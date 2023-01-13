@@ -1,18 +1,6 @@
 
-#define A0_PIN             19   
-#define A1_PIN             18   
-#define A2_PIN             14   
-#define A3_PIN             15  
-                           
-#define D0_PIN             10
-#define D1_PIN             12
-#define D2_PIN             11
-#define D3_PIN             13
-#define D4_PIN              8
-#define D5_PIN              7
-#define D6_PIN             36
-#define D7_PIN             37
-                           
+const uint8_t AddrBusPins[] = {19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27};
+
 #define DataCEn_PIN        35     
 #define IO1n_PIN           24  
 #define PHI2_PIN            1  
@@ -21,7 +9,7 @@
 #define ReadGPIO6          (*(volatile uint32_t *)IMXRT_GPIO6_ADDRESS)
 #define GP_R_Wn(r)         (r & CORE_PIN0_BITMASK)
 #define GP_IO1n(r)         (r & CORE_PIN24_BITMASK)
-#define GP_Address(r)      ((r >> CORE_PIN19_BIT) & 0xF)  // lower nibble bits 16-19 
+#define GP_Address(r)      ((r >> CORE_PIN19_BIT) & 0xFFFF)  // bits 16-31 contain address bus, in order 
                            
 #define ReadGPIO7          (*(volatile uint32_t *)IMXRT_GPIO7_ADDRESS)
 #define GP7_DataMask       0xF000F   //CORE_PIN10,12,11,13,8,7,36,37_BITMASK
@@ -37,7 +25,7 @@
 #define nS_DataSetup       325 //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
 #define nS_DataHold        375  //On a read, when to stop driving the data bus, spec calls for >430
 
-__attribute__((always_inline)) inline void SetDataPortOutWait(uint8_t Data, uint32_t StartCycles)
+__attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data, uint32_t StartCycles)
 {
    DataBufEnable; 
    register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
@@ -47,7 +35,7 @@ __attribute__((always_inline)) inline void SetDataPortOutWait(uint8_t Data, uint
    DataBufDisable;
 }
 
-__attribute__(( always_inline )) inline uint8_t DataPortRead(uint32_t StartCycles)
+__attribute__(( always_inline )) inline uint8_t DataPortWaitRead(uint32_t StartCycles)
 {
    SetDataPortRead; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
@@ -55,5 +43,6 @@ __attribute__(( always_inline )) inline uint8_t DataPortRead(uint32_t StartCycle
    register uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortWrite; //set data ports to outputs (default)
-   return ((DataIn & 0x0F) | ((DataIn & 0xF0) >> 12));
+   return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
+

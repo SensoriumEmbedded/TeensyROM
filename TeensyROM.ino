@@ -3,20 +3,18 @@
 
 #include "TeensyROM.h"
 
+uint8_t IO1_RAM[256];
+
 void setup() 
 {
    Serial.begin(115200);
    Serial.println(F("File: " __FILE__ ));
    Serial.println(F("Date: " __DATE__ ));
    Serial.println(F("Time: " __TIME__ ));
-  
-   pinMode(A0_PIN, INPUT);  
-   pinMode(A1_PIN, INPUT);  
-   pinMode(A2_PIN, INPUT);  
-   pinMode(A3_PIN, INPUT);  
 
    pinMode(DataCEn_PIN, OUTPUT);  
    DataBufDisable; //buffer disabled
+   for(uint8_t PinNum=0; PinNum<sizeof(AddrBusPins); PinNum++) pinMode(AddrBusPins[PinNum], INPUT); 
    SetDataPortWrite; //default to output (for C64 Read)
    
    pinMode(IO1n_PIN, INPUT);  
@@ -26,7 +24,7 @@ void setup()
  
    attachInterrupt( digitalPinToInterrupt( PHI2_PIN ), isrPHI2, RISING );
 
-   Serial.print("IO Benchmark test\n");
+   Serial.print("TeensyROM is on-line\n");
 } 
   
 void loop()
@@ -54,22 +52,20 @@ FASTRUN void isrPHI2()
    {
       if (GP_R_Wn(GPIO_6)) //High (Read)
       {
-         //SetDataPortWrite; //(default, not needed) set data ports to outputs (default)
-         SetDataPortOutWait(Address, StartCycles);  
-         //Serial.printf("Read %d from ", Address);
+         DataPortWriteWait(IO1_RAM[Address & 0xFF], StartCycles);  
+         //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
       else  //write
       {
-         //read data bus
-         register uint8_t DataIn = DataPortRead(StartCycles); 
-         Serial.printf("Wrote %d to %d\n", DataIn, Address);
+         IO1_RAM[Address & 0xFF] = DataPortWaitRead(StartCycles); 
+         Serial.printf("Wr %d to %04x\n", IO1_RAM[Address & 0xFF], Address);
       }
       
-      //Serial.println(Address);   
-      //Serial.print(" IO1 ");
    }
    //DataBufDisable;
    //SetDataPortWrite; //(default, not needed) set data ports to outputs (default)
+   
+   //now the time-sensitive work is done, have a few hundred nS until the next interrupt...
    
 }
 
