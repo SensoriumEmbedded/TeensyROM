@@ -1,14 +1,13 @@
 
 //Compile with 816MHz (overclock) option set
 
+#include "ROM_Images.h"
 #include "TeensyROM.h"
-#include "ROMs\586220ast_Diagnostics.h"
-#include "ROMs\Jupiter_Lander.h"
-#include "ROMs\781220_Dead_Test.h"
-#include "ROMs\Donkey_Kong.BIN.h"
 
-uint8_t IO1_RAM[256];
+uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
+volatile uint8_t extReset = false;
+uint8_t RegSelect = 0;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
 
@@ -25,32 +24,54 @@ void setup()
    DataBufDisable; //buffer disabled
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    SetDataPortDirOut; //default to output (for C64 Read)
-   SetExROMDeassert;
-   SetGameDeassert; 
+   //SetExROMDeassert;
+   //SetGameDeassert; 
 
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    
-   attachInterrupt( digitalPinToInterrupt( PHI2_PIN ), isrPHI2, RISING );
+   attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
+   attachInterrupt( digitalPinToInterrupt(Reset_In_PIN), isrReset, FALLING );
    
    SetDebugDeassert;
    SetDebug2Deassert;
-   //SetExROMAssert;
-   //SetGameAssert;
+   SetUpMainMenuROM();
   
    Serial.print("TeensyROM is on-line\n");
 
 } 
-  
+     
 void loop()
 {
+   if (extReset)
+   {
+      Serial.println("External Reset detected"); 
+      SetUpMainMenuROM(); //back to main menu
+      extReset=false;
+   }
+   
    if (doReset)
    {
       doReset=false;
       Serial.println("Resetting C64"); 
       SetResetAssert; 
-      delay(5); 
+      delay(3); 
       SetResetDeassert;
+      delay(1); //avoid self reset detection
+      extReset = false;
    }
+}
+
+void SetUpMainMenuROM()
+{
+   SetGameDeassert;
+   SetExROMAssert;
+   LOROM_Image = TeensyROMC64_bin;
+   HIROM_Image = NULL;
+}
+
+FASTRUN void isrReset()
+{
+   extReset = true;
 }
 
 FASTRUN void isrPHI2()
@@ -59,70 +80,101 @@ FASTRUN void isrPHI2()
    
  	SetDebug2Assert;
    //SetDebugDeassert;
+   
    WaitUntil_nS(nS_RWnReady); 
-
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
-    
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
-   register bool IsRead = GP6_R_Wn(GPIO_6);
+   register uint8_t  Data;
+   register bool     IsRead = GP6_R_Wn(GPIO_6);
    
  	WaitUntil_nS(nS_PLAprop); 
-   
    register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+   
    if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
       if (IsRead) //High (Read)
       {
-         DataPortWriteWait(IO1_RAM[Address & 0xFF]);  
+         switch(Address & 0xFF)
+         {
+            case rwRegSelect:
+               DataPortWriteWait(RegSelect);  
+               break;
+            case rRegNumROMs:
+               DataPortWriteWait(sizeof(ROMMenu)/sizeof(ROMMenu[0]));  
+               break;
+            case rRegROMType:
+               DataPortWriteWait(ROMMenu[RegSelect].HW_Config);  
+               break;
+            case rRegROMName ... (rRegROMName+MAX_ROMNAME_CHARS-1):
+               Data = ROMMenu[RegSelect].Name[(Address & 0xFF)-rRegROMName];
+               DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
+               break;
+            case rRegPresence1:
+               DataPortWriteWait(0x55);
+               break;
+            case rRegPresence2:
+               DataPortWriteWait(0xAA);
+               break;
+         }
          //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
       else  //write
       {
-         IO1_RAM[Address & 0xFF] = DataPortWaitRead(); 
-         Serial.printf("Wr %d to %04x\n", IO1_RAM[Address & 0xFF], Address);
-         if (Address == 57000)   //DEA8
+         Data = DataPortWaitRead(); 
+         switch(Address & 0xFF)
          {
-            switch (IO1_RAM[Address & 0xFF]) 
-            {
-            case 1:
-               //reset C64
-               doReset=true;
+            case rwRegSelect:
+               RegSelect=Data;
                break;
-            case 2:
-               Serial.println("Starting ExROM/ROML cartridge");
-               SetGameDeassert;
-               SetExROMAssert;
-               LOROM_Image = a586220ast_Diagnostics_BIN;
-               HIROM_Image = NULL;
-               doReset=true;
-               //works with H/L/3FFF on both
-               //only requires L/1FFF
+            case wRegControl:
+               if(Data==RCtlStartRom)
+               {
+                  switch(ROMMenu[RegSelect].HW_Config)
+                  {
+                     case rt16k:
+                        SetGameAssert;
+                        SetExROMAssert;
+                        LOROM_Image = ROMMenu[RegSelect].ROM_Image;
+                        HIROM_Image = ROMMenu[RegSelect].ROM_Image+0x2000;
+                        break;
+                     case rt8kHi:
+                        SetGameAssert;
+                        SetExROMDeassert;
+                        LOROM_Image = NULL;
+                        HIROM_Image = ROMMenu[RegSelect].ROM_Image;
+                        break;
+                     case rt8kLo:
+                        SetGameDeassert;
+                        SetExROMAssert;
+                        LOROM_Image = ROMMenu[RegSelect].ROM_Image;
+                        HIROM_Image = NULL;
+                        break;
+                     case rtPrg:
+                        SetGameAssert;
+                        SetExROMAssert;
+                        LOROM_Image = NULL;
+                        HIROM_Image = NULL;
+                        break;
+                  }
+                  doReset=true;
+               }
                break;
-            case 3:
-               Serial.println("Starting GAME/ROMH cartridge");
-               SetExROMDeassert;
-               SetGameAssert;
-               LOROM_Image = NULL;
-               HIROM_Image = a781220_Dead_Test_BIN;
-               //ROM_Image = Jupiter_Lander_BIN;
-               doReset=true;
-               //requires ROMH and 1FFF as only response
-               break;
-            case 4:
-               Serial.println("Starting GAME/ROMH/ExROM/ROML (16k) cartridge");
-               SetExROMAssert;
-               SetGameAssert;
-               LOROM_Image = Donkey_Kong_BIN;
-               HIROM_Image = Donkey_Kong_BIN + 0x2000;
-               doReset=true;
-               //works with H/L/3FFF on both
-               //only requires H(1FFF | 2000)/L(1FFF)
-               break;
-            }
-
          }
-      }
+      } //write
    }  //IO1
+   else if (!GP9_IO2n(GPIO_9)) //IO2: DFxx address space, virtual RAM
+   {
+      if (IsRead) //High (Read)
+      {
+         DataPortWriteWait(IO2_RAM[Address & 0xFF]);  
+         //Serial.printf("Rd %d from %d\n", IO2_RAM[Address & 0xFF], Address);
+      }
+      else  //write
+      {
+         IO2_RAM[Address & 0xFF] = DataPortWaitRead(); 
+         Serial.printf("IO2 Wr %d to 0x%04x\n", IO2_RAM[Address & 0xFF], Address);
+      }
+   }  //IO2
    else if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]);  

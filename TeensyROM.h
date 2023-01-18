@@ -1,10 +1,11 @@
 
 
 #define PHI2_PIN            1  
+#define Reset_In_PIN        28  
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,         // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
-   25,     //BA
+   29, Reset_In_PIN,    //BA, Reset_In_PIN
    };
 
 const uint8_t OutputPins[] = {
@@ -36,19 +37,20 @@ const uint8_t OutputPins[] = {
 #define SetExROMDeassert   CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK 
 #define SetGameAssert      CORE_PIN32_PORTSET = CORE_PIN32_BITMASK
 #define SetGameDeassert    CORE_PIN32_PORTCLEAR = CORE_PIN32_BITMASK 
+
 #define SetDebugAssert     CORE_PIN34_PORTSET = CORE_PIN34_BITMASK
 #define SetDebugDeassert   CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 
 #define SetDebug2Assert    CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDebug2Deassert  CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
 #define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
-#define WaitUntil_nS(N)      while(ARM_DWT_CYCCNT < N * 0.816) 
-   //was ARM_DWT_CYCCNT < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16)     F_CPU_ACTUAL=816000000  /1000000000 = 0.816
+#define WaitUntil_nS(N)    while(ARM_DWT_CYCCNT < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
+    //Could reduce or use whole cycle counts instead of nS... while(ARM_DWT_CYCCNT < N * 0.816)      F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 // all times starting from Phi2 rising (interrupt). 
-#define nS_RWnReady        20  // Phi2 rise to RWn valid
-#define nS_PLAprop         100 //100 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
+#define nS_RWnReady        20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
+#define nS_PLAprop         100 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
 #define nS_DataSetup       325 //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
-#define nS_DataHold        375 //375  //On a read, when to stop driving the data bus, spec calls for >430
+#define nS_DataHold        375 //On a read, when to stop driving the data bus, spec calls for >430
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
@@ -71,3 +73,25 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
 
+enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
+{
+   wRegControl, //execute specisic functions
+   rRegStatus,
+   rRegSize,
+   rRegStreamData,
+   
+   rRegPresence1, //for HW detect: 0x55
+   rRegPresence2, //for HW detect: 0xAA
+   rwRegSelect,  //select ROM for name, type, execution, etc
+   rRegNumROMs,
+   rRegROMType,
+   rRegROMName, //MAX_ROMNAME_CHARS in length (incl term)
+};
+
+enum RegCtlCommands
+{
+   RCtlStartRom  = 0,
+   RCtlExitToBASIC = 1,
+   RCtlLoadFromSD = 2,
+   RCtlLoadFromUSB = 3,
+};
