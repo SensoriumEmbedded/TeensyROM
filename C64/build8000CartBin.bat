@@ -36,7 +36,7 @@ rem rem SET cruncherArgs=-x$0801 -c64 -g55 -fshort
 SET bin2headerPath=%toolPath%\bin2header
 SET bin2header=bin2header.exe
 rem SET bin2headerArgs=%toolPath%
-SET bin2headerROMPath=..\Teensy\ROMs
+SET bin2headerROMPath=..\TeensyROM\ROMs
 
 SET cartconvPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
 SET cartconv=cartconv.exe

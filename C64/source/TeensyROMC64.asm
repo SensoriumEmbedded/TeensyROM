@@ -4,9 +4,10 @@
    ;PacketSize = 64
 
    ;Registers:
-   ;PtrAddrLo  = $fb
-   ;PtrAddrHi  = $fc
+   PtrAddrLo  = $fb
+   PtrAddrHi  = $fc
    ;LastPage   = $fd
+   
    ;These need to match Teensy Code!
    IO1Port           = $de00
    BorderColor       = $d020 
@@ -15,16 +16,16 @@
    MAX_ROMNAME_CHARS = 25
    
    rRegStatus     = IO1Port + 0
-   rRegSize       = IO1Port + 1
-   rRegStreamData = IO1Port + 2
-   
-   wRegControl    = IO1Port + 3
-   rRegPresence1  = IO1Port + 4
-   rRegPresence2  = IO1Port + 5
-   rwRegSelect    = IO1Port + 6
-   rRegNumROMs    = IO1Port + 7
-   rRegROMType    = IO1Port + 8
-   rRegROMName    = IO1Port + 9 ;MAX_ROMNAME_CHARS max len
+   rRegStrAddrLo  = IO1Port + 1
+   rRegStrAddrHi  = IO1Port + 2
+   rRegStrData    = IO1Port + 3  
+   wRegControl    = IO1Port + 4
+   rRegPresence1  = IO1Port + 5
+   rRegPresence2  = IO1Port + 6
+   rwRegSelect    = IO1Port + 7
+   rRegNumROMs    = IO1Port + 8
+   rRegROMType    = IO1Port + 9
+   rRegROMName    = IO1Port + 10 ;MAX_ROMNAME_CHARS max len
    
    RCtlExitToBASIC = 0
    RCtlStartRom    = 1
@@ -185,9 +186,9 @@ WaitForKey:
    beq WaitForKey
 
    cmp #'0'  ;'1'-'9' inclusive 
-   bmi n1   ;skip if below '1'
+   bmi notAlphaNum   ;skip if below '1'
    cmp #'9'+ 1  
-   bpl n1   ;skip if above '9'
+   bpl notAlphaNum   ;skip if above '9'
    
    jsr SendChar ;print entered char
    ;convert to ROM number
@@ -195,26 +196,32 @@ WaitForKey:
    sbc #'0'  ;now 0-9 
    sta rwRegSelect ;select ROM/PRG
    lda rRegROMType
-   cmp #rtPrg
+   cmp #rtPrg  ;Is it a PRG?
    bne ROMStart
-   ;PRG file, transfer to $0801...
-   ;read size
    
-   ;transfer
+   jsr PRGtoMem
+   ;load keyboard buffer with "run\n":  
+   lda #'r'
+   sta $0277  ;kbd buff 0
+   lda #'u'
+   sta $0278 ;kbd buff 1
+   lda #'n'
+   sta $0279  ;kbd buff 2
+   lda #13
+   sta $027a  ;kbd buff 3
+   lda #4
+   sta $C6  ;# chars in kbd buff (10 max)
+   jmp (BasicWarmStartVect)     
    
-   jmp (BasicWarmStartVect) 
-   
-   
-ROMStart:   
-   lda #RCtlStartRom
-   sta wRegControl
-   jmp AllDone   ;TR should take it from here...
-   
-n1:
-
+notAlphaNum:
+   ;check for function keys:
 
    jmp WaitForKey
 
+ROMStart:   
+   lda #RCtlStartRom
+   sta wRegControl
+   ;TR should take it from here...
 AllDone:
    jmp AllDone ;(BasicWarmStartVect) 
 
@@ -224,7 +231,53 @@ AllDone:
 
    
 ; ******************************* Subroutines ******************************* 
+
+PRGtoMem:
+   ;stream PRG file from TeensyROM to $0801
+   ;assumes TeensyROM is set up to transfer, PRG selected
+   ;rRegStrAddrHi is zero when inactive/complete
+   
+   lda #RCtlStartRom  ;tell TR we're ready to transfer
+   sta wRegControl
+   
+   lda rRegStrAddrHi
+   bne cont1
+   lda #1 ;no data to read!
+   jmp ErrOut
+
+cont1:   
+   sta PtrAddrHi
+   lda rRegStrAddrLo   
+   sta PtrAddrLo
+   ldy #0   ;zero offset
+xferloop:
+   lda rRegStrData ;read from rRegStrData increments address/checks for end
+   sta (PtrAddrLo), y 
+   lda rRegStrAddrHi ;are we done?
+   beq xfercomplete 
+   iny
+   bne xferloop
+   inc PtrAddrHi
+   bne xferloop
+   lda #2 ;Overflow!
+   jmp ErrOut
+   
+xfercomplete:
+   rts
   
+  
+ErrOut:   
+   ;ErrNum stored in acc
+   pha
+   lda #<MsgError
+   ldy #>MsgError
+   jsr PrintString   
+   pla
+   jsr PrintHexByte
+   lda #13
+   jsr SendChar
+   rts
+
 PrintHexByte:
    ;Print byte value stored in acc in hex
    ;  2 chars plus a space
@@ -263,8 +316,10 @@ MsgWelcome:       ;clr screen, wht char, lower case
    !tx 147, 5, 14, "TeensyROM v0.01", 13, 0
 MsgSelect:
    !tx 13, 13, 5, "Select from above: ", 0
+MsgError:
+   !tx 13, "Error #", 0
 MsgNoHW:
    !tx "Hardware Not Detected", 13, 0
 TblROMType:
-   !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each
+   !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
    
