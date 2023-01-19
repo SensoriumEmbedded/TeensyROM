@@ -1,0 +1,46 @@
+
+
+*** Hardware
+  change out 7406 with something 3.3v powered, non-inverting 
+    ie 74LCX07 or 74LVC07
+  drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
+     Kernal/BASIC/Char Set controls (5 bits)
+  remaining control signals (IRQ, NMI, etc)
+  
+  Jupiter Lander still has garbled video...
+  
+*** Software
+C64 code:
+  options: Exit to BASIC, Load from USB Host/SD/USB Drive
+  
+
+  Transfer from header file to mem (.prg)
+  transfer program/cart via USB
+  SD access, USB thumb drive?
+  
+  assembly test program?
+  Verify T41 speed on compile or setup()?   
+      overclock even needed?
+  Read c64 bus speed, adjust for PAL(?)
+
+more program options to load:
+1- EPYX fast load routine (just fast load routine for drive 8, not full cart version)
+2- FB64 (file browser)
+3- CCGMS
+
+
+
+*** notes
+These take the same amount of memory:
+//PROGMEM  prog_uchar testpat[] = {
+//Memory Usage on Teensy 4.1:
+//  FLASH: code:26828, data:*7328, headers:*8848   free for files:*8083460
+//   RAM1: variables:7936, code:24280, padding:8488   free for local variables:483584
+//   RAM2: variables:12384  free for malloc/new:511904
+//
+//static const uint8_t testpat[] = {
+//Memory Usage on Teensy 4.1:
+//  FLASH: code:26828, data:*7064, headers:*9112   free for files:*8083460
+//   RAM1: variables:7936, code:24280, padding:8488   free for local variables:483584
+//   RAM2: variables:12384  free for malloc/new:511904
+   

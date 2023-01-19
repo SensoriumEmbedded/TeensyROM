@@ -11,6 +11,8 @@
 #include "ROMs\586220ast_Diagnostics.h" 
 #include "ROMs\781220_Dead_Test.h" 
 #include "ROMs\Donkey_Kong.h" 
+#include "ROMs\ember_head.prg.h"
+#include "ROMs\Dig_Dug.bin.h"
 
 enum ROMTypes
 {
@@ -37,9 +39,10 @@ const StructROMDefs ROMMenu[] =
    rt8kLo, "586220 Diagnostics" , a586220_Diagnostics_BIN    ,
    rt8kLo, "586220* Diagnostics", a586220ast_Diagnostics_BIN ,
    rt8kHi, "781220 Dead Test"   , a781220_Dead_Test_BIN      ,
-   rt16k , "Donkey Kong"        , Donkey_Kong_BIN     ,       
+   rt16k , "Donkey Kong"        , Donkey_Kong_BIN            ,      
+   rt16k , "Dig Dug"            , Dig_Dug_bin                ,
+   rtPrg , "Ember Head"         , ember_head_prg             ,   
    //rt8kHi, "Jupiter Lander"     , Jupiter_Lander_BIN         , //graphics messed up...
-
 
 };
 

@@ -51,12 +51,12 @@ void loop()
    
    if (doReset)
    {
-      doReset=false;
       Serial.println("Resetting C64"); 
       SetResetAssert; 
-      delay(3); 
+      delay(5); 
       SetResetDeassert;
-      delay(1); //avoid self reset detection
+      delay(2); //avoid self reset detection
+      doReset=false;
       extReset = false;
    }
 }
@@ -77,6 +77,7 @@ FASTRUN void isrReset()
 FASTRUN void isrPHI2()
 {
    RESET_CYCLECOUNT;
+   //if (doReset) return;
    
  	SetDebug2Assert;
    //SetDebugDeassert;

@@ -75,11 +75,11 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
 
 enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 {
-   wRegControl, //execute specisic functions
-   rRegStatus,
+   rRegStatus,  //loc 0(DE00) gets written to after/during reset
    rRegSize,
    rRegStreamData,
    
+   wRegControl, //execute specific functions
    rRegPresence1, //for HW detect: 0x55
    rRegPresence2, //for HW detect: 0xAA
    rwRegSelect,  //select ROM for name, type, execution, etc
@@ -90,8 +90,8 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 
 enum RegCtlCommands
 {
-   RCtlStartRom  = 0,
-   RCtlExitToBASIC = 1,
-   RCtlLoadFromSD = 2,
-   RCtlLoadFromUSB = 3,
+   RCtlExitToBASIC = 0,
+   RCtlStartRom ,
+   RCtlLoadFromSD ,
+   RCtlLoadFromUSB ,
 };
