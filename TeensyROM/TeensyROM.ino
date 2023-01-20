@@ -10,6 +10,7 @@ volatile uint8_t extReset = false;
 uint16_t StreamStartAddr = 0;
 uint16_t StreamOffsetAddr = 0;
 uint8_t RegSelect = 0;
+uint8_t DisableISR = false;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
 
@@ -34,7 +35,7 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    attachInterrupt( digitalPinToInterrupt(Reset_In_PIN), isrReset, FALLING );
    
-   SetDebugDeassert;
+   SetLEDOn;
    SetDebug2Deassert;
    SetUpMainMenuROM();
   
@@ -48,16 +49,20 @@ void loop()
    {
       Serial.println("External Reset detected"); 
       SetUpMainMenuROM(); //back to main menu
+      SetLEDOn;
+      DisableISR=false;
       extReset=false;
+      doReset=true;
    }
    
    if (doReset)
    {
       Serial.println("Resetting C64"); 
       SetResetAssert; 
-      delay(5); 
+      delay(10); 
       SetResetDeassert;
-      delay(3); //avoid self reset detection
+      while(digitalRead(Reset_In_PIN)==0); //avoid self reset detection
+      //delay(3); 
       doReset=false;
       extReset = false;
    }

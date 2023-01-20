@@ -8,10 +8,9 @@ FASTRUN void isrReset()
 FASTRUN void isrPHI2()
 {
    RESET_CYCLECOUNT;
-   //if (doReset) return;
+   if (DisableISR) return;
    
  	SetDebug2Assert;
-   //SetDebugDeassert;
    
    WaitUntil_nS(nS_RWnReady); 
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
@@ -73,39 +72,47 @@ FASTRUN void isrPHI2()
                RegSelect=Data;
                break;
             case wRegControl:
-               if(Data==RCtlStartRom)
+               switch(Data)
                {
-                  switch(ROMMenu[RegSelect].HW_Config)
-                  {
-                     case rt16k:
-                        SetGameAssert;
-                        SetExROMAssert;
-                        LOROM_Image = ROMMenu[RegSelect].ROM_Image;
-                        HIROM_Image = ROMMenu[RegSelect].ROM_Image+0x2000;
-                        doReset=true;
-                        break;
-                     case rt8kHi:
-                        SetGameAssert;
-                        SetExROMDeassert;
-                        LOROM_Image = NULL;
-                        HIROM_Image = ROMMenu[RegSelect].ROM_Image;
-                        doReset=true;
-                        break;
-                     case rt8kLo:
-                        SetGameDeassert;
-                        SetExROMAssert;
-                        LOROM_Image = ROMMenu[RegSelect].ROM_Image;
-                        HIROM_Image = NULL;
-                        doReset=true;
-                        break;
-                     case rtPrg:
-                        //set up for transfer
-                        StreamStartAddr = (ROMMenu[RegSelect].ROM_Image[1]<<8) + ROMMenu[RegSelect].ROM_Image[0];
-                        StreamOffsetAddr = 2; //set to start of data
-                        break;
-
-               
-                  }
+                  case RCtlVanish: //will go out to lunch if called from ext ROM
+                           SetGameDeassert;
+                           SetExROMDeassert;      
+                           LOROM_Image = NULL;
+                           HIROM_Image = NULL;  
+                           DisableISR = true;
+                           SetLEDOff;
+                     break;
+                  case RCtlStartRom:
+                     switch(ROMMenu[RegSelect].HW_Config)
+                     {
+                        case rt16k:
+                           SetGameAssert;
+                           SetExROMAssert;
+                           LOROM_Image = ROMMenu[RegSelect].ROM_Image;
+                           HIROM_Image = ROMMenu[RegSelect].ROM_Image+0x2000;
+                           doReset=true;
+                           break;
+                        case rt8kHi:
+                           SetGameAssert;
+                           SetExROMDeassert;
+                           LOROM_Image = NULL;
+                           HIROM_Image = ROMMenu[RegSelect].ROM_Image;
+                           doReset=true;
+                           break;
+                        case rt8kLo:
+                           SetGameDeassert;
+                           SetExROMAssert;
+                           LOROM_Image = ROMMenu[RegSelect].ROM_Image;
+                           HIROM_Image = NULL;
+                           doReset=true;
+                           break;
+                        case rtPrg:
+                           //set up for transfer
+                           StreamStartAddr = (ROMMenu[RegSelect].ROM_Image[1]<<8) + ROMMenu[RegSelect].ROM_Image[0];
+                           StreamOffsetAddr = 2; //set to start of data
+                           break;
+                     }
+                     break;
                }
                break;
          }

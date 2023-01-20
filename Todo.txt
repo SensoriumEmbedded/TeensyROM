@@ -2,12 +2,15 @@
 
 *** Hardware
 --> order parts...
+   Bi-dir lev transl for Reset?
   change out 7406 with something 3.3v powered, non-inverting 
     ie 74LCX07 or 74LVC07
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
   remaining control signals (IRQ, NMI, etc)
   
+  batt back for USB
+  test SD port
   Ethernet port?
   USB host port?
   
@@ -15,8 +18,8 @@
   
 *** Software
 C64 code:
-  options (funct keys): Exit to BASIC, Load from USB Host/SD/USB Drive
---> Transfer from header file to mem (.prg)
+-->exit to basic (for PRG run, etc) should unassert game/exrom
+--> options (funct keys): Exit to BASIC, Load from USB Host/SD/USB Drive
   transfer program/cart via USB
   SD access, USB thumb drive?
   
@@ -27,9 +30,6 @@ C64 code:
 
 more program options to load:
 1- EPYX fast load routine (just fast load routine for drive 8, not full cart version)
-2- FB64 (file browser)
-3- CCGMS
-
 
 
 *** notes

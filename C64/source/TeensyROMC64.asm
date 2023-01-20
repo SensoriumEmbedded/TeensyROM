@@ -8,6 +8,8 @@
    PtrAddrHi  = $fc
    ;LastPage   = $fd
    
+   TempCodeLoc = $c000    
+
    ;These need to match Teensy Code!
    IO1Port           = $de00
    BorderColor       = $d020 
@@ -27,7 +29,7 @@
    rRegROMType    = IO1Port + 9
    rRegROMName    = IO1Port + 10 ;MAX_ROMNAME_CHARS max len
    
-   RCtlExitToBASIC = 0
+   RCtlVanish      = 0
    RCtlStartRom    = 1
    RCtlLoadFromSD  = 2
    RCtlLoadFromUSB = 3
@@ -100,8 +102,8 @@ Warmstart:
    jsr $e453            ; Init BASIC RAM vectors
    jsr $e3bf            ; Main BASIC RAM Init routine
    jsr $e422            ; Power-up message / NEW command
-   ldx #$fb
-   txs                  ; Reduce stack pointer for BASIC
+   ;ldx #$fb
+   ;txs                  ; Reduce stack pointer for BASIC
    code       = *
 }
    
@@ -110,7 +112,7 @@ Warmstart:
    *=code  ; Start location for code
    
 ;   Setup stuff:
-   ;sei
+   sei
      
    lda #6  ;blue
    sta BorderColor
@@ -186,32 +188,35 @@ WaitForKey:
    beq WaitForKey
 
    cmp #'0'  ;'1'-'9' inclusive 
-   bmi notAlphaNum   ;skip if below '1'
+   bmi notNum   ;skip if below '1'
    cmp #'9'+ 1  
-   bpl notAlphaNum   ;skip if above '9'
-   
+   bpl notNum   ;skip if above '9'
    jsr SendChar ;print entered char
    ;convert to ROM number
    sec       ;set to subtract without carry
    sbc #'0'  ;now 0-9 
+   jmp ROMSelected
+   
+notNum:
+   cmp #'a'  ;'a'-'z' inclusive 
+   bmi notAlphaNum   ;skip if below 'a'
+   cmp #'z'+ 1  
+   bpl notAlphaNum   ;skip if above 'z'
+   jsr SendChar ;print entered char
+   ;convert to ROM number
+   sec       ;set to subtract without carry
+   sbc #'a'-10  ;now 10-25 
+   
+ROMSelected:   ;ROM num in acc
+   cmp rRegNumROMs 
+   bpl WaitForKey   ;skip if above num of ROMs
    sta rwRegSelect ;select ROM/PRG
    lda rRegROMType
    cmp #rtPrg  ;Is it a PRG?
    bne ROMStart
    
    jsr PRGtoMem
-   ;load keyboard buffer with "run\n":  
-   lda #'r'
-   sta $0277  ;kbd buff 0
-   lda #'u'
-   sta $0278 ;kbd buff 1
-   lda #'n'
-   sta $0279  ;kbd buff 2
-   lda #13
-   sta $027a  ;kbd buff 3
-   lda #4
-   sta $C6  ;# chars in kbd buff (10 max)
-   jmp (BasicWarmStartVect)     
+   jmp VanishBASICRun
    
 notAlphaNum:
    ;check for function keys:
@@ -310,6 +315,31 @@ printret:
    jsr SendChar
    rts
  
+VanishBASICRun:
+   ;copy code to c000 and execute from there so we can kill the TeensyROM
+   lda #>CodeToCopy
+   sta PtrAddrHi
+   ldy #<CodeToCopy   
+   sty PtrAddrLo ;should be zero
+CodeCopyLoop:
+   lda (PtrAddrLo), y 
+   sta TempCodeLoc,y
+   iny
+   cpy #<EndCoppiedCode
+   bne CodeCopyLoop   
+   ;load keyboard buffer with "run\n":  
+   lda #'r'
+   sta $0277  ;kbd buff 0
+   lda #'u'
+   sta $0278 ;kbd buff 1
+   lda #'n'
+   sta $0279  ;kbd buff 2
+   lda #13
+   sta $027a  ;kbd buff 3
+   lda #4
+   sta $C6  ;# chars in kbd buff (10 max)
+   jmp TempCodeLoc
+
 ; ******************************* Strings/Messages ******************************* 
 
 MsgWelcome:       ;clr screen, wht char, lower case
@@ -323,3 +353,10 @@ MsgNoHW:
 TblROMType:
    !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
    
+; ******************************* Code to Copy ******************************* 
+!align 255, 0	; align to page (256 bytes)
+CodeToCopy:  ;must be <256 bytes 
+   lda #RCtlVanish ;put the TeensyROM to sleep (Deassert Game & ExROM)
+   sta wRegControl                               
+   jmp (BasicWarmStartVect)    
+EndCoppiedCode:

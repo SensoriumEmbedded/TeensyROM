@@ -12,6 +12,13 @@
 #include "ROMs\Donkey_Kong.h" 
 #include "ROMs\ember_head.prg.h"
 #include "ROMs\Dig_Dug.bin.h"
+#include "ROMs\fb64.prg.h"
+#include "ROMs\ccgms_2021.prg.h"
+#include "ROMs\80columns.prg.h"
+#include "ROMs\DualCopy.prg.h"
+#include "ROMs\disp_fract.prg.h"
+#include "ROMs\draw01.prg.h"
+
 
 enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 {
@@ -31,7 +38,7 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 
 enum RegCtlCommands
 {
-   RCtlExitToBASIC = 0,
+   RCtlVanish = 0,
    RCtlStartRom ,
    RCtlLoadFromSD ,
    RCtlLoadFromUSB ,
@@ -56,16 +63,23 @@ struct StructROMDefs
 
 const StructROMDefs ROMMenu[] = 
 {
-   rt8kLo, "1541 Diagnostics"   , a1541_Diagnostics_BIN      , 1, //size not used for carts
-   rt8kLo, "Joystick Tester"    , Joystick_Tester_BIN        , 1, //size not used for carts
-   rt8kLo, "Keyboard Tester"    , Keyboard_Tester_BIN        , 1, //size not used for carts
-   rt8kLo, "SID Tester"         , SID_Tester_BIN             , 1, //size not used for carts
-   rt8kLo, "586220 Diagnostics" , a586220_Diagnostics_BIN    , 1, //size not used for carts
-   rt8kLo, "586220* Diagnostics", a586220ast_Diagnostics_BIN , 1, //size not used for carts
-   rt8kHi, "781220 Dead Test"   , a781220_Dead_Test_BIN      , 1, //size not used for carts
-   rt16k , "Donkey Kong"        , Donkey_Kong_BIN            , 1, //size not used for carts      
-   rt16k , "Dig Dug"            , Dig_Dug_bin                , 1, //size not used for carts
-   rtPrg , "Ember Head"         , ember_head_prg             , sizeof(ember_head_prg)  ,
+   rt8kLo, "1541 Diagnostics"   , a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
+   rt8kLo, "Joystick Tester"    , Joystick_Tester_BIN        , 1, //size not needed for ROMs
+   rt8kLo, "Keyboard Tester"    , Keyboard_Tester_BIN        , 1, //size not needed for ROMs
+   rt8kLo, "SID Tester"         , SID_Tester_BIN             , 1, //size not needed for ROMs
+   rt8kLo, "586220 Diagnostics" , a586220_Diagnostics_BIN    , 1, //size not needed for ROMs
+   rt8kLo, "586220* Diagnostics", a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
+   rt8kHi, "781220 Dead Test"   , a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
+   rtPrg , "File Browser 64"    , fb64_prg                   , sizeof(fb64_prg      ) ,
+   rtPrg , "CCGMS 2021"         , ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
+   rt16k , " Donkey Kong"       , Donkey_Kong_BIN            , 1, //size not needed for ROMs      
+   rt16k , " Dig Dug"           , Dig_Dug_bin                , 1, //size not needed for ROMs
+   rtPrg , "  Ember Head"       , ember_head_prg             , sizeof(ember_head_prg) ,
+   rtPrg , "  Display Fractal"  , disp_fract_prg             , sizeof(disp_fract_prg) ,
+   rtPrg , "  Draw!"            , draw01_prg                 , sizeof(draw01_prg    ) ,
+
+   rtPrg , "DualCopy"           , DualCopy_prg               , sizeof(DualCopy_prg  ) ,
+   rtPrg , "80 Columns"         , a80columns_prg             , sizeof(a80columns_prg) ,
    //rt8kHi, "Jupiter Lander"     , Jupiter_Lander_BIN         , //graphics messed up...
 
 };

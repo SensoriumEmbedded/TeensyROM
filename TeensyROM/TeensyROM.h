@@ -38,8 +38,8 @@ const uint8_t OutputPins[] = {
 #define SetGameAssert      CORE_PIN32_PORTSET = CORE_PIN32_BITMASK
 #define SetGameDeassert    CORE_PIN32_PORTCLEAR = CORE_PIN32_BITMASK 
 
-#define SetDebugAssert     CORE_PIN34_PORTSET = CORE_PIN34_BITMASK
-#define SetDebugDeassert   CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 
+#define SetLEDOn           CORE_PIN34_PORTSET = CORE_PIN34_BITMASK
+#define SetLEDOff          CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 
 #define SetDebug2Assert    CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDebug2Deassert  CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
