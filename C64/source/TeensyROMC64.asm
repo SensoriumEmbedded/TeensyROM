@@ -1,14 +1,16 @@
 
+; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
  
-   ;PacketSize = 64
-
    ;Registers:
    PtrAddrLo  = $fb
    PtrAddrHi  = $fc
-   ;LastPage   = $fd
+   Ptr2AddrLo  = $fd
+   Ptr2AddrHi  = $fe
    
-   TempCodeLoc = $c000    
+   ;RAM coppies:
+   VanishCodeRAM = $c000    
+   SIDCodeRAM = $1000 
 
    ;These need to match Teensy Code!
    IO1Port           = $de00
@@ -40,51 +42,29 @@
    rtPrg  = 3
 
    ;Kernal routines:
-   SendChar = $ffd2
-   ScanKey  = $ff9f ;SCNKEY
-   GetIn    = $ffe4 ;GETIN
+   IRQDefault = $ea31
+   SendChar   = $ffd2
+   ScanKey    = $ff9f ;SCNKEY
+   GetIn      = $ffe4 ;GETIN
    
    ;BASIC routines:
    BasicWarmStartVect = $a002
    PrintString =  $ab1e
 
 
-CompType = 3 ;Choose Compile type:  1=BASIC 0801, 2=UPPER c000, 3=ROMCRT 8000
 
-!if CompType = 1 {
-; Load into Basic RAM (0801) directly and run from there 
-; no crunch needed 
-; 
-   BasicStart = $0801
-   *=BasicStart
-   ;BASIC SYS header
-   !byte $0b,$08,$01,$00,$9e  ; Line 1 SYS
-   !tx "2064" ;dec address for sys start in text
-   !byte $00,$00,$00
-   code = 2064 ;$0810
-}
+;********************************   Cartridge begin   ********************************   
 
-!if CompType = 2 {
-;Option #2
-; Load into upper memory, use cruncher to to transfer/call  
-; SET cruncherArgs=-x$c000 -c64 -g55 -fshort
-;
-   code       = $c000  ;49152
-}
+;8k Cartridge/ROM   ROML $8000-$9FFF
+;  Could make 16k if needed
+; SID Code is 5109-126=4983 bytes ($1377)
+SIDCode = $8C00  ;should leave ~136bytes at end
 
-!if CompType = 3 {
-;Option #3
-; Store in EEPROM/cartridge
-; no crunch needed  
-; SET build=%filename%.bin
-; SET compilerArgs=-r %buildPath%\%compilerReport% --vicelabels %buildPath%\%compilerSymbols% --msvc --color --format plain -v3 --outfile
-; burn to eeprom, file won't import to emulator due to 2 missing start addr bytes in file
-;
 * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
    !byte 0
+   
+* = $8000  ;Cart Start
 ;  jump vectors and autostart key     
-   CartStart = $8000
-   *=CartStart
    !word Coldstart    ; Cartridge cold-start vector   ;!byte $09, $80 = !word $8009
    !word Warmstart    ; Cartridge warm-start vector
    !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key
@@ -102,18 +82,18 @@ Warmstart:
    jsr $e453            ; Init BASIC RAM vectors
    jsr $e3bf            ; Main BASIC RAM Init routine
    jsr $e422            ; Power-up message / NEW command
-   ;ldx #$fb
-   ;txs                  ; Reduce stack pointer for BASIC
-   code       = *
-}
+   ldx #$fb
+   txs                  ; Reduce stack pointer for BASIC
    
 
-;******************************* Real Code Start ************************************   
-   *=code  ; Start location for code
+;******************************* Main Code Start ************************************   
    
 ;   Setup stuff:
-   sei
-     
+
+   jsr SIDCopyToRAM
+   jsr SIDOn
+
+;screen setup:     
    lda #6  ;blue
    sta BorderColor
    lda #0   ;black
@@ -123,6 +103,7 @@ Warmstart:
    ldy #>MsgWelcome
    jsr PrintString  
 
+;check for HW:
    lda rRegPresence1
    cmp #$55
    bne NoHW
@@ -136,20 +117,20 @@ NoHW:
    jmp AllDone
 
 ListROMs:
-;list out rom number, type, & names
+;                           list out rom number, type, & names
    ldx #0 ;initialize to first ROM
 NextROM:
 
-   lda#13  ;next line
+   lda #13  ;next line
    jsr SendChar
-   lda#5   ;White Number/letter
+   lda #5   ;White Number/letter
    jsr SendChar
-   lda#32  ;space
+   lda #32  ;space
    jsr SendChar
    stx rwRegSelect  
    txa
    jsr PrintHexNibble  ;selection
-   lda#32  ;space
+   lda #32  ;space
    jsr SendChar
 
    lda#154  ;Lt Blue Type
@@ -167,7 +148,7 @@ NxtTypChar:
    and #3
    bne NxtTypChar
    
-   lda#158  ;Yellow Name string
+   lda #158  ;Yellow Name string
    jsr SendChar
    lda #<rRegROMName
    ldy #>rRegROMName
@@ -183,7 +164,7 @@ NxtTypChar:
    jsr PrintString
 
 WaitForKey:     
-   jsr ScanKey  ; (since interrupts are disabled)
+   ;jsr ScanKey  ;only needed if ints are off
    jsr GetIn    
    beq WaitForKey
 
@@ -215,11 +196,24 @@ ROMSelected:   ;ROM num in acc
    cmp #rtPrg  ;Is it a PRG?
    bne ROMStart
    
+   jsr SIDOff
    jsr PRGtoMem
    jmp VanishBASICRun
    
-notAlphaNum:
-   ;check for function keys:
+notAlphaNum: ;check for function keys:
+   cmp #136  ;F7 - toggle music
+   bne notF7
+   ldx #>irqSID
+   cpx $315  ;CINV,,\ HW IRQ Int Hi
+   beq SIDisOn
+   jsr SIDOn ;sid is off, turn it on
+   jmp WaitForKey
+SIDisOn:
+   jsr SIDOff ;sid is on, turn it off
+   jmp WaitForKey
+   
+notF7:
+
 
    jmp WaitForKey
 
@@ -323,7 +317,7 @@ VanishBASICRun:
    sty PtrAddrLo ;should be zero
 CodeCopyLoop:
    lda (PtrAddrLo), y 
-   sta TempCodeLoc,y
+   sta VanishCodeRAM,y
    iny
    cpy #<EndCoppiedCode
    bne CodeCopyLoop   
@@ -338,7 +332,90 @@ CodeCopyLoop:
    sta $027a  ;kbd buff 3
    lda #4
    sta $C6  ;# chars in kbd buff (10 max)
-   jmp TempCodeLoc
+   jmp VanishCodeRAM
+
+
+SIDCopyToRAM:
+;have to copy SID code to RAM because it self modifies...
+   lda #>SIDCode
+   ldy #<SIDCode   
+   sta PtrAddrHi
+   sty PtrAddrLo 
+   ldx #(>EndSIDCode)+1 ;last page+1, will copy ((EndSIDCode-SIDCode) | 0xFF) bytes
+   
+   lda #>SIDCodeRAM
+   ldy #<SIDCodeRAM   
+   sta Ptr2AddrHi
+   sty Ptr2AddrLo 
+   
+   ldy #0 ;initialize
+SIDCopyLoop:
+   lda (PtrAddrLo), y 
+   sta (Ptr2AddrLo),y
+   iny
+   bne SIDCopyLoop   
+   inc PtrAddrHi
+   inc Ptr2AddrHi
+   cpx PtrAddrHi
+   bne SIDCopyLoop
+   rts
+   
+;Initialize SID interrupt
+SIDOn:
+   ;sei
+   ;lda #<irqSID
+   ;ldx #>irqSID
+   ;sta $314   ;CINV,,\ HW IRQ Int
+   ;stx $315
+   ;lda #$1b
+   ;ldx #$00
+   ;ldy #$7f 
+   ;sta $d011  ;VIC ctl reg
+   ;stx $d012   ;raster val
+   ;sty $dc0d   ;CIA int ctl
+   ;lda #$01
+   ;sta $d01a ;irq enable
+   ;sta $d019 ;VIC int flag reg; ACK any raster IRQs
+   ;lda #$00
+   ;jsr SIDCodeRAM ;Initialize music
+   ;cli
+
+   lda #$00
+   jsr SIDCodeRAM ;Initialize music
+   lda #$7f
+   sta $dc0d   ;CIA int ctl
+   lda $dc0d   ;CIA int ctl
+   sei
+   lda #$01
+   sta $d01a  ;irq enable
+   lda #$64
+   sta $d012  ;raster val
+   lda $d011  ;VIC ctl reg
+   AND #$7f
+   sta $d011  ;VIC ctl reg
+   lda #<irqSID
+   ldx #>irqSID
+   sta $314   ;CINV, HW IRQ Int Lo
+   stx $315   ;CINV, HW IRQ Int Hi
+   cli
+   rts
+
+SIDOff:
+   sei
+   lda #<IRQDefault
+   ldx #>IRQDefault
+   sta $314   ;CINV, HW IRQ Int Lo
+   stx $315   ;CINV, HW IRQ Int Hi
+   lda #$81
+   sta $dc0d  ;CIA int ctl
+   lda #0
+   sta $d01a  ;irq enable
+   inc $d019
+   lda $dc0d  ;CIA int ctl
+   jsr SIDCodeRAM
+   cli 
+   rts
+   
 
 ; ******************************* Strings/Messages ******************************* 
 
@@ -353,10 +430,22 @@ MsgNoHW:
 TblROMType:
    !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
    
-; ******************************* Code to Copy ******************************* 
+; ******************************* Code to Copy, SID music/code ******************************* 
+
 !align 255, 0	; align to page (256 bytes)
-CodeToCopy:  ;must be <256 bytes 
+CodeToCopy:  ;must be <256 bytes total, page aligned
    lda #RCtlVanish ;put the TeensyROM to sleep (Deassert Game & ExROM)
    sta wRegControl                               
    jmp (BasicWarmStartVect)    
-EndCoppiedCode:
+EndCoppiedCode = *
+
+* = SIDCode
+      !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
+EndSIDCode = *
+
+irqSID:
+   inc $d019   ;ACK raster IRQs
+   ;inc $d020 ;tweak display border
+   jsr SIDCode+3 ;Play the music
+   ;dec $d020 ;tweak it back
+   jmp IRQDefault

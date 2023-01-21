@@ -2,12 +2,13 @@
 
 *** Hardware
 --> order parts...
-   Bi-dir lev transl for Reset?
-  change out 7406 with something 3.3v powered, non-inverting 
+--> Bi-dir lev transl for Reset?
+--> change out 7406 with something 3.3v powered, non-inverting 
     ie 74LCX07 or 74LVC07
+--> remaining control signals (IRQ, NMI, etc)
+
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
-  remaining control signals (IRQ, NMI, etc)
   
   batt back for USB
   test SD port
