@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="7.7.0">
+<eagle version="9.6.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="16" fill="1" visible="no" active="yes"/>
@@ -46,7 +46,7 @@
 <layer number="48" name="Document" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="49" name="Reference" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="50" name="dxf" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="51" name="tDocu" color="12" fill="1" visible="yes" active="yes"/>
+<layer number="51" name="tDocu" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="52" name="bDocu" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="53" name="tGND_GNDA" color="7" fill="9" visible="no" active="no"/>
 <layer number="54" name="bGND_GNDA" color="1" fill="9" visible="no" active="no"/>
@@ -267,7 +267,7 @@
 <smd name="GND-8" x="-27.94" y="1.27" dx="1.27" dy="0.635" layer="1"/>
 <smd name="3V3-8" x="-27.94" y="0" dx="1.27" dy="0.635" layer="1"/>
 <smd name="VB" x="-27.94" y="-1.27" dx="1.27" dy="0.635" layer="1"/>
-<pad name="24-" x="5.08" y="-7.62" drill="1" rot="R90"/>
+<pad name="24-" x="5.08" y="-7.62" locked="yes" drill="1" rot="R90"/>
 <pad name="GND3" x="2.54" y="7.62" drill="1" shape="square"/>
 <pad name="D-" x="-31.496" y="0.9" drill="1"/>
 <pad name="D+" x="-32.004" y="-0.9" drill="1"/>
@@ -361,7 +361,7 @@
 <wire x1="-22.86" y1="-5.969" x2="-25.4" y2="-5.969" width="0.127" layer="21"/>
 <wire x1="-25.4" y1="-5.969" x2="-25.4" y2="-3.302" width="0.127" layer="21"/>
 <wire x1="-22.86" y1="-3.302" x2="-22.86" y2="-5.969" width="0.127" layer="21"/>
-<pad name="24-A10/TX6/SCL2" x="7.62" y="-7.62" drill="1" rot="R90"/>
+<pad name="24-A10/TX6/SCL2" x="7.62" y="-7.62" locked="yes" drill="1" rot="R90"/>
 <pad name="GND3" x="5.08" y="7.62" drill="1" shape="square"/>
 <pad name="D-" x="-30.25" y="1" drill="1"/>
 <pad name="D+" x="-30.25" y="-1" drill="1"/>
@@ -467,109 +467,9 @@
 <wire x1="-22.86" y1="-5.969" x2="-25.4" y2="-5.969" width="0.127" layer="21"/>
 <wire x1="-25.4" y1="-5.969" x2="-25.4" y2="-3.302" width="0.127" layer="21"/>
 <wire x1="-22.86" y1="-3.302" x2="-22.86" y2="-5.969" width="0.127" layer="21"/>
-<pad name="24-A10/TX6/SCL2" x="7.62" y="-7.62" drill="1" rot="R90"/>
+<pad name="24-A10/TX6/SCL2" x="7.62" y="-7.62" locked="yes" drill="1" rot="R90"/>
 <pad name="GND3" x="5.08" y="7.62" drill="1" shape="square"/>
 <circle x="11.43" y="0" radius="1" width="0.127" layer="21"/>
-<polygon width="0.127" layer="51" pour="hatch">
-<vertex x="-31.75" y="16.51"/>
-<vertex x="3.81" y="16.51"/>
-<vertex x="3.81" y="-20.32"/>
-<vertex x="-31.75" y="-20.32"/>
-</polygon>
-<text x="-27.94" y="-16.51" size="3.81" layer="51">Audio Board</text>
-</package>
-<package name="TEENSY41-STRIP">
-<pad name="GND1" x="-29.21" y="-7.62" drill="1" shape="square"/>
-<pad name="GND6" x="-26.67" y="7.62" drill="1" shape="square" rot="R90"/>
-<pad name="VIN" x="-29.21" y="7.62" drill="1" diameter="1.6764" rot="R180"/>
-<pad name="3V3-3" x="-24.13" y="7.62" drill="1" shape="octagon" rot="R90"/>
-<pad name="13-SCK/LED" x="3.81" y="7.62" drill="1" rot="R90"/>
-<pad name="12-MISO/MQSL" x="3.81" y="-7.62" drill="1" rot="R90"/>
-<pad name="0-RX1/CS1/CRX2" x="-26.67" y="-7.62" drill="1" rot="R90"/>
-<pad name="1-TX1/MISO1/CTX2" x="-24.13" y="-7.62" drill="1" rot="R90"/>
-<pad name="2-OUT2" x="-21.59" y="-7.62" drill="1" rot="R90"/>
-<pad name="3-LRCLK2" x="-19.05" y="-7.62" drill="1" rot="R90"/>
-<pad name="4-BCLK2" x="-16.51" y="-7.62" drill="1" rot="R90"/>
-<pad name="5-IN2" x="-13.97" y="-7.62" drill="1" rot="R180"/>
-<pad name="6-OUT1D" x="-11.43" y="-7.62" drill="1" rot="R90"/>
-<pad name="7-RX2/OUT1A" x="-8.89" y="-7.62" drill="1" rot="R90"/>
-<pad name="8-TX2/IN1" x="-6.35" y="-7.62" drill="1" rot="R90"/>
-<pad name="9-OUT1C" x="-3.81" y="-7.62" drill="1" rot="R90"/>
-<pad name="10-CS\MQSR" x="-1.27" y="-7.62" drill="1" rot="R90"/>
-<pad name="11-MOSI/CTX1" x="1.27" y="-7.62" drill="1" rot="R90"/>
-<pad name="VUSB" x="-26.67" y="5.08" drill="1" rot="R90"/>
-<pad name="14-A0/TX3/SPDIF_OUT" x="1.27" y="7.62" drill="1" rot="R90"/>
-<pad name="15-A1/RX3/SPDIF_IN" x="-1.27" y="7.62" drill="1" rot="R90"/>
-<pad name="16-A2/RX4/SCL1" x="-3.81" y="7.62" drill="1" rot="R90"/>
-<pad name="17-A3/TX4/SDA1" x="-6.35" y="7.62" drill="1" rot="R90"/>
-<pad name="18-A4/SDA0" x="-8.89" y="7.62" drill="1" rot="R90"/>
-<pad name="19-A5/SCL0" x="-11.43" y="7.62" drill="1" rot="R90"/>
-<pad name="20-A6/TX5/LRCLK1" x="-13.97" y="7.62" drill="1" rot="R90"/>
-<pad name="21-A7/RX5/BCLK1" x="-16.51" y="7.62" drill="1" rot="R90"/>
-<pad name="22-A8/CTX1" x="-19.05" y="7.62" drill="1" rot="R90"/>
-<pad name="23-A9/CRX1/MCLK1" x="-21.59" y="7.62" drill="1" rot="R90"/>
-<wire x1="-30.48" y1="8.89" x2="-30.48" y2="-8.89" width="0.127" layer="21"/>
-<wire x1="-30.48" y1="-8.89" x2="30.48" y2="-8.89" width="0.127" layer="21"/>
-<wire x1="30.48" y1="-8.89" x2="30.48" y2="8.89" width="0.127" layer="21"/>
-<wire x1="30.48" y1="8.89" x2="-30.48" y2="8.89" width="0.127" layer="21"/>
-<wire x1="-31.75" y1="3.81" x2="-31.75" y2="-3.81" width="0.127" layer="21"/>
-<wire x1="-31.75" y1="-3.81" x2="-26.035" y2="-3.81" width="0.127" layer="21"/>
-<wire x1="-26.035" y1="-3.81" x2="-26.035" y2="3.81" width="0.127" layer="21"/>
-<wire x1="-26.035" y1="3.81" x2="-31.75" y2="3.81" width="0.127" layer="21"/>
-<text x="-6.35" y="0" size="1.27" layer="21">TEENSY 4.1</text>
-<text x="-26.418909375" y="-1.124321875" size="0.8128" layer="21" rot="R90">USB</text>
-<pad name="3V3-1" x="6.35" y="-7.62" drill="1" shape="octagon" rot="R90"/>
-<pad name="25-A11/RX6/SDA2" x="11.43" y="-7.62" drill="1" rot="R90"/>
-<pad name="26-A12/MOSI1" x="13.97" y="-7.62" drill="1" rot="R90"/>
-<pad name="27-A13/SCK1" x="16.51" y="-7.62" drill="1" rot="R90"/>
-<pad name="28-RX7" x="19.05" y="-7.62" drill="1" rot="R90"/>
-<pad name="29-TX7" x="21.59" y="-7.62" drill="1" rot="R90"/>
-<pad name="30-CRX3" x="24.13" y="-7.62" drill="1" rot="R90"/>
-<pad name="31-CTX3" x="26.67" y="-7.62" drill="1" rot="R90"/>
-<pad name="32-OUT1B" x="29.21" y="-7.62" drill="1" rot="R90"/>
-<pad name="41-A17/MISO1" x="8.89" y="7.62" drill="1" rot="R90"/>
-<pad name="40-A16/CS1" x="11.43" y="7.62" drill="1" rot="R90"/>
-<pad name="39-A15/CS/OUT1A" x="13.97" y="7.62" drill="1" rot="R90"/>
-<pad name="38-A14/CS/IN1" x="16.51" y="7.62" drill="1" rot="R90"/>
-<pad name="37-PWM" x="19.05" y="7.62" drill="1" rot="R90"/>
-<pad name="36-PWM" x="21.59" y="7.62" drill="1" rot="R90"/>
-<pad name="35-TX8" x="24.13" y="7.62" drill="1" rot="R90"/>
-<pad name="34-RX8" x="26.67" y="7.62" drill="1" rot="R90"/>
-<pad name="33-MCLK2" x="29.21" y="7.62" drill="1" rot="R90"/>
-<wire x1="10.8966" y1="-1.54" x2="14.5034" y2="-1.54" width="0.127" layer="21"/>
-<wire x1="14.5034" y1="-1.54" x2="14.5034" y2="1.54" width="0.127" layer="21"/>
-<wire x1="14.5034" y1="1.54" x2="10.8966" y2="1.54" width="0.127" layer="21"/>
-<wire x1="10.8966" y1="1.54" x2="10.8966" y2="-1.54" width="0.127" layer="21"/>
-<wire x1="30.48" y1="6.35" x2="17.78" y2="6.35" width="0.127" layer="21"/>
-<wire x1="17.78" y1="6.35" x2="17.78" y2="-6.35" width="0.127" layer="21"/>
-<wire x1="17.78" y1="-6.35" x2="30.48" y2="-6.35" width="0.127" layer="21"/>
-<wire x1="30.48" y1="-6.35" x2="30.48" y2="-5.08" width="0.127" layer="21"/>
-<wire x1="30.48" y1="-5.08" x2="30.48" y2="5.08" width="0.127" layer="21"/>
-<wire x1="30.48" y1="5.08" x2="29.21" y2="5.08" width="0.127" layer="21"/>
-<wire x1="29.21" y1="5.08" x2="29.21" y2="-5.08" width="0.127" layer="21"/>
-<wire x1="29.21" y1="-5.08" x2="30.48" y2="-5.08" width="0.127" layer="21"/>
-<pad name="+5V" x="-22.86" y="-4.62" drill="1" rot="R90"/>
-<pad name="DM" x="-20.32" y="-4.62" drill="1" rot="R90"/>
-<pad name="DP" x="-17.78" y="-4.62" drill="1" rot="R90"/>
-<pad name="GND4" x="-15.24" y="-4.62" drill="1" rot="R90"/>
-<pad name="GND5" x="-12.7" y="-4.62" drill="1" rot="R90"/>
-<wire x1="-24.13" y1="-3.302" x2="-21.59" y2="-3.302" width="0.127" layer="21"/>
-<wire x1="-21.59" y1="-3.302" x2="-11.43" y2="-3.302" width="0.127" layer="21"/>
-<wire x1="-11.43" y1="-3.302" x2="-11.43" y2="-5.969" width="0.127" layer="21"/>
-<wire x1="-11.43" y1="-5.969" x2="-21.59" y2="-5.969" width="0.127" layer="21"/>
-<wire x1="-21.59" y1="-5.969" x2="-24.13" y2="-5.969" width="0.127" layer="21"/>
-<wire x1="-24.13" y1="-5.969" x2="-24.13" y2="-3.302" width="0.127" layer="21"/>
-<wire x1="-21.59" y1="-3.302" x2="-21.59" y2="-5.969" width="0.127" layer="21"/>
-<pad name="24-A10/TX6/SCL2" x="8.89" y="-7.62" drill="1" rot="R90"/>
-<pad name="GND3" x="6.35" y="7.62" drill="1" shape="square"/>
-<circle x="12.7" y="0" radius="1" width="0.127" layer="21"/>
-<polygon width="0.127" layer="51" pour="hatch">
-<vertex x="-30.48" y="16.51"/>
-<vertex x="5.08" y="16.51"/>
-<vertex x="5.08" y="-20.32"/>
-<vertex x="-30.48" y="-20.32"/>
-</polygon>
-<text x="-26.67" y="-16.51" size="3.81" layer="51">Audio Board</text>
 </package>
 </packages>
 <symbols>
@@ -808,131 +708,70 @@
 <wire x1="14.986" y1="33.782" x2="20.574" y2="33.782" width="0.0762" layer="94"/>
 </symbol>
 <symbol name="TEENSY41-E">
-<pin name="14-A0/TX3/SPDIF_OUT" x="30.48" y="7.62" visible="pin" length="middle" rot="R180"/>
-<pin name="15-A1/RX3/SPDIF_IN" x="30.48" y="10.16" visible="pin" length="middle" rot="R180"/>
-<pin name="16-A2/RX4/SCL1" x="30.48" y="12.7" visible="pin" length="middle" rot="R180"/>
-<pin name="17-A3/TX4/SDA1" x="30.48" y="15.24" visible="pin" length="middle" rot="R180"/>
-<pin name="18-A4/SDA0" x="30.48" y="17.78" visible="pin" length="middle" rot="R180"/>
-<pin name="19-A5/SCL0" x="30.48" y="20.32" visible="pin" length="middle" rot="R180"/>
-<pin name="20-A6/TX5/LRCLK1" x="30.48" y="22.86" visible="pin" length="middle" rot="R180"/>
-<pin name="21-A7/RX5/BCLK1" x="30.48" y="25.4" visible="pin" length="middle" rot="R180"/>
-<pin name="22-A8/CTX1" x="30.48" y="27.94" visible="pin" length="middle" rot="R180"/>
-<pin name="23-A9/CRX1/MCLK1" x="30.48" y="30.48" visible="pin" length="middle" rot="R180"/>
-<pin name="8-TX2/IN1" x="-30.48" y="15.24" visible="pin" length="middle"/>
-<pin name="5-IN2" x="-30.48" y="22.86" visible="pin" length="middle"/>
-<pin name="3-LRCLK2" x="-30.48" y="27.94" visible="pin" length="middle"/>
-<pin name="4-BCLK2" x="-30.48" y="25.4" visible="pin" length="middle"/>
-<pin name="0-RX1/CS1/CRX2" x="-30.48" y="35.56" visible="pin" length="middle"/>
-<pin name="1-TX1/MISO1/CTX2" x="-30.48" y="33.02" visible="pin" length="middle"/>
-<pin name="VUSB" x="2.54" y="53.34" visible="pin" length="middle" rot="R270"/>
-<pin name="GND1" x="-30.48" y="38.1" visible="pin" length="middle"/>
-<pin name="GND2" x="0" y="-27.94" visible="pin" length="middle" rot="R90"/>
-<pin name="GND3" x="30.48" y="2.54" visible="pin" length="middle" rot="R180"/>
-<pin name="VBAT" x="-5.08" y="-27.94" visible="pin" length="middle" rot="R90"/>
-<pin name="PROGRAM" x="2.54" y="-27.94" visible="pin" length="middle" rot="R90"/>
-<pin name="ON/OFF" x="5.08" y="-27.94" visible="pin" length="middle" rot="R90"/>
-<pin name="6-OUT1D" x="-30.48" y="20.32" visible="pin" length="middle"/>
-<pin name="7-RX2/OUT1A" x="-30.48" y="17.78" visible="pin" length="middle"/>
-<pin name="2-OUT2" x="-30.48" y="30.48" visible="pin" length="middle"/>
-<pin name="9-OUT1C" x="-30.48" y="12.7" visible="pin" length="middle"/>
-<pin name="10-CS/MQSR" x="-30.48" y="10.16" visible="pin" length="middle"/>
-<pin name="11-MOSI/CTX1" x="-30.48" y="7.62" visible="pin" length="middle"/>
-<pin name="12-MISO/MQSL" x="-30.48" y="5.08" visible="pin" length="middle"/>
-<pin name="13-SCK/LED" x="30.48" y="5.08" visible="pin" length="middle" rot="R180"/>
-<pin name="3V3-2" x="-2.54" y="-27.94" visible="pin" length="middle" rot="R90"/>
-<pin name="3V3-1" x="-30.48" y="2.54" visible="pin" length="middle"/>
-<pin name="VIN" x="30.48" y="38.1" visible="pin" length="middle" rot="R180"/>
-<wire x1="25.4" y1="48.26" x2="-25.4" y2="48.26" width="0.254" layer="94"/>
-<wire x1="-25.4" y1="48.26" x2="-25.4" y2="-22.86" width="0.254" layer="94"/>
-<wire x1="-25.4" y1="-22.86" x2="25.4" y2="-22.86" width="0.254" layer="94"/>
-<wire x1="25.4" y1="-22.86" x2="25.4" y2="48.26" width="0.254" layer="94"/>
-<pin name="24-A10/TX6/SCL2" x="-30.48" y="0" visible="pin" length="middle"/>
-<pin name="25-A11/RX6/SDA2" x="-30.48" y="-2.54" visible="pin" length="middle"/>
-<pin name="26-A12/MOSI1" x="-30.48" y="-5.08" visible="pin" length="middle"/>
-<pin name="27-A13/SCK1" x="-30.48" y="-7.62" visible="pin" length="middle"/>
-<pin name="28-RX7" x="-30.48" y="-10.16" visible="pin" length="middle"/>
-<pin name="29-TX7" x="-30.48" y="-12.7" visible="pin" length="middle"/>
-<pin name="30-CRX3" x="-30.48" y="-15.24" visible="pin" length="middle"/>
-<pin name="31-CTX3" x="-30.48" y="-17.78" visible="pin" length="middle"/>
-<pin name="32-OUT1B" x="-30.48" y="-20.32" visible="pin" length="middle"/>
-<pin name="33-MCLK2" x="30.48" y="-20.32" visible="pin" length="middle" rot="R180"/>
-<pin name="38-A14/CS/IN1" x="30.48" y="-7.62" visible="pin" length="middle" rot="R180"/>
-<pin name="39-A15/CS/OUT1A" x="30.48" y="-5.08" visible="pin" length="middle" rot="R180"/>
-<pin name="40-A16/CS1" x="30.48" y="-2.54" visible="pin" length="middle" rot="R180"/>
-<pin name="41-A17/MISO1" x="30.48" y="0" visible="pin" length="middle" rot="R180"/>
-<pin name="34-RX8" x="30.48" y="-17.78" visible="pin" length="middle" rot="R180"/>
-<pin name="35/TX8" x="30.48" y="-15.24" visible="pin" length="middle" rot="R180"/>
-<pin name="36-PWM" x="30.48" y="-12.7" visible="pin" length="middle" rot="R180"/>
-<pin name="37-PWM" x="30.48" y="-10.16" visible="pin" length="middle" rot="R180"/>
-<pin name="DP" x="-17.78" y="53.34" visible="pin" length="middle" rot="R270"/>
-<pin name="DM" x="-20.32" y="53.34" visible="pin" length="middle" rot="R270"/>
-<pin name="GND5" x="-12.7" y="53.34" visible="pin" length="middle" rot="R270"/>
-<pin name="GND4" x="-15.24" y="53.34" visible="pin" length="middle" rot="R270"/>
-<pin name="GND6" x="30.48" y="35.56" visible="pin" length="middle" rot="R180"/>
-<pin name="5V" x="-22.86" y="53.34" visible="pin" length="middle" rot="R270"/>
-<text x="9.652" y="49.022" size="1.778" layer="94">TEENSY 4.1</text>
-<pin name="3V3-3" x="30.48" y="33.02" visible="pin" length="middle" rot="R180"/>
-</symbol>
-<symbol name="TEENSY41-STRIP">
-<pin name="14-A0/TX3/SPDIF_OUT" x="30.48" y="5.08" visible="pin" length="middle" rot="R180"/>
-<pin name="15-A1/RX3/SPDIF_IN" x="30.48" y="7.62" visible="pin" length="middle" rot="R180"/>
-<pin name="16-A2/RX4/SCL1" x="30.48" y="10.16" visible="pin" length="middle" rot="R180"/>
-<pin name="17-A3/TX4/SDA1" x="30.48" y="12.7" visible="pin" length="middle" rot="R180"/>
-<pin name="18-A4/SDA0" x="30.48" y="15.24" visible="pin" length="middle" rot="R180"/>
-<pin name="19-A5/SCL0" x="30.48" y="17.78" visible="pin" length="middle" rot="R180"/>
-<pin name="20-A6/TX5/LRCLK1" x="30.48" y="20.32" visible="pin" length="middle" rot="R180"/>
-<pin name="21-A7/RX5/BCLK1" x="30.48" y="22.86" visible="pin" length="middle" rot="R180"/>
-<pin name="22-A8/CTX1" x="30.48" y="25.4" visible="pin" length="middle" rot="R180"/>
-<pin name="23-A9/CRX1/MCLK1" x="30.48" y="27.94" visible="pin" length="middle" rot="R180"/>
-<pin name="8-TX2/IN1" x="-30.48" y="12.7" visible="pin" length="middle"/>
-<pin name="5-IN2" x="-30.48" y="20.32" visible="pin" length="middle"/>
-<pin name="3-LRCLK2" x="-30.48" y="25.4" visible="pin" length="middle"/>
-<pin name="4-BCLK2" x="-30.48" y="22.86" visible="pin" length="middle"/>
-<pin name="0-RX1/CS1/CRX2" x="-30.48" y="33.02" visible="pin" length="middle"/>
-<pin name="1-TX1/MISO1/CTX2" x="-30.48" y="30.48" visible="pin" length="middle"/>
-<pin name="VUSB" x="2.54" y="50.8" visible="pin" length="middle" rot="R270"/>
-<pin name="GND1" x="-30.48" y="35.56" visible="pin" length="middle"/>
-<pin name="GND3" x="30.48" y="0" visible="pin" length="middle" rot="R180"/>
-<pin name="6-OUT1D" x="-30.48" y="17.78" visible="pin" length="middle"/>
-<pin name="7-RX2/OUT1A" x="-30.48" y="15.24" visible="pin" length="middle"/>
-<pin name="2-OUT2" x="-30.48" y="27.94" visible="pin" length="middle"/>
-<pin name="9-OUT1C" x="-30.48" y="10.16" visible="pin" length="middle"/>
-<pin name="10-CS/MQSR" x="-30.48" y="7.62" visible="pin" length="middle"/>
-<pin name="11-MOSI/CTX1" x="-30.48" y="5.08" visible="pin" length="middle"/>
-<pin name="12-MISO/MQSL" x="-30.48" y="2.54" visible="pin" length="middle"/>
-<pin name="13-SCK/LED" x="30.48" y="2.54" visible="pin" length="middle" rot="R180"/>
-<pin name="3V3-1" x="-30.48" y="0" visible="pin" length="middle"/>
-<pin name="VIN" x="30.48" y="35.56" visible="pin" length="middle" rot="R180"/>
-<wire x1="25.4" y1="45.72" x2="-25.4" y2="45.72" width="0.254" layer="94"/>
-<wire x1="-25.4" y1="45.72" x2="-25.4" y2="-25.4" width="0.254" layer="94"/>
-<wire x1="-25.4" y1="-25.4" x2="25.4" y2="-25.4" width="0.254" layer="94"/>
-<wire x1="25.4" y1="-25.4" x2="25.4" y2="45.72" width="0.254" layer="94"/>
-<pin name="24-A10/TX6/SCL2" x="-30.48" y="-2.54" visible="pin" length="middle"/>
-<pin name="25-A11/RX6/SDA2" x="-30.48" y="-5.08" visible="pin" length="middle"/>
-<pin name="26-A12/MOSI1" x="-30.48" y="-7.62" visible="pin" length="middle"/>
-<pin name="27-A13/SCK1" x="-30.48" y="-10.16" visible="pin" length="middle"/>
-<pin name="28-RX7" x="-30.48" y="-12.7" visible="pin" length="middle"/>
-<pin name="29-TX7" x="-30.48" y="-15.24" visible="pin" length="middle"/>
-<pin name="30-CRX3" x="-30.48" y="-17.78" visible="pin" length="middle"/>
-<pin name="31-CTX3" x="-30.48" y="-20.32" visible="pin" length="middle"/>
-<pin name="32-OUT1B" x="-30.48" y="-22.86" visible="pin" length="middle"/>
-<pin name="33-MCLK2" x="30.48" y="-22.86" visible="pin" length="middle" rot="R180"/>
-<pin name="38-A14/CS/IN1" x="30.48" y="-10.16" visible="pin" length="middle" rot="R180"/>
-<pin name="39-A15/CS/OUT1A" x="30.48" y="-7.62" visible="pin" length="middle" rot="R180"/>
-<pin name="40-A16/CS1" x="30.48" y="-5.08" visible="pin" length="middle" rot="R180"/>
-<pin name="41-A17/MISO1" x="30.48" y="-2.54" visible="pin" length="middle" rot="R180"/>
-<pin name="34-RX8" x="30.48" y="-20.32" visible="pin" length="middle" rot="R180"/>
-<pin name="35/TX8" x="30.48" y="-17.78" visible="pin" length="middle" rot="R180"/>
-<pin name="36-PWM" x="30.48" y="-15.24" visible="pin" length="middle" rot="R180"/>
-<pin name="37-PWM" x="30.48" y="-12.7" visible="pin" length="middle" rot="R180"/>
-<pin name="DP" x="-17.78" y="50.8" visible="pin" length="middle" rot="R270"/>
-<pin name="DM" x="-20.32" y="50.8" visible="pin" length="middle" rot="R270"/>
-<pin name="GND5" x="-12.7" y="50.8" visible="pin" length="middle" rot="R270"/>
-<pin name="GND4" x="-15.24" y="50.8" visible="pin" length="middle" rot="R270"/>
-<pin name="GND6" x="30.48" y="33.02" visible="pin" length="middle" rot="R180"/>
-<pin name="5V" x="-22.86" y="50.8" visible="pin" length="middle" rot="R270"/>
-<text x="9.652" y="46.482" size="1.778" layer="94">TEENSY 4.1</text>
-<pin name="3V3-3" x="30.48" y="30.48" visible="pin" length="middle" rot="R180"/>
+<pin name="14-A0/TX3/SPDIF_OUT" x="-30.48" y="35.56" visible="pin" length="middle"/>
+<pin name="15-A1/RX3/SPDIF_IN" x="-30.48" y="33.02" visible="pin" length="middle"/>
+<pin name="16-A2/RX4/SCL1" x="-30.48" y="30.48" visible="pin" length="middle"/>
+<pin name="17-A3/TX4/SDA1" x="-30.48" y="27.94" visible="pin" length="middle"/>
+<pin name="18-A4/SDA0" x="-30.48" y="25.4" visible="pin" length="middle"/>
+<pin name="19-A5/SCL0" x="-30.48" y="22.86" visible="pin" length="middle"/>
+<pin name="20-A6/TX5/LRCLK1" x="-30.48" y="20.32" visible="pin" length="middle"/>
+<pin name="21-A7/RX5/BCLK1" x="-30.48" y="17.78" visible="pin" length="middle"/>
+<pin name="22-A8/CTX1" x="-30.48" y="15.24" visible="pin" length="middle"/>
+<pin name="23-A9/CRX1/MCLK1" x="-30.48" y="12.7" visible="pin" length="middle"/>
+<pin name="8-TX2/IN1" x="25.4" y="17.78" visible="pin" length="middle" rot="R180"/>
+<pin name="5-IN2" x="-30.48" y="-22.86" visible="pin" length="middle"/>
+<pin name="3-LRCLK2" x="-30.48" y="-17.78" visible="pin" length="middle"/>
+<pin name="4-BCLK2" x="-30.48" y="-20.32" visible="pin" length="middle"/>
+<pin name="0-RX1/CS1/CRX2" x="25.4" y="27.94" visible="pin" length="middle" rot="R180"/>
+<pin name="1-TX1/MISO1/CTX2" x="25.4" y="25.4" visible="pin" length="middle" rot="R180"/>
+<pin name="VUSB" x="25.4" y="33.02" visible="pin" length="middle" rot="R180"/>
+<pin name="GND1" x="-7.62" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="GND2" x="-5.08" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="GND3" x="-2.54" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="VBAT" x="-30.48" y="-27.94" visible="pin" length="middle"/>
+<pin name="PROGRAM" x="-30.48" y="-30.48" visible="pin" length="middle"/>
+<pin name="ON/OFF" x="-27.94" y="40.64" visible="pin" length="short"/>
+<pin name="6-OUT1D" x="25.4" y="-20.32" visible="pin" length="middle" rot="R180"/>
+<pin name="7-RX2/OUT1A" x="25.4" y="20.32" visible="pin" length="middle" rot="R180"/>
+<pin name="2-OUT2" x="25.4" y="-22.86" visible="pin" length="middle" rot="R180"/>
+<pin name="9-OUT1C" x="25.4" y="-17.78" visible="pin" length="middle" rot="R180"/>
+<pin name="10-CS/MQSR" x="25.4" y="-2.54" visible="pin" length="middle" rot="R180"/>
+<pin name="11-MOSI/CTX1" x="25.4" y="-5.08" visible="pin" length="middle" rot="R180"/>
+<pin name="12-MISO/MQSL" x="25.4" y="-7.62" visible="pin" length="middle" rot="R180"/>
+<pin name="13-SCK/LED" x="25.4" y="-10.16" visible="pin" length="middle" rot="R180"/>
+<pin name="3V3-2" x="7.62" y="45.72" visible="pin" length="short" rot="R270"/>
+<pin name="3V3-1" x="5.08" y="45.72" visible="pin" length="short" rot="R270"/>
+<pin name="VIN" x="0" y="45.72" visible="pin" length="short" rot="R270"/>
+<wire x1="20.32" y1="43.18" x2="-25.4" y2="43.18" width="0.254" layer="94"/>
+<wire x1="-25.4" y1="43.18" x2="-25.4" y2="-35.56" width="0.254" layer="94"/>
+<wire x1="-25.4" y1="-35.56" x2="20.32" y2="-35.56" width="0.254" layer="94"/>
+<wire x1="20.32" y1="-35.56" x2="20.32" y2="43.18" width="0.254" layer="94"/>
+<pin name="24-A10/TX6/SCL2" x="-30.48" y="10.16" visible="pin" length="middle"/>
+<pin name="25-A11/RX6/SDA2" x="-30.48" y="7.62" visible="pin" length="middle"/>
+<pin name="26-A12/MOSI1" x="-30.48" y="5.08" visible="pin" length="middle"/>
+<pin name="27-A13/SCK1" x="-30.48" y="2.54" visible="pin" length="middle"/>
+<pin name="28-RX7" x="25.4" y="12.7" visible="pin" length="middle" rot="R180"/>
+<pin name="29-TX7" x="25.4" y="10.16" visible="pin" length="middle" rot="R180"/>
+<pin name="30-CRX3" x="-30.48" y="-12.7" visible="pin" length="middle"/>
+<pin name="31-CTX3" x="-30.48" y="-15.24" visible="pin" length="middle"/>
+<pin name="32-OUT1B" x="25.4" y="-15.24" visible="pin" length="middle" rot="R180"/>
+<pin name="33-MCLK2" x="25.4" y="-25.4" visible="pin" length="middle" rot="R180"/>
+<pin name="38-A14/CS/IN1" x="-30.48" y="0" visible="pin" length="middle"/>
+<pin name="39-A15/CS/OUT1A" x="-30.48" y="-2.54" visible="pin" length="middle"/>
+<pin name="40-A16/CS1" x="-30.48" y="-5.08" visible="pin" length="middle"/>
+<pin name="41-A17/MISO1" x="-30.48" y="-7.62" visible="pin" length="middle"/>
+<pin name="34-RX8" x="25.4" y="5.08" visible="pin" length="middle" rot="R180"/>
+<pin name="35/TX8" x="25.4" y="2.54" visible="pin" length="middle" rot="R180"/>
+<pin name="36-PWM" x="25.4" y="-30.48" visible="pin" length="middle" rot="R180"/>
+<pin name="37-PWM" x="25.4" y="-33.02" visible="pin" length="middle" rot="R180"/>
+<pin name="DP" x="25.4" y="35.56" visible="pin" length="middle" rot="R180"/>
+<pin name="DM" x="25.4" y="38.1" visible="pin" length="middle" rot="R180"/>
+<pin name="GND5" x="2.54" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="GND4" x="0" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="GND6" x="5.08" y="-38.1" visible="pin" length="short" rot="R90"/>
+<pin name="5V" x="25.4" y="40.64" visible="pin" length="middle" rot="R180"/>
+<text x="-23.368" y="43.942" size="1.778" layer="94">TEENSY 4.1</text>
+<pin name="3V3-3" x="10.16" y="45.72" visible="pin" length="short" rot="R270"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -1249,74 +1088,6 @@
 <connect gate="G$1" pin="ON/OFF" pad="ON/OFF"/>
 <connect gate="G$1" pin="PROGRAM" pad="PROGRAM"/>
 <connect gate="G$1" pin="VBAT" pad="VBAT"/>
-<connect gate="G$1" pin="VIN" pad="VIN"/>
-<connect gate="G$1" pin="VUSB" pad="VUSB"/>
-</connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="TEENSY41-STRIP">
-<gates>
-<gate name="G$1" symbol="TEENSY41-STRIP" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="TEENSY41-STRIP">
-<connects>
-<connect gate="G$1" pin="0-RX1/CS1/CRX2" pad="0-RX1/CS1/CRX2"/>
-<connect gate="G$1" pin="1-TX1/MISO1/CTX2" pad="1-TX1/MISO1/CTX2"/>
-<connect gate="G$1" pin="10-CS/MQSR" pad="10-CS\MQSR"/>
-<connect gate="G$1" pin="11-MOSI/CTX1" pad="11-MOSI/CTX1"/>
-<connect gate="G$1" pin="12-MISO/MQSL" pad="12-MISO/MQSL"/>
-<connect gate="G$1" pin="13-SCK/LED" pad="13-SCK/LED"/>
-<connect gate="G$1" pin="14-A0/TX3/SPDIF_OUT" pad="14-A0/TX3/SPDIF_OUT"/>
-<connect gate="G$1" pin="15-A1/RX3/SPDIF_IN" pad="15-A1/RX3/SPDIF_IN"/>
-<connect gate="G$1" pin="16-A2/RX4/SCL1" pad="16-A2/RX4/SCL1"/>
-<connect gate="G$1" pin="17-A3/TX4/SDA1" pad="17-A3/TX4/SDA1"/>
-<connect gate="G$1" pin="18-A4/SDA0" pad="18-A4/SDA0"/>
-<connect gate="G$1" pin="19-A5/SCL0" pad="19-A5/SCL0"/>
-<connect gate="G$1" pin="2-OUT2" pad="2-OUT2"/>
-<connect gate="G$1" pin="20-A6/TX5/LRCLK1" pad="20-A6/TX5/LRCLK1"/>
-<connect gate="G$1" pin="21-A7/RX5/BCLK1" pad="21-A7/RX5/BCLK1"/>
-<connect gate="G$1" pin="22-A8/CTX1" pad="22-A8/CTX1"/>
-<connect gate="G$1" pin="23-A9/CRX1/MCLK1" pad="23-A9/CRX1/MCLK1"/>
-<connect gate="G$1" pin="24-A10/TX6/SCL2" pad="24-A10/TX6/SCL2"/>
-<connect gate="G$1" pin="25-A11/RX6/SDA2" pad="25-A11/RX6/SDA2"/>
-<connect gate="G$1" pin="26-A12/MOSI1" pad="26-A12/MOSI1"/>
-<connect gate="G$1" pin="27-A13/SCK1" pad="27-A13/SCK1"/>
-<connect gate="G$1" pin="28-RX7" pad="28-RX7"/>
-<connect gate="G$1" pin="29-TX7" pad="29-TX7"/>
-<connect gate="G$1" pin="3-LRCLK2" pad="3-LRCLK2"/>
-<connect gate="G$1" pin="30-CRX3" pad="30-CRX3"/>
-<connect gate="G$1" pin="31-CTX3" pad="31-CTX3"/>
-<connect gate="G$1" pin="32-OUT1B" pad="32-OUT1B"/>
-<connect gate="G$1" pin="33-MCLK2" pad="33-MCLK2"/>
-<connect gate="G$1" pin="34-RX8" pad="34-RX8"/>
-<connect gate="G$1" pin="35/TX8" pad="35-TX8"/>
-<connect gate="G$1" pin="36-PWM" pad="36-PWM"/>
-<connect gate="G$1" pin="37-PWM" pad="37-PWM"/>
-<connect gate="G$1" pin="38-A14/CS/IN1" pad="38-A14/CS/IN1"/>
-<connect gate="G$1" pin="39-A15/CS/OUT1A" pad="39-A15/CS/OUT1A"/>
-<connect gate="G$1" pin="3V3-1" pad="3V3-1"/>
-<connect gate="G$1" pin="3V3-3" pad="3V3-3"/>
-<connect gate="G$1" pin="4-BCLK2" pad="4-BCLK2"/>
-<connect gate="G$1" pin="40-A16/CS1" pad="40-A16/CS1"/>
-<connect gate="G$1" pin="41-A17/MISO1" pad="41-A17/MISO1"/>
-<connect gate="G$1" pin="5-IN2" pad="5-IN2"/>
-<connect gate="G$1" pin="5V" pad="+5V"/>
-<connect gate="G$1" pin="6-OUT1D" pad="6-OUT1D"/>
-<connect gate="G$1" pin="7-RX2/OUT1A" pad="7-RX2/OUT1A"/>
-<connect gate="G$1" pin="8-TX2/IN1" pad="8-TX2/IN1"/>
-<connect gate="G$1" pin="9-OUT1C" pad="9-OUT1C"/>
-<connect gate="G$1" pin="DM" pad="DM"/>
-<connect gate="G$1" pin="DP" pad="DP"/>
-<connect gate="G$1" pin="GND1" pad="GND1"/>
-<connect gate="G$1" pin="GND3" pad="GND3"/>
-<connect gate="G$1" pin="GND4" pad="GND4"/>
-<connect gate="G$1" pin="GND5" pad="GND5"/>
-<connect gate="G$1" pin="GND6" pad="GND6"/>
 <connect gate="G$1" pin="VIN" pad="VIN"/>
 <connect gate="G$1" pin="VUSB" pad="VUSB"/>
 </connects>

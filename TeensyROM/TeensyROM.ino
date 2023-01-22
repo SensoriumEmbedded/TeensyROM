@@ -23,24 +23,23 @@ void setup()
    Serial.print(F_CPU_ACTUAL);
    Serial.println(" Hz");
    
-   SetResetDeassert;
    DataBufDisable; //buffer disabled
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    SetDataPortDirOut; //default to output (for C64 Read)
-   //SetExROMDeassert;
-   //SetGameDeassert; 
-
-   for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
-   
-   attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
-   attachInterrupt( digitalPinToInterrupt(Reset_In_PIN), isrReset, FALLING );
-   
+   SetDMADeassert;
+   SetNMIDeassert;
+   SetUpMainMenuROM();
    SetLEDOn;
    SetDebug2Deassert;
-   SetUpMainMenuROM();
+   SetResetDeassert;
   
-   Serial.print("TeensyROM is on-line\n");
-
+   for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
+   pinMode(Reset_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
+   attachInterrupt( digitalPinToInterrupt(Reset_In_PIN), isrReset, FALLING );
+   attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
+   
+   Serial.print("TeensyROM 0.01 is on-line\n");
 } 
      
 void loop()
@@ -48,10 +47,11 @@ void loop()
    if (extReset)
    {
       Serial.println("External Reset detected"); 
-      SetUpMainMenuROM(); //back to main menu
       SetLEDOn;
-      DisableISR=false;
       extReset=false;
+      SetDebug2Deassert;
+      SetUpMainMenuROM(); //back to main menu
+      DisableISR=false;
       doReset=true;
    }
    
@@ -61,8 +61,8 @@ void loop()
       SetResetAssert; 
       delay(10); 
       SetResetDeassert;
-      while(digitalRead(Reset_In_PIN)==0); //avoid self reset detection
-      //delay(3); 
+      while(ReadReset==0); //avoid self reset detection
+      SetDebug2Deassert;
       doReset=false;
       extReset = false;
    }

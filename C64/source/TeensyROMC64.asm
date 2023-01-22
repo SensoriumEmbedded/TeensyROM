@@ -362,24 +362,6 @@ SIDCopyLoop:
    
 ;Initialize SID interrupt
 SIDOn:
-   ;sei
-   ;lda #<irqSID
-   ;ldx #>irqSID
-   ;sta $314   ;CINV,,\ HW IRQ Int
-   ;stx $315
-   ;lda #$1b
-   ;ldx #$00
-   ;ldy #$7f 
-   ;sta $d011  ;VIC ctl reg
-   ;stx $d012   ;raster val
-   ;sty $dc0d   ;CIA int ctl
-   ;lda #$01
-   ;sta $d01a ;irq enable
-   ;sta $d019 ;VIC int flag reg; ACK any raster IRQs
-   ;lda #$00
-   ;jsr SIDCodeRAM ;Initialize music
-   ;cli
-
    lda #$00
    jsr SIDCodeRAM ;Initialize music
    lda #$7f

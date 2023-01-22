@@ -1,16 +1,18 @@
 
 
 #define PHI2_PIN            1  
-#define Reset_In_PIN        28  
+#define Reset_In_PIN         31  
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,         // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
-   29, Reset_In_PIN,    //BA, Reset_In_PIN
+   28, 29, Reset_In_PIN,    //DOT clk, BA, Reset
    };
 
 const uint8_t OutputPins[] = {
-   35, 9, 32, 6, // DataCEn, ExROM, Game, Reset
-   34,33,    //debug
+   35, 9, 32, // DataCEn, ExROM, Game
+   30, 25,    //DMA, NMI
+   34,33,     //debug
+   6,    //Reset_Out_PIN,
    };
 
 #define ReadGPIO6          (*(volatile uint32_t *)IMXRT_GPIO6_ADDRESS)
@@ -31,12 +33,22 @@ const uint8_t OutputPins[] = {
 
 #define DataBufDisable     CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
 #define DataBufEnable      CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
-#define SetResetAssert     CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
-#define SetResetDeassert   CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK 
-#define SetExROMAssert     CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
-#define SetExROMDeassert   CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK 
-#define SetGameAssert      CORE_PIN32_PORTSET = CORE_PIN32_BITMASK
-#define SetGameDeassert    CORE_PIN32_PORTCLEAR = CORE_PIN32_BITMASK 
+
+#define SetResetAssert     CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
+#define SetResetDeassert   CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
+//#define SetResetAssert     { CORE_PIN6_DDRREG  |= CORE_PIN6_BITMASK; CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; }   //make output, drive low
+//#define SetResetRelease    CORE_PIN6_DDRREG  &= ~CORE_PIN6_BITMASK      //make input (OC)
+#define ReadGPIO8          (*(volatile uint32_t *)IMXRT_GPIO8_ADDRESS)
+#define ReadReset          (ReadGPIO8 & CORE_PIN31_BITMASK)
+
+#define SetExROMAssert     CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
+#define SetExROMDeassert   CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
+#define SetGameAssert      CORE_PIN32_PORTCLEAR = CORE_PIN32_BITMASK //active low
+#define SetGameDeassert    CORE_PIN32_PORTSET = CORE_PIN32_BITMASK 
+#define SetDMAAssert       CORE_PIN30_PORTCLEAR = CORE_PIN30_BITMASK  //active low
+#define SetDMADeassert     CORE_PIN30_PORTSET = CORE_PIN30_BITMASK
+#define SetNMIAssert       CORE_PIN25_PORTCLEAR = CORE_PIN25_BITMASK //active low
+#define SetNMIDeassert     CORE_PIN25_PORTSET = CORE_PIN25_BITMASK 
 
 #define SetLEDOn           CORE_PIN34_PORTSET = CORE_PIN34_BITMASK
 #define SetLEDOff          CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 

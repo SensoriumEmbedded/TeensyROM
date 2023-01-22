@@ -10,7 +10,7 @@
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
   
-  batt back for USB
+  batt back for RTC
   test SD port
   Ethernet port?
   USB host port?
@@ -23,6 +23,10 @@ C64 code:
 --> options (funct keys): Exit to BASIC, Load from USB Host/SD/USB Drive
   transfer program/cart via USB
   SD access, USB thumb drive?
+  
+  default music state (on/off) saved in t4 internal eeprom
+  Get time from internet
+  
   
   assembly test program?
   Verify T41 speed on compile or setup()?   
@@ -47,3 +51,14 @@ These take the same amount of memory:
 //   RAM1: variables:7936, code:24280, padding:8488   free for local variables:483584
 //   RAM2: variables:12384  free for malloc/new:511904
    
+   
+   
+Features:
+Internal storage for instant access to xxMB of carts and prgs
+
+SD card
+USB Host (Thumb)
+USB Device (transfer from PC)
+Ethernet
+
+

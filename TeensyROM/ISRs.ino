@@ -2,6 +2,7 @@
 
 FASTRUN void isrReset()
 {
+   SetDebug2Assert;
    extReset = true;
 }
 
@@ -10,7 +11,7 @@ FASTRUN void isrPHI2()
    RESET_CYCLECOUNT;
    if (DisableISR) return;
    
- 	SetDebug2Assert;
+ 	//SetDebug2Assert;
    
    WaitUntil_nS(nS_RWnReady); 
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
@@ -142,7 +143,7 @@ FASTRUN void isrPHI2()
    
  
    //now the time-sensitive work is done, have a few hundred nS until the next interrupt...
-   SetDebug2Deassert;
+   //SetDebug2Deassert;
 }
 
 
