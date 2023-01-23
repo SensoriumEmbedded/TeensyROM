@@ -77,10 +77,10 @@ const StructROMDefs ROMMenu[] =
    rtPrg , "  Ember Head"       , ember_head_prg             , sizeof(ember_head_prg) ,
    rtPrg , "  Display Fractal"  , disp_fract_prg             , sizeof(disp_fract_prg) ,
    rtPrg , "  Draw!"            , draw01_prg                 , sizeof(draw01_prg    ) ,
-
    rtPrg , "DualCopy"           , DualCopy_prg               , sizeof(DualCopy_prg  ) ,
+   //not working:
    rtPrg , "80 Columns"         , a80columns_prg             , sizeof(a80columns_prg) ,
-   //rt8kHi, "Jupiter Lander"     , Jupiter_Lander_BIN         , //graphics messed up...
+   rt8kHi, "Jupiter Lander"     , Jupiter_Lander_BIN         , //graphics messed up...
 
 };
 

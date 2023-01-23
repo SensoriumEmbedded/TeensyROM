@@ -2,15 +2,15 @@
 
 *** Hardware
 --> order parts...
---> Bi-dir lev transl for Reset?
---> change out 7406 with something 3.3v powered, non-inverting 
-    ie 74LCX07 or 74LVC07
---> remaining control signals (IRQ, NMI, etc)
+--> remaining control signals(IRQ) Leave disconnected or
+-->      Bi-dir lev transl for Reset?
 
+-->Make Reset In from button only (as currently implemented) Use spare buffer for IRQ.
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
-  
-  batt back for RTC
+
+PCB Design:
+  batt back for RTC?
   test SD port
   Ethernet port?
   USB host port?
@@ -19,7 +19,6 @@
   
 *** Software
 C64 code:
--->exit to basic (for PRG run, etc) should unassert game/exrom
 --> options (funct keys): Exit to BASIC, Load from USB Host/SD/USB Drive
   transfer program/cart via USB
   SD access, USB thumb drive?

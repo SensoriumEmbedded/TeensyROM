@@ -6,11 +6,11 @@
 
 uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
-volatile uint8_t extReset = false;
+volatile uint8_t ResetBtnPressed = false;
+volatile uint8_t DisablePhi2ISR = false;
 uint16_t StreamStartAddr = 0;
 uint16_t StreamOffsetAddr = 0;
 uint8_t RegSelect = 0;
-uint8_t DisableISR = false;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
 
@@ -34,9 +34,9 @@ void setup()
    SetResetDeassert;
   
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
-   pinMode(Reset_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
-   attachInterrupt( digitalPinToInterrupt(Reset_In_PIN), isrReset, FALLING );
+   attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrResetBtn, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    
    Serial.print("TeensyROM 0.01 is on-line\n");
@@ -44,27 +44,29 @@ void setup()
      
 void loop()
 {
-   if (extReset)
+
+   if (ResetBtnPressed)
    {
       Serial.println("External Reset detected"); 
       SetLEDOn;
-      extReset=false;
+      ResetBtnPressed=false;
       SetDebug2Deassert;
       SetUpMainMenuROM(); //back to main menu
-      DisableISR=false;
+      DisablePhi2ISR=false;
       doReset=true;
    }
    
    if (doReset)
    {
-      Serial.println("Resetting C64"); 
+      Serial.print("Resetting C64..."); 
       SetResetAssert; 
       delay(10); 
-      SetResetDeassert;
       while(ReadReset==0); //avoid self reset detection
+      SetResetDeassert; //if self monitorring, place before while loop
       SetDebug2Deassert;
+      Serial.println("Done");
       doReset=false;
-      extReset = false;
+      ResetBtnPressed = false;
    }
 }
 

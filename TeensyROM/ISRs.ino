@@ -1,15 +1,14 @@
 
-
-FASTRUN void isrReset()
+FASTRUN void isrResetBtn()
 {
    SetDebug2Assert;
-   extReset = true;
+   ResetBtnPressed = true;
 }
 
 FASTRUN void isrPHI2()
 {
    RESET_CYCLECOUNT;
-   if (DisableISR) return;
+   if (DisablePhi2ISR) return;
    
  	//SetDebug2Assert;
    
@@ -76,12 +75,12 @@ FASTRUN void isrPHI2()
                switch(Data)
                {
                   case RCtlVanish: //will go out to lunch if called from ext ROM
-                           SetGameDeassert;
-                           SetExROMDeassert;      
-                           LOROM_Image = NULL;
-                           HIROM_Image = NULL;  
-                           DisableISR = true;
-                           SetLEDOff;
+                     SetGameDeassert;
+                     SetExROMDeassert;      
+                     LOROM_Image = NULL;
+                     HIROM_Image = NULL;  
+                     DisablePhi2ISR = true;
+                     SetLEDOff;
                      break;
                   case RCtlStartRom:
                      switch(ROMMenu[RegSelect].HW_Config)
