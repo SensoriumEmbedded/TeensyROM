@@ -8,9 +8,6 @@ uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
 volatile uint8_t ResetBtnPressed = false;
 volatile uint8_t DisablePhi2ISR = false;
-uint16_t StreamStartAddr = 0;
-uint16_t StreamOffsetAddr = 0;
-uint8_t RegSelect = 0;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
 

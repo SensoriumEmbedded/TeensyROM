@@ -7,10 +7,13 @@ FASTRUN void isrResetBtn()
 
 FASTRUN void isrPHI2()
 {
-   RESET_CYCLECOUNT;
    if (DisablePhi2ISR) return;
-   
+   RESET_CYCLECOUNT;
  	//SetDebug2Assert;
+   
+   static uint16_t StreamStartAddr = 0;
+   static uint16_t StreamOffsetAddr = 0;
+   static uint8_t RegSelect = 0;
    
    WaitUntil_nS(nS_RWnReady); 
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
@@ -81,6 +84,15 @@ FASTRUN void isrPHI2()
                      HIROM_Image = NULL;  
                      DisablePhi2ISR = true;
                      SetLEDOff;
+                     break;
+                  case RCtlVanishReset:  //called from ROM, but it's resetting anyway
+                     SetGameDeassert;
+                     SetExROMDeassert;      
+                     LOROM_Image = NULL;
+                     HIROM_Image = NULL;  
+                     DisablePhi2ISR = true;
+                     SetLEDOff;
+                     doReset=true;
                      break;
                   case RCtlStartRom:
                      switch(ROMMenu[RegSelect].HW_Config)

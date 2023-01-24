@@ -1,12 +1,13 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
- 
-   ;Registers:
-   PtrAddrLo  = $fb
-   PtrAddrHi  = $fc
+
+   ;RAM Registers:
+   PtrAddrLo   = $fb
+   PtrAddrHi   = $fc
    Ptr2AddrLo  = $fd
    Ptr2AddrHi  = $fe
+   RegMenuPageStart = $4e
    
    ;RAM coppies:
    VanishCodeRAM = $c000    
@@ -14,8 +15,8 @@
 
    ;These need to match Teensy Code!
    IO1Port           = $de00
-   BorderColor       = $d020 
-   BackgroundColor   = $d021
+   BorderColorReg    = $d020 
+   BackgndColorReg   = $d021
    
    MAX_ROMNAME_CHARS = 25
    
@@ -32,33 +33,93 @@
    rRegROMName    = IO1Port + 10 ;MAX_ROMNAME_CHARS max len
    
    RCtlVanish      = 0
-   RCtlStartRom    = 1
-   RCtlLoadFromSD  = 2
-   RCtlLoadFromUSB = 3
+   RCtlVanishReset = 1
+   RCtlStartRom    = 2
+   RCtlLoadFromSD  = 3
+   RCtlLoadFromUSB = 4
 
    rt16k  = 0
    rt8kHi = 1
    rt8kLo = 2
    rtPrg  = 3
 
+
    ;Kernal routines:
    IRQDefault = $ea31
    SendChar   = $ffd2
    ScanKey    = $ff9f ;SCNKEY
    GetIn      = $ffe4 ;GETIN
+   SetCursor  = $fff0 ;PLOT
    
    ;BASIC routines:
-   BasicWarmStartVect = $a002
+   BasicColdStartVect = $a000 ; $e394  58260
+   BasicWarmStartVect = $a002 ; $e37b  58235
    PrintString =  $ab1e
 
-
+   ;chr$ symbols
+   ChrBlack   = 144
+   ChrWhite   = 5
+   ChrRed     = 28
+   ChrCyan    = 159
+   ChrPurple  = 156
+   ChrGreen   = 30
+   ChrBlue    = 31
+   ChrYellow  = 158 
+   ChrOrange  = 129
+   ChrBrown   = 149
+   ChrLtRed   = 150
+   ChrDrkGrey = 151
+   ChrMedGrey = 152
+   ChrLtGreen = 153
+   ChrLtBlue  = 154
+   ChrLtGrey  = 155
+   
+   ChrF1      = 133
+   ChrF2      = 137
+   ChrF3      = 134
+   ChrF4      = 138
+   ChrF5      = 135
+   ChrF6      = 139
+   ChrF7      = 136
+   ChrF8      = 140
+   ChrToLower = 14
+   ChrToUpper = 142
+   ChrRvsOn   = 18
+   ChrRvsOff  = 146
+   ChrClear   = 147
+   ChrReturn  = 13
+   ChrSpace   = 32
+   
+;poke colors
+   pokeBlack   = 0
+   pokeWhite   = 1
+   pokeRed     = 2
+   pokeCyan    = 3
+   pokePurple  = 4
+   pokeGreen   = 5
+   pokeBlue    = 6
+   pokeYellow  = 7
+   pokeOrange  = 8
+   pokeBrown   = 9
+   pokeLtRed   = 10
+   pokeDrkGrey = 11
+   pokeMedGrey = 12
+   pokeLtGreen = 13
+   pokeLtBlue  = 14
+   pokeLtGrey  = 15
+   
+   ROMNumColor  = ChrMedGrey
+   OptionColor  = ChrYellow
+   TypeColor    = ChrLtBlue
+   NameColor    = ChrGreen
+   BorderColor  = pokePurple
+   BackgndColor = pokeBlack
+   MaxMenuItems = 17
 
 ;********************************   Cartridge begin   ********************************   
 
 ;8k Cartridge/ROM   ROML $8000-$9FFF
 ;  Could make 16k if needed
-; SID Code is 5109-126=4983 bytes ($1377)
-SIDCode = $8C00  ;should leave ~136bytes at end
 
 * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
    !byte 0
@@ -94,101 +155,45 @@ Warmstart:
    jsr SIDOn
 
 ;screen setup:     
-   lda #6  ;blue
-   sta BorderColor
-   lda #0   ;black
-   sta BackgroundColor
+   lda #BorderColor
+   sta BorderColorReg
+   lda #BackgndColor
+   sta BackgndColorReg
    
-   lda #<MsgWelcome
-   ldy #>MsgWelcome
-   jsr PrintString  
-
 ;check for HW:
    lda rRegPresence1
    cmp #$55
    bne NoHW
    lda rRegPresence2
    cmp #$AA
-   beq ListROMs
+   beq HWGood
 NoHW:
    lda #<MsgNoHW
    ldy #>MsgNoHW
    jsr PrintString  
    jmp AllDone
 
-ListROMs:
-;                           list out rom number, type, & names
-   ldx #0 ;initialize to first ROM
-NextROM:
-
-   lda #13  ;next line
-   jsr SendChar
-   lda #5   ;White Number/letter
-   jsr SendChar
-   lda #32  ;space
-   jsr SendChar
-   stx rwRegSelect  
-   txa
-   jsr PrintHexNibble  ;selection
-   lda #32  ;space
-   jsr SendChar
-
-   lda#154  ;Lt Blue Type
-   jsr SendChar
-   lda rRegROMType 
-   clc
-   rol
-   rol
-   tax
-NxtTypChar:
-   lda TblROMType,x
-   jsr SendChar   ;type (4 chars)
-   inx
-   txa
-   and #3
-   bne NxtTypChar
-   
-   lda #158  ;Yellow Name string
-   jsr SendChar
-   lda #<rRegROMName
-   ldy #>rRegROMName
-   jsr PrintString
-   
-   ldx rwRegSelect
-   inx
-   cpx rRegNumROMs
-   bne NextROM
-
-   lda #<MsgSelect
-   ldy #>MsgSelect
-   jsr PrintString
+HWGood:
+   lda #0 ;initialize to first page/ROM
+   sta RegMenuPageStart
+   jsr ListROMs
 
 WaitForKey:     
    ;jsr ScanKey  ;only needed if ints are off
    jsr GetIn    
    beq WaitForKey
 
-   cmp #'0'  ;'1'-'9' inclusive 
-   bmi notNum   ;skip if below '1'
-   cmp #'9'+ 1  
-   bpl notNum   ;skip if above '9'
-   jsr SendChar ;print entered char
+   cmp #'a'  ;'a'-'q' inclusive 
+   bmi notAlpha   ;skip if below 'a'
+   cmp #'a'+ MaxMenuItems + 1  
+   bpl notAlpha   ;skip if above MaxMenuItems
+   ;jsr SendChar ;print entered char
    ;convert to ROM number
    sec       ;set to subtract without carry
-   sbc #'0'  ;now 0-9 
-   jmp ROMSelected
-   
-notNum:
-   cmp #'a'  ;'a'-'z' inclusive 
-   bmi notAlphaNum   ;skip if below 'a'
-   cmp #'z'+ 1  
-   bpl notAlphaNum   ;skip if above 'z'
-   jsr SendChar ;print entered char
-   ;convert to ROM number
-   sec       ;set to subtract without carry
-   sbc #'a'-10  ;now 10-25 
-   
-ROMSelected:   ;ROM num in acc
+   sbc #'a'  ;now 0-?
+   clc
+   adc RegMenuPageStart   
+;ROMSelected, ROM num in acc
    cmp rRegNumROMs 
    bpl WaitForKey   ;skip if above num of ROMs
    sta rwRegSelect ;select ROM/PRG
@@ -199,21 +204,56 @@ ROMSelected:   ;ROM num in acc
    jsr SIDOff
    jsr PRGtoMem
    jmp VanishBASICRun
-   
-notAlphaNum: ;check for function keys:
-   cmp #136  ;F7 - toggle music
+notAlpha: 
+;check for function keys:
+
+   cmp #ChrF1  ;F1 - Next Page
+   bne notF1
+   ;code...
+   lda RegMenuPageStart
+   clc
+   adc #MaxMenuItems
+   cmp rRegNumROMs
+   bpl WaitForKey  ;already last page
+   sta RegMenuPageStart
+   jsr ListROMs
+   jmp WaitForKey  
+notF1:
+
+   cmp #ChrF2  ;F2 - Prev Page
+   bne notF2
+   lda RegMenuPageStart
+   beq WaitForKey  ;already on first page
+   sec
+   sbc #MaxMenuItems
+   sta RegMenuPageStart
+   jsr ListROMs
+   jmp WaitForKey  
+notF2:
+
+   cmp #ChrF3  ;F3 - ???
+   bne notF3
+   ;code...
+   jmp WaitForKey  
+notF3:
+
+   cmp #ChrF5  ;F5 - Exit to BASIC
+   bne notF5
+   lda #RCtlVanishReset ;put the TeensyROM to sleep  and reset
+   sta wRegControl
+   jmp AllDone  ;should be resetting to BASIC
+notF5:
+
+   cmp #ChrF7  ;F7 - toggle music
    bne notF7
    ldx #>irqSID
-   cpx $315  ;CINV,,\ HW IRQ Int Hi
-   beq SIDisOn
+   cpx $315  ;see if the IRQ is pointing at our SID routine
+   beq +
    jsr SIDOn ;sid is off, turn it on
    jmp WaitForKey
-SIDisOn:
-   jsr SIDOff ;sid is on, turn it off
-   jmp WaitForKey
-   
++  jsr SIDOff ;sid is on, turn it off
+   jmp WaitForKey  
 notF7:
-
 
    jmp WaitForKey
 
@@ -224,13 +264,87 @@ ROMStart:
 AllDone:
    jmp AllDone ;(BasicWarmStartVect) 
 
-
-
-
-
    
 ; ******************************* Subroutines ******************************* 
+;                           list out rom number, type, & names
+;Prep: load RegMenuPageStart with first ROM on menu page
+Ssssssssssssssubroutines:
+ListROMs:
+   lda #<MsgWelcome
+   ldy #>MsgWelcome
+   jsr PrintString  
+   lda RegMenuPageStart
+   sta rwRegSelect
+   lda #'A' ;initialize to start of page
+NextMenuLine:
+   pha ;remember menu letter
+   lda #ChrReturn
+   jsr SendChar
+   
+;print option letter
+   lda #OptionColor
+   jsr SendChar
+   lda #ChrSpace
+   jsr SendChar
+   pla
+   pha
+   jsr SendChar
+   lda #'-'
+   jsr SendChar
+; print name
+   lda #NameColor
+   jsr SendChar
+   lda #<rRegROMName
+   ldy #>rRegROMName
+   jsr PrintString
+;align to col
+   sec
+   jsr SetCursor ;read current to load y (row)
+   ldy #MAX_ROMNAME_CHARS + 3  ;col
+   clc
+   jsr SetCursor
+; print type
+   lda #TypeColor
+   jsr SendChar
+   lda rRegROMType 
+   clc
+   rol
+   rol  ;mult by 4
+   tay
+-  lda TblROMType,y
+   jsr SendChar   ;type (4 chars)
+   iny
+   tya
+   and #3
+   bne -
+;print ROM #
+   lda #ROMNumColor
+   jsr SendChar
+   lda rwRegSelect
+   jsr PrintHexByte
+   
+;line is done printing, check for next...
+   pla ;menu select letter
+   inc rwRegSelect
+   ldx rwRegSelect
+   cpx rRegNumROMs
+   beq RomListDone
+   clc
+   adc #01
+   cmp #'A' + MaxMenuItems
+   bne NextMenuLine  
 
+RomListDone:
+   ldx #20 ;row
+   ldy #0  ;col
+   clc
+   jsr SetCursor
+   lda #<MsgSelect
+   ldy #>MsgSelect
+   jsr PrintString
+   rts
+   
+   
 PRGtoMem:
    ;stream PRG file from TeensyROM to $0801
    ;assumes TeensyROM is set up to transfer, PRG selected
@@ -279,8 +393,8 @@ ErrOut:
 
 PrintHexByte:
    ;Print byte value stored in acc in hex
-   ;  2 chars plus a space
-   ;trashes acc
+   ;  2 chars plus space
+   ;preserves acc
    pha
    ror
    ror
@@ -288,9 +402,11 @@ PrintHexByte:
    ror
    jsr PrintHexNibble
    pla
+   pha
    jsr PrintHexNibble
-   lda #' '
+   lda #ChrSpace
    jsr SendChar
+   pla
    rts
    
 PrintHexNibble:   
@@ -308,18 +424,17 @@ letter:
 printret:
    jsr SendChar
    rts
- 
+
+   
+; ******************************* Vanish, Code to Copy ******************************* 
+
 VanishBASICRun:
-   ;copy code to c000 and execute from there so we can kill the TeensyROM
-   lda #>CodeToCopy
-   sta PtrAddrHi
-   ldy #<CodeToCopy   
-   sty PtrAddrLo ;should be zero
+   ;copy code to RAM and execute from there so we can kill the TeensyROM
 CodeCopyLoop:
-   lda (PtrAddrLo), y 
+   lda CodeToCopy,y
    sta VanishCodeRAM,y
    iny
-   cpy #<EndCoppiedCode
+   cpy #(EndCoppiedCode - CodeToCopy)
    bne CodeCopyLoop   
    ;load keyboard buffer with "run\n":  
    lda #'r'
@@ -328,12 +443,31 @@ CodeCopyLoop:
    sta $0278 ;kbd buff 1
    lda #'n'
    sta $0279  ;kbd buff 2
-   lda #13
+   lda #ChrReturn
    sta $027a  ;kbd buff 3
    lda #4
-   sta $C6  ;# chars in kbd buff (10 max)
+   sta $C6  ;# chars in kbd buff (4 of 10 max)
+   
    jmp VanishCodeRAM
 
+;!align 255, 0	; align to page (256 bytes) No longer needed
+CodeToCopy:  ;must be <256 bytes total
+   lda #RCtlVanish ;put the TeensyROM to sleep (Deassert Game & ExROM)
+   sta wRegControl
+   jmp (BasicWarmStartVect)  
+   
+   ;;xColdstart:
+   ;sei
+   ;jsr $fd50            ; RANTAM - Clear/test system RAM (determine bytes free)
+   ;jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
+   ;jsr $ff5b            ; CINT   - Init VIC and screen editor
+   ;;;jsr $ff87  ;RAMTAS Memory initialization
+   ;cli                  ; Re-enable IRQ interrupts
+   ;jmp (BasicColdStartVect)    
+EndCoppiedCode = *
+
+
+; ******************************* SID music/code ******************************* 
 
 SIDCopyToRAM:
 ;have to copy SID code to RAM because it self modifies...
@@ -397,37 +531,42 @@ SIDOff:
    jsr SIDCodeRAM
    cli 
    rts
-   
-
-; ******************************* Strings/Messages ******************************* 
-
-MsgWelcome:       ;clr screen, wht char, lower case
-   !tx 147, 5, 14, "TeensyROM v0.01", 13, 0
-MsgSelect:
-   !tx 13, 13, 5, "Select from above: ", 0
-MsgError:
-   !tx 13, "Error #", 0
-MsgNoHW:
-   !tx "Hardware Not Detected", 13, 0
-TblROMType:
-   !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
-   
-; ******************************* Code to Copy, SID music/code ******************************* 
-
-!align 255, 0	; align to page (256 bytes)
-CodeToCopy:  ;must be <256 bytes total, page aligned
-   lda #RCtlVanish ;put the TeensyROM to sleep (Deassert Game & ExROM)
-   sta wRegControl                               
-   jmp (BasicWarmStartVect)    
-EndCoppiedCode = *
-
-* = SIDCode
-      !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
-EndSIDCode = *
 
 irqSID:
    inc $d019   ;ACK raster IRQs
-   ;inc $d020 ;tweak display border
-   jsr SIDCode+3 ;Play the music
-   ;dec $d020 ;tweak it back
+   inc BorderColorReg ;tweak display border
+   jsr SIDCodeRAM+3 ;Play the music
+   dec BorderColorReg ;tweak it back
    jmp IRQDefault
+
+SIDCode = *
+      !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
+EndSIDCode = *
+
+
+; ******************************* Strings/Messages ******************************* 
+
+MsgWelcome:    
+   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
+MsgSelect:
+   !tx ChrPurple, "Select from above, or...", ChrReturn
+   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, NameColor, " Next Page       "
+   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, NameColor, " Previous Page   "
+   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, NameColor, " From USB Host   "
+   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, NameColor, " From USB Drive  "
+   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, NameColor, " Exit to BASIC   "
+   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, NameColor, " From Ethernet   "
+   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, NameColor, " Music on/off    "
+   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, NameColor, " Credits"
+   !tx 0
+MsgError:
+   !tx ChrReturn, "Error #", 0
+MsgNoHW:
+   !tx "Hardware Not Detected", ChrReturn, 0
+   
+TblROMType:
+   !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
+   
+   
+EndOfAllCode = *
+

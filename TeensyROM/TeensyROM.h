@@ -62,7 +62,7 @@ const uint8_t OutputPins[] = {
 #define nS_RWnReady        20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
 #define nS_PLAprop         100 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
 #define nS_DataSetup       325 //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
-#define nS_DataHold        375 //On a read, when to stop driving the data bus, spec calls for >430
+#define nS_DataHold        400 //On a read, when to stop driving the data bus, spec calls for >430
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {

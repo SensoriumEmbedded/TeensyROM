@@ -1,11 +1,7 @@
 
 
 *** Hardware
---> order parts...
---> remaining control signals(IRQ) Leave disconnected or
--->      Bi-dir lev transl for Reset?
-
--->Make Reset In from button only (as currently implemented) Use spare buffer for IRQ.
+--> order parts... Done, try 74LCV07 (maybe?)
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
 
