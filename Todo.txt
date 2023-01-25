@@ -1,7 +1,7 @@
 
 
 *** Hardware
---> order parts... Done, try 74LCV07 (maybe?)
+--> ordered parts...  try 74LCV07 (maybe?)
   drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
      Kernal/BASIC/Char Set controls (5 bits)
 
@@ -11,25 +11,22 @@ PCB Design:
   Ethernet port?
   USB host port?
   
-  Jupiter Lander still has garbled video...
   
 *** Software
 C64 code:
---> options (funct keys): Exit to BASIC, Load from USB Host/SD/USB Drive
-  transfer program/cart via USB
-  SD access, USB thumb drive?
-  
-  default music state (on/off) saved in t4 internal eeprom
+-->   transfer program/cart file via USB
+  Load from USB Host, SD card, USB thumb Drive
   Get time from internet
   
+  default music state (on/off) saved in t4 internal eeprom
+  Jupiter Lander still has garbled video, 80 col PRG doesn't work...
+  add (find) EPYX fast load routine (fast load routine for drive 8?, not full cart version)
   
-  assembly test program?
+  TeensyROM test program? (IO1/2, other ROM locations, etc)
   Verify T41 speed on compile or setup()?   
       overclock even needed?
   Read c64 bus speed, adjust for PAL(?)
 
-more program options to load:
-1- EPYX fast load routine (just fast load routine for drive 8, not full cart version)
 
 
 *** notes
