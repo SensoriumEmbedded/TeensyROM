@@ -5,10 +5,12 @@ FASTRUN void isrResetBtn()
    ResetBtnPressed = true;
 }
 
+
 FASTRUN void isrPHI2()
 {
+   StartCycCnt = ARM_DWT_CYCCNT;
    if (DisablePhi2ISR) return;
-   RESET_CYCLECOUNT;
+   //RESET_CYCLECOUNT;
  	//SetDebug2Assert;
    
    static uint16_t StreamStartAddr = 0;
@@ -154,7 +156,7 @@ FASTRUN void isrPHI2()
    
  
    //now the time-sensitive work is done, have a few hundred nS until the next interrupt...
-   //SetDebug2Deassert;
+   //SetDebugDeassert;
 }
 
 

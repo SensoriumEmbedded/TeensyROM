@@ -1,22 +1,26 @@
 
 
 *** Hardware
---> ordered parts...  try 74LCV07 (maybe?)
-  drive data bus to set latches for IO set such as... (or access more Teensy IO, or IO expander, etc)
-     Kernal/BASIC/Char Set controls (5 bits)
+   Potential Changes from 0.1 PCB:
 
-PCB Design:
-  batt back for RTC?
-  test SD port
-  Ethernet port?
-  USB host port?
+      drive local data bus to latched outputs such as Kernal/BASIC/Char Set controls (5 bits)
+            via 74LVC573 Need 1 Teensy IO line per latch
+      access more Teensy IO pins by muxing inputs via 74LVC257s
+            8 inputs reduce to 5
+            16 inputs reduce to 9
+            24 inputs reduce to 13 (frees up 11 IOs)
+      
+      batt back for RTC?
+      Ethernet port?
+      USB host port?
   
   
 *** Software
 C64 code:
 -->   transfer program/cart file via USB
   Load from USB Host, SD card, USB thumb Drive
-  Get time from internet
+  Get time from internet, display in app
+  Add HES mon & Joust to internal loads
   
   default music state (on/off) saved in t4 internal eeprom
   Jupiter Lander still has garbled video, 80 col PRG doesn't work...

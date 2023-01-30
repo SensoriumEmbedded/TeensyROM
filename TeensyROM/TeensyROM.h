@@ -1,17 +1,20 @@
 
+#define SerialTimoutMillis 500
+uint32_t StartCycCnt;
+
 
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN         31  
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,         // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
-   28, 29, Reset_Btn_In_PIN,    //DOT clk, BA, Reset
+   28, 29, Reset_Btn_In_PIN,    //DOT clk, BA, Reset button
    };
 
 const uint8_t OutputPins[] = {
    35, 9, 32, // DataCEn, ExROM, Game
-   30, 25,    //DMA, NMI
-   34,33,     //debug
+   30, 25, 24,   //DMA, NMI, IRQ
+   34,33,     //LED, debug
    6,    //Reset_Out_PIN,
    };
 
@@ -39,7 +42,7 @@ const uint8_t OutputPins[] = {
 //#define SetResetAssert     { CORE_PIN6_DDRREG  |= CORE_PIN6_BITMASK; CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; }   //make output, drive low
 //#define SetResetRelease    CORE_PIN6_DDRREG  &= ~CORE_PIN6_BITMASK      //make input (OC)
 #define ReadGPIO8          (*(volatile uint32_t *)IMXRT_GPIO8_ADDRESS)
-#define ReadReset          (ReadGPIO8 & CORE_PIN31_BITMASK)
+#define ReadResetButton    (ReadGPIO8 & CORE_PIN31_BITMASK)
 
 #define SetExROMAssert     CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
 #define SetExROMDeassert   CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
@@ -49,14 +52,17 @@ const uint8_t OutputPins[] = {
 #define SetDMADeassert     CORE_PIN30_PORTSET = CORE_PIN30_BITMASK
 #define SetNMIAssert       CORE_PIN25_PORTCLEAR = CORE_PIN25_BITMASK //active low
 #define SetNMIDeassert     CORE_PIN25_PORTSET = CORE_PIN25_BITMASK 
+#define SetIRQAssert       CORE_PIN24_PORTCLEAR = CORE_PIN24_BITMASK //active low
+#define SetIRQDeassert     CORE_PIN24_PORTSET = CORE_PIN24_BITMASK 
 
 #define SetLEDOn           CORE_PIN34_PORTSET = CORE_PIN34_BITMASK
 #define SetLEDOff          CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 
 #define SetDebug2Assert    CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
-#define SetDebug2Deassert  CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
+#define SetDebugDeassert  CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
-#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
-#define WaitUntil_nS(N)    while(ARM_DWT_CYCCNT < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
+//Use only inside Phi2 isr:
+//#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
+#define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
     //Could reduce or use whole cycle counts instead of nS... while(ARM_DWT_CYCCNT < N * 0.816)      F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 // all times starting from Phi2 rising (interrupt). 
 #define nS_RWnReady        20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
@@ -84,4 +90,5 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
    SetDataPortDirOut; //set data ports to outputs (default)
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
+
 

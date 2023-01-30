@@ -430,6 +430,7 @@ printret:
 
 VanishBASICRun:
    ;copy code to RAM and execute from there so we can kill the TeensyROM
+   ldy#0
 CodeCopyLoop:
    lda CodeToCopy,y
    sta VanishCodeRAM,y
