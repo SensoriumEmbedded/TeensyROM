@@ -7,7 +7,7 @@
 uint8_t IO2_RAM[256];
 uint8_t RAM_Image[65536];
 volatile uint8_t doReset = true;
-volatile uint8_t ResetBtnPressed = false;
+volatile uint8_t BtnPressed = false;
 volatile uint8_t DisablePhi2ISR = false;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
@@ -35,7 +35,7 @@ void setup()
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
-   attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrResetBtn, FALLING );
+   attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    
    Serial.print("TeensyROM 0.01 is on-line\n");
@@ -52,11 +52,11 @@ void setup()
 void loop()
 {
 
-   if (ResetBtnPressed)
+   if (BtnPressed)
    {
-      Serial.println("Reset Button detected"); 
+      Serial.print("Button detected\n"); 
       SetLEDOn;
-      ResetBtnPressed=false;
+      BtnPressed=false;
       SetDebugDeassert;
       SetUpMainMenuROM(); //back to main menu
       DisablePhi2ISR=false;
@@ -71,9 +71,9 @@ void loop()
       while(ReadResetButton==0); //avoid self reset detection
       SetResetDeassert; //if self monitorring, place before while loop
       SetDebugDeassert;
-      Serial.println("Done");
+      Serial.print("Done\n");
       doReset=false;
-      ResetBtnPressed = false;
+      BtnPressed = false;
    }
   
    if (Serial.available())

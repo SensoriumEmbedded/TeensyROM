@@ -1,8 +1,8 @@
 
-FASTRUN void isrResetBtn()
+FASTRUN void isrButton()
 {
    SetDebug2Assert;
-   ResetBtnPressed = true;
+   BtnPressed = true;
 }
 
 
