@@ -38,10 +38,11 @@
    RCtlLoadFromSD  = 3
    RCtlLoadFromUSB = 4
 
-   rt16k  = 0
-   rt8kHi = 1
-   rt8kLo = 2
-   rtPrg  = 3
+   rtNone = 0
+   rt16k  = 1
+   rt8kHi = 2
+   rt8kLo = 3
+   rtPrg  = 4
 
 
    ;Kernal routines:
@@ -142,7 +143,10 @@ NoHW:
    jmp AllDone
 
 HWGood:
-   lda #0 ;initialize to first page/ROM
+   lda #RCtlVanish ;Deassert Game & ExROM
+   sta wRegControl
+
+   lda #1 ;initialize to first page/ROM;  ROM#1 shown first (0 is for transfers)
    sta RegMenuPageStart
    jsr ListROMs
 
@@ -151,7 +155,7 @@ WaitForKey:
    jsr GetIn    
    beq WaitForKey
 
-   cmp #'a'  ;'a'-'q' inclusive 
+   cmp #'a'  
    bmi notAlpha   ;skip if below 'a'
    cmp #'a'+ MaxMenuItems + 1  
    bpl notAlpha   ;skip if above MaxMenuItems
@@ -165,11 +169,9 @@ WaitForKey:
    cmp rRegNumROMs 
    bpl WaitForKey   ;skip if above num of ROMs
    sta rwRegSelect ;select ROM/PRG
-   lda rRegROMType
-   cmp #rtPrg  ;Is it a PRG?
-   bne ROMStart
-   jmp BASICRun
-notAlpha: 
+   jsr RunPRGROM
+   jmp WaitForKey
+notAlpha:
 ;check for function keys:
 
    cmp #ChrF1  ;F1 - Next Page
@@ -182,12 +184,13 @@ notAlpha:
    bpl WaitForKey  ;already last page
    sta RegMenuPageStart
    jsr ListROMs
-   jmp WaitForKey  
+   jmp WaitForKey
 notF1:
 
    cmp #ChrF2  ;F2 - Prev Page
    bne notF2
    lda RegMenuPageStart
+   cmp #1     ;ROM#1 shown first (0 is for transfers)
    beq WaitForKey  ;already on first page
    sec
    sbc #MaxMenuItems
@@ -196,15 +199,20 @@ notF1:
    jmp WaitForKey  
 notF2:
 
-   cmp #ChrF3  ;F3 - ???
+   cmp #ChrF3  ;F3 - Exe USB Host file
    bne notF3
-   ;code...
-   jmp WaitForKey  
+   ;check if file is present
+   
+   ;copy to RAM and execute
+   lda #0     ;0 is received file in RAM
+   sta rwRegSelect ;select ROM/PRG   
+   jsr RunPRGROM
+   jmp WaitForKey
 notF3:
 
    cmp #ChrF5  ;F5 - Exit to BASIC
    bne notF5
-   lda #RCtlVanishReset ;put the TeensyROM to sleep  and reset
+   lda #RCtlVanishReset ;reset to BASIC
    sta wRegControl
    jmp AllDone  ;should be resetting to BASIC
 notF5:
@@ -222,10 +230,6 @@ notF7:
 
    jmp WaitForKey
 
-ROMStart:   
-   lda #RCtlStartRom
-   sta wRegControl
-   ;TR should take it from here...
 AllDone:
    jmp AllDone ;(BasicWarmStartVect) 
 
@@ -319,12 +323,11 @@ PRGtoMem:
    sta wRegControl
    
    lda rRegStrAddrHi
-   bne cont1
-   lda #1 ;no data to read!
+   bne +
+   lda #<MsgErrNoData;no data to read!
+   ldy #>MsgErrNoData
    jmp ErrOut
-
-cont1:   
-   sta PtrAddrHi
++  sta PtrAddrHi
    lda rRegStrAddrLo   
    sta PtrAddrLo
    ldy #0   ;zero offset
@@ -337,7 +340,8 @@ xferloop:
    bne xferloop
    inc PtrAddrHi
    bne xferloop
-   lda #2 ;Overflow!
+   lda #<MsgErrOverflow ;Overflow!
+   ldy #>MsgErrOverflow
    jmp ErrOut
    
 xfercomplete:
@@ -345,15 +349,21 @@ xfercomplete:
   
   
 ErrOut:   
-   ;ErrNum stored in acc
+   ;Error msg pointer stored in acc/y
    pha
+   tya
+   pha
+   ldx #19 ;row
+   ldy #0  ;col
+   clc
+   jsr SetCursor
    lda #<MsgError
    ldy #>MsgError
    jsr PrintString   
    pla
-   jsr PrintHexByte
-   lda #13
-   jsr SendChar
+   tay
+   pla
+   jsr PrintString
    rts
 
 PrintHexByte:
@@ -390,23 +400,21 @@ printret:
    jsr SendChar
    rts
 
-   
-; ******************************* Vanish, Code to Copy ******************************* 
-
-BASICRun:
-
+;Execute a ROM or copy PRG to RAM and run
+;Pre-Load rwRegSelect with ROM/PRG# to execute
+RunPRGROM:
+   ldx rRegROMType
+   cpx #rtNone
+   bne +
+   lda #<MsgErrNoFile ;No File loaded 
+   ldy #>MsgErrNoFile
+   jmp ErrOut
++  pla ;pull the jsr return info from the stack, we're not going back!
+   cpx #rtPrg  
+   bne ROMStart
+;it's a PRG...
    jsr SIDOff
    jsr PRGtoMem
-;   ;copy code to RAM and execute from there so we can kill the TeensyROM
-;   ldy#0
-;CodeCopyLoop:
-;   lda CodeToCopy,y
-;   sta VanishCodeRAM,y
-;   iny
-;   cpy #(EndCoppiedCode - CodeToCopy)
-;   bne CodeCopyLoop   
-
-
    ;load keyboard buffer with "run\n":  
    lda #'r'
    sta $0277  ;kbd buff 0
@@ -418,10 +426,13 @@ BASICRun:
    sta $027a  ;kbd buff 3
    lda #4
    sta $C6  ;# chars in kbd buff (4 of 10 max)
-   
-   lda #RCtlVanish ;put the TeensyROM to sleep (Deassert Game & ExROM)
-   sta wRegControl
+   ;lda #RCtlVanish ;Deassert Game & ExROM (already done at start)
+   ;sta wRegControl
    jmp (BasicWarmStartVect)  
+ROMStart:   
+   lda #RCtlStartRom
+   sta wRegControl
+x  jmp x ;TR should take it from here and reset...
    
 
 ; ******************************* SID music/code ******************************* 
@@ -486,13 +497,19 @@ MsgSelect:
    !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, NameColor, " Music on/off    "
    !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, NameColor, " Credits"
    !tx 0
-MsgError:
-   !tx ChrReturn, "Error #", 0
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
+MsgError:
+   !tx ChrRed, "Error: ", 0
+MsgErrNoData:
+   !tx "No Data Available", 0
+MsgErrOverflow:
+   !tx "Overflow", 0
+MsgErrNoFile:
+   !tx "No File Available", 0
    
 TblROMType:
-   !tx "16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
+   !tx "None","16k ","8Hi ","8Lo ","PRG " ;4 bytes each, no term
    
    
 EndOfAllCode = *

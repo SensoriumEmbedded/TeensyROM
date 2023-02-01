@@ -42,7 +42,7 @@ const uint8_t OutputPins[] = {
 //#define SetResetAssert     { CORE_PIN6_DDRREG  |= CORE_PIN6_BITMASK; CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; }   //make output, drive low
 //#define SetResetRelease    CORE_PIN6_DDRREG  &= ~CORE_PIN6_BITMASK      //make input (OC)
 #define ReadGPIO8          (*(volatile uint32_t *)IMXRT_GPIO8_ADDRESS)
-#define ReadResetButton    (ReadGPIO8 & CORE_PIN31_BITMASK)
+#define ReadButton         (ReadGPIO8 & CORE_PIN31_BITMASK)
 
 #define SetExROMAssert     CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
 #define SetExROMDeassert   CORE_PIN9_PORTSET = CORE_PIN9_BITMASK

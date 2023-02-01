@@ -31,6 +31,7 @@ namespace Serial_Logger
         private void Form1_Load(object sender, EventArgs e)
         {
             btnRefreshCOMList.PerformClick();
+            serialPort1.ReadTimeout = 200;
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -104,9 +105,14 @@ namespace Serial_Logger
             }
             else
             {   //connect
-                serialPort1.PortName = cmbCOMPort.Text;
+                if (cmbCOMPort.Text=="")
+                {
+                    WriteToOutput("Select COM port", Color.Red);
+                    return;
+                }
                 try
                 {
+                    serialPort1.PortName = cmbCOMPort.Text;
                     rtbOutput.Clear();
                     serialPort1.Open();
                     //btnPing_Click(null, e);
@@ -134,11 +140,11 @@ namespace Serial_Logger
         private void btnSendFile_Click(object sender, EventArgs e)
         {
             openFileDialog1.FileName = "";
-            openFileDialog1.Filter = "PRG files (*.prg)|*.prg";
+            openFileDialog1.Filter = "C64 Files (*.prg;*.crt)|*.prg;*.crt|PRG files (*.prg)|*.prg|CRT files (*.crt)|*.crt|All files (*.*)|*.*";
             if (openFileDialog1.ShowDialog() == DialogResult.Cancel) return;
 
             //Read/store file, get length, calc checksum
-            WriteToOutput("\nReading file: " + openFileDialog1.FileName, Color.Black);
+            WriteToOutput("\nReading file: " + openFileDialog1.SafeFileName, Color.Black);
             BinaryReader br = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
             int len = (int)br.BaseStream.Length;
             byte[] fileBuf = br.ReadBytes(len);  //read full file to array
@@ -149,7 +155,7 @@ namespace Serial_Logger
 
             //   App: SendFileToken 0x64AA
             //Teensy: ack 0x6464
-            //   App: Send Length(2), CS(2), file(length)
+            //   App: Send Length(2), CS(2), Name(MAX_ROMNAME_CHARS=25 incl term), file(length)
             //Teensy: Pass 0x6480 or Fail 0x9b7f (or anything else received) 
             byte[] recBuf = new byte[2];
             byte[] LenHiLo = { (byte)len, (byte)(len >> 8) };
@@ -157,13 +163,10 @@ namespace Serial_Logger
             byte[] SendFileToken = { 0x64, 0xAA };
             timer1.Enabled = false;
             WriteToOutput("Transferring " + len + " bytes, CS= " +CheckSum, Color.Black);
-            serialPort1.Write(SendFileToken, 0, 2);
 
-            //serialPort1.ReadTimeout = 2000;
-            //while (serialPort1.BytesToRead < 2) WriteToOutput("#", Color.Black);
+            serialPort1.Write(SendFileToken, 0, 2);
             if (!WaitForSerial(2, 500)) return;
             serialPort1.Read(recBuf, 0, 2);
-
             if (to16(recBuf) != 0x6464)
             {
                 WriteToOutput("TeensyROM Not Communicating: " + recBuf[0] + " & " + recBuf[1], Color.DarkRed);
@@ -173,6 +176,16 @@ namespace Serial_Logger
 
             serialPort1.Write(LenHiLo, 0, 2);  //Send Length
             serialPort1.Write(CSHiLo, 0, 2);  //Send Checksum
+
+            //Send name (MAX_ROMNAME_CHARS=25 incl term)
+            const int MAX_ROMNAME_CHARS = 25;
+            string fname = openFileDialog1.SafeFileName.ToLower();
+            if (fname.Length > MAX_ROMNAME_CHARS-1) fname = fname.Substring(0, MAX_ROMNAME_CHARS-5) + fname.Substring(fname.Length - 4); //compress but leave extension
+
+            serialPort1.Write(fname);
+            byte[] NullByte = new byte[1] { 0 };
+            for (int i = fname.Length; i < MAX_ROMNAME_CHARS; i++) serialPort1.Write(NullByte, 0, 1);
+
             serialPort1.Write(fileBuf, 0, len); //Send file
             WriteToOutput("Finished sending...", Color.Black);
 

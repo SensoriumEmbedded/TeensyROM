@@ -47,23 +47,27 @@ enum RegCtlCommands
 
 enum ROMTypes
 {
-   rt16k  = 0,
-   rt8kHi = 1,
-   rt8kLo = 2,
-   rtPrg  = 3,
+   rtNone = 0,
+   rt16k  = 1,
+   rt8kHi = 2,
+   rt8kLo = 3,
+   rtPrg  = 4,
 };
 #define  MAX_ROMNAME_CHARS 25
 
 struct StructROMDefs
 {
   unsigned char HW_Config;
-  const char Name[MAX_ROMNAME_CHARS];
-  const unsigned char *ROM_Image;
+  char Name[MAX_ROMNAME_CHARS];
+  const unsigned char *Code_Image;
   uint16_t Size;
 };
 
-const StructROMDefs ROMMenu[] = 
+uint8_t RAM_Image[65536];
+
+StructROMDefs ROMMenu[] = 
 {
+   rtNone, "Nothing yet..."          , RAM_Image                  , 0, 
    rt8kLo, "1541 Diagnostics"        , a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
    rt8kLo, "Joystick Tester"         , Joystick_Tester_BIN        , 1, //size not needed for ROMs
    rt8kLo, "Keyboard Tester"         , Keyboard_Tester_BIN        , 1, //size not needed for ROMs

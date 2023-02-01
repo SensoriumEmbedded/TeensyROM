@@ -46,7 +46,7 @@ FASTRUN void isrPHI2()
                DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
                break;
             case rRegStrData:
-               DataPortWriteWait(ROMMenu[RegSelect].ROM_Image[StreamOffsetAddr]);
+               DataPortWriteWait(ROMMenu[RegSelect].Code_Image[StreamOffsetAddr]);
                if (++StreamOffsetAddr >= ROMMenu[RegSelect].Size) //inc on read, check for end
                {  //transfer finished
                   StreamStartAddr=0; //signals end of transfer
@@ -84,7 +84,7 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     DisablePhi2ISR = true;
+                     //DisablePhi2ISR = true;
                      SetLEDOff;
                      break;
                   case RCtlVanishReset:  //called from ROM, but it's resetting anyway
@@ -92,7 +92,7 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     DisablePhi2ISR = true;
+                     //DisablePhi2ISR = true;
                      SetLEDOff;
                      doReset=true;
                      break;
@@ -102,27 +102,27 @@ FASTRUN void isrPHI2()
                         case rt16k:
                            SetGameAssert;
                            SetExROMAssert;
-                           LOROM_Image = ROMMenu[RegSelect].ROM_Image;
-                           HIROM_Image = ROMMenu[RegSelect].ROM_Image+0x2000;
+                           LOROM_Image = ROMMenu[RegSelect].Code_Image;
+                           HIROM_Image = ROMMenu[RegSelect].Code_Image+0x2000;
                            doReset=true;
                            break;
                         case rt8kHi:
                            SetGameAssert;
                            SetExROMDeassert;
                            LOROM_Image = NULL;
-                           HIROM_Image = ROMMenu[RegSelect].ROM_Image;
+                           HIROM_Image = ROMMenu[RegSelect].Code_Image;
                            doReset=true;
                            break;
                         case rt8kLo:
                            SetGameDeassert;
                            SetExROMAssert;
-                           LOROM_Image = ROMMenu[RegSelect].ROM_Image;
+                           LOROM_Image = ROMMenu[RegSelect].Code_Image;
                            HIROM_Image = NULL;
                            doReset=true;
                            break;
                         case rtPrg:
                            //set up for transfer
-                           StreamStartAddr = (ROMMenu[RegSelect].ROM_Image[1]<<8) + ROMMenu[RegSelect].ROM_Image[0];
+                           StreamStartAddr = (ROMMenu[RegSelect].Code_Image[1]<<8) + ROMMenu[RegSelect].Code_Image[0];
                            StreamOffsetAddr = 2; //set to start of data
                            break;
                      }
