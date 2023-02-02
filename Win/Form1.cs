@@ -236,6 +236,12 @@ namespace Serial_Logger
             serialPort1.Write(Reset, 0, 2);  
         }
 
+        private void btnSDDir_Click(object sender, EventArgs e)
+        {
+            byte[] SDDir = { 0x64, 0x67 };
+            serialPort1.Write(SDDir, 0, 2);
+        }
+
         /********************************  Stand Alone Functions *****************************************/
 
         private void WriteToOutput(string strMsg, Color color)
@@ -266,7 +272,6 @@ namespace Serial_Logger
             timer1.Enabled = true;
             return false;
         }
-
 
     }
 }

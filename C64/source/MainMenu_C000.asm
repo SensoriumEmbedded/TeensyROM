@@ -90,6 +90,8 @@
    ChrClear   = 147
    ChrReturn  = 13
    ChrSpace   = 32
+   ChrCSRSUp  = 145
+   ChrCSRSDn  = 17
    
 ;poke colors
    pokeBlack   = 0
@@ -135,15 +137,14 @@
    bne NoHW
    lda rRegPresence2
    cmp #$AA
-   beq HWGood
+   beq +
 NoHW:
    lda #<MsgNoHW
    ldy #>MsgNoHW
    jsr PrintString  
-   jmp AllDone
+-  jmp -
 
-HWGood:
-   lda #RCtlVanish ;Deassert Game & ExROM
++  lda #RCtlVanish ;Deassert Game & ExROM
    sta wRegControl
 
    lda #1 ;initialize to first page/ROM;  ROM#1 shown first (0 is for transfers)
@@ -156,82 +157,82 @@ WaitForKey:
    beq WaitForKey
 
    cmp #'a'  
-   bmi notAlpha   ;skip if below 'a'
+   bmi +   ;skip if below 'a'
    cmp #'a'+ MaxMenuItems + 1  
-   bpl notAlpha   ;skip if above MaxMenuItems
+   bpl +   ;skip if above MaxMenuItems
    ;jsr SendChar ;print entered char
    ;convert to ROM number
    sec       ;set to subtract without carry
    sbc #'a'  ;now 0-?
    clc
    adc RegMenuPageStart   
-;ROMSelected, ROM num in acc
+   ;ROMSelected, ROM num in acc
    cmp rRegNumROMs 
    bpl WaitForKey   ;skip if above num of ROMs
    sta rwRegSelect ;select ROM/PRG
    jsr RunPRGROM
    jmp WaitForKey
-notAlpha:
-;check for function keys:
 
-   cmp #ChrF1  ;F1 - Next Page
-   bne notF1
-   ;code...
++  cmp #ChrCSRSDn  ;Currsor Down - Next Page
+   bne +
    lda RegMenuPageStart
    clc
    adc #MaxMenuItems
    cmp rRegNumROMs
-   bpl WaitForKey  ;already last page
+   bpl WaitForKey  ;already on last page
    sta RegMenuPageStart
    jsr ListROMs
    jmp WaitForKey
-notF1:
 
-   cmp #ChrF2  ;F2 - Prev Page
-   bne notF2
++  cmp #ChrCSRSUp  ;Prev Page
+   bne +
    lda RegMenuPageStart
-   cmp #1     ;ROM#1 shown first (0 is for transfers)
+   cmp #1     ;ROM#1 shown first
    beq WaitForKey  ;already on first page
    sec
    sbc #MaxMenuItems
    sta RegMenuPageStart
    jsr ListROMs
    jmp WaitForKey  
-notF2:
 
-   cmp #ChrF3  ;F3 - Exe USB Host file
-   bne notF3
-   ;check if file is present
-   
-   ;copy to RAM and execute
++  cmp #ChrF1  ;SD Card
+   bne +
+n  lda rRegPresence1
+   cmp #$55
+   beq n
+   pha
+   ldx #19 ;row
+   ldy #10  ;col
+   clc
+   jsr SetCursor
+   pla
+   jsr PrintHexByte
+   jmp WaitForKey  
+
++  cmp #ChrF2  ;Exit to BASIC
+   bne +
+   lda #RCtlVanishReset ;reset to BASIC
+   sta wRegControl
+-  jmp -  ;should be resetting to BASIC
+
++  cmp #ChrF4  ;toggle music
+   bne +
+   ldx #>irqSID
+   cpx $315  ;see if the IRQ is pointing at our SID routine
+   beq on
+   jsr SIDOn ;sid is off, turn it on
+   jmp WaitForKey
+on jsr SIDOff ;sid is on, turn it off
+   jmp WaitForKey  
+
++  cmp #ChrF5  ;Exe USB Host file
+   bne +
    lda #0     ;0 is received file in RAM
    sta rwRegSelect ;select ROM/PRG   
    jsr RunPRGROM
    jmp WaitForKey
-notF3:
 
-   cmp #ChrF5  ;F5 - Exit to BASIC
-   bne notF5
-   lda #RCtlVanishReset ;reset to BASIC
-   sta wRegControl
-   jmp AllDone  ;should be resetting to BASIC
-notF5:
-
-   cmp #ChrF7  ;F7 - toggle music
-   bne notF7
-   ldx #>irqSID
-   cpx $315  ;see if the IRQ is pointing at our SID routine
-   beq +
-   jsr SIDOn ;sid is off, turn it on
-   jmp WaitForKey
-+  jsr SIDOff ;sid is on, turn it off
-   jmp WaitForKey  
-notF7:
-
-   jmp WaitForKey
-
-AllDone:
-   jmp AllDone ;(BasicWarmStartVect) 
++  jmp WaitForKey
 
    
 ; ******************************* Subroutines ******************************* 
@@ -245,8 +246,7 @@ ListROMs:
    lda RegMenuPageStart
    sta rwRegSelect
    lda #'A' ;initialize to start of page
-NextMenuLine:
-   pha ;remember menu letter
+nl pha ;remember menu letter
    lda #ChrReturn
    jsr SendChar
    
@@ -297,14 +297,12 @@ NextMenuLine:
    inc rwRegSelect
    ldx rwRegSelect
    cpx rRegNumROMs
-   beq RomListDone
+   beq dn
    clc
    adc #01
    cmp #'A' + MaxMenuItems
-   bne NextMenuLine  
-
-RomListDone:
-   ldx #20 ;row
+   bne nl  
+dn ldx #20 ;row
    ldy #0  ;col
    clc
    jsr SetCursor
@@ -331,21 +329,18 @@ PRGtoMem:
    lda rRegStrAddrLo   
    sta PtrAddrLo
    ldy #0   ;zero offset
-xferloop:
-   lda rRegStrData ;read from rRegStrData increments address/checks for end
+-  lda rRegStrData ;read from rRegStrData increments address/checks for end
    sta (PtrAddrLo), y 
    lda rRegStrAddrHi ;are we done?
-   beq xfercomplete 
+   beq rt 
    iny
-   bne xferloop
+   bne -
    inc PtrAddrHi
-   bne xferloop
+   bne -
    lda #<MsgErrOverflow ;Overflow!
    ldy #>MsgErrOverflow
    jmp ErrOut
-   
-xfercomplete:
-   rts
+rt rts
   
   
 ErrOut:   
@@ -389,15 +384,13 @@ PrintHexNibble:
    ;trashes acc
    and #$0f
    cmp #$0a
-   bpl letter 
+   bpl l 
    clc
    adc #'0'
-   jmp printret
-letter:
-   clc
+   jmp pr
+l  clc
    adc #'a'-$0a
-printret:
-   jsr SendChar
+pr jsr SendChar
    rts
 
 ;Execute a ROM or copy PRG to RAM and run
@@ -487,16 +480,17 @@ irqSID:
 MsgWelcome:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
 MsgSelect:
-   !tx ChrPurple, "Select from above, or...", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, NameColor, " Next Page       "
-   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, NameColor, " Previous Page   "
-   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, NameColor, " From USB Host   "
-   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, NameColor, " From USB Drive  "
-   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, NameColor, " Exit to BASIC   "
-   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, NameColor, " From Ethernet   "
-   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, NameColor, " Music on/off    "
+   !tx ChrPurple, "Load from:           "
+   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, NameColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, NameColor, "CRSR: Page", ChrReturn
+   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, NameColor, " SD Card         "
+   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, NameColor, " Exit to BASIC   "
+   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, NameColor, " Teensy Direct   "
+   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, NameColor, " Music on/off    "
+   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, NameColor, " USB Host        "
+   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, NameColor, " Ethernet        "
+   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, NameColor, " USB Drive       "
    !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, NameColor, " Credits"
-   !tx 0
+    !tx 0
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
 MsgError:

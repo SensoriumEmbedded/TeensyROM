@@ -17,8 +17,7 @@
   
 *** Software
 C64 code:
--->   transfer program/cart file via USB
-  Load from USB Host, SD card, USB thumb Drive
+  Load from SD card, USB thumb Drive
   Get time from internet, display in app
   Add HES mon & Joust to internal loads
   

@@ -41,6 +41,7 @@
             this.btnClear = new System.Windows.Forms.Button();
             this.btnReset = new System.Windows.Forms.Button();
             this.gbCommButtons = new System.Windows.Forms.GroupBox();
+            this.btnSDDir = new System.Windows.Forms.Button();
             this.gbCommButtons.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -141,6 +142,7 @@
             // 
             // gbCommButtons
             // 
+            this.gbCommButtons.Controls.Add(this.btnSDDir);
             this.gbCommButtons.Controls.Add(this.btnPing);
             this.gbCommButtons.Controls.Add(this.btnReset);
             this.gbCommButtons.Controls.Add(this.btnSendFile);
@@ -151,6 +153,17 @@
             this.gbCommButtons.TabStop = false;
             this.gbCommButtons.Text = "Comm";
             this.gbCommButtons.Visible = false;
+            // 
+            // btnSDDir
+            // 
+            this.btnSDDir.Location = new System.Drawing.Point(7, 130);
+            this.btnSDDir.Margin = new System.Windows.Forms.Padding(4);
+            this.btnSDDir.Name = "btnSDDir";
+            this.btnSDDir.Size = new System.Drawing.Size(72, 28);
+            this.btnSDDir.TabIndex = 15;
+            this.btnSDDir.Text = "SD Dir";
+            this.btnSDDir.UseVisualStyleBackColor = true;
+            this.btnSDDir.Click += new System.EventHandler(this.btnSDDir_Click);
             // 
             // Form1
             // 
@@ -188,6 +201,7 @@
         private System.Windows.Forms.Button btnClear;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.GroupBox gbCommButtons;
+        private System.Windows.Forms.Button btnSDDir;
     }
 }
 
