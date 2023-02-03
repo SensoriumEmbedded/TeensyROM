@@ -32,26 +32,26 @@ FASTRUN void isrPHI2()
       {
          switch(Address & 0xFF)
          {
-            case rwRegSelect:
+            case rwRegSelItem:
                DataPortWriteWait(RegSelect);  
                break;
-            case rRegNumROMs:
-               DataPortWriteWait(sizeof(ROMMenu)/sizeof(ROMMenu[0]));  
+            case rwRegCurrMenu:
+               DataPortWriteWait(CurrentMenu);
                break;
-            case rRegROMType:
-               DataPortWriteWait(ROMMenu[RegSelect].HW_Config);  
+            case rRegNumItems:
+               DataPortWriteWait(NumMenuItems);  
                break;
-            case rRegROMName ... (rRegROMName+MAX_ROMNAME_CHARS-1):
-               Data = ROMMenu[RegSelect].Name[(Address & 0xFF)-rRegROMName];
+            case rRegItemType:
+               DataPortWriteWait(MenuSource[RegSelect].ItemType);  
+               break;
+            case rRegItemName ... (rRegItemName+MaxItemNameLength-1):
+               Data = MenuSource[RegSelect].Name[(Address & 0xFF)-rRegItemName];
                DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
                break;
-            case rRegStrData:
-               DataPortWriteWait(ROMMenu[RegSelect].Code_Image[StreamOffsetAddr]);
-               if (++StreamOffsetAddr >= ROMMenu[RegSelect].Size) //inc on read, check for end
-               {  //transfer finished
-                  StreamStartAddr=0; //signals end of transfer
-                  //StreamOffsetAddr=0;
-               }
+            case rRegStreamData:
+               DataPortWriteWait(MenuSource[RegSelect].Code_Image[StreamOffsetAddr]);
+               //inc on read, check for end
+               if (++StreamOffsetAddr >= MenuSource[RegSelect].Size) StreamStartAddr=0; //signals end of transfer
                break;
             case rRegStrAddrLo:
                DataPortWriteWait(StreamStartAddr & 0xFF);
@@ -65,6 +65,9 @@ FASTRUN void isrPHI2()
             case rRegPresence2:
                DataPortWriteWait(0xAA);
                break;
+            case rRegStatus:
+               DataPortWriteWait(RegStatus); 
+               break;
          }
          //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
@@ -73,8 +76,30 @@ FASTRUN void isrPHI2()
          Data = DataPortWaitRead(); 
          switch(Address & 0xFF)
          {
-            case rwRegSelect:
+            case rwRegSelItem:
                RegSelect=Data;
+               break;
+            case rwRegCurrMenu:
+               CurrentMenu=Data;
+               switch(Data)
+               {
+                  case rmtTeensy:
+                     MenuSource = ROMMenu; 
+                     NumMenuItems = sizeof(ROMMenu)/sizeof(USBHostMenu);
+                     break;
+                  case rmtSD:
+                     MenuSource = SDMenu; 
+                     NumMenuItems = NumSDItems;
+                     break;
+                  case rmtUSBHost:
+                     MenuSource = &USBHostMenu; 
+                     NumMenuItems = NumUSBHostItems;
+                     break;
+                  case rmtUSBDrive:
+                     //MenuSource = ROMMenu; 
+                     //NumMenuItems = sizeof(ROMMenu)/sizeof(USBHostMenu);
+                     break;
+               }
                break;
             case wRegControl:
                switch(Data)
@@ -87,7 +112,7 @@ FASTRUN void isrPHI2()
                      //DisablePhi2ISR = true;
                      SetLEDOff;
                      break;
-                  case RCtlVanishReset:  //called from ROM, but it's resetting anyway
+                  case RCtlVanishReset:  
                      SetGameDeassert;
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
@@ -97,32 +122,32 @@ FASTRUN void isrPHI2()
                      doReset=true;
                      break;
                   case RCtlStartRom:
-                     switch(ROMMenu[RegSelect].HW_Config)
+                     switch(MenuSource[RegSelect].ItemType)
                      {
                         case rt16k:
                            SetGameAssert;
                            SetExROMAssert;
-                           LOROM_Image = ROMMenu[RegSelect].Code_Image;
-                           HIROM_Image = ROMMenu[RegSelect].Code_Image+0x2000;
+                           LOROM_Image = MenuSource[RegSelect].Code_Image;
+                           HIROM_Image = MenuSource[RegSelect].Code_Image+0x2000;
                            doReset=true;
                            break;
                         case rt8kHi:
                            SetGameAssert;
                            SetExROMDeassert;
                            LOROM_Image = NULL;
-                           HIROM_Image = ROMMenu[RegSelect].Code_Image;
+                           HIROM_Image = MenuSource[RegSelect].Code_Image;
                            doReset=true;
                            break;
                         case rt8kLo:
                            SetGameDeassert;
                            SetExROMAssert;
-                           LOROM_Image = ROMMenu[RegSelect].Code_Image;
+                           LOROM_Image = MenuSource[RegSelect].Code_Image;
                            HIROM_Image = NULL;
                            doReset=true;
                            break;
                         case rtPrg:
                            //set up for transfer
-                           StreamStartAddr = (ROMMenu[RegSelect].Code_Image[1]<<8) + ROMMenu[RegSelect].Code_Image[0];
+                           StreamStartAddr = (MenuSource[RegSelect].Code_Image[1]<<8) + MenuSource[RegSelect].Code_Image[0];
                            StreamOffsetAddr = 2; //set to start of data
                            break;
                      }

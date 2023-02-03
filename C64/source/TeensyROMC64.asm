@@ -90,13 +90,13 @@ CodeCopy:
    rts
    
 SIDCode = *
-      !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
+   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
 EndSIDCode = *
 
 MainCode = *
-      !binary "build\MainMenu_C000.bin"
+   !binary "build\MainMenu_C000.bin"
 EndMainCode = *
 
    
 EndOfAllCode = *
-
+   !byte 0

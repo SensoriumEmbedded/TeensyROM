@@ -19,8 +19,8 @@ void ServiceSerial()
             doReset = true;
             break;
          case 0x67:
-            root = SD.open("/");
-            if(root) printDirectory(root);  
+            SDFileDir = SD.open("/");
+            if(SDFileDir) LoadSDDirectory(SDFileDir);  
             else Serial.println("SD Card not present/initialized");
             break;
          default:
@@ -34,14 +34,15 @@ void ReceiveFile()
 { 
       //   App: SendFileToken 0x64AA
       //Teensy: ack 0x6464
-      //   App: Send Length(2), CS(2), Name(MAX_ROMNAME_CHARS 25, incl term), file(length)
+      //   App: Send Length(2), CS(2), Name(MaxItemNameLength 25, incl term), file(length)
       //Teensy: Pass 0x6480 or Fail 0x9b7f
 
       //send file token has been received, only 2 byte responses until final response
    
    Serial.write(0x64);  //ack
    Serial.write(0x64);  
-   ROMMenu[0].HW_Config = rtNone;  //in case we fail
+   //USBHostMenu.ItemType = rtNone;  
+   NumUSBHostItems = 0; //in case we fail
    
    if(!SerialAvailabeTimeout()) return;
    uint16_t len = Serial.read();
@@ -50,10 +51,10 @@ void ReceiveFile()
    uint16_t CheckSum = Serial.read();
    CheckSum = CheckSum + 256 * Serial.read();
    
-   for (int i = 0; i < MAX_ROMNAME_CHARS; i++) 
+   for (int i = 0; i < MaxItemNameLength; i++) 
    {
       if(!SerialAvailabeTimeout()) return;
-      ROMMenu[0].Name[i] = Serial.read();
+      USBHostMenu.Name[i] = Serial.read();
    }
    
    uint16_t bytenum = 0;
@@ -68,29 +69,31 @@ void ReceiveFile()
    {  //Failed
      Serial.write(0x9B);  // 155
      Serial.write(0x7F);  // 127
-     Serial.printf("Failed! Len:%d, RCS:%d, Name:%s\n", len, CheckSum, ROMMenu[0].Name);
-     //for (int i = 0; i < MAX_ROMNAME_CHARS; i++) Serial.printf("%02d-%d\n", i, ROMMenu[0].Name[i]);
+     Serial.printf("Failed! Len:%d, RCS:%d, Name:%s\n", len, CheckSum, USBHostMenu.Name);
+     //for (int i = 0; i < MaxItemNameLength; i++) Serial.printf("%02d-%d\n", i, USBHostMenu.Name[i]);
      return;
    }   
 
    //success!
    Serial.write(0x64);  
    Serial.write(0x80);  
-   Serial.printf("%s received succesfully\n", ROMMenu[0].Name);
+   Serial.printf("%s received succesfully\n", USBHostMenu.Name);
    
-   ROMMenu[0].Size = len;  
+   USBHostMenu.Size = len;  
    
    //check extension
-   if (strcmp((ROMMenu[0].Name + strlen(ROMMenu[0].Name) - 4), ".prg")==0)
+   if (strcmp((USBHostMenu.Name + strlen(USBHostMenu.Name) - 4), ".prg")==0)
    {
-      ROMMenu[0].HW_Config = rtPrg;
+      USBHostMenu.ItemType = rtPrg;
       Serial.println(".PRG file detected");
+      USBHostMenu.Code_Image=RAM_Image;
+      NumUSBHostItems = 1;
       return;
    }
    
-   if (strcmp((ROMMenu[0].Name + strlen(ROMMenu[0].Name) - 4), ".crt")!=0)
+   if (strcmp((USBHostMenu.Name + strlen(USBHostMenu.Name) - 4), ".crt")!=0)
    {
-      //HW_Config default to rtNone, set at start
+      //ItemType default to rtNone, set at start
       Serial.println("File type unknown!");
       return;
    }
@@ -138,29 +141,33 @@ void ReceiveFile()
    Serial.printf("Load Addr: $%04x\n",   toU16(ChipImage+0x0C));
    Serial.printf(" ROM Size: $%04x\n",   toU16(ChipImage+0x0E));
 
-   ROMMenu[0].Code_Image=RAM_Image+HeaderLen+0x10;
+//************We have an official file
+//new defaults:
+   USBHostMenu.ItemType = rtUnk;
+   NumUSBHostItems = 1;
+   
+   USBHostMenu.Code_Image=RAM_Image+HeaderLen+0x10;
    
    if(EXROM==0 && GAME==1 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x2000)
    {
-      ROMMenu[0].HW_Config = rt8kLo;
+      USBHostMenu.ItemType = rt8kLo;
       Serial.println("\n 8kLo config");
       return;
    }      
 
    if(EXROM==1 && GAME==0 && toU16(ChipImage+0x0C) == 0xe000 && toU16(ChipImage+0x0E) == 0x2000)
    {
-      ROMMenu[0].HW_Config = rt8kHi;
+      USBHostMenu.ItemType = rt8kHi;
       Serial.println("\n 8kHi config");
       return;
    }      
 
    if(EXROM==0 && GAME==0 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x4000)
    {
-      ROMMenu[0].HW_Config = rt16k;
+      USBHostMenu.ItemType = rt16k;
       Serial.println("\n 16k config");
       return;
    }      
-
    
    Serial.println("\nHW config unknown!");
 }
@@ -194,18 +201,41 @@ bool SerialAvailabeTimeout()
    return(false);
 }
 
-#define MaxDirEntries  250
-void printDirectory(File dir) 
+void LoadSDDirectory(File dir) 
 {
-   uint16_t Count = 0;
-   while(Count < MaxDirEntries) 
+   NumSDItems = 0;
+   do
    {
-     File entry = dir.openNextFile();
-     if (! entry) return;
-     if (entry.isDirectory()) Serial.print("/");
-     Serial.printf("%d- %s\n", Count++, entry.name());  
-     entry.close();
-   }
+      File entry = dir.openNextFile();
+      if (! entry) return;
+      if (entry.isDirectory())
+      {
+         SDMenu[NumSDItems].Name[0] = '/';
+         memcpy(SDMenu[NumSDItems].Name+1, entry.name(), MaxItemNameLength-1);
+      }
+      else memcpy(SDMenu[NumSDItems].Name, entry.name(), MaxItemNameLength);
+      
+      SDMenu[NumSDItems].Name[MaxItemNameLength-1]=0; //terminate in case too long.  
+      
+      
+      if (entry.isDirectory()) SDMenu[NumSDItems].ItemType = rtDir;
+      else if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".prg")==0) SDMenu[NumSDItems].ItemType = rtPrg;
+      else if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".crt")==0) SDMenu[NumSDItems].ItemType = rtCrt;
+      else SDMenu[NumSDItems].ItemType = rtUnk;
+      
+      //todo: fill in by extension:
+      //if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".prg")==0)
+      //if (strcmp((entry.name()), ".prg")==0)
+      
+      //  rtPrg
+      //  rtCrt
+      //  rtUnk
+      //  rtDir
+      
+      //Serial.printf("%d- %s\n", NumSDItems, SDMenu[NumSDItems].Name); 
+      entry.close();
+   } while(NumSDItems++ < MaxMenuItems);
+   
    Serial.print("Too many files!");
 }
 

@@ -1,5 +1,4 @@
 
-
 #include "ROMs\TeensyROMC64.h"
 #include "ROMs\Jupiter_Lander.h" 
 #include "ROMs\1541_Diagnostics.h" 
@@ -19,55 +18,8 @@
 #include "ROMs\disp_fract.prg.h"
 #include "ROMs\draw01.prg.h"
 
-
-enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
+StructMenuItem ROMMenu[] = 
 {
-   rRegStatus,  //loc 0(DE00) gets written to after/during reset
-   
-   rRegStrAddrLo,
-   rRegStrAddrHi,  //zero when inactive (no transfer to zero page)
-   rRegStrData,
-   wRegControl, //execute specific functions
-   rRegPresence1, //for HW detect: 0x55
-   rRegPresence2, //for HW detect: 0xAA
-   rwRegSelect,  //select ROM for name, type, execution, etc
-   rRegNumROMs,
-   rRegROMType,
-   rRegROMName, //MAX_ROMNAME_CHARS in length (incl term)
-};
-
-enum RegCtlCommands
-{
-   RCtlVanish = 0,
-   RCtlVanishReset,
-   RCtlStartRom ,
-   RCtlLoadFromSD ,
-   RCtlLoadFromUSB ,
-};
-
-enum ROMTypes
-{
-   rtNone = 0,
-   rt16k  = 1,
-   rt8kHi = 2,
-   rt8kLo = 3,
-   rtPrg  = 4,
-};
-#define  MAX_ROMNAME_CHARS 25
-
-struct StructROMDefs
-{
-  unsigned char HW_Config;
-  char Name[MAX_ROMNAME_CHARS];
-  const unsigned char *Code_Image;
-  uint16_t Size;
-};
-
-uint8_t RAM_Image[65536];
-
-StructROMDefs ROMMenu[] = 
-{
-   rtNone, "Nothing yet..."          , RAM_Image                  , 0, 
    rt8kLo, "1541 Diagnostics"        , a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
    rt8kLo, "Joystick Tester"         , Joystick_Tester_BIN        , 1, //size not needed for ROMs
    rt8kLo, "Keyboard Tester"         , Keyboard_Tester_BIN        , 1, //size not needed for ROMs

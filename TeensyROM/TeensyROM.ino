@@ -1,17 +1,30 @@
 
 //Compile with 816MHz (overclock) option set
 
-#include "ROM_Images.h"
 #include "TeensyROM.h"
+#include "Menu_Regs.h"
+#include "ROM_Images.h"
 #include <SD.h>
 
 uint8_t IO2_RAM[256];
+volatile uint8_t RegStatus = rstReady;
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false;
 volatile uint8_t DisablePhi2ISR = false;
 static const unsigned char *HIROM_Image = NULL;
 static const unsigned char *LOROM_Image = NULL;
-File root;
+
+uint8_t CurrentMenu = rmtTeensy;
+StructMenuItem *MenuSource = ROMMenu; //init to internal memory
+uint8_t NumMenuItems = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+
+StructMenuItem SDMenu[MaxMenuItems];
+uint8_t NumSDItems = 0;
+
+StructMenuItem USBHostMenu;
+uint8_t NumUSBHostItems = 0;
+
+File SDFileDir;
 
 void setup() 
 {
@@ -42,6 +55,8 @@ void setup()
    if (SD.begin(BUILTIN_SDCARD)) 
    {
      Serial.println("SD card initialized");
+     SDFileDir = SD.open("/");
+     if(SDFileDir) LoadSDDirectory(SDFileDir);  
    }
    else
    {

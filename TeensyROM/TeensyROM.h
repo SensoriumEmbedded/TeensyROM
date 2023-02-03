@@ -2,7 +2,6 @@
 #define SerialTimoutMillis 500
 uint32_t StartCycCnt;
 
-
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN         31  
 const uint8_t InputPins[] = {
@@ -66,7 +65,7 @@ const uint8_t OutputPins[] = {
     //Could reduce or use whole cycle counts instead of nS... while(ARM_DWT_CYCCNT < N * 0.816)      F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 // all times starting from Phi2 rising (interrupt). 
 #define nS_RWnReady        20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
-#define nS_PLAprop         100 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
+#define nS_PLAprop         110 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
 #define nS_DataSetup       325 //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
 #define nS_DataHold        400 //On a read, when to stop driving the data bus, spec calls for >430
 
