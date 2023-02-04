@@ -163,6 +163,7 @@
             this.btnSDDir.TabIndex = 15;
             this.btnSDDir.Text = "SD Dir";
             this.btnSDDir.UseVisualStyleBackColor = true;
+            this.btnSDDir.Visible = false;
             this.btnSDDir.Click += new System.EventHandler(this.btnSDDir_Click);
             // 
             // Form1

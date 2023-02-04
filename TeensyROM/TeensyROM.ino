@@ -7,12 +7,15 @@
 #include <SD.h>
 
 uint8_t IO2_RAM[256];
-volatile uint8_t RegStatus = rstReady;
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false;
 volatile uint8_t DisablePhi2ISR = false;
-static const unsigned char *HIROM_Image = NULL;
-static const unsigned char *LOROM_Image = NULL;
+uint8_t RegStatus = rsReady;
+uint8_t RegSelect = 0;
+uint16_t StreamStartAddr = 0;
+uint16_t StreamOffsetAddr = 0;
+const unsigned char *HIROM_Image = NULL;
+const unsigned char *LOROM_Image = NULL;
 
 uint8_t CurrentMenu = rmtTeensy;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
@@ -20,11 +23,10 @@ uint8_t NumMenuItems = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
 
 StructMenuItem SDMenu[MaxMenuItems];
 uint8_t NumSDItems = 0;
+char SDPath[250] = "/";
 
 StructMenuItem USBHostMenu;
 uint8_t NumUSBHostItems = 0;
-
-File SDFileDir;
 
 void setup() 
 {
@@ -55,8 +57,7 @@ void setup()
    if (SD.begin(BUILTIN_SDCARD)) 
    {
      Serial.println("SD card initialized");
-     SDFileDir = SD.open("/");
-     if(SDFileDir) LoadSDDirectory(SDFileDir);  
+     LoadSDDirectory();  
    }
    else
    {
@@ -76,7 +77,12 @@ void setup()
      
 void loop()
 {
-
+   if (RegStatus != rsReady) 
+   {
+      HandleExecution(); //rsStartItem is only non-ready setting, currently
+      RegStatus = rsReady;
+   }
+   
    if (BtnPressed)
    {
       Serial.print("Button detected\n"); 
@@ -111,4 +117,3 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = NULL;
 }
-

@@ -13,12 +13,12 @@
    MainCodeRAM = $c000    ;this file
    SIDCodeRAM = $1000 
 
-   ;These need to match Teensy Code!
-   IO1Port           = $de00
    BorderColorReg    = $d020 
    BackgndColorReg   = $d021
+   IO1Port           = $de00
    
-   MaxItemNameLength = 25
+   ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   MaxItemNameLength = 28
    
    rRegStatus     = IO1Port + 0
    rRegStrAddrLo  = IO1Port + 1
@@ -31,11 +31,20 @@
    rwRegSelItem   = IO1Port + 8
    rRegNumItems   = IO1Port + 9
    rRegItemType   = IO1Port + 10
-   rRegItemName   = IO1Port + 11 ;MaxItemNameLength in length (incl term)
+   rRegItemName   = IO1Port + 11 ;MaxItemNameLength bytes long (incl term)
+   
+   rsReady     = 0x5a
+   rsStartItem = 0xb1
+   rsError     = 0x24
+
+   rmtSD        = 0
+   rmtTeensy    = 1
+   rmtUSBHost   = 2
+   rmtUSBDrive  = 3
    
    RCtlVanish      = 0
    RCtlVanishReset = 1
-   RCtlStartRom    = 2
+   RCtlSelectItem  = 2
    RCtlLoadFromSD  = 3
    RCtlLoadFromUSB = 4
 
@@ -47,12 +56,9 @@
    rtUnk  = 5
    rtCrt  = 6
    rtDir  = 7
-
-   rmtSD        = 0
-   rmtTeensy    = 1
-   rmtUSBHost   = 2
-   rmtUSBDrive  = 3
    
+;!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!
+
 
    ;Kernal routines:
    IRQDefault = $ea31
@@ -364,13 +370,8 @@ finishMenu
    
 PRGtoMem:
    ;stream PRG file from TeensyROM to RAM
-   ;assumes TeensyROM is set up to transfer, PRG selected
+   ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
    ;rRegStrAddrHi is zero when inactive/complete
-   
-   ;wait for TR to be ready, could be loading from SD Card or USB Drive
-   
-   lda #RCtlStartRom  ;tell TR we're ready to transfer
-   sta wRegControl
    
    lda rRegStrAddrHi
    bne +
@@ -446,31 +447,29 @@ pr jsr SendChar
    rts
 
 ;Execute/select an item from the list
-; ROM, copy PRG to RAM and run, etc
+; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItem with Item # to execute/select
 SelectMenuItem:
-   ldx rRegItemType
-   cpx #rtNone
-   bne +
-   lda #<MsgErrNoFile ;No File loaded 
-   ldy #>MsgErrNoFile
-   jmp ErrOut
+   ldy rRegItemType ;grab this now it will change if new directory is loaded
+   lda #RCtlSelectItem
+   sta wRegControl
+   ;if it's a good ROM image, it won't return from this
+ResetWaitForTR
+   ldx#5 ;require 5 consecutive reads of ready to continue
+WaitForTR
+   lda rRegStatus
+   cmp #rsReady
+   bne ResetWaitForTR
+   dex
+   bne WaitForTR
 
+   cpy #rtPrg
+   beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
+   jsr ListMenuItems
+   rts
 
-   ;rtNone = 0,
-   ;rt16k  = 1,
-   ;rt8kHi = 2,
-   ;rt8kLo = 3,
-   ;rtPrg  = 4,
-   ;rtUnk  = 5,
-   ;rtCrt  = 6,
-   ;rtDir  = 7,
-
-   
-+  pla ;pull the jsr return info from the stack, we're not going back!
-   cpx #rtPrg  
-   bne ROMStart
 PRGStart
+   pla ;pull the jsr return info from the stack, we're not going back!
    jsr SIDOff
    jsr PRGtoMem
    ;load keyboard buffer with "run\n":  
@@ -484,14 +483,7 @@ PRGStart
    sta $027a  ;kbd buff 3
    lda #4
    sta $C6  ;# chars in kbd buff (4 of 10 max)
-   ;lda #RCtlVanish ;Deassert Game & ExROM (already done at start)
-   ;sta wRegControl
    jmp (BasicWarmStartVect)  
-ROMStart   
-   lda #RCtlStartRom
-   sta wRegControl
-x  jmp x ;TR should take it from here and reset...
-   
 
 ; ******************************* SID music/code ******************************* 
    
@@ -576,8 +568,8 @@ MsgErrNoData:
    !tx "No Data Available", 0
 MsgErrOverflow:
    !tx "Overflow", 0
-MsgErrNoFile:
-   !tx "No File Available", 0
+;MsgErrNoFile:
+;   !tx "No File Available", 0
    
 TblROMType:
    !tx "None","16k ","8Hi ","8Lo ","PRG ","Unk ","Crt ","Dir " ;4 bytes each, no term

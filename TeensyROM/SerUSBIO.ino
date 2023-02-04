@@ -18,11 +18,11 @@ void ServiceSerial()
             SetUpMainMenuROM();
             doReset = true;
             break;
-         case 0x67:
-            SDFileDir = SD.open("/");
-            if(SDFileDir) LoadSDDirectory(SDFileDir);  
-            else Serial.println("SD Card not present/initialized");
-            break;
+         //case 0x67:
+         //   SDFileDir = SD.open("/");
+         //   if(SDFileDir) LoadSDDirectory(SDFileDir);  
+         //   else Serial.println("SD Card not present/initialized");
+         //   break;
          default:
             Serial.printf("Unk: %02x\n", inByte); 
             break;
@@ -93,13 +93,18 @@ void ReceiveFile()
    
    if (strcmp((USBHostMenu.Name + strlen(USBHostMenu.Name) - 4), ".crt")!=0)
    {
-      //ItemType default to rtNone, set at start
+      //NumUSBHostItems = 0, set at start
       Serial.println("File type unknown!");
       return;
    }
    
-   
-   Serial.println(".CRT file detected");
+   Serial.println(".CRT file detected"); 
+   ParseCRTFile(&USBHostMenu);   
+ 
+}
+
+void ParseCRTFile(StructMenuItem* MyMenuItem)   
+{
    //https://vice-emu.sourceforge.io/vice_17.html#SEC369
    //http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
    
@@ -140,38 +145,37 @@ void ReceiveFile()
    Serial.printf(" Bank Num: %d\n",      toU16(ChipImage+0x0A));
    Serial.printf("Load Addr: $%04x\n",   toU16(ChipImage+0x0C));
    Serial.printf(" ROM Size: $%04x\n",   toU16(ChipImage+0x0E));
-
-//************We have an official file
-//new defaults:
-   USBHostMenu.ItemType = rtUnk;
+   
+   //We have a good CRT image, new defaults:
+   MyMenuItem->ItemType = rtUnk;
    NumUSBHostItems = 1;
    
-   USBHostMenu.Code_Image=RAM_Image+HeaderLen+0x10;
+   MyMenuItem->Code_Image=RAM_Image+HeaderLen+0x10;
    
    if(EXROM==0 && GAME==1 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x2000)
    {
-      USBHostMenu.ItemType = rt8kLo;
+      MyMenuItem->ItemType = rt8kLo;
       Serial.println("\n 8kLo config");
       return;
    }      
 
    if(EXROM==1 && GAME==0 && toU16(ChipImage+0x0C) == 0xe000 && toU16(ChipImage+0x0E) == 0x2000)
    {
-      USBHostMenu.ItemType = rt8kHi;
+      MyMenuItem->ItemType = rt8kHi;
       Serial.println("\n 8kHi config");
       return;
    }      
 
    if(EXROM==0 && GAME==0 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x4000)
    {
-      USBHostMenu.ItemType = rt16k;
+      MyMenuItem->ItemType = rt16k;
       Serial.println("\n 16k config");
       return;
    }      
    
    Serial.println("\nHW config unknown!");
 }
-
+   
 uint32_t toU32(uint8_t* src)
 {
    return
@@ -201,9 +205,19 @@ bool SerialAvailabeTimeout()
    return(false);
 }
 
-void LoadSDDirectory(File dir) 
+void LoadSDDirectory() 
 {
    NumSDItems = 0;
+   File dir = SD.open(SDPath);
+   if(!dir) return;   
+   
+   if (!(strlen(SDPath) == 1 && SDPath[0] == '/'))
+   {  //not at root, add up dir option
+      NumSDItems = 1;
+      strcpy(SDMenu[0].Name, UpDirString);
+      SDMenu[0].ItemType = rtDir;
+   }
+   
    do
    {
       File entry = dir.openNextFile();
@@ -215,22 +229,12 @@ void LoadSDDirectory(File dir)
       }
       else memcpy(SDMenu[NumSDItems].Name, entry.name(), MaxItemNameLength);
       
-      SDMenu[NumSDItems].Name[MaxItemNameLength-1]=0; //terminate in case too long.  
-      
+      SDMenu[NumSDItems].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
       
       if (entry.isDirectory()) SDMenu[NumSDItems].ItemType = rtDir;
       else if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".prg")==0) SDMenu[NumSDItems].ItemType = rtPrg;
       else if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".crt")==0) SDMenu[NumSDItems].ItemType = rtCrt;
       else SDMenu[NumSDItems].ItemType = rtUnk;
-      
-      //todo: fill in by extension:
-      //if (strcmp((SDMenu[NumSDItems].Name + strlen(SDMenu[NumSDItems].Name) - 4), ".prg")==0)
-      //if (strcmp((entry.name()), ".prg")==0)
-      
-      //  rtPrg
-      //  rtCrt
-      //  rtUnk
-      //  rtDir
       
       //Serial.printf("%d- %s\n", NumSDItems, SDMenu[NumSDItems].Name); 
       entry.close();
@@ -239,6 +243,87 @@ void LoadSDDirectory(File dir)
    Serial.print("Too many files!");
 }
 
+bool LoadSDFile()
+{
+   char FullFilePath[300];
+
+   if (strlen(SDPath) == 1 && SDPath[0] == '/') sprintf(FullFilePath, "%s%s", SDPath, SDMenu[RegSelect].Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", SDPath, SDMenu[RegSelect].Name);
+      
+   Serial.printf("Openning: %s\n", FullFilePath);
+   
+   File myFile = SD.open(FullFilePath, FILE_READ);
+   if (!myFile) return false;
+
+   uint16_t count=0;
+   while (myFile.available()) RAM_Image[count++]=myFile.read();
+   
+   SDMenu[RegSelect].Code_Image = RAM_Image;
+   SDMenu[RegSelect].Size = count;
+   myFile.close();
+   return true;
+}
+
+void HandleExecution()
+{
+   //DisablePhi2ISR = true;
+   //interpret/load rtDir, rtCrt, and rtPrg from SD card
+   if (CurrentMenu == rmtSD) switch(SDMenu[RegSelect].ItemType)
+   {
+      case rtDir: //load the new directory from SD to SDMenu/NumSDItems
+         if(strcmp(SDMenu[RegSelect].Name, UpDirString)==0)
+         {  //up dir
+            char * LastSlash = strrchr(SDPath, '/'); //find last slash
+            if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
+         }
+         else strcat(SDPath, SDMenu[RegSelect].Name); //append dir name
+         LoadSDDirectory(); 
+         NumMenuItems = NumSDItems;
+         return;
+         break;
+      case rtPrg: //Load the prg file to RAM
+         if(!LoadSDFile()) SDMenu[RegSelect].ItemType=rtUnk; //mark unknown if error
+         break;
+      case rtCrt: //load the Crt in to RAM and parse it for emulation
+         if(!LoadSDFile()) SDMenu[RegSelect].ItemType=rtUnk; //mark unknown if error
+         ParseCRTFile(&SDMenu[RegSelect]); //will convert type, if checks ok
+         break;
+
+   }      
+   
+   //has to be distilled down to one of these by this point, only ones supported so far.
+   //Execute ROM or prep PRG tranfer
+   switch(MenuSource[RegSelect].ItemType)
+   {
+      case rt16k:
+         SetGameAssert;
+         SetExROMAssert;
+         LOROM_Image = MenuSource[RegSelect].Code_Image;
+         HIROM_Image = MenuSource[RegSelect].Code_Image+0x2000;
+         doReset=true;
+         break;
+      case rt8kHi:
+         SetGameAssert;
+         SetExROMDeassert;
+         LOROM_Image = NULL;
+         HIROM_Image = MenuSource[RegSelect].Code_Image;
+         doReset=true;
+         break;
+      case rt8kLo:
+         SetGameDeassert;
+         SetExROMAssert;
+         LOROM_Image = MenuSource[RegSelect].Code_Image;
+         HIROM_Image = NULL;
+         doReset=true;
+         break;
+      case rtPrg:
+         //set up for transfer
+         StreamStartAddr = (MenuSource[RegSelect].Code_Image[1]<<8) + MenuSource[RegSelect].Code_Image[0];
+         StreamOffsetAddr = 2; //set to start of data
+         break;
+   }
+    
+}
 
 
 

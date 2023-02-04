@@ -1,5 +1,6 @@
 
 #define SerialTimoutMillis 500
+#define UpDirString "/.. <Up Dir>"
 uint32_t StartCycCnt;
 
 #define PHI2_PIN            1  

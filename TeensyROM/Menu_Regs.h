@@ -1,6 +1,6 @@
 
 #define MaxMenuItems  254
-#define MaxItemNameLength 25
+#define MaxItemNameLength 28
 
 uint8_t RAM_Image[65536];  //For receiving files from USB/SD/etc, should do this dynamically...
 
@@ -17,14 +17,14 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
    rwRegSelItem,  //select Menu Item for name, type, execution, etc
    rRegNumItems,  //num items in menu list
    rRegItemType,  //regItemTypes: type of item 
-   rRegItemName,  //MaxItemNameLength in length (incl term)
+   rRegItemName,  //MaxItemNameLength bytes long (incl term)
 };
 
 enum RegStatusTypes
 {
-   rstBusy,
-   rstReady,
-   rmtError,
+   rsReady     = 0x5a,
+   rsStartItem = 0xb1,
+   rsError     = 0x24,
 };
 
 enum RegMenuTypes
@@ -39,7 +39,7 @@ enum RegCtlCommands
 {
    RCtlVanish = 0,
    RCtlVanishReset,
-   RCtlStartRom ,
+   RCtlSelectItem ,
    RCtlLoadFromSD ,
    RCtlLoadFromUSB ,
 };

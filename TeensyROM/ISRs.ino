@@ -13,10 +13,6 @@ FASTRUN void isrPHI2()
    //RESET_CYCLECOUNT;
  	//SetDebug2Assert;
    
-   static uint16_t StreamStartAddr = 0;
-   static uint16_t StreamOffsetAddr = 0;
-   static uint8_t RegSelect = 0;
-   
    WaitUntil_nS(nS_RWnReady); 
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
@@ -28,7 +24,7 @@ FASTRUN void isrPHI2()
    
    if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
-      if (IsRead) //High (Read)
+      if (IsRead) //High (IO1 Read)
       {
          switch(Address & 0xFF)
          {
@@ -71,7 +67,7 @@ FASTRUN void isrPHI2()
          }
          //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
-      else  //write
+      else  // IO1 write
       {
          Data = DataPortWaitRead(); 
          switch(Address & 0xFF)
@@ -117,40 +113,12 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     //DisablePhi2ISR = true;
+                     DisablePhi2ISR = true;
                      SetLEDOff;
                      doReset=true;
                      break;
-                  case RCtlStartRom:
-                     switch(MenuSource[RegSelect].ItemType)
-                     {
-                        case rt16k:
-                           SetGameAssert;
-                           SetExROMAssert;
-                           LOROM_Image = MenuSource[RegSelect].Code_Image;
-                           HIROM_Image = MenuSource[RegSelect].Code_Image+0x2000;
-                           doReset=true;
-                           break;
-                        case rt8kHi:
-                           SetGameAssert;
-                           SetExROMDeassert;
-                           LOROM_Image = NULL;
-                           HIROM_Image = MenuSource[RegSelect].Code_Image;
-                           doReset=true;
-                           break;
-                        case rt8kLo:
-                           SetGameDeassert;
-                           SetExROMAssert;
-                           LOROM_Image = MenuSource[RegSelect].Code_Image;
-                           HIROM_Image = NULL;
-                           doReset=true;
-                           break;
-                        case rtPrg:
-                           //set up for transfer
-                           StreamStartAddr = (MenuSource[RegSelect].Code_Image[1]<<8) + MenuSource[RegSelect].Code_Image[0];
-                           StreamOffsetAddr = 2; //set to start of data
-                           break;
-                     }
+                  case RCtlSelectItem:
+                     RegStatus = rsStartItem; //work this in the main code
                      break;
                }
                break;
