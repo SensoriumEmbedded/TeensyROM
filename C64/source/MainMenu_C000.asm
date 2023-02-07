@@ -13,6 +13,7 @@
    MainCodeRAM = $c000    ;this file
    SIDCodeRAM = $1000 
 
+   ScreenMemStart    = $0400
    BorderColorReg    = $d020 
    BackgndColorReg   = $d021
    IO1Port           = $de00
@@ -27,28 +28,29 @@
    wRegControl    = IO1Port + 4
    rRegPresence1  = IO1Port + 5
    rRegPresence2  = IO1Port + 6
-   rwRegCurrMenu  = IO1Port + 7
+   rWRegCurrMenuWAIT  = IO1Port + 7
    rwRegSelItem   = IO1Port + 8
    rRegNumItems   = IO1Port + 9
    rRegItemType   = IO1Port + 10
    rRegItemName   = IO1Port + 11 ;MaxItemNameLength bytes long (incl term)
    
-   rsReady     = 0x5a
-   rsStartItem = 0xb1
-   rsError     = 0x24
+   rsReady      = 0x5a
+   rsChangeMenu = 0x9d
+   rsStartItem  = 0xb1
+   ;rsError      = 0x24
 
    rmtSD        = 0
    rmtTeensy    = 1
    rmtUSBHost   = 2
    rmtUSBDrive  = 3
    
-   RCtlVanish      = 0
-   RCtlVanishReset = 1
-   RCtlSelectItem  = 2
-   RCtlLoadFromSD  = 3
-   RCtlLoadFromUSB = 4
+   rCtlVanish         = 0
+   rCtlVanishReset    = 1
+   rCtlSelectItemWAIT = 2
+   rCtlLoadFromSD     = 3
+   rCtlLoadFromUSB    = 4
 
-   rtNone = 0
+   rtNone = 0  ;synch with TblItemType below
    rt16k  = 1
    rt8kHi = 2
    rt8kLo = 3
@@ -161,12 +163,10 @@ NoHW:
    jsr PrintString  
 -  jmp -
 
-+  lda #RCtlVanish ;Deassert Game & ExROM
++  lda #rCtlVanish ;Deassert Game & ExROM
    sta wRegControl
 
-   lda #0 ;initialize to first Item
-   sta RegMenuPageStart
-   jsr ListMenuItems
+   jsr ListMenuItemsInit
 
 WaitForKey:     
    ;jsr ScanKey  ;only needed if ints are off
@@ -212,28 +212,22 @@ WaitForKey:
    jsr ListMenuItems
    jmp WaitForKey  
 
-+  cmp #ChrF1  ;SD Card Menu
++  cmp #ChrF1  ;Teensy mem Menu
    bne +
-   lda #rmtSD
-   sta rwRegCurrMenu
-   lda #0  ;First Item
-   sta RegMenuPageStart
-   jsr ListMenuItems
+   lda #rmtTeensy
+   jsr ListMenuItemsChangeInit
    jmp WaitForKey  
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
-   lda #RCtlVanishReset ;reset to BASIC
+   lda #rCtlVanishReset ;reset to BASIC
    sta wRegControl
 -  jmp -  ;should be resetting to BASIC
 
-+  cmp #ChrF3  ;Teensy mem Menu
++  cmp #ChrF3  ;SD Card Menu
    bne +
-   lda #rmtTeensy
-   sta rwRegCurrMenu
-   lda #0  ;First Item
-   sta RegMenuPageStart
-   jsr ListMenuItems
+   lda #rmtSD
+   jsr ListMenuItemsChangeInit
    jmp WaitForKey  
 
 +  cmp #ChrF4  ;toggle music
@@ -246,28 +240,39 @@ WaitForKey:
 on jsr SIDOff ;sid is on, turn it off
    jmp WaitForKey  
 
-+  cmp #ChrF5  ;Exe USB Host file
++  cmp #ChrF5  ;USB Drive Menu
+   bne +
+   lda #rmtUSBDrive
+   jsr ListMenuItemsChangeInit
+   jmp WaitForKey  
+
++  cmp #ChrF7  ;Exe USB Host file
    bne +
    lda #rmtUSBHost
-   sta rwRegCurrMenu
-   lda #0  ;First Item
-   sta RegMenuPageStart
-   jsr ListMenuItems
+   jsr ListMenuItemsChangeInit
    jmp WaitForKey
+
+
 
 +  jmp WaitForKey
 
    
 ; ******************************* Subroutines ******************************* 
 ;                           list out rom number, type, & names
-;Prep: load RegMenuPageStart with first ROM on menu page
-Ssssssssssssssubroutines:
-ListMenuItems:
+
+Sssssssssssssssssssssssubroutines:
+ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
+   sta rWRegCurrMenuWAIT  ;must wait on a write (load dir)
+   jsr WaitForTR
+ListMenuItemsInit:
+   lda #0       ;initialize to first Item
+   sta RegMenuPageStart
+ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    lda #<MsgWelcome
    ldy #>MsgWelcome
    jsr PrintString 
    
-   lda rwRegCurrMenu
+   lda rWRegCurrMenuWAIT
    cmp #rmtSD
    bne +
    lda #<MsgMenuSD
@@ -278,6 +283,12 @@ ListMenuItems:
    bne +
    lda #<MsgMenuTeensy
    ldy #>MsgMenuTeensy
+   jmp cont1
+   
++  cmp #rmtUSBDrive
+   bne +
+   lda #<MsgMenuUSBDrive
+   ldy #>MsgMenuUSBDrive
    jmp cont1
    
 +  ;cmp #rmtUSBHost
@@ -335,7 +346,7 @@ nl pha ;remember menu letter
    rol
    rol  ;mult by 4
    tay
--  lda TblROMType,y
+-  lda TblItemType,y
    jsr SendChar   ;type (4 chars)
    iny
    tya
@@ -366,7 +377,45 @@ finishMenu
    ldy #>MsgSelect
    jsr PrintString
    rts
+
+;Execute/select an item from the list
+; Dir, ROM, copy PRG to RAM and run, etc
+;Pre-Load rwRegSelItem with Item # to execute/select
+SelectMenuItem:
+   ldy rRegItemType ;grab this now it will change if new directory is loaded
+   lda #rCtlSelectItemWAIT
+   sta wRegControl
+   jsr WaitForTR ;if it's a good ROM image, it won't return from this
+   cpy #rtPrg
+   beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
+   jsr ListMenuItemsInit
+   rts
+PRGStart
+   pla ;pull the jsr return info from the stack, we're not going back!
+   jsr SIDOff
+   jsr PRGtoMem
+   ;load keyboard buffer with "run\n":  
+   lda #'r'
+   sta $0277  ;kbd buff 0
+   lda #'u'
+   sta $0278 ;kbd buff 1
+   lda #'n'
+   sta $0279  ;kbd buff 2
+   lda #ChrReturn
+   sta $027a  ;kbd buff 3
+   lda #4
+   sta $C6  ;# chars in kbd buff (4 of 10 max)
+   jmp (BasicWarmStartVect)  
    
+WaitForTR:  ;wait for ready status, uses acc and X
+   ldx#5 ;require 5 consecutive reads of ready to continue
+   inc ScreenMemStart+40*2-1 ;end of second line
+-  lda rRegStatus
+   cmp #rsReady
+   bne WaitForTR
+   dex
+   bne -
+   rts
    
 PRGtoMem:
    ;stream PRG file from TeensyROM to RAM
@@ -446,44 +495,6 @@ l  clc
 pr jsr SendChar
    rts
 
-;Execute/select an item from the list
-; Dir, ROM, copy PRG to RAM and run, etc
-;Pre-Load rwRegSelItem with Item # to execute/select
-SelectMenuItem:
-   ldy rRegItemType ;grab this now it will change if new directory is loaded
-   lda #RCtlSelectItem
-   sta wRegControl
-   ;if it's a good ROM image, it won't return from this
-ResetWaitForTR
-   ldx#5 ;require 5 consecutive reads of ready to continue
-WaitForTR
-   lda rRegStatus
-   cmp #rsReady
-   bne ResetWaitForTR
-   dex
-   bne WaitForTR
-
-   cpy #rtPrg
-   beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
-   jsr ListMenuItems
-   rts
-
-PRGStart
-   pla ;pull the jsr return info from the stack, we're not going back!
-   jsr SIDOff
-   jsr PRGtoMem
-   ;load keyboard buffer with "run\n":  
-   lda #'r'
-   sta $0277  ;kbd buff 0
-   lda #'u'
-   sta $0278 ;kbd buff 1
-   lda #'n'
-   sta $0279  ;kbd buff 2
-   lda #ChrReturn
-   sta $027a  ;kbd buff 3
-   lda #4
-   sta $C6  ;# chars in kbd buff (4 of 10 max)
-   jmp (BasicWarmStartVect)  
 
 ; ******************************* SID music/code ******************************* 
    
@@ -533,20 +544,20 @@ irqSID:
    jmp IRQDefault
 
 ; ******************************* Strings/Messages ******************************* 
-
+MmmmmmmmmmessagesText:
 MsgWelcome:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff
-   !tx ChrReturn, SourcesColor, "From ", 0
+   !tx ChrReturn, SourcesColor, "From ", 0 
 MsgSelect:
    !tx SourcesColor, "Sources:             "
    !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " SD Card         "
+   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem      "
    !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC   "
-   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " Teensy Mem      "
+   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card         "
    !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off    "
-   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Host        "
+   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive       "
    !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet        "
-   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Drive       "
+   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host        "
    !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
     !tx 0
 MsgNoHW:
@@ -560,6 +571,8 @@ MsgMenuTeensy:
    !tx "Teensy Mem:", 0
 MsgMenuUSBHost:
    !tx "USB Host:", 0
+MsgMenuUSBDrive:
+   !tx "USB Drive:", 0
 
 
 MsgError:
@@ -571,8 +584,8 @@ MsgErrOverflow:
 ;MsgErrNoFile:
 ;   !tx "No File Available", 0
    
-TblROMType:
-   !tx "None","16k ","8Hi ","8Lo ","PRG ","Unk ","Crt ","Dir " ;4 bytes each, no term
+TblItemType: ;must match rtNone, rt16k, etc order!
+   !tx "None","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
    
    
 EndOfAllCode = *

@@ -5,6 +5,7 @@
 #include "Menu_Regs.h"
 #include "ROM_Images.h"
 #include <SD.h>
+#include <USBHost_t36.h>
 
 uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
@@ -25,8 +26,16 @@ StructMenuItem SDMenu[MaxMenuItems];
 uint8_t NumSDItems = 0;
 char SDPath[250] = "/";
 
+StructMenuItem USBDriveMenu[MaxMenuItems];
+uint8_t NumUSBDriveItems = 0;
+char USBDrivePath[250] = "/";
+
 StructMenuItem USBHostMenu;
 uint8_t NumUSBHostItems = 0;
+USBHost myusb;
+USBHub hub1(myusb);
+USBDrive myDrive(myusb);
+USBFilesystem firstPartition(myusb);
 
 void setup() 
 {
@@ -54,16 +63,16 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    
-   if (SD.begin(BUILTIN_SDCARD)) 
-   {
-     Serial.println("SD card initialized");
-     LoadSDDirectory();  
-   }
-   else
-   {
-     Serial.println("SD card initialization failed!"); 
-   }   
-   
+   Serial.print("SD Card initialization... ");
+   if (SD.begin(BUILTIN_SDCARD)) Serial.println("passed.");
+   else Serial.println("***Failed!***");
+  
+   Serial.print("USB Drive initialization... ");
+   myusb.begin(); // Start USBHost_t36, HUB(s) and USB devices.
+   // future USBFilesystem will begin automatically, begin(USBDrive) is a temporary feature
+   if (firstPartition.begin(&myDrive)) Serial.println("passed.");
+   else Serial.println("***Failed!***");
+
    Serial.print("TeensyROM 0.01 is on-line\n");
    //go directly to BASIC:
       //SetGameDeassert;
@@ -79,7 +88,8 @@ void loop()
 {
    if (RegStatus != rsReady) 
    {
-      HandleExecution(); //rsStartItem is only non-ready setting, currently
+      if(RegStatus == rsChangeMenu) MenuChange();
+      else HandleExecution(); //rsStartItem is only other non-ready setting
       RegStatus = rsReady;
    }
    

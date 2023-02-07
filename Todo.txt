@@ -17,11 +17,10 @@
   
 *** Software
 C64 code:
-  Load from SD card, USB thumb Drive
   Get time from internet, display in app
   Add HES mon & Joust to internal loads
   
-  default music state (on/off) saved in t4 internal eeprom
+  default music state (on/off) saved in t4 internal eeprom, other settings?
   Jupiter Lander still has garbled video, 80 col PRG doesn't work...
   add (find) EPYX fast load routine (fast load routine for drive 8?, not full cart version)
   
@@ -29,6 +28,16 @@ C64 code:
   Verify T41 speed on compile or setup()?   
       overclock even needed?
   Read c64 bus speed, adjust for PAL(?)
+
+modem emulation (ethernet)
+MIDI USB in -> SID
+
+
+Features:
+  Load from SD card, USB thumb Drive
+  Emulates "Normal" .crt files
+  transfers/executes .prg files
+  
 
 
 

@@ -155,7 +155,7 @@ namespace Serial_Logger
 
             //   App: SendFileToken 0x64AA
             //Teensy: ack 0x6464
-            //   App: Send Length(2), CS(2), Name(MAX_ROMNAME_CHARS=25 incl term), file(length)
+            //   App: Send Length(2), CS(2), Name(MaxItemNameLength=25 incl term), file(length)
             //Teensy: Pass 0x6480 or Fail 0x9b7f (or anything else received) 
             byte[] recBuf = new byte[2];
             byte[] LenHiLo = { (byte)len, (byte)(len >> 8) };
@@ -177,14 +177,14 @@ namespace Serial_Logger
             serialPort1.Write(LenHiLo, 0, 2);  //Send Length
             serialPort1.Write(CSHiLo, 0, 2);  //Send Checksum
 
-            //Send name (MAX_ROMNAME_CHARS=25 incl term)
-            const int MAX_ROMNAME_CHARS = 25;
+            //Send name (MaxItemNameLength=28 incl term)
+            const int MaxItemNameLength = 28;  //must synch with TeensyROM code!!!
             string fname = openFileDialog1.SafeFileName.ToLower();
-            if (fname.Length > MAX_ROMNAME_CHARS-1) fname = fname.Substring(0, MAX_ROMNAME_CHARS-5) + fname.Substring(fname.Length - 4); //compress but leave extension
+            if (fname.Length > MaxItemNameLength-1) fname = fname.Substring(0, MaxItemNameLength-5) + fname.Substring(fname.Length - 4); //compress but leave extension
 
             serialPort1.Write(fname);
             byte[] NullByte = new byte[1] { 0 };
-            for (int i = fname.Length; i < MAX_ROMNAME_CHARS; i++) serialPort1.Write(NullByte, 0, 1);
+            for (int i = fname.Length; i < MaxItemNameLength; i++) serialPort1.Write(NullByte, 0, 1);
 
             serialPort1.Write(fileBuf, 0, len); //Send file
             WriteToOutput("Finished sending...", Color.Black);

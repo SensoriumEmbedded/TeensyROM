@@ -31,7 +31,7 @@ FASTRUN void isrPHI2()
             case rwRegSelItem:
                DataPortWriteWait(RegSelect);  
                break;
-            case rwRegCurrMenu:
+            case rWRegCurrMenuWAIT:
                DataPortWriteWait(CurrentMenu);
                break;
             case rRegNumItems:
@@ -75,32 +75,14 @@ FASTRUN void isrPHI2()
             case rwRegSelItem:
                RegSelect=Data;
                break;
-            case rwRegCurrMenu:
+            case rWRegCurrMenuWAIT:
                CurrentMenu=Data;
-               switch(Data)
-               {
-                  case rmtTeensy:
-                     MenuSource = ROMMenu; 
-                     NumMenuItems = sizeof(ROMMenu)/sizeof(USBHostMenu);
-                     break;
-                  case rmtSD:
-                     MenuSource = SDMenu; 
-                     NumMenuItems = NumSDItems;
-                     break;
-                  case rmtUSBHost:
-                     MenuSource = &USBHostMenu; 
-                     NumMenuItems = NumUSBHostItems;
-                     break;
-                  case rmtUSBDrive:
-                     //MenuSource = ROMMenu; 
-                     //NumMenuItems = sizeof(ROMMenu)/sizeof(USBHostMenu);
-                     break;
-               }
+               RegStatus = rsChangeMenu; //work this in the main code
                break;
             case wRegControl:
                switch(Data)
                {
-                  case RCtlVanish: //will go out to lunch if called from ext ROM
+                  case rCtlVanish:
                      SetGameDeassert;
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
@@ -108,7 +90,7 @@ FASTRUN void isrPHI2()
                      //DisablePhi2ISR = true;
                      SetLEDOff;
                      break;
-                  case RCtlVanishReset:  
+                  case rCtlVanishReset:  
                      SetGameDeassert;
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
@@ -117,7 +99,7 @@ FASTRUN void isrPHI2()
                      SetLEDOff;
                      doReset=true;
                      break;
-                  case RCtlSelectItem:
+                  case rCtlSelectItemWAIT:
                      RegStatus = rsStartItem; //work this in the main code
                      break;
                }

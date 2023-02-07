@@ -13,7 +13,7 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
    wRegControl,   //RegCtlCommands: execute specific functions
    rRegPresence1, //for HW detect: 0x55
    rRegPresence2, //for HW detect: 0xAA
-   rwRegCurrMenu, //RegMenuTypes: select Menu type: SD, USB, etc
+   rWRegCurrMenuWAIT, //RegMenuTypes: select Menu type: SD, USB, etc
    rwRegSelItem,  //select Menu Item for name, type, execution, etc
    rRegNumItems,  //num items in menu list
    rRegItemType,  //regItemTypes: type of item 
@@ -22,26 +22,27 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 
 enum RegStatusTypes
 {
-   rsReady     = 0x5a,
-   rsStartItem = 0xb1,
-   rsError     = 0x24,
+   rsReady      = 0x5a,
+   rsChangeMenu = 0x9d,
+   rsStartItem  = 0xb1,
+   //rsError      = 0x24,
 };
 
 enum RegMenuTypes
 {
-   rmtSD,
-   rmtTeensy,
-   rmtUSBHost,
-   rmtUSBDrive,
+   rmtSD        = 0,
+   rmtTeensy    = 1,
+   rmtUSBHost   = 2,
+   rmtUSBDrive  = 3,
 };
 
 enum RegCtlCommands
 {
-   RCtlVanish = 0,
-   RCtlVanishReset,
-   RCtlSelectItem ,
-   RCtlLoadFromSD ,
-   RCtlLoadFromUSB ,
+   rCtlVanish         = 0,
+   rCtlVanishReset    = 1,
+   rCtlSelectItemWAIT = 2,
+   rCtlLoadFromSD     = 3,
+   rCtlLoadFromUSB    = 4,
 };
 
 enum regItemTypes

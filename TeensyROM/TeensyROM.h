@@ -65,10 +65,10 @@ const uint8_t OutputPins[] = {
 #define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
     //Could reduce or use whole cycle counts instead of nS... while(ARM_DWT_CYCCNT < N * 0.816)      F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 // all times starting from Phi2 rising (interrupt). 
-#define nS_RWnReady        20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
-#define nS_PLAprop         110 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
-#define nS_DataSetup       325 //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
-#define nS_DataHold        400 //On a read, when to stop driving the data bus, spec calls for >430
+#define nS_RWnReady        10  //20  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
+#define nS_PLAprop         15  //110 //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
+#define nS_DataSetup       325 //    //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
+#define nS_DataHold        250 //400 //On a read, when to stop driving the data bus, spec calls for >430, <=200 fails dead test
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
@@ -76,7 +76,7 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
-   WaitUntil_nS(nS_DataHold);  //could poll Phi2 for falling edge...  only 30nS typ hold time
+   WaitUntil_nS(nS_DataHold);  
    DataBufDisable;
 }
 
