@@ -41,7 +41,7 @@
             this.btnClear = new System.Windows.Forms.Button();
             this.btnReset = new System.Windows.Forms.Button();
             this.gbCommButtons = new System.Windows.Forms.GroupBox();
-            this.btnSDDir = new System.Windows.Forms.Button();
+            this.btnTest = new System.Windows.Forms.Button();
             this.gbCommButtons.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -85,7 +85,7 @@
             this.rtbOutput.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rtbOutput.Location = new System.Drawing.Point(16, 50);
             this.rtbOutput.Name = "rtbOutput";
-            this.rtbOutput.Size = new System.Drawing.Size(316, 423);
+            this.rtbOutput.Size = new System.Drawing.Size(475, 423);
             this.rtbOutput.TabIndex = 9;
             this.rtbOutput.Text = "";
             // 
@@ -142,11 +142,11 @@
             // 
             // gbCommButtons
             // 
-            this.gbCommButtons.Controls.Add(this.btnSDDir);
+            this.gbCommButtons.Controls.Add(this.btnTest);
             this.gbCommButtons.Controls.Add(this.btnPing);
             this.gbCommButtons.Controls.Add(this.btnReset);
             this.gbCommButtons.Controls.Add(this.btnSendFile);
-            this.gbCommButtons.Location = new System.Drawing.Point(338, 17);
+            this.gbCommButtons.Location = new System.Drawing.Point(499, 17);
             this.gbCommButtons.Name = "gbCommButtons";
             this.gbCommButtons.Size = new System.Drawing.Size(88, 456);
             this.gbCommButtons.TabIndex = 15;
@@ -154,24 +154,23 @@
             this.gbCommButtons.Text = "Comm";
             this.gbCommButtons.Visible = false;
             // 
-            // btnSDDir
+            // btnTest
             // 
-            this.btnSDDir.Location = new System.Drawing.Point(7, 130);
-            this.btnSDDir.Margin = new System.Windows.Forms.Padding(4);
-            this.btnSDDir.Name = "btnSDDir";
-            this.btnSDDir.Size = new System.Drawing.Size(72, 28);
-            this.btnSDDir.TabIndex = 15;
-            this.btnSDDir.Text = "SD Dir";
-            this.btnSDDir.UseVisualStyleBackColor = true;
-            this.btnSDDir.Visible = false;
-            this.btnSDDir.Click += new System.EventHandler(this.btnSDDir_Click);
+            this.btnTest.Location = new System.Drawing.Point(7, 130);
+            this.btnTest.Margin = new System.Windows.Forms.Padding(4);
+            this.btnTest.Name = "btnTest";
+            this.btnTest.Size = new System.Drawing.Size(72, 28);
+            this.btnTest.TabIndex = 15;
+            this.btnTest.Text = "Test";
+            this.btnTest.UseVisualStyleBackColor = true;
+            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ActiveBorder;
-            this.ClientSize = new System.Drawing.Size(431, 485);
+            this.ClientSize = new System.Drawing.Size(594, 485);
             this.Controls.Add(this.gbCommButtons);
             this.Controls.Add(this.btnClear);
             this.Controls.Add(this.btnRefreshCOMList);
@@ -202,7 +201,7 @@
         private System.Windows.Forms.Button btnClear;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.GroupBox gbCommButtons;
-        private System.Windows.Forms.Button btnSDDir;
+        private System.Windows.Forms.Button btnTest;
     }
 }
 

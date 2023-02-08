@@ -6,10 +6,13 @@
 #include "ROM_Images.h"
 #include <SD.h>
 #include <USBHost_t36.h>
+#include <SPI.h>
+#include <NativeEthernet.h>
+#include <NativeEthernetUdp.h>
 
 uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
-volatile uint8_t BtnPressed = false;
+volatile uint8_t BtnPressed = false; 
 volatile uint8_t DisablePhi2ISR = false;
 uint8_t RegStatus = rsReady;
 uint8_t RegSelect = 0;
@@ -36,6 +39,15 @@ USBHost myusb;
 USBHub hub1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
+
+uint8_t LastSecBCD  =0;
+uint8_t LastMinBCD  =0;
+uint8_t LastHourBCD =0;
+unsigned int localPort = 8888;       // local port to listen for UDP packets
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
+int timeZone = -8;  // -8==Pacific Standard Time, -7==Pacific Daylight Time (USA)
+EthernetUDP Udp;
 
 void setup() 
 {
@@ -89,6 +101,7 @@ void loop()
    if (RegStatus != rsReady) 
    {
       if(RegStatus == rsChangeMenu) MenuChange();
+      else if(RegStatus == rsGetTime) getNtpTime();
       else HandleExecution(); //rsStartItem is only other non-ready setting
       RegStatus = rsReady;
    }

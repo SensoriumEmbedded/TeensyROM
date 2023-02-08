@@ -17,26 +17,34 @@
    BorderColorReg    = $d020 
    BackgndColorReg   = $d021
    IO1Port           = $de00
+   TODHoursBCD       = $dc0b
+   TODMinBCD         = $dc0a
+   TODSecBCD         = $dc09
+   TODTenthSecBCD    = $dc08
    
    ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    MaxItemNameLength = 28
    
-   rRegStatus     = IO1Port + 0
-   rRegStrAddrLo  = IO1Port + 1
-   rRegStrAddrHi  = IO1Port + 2
-   rRegStreamData = IO1Port + 3  
-   wRegControl    = IO1Port + 4
-   rRegPresence1  = IO1Port + 5
-   rRegPresence2  = IO1Port + 6
-   rWRegCurrMenuWAIT  = IO1Port + 7
-   rwRegSelItem   = IO1Port + 8
-   rRegNumItems   = IO1Port + 9
-   rRegItemType   = IO1Port + 10
-   rRegItemName   = IO1Port + 11 ;MaxItemNameLength bytes long (incl term)
+   rRegStatus        = IO1Port + 0
+   rRegStrAddrLo     = IO1Port + 1
+   rRegStrAddrHi     = IO1Port + 2
+   rRegStreamData    = IO1Port + 3  
+   wRegControl       = IO1Port + 4
+   rRegPresence1     = IO1Port + 5
+   rRegPresence2     = IO1Port + 6
+   rRegLastHourBCD   = IO1Port + 7
+   rRegLastMinBCD    = IO1Port + 8
+   rRegLastSecBCD    = IO1Port + 9
+   rWRegCurrMenuWAIT = IO1Port + 10 
+   rwRegSelItem      = IO1Port + 11
+   rRegNumItems      = IO1Port + 12
+   rRegItemType      = IO1Port + 13
+   rRegItemName      = IO1Port + 14 ;MaxItemNameLength bytes long (incl term)
    
    rsReady      = 0x5a
    rsChangeMenu = 0x9d
    rsStartItem  = 0xb1
+   rsGetTime    = 0xe6
    ;rsError      = 0x24
 
    rmtSD        = 0
@@ -44,11 +52,10 @@
    rmtUSBHost   = 2
    rmtUSBDrive  = 3
    
-   rCtlVanish         = 0
-   rCtlVanishReset    = 1
-   rCtlSelectItemWAIT = 2
-   rCtlLoadFromSD     = 3
-   rCtlLoadFromUSB    = 4
+   rCtlVanish           = 0
+   rCtlVanishReset      = 1
+   rCtlStartSelItemWAIT = 2
+   rCtlGetTimeWAIT      = 3
 
    rtNone = 0  ;synch with TblItemType below
    rt16k  = 1
@@ -128,6 +135,7 @@
    pokeLtBlue  = 14
    pokeLtGrey  = 15
    
+   TimeColor        = ChrBrown
    MenuMiscColor    = ChrGreen
    ROMNumColor      = ChrDrkGrey
    OptionColor      = ChrYellow
@@ -148,7 +156,7 @@
    lda #BackgndColor
    sta BackgndColorReg
    
-   jsr SIDOn
+   jsr SIDOn ;Start the music!
    
 ;check for HW:
    lda rRegPresence1
@@ -167,8 +175,10 @@ NoHW:
    sta wRegControl
 
    jsr ListMenuItemsInit
+   ;jsr SynchEthernetTime
 
 WaitForKey:     
+   jsr DisplayTime
    ;jsr ScanKey  ;only needed if ints are off
    jsr GetIn    
    beq WaitForKey
@@ -246,6 +256,11 @@ on jsr SIDOff ;sid is on, turn it off
    jsr ListMenuItemsChangeInit
    jmp WaitForKey  
 
++  cmp #ChrF6  ;Synch Ethernet Time
+   bne +
+   jsr SynchEthernetTime
+   jmp WaitForKey  
+
 +  cmp #ChrF7  ;Exe USB Host file
    bne +
    lda #rmtUSBHost
@@ -271,8 +286,8 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    lda #<MsgWelcome
    ldy #>MsgWelcome
    jsr PrintString 
-   
-   lda rWRegCurrMenuWAIT
+   ;print menu source:
+   lda rWRegCurrMenuWAIT ;don't have to wait on a read
    cmp #rmtSD
    bne +
    lda #<MsgMenuSD
@@ -298,17 +313,18 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    ;jmp cont1
    
 cont1   
-   jsr PrintString 
+   jsr PrintString
    lda rRegNumItems
    bne +
    lda #<MsgNoItems
    ldy #>MsgNoItems
-   jsr PrintString 
+   jsr PrintString
    jmp finishMenu
 +  lda RegMenuPageStart
    sta rwRegSelItem
    lda #'A' ;initialize to start of page
-nl pha ;remember menu letter
+nextLine
+   pha ;remember menu letter
    lda #ChrReturn
    jsr SendChar
    
@@ -367,7 +383,7 @@ nl pha ;remember menu letter
    clc
    adc #01
    cmp #'A' + MaxMenuDispItems
-   bne nl  
+   bne nextLine  
 finishMenu
    ldx #20 ;row
    ldy #0  ;col
@@ -383,7 +399,7 @@ finishMenu
 ;Pre-Load rwRegSelItem with Item # to execute/select
 SelectMenuItem:
    ldy rRegItemType ;grab this now it will change if new directory is loaded
-   lda #rCtlSelectItemWAIT
+   lda #rCtlStartSelItemWAIT
    sta wRegControl
    jsr WaitForTR ;if it's a good ROM image, it won't return from this
    cpy #rtPrg
@@ -394,6 +410,10 @@ PRGStart
    pla ;pull the jsr return info from the stack, we're not going back!
    jsr SIDOff
    jsr PRGtoMem
+   lda #ChrGreen
+   jsr SendChar 
+   lda #ChrClear
+   jsr SendChar 
    ;load keyboard buffer with "run\n":  
    lda #'r'
    sta $0277  ;kbd buff 0
@@ -409,7 +429,7 @@ PRGStart
    
 WaitForTR:  ;wait for ready status, uses acc and X
    ldx#5 ;require 5 consecutive reads of ready to continue
-   inc ScreenMemStart+40*2-1 ;end of second line
+   inc ScreenMemStart+40*2-2 ;end of 'Time' print loc.
 -  lda rRegStatus
    cmp #rsReady
    bne WaitForTR
@@ -444,7 +464,6 @@ PRGtoMem:
    jmp ErrOut
 rt rts
   
-  
 ErrOut:   
    ;Error msg pointer stored in acc/y
    pha
@@ -463,22 +482,73 @@ ErrOut:
    jsr PrintString
    rts
 
-PrintHexByte:
-   ;Print byte value stored in acc in hex
-   ;  2 chars plus space
-   ;preserves acc
-   pha
-   ror
-   ror
-   ror
-   ror
-   jsr PrintHexNibble
-   pla
-   pha
-   jsr PrintHexNibble
-   lda #ChrSpace
+SynchEthernetTime:
+   lda #rCtlGetTimeWAIT
+   sta wRegControl
+   jsr WaitForTR 
+   lda rRegLastHourBCD
+   sta TODHoursBCD  ;stop TOD regs incrementing
+   lda rRegLastMinBCD
+   sta TODMinBCD
+   lda rRegLastSecBCD
+   sta TODSecBCD
+   lda #9
+   sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+   rts
+   
+DisplayTime:
+   ldx #1 ;row
+   ldy #29  ;col
+   clc
+   jsr SetCursor
+   lda #TimeColor
    jsr SendChar
+   lda TODHoursBCD ;latches time in regs (stops incrementing)
+   tay ;save for am/pm at end
+   and #$10
+   bne +
+   lda #ChrSpace
+   jmp ++
++  lda #'1'
+++ jsr SendChar
+   tya
+   and #$0f  ;ones of hours
+   jsr PrintHexNibble
+   lda #':'
+   jsr SendChar
+   lda TODMinBCD
+   jsr PrintHexByte
+   lda #':'
+   jsr SendChar
+   lda TODSecBCD
+   jsr PrintHexByte
+   ;lda #'.'
+   ;jsr SendChar
+   lda TODTenthSecBCD ;have to read 10ths to release latch
+   ;jsr PrintHexNibble
+   tya ;am/pm (pre latch release)
+   and #$80
+   bne +
+   lda #'a'
+   jmp ++
++  lda #'p'
+++ jsr SendChar
+   lda #'m'
+   jsr SendChar
+   rts
+   
+PrintHexByte:
+   ;Print byte value stored in acc in hex (2 chars)
+   pha
+   ror
+   ror
+   ror
+   ror
+   jsr PrintHexNibble
    pla
+   ;pha   ; preserve acc on return?
+   jsr PrintHexNibble
+   ;pla
    rts
    
 PrintHexNibble:   
@@ -549,15 +619,15 @@ MsgWelcome:
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff
    !tx ChrReturn, SourcesColor, "From ", 0 
 MsgSelect:
-   !tx SourcesColor, "Sources:             "
+   !tx SourcesColor, "Sources:          "
    !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem      "
-   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC   "
-   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card         "
-   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off    "
-   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive       "
-   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet        "
-   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host        "
+   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
+   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
+   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
+   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
+   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
+   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
+   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
    !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
     !tx 0
 MsgNoHW:

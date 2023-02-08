@@ -236,10 +236,10 @@ namespace Serial_Logger
             serialPort1.Write(Reset, 0, 2);  
         }
 
-        private void btnSDDir_Click(object sender, EventArgs e)
+        private void btnTest_Click(object sender, EventArgs e)
         {
-            byte[] SDDir = { 0x64, 0x67 };
-            serialPort1.Write(SDDir, 0, 2);
+            byte[] TestCode = { 0x64, 0x67 };
+            serialPort1.Write(TestCode, 0, 2);
         }
 
         /********************************  Stand Alone Functions *****************************************/

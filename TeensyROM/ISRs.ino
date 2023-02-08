@@ -64,6 +64,15 @@ FASTRUN void isrPHI2()
             case rRegStatus:
                DataPortWriteWait(RegStatus); 
                break;
+            case rRegLastHourBCD:
+               DataPortWriteWait(LastHourBCD); 
+               break;
+            case rRegLastMinBCD:
+               DataPortWriteWait(LastMinBCD); 
+               break;
+            case rRegLastSecBCD:
+               DataPortWriteWait(LastSecBCD); 
+               break;
          }
          //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
@@ -99,8 +108,11 @@ FASTRUN void isrPHI2()
                      SetLEDOff;
                      doReset=true;
                      break;
-                  case rCtlSelectItemWAIT:
+                  case rCtlStartSelItemWAIT:
                      RegStatus = rsStartItem; //work this in the main code
+                     break;
+                  case rCtlGetTimeWAIT:
+                     RegStatus = rsGetTime; //work this in the main code
                      break;
                }
                break;
@@ -117,7 +129,7 @@ FASTRUN void isrPHI2()
       else  //write
       {
          IO2_RAM[Address & 0xFF] = DataPortWaitRead(); 
-         Serial.printf("IO2 Wr %d to 0x%04x\n", IO2_RAM[Address & 0xFF], Address);
+         //Serial.printf("IO2 Wr %d to 0x%04x\n", IO2_RAM[Address & 0xFF], Address);
       }
    }  //IO2
    else if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
@@ -128,7 +140,7 @@ FASTRUN void isrPHI2()
    {
       if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); 
    }  //ROMH
-   
+      
  
    //now the time-sensitive work is done, have a few hundred nS until the next interrupt...
    //SetDebugDeassert;

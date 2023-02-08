@@ -18,8 +18,9 @@ void ServiceSerial()
             SetUpMainMenuROM();
             doReset = true;
             break;
-         //case 0x67:
-         //   break;
+         case 0x67:
+            getNtpTime();
+            break;
          default:
             Serial.printf("Unk: %02x\n", inByte); 
             break;
@@ -136,5 +137,93 @@ bool SerialAvailabeTimeout()
    Serial.write(0x7F);  // 127
    Serial.print("Timeout!\n");  
    return(false);
+}
+  
+void getNtpTime() 
+{
+   Serial.print("\nEthernet init... ");
+   uint32_t beginWait = millis();
+
+   if (Ethernet.begin(mac, 5000, 4000) == 0)  //reduce timeout from 60 to 5 sec, should be longer, or option to skip
+   {
+      Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
+      // Check for Ethernet hardware present
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
+      else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
+      
+      LastSecBCD  =0;      
+      LastMinBCD  =0;      
+      LastHourBCD =0;      
+      return;
+   }
+   Udp.begin(localPort);
+   Serial.printf("passed. took %d mS\n", (millis() - beginWait));
+   
+   const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
+   byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
+   
+   Serial.printf("Updating time from: %s\n", timeServer);
+   while (Udp.parsePacket() > 0) ; // discard any previously received packets
+   
+   // send an NTP request to the time server at the given address
+    // set all bytes in the buffer to 0
+    memset(packetBuffer, 0, NTP_PACKET_SIZE);
+    // Initialize values needed to form NTP request
+    packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+    packetBuffer[1] = 0;     // Stratum, or type of clock
+    packetBuffer[2] = 6;     // Polling Interval
+    packetBuffer[3] = 0xEC;  // Peer Clock Precision
+    // 8 bytes of zero for Root Delay & Root Dispersion
+    packetBuffer[12]  = 49;
+    packetBuffer[13]  = 0x4E;
+    packetBuffer[14]  = 49;
+    packetBuffer[15]  = 52;
+    // all NTP fields have been given values, now send a packet requesting a timestamp:
+    Udp.beginPacket(timeServer, 123); // NTP requests are to port 123
+    Udp.write(packetBuffer, NTP_PACKET_SIZE);
+    Udp.endPacket();
+
+   beginWait = millis();
+   while (millis() - beginWait < 1500) 
+   {
+      int size = Udp.parsePacket();
+      if (size >= NTP_PACKET_SIZE) 
+      {
+         Udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+         uint32_t secsSince1900;
+         // convert four bytes starting at location 40 to a long integer
+         secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+         secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+         secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+         secsSince1900 |= (unsigned long)packetBuffer[43];
+         Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
+
+         //since we don't need the date, leaving out TimeLib.h all together
+         //#include <TimeLib.h>
+         //time_t tm = secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+         //Serial.printf("%d/%02d/%02d     ", year(tm), month(tm), day(tm));
+         //Serial.printf("%2d:%02d:%02d\n", hour(tm) , minute(tm), second(tm));
+         
+         LastSecBCD =DecToBCD(secsSince1900 % 60);
+         secsSince1900 /=60; //to  minutes
+         LastMinBCD =DecToBCD(secsSince1900 % 60);
+         secsSince1900 = (secsSince1900/60 + timeZone)%24; //to hours, offset timezone
+         if (secsSince1900 >= 12) LastHourBCD = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
+         else LastHourBCD =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
+
+         Serial.printf("Time: %02x:%02x:%02x %sm\n", (LastHourBCD & 0x7f) , LastMinBCD, LastSecBCD, (LastHourBCD & 0x80) ? "p" : "a");        
+         //Udp.stop();
+         //EthernetClient.stop();
+         return;
+      }
+   }
+   Serial.println("NTP Response timeout!");
+   //Ethernet.stop();
+   //Ethernet.maintain();
+}
+
+uint8_t DecToBCD(uint8_t DecVal)
+{
+   return (int(DecVal/10)<<4) | (DecVal%10);
 }
 

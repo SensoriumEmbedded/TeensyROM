@@ -17,7 +17,6 @@
   
 *** Software
 C64 code:
-  Get time from internet, display in app
   Add HES mon & Joust to internal loads
   
   default music state (on/off) saved in t4 internal eeprom, other settings?
@@ -29,6 +28,12 @@ C64 code:
       overclock even needed?
   Read c64 bus speed, adjust for PAL(?)
 
+Internal EEPROM storage:
+   Music on/off state
+   Auto time synch w/ ethernet
+
+
+
 modem emulation (ethernet)
 MIDI USB in -> SID
 
@@ -37,6 +42,7 @@ Features:
   Load from SD card, USB thumb Drive
   Emulates "Normal" .crt files
   transfers/executes .prg files
+  Synchs C64 system time from internet, display in app
   
 
 
