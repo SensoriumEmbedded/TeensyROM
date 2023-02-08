@@ -175,7 +175,7 @@ NoHW:
    sta wRegControl
 
    jsr ListMenuItemsInit
-   ;jsr SynchEthernetTime
+   jsr SynchEthernetTime
 
 WaitForKey:     
    jsr DisplayTime
@@ -504,7 +504,13 @@ DisplayTime:
    lda #TimeColor
    jsr SendChar
    lda TODHoursBCD ;latches time in regs (stops incrementing)
-   tay ;save for am/pm at end
+   tay ;save for re-use
+   and #$1f
+   bne nz   ;if hours is 0, make it 12...
+   tya
+   ora #$12
+   tay ;re-save for re-use
+nz tya
    and #$10
    bne +
    lda #ChrSpace

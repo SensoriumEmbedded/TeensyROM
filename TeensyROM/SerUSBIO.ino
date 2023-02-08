@@ -199,11 +199,6 @@ void getNtpTime()
          Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
 
          //since we don't need the date, leaving out TimeLib.h all together
-         //#include <TimeLib.h>
-         //time_t tm = secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
-         //Serial.printf("%d/%02d/%02d     ", year(tm), month(tm), day(tm));
-         //Serial.printf("%2d:%02d:%02d\n", hour(tm) , minute(tm), second(tm));
-         
          LastSecBCD =DecToBCD(secsSince1900 % 60);
          secsSince1900 /=60; //to  minutes
          LastMinBCD =DecToBCD(secsSince1900 % 60);
@@ -212,8 +207,6 @@ void getNtpTime()
          else LastHourBCD =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
 
          Serial.printf("Time: %02x:%02x:%02x %sm\n", (LastHourBCD & 0x7f) , LastMinBCD, LastSecBCD, (LastHourBCD & 0x80) ? "p" : "a");        
-         //Udp.stop();
-         //EthernetClient.stop();
          return;
       }
    }
