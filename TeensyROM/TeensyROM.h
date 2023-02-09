@@ -39,8 +39,6 @@ const uint8_t OutputPins[] = {
 
 #define SetResetAssert     CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
 #define SetResetDeassert   CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
-//#define SetResetAssert     { CORE_PIN6_DDRREG  |= CORE_PIN6_BITMASK; CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; }   //make output, drive low
-//#define SetResetRelease    CORE_PIN6_DDRREG  &= ~CORE_PIN6_BITMASK      //make input (OC)
 #define ReadGPIO8          (*(volatile uint32_t *)IMXRT_GPIO8_ADDRESS)
 #define ReadButton         (ReadGPIO8 & CORE_PIN31_BITMASK)
 
@@ -60,7 +58,6 @@ const uint8_t OutputPins[] = {
 #define SetDebug2Assert    CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDebugDeassert  CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
-//Use only inside Phi2 isr:
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
     //Could reduce or use whole cycle counts instead of nS... while(ARM_DWT_CYCCNT < N * 0.816)      F_CPU_ACTUAL=816000000  /1000000000 = 0.816
@@ -73,6 +70,7 @@ const uint8_t OutputPins[] = {
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
    DataBufEnable; 
+   Data= (Data&0xf9) | ((Data & 0x02)<<1) | ((Data & 0x04)>>1);  //Workaround: Data bits swapped on v0.1 schematic!
    register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
@@ -88,7 +86,9 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
    register uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
-   return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+   //return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+   DataIn = ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+   return (DataIn&0xf9) | ((DataIn & 0x02)<<1) | ((DataIn & 0x04)>>1);   //Workaround: Data bits swapped on v0.1 schematic!
 }
 
 

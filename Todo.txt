@@ -1,74 +1,59 @@
 
 
 *** Hardware
-   Potential Changes from 0.1 PCB:
-
+  Planned Changes from 0.1 PCB:
+      Data bits 2 and 1 are swapped in v0.1, worked around in SW
+      Ethernet port
+      USB host port
+  Potential Changes:
       drive local data bus to latched outputs such as Kernal/BASIC/Char Set controls (5 bits)
-            via 74LVC573 Need 1 Teensy IO line per latch
+         via 74LVC573 Need 1 Teensy IO line per latch
       access more Teensy IO pins by muxing inputs via 74LVC257s
-            8 inputs reduce to 5
-            16 inputs reduce to 9
-            24 inputs reduce to 13 (frees up 11 IOs)
-      
-      batt back for RTC?
-      Ethernet port?
-      USB host port?
-  
+         8 inputs reduce to 5
+         16 inputs reduce to 9
+         24 inputs reduce to 13 (frees up 11 IOs)
+      DAC for audio?
+      batt back for RTC? not using currently, ethernet seems fine
   
 *** Software
-C64 code:
-  Add HES mon & Joust to internal loads
-  
-  default music state (on/off) saved in t4 internal eeprom, other settings?
-  Jupiter Lander still has garbled video, 80 col PRG doesn't work...
-  add (find) EPYX fast load routine (fast load routine for drive 8?, not full cart version)
-  
-  TeensyROM test program? (IO1/2, other ROM locations, etc)
-  Verify T41 speed on compile or setup()?   
-      overclock even needed?
-  Read c64 bus speed, adjust for PAL(?)
+  C64 code:
+      Calc AC input freq, adjust TOD clock 50/60Hz 
+      TeensyROM interface test program? (IO1/2, ROM locations, etc)
+      2nd interrupt in menu app to clean up border end flicker? (aesthetic)
+      
+  Calc c64 bus freq, adjust emul timing for PAL(?)
+  Verify T41 speed on compile or setup()?  overclock really needed?
+  modem emulation (ethernet)
+  detect file/dir name too long and mark as such (new type)
+  *MIDI USB in -> SID
+  *other crt types HW emulation (esp epyx)
+  *Internal EEPROM storage:
+      default music state (on/off) 
+      Auto time synch w/ ethernet on start
+   
+Todo:
+   Recheck timing, scope shots to publish
+   Credits/info page 
+      incl EEPROM settings?
+      Sensorium, SideKick/SID inspiration, FZ
+   test w/out USB/SD
+   
+  PRG/CRT collection/sort:   Add HES mon & Joust to internal loads
+      add (find) EPYX fast load routine (fast load routine for drive 8?, not full cart version)
 
-Internal EEPROM storage:
-   Music on/off state
-   Auto time synch w/ ethernet
+Known Issues:
+  Jupiter Lander & other ROMH/8khi crts have garbled video
+  80 col PRG doesn't work, better way to go to BASIC and re-gain reported RAM?
 
 
-
-modem emulation (ethernet)
-MIDI USB in -> SID
-
-
-Features:
-  Load from SD card, USB thumb Drive
+Current Features:
+  NTSC
+  Load/run from:
+      USB thumb Drive
+      SD card
+      Teensy Internal Flash  
+      Transfer directly from PC (Windows app included)
+  Sets C64 system time from internet
   Emulates "Normal" .crt files
   transfers/executes .prg files
-  Synchs C64 system time from internet, display in app
-  
-
-
-
-*** notes
-These take the same amount of memory:
-//PROGMEM  prog_uchar testpat[] = {
-//Memory Usage on Teensy 4.1:
-//  FLASH: code:26828, data:*7328, headers:*8848   free for files:*8083460
-//   RAM1: variables:7936, code:24280, padding:8488   free for local variables:483584
-//   RAM2: variables:12384  free for malloc/new:511904
-//
-//static const uint8_t testpat[] = {
-//Memory Usage on Teensy 4.1:
-//  FLASH: code:26828, data:*7064, headers:*9112   free for files:*8083460
-//   RAM1: variables:7936, code:24280, padding:8488   free for local variables:483584
-//   RAM2: variables:12384  free for malloc/new:511904
-   
-   
-   
-Features:
-Internal storage for instant access to xxMB of carts and prgs
-
-SD card
-USB Host (Thumb)
-USB Device (transfer from PC)
-Ethernet
-
 
