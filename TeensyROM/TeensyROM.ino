@@ -1,4 +1,8 @@
 
+//  TeensyROM: A C64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
+//  Copyright (c) 2023 Travis Smith <travis@sensoriumembedded.com> 
+
+
 //Compile with 816MHz (overclock) option set
 
 #include "TeensyROM.h"
@@ -87,13 +91,6 @@ void setup()
    else Serial.println("***Failed!***");
 
    Serial.print("TeensyROM 0.01 is on-line\n");
-   //go directly to BASIC:
-      //SetGameDeassert;
-      //SetExROMDeassert;      
-      //LOROM_Image = NULL;
-      //HIROM_Image = NULL;  
-      //DisablePhi2ISR = true;
-      //SetLEDOff;
 
 } 
      

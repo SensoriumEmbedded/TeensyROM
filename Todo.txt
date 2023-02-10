@@ -21,22 +21,22 @@
       TeensyROM interface test program? (IO1/2, ROM locations, etc)
       2nd interrupt in menu app to clean up border end flicker? (aesthetic)
       
-  Calc c64 bus freq, adjust emul timing for PAL(?)
-  Verify T41 speed on compile or setup()?  overclock really needed?
-  modem emulation (ethernet)
-  detect file/dir name too long and mark as such (new type)
+  *detect file/dir name too long and mark as such (new type)
   *MIDI USB in -> SID
   *other crt types HW emulation (esp epyx)
   *Internal EEPROM storage:
       default music state (on/off) 
       Auto time synch w/ ethernet on start
+  Calc c64 bus freq, adjust emul timing for PAL(?)
+  Verify T41 speed on compile or setup()?  overclock really needed?
+  modem emulation (ethernet)
    
-Todo:
+Soon:
    Recheck timing, scope shots to publish
    Credits/info page 
       incl EEPROM settings?
       Sensorium, SideKick/SID inspiration, FZ
-   test w/out USB/SD
+   more testing w/out USB/SD
    
   PRG/CRT collection/sort:   Add HES mon & Joust to internal loads
       add (find) EPYX fast load routine (fast load routine for drive 8?, not full cart version)
@@ -45,15 +45,4 @@ Known Issues:
   Jupiter Lander & other ROMH/8khi crts have garbled video
   80 col PRG doesn't work, better way to go to BASIC and re-gain reported RAM?
 
-
-Current Features:
-  NTSC
-  Load/run from:
-      USB thumb Drive
-      SD card
-      Teensy Internal Flash  
-      Transfer directly from PC (Windows app included)
-  Sets C64 system time from internet
-  Emulates "Normal" .crt files
-  transfers/executes .prg files
 

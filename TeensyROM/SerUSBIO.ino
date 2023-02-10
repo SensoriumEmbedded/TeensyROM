@@ -205,7 +205,7 @@ void getNtpTime()
          secsSince1900 = (secsSince1900/60 + timeZone)%24; //to hours, offset timezone
          if (secsSince1900 >= 12) LastHourBCD = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
          else LastHourBCD =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
-
+   
          Serial.printf("Time: %02x:%02x:%02x %sm\n", (LastHourBCD & 0x7f) , LastMinBCD, LastSecBCD, (LastHourBCD & 0x80) ? "p" : "a");        
          return;
       }
