@@ -2,7 +2,7 @@
  A Commodore 64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
    by Travis Smith <travis@sensoriumembedded.com> 
 
- I know there are plenty of Emulators/loaders out there, but I wanted to make one of my own for the sheer fun of it.  This is by no means a competition and will always publish my full work for anyone interrested. 
+ I know there are plenty of Emulators/loaders out there, but I wanted to design my own for the sheer fun of it.  This is by no means a competition and will always publish my full work for anyone interrested. 
 
  Features as of 2/9/23:
 - Immediate Load/run/emulate files from:
