@@ -1,4 +1,5 @@
 
+
 #include "ROMs\TeensyROMC64.h"
 #include "ROMs\Jupiter_Lander.h" 
 #include "ROMs\1541_Diagnostics.h" 
@@ -35,17 +36,9 @@ StructMenuItem ROMMenu[] =
    rtPrg , "  Ember Head"               , ember_head_prg             , sizeof(ember_head_prg) ,
    rtPrg , "  Display Fractal"          , disp_fract_prg             , sizeof(disp_fract_prg) ,
    rtPrg , "  Draw!!!                :)", draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
-   ////not working:                    
+   //not working:                    
    //rtPrg , "nw80 Columns"               , a80columns_prg             , sizeof(a80columns_prg) ,
    //rt8kHi, "nwJupiter Lander"           , Jupiter_Lander_BIN         , 1,  //graphics messed up...
-   //                                     
-   ////overflow testing                   
-   //rt16k , " Donkey Kong"               , Donkey_Kong_BIN            , 1, //size not needed for ROMs      
-   //rt16k , " Dig Dug"                   , Dig_Dug_bin                , 1, //size not needed for ROMs
-   //rtPrg , "  Ember Head"               , ember_head_prg             , sizeof(ember_head_prg) ,
-   //rtPrg , "  Display Fractal"          , disp_fract_prg             , sizeof(disp_fract_prg) ,
-   //rtPrg , "  Draw!!!                :)", draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
-
 };
 
 
