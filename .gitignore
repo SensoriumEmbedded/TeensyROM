@@ -1,5 +1,5 @@
 
-C64/build/*
-PCB/*.?#?
+C64/build/backup-ref/*
+PCB/v0.2/*.?#?
 Win/.vs/*
 Win/obj/*
