@@ -1,0 +1,689 @@
+
+; ******** Source: source\MainMenu_C000.asm
+     1                          ; MIT License
+     2                          ; 
+     3                          ; Copyright (c) 2023 Travis Smith
+     4                          ; 
+     5                          ; Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
+     6                          ; and associated documentation files (the "Software"), to deal in the Software without 
+     7                          ; restriction, including without limitation the rights to use, copy, modify, merge, publish, 
+     8                          ; distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom 
+     9                          ; the Software is furnished to do so, subject to the following conditions:
+    10                          ; 
+    11                          ; The above copyright notice and this permission notice shall be included in all copies or 
+    12                          ; substantial portions of the Software.
+    13                          ; 
+    14                          ; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
+    15                          ; BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+    16                          ; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+    17                          ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+    18                          ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    19                          
+    20                          
+    21                          ; ********************************   Symbols   ********************************   
+    22                             !convtab pet   ;key in and text out conv to PetSCII throughout
+    23                          
+    24                             ;RAM Registers:
+    25                             PtrAddrLo   = $fb
+    26                             PtrAddrHi   = $fc
+    27                             Ptr2AddrLo  = $fd
+    28                             Ptr2AddrHi  = $fe
+    29                             RegMenuPageStart = $4e
+    30                             
+    31                             ;RAM coppies:
+    32                             MainCodeRAM = $c000    ;this file
+    33                             SIDCodeRAM = $1000 
+    34                          
+    35                             ScreenMemStart    = $0400
+    36                             BorderColorReg    = $d020 
+    37                             BackgndColorReg   = $d021
+    38                             IO1Port           = $de00
+    39                             TODHoursBCD       = $dc0b
+    40                             TODMinBCD         = $dc0a
+    41                             TODSecBCD         = $dc09
+    42                             TODTenthSecBCD    = $dc08
+    43                             
+    44                             ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    45                             MaxItemNameLength = 28
+    46                             
+    47                             rRegStatus        = IO1Port + 0
+    48                             rRegStrAddrLo     = IO1Port + 1
+    49                             rRegStrAddrHi     = IO1Port + 2
+    50                             rRegStreamData    = IO1Port + 3  
+    51                             wRegControl       = IO1Port + 4
+    52                             rRegPresence1     = IO1Port + 5
+    53                             rRegPresence2     = IO1Port + 6
+    54                             rRegLastHourBCD   = IO1Port + 7
+    55                             rRegLastMinBCD    = IO1Port + 8
+    56                             rRegLastSecBCD    = IO1Port + 9
+    57                             rWRegCurrMenuWAIT = IO1Port + 10 
+    58                             rwRegSelItem      = IO1Port + 11
+    59                             rRegNumItems      = IO1Port + 12
+    60                             rRegItemType      = IO1Port + 13
+    61                             rRegItemName      = IO1Port + 14 ;MaxItemNameLength bytes long (incl term)
+    62                             
+    63                             rsReady      = 0x5a
+    64                             rsChangeMenu = 0x9d
+    65                             rsStartItem  = 0xb1
+    66                             rsGetTime    = 0xe6
+    67                             ;rsError      = 0x24
+    68                          
+    69                             rmtSD        = 0
+    70                             rmtTeensy    = 1
+    71                             rmtUSBHost   = 2
+    72                             rmtUSBDrive  = 3
+    73                             
+    74                             rCtlVanish           = 0
+    75                             rCtlVanishReset      = 1
+    76                             rCtlStartSelItemWAIT = 2
+    77                             rCtlGetTimeWAIT      = 3
+    78                          
+    79                             rtNone = 0  ;synch with TblItemType below
+    80                             rt16k  = 1
+    81                             rt8kHi = 2
+    82                             rt8kLo = 3
+    83                             rtPrg  = 4
+    84                             rtUnk  = 5
+    85                             rtCrt  = 6
+    86                             rtDir  = 7
+    87                             
+    88                          ;!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!
+    89                          
+    90                          
+    91                             ;Kernal routines:
+    92                             IRQDefault = $ea31
+    93                             SendChar   = $ffd2
+    94                             ScanKey    = $ff9f ;SCNKEY
+    95                             GetIn      = $ffe4 ;GETIN
+    96                             SetCursor  = $fff0 ;PLOT
+    97                             
+    98                             ;BASIC routines:
+    99                             BasicColdStartVect = $a000 ; $e394  58260
+   100                             BasicWarmStartVect = $a002 ; $e37b  58235
+   101                             PrintString =  $ab1e
+   102                          
+   103                             ;chr$ symbols
+   104                             ChrBlack   = 144
+   105                             ChrWhite   = 5
+   106                             ChrRed     = 28
+   107                             ChrCyan    = 159
+   108                             ChrPurple  = 156
+   109                             ChrGreen   = 30
+   110                             ChrBlue    = 31
+   111                             ChrYellow  = 158 
+   112                             ChrOrange  = 129
+   113                             ChrBrown   = 149
+   114                             ChrLtRed   = 150
+   115                             ChrDrkGrey = 151
+   116                             ChrMedGrey = 152
+   117                             ChrLtGreen = 153
+   118                             ChrLtBlue  = 154
+   119                             ChrLtGrey  = 155
+   120                             
+   121                             ChrF1      = 133
+   122                             ChrF2      = 137
+   123                             ChrF3      = 134
+   124                             ChrF4      = 138
+   125                             ChrF5      = 135
+   126                             ChrF6      = 139
+   127                             ChrF7      = 136
+   128                             ChrF8      = 140
+   129                             ChrToLower = 14
+   130                             ChrToUpper = 142
+   131                             ChrRvsOn   = 18
+   132                             ChrRvsOff  = 146
+   133                             ChrClear   = 147
+   134                             ChrReturn  = 13
+   135                             ChrSpace   = 32
+   136                             ChrCSRSUp  = 145
+   137                             ChrCSRSDn  = 17
+   138                             
+   139                          ;poke colors
+   140                             pokeBlack   = 0
+   141                             pokeWhite   = 1
+   142                             pokeRed     = 2
+   143                             pokeCyan    = 3
+   144                             pokePurple  = 4
+   145                             pokeGreen   = 5
+   146                             pokeBlue    = 6
+   147                             pokeYellow  = 7
+   148                             pokeOrange  = 8
+   149                             pokeBrown   = 9
+   150                             pokeLtRed   = 10
+   151                             pokeDrkGrey = 11
+   152                             pokeMedGrey = 12
+   153                             pokeLtGreen = 13
+   154                             pokeLtBlue  = 14
+   155                             pokeLtGrey  = 15
+   156                             
+   157                             TimeColor        = ChrBrown
+   158                             MenuMiscColor    = ChrGreen
+   159                             ROMNumColor      = ChrDrkGrey
+   160                             OptionColor      = ChrYellow
+   161                             SourcesColor     = ChrLtBlue
+   162                             TypeColor        = ChrBlue
+   163                             NameColor        = ChrLtGreen
+   164                             BorderColor      = pokePurple
+   165                             BackgndColor     = pokeBlack
+   166                             MaxMenuDispItems = 16
+   167                          
+   168                          ;******************************* Main Code Start ************************************   
+   169                          
+   170                          * = MainCodeRAM
+   171                            
+   172                          ;screen setup:     
+   173  c000 a904                  lda #BorderColor
+   174  c002 8d20d0                sta BorderColorReg
+   175  c005 a900                  lda #BackgndColor
+   176  c007 8d21d0                sta BackgndColorReg
+   177                             
+   178  c00a 20e1c2                jsr SIDOn ;Start the music!
+   179                             
+   180                          ;check for HW:
+   181  c00d ad05de                lda rRegPresence1
+   182  c010 c955                  cmp #$55
+   183  c012 d007                  bne NoHW
+   184  c014 ad06de                lda rRegPresence2
+   185  c017 c9aa                  cmp #$AA
+   186  c019 f00a                  beq +
+   187                          NoHW:
+   188  c01b a94b                  lda #<MsgNoHW
+   189  c01d a0c4                  ldy #>MsgNoHW
+   190  c01f 201eab                jsr PrintString  
+   191  c022 4c22c0             -  jmp -
+   192                          
+   193  c025 a900               +  lda #rCtlVanish ;Deassert Game & ExROM
+   194  c027 8d04de                sta wRegControl
+   195                          
+   196  c02a 20e3c0                jsr ListMenuItemsInit
+   197  c02d 2045c2                jsr SynchEthernetTime
+   198                          
+   199                          WaitForKey:     
+   200  c030 2065c2                jsr DisplayTime
+   201                             ;jsr ScanKey  ;only needed if ints are off
+   202  c033 20e4ff                jsr GetIn    
+   203  c036 f0f8                  beq WaitForKey
+   204                          
+   205  c038 c941                  cmp #'a'  
+   206  c03a 3018                  bmi +   ;skip if below 'a'
+   207  c03c c952                  cmp #'a'+ MaxMenuDispItems + 1  
+   208  c03e 1014                  bpl +   ;skip if above MaxMenuDispItems
+   209                             ;jsr SendChar ;print entered char
+   210                             ;convert to ROM number
+   211  c040 38                    sec       ;set to subtract without carry
+   212  c041 e941                  sbc #'a'  ;now 0-?
+   213  c043 18                    clc
+   214  c044 654e                  adc RegMenuPageStart   
+   215                             ;ROMSelected, ROM num in acc
+   216  c046 cd0cde                cmp rRegNumItems 
+   217  c049 10e5                  bpl WaitForKey   ;skip if above num of ROMs
+   218  c04b 8d0bde                sta rwRegSelItem ;select Item from list
+   219  c04e 20afc1                jsr SelectMenuItem
+   220  c051 4c30c0                jmp WaitForKey
+   221                          
+   222  c054 c911               +  cmp #ChrCSRSDn  ;Currsor Down - Next Page
+   223  c056 d012                  bne +
+   224  c058 a54e                  lda RegMenuPageStart
+   225  c05a 18                    clc
+   226  c05b 6910                  adc #MaxMenuDispItems
+   227  c05d cd0cde                cmp rRegNumItems
+   228  c060 10ce                  bpl WaitForKey  ;already on last page
+   229  c062 854e                  sta RegMenuPageStart
+   230  c064 20e7c0                jsr ListMenuItems
+   231  c067 4c30c0                jmp WaitForKey
+   232                          
+   233  c06a c991               +  cmp #ChrCSRSUp  ;Prev Page
+   234  c06c d00f                  bne +
+   235  c06e a54e                  lda RegMenuPageStart
+   236                             ;cmp #0     
+   237  c070 f0be                  beq WaitForKey  ;already on first page
+   238  c072 38                    sec
+   239  c073 e910                  sbc #MaxMenuDispItems
+   240  c075 854e                  sta RegMenuPageStart
+   241  c077 20e7c0                jsr ListMenuItems
+   242  c07a 4c30c0                jmp WaitForKey  
+   243                          
+   244  c07d c985               +  cmp #ChrF1  ;Teensy mem Menu
+   245  c07f d008                  bne +
+   246  c081 a901                  lda #rmtTeensy
+   247  c083 20ddc0                jsr ListMenuItemsChangeInit
+   248  c086 4c30c0                jmp WaitForKey  
+   249                          
+   250  c089 c989               +  cmp #ChrF2  ;Exit to BASIC
+   251  c08b d008                  bne +
+   252  c08d a901                  lda #rCtlVanishReset ;reset to BASIC
+   253  c08f 8d04de                sta wRegControl
+   254  c092 4c92c0             -  jmp -  ;should be resetting to BASIC
+   255                          
+   256  c095 c986               +  cmp #ChrF3  ;SD Card Menu
+   257  c097 d008                  bne +
+   258  c099 a900                  lda #rmtSD
+   259  c09b 20ddc0                jsr ListMenuItemsChangeInit
+   260  c09e 4c30c0                jmp WaitForKey  
+   261                          
+   262  c0a1 c98a               +  cmp #ChrF4  ;toggle music
+   263  c0a3 d013                  bne +
+   264  c0a5 a2c3                  ldx #>irqSID
+   265  c0a7 ec1503                cpx $315  ;see if the IRQ is pointing at our SID routine
+   266  c0aa f006                  beq on
+   267  c0ac 20e1c2                jsr SIDOn ;sid is off, turn it on
+   268  c0af 4c30c0                jmp WaitForKey
+   269  c0b2 200dc3             on jsr SIDOff ;sid is on, turn it off
+   270  c0b5 4c30c0                jmp WaitForKey  
+   271                          
+   272  c0b8 c987               +  cmp #ChrF5  ;USB Drive Menu
+   273  c0ba d008                  bne +
+   274  c0bc a903                  lda #rmtUSBDrive
+   275  c0be 20ddc0                jsr ListMenuItemsChangeInit
+   276  c0c1 4c30c0                jmp WaitForKey  
+   277                          
+   278  c0c4 c98b               +  cmp #ChrF6  ;Synch Ethernet Time
+   279  c0c6 d006                  bne +
+   280  c0c8 2045c2                jsr SynchEthernetTime
+   281  c0cb 4c30c0                jmp WaitForKey  
+   282                          
+   283  c0ce c988               +  cmp #ChrF7  ;Exe USB Host file
+   284  c0d0 d008                  bne +
+   285  c0d2 a902                  lda #rmtUSBHost
+   286  c0d4 20ddc0                jsr ListMenuItemsChangeInit
+   287  c0d7 4c30c0                jmp WaitForKey
+   288                          
+   289                          
+   290                          
+   291  c0da 4c30c0             +  jmp WaitForKey
+   292                          
+   293                             
+   294                          ; ******************************* Subroutines ******************************* 
+   295                          ;                           list out rom number, type, & names
+   296                          
+   297                          Sssssssssssssssssssssssubroutines:
+   298                          ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
+   299  c0dd 8d0ade                sta rWRegCurrMenuWAIT  ;must wait on a write (load dir)
+   300  c0e0 20eec1                jsr WaitForTR
+   301                          ListMenuItemsInit:
+   302  c0e3 a900                  lda #0       ;initialize to first Item
+   303  c0e5 854e                  sta RegMenuPageStart
+   304                          ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
+   305  c0e7 a93c                  lda #<MsgWelcome
+   306  c0e9 a0c3                  ldy #>MsgWelcome
+   307  c0eb 201eab                jsr PrintString 
+   308                             ;print menu source:
+   309  c0ee ad0ade                lda rWRegCurrMenuWAIT ;don't have to wait on a read
+   310  c0f1 c900                  cmp #rmtSD
+   311  c0f3 d007                  bne +
+   312  c0f5 a987                  lda #<MsgMenuSD
+   313  c0f7 a0c4                  ldy #>MsgMenuSD
+   314  c0f9 4c16c1                jmp cont1
+   315                          
+   316  c0fc c901               +  cmp #rmtTeensy
+   317  c0fe d007                  bne +
+   318  c100 a990                  lda #<MsgMenuTeensy
+   319  c102 a0c4                  ldy #>MsgMenuTeensy
+   320  c104 4c16c1                jmp cont1
+   321                             
+   322  c107 c903               +  cmp #rmtUSBDrive
+   323  c109 d007                  bne +
+   324  c10b a9a6                  lda #<MsgMenuUSBDrive
+   325  c10d a0c4                  ldy #>MsgMenuUSBDrive
+   326  c10f 4c16c1                jmp cont1
+   327                             
+   328                          +  ;cmp #rmtUSBHost
+   329                             ;bne +
+   330  c112 a99c                  lda #<MsgMenuUSBHost
+   331  c114 a0c4                  ldy #>MsgMenuUSBHost
+   332                             ;jmp cont1
+   333                             
+   334                          cont1   
+   335  c116 201eab                jsr PrintString
+   336  c119 ad0cde                lda rRegNumItems
+   337  c11c d00a                  bne +
+   338  c11e a973                  lda #<MsgNoItems
+   339  c120 a0c4                  ldy #>MsgNoItems
+   340  c122 201eab                jsr PrintString
+   341  c125 4c9fc1                jmp finishMenu
+   342  c128 a54e               +  lda RegMenuPageStart
+   343  c12a 8d0bde                sta rwRegSelItem
+   344  c12d a9c1                  lda #'A' ;initialize to start of page
+   345                          nextLine
+   346  c12f 48                    pha ;remember menu letter
+   347  c130 a90d                  lda #ChrReturn
+   348  c132 20d2ff                jsr SendChar
+   349                             
+   350                          ;print option letter
+   351  c135 a99e                  lda #OptionColor
+   352  c137 20d2ff                jsr SendChar
+   353  c13a a920                  lda #ChrSpace
+   354  c13c 20d2ff                jsr SendChar
+   355  c13f a912                  lda #ChrRvsOn
+   356  c141 20d2ff                jsr SendChar
+   357  c144 68                    pla
+   358  c145 48                    pha
+   359  c146 20d2ff                jsr SendChar
+   360  c149 a992                  lda #ChrRvsOff
+   361  c14b 20d2ff                jsr SendChar
+   362  c14e a92d                  lda #'-'
+   363  c150 20d2ff                jsr SendChar
+   364                          ; print name
+   365  c153 a999                  lda #NameColor
+   366  c155 20d2ff                jsr SendChar
+   367  c158 a90e                  lda #<rRegItemName
+   368  c15a a0de                  ldy #>rRegItemName
+   369  c15c 201eab                jsr PrintString
+   370                          ;align to col
+   371  c15f 38                    sec
+   372  c160 20f0ff                jsr SetCursor ;read current to load y (row)
+   373  c163 a01f                  ldy #MaxItemNameLength + 3  ;col
+   374  c165 18                    clc
+   375  c166 20f0ff                jsr SetCursor
+   376                          ; print type
+   377  c169 a91f                  lda #TypeColor
+   378  c16b 20d2ff                jsr SendChar
+   379  c16e ad0dde                lda rRegItemType 
+   380  c171 18                    clc
+   381  c172 2a                    rol
+   382  c173 2a                    rol  ;mult by 4
+   383  c174 a8                    tay
+   384  c175 b9d5c4             -  lda TblItemType,y
+   385  c178 20d2ff                jsr SendChar   ;type (4 chars)
+   386  c17b c8                    iny
+   387  c17c 98                    tya
+   388  c17d 2903                  and #3
+   389  c17f d0f4                  bne -
+   390                          ;print ROM #
+   391  c181 a997                  lda #ROMNumColor
+   392  c183 20d2ff                jsr SendChar
+   393  c186 ad0bde                lda rwRegSelItem
+   394  c189 20c1c2                jsr PrintHexByte
+   395                             
+   396                          ;line is done printing, check for next...
+   397  c18c 68                    pla ;menu select letter
+   398  c18d ee0bde                inc rwRegSelItem
+   399  c190 ae0bde                ldx rwRegSelItem
+   400  c193 ec0cde                cpx rRegNumItems
+   401  c196 f007                  beq finishMenu
+   402  c198 18                    clc
+   403  c199 6901                  adc #01
+   404  c19b c9d1                  cmp #'A' + MaxMenuDispItems
+   405  c19d d090                  bne nextLine  
+   406                          finishMenu
+   407  c19f a214                  ldx #20 ;row
+   408  c1a1 a000                  ldy #0  ;col
+   409  c1a3 18                    clc
+   410  c1a4 20f0ff                jsr SetCursor
+   411  c1a7 a971                  lda #<MsgSelect
+   412  c1a9 a0c3                  ldy #>MsgSelect
+   413  c1ab 201eab                jsr PrintString
+   414  c1ae 60                    rts
+   415                          
+   416                          ;Execute/select an item from the list
+   417                          ; Dir, ROM, copy PRG to RAM and run, etc
+   418                          ;Pre-Load rwRegSelItem with Item # to execute/select
+   419                          SelectMenuItem:
+   420  c1af ac0dde                ldy rRegItemType ;grab this now it will change if new directory is loaded
+   421  c1b2 a902                  lda #rCtlStartSelItemWAIT
+   422  c1b4 8d04de                sta wRegControl
+   423  c1b7 20eec1                jsr WaitForTR ;if it's a good ROM image, it won't return from this
+   424  c1ba c004                  cpy #rtPrg
+   425  c1bc f004                  beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
+   426  c1be 20e3c0                jsr ListMenuItemsInit
+   427  c1c1 60                    rts
+   428                          PRGStart
+   429  c1c2 68                    pla ;pull the jsr return info from the stack, we're not going back!
+   430  c1c3 200dc3                jsr SIDOff
+   431  c1c6 20fec1                jsr PRGtoMem
+   432  c1c9 a91e                  lda #ChrGreen
+   433  c1cb 20d2ff                jsr SendChar 
+   434  c1ce a993                  lda #ChrClear
+   435  c1d0 20d2ff                jsr SendChar 
+   436                             ;load keyboard buffer with "run\n":  
+   437  c1d3 a952                  lda #'r'
+   438  c1d5 8d7702                sta $0277  ;kbd buff 0
+   439  c1d8 a955                  lda #'u'
+   440  c1da 8d7802                sta $0278 ;kbd buff 1
+   441  c1dd a94e                  lda #'n'
+   442  c1df 8d7902                sta $0279  ;kbd buff 2
+   443  c1e2 a90d                  lda #ChrReturn
+   444  c1e4 8d7a02                sta $027a  ;kbd buff 3
+   445  c1e7 a904                  lda #4
+   446  c1e9 85c6                  sta $C6  ;# chars in kbd buff (4 of 10 max)
+   447  c1eb 6c02a0                jmp (BasicWarmStartVect)  
+   448                             
+   449                          WaitForTR:  ;wait for ready status, uses acc and X
+   450  c1ee a205                  ldx#5 ;require 5 consecutive reads of ready to continue
+   451  c1f0 ee4e04                inc ScreenMemStart+40*2-2 ;end of 'Time' print loc.
+   452  c1f3 ad00de             -  lda rRegStatus
+   453  c1f6 c95a                  cmp #rsReady
+   454  c1f8 d0f4                  bne WaitForTR
+   455  c1fa ca                    dex
+   456  c1fb d0f6                  bne -
+   457  c1fd 60                    rts
+   458                             
+   459                          PRGtoMem:
+   460                             ;stream PRG file from TeensyROM to RAM
+   461                             ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
+   462                             ;rRegStrAddrHi is zero when inactive/complete
+   463                             
+   464  c1fe ad02de                lda rRegStrAddrHi
+   465  c201 d007                  bne +
+   466  c203 a9ba                  lda #<MsgErrNoData;no data to read!
+   467  c205 a0c4                  ldy #>MsgErrNoData
+   468  c207 4c2cc2                jmp ErrOut
+   469  c20a 85fc               +  sta PtrAddrHi
+   470  c20c ad01de                lda rRegStrAddrLo   
+   471  c20f 85fb                  sta PtrAddrLo
+   472  c211 a000                  ldy #0   ;zero offset
+   473  c213 ad03de             -  lda rRegStreamData ;read from rRegStreamData increments address/checks for end
+   474  c216 91fb                  sta (PtrAddrLo), y 
+   475  c218 ad02de                lda rRegStrAddrHi ;are we done?
+   476  c21b f00e                  beq rt 
+   477  c21d c8                    iny
+   478  c21e d0f3                  bne -
+   479  c220 e6fc                  inc PtrAddrHi
+   480  c222 d0ef                  bne -
+   481  c224 a9cc                  lda #<MsgErrOverflow ;Overflow!
+   482  c226 a0c4                  ldy #>MsgErrOverflow
+   483  c228 4c2cc2                jmp ErrOut
+   484  c22b 60                 rt rts
+   485                            
+   486                          ErrOut:   
+   487                             ;Error msg pointer stored in acc/y
+   488  c22c 48                    pha
+   489  c22d 98                    tya
+   490  c22e 48                    pha
+   491  c22f a213                  ldx #19 ;row
+   492  c231 a000                  ldy #0  ;col
+   493  c233 18                    clc
+   494  c234 20f0ff                jsr SetCursor
+   495  c237 a9b1                  lda #<MsgError
+   496  c239 a0c4                  ldy #>MsgError
+   497  c23b 201eab                jsr PrintString   
+   498  c23e 68                    pla
+   499  c23f a8                    tay
+   500  c240 68                    pla
+   501  c241 201eab                jsr PrintString
+   502  c244 60                    rts
+   503                          
+   504                          SynchEthernetTime:
+   505  c245 a903                  lda #rCtlGetTimeWAIT
+   506  c247 8d04de                sta wRegControl
+   507  c24a 20eec1                jsr WaitForTR 
+   508  c24d ad07de                lda rRegLastHourBCD
+   509  c250 8d0bdc                sta TODHoursBCD  ;stop TOD regs incrementing
+   510  c253 ad08de                lda rRegLastMinBCD
+   511  c256 8d0adc                sta TODMinBCD
+   512  c259 ad09de                lda rRegLastSecBCD
+   513  c25c 8d09dc                sta TODSecBCD
+   514  c25f a909                  lda #9
+   515  c261 8d08dc                sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+   516  c264 60                    rts
+   517                             
+   518                          DisplayTime:
+   519  c265 a201                  ldx #1 ;row
+   520  c267 a01d                  ldy #29  ;col
+   521  c269 18                    clc
+   522  c26a 20f0ff                jsr SetCursor
+   523  c26d a995                  lda #TimeColor
+   524  c26f 20d2ff                jsr SendChar
+   525  c272 ad0bdc                lda TODHoursBCD ;latches time in regs (stops incrementing)
+   526  c275 a8                    tay ;save for re-use
+   527  c276 291f                  and #$1f
+   528  c278 d004                  bne nz   ;if hours is 0, make it 12...
+   529  c27a 98                    tya
+   530  c27b 0912                  ora #$12
+   531  c27d a8                    tay ;re-save for re-use
+   532  c27e 98                 nz tya
+   533  c27f 2910                  and #$10
+   534  c281 d005                  bne +
+   535  c283 a920                  lda #ChrSpace
+   536  c285 4c8ac2                jmp ++
+   537  c288 a931               +  lda #'1'
+   538  c28a 20d2ff             ++ jsr SendChar
+   539  c28d 98                    tya
+   540  c28e 290f                  and #$0f  ;ones of hours
+   541  c290 20cec2                jsr PrintHexNibble
+   542  c293 a93a                  lda #':'
+   543  c295 20d2ff                jsr SendChar
+   544  c298 ad0adc                lda TODMinBCD
+   545  c29b 20c1c2                jsr PrintHexByte
+   546  c29e a93a                  lda #':'
+   547  c2a0 20d2ff                jsr SendChar
+   548  c2a3 ad09dc                lda TODSecBCD
+   549  c2a6 20c1c2                jsr PrintHexByte
+   550                             ;lda #'.'
+   551                             ;jsr SendChar
+   552  c2a9 ad08dc                lda TODTenthSecBCD ;have to read 10ths to release latch
+   553                             ;jsr PrintHexNibble
+   554  c2ac 98                    tya ;am/pm (pre latch release)
+   555  c2ad 2980                  and #$80
+   556  c2af d005                  bne +
+   557  c2b1 a941                  lda #'a'
+   558  c2b3 4cb8c2                jmp ++
+   559  c2b6 a950               +  lda #'p'
+   560  c2b8 20d2ff             ++ jsr SendChar
+   561  c2bb a94d                  lda #'m'
+   562  c2bd 20d2ff                jsr SendChar
+   563  c2c0 60                    rts
+   564                             
+   565                          PrintHexByte:
+   566                             ;Print byte value stored in acc in hex (2 chars)
+   567  c2c1 48                    pha
+   568  c2c2 6a                    ror
+   569  c2c3 6a                    ror
+   570  c2c4 6a                    ror
+   571  c2c5 6a                    ror
+   572  c2c6 20cec2                jsr PrintHexNibble
+   573  c2c9 68                    pla
+   574                             ;pha   ; preserve acc on return?
+   575  c2ca 20cec2                jsr PrintHexNibble
+   576                             ;pla
+   577  c2cd 60                    rts
+   578                             
+   579                          PrintHexNibble:   
+   580                             ;Print value stored in lower nible acc in hex
+   581                             ;trashes acc
+   582  c2ce 290f                  and #$0f
+   583  c2d0 c90a                  cmp #$0a
+   584  c2d2 1006                  bpl l 
+   585  c2d4 18                    clc
+   586  c2d5 6930                  adc #'0'
+   587  c2d7 4cddc2                jmp pr
+   588  c2da 18                 l  clc
+   589  c2db 6937                  adc #'a'-$0a
+   590  c2dd 20d2ff             pr jsr SendChar
+   591  c2e0 60                    rts
+   592                          
+   593                          
+   594                          ; ******************************* SID music/code ******************************* 
+   595                             
+   596                          ;Initialize SID interrupt
+   597                          SIDOn:
+   598  c2e1 a900                  lda #$00
+   599  c2e3 200010                jsr SIDCodeRAM ;Initialize music
+   600  c2e6 a97f                  lda #$7f
+   601  c2e8 8d0ddc                sta $dc0d   ;CIA int ctl
+   602  c2eb ad0ddc                lda $dc0d   ;CIA int ctl
+   603  c2ee 78                    sei
+   604  c2ef a901                  lda #$01
+   605  c2f1 8d1ad0                sta $d01a  ;irq enable
+   606  c2f4 a964                  lda #$64
+   607  c2f6 8d12d0                sta $d012  ;raster val
+   608  c2f9 ad11d0                lda $d011  ;VIC ctl reg
+   609  c2fc 297f                  AND #$7f
+   610  c2fe 8d11d0                sta $d011  ;VIC ctl reg
+   611  c301 a92d                  lda #<irqSID
+   612  c303 a2c3                  ldx #>irqSID
+   613  c305 8d1403                sta $314   ;CINV, HW IRQ Int Lo
+   614  c308 8e1503                stx $315   ;CINV, HW IRQ Int Hi
+   615  c30b 58                    cli
+   616  c30c 60                    rts
+   617                          
+   618                          SIDOff:
+   619  c30d 78                    sei
+   620  c30e a931                  lda #<IRQDefault
+   621  c310 a2ea                  ldx #>IRQDefault
+   622  c312 8d1403                sta $314   ;CINV, HW IRQ Int Lo
+   623  c315 8e1503                stx $315   ;CINV, HW IRQ Int Hi
+   624  c318 a981                  lda #$81
+   625  c31a 8d0ddc                sta $dc0d  ;CIA int ctl
+   626  c31d a900                  lda #0
+   627  c31f 8d1ad0                sta $d01a  ;irq enable
+   628  c322 ee19d0                inc $d019
+   629  c325 ad0ddc                lda $dc0d  ;CIA int ctl
+   630  c328 200010                jsr SIDCodeRAM
+   631  c32b 58                    cli 
+   632  c32c 60                    rts
+   633                          
+   634                          irqSID:
+   635  c32d ee19d0                inc $d019   ;ACK raster IRQs
+   636  c330 ee20d0                inc BorderColorReg ;tweak display border
+   637  c333 200310                jsr SIDCodeRAM+3 ;Play the music
+   638  c336 ce20d0                dec BorderColorReg ;tweak it back
+   639  c339 4c31ea                jmp IRQDefault
+   640                          
+   641                          ; ******************************* Strings/Messages ******************************* 
+   642                          MmmmmmmmmmessagesText:
+   643                          MsgWelcome:    
+   644  c33c 930e9c1220202020...   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff
+   645  c369 0d9ac6524f4d2000      !tx ChrReturn, SourcesColor, "From ", 0 
+   646                          MsgSelect:
+   647  c371 9ad34f5552434553...   !tx SourcesColor, "Sources:          "
+   648  c384 129ed550921e2f12...   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
+   649  c39c 20129ec631929a20...   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
+   650  c3b1 20129ec632921e20...   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
+   651  c3c7 20129ec633929a20...   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
+   652  c3dc 20129ec634921e20...   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
+   653  c3f1 20129ec635929a20...   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
+   654  c406 20129ec636921e20...   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
+   655  c421 20129ec637929a20...   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
+   656  c436 20129ec638921e20...   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
+   657  c44a 00                     !tx 0
+   658                          MsgNoHW:
+   659  c44b 0d0d0e9ed445454e...   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
+   660                          MsgNoItems:
+   661  c473 0d9e20ce4f544849...   !tx ChrReturn, OptionColor, " Nothing to show!", 0
+   662                          
+   663                          MsgMenuSD:
+   664  c487 d3c420c34152443a...   !tx "SD Card:", 0
+   665                          MsgMenuTeensy:
+   666  c490 d445454e535920cd...   !tx "Teensy Mem:", 0
+   667                          MsgMenuUSBHost:
+   668  c49c d5d3c220c84f5354...   !tx "USB Host:", 0
+   669                          MsgMenuUSBDrive:
+   670  c4a6 d5d3c220c4524956...   !tx "USB Drive:", 0
+   671                          
+   672                          
+   673                          MsgError:
+   674  c4b1 1cc552524f523a20...   !tx ChrRed, "Error: ", 0
+   675                          MsgErrNoData:
+   676  c4ba ce4f20c441544120...   !tx "No Data Available", 0
+   677                          MsgErrOverflow:
+   678  c4cc cf564552464c4f57...   !tx "Overflow", 0
+   679                          ;MsgErrNoFile:
+   680                          ;   !tx "No File Available", 0
+   681                             
+   682                          TblItemType: ;must match rtNone, rt16k, etc order!
+   683  c4d5 ce4f4e4531364b20...   !tx "None","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
+   684                             
+   685                             
+   686                          EndOfAllCode = *
+   687                          
