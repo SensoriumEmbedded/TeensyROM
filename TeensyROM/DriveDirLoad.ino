@@ -75,6 +75,11 @@ void MenuChange()
          break;
       case rmtUSBDrive:
          stpcpy(USBDrivePath, "/");
+         firstPartition.begin(&myDrive); //takes a couple seconds first time if no drive present
+            //Serial.print("USB Drive initialization... ");
+            ////future USBFilesystem will begin automatically, begin(USBDrive) is a temporary feature
+            //if (firstPartition.begin(&myDrive)) Serial.println("passed.");
+            //else Serial.println("***Failed!***");
          LoadUSBDriveDirectory();
          MenuSource = USBDriveMenu; 
          NumMenuItems = NumUSBDriveItems;
@@ -160,14 +165,14 @@ void LoadUSBDriveDirectory()
 {  
    File USBDrivedir = firstPartition.open(USBDrivePath);
    LoadDirectory(&NumUSBDriveItems, USBDrivedir, USBDrivePath, USBDriveMenu);
-   Serial.printf("%d files from USBDrive%s\nLast: %s\n", NumUSBDriveItems, USBDrivePath, USBDriveMenu[NumUSBDriveItems-1].Name); 
+   //Serial.printf("%d files from USBDrive%s\nLast: %s\n", NumUSBDriveItems, USBDrivePath, USBDriveMenu[NumUSBDriveItems-1].Name); 
 }
 
 void LoadSDDirectory() 
 {
    File SDdir = SD.open(SDPath);
    LoadDirectory(&NumSDItems, SDdir, SDPath, SDMenu);
-   Serial.printf("%d files from SDCard%s\nLast: %s\n", NumSDItems, SDPath, SDMenu[NumSDItems-1].Name); 
+   //Serial.printf("%d files from SDCard%s\nLast: %s\n", NumSDItems, SDPath, SDMenu[NumSDItems-1].Name); 
 }
 
 void LoadDirectory(uint8_t *NumItems, File dir, char *DrvPath, StructMenuItem* DrvMenuItem) 

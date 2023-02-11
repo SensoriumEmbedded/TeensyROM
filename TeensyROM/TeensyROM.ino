@@ -31,6 +31,8 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 
+#define DebugMessages  //will interfere with ROM emulation, use at your own risk!
+
 uint8_t IO2_RAM[256];
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
@@ -58,6 +60,7 @@ StructMenuItem USBHostMenu;
 uint8_t NumUSBHostItems = 0;
 USBHost myusb;
 USBHub hub1(myusb);
+MIDIDevice midi1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
 
@@ -88,7 +91,7 @@ void setup()
    SetUpMainMenuROM();
    SetLEDOn;
    SetDebugDeassert;
-   SetResetDeassert;
+   SetResetAssert; //assert reset until main loop()
   
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
@@ -101,11 +104,11 @@ void setup()
    if (SD.begin(BUILTIN_SDCARD)) Serial.println("passed.");
    else Serial.println("***Failed!***");
   
-   Serial.print("USB Drive initialization... ");
    myusb.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-   // future USBFilesystem will begin automatically, begin(USBDrive) is a temporary feature
-   if (firstPartition.begin(&myDrive)) Serial.println("passed.");
-   else Serial.println("***Failed!***");
+   midi1.setHandleNoteOff(OnNoteOff);
+   midi1.setHandleNoteOn(OnNoteOn);
+   midi1.setHandleControlChange(OnControlChange);
+   midi1.setHandlePitchChange(myPitchChange);
 
    Serial.print("TeensyROM 0.01 is on-line\n");
 
@@ -113,14 +116,6 @@ void setup()
      
 void loop()
 {
-   if (RegStatus != rsReady) 
-   {
-      if(RegStatus == rsChangeMenu) MenuChange();
-      else if(RegStatus == rsGetTime) getNtpTime();
-      else HandleExecution(); //rsStartItem is only other non-ready setting
-      RegStatus = rsReady;
-   }
-   
    if (BtnPressed)
    {
       Serial.print("Button detected\n"); 
@@ -145,7 +140,17 @@ void loop()
       SetResetDeassert;
    }
   
+   if (RegStatus != rsReady) 
+   {
+      if(RegStatus == rsChangeMenu) MenuChange();
+      else if(RegStatus == rsGetTime) getNtpTime();
+      else HandleExecution(); //rsStartItem is only other non-ready setting
+      RegStatus = rsReady;
+   }
+   
    if (Serial.available()) ServiceSerial();
+   myusb.Task();
+   midi1.read();
 }
 
 void SetUpMainMenuROM()
@@ -155,3 +160,4 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = NULL;
 }
+
