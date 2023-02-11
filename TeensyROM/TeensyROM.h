@@ -17,7 +17,10 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define DebugMessages  //will interfere with ROM emulation, use at your own risk!
 
+#define MaxMenuItems  254
+#define MaxItemNameLength 28
 #define SerialTimoutMillis 500
 #define UpDirString "/.. <Up Dir>"
 uint32_t StartCycCnt;

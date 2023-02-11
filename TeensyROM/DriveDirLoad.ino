@@ -24,36 +24,37 @@ void HandleExecution()
 {
    //DisablePhi2ISR = true; //may want to do this through here
    //interpret/load rtDir, rtCrt, and rtPrg from SD card or USB Drive
-   if (CurrentMenu == rmtSD || CurrentMenu == rmtUSBDrive) LoadDirPrgCrt(CurrentMenu == rmtSD);
+   if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) LoadDirPrgCrt(IO1[rWRegCurrMenuWAIT] == rmtSD);
    
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Execute ROM or prep PRG tranfer
-   switch(MenuSource[RegSelect].ItemType)
+   switch(MenuSource[IO1[rwRegSelItem]].ItemType)
    {
       case rt16k:
          SetGameAssert;
          SetExROMAssert;
-         LOROM_Image = MenuSource[RegSelect].Code_Image;
-         HIROM_Image = MenuSource[RegSelect].Code_Image+0x2000;
+         LOROM_Image = MenuSource[IO1[rwRegSelItem]].Code_Image;
+         HIROM_Image = MenuSource[IO1[rwRegSelItem]].Code_Image+0x2000;
          doReset=true;
          break;
       case rt8kHi:
          SetGameAssert;
          SetExROMDeassert;
          LOROM_Image = NULL;
-         HIROM_Image = MenuSource[RegSelect].Code_Image;
+         HIROM_Image = MenuSource[IO1[rwRegSelItem]].Code_Image;
          doReset=true;
          break;
       case rt8kLo:
          SetGameDeassert;
          SetExROMAssert;
-         LOROM_Image = MenuSource[RegSelect].Code_Image;
+         LOROM_Image = MenuSource[IO1[rwRegSelItem]].Code_Image;
          HIROM_Image = NULL;
          doReset=true;
          break;
       case rtPrg:
          //set up for transfer
-         StreamStartAddr = (MenuSource[RegSelect].Code_Image[1]<<8) + MenuSource[RegSelect].Code_Image[0];
+         IO1[rRegStrAddrLo]=MenuSource[IO1[rwRegSelItem]].Code_Image[0];
+         IO1[rRegStrAddrHi]=MenuSource[IO1[rwRegSelItem]].Code_Image[1];
          StreamOffsetAddr = 2; //set to start of data
          break;
    }
@@ -61,17 +62,17 @@ void HandleExecution()
 
 void MenuChange()
 {
-   switch(CurrentMenu)
+   switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
          MenuSource = ROMMenu; 
-         NumMenuItems = sizeof(ROMMenu)/sizeof(USBHostMenu);
+         IO1[rRegNumItems] = sizeof(ROMMenu)/sizeof(USBHostMenu);
          break;
       case rmtSD:
          stpcpy(SDPath, "/");
          LoadSDDirectory();
          MenuSource = SDMenu; 
-         NumMenuItems = NumSDItems;
+         IO1[rRegNumItems] = NumSDItems;
          break;
       case rmtUSBDrive:
          stpcpy(USBDrivePath, "/");
@@ -82,11 +83,11 @@ void MenuChange()
             //else Serial.println("***Failed!***");
          LoadUSBDriveDirectory();
          MenuSource = USBDriveMenu; 
-         NumMenuItems = NumUSBDriveItems;
+         IO1[rRegNumItems] = NumUSBDriveItems;
          break;
       case rmtUSBHost:
          MenuSource = &USBHostMenu; 
-         NumMenuItems = NumUSBHostItems;
+         IO1[rRegNumItems] = NumUSBHostItems;
          break;
    }
 }
@@ -98,33 +99,33 @@ void LoadDirPrgCrt(bool SD_nUSBDrive)
    if (SD_nUSBDrive) myPath = SDPath;
    else myPath = USBDrivePath;
    
-   switch(MenuSource[RegSelect].ItemType)
+   switch(MenuSource[IO1[rwRegSelItem]].ItemType)
    {
       case rtDir: //load the new directory from SD to SDMenu/NumSDItems
-         if(strcmp(MenuSource[RegSelect].Name, UpDirString)==0)
+         if(strcmp(MenuSource[IO1[rwRegSelItem]].Name, UpDirString)==0)
          {  //up dir
             char * LastSlash = strrchr(myPath, '/'); //find last slash
             if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
          }
-         else strcat(myPath, MenuSource[RegSelect].Name); //append dir name
+         else strcat(myPath, MenuSource[IO1[rwRegSelItem]].Name); //append dir name
          if (SD_nUSBDrive)
          {
             LoadSDDirectory(); 
-            NumMenuItems = NumSDItems;
+            IO1[rRegNumItems] = NumSDItems;
          }
          else 
          {
             LoadUSBDriveDirectory(); 
-            NumMenuItems = NumUSBDriveItems;
+            IO1[rRegNumItems] = NumUSBDriveItems;
          }
          return;
          break;
       case rtPrg: //Load the prg file to RAM
-         if(!LoadFile(SD_nUSBDrive)) MenuSource[RegSelect].ItemType=rtUnk; //mark unknown if error
+         if(!LoadFile(SD_nUSBDrive)) MenuSource[IO1[rwRegSelItem]].ItemType=rtUnk; //mark unknown if error
          break;
       case rtCrt: //load the Crt in to RAM and parse it for emulation
-         if(!LoadFile(SD_nUSBDrive)) MenuSource[RegSelect].ItemType=rtUnk; //mark unknown if error
-         else ParseCRTFile(&MenuSource[RegSelect]); //will convert type, if checks ok
+         if(!LoadFile(SD_nUSBDrive)) MenuSource[IO1[rwRegSelItem]].ItemType=rtUnk; //mark unknown if error
+         else ParseCRTFile(&MenuSource[IO1[rwRegSelItem]]); //will convert type, if checks ok
          break;
    } 
    
@@ -138,8 +139,8 @@ bool LoadFile(bool SD_nUSBDrive)
    
    char FullFilePath[300];
 
-   if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "%s%s", myPath, MenuSource[RegSelect].Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", myPath, MenuSource[RegSelect].Name);
+   if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "%s%s", myPath, MenuSource[IO1[rwRegSelItem]].Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", myPath, MenuSource[IO1[rwRegSelItem]].Name);
       
    Serial.printf("Openning: %s\n", FullFilePath);
    
@@ -152,8 +153,8 @@ bool LoadFile(bool SD_nUSBDrive)
    uint16_t count=0;
    while (myFile.available()) RAM_Image[count++]=myFile.read();
    
-   MenuSource[RegSelect].Code_Image = RAM_Image;
-   MenuSource[RegSelect].Size = count;
+   MenuSource[IO1[rwRegSelItem]].Code_Image = RAM_Image;
+   MenuSource[IO1[rwRegSelItem]].Size = count;
    myFile.close();
    return true;
 }

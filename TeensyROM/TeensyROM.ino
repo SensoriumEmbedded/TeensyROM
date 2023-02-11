@@ -31,22 +31,17 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 
-#define DebugMessages  //will interfere with ROM emulation, use at your own risk!
 
-uint8_t IO2_RAM[256];
+uint8_t IO1[256];  //io1 space/regs
+uint8_t RAM_Image[65536];  //For receiving files from USB/SD/etc, todo:do this dynamically...
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t DisablePhi2ISR = false;
-uint8_t RegStatus = rsReady;
-uint8_t RegSelect = 0;
-uint16_t StreamStartAddr = 0;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 
-uint8_t CurrentMenu = rmtTeensy;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
-uint8_t NumMenuItems = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
 
 StructMenuItem SDMenu[MaxMenuItems];
 uint8_t NumSDItems = 0;
@@ -64,9 +59,6 @@ MIDIDevice midi1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
 
-uint8_t LastSecBCD  =0;
-uint8_t LastMinBCD  =0;
-uint8_t LastHourBCD =0;
 unsigned int localPort = 8888;       // local port to listen for UDP packets
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
@@ -110,6 +102,13 @@ void setup()
    midi1.setHandleControlChange(OnControlChange);
    midi1.setHandlePitchChange(myPitchChange);
 
+   for (uint16_t reg=0; reg<sizeof(IO1); reg++) IO1[reg]=0; //initialize regs to 0
+   IO1[rRegStatus]=rsReady;
+   IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+   IO1[rRegNumItems] = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+   IO1[rRegPresence1]  = 0x55;   
+   IO1[rRegPresence2]  = 0xAA;   
+
    Serial.print("TeensyROM 0.01 is on-line\n");
 
 } 
@@ -140,15 +139,16 @@ void loop()
       SetResetDeassert;
    }
   
-   if (RegStatus != rsReady) 
+   if (IO1[rRegStatus] != rsReady) 
    {
-      if(RegStatus == rsChangeMenu) MenuChange();
-      else if(RegStatus == rsGetTime) getNtpTime();
+      if(IO1[rRegStatus] == rsChangeMenu) MenuChange();
+      else if(IO1[rRegStatus] == rsGetTime) getNtpTime();
       else HandleExecution(); //rsStartItem is only other non-ready setting
-      RegStatus = rsReady;
+      IO1[rRegStatus] = rsReady;
    }
    
    if (Serial.available()) ServiceSerial();
+   
    myusb.Task();
    midi1.read();
 }

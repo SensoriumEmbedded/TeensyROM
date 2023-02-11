@@ -170,9 +170,9 @@ void getNtpTime()
       if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
       else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
       
-      LastSecBCD  =0;      
-      LastMinBCD  =0;      
-      LastHourBCD =0;      
+      IO1[rRegLastSecBCD]  =0;      
+      IO1[rRegLastMinBCD]  =0;      
+      IO1[rRegLastHourBCD] =0;      
       return;
    }
    Udp.begin(localPort);
@@ -218,14 +218,14 @@ void getNtpTime()
          Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
 
          //since we don't need the date, leaving out TimeLib.h all together
-         LastSecBCD =DecToBCD(secsSince1900 % 60);
+         IO1[rRegLastSecBCD] =DecToBCD(secsSince1900 % 60);
          secsSince1900 /=60; //to  minutes
-         LastMinBCD =DecToBCD(secsSince1900 % 60);
+         IO1[rRegLastMinBCD] =DecToBCD(secsSince1900 % 60);
          secsSince1900 = (secsSince1900/60 + timeZone)%24; //to hours, offset timezone
-         if (secsSince1900 >= 12) LastHourBCD = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
-         else LastHourBCD =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
+         if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
+         else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
    
-         Serial.printf("Time: %02x:%02x:%02x %sm\n", (LastHourBCD & 0x7f) , LastMinBCD, LastSecBCD, (LastHourBCD & 0x80) ? "p" : "a");        
+         Serial.printf("Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
          return;
       }
    }

@@ -18,11 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-#define MaxMenuItems  254
-#define MaxItemNameLength 28
-
-uint8_t RAM_Image[65536];  //For receiving files from USB/SD/etc, should do this dynamically...
-
 enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 {
    rRegStatus,        //Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset

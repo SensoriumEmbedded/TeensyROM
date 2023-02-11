@@ -43,69 +43,39 @@ FASTRUN void isrPHI2()
    
    if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
+      Address &= 0xFF;
       if (IsRead) //High (IO1 Read)
       {
-         switch(Address & 0xFF)
+         switch(Address)
          {
-            case rwRegSelItem:
-               DataPortWriteWait(RegSelect);  
-               break;
-            case rWRegCurrMenuWAIT:
-               DataPortWriteWait(CurrentMenu);
-               break;
-            case rRegNumItems:
-               DataPortWriteWait(NumMenuItems);  
-               break;
             case rRegItemType:
-               DataPortWriteWait(MenuSource[RegSelect].ItemType);  
+               DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].ItemType);  
                break;
             case rRegItemName ... (rRegItemName+MaxItemNameLength-1):
-               Data = MenuSource[RegSelect].Name[(Address & 0xFF)-rRegItemName];
+               Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemName];
                DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
                break;
             case rRegStreamData:
-               DataPortWriteWait(MenuSource[RegSelect].Code_Image[StreamOffsetAddr]);
-               //inc on read, check for end
-               if (++StreamOffsetAddr >= MenuSource[RegSelect].Size) StreamStartAddr=0; //signals end of transfer
+               DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
+               //inc on read, check for end:
+               if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAddrHi]=0; //zero in Hi reg signals end of transfer
                break;
-            case rRegStrAddrLo:
-               DataPortWriteWait(StreamStartAddr & 0xFF);
-               break;
-            case rRegStrAddrHi:
-               DataPortWriteWait(StreamStartAddr>>8);
-               break;
-            case rRegPresence1:
-               DataPortWriteWait(0x55);
-               break;
-            case rRegPresence2:
-               DataPortWriteWait(0xAA);
-               break;
-            case rRegStatus:
-               DataPortWriteWait(RegStatus); 
-               break;
-            case rRegLastHourBCD:
-               DataPortWriteWait(LastHourBCD); 
-               break;
-            case rRegLastMinBCD:
-               DataPortWriteWait(LastMinBCD); 
-               break;
-            case rRegLastSecBCD:
-               DataPortWriteWait(LastSecBCD); 
+            default: //used for all other IO1 reads
+               DataPortWriteWait(IO1[Address]); 
                break;
          }
-         //Serial.printf("Rd %d from %d\n", IO1_RAM[Address & 0xFF], Address);
       }
       else  // IO1 write
       {
          Data = DataPortWaitRead(); 
-         switch(Address & 0xFF)
+         switch(Address)
          {
             case rwRegSelItem:
-               RegSelect=Data;
+               IO1[rwRegSelItem]=Data;
                break;
             case rWRegCurrMenuWAIT:
-               CurrentMenu=Data;
-               RegStatus = rsChangeMenu; //work this in the main code
+               IO1[rWRegCurrMenuWAIT]=Data;
+               IO1[rRegStatus] = rsChangeMenu; //work this in the main code
                break;
             case wRegControl:
                switch(Data)
@@ -128,29 +98,16 @@ FASTRUN void isrPHI2()
                      doReset=true;
                      break;
                   case rCtlStartSelItemWAIT:
-                     RegStatus = rsStartItem; //work this in the main code
+                     IO1[rRegStatus] = rsStartItem; //work this in the main code
                      break;
                   case rCtlGetTimeWAIT:
-                     RegStatus = rsGetTime; //work this in the main code
+                     IO1[rRegStatus] = rsGetTime; //work this in the main code
                      break;
                }
                break;
          }
       } //write
    }  //IO1
-   else if (!GP9_IO2n(GPIO_9)) //IO2: DFxx address space, virtual RAM
-   {
-      if (IsRead) //High (Read)
-      {
-         DataPortWriteWait(IO2_RAM[Address & 0xFF]);  
-         //Serial.printf("Rd %d from %d\n", IO2_RAM[Address & 0xFF], Address);
-      }
-      else  //write
-      {
-         IO2_RAM[Address & 0xFF] = DataPortWaitRead(); 
-         //Serial.printf("IO2 Wr %d to 0x%04x\n", IO2_RAM[Address & 0xFF], Address);
-      }
-   }  //IO2
    else if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]);  
@@ -159,9 +116,11 @@ FASTRUN void isrPHI2()
    {
       if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); 
    }  //ROMH
-      
- 
-   //now the time-sensitive work is done, have a few hundred nS until the next interrupt...
+ #ifdef DebugMessages
+   //IO2: DFxx address space
+   else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", IsRead ? "Rd from" : "Wr to", Address);
+ #endif
+     
    //SetDebugDeassert;
 }
 
