@@ -18,23 +18,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+//  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu_C000.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#define MaxItemNameLength 28
+
 enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
 {
-   rRegStatus,        //Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
-   rRegStrAddrLo,     //start address of the prg file being transfered to mem
-   rRegStrAddrHi,     //zero when inactive/complete (no transfer to zero page)
-   rRegStreamData,    //next byte of data to transfer, auto increments when read
-   wRegControl,       //RegCtlCommands: execute specific functions
-   rRegPresence1,     //for HW detect: 0x55
-   rRegPresence2,     //for HW detect: 0xAA
-   rRegLastHourBCD,   //Last TOD Hours read
-   rRegLastMinBCD,    //Last TOD Minutes read
-   rRegLastSecBCD,    //Last TOD Seconds read
-   rWRegCurrMenuWAIT, //RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItem,      //select Menu Item for name, type, execution, etc
-   rRegNumItems,      //num items in menu list
-   rRegItemType,      //regItemTypes: type of item 
-   rRegItemName,      //MaxItemNameLength bytes long (incl term)
+   rRegStatus        =  0 , //Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
+   rRegStrAddrLo     =  1 , //start address of the prg file being transfered to mem
+   rRegStrAddrHi     =  2 , //zero when inactive/complete (no transfer to zero page)
+   rRegStreamData    =  3 , //next byte of data to transfer, auto increments when read
+   wRegControl       =  4 , //RegCtlCommands: execute specific functions
+   rRegPresence1     =  5 , //for HW detect: 0x55
+   rRegPresence2     =  6 , //for HW detect: 0xAA
+   rRegLastHourBCD   =  7 , //Last TOD Hours read
+   rRegLastMinBCD    =  8 , //Last TOD Minutes read
+   rRegLastSecBCD    =  9 , //Last TOD Seconds read
+   rWRegCurrMenuWAIT = 10 , //RegMenuTypes: select Menu type: SD, USB, etc
+   rwRegSelItem      = 11 , //select Menu Item for name, type, execution, etc
+   rRegNumItems      = 12 , //num items in menu list
+   rRegItemType      = 13 , //regItemTypes: type of item 
+                     
+   StartSIDRegs      = 14 , //start of SID Regs, matching SID Reg order ($D400)
+   rRegSIDFreqLo1    = StartSIDRegs +  0, 
+   rRegSIDFreqHi1    = StartSIDRegs +  1,
+   rRegSIDDutyLo1    = StartSIDRegs +  2,
+   rRegSIDDutyHi1    = StartSIDRegs +  3,
+   rRegSIDVoicCont1  = StartSIDRegs +  4,
+   rRegSIDAttDec1    = StartSIDRegs +  5,
+   rRegSIDSusRel1    = StartSIDRegs +  6,
+                                       
+   rRegSIDFreqLo2    = StartSIDRegs +  7, 
+   rRegSIDFreqHi2    = StartSIDRegs +  8,
+   rRegSIDDutyLo2    = StartSIDRegs +  9,
+   rRegSIDDutyHi2    = StartSIDRegs + 10,
+   rRegSIDVoicCont2  = StartSIDRegs + 11,
+   rRegSIDAttDec2    = StartSIDRegs + 12,
+   rRegSIDSusRel2    = StartSIDRegs + 13,
+
+   rRegSIDFreqLo3    = StartSIDRegs + 14, 
+   rRegSIDFreqHi3    = StartSIDRegs + 15,
+   rRegSIDDutyLo3    = StartSIDRegs + 16,
+   rRegSIDDutyHi3    = StartSIDRegs + 17,
+   rRegSIDVoicCont3  = StartSIDRegs + 18,
+   rRegSIDAttDec3    = StartSIDRegs + 19,
+   rRegSIDSusRel3    = StartSIDRegs + 20,
+
+   rRegSIDFreqCutLo  = StartSIDRegs + 21,
+   rRegSIDFreqCutHi  = StartSIDRegs + 22,
+   rRegSIDFCtlReson  = StartSIDRegs + 23,
+   rRegSIDVolFilSel  = StartSIDRegs + 24,
+   EndSIDRegs        = StartSIDRegs + 25,
+                     
+   rRegItemName      = 40 , //MaxItemNameLength bytes long (incl term)
 };
 
 enum RegStatusTypes
@@ -73,6 +108,8 @@ enum regItemTypes
    rtCrt  = 6,
    rtDir  = 7,
 };
+
+//   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 struct StructMenuItem
 {

@@ -35,6 +35,7 @@
    ScreenMemStart    = $0400
    BorderColorReg    = $d020 
    BackgndColorReg   = $d021
+   SIDLoc            = $d400
    IO1Port           = $de00
    TODHoursBCD       = $dc0b
    TODMinBCD         = $dc0a
@@ -44,22 +45,54 @@
    ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    MaxItemNameLength = 28
    
-   rRegStatus        = IO1Port + 0
-   rRegStrAddrLo     = IO1Port + 1
-   rRegStrAddrHi     = IO1Port + 2
-   rRegStreamData    = IO1Port + 3  
-   wRegControl       = IO1Port + 4
-   rRegPresence1     = IO1Port + 5
-   rRegPresence2     = IO1Port + 6
-   rRegLastHourBCD   = IO1Port + 7
-   rRegLastMinBCD    = IO1Port + 8
-   rRegLastSecBCD    = IO1Port + 9
-   rWRegCurrMenuWAIT = IO1Port + 10 
-   rwRegSelItem      = IO1Port + 11
-   rRegNumItems      = IO1Port + 12
-   rRegItemType      = IO1Port + 13
-   rRegItemName      = IO1Port + 14 ;MaxItemNameLength bytes long (incl term)
-   
+   rRegStatus        =  0
+   rRegStrAddrLo     =  1
+   rRegStrAddrHi     =  2
+   rRegStreamData    =  3
+   wRegControl       =  4
+   rRegPresence1     =  5
+   rRegPresence2     =  6
+   rRegLastHourBCD   =  7
+   rRegLastMinBCD    =  8
+   rRegLastSecBCD    =  9
+   rWRegCurrMenuWAIT = 10
+   rwRegSelItem      = 11
+   rRegNumItems      = 12
+   rRegItemType      = 13
+
+   StartSIDRegs      = 14 ;start of SID Regs, matching SID Reg order ($D400)
+   rRegSIDFreqLo1    = StartSIDRegs +  0
+   rRegSIDFreqHi1    = StartSIDRegs +  1
+   rRegSIDDutyLo1    = StartSIDRegs +  2
+   rRegSIDDutyHi1    = StartSIDRegs +  3
+   rRegSIDVoicCont1  = StartSIDRegs +  4
+   rRegSIDAttDec1    = StartSIDRegs +  5
+   rRegSIDSusRel1    = StartSIDRegs +  6
+
+   rRegSIDFreqLo2    = StartSIDRegs +  7
+   rRegSIDFreqHi2    = StartSIDRegs +  8
+   rRegSIDDutyLo2    = StartSIDRegs +  9
+   rRegSIDDutyHi2    = StartSIDRegs + 10
+   rRegSIDVoicCont2  = StartSIDRegs + 11
+   rRegSIDAttDec2    = StartSIDRegs + 12
+   rRegSIDSusRel2    = StartSIDRegs + 13
+
+   rRegSIDFreqLo3    = StartSIDRegs + 14
+   rRegSIDFreqHi3    = StartSIDRegs + 15
+   rRegSIDDutyLo3    = StartSIDRegs + 16
+   rRegSIDDutyHi3    = StartSIDRegs + 17
+   rRegSIDVoicCont3  = StartSIDRegs + 18
+   rRegSIDAttDec3    = StartSIDRegs + 19
+   rRegSIDSusRel3    = StartSIDRegs + 20
+
+   rRegSIDFreqCutLo  = StartSIDRegs + 21
+   rRegSIDFreqCutHi  = StartSIDRegs + 22
+   rRegSIDFCtlReson  = StartSIDRegs + 23
+   rRegSIDVolFilSel  = StartSIDRegs + 24
+   EndSIDRegs        = StartSIDRegs + 25
+
+   rRegItemName      = 40 ;MaxItemNameLength bytes long (incl term)
+
    rsReady      = 0x5a
    rsChangeMenu = 0x9d
    rsStartItem  = 0xb1
@@ -154,34 +187,36 @@
    pokeLtBlue  = 14
    pokeLtGrey  = 15
    
-   TimeColor        = ChrBrown
+   ;color scheme:
+   BorderColor      = pokePurple
+   BackgndColor     = pokeBlack
+   TimeColor        = ChrOrange
    MenuMiscColor    = ChrGreen
    ROMNumColor      = ChrDrkGrey
    OptionColor      = ChrYellow
    SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
    NameColor        = ChrLtGreen
-   BorderColor      = pokePurple
-   BackgndColor     = pokeBlack
    MaxMenuDispItems = 16
 
 ;******************************* Main Code Start ************************************   
 
 * = MainCodeRAM
-  
+Start:
+
 ;screen setup:     
    lda #BorderColor
    sta BorderColorReg
    lda #BackgndColor
    sta BackgndColorReg
    
-   jsr SIDOn ;Start the music!
+   jsr SIDMusicOn ;Start the music!
    
 ;check for HW:
-   lda rRegPresence1
+   lda rRegPresence1+IO1Port
    cmp #$55
    bne NoHW
-   lda rRegPresence2
+   lda rRegPresence2+IO1Port
    cmp #$AA
    beq +
 NoHW:
@@ -191,7 +226,7 @@ NoHW:
 -  jmp -
 
 +  lda #rCtlVanish ;Deassert Game & ExROM
-   sta wRegControl
+   sta wRegControl+IO1Port
 
    jsr ListMenuItemsInit
    jsr SynchEthernetTime
@@ -213,18 +248,18 @@ WaitForKey:
    clc
    adc RegMenuPageStart   
    ;ROMSelected, ROM num in acc
-   cmp rRegNumItems 
+   cmp rRegNumItems+IO1Port 
    bpl WaitForKey   ;skip if above num of ROMs
-   sta rwRegSelItem ;select Item from list
+   sta rwRegSelItem+IO1Port ;select Item from list
    jsr SelectMenuItem
    jmp WaitForKey
 
-+  cmp #ChrCSRSDn  ;Currsor Down - Next Page
++  cmp #ChrCSRSDn  ;Next Page
    bne +
    lda RegMenuPageStart
    clc
    adc #MaxMenuDispItems
-   cmp rRegNumItems
+   cmp rRegNumItems+IO1Port
    bpl WaitForKey  ;already on last page
    sta RegMenuPageStart
    jsr ListMenuItems
@@ -250,7 +285,7 @@ WaitForKey:
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
    lda #rCtlVanishReset ;reset to BASIC
-   sta wRegControl
+   sta wRegControl+IO1Port
 -  jmp -  ;should be resetting to BASIC
 
 +  cmp #ChrF3  ;SD Card Menu
@@ -264,9 +299,9 @@ WaitForKey:
    ldx #>irqSID
    cpx $315  ;see if the IRQ is pointing at our SID routine
    beq on
-   jsr SIDOn ;sid is off, turn it on
+   jsr SIDMusicOn ;sid is off, turn it on
    jmp WaitForKey
-on jsr SIDOff ;sid is on, turn it off
+on jsr SIDMusicOff ;sid is on, turn it off
    jmp WaitForKey  
 
 +  cmp #ChrF5  ;USB Drive Menu
@@ -286,6 +321,12 @@ on jsr SIDOff ;sid is on, turn it off
    jsr ListMenuItemsChangeInit
    jmp WaitForKey
 
++  cmp #ChrF8  ;Credits, options, SID???
+   bne +
+   jsr MIDI2SID
+   jsr ListMenuItems
+   jmp WaitForKey
+
 
 
 +  jmp WaitForKey
@@ -296,17 +337,20 @@ on jsr SIDOff ;sid is on, turn it off
 
 Sssssssssssssssssssssssubroutines:
 ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
-   sta rWRegCurrMenuWAIT  ;must wait on a write (load dir)
+   sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTR
 ListMenuItemsInit:
    lda #0       ;initialize to first Item
    sta RegMenuPageStart
 ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
-   lda #<MsgWelcome
-   ldy #>MsgWelcome
+   lda #<MsgBanner
+   ldy #>MsgBanner
+   jsr PrintString 
+   lda #<MsgFrom
+   ldy #>MsgFrom
    jsr PrintString 
    ;print menu source:
-   lda rWRegCurrMenuWAIT ;don't have to wait on a read
+   lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read
    cmp #rmtSD
    bne +
    lda #<MsgMenuSD
@@ -333,14 +377,14 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    
 cont1   
    jsr PrintString
-   lda rRegNumItems
+   lda rRegNumItems+IO1Port
    bne +
    lda #<MsgNoItems
    ldy #>MsgNoItems
    jsr PrintString
    jmp finishMenu
 +  lda RegMenuPageStart
-   sta rwRegSelItem
+   sta rwRegSelItem+IO1Port
    lda #'A' ;initialize to start of page
 nextLine
    pha ;remember menu letter
@@ -364,8 +408,8 @@ nextLine
 ; print name
    lda #NameColor
    jsr SendChar
-   lda #<rRegItemName
-   ldy #>rRegItemName
+   lda #<rRegItemName+IO1Port
+   ldy #>rRegItemName+IO1Port
    jsr PrintString
 ;align to col
    sec
@@ -376,7 +420,7 @@ nextLine
 ; print type
    lda #TypeColor
    jsr SendChar
-   lda rRegItemType 
+   lda rRegItemType+IO1Port 
    clc
    rol
    rol  ;mult by 4
@@ -390,14 +434,14 @@ nextLine
 ;print ROM #
    lda #ROMNumColor
    jsr SendChar
-   lda rwRegSelItem
+   lda rwRegSelItem+IO1Port
    jsr PrintHexByte
    
 ;line is done printing, check for next...
    pla ;menu select letter
-   inc rwRegSelItem
-   ldx rwRegSelItem
-   cpx rRegNumItems
+   inc rwRegSelItem+IO1Port
+   ldx rwRegSelItem+IO1Port
+   cpx rRegNumItems+IO1Port
    beq finishMenu
    clc
    adc #01
@@ -415,11 +459,11 @@ finishMenu
 
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
-;Pre-Load rwRegSelItem with Item # to execute/select
+;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
 SelectMenuItem:
-   ldy rRegItemType ;grab this now it will change if new directory is loaded
+   ldy rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
    lda #rCtlStartSelItemWAIT
-   sta wRegControl
+   sta wRegControl+IO1Port
    jsr WaitForTR ;if it's a good ROM image, it won't return from this
    cpy #rtPrg
    beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
@@ -427,7 +471,7 @@ SelectMenuItem:
    rts
 PRGStart
    pla ;pull the jsr return info from the stack, we're not going back!
-   jsr SIDOff
+   jsr SIDMusicOff
    jsr PRGtoMem
    lda #ChrGreen
    jsr SendChar 
@@ -449,7 +493,7 @@ PRGStart
 WaitForTR:  ;wait for ready status, uses acc and X
    ldx#5 ;require 5 consecutive reads of ready to continue
    inc ScreenMemStart+40*2-2 ;end of 'Time' print loc.
--  lda rRegStatus
+-  lda rRegStatus+IO1Port
    cmp #rsReady
    bne WaitForTR
    dex
@@ -459,20 +503,20 @@ WaitForTR:  ;wait for ready status, uses acc and X
 PRGtoMem:
    ;stream PRG file from TeensyROM to RAM
    ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
-   ;rRegStrAddrHi is zero when inactive/complete
+   ;rRegStrAddrHi+IO1Port is zero when inactive/complete
    
-   lda rRegStrAddrHi
+   lda rRegStrAddrHi+IO1Port
    bne +
    lda #<MsgErrNoData;no data to read!
    ldy #>MsgErrNoData
    jmp ErrOut
 +  sta PtrAddrHi
-   lda rRegStrAddrLo   
+   lda rRegStrAddrLo+IO1Port   
    sta PtrAddrLo
    ldy #0   ;zero offset
--  lda rRegStreamData ;read from rRegStreamData increments address/checks for end
+-  lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address/checks for end
    sta (PtrAddrLo), y 
-   lda rRegStrAddrHi ;are we done?
+   lda rRegStrAddrHi+IO1Port ;are we done?
    beq rt 
    iny
    bne -
@@ -503,13 +547,13 @@ ErrOut:
 
 SynchEthernetTime:
    lda #rCtlGetTimeWAIT
-   sta wRegControl
+   sta wRegControl+IO1Port
    jsr WaitForTR 
-   lda rRegLastHourBCD
+   lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
-   lda rRegLastMinBCD
+   lda rRegLastMinBCD+IO1Port
    sta TODMinBCD
-   lda rRegLastSecBCD
+   lda rRegLastSecBCD+IO1Port
    sta TODSecBCD
    lda #9
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
@@ -591,10 +635,39 @@ pr jsr SendChar
    rts
 
 
-; ******************************* SID music/code ******************************* 
+; ******************************* SID stuff ******************************* 
+   
+MIDI2SID:
+   jsr SIDMusicOff
+   lda #<MsgBanner
+   ldy #>MsgBanner
+   jsr PrintString 
+CpySID
+   ldx #0;
+-  lda IO1Port+StartSIDRegs, x
+   sta SIDLoc, x
+   
+   
+   ;jsr PrintHexByte
+   ;lda #':'
+   ;jsr SendChar
+   ;txa
+   ;jsr PrintHexByte
+   ;lda #ChrSpace
+   ;jsr SendChar
+   
+   inx
+   cpx #(EndSIDRegs-StartSIDRegs)
+   bne -
+   
+   jsr DisplayTime
+   jsr GetIn    
+   beq CpySID
+   ;any key
+   rts
    
 ;Initialize SID interrupt
-SIDOn:
+SIDMusicOn:
    lda #$00
    jsr SIDCodeRAM ;Initialize music
    lda #$7f
@@ -615,7 +688,7 @@ SIDOn:
    cli
    rts
 
-SIDOff:
+SIDMusicOff:
    sei
    lda #<IRQDefault
    ldx #>IRQDefault
@@ -640,8 +713,9 @@ irqSID:
 
 ; ******************************* Strings/Messages ******************************* 
 MmmmmmmmmmessagesText:
-MsgWelcome:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff
+MsgBanner:    
+   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
+MsgFrom:    
    !tx ChrReturn, SourcesColor, "From ", 0 
 MsgSelect:
    !tx SourcesColor, "Sources:          "

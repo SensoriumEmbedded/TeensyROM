@@ -104,10 +104,20 @@ void setup()
 
    for (uint16_t reg=0; reg<sizeof(IO1); reg++) IO1[reg]=0; //initialize regs to 0
    IO1[rRegStatus]=rsReady;
-   IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-   IO1[rRegNumItems] = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
-   IO1[rRegPresence1]  = 0x55;   
-   IO1[rRegPresence2]  = 0xAA;   
+   IO1[rWRegCurrMenuWAIT]= rmtTeensy;
+   IO1[rRegNumItems]     = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+   IO1[rRegPresence1]    = 0x55;   
+   IO1[rRegPresence2]    = 0xAA;   
+   IO1[rRegSIDAttDec1]   = 0x77; //Default A D
+   IO1[rRegSIDSusRel1]   = 0x77; //Default S R
+   IO1[rRegSIDVoicCont1] = 0x10; //Default Triangle
+   IO1[rRegSIDAttDec2]   = 0x77; //Default A D
+   IO1[rRegSIDSusRel2]   = 0x77; //Default S R
+   IO1[rRegSIDVoicCont2] = 0x10; //Default Triangle
+   IO1[rRegSIDAttDec3]   = 0x77; //Default A D
+   IO1[rRegSIDSusRel3]   = 0x77; //Default S R
+   IO1[rRegSIDVoicCont3] = 0x10; //Default Triangle
+   IO1[rRegSIDVolFilSel] = 0x0f; //max vol
 
    Serial.print("TeensyROM 0.01 is on-line\n");
 
