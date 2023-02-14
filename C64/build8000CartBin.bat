@@ -71,6 +71,6 @@ echo ***CartConvert...
 %cartconvPath%\%cartconv% %cartconvArgs%
 
 echo ***Emulate...
-%emulatorPath%\%emulator% %emulatorArgs% %buildPath%\%cartconvFilename%
+start "" %emulatorPath%\%emulator% %emulatorArgs% %buildPath%\%cartconvFilename%
 
-pause
+::pause

@@ -51,8 +51,8 @@ FASTRUN void isrPHI2()
             case rRegItemType:
                DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].ItemType);  
                break;
-            case rRegItemName ... (rRegItemName+MaxItemNameLength-1):
-               Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemName];
+            case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
+               Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
                DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
                break;
             case rRegStreamData:

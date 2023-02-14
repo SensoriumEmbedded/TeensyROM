@@ -21,12 +21,17 @@
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
 
-   ;RAM Registers:
+   ;Zero page RAM Registers:
    PtrAddrLo   = $fb
    PtrAddrHi   = $fc
    Ptr2AddrLo  = $fd
    Ptr2AddrHi  = $fe
-   RegMenuPageStart = $4e
+   ;other RAM Registers
+   RegMenuPageStart = $0334
+   SIDVoicCont      = $0335
+   SIDAttDec        = $0336
+   SIDSusRel        = $0337
+   SIDDutyHi        = $0338
    
    ;RAM coppies:
    MainCodeRAM = $c000    ;this file
@@ -88,10 +93,14 @@
    rRegSIDFreqCutLo  = StartSIDRegs + 21
    rRegSIDFreqCutHi  = StartSIDRegs + 22
    rRegSIDFCtlReson  = StartSIDRegs + 23
-   rRegSIDVolFilSel  = StartSIDRegs + 24
+   rRegSIDVolFltSel  = StartSIDRegs + 24
    EndSIDRegs        = StartSIDRegs + 25
 
-   rRegItemName      = 40 ;MaxItemNameLength bytes long (incl term)
+   rRegSIDStrStart   = StartSIDRegs + 26
+   ;11 chars + term defining current note for each voice (spaces betw)
+   rRegSIDStringTerm = StartSIDRegs + 37
+    
+   rRegItemNameStart = rRegSIDStringTerm + 1 ;MaxItemNameLength bytes long (incl term)
 
    rsReady      = 0x5a
    rsChangeMenu = 0x9d
@@ -198,6 +207,7 @@
    TypeColor        = ChrBlue
    NameColor        = ChrLtGreen
    MaxMenuDispItems = 16
+   M2SDataColumn    = 14
 
 ;******************************* Main Code Start ************************************   
 
@@ -210,6 +220,8 @@ Start:
    lda #BackgndColor
    sta BackgndColorReg
    
+   lda #$00
+   jsr SIDCodeRAM ;Initialize music
    jsr SIDMusicOn ;Start the music!
    
 ;check for HW:
@@ -229,11 +241,10 @@ NoHW:
    sta wRegControl+IO1Port
 
    jsr ListMenuItemsInit
-   jsr SynchEthernetTime
+   ;jsr SynchEthernetTime
 
 WaitForKey:     
    jsr DisplayTime
-   ;jsr ScanKey  ;only needed if ints are off
    jsr GetIn    
    beq WaitForKey
 
@@ -241,7 +252,6 @@ WaitForKey:
    bmi +   ;skip if below 'a'
    cmp #'a'+ MaxMenuDispItems + 1  
    bpl +   ;skip if above MaxMenuDispItems
-   ;jsr SendChar ;print entered char
    ;convert to ROM number
    sec       ;set to subtract without carry
    sbc #'a'  ;now 0-?
@@ -296,7 +306,7 @@ WaitForKey:
 
 +  cmp #ChrF4  ;toggle music
    bne +
-   ldx #>irqSID
+   ldx #>irqRastSID
    cpx $315  ;see if the IRQ is pointing at our SID routine
    beq on
    jsr SIDMusicOn ;sid is off, turn it on
@@ -408,8 +418,8 @@ nextLine
 ; print name
    lda #NameColor
    jsr SendChar
-   lda #<rRegItemName+IO1Port
-   ldy #>rRegItemName+IO1Port
+   lda #<rRegItemNameStart+IO1Port
+   ldy #>rRegItemNameStart+IO1Port
    jsr PrintString
 ;align to col
    sec
@@ -420,17 +430,10 @@ nextLine
 ; print type
    lda #TypeColor
    jsr SendChar
+   ldx #<TblItemType
+   ldy #>TblItemType
    lda rRegItemType+IO1Port 
-   clc
-   rol
-   rol  ;mult by 4
-   tay
--  lda TblItemType,y
-   jsr SendChar   ;type (4 chars)
-   iny
-   tya
-   and #3
-   bne -
+   jsr Print4CharTable
 ;print ROM #
    lda #ROMNumColor
    jsr SendChar
@@ -609,10 +612,10 @@ nz tya
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)
    pha
-   ror
-   ror
-   ror
-   ror
+   lsr
+   lsr
+   lsr
+   lsr
    jsr PrintHexNibble
    pla
    ;pha   ; preserve acc on return?
@@ -634,61 +637,348 @@ l  clc
 pr jsr SendChar
    rts
 
+PrintOnOff:
+   ;Print "On" or "Off" based on Zero flag
+   ;uses A and Y regs
+   bne +
+   lda #<MsgOff
+   ldy #>MsgOff
+   jmp ++
++  lda #<MsgOn
+   ldy #>MsgOn
+++ jsr PrintString 
+   rts
 
-; ******************************* SID stuff ******************************* 
+Print4CharTableHiNib
+   lsr
+   lsr
+   lsr
+   lsr ; move to lower nibble
+Print4CharTable:   
+;prints 4 chars from a table of continuous 4 char sets (no termination)
+;X=table base lo, y=table base high, acc=index to item# (63 max)
+;   and #0xfc 
+   stx PtrAddrLo
+   sty PtrAddrHi
+   asl
+   asl  ;mult by 4
+   tay
+-  lda (PtrAddrLo),y
+   jsr SendChar   ;type (4 chars)
+   iny
+   tya
+   and #3
+   bne -
+   rts
    
+; ******************************* SID stuff ******************************* 
+
 MIDI2SID:
    jsr SIDMusicOff
    lda #<MsgBanner
    ldy #>MsgBanner
    jsr PrintString 
-CpySID
-   ldx #0;
--  lda IO1Port+StartSIDRegs, x
-   sta SIDLoc, x
-   
-   
-   ;jsr PrintHexByte
-   ;lda #':'
-   ;jsr SendChar
-   ;txa
-   ;jsr PrintHexByte
-   ;lda #ChrSpace
-   ;jsr SendChar
-   
+   lda #<MsgM2SPolyMenu
+   ldy #>MsgM2SPolyMenu
+   jsr PrintString 
+   ;clear SID regs
+   lda #0
+   tax
+-  sta SIDLoc, x
    inx
    cpx #(EndSIDRegs-StartSIDRegs)
    bne -
+
+   ;  set default local settings:
+   lda #0x0f ; full volume
+   sta SIDLoc+rRegSIDVolFltSel-StartSIDRegs
+   lda #0x02 ; 12.5% duty cycle (12 bit resolution, lo reg left at 0)
+   sta SIDDutyHi
+   sta SIDLoc+rRegSIDDutyHi1-StartSIDRegs
+   sta SIDLoc+rRegSIDDutyHi2-StartSIDRegs
+   sta SIDLoc+rRegSIDDutyHi3-StartSIDRegs
+   lda #0x40 ; pulse wave
+   sta SIDVoicCont
+   sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
+   sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
+   sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs
+   lda #0x23 ; Att=16mS, Dec=72mS
+   sta SIDAttDec
+   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   lda #0x34 ; Sus=20%, Rel=114mS
+   sta SIDSusRel
+   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
    
+M2SDispUpdate:  ;upadte all M2S status display values
+   lda #NameColor
+   jsr SendChar
+   ldx # 5 ;row  Triangle
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   lda SIDVoicCont
+   and #0x10  
+   jsr PrintOnOff
+   
+   ldx # 6 ;row  Sawtooth
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   lda SIDVoicCont
+   and #0x20  
+   jsr PrintOnOff
+   
+   ldx # 7 ;row  Pulse
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   lda SIDVoicCont
+   and #0x40  
+   jsr PrintOnOff
+   
+   ldx #8 ;row  Duty Cycle
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   ldx #<TblM2SDutyPct
+   ldy #>TblM2SDutyPct
+   lda SIDDutyHi  ;duty cycle most sig nib = bits 3:0
+   and #$0f
+   jsr Print4CharTable
+   lda #'%'
+   jsr SendChar
+   
+   ldx # 9 ;row  Noise
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   lda SIDVoicCont
+   and #0x80  
+   jsr PrintOnOff
+ 
+   ldx #11 ;row  attack
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   ldx #<TblM2SAttack
+   ldy #>TblM2SAttack
+   lda SIDAttDec  ;attack = bits 7:4
+   jsr Print4CharTableHiNib
+   lda #'S'
+   jsr SendChar
+
+   ldx #12 ;row  decay
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   ldx #<TblM2SDecayRelease
+   ldy #>TblM2SDecayRelease
+   lda SIDAttDec  ;decay = bits 3:0
+   and #$0f
+   jsr Print4CharTable
+   lda #'S'
+   jsr SendChar
+
+   ldx #13 ;row  sustain
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   ldx #<TblM2SSustPct
+   ldy #>TblM2SSustPct
+   lda SIDSusRel   ;sustain = bits 7:4
+   jsr Print4CharTableHiNib
+   lda #'%'
+   jsr SendChar
+
+   ldx #14 ;row  release
+   ldy #M2SDataColumn ;col
+   clc
+   jsr SetCursor
+   ldx #<TblM2SDecayRelease
+   ldy #>TblM2SDecayRelease
+   lda SIDSusRel  ;release = bits 3:0
+   and #$0f
+   jsr Print4CharTable
+   lda #'S'
+   jsr SendChar
+
+;continue into the main loop...
+M2SUpdateKeyInLoop:
+;refresh dynamic SID regs from MIDI:   todo: move this to an interrupt?
+   lda SIDVoicCont  ;waveform in upper nibble
+   ora IO1Port+rRegSIDVoicCont1 ;latch bit (0) from MIDI
+   sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqHi1 
+   sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqLo1 
+   sta SIDLoc+rRegSIDFreqLo1-StartSIDRegs 
+
+   lda SIDVoicCont  ;waveform in upper nibble
+   ora IO1Port+rRegSIDVoicCont2 ;latch bit (0) from MIDI
+   sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqHi2 
+   sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqLo2 
+   sta SIDLoc+rRegSIDFreqLo2-StartSIDRegs 
+
+   lda SIDVoicCont  ;waveform in upper nibble
+   ora IO1Port+rRegSIDVoicCont3 ;latch bit (0) from MIDI
+   sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqHi3 
+   sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
+   lda IO1Port+rRegSIDFreqLo3 
+   sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
+
    jsr DisplayTime
-   jsr GetIn    
-   beq CpySID
-   ;any key
-   rts
+   ldx #19 ;row   ;print note vals
+   ldy #3  ;col
+   clc
+   jsr SetCursor
+   lda #NameColor
+   jsr SendChar
+   lda #<IO1Port+rRegSIDStrStart
+   ldy #>IO1Port+rRegSIDStrStart
+   jsr PrintString 
    
-;Initialize SID interrupt
-SIDMusicOn:
-   lda #$00
-   jsr SIDCodeRAM ;Initialize music
-   lda #$7f
-   sta $dc0d   ;CIA int ctl
-   lda $dc0d   ;CIA int ctl
+   jsr GetIn
+   beq M2SUpdateKeyInLoop
+   
+   cmp #'t'  ;Triangle
+   bne +
+   lda #0x10
+   eor SIDVoicCont
+   and #0x70  ;never combine with noise
+   sta SIDVoicCont
+   jmp M2SDispUpdate
+
++  cmp #'w'  ;saWtooth
+   bne +
+   lda #0x20 
+   eor SIDVoicCont
+   and #0x70  ;never combine with noise
+   sta SIDVoicCont
+   jmp M2SDispUpdate
+
++  cmp #'p'  ;Pulse
+   bne +
+   lda #0x40 
+   eor SIDVoicCont
+   and #0x70  ;never combine with noise
+   sta SIDVoicCont
+   jmp M2SDispUpdate
+
++  cmp #'u'  ;dUty cycle
+   bne +
+   ldx SIDDutyHi  ;duty cycle most sig nib = bits 3:0, upper unused
+   inx
+   stx SIDDutyHi ;apply change at time of update
+   stx SIDLoc+rRegSIDDutyHi1-StartSIDRegs
+   stx SIDLoc+rRegSIDDutyHi2-StartSIDRegs
+   stx SIDLoc+rRegSIDDutyHi3-StartSIDRegs
+   jmp M2SDispUpdate
+
++  cmp #'n'  ;Noise
+   bne +
+   lda #0x80 
+   ;eor SIDVoicCont  ;doesn't play nice with others
+   sta SIDVoicCont
+   jmp M2SDispUpdate
+
++  cmp #'a'  ;Attack
+   bne +
+   lda SIDAttDec  ;attack = bits 7:4
+   clc
+   adc #$10
+   sta SIDAttDec ;apply change at time of update
+   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   jmp M2SDispUpdate
+
++  cmp #'d'  ;Decay
+   bne +
+   lda SIDAttDec  ;decay = bits 3:0
+   tax
+   and #$0f
+   cmp #$0f
+   bne dok
+   txa
+   and #$f0 ;Wrap Around without overflow
+   jmp dcnt
+dok   
+   inx
+   txa
+dcnt
+   sta SIDAttDec ;apply change at time of update
+   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   jmp M2SDispUpdate
+
++  cmp #'s'  ;Sustain
+   bne +
+   lda SIDSusRel  ;sustain = bits 7:4
+   clc
+   adc #$10
+   sta SIDSusRel ;apply change at time of update
+   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
+   jmp M2SDispUpdate
+
++  cmp #'r'  ;Release
+   bne +
+   lda SIDSusRel  ;release = bits 3:0
+   tax
+   and #$0f
+   cmp #$0f
+   bne rok
+   txa
+   and #$f0 ;Wrap Around without overflow
+   jmp rcnt
+rok   
+   inx
+   txa
+rcnt
+   sta SIDSusRel ;apply change at time of update
+   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
+   jmp M2SDispUpdate
+
++  cmp #'x'  ;Exit M2S
+   bne +
+   jsr SIDVoicesOff
+   rts 
+
++  jmp M2SUpdateKeyInLoop
+
+   
+SIDMusicOn:  ;Start SID interrupt
+   lda #$7f    ;disable all ints
+   sta $dc0d   ;CIA1 int ctl
+   lda $dc0d   ;CIA1 int ctl    reading clears
    sei
-   lda #$01
-   sta $d01a  ;irq enable
-   lda #$64
-   sta $d012  ;raster val
-   lda $d011  ;VIC ctl reg
-   AND #$7f
-   sta $d011  ;VIC ctl reg
-   lda #<irqSID
-   ldx #>irqSID
-   sta $314   ;CINV, HW IRQ Int Lo
-   stx $315   ;CINV, HW IRQ Int Hi
+   lda #$01    ;raster compare enable
+   sta $d01a   ;irq mask reg
+   sta $d019   ;ACK any raster IRQs
+   lda #100    ;mid screen
+   sta $d012   ;raster scan line compare reg
+   lda $d011   ;VIC ctl reg fine scrolling/control
+   AND #$7f    ;bit 7 is bit 8 of scan line compare
+   sta $d011   ;VIC ctl reg fine scrolling/control
+   lda #<irqRastSID
+   ldx #>irqRastSID
+   sta $314    ;CINV, HW IRQ Int Lo
+   stx $315    ;CINV, HW IRQ Int Hi
    cli
    rts
 
-SIDMusicOff:
+SIDMusicOff:  ;stop SID interrupt
    sei
    lda #<IRQDefault
    ldx #>IRQDefault
@@ -700,15 +990,42 @@ SIDMusicOff:
    sta $d01a  ;irq enable
    inc $d019
    lda $dc0d  ;CIA int ctl
-   jsr SIDCodeRAM
+   ;jsr SIDCodeRAM  ;turns voices off, but resets song to start
+   jsr SIDVoicesOff
    cli 
+   lda #BorderColor
+   sta BorderColorReg   ;restore border in case we ended in mid region
    rts
 
-irqSID:
+SIDVoicesOff:
+   lda #0x00 ; turn 3 voices off
+   sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
+   sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
+   sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
+   rts
+   
+irqRastSID:
    inc $d019   ;ACK raster IRQs
    inc BorderColorReg ;tweak display border
    jsr SIDCodeRAM+3 ;Play the music
+   lda #<irqRast2
+   ldx #>irqRast2
+   sta $314    ;CINV, HW IRQ Int Lo
+   stx $315    ;CINV, HW IRQ Int Hi
+   lda #200    ;loweer part of screen
+   sta $d012   ;raster scan line compare reg
+   jmp IRQDefault
+
+irqRast2:
+   inc $d019   ;ACK raster IRQs
    dec BorderColorReg ;tweak it back
+   lda #<irqRastSID
+   ldx #>irqRastSID
+   sta $314    ;CINV, HW IRQ Int Lo
+   stx $315    ;CINV, HW IRQ Int Hi
+   lda #100    ;upper part of screen
+   sta $d012   ;raster scan line compare reg
+   
    jmp IRQDefault
 
 ; ******************************* Strings/Messages ******************************* 
@@ -743,7 +1060,40 @@ MsgMenuUSBHost:
 MsgMenuUSBDrive:
    !tx "USB Drive:", 0
 
-
+MsgM2SPolyMenu:    
+   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI 2 SID Polyphonic Mode"
+   !tx ChrReturn, ChrReturn, OptionColor 
+   !tx "   ", ChrRvsOn, "T", ChrRvsOff, "riangle:", ChrReturn
+   !tx " Sa", ChrRvsOn, "W", ChrRvsOff, "tooth:", ChrReturn
+   !tx "   ", ChrRvsOn, "P", ChrRvsOff, "ulse:", ChrReturn
+   !tx "  D", ChrRvsOn, "U", ChrRvsOff, "ty Cycle:", ChrReturn
+   !tx "   ", ChrRvsOn, "N", ChrRvsOff, "oise:", ChrReturn
+   !tx ChrReturn
+   !tx "   ", ChrRvsOn, "A", ChrRvsOff, "ttack:", ChrReturn
+   !tx "   ", ChrRvsOn, "D", ChrRvsOff, "ecay:", ChrReturn
+   !tx "   ", ChrRvsOn, "S", ChrRvsOff, "ustain:", ChrReturn
+   !tx "   ", ChrRvsOn, "R", ChrRvsOff, "elease:", ChrReturn
+   !tx ChrReturn
+   !tx "  E", ChrRvsOn, "x", ChrRvsOff, "it", ChrReturn
+   !tx ChrReturn
+   !tx "   V1  V2  V3", ChrReturn
+   !tx 0
+TblM2SAttack:  ;4 bytes each, no term
+   !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
+   !tx "100m","250m","500m","800m","   1","   3","   5","   8"
+TblM2SDecayRelease:  ;4 bytes each, no term
+   !tx "  6m"," 24m"," 48m"," 72m","114m","168m","204m","240m"
+   !tx "300m","750m"," 1.5"," 2.4","   3","   9","  15","  24"
+TblM2SSustPct:  ;4 bytes each, no term
+   !tx " 0.0"," 6.7","13.3","20.0","26.7","33.3","40.0","46.7"
+   !tx "53.3","60.0","66.7","73.3","80.0","86.7","93.3"," 100"
+TblM2SDutyPct:  ;4 bytes each, no term
+   !tx " 0.0"," 6.3","12.5","18.8","25.0","31.3","37.5","43.8"
+   !tx "50.0","56.3","62.5","68.8","75.0","81.3","87.5","93.8"
+MsgOn:
+   !tx "On ", 0
+MsgOff:
+   !tx "Off", 0
 MsgError:
    !tx ChrRed, "Error: ", 0
 MsgErrNoData:

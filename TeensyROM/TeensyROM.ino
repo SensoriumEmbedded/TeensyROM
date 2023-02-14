@@ -99,25 +99,17 @@ void setup()
    myusb.begin(); // Start USBHost_t36, HUB(s) and USB devices.
    midi1.setHandleNoteOff(OnNoteOff);
    midi1.setHandleNoteOn(OnNoteOn);
-   midi1.setHandleControlChange(OnControlChange);
-   midi1.setHandlePitchChange(myPitchChange);
+   midi1.setHandleControlChange(OnControlChange); //not used
+   midi1.setHandlePitchChange(OnPitchChange);  //not used
 
-   for (uint16_t reg=0; reg<sizeof(IO1); reg++) IO1[reg]=0; //initialize regs to 0
+   for (uint16_t reg=0; reg<sizeof(IO1); reg++) IO1[reg]=0; //initialize all regs to 0
    IO1[rRegStatus]=rsReady;
    IO1[rWRegCurrMenuWAIT]= rmtTeensy;
    IO1[rRegNumItems]     = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
    IO1[rRegPresence1]    = 0x55;   
    IO1[rRegPresence2]    = 0xAA;   
-   IO1[rRegSIDAttDec1]   = 0x77; //Default A D
-   IO1[rRegSIDSusRel1]   = 0x77; //Default S R
-   IO1[rRegSIDVoicCont1] = 0x10; //Default Triangle
-   IO1[rRegSIDAttDec2]   = 0x77; //Default A D
-   IO1[rRegSIDSusRel2]   = 0x77; //Default S R
-   IO1[rRegSIDVoicCont2] = 0x10; //Default Triangle
-   IO1[rRegSIDAttDec3]   = 0x77; //Default A D
-   IO1[rRegSIDSusRel3]   = 0x77; //Default S R
-   IO1[rRegSIDVoicCont3] = 0x10; //Default Triangle
-   IO1[rRegSIDVolFilSel] = 0x0f; //max vol
+   for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
+   IO1[rRegSIDStringTerm]= 0;   
 
    Serial.print("TeensyROM 0.01 is on-line\n");
 

@@ -66,10 +66,14 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
    rRegSIDFreqCutLo  = StartSIDRegs + 21,
    rRegSIDFreqCutHi  = StartSIDRegs + 22,
    rRegSIDFCtlReson  = StartSIDRegs + 23,
-   rRegSIDVolFilSel  = StartSIDRegs + 24,
+   rRegSIDVolFltSel  = StartSIDRegs + 24,
    EndSIDRegs        = StartSIDRegs + 25,
-                     
-   rRegItemName      = 40 , //MaxItemNameLength bytes long (incl term)
+   
+   rRegSIDStrStart   = StartSIDRegs + 26,
+   //11 chars + term defining current note for each voice (spaces betw)
+   rRegSIDStringTerm = StartSIDRegs + 37,
+   
+   rRegItemNameStart = rRegSIDStringTerm + 1 , //MaxItemNameLength bytes long (incl term)
 };
 
 enum RegStatusTypes
