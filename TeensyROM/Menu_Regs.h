@@ -21,7 +21,7 @@
 //  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu_C000.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #define MaxItemNameLength 28
 
-enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
+enum IO1_Registers  //offset from 0xDE00
 {
    rRegStatus        =  0 , //Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
    rRegStrAddrLo     =  1 , //start address of the prg file being transfered to mem
@@ -70,8 +70,12 @@ enum IO1_Registers  //offset from 0xDE00, needs to match C64 code
    EndSIDRegs        = StartSIDRegs + 25,
    
    rRegSIDStrStart   = StartSIDRegs + 26,
-   //11 chars + term defining current note for each voice (spaces betw)
-   rRegSIDStringTerm = StartSIDRegs + 37,
+   //  9: 3 chars per voice (oct, note, shrp)
+   //  1: Out of voices indicator
+   //  3: spaces betw
+   // 14 total w// term:  ON# ON# ON# X
+   rRegSIDOutOfVoices= StartSIDRegs + 38,
+   rRegSIDStringTerm = StartSIDRegs + 39,
    
    rRegItemNameStart = rRegSIDStringTerm + 1 , //MaxItemNameLength bytes long (incl term)
 };

@@ -32,8 +32,8 @@
 #include <NativeEthernetUdp.h>
 
 
-uint8_t IO1[256];  //io1 space/regs
-uint8_t RAM_Image[65536];  //For receiving files from USB/SD/etc, todo:do this dynamically...
+uint8_t* IO1;  //io1 space/regs
+uint8_t* RAM_Image; //For receiving files from USB/SD/etc, todo:do this dynamically...
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t DisablePhi2ISR = false;
@@ -74,8 +74,8 @@ void setup()
    Serial.print(F_CPU_ACTUAL);
    Serial.println(" Hz");
    
-   DataBufDisable; //buffer disabled
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
+   DataBufDisable; //buffer disabled
    SetDataPortDirOut; //default to output (for C64 Read)
    SetDMADeassert;
    SetNMIDeassert;
@@ -102,7 +102,10 @@ void setup()
    midi1.setHandleControlChange(OnControlChange); //not used
    midi1.setHandlePitchChange(OnPitchChange);  //not used
 
-   for (uint16_t reg=0; reg<sizeof(IO1); reg++) IO1[reg]=0; //initialize all regs to 0
+   RAM_Image = (uint8_t*)malloc(RAM_Image_Size);
+   IO1 = (uint8_t*)malloc(IO1_Size);
+
+   for (uint16_t reg=0; reg<IO1_Size; reg++) IO1[reg]=0; //initialize all regs to 0
    IO1[rRegStatus]=rsReady;
    IO1[rWRegCurrMenuWAIT]= rmtTeensy;
    IO1[rRegNumItems]     = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
@@ -110,6 +113,7 @@ void setup()
    IO1[rRegPresence2]    = 0xAA;   
    for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm]= 0;   
+
 
    Serial.print("TeensyROM 0.01 is on-line\n");
 

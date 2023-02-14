@@ -19,13 +19,16 @@
 
 //#define DebugMessages  //will interfere with ROM/IO emulation, use at your own risk!
 
-#define MaxMenuItems  254
+#define MaxMenuItems       254
 #define SerialTimoutMillis 500
 #define UpDirString "/.. <Up Dir>"
 uint32_t StartCycCnt;
-#define NTSCBusFreq 1022730
-#define PALBusFreq   985250
-
+#define NTSCBusFreq    1022730
+#define PALBusFreq      985250
+#define RAM_Image_Size   65536
+#define IO1_Size           256
+   
+   
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN         31  
 const uint8_t InputPins[] = {

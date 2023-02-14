@@ -97,8 +97,12 @@
    EndSIDRegs        = StartSIDRegs + 25
 
    rRegSIDStrStart   = StartSIDRegs + 26
-   ;11 chars + term defining current note for each voice (spaces betw)
-   rRegSIDStringTerm = StartSIDRegs + 37
+   ;  9: 3 chars per voice (oct, note, shrp)
+   ;  1: Out of voices indicator
+   ;  3: spaces betw
+   ; 14 total w// term:  ON# ON# ON# X
+   rRegSIDOutOfVoices= StartSIDRegs + 38
+   rRegSIDStringTerm = StartSIDRegs + 39
     
    rRegItemNameStart = rRegSIDStringTerm + 1 ;MaxItemNameLength bytes long (incl term)
 

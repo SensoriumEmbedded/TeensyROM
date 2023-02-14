@@ -39,6 +39,7 @@ void OnNoteOn(byte channel, byte note, byte velocity)
    int VoiceNum = FindFreeVoice();
    if (VoiceNum<0)
    {
+      IO1[rRegSIDOutOfVoices]='x';
       #ifdef DebugMessages
        Serial.println("Out of Voices!");  
       #endif
@@ -85,6 +86,7 @@ void OnNoteOn(byte channel, byte note, byte velocity)
 void OnNoteOff(byte channel, byte note, byte velocity)
 {
    note+=3; //offset to A centered from C
+   IO1[rRegSIDOutOfVoices]=' ';
    int VoiceNum = FindVoiceUsingNote(note);
   
    if (VoiceNum<0)
