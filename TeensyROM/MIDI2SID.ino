@@ -99,8 +99,8 @@ void OnNoteOff(byte channel, byte note, byte velocity)
    }
    Voice[VoiceNum].Available = true;
    IO1[rRegSIDVoicCont1+VoiceNum*7] &= 0xFE; //stop note
-   IO1[rRegSIDStrStart+VoiceNum*4+0]=' ';
-   IO1[rRegSIDStrStart+VoiceNum*4+1]=' ';
+   IO1[rRegSIDStrStart+VoiceNum*4+0]='-';
+   IO1[rRegSIDStrStart+VoiceNum*4+1]='-';
    IO1[rRegSIDStrStart+VoiceNum*4+2]=' ';
 
    #ifdef DebugMessages

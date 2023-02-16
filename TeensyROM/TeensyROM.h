@@ -17,7 +17,10 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+//Build options:
 //#define DebugMessages  //will interfere with ROM/IO emulation, use at your own risk!
+//#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
+
 
 #define MaxMenuItems       254
 #define SerialTimoutMillis 500
@@ -96,7 +99,9 @@ const uint8_t OutputPins[] = {
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
    DataBufEnable; 
-   Data= (Data&0xf9) | ((Data & 0x02)<<1) | ((Data & 0x04)>>1);  //Workaround: Data bits swapped on v0.1 schematic!
+   #ifdef HWv0_1_PCB
+     Data= (Data&0xf9) | ((Data & 0x02)<<1) | ((Data & 0x04)>>1);  //Workaround: Data bits swapped on v0.1 schematic!
+   #endif
    register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
@@ -112,9 +117,12 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
    register uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
-   //return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
-   DataIn = ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
-   return (DataIn&0xf9) | ((DataIn & 0x02)<<1) | ((DataIn & 0x04)>>1);   //Workaround: Data bits swapped on v0.1 schematic!
+   #ifdef HWv0_1_PCB
+      DataIn = ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+      return (DataIn&0xf9) | ((DataIn & 0x02)<<1) | ((DataIn & 0x04)>>1);   //Workaround: Data bits swapped on v0.1 schematic!
+   #else
+      return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+   #endif
 }
 
 

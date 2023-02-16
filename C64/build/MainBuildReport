@@ -240,7 +240,7 @@
    238  c01c c9aa                  cmp #$AA
    239  c01e f00a                  beq +
    240                          NoHW:
-   241  c020 a94a                  lda #<MsgNoHW
+   241  c020 a949                  lda #<MsgNoHW
    242  c022 a0c7                  ldy #>MsgNoHW
    243  c024 201eab                jsr PrintString  
    244  c027 4c27c0             -  jmp -
@@ -339,7 +339,7 @@
    337  c0db 20f1c0                jsr ListMenuItemsChangeInit
    338  c0de 4c32c0                jmp WaitForKey
    339                          
-   340  c0e1 c98c               +  cmp #ChrF8  ;Credits, options, SID???
+   340  c0e1 c98c               +  cmp #ChrF8  ;MIDI to SID
    341  c0e3 d009                  bne +
    342  c0e5 205dc3                jsr MIDI2SID
    343  c0e8 20fcc0                jsr ListMenuItems
@@ -371,25 +371,25 @@
    369  c10a ad0bde                lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read
    370  c10d c900                  cmp #rmtSD
    371  c10f d007                  bne +
-   372  c111 a986                  lda #<MsgMenuSD
+   372  c111 a985                  lda #<MsgMenuSD
    373  c113 a0c7                  ldy #>MsgMenuSD
    374  c115 4c32c1                jmp cont1
    375                          
    376  c118 c901               +  cmp #rmtTeensy
    377  c11a d007                  bne +
-   378  c11c a98f                  lda #<MsgMenuTeensy
+   378  c11c a98e                  lda #<MsgMenuTeensy
    379  c11e a0c7                  ldy #>MsgMenuTeensy
    380  c120 4c32c1                jmp cont1
    381                             
    382  c123 c903               +  cmp #rmtUSBDrive
    383  c125 d007                  bne +
-   384  c127 a9a5                  lda #<MsgMenuUSBDrive
+   384  c127 a9a4                  lda #<MsgMenuUSBDrive
    385  c129 a0c7                  ldy #>MsgMenuUSBDrive
    386  c12b 4c32c1                jmp cont1
    387                             
    388                          +  ;cmp #rmtUSBHost
    389                             ;bne +
-   390  c12e a99b                  lda #<MsgMenuUSBHost
+   390  c12e a99a                  lda #<MsgMenuUSBHost
    391  c130 a0c7                  ldy #>MsgMenuUSBHost
    392                             ;jmp cont1
    393                             
@@ -397,7 +397,7 @@
    395  c132 201eab                jsr PrintString
    396  c135 ad0dde                lda rRegNumItems+IO1Port
    397  c138 d00a                  bne +
-   398  c13a a972                  lda #<MsgNoItems
+   398  c13a a971                  lda #<MsgNoItems
    399  c13c a0c7                  ldy #>MsgNoItems
    400  c13e 201eab                jsr PrintString
    401  c141 4cb3c1                jmp finishMenu
@@ -438,7 +438,7 @@
    436                          ; print type
    437  c186 a91f                  lda #TypeColor
    438  c188 20d2ff                jsr SendChar
-   439  c18b a294                  ldx #<TblItemType
+   439  c18b a2a6                  ldx #<TblItemType
    440  c18d a0c9                  ldy #>TblItemType
    441  c18f ad0ede                lda rRegItemType+IO1Port 
    442  c192 204ac3                jsr Print4CharTable
@@ -486,12 +486,12 @@
    484                             ;192 byte limit, watch size of PRGLoadStart block!  check below
    485  c1d6 ad03de                lda rRegStrAvailable+IO1Port
    486  c1d9 d007                  bne +
-   487  c1db a982                  lda #<MsgErrNoData;no data to read!
+   487  c1db a994                  lda #<MsgErrNoData;no data to read!
    488  c1dd a0c9                  ldy #>MsgErrNoData
    489  c1df 4c80c2                jmp ErrOut
    490                             ;no going back now...
    491  c1e2 20d6c5             +  jsr SIDMusicOff    
-   492  c1e5 a96c                  lda #<MsgLoading
+   492  c1e5 a97e                  lda #<MsgLoading
    493  c1e7 a0c9                  ldy #>MsgLoading
    494  c1e9 201eab                jsr PrintString
    495  c1ec a90f                  lda #<rRegItemNameStart+IO1Port
@@ -588,7 +588,7 @@
    586  c285 a000                  ldy #0  ;col
    587  c287 18                    clc
    588  c288 20f0ff                jsr SetCursor
-   589  c28b a979                  lda #<MsgError
+   589  c28b a98b                  lda #<MsgError
    590  c28d a0c9                  ldy #>MsgError
    591  c28f 201eab                jsr PrintString   
    592  c292 68                    pla
@@ -690,10 +690,10 @@
    688                             ;Print "On" or "Off" based on Zero flag
    689                             ;uses A and Y regs
    690  c335 d007                  bne +
-   691  c337 a968                  lda #<MsgOff
+   691  c337 a97a                  lda #<MsgOff
    692  c339 a0c9                  ldy #>MsgOff
    693  c33b 4c42c3                jmp ++
-   694  c33e a964               +  lda #<MsgOn
+   694  c33e a976               +  lda #<MsgOn
    695  c340 a0c9                  ldy #>MsgOn
    696  c342 201eab             ++ jsr PrintString 
    697  c345 60                    rts
@@ -727,7 +727,7 @@
    725  c360 a93a                  lda #<MsgBanner
    726  c362 a0c6                  ldy #>MsgBanner
    727  c364 201eab                jsr PrintString 
-   728  c367 a9b0                  lda #<MsgM2SPolyMenu
+   728  c367 a9af                  lda #<MsgM2SPolyMenu
    729  c369 a0c7                  ldy #>MsgM2SPolyMenu
    730  c36b 201eab                jsr PrintString 
    731                             ;clear SID regs
@@ -793,7 +793,7 @@
    791  c3ed a00e                  ldy #M2SDataColumn ;col
    792  c3ef 18                    clc
    793  c3f0 20f0ff                jsr SetCursor
-   794  c3f3 a224                  ldx #<TblM2SDutyPct
+   794  c3f3 a236                  ldx #<TblM2SDutyPct
    795  c3f5 a0c9                  ldy #>TblM2SDutyPct
    796  c3f7 ad3803                lda SIDDutyHi  ;duty cycle most sig nib = bits 3:0
    797  c3fa 290f                  and #$0f
@@ -813,7 +813,7 @@
    811  c416 a00e                  ldy #M2SDataColumn ;col
    812  c418 18                    clc
    813  c419 20f0ff                jsr SetCursor
-   814  c41c a264                  ldx #<TblM2SAttack
+   814  c41c a276                  ldx #<TblM2SAttack
    815  c41e a0c8                  ldy #>TblM2SAttack
    816  c420 ad3603                lda SIDAttDec  ;attack = bits 7:4
    817  c423 2046c3                jsr Print4CharTableHiNib
@@ -824,7 +824,7 @@
    822  c42d a00e                  ldy #M2SDataColumn ;col
    823  c42f 18                    clc
    824  c430 20f0ff                jsr SetCursor
-   825  c433 a2a4                  ldx #<TblM2SDecayRelease
+   825  c433 a2b6                  ldx #<TblM2SDecayRelease
    826  c435 a0c8                  ldy #>TblM2SDecayRelease
    827  c437 ad3603                lda SIDAttDec  ;decay = bits 3:0
    828  c43a 290f                  and #$0f
@@ -836,7 +836,7 @@
    834  c446 a00e                  ldy #M2SDataColumn ;col
    835  c448 18                    clc
    836  c449 20f0ff                jsr SetCursor
-   837  c44c a2e4                  ldx #<TblM2SSustPct
+   837  c44c a2f6                  ldx #<TblM2SSustPct
    838  c44e a0c8                  ldy #>TblM2SSustPct
    839  c450 ad3703                lda SIDSusRel   ;sustain = bits 7:4
    840  c453 2046c3                jsr Print4CharTableHiNib
@@ -847,7 +847,7 @@
    845  c45d a00e                  ldy #M2SDataColumn ;col
    846  c45f 18                    clc
    847  c460 20f0ff                jsr SetCursor
-   848  c463 a2a4                  ldx #<TblM2SDecayRelease
+   848  c463 a2b6                  ldx #<TblM2SDecayRelease
    849  c465 a0c8                  ldy #>TblM2SDecayRelease
    850  c467 ad3703                lda SIDSusRel  ;release = bits 3:0
    851  c46a 290f                  and #$0f
@@ -883,7 +883,7 @@
    881  c4b0 8d0ed4                sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
    882                          
    883  c4b3 20b9c2                jsr DisplayTime
-   884  c4b6 a213                  ldx #19 ;row   ;print note vals
+   884  c4b6 a214                  ldx #20 ;row   ;print note vals
    885  c4b8 a003                  ldy #3  ;col
    886  c4ba 18                    clc
    887  c4bb 20f0ff                jsr SetCursor
@@ -1093,24 +1093,24 @@
   1091  c6f0 20129ec635929a20...   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
   1092  c705 20129ec636921e20...   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
   1093  c720 20129ec637929a20...   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
-  1094  c735 20129ec638921e20...   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
-  1095  c749 00                     !tx 0
+  1094  c735 20129ec638921e20...   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID"
+  1095  c748 00                     !tx 0
   1096                          MsgNoHW:
-  1097  c74a 0d0d0e9ed445454e...   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
+  1097  c749 0d0d0e9ed445454e...   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
   1098                          MsgNoItems:
-  1099  c772 0d9e20ce4f544849...   !tx ChrReturn, OptionColor, " Nothing to show!", 0
+  1099  c771 0d9e20ce4f544849...   !tx ChrReturn, OptionColor, " Nothing to show!", 0
   1100                          
   1101                          MsgMenuSD:
-  1102  c786 d3c420c34152443a...   !tx "SD Card:", 0
+  1102  c785 d3c420c34152443a...   !tx "SD Card:", 0
   1103                          MsgMenuTeensy:
-  1104  c78f d445454e535920cd...   !tx "Teensy Mem:", 0
+  1104  c78e d445454e535920cd...   !tx "Teensy Mem:", 0
   1105                          MsgMenuUSBHost:
-  1106  c79b d5d3c220c84f5354...   !tx "USB Host:", 0
+  1106  c79a d5d3c220c84f5354...   !tx "USB Host:", 0
   1107                          MsgMenuUSBDrive:
-  1108  c7a5 d5d3c220c4524956...   !tx "USB Drive:", 0
+  1108  c7a4 d5d3c220c4524956...   !tx "USB Drive:", 0
   1109                          
   1110                          MsgM2SPolyMenu:    
-  1111  c7b0 0d0d9acdc9c4c920...   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI 2 SID Polyphonic Mode"
+  1111  c7af 0d0d9acdc9c4c920...   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI to SID Polyphonic Mode"
   1112  c7cd 0d0d9e                !tx ChrReturn, ChrReturn, OptionColor 
   1113  c7d0 20202012d4925249...   !tx "   ", ChrRvsOn, "T", ChrRvsOff, "riangle:", ChrReturn
   1114  c7df 20d34112d792544f...   !tx " Sa", ChrRvsOn, "W", ChrRvsOff, "tooth:", ChrReturn
@@ -1125,35 +1125,36 @@
   1123  c84a 0d                    !tx ChrReturn
   1124  c84b 2020c51258924954...   !tx "  E", ChrRvsOn, "x", ChrRvsOff, "it", ChrReturn
   1125  c854 0d                    !tx ChrReturn
-  1126  c855 202020d6312020d6...   !tx "   V1  V2  V3", ChrReturn
-  1127  c863 00                    !tx 0
-  1128                          TblM2SAttack:  ;4 bytes each, no term
-  1129  c864 2020324d2020384d...   !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
-  1130  c884 3130304d3235304d...   !tx "100m","250m","500m","800m","   1","   3","   5","   8"
-  1131                          TblM2SDecayRelease:  ;4 bytes each, no term
-  1132  c8a4 2020364d2032344d...   !tx "  6m"," 24m"," 48m"," 72m","114m","168m","204m","240m"
-  1133  c8c4 3330304d3735304d...   !tx "300m","750m"," 1.5"," 2.4","   3","   9","  15","  24"
-  1134                          TblM2SSustPct:  ;4 bytes each, no term
-  1135  c8e4 20302e3020362e37...   !tx " 0.0"," 6.7","13.3","20.0","26.7","33.3","40.0","46.7"
-  1136  c904 35332e3336302e30...   !tx "53.3","60.0","66.7","73.3","80.0","86.7","93.3"," 100"
-  1137                          TblM2SDutyPct:  ;4 bytes each, no term
-  1138  c924 20302e3020362e33...   !tx " 0.0"," 6.3","12.5","18.8","25.0","31.3","37.5","43.8"
-  1139  c944 35302e3035362e33...   !tx "50.0","56.3","62.5","68.8","75.0","81.3","87.5","93.8"
-  1140                          MsgOn:
-  1141  c964 cf4e2000              !tx "On ", 0
-  1142                          MsgOff:
-  1143  c968 cf464600              !tx "Off", 0
-  1144                          MsgLoading:
-  1145  c96c 939e8e4c4f414449...   !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
-  1146                          MsgError:
-  1147  c979 1cc552524f523a20...   !tx ChrRed, "Error: ", 0
-  1148                          MsgErrNoData:
-  1149  c982 ce4f20c441544120...   !tx "No Data Available", 0
-  1150                          ;MsgErrNoFile:
-  1151                          ;   !tx "No File Available", 0
-  1152                             
-  1153                          TblItemType: ;must match rtNone, rt16k, etc order!
-  1154  c994 2d2d2d2031364b20...   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
-  1155                             
-  1156                          EndOfAllCode = *
-  1157                          
+  1126  c855 2020ce4f5720d04c...   !tx "  Now Playing:", ChrReturn
+  1127  c864 202020d6312020d6...   !tx "   V1  V2  V3  X", ChrReturn
+  1128  c875 00                    !tx 0
+  1129                          TblM2SAttack:  ;4 bytes each, no term
+  1130  c876 2020324d2020384d...   !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
+  1131  c896 3130304d3235304d...   !tx "100m","250m","500m","800m","   1","   3","   5","   8"
+  1132                          TblM2SDecayRelease:  ;4 bytes each, no term
+  1133  c8b6 2020364d2032344d...   !tx "  6m"," 24m"," 48m"," 72m","114m","168m","204m","240m"
+  1134  c8d6 3330304d3735304d...   !tx "300m","750m"," 1.5"," 2.4","   3","   9","  15","  24"
+  1135                          TblM2SSustPct:  ;4 bytes each, no term
+  1136  c8f6 20302e3020362e37...   !tx " 0.0"," 6.7","13.3","20.0","26.7","33.3","40.0","46.7"
+  1137  c916 35332e3336302e30...   !tx "53.3","60.0","66.7","73.3","80.0","86.7","93.3"," 100"
+  1138                          TblM2SDutyPct:  ;4 bytes each, no term
+  1139  c936 20302e3020362e33...   !tx " 0.0"," 6.3","12.5","18.8","25.0","31.3","37.5","43.8"
+  1140  c956 35302e3035362e33...   !tx "50.0","56.3","62.5","68.8","75.0","81.3","87.5","93.8"
+  1141                          MsgOn:
+  1142  c976 cf4e2000              !tx "On ", 0
+  1143                          MsgOff:
+  1144  c97a cf464600              !tx "Off", 0
+  1145                          MsgLoading:
+  1146  c97e 939e8e4c4f414449...   !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
+  1147                          MsgError:
+  1148  c98b 1cc552524f523a20...   !tx ChrRed, "Error: ", 0
+  1149                          MsgErrNoData:
+  1150  c994 ce4f20c441544120...   !tx "No Data Available", 0
+  1151                          ;MsgErrNoFile:
+  1152                          ;   !tx "No File Available", 0
+  1153                             
+  1154                          TblItemType: ;must match rtNone, rt16k, etc order!
+  1155  c9a6 2d2d2d2031364b20...   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
+  1156                             
+  1157                          EndOfAllCode = *
+  1158                          

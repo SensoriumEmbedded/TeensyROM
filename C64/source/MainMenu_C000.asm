@@ -337,7 +337,7 @@ on jsr SIDMusicOff ;sid is on, turn it off
    jsr ListMenuItemsChangeInit
    jmp WaitForKey
 
-+  cmp #ChrF8  ;Credits, options, SID???
++  cmp #ChrF8  ;MIDI to SID
    bne +
    jsr MIDI2SID
    jsr ListMenuItems
@@ -881,7 +881,7 @@ M2SUpdateKeyInLoop:
    sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
 
    jsr DisplayTime
-   ldx #19 ;row   ;print note vals
+   ldx #20 ;row   ;print note vals
    ldy #3  ;col
    clc
    jsr SetCursor
@@ -1091,7 +1091,7 @@ MsgSelect:
    !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
    !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
-   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
+   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID"
     !tx 0
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
@@ -1108,7 +1108,7 @@ MsgMenuUSBDrive:
    !tx "USB Drive:", 0
 
 MsgM2SPolyMenu:    
-   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI 2 SID Polyphonic Mode"
+   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI to SID Polyphonic Mode"
    !tx ChrReturn, ChrReturn, OptionColor 
    !tx "   ", ChrRvsOn, "T", ChrRvsOff, "riangle:", ChrReturn
    !tx " Sa", ChrRvsOn, "W", ChrRvsOff, "tooth:", ChrReturn
@@ -1123,7 +1123,8 @@ MsgM2SPolyMenu:
    !tx ChrReturn
    !tx "  E", ChrRvsOn, "x", ChrRvsOff, "it", ChrReturn
    !tx ChrReturn
-   !tx "   V1  V2  V3", ChrReturn
+   !tx "  Now Playing:", ChrReturn
+   !tx "   V1  V2  V3  X", ChrReturn
    !tx 0
 TblM2SAttack:  ;4 bytes each, no term
    !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
