@@ -30,94 +30,95 @@
     28                             Ptr2AddrHi  = $fe
     29                             
     30                             ;RAM coppies:
-    31                             MainCodeRAM = $c000    
-    32                             SIDCodeRAM = $1000 
-    33                          
-    34                          ;********************************   Cartridge begin   ********************************   
-    35                          
-    36                          ;8k Cartridge/ROM   ROML $8000-$9FFF
-    37                          ;  Could make 16k if needed
-    38                          * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
-    39  9fff 00                    !byte 0
-    40                             
-    41                          * = $8000  ;Cart Start
-    42                          ;  jump vectors and autostart key     
-    43  8000 0980                  !word Coldstart    ; Cartridge cold-start vector   ;!byte $09, $80 = !word $8009
-    44  8002 1a80                  !word Warmstart    ; Cartridge warm-start vector
-    45  8004 c3c2cd3830            !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key
-    46                          ;  KERNAL RESET ROUTINE
-    47                          Coldstart:
-    48  8009 78                    sei
-    49  800a 8e16d0                stx $d016            ; Turn on VIC for PAL / NTSC check
-    50  800d 20a3fd                jsr $fda3            ; IOINIT - Init CIA chips
-    51  8010 2050fd                jsr $fd50            ; RANTAM - Clear/test system RAM
-    52  8013 2015fd                jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
-    53  8016 205bff                jsr $ff5b            ; CINT   - Init VIC and screen editor
-    54  8019 58                    cli                  ; Re-enable IRQ interrupts
-    55                          ;  BASIC RESET  Routine
-    56                          Warmstart:
-    57  801a 2053e4                jsr $e453            ; Init BASIC RAM vectors
-    58  801d 20bfe3                jsr $e3bf            ; Main BASIC RAM Init routine
-    59  8020 2022e4                jsr $e422            ; Power-up message / NEW command
-    60  8023 a2fb                  ldx #$fb
-    61  8025 9a                    txs                  ; Reduce stack pointer for BASIC
-    62                             
-    63                          
-    64                          ;******************************* Main Code Start ************************************   
-    65                             
-    66  8026 204480                jsr SIDCopyToRAM
-    67  8029 202f80                jsr MainCopyToRAM
-    68  802c 4c00c0                jmp MainCodeRAM
-    69                             
-    70                          ; ******************************* Subroutines ******************************* 
-    71                          MainCopyToRAM:
-    72  802f a993                  lda #>MainCode
-    73  8031 a0e0                  ldy #<MainCode   
-    74  8033 85fc                  sta PtrAddrHi
-    75  8035 84fb                  sty PtrAddrLo 
-    76  8037 a29d                  ldx #>EndMainCode
-    77                             
-    78  8039 a9c0                  lda #>MainCodeRAM
-    79  803b a000                  ldy #<MainCodeRAM   
-    80  803d 85fe                  sta Ptr2AddrHi
-    81  803f 84fd                  sty Ptr2AddrLo 
-    82  8041 4c5680                jmp CodeCopy
-    83                             
-    84                          SIDCopyToRAM:
-    85                             ;have to copy SID code to RAM because it self modifies...
-    86  8044 a980                  lda #>SIDCode
-    87  8046 a069                  ldy #<SIDCode   
-    88  8048 85fc                  sta PtrAddrHi
-    89  804a 84fb                  sty PtrAddrLo 
-    90  804c a293                  ldx #>EndSIDCode
-    91                             
-    92  804e a910                  lda #>SIDCodeRAM
-    93  8050 a000                  ldy #<SIDCodeRAM   
-    94  8052 85fe                  sta Ptr2AddrHi
-    95  8054 84fd                  sty Ptr2AddrLo 
-    96                             
-    97                          CodeCopy:
-    98                             ; Copy from (PtrAddrLo/Hi) to (PtrAddrLo/Hi), x reg is last page to copy
-    99  8056 e8                    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
-   100  8057 a000                  ldy #0 ;initialize
-   101  8059 b1fb               -  lda (PtrAddrLo), y 
-   102  805b 91fd                  sta (Ptr2AddrLo),y
-   103  805d c8                    iny
-   104  805e d0f9                  bne -   
-   105  8060 e6fc                  inc PtrAddrHi
-   106  8062 e6fe                  inc Ptr2AddrHi
-   107  8064 e4fc                  cpx PtrAddrHi
-   108  8066 d0f1                  bne -
-   109  8068 60                    rts
-   110                             
-   111                          SIDCode = *
-   112  8069 4cb1104c0b114c83...   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
-   113                          EndSIDCode = *
-   114                          
-   115                          MainCode = *
-   116  93e0 a9048d20d0a9008d...   !binary "build\MainMenu_C000.bin"
-   117                          EndMainCode = *
-   118                          
-   119                             
-   120                          EndOfAllCode = *
-   121  9d51 00                    !byte 0
+    31                             MainCodeRAM = $c000    ;Main execution point, 4k available.  Only using 2.42 KB as of 2/16/23
+    32                                                    ;Could move to 0801 if more space needed
+    33                             SIDCodeRAM  = $1000 
+    34                          
+    35                          ;********************************   Cartridge begin   ********************************   
+    36                          
+    37                          ;8k Cartridge/ROM   ROML $8000-$9FFF
+    38                          ;  Could make 16k if needed
+    39                          * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
+    40  9fff 00                    !byte 0
+    41                             
+    42                          * = $8000  ;Cart Start
+    43                          ;  jump vectors and autostart key     
+    44  8000 0980                  !word Coldstart    ; Cartridge cold-start vector   ;!byte $09, $80 = !word $8009
+    45  8002 1a80                  !word Warmstart    ; Cartridge warm-start vector
+    46  8004 c3c2cd3830            !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key
+    47                          ;  KERNAL RESET ROUTINE
+    48                          Coldstart:
+    49  8009 78                    sei
+    50  800a 8e16d0                stx $d016            ; Turn on VIC for PAL / NTSC check
+    51  800d 20a3fd                jsr $fda3            ; IOINIT - Init CIA chips
+    52  8010 2050fd                jsr $fd50            ; RANTAM - Clear/test system RAM
+    53  8013 2015fd                jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
+    54  8016 205bff                jsr $ff5b            ; CINT   - Init VIC and screen editor
+    55  8019 58                    cli                  ; Re-enable IRQ interrupts
+    56                          ;  BASIC RESET  Routine
+    57                          Warmstart:
+    58  801a 2053e4                jsr $e453            ; Init BASIC RAM vectors
+    59  801d 20bfe3                jsr $e3bf            ; Main BASIC RAM Init routine
+    60  8020 2022e4                jsr $e422            ; Power-up message / NEW command
+    61  8023 a2fb                  ldx #$fb
+    62  8025 9a                    txs                  ; Reduce stack pointer for BASIC
+    63                             
+    64                          
+    65                          ;******************************* Main Code Start ************************************   
+    66                             
+    67  8026 204480                jsr SIDCopyToRAM
+    68  8029 202f80                jsr MainCopyToRAM
+    69  802c 4c00c0                jmp MainCodeRAM
+    70                             
+    71                          ; ******************************* Subroutines ******************************* 
+    72                          MainCopyToRAM:
+    73  802f a993                  lda #>MainCode
+    74  8031 a0e0                  ldy #<MainCode   
+    75  8033 85fc                  sta PtrAddrHi
+    76  8035 84fb                  sty PtrAddrLo 
+    77  8037 a29d                  ldx #>EndMainCode
+    78                             
+    79  8039 a9c0                  lda #>MainCodeRAM
+    80  803b a000                  ldy #<MainCodeRAM   
+    81  803d 85fe                  sta Ptr2AddrHi
+    82  803f 84fd                  sty Ptr2AddrLo 
+    83  8041 4c5680                jmp CodeCopy
+    84                             
+    85                          SIDCopyToRAM:
+    86                             ;have to copy SID code to RAM because it self modifies...
+    87  8044 a980                  lda #>SIDCode
+    88  8046 a069                  ldy #<SIDCode   
+    89  8048 85fc                  sta PtrAddrHi
+    90  804a 84fb                  sty PtrAddrLo 
+    91  804c a293                  ldx #>EndSIDCode
+    92                             
+    93  804e a910                  lda #>SIDCodeRAM
+    94  8050 a000                  ldy #<SIDCodeRAM   
+    95  8052 85fe                  sta Ptr2AddrHi
+    96  8054 84fd                  sty Ptr2AddrLo 
+    97                             
+    98                          CodeCopy:
+    99                             ; Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
+   100  8056 e8                    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
+   101  8057 a000                  ldy #0 ;initialize
+   102  8059 b1fb               -  lda (PtrAddrLo), y 
+   103  805b 91fd                  sta (Ptr2AddrLo),y
+   104  805d c8                    iny
+   105  805e d0f9                  bne -   
+   106  8060 e6fc                  inc PtrAddrHi
+   107  8062 e6fe                  inc Ptr2AddrHi
+   108  8064 e4fc                  cpx PtrAddrHi
+   109  8066 d0f1                  bne -
+   110  8068 60                    rts
+   111                             
+   112                          SIDCode = *
+   113  8069 4cb1104c0b114c83...   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
+   114                          EndSIDCode = *
+   115                          
+   116                          MainCode = *
+   117  93e0 a9048d20d0a9008d...   !binary "build\MainMenu_C000.bin"
+   118                          EndMainCode = *
+   119                          
+   120                             
+   121                          EndOfAllCode = *
+   122  9d94 00                    !byte 0

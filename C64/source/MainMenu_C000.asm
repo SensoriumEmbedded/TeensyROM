@@ -26,12 +26,13 @@
    PtrAddrHi   = $fc
    Ptr2AddrLo  = $fd
    Ptr2AddrHi  = $fe
-   ;other RAM Registers
-   RegMenuPageStart = $0334
+   ;other RAM Registers/code space
+   RegMenuPageStart = $0334 ;$0334-033b is "free space"
    SIDVoicCont      = $0335
    SIDAttDec        = $0336
    SIDSusRel        = $0337
    SIDDutyHi        = $0338
+   PRGLoadStartReloc= $033c ;$033c-03fb is the tape buffer (192 bytes)
    
    ;RAM coppies:
    MainCodeRAM = $c000    ;this file
@@ -472,76 +473,72 @@ SelectMenuItem:
    ldy rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTR ;if it's a good ROM image, it won't return from this
+   jsr WaitForTR ;if it's a good ROM/crt image, it won't return from this
    cpy #rtPrg
-   beq PRGStart ;if it's a program, x-fer and launch, otherwise reprint menu and return
+   beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
    jsr ListMenuItemsInit
    rts
-PRGStart
-   jsr SIDMusicOff       
-   ;jsr $A644 ;new
-   ;pla ;pull the jsr return address from the stack, we're not going back!
-   ;pla
-   jsr PRGtoMem
-   lda #ChrYellow
-   jsr SendChar 
-   lda #ChrClear
-   jsr SendChar 
-   ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
-   jsr $A659	;reset execution to start, clear variables and flush stack
-   jsr $A533	;rebuild BASIC line chaining
-   ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
-   jmp $A7AE ;BASIC warm start/interpreter inner loop/next statement
-;   ;load keyboard buffer with "run\n":  
-;   lda #'r'
-;   sta $0277  ;kbd buff 0
-;   lda #'u'
-;   sta $0278 ;kbd buff 1
-;   lda #'n'
-;   sta $0279  ;kbd buff 2
-;   lda #ChrReturn
-;   sta $027a  ;kbd buff 3
-;   lda #4
-;   sta $C6  ;# chars in kbd buff (4 of 10 max)
-;   jmp (BasicWarmStartVect)  
    
-WaitForTR:  ;wait for ready status, uses acc and X
-   ldx#5 ;require 5 consecutive reads of ready to continue
-   inc ScreenMemStart+40*2-2 ;end of 'Time' print loc.
--  lda rRegStatus+IO1Port
-   cmp #rsReady
-   bne WaitForTR
-   dex
-   bne -
-   rts
-   
-PRGtoMem:
-   ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
-   ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
-   ;rRegStrAvailable+IO1Port is zero when inactive/complete
-   
+XferCopyRun:
+   ;copy PRGLoadStart code to tape buffer area in case this (Cxxx) area gets overwritten
+   ;192 byte limit, watch size of PRGLoadStart block!  check below
    lda rRegStrAvailable+IO1Port
    bne +
    lda #<MsgErrNoData;no data to read!
    ldy #>MsgErrNoData
    jmp ErrOut
-+  lda rRegStrAddrHi+IO1Port
+   ;no going back now...
++  jsr SIDMusicOff    
+   lda #<MsgLoading
+   ldy #>MsgLoading
+   jsr PrintString
+   lda #<rRegItemNameStart+IO1Port
+   ldy #>rRegItemNameStart+IO1Port
+   jsr PrintString
+
+   lda #>PRGLoadStart
+   ldy #<PRGLoadStart   
+   sta PtrAddrHi
+   sty PtrAddrLo 
+   lda #>PRGLoadStartReloc
+   ldy #<PRGLoadStartReloc   
+   sta Ptr2AddrHi
+   sty Ptr2AddrLo 
+   ldy #$00
+-  lda (PtrAddrLo), y 
+   sta (Ptr2AddrLo),y
+   iny
+   cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
+   bne -   
+   jmp PRGLoadStartReloc
+
+PRGLoadStart:
+   ;this code is relocated to PRGLoadStartReloc and run from there as it 
+   ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers)
+   ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
+   ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
+   ;rRegStrAvailable+IO1Port is zero when inactive/complete
+
+   ;jsr $A644 ;new   
+   lda rRegStrAddrHi+IO1Port
    sta PtrAddrHi
    lda rRegStrAddrLo+IO1Port   
    sta PtrAddrLo
    ldy #0   ;zero offset
    
 -  lda rRegStrAvailable+IO1Port ;are we done?
-   beq + 
+   beq +   ;exit the loop
    lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
    sta (PtrAddrLo), y 
    iny
    bne -
    inc PtrAddrHi
    bne -
-   lda #<MsgErrOverflow ;Overflow!
-   ldy #>MsgErrOverflow
-   jmp ErrOut
+   ;good luck if we get to here... Trying to overflow and write to zero page
+   lda #<(MsgOverflow - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc 
+   ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
+   jsr PrintString   ;$ab1e
+   jmp (BasicWarmStartVect)
    ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
 +  ldx PtrAddrHi
    tya
@@ -553,8 +550,33 @@ PRGtoMem:
    stx $2e  ; (Hi)
    sta $ae  ;End of load address (Lo)
    stx $af  ; (Hi)
+   
+   lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
+   ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
+   jsr PrintString   ;$ab1e
+   ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
+   jsr $a659	;reset execution to start, clear variables and flush stack
+   jsr $a533	;rebuild BASIC line chaining
+   ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
+   jmp $a7ae ;BASIC warm start/interpreter inner loop/next statement (Run)
+   ;jmp (BasicWarmStartVect)  
+MsgRunning:
+   !tx ChrReturn, ChrReturn, "running", ChrReturn, 0
+MsgOverflow:
+   !tx ChrReturn, "overflow!", ChrReturn, 0
+PRGLoadEnd = *
+     
+     
+WaitForTR:  ;wait for ready status, uses acc and X
+   ldx#5 ;require 5 consecutive reads of ready to continue
+   inc ScreenMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
+-  lda rRegStatus+IO1Port
+   cmp #rsReady
+   bne WaitForTR
+   dex
+   bne -
    rts
-  
+
 ErrOut:   
    ;Error msg pointer stored in acc/y
    pha
@@ -1119,18 +1141,17 @@ MsgOn:
    !tx "On ", 0
 MsgOff:
    !tx "Off", 0
+MsgLoading:
+   !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
 MsgError:
    !tx ChrRed, "Error: ", 0
 MsgErrNoData:
    !tx "No Data Available", 0
-MsgErrOverflow:
-   !tx "Overflow", 0
 ;MsgErrNoFile:
 ;   !tx "No File Available", 0
    
 TblItemType: ;must match rtNone, rt16k, etc order!
    !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
-   
    
 EndOfAllCode = *
 

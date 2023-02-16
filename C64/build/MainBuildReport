@@ -28,1111 +28,1132 @@
     26                             PtrAddrHi   = $fc
     27                             Ptr2AddrLo  = $fd
     28                             Ptr2AddrHi  = $fe
-    29                             ;other RAM Registers
-    30                             RegMenuPageStart = $0334
+    29                             ;other RAM Registers/code space
+    30                             RegMenuPageStart = $0334 ;$0334-033b is "free space"
     31                             SIDVoicCont      = $0335
     32                             SIDAttDec        = $0336
     33                             SIDSusRel        = $0337
     34                             SIDDutyHi        = $0338
-    35                             
-    36                             ;RAM coppies:
-    37                             MainCodeRAM = $c000    ;this file
-    38                             SIDCodeRAM = $1000 
-    39                          
-    40                             ScreenMemStart    = $0400
-    41                             BorderColorReg    = $d020 
-    42                             BackgndColorReg   = $d021
-    43                             SIDLoc            = $d400
-    44                             IO1Port           = $de00
-    45                             TODHoursBCD       = $dc0b
-    46                             TODMinBCD         = $dc0a
-    47                             TODSecBCD         = $dc09
-    48                             TODTenthSecBCD    = $dc08
-    49                             
-    50                             ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    51                             MaxItemNameLength = 28
-    52                             
-    53                             rRegStatus        =  0 ;//Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
-    54                             rRegStrAddrLo     =  1 ;//lo byte of start address of the prg file being transfered to mem
-    55                             rRegStrAddrHi     =  2 ;//Hi byte of start address
-    56                             rRegStrAvailable  =  3 ;//zero when inactive/complete 
-    57                             rRegStreamData    =  4 ;//next byte of data to transfer, auto increments when read
-    58                             wRegControl       =  5 ;//RegCtlCommands: execute specific functions
-    59                             rRegPresence1     =  6 ;//for HW detect: 0x55
-    60                             rRegPresence2     =  7 ;//for HW detect: 0xAA
-    61                             rRegLastHourBCD   =  8 ;//Last TOD Hours read
-    62                             rRegLastMinBCD    =  9 ;//Last TOD Minutes read
-    63                             rRegLastSecBCD    = 10 ;//Last TOD Seconds read
-    64                             rWRegCurrMenuWAIT = 11 ;//RegMenuTypes: select Menu type: SD, USB, etc
-    65                             rwRegSelItem      = 12 ;//select Menu Item for name, type, execution, etc
-    66                             rRegNumItems      = 13 ;//num items in menu list
-    67                             rRegItemType      = 14 ;//regItemTypes: type of item 
-    68                             rRegItemNameStart = 15 ;//MaxItemNameLength bytes long (incl term)
-    69                             rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength
-    70                             StartSIDRegs      = rRegItemNameTerm+1  ;//start of SID Regs, matching SID Reg order ($D400)
-    71                             rRegSIDFreqLo1    = StartSIDRegs +  0 
-    72                             rRegSIDFreqHi1    = StartSIDRegs +  1
-    73                             rRegSIDDutyLo1    = StartSIDRegs +  2
-    74                             rRegSIDDutyHi1    = StartSIDRegs +  3
-    75                             rRegSIDVoicCont1  = StartSIDRegs +  4
-    76                             rRegSIDAttDec1    = StartSIDRegs +  5
-    77                             rRegSIDSusRel1    = StartSIDRegs +  6
-    78                          
-    79                             rRegSIDFreqLo2    = StartSIDRegs +  7
-    80                             rRegSIDFreqHi2    = StartSIDRegs +  8
-    81                             rRegSIDDutyLo2    = StartSIDRegs +  9
-    82                             rRegSIDDutyHi2    = StartSIDRegs + 10
-    83                             rRegSIDVoicCont2  = StartSIDRegs + 11
-    84                             rRegSIDAttDec2    = StartSIDRegs + 12
-    85                             rRegSIDSusRel2    = StartSIDRegs + 13
-    86                          
-    87                             rRegSIDFreqLo3    = StartSIDRegs + 14
-    88                             rRegSIDFreqHi3    = StartSIDRegs + 15
-    89                             rRegSIDDutyLo3    = StartSIDRegs + 16
-    90                             rRegSIDDutyHi3    = StartSIDRegs + 17
-    91                             rRegSIDVoicCont3  = StartSIDRegs + 18
-    92                             rRegSIDAttDec3    = StartSIDRegs + 19
-    93                             rRegSIDSusRel3    = StartSIDRegs + 20
-    94                          
-    95                             rRegSIDFreqCutLo  = StartSIDRegs + 21
-    96                             rRegSIDFreqCutHi  = StartSIDRegs + 22
-    97                             rRegSIDFCtlReson  = StartSIDRegs + 23
-    98                             rRegSIDVolFltSel  = StartSIDRegs + 24
-    99                             EndSIDRegs        = StartSIDRegs + 25
-   100                          
-   101                             rRegSIDStrStart   = StartSIDRegs + 26
-   102                             ;  9: 3 chars per voice (oct, note, shrp)
-   103                             ;  1: Out of voices indicator
-   104                             ;  3: spaces betw
-   105                             ; 14 total w// term:  ON# ON# ON# X
-   106                             rRegSIDOutOfVoices= StartSIDRegs + 38
-   107                             rRegSIDStringTerm = StartSIDRegs + 39
-   108                              
-   109                          
-   110                             rsReady      = 0x5a
-   111                             rsChangeMenu = 0x9d
-   112                             rsStartItem  = 0xb1
-   113                             rsGetTime    = 0xe6
-   114                             ;rsError      = 0x24
-   115                          
-   116                             rmtSD        = 0
-   117                             rmtTeensy    = 1
-   118                             rmtUSBHost   = 2
-   119                             rmtUSBDrive  = 3
-   120                             
-   121                             rCtlVanish           = 0
-   122                             rCtlVanishReset      = 1
-   123                             rCtlStartSelItemWAIT = 2
-   124                             rCtlGetTimeWAIT      = 3
-   125                          
-   126                             rtNone = 0  ;synch with TblItemType below
-   127                             rt16k  = 1
-   128                             rt8kHi = 2
-   129                             rt8kLo = 3
-   130                             rtPrg  = 4
-   131                             rtUnk  = 5
-   132                             rtCrt  = 6
-   133                             rtDir  = 7
-   134                             
-   135                          ;!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!
-   136                          
+    35                             PRGLoadStartReloc= $033c ;$033c-03fb is the tape buffer (192 bytes)
+    36                             
+    37                             ;RAM coppies:
+    38                             MainCodeRAM = $c000    ;this file
+    39                             SIDCodeRAM = $1000 
+    40                          
+    41                             ScreenMemStart    = $0400
+    42                             BorderColorReg    = $d020 
+    43                             BackgndColorReg   = $d021
+    44                             SIDLoc            = $d400
+    45                             IO1Port           = $de00
+    46                             TODHoursBCD       = $dc0b
+    47                             TODMinBCD         = $dc0a
+    48                             TODSecBCD         = $dc09
+    49                             TODTenthSecBCD    = $dc08
+    50                             
+    51                             ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    52                             MaxItemNameLength = 28
+    53                             
+    54                             rRegStatus        =  0 ;//Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
+    55                             rRegStrAddrLo     =  1 ;//lo byte of start address of the prg file being transfered to mem
+    56                             rRegStrAddrHi     =  2 ;//Hi byte of start address
+    57                             rRegStrAvailable  =  3 ;//zero when inactive/complete 
+    58                             rRegStreamData    =  4 ;//next byte of data to transfer, auto increments when read
+    59                             wRegControl       =  5 ;//RegCtlCommands: execute specific functions
+    60                             rRegPresence1     =  6 ;//for HW detect: 0x55
+    61                             rRegPresence2     =  7 ;//for HW detect: 0xAA
+    62                             rRegLastHourBCD   =  8 ;//Last TOD Hours read
+    63                             rRegLastMinBCD    =  9 ;//Last TOD Minutes read
+    64                             rRegLastSecBCD    = 10 ;//Last TOD Seconds read
+    65                             rWRegCurrMenuWAIT = 11 ;//RegMenuTypes: select Menu type: SD, USB, etc
+    66                             rwRegSelItem      = 12 ;//select Menu Item for name, type, execution, etc
+    67                             rRegNumItems      = 13 ;//num items in menu list
+    68                             rRegItemType      = 14 ;//regItemTypes: type of item 
+    69                             rRegItemNameStart = 15 ;//MaxItemNameLength bytes long (incl term)
+    70                             rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength
+    71                             StartSIDRegs      = rRegItemNameTerm+1  ;//start of SID Regs, matching SID Reg order ($D400)
+    72                             rRegSIDFreqLo1    = StartSIDRegs +  0 
+    73                             rRegSIDFreqHi1    = StartSIDRegs +  1
+    74                             rRegSIDDutyLo1    = StartSIDRegs +  2
+    75                             rRegSIDDutyHi1    = StartSIDRegs +  3
+    76                             rRegSIDVoicCont1  = StartSIDRegs +  4
+    77                             rRegSIDAttDec1    = StartSIDRegs +  5
+    78                             rRegSIDSusRel1    = StartSIDRegs +  6
+    79                          
+    80                             rRegSIDFreqLo2    = StartSIDRegs +  7
+    81                             rRegSIDFreqHi2    = StartSIDRegs +  8
+    82                             rRegSIDDutyLo2    = StartSIDRegs +  9
+    83                             rRegSIDDutyHi2    = StartSIDRegs + 10
+    84                             rRegSIDVoicCont2  = StartSIDRegs + 11
+    85                             rRegSIDAttDec2    = StartSIDRegs + 12
+    86                             rRegSIDSusRel2    = StartSIDRegs + 13
+    87                          
+    88                             rRegSIDFreqLo3    = StartSIDRegs + 14
+    89                             rRegSIDFreqHi3    = StartSIDRegs + 15
+    90                             rRegSIDDutyLo3    = StartSIDRegs + 16
+    91                             rRegSIDDutyHi3    = StartSIDRegs + 17
+    92                             rRegSIDVoicCont3  = StartSIDRegs + 18
+    93                             rRegSIDAttDec3    = StartSIDRegs + 19
+    94                             rRegSIDSusRel3    = StartSIDRegs + 20
+    95                          
+    96                             rRegSIDFreqCutLo  = StartSIDRegs + 21
+    97                             rRegSIDFreqCutHi  = StartSIDRegs + 22
+    98                             rRegSIDFCtlReson  = StartSIDRegs + 23
+    99                             rRegSIDVolFltSel  = StartSIDRegs + 24
+   100                             EndSIDRegs        = StartSIDRegs + 25
+   101                          
+   102                             rRegSIDStrStart   = StartSIDRegs + 26
+   103                             ;  9: 3 chars per voice (oct, note, shrp)
+   104                             ;  1: Out of voices indicator
+   105                             ;  3: spaces betw
+   106                             ; 14 total w// term:  ON# ON# ON# X
+   107                             rRegSIDOutOfVoices= StartSIDRegs + 38
+   108                             rRegSIDStringTerm = StartSIDRegs + 39
+   109                              
+   110                          
+   111                             rsReady      = 0x5a
+   112                             rsChangeMenu = 0x9d
+   113                             rsStartItem  = 0xb1
+   114                             rsGetTime    = 0xe6
+   115                             ;rsError      = 0x24
+   116                          
+   117                             rmtSD        = 0
+   118                             rmtTeensy    = 1
+   119                             rmtUSBHost   = 2
+   120                             rmtUSBDrive  = 3
+   121                             
+   122                             rCtlVanish           = 0
+   123                             rCtlVanishReset      = 1
+   124                             rCtlStartSelItemWAIT = 2
+   125                             rCtlGetTimeWAIT      = 3
+   126                          
+   127                             rtNone = 0  ;synch with TblItemType below
+   128                             rt16k  = 1
+   129                             rt8kHi = 2
+   130                             rt8kLo = 3
+   131                             rtPrg  = 4
+   132                             rtUnk  = 5
+   133                             rtCrt  = 6
+   134                             rtDir  = 7
+   135                             
+   136                          ;!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!
    137                          
-   138                             ;Kernal routines:
-   139                             IRQDefault = $ea31
-   140                             SendChar   = $ffd2
-   141                             ScanKey    = $ff9f ;SCNKEY
-   142                             GetIn      = $ffe4 ;GETIN
-   143                             SetCursor  = $fff0 ;PLOT
-   144                             
-   145                             ;BASIC routines:
-   146                             BasicColdStartVect = $a000 ; $e394  58260
-   147                             BasicWarmStartVect = $a002 ; $e37b  58235
-   148                             PrintString =  $ab1e
-   149                          
-   150                             ;chr$ symbols
-   151                             ChrBlack   = 144
-   152                             ChrWhite   = 5
-   153                             ChrRed     = 28
-   154                             ChrCyan    = 159
-   155                             ChrPurple  = 156
-   156                             ChrGreen   = 30
-   157                             ChrBlue    = 31
-   158                             ChrYellow  = 158 
-   159                             ChrOrange  = 129
-   160                             ChrBrown   = 149
-   161                             ChrLtRed   = 150
-   162                             ChrDrkGrey = 151
-   163                             ChrMedGrey = 152
-   164                             ChrLtGreen = 153
-   165                             ChrLtBlue  = 154
-   166                             ChrLtGrey  = 155
-   167                             
-   168                             ChrF1      = 133
-   169                             ChrF2      = 137
-   170                             ChrF3      = 134
-   171                             ChrF4      = 138
-   172                             ChrF5      = 135
-   173                             ChrF6      = 139
-   174                             ChrF7      = 136
-   175                             ChrF8      = 140
-   176                             ChrToLower = 14
-   177                             ChrToUpper = 142
-   178                             ChrRvsOn   = 18
-   179                             ChrRvsOff  = 146
-   180                             ChrClear   = 147
-   181                             ChrReturn  = 13
-   182                             ChrSpace   = 32
-   183                             ChrCSRSUp  = 145
-   184                             ChrCSRSDn  = 17
-   185                             
-   186                          ;poke colors
-   187                             pokeBlack   = 0
-   188                             pokeWhite   = 1
-   189                             pokeRed     = 2
-   190                             pokeCyan    = 3
-   191                             pokePurple  = 4
-   192                             pokeGreen   = 5
-   193                             pokeBlue    = 6
-   194                             pokeYellow  = 7
-   195                             pokeOrange  = 8
-   196                             pokeBrown   = 9
-   197                             pokeLtRed   = 10
-   198                             pokeDrkGrey = 11
-   199                             pokeMedGrey = 12
-   200                             pokeLtGreen = 13
-   201                             pokeLtBlue  = 14
-   202                             pokeLtGrey  = 15
-   203                             
-   204                             ;color scheme:
-   205                             BorderColor      = pokePurple
-   206                             BackgndColor     = pokeBlack
-   207                             TimeColor        = ChrOrange
-   208                             MenuMiscColor    = ChrGreen
-   209                             ROMNumColor      = ChrDrkGrey
-   210                             OptionColor      = ChrYellow
-   211                             SourcesColor     = ChrLtBlue
-   212                             TypeColor        = ChrBlue
-   213                             NameColor        = ChrLtGreen
-   214                             MaxMenuDispItems = 16
-   215                             M2SDataColumn    = 14
-   216                          
-   217                          ;******************************* Main Code Start ************************************   
-   218                          
-   219                          * = MainCodeRAM
-   220                          Start:
-   221                          
-   222                          ;screen setup:     
-   223  c000 a904                  lda #BorderColor
-   224  c002 8d20d0                sta BorderColorReg
-   225  c005 a900                  lda #BackgndColor
-   226  c007 8d21d0                sta BackgndColorReg
-   227                             
-   228  c00a a900                  lda #$00
-   229  c00c 200010                jsr SIDCodeRAM ;Initialize music
-   230  c00f 206dc5                jsr SIDMusicOn ;Start the music!
-   231                             
-   232                          ;check for HW:
-   233  c012 ad06de                lda rRegPresence1+IO1Port
-   234  c015 c955                  cmp #$55
-   235  c017 d007                  bne NoHW
-   236  c019 ad07de                lda rRegPresence2+IO1Port
-   237  c01c c9aa                  cmp #$AA
-   238  c01e f00a                  beq +
-   239                          NoHW:
-   240  c020 a90b                  lda #<MsgNoHW
-   241  c022 a0c7                  ldy #>MsgNoHW
-   242  c024 201eab                jsr PrintString  
-   243  c027 4c27c0             -  jmp -
-   244                          
-   245  c02a a900               +  lda #rCtlVanish ;Deassert Game & ExROM
-   246  c02c 8d05de                sta wRegControl+IO1Port
-   247                          
-   248  c02f 20f7c0                jsr ListMenuItemsInit
-   249                             ;jsr SynchEthernetTime
-   250                          
-   251                          WaitForKey:     
-   252  c032 207ac2                jsr DisplayTime
-   253  c035 20e4ff                jsr GetIn    
-   254  c038 f0f8                  beq WaitForKey
-   255                          
-   256  c03a c941                  cmp #'a'  
-   257  c03c 3019                  bmi +   ;skip if below 'a'
-   258  c03e c952                  cmp #'a'+ MaxMenuDispItems + 1  
-   259  c040 1015                  bpl +   ;skip if above MaxMenuDispItems
-   260                             ;convert to ROM number
-   261  c042 38                    sec       ;set to subtract without carry
-   262  c043 e941                  sbc #'a'  ;now 0-?
-   263  c045 18                    clc
-   264  c046 6d3403                adc RegMenuPageStart   
-   265                             ;ROMSelected, ROM num in acc
-   266  c049 cd0dde                cmp rRegNumItems+IO1Port 
-   267  c04c 10e4                  bpl WaitForKey   ;skip if above num of ROMs
-   268  c04e 8d0cde                sta rwRegSelItem+IO1Port ;select Item from list
-   269  c051 20c3c1                jsr SelectMenuItem
-   270  c054 4c32c0                jmp WaitForKey
-   271                          
-   272  c057 c911               +  cmp #ChrCSRSDn  ;Next Page
-   273  c059 d014                  bne +
-   274  c05b ad3403                lda RegMenuPageStart
-   275  c05e 18                    clc
-   276  c05f 6910                  adc #MaxMenuDispItems
-   277  c061 cd0dde                cmp rRegNumItems+IO1Port
-   278  c064 10cc                  bpl WaitForKey  ;already on last page
-   279  c066 8d3403                sta RegMenuPageStart
-   280  c069 20fcc0                jsr ListMenuItems
-   281  c06c 4c32c0                jmp WaitForKey
-   282                          
-   283  c06f c991               +  cmp #ChrCSRSUp  ;Prev Page
-   284  c071 d011                  bne +
-   285  c073 ad3403                lda RegMenuPageStart
-   286                             ;cmp #0     
-   287  c076 f0ba                  beq WaitForKey  ;already on first page
-   288  c078 38                    sec
-   289  c079 e910                  sbc #MaxMenuDispItems
-   290  c07b 8d3403                sta RegMenuPageStart
-   291  c07e 20fcc0                jsr ListMenuItems
-   292  c081 4c32c0                jmp WaitForKey  
-   293                          
-   294  c084 c985               +  cmp #ChrF1  ;Teensy mem Menu
-   295  c086 d008                  bne +
-   296  c088 a901                  lda #rmtTeensy
-   297  c08a 20f1c0                jsr ListMenuItemsChangeInit
-   298  c08d 4c32c0                jmp WaitForKey  
-   299                          
-   300  c090 c989               +  cmp #ChrF2  ;Exit to BASIC
-   301  c092 d008                  bne +
-   302  c094 a901                  lda #rCtlVanishReset ;reset to BASIC
-   303  c096 8d05de                sta wRegControl+IO1Port
-   304  c099 4c99c0             -  jmp -  ;should be resetting to BASIC
-   305                          
-   306  c09c c986               +  cmp #ChrF3  ;SD Card Menu
-   307  c09e d008                  bne +
-   308  c0a0 a900                  lda #rmtSD
-   309  c0a2 20f1c0                jsr ListMenuItemsChangeInit
-   310  c0a5 4c32c0                jmp WaitForKey  
-   311                          
-   312  c0a8 c98a               +  cmp #ChrF4  ;toggle music
-   313  c0aa d013                  bne +
-   314  c0ac a2c5                  ldx #>irqRastSID
-   315  c0ae ec1503                cpx $315  ;see if the IRQ is pointing at our SID routine
-   316  c0b1 f006                  beq on
-   317  c0b3 206dc5                jsr SIDMusicOn ;sid is off, turn it on
-   318  c0b6 4c32c0                jmp WaitForKey
-   319  c0b9 2097c5             on jsr SIDMusicOff ;sid is on, turn it off
-   320  c0bc 4c32c0                jmp WaitForKey  
-   321                          
-   322  c0bf c987               +  cmp #ChrF5  ;USB Drive Menu
-   323  c0c1 d008                  bne +
-   324  c0c3 a903                  lda #rmtUSBDrive
-   325  c0c5 20f1c0                jsr ListMenuItemsChangeInit
-   326  c0c8 4c32c0                jmp WaitForKey  
-   327                          
-   328  c0cb c98b               +  cmp #ChrF6  ;Synch Ethernet Time
-   329  c0cd d006                  bne +
-   330  c0cf 205ac2                jsr SynchEthernetTime
-   331  c0d2 4c32c0                jmp WaitForKey  
-   332                          
-   333  c0d5 c988               +  cmp #ChrF7  ;Exe USB Host file
-   334  c0d7 d008                  bne +
-   335  c0d9 a902                  lda #rmtUSBHost
-   336  c0db 20f1c0                jsr ListMenuItemsChangeInit
-   337  c0de 4c32c0                jmp WaitForKey
-   338                          
-   339  c0e1 c98c               +  cmp #ChrF8  ;Credits, options, SID???
-   340  c0e3 d009                  bne +
-   341  c0e5 201ec3                jsr MIDI2SID
-   342  c0e8 20fcc0                jsr ListMenuItems
-   343  c0eb 4c32c0                jmp WaitForKey
-   344                          
+   138                          
+   139                             ;Kernal routines:
+   140                             IRQDefault = $ea31
+   141                             SendChar   = $ffd2
+   142                             ScanKey    = $ff9f ;SCNKEY
+   143                             GetIn      = $ffe4 ;GETIN
+   144                             SetCursor  = $fff0 ;PLOT
+   145                             
+   146                             ;BASIC routines:
+   147                             BasicColdStartVect = $a000 ; $e394  58260
+   148                             BasicWarmStartVect = $a002 ; $e37b  58235
+   149                             PrintString =  $ab1e
+   150                          
+   151                             ;chr$ symbols
+   152                             ChrBlack   = 144
+   153                             ChrWhite   = 5
+   154                             ChrRed     = 28
+   155                             ChrCyan    = 159
+   156                             ChrPurple  = 156
+   157                             ChrGreen   = 30
+   158                             ChrBlue    = 31
+   159                             ChrYellow  = 158 
+   160                             ChrOrange  = 129
+   161                             ChrBrown   = 149
+   162                             ChrLtRed   = 150
+   163                             ChrDrkGrey = 151
+   164                             ChrMedGrey = 152
+   165                             ChrLtGreen = 153
+   166                             ChrLtBlue  = 154
+   167                             ChrLtGrey  = 155
+   168                             
+   169                             ChrF1      = 133
+   170                             ChrF2      = 137
+   171                             ChrF3      = 134
+   172                             ChrF4      = 138
+   173                             ChrF5      = 135
+   174                             ChrF6      = 139
+   175                             ChrF7      = 136
+   176                             ChrF8      = 140
+   177                             ChrToLower = 14
+   178                             ChrToUpper = 142
+   179                             ChrRvsOn   = 18
+   180                             ChrRvsOff  = 146
+   181                             ChrClear   = 147
+   182                             ChrReturn  = 13
+   183                             ChrSpace   = 32
+   184                             ChrCSRSUp  = 145
+   185                             ChrCSRSDn  = 17
+   186                             
+   187                          ;poke colors
+   188                             pokeBlack   = 0
+   189                             pokeWhite   = 1
+   190                             pokeRed     = 2
+   191                             pokeCyan    = 3
+   192                             pokePurple  = 4
+   193                             pokeGreen   = 5
+   194                             pokeBlue    = 6
+   195                             pokeYellow  = 7
+   196                             pokeOrange  = 8
+   197                             pokeBrown   = 9
+   198                             pokeLtRed   = 10
+   199                             pokeDrkGrey = 11
+   200                             pokeMedGrey = 12
+   201                             pokeLtGreen = 13
+   202                             pokeLtBlue  = 14
+   203                             pokeLtGrey  = 15
+   204                             
+   205                             ;color scheme:
+   206                             BorderColor      = pokePurple
+   207                             BackgndColor     = pokeBlack
+   208                             TimeColor        = ChrOrange
+   209                             MenuMiscColor    = ChrGreen
+   210                             ROMNumColor      = ChrDrkGrey
+   211                             OptionColor      = ChrYellow
+   212                             SourcesColor     = ChrLtBlue
+   213                             TypeColor        = ChrBlue
+   214                             NameColor        = ChrLtGreen
+   215                             MaxMenuDispItems = 16
+   216                             M2SDataColumn    = 14
+   217                          
+   218                          ;******************************* Main Code Start ************************************   
+   219                          
+   220                          * = MainCodeRAM
+   221                          Start:
+   222                          
+   223                          ;screen setup:     
+   224  c000 a904                  lda #BorderColor
+   225  c002 8d20d0                sta BorderColorReg
+   226  c005 a900                  lda #BackgndColor
+   227  c007 8d21d0                sta BackgndColorReg
+   228                             
+   229  c00a a900                  lda #$00
+   230  c00c 200010                jsr SIDCodeRAM ;Initialize music
+   231  c00f 20acc5                jsr SIDMusicOn ;Start the music!
+   232                             
+   233                          ;check for HW:
+   234  c012 ad06de                lda rRegPresence1+IO1Port
+   235  c015 c955                  cmp #$55
+   236  c017 d007                  bne NoHW
+   237  c019 ad07de                lda rRegPresence2+IO1Port
+   238  c01c c9aa                  cmp #$AA
+   239  c01e f00a                  beq +
+   240                          NoHW:
+   241  c020 a94a                  lda #<MsgNoHW
+   242  c022 a0c7                  ldy #>MsgNoHW
+   243  c024 201eab                jsr PrintString  
+   244  c027 4c27c0             -  jmp -
+   245                          
+   246  c02a a900               +  lda #rCtlVanish ;Deassert Game & ExROM
+   247  c02c 8d05de                sta wRegControl+IO1Port
+   248                          
+   249  c02f 20f7c0                jsr ListMenuItemsInit
+   250                             ;jsr SynchEthernetTime
+   251                          
+   252                          WaitForKey:     
+   253  c032 20b9c2                jsr DisplayTime
+   254  c035 20e4ff                jsr GetIn    
+   255  c038 f0f8                  beq WaitForKey
+   256                          
+   257  c03a c941                  cmp #'a'  
+   258  c03c 3019                  bmi +   ;skip if below 'a'
+   259  c03e c952                  cmp #'a'+ MaxMenuDispItems + 1  
+   260  c040 1015                  bpl +   ;skip if above MaxMenuDispItems
+   261                             ;convert to ROM number
+   262  c042 38                    sec       ;set to subtract without carry
+   263  c043 e941                  sbc #'a'  ;now 0-?
+   264  c045 18                    clc
+   265  c046 6d3403                adc RegMenuPageStart   
+   266                             ;ROMSelected, ROM num in acc
+   267  c049 cd0dde                cmp rRegNumItems+IO1Port 
+   268  c04c 10e4                  bpl WaitForKey   ;skip if above num of ROMs
+   269  c04e 8d0cde                sta rwRegSelItem+IO1Port ;select Item from list
+   270  c051 20c3c1                jsr SelectMenuItem
+   271  c054 4c32c0                jmp WaitForKey
+   272                          
+   273  c057 c911               +  cmp #ChrCSRSDn  ;Next Page
+   274  c059 d014                  bne +
+   275  c05b ad3403                lda RegMenuPageStart
+   276  c05e 18                    clc
+   277  c05f 6910                  adc #MaxMenuDispItems
+   278  c061 cd0dde                cmp rRegNumItems+IO1Port
+   279  c064 10cc                  bpl WaitForKey  ;already on last page
+   280  c066 8d3403                sta RegMenuPageStart
+   281  c069 20fcc0                jsr ListMenuItems
+   282  c06c 4c32c0                jmp WaitForKey
+   283                          
+   284  c06f c991               +  cmp #ChrCSRSUp  ;Prev Page
+   285  c071 d011                  bne +
+   286  c073 ad3403                lda RegMenuPageStart
+   287                             ;cmp #0     
+   288  c076 f0ba                  beq WaitForKey  ;already on first page
+   289  c078 38                    sec
+   290  c079 e910                  sbc #MaxMenuDispItems
+   291  c07b 8d3403                sta RegMenuPageStart
+   292  c07e 20fcc0                jsr ListMenuItems
+   293  c081 4c32c0                jmp WaitForKey  
+   294                          
+   295  c084 c985               +  cmp #ChrF1  ;Teensy mem Menu
+   296  c086 d008                  bne +
+   297  c088 a901                  lda #rmtTeensy
+   298  c08a 20f1c0                jsr ListMenuItemsChangeInit
+   299  c08d 4c32c0                jmp WaitForKey  
+   300                          
+   301  c090 c989               +  cmp #ChrF2  ;Exit to BASIC
+   302  c092 d008                  bne +
+   303  c094 a901                  lda #rCtlVanishReset ;reset to BASIC
+   304  c096 8d05de                sta wRegControl+IO1Port
+   305  c099 4c99c0             -  jmp -  ;should be resetting to BASIC
+   306                          
+   307  c09c c986               +  cmp #ChrF3  ;SD Card Menu
+   308  c09e d008                  bne +
+   309  c0a0 a900                  lda #rmtSD
+   310  c0a2 20f1c0                jsr ListMenuItemsChangeInit
+   311  c0a5 4c32c0                jmp WaitForKey  
+   312                          
+   313  c0a8 c98a               +  cmp #ChrF4  ;toggle music
+   314  c0aa d013                  bne +
+   315  c0ac a2c6                  ldx #>irqRastSID
+   316  c0ae ec1503                cpx $315  ;see if the IRQ is pointing at our SID routine
+   317  c0b1 f006                  beq on
+   318  c0b3 20acc5                jsr SIDMusicOn ;sid is off, turn it on
+   319  c0b6 4c32c0                jmp WaitForKey
+   320  c0b9 20d6c5             on jsr SIDMusicOff ;sid is on, turn it off
+   321  c0bc 4c32c0                jmp WaitForKey  
+   322                          
+   323  c0bf c987               +  cmp #ChrF5  ;USB Drive Menu
+   324  c0c1 d008                  bne +
+   325  c0c3 a903                  lda #rmtUSBDrive
+   326  c0c5 20f1c0                jsr ListMenuItemsChangeInit
+   327  c0c8 4c32c0                jmp WaitForKey  
+   328                          
+   329  c0cb c98b               +  cmp #ChrF6  ;Synch Ethernet Time
+   330  c0cd d006                  bne +
+   331  c0cf 2099c2                jsr SynchEthernetTime
+   332  c0d2 4c32c0                jmp WaitForKey  
+   333                          
+   334  c0d5 c988               +  cmp #ChrF7  ;Exe USB Host file
+   335  c0d7 d008                  bne +
+   336  c0d9 a902                  lda #rmtUSBHost
+   337  c0db 20f1c0                jsr ListMenuItemsChangeInit
+   338  c0de 4c32c0                jmp WaitForKey
+   339                          
+   340  c0e1 c98c               +  cmp #ChrF8  ;Credits, options, SID???
+   341  c0e3 d009                  bne +
+   342  c0e5 205dc3                jsr MIDI2SID
+   343  c0e8 20fcc0                jsr ListMenuItems
+   344  c0eb 4c32c0                jmp WaitForKey
    345                          
    346                          
-   347  c0ee 4c32c0             +  jmp WaitForKey
-   348                          
-   349                             
-   350                          ; ******************************* Subroutines ******************************* 
-   351                          ;                           list out rom number, type, & names
-   352                          
-   353                          Sssssssssssssssssssssssubroutines:
-   354                          ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
-   355  c0f1 8d0bde                sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
-   356  c0f4 20efc1                jsr WaitForTR
-   357                          ListMenuItemsInit:
-   358  c0f7 a900                  lda #0       ;initialize to first Item
-   359  c0f9 8d3403                sta RegMenuPageStart
-   360                          ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
-   361  c0fc a9fb                  lda #<MsgBanner
-   362  c0fe a0c5                  ldy #>MsgBanner
-   363  c100 201eab                jsr PrintString 
-   364  c103 a929                  lda #<MsgFrom
-   365  c105 a0c6                  ldy #>MsgFrom
-   366  c107 201eab                jsr PrintString 
-   367                             ;print menu source:
-   368  c10a ad0bde                lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read
-   369  c10d c900                  cmp #rmtSD
-   370  c10f d007                  bne +
-   371  c111 a947                  lda #<MsgMenuSD
-   372  c113 a0c7                  ldy #>MsgMenuSD
-   373  c115 4c32c1                jmp cont1
-   374                          
-   375  c118 c901               +  cmp #rmtTeensy
-   376  c11a d007                  bne +
-   377  c11c a950                  lda #<MsgMenuTeensy
-   378  c11e a0c7                  ldy #>MsgMenuTeensy
-   379  c120 4c32c1                jmp cont1
-   380                             
-   381  c123 c903               +  cmp #rmtUSBDrive
-   382  c125 d007                  bne +
-   383  c127 a966                  lda #<MsgMenuUSBDrive
-   384  c129 a0c7                  ldy #>MsgMenuUSBDrive
-   385  c12b 4c32c1                jmp cont1
-   386                             
-   387                          +  ;cmp #rmtUSBHost
-   388                             ;bne +
-   389  c12e a95c                  lda #<MsgMenuUSBHost
-   390  c130 a0c7                  ldy #>MsgMenuUSBHost
-   391                             ;jmp cont1
-   392                             
-   393                          cont1   
-   394  c132 201eab                jsr PrintString
-   395  c135 ad0dde                lda rRegNumItems+IO1Port
-   396  c138 d00a                  bne +
-   397  c13a a933                  lda #<MsgNoItems
-   398  c13c a0c7                  ldy #>MsgNoItems
-   399  c13e 201eab                jsr PrintString
-   400  c141 4cb3c1                jmp finishMenu
-   401  c144 ad3403             +  lda RegMenuPageStart
-   402  c147 8d0cde                sta rwRegSelItem+IO1Port
-   403  c14a a9c1                  lda #'A' ;initialize to start of page
-   404                          nextLine
-   405  c14c 48                    pha ;remember menu letter
-   406  c14d a90d                  lda #ChrReturn
-   407  c14f 20d2ff                jsr SendChar
-   408                             
-   409                          ;print option letter
-   410  c152 a99e                  lda #OptionColor
-   411  c154 20d2ff                jsr SendChar
-   412  c157 a920                  lda #ChrSpace
-   413  c159 20d2ff                jsr SendChar
-   414  c15c a912                  lda #ChrRvsOn
-   415  c15e 20d2ff                jsr SendChar
-   416  c161 68                    pla
-   417  c162 48                    pha
-   418  c163 20d2ff                jsr SendChar
-   419  c166 a992                  lda #ChrRvsOff
-   420  c168 20d2ff                jsr SendChar
-   421  c16b a92d                  lda #'-'
-   422  c16d 20d2ff                jsr SendChar
-   423                          ; print name
-   424  c170 a999                  lda #NameColor
-   425  c172 20d2ff                jsr SendChar
-   426  c175 a90f                  lda #<rRegItemNameStart+IO1Port
-   427  c177 a0de                  ldy #>rRegItemNameStart+IO1Port
-   428  c179 201eab                jsr PrintString
-   429                          ;align to col
-   430  c17c 38                    sec
-   431  c17d 20f0ff                jsr SetCursor ;read current to load y (row)
-   432  c180 a01f                  ldy #MaxItemNameLength + 3  ;col
-   433  c182 18                    clc
-   434  c183 20f0ff                jsr SetCursor
-   435                          ; print type
-   436  c186 a91f                  lda #TypeColor
-   437  c188 20d2ff                jsr SendChar
-   438  c18b a251                  ldx #<TblItemType
-   439  c18d a0c9                  ldy #>TblItemType
-   440  c18f ad0ede                lda rRegItemType+IO1Port 
-   441  c192 200bc3                jsr Print4CharTable
-   442                          ;print ROM #
-   443  c195 a997                  lda #ROMNumColor
-   444  c197 20d2ff                jsr SendChar
-   445  c19a ad0cde                lda rwRegSelItem+IO1Port
-   446  c19d 20d6c2                jsr PrintHexByte
-   447                             
-   448                          ;line is done printing, check for next...
-   449  c1a0 68                    pla ;menu select letter
-   450  c1a1 ee0cde                inc rwRegSelItem+IO1Port
-   451  c1a4 ae0cde                ldx rwRegSelItem+IO1Port
-   452  c1a7 ec0dde                cpx rRegNumItems+IO1Port
-   453  c1aa f007                  beq finishMenu
-   454  c1ac 18                    clc
-   455  c1ad 6901                  adc #01
-   456  c1af c9d1                  cmp #'A' + MaxMenuDispItems
-   457  c1b1 d099                  bne nextLine  
-   458                          finishMenu
-   459  c1b3 a214                  ldx #20 ;row
-   460  c1b5 a000                  ldy #0  ;col
-   461  c1b7 18                    clc
-   462  c1b8 20f0ff                jsr SetCursor
-   463  c1bb a931                  lda #<MsgSelect
-   464  c1bd a0c6                  ldy #>MsgSelect
-   465  c1bf 201eab                jsr PrintString
-   466  c1c2 60                    rts
-   467                          
-   468                          ;Execute/select an item from the list
-   469                          ; Dir, ROM, copy PRG to RAM and run, etc
-   470                          ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
-   471                          SelectMenuItem:
-   472  c1c3 ac0ede                ldy rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
-   473  c1c6 a902                  lda #rCtlStartSelItemWAIT
-   474  c1c8 8d05de                sta wRegControl+IO1Port
-   475  c1cb 20efc1                jsr WaitForTR ;if it's a good ROM image, it won't return from this
-   476  c1ce c004                  cpy #rtPrg
-   477  c1d0 f004                  beq PRGStart ;if it's a program, x-fer and launch, otherwise reprint menu and return
-   478  c1d2 20f7c0                jsr ListMenuItemsInit
-   479  c1d5 60                    rts
-   480                          PRGStart
-   481  c1d6 2097c5                jsr SIDMusicOff       
-   482                             ;jsr $A644 ;new
-   483                             ;pla ;pull the jsr return address from the stack, we're not going back!
-   484                             ;pla
-   485  c1d9 20ffc1                jsr PRGtoMem
-   486  c1dc a99e                  lda #ChrYellow
-   487  c1de 20d2ff                jsr SendChar 
-   488  c1e1 a993                  lda #ChrClear
-   489  c1e3 20d2ff                jsr SendChar 
-   490                             ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
-   491  c1e6 2059a6                jsr $A659	;reset execution to start, clear variables and flush stack
-   492  c1e9 2033a5                jsr $A533	;rebuild BASIC line chaining
-   493                             ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
-   494  c1ec 4caea7                jmp $A7AE ;BASIC warm start/interpreter inner loop/next statement
-   495                          ;   ;load keyboard buffer with "run\n":  
-   496                          ;   lda #'r'
-   497                          ;   sta $0277  ;kbd buff 0
-   498                          ;   lda #'u'
-   499                          ;   sta $0278 ;kbd buff 1
-   500                          ;   lda #'n'
-   501                          ;   sta $0279  ;kbd buff 2
-   502                          ;   lda #ChrReturn
-   503                          ;   sta $027a  ;kbd buff 3
-   504                          ;   lda #4
-   505                          ;   sta $C6  ;# chars in kbd buff (4 of 10 max)
-   506                          ;   jmp (BasicWarmStartVect)  
-   507                             
-   508                          WaitForTR:  ;wait for ready status, uses acc and X
-   509  c1ef a205                  ldx#5 ;require 5 consecutive reads of ready to continue
-   510  c1f1 ee4e04                inc ScreenMemStart+40*2-2 ;end of 'Time' print loc.
-   511  c1f4 ad00de             -  lda rRegStatus+IO1Port
-   512  c1f7 c95a                  cmp #rsReady
-   513  c1f9 d0f4                  bne WaitForTR
-   514  c1fb ca                    dex
-   515  c1fc d0f6                  bne -
-   516  c1fe 60                    rts
-   517                             
-   518                          PRGtoMem:
-   519                             ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
-   520                             ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
-   521                             ;rRegStrAvailable+IO1Port is zero when inactive/complete
-   522                             
-   523  c1ff ad03de                lda rRegStrAvailable+IO1Port
-   524  c202 d007                  bne +
-   525  c204 a936                  lda #<MsgErrNoData;no data to read!
-   526  c206 a0c9                  ldy #>MsgErrNoData
-   527  c208 4c41c2                jmp ErrOut
-   528  c20b ad02de             +  lda rRegStrAddrHi+IO1Port
-   529  c20e 85fc                  sta PtrAddrHi
-   530  c210 ad01de                lda rRegStrAddrLo+IO1Port   
-   531  c213 85fb                  sta PtrAddrLo
-   532  c215 a000                  ldy #0   ;zero offset
-   533                             
-   534  c217 ad03de             -  lda rRegStrAvailable+IO1Port ;are we done?
-   535  c21a f013                  beq + 
-   536  c21c ad04de                lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
-   537  c21f 91fb                  sta (PtrAddrLo), y 
-   538  c221 c8                    iny
-   539  c222 d0f3                  bne -
-   540  c224 e6fc                  inc PtrAddrHi
-   541  c226 d0ef                  bne -
-   542  c228 a948                  lda #<MsgErrOverflow ;Overflow!
-   543  c22a a0c9                  ldy #>MsgErrOverflow
-   544  c22c 4c41c2                jmp ErrOut
-   545                             ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
-   546  c22f a6fc               +  ldx PtrAddrHi
-   547  c231 98                    tya
-   548  c232 18                    clc
-   549  c233 65fb                  adc PtrAddrLo
-   550  c235 9001                  bcc +
-   551  c237 e8                    inx
-   552  c238 852d               +  sta $2d  ;start of BASIC variables pointer (Lo)
-   553  c23a 862e                  stx $2e  ; (Hi)
-   554  c23c 85ae                  sta $ae  ;End of load address (Lo)
-   555  c23e 86af                  stx $af  ; (Hi)
-   556  c240 60                    rts
-   557                            
-   558                          ErrOut:   
-   559                             ;Error msg pointer stored in acc/y
-   560  c241 48                    pha
-   561  c242 98                    tya
-   562  c243 48                    pha
-   563  c244 a213                  ldx #19 ;row
-   564  c246 a000                  ldy #0  ;col
-   565  c248 18                    clc
-   566  c249 20f0ff                jsr SetCursor
-   567  c24c a92d                  lda #<MsgError
-   568  c24e a0c9                  ldy #>MsgError
-   569  c250 201eab                jsr PrintString   
-   570  c253 68                    pla
-   571  c254 a8                    tay
-   572  c255 68                    pla
-   573  c256 201eab                jsr PrintString
-   574  c259 60                    rts
-   575                          
-   576                          SynchEthernetTime:
-   577  c25a a903                  lda #rCtlGetTimeWAIT
-   578  c25c 8d05de                sta wRegControl+IO1Port
-   579  c25f 20efc1                jsr WaitForTR 
-   580  c262 ad08de                lda rRegLastHourBCD+IO1Port
-   581  c265 8d0bdc                sta TODHoursBCD  ;stop TOD regs incrementing
-   582  c268 ad09de                lda rRegLastMinBCD+IO1Port
-   583  c26b 8d0adc                sta TODMinBCD
-   584  c26e ad0ade                lda rRegLastSecBCD+IO1Port
-   585  c271 8d09dc                sta TODSecBCD
-   586  c274 a909                  lda #9
-   587  c276 8d08dc                sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
-   588  c279 60                    rts
-   589                             
-   590                          DisplayTime:
-   591  c27a a201                  ldx #1 ;row
-   592  c27c a01d                  ldy #29  ;col
-   593  c27e 18                    clc
-   594  c27f 20f0ff                jsr SetCursor
-   595  c282 a981                  lda #TimeColor
-   596  c284 20d2ff                jsr SendChar
-   597  c287 ad0bdc                lda TODHoursBCD ;latches time in regs (stops incrementing)
-   598  c28a a8                    tay ;save for re-use
-   599  c28b 291f                  and #$1f
-   600  c28d d004                  bne nz   ;if hours is 0, make it 12...
-   601  c28f 98                    tya
-   602  c290 0912                  ora #$12
-   603  c292 a8                    tay ;re-save for re-use
-   604  c293 98                 nz tya
-   605  c294 2910                  and #$10
-   606  c296 d005                  bne +
-   607  c298 a920                  lda #ChrSpace
-   608  c29a 4c9fc2                jmp ++
-   609  c29d a931               +  lda #'1'
-   610  c29f 20d2ff             ++ jsr SendChar
-   611  c2a2 98                    tya
-   612  c2a3 290f                  and #$0f  ;ones of hours
-   613  c2a5 20e3c2                jsr PrintHexNibble
-   614  c2a8 a93a                  lda #':'
-   615  c2aa 20d2ff                jsr SendChar
-   616  c2ad ad0adc                lda TODMinBCD
-   617  c2b0 20d6c2                jsr PrintHexByte
-   618  c2b3 a93a                  lda #':'
-   619  c2b5 20d2ff                jsr SendChar
-   620  c2b8 ad09dc                lda TODSecBCD
-   621  c2bb 20d6c2                jsr PrintHexByte
-   622                             ;lda #'.'
-   623                             ;jsr SendChar
-   624  c2be ad08dc                lda TODTenthSecBCD ;have to read 10ths to release latch
-   625                             ;jsr PrintHexNibble
-   626  c2c1 98                    tya ;am/pm (pre latch release)
-   627  c2c2 2980                  and #$80
-   628  c2c4 d005                  bne +
-   629  c2c6 a941                  lda #'a'
-   630  c2c8 4ccdc2                jmp ++
-   631  c2cb a950               +  lda #'p'
-   632  c2cd 20d2ff             ++ jsr SendChar
-   633  c2d0 a94d                  lda #'m'
-   634  c2d2 20d2ff                jsr SendChar
-   635  c2d5 60                    rts
-   636                             
-   637                          PrintHexByte:
-   638                             ;Print byte value stored in acc in hex (2 chars)
-   639  c2d6 48                    pha
-   640  c2d7 4a                    lsr
-   641  c2d8 4a                    lsr
-   642  c2d9 4a                    lsr
-   643  c2da 4a                    lsr
-   644  c2db 20e3c2                jsr PrintHexNibble
-   645  c2de 68                    pla
-   646                             ;pha   ; preserve acc on return?
-   647  c2df 20e3c2                jsr PrintHexNibble
-   648                             ;pla
-   649  c2e2 60                    rts
-   650                             
-   651                          PrintHexNibble:   
-   652                             ;Print value stored in lower nible acc in hex
-   653                             ;trashes acc
-   654  c2e3 290f                  and #$0f
-   655  c2e5 c90a                  cmp #$0a
-   656  c2e7 1006                  bpl l 
-   657  c2e9 18                    clc
-   658  c2ea 6930                  adc #'0'
-   659  c2ec 4cf2c2                jmp pr
-   660  c2ef 18                 l  clc
-   661  c2f0 6937                  adc #'a'-$0a
-   662  c2f2 20d2ff             pr jsr SendChar
-   663  c2f5 60                    rts
-   664                          
-   665                          PrintOnOff:
-   666                             ;Print "On" or "Off" based on Zero flag
-   667                             ;uses A and Y regs
-   668  c2f6 d007                  bne +
-   669  c2f8 a929                  lda #<MsgOff
-   670  c2fa a0c9                  ldy #>MsgOff
-   671  c2fc 4c03c3                jmp ++
-   672  c2ff a925               +  lda #<MsgOn
-   673  c301 a0c9                  ldy #>MsgOn
-   674  c303 201eab             ++ jsr PrintString 
-   675  c306 60                    rts
-   676                          
-   677                          Print4CharTableHiNib
-   678  c307 4a                    lsr
-   679  c308 4a                    lsr
-   680  c309 4a                    lsr
-   681  c30a 4a                    lsr ; move to lower nibble
-   682                          Print4CharTable:   
-   683                          ;prints 4 chars from a table of continuous 4 char sets (no termination)
-   684                          ;X=table base lo, y=table base high, acc=index to item# (63 max)
-   685                          ;   and #0xfc 
-   686  c30b 86fb                  stx PtrAddrLo
-   687  c30d 84fc                  sty PtrAddrHi
-   688  c30f 0a                    asl
-   689  c310 0a                    asl  ;mult by 4
-   690  c311 a8                    tay
-   691  c312 b1fb               -  lda (PtrAddrLo),y
-   692  c314 20d2ff                jsr SendChar   ;type (4 chars)
-   693  c317 c8                    iny
-   694  c318 98                    tya
-   695  c319 2903                  and #3
-   696  c31b d0f5                  bne -
-   697  c31d 60                    rts
-   698                             
-   699                          ; ******************************* SID stuff ******************************* 
-   700                          
-   701                          MIDI2SID:
-   702  c31e 2097c5                jsr SIDMusicOff
-   703  c321 a9fb                  lda #<MsgBanner
-   704  c323 a0c5                  ldy #>MsgBanner
-   705  c325 201eab                jsr PrintString 
-   706  c328 a971                  lda #<MsgM2SPolyMenu
-   707  c32a a0c7                  ldy #>MsgM2SPolyMenu
-   708  c32c 201eab                jsr PrintString 
-   709                             ;clear SID regs
-   710  c32f a900                  lda #0
-   711  c331 aa                    tax
-   712  c332 9d00d4             -  sta SIDLoc, x
-   713  c335 e8                    inx
-   714  c336 e019                  cpx #(EndSIDRegs-StartSIDRegs)
-   715  c338 d0f8                  bne -
-   716                          
-   717                             ;  set default local settings:
-   718  c33a a90f                  lda #0x0f ; full volume
-   719  c33c 8d18d4                sta SIDLoc+rRegSIDVolFltSel-StartSIDRegs
-   720  c33f a902                  lda #0x02 ; 12.5% duty cycle (12 bit resolution, lo reg left at 0)
-   721  c341 8d3803                sta SIDDutyHi
-   722  c344 8d03d4                sta SIDLoc+rRegSIDDutyHi1-StartSIDRegs
-   723  c347 8d0ad4                sta SIDLoc+rRegSIDDutyHi2-StartSIDRegs
-   724  c34a 8d11d4                sta SIDLoc+rRegSIDDutyHi3-StartSIDRegs
-   725  c34d a940                  lda #0x40 ; pulse wave
-   726  c34f 8d3503                sta SIDVoicCont
-   727  c352 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
-   728  c355 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
-   729  c358 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs
-   730  c35b a923                  lda #0x23 ; Att=16mS, Dec=72mS
-   731  c35d 8d3603                sta SIDAttDec
-   732  c360 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   733  c363 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   734  c366 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   735  c369 a934                  lda #0x34 ; Sus=20%, Rel=114mS
-   736  c36b 8d3703                sta SIDSusRel
-   737  c36e 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   738  c371 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   739  c374 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   740                             
-   741                          M2SDispUpdate:  ;upadte all M2S status display values
-   742  c377 a999                  lda #NameColor
-   743  c379 20d2ff                jsr SendChar
-   744  c37c a205                  ldx # 5 ;row  Triangle
-   745  c37e a00e                  ldy #M2SDataColumn ;col
-   746  c380 18                    clc
-   747  c381 20f0ff                jsr SetCursor
-   748  c384 ad3503                lda SIDVoicCont
-   749  c387 2910                  and #0x10  
-   750  c389 20f6c2                jsr PrintOnOff
-   751                             
-   752  c38c a206                  ldx # 6 ;row  Sawtooth
-   753  c38e a00e                  ldy #M2SDataColumn ;col
-   754  c390 18                    clc
-   755  c391 20f0ff                jsr SetCursor
-   756  c394 ad3503                lda SIDVoicCont
-   757  c397 2920                  and #0x20  
-   758  c399 20f6c2                jsr PrintOnOff
-   759                             
-   760  c39c a207                  ldx # 7 ;row  Pulse
-   761  c39e a00e                  ldy #M2SDataColumn ;col
-   762  c3a0 18                    clc
-   763  c3a1 20f0ff                jsr SetCursor
-   764  c3a4 ad3503                lda SIDVoicCont
-   765  c3a7 2940                  and #0x40  
-   766  c3a9 20f6c2                jsr PrintOnOff
-   767                             
-   768  c3ac a208                  ldx #8 ;row  Duty Cycle
-   769  c3ae a00e                  ldy #M2SDataColumn ;col
-   770  c3b0 18                    clc
-   771  c3b1 20f0ff                jsr SetCursor
-   772  c3b4 a2e5                  ldx #<TblM2SDutyPct
-   773  c3b6 a0c8                  ldy #>TblM2SDutyPct
-   774  c3b8 ad3803                lda SIDDutyHi  ;duty cycle most sig nib = bits 3:0
-   775  c3bb 290f                  and #$0f
-   776  c3bd 200bc3                jsr Print4CharTable
-   777  c3c0 a925                  lda #'%'
-   778  c3c2 20d2ff                jsr SendChar
-   779                             
-   780  c3c5 a209                  ldx # 9 ;row  Noise
-   781  c3c7 a00e                  ldy #M2SDataColumn ;col
-   782  c3c9 18                    clc
-   783  c3ca 20f0ff                jsr SetCursor
-   784  c3cd ad3503                lda SIDVoicCont
-   785  c3d0 2980                  and #0x80  
-   786  c3d2 20f6c2                jsr PrintOnOff
-   787                           
-   788  c3d5 a20b                  ldx #11 ;row  attack
-   789  c3d7 a00e                  ldy #M2SDataColumn ;col
-   790  c3d9 18                    clc
-   791  c3da 20f0ff                jsr SetCursor
-   792  c3dd a225                  ldx #<TblM2SAttack
-   793  c3df a0c8                  ldy #>TblM2SAttack
-   794  c3e1 ad3603                lda SIDAttDec  ;attack = bits 7:4
-   795  c3e4 2007c3                jsr Print4CharTableHiNib
-   796  c3e7 a9d3                  lda #'S'
-   797  c3e9 20d2ff                jsr SendChar
-   798                          
-   799  c3ec a20c                  ldx #12 ;row  decay
-   800  c3ee a00e                  ldy #M2SDataColumn ;col
-   801  c3f0 18                    clc
-   802  c3f1 20f0ff                jsr SetCursor
-   803  c3f4 a265                  ldx #<TblM2SDecayRelease
-   804  c3f6 a0c8                  ldy #>TblM2SDecayRelease
-   805  c3f8 ad3603                lda SIDAttDec  ;decay = bits 3:0
-   806  c3fb 290f                  and #$0f
-   807  c3fd 200bc3                jsr Print4CharTable
-   808  c400 a9d3                  lda #'S'
-   809  c402 20d2ff                jsr SendChar
-   810                          
-   811  c405 a20d                  ldx #13 ;row  sustain
-   812  c407 a00e                  ldy #M2SDataColumn ;col
-   813  c409 18                    clc
-   814  c40a 20f0ff                jsr SetCursor
-   815  c40d a2a5                  ldx #<TblM2SSustPct
-   816  c40f a0c8                  ldy #>TblM2SSustPct
-   817  c411 ad3703                lda SIDSusRel   ;sustain = bits 7:4
-   818  c414 2007c3                jsr Print4CharTableHiNib
-   819  c417 a925                  lda #'%'
-   820  c419 20d2ff                jsr SendChar
-   821                          
-   822  c41c a20e                  ldx #14 ;row  release
-   823  c41e a00e                  ldy #M2SDataColumn ;col
-   824  c420 18                    clc
-   825  c421 20f0ff                jsr SetCursor
-   826  c424 a265                  ldx #<TblM2SDecayRelease
-   827  c426 a0c8                  ldy #>TblM2SDecayRelease
-   828  c428 ad3703                lda SIDSusRel  ;release = bits 3:0
-   829  c42b 290f                  and #$0f
-   830  c42d 200bc3                jsr Print4CharTable
-   831  c430 a9d3                  lda #'S'
-   832  c432 20d2ff                jsr SendChar
-   833                          
-   834                          ;continue into the main loop...
-   835                          M2SUpdateKeyInLoop:
-   836                          ;refresh dynamic SID regs from MIDI:   todo: move this to an interrupt?
-   837  c435 ad3503                lda SIDVoicCont  ;waveform in upper nibble
-   838  c438 0d30de                ora IO1Port+rRegSIDVoicCont1 ;latch bit (0) from MIDI
-   839  c43b 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
-   840  c43e ad2dde                lda IO1Port+rRegSIDFreqHi1 
-   841  c441 8d01d4                sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
-   842  c444 ad2cde                lda IO1Port+rRegSIDFreqLo1 
-   843  c447 8d00d4                sta SIDLoc+rRegSIDFreqLo1-StartSIDRegs 
-   844                          
-   845  c44a ad3503                lda SIDVoicCont  ;waveform in upper nibble
-   846  c44d 0d37de                ora IO1Port+rRegSIDVoicCont2 ;latch bit (0) from MIDI
-   847  c450 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
-   848  c453 ad34de                lda IO1Port+rRegSIDFreqHi2 
-   849  c456 8d08d4                sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
-   850  c459 ad33de                lda IO1Port+rRegSIDFreqLo2 
-   851  c45c 8d07d4                sta SIDLoc+rRegSIDFreqLo2-StartSIDRegs 
-   852                          
-   853  c45f ad3503                lda SIDVoicCont  ;waveform in upper nibble
-   854  c462 0d3ede                ora IO1Port+rRegSIDVoicCont3 ;latch bit (0) from MIDI
-   855  c465 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
-   856  c468 ad3bde                lda IO1Port+rRegSIDFreqHi3 
-   857  c46b 8d0fd4                sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
-   858  c46e ad3ade                lda IO1Port+rRegSIDFreqLo3 
-   859  c471 8d0ed4                sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
-   860                          
-   861  c474 207ac2                jsr DisplayTime
-   862  c477 a213                  ldx #19 ;row   ;print note vals
-   863  c479 a003                  ldy #3  ;col
-   864  c47b 18                    clc
-   865  c47c 20f0ff                jsr SetCursor
-   866  c47f a999                  lda #NameColor
-   867  c481 20d2ff                jsr SendChar
-   868  c484 a946                  lda #<IO1Port+rRegSIDStrStart
-   869  c486 a0de                  ldy #>IO1Port+rRegSIDStrStart
-   870  c488 201eab                jsr PrintString 
-   871                             
-   872  c48b 20e4ff                jsr GetIn
-   873  c48e f0a5                  beq M2SUpdateKeyInLoop
-   874                             
-   875  c490 c954                  cmp #'t'  ;Triangle
-   876  c492 d00d                  bne +
-   877  c494 a910                  lda #0x10
-   878  c496 4d3503                eor SIDVoicCont
-   879  c499 2970                  and #0x70  ;never combine with noise
-   880  c49b 8d3503                sta SIDVoicCont
-   881  c49e 4c77c3                jmp M2SDispUpdate
+   347                          
+   348  c0ee 4c32c0             +  jmp WaitForKey
+   349                          
+   350                             
+   351                          ; ******************************* Subroutines ******************************* 
+   352                          ;                           list out rom number, type, & names
+   353                          
+   354                          Sssssssssssssssssssssssubroutines:
+   355                          ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
+   356  c0f1 8d0bde                sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
+   357  c0f4 2070c2                jsr WaitForTR
+   358                          ListMenuItemsInit:
+   359  c0f7 a900                  lda #0       ;initialize to first Item
+   360  c0f9 8d3403                sta RegMenuPageStart
+   361                          ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
+   362  c0fc a93a                  lda #<MsgBanner
+   363  c0fe a0c6                  ldy #>MsgBanner
+   364  c100 201eab                jsr PrintString 
+   365  c103 a968                  lda #<MsgFrom
+   366  c105 a0c6                  ldy #>MsgFrom
+   367  c107 201eab                jsr PrintString 
+   368                             ;print menu source:
+   369  c10a ad0bde                lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read
+   370  c10d c900                  cmp #rmtSD
+   371  c10f d007                  bne +
+   372  c111 a986                  lda #<MsgMenuSD
+   373  c113 a0c7                  ldy #>MsgMenuSD
+   374  c115 4c32c1                jmp cont1
+   375                          
+   376  c118 c901               +  cmp #rmtTeensy
+   377  c11a d007                  bne +
+   378  c11c a98f                  lda #<MsgMenuTeensy
+   379  c11e a0c7                  ldy #>MsgMenuTeensy
+   380  c120 4c32c1                jmp cont1
+   381                             
+   382  c123 c903               +  cmp #rmtUSBDrive
+   383  c125 d007                  bne +
+   384  c127 a9a5                  lda #<MsgMenuUSBDrive
+   385  c129 a0c7                  ldy #>MsgMenuUSBDrive
+   386  c12b 4c32c1                jmp cont1
+   387                             
+   388                          +  ;cmp #rmtUSBHost
+   389                             ;bne +
+   390  c12e a99b                  lda #<MsgMenuUSBHost
+   391  c130 a0c7                  ldy #>MsgMenuUSBHost
+   392                             ;jmp cont1
+   393                             
+   394                          cont1   
+   395  c132 201eab                jsr PrintString
+   396  c135 ad0dde                lda rRegNumItems+IO1Port
+   397  c138 d00a                  bne +
+   398  c13a a972                  lda #<MsgNoItems
+   399  c13c a0c7                  ldy #>MsgNoItems
+   400  c13e 201eab                jsr PrintString
+   401  c141 4cb3c1                jmp finishMenu
+   402  c144 ad3403             +  lda RegMenuPageStart
+   403  c147 8d0cde                sta rwRegSelItem+IO1Port
+   404  c14a a9c1                  lda #'A' ;initialize to start of page
+   405                          nextLine
+   406  c14c 48                    pha ;remember menu letter
+   407  c14d a90d                  lda #ChrReturn
+   408  c14f 20d2ff                jsr SendChar
+   409                             
+   410                          ;print option letter
+   411  c152 a99e                  lda #OptionColor
+   412  c154 20d2ff                jsr SendChar
+   413  c157 a920                  lda #ChrSpace
+   414  c159 20d2ff                jsr SendChar
+   415  c15c a912                  lda #ChrRvsOn
+   416  c15e 20d2ff                jsr SendChar
+   417  c161 68                    pla
+   418  c162 48                    pha
+   419  c163 20d2ff                jsr SendChar
+   420  c166 a992                  lda #ChrRvsOff
+   421  c168 20d2ff                jsr SendChar
+   422  c16b a92d                  lda #'-'
+   423  c16d 20d2ff                jsr SendChar
+   424                          ; print name
+   425  c170 a999                  lda #NameColor
+   426  c172 20d2ff                jsr SendChar
+   427  c175 a90f                  lda #<rRegItemNameStart+IO1Port
+   428  c177 a0de                  ldy #>rRegItemNameStart+IO1Port
+   429  c179 201eab                jsr PrintString
+   430                          ;align to col
+   431  c17c 38                    sec
+   432  c17d 20f0ff                jsr SetCursor ;read current to load y (row)
+   433  c180 a01f                  ldy #MaxItemNameLength + 3  ;col
+   434  c182 18                    clc
+   435  c183 20f0ff                jsr SetCursor
+   436                          ; print type
+   437  c186 a91f                  lda #TypeColor
+   438  c188 20d2ff                jsr SendChar
+   439  c18b a294                  ldx #<TblItemType
+   440  c18d a0c9                  ldy #>TblItemType
+   441  c18f ad0ede                lda rRegItemType+IO1Port 
+   442  c192 204ac3                jsr Print4CharTable
+   443                          ;print ROM #
+   444  c195 a997                  lda #ROMNumColor
+   445  c197 20d2ff                jsr SendChar
+   446  c19a ad0cde                lda rwRegSelItem+IO1Port
+   447  c19d 2015c3                jsr PrintHexByte
+   448                             
+   449                          ;line is done printing, check for next...
+   450  c1a0 68                    pla ;menu select letter
+   451  c1a1 ee0cde                inc rwRegSelItem+IO1Port
+   452  c1a4 ae0cde                ldx rwRegSelItem+IO1Port
+   453  c1a7 ec0dde                cpx rRegNumItems+IO1Port
+   454  c1aa f007                  beq finishMenu
+   455  c1ac 18                    clc
+   456  c1ad 6901                  adc #01
+   457  c1af c9d1                  cmp #'A' + MaxMenuDispItems
+   458  c1b1 d099                  bne nextLine  
+   459                          finishMenu
+   460  c1b3 a214                  ldx #20 ;row
+   461  c1b5 a000                  ldy #0  ;col
+   462  c1b7 18                    clc
+   463  c1b8 20f0ff                jsr SetCursor
+   464  c1bb a970                  lda #<MsgSelect
+   465  c1bd a0c6                  ldy #>MsgSelect
+   466  c1bf 201eab                jsr PrintString
+   467  c1c2 60                    rts
+   468                          
+   469                          ;Execute/select an item from the list
+   470                          ; Dir, ROM, copy PRG to RAM and run, etc
+   471                          ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
+   472                          SelectMenuItem:
+   473  c1c3 ac0ede                ldy rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
+   474  c1c6 a902                  lda #rCtlStartSelItemWAIT
+   475  c1c8 8d05de                sta wRegControl+IO1Port
+   476  c1cb 2070c2                jsr WaitForTR ;if it's a good ROM/crt image, it won't return from this
+   477  c1ce c004                  cpy #rtPrg
+   478  c1d0 f004                  beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
+   479  c1d2 20f7c0                jsr ListMenuItemsInit
+   480  c1d5 60                    rts
+   481                             
+   482                          XferCopyRun:
+   483                             ;copy PRGLoadStart code to tape buffer area in case this (Cxxx) area gets overwritten
+   484                             ;192 byte limit, watch size of PRGLoadStart block!  check below
+   485  c1d6 ad03de                lda rRegStrAvailable+IO1Port
+   486  c1d9 d007                  bne +
+   487  c1db a982                  lda #<MsgErrNoData;no data to read!
+   488  c1dd a0c9                  ldy #>MsgErrNoData
+   489  c1df 4c80c2                jmp ErrOut
+   490                             ;no going back now...
+   491  c1e2 20d6c5             +  jsr SIDMusicOff    
+   492  c1e5 a96c                  lda #<MsgLoading
+   493  c1e7 a0c9                  ldy #>MsgLoading
+   494  c1e9 201eab                jsr PrintString
+   495  c1ec a90f                  lda #<rRegItemNameStart+IO1Port
+   496  c1ee a0de                  ldy #>rRegItemNameStart+IO1Port
+   497  c1f0 201eab                jsr PrintString
+   498                          
+   499  c1f3 a9c2                  lda #>PRGLoadStart
+   500  c1f5 a011                  ldy #<PRGLoadStart   
+   501  c1f7 85fc                  sta PtrAddrHi
+   502  c1f9 84fb                  sty PtrAddrLo 
+   503  c1fb a903                  lda #>PRGLoadStartReloc
+   504  c1fd a03c                  ldy #<PRGLoadStartReloc   
+   505  c1ff 85fe                  sta Ptr2AddrHi
+   506  c201 84fd                  sty Ptr2AddrLo 
+   507  c203 a000                  ldy #$00
+   508  c205 b1fb               -  lda (PtrAddrLo), y 
+   509  c207 91fd                  sta (Ptr2AddrLo),y
+   510  c209 c8                    iny
+   511  c20a c05f                  cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
+   512  c20c d0f7                  bne -   
+   513  c20e 4c3c03                jmp PRGLoadStartReloc
+   514                          
+   515                          PRGLoadStart:
+   516                             ;this code is relocated to PRGLoadStartReloc and run from there as it 
+   517                             ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers)
+   518                             ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
+   519                             ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
+   520                             ;rRegStrAvailable+IO1Port is zero when inactive/complete
+   521                          
+   522                             ;jsr $A644 ;new   
+   523  c211 ad02de                lda rRegStrAddrHi+IO1Port
+   524  c214 85fc                  sta PtrAddrHi
+   525  c216 ad01de                lda rRegStrAddrLo+IO1Port   
+   526  c219 85fb                  sta PtrAddrLo
+   527  c21b a000                  ldy #0   ;zero offset
+   528                             
+   529  c21d ad03de             -  lda rRegStrAvailable+IO1Port ;are we done?
+   530  c220 f016                  beq +   ;exit the loop
+   531  c222 ad04de                lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
+   532  c225 91fb                  sta (PtrAddrLo), y 
+   533  c227 c8                    iny
+   534  c228 d0f3                  bne -
+   535  c22a e6fc                  inc PtrAddrHi
+   536  c22c d0ef                  bne -
+   537                             ;good luck if we get to here... Trying to overflow and write to zero page
+   538  c22e a98f                  lda #<(MsgOverflow - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc 
+   539  c230 a003                  ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
+   540  c232 201eab                jsr PrintString   ;$ab1e
+   541  c235 6c02a0                jmp (BasicWarmStartVect)
+   542                             ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
+   543  c238 a6fc               +  ldx PtrAddrHi
+   544  c23a 98                    tya
+   545  c23b 18                    clc
+   546  c23c 65fb                  adc PtrAddrLo
+   547  c23e 9001                  bcc +
+   548  c240 e8                    inx
+   549  c241 852d               +  sta $2d  ;start of BASIC variables pointer (Lo)
+   550  c243 862e                  stx $2e  ; (Hi)
+   551  c245 85ae                  sta $ae  ;End of load address (Lo)
+   552  c247 86af                  stx $af  ; (Hi)
+   553                             
+   554  c249 a984                  lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
+   555  c24b a003                  ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
+   556  c24d 201eab                jsr PrintString   ;$ab1e
+   557                             ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
+   558  c250 2059a6                jsr $a659	;reset execution to start, clear variables and flush stack
+   559  c253 2033a5                jsr $a533	;rebuild BASIC line chaining
+   560                             ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
+   561  c256 4caea7                jmp $a7ae ;BASIC warm start/interpreter inner loop/next statement (Run)
+   562                             ;jmp (BasicWarmStartVect)  
+   563                          MsgRunning:
+   564  c259 0d0d52554e4e494e...   !tx ChrReturn, ChrReturn, "running", ChrReturn, 0
+   565                          MsgOverflow:
+   566  c264 0d4f564552464c4f...   !tx ChrReturn, "overflow!", ChrReturn, 0
+   567                          PRGLoadEnd = *
+   568                               
+   569                               
+   570                          WaitForTR:  ;wait for ready status, uses acc and X
+   571  c270 a205                  ldx#5 ;require 5 consecutive reads of ready to continue
+   572  c272 ee4e04                inc ScreenMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
+   573  c275 ad00de             -  lda rRegStatus+IO1Port
+   574  c278 c95a                  cmp #rsReady
+   575  c27a d0f4                  bne WaitForTR
+   576  c27c ca                    dex
+   577  c27d d0f6                  bne -
+   578  c27f 60                    rts
+   579                          
+   580                          ErrOut:   
+   581                             ;Error msg pointer stored in acc/y
+   582  c280 48                    pha
+   583  c281 98                    tya
+   584  c282 48                    pha
+   585  c283 a213                  ldx #19 ;row
+   586  c285 a000                  ldy #0  ;col
+   587  c287 18                    clc
+   588  c288 20f0ff                jsr SetCursor
+   589  c28b a979                  lda #<MsgError
+   590  c28d a0c9                  ldy #>MsgError
+   591  c28f 201eab                jsr PrintString   
+   592  c292 68                    pla
+   593  c293 a8                    tay
+   594  c294 68                    pla
+   595  c295 201eab                jsr PrintString
+   596  c298 60                    rts
+   597                          
+   598                          SynchEthernetTime:
+   599  c299 a903                  lda #rCtlGetTimeWAIT
+   600  c29b 8d05de                sta wRegControl+IO1Port
+   601  c29e 2070c2                jsr WaitForTR 
+   602  c2a1 ad08de                lda rRegLastHourBCD+IO1Port
+   603  c2a4 8d0bdc                sta TODHoursBCD  ;stop TOD regs incrementing
+   604  c2a7 ad09de                lda rRegLastMinBCD+IO1Port
+   605  c2aa 8d0adc                sta TODMinBCD
+   606  c2ad ad0ade                lda rRegLastSecBCD+IO1Port
+   607  c2b0 8d09dc                sta TODSecBCD
+   608  c2b3 a909                  lda #9
+   609  c2b5 8d08dc                sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+   610  c2b8 60                    rts
+   611                             
+   612                          DisplayTime:
+   613  c2b9 a201                  ldx #1 ;row
+   614  c2bb a01d                  ldy #29  ;col
+   615  c2bd 18                    clc
+   616  c2be 20f0ff                jsr SetCursor
+   617  c2c1 a981                  lda #TimeColor
+   618  c2c3 20d2ff                jsr SendChar
+   619  c2c6 ad0bdc                lda TODHoursBCD ;latches time in regs (stops incrementing)
+   620  c2c9 a8                    tay ;save for re-use
+   621  c2ca 291f                  and #$1f
+   622  c2cc d004                  bne nz   ;if hours is 0, make it 12...
+   623  c2ce 98                    tya
+   624  c2cf 0912                  ora #$12
+   625  c2d1 a8                    tay ;re-save for re-use
+   626  c2d2 98                 nz tya
+   627  c2d3 2910                  and #$10
+   628  c2d5 d005                  bne +
+   629  c2d7 a920                  lda #ChrSpace
+   630  c2d9 4cdec2                jmp ++
+   631  c2dc a931               +  lda #'1'
+   632  c2de 20d2ff             ++ jsr SendChar
+   633  c2e1 98                    tya
+   634  c2e2 290f                  and #$0f  ;ones of hours
+   635  c2e4 2022c3                jsr PrintHexNibble
+   636  c2e7 a93a                  lda #':'
+   637  c2e9 20d2ff                jsr SendChar
+   638  c2ec ad0adc                lda TODMinBCD
+   639  c2ef 2015c3                jsr PrintHexByte
+   640  c2f2 a93a                  lda #':'
+   641  c2f4 20d2ff                jsr SendChar
+   642  c2f7 ad09dc                lda TODSecBCD
+   643  c2fa 2015c3                jsr PrintHexByte
+   644                             ;lda #'.'
+   645                             ;jsr SendChar
+   646  c2fd ad08dc                lda TODTenthSecBCD ;have to read 10ths to release latch
+   647                             ;jsr PrintHexNibble
+   648  c300 98                    tya ;am/pm (pre latch release)
+   649  c301 2980                  and #$80
+   650  c303 d005                  bne +
+   651  c305 a941                  lda #'a'
+   652  c307 4c0cc3                jmp ++
+   653  c30a a950               +  lda #'p'
+   654  c30c 20d2ff             ++ jsr SendChar
+   655  c30f a94d                  lda #'m'
+   656  c311 20d2ff                jsr SendChar
+   657  c314 60                    rts
+   658                             
+   659                          PrintHexByte:
+   660                             ;Print byte value stored in acc in hex (2 chars)
+   661  c315 48                    pha
+   662  c316 4a                    lsr
+   663  c317 4a                    lsr
+   664  c318 4a                    lsr
+   665  c319 4a                    lsr
+   666  c31a 2022c3                jsr PrintHexNibble
+   667  c31d 68                    pla
+   668                             ;pha   ; preserve acc on return?
+   669  c31e 2022c3                jsr PrintHexNibble
+   670                             ;pla
+   671  c321 60                    rts
+   672                             
+   673                          PrintHexNibble:   
+   674                             ;Print value stored in lower nible acc in hex
+   675                             ;trashes acc
+   676  c322 290f                  and #$0f
+   677  c324 c90a                  cmp #$0a
+   678  c326 1006                  bpl l 
+   679  c328 18                    clc
+   680  c329 6930                  adc #'0'
+   681  c32b 4c31c3                jmp pr
+   682  c32e 18                 l  clc
+   683  c32f 6937                  adc #'a'-$0a
+   684  c331 20d2ff             pr jsr SendChar
+   685  c334 60                    rts
+   686                          
+   687                          PrintOnOff:
+   688                             ;Print "On" or "Off" based on Zero flag
+   689                             ;uses A and Y regs
+   690  c335 d007                  bne +
+   691  c337 a968                  lda #<MsgOff
+   692  c339 a0c9                  ldy #>MsgOff
+   693  c33b 4c42c3                jmp ++
+   694  c33e a964               +  lda #<MsgOn
+   695  c340 a0c9                  ldy #>MsgOn
+   696  c342 201eab             ++ jsr PrintString 
+   697  c345 60                    rts
+   698                          
+   699                          Print4CharTableHiNib
+   700  c346 4a                    lsr
+   701  c347 4a                    lsr
+   702  c348 4a                    lsr
+   703  c349 4a                    lsr ; move to lower nibble
+   704                          Print4CharTable:   
+   705                          ;prints 4 chars from a table of continuous 4 char sets (no termination)
+   706                          ;X=table base lo, y=table base high, acc=index to item# (63 max)
+   707                          ;   and #0xfc 
+   708  c34a 86fb                  stx PtrAddrLo
+   709  c34c 84fc                  sty PtrAddrHi
+   710  c34e 0a                    asl
+   711  c34f 0a                    asl  ;mult by 4
+   712  c350 a8                    tay
+   713  c351 b1fb               -  lda (PtrAddrLo),y
+   714  c353 20d2ff                jsr SendChar   ;type (4 chars)
+   715  c356 c8                    iny
+   716  c357 98                    tya
+   717  c358 2903                  and #3
+   718  c35a d0f5                  bne -
+   719  c35c 60                    rts
+   720                             
+   721                          ; ******************************* SID stuff ******************************* 
+   722                          
+   723                          MIDI2SID:
+   724  c35d 20d6c5                jsr SIDMusicOff
+   725  c360 a93a                  lda #<MsgBanner
+   726  c362 a0c6                  ldy #>MsgBanner
+   727  c364 201eab                jsr PrintString 
+   728  c367 a9b0                  lda #<MsgM2SPolyMenu
+   729  c369 a0c7                  ldy #>MsgM2SPolyMenu
+   730  c36b 201eab                jsr PrintString 
+   731                             ;clear SID regs
+   732  c36e a900                  lda #0
+   733  c370 aa                    tax
+   734  c371 9d00d4             -  sta SIDLoc, x
+   735  c374 e8                    inx
+   736  c375 e019                  cpx #(EndSIDRegs-StartSIDRegs)
+   737  c377 d0f8                  bne -
+   738                          
+   739                             ;  set default local settings:
+   740  c379 a90f                  lda #0x0f ; full volume
+   741  c37b 8d18d4                sta SIDLoc+rRegSIDVolFltSel-StartSIDRegs
+   742  c37e a902                  lda #0x02 ; 12.5% duty cycle (12 bit resolution, lo reg left at 0)
+   743  c380 8d3803                sta SIDDutyHi
+   744  c383 8d03d4                sta SIDLoc+rRegSIDDutyHi1-StartSIDRegs
+   745  c386 8d0ad4                sta SIDLoc+rRegSIDDutyHi2-StartSIDRegs
+   746  c389 8d11d4                sta SIDLoc+rRegSIDDutyHi3-StartSIDRegs
+   747  c38c a940                  lda #0x40 ; pulse wave
+   748  c38e 8d3503                sta SIDVoicCont
+   749  c391 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
+   750  c394 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
+   751  c397 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs
+   752  c39a a923                  lda #0x23 ; Att=16mS, Dec=72mS
+   753  c39c 8d3603                sta SIDAttDec
+   754  c39f 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   755  c3a2 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   756  c3a5 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   757  c3a8 a934                  lda #0x34 ; Sus=20%, Rel=114mS
+   758  c3aa 8d3703                sta SIDSusRel
+   759  c3ad 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   760  c3b0 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   761  c3b3 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
+   762                             
+   763                          M2SDispUpdate:  ;upadte all M2S status display values
+   764  c3b6 a999                  lda #NameColor
+   765  c3b8 20d2ff                jsr SendChar
+   766  c3bb a205                  ldx # 5 ;row  Triangle
+   767  c3bd a00e                  ldy #M2SDataColumn ;col
+   768  c3bf 18                    clc
+   769  c3c0 20f0ff                jsr SetCursor
+   770  c3c3 ad3503                lda SIDVoicCont
+   771  c3c6 2910                  and #0x10  
+   772  c3c8 2035c3                jsr PrintOnOff
+   773                             
+   774  c3cb a206                  ldx # 6 ;row  Sawtooth
+   775  c3cd a00e                  ldy #M2SDataColumn ;col
+   776  c3cf 18                    clc
+   777  c3d0 20f0ff                jsr SetCursor
+   778  c3d3 ad3503                lda SIDVoicCont
+   779  c3d6 2920                  and #0x20  
+   780  c3d8 2035c3                jsr PrintOnOff
+   781                             
+   782  c3db a207                  ldx # 7 ;row  Pulse
+   783  c3dd a00e                  ldy #M2SDataColumn ;col
+   784  c3df 18                    clc
+   785  c3e0 20f0ff                jsr SetCursor
+   786  c3e3 ad3503                lda SIDVoicCont
+   787  c3e6 2940                  and #0x40  
+   788  c3e8 2035c3                jsr PrintOnOff
+   789                             
+   790  c3eb a208                  ldx #8 ;row  Duty Cycle
+   791  c3ed a00e                  ldy #M2SDataColumn ;col
+   792  c3ef 18                    clc
+   793  c3f0 20f0ff                jsr SetCursor
+   794  c3f3 a224                  ldx #<TblM2SDutyPct
+   795  c3f5 a0c9                  ldy #>TblM2SDutyPct
+   796  c3f7 ad3803                lda SIDDutyHi  ;duty cycle most sig nib = bits 3:0
+   797  c3fa 290f                  and #$0f
+   798  c3fc 204ac3                jsr Print4CharTable
+   799  c3ff a925                  lda #'%'
+   800  c401 20d2ff                jsr SendChar
+   801                             
+   802  c404 a209                  ldx # 9 ;row  Noise
+   803  c406 a00e                  ldy #M2SDataColumn ;col
+   804  c408 18                    clc
+   805  c409 20f0ff                jsr SetCursor
+   806  c40c ad3503                lda SIDVoicCont
+   807  c40f 2980                  and #0x80  
+   808  c411 2035c3                jsr PrintOnOff
+   809                           
+   810  c414 a20b                  ldx #11 ;row  attack
+   811  c416 a00e                  ldy #M2SDataColumn ;col
+   812  c418 18                    clc
+   813  c419 20f0ff                jsr SetCursor
+   814  c41c a264                  ldx #<TblM2SAttack
+   815  c41e a0c8                  ldy #>TblM2SAttack
+   816  c420 ad3603                lda SIDAttDec  ;attack = bits 7:4
+   817  c423 2046c3                jsr Print4CharTableHiNib
+   818  c426 a9d3                  lda #'S'
+   819  c428 20d2ff                jsr SendChar
+   820                          
+   821  c42b a20c                  ldx #12 ;row  decay
+   822  c42d a00e                  ldy #M2SDataColumn ;col
+   823  c42f 18                    clc
+   824  c430 20f0ff                jsr SetCursor
+   825  c433 a2a4                  ldx #<TblM2SDecayRelease
+   826  c435 a0c8                  ldy #>TblM2SDecayRelease
+   827  c437 ad3603                lda SIDAttDec  ;decay = bits 3:0
+   828  c43a 290f                  and #$0f
+   829  c43c 204ac3                jsr Print4CharTable
+   830  c43f a9d3                  lda #'S'
+   831  c441 20d2ff                jsr SendChar
+   832                          
+   833  c444 a20d                  ldx #13 ;row  sustain
+   834  c446 a00e                  ldy #M2SDataColumn ;col
+   835  c448 18                    clc
+   836  c449 20f0ff                jsr SetCursor
+   837  c44c a2e4                  ldx #<TblM2SSustPct
+   838  c44e a0c8                  ldy #>TblM2SSustPct
+   839  c450 ad3703                lda SIDSusRel   ;sustain = bits 7:4
+   840  c453 2046c3                jsr Print4CharTableHiNib
+   841  c456 a925                  lda #'%'
+   842  c458 20d2ff                jsr SendChar
+   843                          
+   844  c45b a20e                  ldx #14 ;row  release
+   845  c45d a00e                  ldy #M2SDataColumn ;col
+   846  c45f 18                    clc
+   847  c460 20f0ff                jsr SetCursor
+   848  c463 a2a4                  ldx #<TblM2SDecayRelease
+   849  c465 a0c8                  ldy #>TblM2SDecayRelease
+   850  c467 ad3703                lda SIDSusRel  ;release = bits 3:0
+   851  c46a 290f                  and #$0f
+   852  c46c 204ac3                jsr Print4CharTable
+   853  c46f a9d3                  lda #'S'
+   854  c471 20d2ff                jsr SendChar
+   855                          
+   856                          ;continue into the main loop...
+   857                          M2SUpdateKeyInLoop:
+   858                          ;refresh dynamic SID regs from MIDI:   todo: move this to an interrupt?
+   859  c474 ad3503                lda SIDVoicCont  ;waveform in upper nibble
+   860  c477 0d30de                ora IO1Port+rRegSIDVoicCont1 ;latch bit (0) from MIDI
+   861  c47a 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
+   862  c47d ad2dde                lda IO1Port+rRegSIDFreqHi1 
+   863  c480 8d01d4                sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
+   864  c483 ad2cde                lda IO1Port+rRegSIDFreqLo1 
+   865  c486 8d00d4                sta SIDLoc+rRegSIDFreqLo1-StartSIDRegs 
+   866                          
+   867  c489 ad3503                lda SIDVoicCont  ;waveform in upper nibble
+   868  c48c 0d37de                ora IO1Port+rRegSIDVoicCont2 ;latch bit (0) from MIDI
+   869  c48f 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
+   870  c492 ad34de                lda IO1Port+rRegSIDFreqHi2 
+   871  c495 8d08d4                sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
+   872  c498 ad33de                lda IO1Port+rRegSIDFreqLo2 
+   873  c49b 8d07d4                sta SIDLoc+rRegSIDFreqLo2-StartSIDRegs 
+   874                          
+   875  c49e ad3503                lda SIDVoicCont  ;waveform in upper nibble
+   876  c4a1 0d3ede                ora IO1Port+rRegSIDVoicCont3 ;latch bit (0) from MIDI
+   877  c4a4 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
+   878  c4a7 ad3bde                lda IO1Port+rRegSIDFreqHi3 
+   879  c4aa 8d0fd4                sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
+   880  c4ad ad3ade                lda IO1Port+rRegSIDFreqLo3 
+   881  c4b0 8d0ed4                sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
    882                          
-   883  c4a1 c957               +  cmp #'w'  ;saWtooth
-   884  c4a3 d00d                  bne +
-   885  c4a5 a920                  lda #0x20 
-   886  c4a7 4d3503                eor SIDVoicCont
-   887  c4aa 2970                  and #0x70  ;never combine with noise
-   888  c4ac 8d3503                sta SIDVoicCont
-   889  c4af 4c77c3                jmp M2SDispUpdate
-   890                          
-   891  c4b2 c950               +  cmp #'p'  ;Pulse
-   892  c4b4 d00d                  bne +
-   893  c4b6 a940                  lda #0x40 
-   894  c4b8 4d3503                eor SIDVoicCont
-   895  c4bb 2970                  and #0x70  ;never combine with noise
-   896  c4bd 8d3503                sta SIDVoicCont
-   897  c4c0 4c77c3                jmp M2SDispUpdate
-   898                          
-   899  c4c3 c955               +  cmp #'u'  ;dUty cycle
-   900  c4c5 d013                  bne +
-   901  c4c7 ae3803                ldx SIDDutyHi  ;duty cycle most sig nib = bits 3:0, upper unused
-   902  c4ca e8                    inx
-   903  c4cb 8e3803                stx SIDDutyHi ;apply change at time of update
-   904  c4ce 8e03d4                stx SIDLoc+rRegSIDDutyHi1-StartSIDRegs
-   905  c4d1 8e0ad4                stx SIDLoc+rRegSIDDutyHi2-StartSIDRegs
-   906  c4d4 8e11d4                stx SIDLoc+rRegSIDDutyHi3-StartSIDRegs
-   907  c4d7 4c77c3                jmp M2SDispUpdate
-   908                          
-   909  c4da c94e               +  cmp #'n'  ;Noise
-   910  c4dc d008                  bne +
-   911  c4de a980                  lda #0x80 
-   912                             ;eor SIDVoicCont  ;doesn't play nice with others
-   913  c4e0 8d3503                sta SIDVoicCont
-   914  c4e3 4c77c3                jmp M2SDispUpdate
-   915                          
-   916  c4e6 c941               +  cmp #'a'  ;Attack
-   917  c4e8 d015                  bne +
-   918  c4ea ad3603                lda SIDAttDec  ;attack = bits 7:4
-   919  c4ed 18                    clc
-   920  c4ee 6910                  adc #$10
-   921  c4f0 8d3603                sta SIDAttDec ;apply change at time of update
-   922  c4f3 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   923  c4f6 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   924  c4f9 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   925  c4fc 4c77c3                jmp M2SDispUpdate
-   926                          
-   927  c4ff c944               +  cmp #'d'  ;Decay
-   928  c501 d021                  bne +
-   929  c503 ad3603                lda SIDAttDec  ;decay = bits 3:0
-   930  c506 aa                    tax
-   931  c507 290f                  and #$0f
-   932  c509 c90f                  cmp #$0f
-   933  c50b d006                  bne dok
-   934  c50d 8a                    txa
-   935  c50e 29f0                  and #$f0 ;Wrap Around without overflow
-   936  c510 4c15c5                jmp dcnt
-   937                          dok   
-   938  c513 e8                    inx
-   939  c514 8a                    txa
-   940                          dcnt
-   941  c515 8d3603                sta SIDAttDec ;apply change at time of update
-   942  c518 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   943  c51b 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   944  c51e 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   945  c521 4c77c3                jmp M2SDispUpdate
-   946                          
-   947  c524 c953               +  cmp #'s'  ;Sustain
-   948  c526 d015                  bne +
-   949  c528 ad3703                lda SIDSusRel  ;sustain = bits 7:4
-   950  c52b 18                    clc
-   951  c52c 6910                  adc #$10
-   952  c52e 8d3703                sta SIDSusRel ;apply change at time of update
-   953  c531 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   954  c534 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   955  c537 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   956  c53a 4c77c3                jmp M2SDispUpdate
-   957                          
-   958  c53d c952               +  cmp #'r'  ;Release
-   959  c53f d021                  bne +
-   960  c541 ad3703                lda SIDSusRel  ;release = bits 3:0
-   961  c544 aa                    tax
-   962  c545 290f                  and #$0f
-   963  c547 c90f                  cmp #$0f
-   964  c549 d006                  bne rok
-   965  c54b 8a                    txa
-   966  c54c 29f0                  and #$f0 ;Wrap Around without overflow
-   967  c54e 4c53c5                jmp rcnt
-   968                          rok   
-   969  c551 e8                    inx
-   970  c552 8a                    txa
-   971                          rcnt
-   972  c553 8d3703                sta SIDSusRel ;apply change at time of update
-   973  c556 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   974  c559 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   975  c55c 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   976  c55f 4c77c3                jmp M2SDispUpdate
-   977                          
-   978  c562 c958               +  cmp #'x'  ;Exit M2S
-   979  c564 d004                  bne +
-   980  c566 20bcc5                jsr SIDVoicesOff
-   981  c569 60                    rts 
-   982                          
-   983  c56a 4c35c4             +  jmp M2SUpdateKeyInLoop
-   984                          
-   985                             
-   986                          SIDMusicOn:  ;Start SID interrupt
-   987  c56d a97f                  lda #$7f    ;disable all ints
-   988  c56f 8d0ddc                sta $dc0d   ;CIA1 int ctl
-   989  c572 ad0ddc                lda $dc0d   ;CIA1 int ctl    reading clears
-   990  c575 78                    sei
-   991  c576 a901                  lda #$01    ;raster compare enable
-   992  c578 8d1ad0                sta $d01a   ;irq mask reg
-   993  c57b 8d19d0                sta $d019   ;ACK any raster IRQs
-   994  c57e a964                  lda #100    ;mid screen
-   995  c580 8d12d0                sta $d012   ;raster scan line compare reg
-   996  c583 ad11d0                lda $d011   ;VIC ctl reg fine scrolling/control
-   997  c586 297f                  AND #$7f    ;bit 7 is bit 8 of scan line compare
-   998  c588 8d11d0                sta $d011   ;VIC ctl reg fine scrolling/control
-   999  c58b a9c8                  lda #<irqRastSID
-  1000  c58d a2c5                  ldx #>irqRastSID
-  1001  c58f 8d1403                sta $314    ;CINV, HW IRQ Int Lo
-  1002  c592 8e1503                stx $315    ;CINV, HW IRQ Int Hi
-  1003  c595 58                    cli
-  1004  c596 60                    rts
-  1005                          
-  1006                          SIDMusicOff:  ;stop SID interrupt
-  1007  c597 78                    sei
-  1008  c598 a931                  lda #<IRQDefault
-  1009  c59a a2ea                  ldx #>IRQDefault
-  1010  c59c 8d1403                sta $314   ;CINV, HW IRQ Int Lo
-  1011  c59f 8e1503                stx $315   ;CINV, HW IRQ Int Hi
-  1012  c5a2 a981                  lda #$81
-  1013  c5a4 8d0ddc                sta $dc0d  ;CIA int ctl
-  1014  c5a7 a900                  lda #0
-  1015  c5a9 8d1ad0                sta $d01a  ;irq enable
-  1016  c5ac ee19d0                inc $d019
-  1017  c5af ad0ddc                lda $dc0d  ;CIA int ctl
-  1018                             ;jsr SIDCodeRAM  ;turns voices off, but resets song to start
-  1019  c5b2 20bcc5                jsr SIDVoicesOff
-  1020  c5b5 58                    cli 
-  1021  c5b6 a904                  lda #BorderColor
-  1022  c5b8 8d20d0                sta BorderColorReg   ;restore border in case we ended in mid region
-  1023  c5bb 60                    rts
-  1024                          
-  1025                          SIDVoicesOff:
-  1026  c5bc a900                  lda #0x00 ; turn 3 voices off
-  1027  c5be 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
-  1028  c5c1 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
-  1029  c5c4 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
-  1030  c5c7 60                    rts
-  1031                             
-  1032                          irqRastSID:
-  1033  c5c8 ee19d0                inc $d019   ;ACK raster IRQs
-  1034  c5cb ee20d0                inc BorderColorReg ;tweak display border
-  1035  c5ce 200310                jsr SIDCodeRAM+3 ;Play the music
-  1036  c5d1 a9e3                  lda #<irqRast2
-  1037  c5d3 a2c5                  ldx #>irqRast2
-  1038  c5d5 8d1403                sta $314    ;CINV, HW IRQ Int Lo
-  1039  c5d8 8e1503                stx $315    ;CINV, HW IRQ Int Hi
-  1040  c5db a9c8                  lda #200    ;loweer part of screen
-  1041  c5dd 8d12d0                sta $d012   ;raster scan line compare reg
-  1042  c5e0 4c31ea                jmp IRQDefault
-  1043                          
-  1044                          irqRast2:
-  1045  c5e3 ee19d0                inc $d019   ;ACK raster IRQs
-  1046  c5e6 ce20d0                dec BorderColorReg ;tweak it back
-  1047  c5e9 a9c8                  lda #<irqRastSID
-  1048  c5eb a2c5                  ldx #>irqRastSID
-  1049  c5ed 8d1403                sta $314    ;CINV, HW IRQ Int Lo
-  1050  c5f0 8e1503                stx $315    ;CINV, HW IRQ Int Hi
-  1051  c5f3 a964                  lda #100    ;upper part of screen
-  1052  c5f5 8d12d0                sta $d012   ;raster scan line compare reg
+   883  c4b3 20b9c2                jsr DisplayTime
+   884  c4b6 a213                  ldx #19 ;row   ;print note vals
+   885  c4b8 a003                  ldy #3  ;col
+   886  c4ba 18                    clc
+   887  c4bb 20f0ff                jsr SetCursor
+   888  c4be a999                  lda #NameColor
+   889  c4c0 20d2ff                jsr SendChar
+   890  c4c3 a946                  lda #<IO1Port+rRegSIDStrStart
+   891  c4c5 a0de                  ldy #>IO1Port+rRegSIDStrStart
+   892  c4c7 201eab                jsr PrintString 
+   893                             
+   894  c4ca 20e4ff                jsr GetIn
+   895  c4cd f0a5                  beq M2SUpdateKeyInLoop
+   896                             
+   897  c4cf c954                  cmp #'t'  ;Triangle
+   898  c4d1 d00d                  bne +
+   899  c4d3 a910                  lda #0x10
+   900  c4d5 4d3503                eor SIDVoicCont
+   901  c4d8 2970                  and #0x70  ;never combine with noise
+   902  c4da 8d3503                sta SIDVoicCont
+   903  c4dd 4cb6c3                jmp M2SDispUpdate
+   904                          
+   905  c4e0 c957               +  cmp #'w'  ;saWtooth
+   906  c4e2 d00d                  bne +
+   907  c4e4 a920                  lda #0x20 
+   908  c4e6 4d3503                eor SIDVoicCont
+   909  c4e9 2970                  and #0x70  ;never combine with noise
+   910  c4eb 8d3503                sta SIDVoicCont
+   911  c4ee 4cb6c3                jmp M2SDispUpdate
+   912                          
+   913  c4f1 c950               +  cmp #'p'  ;Pulse
+   914  c4f3 d00d                  bne +
+   915  c4f5 a940                  lda #0x40 
+   916  c4f7 4d3503                eor SIDVoicCont
+   917  c4fa 2970                  and #0x70  ;never combine with noise
+   918  c4fc 8d3503                sta SIDVoicCont
+   919  c4ff 4cb6c3                jmp M2SDispUpdate
+   920                          
+   921  c502 c955               +  cmp #'u'  ;dUty cycle
+   922  c504 d013                  bne +
+   923  c506 ae3803                ldx SIDDutyHi  ;duty cycle most sig nib = bits 3:0, upper unused
+   924  c509 e8                    inx
+   925  c50a 8e3803                stx SIDDutyHi ;apply change at time of update
+   926  c50d 8e03d4                stx SIDLoc+rRegSIDDutyHi1-StartSIDRegs
+   927  c510 8e0ad4                stx SIDLoc+rRegSIDDutyHi2-StartSIDRegs
+   928  c513 8e11d4                stx SIDLoc+rRegSIDDutyHi3-StartSIDRegs
+   929  c516 4cb6c3                jmp M2SDispUpdate
+   930                          
+   931  c519 c94e               +  cmp #'n'  ;Noise
+   932  c51b d008                  bne +
+   933  c51d a980                  lda #0x80 
+   934                             ;eor SIDVoicCont  ;doesn't play nice with others
+   935  c51f 8d3503                sta SIDVoicCont
+   936  c522 4cb6c3                jmp M2SDispUpdate
+   937                          
+   938  c525 c941               +  cmp #'a'  ;Attack
+   939  c527 d015                  bne +
+   940  c529 ad3603                lda SIDAttDec  ;attack = bits 7:4
+   941  c52c 18                    clc
+   942  c52d 6910                  adc #$10
+   943  c52f 8d3603                sta SIDAttDec ;apply change at time of update
+   944  c532 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   945  c535 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   946  c538 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   947  c53b 4cb6c3                jmp M2SDispUpdate
+   948                          
+   949  c53e c944               +  cmp #'d'  ;Decay
+   950  c540 d021                  bne +
+   951  c542 ad3603                lda SIDAttDec  ;decay = bits 3:0
+   952  c545 aa                    tax
+   953  c546 290f                  and #$0f
+   954  c548 c90f                  cmp #$0f
+   955  c54a d006                  bne dok
+   956  c54c 8a                    txa
+   957  c54d 29f0                  and #$f0 ;Wrap Around without overflow
+   958  c54f 4c54c5                jmp dcnt
+   959                          dok   
+   960  c552 e8                    inx
+   961  c553 8a                    txa
+   962                          dcnt
+   963  c554 8d3603                sta SIDAttDec ;apply change at time of update
+   964  c557 8d05d4                sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
+   965  c55a 8d0cd4                sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
+   966  c55d 8d13d4                sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
+   967  c560 4cb6c3                jmp M2SDispUpdate
+   968                          
+   969  c563 c953               +  cmp #'s'  ;Sustain
+   970  c565 d015                  bne +
+   971  c567 ad3703                lda SIDSusRel  ;sustain = bits 7:4
+   972  c56a 18                    clc
+   973  c56b 6910                  adc #$10
+   974  c56d 8d3703                sta SIDSusRel ;apply change at time of update
+   975  c570 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   976  c573 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   977  c576 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
+   978  c579 4cb6c3                jmp M2SDispUpdate
+   979                          
+   980  c57c c952               +  cmp #'r'  ;Release
+   981  c57e d021                  bne +
+   982  c580 ad3703                lda SIDSusRel  ;release = bits 3:0
+   983  c583 aa                    tax
+   984  c584 290f                  and #$0f
+   985  c586 c90f                  cmp #$0f
+   986  c588 d006                  bne rok
+   987  c58a 8a                    txa
+   988  c58b 29f0                  and #$f0 ;Wrap Around without overflow
+   989  c58d 4c92c5                jmp rcnt
+   990                          rok   
+   991  c590 e8                    inx
+   992  c591 8a                    txa
+   993                          rcnt
+   994  c592 8d3703                sta SIDSusRel ;apply change at time of update
+   995  c595 8d06d4                sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
+   996  c598 8d0dd4                sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
+   997  c59b 8d14d4                sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
+   998  c59e 4cb6c3                jmp M2SDispUpdate
+   999                          
+  1000  c5a1 c958               +  cmp #'x'  ;Exit M2S
+  1001  c5a3 d004                  bne +
+  1002  c5a5 20fbc5                jsr SIDVoicesOff
+  1003  c5a8 60                    rts 
+  1004                          
+  1005  c5a9 4c74c4             +  jmp M2SUpdateKeyInLoop
+  1006                          
+  1007                             
+  1008                          SIDMusicOn:  ;Start SID interrupt
+  1009  c5ac a97f                  lda #$7f    ;disable all ints
+  1010  c5ae 8d0ddc                sta $dc0d   ;CIA1 int ctl
+  1011  c5b1 ad0ddc                lda $dc0d   ;CIA1 int ctl    reading clears
+  1012  c5b4 78                    sei
+  1013  c5b5 a901                  lda #$01    ;raster compare enable
+  1014  c5b7 8d1ad0                sta $d01a   ;irq mask reg
+  1015  c5ba 8d19d0                sta $d019   ;ACK any raster IRQs
+  1016  c5bd a964                  lda #100    ;mid screen
+  1017  c5bf 8d12d0                sta $d012   ;raster scan line compare reg
+  1018  c5c2 ad11d0                lda $d011   ;VIC ctl reg fine scrolling/control
+  1019  c5c5 297f                  AND #$7f    ;bit 7 is bit 8 of scan line compare
+  1020  c5c7 8d11d0                sta $d011   ;VIC ctl reg fine scrolling/control
+  1021  c5ca a907                  lda #<irqRastSID
+  1022  c5cc a2c6                  ldx #>irqRastSID
+  1023  c5ce 8d1403                sta $314    ;CINV, HW IRQ Int Lo
+  1024  c5d1 8e1503                stx $315    ;CINV, HW IRQ Int Hi
+  1025  c5d4 58                    cli
+  1026  c5d5 60                    rts
+  1027                          
+  1028                          SIDMusicOff:  ;stop SID interrupt
+  1029  c5d6 78                    sei
+  1030  c5d7 a931                  lda #<IRQDefault
+  1031  c5d9 a2ea                  ldx #>IRQDefault
+  1032  c5db 8d1403                sta $314   ;CINV, HW IRQ Int Lo
+  1033  c5de 8e1503                stx $315   ;CINV, HW IRQ Int Hi
+  1034  c5e1 a981                  lda #$81
+  1035  c5e3 8d0ddc                sta $dc0d  ;CIA int ctl
+  1036  c5e6 a900                  lda #0
+  1037  c5e8 8d1ad0                sta $d01a  ;irq enable
+  1038  c5eb ee19d0                inc $d019
+  1039  c5ee ad0ddc                lda $dc0d  ;CIA int ctl
+  1040                             ;jsr SIDCodeRAM  ;turns voices off, but resets song to start
+  1041  c5f1 20fbc5                jsr SIDVoicesOff
+  1042  c5f4 58                    cli 
+  1043  c5f5 a904                  lda #BorderColor
+  1044  c5f7 8d20d0                sta BorderColorReg   ;restore border in case we ended in mid region
+  1045  c5fa 60                    rts
+  1046                          
+  1047                          SIDVoicesOff:
+  1048  c5fb a900                  lda #0x00 ; turn 3 voices off
+  1049  c5fd 8d04d4                sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
+  1050  c600 8d0bd4                sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
+  1051  c603 8d12d4                sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
+  1052  c606 60                    rts
   1053                             
-  1054  c5f8 4c31ea                jmp IRQDefault
-  1055                          
-  1056                          ; ******************************* Strings/Messages ******************************* 
-  1057                          MmmmmmmmmmessagesText:
-  1058                          MsgBanner:    
-  1059  c5fb 930e9c1220202020...   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
-  1060                          MsgFrom:    
-  1061  c629 0d9ac6524f4d2000      !tx ChrReturn, SourcesColor, "From ", 0 
-  1062                          MsgSelect:
-  1063  c631 9ad34f5552434553...   !tx SourcesColor, "Sources:          "
-  1064  c644 129ed550921e2f12...   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
-  1065  c65c 20129ec631929a20...   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
-  1066  c671 20129ec632921e20...   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
-  1067  c687 20129ec633929a20...   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
-  1068  c69c 20129ec634921e20...   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
-  1069  c6b1 20129ec635929a20...   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
-  1070  c6c6 20129ec636921e20...   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
-  1071  c6e1 20129ec637929a20...   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
-  1072  c6f6 20129ec638921e20...   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
-  1073  c70a 00                     !tx 0
-  1074                          MsgNoHW:
-  1075  c70b 0d0d0e9ed445454e...   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
-  1076                          MsgNoItems:
-  1077  c733 0d9e20ce4f544849...   !tx ChrReturn, OptionColor, " Nothing to show!", 0
-  1078                          
-  1079                          MsgMenuSD:
-  1080  c747 d3c420c34152443a...   !tx "SD Card:", 0
-  1081                          MsgMenuTeensy:
-  1082  c750 d445454e535920cd...   !tx "Teensy Mem:", 0
-  1083                          MsgMenuUSBHost:
-  1084  c75c d5d3c220c84f5354...   !tx "USB Host:", 0
-  1085                          MsgMenuUSBDrive:
-  1086  c766 d5d3c220c4524956...   !tx "USB Drive:", 0
-  1087                          
-  1088                          MsgM2SPolyMenu:    
-  1089  c771 0d0d9acdc9c4c920...   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI 2 SID Polyphonic Mode"
-  1090  c78e 0d0d9e                !tx ChrReturn, ChrReturn, OptionColor 
-  1091  c791 20202012d4925249...   !tx "   ", ChrRvsOn, "T", ChrRvsOff, "riangle:", ChrReturn
-  1092  c7a0 20d34112d792544f...   !tx " Sa", ChrRvsOn, "W", ChrRvsOff, "tooth:", ChrReturn
-  1093  c7ad 20202012d092554c...   !tx "   ", ChrRvsOn, "P", ChrRvsOff, "ulse:", ChrReturn
-  1094  c7b9 2020c412d5925459...   !tx "  D", ChrRvsOn, "U", ChrRvsOff, "ty Cycle:", ChrReturn
-  1095  c7c9 20202012ce924f49...   !tx "   ", ChrRvsOn, "N", ChrRvsOff, "oise:", ChrReturn
-  1096  c7d5 0d                    !tx ChrReturn
-  1097  c7d6 20202012c1925454...   !tx "   ", ChrRvsOn, "A", ChrRvsOff, "ttack:", ChrReturn
-  1098  c7e3 20202012c4924543...   !tx "   ", ChrRvsOn, "D", ChrRvsOff, "ecay:", ChrReturn
-  1099  c7ef 20202012d3925553...   !tx "   ", ChrRvsOn, "S", ChrRvsOff, "ustain:", ChrReturn
-  1100  c7fd 20202012d292454c...   !tx "   ", ChrRvsOn, "R", ChrRvsOff, "elease:", ChrReturn
-  1101  c80b 0d                    !tx ChrReturn
-  1102  c80c 2020c51258924954...   !tx "  E", ChrRvsOn, "x", ChrRvsOff, "it", ChrReturn
-  1103  c815 0d                    !tx ChrReturn
-  1104  c816 202020d6312020d6...   !tx "   V1  V2  V3", ChrReturn
-  1105  c824 00                    !tx 0
-  1106                          TblM2SAttack:  ;4 bytes each, no term
-  1107  c825 2020324d2020384d...   !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
-  1108  c845 3130304d3235304d...   !tx "100m","250m","500m","800m","   1","   3","   5","   8"
-  1109                          TblM2SDecayRelease:  ;4 bytes each, no term
-  1110  c865 2020364d2032344d...   !tx "  6m"," 24m"," 48m"," 72m","114m","168m","204m","240m"
-  1111  c885 3330304d3735304d...   !tx "300m","750m"," 1.5"," 2.4","   3","   9","  15","  24"
-  1112                          TblM2SSustPct:  ;4 bytes each, no term
-  1113  c8a5 20302e3020362e37...   !tx " 0.0"," 6.7","13.3","20.0","26.7","33.3","40.0","46.7"
-  1114  c8c5 35332e3336302e30...   !tx "53.3","60.0","66.7","73.3","80.0","86.7","93.3"," 100"
-  1115                          TblM2SDutyPct:  ;4 bytes each, no term
-  1116  c8e5 20302e3020362e33...   !tx " 0.0"," 6.3","12.5","18.8","25.0","31.3","37.5","43.8"
-  1117  c905 35302e3035362e33...   !tx "50.0","56.3","62.5","68.8","75.0","81.3","87.5","93.8"
-  1118                          MsgOn:
-  1119  c925 cf4e2000              !tx "On ", 0
-  1120                          MsgOff:
-  1121  c929 cf464600              !tx "Off", 0
-  1122                          MsgError:
-  1123  c92d 1cc552524f523a20...   !tx ChrRed, "Error: ", 0
-  1124                          MsgErrNoData:
-  1125  c936 ce4f20c441544120...   !tx "No Data Available", 0
-  1126                          MsgErrOverflow:
-  1127  c948 cf564552464c4f57...   !tx "Overflow", 0
-  1128                          ;MsgErrNoFile:
-  1129                          ;   !tx "No File Available", 0
-  1130                             
-  1131                          TblItemType: ;must match rtNone, rt16k, etc order!
-  1132  c951 2d2d2d2031364b20...   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
-  1133                             
-  1134                             
-  1135                          EndOfAllCode = *
-  1136                          
+  1054                          irqRastSID:
+  1055  c607 ee19d0                inc $d019   ;ACK raster IRQs
+  1056  c60a ee20d0                inc BorderColorReg ;tweak display border
+  1057  c60d 200310                jsr SIDCodeRAM+3 ;Play the music
+  1058  c610 a922                  lda #<irqRast2
+  1059  c612 a2c6                  ldx #>irqRast2
+  1060  c614 8d1403                sta $314    ;CINV, HW IRQ Int Lo
+  1061  c617 8e1503                stx $315    ;CINV, HW IRQ Int Hi
+  1062  c61a a9c8                  lda #200    ;loweer part of screen
+  1063  c61c 8d12d0                sta $d012   ;raster scan line compare reg
+  1064  c61f 4c31ea                jmp IRQDefault
+  1065                          
+  1066                          irqRast2:
+  1067  c622 ee19d0                inc $d019   ;ACK raster IRQs
+  1068  c625 ce20d0                dec BorderColorReg ;tweak it back
+  1069  c628 a907                  lda #<irqRastSID
+  1070  c62a a2c6                  ldx #>irqRastSID
+  1071  c62c 8d1403                sta $314    ;CINV, HW IRQ Int Lo
+  1072  c62f 8e1503                stx $315    ;CINV, HW IRQ Int Hi
+  1073  c632 a964                  lda #100    ;upper part of screen
+  1074  c634 8d12d0                sta $d012   ;raster scan line compare reg
+  1075                             
+  1076  c637 4c31ea                jmp IRQDefault
+  1077                          
+  1078                          ; ******************************* Strings/Messages ******************************* 
+  1079                          MmmmmmmmmmessagesText:
+  1080                          MsgBanner:    
+  1081  c63a 930e9c1220202020...   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
+  1082                          MsgFrom:    
+  1083  c668 0d9ac6524f4d2000      !tx ChrReturn, SourcesColor, "From ", 0 
+  1084                          MsgSelect:
+  1085  c670 9ad34f5552434553...   !tx SourcesColor, "Sources:          "
+  1086  c683 129ed550921e2f12...   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
+  1087  c69b 20129ec631929a20...   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
+  1088  c6b0 20129ec632921e20...   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
+  1089  c6c6 20129ec633929a20...   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
+  1090  c6db 20129ec634921e20...   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
+  1091  c6f0 20129ec635929a20...   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
+  1092  c705 20129ec636921e20...   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Ethernet Time Sync", ChrReturn
+  1093  c720 20129ec637929a20...   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
+  1094  c735 20129ec638921e20...   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " Credits/Info"
+  1095  c749 00                     !tx 0
+  1096                          MsgNoHW:
+  1097  c74a 0d0d0e9ed445454e...   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
+  1098                          MsgNoItems:
+  1099  c772 0d9e20ce4f544849...   !tx ChrReturn, OptionColor, " Nothing to show!", 0
+  1100                          
+  1101                          MsgMenuSD:
+  1102  c786 d3c420c34152443a...   !tx "SD Card:", 0
+  1103                          MsgMenuTeensy:
+  1104  c78f d445454e535920cd...   !tx "Teensy Mem:", 0
+  1105                          MsgMenuUSBHost:
+  1106  c79b d5d3c220c84f5354...   !tx "USB Host:", 0
+  1107                          MsgMenuUSBDrive:
+  1108  c7a5 d5d3c220c4524956...   !tx "USB Drive:", 0
+  1109                          
+  1110                          MsgM2SPolyMenu:    
+  1111  c7b0 0d0d9acdc9c4c920...   !tx ChrReturn, ChrReturn, SourcesColor, "MIDI 2 SID Polyphonic Mode"
+  1112  c7cd 0d0d9e                !tx ChrReturn, ChrReturn, OptionColor 
+  1113  c7d0 20202012d4925249...   !tx "   ", ChrRvsOn, "T", ChrRvsOff, "riangle:", ChrReturn
+  1114  c7df 20d34112d792544f...   !tx " Sa", ChrRvsOn, "W", ChrRvsOff, "tooth:", ChrReturn
+  1115  c7ec 20202012d092554c...   !tx "   ", ChrRvsOn, "P", ChrRvsOff, "ulse:", ChrReturn
+  1116  c7f8 2020c412d5925459...   !tx "  D", ChrRvsOn, "U", ChrRvsOff, "ty Cycle:", ChrReturn
+  1117  c808 20202012ce924f49...   !tx "   ", ChrRvsOn, "N", ChrRvsOff, "oise:", ChrReturn
+  1118  c814 0d                    !tx ChrReturn
+  1119  c815 20202012c1925454...   !tx "   ", ChrRvsOn, "A", ChrRvsOff, "ttack:", ChrReturn
+  1120  c822 20202012c4924543...   !tx "   ", ChrRvsOn, "D", ChrRvsOff, "ecay:", ChrReturn
+  1121  c82e 20202012d3925553...   !tx "   ", ChrRvsOn, "S", ChrRvsOff, "ustain:", ChrReturn
+  1122  c83c 20202012d292454c...   !tx "   ", ChrRvsOn, "R", ChrRvsOff, "elease:", ChrReturn
+  1123  c84a 0d                    !tx ChrReturn
+  1124  c84b 2020c51258924954...   !tx "  E", ChrRvsOn, "x", ChrRvsOff, "it", ChrReturn
+  1125  c854 0d                    !tx ChrReturn
+  1126  c855 202020d6312020d6...   !tx "   V1  V2  V3", ChrReturn
+  1127  c863 00                    !tx 0
+  1128                          TblM2SAttack:  ;4 bytes each, no term
+  1129  c864 2020324d2020384d...   !tx "  2m","  8m"," 16m"," 24m"," 38m"," 56m"," 68m"," 80m"
+  1130  c884 3130304d3235304d...   !tx "100m","250m","500m","800m","   1","   3","   5","   8"
+  1131                          TblM2SDecayRelease:  ;4 bytes each, no term
+  1132  c8a4 2020364d2032344d...   !tx "  6m"," 24m"," 48m"," 72m","114m","168m","204m","240m"
+  1133  c8c4 3330304d3735304d...   !tx "300m","750m"," 1.5"," 2.4","   3","   9","  15","  24"
+  1134                          TblM2SSustPct:  ;4 bytes each, no term
+  1135  c8e4 20302e3020362e37...   !tx " 0.0"," 6.7","13.3","20.0","26.7","33.3","40.0","46.7"
+  1136  c904 35332e3336302e30...   !tx "53.3","60.0","66.7","73.3","80.0","86.7","93.3"," 100"
+  1137                          TblM2SDutyPct:  ;4 bytes each, no term
+  1138  c924 20302e3020362e33...   !tx " 0.0"," 6.3","12.5","18.8","25.0","31.3","37.5","43.8"
+  1139  c944 35302e3035362e33...   !tx "50.0","56.3","62.5","68.8","75.0","81.3","87.5","93.8"
+  1140                          MsgOn:
+  1141  c964 cf4e2000              !tx "On ", 0
+  1142                          MsgOff:
+  1143  c968 cf464600              !tx "Off", 0
+  1144                          MsgLoading:
+  1145  c96c 939e8e4c4f414449...   !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
+  1146                          MsgError:
+  1147  c979 1cc552524f523a20...   !tx ChrRed, "Error: ", 0
+  1148                          MsgErrNoData:
+  1149  c982 ce4f20c441544120...   !tx "No Data Available", 0
+  1150                          ;MsgErrNoFile:
+  1151                          ;   !tx "No File Available", 0
+  1152                             
+  1153                          TblItemType: ;must match rtNone, rt16k, etc order!
+  1154  c994 2d2d2d2031364b20...   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
+  1155                             
+  1156                          EndOfAllCode = *
+  1157                          

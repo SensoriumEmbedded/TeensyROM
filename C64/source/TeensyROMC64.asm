@@ -28,8 +28,9 @@
    Ptr2AddrHi  = $fe
    
    ;RAM coppies:
-   MainCodeRAM = $c000    
-   SIDCodeRAM = $1000 
+   MainCodeRAM = $c000    ;Main execution point, 4k available.  Only using 2.42 KB as of 2/16/23
+                          ;Could move to 0801 if more space needed
+   SIDCodeRAM  = $1000 
 
 ;********************************   Cartridge begin   ********************************   
 
@@ -95,7 +96,7 @@ SIDCopyToRAM:
    sty Ptr2AddrLo 
    
 CodeCopy:
-   ; Copy from (PtrAddrLo/Hi) to (PtrAddrLo/Hi), x reg is last page to copy
+   ; Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
    ldy #0 ;initialize
 -  lda (PtrAddrLo), y 
