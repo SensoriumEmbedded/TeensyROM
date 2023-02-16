@@ -55,6 +55,7 @@ void HandleExecution()
          //set up for transfer
          IO1[rRegStrAddrLo]=MenuSource[IO1[rwRegSelItem]].Code_Image[0];
          IO1[rRegStrAddrHi]=MenuSource[IO1[rwRegSelItem]].Code_Image[1];
+         IO1[rRegStrAvailable]=0xff;
          StreamOffsetAddr = 2; //set to start of data
          break;
    }

@@ -24,21 +24,23 @@
 enum IO1_Registers  //offset from 0xDE00
 {
    rRegStatus        =  0 , //Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
-   rRegStrAddrLo     =  1 , //start address of the prg file being transfered to mem
-   rRegStrAddrHi     =  2 , //zero when inactive/complete (no transfer to zero page)
-   rRegStreamData    =  3 , //next byte of data to transfer, auto increments when read
-   wRegControl       =  4 , //RegCtlCommands: execute specific functions
-   rRegPresence1     =  5 , //for HW detect: 0x55
-   rRegPresence2     =  6 , //for HW detect: 0xAA
-   rRegLastHourBCD   =  7 , //Last TOD Hours read
-   rRegLastMinBCD    =  8 , //Last TOD Minutes read
-   rRegLastSecBCD    =  9 , //Last TOD Seconds read
-   rWRegCurrMenuWAIT = 10 , //RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItem      = 11 , //select Menu Item for name, type, execution, etc
-   rRegNumItems      = 12 , //num items in menu list
-   rRegItemType      = 13 , //regItemTypes: type of item 
-                     
-   StartSIDRegs      = 14 , //start of SID Regs, matching SID Reg order ($D400)
+   rRegStrAddrLo     =  1 , //lo byte of start address of the prg file being transfered to mem
+   rRegStrAddrHi     =  2 , //Hi byte of start address
+   rRegStrAvailable  =  3 , //zero when inactive/complete 
+   rRegStreamData    =  4 , //next byte of data to transfer, auto increments when read
+   wRegControl       =  5 , //RegCtlCommands: execute specific functions
+   rRegPresence1     =  6 , //for HW detect: 0x55
+   rRegPresence2     =  7 , //for HW detect: 0xAA
+   rRegLastHourBCD   =  8 , //Last TOD Hours read
+   rRegLastMinBCD    =  9 , //Last TOD Minutes read
+   rRegLastSecBCD    = 10 , //Last TOD Seconds read
+   rWRegCurrMenuWAIT = 11 , //RegMenuTypes: select Menu type: SD, USB, etc
+   rwRegSelItem      = 12 , //select Menu Item for name, type, execution, etc
+   rRegNumItems      = 13 , //num items in menu list
+   rRegItemType      = 14 , //regItemTypes: type of item 
+   rRegItemNameStart = 15 , //MaxItemNameLength bytes long (incl term)
+   rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength,
+   StartSIDRegs      = rRegItemNameTerm+1 , //start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1    = StartSIDRegs +  0, 
    rRegSIDFreqHi1    = StartSIDRegs +  1,
    rRegSIDDutyLo1    = StartSIDRegs +  2,
@@ -77,7 +79,6 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDOutOfVoices= StartSIDRegs + 38,
    rRegSIDStringTerm = StartSIDRegs + 39,
    
-   rRegItemNameStart = rRegSIDStringTerm + 1 , //MaxItemNameLength bytes long (incl term)
 };
 
 enum RegStatusTypes

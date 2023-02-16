@@ -6,7 +6,7 @@ al C:00fd .Ptr2AddrLo
 al C:1000 .SIDCodeRAM
 al C:c000 .MainCodeRAM
 
-al C:9d50 .EndMainCode
+al C:9d51 .EndMainCode
 al C:93e0 .MainCode
 al C:8044 .SIDCopyToRAM
 al C:801a .Warmstart
@@ -14,5 +14,5 @@ al C:8009 .Coldstart
 al C:93e0 .EndSIDCode
 al C:8069 .SIDCode
 al C:8056 .CodeCopy
-al C:9d50 .EndOfAllCode
+al C:9d51 .EndOfAllCode
 al C:802f .MainCopyToRAM

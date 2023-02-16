@@ -50,23 +50,25 @@
    ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    MaxItemNameLength = 28
    
-   rRegStatus        =  0
-   rRegStrAddrLo     =  1
-   rRegStrAddrHi     =  2
-   rRegStreamData    =  3
-   wRegControl       =  4
-   rRegPresence1     =  5
-   rRegPresence2     =  6
-   rRegLastHourBCD   =  7
-   rRegLastMinBCD    =  8
-   rRegLastSecBCD    =  9
-   rWRegCurrMenuWAIT = 10
-   rwRegSelItem      = 11
-   rRegNumItems      = 12
-   rRegItemType      = 13
-
-   StartSIDRegs      = 14 ;start of SID Regs, matching SID Reg order ($D400)
-   rRegSIDFreqLo1    = StartSIDRegs +  0
+   rRegStatus        =  0 ;//Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
+   rRegStrAddrLo     =  1 ;//lo byte of start address of the prg file being transfered to mem
+   rRegStrAddrHi     =  2 ;//Hi byte of start address
+   rRegStrAvailable  =  3 ;//zero when inactive/complete 
+   rRegStreamData    =  4 ;//next byte of data to transfer, auto increments when read
+   wRegControl       =  5 ;//RegCtlCommands: execute specific functions
+   rRegPresence1     =  6 ;//for HW detect: 0x55
+   rRegPresence2     =  7 ;//for HW detect: 0xAA
+   rRegLastHourBCD   =  8 ;//Last TOD Hours read
+   rRegLastMinBCD    =  9 ;//Last TOD Minutes read
+   rRegLastSecBCD    = 10 ;//Last TOD Seconds read
+   rWRegCurrMenuWAIT = 11 ;//RegMenuTypes: select Menu type: SD, USB, etc
+   rwRegSelItem      = 12 ;//select Menu Item for name, type, execution, etc
+   rRegNumItems      = 13 ;//num items in menu list
+   rRegItemType      = 14 ;//regItemTypes: type of item 
+   rRegItemNameStart = 15 ;//MaxItemNameLength bytes long (incl term)
+   rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength
+   StartSIDRegs      = rRegItemNameTerm+1  ;//start of SID Regs, matching SID Reg order ($D400)
+   rRegSIDFreqLo1    = StartSIDRegs +  0 
    rRegSIDFreqHi1    = StartSIDRegs +  1
    rRegSIDDutyLo1    = StartSIDRegs +  2
    rRegSIDDutyHi1    = StartSIDRegs +  3
@@ -104,7 +106,6 @@
    rRegSIDOutOfVoices= StartSIDRegs + 38
    rRegSIDStringTerm = StartSIDRegs + 39
     
-   rRegItemNameStart = rRegSIDStringTerm + 1 ;MaxItemNameLength bytes long (incl term)
 
    rsReady      = 0x5a
    rsChangeMenu = 0x9d
@@ -473,29 +474,36 @@ SelectMenuItem:
    sta wRegControl+IO1Port
    jsr WaitForTR ;if it's a good ROM image, it won't return from this
    cpy #rtPrg
-   beq PRGStart ;if it's a program, x-fer and lunch, otherwise reprint menu and return
+   beq PRGStart ;if it's a program, x-fer and launch, otherwise reprint menu and return
    jsr ListMenuItemsInit
    rts
 PRGStart
-   pla ;pull the jsr return info from the stack, we're not going back!
-   jsr SIDMusicOff
+   jsr SIDMusicOff       
+   ;jsr $A644 ;new
+   ;pla ;pull the jsr return address from the stack, we're not going back!
+   ;pla
    jsr PRGtoMem
-   lda #ChrGreen
+   lda #ChrYellow
    jsr SendChar 
    lda #ChrClear
    jsr SendChar 
-   ;load keyboard buffer with "run\n":  
-   lda #'r'
-   sta $0277  ;kbd buff 0
-   lda #'u'
-   sta $0278 ;kbd buff 1
-   lda #'n'
-   sta $0279  ;kbd buff 2
-   lda #ChrReturn
-   sta $027a  ;kbd buff 3
-   lda #4
-   sta $C6  ;# chars in kbd buff (4 of 10 max)
-   jmp (BasicWarmStartVect)  
+   ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
+   jsr $A659	;reset execution to start, clear variables and flush stack
+   jsr $A533	;rebuild BASIC line chaining
+   ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
+   jmp $A7AE ;BASIC warm start/interpreter inner loop/next statement
+;   ;load keyboard buffer with "run\n":  
+;   lda #'r'
+;   sta $0277  ;kbd buff 0
+;   lda #'u'
+;   sta $0278 ;kbd buff 1
+;   lda #'n'
+;   sta $0279  ;kbd buff 2
+;   lda #ChrReturn
+;   sta $027a  ;kbd buff 3
+;   lda #4
+;   sta $C6  ;# chars in kbd buff (4 of 10 max)
+;   jmp (BasicWarmStartVect)  
    
 WaitForTR:  ;wait for ready status, uses acc and X
    ldx#5 ;require 5 consecutive reads of ready to continue
@@ -508,23 +516,25 @@ WaitForTR:  ;wait for ready status, uses acc and X
    rts
    
 PRGtoMem:
-   ;stream PRG file from TeensyROM to RAM
+   ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
    ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
-   ;rRegStrAddrHi+IO1Port is zero when inactive/complete
+   ;rRegStrAvailable+IO1Port is zero when inactive/complete
    
-   lda rRegStrAddrHi+IO1Port
+   lda rRegStrAvailable+IO1Port
    bne +
    lda #<MsgErrNoData;no data to read!
    ldy #>MsgErrNoData
    jmp ErrOut
-+  sta PtrAddrHi
++  lda rRegStrAddrHi+IO1Port
+   sta PtrAddrHi
    lda rRegStrAddrLo+IO1Port   
    sta PtrAddrLo
    ldy #0   ;zero offset
--  lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address/checks for end
+   
+-  lda rRegStrAvailable+IO1Port ;are we done?
+   beq + 
+   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
    sta (PtrAddrLo), y 
-   lda rRegStrAddrHi+IO1Port ;are we done?
-   beq rt 
    iny
    bne -
    inc PtrAddrHi
@@ -532,7 +542,18 @@ PRGtoMem:
    lda #<MsgErrOverflow ;Overflow!
    ldy #>MsgErrOverflow
    jmp ErrOut
-rt rts
+   ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
++  ldx PtrAddrHi
+   tya
+   clc
+   adc PtrAddrLo
+   bcc +
+   inx
++  sta $2d  ;start of BASIC variables pointer (Lo)
+   stx $2e  ; (Hi)
+   sta $ae  ;End of load address (Lo)
+   stx $af  ; (Hi)
+   rts
   
 ErrOut:   
    ;Error msg pointer stored in acc/y
@@ -1108,7 +1129,7 @@ MsgErrOverflow:
 ;   !tx "No File Available", 0
    
 TblItemType: ;must match rtNone, rt16k, etc order!
-   !tx "None","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
+   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
    
    
 EndOfAllCode = *

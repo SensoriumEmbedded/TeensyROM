@@ -38,7 +38,7 @@ void ServiceSerial()
             doReset = true;
             break;
          case 0x67:
-            getNtpTime();
+            //getNtpTime();
             break;
          default:
             Serial.printf("Unk: %02x\n", inByte); 

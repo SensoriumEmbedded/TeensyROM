@@ -11,6 +11,7 @@
 - `Teensy Internal Flash`
 - `Transfer directly from PC (C# Windows app included)`
 - Sets C64 system time from internet (via Ethernet)
+- MIDI USB in -> SID Polyphonic player with waveform/envelope controls
 - Emulates "Normal" .crt files (8khi/lo/16k)
 - Loads/executes .prg files
 

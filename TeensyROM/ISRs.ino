@@ -58,7 +58,7 @@ FASTRUN void isrPHI2()
             case rRegStreamData:
                DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
                //inc on read, check for end:
-               if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAddrHi]=0; //zero in Hi reg signals end of transfer
+               if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
                break;
             default: //used for all other IO1 reads
                DataPortWriteWait(IO1[Address]); 
