@@ -260,8 +260,10 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    Serial.printf("Packet len: $%08x\n",  toU32(ChipImage+0x04));
    Serial.printf("Chip Type: %d\n",      toU16(ChipImage+0x08));
    Serial.printf(" Bank Num: %d\n",      toU16(ChipImage+0x0A));
-   Serial.printf("Load Addr: $%04x\n",   toU16(ChipImage+0x0C));
-   Serial.printf(" ROM Size: $%04x\n",   toU16(ChipImage+0x0E));
+   uint16_t LoadAddress = toU16(ChipImage+0x0C);
+   uint16_t ROMSize = toU16(ChipImage+0x0E);
+   Serial.printf("Load Addr: $%04x\n",   LoadAddress);
+   Serial.printf(" ROM Size: $%04x\n",   ROMSize);
    
    //We have a good CRT image, new defaults:
    MyMenuItem->ItemType = rtUnk;
@@ -269,21 +271,21 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    
    MyMenuItem->Code_Image=RAM_Image+HeaderLen+0x10;
    
-   if(EXROM==0 && GAME==1 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x2000)
+   if(EXROM==0 &&            LoadAddress == 0x8000 && ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
    {
       MyMenuItem->ItemType = rt8kLo;
       Serial.println("\n 8kLo config");
       return;
    }      
 
-   if(EXROM==1 && GAME==0 && toU16(ChipImage+0x0C) == 0xe000 && toU16(ChipImage+0x0E) == 0x2000)
+   if(EXROM==1 && GAME==0 && LoadAddress == 0xe000 && ROMSize == 0x2000)
    {
       MyMenuItem->ItemType = rt8kHi;
       Serial.println("\n 8kHi config");
       return;
    }      
 
-   if(EXROM==0 && GAME==0 && toU16(ChipImage+0x0C) == 0x8000 && toU16(ChipImage+0x0E) == 0x4000)
+   if(EXROM==0 && GAME==0 && LoadAddress == 0x8000 && ROMSize == 0x4000)
    {
       MyMenuItem->ItemType = rt16k;
       Serial.println("\n 16k config");
