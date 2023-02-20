@@ -20,31 +20,52 @@
 
 FASTRUN void isrButton()
 {
-   SetDebug2Assert;
    BtnPressed = true;
 }
 
 
 FASTRUN void isrPHI2()
 {
-   StartCycCnt = ARM_DWT_CYCCNT;
+   //if ((ARM_DWT_CYCCNT-StartCycCnt) > 1500)... //check for missed cycles?
+   StartCycCnt = ARM_DWT_CYCCNT;     //RESET_CYCLECOUNT; kills any other delay() type opperations
    if (DisablePhi2ISR) return;
-   //RESET_CYCLECOUNT;
- 	//SetDebug2Assert;
+   SetDebugAssert;
+   WaitUntil_nS(nS_VICStart);
    
-   WaitUntil_nS(nS_RWnReady); 
+   register uint8_t  Data;
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
-   register uint8_t  Data;
-   register bool     IsRead = GP6_R_Wn(GPIO_6);
+   register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+
+   if (HIROM_Image!=NULL && !GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+   {
+      DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
+   } 
+   
+   while(GP6_Phi2(ReadGPIO6) == 0); //Re-align to phi2 rising   
+   //phi2 has gone high..........................................................................
+   
+   StartCycCnt = ARM_DWT_CYCCNT;
+      
+   WaitUntil_nS(nS_RWnReady); 
+   GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
+   Address = GP6_Address(GPIO_6); //parse out address
    
  	WaitUntil_nS(nS_PLAprop); 
-   register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+   GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
-   if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
+   if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
+   {
+      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]);  
+   }  //ROML
+   else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+   {
+      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); 
+   }  //ROMH
+   else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
       Address &= 0xFF;
-      if (IsRead) //High (IO1 Read)
+      if (GP6_R_Wn(GPIO_6)) //High (IO1 Read)
       {
          switch(Address)
          {
@@ -85,7 +106,6 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     //DisablePhi2ISR = true;
                      SetLEDOff;
                      break;
                   case rCtlVanishReset:  
@@ -93,8 +113,8 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     DisablePhi2ISR = true;
                      SetLEDOff;
+                     DisablePhi2ISR = true;
                      doReset=true;
                      break;
                   case rCtlStartSelItemWAIT:
@@ -108,20 +128,13 @@ FASTRUN void isrPHI2()
          }
       } //write
    }  //IO1
-   else if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
-   {
-      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]);  
-   }  //ROML
-   else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
-   {
-      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); 
-   }  //ROMH
  #ifdef DebugMessages
    //IO2: DFxx address space
-   else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", IsRead ? "Rd from" : "Wr to", Address);
+   else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
  #endif
-     
-   //SetDebugDeassert;
+
+   //leave time enough time to re-trigger on falling edge!
+   SetDebugDeassert;    
 }
 
 

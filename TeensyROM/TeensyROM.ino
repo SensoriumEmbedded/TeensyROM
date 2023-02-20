@@ -20,7 +20,6 @@
 //  TeensyROM: A C64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
 //  Copyright (c) 2023 Travis Smith <travis@sensoriumembedded.com> 
 
-//Compile with 816MHz (overclock) option set
 
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
@@ -89,7 +88,7 @@ void setup()
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrButton, FALLING );
-   attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
+   attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, FALLING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
    Serial.print("SD Card initialization... ");
@@ -126,7 +125,6 @@ void loop()
       Serial.print("Button detected\n"); 
       SetLEDOn;
       BtnPressed=false;
-      SetDebugDeassert;
       SetUpMainMenuROM(); //back to main menu
       DisablePhi2ISR=false;
       doReset=true;
@@ -141,15 +139,14 @@ void loop()
       Serial.print("Done\n");
       doReset=false;
       BtnPressed = false;
-      SetDebugDeassert;
       SetResetDeassert;
    }
   
    if (IO1[rRegStatus] != rsReady) 
    {
-      if(IO1[rRegStatus] == rsChangeMenu) MenuChange();
-      else if(IO1[rRegStatus] == rsGetTime) getNtpTime();
-      else HandleExecution(); //rsStartItem is only other non-ready setting
+      if(IO1[rRegStatus] == rsChangeMenu)     MenuChange();
+      else if(IO1[rRegStatus] == rsGetTime)   getNtpTime();
+      else if(IO1[rRegStatus] == rsStartItem) HandleExecution();
       IO1[rRegStatus] = rsReady;
    }
    
