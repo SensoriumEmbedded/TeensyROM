@@ -34,91 +34,168 @@
     32                                                    ;Could move to 0801 if more space needed
     33                             SIDCodeRAM  = $1000 
     34                          
-    35                          ;********************************   Cartridge begin   ********************************   
-    36                          
-    37                          ;8k Cartridge/ROM   ROML $8000-$9FFF
-    38                          ;  Could make 16k if needed
-    39                          * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
-    40  9fff 00                    !byte 0
-    41                             
-    42                          * = $8000  ;Cart Start
-    43                          ;  jump vectors and autostart key     
-    44  8000 0980                  !word Coldstart    ; Cartridge cold-start vector   ;!byte $09, $80 = !word $8009
-    45  8002 1a80                  !word Warmstart    ; Cartridge warm-start vector
-    46  8004 c3c2cd3830            !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key
-    47                          ;  KERNAL RESET ROUTINE
-    48                          Coldstart:
-    49  8009 78                    sei
-    50  800a 8e16d0                stx $d016            ; Turn on VIC for PAL / NTSC check
-    51  800d 20a3fd                jsr $fda3            ; IOINIT - Init CIA chips
-    52  8010 2050fd                jsr $fd50            ; RANTAM - Clear/test system RAM
-    53  8013 2015fd                jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
-    54  8016 205bff                jsr $ff5b            ; CINT   - Init VIC and screen editor
-    55  8019 58                    cli                  ; Re-enable IRQ interrupts
-    56                          ;  BASIC RESET  Routine
-    57                          Warmstart:
-    58  801a 2053e4                jsr $e453            ; Init BASIC RAM vectors
-    59  801d 20bfe3                jsr $e3bf            ; Main BASIC RAM Init routine
-    60  8020 2022e4                jsr $e422            ; Power-up message / NEW command
-    61  8023 a2fb                  ldx #$fb
-    62  8025 9a                    txs                  ; Reduce stack pointer for BASIC
-    63                             
-    64                          
-    65                          ;******************************* Main Code Start ************************************   
-    66                             
-    67  8026 204480                jsr SIDCopyToRAM
-    68  8029 202f80                jsr MainCopyToRAM
-    69  802c 4c00c0                jmp MainCodeRAM
-    70                             
-    71                          ; ******************************* Subroutines ******************************* 
-    72                          MainCopyToRAM:
-    73  802f a993                  lda #>MainCode
-    74  8031 a0e0                  ldy #<MainCode   
-    75  8033 85fc                  sta PtrAddrHi
-    76  8035 84fb                  sty PtrAddrLo 
-    77  8037 a29d                  ldx #>EndMainCode
-    78                             
-    79  8039 a9c0                  lda #>MainCodeRAM
-    80  803b a000                  ldy #<MainCodeRAM   
-    81  803d 85fe                  sta Ptr2AddrHi
-    82  803f 84fd                  sty Ptr2AddrLo 
-    83  8041 4c5680                jmp CodeCopy
-    84                             
-    85                          SIDCopyToRAM:
-    86                             ;have to copy SID code to RAM because it self modifies...
-    87  8044 a980                  lda #>SIDCode
-    88  8046 a069                  ldy #<SIDCode   
-    89  8048 85fc                  sta PtrAddrHi
-    90  804a 84fb                  sty PtrAddrLo 
-    91  804c a293                  ldx #>EndSIDCode
-    92                             
-    93  804e a910                  lda #>SIDCodeRAM
-    94  8050 a000                  ldy #<SIDCodeRAM   
-    95  8052 85fe                  sta Ptr2AddrHi
-    96  8054 84fd                  sty Ptr2AddrLo 
-    97                             
-    98                          CodeCopy:
-    99                             ; Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
-   100  8056 e8                    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
-   101  8057 a000                  ldy #0 ;initialize
-   102  8059 b1fb               -  lda (PtrAddrLo), y 
-   103  805b 91fd                  sta (Ptr2AddrLo),y
-   104  805d c8                    iny
-   105  805e d0f9                  bne -   
-   106  8060 e6fc                  inc PtrAddrHi
-   107  8062 e6fe                  inc Ptr2AddrHi
-   108  8064 e4fc                  cpx PtrAddrHi
-   109  8066 d0f1                  bne -
-   110  8068 60                    rts
-   111                             
-   112                          SIDCode = *
-   113  8069 4cb1104c0b114c83...   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
-   114                          EndSIDCode = *
-   115                          
-   116                          MainCode = *
-   117  93e0 a9048d20d0a9008d...   !binary "build\MainMenu_C000.bin"
-   118                          EndMainCode = *
-   119                          
-   120                             
-   121                          EndOfAllCode = *
-   122  9da6 00                    !byte 0
+    35                             ;BASIC routines:
+    36                             PrintString =  $ab1e
+    37                          
+    38                             ;chr$ symbols
+    39                             ChrBlack   = 144
+    40                             ChrWhite   = 5
+    41                             ChrRed     = 28
+    42                             ChrCyan    = 159
+    43                             ChrPurple  = 156
+    44                             ChrGreen   = 30
+    45                             ChrBlue    = 31
+    46                             ChrYellow  = 158 
+    47                             ChrOrange  = 129
+    48                             ChrBrown   = 149
+    49                             ChrLtRed   = 150
+    50                             ChrDrkGrey = 151
+    51                             ChrMedGrey = 152
+    52                             ChrLtGreen = 153
+    53                             ChrLtBlue  = 154
+    54                             ChrLtGrey  = 155
+    55                             
+    56                             ChrF1      = 133
+    57                             ChrF2      = 137
+    58                             ChrF3      = 134
+    59                             ChrF4      = 138
+    60                             ChrF5      = 135
+    61                             ChrF6      = 139
+    62                             ChrF7      = 136
+    63                             ChrF8      = 140
+    64                             ChrToLower = 14
+    65                             ChrToUpper = 142
+    66                             ChrRvsOn   = 18
+    67                             ChrRvsOff  = 146
+    68                             ChrClear   = 147
+    69                             ChrReturn  = 13
+    70                             ChrSpace   = 32
+    71                             ChrCSRSUp  = 145
+    72                             ChrCSRSDn  = 17
+    73                          
+    74                             ;poke colors
+    75                             pokeBlack   = 0
+    76                             pokeWhite   = 1
+    77                             pokeRed     = 2
+    78                             pokeCyan    = 3
+    79                             pokePurple  = 4
+    80                             pokeGreen   = 5
+    81                             pokeBlue    = 6
+    82                             pokeYellow  = 7
+    83                             pokeOrange  = 8
+    84                             pokeBrown   = 9
+    85                             pokeLtRed   = 10
+    86                             pokeDrkGrey = 11
+    87                             pokeMedGrey = 12
+    88                             pokeLtGreen = 13
+    89                             pokeLtBlue  = 14
+    90                             pokeLtGrey  = 15
+    91                          
+    92                             ;color scheme:
+    93                             BorderColorReg    = $d020 
+    94                             BackgndColorReg   = $d021
+    95                             BorderColor       = pokePurple
+    96                             BackgndColor      = pokeBlack
+    97                          
+    98                          ;********************************   Cartridge begin   ********************************   
+    99                          
+   100                          ;8k Cartridge/ROM   ROML $8000-$9FFF
+   101                          ;  Could make 16k if needed
+   102                          * = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
+   103  9fff 00                    !byte 0
+   104                             
+   105                          * = $8000  ;Cart Start
+   106                          ;  jump vectors and autostart key     
+   107  8000 0980                  !word Coldstart    ; Cartridge cold-start vector   ;!byte $09, $80 = !word $8009
+   108  8002 1a80                  !word Warmstart    ; Cartridge warm-start vector
+   109  8004 c3c2cd3830            !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key
+   110                          ;  KERNAL RESET ROUTINE
+   111                          Coldstart:
+   112  8009 78                    sei
+   113  800a 8e16d0                stx $d016            ; Turn on VIC for PAL / NTSC check
+   114  800d 20a3fd                jsr $fda3            ; IOINIT - Init CIA chips
+   115  8010 2050fd                jsr $fd50            ; RANTAM - Clear/test system RAM
+   116  8013 2015fd                jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
+   117  8016 205bff                jsr $ff5b            ; CINT   - Init VIC and screen editor
+   118  8019 58                    cli                  ; Re-enable IRQ interrupts
+   119                          ;  BASIC RESET  Routine
+   120                          Warmstart:
+   121  801a 2053e4                jsr $e453            ; Init BASIC RAM vectors
+   122  801d 20bfe3                jsr $e3bf            ; Main BASIC RAM Init routine
+   123  8020 2022e4                jsr $e422            ; Power-up message / NEW command
+   124  8023 a2fb                  ldx #$fb
+   125  8025 9a                    txs                  ; Reduce stack pointer for BASIC
+   126                             
+   127                          ;******************************* Main Code Start ************************************   
+   128                             ;screen setup:     
+   129  8026 a904                  lda #BorderColor
+   130  8028 8d20d0                sta BorderColorReg
+   131  802b a900                  lda #BackgndColor
+   132  802d 8d21d0                sta BackgndColorReg
+   133  8030 a940                  lda #<MsgCartBanner
+   134  8032 a080                  ldy #>MsgCartBanner
+   135  8034 201eab                jsr PrintString  
+   136                             
+   137  8037 20d380                jsr SIDCopyToRAM
+   138  803a 20be80                jsr MainCopyToRAM
+   139  803d 4c00c0                jmp MainCodeRAM
+   140                             
+   141                             
+   142                          MsgCartBanner:    
+   143  8040 930e9c12              !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
+   144  8044 2020202020202020...   !tx "                                        "
+   145  806c 20202020202a2a2a...   !tx "     *** Sensorium Embedded 2023 ***    "
+   146  8094 2020202020202020...   !tx "                                        ", ChrRvsOff, 0
+   147                             
+   148                          ; ******************************* Subroutines ******************************* 
+   149                          MainCopyToRAM:
+   150  80be a994                  lda #>MainCode
+   151  80c0 a06f                  ldy #<MainCode   
+   152  80c2 85fc                  sta PtrAddrHi
+   153  80c4 84fb                  sty PtrAddrLo 
+   154  80c6 a29e                  ldx #>EndMainCode
+   155                             
+   156  80c8 a9c0                  lda #>MainCodeRAM
+   157  80ca a000                  ldy #<MainCodeRAM   
+   158  80cc 85fe                  sta Ptr2AddrHi
+   159  80ce 84fd                  sty Ptr2AddrLo 
+   160  80d0 4ce580                jmp CodeCopy
+   161                             
+   162                          SIDCopyToRAM:
+   163                             ;have to copy SID code to RAM because it self modifies...
+   164  80d3 a980                  lda #>SIDCode
+   165  80d5 a0f8                  ldy #<SIDCode   
+   166  80d7 85fc                  sta PtrAddrHi
+   167  80d9 84fb                  sty PtrAddrLo 
+   168  80db a294                  ldx #>EndSIDCode
+   169                             
+   170  80dd a910                  lda #>SIDCodeRAM
+   171  80df a000                  ldy #<SIDCodeRAM   
+   172  80e1 85fe                  sta Ptr2AddrHi
+   173  80e3 84fd                  sty Ptr2AddrLo 
+   174                             
+   175                          CodeCopy:
+   176                             ; Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
+   177  80e5 e8                    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
+   178  80e6 a000                  ldy #0 ;initialize
+   179  80e8 b1fb               -  lda (PtrAddrLo), y 
+   180  80ea 91fd                  sta (Ptr2AddrLo),y
+   181  80ec c8                    iny
+   182  80ed d0f9                  bne -   
+   183  80ef e6fc                  inc PtrAddrHi
+   184  80f1 e6fe                  inc Ptr2AddrHi
+   185  80f3 e4fc                  cpx PtrAddrHi
+   186  80f5 d0f1                  bne -
+   187  80f7 60                    rts
+   188                             
+   189                          SIDCode = *
+   190  80f8 4cb1104c0b114c83...   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
+   191                          EndSIDCode = *
+   192                          
+   193                          MainCode = *
+   194  946f a9048d20d0a9008d...   !binary "build\MainMenu_C000.bin"
+   195                          EndMainCode = *
+   196                          
+   197                             
+   198                          EndOfAllCode = *
+   199  9e35 00                    !byte 0

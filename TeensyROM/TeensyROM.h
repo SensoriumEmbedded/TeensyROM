@@ -19,10 +19,8 @@
 
 
 //Build options:
-//#define DebugMessages  //will interfere with ROM/IO emulation, use at your own risk!
-#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
-//Compile with 816MHz (overclock) option set
-
+//#define DebugMessages  //will interfere with ROM/IO emulation, use at your own risk
+//#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
 
 #define MaxMenuItems       254
 #define SerialTimoutMillis 500
@@ -95,7 +93,7 @@ const uint8_t OutputPins[] = {
     //Could reduce or use whole cycle counts instead of nS... F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 
 // Times starting from Phi2 falling (interrupt):
-#define nS_VICStart        200    //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
+#define nS_VICStart        210//200    //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 //  Hold time for VIC cycle is same as nS_DataHold
 
 // These times starting from Phi2 rising:

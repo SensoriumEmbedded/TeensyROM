@@ -1080,7 +1080,7 @@
   1078                          ; ******************************* Strings/Messages ******************************* 
   1079                          MmmmmmmmmmessagesText:
   1080                          MsgBanner:    
-  1081  c63a 930e9c1220202020...   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "            TeensyROM v0.01             ", ChrRvsOff, 0
+  1081  c63a 930e9c1220202020...   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM v0.5             ", ChrRvsOff, 0
   1082                          MsgFrom:    
   1083  c668 0d9ac6524f4d2000      !tx ChrReturn, SourcesColor, "From ", 0 
   1084                          MsgSelect:

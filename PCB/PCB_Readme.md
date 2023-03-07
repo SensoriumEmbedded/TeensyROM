@@ -23,4 +23,4 @@
 
 ## **v0.1: Released 1/29/23**
    First prototype, fully tested and works with released code using "#define HWv0_1_PCB" build option
-   No USB or Ethernet connectors, requires dongles directly from Teensy
+   No USB Host or Ethernet connectors, dongles directly from Teensy needed for these

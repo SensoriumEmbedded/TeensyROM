@@ -106,7 +106,7 @@ FASTRUN void isrPHI2()
                      SetExROMDeassert;      
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
-                     SetLEDOff;
+                     //SetLEDOff;
                      break;
                   case rCtlVanishReset:  
                      SetGameDeassert;

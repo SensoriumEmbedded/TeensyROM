@@ -64,14 +64,17 @@ const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
 int timeZone = -8;  // -8==Pacific Standard Time, -7==Pacific Daylight Time (USA)
 EthernetUDP Udp;
 
+extern "C" uint32_t set_arm_clock(uint32_t frequency);
+
 void setup() 
 {
+   set_arm_clock( 816000000 );  //force slight overclocking
+   
    Serial.begin(115200);
    Serial.println(F("File: " __FILE__ ));
    Serial.println(F("Date: " __DATE__ ));
    Serial.println(F("Time: " __TIME__ ));
-   Serial.print(F_CPU_ACTUAL);
-   Serial.println(" Hz");
+   Serial.printf("CPU Freq: %lu Hz\n", F_CPU_ACTUAL);
    
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    DataBufDisable; //buffer disabled
@@ -114,7 +117,7 @@ void setup()
    IO1[rRegSIDStringTerm]= 0;   
 
 
-   Serial.print("TeensyROM 0.01 is on-line\n");
+   Serial.print("TeensyROM 0.5 is on-line\n");
 
 } 
      

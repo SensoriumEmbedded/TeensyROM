@@ -1,5 +1,5 @@
 # TeensyROM
- A Commodore 64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
+ A Commodore 64 ROM emulator and super fast loader cartridge based on the Teensy 4.1
    by Travis Smith <travis@sensoriumembedded.com> 
 
  I know there are plenty of Emulators/loaders out there, but I wanted to design my own for the sheer fun of it.  I'm publishing all deign files, code, etc for anyone interrested. 
