@@ -1078,7 +1078,7 @@ irqRast2:
 ; ******************************* Strings/Messages ******************************* 
 MmmmmmmmmmessagesText:
 MsgBanner:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM v0.5             ", ChrRvsOff, 0
+   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM v0.2             ", ChrRvsOff, 0
 MsgFrom:    
    !tx ChrReturn, SourcesColor, "From ", 0 
 MsgSelect:

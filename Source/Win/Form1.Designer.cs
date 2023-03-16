@@ -48,7 +48,7 @@
             // btnConnected
             // 
             this.btnConnected.BackColor = System.Drawing.Color.Yellow;
-            this.btnConnected.Location = new System.Drawing.Point(137, 15);
+            this.btnConnected.Location = new System.Drawing.Point(150, 15);
             this.btnConnected.Margin = new System.Windows.Forms.Padding(4);
             this.btnConnected.Name = "btnConnected";
             this.btnConnected.Size = new System.Drawing.Size(120, 28);
@@ -105,7 +105,7 @@
             this.cmbCOMPort.FormattingEnabled = true;
             this.cmbCOMPort.Location = new System.Drawing.Point(54, 17);
             this.cmbCOMPort.Name = "cmbCOMPort";
-            this.cmbCOMPort.Size = new System.Drawing.Size(76, 24);
+            this.cmbCOMPort.Size = new System.Drawing.Size(89, 24);
             this.cmbCOMPort.TabIndex = 11;
             // 
             // btnRefreshCOMList
@@ -120,7 +120,7 @@
             // 
             // btnClear
             // 
-            this.btnClear.Location = new System.Drawing.Point(265, 15);
+            this.btnClear.Location = new System.Drawing.Point(278, 15);
             this.btnClear.Margin = new System.Windows.Forms.Padding(4);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(52, 28);
@@ -180,7 +180,7 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Form1";
-            this.Text = "C64 TeensyROM Transfer v0.1";
+            this.Text = "C64 TeensyROM Transfer v0.2";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.gbCommButtons.ResumeLayout(false);
             this.ResumeLayout(false);

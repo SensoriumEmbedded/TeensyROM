@@ -117,7 +117,7 @@ void setup()
    IO1[rRegSIDStringTerm]= 0;   
 
 
-   Serial.print("TeensyROM 0.5 is on-line\n");
+   Serial.print("TeensyROM 0.2 is on-line\n");
 
 } 
      
