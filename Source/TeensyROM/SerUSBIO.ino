@@ -163,7 +163,7 @@ void getNtpTime()
    Serial.print("\nEthernet init... ");
    uint32_t beginWait = millis();
 
-   if (Ethernet.begin(mac, 5000, 4000) == 0)  //reduce timeout from 60 to 5 sec, should be longer, or option to skip
+   if (Ethernet.begin(mac, 9000, 4000) == 0)  //reduce timeout from 60 to 9 sec, should be longer, or option to skip
    {
       Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
       // Check for Ethernet hardware present

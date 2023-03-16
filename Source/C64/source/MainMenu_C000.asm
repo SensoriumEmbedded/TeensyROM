@@ -247,7 +247,7 @@ NoHW:
    sta wRegControl+IO1Port
 
    jsr ListMenuItemsInit
-   ;jsr SynchEthernetTime
+   jsr SynchEthernetTime
 
 WaitForKey:     
    jsr DisplayTime

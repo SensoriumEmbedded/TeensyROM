@@ -1,6 +1,6 @@
 cls
 :: $c000 main menu code
-:: $8000 compile for Lower ROM copy code (w/ main menu code and SID BINs)
+:: $8000 compile for Lower ROM copy code (w/ main menu code and SID BINs embedded for copy)
 :: No crunching
 :: Compiled/Saved as BIN w/ no header ("plain" format) for ROM image
 :: bin2header to convert/copy .bin file to C header file for ROM emulation
