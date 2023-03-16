@@ -25,28 +25,29 @@ The primary change is the addition of Ethernet and USB host connectors to elimin
 ![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/v0.2%20ang.jpg)
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
    
-## Compataibility
+## Compatibility
 TeensyROM been tested on about a dozen NTSC C64 and C64C machines to this point.  Waiting for VIC-II Kawari availability to implement PAL timing  :) 
 
-## Potential future SW development/features:
+## Future/potential SW development/features:
 * REU support using PSRAM
 * Special cartridge HW emulation
 * .d64, .tap file support
   * drive emulation via custom Kernal
 * Other HW Support: PAL, 50Hz, C128
 * Modem emulation via Ethernet connection
+* Method to save from USB/PC to SD or USB Drive
 * MIDI interface enhancements:
   * Single note, multi-voice/filter/ring
   * Simulate other released MIDI interfaces
 
-## Pictures/screen captures/videos:
+## Demo Videos:
+*  [TeensyROM real-time video/audio capture](https://www.youtube.com/watch?v=RyowR9huh0A) of menu navigation and loading/running/emulating various programs/cartridges
+* [MIDI2SID Demo ](https://www.youtube.com/watch?v=3BsX_jxIYKY) using MIDI keyboard => TeensyROM => C64/SID
+## Pictures/screen captures:
 | ![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/v0.2%20top.jpg) | ![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/20230307_164007.jpg) | 
 |--|--|
 ![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/20230307_163653.jpg) |![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/20230308_121851%20edit.jpg)  |
-|Main Menu|MIDI2SID|
-
-**Links to Demo videos:**
-* TeensyROM real-time menu navigation and loading
-* [MIDI2SID Demo](https://www.youtube.com/watch?v=3BsX_jxIYKY)
-
+|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/MIDI%20to%20SID.png)|
+![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/WinPC%20x-fer%20app.png)|
 See [pics-info](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/pics-info) folder for more, including some oscilloscope shots showing VIC cycle timing.
+

@@ -1,11 +1,12 @@
 
-## **v0.2: Released 2/23/22**
-**Second protype, Link to designOSH Park :** 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://oshpark.com/shared_projects/zJfB98zq"><img src="https://oshpark.com/packs/media/images/badge-5f4e3bf4bf68f72ff88bd92e0089e9cf.png" alt="Order from OSH Park"></img></a>
-**Changes from 0.1 PCB:**
+## **v0.2: Released Feb 23, 2023**
+![TeensyROM v0.2](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/v0.2%20top.jpg)
+### **Link to design at OSH Park :**    <a href="https://oshpark.com/shared_projects/zJfB98zq"><img src="https://oshpark.com/packs/media/images/badge-5f4e3bf4bf68f72ff88bd92e0089e9cf.png" alt="Order from OSH Park"></img></a>
+
+### **Changes from 0.1 PCB:**
   * New features:
-    * Ethernet port
-    * USB host port
+    * Ethernet port connector
+    * USB host port connector
   * Other Improvements/Notes:
     * Corrected: Data bits 2 and 1 swapped in v0.1 (worked around in SW)
     * shield connections:  USB is GND, Eth shorted to gnd via JP1
@@ -21,6 +22,10 @@
     * BOM/REF des updated
     * Text size/vectors same for ref-des
 
-## **v0.1: Released 1/29/23**
-   First prototype, fully tested and works with released code using "#define HWv0_1_PCB" build option
-   No USB Host or Ethernet connectors, dongles directly from Teensy needed for these
+## **v0.1: Released January 29, 2023**
+![TeensyROM v0.1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.1/v0.1.jpg)   First PCB prototype, fully tested and working with released code using "#define HWv0_1_PCB" build option
+   No USB Host or Ethernet connectors, dongles directly from Teensy needed for these.  This makes this board slightly smaller.
+
+## **v0.0: Early January 23**
+![TeensyROM v0.0](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.0/v0.0.jpg)
+Protoboard proof of concept.  It worked in proving the basic concept and allowed PCB design with confidence. 
