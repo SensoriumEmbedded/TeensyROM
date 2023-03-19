@@ -5,7 +5,7 @@ The first 3 columns of the [TeensyROM BOM](https://github.com/SensoriumEmbedded/
 |--|--|--|
 | Direct attach: Solder Teensy directly to TeensyROM | Least number of sockets needed, lower profile | Can't re-use Teensy in other projects |
 | Sockets for all pins | No USB Host or Ethernet dongles required, use on-board connectors (v0.2 only) | Teensy center pins pointing downward may interfere with other projects |
-| Sockets for I/O only | No Teensy center pins pointing downward, better proto-board & other project compatibility | USB Host and Ethernet dongles required for those functions, can't use on-board |
+| Sockets for I/O only | No Teensy center pins pointing downward, better for proto-board & other project compatibility | USB Host and Ethernet dongles required for those functions, can't use on-board connectors|
 
 **Sockets for all -or- Direct attach Teensy pin config pics:**
 (USB Host/Ethernet pins on bottom)
