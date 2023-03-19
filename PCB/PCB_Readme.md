@@ -1,16 +1,17 @@
 # Teensy connection to TeensyROM
 **There are 3 potential methods to attach the Teensy 4.1 to the TeensyROM PCB**
+The first 3 columns of the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2%20BOM.xlsx) show which parts are required for each configuration/method
 | Method | Advantages | Disadvantages |
 |--|--|--|
 | Direct attach: Solder Teensy directly to TeensyROM | Least number of sockets needed, lower profile | Can't re-use Teensy in other projects |
 | Sockets for all pins | No USB Host or Ethernet dongles required, use on-board connectors (v0.2 only) | Teensy center pins pointing downward may interfere with other projects |
 | Sockets for I/O only | No Teensy center pins pointing downward, better proto-board & other project compatibility | USB Host and Ethernet dongles required for those functions, can't use on-board |
-**The first 3 columns of the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2%20BOM.xlsx) show which parts are required for each configuration/method**
 
 **Sockets for all -or- Direct attach Teensy pin config pics:**
 (USB Host/Ethernet pins on bottom)
 |  | ![Bottom pins](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Teensy/Teensy%20Bot%20Pins.jpg) | ![Direct Connect](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/20230307_163653.jpg) |
 |--|--|--|
+
 **IO only/Dongle Teensy pics:**
 (USB Host/Ethernet pins on top)
 | |![enter image description here](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Teensy/Teensy%20Top%20Pins.jpg) | ![Direct Connect](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.1/With_Dongles.jpg) |
@@ -42,8 +43,7 @@
 ## TeensyROM/Teensy Final Assembly
 - Full socket config: insert Teensy into sockets, use on-board USB/Ethernet conns
 - Direct attach: insert Teensy into TeensyROM and solder directly, use on-board USB/Ethernet conns- IO only config: insert Teensy into sockets, use USB/Ethernet dongles
-
-**Assembly complete!  Next step is to load the Firmware.**
+> **Assembly complete, next step is to load the Firmware!**
 
 # PCB/Design History:
 ## **v0.2: Released Feb 23, 2023**
