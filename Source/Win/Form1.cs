@@ -195,6 +195,7 @@ namespace Serial_Logger
             if (to16(recBuf) == 0x6480)
             {
                 WriteToOutput("Sucess!", Color.Green);
+                btnConnected.PerformClick(); //auto disconnect
                 return;
             }
             else
