@@ -32,7 +32,7 @@
 
 
 uint8_t* IO1;  //io1 space/regs
-uint8_t* RAM_Image; //For receiving files from USB/SD/etc, todo:do this dynamically...
+uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t DisablePhi2ISR = false;
@@ -43,15 +43,19 @@ const unsigned char *LOROM_Image = NULL;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
 StructMenuItem SDMenu[MaxMenuItems];
-uint8_t NumSDItems = 0;
 char SDPath[250] = "/";
 
 StructMenuItem USBDriveMenu[MaxMenuItems];
-uint8_t NumUSBDriveItems = 0;
 char USBDrivePath[250] = "/";
 
-StructMenuItem USBHostMenu;
-uint8_t NumUSBHostItems = 0;
+StructMenuItem USBHostMenu = {
+  rtNone,  //unsigned char ItemType;
+  "<Nothing Sent>",      //char Name[MaxItemNameLength];
+  NULL,    //const unsigned char *Code_Image;
+  0        //uint16_t Size;
+};
+uint8_t* HOST_Image = NULL; //For receiving files from USB Host
+uint8_t NumUSBHostItems = 1;
 USBHost myusb;
 USBHub hub1(myusb);
 MIDIDevice midi1(myusb);
@@ -104,10 +108,7 @@ void setup()
    midi1.setHandleControlChange(OnControlChange); //not used
    midi1.setHandlePitchChange(OnPitchChange);  //not used
 
-   RAM_Image = (uint8_t*)malloc(RAM_Image_Size);
-   IO1 = (uint8_t*)malloc(IO1_Size);
-
-   for (uint16_t reg=0; reg<IO1_Size; reg++) IO1[reg]=0; //initialize all regs to 0
+   IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rRegStatus]=rsReady;
    IO1[rWRegCurrMenuWAIT]= rmtTeensy;
    IO1[rRegNumItems]     = sizeof(ROMMenu)/sizeof(ROMMenu[0]);

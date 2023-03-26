@@ -27,35 +27,35 @@
 
 StructMenuItem ROMMenu[] = 
 {
-   rtNone, "Test/Diags:----------------", NULL                       , 1, //sepparator
-   rt8kHi, "  781220 Dead Test"         , a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
-   rt8kLo, "  586220* Diagnostics"      , a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
-   rt8kLo, "  586220 Diagnostics"       , a586220_Diagnostics_BIN    , 1, //size not needed for ROMs
-   rt8kLo, "  1541 Diagnostics"         , a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
-   rt8kLo, "  Keyboard Tester"          , Keyboard_Tester_BIN        , 1, //size not needed for ROMs
-   rt8kLo, "  SID Tester"               , SID_Tester_BIN             , 1, //size not needed for ROMs
-   rt8kLo, "  Joystick Tester"          , Joystick_Tester_BIN        , 1, //size not needed for ROMs
-   rtPrg , "  Game Controller Tester"   , game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
-   rtPrg , "  ROM Checksum read"        , rom_chksum_137kernals_prg  , sizeof(rom_chksum_137kernals_prg) ,
+   rtNone, "Test/Diags:----------------", NULL                                 , 1, //sepparator
+   rt8kHi, "  781220 Dead Test"         , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
+   rt8kLo, "  586220* Diagnostics"      , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
+   rt8kLo, "  586220 Diagnostics"       , (uint8_t*)a586220_Diagnostics_BIN    , 1, //size not needed for ROMs
+   rt8kLo, "  1541 Diagnostics"         , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
+   rt8kLo, "  Keyboard Tester"          , (uint8_t*)Keyboard_Tester_BIN        , 1, //size not needed for ROMs
+   rt8kLo, "  SID Tester"               , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
+   rt8kLo, "  Joystick Tester"          , (uint8_t*)Joystick_Tester_BIN        , 1, //size not needed for ROMs
+   rtPrg , "  Game Controller Tester"   , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
+   rtPrg , "  ROM Checksum read"        , (uint8_t*)rom_chksum_137kernals_prg  , sizeof(rom_chksum_137kernals_prg) ,
 
-   rtNone, "Utilities:-----------------", NULL                       , 1, //sepparator
-   rtPrg , "  Epyx Fast Load"           , epyx_prg                   , sizeof(epyx_prg) ,
-   rtPrg , "  Hex Mon"                  , hex_mon_prg                , sizeof(hex_mon_prg) ,
-   rtPrg , "  80 Columns"               , a80columns_prg             , sizeof(a80columns_prg) ,
-   rtPrg , "  File Browser 64"          , fb64_prg                   , sizeof(fb64_prg      ) ,
-   rtPrg , "  DualCopy"                 , DualCopy_prg               , sizeof(DualCopy_prg  ) ,
-   rtPrg , "  CCGMS 2021"               , ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
+   rtNone, "Utilities:-----------------", NULL                                 , 1, //sepparator
+   rtPrg , "  Epyx Fast Load"           , (uint8_t*)epyx_prg                   , sizeof(epyx_prg) ,
+   rtPrg , "  Hex Mon"                  , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
+   rtPrg , "  80 Columns"               , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
+   rtPrg , "  File Browser 64"          , (uint8_t*)fb64_prg                   , sizeof(fb64_prg      ) ,
+   rtPrg , "  DualCopy"                 , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg  ) ,
+   rtPrg , "  CCGMS 2021"               , (uint8_t*)ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
 
-   rtNone, "Games:---------------------", NULL                       , 1, //sepparator
-   rt16k , "  Donkey Kong"              , Donkey_Kong_BIN            , 1, //size not needed for ROMs      
-   rt16k , "  Dig Dug"                  , Dig_Dug_bin                , 1, //size not needed for ROMs
-   rtPrg , "  Joust!"                   , joust_prg                  , sizeof(joust_prg) ,
-   rt8kHi, "  Jupiter Lander"           , Jupiter_Lander_BIN         , 1,  //graphics messed up...
+   rtNone, "Games:---------------------", NULL                                 , 1, //sepparator
+   rt16k , "  Donkey Kong"              , (uint8_t*)Donkey_Kong_BIN            , 1, //size not needed for ROMs      
+   rt16k , "  Dig Dug"                  , (uint8_t*)Dig_Dug_bin                , 1, //size not needed for ROMs
+   rtPrg , "  Joust!"                   , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
+   rt8kHi, "  Jupiter Lander"           , (uint8_t*)Jupiter_Lander_BIN         , 1,  //graphics messed up...
 
-   rtNone, "Trav PRGs:-----------------", NULL                       , 1, //sepparator
-   rtPrg , "  Ember Head"               , ember_head_prg             , sizeof(ember_head_prg) ,
-   rtPrg , "  Display Fractal"          , disp_fract_prg             , sizeof(disp_fract_prg) ,
-   rtPrg , "  Draw!!!                :)", draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
+   rtNone, "Trav PRGs:-----------------", NULL                                 , 1, //sepparator
+   rtPrg , "  Ember Head"               , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
+   rtPrg , "  Display Fractal"          , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
+   rtPrg , "  Draw!!!                :)", (uint8_t*)draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
 
 };
 

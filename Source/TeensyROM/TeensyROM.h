@@ -27,7 +27,6 @@
 #define UpDirString "/.. <Up Dir>"
 #define NTSCBusFreq    1022730
 #define PALBusFreq      985250
-#define RAM_Image_Size   65536
 #define IO1_Size           256
    
 uint32_t StartCycCnt;

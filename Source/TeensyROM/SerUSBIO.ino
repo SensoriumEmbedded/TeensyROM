@@ -74,6 +74,8 @@ void ReceiveFile()
       USBHostMenu.Name[i] = Serial.read();
    }
    
+   free(HOST_Image);
+   HOST_Image = (uint8_t*)malloc(len);
    uint16_t bytenum = 0;
    while(bytenum < len)
    {
@@ -82,8 +84,8 @@ void ReceiveFile()
          Serial.printf("(PayL) Rec %d of %d, RCS:%d, Name:%s\n", bytenum, len, CheckSum, USBHostMenu.Name);
          return;
       }
-      RAM_Image[bytenum] = Serial.read();
-      CheckSum-=RAM_Image[bytenum++];
+      HOST_Image[bytenum] = Serial.read();
+      CheckSum-=HOST_Image[bytenum++];
 
    }  
    if (CheckSum!=0)
@@ -111,20 +113,21 @@ void ReceiveFile()
    {
       USBHostMenu.ItemType = rtPrg;
       Serial.println(".PRG file detected");
-      USBHostMenu.Code_Image=RAM_Image;
       NumUSBHostItems = 1;
       return;
    }
    
-   if (strcmp(Extension, ".crt")!=0)
+   if (strcmp(Extension, ".crt")==0)
    {
-      //NumUSBHostItems = 0, set at start
-      Serial.println("File type unknown!");
+      USBHostMenu.ItemType = rtCrt;
+      Serial.println(".CRT file detected"); 
+      NumUSBHostItems = 1;
       return;
    }
    
-   Serial.println(".CRT file detected"); 
-   ParseCRTFile(&USBHostMenu);   
+   //NumUSBHostItems = 0, set at start
+   Serial.println("File type unknown!");
+   return;
  
 }
 

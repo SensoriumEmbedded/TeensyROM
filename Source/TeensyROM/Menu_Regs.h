@@ -124,7 +124,7 @@ struct StructMenuItem
 {
   unsigned char ItemType;
   char Name[MaxItemNameLength];
-  const unsigned char *Code_Image;
+  uint8_t *Code_Image;
   uint16_t Size;
 };
 
