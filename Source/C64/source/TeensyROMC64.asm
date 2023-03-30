@@ -20,6 +20,11 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
+   !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
+
+   ;color scheme:
+   BorderColor       = pokePurple
+   BackgndColor      = pokeBlack
 
    ;RAM Registers:
    PtrAddrLo   = $fb
@@ -32,68 +37,6 @@
                           ;Could move to 0801 if more space needed
    SIDCodeRAM  = $1000 
 
-   ;BASIC routines:
-   PrintString =  $ab1e
-
-   ;chr$ symbols
-   ChrBlack   = 144
-   ChrWhite   = 5
-   ChrRed     = 28
-   ChrCyan    = 159
-   ChrPurple  = 156
-   ChrGreen   = 30
-   ChrBlue    = 31
-   ChrYellow  = 158 
-   ChrOrange  = 129
-   ChrBrown   = 149
-   ChrLtRed   = 150
-   ChrDrkGrey = 151
-   ChrMedGrey = 152
-   ChrLtGreen = 153
-   ChrLtBlue  = 154
-   ChrLtGrey  = 155
-   
-   ChrF1      = 133
-   ChrF2      = 137
-   ChrF3      = 134
-   ChrF4      = 138
-   ChrF5      = 135
-   ChrF6      = 139
-   ChrF7      = 136
-   ChrF8      = 140
-   ChrToLower = 14
-   ChrToUpper = 142
-   ChrRvsOn   = 18
-   ChrRvsOff  = 146
-   ChrClear   = 147
-   ChrReturn  = 13
-   ChrSpace   = 32
-   ChrCSRSUp  = 145
-   ChrCSRSDn  = 17
-
-   ;poke colors
-   pokeBlack   = 0
-   pokeWhite   = 1
-   pokeRed     = 2
-   pokeCyan    = 3
-   pokePurple  = 4
-   pokeGreen   = 5
-   pokeBlue    = 6
-   pokeYellow  = 7
-   pokeOrange  = 8
-   pokeBrown   = 9
-   pokeLtRed   = 10
-   pokeDrkGrey = 11
-   pokeMedGrey = 12
-   pokeLtGreen = 13
-   pokeLtBlue  = 14
-   pokeLtGrey  = 15
-
-   ;color scheme:
-   BorderColorReg    = $d020 
-   BackgndColorReg   = $d021
-   BorderColor       = pokePurple
-   BackgndColor      = pokeBlack
 
 ;********************************   Cartridge begin   ********************************   
 

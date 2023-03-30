@@ -19,7 +19,23 @@
 
 
 ; ********************************   Symbols   ********************************   
+   ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
+   !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
+
+   ;color scheme:
+   BorderColor      = pokePurple
+   BackgndColor     = pokeBlack
+   TimeColor        = ChrOrange
+   MenuMiscColor    = ChrGreen
+   ROMNumColor      = ChrDrkGrey
+   OptionColor      = ChrYellow
+   SourcesColor     = ChrLtBlue
+   TypeColor        = ChrBlue
+   NameColor        = ChrLtGreen
+   MaxMenuDispItems = 16
+   M2SDataColumn    = 14
+
 
    ;Zero page RAM Registers:
    PtrAddrLo   = $fb
@@ -38,17 +54,7 @@
    MainCodeRAM = $c000    ;this file
    SIDCodeRAM = $1000 
 
-   ScreenMemStart    = $0400
-   BorderColorReg    = $d020 
-   BackgndColorReg   = $d021
-   SIDLoc            = $d400
-   IO1Port           = $de00
-   TODHoursBCD       = $dc0b
-   TODMinBCD         = $dc0a
-   TODSecBCD         = $dc09
-   TODTenthSecBCD    = $dc08
-   
-   ;!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;!!!!!!!!!!!!!!!!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    MaxItemNameLength = 28
    
    rRegStatus        =  0 ;//Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
@@ -133,87 +139,8 @@
    rtCrt  = 6
    rtDir  = 7
    
-;!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-   ;Kernal routines:
-   IRQDefault = $ea31
-   SendChar   = $ffd2
-   ScanKey    = $ff9f ;SCNKEY
-   GetIn      = $ffe4 ;GETIN
-   SetCursor  = $fff0 ;PLOT
-   
-   ;BASIC routines:
-   BasicColdStartVect = $a000 ; $e394  58260
-   BasicWarmStartVect = $a002 ; $e37b  58235
-   PrintString =  $ab1e
-
-   ;chr$ symbols
-   ChrBlack   = 144
-   ChrWhite   = 5
-   ChrRed     = 28
-   ChrCyan    = 159
-   ChrPurple  = 156
-   ChrGreen   = 30
-   ChrBlue    = 31
-   ChrYellow  = 158 
-   ChrOrange  = 129
-   ChrBrown   = 149
-   ChrLtRed   = 150
-   ChrDrkGrey = 151
-   ChrMedGrey = 152
-   ChrLtGreen = 153
-   ChrLtBlue  = 154
-   ChrLtGrey  = 155
-   
-   ChrF1      = 133
-   ChrF2      = 137
-   ChrF3      = 134
-   ChrF4      = 138
-   ChrF5      = 135
-   ChrF6      = 139
-   ChrF7      = 136
-   ChrF8      = 140
-   ChrToLower = 14
-   ChrToUpper = 142
-   ChrRvsOn   = 18
-   ChrRvsOff  = 146
-   ChrClear   = 147
-   ChrReturn  = 13
-   ChrSpace   = 32
-   ChrCSRSUp  = 145
-   ChrCSRSDn  = 17
-   
-;poke colors
-   pokeBlack   = 0
-   pokeWhite   = 1
-   pokeRed     = 2
-   pokeCyan    = 3
-   pokePurple  = 4
-   pokeGreen   = 5
-   pokeBlue    = 6
-   pokeYellow  = 7
-   pokeOrange  = 8
-   pokeBrown   = 9
-   pokeLtRed   = 10
-   pokeDrkGrey = 11
-   pokeMedGrey = 12
-   pokeLtGreen = 13
-   pokeLtBlue  = 14
-   pokeLtGrey  = 15
-   
-   ;color scheme:
-   BorderColor      = pokePurple
-   BackgndColor     = pokeBlack
-   TimeColor        = ChrOrange
-   MenuMiscColor    = ChrGreen
-   ROMNumColor      = ChrDrkGrey
-   OptionColor      = ChrYellow
-   SourcesColor     = ChrLtBlue
-   TypeColor        = ChrBlue
-   NameColor        = ChrLtGreen
-   MaxMenuDispItems = 16
-   M2SDataColumn    = 14
 
 ;******************************* Main Code Start ************************************   
 
@@ -230,6 +157,7 @@ Start:
    jsr SIDCodeRAM ;Initialize music
    jsr SIDMusicOn ;Start the music!
    
+!ifndef Debug {
 ;check for HW:
    lda rRegPresence1+IO1Port
    cmp #$55
@@ -241,13 +169,15 @@ NoHW:
    lda #<MsgNoHW
    ldy #>MsgNoHW
    jsr PrintString  
--  jmp -
+   jmp (BasicWarmStartVect)
+}
 
 +  lda #rCtlVanish ;Deassert Game & ExROM
    sta wRegControl+IO1Port
 
    jsr ListMenuItemsInit
    jsr SynchEthernetTime
+
 
 WaitForKey:     
    jsr DisplayTime
@@ -568,6 +498,7 @@ PRGLoadEnd = *
      
      
 WaitForTR:  ;wait for ready status, uses acc and X
+!ifndef Debug {
    ldx#5 ;require 5 consecutive reads of ready to continue
    inc ScreenMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
 -  lda rRegStatus+IO1Port
@@ -575,6 +506,7 @@ WaitForTR:  ;wait for ready status, uses acc and X
    bne WaitForTR
    dex
    bne -
+}
    rts
 
 ErrOut:   
