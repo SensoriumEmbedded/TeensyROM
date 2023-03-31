@@ -33,7 +33,7 @@
    Ptr2AddrHi  = $fe
    
    ;RAM coppies:
-   MainCodeRAM = $c000    ;Main execution point, 4k available. 
+   MainCodeRAM = $2400    ;Main execution point 
    SIDCodeRAM  = $1000 
 
 
@@ -142,7 +142,7 @@ SIDCode = *
 EndSIDCode = *
 
 MainCode = *
-   !binary "build\MainMenu_C000.bin"
+   !binary "build\MainMenu.bin"
 EndMainCode = *
 
    

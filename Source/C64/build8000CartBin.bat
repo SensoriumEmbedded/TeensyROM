@@ -1,5 +1,5 @@
 cls
-:: $c000 main menu code
+:: $2400 main menu code
 :: $8000 compile for Lower ROM copy code (w/ main menu code and SID BINs embedded for copy)
 :: No crunching
 :: Compiled/Saved as BIN w/ no header ("plain" format) for ROM image
@@ -10,7 +10,7 @@ cls
 @echo off
 
 set CartFilename=TeensyROMC64
-set MainFilename=MainMenu_C000
+set MainFilename=MainMenu
 set toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
 
 setlocal EnableDelayedExpansion
@@ -30,7 +30,7 @@ SET MainCompilerArgs=-r %buildPath%\MainBuildReport --vicelabels %buildPath%\Mai
 
 rem SET cruncherPath=%toolPath%\C64-devkit\cruncher\win32
 rem SET cruncher=pucrunch.exe
-rem SET cruncherArgs=-x$c000 -c64 -g55 -fshort
+rem SET cruncherArgs=-x$2400 -c64 -g55 -fshort
 rem rem SET cruncherArgs=-x$0801 -c64 -g55 -fshort
 
 SET bin2headerPath=%toolPath%\bin2header
@@ -65,10 +65,12 @@ echo ***bin2header
 %bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
 
-exit /b
+::exit /b
 
 echo ***CartConvert...
 %cartconvPath%\%cartconv% %cartconvArgs%
+echo ***CartConvert Read Info...
+%cartconvPath%\%cartconv% -f %buildPath%\%cartconvFilename%
 
 echo ***Emulate...
 start "" %emulatorPath%\%emulator% %emulatorArgs% %buildPath%\%cartconvFilename%

@@ -19,7 +19,7 @@
 
 
 ; ********************************   Symbols   ********************************   
-   ;!set Debug = 1 ;if defined, skips HW checks/waits 
+   !set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
@@ -55,7 +55,7 @@
    PRGLoadStartReloc= $033c 
    
    ;RAM coppies:
-   MainCodeRAM = $c000    ;this file
+   MainCodeRAM = $2400    ;this file
    SIDCodeRAM = $1000 
 
 ;******************************* Main Code Start ************************************   
