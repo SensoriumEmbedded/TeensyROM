@@ -33,8 +33,7 @@
    Ptr2AddrHi  = $fe
    
    ;RAM coppies:
-   MainCodeRAM = $c000    ;Main execution point, 4k available.  Only using 2.42 KB as of 2/16/23
-                          ;Could move to 0801 if more space needed
+   MainCodeRAM = $c000    ;Main execution point, 4k available. 
    SIDCodeRAM  = $1000 
 
 
@@ -138,5 +137,5 @@ MainCode = *
 EndMainCode = *
 
    
-EndOfAllCode = *
+EndOfAllCartCode = *
    !byte 0
