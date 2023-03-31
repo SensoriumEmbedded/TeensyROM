@@ -19,7 +19,7 @@
 
 
 ; ********************************   Symbols   ********************************   
-   !set Debug = 1 ;if defined, skips HW checks/waits 
+   ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
@@ -81,7 +81,8 @@ NoHW:
    lda #<MsgNoHW
    ldy #>MsgNoHW
    jsr PrintString  
-   jmp (BasicWarmStartVect)
+   ;jmp (BasicWarmStartVect)
+-  jmp -
 }
 
 +  lda #rCtlVanish ;Deassert Game & ExROM

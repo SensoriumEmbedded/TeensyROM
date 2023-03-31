@@ -39,9 +39,9 @@
 
 ;********************************   Cartridge begin   ********************************   
 
-;8k Cartridge/ROM   ROML $8000-$9FFF
-;  Could make 16k if needed
-* = $9fff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
+; 8k Cartridge/ROM   ROML $8000-$9FFF
+;16k Cartridge/ROM   ROML $8000-$BFFF (Replaces BASIC ROM)
+* = $bfff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
    !byte 0
    
 * = $8000  ;Cart Start
@@ -62,7 +62,7 @@ Coldstart:
 Warmstart:
    jsr $e453            ; Init BASIC RAM vectors
    jsr $e3bf            ; Main BASIC RAM Init routine
-   jsr $e422            ; Power-up message / NEW command
+   ;jsr $e422            ; Power-up message / NEW command (requires BASIC ROM)
    ldx #$fb
    txs                  ; Reduce stack pointer for BASIC
    
@@ -72,11 +72,20 @@ Warmstart:
    sta BorderColorReg
    lda #BackgndColor
    sta BackgndColorReg
+
    lda #<MsgCartBanner
    ldy #>MsgCartBanner
-   jsr PrintString  
+   ;jsr PrintString  
+   sta PtrAddrLo
+   sty PtrAddrHi
+   ldy #0
+-  lda (PtrAddrLo), y
+   beq +
+   jsr SendChar
+   iny
+   bne -
    
-   jsr SIDCopyToRAM
++  jsr SIDCopyToRAM
    jsr MainCopyToRAM
    jmp MainCodeRAM
    

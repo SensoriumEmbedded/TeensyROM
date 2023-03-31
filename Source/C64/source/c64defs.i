@@ -19,9 +19,9 @@
    SetCursor  = $fff0 ;PLOT
    
    ;BASIC routines:
-   BasicColdStartVect = $a000 ; $e394  58260
+   ;BasicColdStartVect = $a000 ; $e394  58260
    BasicWarmStartVect = $a002 ; $e37b  58235
-   PrintString =  $ab1e
+   ;PrintString =  $ab1e
 
    ;chr$ symbols
    ChrBlack   = 144

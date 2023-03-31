@@ -1,4 +1,14 @@
 
+PrintString:
+   sta PtrAddrLo
+   sty PtrAddrHi
+   ldy #0
+-  lda (PtrAddrLo), y
+   beq +
+   jsr SendChar
+   iny
+   bne -
++  rts
 
 ; ******************************* Strings/Messages ******************************* 
 
@@ -53,7 +63,7 @@ MsgCreditsInfo:
    !tx "    emulation projects out there: ", ChrReturn
    !tx "       Thank you for the inspiration!", ChrReturn, ChrReturn
    !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
-   ;!tx " github.com/SensoriumEmbedded/TeensyROM", ChrReturn
+   !tx " github.com/SensoriumEmbedded/TeensyROM", ChrReturn
    !tx 0
 
 MsgM2SPolyMenu:    

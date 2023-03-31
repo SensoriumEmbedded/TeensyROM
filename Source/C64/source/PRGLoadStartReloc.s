@@ -1,6 +1,7 @@
 
    ;this code is relocated to PRGLoadStartReloc and run from there as it 
    ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers)
+   
    ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
    ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
    ;rRegStrAvailable+IO1Port is zero when inactive/complete
@@ -24,7 +25,7 @@ PRGLoadStart:
    ;good luck if we get to here... Trying to overflow and write to zero page
    lda #<(MsgOverflow - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc 
    ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
-   jsr PrintString   ;$ab1e
+   jsr $ab1e   ;PrintString
    jmp (BasicWarmStartVect)
    ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
 +  ldx PtrAddrHi
@@ -40,7 +41,7 @@ PRGLoadStart:
    
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
-   jsr PrintString   ;$ab1e
+   jsr $ab1e   ;PrintString
    ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
    jsr $a659	;reset execution to start, clear variables and flush stack
    jsr $a533	;rebuild BASIC line chaining
