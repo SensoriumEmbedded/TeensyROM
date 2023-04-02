@@ -173,9 +173,9 @@ void getNtpTime()
       if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
       else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
       
-      IO1[rRegLastSecBCD]  =0;      
-      IO1[rRegLastMinBCD]  =0;      
-      IO1[rRegLastHourBCD] =0;      
+      IO1[rRegLastSecBCD]  = 0;      
+      IO1[rRegLastMinBCD]  = 0;      
+      IO1[rRegLastHourBCD] = 0;      
       return;
    }
    Udp.begin(localPort);
@@ -224,7 +224,7 @@ void getNtpTime()
          IO1[rRegLastSecBCD] =DecToBCD(secsSince1900 % 60);
          secsSince1900 /=60; //to  minutes
          IO1[rRegLastMinBCD] =DecToBCD(secsSince1900 % 60);
-         secsSince1900 = (secsSince1900/60 + timeZone)%24; //to hours, offset timezone
+         secsSince1900 = (secsSince1900/60 + (int8_t)IO1[rwRegTimezone]) % 24; //to hours, offset timezone
          if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
          else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
    

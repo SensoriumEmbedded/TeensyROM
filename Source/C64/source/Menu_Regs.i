@@ -59,10 +59,13 @@
    rRegSIDOutOfVoices= StartSIDRegs + 38
    rRegSIDStringTerm = StartSIDRegs + 39
    
-   rwRegPwrUpDefaults= StartSIDRegs + 40
-   rwRegMusicPlaying = StartSIDRegs + 41
-   rwRegTimezone     = StartSIDRegs + 42
+   rwRegPwrUpDefaults= StartSIDRegs + 40 ; power up default reg, see bit mask defs
+   rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
    
+   
+   
+   rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
+   rpudNetTimeMask   = 0x02 ; rwRegPwrUpDefaults bit 1=synch net time
 
    rsReady      = 0x5a
    rsChangeMenu = 0x9d

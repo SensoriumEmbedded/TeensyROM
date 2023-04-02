@@ -178,19 +178,15 @@ void LoadDirectory(bool SD_nUSBDrive)
       DrvMenuItem = USBDriveMenu;
    }
    
-   if(!dir) return;   
-   
    if (!(strlen(DrvPath) == 1 && DrvPath[0] == '/'))
-   {  //not at root, add up dir option
+   {  // *not* at root, add up dir option
       NumItems = 1;
       strcpy(DrvMenuItem[0].Name, UpDirString);
       DrvMenuItem[0].ItemType = rtDir;
    }
    
-   while (1) 
+   while (File entry = dir.openNextFile()) 
    {
-      File entry = dir.openNextFile();
-      if (! entry) break;
       if (entry.isDirectory())
       {
          DrvMenuItem[NumItems].Name[0] = '/';

@@ -29,6 +29,7 @@
 #include <SPI.h>
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
+#include <EEPROM.h>
 
 
 uint8_t* IO1;  //io1 space/regs
@@ -65,7 +66,6 @@ USBFilesystem firstPartition(myusb);
 unsigned int localPort = 8888;       // local port to listen for UDP packets
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
-int timeZone = -8;  // -8==Pacific Standard Time, -7==Pacific Daylight Time (USA)
 EthernetUDP Udp;
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
@@ -108,15 +108,26 @@ void setup()
    midi1.setHandleControlChange(OnControlChange); //not used
    midi1.setHandlePitchChange(OnPitchChange);  //not used
 
-   IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
-   IO1[rRegStatus]=rsReady;
-   IO1[rWRegCurrMenuWAIT]= rmtTeensy;
-   IO1[rRegNumItems]     = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
-   IO1[rRegPresence1]    = 0x55;   
-   IO1[rRegPresence2]    = 0xAA;   
-   for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
-   IO1[rRegSIDStringTerm]= 0;   
+   uint32_t MagNumRead;
+   EEPROM.get(eepAdMagicNum, MagNumRead);
+   if (MagNumRead != eepMagicNum)
+   {
+      Serial.println("EEPROM first use, setting defaults");
+      EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
+      EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
+      EEPROM.write(eepAdrwRegTimezone, -8 ); //default to pacific time
+   }
 
+   IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
+   IO1[rRegStatus]        = rsReady;
+   IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+   IO1[rRegNumItems]      = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+   IO1[rRegPresence1]     = 0x55;   
+   IO1[rRegPresence2]     = 0xAA;   
+   for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
+   IO1[rRegSIDStringTerm] = 0;   
+   IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
+   IO1[rwRegTimezone]     = EEPROM.read(eepAdrwRegTimezone);  
 
    Serial.print("TeensyROM 0.2 is on-line\n");
 
@@ -162,9 +173,10 @@ void loop()
 
 void SetUpMainMenuROM()
 {
-   SetGameDeassert;
+   //emulate 16k cart ROM
+   SetGameAssert;
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
-   HIROM_Image = NULL;
+   HIROM_Image = TeensyROMC64_bin+0x2000;
 }
 

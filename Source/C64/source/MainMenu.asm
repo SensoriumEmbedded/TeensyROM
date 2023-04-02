@@ -19,7 +19,7 @@
 
 
 ; ********************************   Symbols   ********************************   
-   !set Debug = 1 ;if defined, skips HW checks/waits 
+   ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
@@ -91,17 +91,20 @@ NoHW:
    lda #$00
    jsr SIDCodeRAM ;Initialize music
    
+   jsr ListMenuItemsInit
+
    ;check default registers for music & time settings
-   lda #00 ;get this from teensy, or just point MusicPlaying to io1 reg
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudMusicMask
    sta MusicPlaying
-   
-   lda MusicPlaying
    beq +
    jsr SIDMusicOn
+
++  lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNetTimeMask
+   beq WaitForKey
+   jsr SynchEthernetTime
    
-+  jsr SynchEthernetTime
-   
-   jsr ListMenuItemsInit
 
 WaitForKey:     
    jsr DisplayTime
@@ -194,14 +197,15 @@ WaitForKey:
    jmp WaitForKey
 
 
-
 +  jmp WaitForKey
 
    
 ; ******************************* Subroutines ******************************* 
-;                           list out rom number, type, & names
 
-Sssssssssssssssssssssssubroutines:
+___Subroutines________________________________:
+
+
+;                           list out rom number, type, & names
 ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTR
@@ -320,11 +324,13 @@ finishMenu
 ; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
 SelectMenuItem:
-   ldy rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
+   lda rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
+   pha
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTR ;if it's a good ROM/crt image, it won't return from this
-   cpy #rtPrg
+   jsr WaitForTR ;if it's a ROM/crt image, it won't return from this
+   pla
+   cmp #rtPrg
    beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
    jsr ListMenuItemsInit
    rts
@@ -362,13 +368,20 @@ XferCopyRun:
    bne -   
    jmp PRGLoadStartReloc     
      
-WaitForTR:  ;wait for ready status, uses acc and X
+WaitForTR:  ;wait for ready status, uses acc, X and Y
+   ldx #1 ;row   Show "Waiting:" over time disp
+   ldy #29  ;col
+   clc
+   jsr SetCursor
+   lda #<MsgWaiting
+   ldy #>MsgWaiting
+   jsr PrintString
 !ifndef Debug {
-   ldx#5 ;require 5 consecutive reads of ready to continue
+-- ldx#5 ;require 5 consecutive reads of ready to continue
    inc ScreenMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
 -  lda rRegStatus+IO1Port
    cmp #rsReady
-   bne WaitForTR
+   bne --
    dex
    bne -
 }
@@ -406,115 +419,6 @@ SynchEthernetTime:
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    rts
    
-DisplayTime:
-   ldx #1 ;row
-   ldy #29  ;col
-   clc
-   jsr SetCursor
-   lda #TimeColor
-   jsr SendChar
-   lda TODHoursBCD ;latches time in regs (stops incrementing)
-   tay ;save for re-use
-   and #$1f
-   bne nz   ;if hours is 0, make it 12...
-   tya
-   ora #$12
-   tay ;re-save for re-use
-nz tya
-   and #$10
-   bne +
-   lda #ChrSpace
-   jmp ++
-+  lda #'1'
-++ jsr SendChar
-   tya
-   and #$0f  ;ones of hours
-   jsr PrintHexNibble
-   lda #':'
-   jsr SendChar
-   lda TODMinBCD
-   jsr PrintHexByte
-   lda #':'
-   jsr SendChar
-   lda TODSecBCD
-   jsr PrintHexByte
-   ;lda #'.'
-   ;jsr SendChar
-   lda TODTenthSecBCD ;have to read 10ths to release latch
-   ;jsr PrintHexNibble
-   tya ;am/pm (pre latch release)
-   and #$80
-   bne +
-   lda #'a'
-   jmp ++
-+  lda #'p'
-++ jsr SendChar
-   lda #'m'
-   jsr SendChar
-   rts
-   
-PrintHexByte:
-   ;Print byte value stored in acc in hex (2 chars)
-   pha
-   lsr
-   lsr
-   lsr
-   lsr
-   jsr PrintHexNibble
-   pla
-   ;pha   ; preserve acc on return?
-   jsr PrintHexNibble
-   ;pla
-   rts
-   
-PrintHexNibble:   
-   ;Print value stored in lower nible acc in hex
-   ;trashes acc
-   and #$0f
-   cmp #$0a
-   bpl l 
-   clc
-   adc #'0'
-   jmp pr
-l  clc
-   adc #'a'-$0a
-pr jsr SendChar
-   rts
-
-PrintOnOff:
-   ;Print "On" or "Off" based on Zero flag
-   ;uses A and Y regs
-   bne +
-   lda #<MsgOff
-   ldy #>MsgOff
-   jmp ++
-+  lda #<MsgOn
-   ldy #>MsgOn
-++ jsr PrintString 
-   rts
-
-Print4CharTableHiNib
-   lsr
-   lsr
-   lsr
-   lsr ; move to lower nibble
-Print4CharTable:   
-;prints 4 chars from a table of continuous 4 char sets (no termination)
-;X=table base lo, y=table base high, acc=index to item# (63 max)
-;   and #0xfc 
-   stx PtrAddrLo
-   sty PtrAddrHi
-   asl
-   asl  ;mult by 4
-   tay
--  lda (PtrAddrLo),y
-   jsr SendChar   ;type (4 chars)
-   iny
-   tya
-   and #3
-   bne -
-   rts
-   
 SettingsMenu:
    lda #<MsgBanner
    ldy #>MsgBanner
@@ -526,15 +430,97 @@ SettingsMenu:
    ldy #>MsgCreditsInfo
    jsr PrintString 
 
+ShowSettings:
+   lda #NameColor
+   jsr SendChar
+
+   ldx #5 ;row Synch Time
+   ldy #23 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNetTimeMask  
+   jsr PrintOnOff
+
+   ldx #6 ;row Music State
+   ldy #23 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudMusicMask  
+   jsr PrintOnOff
+   
+   ldx #7 ;row Time Zone
+   ldy #26 ;col
+   clc
+   jsr SetCursor
+   ldx #'+'
+   ldy rwRegTimezone+IO1Port
+   tya
+   and #$80
+   beq +
+   ;neg number
+   tya
+   eor#$ff  ;1's comp
+   tay
+   iny ;2's comp
+   ldx #'-' 
++  txa
+   jsr SendChar
+   tya
+   ;conv to bcd
+   cmp #10
+   bmi +     ;skip if below 10
+   sec       ;set to subtract without carry
+   sbc #10   ;subtract 10
+   ora #$10
++  jsr PrintHexByte
+
+
 WaitForSettingsKey:     
    jsr DisplayTime   
    jsr GetIn
    beq WaitForSettingsKey
 
+   cmp #ChrF1  ;Power-up Synch Time toggle
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudNetTimeMask  
+   sta rwRegPwrUpDefaults+IO1Port
+   jmp ShowSettings  
 
++  cmp #ChrF3  ;Power-up Music State toggle
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudMusicMask  
+   sta rwRegPwrUpDefaults+IO1Port
+   jmp ShowSettings  
 
++  cmp #ChrF5  ;Power-up Time Zone increment
+   bne +
+   ldx rwRegTimezone+IO1Port
+   inx
+   cpx #15
+   bne ++
+   ldx #-12
+++ stx rwRegTimezone+IO1Port
+   jmp ShowSettings  
 
++  cmp #ChrF2  ;Synch Time now
+   bne +
+   jsr SynchEthernetTime
+   jmp WaitForSettingsKey  
+
++  cmp #ChrF4  ;Toggle Music now
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitForSettingsKey  
+
++  cmp #ChrF7  ;Exit
+   bne +
    rts
+
++  jmp WaitForSettingsKey  
 
 
    !src "source\PRGLoadStartReloc.s"

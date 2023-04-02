@@ -138,27 +138,27 @@ M2SDispUpdate:  ;upadte all M2S status display values
 M2SUpdateKeyInLoop:
 ;refresh dynamic SID regs from MIDI:   todo: move this to an interrupt?
    lda SIDVoicCont  ;waveform in upper nibble
-   ora IO1Port+rRegSIDVoicCont1 ;latch bit (0) from MIDI
+   ora rRegSIDVoicCont1+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqHi1 
+   lda rRegSIDFreqHi1+IO1Port 
    sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqLo1 
+   lda rRegSIDFreqLo1+IO1Port 
    sta SIDLoc+rRegSIDFreqLo1-StartSIDRegs 
 
    lda SIDVoicCont  ;waveform in upper nibble
-   ora IO1Port+rRegSIDVoicCont2 ;latch bit (0) from MIDI
+   ora rRegSIDVoicCont2+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqHi2 
+   lda rRegSIDFreqHi2+IO1Port 
    sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqLo2 
+   lda rRegSIDFreqLo2+IO1Port 
    sta SIDLoc+rRegSIDFreqLo2-StartSIDRegs 
 
    lda SIDVoicCont  ;waveform in upper nibble
-   ora IO1Port+rRegSIDVoicCont3 ;latch bit (0) from MIDI
+   ora rRegSIDVoicCont3+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqHi3 
+   lda rRegSIDFreqHi3+IO1Port 
    sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
-   lda IO1Port+rRegSIDFreqLo3 
+   lda rRegSIDFreqLo3+IO1Port 
    sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
 
    jsr DisplayTime
@@ -168,8 +168,8 @@ M2SUpdateKeyInLoop:
    jsr SetCursor
    lda #NameColor
    jsr SendChar
-   lda #<IO1Port+rRegSIDStrStart
-   ldy #>IO1Port+rRegSIDStrStart
+   lda #<rRegSIDStrStart+IO1Port
+   ldy #>rRegSIDStrStart+IO1Port
    jsr PrintString 
    
    jsr GetIn
@@ -282,21 +282,20 @@ rcnt
    bne +
    jsr SIDVoicesOff
    lda MusicPlaying ;turn music back on if it was before...
-   beq rt
+   beq ++
    jsr SIDMusicOn
-rt rts 
+++ rts 
 
 +  jmp M2SUpdateKeyInLoop
 
 ToggleSIDMusic:
    lda MusicPlaying
-   bne +
+   eor #rpudMusicMask   ;toggle playing status
+   sta MusicPlaying
+   beq +
    jsr SIDMusicOn ;sid is off, turn it on
-   lda #01   ;update playing status
-   jmp ++
+   rts
 +  jsr SIDMusicOff ;sid is on, turn it off
-   lda #00   ;update playing status
-++ sta MusicPlaying
    rts
    
 SIDMusicOn:  ;Start SID interrupt

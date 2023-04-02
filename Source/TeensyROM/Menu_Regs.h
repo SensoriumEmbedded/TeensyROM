@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu_C000.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #define MaxItemNameLength 28
 
 enum IO1_Registers  //offset from 0xDE00
@@ -79,6 +79,16 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDOutOfVoices= StartSIDRegs + 38,
    rRegSIDStringTerm = StartSIDRegs + 39,
    
+   rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see bit mask defs
+   rwRegTimezone     = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
+   
+   //~85/256 locations used
+};
+
+enum RegPowerUpDefaultMasks
+{
+   rpudMusicMask     = 0x01, // rwRegPwrUpDefaults bit 0=music on
+   rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1=synch net time
 };
 
 enum RegStatusTypes

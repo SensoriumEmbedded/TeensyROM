@@ -1,17 +1,15 @@
 
-
 #include "ROMs\TeensyROMC64.h"
+
 #include "ROMs\Jupiter_Lander.h" 
 #include "ROMs\1541_Diagnostics.h" 
 #include "ROMs\Joystick_Tester.h" 
 #include "ROMs\Keyboard_Tester.h" 
 #include "ROMs\SID_Tester.h" 
-#include "ROMs\586220_Diagnostics.h" 
 #include "ROMs\586220ast_Diagnostics.h" 
 #include "ROMs\781220_Dead_Test.h" 
 #include "ROMs\Donkey_Kong.h" 
 #include "ROMs\ember_head.prg.h"
-#include "ROMs\Dig_Dug.bin.h"
 #include "ROMs\fb64.prg.h"
 #include "ROMs\ccgms_2021.prg.h"
 #include "ROMs\80columns.prg.h"
@@ -30,7 +28,6 @@ StructMenuItem ROMMenu[] =
    rtNone, "Test/Diags:----------------", NULL                                 , 1, //sepparator
    rt8kHi, "  781220 Dead Test"         , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
    rt8kLo, "  586220* Diagnostics"      , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
-   rt8kLo, "  586220 Diagnostics"       , (uint8_t*)a586220_Diagnostics_BIN    , 1, //size not needed for ROMs
    rt8kLo, "  1541 Diagnostics"         , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
    rt8kLo, "  Keyboard Tester"          , (uint8_t*)Keyboard_Tester_BIN        , 1, //size not needed for ROMs
    rt8kLo, "  SID Tester"               , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
@@ -48,7 +45,6 @@ StructMenuItem ROMMenu[] =
 
    rtNone, "Games:---------------------", NULL                                 , 1, //sepparator
    rt16k , "  Donkey Kong"              , (uint8_t*)Donkey_Kong_BIN            , 1, //size not needed for ROMs      
-   rt16k , "  Dig Dug"                  , (uint8_t*)Dig_Dug_bin                , 1, //size not needed for ROMs
    rtPrg , "  Joust!"                   , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
    rt8kHi, "  Jupiter Lander"           , (uint8_t*)Jupiter_Lander_BIN         , 1,  //graphics messed up...
 

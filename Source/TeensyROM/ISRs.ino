@@ -98,6 +98,14 @@ FASTRUN void isrPHI2()
                IO1[rWRegCurrMenuWAIT]=Data;
                IO1[rRegStatus] = rsChangeMenu; //work this in the main code
                break;
+            case rwRegPwrUpDefaults:
+               IO1[rwRegPwrUpDefaults]= Data;
+               EEPROM.write(eepAdPwrUpDefaults, Data); 
+               break;
+            case rwRegTimezone:
+               IO1[rwRegTimezone]= Data;
+               EEPROM.write(eepAdrwRegTimezone, Data); 
+               break;
             case wRegControl:
                switch(Data)
                {

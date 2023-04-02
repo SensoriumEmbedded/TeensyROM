@@ -28,7 +28,15 @@
 #define NTSCBusFreq    1022730
 #define PALBusFreq      985250
 #define IO1_Size           256
-   
+#define eepMagicNum   0xfeedac64
+
+enum InternalEEPROMmap
+{
+   eepAdMagicNum      = 0, // (uint32_t) Indicated if internal EEPROM has been initialized
+   eepAdPwrUpDefaults = 4, // (uint8_t)  power up default reg, see bit mask defs
+   eepAdrwRegTimezone = 5, // (int8_t)   signed char for timezone: UTC +14/-12 
+};
+
 uint32_t StartCycCnt;
    
 #define PHI2_PIN            1  

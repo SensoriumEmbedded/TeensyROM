@@ -28,10 +28,10 @@ rem --format plain leaves off the 2 byte address from the start of the file.  "c
 SET MainBuild=%MainFilename%.bin
 SET MainCompilerArgs=-r %buildPath%\MainBuildReport --vicelabels %buildPath%\MainSymbols --msvc --color --format plain -v3 --outfile
 
-rem SET cruncherPath=%toolPath%\C64-devkit\cruncher\win32
-rem SET cruncher=pucrunch.exe
-rem SET cruncherArgs=-x$2400 -c64 -g55 -fshort
-rem rem SET cruncherArgs=-x$0801 -c64 -g55 -fshort
+:: SET cruncherPath=%toolPath%\C64-devkit\cruncher\win32
+:: SET cruncher=pucrunch.exe
+:: SET cruncherArgs=-x$2400 -c64 -g55 -fshort
+:: rem SET cruncherArgs=-x$0801 -c64 -g55 -fshort
 
 SET bin2headerPath=%toolPath%\bin2header
 SET bin2header=bin2header.exe
@@ -65,7 +65,7 @@ echo ***bin2header
 %bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
 
-::exit /b
+exit /b
 
 echo ***CartConvert...
 %cartconvPath%\%cartconv% %cartconvArgs%
