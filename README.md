@@ -18,7 +18,9 @@ I'm planning to continue to publish all PCB design files and source code here fo
     * Includes VIC direct reads used on some HiROM carts
   * .prg files: Super fast-loads any PRG into RAM and executes
 * Sets C64 system time from internet (via Ethernet)
-* MIDI USB in -> SID Polyphonic player with waveform/envelope controls
+* Adjustable startup parameters stored in Teensy internal EEPROM
+* MIDI USB in -> SID
+  * 3 voice Polyphonic player with waveform/envelope controls
 
 ## Hardware/PCB Design
 **v0.2 PCB is completed, built and tested!**
@@ -38,7 +40,8 @@ TeensyROM been tested on about a dozen NTSC C64 and C64C machines to this point.
 * Modem emulation via Ethernet connection
 * Method to save from USB/PC to SD or USB Drive
 * MIDI interface enhancements:
-  * Single note, multi-voice/filter/ring
+  * Dual SID, 6 voice poly support
+  * Single note synth, multi-voice/filter/ring
   * Simulate other released MIDI interfaces
 
 ## Demo Videos:
