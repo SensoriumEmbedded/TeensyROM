@@ -99,15 +99,15 @@ const uint8_t OutputPins[] = {
 #define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
     //Could reduce or use whole cycle counts instead of nS... F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 
-// Times starting from Phi2 falling (interrupt):
-#define nS_VICStart        210//200    //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
-//  Hold time for VIC cycle is same as nS_DataHold
+// Times from Phi2 rising (interrupt):
+uint32_t nS_RWnReady   =    100 ;  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
+uint32_t nS_PLAprop    =    145 ;  //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
+uint32_t nS_DataSetup  =    220 ;  //On a C64 write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
+uint32_t nS_DataHold   =    350 ;  //On a C64 read, when to stop driving the data bus, applies to both VIC and normal cycles
 
-// These times starting from Phi2 rising:
-#define nS_RWnReady        130    //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
-#define nS_PLAprop         225    //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
-#define nS_DataSetup       300    //On a write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
-#define nS_DataHold        350    //On a read, when to stop driving the data bus, applies to both VIC and normal cycles
+// Times from Phi2 falling:
+uint32_t nS_VICStart   =    210;  //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
+//  Hold time for VIC cycle is same as nS_DataHold
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {

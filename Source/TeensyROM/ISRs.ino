@@ -24,35 +24,20 @@ FASTRUN void isrButton()
 }
 
 
-FASTRUN void isrPHI2()
+FASTRUN void isrPHI2() //Phi2 rising edge
 {
    //if ((ARM_DWT_CYCCNT-StartCycCnt) > 1500)... //check for missed cycles?
    StartCycCnt = ARM_DWT_CYCCNT;     //RESET_CYCLECOUNT; kills any other delay() type opperations
    if (DisablePhi2ISR) return;
    SetDebugAssert;
-   WaitUntil_nS(nS_VICStart);
-   
+
+   WaitUntil_nS(nS_RWnReady); 
    register uint8_t  Data;
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
-   register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
-
-   if (HIROM_Image!=NULL && !GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
-   {
-      DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
-   } 
-   
-   while(GP6_Phi2(ReadGPIO6) == 0); //Re-align to phi2 rising   
-   //phi2 has gone high..........................................................................
-   
-   StartCycCnt = ARM_DWT_CYCCNT;
-      
-   WaitUntil_nS(nS_RWnReady); 
-   GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
-   Address = GP6_Address(GPIO_6); //parse out address
    
  	WaitUntil_nS(nS_PLAprop); 
-   GPIO_9 = ReadGPIO9; //Now read the derived signals 
+   register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
@@ -141,7 +126,26 @@ FASTRUN void isrPHI2()
    else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
  #endif
 
-   //leave time enough time to re-trigger on falling edge!
+if (HIROM_Image!=NULL) // && SetExROMDeassert(ed)
+{
+   while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
+   //phi2 has gone low..........................................................................
+   
+   StartCycCnt = ARM_DWT_CYCCNT;
+
+   WaitUntil_nS(nS_VICStart);
+   
+   GPIO_6 = ReadGPIO6; //Address bus and R/*W 
+   Address = GP6_Address(GPIO_6); //parse out address
+   GPIO_9 = ReadGPIO9; //Now read the derived signals
+
+   if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+   {
+      DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
+   } 
+}
+   
+   //leave time enough time to re-trigger on rising edge!
    SetDebugDeassert;    
 }
 
