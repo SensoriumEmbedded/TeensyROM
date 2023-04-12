@@ -112,11 +112,6 @@ void MenuChange()
          break;
       case rmtUSBDrive:
          stpcpy(USBDrivePath, "/");
-         firstPartition.begin(&myDrive); //takes a couple seconds first time if no drive present
-            //Serial.print("USB Drive initialization... ");
-            ////future USBFilesystem will begin automatically, begin(USBDrive) is a temporary feature
-            //if (firstPartition.begin(&myDrive)) Serial.println("passed.");
-            //else Serial.println("***Failed!***");
          LoadDirectory(false);
          MenuSource = USBDriveMenu; 
          break;
