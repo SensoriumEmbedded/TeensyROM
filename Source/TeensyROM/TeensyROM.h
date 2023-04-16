@@ -40,18 +40,17 @@ enum InternalEEPROMmap
 uint32_t StartCycCnt;
    
 #define PHI2_PIN            1  
-#define Reset_Btn_In_PIN         31  
+#define Reset_Btn_In_PIN   31  
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
-   2, 3, 4, 5, PHI2_PIN, 0,         // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
-   28, 29, Reset_Btn_In_PIN,    //DOT clk, BA, Reset button
+   2, 3, 4, 5, PHI2_PIN, 0,   // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
+   28, 29, Reset_Btn_In_PIN,  // DOT clk, BA, Reset button
    };
 
 const uint8_t OutputPins[] = {
-   35, 9, 32, // DataCEn, ExROM, Game
-   30, 25, 24,   //DMA, NMI, IRQ
-   34,33,     //LED, debug
-   6,    //Reset_Out_PIN,
+   35, 9, 32,   // DataCEn, ExROM, Game
+   30, 25, 24,  // DMA, NMI, IRQ
+   34,33, 6,    // LED, debug, Reset_Out_PIN,
    };
 
 #define ReadGPIO6          (*(volatile uint32_t *)IMXRT_GPIO6_ADDRESS)
@@ -100,14 +99,14 @@ const uint8_t OutputPins[] = {
     //Could reduce or use whole cycle counts instead of nS... F_CPU_ACTUAL=816000000  /1000000000 = 0.816
 
 // Times from Phi2 rising (interrupt):
-uint32_t nS_RWnReady   =    100 ;  //Phi2 rise to RWn valid, takes ~30nS past Phi2 to go low for write
-uint32_t nS_PLAprop    =    145 ;  //delay through PLA to decode address (IO1/2, ROML/H), have measured >100nS from Phi2 to IO1 (delayed through PLA, etc)
-uint32_t nS_DataSetup  =    220 ;  //On a C64 write, when to latch data bus. spec calls for 150-200nS min to Data valid for write opperation (TMDS)
-uint32_t nS_DataHold   =    350 ;  //On a C64 read, when to stop driving the data bus, applies to both VIC and normal cycles
+uint32_t nS_RWnReady   =     80;  //Phi2 rise to RWn valid
+uint32_t nS_PLAprop    =    140;  //delay through PLA to decode address (IO1/2, ROML/H)
+uint32_t nS_DataSetup  =    220;  //On a C64 write, when to latch data bus.
+uint32_t nS_DataHold   =    350;  //On a C64 read, when to stop driving the data bus
 
 // Times from Phi2 falling:
 uint32_t nS_VICStart   =    210;  //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
-//  Hold time for VIC cycle is same as nS_DataHold
+//  Hold time for VIC cycle is same as normal cyc (nS_DataHold)
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
@@ -138,4 +137,12 @@ __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
    #endif
 }
 
+enum Phi2ISRStates
+{
+   P2I_Normal,
+   P2I_Off,
+   P2I_TimingCheck,
+};
+
+#define NumTimeSamples   20 
 

@@ -27,8 +27,17 @@ FASTRUN void isrButton()
 FASTRUN void isrPHI2() //Phi2 rising edge
 {
    //if ((ARM_DWT_CYCCNT-StartCycCnt) > 1500)... //check for missed cycles?
+   if (Phi2ISRState != P2I_Normal) 
+   {
+      if (Phi2ISRState == P2I_TimingCheck)
+      {
+         CycleTime[StreamOffsetAddr++] = ARM_DWT_CYCCNT-StartCycCnt;
+         StartCycCnt = ARM_DWT_CYCCNT;
+         if (StreamOffsetAddr == NumTimeSamples) Phi2ISRState = P2I_Normal;
+      }
+      return;
+   }
    StartCycCnt = ARM_DWT_CYCCNT;     //RESET_CYCLECOUNT; kills any other delay() type opperations
-   if (DisablePhi2ISR) return;
    SetDebugAssert;
 
    WaitUntil_nS(nS_RWnReady); 
@@ -36,7 +45,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
    
- 	WaitUntil_nS(nS_PLAprop); 
+   WaitUntil_nS(nS_PLAprop); 
    register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
@@ -107,7 +116,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
                      LOROM_Image = NULL;
                      HIROM_Image = NULL;  
                      SetLEDOff;
-                     DisablePhi2ISR = true;
+                     Phi2ISRState = P2I_Off;
                      doReset=true;
                      break;
                   case rCtlStartSelItemWAIT:

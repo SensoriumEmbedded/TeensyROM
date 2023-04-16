@@ -36,7 +36,8 @@ uint8_t* IO1;  //io1 space/regs
 uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
-volatile uint8_t DisablePhi2ISR = false;
+volatile uint8_t Phi2ISRState = P2I_Normal;
+uint32_t* CycleTime;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
@@ -129,6 +130,20 @@ void setup()
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdrwRegTimezone);  
 
+   //CycleTime = (uint32_t*)malloc(NumTimeSamples*sizeof(uint32_t));
+   //StreamOffsetAddr = 0;
+   //Phi2ISRState = P2I_TimingCheck;
+   //while (Phi2ISRState!=P2I_Normal);
+   //for (uint8_t SampNum = 0; SampNum < NumTimeSamples; SampNum++) 
+   //{
+   //   Serial.print(SampNum);
+   //   Serial.print(" : ");
+   //   Serial.print(CycleTime[SampNum]);
+   //   Serial.print(" : ");
+   //   Serial.println(CycleTime[SampNum]*(1000000000UL>>16)/(F_CPU_ACTUAL>>16));
+   //}
+   //free(CycleTime);
+   
    Serial.print("TeensyROM 0.2 is on-line\n");
 
 } 
@@ -141,7 +156,7 @@ void loop()
       SetLEDOn;
       BtnPressed=false;
       SetUpMainMenuROM(); //back to main menu
-      DisablePhi2ISR=false;
+      Phi2ISRState=P2I_Normal;
       doReset=true;
    }
    
