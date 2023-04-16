@@ -145,7 +145,7 @@ void setup()
    //free(CycleTime);
    
    Serial.print("TeensyROM 0.2 is on-line\n");
-
+   Serial.flush();
 } 
      
 void loop()
@@ -162,11 +162,11 @@ void loop()
    
    if (doReset)
    {
-      Serial.print("Resetting C64..."); 
       SetResetAssert; 
+      Serial.println("Resetting C64"); 
+      Serial.flush();
       delay(50); 
       while(ReadButton==0); //avoid self reset detection
-      Serial.print("Done\n");
       doReset=false;
       BtnPressed = false;
       SetResetDeassert;
