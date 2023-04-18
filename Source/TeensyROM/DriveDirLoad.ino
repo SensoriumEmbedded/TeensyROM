@@ -77,6 +77,7 @@ void HandleExecution()
          LOROM_Image = NULL;
          HIROM_Image = MenuSel.Code_Image;
          doReset=true;
+         EmulateVicCycles = true;
          break;
       case rt8kLo:
          SetGameDeassert;

@@ -135,7 +135,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
  #endif
 
-if (HIROM_Image!=NULL) // && SetExROMDeassert(ed)
+if (EmulateVicCycles)
 {
    while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
    //phi2 has gone low..........................................................................

@@ -36,6 +36,7 @@ uint8_t* IO1;  //io1 space/regs
 uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
+volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 uint32_t* CycleTime;
 uint16_t StreamOffsetAddr = 0;
@@ -193,5 +194,6 @@ void SetUpMainMenuROM()
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
+   EmulateVicCycles = false;
 }
 
