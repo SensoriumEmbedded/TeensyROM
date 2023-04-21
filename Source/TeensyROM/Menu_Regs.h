@@ -126,6 +126,7 @@ enum regItemTypes
    rtUnk  = 5,
    rtCrt  = 6,
    rtDir  = 7,
+   rtC128 = 8,
 };
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

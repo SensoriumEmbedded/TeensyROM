@@ -21,6 +21,7 @@
    rRegItemNameStart = 15 ;//MaxItemNameLength bytes long (incl term)
    rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength
    StartSIDRegs      = rRegItemNameTerm+1  ;//start of SID Regs, matching SID Reg order ($D400)
+
    rRegSIDFreqLo1    = StartSIDRegs +  0 
    rRegSIDFreqHi1    = StartSIDRegs +  1
    rRegSIDDutyLo1    = StartSIDRegs +  2
@@ -91,5 +92,6 @@
    rtUnk  = 5
    rtCrt  = 6
    rtDir  = 7
+   rtC128 = 8
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

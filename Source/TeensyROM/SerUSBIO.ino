@@ -233,8 +233,6 @@ void getNtpTime()
       }
    }
    Serial.println("NTP Response timeout!");
-   //Ethernet.stop();
-   //Ethernet.maintain();
 }
 
 uint8_t DecToBCD(uint8_t DecVal)
