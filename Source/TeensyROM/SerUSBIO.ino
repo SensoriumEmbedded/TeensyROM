@@ -35,7 +35,6 @@ void ServiceSerial()
          case 0xEE:
             Serial.println("Reset cmd received");
             SetUpMainMenuROM();
-            doReset = true;
             break;
          case 0x67:
             //getNtpTime();
@@ -233,8 +232,6 @@ void getNtpTime()
       }
    }
    Serial.println("NTP Response timeout!");
-   //Ethernet.stop();
-   //Ethernet.maintain();
 }
 
 uint8_t DecToBCD(uint8_t DecVal)

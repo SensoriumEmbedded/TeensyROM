@@ -21,6 +21,7 @@
    rRegItemNameStart = 15 ;//MaxItemNameLength bytes long (incl term)
    rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength
    StartSIDRegs      = rRegItemNameTerm+1  ;//start of SID Regs, matching SID Reg order ($D400)
+
    rRegSIDFreqLo1    = StartSIDRegs +  0 
    rRegSIDFreqHi1    = StartSIDRegs +  1
    rRegSIDDutyLo1    = StartSIDRegs +  2
@@ -61,7 +62,8 @@
    
    rwRegPwrUpDefaults= StartSIDRegs + 40 ; power up default reg, see bit mask defs
    rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
-   
+   rwRegNextIO1Hndlr = StartSIDRegs + 42  
+  
    
    
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
@@ -82,6 +84,7 @@
    rCtlVanishReset      = 1
    rCtlStartSelItemWAIT = 2
    rCtlGetTimeWAIT      = 3
+   rCtlRunningPRG       = 4 ; final signal before running prg, allows IO1 handler change
 
    rtNone = 0  ;synch with TblItemType below
    rt16k  = 1
@@ -91,5 +94,6 @@
    rtUnk  = 5
    rtCrt  = 6
    rtDir  = 7
+   rtC128 = 8
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

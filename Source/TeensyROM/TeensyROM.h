@@ -144,5 +144,25 @@ enum Phi2ISRStates
    P2I_TimingCheck,
 };
 
+enum IO1Handlers
+{
+   IO1H_None,
+   IO1H_TeensyROM,
+   IO1H_MIDI,
+};
+
+enum MIDIemulIO1Regs
+{  //SEQUENTIAL CIRCUITS emulation
+   wIORegAddrMIDIControl  = 0,
+   rIORegAddrMIDIStatus   = 2,
+   wIORegAddrMIDITransmit = 1,
+   rIORegAddrMIDIReceive  = 3,
+};
+
+uint8_t wIORegMIDIControl;
+uint8_t rIORegMIDIStatus   = 33;
+uint8_t wIORegMIDITransmit;
+uint8_t rIORegMIDIReceive  = 66;
+
 #define NumTimeSamples   20 
 

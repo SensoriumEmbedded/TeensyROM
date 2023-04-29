@@ -38,6 +38,7 @@ volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
+volatile uint8_t IO1Handler = IO1H_None;
 uint32_t* CycleTime;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
@@ -88,7 +89,6 @@ void setup()
    SetDMADeassert;
    SetNMIDeassert;
    SetIRQDeassert;
-   SetUpMainMenuROM();
    SetLEDOn;
    SetDebugDeassert;
    SetResetAssert; //assert reset until main loop()
@@ -130,6 +130,7 @@ void setup()
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdrwRegTimezone);  
+   SetUpMainMenuROM();
 
    //CycleTime = (uint32_t*)malloc(NumTimeSamples*sizeof(uint32_t));
    //StreamOffsetAddr = 0;
@@ -158,7 +159,6 @@ void loop()
       BtnPressed=false;
       SetUpMainMenuROM(); //back to main menu
       Phi2ISRState=P2I_Normal;
-      doReset=true;
    }
    
    if (doReset)
@@ -194,6 +194,10 @@ void SetUpMainMenuROM()
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
+   IO1Handler = IO1H_TeensyROM;
+   //IO1[rwRegNextIO1Hndlr] = IO1H_None;
+   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;
    EmulateVicCycles = false;
+   doReset = true;
 }
 

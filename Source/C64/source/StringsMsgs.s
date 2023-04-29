@@ -224,5 +224,5 @@ MsgErrNoData:
 ;   !tx "No File Available", 0
    
 TblItemType: ;must match rtNone, rt16k, etc order!
-   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir " ;4 bytes each, no term
+   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir ","C128" ;4 bytes each, no term
    

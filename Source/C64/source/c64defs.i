@@ -59,22 +59,22 @@
    ChrCSRSUp  = 145
    ChrCSRSDn  = 17
    
-;poke colors
-   pokeBlack   = 0
-   pokeWhite   = 1
-   pokeRed     = 2
-   pokeCyan    = 3
-   pokePurple  = 4
-   pokeGreen   = 5
-   pokeBlue    = 6
-   pokeYellow  = 7
-   pokeOrange  = 8
-   pokeBrown   = 9
-   pokeLtRed   = 10
-   pokeDrkGrey = 11
-   pokeMedGrey = 12
-   pokeLtGreen = 13
-   pokeLtBlue  = 14
-   pokeLtGrey  = 15
+;Poke colors
+   PokeBlack   = 0
+   PokeWhite   = 1
+   PokeRed     = 2
+   PokeCyan    = 3
+   PokePurple  = 4
+   PokeGreen   = 5
+   PokeBlue    = 6
+   PokeYellow  = 7
+   PokeOrange  = 8
+   PokeBrown   = 9
+   PokeLtRed   = 10
+   PokeDrkGrey = 11
+   PokeMedGrey = 12
+   PokeLtGreen = 13
+   PokeLtBlue  = 14
+   PokeLtGrey  = 15
 
 

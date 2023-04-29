@@ -62,6 +62,7 @@ void HandleExecution()
    
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
+   uint8_t CartLoaded = false;
    switch(MenuSel.ItemType)
    {
       case rt16k:
@@ -69,14 +70,14 @@ void HandleExecution()
          SetExROMAssert;
          LOROM_Image = MenuSel.Code_Image;
          HIROM_Image = MenuSel.Code_Image+0x2000;
-         doReset=true;
+         CartLoaded=true;
          break;
       case rt8kHi:
          SetGameAssert;
          SetExROMDeassert;
          LOROM_Image = NULL;
          HIROM_Image = MenuSel.Code_Image;
-         doReset=true;
+         CartLoaded=true;
          EmulateVicCycles = true;
          break;
       case rt8kLo:
@@ -84,8 +85,15 @@ void HandleExecution()
          SetExROMAssert;
          LOROM_Image = MenuSel.Code_Image;
          HIROM_Image = NULL;
-         doReset=true;
+         CartLoaded=true;
          break;
+      case rtC128:
+         SetGameDeassert;
+         SetExROMDeassert;
+         LOROM_Image = MenuSel.Code_Image;
+         HIROM_Image = NULL;
+         CartLoaded=true;
+         break;      
       case rtPrg:
          //set up for transfer
          MenuSource[IO1[rwRegSelItem]].Code_Image = MenuSel.Code_Image; 
@@ -96,6 +104,14 @@ void HandleExecution()
          StreamOffsetAddr = 2; //set to start of data
          break;
    }
+   
+   if (CartLoaded)
+   {
+      doReset=true;
+      IO1Handler = IO1[rwRegNextIO1Hndlr];
+      //Serial.printf("CRT loaded, IO1Handler chg: %d\n", IO1Handler);
+   }
+
 }
 
 void MenuChange()
@@ -223,10 +239,12 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
    MyMenuItem->ItemType = rtUnk; //in case we fail
+   uint8_t  C128Cart = false;
    
-   if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)!=0)
+   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) C128Cart = true;
+   else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)!=0)
    {
-      Serial.println("\"C64 CARTRIDGE\" not found");
+      Serial.println("\"C64/128 CARTRIDGE\" not found");
       return;
    }
    
@@ -286,6 +304,13 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    {
       MyMenuItem->ItemType = rt16k;
       Serial.println("\n 16k config");
+      return;
+   }      
+   
+   if(EXROM==0 && GAME==0 && LoadAddress == 0x0000 && ROMSize == 0x2000 && C128Cart)
+   {
+      MyMenuItem->ItemType = rtC128;
+      Serial.println("\n C128 config");
       return;
    }      
    
