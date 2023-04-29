@@ -35,7 +35,6 @@ void ServiceSerial()
          case 0xEE:
             Serial.println("Reset cmd received");
             SetUpMainMenuROM();
-            doReset = true;
             break;
          case 0x67:
             //getNtpTime();

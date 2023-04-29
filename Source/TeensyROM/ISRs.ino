@@ -41,7 +41,6 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    SetDebugAssert;
 
    WaitUntil_nS(nS_RWnReady); 
-   register uint8_t  Data;
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
    
@@ -59,76 +58,15 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
       Address &= 0xFF;
-      if (GP6_R_Wn(GPIO_6)) //High (IO1 Read)
+      switch(IO1Handler)
       {
-         switch(Address)
-         {
-            case rRegItemType:
-               DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].ItemType);  
-               break;
-            case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
-               Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
-               DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
-               break;
-            case rRegStreamData:
-               DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
-               //inc on read, check for end:
-               if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
-               break;
-            default: //used for all other IO1 reads
-               DataPortWriteWait(IO1[Address]); 
-               break;
-         }
+         case IO1H_TeensyROM:
+            IO1Hndlr_TeensyROM(Address, GP6_R_Wn(GPIO_6));
+            break;
+         case IO1H_MIDI:
+            IO1Hndlr_MIDI(Address, GP6_R_Wn(GPIO_6));
+            break;
       }
-      else  // IO1 write
-      {
-         Data = DataPortWaitRead(); 
-         switch(Address)
-         {
-            case rwRegSelItem:
-               IO1[rwRegSelItem]=Data;
-               break;
-            case rWRegCurrMenuWAIT:
-               IO1[rWRegCurrMenuWAIT]=Data;
-               IO1[rRegStatus] = rsChangeMenu; //work this in the main code
-               break;
-            case rwRegPwrUpDefaults:
-               IO1[rwRegPwrUpDefaults]= Data;
-               EEPROM.write(eepAdPwrUpDefaults, Data); 
-               break;
-            case rwRegTimezone:
-               IO1[rwRegTimezone]= Data;
-               EEPROM.write(eepAdrwRegTimezone, Data); 
-               break;
-            case wRegControl:
-               switch(Data)
-               {
-                  case rCtlVanish:
-                     SetGameDeassert;
-                     SetExROMDeassert;      
-                     LOROM_Image = NULL;
-                     HIROM_Image = NULL;  
-                     //SetLEDOff;
-                     break;
-                  case rCtlVanishReset:  
-                     SetGameDeassert;
-                     SetExROMDeassert;      
-                     LOROM_Image = NULL;
-                     HIROM_Image = NULL;  
-                     SetLEDOff;
-                     Phi2ISRState = P2I_Off;
-                     doReset=true;
-                     break;
-                  case rCtlStartSelItemWAIT:
-                     IO1[rRegStatus] = rsStartItem; //work this in the main code
-                     break;
-                  case rCtlGetTimeWAIT:
-                     IO1[rRegStatus] = rsGetTime; //work this in the main code
-                     break;
-               }
-               break;
-         }
-      } //write
    }  //IO1
  #ifdef DebugMessages
    //IO2: DFxx address space
@@ -159,4 +97,113 @@ if (EmulateVicCycles)
 }
 
 
+__attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
+{
+   uint8_t Data;
+   if (R_Wn) //High (IO1 Read)
+   {
+      switch(Address)
+      {
+         case rRegItemType:
+            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].ItemType);  
+            break;
+         case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
+            Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
+            DataPortWriteWait(Data>64 ? (Data^32) : Data);  //Convert to PETscii
+            break;
+         case rRegStreamData:
+            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
+            //inc on read, check for end:
+            if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
+            break;
+         default: //used for all other IO1 reads
+            DataPortWriteWait(IO1[Address]); 
+            break;
+      }
+   }
+   else  // IO1 write
+   {
+      Data = DataPortWaitRead(); 
+      switch(Address)
+      {
+         case rwRegSelItem:
+            IO1[rwRegSelItem]=Data;
+            break;
+         case rWRegCurrMenuWAIT:
+            IO1[rWRegCurrMenuWAIT]=Data;
+            IO1[rRegStatus] = rsChangeMenu; //work this in the main code
+            break;
+         case rwRegPwrUpDefaults:
+            IO1[rwRegPwrUpDefaults]= Data;
+            EEPROM.write(eepAdPwrUpDefaults, Data); 
+            break;
+         case rwRegTimezone:
+            IO1[rwRegTimezone]= Data;
+            EEPROM.write(eepAdrwRegTimezone, Data); 
+            break;
+         case wRegControl:
+            switch(Data)
+            {
+               case rCtlVanish:
+                  SetGameDeassert;
+                  SetExROMDeassert;      
+                  LOROM_Image = NULL;
+                  HIROM_Image = NULL;  
+                  //SetLEDOff;
+                  break;
+               case rCtlVanishReset:  
+                  SetGameDeassert;
+                  SetExROMDeassert;      
+                  LOROM_Image = NULL;
+                  HIROM_Image = NULL;  
+                  SetLEDOff;
+                  Phi2ISRState = P2I_Off;
+                  doReset=true;
+                  break;
+               case rCtlStartSelItemWAIT:
+                  IO1[rRegStatus] = rsStartItem; //work this in the main code
+                  break;
+               case rCtlGetTimeWAIT:
+                  IO1[rRegStatus] = rsGetTime; //work this in the main code
+                  break;
+               case rCtlRunningPRG:
+                  //C64 code is executing transfered program, change IO1 handler
+                  IO1Handler = IO1[rwRegNextIO1Hndlr];
+                  break;
+            }
+            break;
+      }
+   } //write
+}
 
+__attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool R_Wn)
+{
+   uint8_t Data;
+   if (R_Wn) //High (IO1 Read)
+   {
+      switch(Address)
+      {
+         case rIORegAddrMIDIStatus:
+            DataPortWriteWait(rIORegMIDIStatus);  
+            break;
+         case rIORegAddrMIDIReceive:
+            DataPortWriteWait(rIORegMIDIReceive);  
+            SetIRQDeassert;
+            break;
+      }
+   }
+   else  // IO1 write
+   {
+     Data = DataPortWaitRead(); 
+     switch(Address)
+      {
+         case wIORegAddrMIDIControl:
+            wIORegMIDIControl = Data;
+            break;
+         case wIORegAddrMIDITransmit:
+            wIORegMIDITransmit = Data;
+            break;
+      }
+   }
+
+}

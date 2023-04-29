@@ -39,6 +39,8 @@ PRGLoadStart:
    sta $ae  ;End of load address (Lo)
    stx $af  ; (Hi)
    
+   lda #rCtlRunningPRG    ;let TR know we're done, change IO1 handler
+   sta wRegControl+IO1Port 
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
    jsr $ab1e   ;PrintString

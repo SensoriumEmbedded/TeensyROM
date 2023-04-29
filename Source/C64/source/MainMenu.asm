@@ -25,8 +25,8 @@
    !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
 
    ;color scheme:
-   BorderColor      = pokePurple
-   BackgndColor     = pokeBlack
+   BorderColor      = PokePurple
+   BackgndColor     = PokeBlack
    TimeColor        = ChrOrange
    MenuMiscColor    = ChrGreen
    ROMNumColor      = ChrDrkGrey

@@ -62,6 +62,7 @@ void HandleExecution()
    
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
+   uint8_t CartLoaded = false;
    switch(MenuSel.ItemType)
    {
       case rt16k:
@@ -69,14 +70,14 @@ void HandleExecution()
          SetExROMAssert;
          LOROM_Image = MenuSel.Code_Image;
          HIROM_Image = MenuSel.Code_Image+0x2000;
-         doReset=true;
+         CartLoaded=true;
          break;
       case rt8kHi:
          SetGameAssert;
          SetExROMDeassert;
          LOROM_Image = NULL;
          HIROM_Image = MenuSel.Code_Image;
-         doReset=true;
+         CartLoaded=true;
          EmulateVicCycles = true;
          break;
       case rt8kLo:
@@ -84,14 +85,14 @@ void HandleExecution()
          SetExROMAssert;
          LOROM_Image = MenuSel.Code_Image;
          HIROM_Image = NULL;
-         doReset=true;
+         CartLoaded=true;
          break;
       case rtC128:
          SetGameDeassert;
          SetExROMDeassert;
          LOROM_Image = MenuSel.Code_Image;
          HIROM_Image = NULL;
-         doReset=true;
+         CartLoaded=true;
          break;      
       case rtPrg:
          //set up for transfer
@@ -103,6 +104,14 @@ void HandleExecution()
          StreamOffsetAddr = 2; //set to start of data
          break;
    }
+   
+   if (CartLoaded)
+   {
+      doReset=true;
+      IO1Handler = IO1[rwRegNextIO1Hndlr];
+      //Serial.printf("CRT loaded, IO1Handler chg: %d\n", IO1Handler);
+   }
+
 }
 
 void MenuChange()
@@ -298,7 +307,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       return;
    }      
    
-   if(EXROM==0 && GAME==0 && LoadAddress == 0x0000 && ROMSize == 0x2000)
+   if(EXROM==0 && GAME==0 && LoadAddress == 0x0000 && ROMSize == 0x2000 && C128Cart)
    {
       MyMenuItem->ItemType = rtC128;
       Serial.println("\n C128 config");

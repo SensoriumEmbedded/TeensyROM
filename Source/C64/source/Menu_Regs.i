@@ -62,7 +62,8 @@
    
    rwRegPwrUpDefaults= StartSIDRegs + 40 ; power up default reg, see bit mask defs
    rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
-   
+   rwRegNextIO1Hndlr = StartSIDRegs + 42  
+  
    
    
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
@@ -83,6 +84,7 @@
    rCtlVanishReset      = 1
    rCtlStartSelItemWAIT = 2
    rCtlGetTimeWAIT      = 3
+   rCtlRunningPRG       = 4 ; final signal before running prg, allows IO1 handler change
 
    rtNone = 0  ;synch with TblItemType below
    rt16k  = 1

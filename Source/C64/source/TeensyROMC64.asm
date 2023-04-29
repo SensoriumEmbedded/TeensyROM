@@ -23,8 +23,8 @@
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
 
    ;color scheme:
-   BorderColor       = pokePurple
-   BackgndColor      = pokeBlack
+   BorderColor       = PokePurple
+   BackgndColor      = PokeBlack
 
    ;RAM Registers:
    PtrAddrLo   = $fb
