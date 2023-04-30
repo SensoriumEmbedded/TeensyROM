@@ -149,20 +149,41 @@ enum IO1Handlers
    IO1H_None,
    IO1H_TeensyROM,
    IO1H_MIDI,
+   IO1H_MIDI_DEBUG,
 };
 
+//see https://codebase64.org/doku.php?id=base:c64_midi_interfaces
+//DATEL/SIEL/JMS/C-LAB
 enum MIDIemulIO1Regs
-{  //SEQUENTIAL CIRCUITS emulation
-   wIORegAddrMIDIControl  = 0,
-   rIORegAddrMIDIStatus   = 2,
-   wIORegAddrMIDITransmit = 1,
-   rIORegAddrMIDIReceive  = 3,
+{  
+   wIORegAddrMIDIControl  = 4,
+   rIORegAddrMIDIStatus   = 6,
+   wIORegAddrMIDITransmit = 5,
+   rIORegAddrMIDIReceive  = 7,
 };
+#define MIDIContReset     0x03 // Master Reset
+//#define MIDIContEnable    0x16 // Word Select & Counter Divide
+//#define MIDIContIRQEnable 0x96 // IRQ ON, Word Select & Counter Divide
 
-uint8_t wIORegMIDIControl;
-uint8_t rIORegMIDIStatus   = 33;
-uint8_t wIORegMIDITransmit;
-uint8_t rIORegMIDIReceive  = 66;
+//SEQUENTIAL CIRCUITS
+//enum MIDIemulIO1Regs
+//{  
+//   wIORegAddrMIDIControl  = 0,
+//   rIORegAddrMIDIStatus   = 2,
+//   wIORegAddrMIDITransmit = 1,
+//   rIORegAddrMIDIReceive  = 3,
+//};
+//#define MIDIContReset     0x03 // Master Reset
+////#define MIDIContEnable    0x15 // Word Select & Counter Divide
+////#define MIDIContIRQEnable 0x95 // IRQ ON, Word Select & Counter Divide
+
+#define NumMIDIControls 16  //must be power of 2
+//volatile uint8_t wIORegMIDIControl;
+//volatile uint8_t wIORegMIDITransmit;
+volatile uint8_t rIORegMIDIStatus   = 0;
+volatile uint8_t MIDIRxBytesToSend = 0;
+volatile uint8_t rIORegMIDIReceiveBuf[3];
+uint8_t MIDIControlVals[NumMIDIControls];
 
 #define NumTimeSamples   20 
 

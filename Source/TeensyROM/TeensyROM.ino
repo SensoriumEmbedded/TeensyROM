@@ -88,7 +88,6 @@ void setup()
    SetDataPortDirOut; //default to output (for C64 Read)
    SetDMADeassert;
    SetNMIDeassert;
-   SetIRQDeassert;
    SetLEDOn;
    SetDebugDeassert;
    SetResetAssert; //assert reset until main loop()
@@ -105,10 +104,6 @@ void setup()
    else Serial.println("***Failed!***");
   
    myusb.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-   midi1.setHandleNoteOff(OnNoteOff);
-   midi1.setHandleNoteOn(OnNoteOn);
-   midi1.setHandleControlChange(OnControlChange); //not used
-   midi1.setHandlePitchChange(OnPitchChange);  //not used
 
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
@@ -175,21 +170,24 @@ void loop()
   
    if (IO1[rRegStatus] != rsReady) 
    {
-      if(IO1[rRegStatus] == rsChangeMenu)     MenuChange();
-      else if(IO1[rRegStatus] == rsGetTime)   getNtpTime();
-      else if(IO1[rRegStatus] == rsStartItem) HandleExecution();
+      if     (IO1[rRegStatus] == rsChangeMenu) MenuChange();
+      else if(IO1[rRegStatus] == rsGetTime)    getNtpTime();
+      else if(IO1[rRegStatus] == rsStartItem)  HandleExecution();
+      else if(IO1[rRegStatus] == rsIO1HWinit)  IO1HWinit();
+      
       IO1[rRegStatus] = rsReady;
    }
    
    if (Serial.available()) ServiceSerial();
    
    myusb.Task();
-   midi1.read();
+   if (MIDIRxBytesToSend==0) midi1.read();
 }
 
 void SetUpMainMenuROM()
 {
    //emulate 16k cart ROM
+   SetIRQDeassert;
    SetGameAssert;
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
@@ -198,6 +196,11 @@ void SetUpMainMenuROM()
    //IO1[rwRegNextIO1Hndlr] = IO1H_None;
    IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;
    EmulateVicCycles = false;
+   MIDIRxBytesToSend = 0;
+   midi1.setHandleNoteOff(M2SOnNoteOff);
+   midi1.setHandleNoteOn(M2SOnNoteOn);
+   midi1.setHandleControlChange(M2SOnControlChange);
+   midi1.setHandlePitchChange(M2SOnPitchChange);
    doReset = true;
 }
 

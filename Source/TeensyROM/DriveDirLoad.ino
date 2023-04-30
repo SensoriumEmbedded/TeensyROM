@@ -108,7 +108,7 @@ void HandleExecution()
    if (CartLoaded)
    {
       doReset=true;
-      IO1Handler = IO1[rwRegNextIO1Hndlr];
+      IO1HWinit();
       //Serial.printf("CRT loaded, IO1Handler chg: %d\n", IO1Handler);
    }
 

@@ -33,8 +33,8 @@ stcVoiceInfo Voice[NUM_VOICES]=
    true, 0,
 };
 
-void OnNoteOn(byte channel, byte note, byte velocity)
-{
+void M2SOnNoteOn(byte channel, byte note, byte velocity)
+{   
    note+=3; //offset to A centered from C
    int VoiceNum = FindFreeVoice();
    if (VoiceNum<0)
@@ -48,7 +48,7 @@ void OnNoteOn(byte channel, byte note, byte velocity)
    
    float Frequency = 440*pow(1.059463094359,note-60);  
    uint32_t RegVal = Frequency*16777216/NTSCBusFreq;
-
+   
    if (RegVal > 0xffff) 
    {
       #ifdef DebugMessages
@@ -83,12 +83,12 @@ void OnNoteOn(byte channel, byte note, byte velocity)
    #endif
 }
 
-void OnNoteOff(byte channel, byte note, byte velocity)
+void M2SOnNoteOff(byte channel, byte note, byte velocity)
 {
    note+=3; //offset to A centered from C
    IO1[rRegSIDOutOfVoices]=' ';
    int VoiceNum = FindVoiceUsingNote(note);
-  
+   
    if (VoiceNum<0)
    {
       #ifdef DebugMessages
@@ -116,29 +116,29 @@ void OnNoteOff(byte channel, byte note, byte velocity)
    #endif
 }
 
-void OnControlChange(byte channel, byte control, byte value)
+void M2SOnControlChange(byte channel, byte control, byte value)
 {
-
+   
    #ifdef DebugMessages
     Serial.print("MIDI Control Change, ch=");
     Serial.print(channel);
     Serial.print(", control=");
     Serial.print(control);
-    Serial.print(", value=");
-    Serial.print(value);
+    Serial.print(", NewVal=");
+    Serial.print(NewVal);
     Serial.println();
    #endif
 }
 
-void OnPitchChange(byte channel, int pitch) 
+void M2SOnPitchChange(byte channel, int pitch) 
 {
-  //chan 1 (ignoring), -8192 to 8192, returns to 0 always!
- 
+
    #ifdef DebugMessages
     Serial.print("Pitch Change, ch=");
     Serial.print(channel, DEC);
     Serial.print(", pitch=");
     Serial.println(pitch, DEC);
+    Serial.printf("     0-6= %02x, 7-13=%02x\n", pitch & 0x7f, (pitch>>7) & 0x7f);
    #endif
 }
 
@@ -158,4 +158,59 @@ int FindFreeVoice()
     if(Voice[VoiceNum].Available) return (VoiceNum);  
   }
   return (-1);
+}
+
+
+
+//MIDI input handlers for HW Emulation _________________________________________________________________________
+
+void HWEOnNoteOn(byte channel, byte note, byte velocity)
+{
+   rIORegMIDIReceiveBuf[2] = 0x90 | channel;
+   rIORegMIDIReceiveBuf[1] = note;
+   rIORegMIDIReceiveBuf[0] = velocity;
+   MIDIRxBytesToSend = 3;
+   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+   SetIRQAssert;
+}
+
+void HWEOnNoteOff(byte channel, byte note, byte velocity)
+{
+   rIORegMIDIReceiveBuf[2] = 0x80 | channel;
+   rIORegMIDIReceiveBuf[1] = note;
+   rIORegMIDIReceiveBuf[0] = velocity;
+   MIDIRxBytesToSend = 3;
+   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+   SetIRQAssert;
+}
+
+void HWEOnControlChange(byte channel, byte control, byte value)
+{
+   if (value==64) return; //sends ref first, always 64 so just assume it
+   control &= (NumMIDIControls-1);
+   
+   int NewVal = MIDIControlVals[control] + value - 64;
+   if (NewVal<0) NewVal=0;
+   if (NewVal>127) NewVal=127;
+   MIDIControlVals[control] = NewVal;
+      
+   rIORegMIDIReceiveBuf[2] = 0xb0 | channel;
+   rIORegMIDIReceiveBuf[1] = control;
+   rIORegMIDIReceiveBuf[0] = NewVal;
+   MIDIRxBytesToSend = 3;
+   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+   SetIRQAssert;
+}
+
+void HWEOnPitchChange(byte channel, int pitch) 
+{
+   //-8192 to 8192, returns to 0 always
+   pitch+=8192;
+   
+   rIORegMIDIReceiveBuf[2] = 0xe0 | channel;
+   rIORegMIDIReceiveBuf[1] = pitch & 0x7f;
+   rIORegMIDIReceiveBuf[0] = (pitch>>7) & 0x7f;
+   MIDIRxBytesToSend = 3;
+   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+   SetIRQAssert;
 }

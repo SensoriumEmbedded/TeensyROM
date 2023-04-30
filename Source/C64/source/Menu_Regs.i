@@ -73,7 +73,8 @@
    rsChangeMenu = 0x9d
    rsStartItem  = 0xb1
    rsGetTime    = 0xe6
-   ;rsError      = 0x24
+   rsIO1HWinit  = 0x24
+   ;rsError      = 0x48
 
    rmtSD        = 0
    rmtTeensy    = 1
