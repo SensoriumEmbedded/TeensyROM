@@ -81,8 +81,8 @@
    rmtUSBHost   = 2
    rmtUSBDrive  = 3
    
-   rCtlVanish           = 0
-   rCtlVanishReset      = 1
+   rCtlVanishROM        = 0
+   rCtlBasicReset       = 1
    rCtlStartSelItemWAIT = 2
    rCtlGetTimeWAIT      = 3
    rCtlRunningPRG       = 4 ; final signal before running prg, allows IO1 handler change

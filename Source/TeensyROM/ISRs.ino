@@ -66,6 +66,9 @@ FASTRUN void isrPHI2() //Phi2 rising edge
          case IO1H_MIDI:
             IO1Hndlr_MIDI(Address, GP6_R_Wn(GPIO_6));
             break;
+         case IO1H_Debug:
+            IO1Hndlr_Debug(Address, GP6_R_Wn(GPIO_6));
+            break;
       }
    }  //IO1
  #ifdef DebugMessages

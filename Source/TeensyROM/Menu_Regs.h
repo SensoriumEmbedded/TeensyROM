@@ -81,9 +81,9 @@ enum IO1_Registers  //offset from 0xDE00
    
    rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see bit mask defs
    rwRegTimezone     = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
-   rwRegNextIO1Hndlr = StartSIDRegs + 42,  
+   rwRegNextIO1Hndlr = StartSIDRegs + 42,  // Which IO1 handler will take over upone exit/execute/emulate
    
-   //~86/256 locations used
+   //~87/256 locations used
 };
 
 enum RegPowerUpDefaultMasks
@@ -112,8 +112,8 @@ enum RegMenuTypes
 
 enum RegCtlCommands
 {
-   rCtlVanish           = 0,
-   rCtlVanishReset      = 1,
+   rCtlVanishROM        = 0,
+   rCtlBasicReset       = 1,
    rCtlStartSelItemWAIT = 2,
    rCtlGetTimeWAIT      = 3,
    rCtlRunningPRG       = 4, //final signal before running prg, allows IO1 handler change

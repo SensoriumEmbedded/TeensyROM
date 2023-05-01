@@ -85,7 +85,7 @@ NoHW:
 -  jmp -
 }
 
-+  lda #rCtlVanish ;Deassert Game & ExROM
++  lda #rCtlVanishROM ;Deassert Game & ExROM
    sta wRegControl+IO1Port
 
    lda #$00
@@ -157,7 +157,7 @@ WaitForKey:
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
-   lda #rCtlVanishReset ;reset to BASIC
+   lda #rCtlBasicReset ;reset to BASIC
    sta wRegControl+IO1Port
 -  jmp -  ;should be resetting to BASIC
 
@@ -419,110 +419,8 @@ SynchEthernetTime:
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    rts
    
-SettingsMenu:
-   lda #<MsgBanner
-   ldy #>MsgBanner
-   jsr PrintString 
-   lda #<MsgSettingsMenu
-   ldy #>MsgSettingsMenu
-   jsr PrintString 
-   lda #<MsgCreditsInfo
-   ldy #>MsgCreditsInfo
-   jsr PrintString 
-
-ShowSettings:
-   lda #NameColor
-   jsr SendChar
-
-   ldx #5 ;row Synch Time
-   ldy #23 ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNetTimeMask  
-   jsr PrintOnOff
-
-   ldx #6 ;row Music State
-   ldy #23 ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudMusicMask  
-   jsr PrintOnOff
    
-   ldx #7 ;row Time Zone
-   ldy #26 ;col
-   clc
-   jsr SetCursor
-   ldx #'+'
-   ldy rwRegTimezone+IO1Port
-   tya
-   and #$80
-   beq +
-   ;neg number
-   tya
-   eor#$ff  ;1's comp
-   tay
-   iny ;2's comp
-   ldx #'-' 
-+  txa
-   jsr SendChar
-   tya
-   ;conv to bcd
-   cmp #10
-   bmi +     ;skip if below 10
-   sec       ;set to subtract without carry
-   sbc #10   ;subtract 10
-   ora #$10
-+  jsr PrintHexByte
-
-
-WaitForSettingsKey:     
-   jsr DisplayTime   
-   jsr GetIn
-   beq WaitForSettingsKey
-
-   cmp #ChrF1  ;Power-up Synch Time toggle
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudNetTimeMask  
-   sta rwRegPwrUpDefaults+IO1Port
-   jmp ShowSettings  
-
-+  cmp #ChrF3  ;Power-up Music State toggle
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudMusicMask  
-   sta rwRegPwrUpDefaults+IO1Port
-   jmp ShowSettings  
-
-+  cmp #ChrF5  ;Power-up Time Zone increment
-   bne +
-   ldx rwRegTimezone+IO1Port
-   inx
-   cpx #15
-   bne ++
-   ldx #-12
-++ stx rwRegTimezone+IO1Port
-   jmp ShowSettings  
-
-+  cmp #ChrF2  ;Synch Time now
-   bne +
-   jsr SynchEthernetTime
-   jmp WaitForSettingsKey  
-
-+  cmp #ChrF4  ;Toggle Music now
-   bne +
-   jsr ToggleSIDMusic
-   jmp WaitForSettingsKey  
-
-+  cmp #ChrF7  ;Exit
-   bne +
-   rts
-
-+  jmp WaitForSettingsKey  
-
-
+   !src "source\SettingsMenu.asm"
    !src "source\PRGLoadStartReloc.s"
    !src "source\SIDRelated.s"
    !src "source\StringsMsgs.s"

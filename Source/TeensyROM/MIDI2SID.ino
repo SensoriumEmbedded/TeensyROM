@@ -33,6 +33,8 @@ stcVoiceInfo Voice[NUM_VOICES]=
    true, 0,
 };
 
+//MIDI input handlers for MIDI2SID _________________________________________________________________________
+
 void M2SOnNoteOn(byte channel, byte note, byte velocity)
 {   
    note+=3; //offset to A centered from C
@@ -213,4 +215,44 @@ void HWEOnPitchChange(byte channel, int pitch)
    MIDIRxBytesToSend = 3;
    rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
    SetIRQAssert;
+}
+
+//MIDI input handlers for Debug _________________________________________________________________________
+
+void DbgOnNoteOn(byte channel, byte note, byte velocity)
+{   
+    Serial.print("Note On, ch=");
+    Serial.print(channel);
+    Serial.print(", note=");
+    Serial.print(note);
+    Serial.print(", velocity=");
+    Serial.println(velocity);
+}
+
+void DbgOnNoteOff(byte channel, byte note, byte velocity)
+{
+    Serial.print("Note Off, ch=");
+    Serial.print(channel);
+    Serial.print(", note=");
+    Serial.print(note);
+    Serial.print(", velocity=");
+    Serial.println(velocity);
+}
+
+void DbgOnControlChange(byte channel, byte control, byte value)
+{
+    Serial.print("Control Change, ch=");
+    Serial.print(channel);
+    Serial.print(", control=");
+    Serial.print(control);
+    Serial.print(", NewVal=");
+    Serial.println(value);
+}
+
+void DbgOnPitchChange(byte channel, int pitch) 
+{
+    Serial.print("Pitch Change, ch=");
+    Serial.print(channel);
+    Serial.print(", pitch=");
+    Serial.println(pitch);
 }

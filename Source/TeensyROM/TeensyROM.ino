@@ -62,6 +62,7 @@ uint8_t* HOST_Image = NULL; //For receiving files from USB Host
 uint8_t NumUSBHostItems = 1;
 USBHost myusb;
 USBHub hub1(myusb);
+USBHub hub2(myusb);
 MIDIDevice midi1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
@@ -193,8 +194,7 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
    IO1Handler = IO1H_TeensyROM;
-   //IO1[rwRegNextIO1Hndlr] = IO1H_None;
-   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;
+   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;//IO1H_None;
    EmulateVicCycles = false;
    MIDIRxBytesToSend = 0;
    midi1.setHandleNoteOff(M2SOnNoteOff);

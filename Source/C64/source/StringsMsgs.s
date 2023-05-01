@@ -164,11 +164,12 @@ MsgSettingsMenu:
    !tx "    Immediate", ChrReturn
    !tx "       ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, SourcesColor, " Synch Time via Ethernet", ChrReturn
    !tx "       ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, SourcesColor, " Toggle Music On/Off", ChrReturn, ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
+   !tx "       ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
    !tx 0  ;near max of 256 bytes
 
 MsgCreditsInfo:
-   !tx ChrReturn, ChrReturn, MenuMiscColor 
+   !tx "       ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Special IO:", ChrReturn
+   !tx ChrReturn, MenuMiscColor 
    !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
    !tx " github.com/SensoriumEmbedded/TeensyROM", ChrReturn, ChrReturn
    !tx " Here's to all the other loader &", ChrReturn
@@ -225,4 +226,6 @@ MsgErrNoData:
    
 TblItemType: ;must match rtNone, rt16k, etc order!
    !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir ","C128" ;4 bytes each, no term
+TblSpecialIO: ;must match IO1Handlers order/qty
+   !tx "None","MIDI","Debg","tROM" ;4 bytes each, no term
    
