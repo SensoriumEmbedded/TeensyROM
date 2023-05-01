@@ -14,13 +14,15 @@ I'm planning to continue to publish all PCB design files and source code here fo
   * Teensy Internal Flash
   * Transfer directly from PC (C# Windows app included)
 * Files Supported:
-  * .crt files (8khi/lo/16k):  Emulates "Normal" type ROM carts
+  * .crt files (8khi/8klo/16k/C128):  Emulates all "Normal" type ROM carts
     * Includes VIC direct reads used on some HiROM carts
   * .prg files: Super fast-loads any PRG into RAM and executes
 * Sets C64 system time from internet (via Ethernet)
 * Adjustable startup parameters stored in Teensy internal EEPROM
-* MIDI USB in -> SID
-  * 3 voice Polyphonic player with waveform/envelope controls
+* MIDI USB input and Datel MIDI cartridge emulation 
+  * Use with Cynthcart, SIDWizard, etc.
+  * Built-in MIDI2SID app: Polyphonic player with waveform/envelope controls
+  * Supports USB Hub for simultaneous instruments and thumb drive access
 
 ## Hardware/PCB Design
 **v0.2 PCB is completed, built and tested!**
@@ -29,7 +31,7 @@ The primary change is the addition of Ethernet and USB host connectors to elimin
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
    
 ## Compatibility
-TeensyROM been tested on about a dozen NTSC C64 and C64C machines to this point.  Waiting for VIC-II Kawari availability to implement PAL timing  :) 
+TeensyROM been tested on about a dozen NTSC C64, C64C, and C128 machines to this point.  Waiting for VIC-II Kawari availability to implement PAL timing  :) 
 
 ## Future/potential SW development/features:
 * REU support using PSRAM
@@ -39,10 +41,6 @@ TeensyROM been tested on about a dozen NTSC C64 and C64C machines to this point.
 * Other HW Support: PAL, 50Hz, C128
 * Modem emulation via Ethernet connection
 * Method to save from USB/PC to SD or USB Drive
-* MIDI interface enhancements:
-  * Dual SID, 6 voice poly support
-  * Single note synth, multi-voice/filter/ring
-  * Simulate other released MIDI interfaces
 
 ## Demo Videos:
 *  [TeensyROM real-time video/audio capture](https://www.youtube.com/watch?v=RyowR9huh0A) of menu navigation and loading/running/emulating various programs/cartridges
