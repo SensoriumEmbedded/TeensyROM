@@ -159,7 +159,7 @@ enum MIDIemulIO1Regs
 {  
    wIORegAddrMIDIControl  = 4,
    rIORegAddrMIDIStatus   = 6,
-   //wIORegAddrMIDITransmit = 5,
+   wIORegAddrMIDITransmit = 5,
    rIORegAddrMIDIReceive  = 7,
 };
 
@@ -168,14 +168,16 @@ enum MIDIemulIO1Regs
 //{  
 //   wIORegAddrMIDIControl  = 0,
 //   rIORegAddrMIDIStatus   = 2,
-//   //wIORegAddrMIDITransmit = 1,
+//   wIORegAddrMIDITransmit = 1,
 //   rIORegAddrMIDIReceive  = 3,
 //};
 
 #define NumMIDIControls 16  //must be power of 2
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxBytesToSend = 0;
-volatile uint8_t rIORegMIDIReceiveBuf[3];
+volatile uint8_t MIDIRxBuf[3];
+volatile uint8_t MIDITxBytesReceived = 0;
+volatile uint8_t MIDITxBuf[3];
 uint8_t MIDIControlVals[NumMIDIControls];
 
 #define NumTimeSamples   20 

@@ -115,16 +115,16 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          case rIORegAddrMIDIReceive:
             if(MIDIRxBytesToSend)
             {
-               DataPortWriteWait(rIORegMIDIReceiveBuf[MIDIRxBytesToSend-1]);  
-               if (--MIDIRxBytesToSend == 0)
+               DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
+               if (MIDIRxBytesToSend == 0)
                {
-                  rIORegMIDIStatus   = 0;
+                  rIORegMIDIStatus = 0;
                   SetIRQDeassert;
                }
             }
             break;
-         default:
-            break;
+         //default:
+            //break;
       }
    }
    else  // IO1 write
@@ -144,11 +144,25 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                rIORegMIDIStatus |= 4; //Bit 2 (Data Carrier Detect)
             }               
             break;
-         //case wIORegAddrMIDITransmit:
-            //wIORegMIDITransmit = Data;
-            //break;
-         default:
+         case wIORegAddrMIDITransmit:
+            if (MIDITxBytesReceived != 0 || ((Data & 0x80) == 0x80 && (Data & 0xf0) != 0xf0)) //skip system & invalid headers
+            {
+               if (MIDITxBytesReceived < 3)
+               {
+                  MIDITxBuf[MIDITxBytesReceived++] = Data;
+                  if(MIDITxBytesReceived == 2 && (MIDITxBuf[0] & 0xf0 == 0xc0 || MIDITxBuf[0] & 0xf0 == 0xd0))
+                  {
+                     MIDITxBuf[2] = 0;
+                     MIDITxBytesReceived = 3;
+                  }
+               }
+               //else Serial.print("Miss!");//replace with LED on
+            }
+            //Serial.printf("%d %02x\n", MIDITxBytesReceived, Data);
+            
             break;
+         //default:
+            //break;
      }
    }
 }

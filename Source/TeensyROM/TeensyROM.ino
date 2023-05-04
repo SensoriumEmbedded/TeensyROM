@@ -182,7 +182,13 @@ void loop()
    if (Serial.available()) ServiceSerial();
    
    myusb.Task();
-   if (MIDIRxBytesToSend==0) midi1.read();
+   if (MIDIRxBytesToSend == 0) midi1.read(); //read data in if ready to send to C64
+   if (MIDITxBytesReceived == 3)  //Transmit data if buffer full from C64
+   {
+      midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      //Serial.printf("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
+      MIDITxBytesReceived = 0;
+   }
 }
 
 void SetUpMainMenuROM()

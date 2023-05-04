@@ -168,9 +168,9 @@ int FindFreeVoice()
 
 void HWEOnNoteOn(byte channel, byte note, byte velocity)
 {
-   rIORegMIDIReceiveBuf[2] = 0x90 | channel;
-   rIORegMIDIReceiveBuf[1] = note;
-   rIORegMIDIReceiveBuf[0] = velocity;
+   MIDIRxBuf[2] = 0x90 | channel;
+   MIDIRxBuf[1] = note;
+   MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
    rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
    SetIRQAssert;
@@ -178,9 +178,9 @@ void HWEOnNoteOn(byte channel, byte note, byte velocity)
 
 void HWEOnNoteOff(byte channel, byte note, byte velocity)
 {
-   rIORegMIDIReceiveBuf[2] = 0x80 | channel;
-   rIORegMIDIReceiveBuf[1] = note;
-   rIORegMIDIReceiveBuf[0] = velocity;
+   MIDIRxBuf[2] = 0x80 | channel;
+   MIDIRxBuf[1] = note;
+   MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
    rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
    SetIRQAssert;
@@ -196,9 +196,9 @@ void HWEOnControlChange(byte channel, byte control, byte value)
    if (NewVal>127) NewVal=127;
    MIDIControlVals[control] = NewVal;
       
-   rIORegMIDIReceiveBuf[2] = 0xb0 | channel;
-   rIORegMIDIReceiveBuf[1] = control;
-   rIORegMIDIReceiveBuf[0] = NewVal;
+   MIDIRxBuf[2] = 0xb0 | channel;
+   MIDIRxBuf[1] = control;
+   MIDIRxBuf[0] = NewVal;
    MIDIRxBytesToSend = 3;
    rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
    SetIRQAssert;
@@ -209,9 +209,9 @@ void HWEOnPitchChange(byte channel, int pitch)
    //-8192 to 8192, returns to 0 always
    pitch+=8192;
    
-   rIORegMIDIReceiveBuf[2] = 0xe0 | channel;
-   rIORegMIDIReceiveBuf[1] = pitch & 0x7f;
-   rIORegMIDIReceiveBuf[0] = (pitch>>7) & 0x7f;
+   MIDIRxBuf[2] = 0xe0 | channel;
+   MIDIRxBuf[1] = pitch & 0x7f;
+   MIDIRxBuf[0] = (pitch>>7) & 0x7f;
    MIDIRxBytesToSend = 3;
    rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
    SetIRQAssert;
