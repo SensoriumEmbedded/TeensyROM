@@ -35,7 +35,7 @@ stcVoiceInfo Voice[NUM_VOICES]=
 
 //MIDI input handlers for MIDI2SID _________________________________________________________________________
 
-void M2SOnNoteOn(byte channel, byte note, byte velocity)
+void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 {   
    note+=3; //offset to A centered from C
    int VoiceNum = FindFreeVoice();
@@ -85,7 +85,7 @@ void M2SOnNoteOn(byte channel, byte note, byte velocity)
    #endif
 }
 
-void M2SOnNoteOff(byte channel, byte note, byte velocity)
+void M2SOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
 {
    note+=3; //offset to A centered from C
    IO1[rRegSIDOutOfVoices]=' ';
@@ -118,7 +118,7 @@ void M2SOnNoteOff(byte channel, byte note, byte velocity)
    #endif
 }
 
-void M2SOnControlChange(byte channel, byte control, byte value)
+void M2SOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
    
    #ifdef DebugMessages
@@ -132,7 +132,7 @@ void M2SOnControlChange(byte channel, byte control, byte value)
    #endif
 }
 
-void M2SOnPitchChange(byte channel, int pitch) 
+void M2SOnPitchChange(uint8_t channel, int pitch) 
 {
 
    #ifdef DebugMessages
@@ -142,6 +142,11 @@ void M2SOnPitchChange(byte channel, int pitch)
     Serial.println(pitch, DEC);
     Serial.printf("     0-6= %02x, 7-13=%02x\n", pitch & 0x7f, (pitch>>7) & 0x7f);
    #endif
+}
+
+void M2SOnSystemExclusive(uint8_t *data, unsigned int size) // F0 SysEx single call, message larger than buffer is truncated
+{
+   //placeholder
 }
 
 int FindVoiceUsingNote(int NoteNum)
@@ -165,28 +170,36 @@ int FindFreeVoice()
 
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
+//Only called if MIDIRxBytesToSend==0 (No data waiting)
 
-void HWEOnNoteOn(byte channel, byte note, byte velocity)
-{
-   MIDIRxBuf[2] = 0x90 | channel;
-   MIDIRxBuf[1] = note;
-   MIDIRxBuf[0] = velocity;
-   MIDIRxBytesToSend = 3;
-   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
-   SetIRQAssert;
-}
-
-void HWEOnNoteOff(byte channel, byte note, byte velocity)
+void HWEOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)  //8x
 {
    MIDIRxBuf[2] = 0x80 | channel;
    MIDIRxBuf[1] = note;
    MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
-   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
-   SetIRQAssert;
+   SetMidiIRQ();
 }
 
-void HWEOnControlChange(byte channel, byte control, byte value)
+void HWEOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)   //9x
+{
+   MIDIRxBuf[2] = 0x90 | channel;
+   MIDIRxBuf[1] = note;
+   MIDIRxBuf[0] = velocity;
+   MIDIRxBytesToSend = 3;
+   SetMidiIRQ();
+}
+
+void HWEOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity) // Ax
+{
+   MIDIRxBuf[2] = 0xa0 | channel;
+   MIDIRxBuf[1] = note;
+   MIDIRxBuf[0] = velocity;
+   MIDIRxBytesToSend = 3;
+   SetMidiIRQ();
+}
+
+void HWEOnControlChange(uint8_t channel, uint8_t control, uint8_t value)  //Bx
 {
    if (value==64) return; //sends ref first, always 64 so just assume it
    control &= (NumMIDIControls-1);
@@ -200,11 +213,26 @@ void HWEOnControlChange(byte channel, byte control, byte value)
    MIDIRxBuf[1] = control;
    MIDIRxBuf[0] = NewVal;
    MIDIRxBytesToSend = 3;
-   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
-   SetIRQAssert;
+   SetMidiIRQ();
 }
 
-void HWEOnPitchChange(byte channel, int pitch) 
+void HWEOnProgramChange(uint8_t channel, uint8_t program) // Cx
+{
+   MIDIRxBuf[1] = 0xc0 | channel;
+   MIDIRxBuf[0] = program;
+   MIDIRxBytesToSend = 2;
+   SetMidiIRQ();
+}
+
+void HWEOnAfterTouch(uint8_t channel, uint8_t pressure)  // Dx
+{   
+   MIDIRxBuf[1] = 0xd0 | channel;
+   MIDIRxBuf[0] = pressure;
+   MIDIRxBytesToSend = 2;
+   SetMidiIRQ();
+}
+
+void HWEOnPitchChange(uint8_t channel, int pitch)  //Ex
 {
    //-8192 to 8192, returns to 0 always
    pitch+=8192;
@@ -213,46 +241,162 @@ void HWEOnPitchChange(byte channel, int pitch)
    MIDIRxBuf[1] = pitch & 0x7f;
    MIDIRxBuf[0] = (pitch>>7) & 0x7f;
    MIDIRxBytesToSend = 3;
-   rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
-   SetIRQAssert;
+   SetMidiIRQ();
 }
+
+void HWEOnSystemExclusive(uint8_t *data, unsigned int size) // F0 SysEx single call, message larger than buffer is truncated
+{
+   //need a bigger buffer and lots of time, not forwarding for now
+}
+
+void HWEOnTimeCodeQuarterFrame(uint8_t data)  // F1
+{
+   MIDIRxBuf[1] = 0xf1;
+   MIDIRxBuf[0] = data;  //won't have bit 7 set
+   MIDIRxBytesToSend = 2;
+   SetMidiIRQ();
+}
+
+void HWEOnSongPosition(uint16_t beats)        // F2
+{
+   MIDIRxBuf[2] = 0xf2;
+   MIDIRxBuf[1] = beats & 0x7f; //not sure if this is correct format?
+   MIDIRxBuf[0] = (beats >> 7) & 0x7f;
+   MIDIRxBytesToSend = 3;
+   SetMidiIRQ();
+}
+
+void HWEOnSongSelect(uint8_t songnumber)      // F3
+{
+   MIDIRxBuf[1] = 0xf3;
+   MIDIRxBuf[0] = songnumber;
+   MIDIRxBytesToSend = 2;
+   SetMidiIRQ();
+}
+
+void HWEOnTuneRequest(void)                   // F6
+{
+   MIDIRxBuf[0] = 0xf6;
+   MIDIRxBytesToSend = 1;
+   SetMidiIRQ();
+}
+
+void HWEOnRealTimeSystem(uint8_t realtimebyte)     // F8-FF (except FD)
+{
+   MIDIRxBuf[0] = realtimebyte;
+   MIDIRxBytesToSend = 1;
+   SetMidiIRQ();
+}
+
+void SetMidiIRQ()
+{
+   if(MIDIRxIRQEnabled)
+   {
+      rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+      SetIRQAssert;
+   }
+   else
+   {
+      MIDIRxBytesToSend = 0;
+   }
+}
+
 
 //MIDI input handlers for Debug _________________________________________________________________________
 
-void DbgOnNoteOn(byte channel, byte note, byte velocity)
+void DbgOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
+{
+   Serial.printf("8x Note Off, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
+}
+
+void DbgOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 {   
-    Serial.print("Note On, ch=");
-    Serial.print(channel);
-    Serial.print(", note=");
-    Serial.print(note);
-    Serial.print(", velocity=");
-    Serial.println(velocity);
+   Serial.printf("9x Note On, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
 }
 
-void DbgOnNoteOff(byte channel, byte note, byte velocity)
+void DbgOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity) // Ax
 {
-    Serial.print("Note Off, ch=");
-    Serial.print(channel);
-    Serial.print(", note=");
-    Serial.print(note);
-    Serial.print(", velocity=");
-    Serial.println(velocity);
+   Serial.printf("Ax After Touch Poly, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
 }
 
-void DbgOnControlChange(byte channel, byte control, byte value)
+void DbgOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
-    Serial.print("Control Change, ch=");
-    Serial.print(channel);
-    Serial.print(", control=");
-    Serial.print(control);
-    Serial.print(", NewVal=");
-    Serial.println(value);
+   Serial.printf("Bx Control Change, ch=%d, control=%d, NewVal=%d\n", channel, control, value);
 }
 
-void DbgOnPitchChange(byte channel, int pitch) 
-{
-    Serial.print("Pitch Change, ch=");
-    Serial.print(channel);
-    Serial.print(", pitch=");
-    Serial.println(pitch);
+void DbgOnProgramChange(uint8_t channel, uint8_t program) // Cx
+{   
+   Serial.printf("Cx Program Change, ch=%d, program=%d\n", channel, program);
 }
+
+void DbgOnAfterTouch(uint8_t channel, uint8_t pressure)  // Dx
+{   
+   Serial.printf("Dx After Touch, ch=%d, pressure=%d\n", channel, pressure);
+}
+
+void DbgOnPitchChange(uint8_t channel, int pitch) 
+{
+   Serial.printf("Ex Pitch Change, ch=%d, (int)pitch=%d\n", channel, pitch);
+}
+
+void DbgOnSystemExclusive(uint8_t *data, unsigned int size) // F0 SysEx single call, message larger than buffer is truncated
+{
+   Serial.printf("F0 SysEx, (int)size=%d, (hex)data=", size);
+   for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" %02x", data[Cnt]);
+   Serial.println();
+}
+
+void DbgOnTimeCodeQuarterFrame(uint8_t data)  // F1
+{
+   Serial.printf("F1 TimeCodeQuarterFrame, data=%d\n", data);
+   //could decode this, see example
+}
+
+void DbgOnSongPosition(uint16_t beats)        // F2
+{
+   Serial.printf("F2 Song Position, (uint)beats=%d\n", beats);
+}
+
+void DbgOnSongSelect(uint8_t songnumber)      // F3
+{
+   Serial.printf("F3 Song Select, songnumber=%d\n", songnumber);
+}
+
+void DbgOnTuneRequest(void)                   // F6
+{
+   Serial.printf("F6 TuneRequest\n");
+}
+
+void DbgOnRealTimeSystem(uint8_t realtimebyte)     // F8-FF (except FD)
+{
+   Serial.printf("%02x Real Time: ", realtimebyte);
+   switch(realtimebyte)
+   {
+      case 0xF8:
+         Serial.print("Timing Clock");
+         break;
+      case 0xF9:
+         Serial.print("Measure End");
+         break;
+      case 0xFA:
+         Serial.print("Start");
+         break;
+      case 0xFB:
+         Serial.print("Continue");
+         break;
+      case 0xFC:
+         Serial.print("Stop");
+         break;
+      case 0xFE:
+         Serial.print("Active Sensing");
+         break;
+      case 0xFF:
+         Serial.print("Reset");
+         break;
+      default:
+         Serial.print("Unknown");
+         break;
+   }         
+   Serial.println();
+}
+

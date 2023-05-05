@@ -170,11 +170,11 @@ void loop()
    }
   
    if (IO1[rRegStatus] != rsReady) 
-   {
+   {  //ISR requested work
       if     (IO1[rRegStatus] == rsChangeMenu) MenuChange();
       else if(IO1[rRegStatus] == rsGetTime)    getNtpTime();
       else if(IO1[rRegStatus] == rsStartItem)  HandleExecution();
-      else if(IO1[rRegStatus] == rsIO1HWinit)  IO1HWinit();
+      else if(IO1[rRegStatus] == rsIO1HWinit)  IO1HWinit(IO1[rwRegNextIO1Hndlr]);
       
       IO1[rRegStatus] = rsReady;
    }
@@ -182,10 +182,12 @@ void loop()
    if (Serial.available()) ServiceSerial();
    
    myusb.Task();
-   if (MIDIRxBytesToSend == 0) midi1.read(); //read data in if ready to send to C64
-   if (MIDITxBytesReceived == 3)  //Transmit data if buffer full from C64
+   if (MIDIRxBytesToSend == 0) midi1.read(); //read MIDI-in data in only if ready to send to C64 (buffer empty)
+      
+   if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
    {
-      midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      else midi1.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
       //Serial.printf("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
       MIDITxBytesReceived = 0;
    }
@@ -199,14 +201,9 @@ void SetUpMainMenuROM()
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
-   IO1Handler = IO1H_TeensyROM;
-   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;//IO1H_None;
    EmulateVicCycles = false;
-   MIDIRxBytesToSend = 0;
-   midi1.setHandleNoteOff(M2SOnNoteOff);
-   midi1.setHandleNoteOn(M2SOnNoteOn);
-   midi1.setHandleControlChange(M2SOnControlChange);
-   midi1.setHandlePitchChange(M2SOnPitchChange);
+   IO1HWinit(IO1H_TeensyROM);   
+   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;//IO1H_None; //default load next
    doReset = true;
 }
 

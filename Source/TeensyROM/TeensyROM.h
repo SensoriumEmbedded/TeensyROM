@@ -174,6 +174,7 @@ enum MIDIemulIO1Regs
 
 #define NumMIDIControls 16  //must be power of 2
 volatile uint8_t rIORegMIDIStatus   = 0;
+volatile uint8_t MIDIRxIRQEnabled = false;
 volatile uint8_t MIDIRxBytesToSend = 0;
 volatile uint8_t MIDIRxBuf[3];
 volatile uint8_t MIDITxBytesReceived = 0;

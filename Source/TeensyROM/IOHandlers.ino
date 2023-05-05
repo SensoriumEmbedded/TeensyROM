@@ -112,7 +112,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          case rIORegAddrMIDIStatus:
             DataPortWriteWait(rIORegMIDIStatus);  
             break;
-         case rIORegAddrMIDIReceive:
+         case rIORegAddrMIDIReceive: //MIDI-in from USB kbd (interrupt driven)
             if(MIDIRxBytesToSend)
             {
                DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
@@ -123,8 +123,9 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                }
             }
             break;
-         //default:
-            //break;
+         default:
+            DataPortWriteWait(0); //read 0s from all other regs in IO1
+            break;
       }
    }
    else  // IO1 write
@@ -137,32 +138,61 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
             {
                rIORegMIDIStatus   = 0;
                MIDIRxBytesToSend  = 0;
+               MIDIRxIRQEnabled = false;
                SetIRQDeassert;
             }
             else if (Data & 0x80) //Receive Interrupt Enable set
             {
                rIORegMIDIStatus |= 4; //Bit 2 (Data Carrier Detect)
+               MIDIRxBytesToSend = 0; 
+               MIDIRxIRQEnabled = true;
             }               
             break;
-         case wIORegAddrMIDITransmit:
-            if (MIDITxBytesReceived != 0 || ((Data & 0x80) == 0x80 && (Data & 0xf0) != 0xf0)) //skip system & invalid headers
+         case wIORegAddrMIDITransmit: //MIDI out to USB kbd
+            if (MIDITxBytesReceived == 0) //look for header byte?
+            {
+               if ((Data & 0x80) == 0x80) //verify valid header
+               {
+                  switch(Data)
+                  {
+                     case 0x00 ... 0xef: 
+                     case 0xf1: 
+                     case 0xf2: 
+                     case 0xf3: 
+                        //2-3 byte messages
+                        MIDITxBuf[MIDITxBytesReceived++] = Data;
+                        break;
+                     case 0xf6:
+                     case 0xf8 ... 0xff:
+                        //1 byte messages, send now
+                        MIDITxBuf[0] = Data;
+                        MIDITxBuf[1] = 0;
+                        MIDITxBuf[2] = 0;
+                        MIDITxBytesReceived = 3;
+                        break;
+                     default:
+                        //Serial.printf("ig%02x\n", Data);
+                        break;
+                  }                  
+               }
+            }
+            else  //adding data to existing
             {
                if (MIDITxBytesReceived < 3)
                {
                   MIDITxBuf[MIDITxBytesReceived++] = Data;
-                  if(MIDITxBytesReceived == 2 && (MIDITxBuf[0] & 0xf0 == 0xc0 || MIDITxBuf[0] & 0xf0 == 0xd0))
-                  {
+                  if(MIDITxBytesReceived == 2 && ((MIDITxBuf[0] & 0xf0) == 0xc0 || (MIDITxBuf[0] & 0xf0) == 0xd0 || MIDITxBuf[0] == 0xf1 || MIDITxBuf[0] == 0xf3))
+                  { //single extra byte commands, send now
                      MIDITxBuf[2] = 0;
                      MIDITxBytesReceived = 3;
                   }
                }
-               //else Serial.print("Miss!");//replace with LED on
+               //else Serial.print("Miss!");
             }
             //Serial.printf("%d %02x\n", MIDITxBytesReceived, Data);
-            
             break;
-         //default:
-            //break;
+         default:
+            break;
      }
    }
 }
@@ -188,33 +218,65 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
 
 //IO1 Handler Init _________________________________________________________________________________________
 
-void IO1HWinit()
+void IO1HWinit(uint8_t NewIO1Handler)
 {
-   IO1Handler = IO1[rwRegNextIO1Hndlr];
-   
-   rIORegMIDIStatus = 0;
+   MIDIRxIRQEnabled = false;
    MIDIRxBytesToSend = 0;
-   switch(IO1Handler)
+   rIORegMIDIStatus = 0;
+   switch(NewIO1Handler)
    {
-      case IO1H_TeensyROM:
-         //MIDI handlers remain for MIDI2SID
-         Serial.println("TeensyROM IO1 handler ready");
+      case IO1H_TeensyROM:  //MIDI handlers for MIDI2SID
+         midi1.setHandleNoteOff             (M2SOnNoteOff);             // 8x
+         midi1.setHandleNoteOn              (M2SOnNoteOn);              // 9x
+         midi1.setHandleAfterTouchPoly      (NULL);                     // Ax
+         midi1.setHandleControlChange       (M2SOnControlChange);       // Bx
+         midi1.setHandleProgramChange       (NULL);                     // Cx
+         midi1.setHandleAfterTouch          (NULL);                     // Dx
+         midi1.setHandlePitchChange         (M2SOnPitchChange);         // Ex
+         midi1.setHandleSystemExclusive     (M2SOnSystemExclusive);     // F0   
+         midi1.setHandleTimeCodeQuarterFrame(NULL);                     // F1
+         midi1.setHandleSongPosition        (NULL);                     // F2
+         midi1.setHandleSongSelect          (NULL);                     // F3
+         midi1.setHandleTuneRequest         (NULL);                     // F6
+         midi1.setHandleRealTimeSystem      (NULL);                     // F8-FF (except FD)
+         Serial.println("TeensyROM/MIDI2SID IO1 handler ready");
          break;
       case IO1H_MIDI:
          for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
-         midi1.setHandleNoteOff      (HWEOnNoteOff);
-         midi1.setHandleNoteOn       (HWEOnNoteOn);
-         midi1.setHandleControlChange(HWEOnControlChange);
-         midi1.setHandlePitchChange  (HWEOnPitchChange);
+         midi1.setHandleNoteOff             (HWEOnNoteOff);             // 8x
+         midi1.setHandleNoteOn              (HWEOnNoteOn);              // 9x
+         midi1.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
+         midi1.setHandleControlChange       (HWEOnControlChange);       // Bx
+         midi1.setHandleProgramChange       (HWEOnProgramChange);       // Cx
+         midi1.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
+         midi1.setHandlePitchChange         (HWEOnPitchChange);         // Ex
+         midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0   
+         midi1.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
+         midi1.setHandleSongPosition        (HWEOnSongPosition);        // F2
+         midi1.setHandleSongSelect          (HWEOnSongSelect);          // F3
+         midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
+         midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+         // not catching F4, F5, F7 (end of SysEx), and FD         
          Serial.println("MIDI IO1 handler ready");
          break;
       case IO1H_Debug:
-         midi1.setHandleNoteOff      (DbgOnNoteOff);
-         midi1.setHandleNoteOn       (DbgOnNoteOn);
-         midi1.setHandleControlChange(DbgOnControlChange);
-         midi1.setHandlePitchChange  (DbgOnPitchChange);
+         midi1.setHandleNoteOff             (DbgOnNoteOff);             // 8x
+         midi1.setHandleNoteOn              (DbgOnNoteOn);              // 9x
+         midi1.setHandleAfterTouchPoly      (DbgOnAfterTouchPoly);      // Ax
+         midi1.setHandleControlChange       (DbgOnControlChange);       // Bx
+         midi1.setHandleProgramChange       (DbgOnProgramChange);       // Cx
+         midi1.setHandleAfterTouch          (DbgOnAfterTouch);          // Dx
+         midi1.setHandlePitchChange         (DbgOnPitchChange);         // Ex
+         midi1.setHandleSystemExclusive     (DbgOnSystemExclusive);     // F0   
+         midi1.setHandleTimeCodeQuarterFrame(DbgOnTimeCodeQuarterFrame);// F1
+         midi1.setHandleSongPosition        (DbgOnSongPosition);        // F2
+         midi1.setHandleSongSelect          (DbgOnSongSelect);          // F3
+         midi1.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
+         //midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
+         // not catching F4, F5, F7 (end of SysEx), and FD         
          Serial.println("Debug IO1 handler ready");
          break;
    }
-
+   
+   IO1Handler = NewIO1Handler;
 }

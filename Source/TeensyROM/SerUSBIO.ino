@@ -26,21 +26,22 @@ void ServiceSerial()
       inByte = Serial.read();
       switch (inByte)
       {
-         case 0x55:
+         case 0x55:  //ping
             Serial.println("TeensyROM Ready!");
             break;
-         case 0xAA:
+         case 0xAA: //file x-fer pc->TR
             ReceiveFile();        
             break;
-         case 0xEE:
+         case 0xEE: //Reset C64
             Serial.println("Reset cmd received");
             SetUpMainMenuROM();
             break;
-         case 0x67:
+         case 0x67: //Test/debug
             //getNtpTime();
+            midi1.sendNoteOn(64, 64, 4);
             break;
          default:
-            Serial.printf("Unk: %02x\n", inByte); 
+            Serial.printf("Unk cmd: %02x\n", inByte); 
             break;
       }
    }
