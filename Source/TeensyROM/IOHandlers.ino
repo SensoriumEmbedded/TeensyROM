@@ -149,10 +149,11 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
             }               
             break;
          case wIORegAddrMIDITransmit: //MIDI out to USB kbd
-            if (MIDITxBytesReceived == 0) //look for header byte?
+            if (MIDITxBytesReceived < 3) //make sure there's not a full packet already in progress
             {
-               if ((Data & 0x80) == 0x80) //verify valid header
+               if ((Data & 0x80) == 0x80) //header byte, start new packet
                {
+                  MIDITxBytesReceived = 0;
                   switch(Data)
                   {
                      case 0x00 ... 0xef: 
@@ -171,25 +172,25 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                         MIDITxBytesReceived = 3;
                         break;
                      default:
-                        //Serial.printf("ig%02x\n", Data);
+                        //Serial.printf("igh%02x\n", Data);
                         break;
                   }                  
                }
-            }
-            else  //adding data to existing
-            {
-               if (MIDITxBytesReceived < 3)
+               else  //adding data to existing
                {
-                  MIDITxBuf[MIDITxBytesReceived++] = Data;
-                  if(MIDITxBytesReceived == 2 && ((MIDITxBuf[0] & 0xf0) == 0xc0 || (MIDITxBuf[0] & 0xf0) == 0xd0 || MIDITxBuf[0] == 0xf1 || MIDITxBuf[0] == 0xf3))
-                  { //single extra byte commands, send now
-                     MIDITxBuf[2] = 0;
-                     MIDITxBytesReceived = 3;
+                  if(MIDITxBytesReceived > 0) //make sure we accepted a valid header byte
+                  {
+                     MIDITxBuf[MIDITxBytesReceived++] = Data;
+                     if(MIDITxBytesReceived == 2 && ((MIDITxBuf[0] & 0xf0) == 0xc0 || (MIDITxBuf[0] & 0xf0) == 0xd0 || MIDITxBuf[0] == 0xf1 || MIDITxBuf[0] == 0xf3))
+                     { //single extra byte commands, send now
+                        MIDITxBuf[2] = 0;
+                        MIDITxBytesReceived = 3;
+                     }
                   }
+                  //else Serial.printf("igd%02x\n", Data);
                }
-               //else Serial.print("Miss!");
             }
-            //Serial.printf("%d %02x\n", MIDITxBytesReceived, Data);
+            //else Serial.print("Miss!");
             break;
          default:
             break;
