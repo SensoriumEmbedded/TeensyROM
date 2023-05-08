@@ -19,8 +19,19 @@
 
 
 //Build options:
-//#define DebugMessages  //will interfere with ROM/IO emulation, use at your own risk
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
+
+//enable debug messaging at your own risk, can cause emulation interference/fails
+//#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
+//#define DbgMsgs_MIDIOut  //MIDI out (to device) messages
+
+
+
+#if defined(DbgMsgs_MIDIOut)
+#define Printf_dbgMIDI Serial.printf
+#else
+void inline Printf_dbgMIDI(...) {};
+#endif
 
 #define MaxMenuItems       254
 #define SerialTimoutMillis 500
@@ -153,15 +164,24 @@ enum IO1Handlers //Synch order/qty with TblSpecialIO
    IO1H_Num_Handlers  //always last
 };
 
+#define NumMIDIControls 16  //must be power of 2, may want to do this differently?
+#define BigBufSize   100
+
 //see https://codebase64.org/doku.php?id=base:c64_midi_interfaces
+//rIORegMIDIStatus:
+#define MIDIStatusIRQReq 0x80   // Interrupt Request
+#define MIDIStatusDCD    0x04   // Data Carrier Detect (Ready to receive Tx data)
+#define MIDIStatusTxRdy  0x02   // Transmit Data Register Empty (Ready to receive Tx data)
+#define MIDIStatusRxFull 0x01   // Receive Data Register Full (Rx Data waiting to be read)
+
 //DATEL/SIEL/JMS/C-LAB
-enum MIDIemulIO1Regs
-{  
-   wIORegAddrMIDIControl  = 4,
-   rIORegAddrMIDIStatus   = 6,
-   wIORegAddrMIDITransmit = 5,
-   rIORegAddrMIDIReceive  = 7,
-};
+//enum MIDIemulIO1Regs
+//{  
+//   wIORegAddrMIDIControl  = 4,
+//   rIORegAddrMIDIStatus   = 6,
+//   wIORegAddrMIDITransmit = 5,
+//   rIORegAddrMIDIReceive  = 7,
+//};
 
 //SEQUENTIAL CIRCUITS
 //enum MIDIemulIO1Regs
@@ -172,14 +192,22 @@ enum MIDIemulIO1Regs
 //   rIORegAddrMIDIReceive  = 3,
 //};
 
-#define NumMIDIControls 16  //must be power of 2
-volatile uint8_t rIORegMIDIStatus   = 0;
-volatile uint8_t MIDIRxIRQEnabled = false;
-volatile uint8_t MIDIRxBytesToSend = 0;
-volatile uint8_t MIDIRxBuf[3];
-volatile uint8_t MIDITxBytesReceived = 0;
-volatile uint8_t MIDITxBuf[3];
-uint8_t MIDIControlVals[NumMIDIControls];
+//PASSPORT & SENTECH
+enum MIDIemulIO1Regs
+{  
+   wIORegAddrMIDIControl  = 8,
+   rIORegAddrMIDIStatus   = 8,
+   wIORegAddrMIDITransmit = 9,
+   rIORegAddrMIDIReceive  = 9,
+};
 
-#define NumTimeSamples   20 
+//NAMESOFT  requires a NMI interrupt for reading Midi data
+//enum MIDIemulIO1Regs
+//{  
+//   wIORegAddrMIDIControl  = 0,
+//   rIORegAddrMIDIStatus   = 2,
+//   wIORegAddrMIDITransmit = 1,
+//   rIORegAddrMIDIReceive  = 3,
+//};
+
 

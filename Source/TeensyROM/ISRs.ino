@@ -31,9 +31,9 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    {
       if (Phi2ISRState == P2I_TimingCheck)
       {
-         CycleTime[StreamOffsetAddr++] = ARM_DWT_CYCCNT-StartCycCnt;
+         BigBuf[BigBufCount++] = ARM_DWT_CYCCNT-StartCycCnt;
          StartCycCnt = ARM_DWT_CYCCNT;
-         if (StreamOffsetAddr == NumTimeSamples) Phi2ISRState = P2I_Normal;
+         if (BigBufCount == BigBufSize) Phi2ISRState = P2I_Normal;
       }
       return;
    }
@@ -71,10 +71,8 @@ FASTRUN void isrPHI2() //Phi2 rising edge
             break;
       }
    }  //IO1
- #ifdef DebugMessages
    //IO2: DFxx address space
-   else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
- #endif
+   //else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
 
 if (EmulateVicCycles)
 {

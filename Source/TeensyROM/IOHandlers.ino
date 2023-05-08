@@ -105,7 +105,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
 __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
-   if (R_Wn) //High (IO1 Read)
+   if (R_Wn) //IO1 Read  -------------------------------------------------
    {
       switch(Address)
       {
@@ -116,19 +116,20 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
             if(MIDIRxBytesToSend)
             {
                DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
-               if (MIDIRxBytesToSend == 0)
-               {
-                  rIORegMIDIStatus = 0;
-                  SetIRQDeassert;
-               }
+            }
+            if (MIDIRxBytesToSend == 0) //if we're done/empty, remove the interrupt
+            {
+               rIORegMIDIStatus &= ~(MIDIStatusRxFull | MIDIStatusIRQReq);
+               SetIRQDeassert;
             }
             break;
          default:
             DataPortWriteWait(0); //read 0s from all other regs in IO1
             break;
       }
+      //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = 0x10000 | Address;
    }
-   else  // IO1 write
+   else  // IO1 write    -------------------------------------------------
    {
       Data = DataPortWaitRead(); 
       switch(Address)
@@ -141,18 +142,24 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                MIDIRxIRQEnabled = false;
                SetIRQDeassert;
             }
-            else if (Data & 0x80) //Receive Interrupt Enable set
+            if (Data & 0x80) //Receive Interrupt Enable set
             {
-               rIORegMIDIStatus |= 4; //Bit 2 (Data Carrier Detect)
+               rIORegMIDIStatus |= MIDIStatusDCD;
                MIDIRxBytesToSend = 0; 
                MIDIRxIRQEnabled = true;
-            }               
+               Printf_dbgMIDI("RIE:%02x\n", Data);
+            }
+            if ((Data & 0x1C) == 0x14) // xxx101xx Word Select == 8 Bits + No Parity + 1 Stop Bit
+            {
+               rIORegMIDIStatus |= MIDIStatusTxRdy;              
+            }
             break;
-         case wIORegAddrMIDITransmit: //MIDI out to USB kbd
+         case wIORegAddrMIDITransmit: //Tx MIDI out to USB instrument
             if (MIDITxBytesReceived < 3) //make sure there's not a full packet already in progress
             {
                if ((Data & 0x80) == 0x80) //header byte, start new packet
                {
+                  if(MIDITxBytesReceived) Printf_dbgMIDI("drop %d\n", MIDITxBytesReceived);
                   MIDITxBytesReceived = 0;
                   switch(Data)
                   {
@@ -172,9 +179,9 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                         MIDITxBytesReceived = 3;
                         break;
                      default:
-                        //Serial.printf("igh%02x\n", Data);
+                        Printf_dbgMIDI("igh: %02x\n", Data);
                         break;
-                  }                  
+                  }           
                }
                else  //adding data to existing
                {
@@ -187,14 +194,17 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                         MIDITxBytesReceived = 3;
                      }
                   }
-                  //else Serial.printf("igd%02x\n", Data);
+                  else Printf_dbgMIDI("igd: %02x\n", Data);
                }
+               rIORegMIDIStatus &= ~MIDIStatusIRQReq;
+               if(MIDITxBytesReceived == 3) rIORegMIDIStatus &= ~MIDIStatusTxRdy; //not ready, waiting for USB transmit
             }
-            //else Serial.print("Miss!");
+            else Printf_dbgMIDI("Miss!\n");
             break;
          default:
             break;
-     }
+      }
+      //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = (Data<<8) | Address;
    }
 }
 
@@ -204,15 +214,14 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
 {
    if (R_Wn) //High (IO1 Read)
    {
+      if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = 0x10000 | Address;
       //Serial.printf("Rd $de%02x\n", Address);
    }
    else  // IO1 write
    {
-      // Every write cycle is preceded by a read cycle, but the Serial.print on rd (here in the ISR) 
-      // keeps it busy during the actual write.  Need to put this in a queue and print from outside or something.
-      // So, for now, comment out the Serial Print in Rd above to see writes, or leave it uncommented to see reads
-      uint8_t Data = DataPortWaitRead(); 
-      Serial.printf("wr $de%02x:$%02x\n", Address, Data);
+      uint32_t Data = DataPortWaitRead(); 
+      if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = (Data<<8) | Address;
+      //Serial.printf("wr $de%02x:$%02x\n", Address, Data);
    }
 }
 
@@ -224,6 +233,10 @@ void IO1HWinit(uint8_t NewIO1Handler)
    MIDIRxIRQEnabled = false;
    MIDIRxBytesToSend = 0;
    rIORegMIDIStatus = 0;
+   free(BigBuf);
+   BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
+   BigBufCount = 0;
+
    switch(NewIO1Handler)
    {
       case IO1H_TeensyROM:  //MIDI handlers for MIDI2SID
@@ -273,8 +286,8 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleSongPosition        (DbgOnSongPosition);        // F2
          midi1.setHandleSongSelect          (DbgOnSongSelect);          // F3
          midi1.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
-         //midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
-         // not catching F4, F5, F7 (end of SysEx), and FD         
+         midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
+         // not catching F4, F5, F7 (end of SysEx), and FD                  
          Serial.println("Debug IO1 handler ready");
          break;
    }

@@ -39,10 +39,19 @@ volatile uint8_t BtnPressed = false;
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 volatile uint8_t IO1Handler = IO1H_None;
-uint32_t* CycleTime;
+uint32_t* BigBuf;
+uint16_t BigBufCount = 0;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
+
+volatile uint8_t rIORegMIDIStatus   = 0;
+volatile uint8_t MIDIRxIRQEnabled = false;
+volatile uint8_t MIDIRxBytesToSend = 0;
+volatile uint8_t MIDIRxBuf[3];
+volatile uint8_t MIDITxBytesReceived = 0;
+volatile uint8_t MIDITxBuf[3];
+uint8_t MIDIControlVals[NumMIDIControls];
 
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
@@ -128,19 +137,19 @@ void setup()
    IO1[rwRegTimezone]     = EEPROM.read(eepAdrwRegTimezone);  
    SetUpMainMenuROM();
 
-   //CycleTime = (uint32_t*)malloc(NumTimeSamples*sizeof(uint32_t));
-   //StreamOffsetAddr = 0;
+   //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
+   //BigBufCount = 0;
    //Phi2ISRState = P2I_TimingCheck;
    //while (Phi2ISRState!=P2I_Normal);
-   //for (uint8_t SampNum = 0; SampNum < NumTimeSamples; SampNum++) 
+   //for (uint8_t SampNum = 0; SampNum < BigBufSize; SampNum++) 
    //{
    //   Serial.print(SampNum);
    //   Serial.print(" : ");
-   //   Serial.print(CycleTime[SampNum]);
+   //   Serial.print(BigBuf[SampNum]);
    //   Serial.print(" : ");
-   //   Serial.println(CycleTime[SampNum]*(1000000000UL>>16)/(F_CPU_ACTUAL>>16));
+   //   Serial.println(BigBuf[SampNum]*(1000000000UL>>16)/(F_CPU_ACTUAL>>16));
    //}
-   //free(CycleTime);
+   //free(BigBuf);
    
    Serial.print("TeensyROM 0.2 is on-line\n");
    Serial.flush();
@@ -188,8 +197,10 @@ void loop()
    {
       if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
       else midi1.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
-      //Serial.printf("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
+      
+      Printf_dbgMIDI("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
       MIDITxBytesReceived = 0;
+      rIORegMIDIStatus |= MIDIStatusTxRdy | MIDIStatusIRQReq;
    }
 }
 

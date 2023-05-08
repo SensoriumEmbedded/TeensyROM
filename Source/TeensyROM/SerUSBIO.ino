@@ -38,7 +38,15 @@ void ServiceSerial()
             break;
          case 0x67: //Test/debug
             //getNtpTime();
-            midi1.sendNoteOn(64, 64, 4);
+            //midi1.sendNoteOn(64, 64, 4);
+            for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
+            {
+               if (BigBuf[Cnt] & 0x10000) Serial.printf("#%03d Rd 0xde%02x\n", Cnt, (BigBuf[Cnt] & 0xff));
+               else Serial.printf("#%03d Wr 0xde%02x:%02x\n", Cnt, (BigBuf[Cnt] & 0xff), ((BigBuf[Cnt]>>8) & 0xff));
+            }
+            if (BigBufCount == BigBufSize) Serial.println("Buffer was full");
+            Serial.println("Buffer Reset");
+            BigBufCount = 0;
             break;
          default:
             Serial.printf("Unk cmd: %02x\n", inByte); 

@@ -42,7 +42,7 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    if (VoiceNum<0)
    {
       IO1[rRegSIDOutOfVoices]='x';
-      #ifdef DebugMessages
+      #ifdef DbgMsgs_M2S
        Serial.println("Out of Voices!");  
       #endif
       return;
@@ -53,7 +53,7 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    
    if (RegVal > 0xffff) 
    {
-      #ifdef DebugMessages
+      #ifdef DbgMsgs_M2S
        Serial.println("Too high!");
       #endif
       return;
@@ -68,7 +68,7 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    IO1[rRegSIDStrStart+VoiceNum*4+1]=NoteName[note%12][1];
    IO1[rRegSIDStrStart+VoiceNum*4+2]='0'+note/12;
 
-   #ifdef DebugMessages
+   #ifdef DbgMsgs_M2S
     Serial.print("MIDI Note On, ch=");
     Serial.print(channel);
     Serial.print(", voice=");
@@ -93,7 +93,7 @@ void M2SOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
    
    if (VoiceNum<0)
    {
-      #ifdef DebugMessages
+      #ifdef DbgMsgs_M2S
        Serial.print("No voice using note ");  
        Serial.println(note);  
       #endif
@@ -105,7 +105,7 @@ void M2SOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
    IO1[rRegSIDStrStart+VoiceNum*4+1]='-';
    IO1[rRegSIDStrStart+VoiceNum*4+2]=' ';
 
-   #ifdef DebugMessages
+   #ifdef DbgMsgs_M2S
     Serial.print("MIDI Note Off, ch=");
     Serial.print(channel);
     Serial.print(", voice=");
@@ -121,7 +121,7 @@ void M2SOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
 void M2SOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
    
-   #ifdef DebugMessages
+   #ifdef DbgMsgs_M2S
     Serial.print("MIDI Control Change, ch=");
     Serial.print(channel);
     Serial.print(", control=");
@@ -135,7 +135,7 @@ void M2SOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 void M2SOnPitchChange(uint8_t channel, int pitch) 
 {
 
-   #ifdef DebugMessages
+   #ifdef DbgMsgs_M2S
     Serial.print("Pitch Change, ch=");
     Serial.print(channel, DEC);
     Serial.print(", pitch=");
@@ -292,12 +292,13 @@ void SetMidiIRQ()
 {
    if(MIDIRxIRQEnabled)
    {
-      rIORegMIDIStatus = 0x81; //Interrupt Request + Receive Data Register Full
+      rIORegMIDIStatus |= MIDIStatusRxFull | MIDIStatusIRQReq; 
       SetIRQAssert;
    }
    else
    {
       MIDIRxBytesToSend = 0;
+      Printf_dbgMIDI("IRQ off\n");
    }
 }
 
