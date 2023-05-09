@@ -164,18 +164,16 @@ MsgSettingsMenu:
    !tx "    Immediate", ChrReturn
    !tx "       ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, SourcesColor, " Synch Time via Ethernet", ChrReturn
    !tx "       ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, SourcesColor, " Toggle Music On/Off", ChrReturn, ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
    !tx 0  ;near max of 256 bytes
 
 MsgCreditsInfo:
-   !tx "       ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Special IO:", ChrReturn
-   !tx ChrReturn, MenuMiscColor 
-   !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
+   !tx "    ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn, ChrReturn
+   !tx "    ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Special IO:", ChrReturn
+   !tx ChrReturn, ChrReturn, MenuMiscColor 
+   !tx "   2023 by Travis Smith @ Sensorium", ChrReturn, ChrReturn
+   !tx " TeensyROM is 100% Open Source HW & SW!", ChrReturn
    !tx " github.com/SensoriumEmbedded/TeensyROM", ChrReturn, ChrReturn
-   !tx " Here's to all the other loader &", ChrReturn
-   !tx "    emulation projects out there: ", ChrReturn
-   !tx "       Thank you for the inspiration!", ChrReturn, ChrReturn
-   !tx "    Music by Frank Zappa", ChrReturn
+   !tx "           Music by Frank Zappa", ChrReturn
    !tx 0
 
 MsgM2SPolyMenu:    
@@ -226,6 +224,28 @@ MsgErrNoData:
    
 TblItemType: ;must match rtNone, rt16k, etc order!
    !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir ","C128" ;4 bytes each, no term
-TblSpecialIO: ;must match IO1Handlers order/qty
-   !tx "None","MIDI","Debg","tROM" ;4 bytes each, no term
+TblSpecialIO: ;must match enum IO1Handlers order/qty
+   !word SpIO_None
+   !word SpIO_MIDI_Datel
+   !word SpIO_MIDI_Sequential
+   !word SpIO_MIDI_Passport
+   !word SpIO_MIDI_NamesoftIRQ
+   !word SpIO_Debug
+   !word SpIO_TeensyROM
+
+SpIO_None:
+   !tx "None              ", 0
+SpIO_MIDI_Datel:
+   !tx "MIDI:Datel/Siel   ", 0
+SpIO_MIDI_Sequential:
+   !tx "MIDI:Sequential   ", 0
+SpIO_MIDI_Passport:
+   !tx "MIDI:Passport/Sent", 0
+SpIO_MIDI_NamesoftIRQ:
+   !tx "MIDI:Namesoft IRQ ", 0
+SpIO_Debug:
+   !tx "Debug             ", 0
+SpIO_TeensyROM:
+   !tx "TeensyROM         ", 0
+   
    

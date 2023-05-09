@@ -75,14 +75,16 @@ ShowSettings:
    ora #$10
 +  jsr PrintHexByte
 
-   ldx #14 ;row Music State
-   ldy #22 ;col
+   ldx #15 ;row Special IO
+   ldy #19 ;col
    clc
    jsr SetCursor
-   ldx #<TblSpecialIO
-   ldy #>TblSpecialIO
    lda rwRegNextIO1Hndlr+IO1Port 
-   jsr Print4CharTable
+   asl
+   tax
+   lda TblSpecialIO,x
+   ldy TblSpecialIO+1,x
+   jsr PrintString
 
 
 WaitForSettingsKey:     

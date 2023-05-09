@@ -298,7 +298,7 @@ void SetMidiIRQ()
    else
    {
       MIDIRxBytesToSend = 0;
-      Printf_dbgMIDI("IRQ off\n");
+      if ((MIDIRxBuf[0] & 0xf0) != 0xf0) Printf_dbgMIDI("IRQ off\n"); //don't print on real-time inputs (there are lots)
    }
 }
 

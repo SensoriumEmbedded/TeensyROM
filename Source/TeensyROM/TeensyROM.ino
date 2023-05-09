@@ -52,6 +52,7 @@ volatile uint8_t MIDIRxBuf[3];
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
 uint8_t MIDIControlVals[NumMIDIControls];
+uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
@@ -214,7 +215,7 @@ void SetUpMainMenuROM()
    HIROM_Image = TeensyROMC64_bin+0x2000;
    EmulateVicCycles = false;
    IO1HWinit(IO1H_TeensyROM);   
-   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI;//IO1H_None; //default load next
+   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Sequential;//IO1H_None; //sets default to load next
    doReset = true;
 }
 

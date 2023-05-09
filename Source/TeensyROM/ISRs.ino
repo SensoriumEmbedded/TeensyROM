@@ -63,7 +63,10 @@ FASTRUN void isrPHI2() //Phi2 rising edge
          case IO1H_TeensyROM:
             IO1Hndlr_TeensyROM(Address, GP6_R_Wn(GPIO_6));
             break;
-         case IO1H_MIDI:
+         case IO1H_MIDI_Datel:
+         //case IO1H_MIDI_Sequential:  //changed to Datel after init (reg addrs set)
+         //case IO1H_MIDI_Passport:    //changed to Datel after init (reg addrs set)
+         //case IO1H_MIDI_NamesoftIRQ: //changed to Datel after init (reg addrs set)
             IO1Hndlr_MIDI(Address, GP6_R_Wn(GPIO_6));
             break;
          case IO1H_Debug:

@@ -107,102 +107,98 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
    uint8_t Data;
    if (R_Wn) //IO1 Read  -------------------------------------------------
    {
-      switch(Address)
+      if      (Address == rIORegAddrMIDIStatus)
       {
-         case rIORegAddrMIDIStatus:
-            DataPortWriteWait(rIORegMIDIStatus);  
-            break;
-         case rIORegAddrMIDIReceive: //MIDI-in from USB kbd (interrupt driven)
-            if(MIDIRxBytesToSend)
-            {
-               DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
-            }
-            if (MIDIRxBytesToSend == 0) //if we're done/empty, remove the interrupt
-            {
-               rIORegMIDIStatus &= ~(MIDIStatusRxFull | MIDIStatusIRQReq);
-               SetIRQDeassert;
-            }
-            break;
-         default:
-            DataPortWriteWait(0); //read 0s from all other regs in IO1
-            break;
+         DataPortWriteWait(rIORegMIDIStatus);  
+      }
+      else if (Address == rIORegAddrMIDIReceive) //MIDI-in from USB kbd (interrupt driven)
+      {
+         if(MIDIRxBytesToSend)
+         {
+            DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
+         }
+         if (MIDIRxBytesToSend == 0) //if we're done/empty, remove the interrupt
+         {
+            rIORegMIDIStatus &= ~(MIDIStatusRxFull | MIDIStatusIRQReq);
+            SetIRQDeassert;
+         }
+      } else
+      {
+         DataPortWriteWait(0); //read 0s from all other regs in IO1
       }
       //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = 0x10000 | Address;
    }
    else  // IO1 write    -------------------------------------------------
    {
       Data = DataPortWaitRead(); 
-      switch(Address)
+      if (Address == wIORegAddrMIDIControl)
       {
-         case wIORegAddrMIDIControl:
-            if (Data == 0x03) //Master Reset
+         if (Data == 0x03) //Master Reset
+         {
+            rIORegMIDIStatus   = 0;
+            MIDIRxBytesToSend  = 0;
+            //MIDIRxIRQEnabled = false;
+            SetIRQDeassert;
+         }
+         MIDIRxIRQEnabled = (Data & 0x80) == 0x80;
+         if (MIDIRxIRQEnabled) //Receive Interrupt Enable set
+         {
+            rIORegMIDIStatus |= MIDIStatusDCD;
+            MIDIRxBytesToSend = 0; 
+            Printf_dbgMIDI("RIE:%02x\n", Data);
+         }
+         if ((Data & 0x1C) == 0x14) // xxx101xx Word Select == 8 Bits + No Parity + 1 Stop Bit
+         {
+            rIORegMIDIStatus |= MIDIStatusTxRdy;              
+         }
+      }
+      else if (Address == wIORegAddrMIDITransmit) //Tx MIDI out to USB instrument
+      {
+         if (MIDITxBytesReceived < 3) //make sure there's not a full packet already in progress
+         {
+            if ((Data & 0x80) == 0x80) //header byte, start new packet
             {
-               rIORegMIDIStatus   = 0;
-               MIDIRxBytesToSend  = 0;
-               MIDIRxIRQEnabled = false;
-               SetIRQDeassert;
-            }
-            if (Data & 0x80) //Receive Interrupt Enable set
-            {
-               rIORegMIDIStatus |= MIDIStatusDCD;
-               MIDIRxBytesToSend = 0; 
-               MIDIRxIRQEnabled = true;
-               Printf_dbgMIDI("RIE:%02x\n", Data);
-            }
-            if ((Data & 0x1C) == 0x14) // xxx101xx Word Select == 8 Bits + No Parity + 1 Stop Bit
-            {
-               rIORegMIDIStatus |= MIDIStatusTxRdy;              
-            }
-            break;
-         case wIORegAddrMIDITransmit: //Tx MIDI out to USB instrument
-            if (MIDITxBytesReceived < 3) //make sure there's not a full packet already in progress
-            {
-               if ((Data & 0x80) == 0x80) //header byte, start new packet
+               if(MIDITxBytesReceived) Printf_dbgMIDI("drop %d\n", MIDITxBytesReceived); //had another in progress
+               MIDITxBytesReceived = 0;
+               switch(Data)
                {
-                  if(MIDITxBytesReceived) Printf_dbgMIDI("drop %d\n", MIDITxBytesReceived);
-                  MIDITxBytesReceived = 0;
-                  switch(Data)
-                  {
-                     case 0x00 ... 0xef: 
-                     case 0xf1: 
-                     case 0xf2: 
-                     case 0xf3: 
-                        //2-3 byte messages
-                        MIDITxBuf[MIDITxBytesReceived++] = Data;
-                        break;
-                     case 0xf6:
-                     case 0xf8 ... 0xff:
-                        //1 byte messages, send now
-                        MIDITxBuf[0] = Data;
-                        MIDITxBuf[1] = 0;
-                        MIDITxBuf[2] = 0;
-                        MIDITxBytesReceived = 3;
-                        break;
-                     default:
-                        Printf_dbgMIDI("igh: %02x\n", Data);
-                        break;
-                  }           
-               }
-               else  //adding data to existing
-               {
-                  if(MIDITxBytesReceived > 0) //make sure we accepted a valid header byte
-                  {
+                  case 0x00 ... 0xef: 
+                  case 0xf1: 
+                  case 0xf2: 
+                  case 0xf3: 
+                     //2-3 byte messages
                      MIDITxBuf[MIDITxBytesReceived++] = Data;
-                     if(MIDITxBytesReceived == 2 && ((MIDITxBuf[0] & 0xf0) == 0xc0 || (MIDITxBuf[0] & 0xf0) == 0xd0 || MIDITxBuf[0] == 0xf1 || MIDITxBuf[0] == 0xf3))
-                     { //single extra byte commands, send now
-                        MIDITxBuf[2] = 0;
-                        MIDITxBytesReceived = 3;
-                     }
-                  }
-                  else Printf_dbgMIDI("igd: %02x\n", Data);
+                     break;
+                  case 0xf6:
+                  case 0xf8 ... 0xff:
+                     //1 byte messages, send now
+                     MIDITxBuf[0] = Data;
+                     MIDITxBuf[1] = 0;
+                     MIDITxBuf[2] = 0;
+                     MIDITxBytesReceived = 3;
+                     break;
+                  default:
+                     Printf_dbgMIDI("igh: %02x\n", Data);
+                     break;
                }
-               rIORegMIDIStatus &= ~MIDIStatusIRQReq;
-               if(MIDITxBytesReceived == 3) rIORegMIDIStatus &= ~MIDIStatusTxRdy; //not ready, waiting for USB transmit
             }
-            else Printf_dbgMIDI("Miss!\n");
-            break;
-         default:
-            break;
+            else  //adding data to existing
+            {
+               if(MIDITxBytesReceived > 0) //make sure we accepted a valid header byte previously
+               {
+                  MIDITxBuf[MIDITxBytesReceived++] = Data;
+                  if(MIDITxBytesReceived == 2 && ((MIDITxBuf[0] & 0xf0) == 0xc0 || (MIDITxBuf[0] & 0xf0) == 0xd0 || MIDITxBuf[0] == 0xf1 || MIDITxBuf[0] == 0xf3))
+                  { //single extra byte commands, send now
+                     MIDITxBuf[2] = 0;
+                     MIDITxBytesReceived = 3;
+                  }
+               }
+               else Printf_dbgMIDI("igd: %02x\n", Data);
+            }
+            rIORegMIDIStatus &= ~MIDIStatusIRQReq;
+            if(MIDITxBytesReceived == 3) rIORegMIDIStatus &= ~MIDIStatusTxRdy; //not ready, waiting for USB transmit
+         }
+         else Printf_dbgMIDI("Miss!\n");
       }
       //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = (Data<<8) | Address;
    }
@@ -255,7 +251,10 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleRealTimeSystem      (NULL);                     // F8-FF (except FD)
          Serial.println("TeensyROM/MIDI2SID IO1 handler ready");
          break;
-      case IO1H_MIDI:
+      case IO1H_MIDI_Datel:
+      case IO1H_MIDI_Sequential:
+      case IO1H_MIDI_Passport:
+      case IO1H_MIDI_NamesoftIRQ:
          for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
          midi1.setHandleNoteOff             (HWEOnNoteOff);             // 8x
          midi1.setHandleNoteOn              (HWEOnNoteOn);              // 9x
@@ -271,7 +270,8 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
          midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
          // not catching F4, F5, F7 (end of SysEx), and FD         
-         Serial.println("MIDI IO1 handler ready");
+         SetMIDIRegs(NewIO1Handler - IO1H_MIDI_Datel);
+         NewIO1Handler = IO1H_MIDI_Datel; //all 4 are the same after regs are set
          break;
       case IO1H_Debug:
          midi1.setHandleNoteOff             (DbgOnNoteOff);             // 8x
@@ -293,4 +293,30 @@ void IO1HWinit(uint8_t NewIO1Handler)
    }
    
    IO1Handler = NewIO1Handler;
+}
+
+void SetMIDIRegs(uint8_t MIDI_ID)
+{  
+   //these must match enum IO1Handlers order/qty
+   char sMIDIType[][15] = {
+      "Datel/Siel", 
+      "Sequential", 
+      "Passport/Sent", 
+      "Namesoft IRQ",
+      };
+
+   uint8_t MidiRegs[][4] = {
+      //wControl, rStatus, wTransmit, rReceive $de00+
+      4,6,5,7,  // Datel/Siel
+      0,2,1,3,  // Sequential
+      8,8,9,9,  // Passport/Sent
+      0,2,1,3,  // Namesoft IRQ (same as seq, no NMI)
+   };
+
+   wIORegAddrMIDIControl  = MidiRegs[MIDI_ID][0];
+   rIORegAddrMIDIStatus   = MidiRegs[MIDI_ID][1];
+   wIORegAddrMIDITransmit = MidiRegs[MIDI_ID][2];
+   rIORegAddrMIDIReceive  = MidiRegs[MIDI_ID][3];
+
+   Serial.printf("%s MIDI IO1 handler ready\n", sMIDIType[MIDI_ID]);
 }

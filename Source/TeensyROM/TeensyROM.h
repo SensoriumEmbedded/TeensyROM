@@ -155,17 +155,20 @@ enum Phi2ISRStates
    P2I_TimingCheck,
 };
 
-enum IO1Handlers //Synch order/qty with TblSpecialIO
+enum IO1Handlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
 {
    IO1H_None,
-   IO1H_MIDI,
+   IO1H_MIDI_Datel,   //always first of 4 MIDI options
+   IO1H_MIDI_Sequential,
+   IO1H_MIDI_Passport,
+   IO1H_MIDI_NamesoftIRQ,
    IO1H_Debug,
    IO1H_TeensyROM, 
    IO1H_Num_Handlers  //always last
 };
 
+#define BigBufSize   200
 #define NumMIDIControls 16  //must be power of 2, may want to do this differently?
-#define BigBufSize   100
 
 //see https://codebase64.org/doku.php?id=base:c64_midi_interfaces
 //rIORegMIDIStatus:
@@ -173,41 +176,4 @@ enum IO1Handlers //Synch order/qty with TblSpecialIO
 #define MIDIStatusDCD    0x04   // Data Carrier Detect (Ready to receive Tx data)
 #define MIDIStatusTxRdy  0x02   // Transmit Data Register Empty (Ready to receive Tx data)
 #define MIDIStatusRxFull 0x01   // Receive Data Register Full (Rx Data waiting to be read)
-
-//DATEL/SIEL/JMS/C-LAB
-//enum MIDIemulIO1Regs
-//{  
-//   wIORegAddrMIDIControl  = 4,
-//   rIORegAddrMIDIStatus   = 6,
-//   wIORegAddrMIDITransmit = 5,
-//   rIORegAddrMIDIReceive  = 7,
-//};
-
-//SEQUENTIAL CIRCUITS
-//enum MIDIemulIO1Regs
-//{  
-//   wIORegAddrMIDIControl  = 0,
-//   rIORegAddrMIDIStatus   = 2,
-//   wIORegAddrMIDITransmit = 1,
-//   rIORegAddrMIDIReceive  = 3,
-//};
-
-//PASSPORT & SENTECH
-enum MIDIemulIO1Regs
-{  
-   wIORegAddrMIDIControl  = 8,
-   rIORegAddrMIDIStatus   = 8,
-   wIORegAddrMIDITransmit = 9,
-   rIORegAddrMIDIReceive  = 9,
-};
-
-//NAMESOFT  requires a NMI interrupt for reading Midi data
-//enum MIDIemulIO1Regs
-//{  
-//   wIORegAddrMIDIControl  = 0,
-//   rIORegAddrMIDIStatus   = 2,
-//   wIORegAddrMIDITransmit = 1,
-//   rIORegAddrMIDIReceive  = 3,
-//};
-
 
