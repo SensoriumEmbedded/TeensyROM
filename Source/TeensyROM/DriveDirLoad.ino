@@ -197,14 +197,17 @@ void LoadDirectory(bool SD_nUSBDrive)
       DrvMenuItem[0].ItemType = rtDir;
    }
    
+   const char *filename;
+   
    while (File entry = dir.openNextFile()) 
    {
+      filename = entry.name();
       if (entry.isDirectory())
       {
          DrvMenuItem[NumItems].Name[0] = '/';
-         memcpy(DrvMenuItem[NumItems].Name+1, entry.name(), MaxItemNameLength-1);
+         memcpy(DrvMenuItem[NumItems].Name+1, filename, MaxItemNameLength-1);
       }
-      else memcpy(DrvMenuItem[NumItems].Name, entry.name(), MaxItemNameLength);
+      else memcpy(DrvMenuItem[NumItems].Name, filename, MaxItemNameLength);
       
       DrvMenuItem[NumItems].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
       
