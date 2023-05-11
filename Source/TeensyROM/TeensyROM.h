@@ -23,23 +23,34 @@
 
 //enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-//#define DbgMsgs_MIDIOut  //MIDI out (to device) messages
+//#define DbgMsgs_MIDI  //MIDI (mostly out) messages (Printf_dbgMIDI)
+//#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to a buffer. Like debug handler but can use for others
 
+uint16_t BigBufCount = 0;
+uint32_t* BigBuf;
 
-
-#if defined(DbgMsgs_MIDIOut)
-#define Printf_dbgMIDI Serial.printf
+#ifdef DbgMsgs_MIDI
+   #define Printf_dbgMIDI Serial.printf
 #else
-void inline Printf_dbgMIDI(...) {};
+   __attribute__((always_inline)) void inline Printf_dbgMIDI(...) {};
 #endif
+
+#define IOTLRead           0x10000
+#define IOTLDataValid      0x20000
+#ifdef DbgIOTraceLog
+   __attribute__((always_inline)) void inline TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
+#else
+   __attribute__((always_inline)) void inline TraceLogAddValidData(...) {};
+#endif
+
 
 #define MaxMenuItems       254
 #define SerialTimoutMillis 500
-#define UpDirString "/.. <Up Dir>"
-#define NTSCBusFreq    1022730
-#define PALBusFreq      985250
+#define UpDirString        "/.. <Up Dir>"
+#define NTSCBusFreq        1022730
+#define PALBusFreq         985250
 #define IO1_Size           256
-#define eepMagicNum   0xfeedac64
+#define eepMagicNum        0xfeedac64
 
 enum InternalEEPROMmap
 {

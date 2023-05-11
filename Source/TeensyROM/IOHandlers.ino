@@ -110,12 +110,20 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
       if      (Address == rIORegAddrMIDIStatus)
       {
          DataPortWriteWait(rIORegMIDIStatus);  
+         TraceLogAddValidData(rIORegMIDIStatus);
       }
       else if (Address == rIORegAddrMIDIReceive) //MIDI-in from USB kbd (interrupt driven)
       {
          if(MIDIRxBytesToSend)
          {
             DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
+            TraceLogAddValidData(MIDIRxBuf[MIDIRxBytesToSend]);
+         }
+         else
+         {
+            DataPortWriteWait(0); 
+            TraceLogAddValidData(0);
+            Printf_dbgMIDI("unreq\n"); //unrequested read from Rx reg.
          }
          if (MIDIRxBytesToSend == 0) //if we're done/empty, remove the interrupt
          {
@@ -125,8 +133,8 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
       } else
       {
          DataPortWriteWait(0); //read 0s from all other regs in IO1
+         TraceLogAddValidData(0);
       }
-      //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = 0x10000 | Address;
    }
    else  // IO1 write    -------------------------------------------------
    {
@@ -200,7 +208,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          }
          else Printf_dbgMIDI("Miss!\n");
       }
-      //if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = (Data<<8) | Address;
+      TraceLogAddValidData(Data);
    }
 }
 
@@ -208,17 +216,24 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
 
 __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, bool R_Wn)
 {
+   #ifndef DbgIOTraceLog
+      BigBuf[BigBufCount] = Address; //initialize w/ address 
+   #endif
    if (R_Wn) //High (IO1 Read)
    {
-      if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = 0x10000 | Address;
+      //DataPortWriteWait(0);
+      //TraceLogAddValidData(0);
       //Serial.printf("Rd $de%02x\n", Address);
    }
    else  // IO1 write
    {
-      uint32_t Data = DataPortWaitRead(); 
-      if (BigBufCount < BigBufSize) BigBuf[BigBufCount++] = (Data<<8) | Address;
+      TraceLogAddValidData(DataPortWaitRead());
       //Serial.printf("wr $de%02x:$%02x\n", Address, Data);
    }
+   #ifndef DbgIOTraceLog
+      if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
+      if (BigBufCount < BigBufSize) BigBufCount++;
+   #endif
 }
 
 

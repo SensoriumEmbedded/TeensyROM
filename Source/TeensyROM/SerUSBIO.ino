@@ -37,16 +37,7 @@ void ServiceSerial()
             SetUpMainMenuROM();
             break;
          case 0x67: //Test/debug
-            //getNtpTime();
-            //midi1.sendNoteOn(64, 64, 4);
-            for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
-            {
-               if (BigBuf[Cnt] & 0x10000) Serial.printf("#%03d Rd 0xde%02x\n", Cnt, (BigBuf[Cnt] & 0xff));
-               else Serial.printf("#%03d Wr 0xde%02x:%02x\n", Cnt, (BigBuf[Cnt] & 0xff), ((BigBuf[Cnt]>>8) & 0xff));
-            }
-            if (BigBufCount == BigBufSize) Serial.println("Buffer was full");
-            Serial.println("Buffer Reset");
-            BigBufCount = 0;
+            PrintDebugLog();
             break;
          default:
             Serial.printf("Unk cmd: %02x\n", inByte); 
@@ -54,6 +45,46 @@ void ServiceSerial()
       }
    }
 }
+
+
+void PrintDebugLog()
+{
+   bool LogDatavalid = false;
+   
+   #ifdef DbgIOTraceLog
+      Serial.println("DbgIOTraceLog enabled");
+      LogDatavalid = true;
+   #endif
+      
+   if (IO1Handler == IO1H_Debug)
+   {
+      Serial.println("Debug IO Handler enabled");
+      LogDatavalid = true;
+   }               
+   
+   if (LogDatavalid)
+   {
+      uint32_t Numentries = BigBufCount;
+      if (Numentries == BigBufSize) 
+      {
+         Serial.println("Buffer is full");
+         Numentries--; //last element invalid
+      }
+      
+      for(uint16_t Cnt=0; Cnt<Numentries; Cnt++)
+      {
+         Serial.printf("#%03d %s 0xde%02x : ", Cnt, (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
+         
+         if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
+         else Serial.printf("n/a\n");
+      }
+      
+      Serial.println("Buffer Reset");
+      BigBufCount = 0;
+   }
+   else Serial.println("No logging enabled");
+}
+
 
 void ReceiveFile()
 { 

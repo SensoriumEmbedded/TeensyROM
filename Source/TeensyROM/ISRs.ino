@@ -58,6 +58,9 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
       Address &= 0xFF;
+      #ifdef DbgIOTraceLog
+         BigBuf[BigBufCount] = Address; //initialize w/ address
+      #endif
       switch(IO1Handler)
       {
          case IO1H_TeensyROM:
@@ -73,6 +76,10 @@ FASTRUN void isrPHI2() //Phi2 rising edge
             IO1Hndlr_Debug(Address, GP6_R_Wn(GPIO_6));
             break;
       }
+      #ifdef DbgIOTraceLog
+         if (GP6_R_Wn(GPIO_6)) BigBuf[BigBufCount] |= IOTLRead;
+         if (BigBufCount < BigBufSize) BigBufCount++;
+      #endif
    }  //IO1
    //IO2: DFxx address space
    //else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);

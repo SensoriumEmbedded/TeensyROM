@@ -39,12 +39,9 @@ volatile uint8_t BtnPressed = false;
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 volatile uint8_t IO1Handler = IO1H_None;
-uint32_t* BigBuf;
-uint16_t BigBufCount = 0;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
-
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
 volatile uint8_t MIDIRxBytesToSend = 0;
@@ -61,15 +58,20 @@ char SDPath[250] = "/";
 
 StructMenuItem USBDriveMenu[MaxMenuItems];
 char USBDrivePath[250] = "/";
-
+  
 StructMenuItem USBHostMenu = {
-  rtNone,  //unsigned char ItemType;
-  "<Nothing Sent>",      //char Name[MaxItemNameLength];
-  NULL,    //const unsigned char *Code_Image;
-  0        //uint16_t Size;
+   rtNone,  //unsigned char ItemType;
+   "<Nothing Sent>",      //char Name[MaxItemNameLength];
+   NULL,    //const unsigned char *Code_Image;
+   0        //uint16_t Size;
 };
 uint8_t* HOST_Image = NULL; //For receiving files from USB Host
 uint8_t NumUSBHostItems = 1;
+
+unsigned int localPort = 8888;       // local port to listen for UDP packets
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
+
 USBHost myusb;
 USBHub hub1(myusb);
 USBHub hub2(myusb);
@@ -77,19 +79,16 @@ MIDIDevice midi1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
 
-unsigned int localPort = 8888;       // local port to listen for UDP packets
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
 EthernetUDP Udp;
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
 void setup() 
 {
-   set_arm_clock( 816000000 );  //force slight overclocking
+   set_arm_clock( 816000000 );  //slight overclocking, no cooling required
    
    Serial.begin(115200);
-   Serial.println(F("File: " __FILE__ ));
+   //Serial.println(F("File: " __FILE__ ));
    Serial.println(F("Date: " __DATE__ ));
    Serial.println(F("Time: " __TIME__ ));
    Serial.printf("CPU Freq: %lu Hz\n", F_CPU_ACTUAL);
@@ -218,4 +217,3 @@ void SetUpMainMenuROM()
    IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Sequential;//IO1H_None; //sets default to load next
    doReset = true;
 }
-
