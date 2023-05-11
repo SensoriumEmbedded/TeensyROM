@@ -51,15 +51,15 @@ void HandleExecution()
       if(!LoadFile(&MenuSel, SD_nUSBDrive)) MenuSel.ItemType=rtUnk; //mark unknown if error      
 
       MenuSel.Code_Image = RAM_Image;
-      if (MenuSel.ItemType == rtCrt) ParseCRTFile(&MenuSel); //will convert type, if checks ok
    }
     
    if (IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
    {
       MenuSel.Code_Image = HOST_Image; 
-      if (MenuSel.ItemType == rtCrt) ParseCRTFile(&MenuSel);
    }
    
+   if (MenuSel.ItemType == rtCrt) ParseCRTFile(&MenuSel); //will update MenuSel.ItemType & .Code_Image, if checks ok
+ 
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
    uint8_t CartLoaded = false;

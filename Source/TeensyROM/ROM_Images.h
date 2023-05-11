@@ -22,13 +22,14 @@
 #include "ROMs\hex_mon.prg.h"
 #include "ROMs\rom_chksum_137kernals.prg.h"
 #include "ROMs\cynthcart_201.prg.h"
-
+#include "ROMs\C128_789010.crt.h"
 
 StructMenuItem ROMMenu[] = 
 {
    rtNone, "Test/Diags:----------------", NULL                                 , 1, //sepparator
-   rt8kHi, "  781220 Dead Test"         , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
-   rt8kLo, "  586220* Diagnostics"      , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
+   rt8kHi, "  781220 C64 Dead Test"     , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
+   rt8kLo, "  586220* C64 Diagnostics"  , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
+   rtCrt,  "  789010 C128 Diagnostics"  , (uint8_t*)C128_789010_crt            , 1, //size not needed for CRTs
    rt8kLo, "  1541 Diagnostics"         , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
    rt8kLo, "  Keyboard Tester"          , (uint8_t*)Keyboard_Tester_BIN        , 1, //size not needed for ROMs
    rt8kLo, "  SID Tester"               , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
@@ -42,7 +43,7 @@ StructMenuItem ROMMenu[] =
    rtPrg , "  Joust!"                   , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
    rt8kHi, "  Jupiter Lander"           , (uint8_t*)Jupiter_Lander_BIN         , 1, //size not needed for ROMs  
    rtPrg , "  Cynthcart v2.0.1"         , (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
-   rtNone, ""                           , NULL                                 , 1, //sepparator
+   //rtNone, ""                           , NULL                                 , 1, //sepparator
 
    rtNone, "Utilities:-----------------", NULL                                 , 1, //sepparator
    rtPrg , "  Epyx Fast Load"           , (uint8_t*)epyx_prg                   , sizeof(epyx_prg) ,
