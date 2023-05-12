@@ -50,13 +50,14 @@ uint32_t* BigBuf;
 #define NTSCBusFreq        1022730
 #define PALBusFreq         985250
 #define IO1_Size           256
-#define eepMagicNum        0xfeedac64
 
+#define eepMagicNum        0xfeed1c64
 enum InternalEEPROMmap
 {
    eepAdMagicNum      = 0, // (uint32_t) Indicated if internal EEPROM has been initialized
-   eepAdPwrUpDefaults = 4, // (uint8_t)  power up default reg, see bit mask defs
-   eepAdrwRegTimezone = 5, // (int8_t)   signed char for timezone: UTC +14/-12 
+   eepAdPwrUpDefaults = 4, // (uint8_t)  power up default reg, see bit mask defs rpudMusicMask, rpudNetTimeMask
+   eepAdTimezone      = 5, // (int8_t)   signed char for timezone: UTC +14/-12 
+   eepAdNextIO1Hndlr  = 6, // (uint8_t)   default IO handler to load upon TR exit
 };
 
 uint32_t StartCycCnt;

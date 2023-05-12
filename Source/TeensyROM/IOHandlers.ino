@@ -58,6 +58,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
          case rwRegNextIO1Hndlr:
             if (Data < IO1H_Num_Handlers) IO1[rwRegNextIO1Hndlr]=Data;
             else IO1[rwRegNextIO1Hndlr]=0;
+            EEPROM.write(eepAdNextIO1Hndlr, IO1[rwRegNextIO1Hndlr]); 
             break;
          case rWRegCurrMenuWAIT:
             IO1[rWRegCurrMenuWAIT]=Data;
@@ -69,7 +70,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
             break;
          case rwRegTimezone:
             IO1[rwRegTimezone]= Data;
-            EEPROM.write(eepAdrwRegTimezone, Data); 
+            EEPROM.write(eepAdTimezone, Data); 
             break;
          case wRegControl:
             switch(Data)
@@ -222,12 +223,12 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
    if (R_Wn) //High (IO1 Read)
    {
       //DataPortWriteWait(0);
-      //TraceLogAddValidData(0);
+      //BigBuf[BigBufCount] |= (0<<8) | IOTLDataValid;
       //Serial.printf("Rd $de%02x\n", Address);
    }
    else  // IO1 write
    {
-      TraceLogAddValidData(DataPortWaitRead());
+      BigBuf[BigBufCount] |= (DataPortWaitRead()<<8) | IOTLDataValid;
       //Serial.printf("wr $de%02x:$%02x\n", Address, Data);
    }
    #ifndef DbgIOTraceLog

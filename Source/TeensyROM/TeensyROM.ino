@@ -122,7 +122,8 @@ void setup()
       Serial.println("EEPROM first use, setting defaults");
       EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
       EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
-      EEPROM.write(eepAdrwRegTimezone, -8 ); //default to pacific time
+      EEPROM.write(eepAdTimezone, -8); //default to pacific time
+      EEPROM.write(eepAdNextIO1Hndlr, IO1H_None); //default to pacific time
    }
 
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
@@ -134,7 +135,8 @@ void setup()
    for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
-   IO1[rwRegTimezone]     = EEPROM.read(eepAdrwRegTimezone);  
+   IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
+   IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr);
    SetUpMainMenuROM();
 
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
@@ -214,6 +216,5 @@ void SetUpMainMenuROM()
    HIROM_Image = TeensyROMC64_bin+0x2000;
    EmulateVicCycles = false;
    IO1HWinit(IO1H_TeensyROM);   
-   IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Sequential;//IO1H_None; //sets default to load next
    doReset = true;
 }

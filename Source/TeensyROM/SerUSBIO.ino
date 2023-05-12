@@ -44,8 +44,8 @@ void ServiceSerial()
             break;
       }
    }
+   else if (inByte == 'l') PrintDebugLog();
 }
-
 
 void PrintDebugLog()
 {

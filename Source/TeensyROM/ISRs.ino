@@ -53,7 +53,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    }  //ROML
    else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
    {
-      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); 
+      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[Address & 0x1FFF]); 
    }  //ROMH
    else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
