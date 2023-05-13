@@ -102,9 +102,16 @@ NoHW:
 
 +  lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
-   beq WaitForKey
+   beq +
    jsr SynchEthernetTime
+   jmp WaitForKey
    
++  lda #0  ;set clock to midnight if not synching
+   sta TODHoursBCD  ;stop TOD regs incrementing
+   sta TODMinBCD
+   sta TODSecBCD
+   sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+
 
 WaitForKey:     
    jsr DisplayTime
