@@ -14,15 +14,19 @@ I'm planning to continue to publish all PCB design files and source code here fo
   * Teensy Internal Flash
   * Transfer directly from PC (C# Windows app included)
 * Files Supported:
-  * .crt files (8khi/8klo/16k/C128):  Emulates all "Normal" type ROM carts
+  * .crt files (8khi/8klo/16k/C128):
+    * Emulates all "Normal" type ROM carts
     * Includes VIC direct reads used on some HiROM carts
   * .prg files: Super fast-loads any PRG into RAM and executes
 * Sets C64 system time from internet (via Ethernet)
 * Adjustable startup parameters stored in Teensy internal EEPROM
-* MIDI USB input and Datel MIDI cartridge emulation 
+* MIDI in/out via USB Host connection
+  * Sequential, Datel/Siel MIDI cartridge full emulation 
+  * Passport/Sentech/Namesoft partial emulation
   * Use with Cynthcart, SIDWizard, etc.
-  * Built-in MIDI2SID app: Polyphonic player with waveform/envelope controls
-  * Supports USB Hub for simultaneous instruments and thumb drive access
+  * Supports USB Hub for multiple instruments+thumb drive access
+  * Built-in MIDI2SID app: 
+    * Polyphonic player with waveform/envelope controls
 
 ## Hardware/PCB Design
 **v0.2 PCB is completed, built and tested!**
