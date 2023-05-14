@@ -72,6 +72,9 @@ FASTRUN void isrPHI2() //Phi2 rising edge
          //case IO1H_MIDI_NamesoftIRQ: //changed to Datel after init (reg addrs set)
             IO1Hndlr_MIDI(Address, GP6_R_Wn(GPIO_6));
             break;
+         case IO1H_SwiftLink:
+            IO1Hndlr_SwiftLink(Address, GP6_R_Wn(GPIO_6));
+            break;
          case IO1H_Debug:
             IO1Hndlr_Debug(Address, GP6_R_Wn(GPIO_6));
             break;

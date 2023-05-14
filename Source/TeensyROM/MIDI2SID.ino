@@ -144,9 +144,9 @@ void M2SOnPitchChange(uint8_t channel, int pitch)
    #endif
 }
 
-void M2SOnSystemExclusive(uint8_t *data, unsigned int size) // F0 SysEx single call, message larger than buffer is truncated
+void NothingOnSystemExclusive(uint8_t *data, unsigned int size) // F0 SysEx single call, message larger than buffer is truncated
 {
-   //placeholder
+   //Setting handler to NULL creates ambiguous error
 }
 
 int FindVoiceUsingNote(int NoteNum)

@@ -250,6 +250,7 @@ TblSpecialIO: ;must match enum IO1Handlers order/qty
    !word SpIO_MIDI_NamesoftIRQ
    !word SpIO_Debug
    !word SpIO_TeensyROM
+   !word SpIO_SwiftLink
 
 SpIO_None:
    !tx "None              ", 0
@@ -265,5 +266,7 @@ SpIO_Debug:
    !tx "Debug             ", 0
 SpIO_TeensyROM:
    !tx "TeensyROM         ", 0
+SpIO_SwiftLink:
+   !tx "SwiftLink         ", 0
    
    

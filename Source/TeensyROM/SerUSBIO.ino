@@ -73,7 +73,7 @@ void PrintDebugLog()
       
       for(uint16_t Cnt=0; Cnt<Numentries; Cnt++)
       {
-         Serial.printf("#%03d %s 0xde%02x : ", Cnt, (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
+         Serial.printf("#%04d %s 0xde%02x : ", Cnt, (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
          
          if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else Serial.printf("n/a\n");

@@ -20,6 +20,8 @@
 ;!!!!!!!!!!!!!!!!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    MaxItemNameLength = 28
+
+   ;;;;;;;;;;;;;;;;;;  start IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
    rRegStatus        =  0 ;//Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
    rRegStrAddrLo     =  1 ;//lo byte of start address of the prg file being transfered to mem
@@ -82,17 +84,20 @@
    rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
    rwRegNextIO1Hndlr = StartSIDRegs + 42  
   
-   
+   ;;;;;;;;;;;;;;;;;;  end IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
    rpudNetTimeMask   = 0x02 ; rwRegPwrUpDefaults bit 1=synch net time
 
-   rsReady      = 0x5a
-   rsChangeMenu = 0x9d
-   rsStartItem  = 0xb1
-   rsGetTime    = 0xe6
-   rsIO1HWinit  = 0x24
-   ;rsError      = 0x48
+;enum RegStatusTypes  //rRegStatus
+   rsChangeMenu    = 0x00  ;
+   rsStartItem     = 0x01  ;
+   rsGetTime       = 0x02  ;
+   rsIO1HWinit     = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
+   rsWriteEEPROM   = 0x04  ;
+   rsNumStatusTypes= 0x05  ;
+   rsReady         = 0x5a
+   ;rsError        = 0x48,
 
    rmtSD        = 0
    rmtTeensy    = 1

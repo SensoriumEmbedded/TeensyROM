@@ -44,21 +44,25 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
             break;
          default: //used for all other IO1 reads
             DataPortWriteWait(IO1[Address]); 
+            TraceLogAddValidData(IO1[Address]);
             break;
       }
    }
    else  // IO1 write
    {
       Data = DataPortWaitRead(); 
+      TraceLogAddValidData(Data);
       switch(Address)
       {
          case rwRegSelItem:
             IO1[rwRegSelItem]=Data;
             break;
          case rwRegNextIO1Hndlr:
-            if (Data < IO1H_Num_Handlers) IO1[rwRegNextIO1Hndlr]=Data;
-            else IO1[rwRegNextIO1Hndlr]=0;
-            EEPROM.write(eepAdNextIO1Hndlr, IO1[rwRegNextIO1Hndlr]); 
+            if (Data >= IO1H_Num_Handlers) Data=0;
+            IO1[rwRegNextIO1Hndlr]= Data;
+            eepAddrToWrite = eepAdNextIO1Hndlr;
+            eepDataToWrite = Data;
+            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case rWRegCurrMenuWAIT:
             IO1[rWRegCurrMenuWAIT]=Data;
@@ -66,11 +70,15 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
             break;
          case rwRegPwrUpDefaults:
             IO1[rwRegPwrUpDefaults]= Data;
-            EEPROM.write(eepAdPwrUpDefaults, Data); 
+            eepAddrToWrite = eepAdPwrUpDefaults;
+            eepDataToWrite = Data;
+            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case rwRegTimezone:
             IO1[rwRegTimezone]= Data;
-            EEPROM.write(eepAdTimezone, Data); 
+            eepAddrToWrite = eepAdTimezone;
+            eepDataToWrite = Data;
+            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case wRegControl:
             switch(Data)
@@ -102,6 +110,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
 }
 
 //IO1 Handler for MIDI Emulation _________________________________________________________________________________________
+// 6580 ACIA interface emulation
 
 __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool R_Wn)
 {
@@ -222,7 +231,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
    #endif
    if (R_Wn) //High (IO1 Read)
    {
-      //DataPortWriteWait(0);
+      //DataPortWriteWait(0); //respond to all reads
       //BigBuf[BigBufCount] |= (0<<8) | IOTLDataValid;
       //Serial.printf("Rd $de%02x\n", Address);
    }
@@ -237,11 +246,92 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
    #endif
 }
 
+//IO1 Handler for SwiftLink (Network) _________________________________________________________________________________________
+
+__attribute__(( always_inline )) inline void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
+{
+   uint8_t Data;
+   
+   if (R_Wn) //IO1 Read  -------------------------------------------------
+   {
+      switch(Address)
+      {
+
+         case IORegSwiftData:   
+         case IORegSwiftStatus:  
+         case IORegSwiftCommand:  
+         case IORegSwiftControl:
+         case IORegSwiftBaud:
+            DataPortWriteWait(0x01);  
+            TraceLogAddValidData(0x01);
+            break;
+
+         //default: //used for all other IO1 reads
+         //   DataPortWriteWait(0x01); 
+         //   TraceLogAddValidData(0x01);
+         //   break;
+      }
+   }
+   else  // IO1 write    -------------------------------------------------
+   {
+      Data = DataPortWaitRead();
+      switch(Address)
+      {
+         case IORegSwiftData:   
+         case IORegSwiftStatus:  
+         case IORegSwiftCommand:  
+         case IORegSwiftControl:
+         case IORegSwiftBaud:
+            TraceLogAddValidData(Data);
+            break;
+         //case wIORegAddrMIDIControl:
+         //   break;
+      }
+      TraceLogAddValidData(Data);
+   }
+}
+
+////IO1 Handler for <Template> _________________________________________________________________________________________
+//
+//__attribute__(( always_inline )) inline void IO1Hndlr_Template(uint8_t Address, bool R_Wn)
+//{
+//   uint8_t Data;
+//   
+//   if (R_Wn) //IO1 Read  -------------------------------------------------
+//   {
+//      switch(Address)
+//      {
+//         //case rIORegAddrMIDIStatus:
+//         //   DataPortWriteWait(rIORegMIDIStatus);  
+//         //   TraceLogAddValidData(rIORegMIDIStatus);
+//         //   break;
+//         //default: //used for all other IO1 reads
+//         //   DataPortWriteWait(IO1[Address]); 
+//         //   break;
+//      }
+//   }
+//   else  // IO1 write    -------------------------------------------------
+//   {
+//      Data = DataPortWaitRead();
+//      switch(Address)
+//      {
+//         //case wIORegAddrMIDIControl:
+//         //   break;
+//      }
+//      TraceLogAddValidData(Data);
+//   }
+//}
 
 //IO1 Handler Init _________________________________________________________________________________________
 
+void IO1HWinitToNext()
+{
+   IO1HWinit(IO1[rwRegNextIO1Hndlr]);
+}
+
 void IO1HWinit(uint8_t NewIO1Handler)
 {
+   SetMIDIHandlersNULL();
    MIDIRxIRQEnabled = false;
    MIDIRxBytesToSend = 0;
    rIORegMIDIStatus = 0;
@@ -251,20 +341,15 @@ void IO1HWinit(uint8_t NewIO1Handler)
 
    switch(NewIO1Handler)
    {
-      case IO1H_TeensyROM:  //MIDI handlers for MIDI2SID
+      case IO1H_SwiftLink:
+         Serial.println("SwiftLink IO1 handler ready");
+         break;
+      case IO1H_TeensyROM:  
+         //MIDI handlers for MIDI2SID:
          midi1.setHandleNoteOff             (M2SOnNoteOff);             // 8x
          midi1.setHandleNoteOn              (M2SOnNoteOn);              // 9x
-         midi1.setHandleAfterTouchPoly      (NULL);                     // Ax
          midi1.setHandleControlChange       (M2SOnControlChange);       // Bx
-         midi1.setHandleProgramChange       (NULL);                     // Cx
-         midi1.setHandleAfterTouch          (NULL);                     // Dx
          midi1.setHandlePitchChange         (M2SOnPitchChange);         // Ex
-         midi1.setHandleSystemExclusive     (M2SOnSystemExclusive);     // F0   
-         midi1.setHandleTimeCodeQuarterFrame(NULL);                     // F1
-         midi1.setHandleSongPosition        (NULL);                     // F2
-         midi1.setHandleSongSelect          (NULL);                     // F3
-         midi1.setHandleTuneRequest         (NULL);                     // F6
-         midi1.setHandleRealTimeSystem      (NULL);                     // F8-FF (except FD)
          Serial.println("TeensyROM/MIDI2SID IO1 handler ready");
          break;
       case IO1H_MIDI_Datel:
@@ -279,13 +364,13 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleProgramChange       (HWEOnProgramChange);       // Cx
          midi1.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
          midi1.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-         midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0   
+         midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0 *not implemented
          midi1.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
          midi1.setHandleSongPosition        (HWEOnSongPosition);        // F2
          midi1.setHandleSongSelect          (HWEOnSongSelect);          // F3
          midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
          midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
-         // not catching F4, F5, F7 (end of SysEx), and FD         
+         // not catching F0, F4, F5, F7 (end of SysEx), and FD         
          SetMIDIRegs(NewIO1Handler - IO1H_MIDI_Datel);
          NewIO1Handler = IO1H_MIDI_Datel; //all 4 are the same after regs are set
          break;
@@ -305,6 +390,9 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
          // not catching F4, F5, F7 (end of SysEx), and FD                  
          Serial.println("Debug IO1 handler ready");
+         break;
+      default:
+         Serial.println("No IO1 handler loaded");
          break;
    }
    
@@ -335,4 +423,21 @@ void SetMIDIRegs(uint8_t MIDI_ID)
    rIORegAddrMIDIReceive  = MidiRegs[MIDI_ID][3];
 
    Serial.printf("%s MIDI IO1 handler ready\n", sMIDIType[MIDI_ID]);
+}
+
+void SetMIDIHandlersNULL()
+{
+   midi1.setHandleNoteOff             (NULL); // 8x
+   midi1.setHandleNoteOn              (NULL); // 9x
+   midi1.setHandleAfterTouchPoly      (NULL); // Ax
+   midi1.setHandleControlChange       (NULL); // Bx
+   midi1.setHandleProgramChange       (NULL); // Cx
+   midi1.setHandleAfterTouch          (NULL); // Dx
+   midi1.setHandlePitchChange         (NULL); // Ex
+   midi1.setHandleSystemExclusive     (NothingOnSystemExclusive); // F0   
+   midi1.setHandleTimeCodeQuarterFrame(NULL); // F1
+   midi1.setHandleSongPosition        (NULL); // F2
+   midi1.setHandleSongSelect          (NULL); // F3
+   midi1.setHandleTuneRequest         (NULL); // F6
+   midi1.setHandleRealTimeSystem      (NULL); // F8-FF (except FD)
 }

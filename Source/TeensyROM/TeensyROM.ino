@@ -24,6 +24,7 @@
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
 #include "ROM_Images.h"
+#include "IOHandlers.h"
 #include <SD.h>
 #include <USBHost_t36.h>
 #include <SPI.h>
@@ -48,6 +49,7 @@ volatile uint8_t MIDIRxBytesToSend = 0;
 volatile uint8_t MIDIRxBuf[3];
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
+volatile uint8_t eepAddrToWrite, eepDataToWrite;
 uint8_t MIDIControlVals[NumMIDIControls];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
@@ -182,11 +184,9 @@ void loop()
   
    if (IO1[rRegStatus] != rsReady) 
    {  //ISR requested work
-      if     (IO1[rRegStatus] == rsChangeMenu) MenuChange();
-      else if(IO1[rRegStatus] == rsGetTime)    getNtpTime();
-      else if(IO1[rRegStatus] == rsStartItem)  HandleExecution();
-      else if(IO1[rRegStatus] == rsIO1HWinit)  IO1HWinit(IO1[rwRegNextIO1Hndlr]);
-      
+      if (IO1[rRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rRegStatus]]();
+      else Serial.printf("?Stat: %02x\n", IO1[rRegStatus]);
+      Serial.flush();
       IO1[rRegStatus] = rsReady;
    }
    
@@ -217,4 +217,9 @@ void SetUpMainMenuROM()
    EmulateVicCycles = false;
    IO1HWinit(IO1H_TeensyROM);   
    doReset = true;
+}
+
+void WriteEEPROM()
+{
+   EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }

@@ -79,7 +79,7 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDOutOfVoices= StartSIDRegs + 38,
    rRegSIDStringTerm = StartSIDRegs + 39,
    
-   rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see bit mask defs
+   rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see RegPowerUpDefaultMasks
    rwRegTimezone     = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
    rwRegNextIO1Hndlr = StartSIDRegs + 42,  // Which IO1 handler will take over upone exit/execute/emulate
    
@@ -92,14 +92,17 @@ enum RegPowerUpDefaultMasks
    rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1=synch net time
 };
 
-enum RegStatusTypes
+enum RegStatusTypes  //rRegStatus, match StatusFunction order
 {
-   rsReady      = 0x5a,
-   rsChangeMenu = 0x9d,
-   rsStartItem  = 0xb1,
-   rsGetTime    = 0xe6,
-   rsIO1HWinit  = 0x24, //C64 code is executing transfered PRG, change IO1 handler
-   //rsError      = 0x48,
+   rsChangeMenu    = 0x00,
+   rsStartItem     = 0x01,
+   rsGetTime       = 0x02,
+   rsIO1HWinit     = 0x03, //C64 code is executing transfered PRG, change IO1 handler
+   rsWriteEEPROM   = 0x04,
+   rsNumStatusTypes= 0x05,
+   
+   rsReady         = 0x5a,
+   //rsError        = 0x48,
 };
 
 enum RegMenuTypes
@@ -142,3 +145,17 @@ struct StructMenuItem
   uint16_t Size;
 };
 
+void MenuChange();
+void HandleExecution();
+void getNtpTime();
+void IO1HWinitToNext();
+void WriteEEPROM();
+
+void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
+{
+   &MenuChange,
+   &HandleExecution,
+   &getNtpTime,
+   &IO1HWinitToNext,
+   &WriteEEPROM,
+};

@@ -51,13 +51,13 @@ uint32_t* BigBuf;
 #define PALBusFreq         985250
 #define IO1_Size           256
 
-#define eepMagicNum        0xfeed1c64
+#define eepMagicNum        0xfeed0c64
 enum InternalEEPROMmap
 {
    eepAdMagicNum      = 0, // (uint32_t) Indicated if internal EEPROM has been initialized
    eepAdPwrUpDefaults = 4, // (uint8_t)  power up default reg, see bit mask defs rpudMusicMask, rpudNetTimeMask
    eepAdTimezone      = 5, // (int8_t)   signed char for timezone: UTC +14/-12 
-   eepAdNextIO1Hndlr  = 6, // (uint8_t)   default IO handler to load upon TR exit
+   eepAdNextIO1Hndlr  = 6, // (uint8_t)  default IO handler to load upon TR exit
 };
 
 uint32_t StartCycCnt;
@@ -166,26 +166,3 @@ enum Phi2ISRStates
    P2I_Off,
    P2I_TimingCheck,
 };
-
-enum IO1Handlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
-{
-   IO1H_None,
-   IO1H_MIDI_Datel,   //always first of 4 MIDI options
-   IO1H_MIDI_Sequential,
-   IO1H_MIDI_Passport,
-   IO1H_MIDI_NamesoftIRQ,
-   IO1H_Debug,
-   IO1H_TeensyROM, 
-   IO1H_Num_Handlers  //always last
-};
-
-#define BigBufSize   200
-#define NumMIDIControls 16  //must be power of 2, may want to do this differently?
-
-//see https://codebase64.org/doku.php?id=base:c64_midi_interfaces
-//rIORegMIDIStatus:
-#define MIDIStatusIRQReq 0x80   // Interrupt Request
-#define MIDIStatusDCD    0x04   // Data Carrier Detect (Ready to receive Tx data)
-#define MIDIStatusTxRdy  0x02   // Transmit Data Register Empty (Ready to receive Tx data)
-#define MIDIStatusRxFull 0x01   // Receive Data Register Full (Rx Data waiting to be read)
-
