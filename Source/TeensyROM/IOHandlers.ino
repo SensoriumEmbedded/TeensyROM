@@ -335,9 +335,9 @@ void IO1HWinit(uint8_t NewIO1Handler)
    MIDIRxIRQEnabled = false;
    MIDIRxBytesToSend = 0;
    rIORegMIDIStatus = 0;
+   BigBufCount = 0;
    free(BigBuf);
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   BigBufCount = 0;
 
    switch(NewIO1Handler)
    {

@@ -56,33 +56,47 @@ void PrintDebugLog()
       LogDatavalid = true;
    #endif
       
+   #ifdef DbgCycAdjLog
+      Serial.println("DbgCycAdjLog enabled");
+      LogDatavalid = true;
+   #endif
+      
    if (IO1Handler == IO1H_Debug)
    {
       Serial.println("Debug IO Handler enabled");
       LogDatavalid = true;
    }               
    
-   if (LogDatavalid)
+   if (!LogDatavalid)
    {
-      uint32_t Numentries = BigBufCount;
-      if (Numentries == BigBufSize) 
+      Serial.println("No logging enabled");
+      return;
+   }
+   
+   bool BufferFull = (BigBufCount == BigBufSize);
+   
+   if  (BufferFull) BigBufCount--; //last element invalid
+   
+   for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
+   {
+      Serial.printf("#%04d ", Cnt);
+      if (BigBuf[Cnt] & AdjustedCycleTiming)
       {
-         Serial.println("Buffer is full");
-         Numentries--; //last element invalid
+         BigBuf[Cnt] &= ~AdjustedCycleTiming;
+         Serial.printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdjThresh);
       }
-      
-      for(uint16_t Cnt=0; Cnt<Numentries; Cnt++)
+      else
       {
-         Serial.printf("#%04d %s 0xde%02x : ", Cnt, (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
+         Serial.printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
          
          if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else Serial.printf("n/a\n");
       }
-      
-      Serial.println("Buffer Reset");
-      BigBufCount = 0;
    }
-   else Serial.println("No logging enabled");
+   
+   if (BufferFull) Serial.println("Buffer was full");
+   Serial.println("Buffer Reset");
+   BigBufCount = 0;
 }
 
 
@@ -218,7 +232,8 @@ void getNtpTime()
       return;
    }
    Udp.begin(localPort);
-   Serial.printf("passed. took %d mS\n", (millis() - beginWait));
+   Serial.printf("passed. took %d mS\nIP: ", (millis() - beginWait));
+   Serial.println(Ethernet.localIP());
    
    const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
    byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets

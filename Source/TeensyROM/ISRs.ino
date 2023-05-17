@@ -26,18 +26,31 @@ FASTRUN void isrButton()
 
 FASTRUN void isrPHI2() //Phi2 rising edge
 {
-   //if ((ARM_DWT_CYCCNT-StartCycCnt) > 1500)... //check for missed cycles?
+   StartCycCnt = ARM_DWT_CYCCNT;
+   uint32_t CycSinceLast = StartCycCnt-LastCycCnt;
+   LastCycCnt = StartCycCnt;
+   
+   if (CycSinceLast > nSToCyc(nS_MaxAdjThresh)) // If we're late, adjust...
+   {
+      StartCycCnt += nSToCyc(nS_MaxAdjThresh) - CycSinceLast; 
+      #ifdef DbgCycAdjLog      
+         if (BigBuf != NULL)
+         {
+            BigBuf[BigBufCount] = CycSinceLast | AdjustedCycleTiming;
+            if (BigBufCount < BigBufSize) BigBufCount++;
+         }
+      #endif
+   }
+   
    if (Phi2ISRState != P2I_Normal) 
    {
       if (Phi2ISRState == P2I_TimingCheck)
       {
-         BigBuf[BigBufCount++] = ARM_DWT_CYCCNT-StartCycCnt;
-         StartCycCnt = ARM_DWT_CYCCNT;
+         BigBuf[BigBufCount++] = CycSinceLast;
          if (BigBufCount == BigBufSize) Phi2ISRState = P2I_Normal;
       }
       return;
    }
-   StartCycCnt = ARM_DWT_CYCCNT;     //RESET_CYCLECOUNT; kills any other delay() type opperations
    SetDebugAssert;
 
    WaitUntil_nS(nS_RWnReady); 

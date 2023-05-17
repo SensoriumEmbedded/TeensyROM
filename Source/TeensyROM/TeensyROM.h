@@ -24,10 +24,11 @@
 //enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 //#define DbgMsgs_MIDI  //MIDI (mostly out) messages (Printf_dbgMIDI)
-//#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to a buffer. Like debug handler but can use for others
+//#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
+//#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 
 uint16_t BigBufCount = 0;
-uint32_t* BigBuf;
+uint32_t* BigBuf = NULL;
 
 #ifdef DbgMsgs_MIDI
    #define Printf_dbgMIDI Serial.printf
@@ -35,8 +36,10 @@ uint32_t* BigBuf;
    __attribute__((always_inline)) void inline Printf_dbgMIDI(...) {};
 #endif
 
-#define IOTLRead           0x10000
-#define IOTLDataValid      0x20000
+#define IOTLRead            0x10000
+#define IOTLDataValid       0x20000
+#define AdjustedCycleTiming 0x40000
+
 #ifdef DbgIOTraceLog
    __attribute__((always_inline)) void inline TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
 #else
@@ -60,7 +63,7 @@ enum InternalEEPROMmap
    eepAdNextIO1Hndlr  = 6, // (uint8_t)  default IO handler to load upon TR exit
 };
 
-uint32_t StartCycCnt;
+uint32_t StartCycCnt, LastCycCnt=0;
    
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN   31  
@@ -117,13 +120,16 @@ const uint8_t OutputPins[] = {
 #define SetDebugAssert     CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDebugDeassert   CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
-//#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
-#define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < ((F_CPU_ACTUAL>>16) * N) / (1000000000UL>>16))
-    //Could reduce or use whole cycle counts instead of nS... F_CPU_ACTUAL=816000000  /1000000000 = 0.816
+#define CycTonS(N)         (N*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
+#define nSToCyc(N)         (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 
+//#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
+#define WaitUntil_nS(N)    while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
+    
+#define nS_MaxAdjThresh        993   //above this nS since last int causes adjustment
 // Times from Phi2 rising (interrupt):
-uint32_t nS_RWnReady   =     80;  //Phi2 rise to RWn valid
-uint32_t nS_PLAprop    =    140;  //delay through PLA to decode address (IO1/2, ROML/H)
+uint32_t nS_RWnReady   =     95;  //Phi2 rise to RWn valid
+uint32_t nS_PLAprop    =    150;  //delay through PLA to decode address (IO1/2, ROML/H)
 uint32_t nS_DataSetup  =    220;  //On a C64 write, when to latch data bus.
 uint32_t nS_DataHold   =    350;  //On a C64 read, when to stop driving the data bus
 

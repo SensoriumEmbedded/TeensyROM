@@ -185,8 +185,9 @@ MsgSettingsMenu:
    !tx 0  ;near max of 256 bytes
 
 MsgCreditsInfo:
-   !tx "    ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn, ChrReturn
+   !tx "    ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
    !tx "    ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Special IO:", ChrReturn
+   !tx "    ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, SourcesColor,  " Self Test", ChrReturn
    !tx ChrReturn, ChrReturn, MenuMiscColor 
    !tx "   2023 by Travis Smith @ Sensorium", ChrReturn, ChrReturn
    !tx " TeensyROM is 100% Open Source HW & SW!", ChrReturn
@@ -237,6 +238,12 @@ MsgError:
    !tx ChrRed, "Error: ", 0
 MsgErrNoData:
    !tx "No Data Available", 0
+MsgTesting:
+   !tx NameColor, "  Test", 0
+MsgPass:
+   !tx "Pass  ", 0
+MsgFail:
+   !tx ChrRed, "Fail  ", 0
 ;MsgErrNoFile:
 ;   !tx "No File Available", 0
    

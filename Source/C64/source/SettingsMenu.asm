@@ -75,7 +75,7 @@ ShowSettings:
    ora #$10
 +  jsr PrintHexByte
 
-   ldx #15 ;row Special IO
+   ldx #14 ;row Special IO
    ldy #19 ;col
    clc
    jsr SetCursor
@@ -142,5 +142,58 @@ WaitForSettingsKey:
    jsr WaitForTR
    jmp ShowSettings  
 
++  cmp #ChrF8  ;Test IO
+   bne +
+   jsr TestIO
+   jmp WaitForSettingsKey  
+
 +  jmp WaitForSettingsKey  
+
+TestIO:
+   jsr CursorToTest    
+   lda #<MsgTesting
+   ldy #>MsgTesting
+   jsr PrintString 
+
+   ldx #$05  ;outer loop count, each takes a couple seconds
+-- stx PtrAddrLo ;storage for outer counter
+   jsr CursorToTest    
+   lda PtrAddrLo
+   jsr PrintHexNibble
+   ;jsr PrintHexByte
+   ldx #$00
+   ldy #$00
+-  lda rRegPresence1+IO1Port
+   cmp #$55
+   bne +
+   lda rRegPresence2+IO1Port
+   cmp #$AA
+   bne +
+   dex
+   bne -
+   dey
+   bne -
+   ldx PtrAddrLo
+   dex
+   bne --
+
+   jsr CursorToTest    
+   lda #<MsgPass
+   ldy #>MsgPass
+   jsr PrintString 
+   rts
+
++  jsr CursorToTest   
+   lda #<MsgFail
+   ldy #>MsgFail
+   jsr PrintString 
+   rts
+
+CursorToTest
+   ldx #15 ;row 
+   ldy #17 ;col
+   clc
+   jsr SetCursor   
+   rts
+
 

@@ -151,7 +151,7 @@ void setup()
    //   Serial.print(" : ");
    //   Serial.print(BigBuf[SampNum]);
    //   Serial.print(" : ");
-   //   Serial.println(BigBuf[SampNum]*(1000000000UL>>16)/(F_CPU_ACTUAL>>16));
+   //   Serial.println(CycTonS(BigBuf[SampNum]));
    //}
    //free(BigBuf);
    
