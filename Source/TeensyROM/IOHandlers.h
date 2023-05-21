@@ -35,12 +35,14 @@ enum IO1Handlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
 #define NumMIDIControls   16  //must be power of 2, may want to do this differently?
 
 //see https://codebase64.org/doku.php?id=base:c64_midi_interfaces
+// 6580 ACIA interface emulation
 //rIORegMIDIStatus:
 #define MIDIStatusIRQReq  0x80   // Interrupt Request
 #define MIDIStatusDCD     0x04   // Data Carrier Detect (Ready to receive Tx data)
 #define MIDIStatusTxRdy   0x02   // Transmit Data Register Empty (Ready to receive Tx data)
 #define MIDIStatusRxFull  0x01   // Receive Data Register Full (Rx Data waiting to be read)
 
+// 6551 ACIA interface emulation
 #define IORegSwiftData    0x00   // Swift Emulation Data Reg
 #define IORegSwiftStatus  0x01   // Swift Emulation Status Reg
 #define IORegSwiftCommand 0x02   // Swift Emulation Command Reg

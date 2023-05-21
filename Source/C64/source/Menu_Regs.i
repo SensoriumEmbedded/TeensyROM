@@ -110,14 +110,16 @@
    rCtlGetTimeWAIT      = 3
    rCtlRunningPRG       = 4 ; final signal before running prg, allows IO1 handler change
 
-   rtNone = 0  ;synch with TblItemType below
-   rt16k  = 1
-   rt8kHi = 2
-   rt8kLo = 3
-   rtPrg  = 4
-   rtUnk  = 5
-   rtCrt  = 6
-   rtDir  = 7
-   rtC128 = 8
+   ;synch with TblItemType & regItemTypes
+   rtNone      = 0
+   rtUnknown   = 1
+   rtBin16k    = 2
+   rtBin8kHi   = 3
+   rtBin8kLo   = 4
+   rtBinC128   = 5
+   rtDirectory = 6
+   rtFilePrg   = 7
+   rtFileCrt   = 8
+
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -43,6 +43,7 @@ volatile uint8_t IO1Handler = IO1H_None;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
+
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
 volatile uint8_t MIDIRxBytesToSend = 0;
@@ -138,7 +139,7 @@ void setup()
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
-   IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr);
+   //IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr); //done each entry into menu
    SetUpMainMenuROM();
 
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));

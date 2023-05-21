@@ -247,8 +247,18 @@ MsgFail:
 ;MsgErrNoFile:
 ;   !tx "No File Available", 0
    
-TblItemType: ;must match rtNone, rt16k, etc order!
-   !tx "--- ","16k ","8Hi ","8Lo ","Prg ","Unk ","Crt ","Dir ","C128" ;4 bytes each, no term
+TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
+   ;4 bytes each, no term
+   !tx "--- "  ; rtNone      = 0,
+   !tx "Unk "  ; rtUnknown   = 1,
+   !tx "16k "  ; rtBin16k    = 2,
+   !tx "8Hi "  ; rtBin8kHi   = 3,
+   !tx "8Lo "  ; rtBin8kLo   = 4,
+   !tx "128 "  ; rtBinC128   = 5,
+   !tx "Dir "  ; rtDirectory = 6,
+   !tx "Prg "  ; rtFilePrg   = 7,
+   !tx "Crt "  ; rtFileCrt   = 8,
+   
 TblSpecialIO: ;must match enum IO1Handlers order/qty
    !word SpIO_None
    !word SpIO_MIDI_Datel

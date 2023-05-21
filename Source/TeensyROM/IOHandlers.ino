@@ -246,7 +246,8 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
    #endif
 }
 
-//IO1 Handler for SwiftLink (Network) _________________________________________________________________________________________
+//IO1 Handler for IO1H_SwiftLink (Network) _________________________________________________________________________________________
+// 6551 ACIA interface emulation
 
 __attribute__(( always_inline )) inline void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 {
@@ -346,6 +347,7 @@ void IO1HWinit(uint8_t NewIO1Handler)
          break;
       case IO1H_TeensyROM:  
          //MIDI handlers for MIDI2SID:
+         IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr);  //in case it was over-ridden by .crt
          midi1.setHandleNoteOff             (M2SOnNoteOff);             // 8x
          midi1.setHandleNoteOn              (M2SOnNoteOn);              // 9x
          midi1.setHandleControlChange       (M2SOnControlChange);       // Bx

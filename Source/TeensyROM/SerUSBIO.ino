@@ -164,7 +164,7 @@ void ReceiveFile()
    
    if (strcmp(Extension, ".prg")==0)
    {
-      USBHostMenu.ItemType = rtPrg;
+      USBHostMenu.ItemType = rtFilePrg;
       Serial.println(".PRG file detected");
       NumUSBHostItems = 1;
       return;
@@ -172,7 +172,7 @@ void ReceiveFile()
    
    if (strcmp(Extension, ".crt")==0)
    {
-      USBHostMenu.ItemType = rtCrt;
+      USBHostMenu.ItemType = rtFileCrt;
       Serial.println(".CRT file detected"); 
       NumUSBHostItems = 1;
       return;

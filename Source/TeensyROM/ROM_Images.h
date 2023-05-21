@@ -26,38 +26,38 @@
 
 StructMenuItem ROMMenu[] = 
 {
-   rtNone, "Test/Diags:----------------", NULL                                 , 1, //sepparator
-   rt8kHi, "  781220 C64 Dead Test"     , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
-   rt8kLo, "  586220* C64 Diagnostics"  , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
-   rtCrt,  "  789010 C128 Diagnostics"  , (uint8_t*)C128_789010_crt            , 1, //size not needed for CRTs
-   rt8kLo, "  1541 Diagnostics"         , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
-   rt8kLo, "  Keyboard Tester"          , (uint8_t*)Keyboard_Tester_BIN        , 1, //size not needed for ROMs
-   rt8kLo, "  SID Tester"               , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
-   rt8kLo, "  Joystick Tester"          , (uint8_t*)Joystick_Tester_BIN        , 1, //size not needed for ROMs
-   rtPrg , "  Game Controller Tester"   , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
-   rtPrg , "  ROM Checksum read"        , (uint8_t*)rom_chksum_137kernals_prg  , sizeof(rom_chksum_137kernals_prg) ,
-   rtNone, ""                           , NULL                                 , 1, //sepparator
+   rtNone   , "Test/Diags:----------------", NULL                                 , 1, //sepparator
+   rtBin8kHi, "  781220 C64 Dead Test"     , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
+   rtBin8kLo, "  586220* C64 Diagnostics"  , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
+   rtFileCrt, "  789010 C128 Diagnostics"  , (uint8_t*)C128_789010_crt            , 1, //size not needed for CRTs
+   rtBin8kLo, "  1541 Diagnostics"         , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
+   rtBin8kLo, "  Keyboard Tester"          , (uint8_t*)Keyboard_Tester_BIN        , 1, //size not needed for ROMs
+   rtBin8kLo, "  SID Tester"               , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
+   rtBin8kLo, "  Joystick Tester"          , (uint8_t*)Joystick_Tester_BIN        , 1, //size not needed for ROMs
+   rtFilePrg, "  Game Controller Tester"   , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
+   rtFilePrg, "  ROM Checksum read"        , (uint8_t*)rom_chksum_137kernals_prg  , sizeof(rom_chksum_137kernals_prg) ,
+   rtNone   , ""                           , NULL                                 , 1, //sepparator
 
-   rtNone, "Games/MIDI:----------------", NULL                                 , 1, //sepparator
-   rt16k , "  Donkey Kong"              , (uint8_t*)Donkey_Kong_BIN            , 1, //size not needed for ROMs      
-   rtPrg , "  Joust!"                   , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
-   rt8kHi, "  Jupiter Lander"           , (uint8_t*)Jupiter_Lander_BIN         , 1, //size not needed for ROMs  
-   rtPrg , "  Cynthcart v2.0.1"         , (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
-   //rtNone, ""                           , NULL                                 , 1, //sepparator
+   rtNone   , "Games/MIDI:----------------", NULL                                 , 1, //sepparator
+   rtBin16k , "  Donkey Kong"              , (uint8_t*)Donkey_Kong_BIN            , 1, //size not needed for ROMs      
+   rtFilePrg, "  Joust!"                   , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
+   rtBin8kHi, "  Jupiter Lander"           , (uint8_t*)Jupiter_Lander_BIN         , 1, //size not needed for ROMs  
+   rtFilePrg, "  Cynthcart v2.0.1"         , (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
+   //rtNone   , ""                           , NULL                                 , 1, //sepparator
 
-   rtNone, "Utilities:-----------------", NULL                                 , 1, //sepparator
-   rtPrg , "  Epyx Fast Load"           , (uint8_t*)epyx_prg                   , sizeof(epyx_prg) ,
-   rtPrg , "  Hex Mon"                  , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
-   rtPrg , "  80 Columns"               , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
-   rtPrg , "  File Browser 64"          , (uint8_t*)fb64_prg                   , sizeof(fb64_prg      ) ,
-   rtPrg , "  DualCopy"                 , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg  ) ,
-   rtPrg , "  CCGMS 2021"               , (uint8_t*)ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
+   rtNone   , "Utilities:-----------------", NULL                                 , 1, //sepparator
+   rtFilePrg, "  Epyx Fast Load"           , (uint8_t*)epyx_prg                   , sizeof(epyx_prg) ,
+   rtFilePrg, "  Hex Mon"                  , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
+   rtFilePrg, "  80 Columns"               , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
+   rtFilePrg, "  File Browser 64"          , (uint8_t*)fb64_prg                   , sizeof(fb64_prg      ) ,
+   rtFilePrg, "  DualCopy"                 , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg  ) ,
+   rtFilePrg, "  CCGMS 2021"               , (uint8_t*)ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
 
-   rtNone, ""                           , NULL                                 , 1, //sepparator
-   rtNone, "My PRGs:-------------------", NULL                                 , 1, //sepparator
-   rtPrg , "  Ember Head"               , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
-   rtPrg , "  Display Fractal"          , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
-   rtPrg , "  Draw!!!                :)", (uint8_t*)draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
+   rtNone   , ""                           , NULL                                 , 1, //sepparator
+   rtNone   , "My PRGs:-------------------", NULL                                 , 1, //sepparator
+   rtFilePrg, "  Ember Head"               , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
+   rtFilePrg, "  Display Fractal"          , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
+   rtFilePrg, "  Draw!!!                :)", (uint8_t*)draw01_prg                 , sizeof(draw01_prg    ) , //max Name length  :)
 
 };
 

@@ -337,7 +337,7 @@ SelectMenuItem:
    sta wRegControl+IO1Port
    jsr WaitForTR ;if it's a ROM/crt image, it won't return from this
    pla
-   cmp #rtPrg
+   cmp #rtFilePrg
    beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
    jsr ListMenuItemsInit
    rts

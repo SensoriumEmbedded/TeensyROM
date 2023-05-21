@@ -124,15 +124,15 @@ enum RegCtlCommands
 
 enum regItemTypes
 {
-   rtNone = 0,
-   rt16k  = 1,
-   rt8kHi = 2,
-   rt8kLo = 3,
-   rtPrg  = 4,
-   rtUnk  = 5,
-   rtCrt  = 6,
-   rtDir  = 7,
-   rtC128 = 8,
+   rtNone      = 0,
+   rtUnknown   = 1,
+   rtBin16k    = 2,
+   rtBin8kHi   = 3,
+   rtBin8kLo   = 4,
+   rtBinC128   = 5,
+   rtDirectory = 6,
+   rtFilePrg   = 7,
+   rtFileCrt   = 8,
 };
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
