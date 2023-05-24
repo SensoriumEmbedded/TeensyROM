@@ -18,17 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-enum IO1Handlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
+enum IOHandlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
 {
-   IO1H_None,
-   IO1H_MIDI_Datel,        // always first of 
-   IO1H_MIDI_Sequential,   //   4 MIDI options
-   IO1H_MIDI_Passport,     //   ...
-   IO1H_MIDI_NamesoftIRQ,  //   in this order
-   IO1H_Debug,
-   IO1H_TeensyROM, 
-   IO1H_SwiftLink,
-   IO1H_Num_Handlers       //always last
+   IOH_None,
+   IOH_MIDI_Datel,        // always first of 
+   IOH_MIDI_Sequential,   //   4 MIDI options
+   IOH_MIDI_Passport,     //   ...
+   IOH_MIDI_NamesoftIRQ,  //   in this order
+   IOH_Debug,
+   IOH_TeensyROM, 
+   IOH_SwiftLink,
+   
+   IOH_Num_Handlers       //always last
 };
 
 #define BigBufSize        5000

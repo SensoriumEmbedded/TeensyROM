@@ -262,19 +262,19 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       case Cart_Generic:
          break;
       case Cart_MIDI_Datel:
-         IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Datel;
+         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Datel;
          break;
       case Cart_MIDI_Sequential:
-         IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Sequential;
+         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Sequential;
          break;
       case Cart_MIDI_Passport:
-         IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_Passport;
+         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Passport;
          break;
       case Cart_MIDI_Namesoft:
-         IO1[rwRegNextIO1Hndlr] = IO1H_MIDI_NamesoftIRQ;
+         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_NamesoftIRQ;
          break;
       case Cart_EpyxFastload:
-         //IO1[rwRegNextIO1Hndlr] = IO1H_;
+         //IO1[rwRegNextIO1Hndlr] = IOH_;
          //break;
       default:
          Serial.println("Unknown Cart HW Type");

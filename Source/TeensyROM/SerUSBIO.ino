@@ -61,7 +61,7 @@ void PrintDebugLog()
       LogDatavalid = true;
    #endif
       
-   if (IO1Handler == IO1H_Debug)
+   if (IO1Handler == IOH_Debug)
    {
       Serial.println("Debug IO Handler enabled");
       LogDatavalid = true;

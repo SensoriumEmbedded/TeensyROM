@@ -39,7 +39,7 @@ volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
-volatile uint8_t IO1Handler = IO1H_None;
+volatile uint8_t IO1Handler = IOH_None;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
@@ -126,7 +126,7 @@ void setup()
       EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
       EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
       EEPROM.write(eepAdTimezone, -8); //default to pacific time
-      EEPROM.write(eepAdNextIO1Hndlr, IO1H_None); //default to pacific time
+      EEPROM.write(eepAdNextIO1Hndlr, IOH_None); //default to no Special HW
    }
 
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
@@ -216,7 +216,7 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
    EmulateVicCycles = false;
-   IO1HWinit(IO1H_TeensyROM);   
+   IO1HWinit(IOH_TeensyROM);   
    doReset = true;
 }
 

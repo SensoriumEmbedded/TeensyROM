@@ -57,12 +57,12 @@
 #define Cart_EasyFlash               32
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
-#define Cart_ActionReplay 3          35
+#define Cart_ActionReplay3           35
 #define Cart_RetroReplay             36
 #define Cart_MMC64                   37
 #define Cart_MMCReplay               38
 #define Cart_IDE64                   39
-#define Cart_SuperSnapshot V4        40
+#define Cart_SuperSnapshotV4         40
 #define Cart_IEEE488                 41
 #define Cart_GameKiller              42
 #define Cart_Prophet64               43

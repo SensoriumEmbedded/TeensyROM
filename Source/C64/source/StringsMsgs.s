@@ -259,7 +259,7 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx "Prg "  ; rtFilePrg   = 7,
    !tx "Crt "  ; rtFileCrt   = 8,
    
-TblSpecialIO: ;must match enum IO1Handlers order/qty
+TblSpecialIO: ;must match enum IOHandlers order/qty
    !word SpIO_None
    !word SpIO_MIDI_Datel
    !word SpIO_MIDI_Sequential
