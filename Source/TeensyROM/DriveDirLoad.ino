@@ -109,8 +109,7 @@ void HandleExecution()
    if (CartLoaded)
    {
       doReset=true;
-      IO1HWinitToNext();
-      //Serial.printf("CRT loaded, IO1Handler chg: %d\n", IO1Handler);
+      IOHandlerInitToNext();
    }
 
 }
@@ -238,8 +237,11 @@ void LoadDirectory(bool SD_nUSBDrive)
 
 void ParseCRTFile(StructMenuItem* MyMenuItem)   
 {
-   //https://vice-emu.sourceforge.io/vice_17.html#SEC369
-   //http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
+   //Sources:
+   // https://codebase64.org/doku.php?id=base:crt_file_format
+   // https://rr.pokefinder.org/wiki/CRT_ID
+   // https://vice-emu.sourceforge.io/vice_17.html#SEC369
+   // http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
    
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
    MyMenuItem->ItemType = rtUnknown; //in case we fail
@@ -256,26 +258,27 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    Serial.printf("Header len: %lu\n", HeaderLen);
    if (HeaderLen < 0x40) HeaderLen = 0x40;
    
-   Serial.printf("HW Type: %d\n", (int16_t)toU16(CRT_Image+0x16));
-   switch ((int16_t)toU16(CRT_Image+0x16))
+   int16_t HWType = (int16_t)toU16(CRT_Image+0x16);
+   Serial.printf("HW Type: %d\n", HWType);
+   switch (HWType)
       {
       case Cart_Generic:
          break;
       case Cart_MIDI_Datel:
-         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Datel;
+         IO1[rwRegNextIOHndlr] = IOH_MIDI_Datel;
          break;
       case Cart_MIDI_Sequential:
-         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Sequential;
+         IO1[rwRegNextIOHndlr] = IOH_MIDI_Sequential;
          break;
       case Cart_MIDI_Passport:
-         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_Passport;
+         IO1[rwRegNextIOHndlr] = IOH_MIDI_Passport;
          break;
       case Cart_MIDI_Namesoft:
-         IO1[rwRegNextIO1Hndlr] = IOH_MIDI_NamesoftIRQ;
+         IO1[rwRegNextIOHndlr] = IOH_MIDI_NamesoftIRQ;
          break;
       case Cart_EpyxFastload:
-         //IO1[rwRegNextIO1Hndlr] = IOH_;
-         //break;
+         IO1[rwRegNextIOHndlr] = IOH_EpyxFastLoad;
+         break;
       default:
          Serial.println("Unknown Cart HW Type");
          return;
@@ -307,6 +310,13 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    //We have a good CRT image!
    //Is it a config we support?
    MyMenuItem->Code_Image += HeaderLen+0x10;
+   
+   if(HWType==Cart_EpyxFastload && LoadAddress == 0x8000 && ROMSize == 0x2000) //sets EXROM & GAME high in crt
+   {
+      MyMenuItem->ItemType = rtBin8kLo;
+      Serial.println("\n 8kLo config");
+      return;
+   }
    
    if(EXROM==0 &&            LoadAddress == 0x8000 && ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
    {

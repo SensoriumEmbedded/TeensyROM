@@ -20,34 +20,47 @@
 
 //IO1 Handler Init _________________________________________________________________________________________
 
-void IO1HWinitToNext()
+void IOHandlerInitToNext()
 {
-   IO1HWinit(IO1[rwRegNextIO1Hndlr]);
+   IOHandlerInit(IO1[rwRegNextIOHndlr]);
 }
 
-void IO1HWinit(uint8_t NewIO1Handler)
+void IOHandlerInit(uint8_t NewIOHandler)
 {
    SetMIDIHandlersNULL();
    MIDIRxIRQEnabled = false;
    MIDIRxBytesToSend = 0;
    rIORegMIDIStatus = 0;
    BigBufCount = 0;
+   CycleCountdown = 0;
    free(BigBuf);
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-
-   switch(NewIO1Handler)
+   
+   if (NewIOHandler>=IOH_Num_Handlers)
+   {
+      Serial.println("***No IO handler loaded");
+      return;
+   }
+   
+   Serial.printf("Loading IO handler: %s\n", IOHandlerName[NewIOHandler]);
+   
+   switch(NewIOHandler)
    {
       case IOH_SwiftLink:
-         Serial.println("SwiftLink IO1 handler ready");
+
+         break;
+      case IOH_EpyxFastLoad:   
+         //EpyxFastLoadCycleReset;
+         CycleCountdown=100000; //give extra time at start
+         SetExROMAssert;
          break;
       case IOH_TeensyROM:  
+         IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
          //MIDI handlers for MIDI2SID:
-         IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr);  //in case it was over-ridden by .crt
          midi1.setHandleNoteOff             (M2SOnNoteOff);             // 8x
          midi1.setHandleNoteOn              (M2SOnNoteOn);              // 9x
          midi1.setHandleControlChange       (M2SOnControlChange);       // Bx
          midi1.setHandlePitchChange         (M2SOnPitchChange);         // Ex
-         Serial.println("TeensyROM/MIDI2SID IO1 handler ready");
          break;
       case IOH_MIDI_Datel:
       case IOH_MIDI_Sequential:
@@ -68,8 +81,11 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
          midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
          // not catching F0, F4, F5, F7 (end of SysEx), and FD         
-         SetMIDIRegAddrs(NewIO1Handler - IOH_MIDI_Datel);
-         NewIO1Handler = IOH_MIDI_Datel; //all 4 are the same after regs are set
+         wIORegAddrMIDIControl  = MidiRegs[NewIOHandler-IOH_MIDI_Datel][0];
+         rIORegAddrMIDIStatus   = MidiRegs[NewIOHandler-IOH_MIDI_Datel][1];
+         wIORegAddrMIDITransmit = MidiRegs[NewIOHandler-IOH_MIDI_Datel][2];
+         rIORegAddrMIDIReceive  = MidiRegs[NewIOHandler-IOH_MIDI_Datel][3];
+         NewIOHandler = IOH_MIDI_Datel; //all 4 are the same after regs are set
          break;
       case IOH_Debug:
          midi1.setHandleNoteOff             (DbgOnNoteOff);             // 8x
@@ -86,41 +102,10 @@ void IO1HWinit(uint8_t NewIO1Handler)
          midi1.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
          midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
          // not catching F4, F5, F7 (end of SysEx), and FD                  
-         Serial.println("Debug IO1 handler ready");
-         break;
-      default:
-         Serial.println("No IO1 handler loaded");
          break;
    }
    
-   IO1Handler = NewIO1Handler;
-}
-
-
-void SetMIDIRegAddrs(uint8_t MIDI_ID)
-{  
-   //these must match enum IOHandlers order/qty
-   char sMIDIType[][15] = {
-      "Datel/Siel", 
-      "Sequential", 
-      "Passport/Sent", 
-      "Namesoft IRQ",
-      };
-
-   uint8_t MidiRegs[][4] = {
-      //wControl, rStatus, wTransmit, rReceive $de00+
-      4,6,5,7,  // Datel/Siel
-      0,2,1,3,  // Sequential
-      8,8,9,9,  // Passport/Sent
-      0,2,1,3,  // Namesoft IRQ (same as seq, no NMI)
-   };
-
-   wIORegAddrMIDIControl  = MidiRegs[MIDI_ID][0];
-   rIORegAddrMIDIStatus   = MidiRegs[MIDI_ID][1];
-   wIORegAddrMIDITransmit = MidiRegs[MIDI_ID][2];
-   rIORegAddrMIDIReceive  = MidiRegs[MIDI_ID][3];
-
-   Serial.printf("%s MIDI IO1 handler ready\n", sMIDIType[MIDI_ID]);
+   IOHandler = NewIOHandler;
 }
 
 

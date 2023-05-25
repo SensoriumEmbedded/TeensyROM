@@ -60,7 +60,7 @@ enum InternalEEPROMmap
    eepAdMagicNum      = 0, // (uint32_t) Indicated if internal EEPROM has been initialized
    eepAdPwrUpDefaults = 4, // (uint8_t)  power up default reg, see bit mask defs rpudMusicMask, rpudNetTimeMask
    eepAdTimezone      = 5, // (int8_t)   signed char for timezone: UTC +14/-12 
-   eepAdNextIO1Hndlr  = 6, // (uint8_t)  default IO handler to load upon TR exit
+   eepAdNextIOHndlr  = 6, // (uint8_t)  default IO handler to load upon TR exit
 };
 
 uint32_t StartCycCnt, LastCycCnt=0;

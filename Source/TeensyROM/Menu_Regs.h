@@ -81,7 +81,7 @@ enum IO1_Registers  //offset from 0xDE00
    
    rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see RegPowerUpDefaultMasks
    rwRegTimezone     = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
-   rwRegNextIO1Hndlr = StartSIDRegs + 42,  // Which IO1 handler will take over upone exit/execute/emulate
+   rwRegNextIOHndlr = StartSIDRegs + 42,  // Which IO1 handler will take over upone exit/execute/emulate
    
    //~87/256 locations used
 };
@@ -97,7 +97,7 @@ enum RegStatusTypes  //rRegStatus, match StatusFunction order
    rsChangeMenu    = 0x00,
    rsStartItem     = 0x01,
    rsGetTime       = 0x02,
-   rsIO1HWinit     = 0x03, //C64 code is executing transfered PRG, change IO1 handler
+   rsIOHWinit      = 0x03, //C64 code is executing transfered PRG, change IO1 handler
    rsWriteEEPROM   = 0x04,
    rsNumStatusTypes= 0x05,
    
@@ -148,7 +148,7 @@ struct StructMenuItem
 void MenuChange();
 void HandleExecution();
 void getNtpTime();
-void IO1HWinitToNext();
+void IOHandlerInitToNext();
 void WriteEEPROM();
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
@@ -156,6 +156,6 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MenuChange,
    &HandleExecution,
    &getNtpTime,
-   &IO1HWinitToNext,
+   &IOHandlerInitToNext,
    &WriteEEPROM,
 };

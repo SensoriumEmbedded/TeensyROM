@@ -39,10 +39,11 @@ volatile uint8_t doReset = true;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
-volatile uint8_t IO1Handler = IOH_None;
+volatile uint8_t IOHandler = IOH_None;
 uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
+uint32_t CycleCountdown=0;
 
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
@@ -126,7 +127,7 @@ void setup()
       EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
       EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
       EEPROM.write(eepAdTimezone, -8); //default to pacific time
-      EEPROM.write(eepAdNextIO1Hndlr, IOH_None); //default to no Special HW
+      EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    }
 
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
@@ -139,7 +140,7 @@ void setup()
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
-   //IO1[rwRegNextIO1Hndlr] = EEPROM.read(eepAdNextIO1Hndlr); //done each entry into menu
+   //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
 
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
@@ -216,7 +217,7 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
    EmulateVicCycles = false;
-   IO1HWinit(IOH_TeensyROM);   
+   IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }
 

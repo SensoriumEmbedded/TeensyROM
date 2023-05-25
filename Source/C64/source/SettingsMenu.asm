@@ -79,7 +79,7 @@ ShowSettings:
    ldy #19 ;col
    clc
    jsr SetCursor
-   lda rwRegNextIO1Hndlr+IO1Port 
+   lda rwRegNextIOHndlr+IO1Port 
    asl
    tax
    lda TblSpecialIO,x
@@ -135,10 +135,10 @@ WaitForSettingsKey:
 
 +  cmp #ChrF7  ;Special IO
    bne +
-   ;inc rwRegNextIO1Hndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad
-   ldx rwRegNextIO1Hndlr+IO1Port
+   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad
+   ldx rwRegNextIOHndlr+IO1Port
    inx
-   stx rwRegNextIO1Hndlr+IO1Port ;TR code will roll-over overflow
+   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
    jsr WaitForTR
    jmp ShowSettings  
 

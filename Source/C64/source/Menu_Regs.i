@@ -82,7 +82,7 @@
    
    rwRegPwrUpDefaults= StartSIDRegs + 40 ; power up default reg, see bit mask defs
    rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
-   rwRegNextIO1Hndlr = StartSIDRegs + 42  
+   rwRegNextIOHndlr  = StartSIDRegs + 42  
   
    ;;;;;;;;;;;;;;;;;;  end IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
@@ -93,7 +93,7 @@
    rsChangeMenu    = 0x00  ;
    rsStartItem     = 0x01  ;
    rsGetTime       = 0x02  ;
-   rsIO1HWinit     = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
+   rsIOHWinit      = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
    rsWriteEEPROM   = 0x04  ;
    rsNumStatusTypes= 0x05  ;
    rsReady         = 0x5a

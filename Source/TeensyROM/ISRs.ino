@@ -52,7 +52,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
       return;
    }
    SetDebugAssert;
-
+   
    WaitUntil_nS(nS_RWnReady); 
    register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    register uint16_t Address = GP6_Address(GPIO_6); //parse out address
@@ -62,7 +62,8 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
-      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]);  
+      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]); 
+      if (IOHandler == IOH_EpyxFastLoad) EpyxFastLoadCycleReset;
    }  //ROML
    else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
    {
@@ -74,7 +75,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
       #ifdef DbgIOTraceLog
          BigBuf[BigBufCount] = Address; //initialize w/ address
       #endif
-      switch(IO1Handler)
+      switch(IOHandler)
       {
          case IOH_TeensyROM:
             IO1Hndlr_TeensyROM(Address, GP6_R_Wn(GPIO_6));
@@ -88,6 +89,8 @@ FASTRUN void isrPHI2() //Phi2 rising edge
          case IOH_SwiftLink:
             IO1Hndlr_SwiftLink(Address, GP6_R_Wn(GPIO_6));
             break;
+         case IOH_EpyxFastLoad:
+            IO1Hndlr_EpyxFastLoad(Address, GP6_R_Wn(GPIO_6));
          case IOH_Debug:
             IO1Hndlr_Debug(Address, GP6_R_Wn(GPIO_6));
             break;
@@ -98,8 +101,20 @@ FASTRUN void isrPHI2() //Phi2 rising edge
       #endif
    }  //IO1
    //IO2: DFxx address space
-   //else if (!GP9_IO2n(GPIO_9)) Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
-
+   else if (!GP9_IO2n(GPIO_9))
+   {
+      //Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
+      Address &= 0xFF;
+      //#ifdef DbgIOTraceLog
+      //   BigBuf[BigBufCount] = Address; //initialize w/ address
+      //#endif
+      if (IOHandler == IOH_EpyxFastLoad) 
+      {
+         DataPortWriteWait(LOROM_Image[Address | 0x1F00]); 
+      }
+   }
+   
+   
 if (EmulateVicCycles)
 {
    while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
@@ -118,6 +133,11 @@ if (EmulateVicCycles)
       DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
    } 
 }
+
+if (CycleCountdown)
+   {
+      if(--CycleCountdown == 0) SetExROMDeassert; //validate that we are using Epyx?  Only one using it currently
+   }
    
    //leave time enough time to re-trigger on rising edge!
    SetDebugDeassert;    

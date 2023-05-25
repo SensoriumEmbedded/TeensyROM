@@ -268,6 +268,7 @@ TblSpecialIO: ;must match enum IOHandlers order/qty
    !word SpIO_Debug
    !word SpIO_TeensyROM
    !word SpIO_SwiftLink
+   !word SpIO_EpyxFastLoad
 
 SpIO_None:
    !tx "None              ", 0
@@ -285,5 +286,6 @@ SpIO_TeensyROM:
    !tx "TeensyROM         ", 0
 SpIO_SwiftLink:
    !tx "SwiftLink         ", 0
-   
+SpIO_EpyxFastLoad:   
+   !tx "Epyx Fast Load    ", 0
    

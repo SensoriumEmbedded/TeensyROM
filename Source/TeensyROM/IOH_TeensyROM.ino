@@ -57,10 +57,10 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
          case rwRegSelItem:
             IO1[rwRegSelItem]=Data;
             break;
-         case rwRegNextIO1Hndlr:
+         case rwRegNextIOHndlr:
             if (Data >= IOH_Num_Handlers) Data=0;
-            IO1[rwRegNextIO1Hndlr]= Data;
-            eepAddrToWrite = eepAdNextIO1Hndlr;
+            IO1[rwRegNextIOHndlr]= Data;
+            eepAddrToWrite = eepAdNextIOHndlr;
             eepDataToWrite = Data;
             IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
@@ -92,7 +92,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
                case rCtlBasicReset:  
                   //SetLEDOff;
                   doReset=true;
-                  IO1[rRegStatus] = rsIO1HWinit; //Support IO handlers at reset
+                  IO1[rRegStatus] = rsIOHWinit; //Support IO handlers at reset
                   break;
                case rCtlStartSelItemWAIT:
                   IO1[rRegStatus] = rsStartItem; //work this in the main code
@@ -101,7 +101,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
                   IO1[rRegStatus] = rsGetTime;   //work this in the main code
                   break;
                case rCtlRunningPRG:
-                  IO1[rRegStatus] = rsIO1HWinit; //Support IO handlers in PRG
+                  IO1[rRegStatus] = rsIOHWinit; //Support IO handlers in PRG
                   break;
             }
             break;

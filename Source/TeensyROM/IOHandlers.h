@@ -18,18 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-enum IOHandlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
+enum IOHandlers //Synch order/qty with TblSpecialIO & IOHandlerName (below)
 {
    IOH_None,
    IOH_MIDI_Datel,        // always first of 
    IOH_MIDI_Sequential,   //   4 MIDI options
-   IOH_MIDI_Passport,     //   ...
-   IOH_MIDI_NamesoftIRQ,  //   in this order
+   IOH_MIDI_Passport,     //   in this order...
+   IOH_MIDI_NamesoftIRQ,  //   See SetMIDIRegAddrs
    IOH_Debug,
    IOH_TeensyROM, 
    IOH_SwiftLink,
+   IOH_EpyxFastLoad,
    
    IOH_Num_Handlers       //always last
+};
+
+const char IOHandlerName[][20] =
+{
+   "None              ", // IOH_None,
+   "MIDI:Datel/Siel   ", // IOH_MIDI_Datel,      
+   "MIDI:Sequential   ", // IOH_MIDI_Sequential, 
+   "MIDI:Passport/Sent", // IOH_MIDI_Passport,   
+   "MIDI:Namesoft IRQ ", // IOH_MIDI_NamesoftIRQ,
+   "Debug             ", // IOH_Debug,
+   "TeensyROM         ", // IOH_TeensyROM, 
+   "SwiftLink         ", // IOH_SwiftLink,
+   "Epyx Fast Load    ", // IOH_EpyxFastLoad,
+};
+
+//these must match enum IOHandlers/IOHandlerName MIDI order/qty starting at IOH_MIDI_Datel
+const uint8_t MidiRegs[][4] = {
+   //wControl, rStatus, wTransmit, rReceive $de00+
+   4,6,5,7,  // Datel/Siel
+   0,2,1,3,  // Sequential
+   8,8,9,9,  // Passport/Sent
+   0,2,1,3,  // Namesoft IRQ (same as seq, no NMI)
 };
 
 #define BigBufSize        5000
@@ -50,3 +73,4 @@ enum IOHandlers //Synch order/qty with TblSpecialIO & SetMIDIRegs
 #define IORegSwiftControl 0x03   // Swift Emulation Control Reg
 #define IORegSwiftBaud    0x07   // Swift Emulation Baud Reg(?)
 
+#define EpyxMaxCycleCount  512 //Numer for C64 clock cycles to disable Epyx

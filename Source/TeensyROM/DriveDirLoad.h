@@ -18,11 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-// https://codebase64.org/doku.php?id=base:crt_file_format
-// https://rr.pokefinder.org/wiki/CRT_ID
-// https://vice-emu.sourceforge.io/vice_17.html#SEC369
-
-#define Cart_Generic                  0
+#define Cart_Generic                  0  //Supported
 #define Cart_ActionReplay             1
 #define Cart_KCSPowerCartridge        2
 #define Cart_FinalCartridgeIII        3
@@ -32,7 +28,7 @@
 #define Cart_FunPlayPowerPlay         7
 #define Cart_SuperGames               8
 #define Cart_AtomicPower              9
-#define Cart_EpyxFastload            10
+#define Cart_EpyxFastload            10  //Supported
 #define Cart_WestermannLearning      11
 #define Cart_RexUtility              12
 #define Cart_FinalCartridgeI         13
@@ -103,10 +99,10 @@
 #define Cart_Partner64               78
 
 // IO handlers only
-#define Cart_MIDI_Passport         -108
-#define Cart_MIDI_Datel            -109
-#define Cart_MIDI_Sequential       -110
-#define Cart_MIDI_Namesoft         -111
+#define Cart_MIDI_Passport         -108  //Supported
+#define Cart_MIDI_Datel            -109  //Supported
+#define Cart_MIDI_Sequential       -110  //Supported
+#define Cart_MIDI_Namesoft         -111  //Supported
 
 
 
