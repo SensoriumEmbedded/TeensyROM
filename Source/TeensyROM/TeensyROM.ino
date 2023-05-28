@@ -44,6 +44,7 @@ uint16_t StreamOffsetAddr = 0;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 uint32_t CycleCountdown=0;
+volatile uint8_t eepAddrToWrite, eepDataToWrite;
 
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
@@ -51,9 +52,13 @@ volatile uint8_t MIDIRxBytesToSend = 0;
 volatile uint8_t MIDIRxBuf[3];
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
-volatile uint8_t eepAddrToWrite, eepDataToWrite;
 uint8_t MIDIControlVals[NumMIDIControls];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
+
+volatile uint8_t SwiftTxBuf, SwiftRxBuf = 0;
+volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+volatile uint32_t SwiftLastRxMicros = 0;
+
 
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
@@ -83,7 +88,8 @@ MIDIDevice midi1(myusb);
 USBDrive myDrive(myusb);
 USBFilesystem firstPartition(myusb);
 
-EthernetUDP Udp;
+EthernetUDP udp;
+EthernetClient client;
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 
@@ -101,6 +107,7 @@ void setup()
    DataBufDisable; //buffer disabled
    SetDataPortDirOut; //default to output (for C64 Read)
    SetDMADeassert;
+   SetIRQDeassert;
    SetNMIDeassert;
    SetLEDOn;
    SetDebugDeassert;
@@ -184,34 +191,56 @@ void loop()
       SetResetDeassert;
    }
   
-   if (IO1[rRegStatus] != rsReady) 
-   {  //ISR requested work
-      if (IO1[rRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rRegStatus]]();
-      else Serial.printf("?Stat: %02x\n", IO1[rRegStatus]);
-      Serial.flush();
-      IO1[rRegStatus] = rsReady;
-   }
-   
    if (Serial.available()) ServiceSerial();
-   
    myusb.Task();
-   if (MIDIRxBytesToSend == 0) midi1.read(); //read MIDI-in data in only if ready to send to C64 (buffer empty)
-      
-   if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
+   
+   //handler specific polling items:
+   switch(IOHandler)
    {
-      if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
-      else midi1.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
-      
-      Printf_dbgMIDI("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
-      MIDITxBytesReceived = 0;
-      rIORegMIDIStatus |= MIDIStatusTxRdy | MIDIStatusIRQReq;
-   }
+      case IOH_None:
+      case IOH_EpyxFastLoad:   
+         break;
+
+      case IOH_TeensyROM:  
+         if (IO1[rRegStatus] != rsReady) 
+         {  //ISR requested work
+            if (IO1[rRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rRegStatus]]();
+            else Serial.printf("?Stat: %02x\n", IO1[rRegStatus]);
+            Serial.flush();
+            IO1[rRegStatus] = rsReady;
+         }
+      case IOH_Debug:
+         midi1.read();
+         break;
+
+      case IOH_MIDI_Datel:
+      case IOH_MIDI_Sequential:
+      case IOH_MIDI_Passport:
+      case IOH_MIDI_NamesoftIRQ:
+         if (MIDIRxBytesToSend == 0) midi1.read(); //read MIDI-in data in only if ready to send to C64 (buffer empty)
+            
+         if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
+         {
+            if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+            else midi1.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
+            
+            Printf_dbg("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
+            MIDITxBytesReceived = 0;
+            rIORegMIDIStatus |= MIDIStatusTxRdy | MIDIStatusIRQReq;
+         }
+         break;
+         
+      case IOH_SwiftLink:
+         SwiftlinkPolling();
+         break;
+   }     
 }
 
 void SetUpMainMenuROM()
 {
    //emulate 16k cart ROM
    SetIRQDeassert;
+   SetNMIDeassert;
    SetGameAssert;
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;

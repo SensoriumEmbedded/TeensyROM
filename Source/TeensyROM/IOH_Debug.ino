@@ -27,7 +27,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Debug(uint8_t Address, boo
    #endif
    if (R_Wn) //High (IO1 Read)
    {
-      //DataPortWriteWait(0); //respond to all reads
+      //DataPortWriteWaitLog(0); //respond to all reads
       //BigBuf[BigBufCount] |= (0<<8) | IOTLDataValid;
       //Serial.printf("Rd $de%02x\n", Address);
    }

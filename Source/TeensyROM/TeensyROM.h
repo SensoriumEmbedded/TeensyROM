@@ -23,17 +23,17 @@
 
 //enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-//#define DbgMsgs_MIDI  //MIDI (mostly out) messages (Printf_dbgMIDI)
+//#define DbgMsgs_IO    //IO messages (Printf_dbg): Swift, MIDI (mostly out) 
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
-#ifdef DbgMsgs_MIDI
-   #define Printf_dbgMIDI Serial.printf
+#ifdef DbgMsgs_IO
+   #define Printf_dbg Serial.printf
 #else
-   __attribute__((always_inline)) void inline Printf_dbgMIDI(...) {};
+   __attribute__((always_inline)) void inline Printf_dbg(...) {};
 #endif
 
 #define IOTLRead            0x10000
@@ -148,6 +148,12 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_DataHold);  
    DataBufDisable;
+}
+
+__attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
+{
+   DataPortWriteWait(Data);
+   TraceLogAddValidData(Data);
 }
 
 __attribute__(( always_inline )) inline uint8_t DataPortWaitRead()

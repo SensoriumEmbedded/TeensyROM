@@ -29,11 +29,10 @@ __attribute__(( always_inline )) inline void IO1Hndlr_Template(uint8_t Address, 
       switch(Address)
       {
          //case rIORegAddrMIDIStatus:
-         //   DataPortWriteWait(rIORegMIDIStatus);  
-         //   TraceLogAddValidData(rIORegMIDIStatus);
+         //   DataPortWriteWaitLog(rIORegMIDIStatus);  
          //   break;
          //default: //used for all other IO1 reads
-         //   DataPortWriteWait(IO1[Address]); 
+         //   DataPortWriteWaitLog(IO1[Address]); 
          //   break;
       }
    }

@@ -28,23 +28,22 @@ __attribute__(( always_inline )) inline void IO1Hndlr_TeensyROM(uint8_t Address,
       switch(Address)
       {
          case rRegItemType:
-            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].ItemType);  
+            DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].ItemType);  
             break;
          case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
             Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
             //Convert to PETscii, make this a table? Seems fast enough
             if (Data==95) Data=32; //underscore->space
             else if (Data>64) Data ^=32; 
-            DataPortWriteWait(Data);  
+            DataPortWriteWaitLog(Data);  
             break;
          case rRegStreamData:
-            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
+            DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
             //inc on read, check for end:
             if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          default: //used for all other IO1 reads
-            DataPortWriteWait(IO1[Address]); 
-            TraceLogAddValidData(IO1[Address]);
+            DataPortWriteWaitLog(IO1[Address]); 
             break;
       }
    }

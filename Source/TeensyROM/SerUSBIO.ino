@@ -21,31 +21,66 @@
 void ServiceSerial()
 {
    uint8_t inByte = Serial.read();
-   if (inByte == 0x64) //command from app
+   switch (inByte)
    {
-      inByte = Serial.read();
-      switch (inByte)
-      {
-         case 0x55:  //ping
-            Serial.println("TeensyROM Ready!");
-            break;
-         case 0xAA: //file x-fer pc->TR
-            ReceiveFile();        
-            break;
-         case 0xEE: //Reset C64
-            Serial.println("Reset cmd received");
-            SetUpMainMenuROM();
-            break;
-         case 0x67: //Test/debug
-            PrintDebugLog();
-            break;
-         default:
-            Serial.printf("Unk cmd: %02x\n", inByte); 
-            break;
-      }
+      case 0x64: //command from app
+         inByte = Serial.read(); //READ NEXT BYTE
+         switch (inByte)
+         {
+            case 0x55:  //ping
+               Serial.println("TeensyROM Ready!");
+               break;
+            case 0xAA: //file x-fer pc->TR
+               ReceiveFile();        
+               break;
+            case 0xEE: //Reset C64
+               Serial.println("Reset cmd received");
+               SetUpMainMenuROM();
+               break;
+            case 0x67: //Test/debug
+               PrintDebugLog();
+               break;
+            default:
+               Serial.printf("Unk cmd: %02x\n", inByte); 
+               break;
+         }
+         break;
+      case 'l':
+         PrintDebugLog();
+         break;
+      case 'c':
+         inByte = Serial.read(); //READ NEXT BYTE
+         SwiftConnectToHost(inByte - '0');
+         break;
+      case 'k':
+         client.stop();
+         Serial.printf("Client stopped\n");
+         break;
+      case 'r':
+         SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+         SetNMIDeassert;
+         break;
+      case 's':
+         {
+            char stNot[] = " Not";
+            
+            Serial.printf("Swiftlink status:\n"); 
+            Serial.printf("  client is");
+            if (!client.connected()) Serial.printf(stNot);
+            Serial.printf(" connected\n");
+            
+            Serial.printf("  RxIRQ is"); 
+            if((SwiftRegCommand & SwiftCmndRxIRQEn) != 0) Serial.printf(stNot); 
+            Serial.printf(" enabled\n"); 
+            
+            Serial.printf("  RxIRQ is");
+            if((SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0) Serial.printf(stNot); 
+            Serial.printf(" set\n");
+         }
+         break;
    }
-   else if (inByte == 'l') PrintDebugLog();
 }
+
 
 void PrintDebugLog()
 {
@@ -87,7 +122,7 @@ void PrintDebugLog()
       }
       else
       {
-         Serial.printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "Write", BigBuf[Cnt] & 0xff);
+         Serial.printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
          
          if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else Serial.printf("n/a\n");
@@ -213,12 +248,12 @@ bool SerialAvailabeTimeout()
    Serial.print("Timeout!\n");  
    return(false);
 }
-  
-void getNtpTime() 
+
+bool EthernetInit()
 {
-   Serial.print("\nEthernet init... ");
    uint32_t beginWait = millis();
 
+   Serial.print("\nEthernet init... ");
    if (Ethernet.begin(mac, 9000, 4000) == 0)  //reduce timeout from 60 to 9 sec, should be longer, or option to skip
    {
       Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
@@ -229,43 +264,50 @@ void getNtpTime()
       IO1[rRegLastSecBCD]  = 0;      
       IO1[rRegLastMinBCD]  = 0;      
       IO1[rRegLastHourBCD] = 0;      
-      return;
+      return false;
    }
-   Udp.begin(localPort);
    Serial.printf("passed. took %d mS\nIP: ", (millis() - beginWait));
    Serial.println(Ethernet.localIP());
+   return true;
+}
+   
+void getNtpTime() 
+{
+   if (!EthernetInit()) return;
+   
+   udp.begin(localPort);
    
    const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
    byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
    
    Serial.printf("Updating time from: %s\n", timeServer);
-   while (Udp.parsePacket() > 0) ; // discard any previously received packets
+   while (udp.parsePacket() > 0) ; // discard any previously received packets
    
    // send an NTP request to the time server at the given address
-    // set all bytes in the buffer to 0
-    memset(packetBuffer, 0, NTP_PACKET_SIZE);
-    // Initialize values needed to form NTP request
-    packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-    packetBuffer[1] = 0;     // Stratum, or type of clock
-    packetBuffer[2] = 6;     // Polling Interval
-    packetBuffer[3] = 0xEC;  // Peer Clock Precision
-    // 8 bytes of zero for Root Delay & Root Dispersion
-    packetBuffer[12]  = 49;
-    packetBuffer[13]  = 0x4E;
-    packetBuffer[14]  = 49;
-    packetBuffer[15]  = 52;
-    // all NTP fields have been given values, now send a packet requesting a timestamp:
-    Udp.beginPacket(timeServer, 123); // NTP requests are to port 123
-    Udp.write(packetBuffer, NTP_PACKET_SIZE);
-    Udp.endPacket();
+   // set all bytes in the buffer to 0
+   memset(packetBuffer, 0, NTP_PACKET_SIZE);
+   // Initialize values needed to form NTP request
+   packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+   packetBuffer[1] = 0;     // Stratum, or type of clock
+   packetBuffer[2] = 6;     // Polling Interval
+   packetBuffer[3] = 0xEC;  // Peer Clock Precision
+   // 8 bytes of zero for Root Delay & Root Dispersion
+   packetBuffer[12]  = 49;
+   packetBuffer[13]  = 0x4E;
+   packetBuffer[14]  = 49;
+   packetBuffer[15]  = 52;
+   // all NTP fields have been given values, now send a packet requesting a timestamp:
+   udp.beginPacket(timeServer, 123); // NTP requests are to port 123
+   udp.write(packetBuffer, NTP_PACKET_SIZE);
+   udp.endPacket();
 
-   beginWait = millis();
+   uint32_t beginWait = millis();
    while (millis() - beginWait < 1500) 
    {
-      int size = Udp.parsePacket();
+      int size = udp.parsePacket();
       if (size >= NTP_PACKET_SIZE) 
       {
-         Udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+         udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
          uint32_t secsSince1900;
          // convert four bytes starting at location 40 to a long integer
          secsSince1900 =  (unsigned long)packetBuffer[40] << 24;

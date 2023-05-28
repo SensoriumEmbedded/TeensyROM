@@ -47,7 +47,10 @@ void IOHandlerInit(uint8_t NewIOHandler)
    switch(NewIOHandler)
    {
       case IOH_SwiftLink:
-
+         if(!EthernetInit()) NewIOHandler = IOH_None; //could let this go and check later?
+         SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
+         SwiftRegCommand = 0;
+         SwiftRegControl = 0;
          break;
       case IOH_EpyxFastLoad:   
          //EpyxFastLoadCycleReset;

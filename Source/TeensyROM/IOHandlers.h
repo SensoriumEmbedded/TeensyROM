@@ -66,11 +66,26 @@ const uint8_t MidiRegs[][4] = {
 #define MIDIStatusTxRdy   0x02   // Transmit Data Register Empty (Ready to receive Tx data)
 #define MIDIStatusRxFull  0x01   // Receive Data Register Full (Rx Data waiting to be read)
 
+
 // 6551 ACIA interface emulation
+//register locations (IO1, DExx)
 #define IORegSwiftData    0x00   // Swift Emulation Data Reg
 #define IORegSwiftStatus  0x01   // Swift Emulation Status Reg
 #define IORegSwiftCommand 0x02   // Swift Emulation Command Reg
 #define IORegSwiftControl 0x03   // Swift Emulation Control Reg
-#define IORegSwiftBaud    0x07   // Swift Emulation Baud Reg(?)
+
+//status reg flags
+#define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
+#define SwiftStatusDSR     0x40   // reflects state of DSR line
+#define SwiftStatusDCD     0x20   // reflects state of DCD line
+#define SwiftStatusTxEmpty 0x10   // high if xmit-data register is empty
+#define SwiftStatusRxFull  0x08   // high if receive-data register full
+#define SwiftStatusErrOver 0x04   // high if overrun error
+#define SwiftStatusErrFram 0x02   // high if framing error
+#define SwiftStatusErrPar  0x01   // high if parity error
+
+//command reg flags
+#define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
+
 
 #define EpyxMaxCycleCount  512 //Numer for C64 clock cycles to disable Epyx

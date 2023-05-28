@@ -153,9 +153,9 @@ void WriteEEPROM();
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
-   &MenuChange,
-   &HandleExecution,
-   &getNtpTime,
-   &IOHandlerInitToNext,
-   &WriteEEPROM,
+   &MenuChange,          // rsChangeMenu 
+   &HandleExecution,     // rsStartItem  
+   &getNtpTime,          // rsGetTime    
+   &IOHandlerInitToNext, // rsIOHWinit   
+   &WriteEEPROM,         // rsWriteEEPROM
 };

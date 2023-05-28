@@ -27,21 +27,18 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
    {
       if      (Address == rIORegAddrMIDIStatus)
       {
-         DataPortWriteWait(rIORegMIDIStatus);  
-         TraceLogAddValidData(rIORegMIDIStatus);
+         DataPortWriteWaitLog(rIORegMIDIStatus);  
       }
       else if (Address == rIORegAddrMIDIReceive) //MIDI-in from USB kbd (interrupt driven)
       {
          if(MIDIRxBytesToSend)
          {
-            DataPortWriteWait(MIDIRxBuf[--MIDIRxBytesToSend]);  
-            TraceLogAddValidData(MIDIRxBuf[MIDIRxBytesToSend]);
+            DataPortWriteWaitLog(MIDIRxBuf[--MIDIRxBytesToSend]);  
          }
          else
          {
-            DataPortWriteWait(0); 
-            TraceLogAddValidData(0);
-            Printf_dbgMIDI("unreq\n"); //unrequested read from Rx reg.
+            DataPortWriteWaitLog(0); 
+            Printf_dbg("unreq\n"); //unrequested read from Rx reg.
          }
          if (MIDIRxBytesToSend == 0) //if we're done/empty, remove the interrupt
          {
@@ -50,8 +47,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          }
       } else
       {
-         DataPortWriteWait(0); //read 0s from all other regs in IO1
-         TraceLogAddValidData(0);
+         DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
       }
    }
    else  // IO1 write    -------------------------------------------------
@@ -71,7 +67,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          {
             rIORegMIDIStatus |= MIDIStatusDCD;
             MIDIRxBytesToSend = 0; 
-            Printf_dbgMIDI("RIE:%02x\n", Data);
+            Printf_dbg("RIE:%02x\n", Data);
          }
          if ((Data & 0x1C) == 0x14) // xxx101xx Word Select == 8 Bits + No Parity + 1 Stop Bit
          {
@@ -84,7 +80,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
          {
             if ((Data & 0x80) == 0x80) //header byte, start new packet
             {
-               if(MIDITxBytesReceived) Printf_dbgMIDI("drop %d\n", MIDITxBytesReceived); //had another in progress
+               if(MIDITxBytesReceived) Printf_dbg("drop %d\n", MIDITxBytesReceived); //had another in progress
                MIDITxBytesReceived = 0;
                switch(Data)
                {
@@ -104,7 +100,7 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                      MIDITxBytesReceived = 3;
                      break;
                   default:
-                     Printf_dbgMIDI("igh: %02x\n", Data);
+                     Printf_dbg("igh: %02x\n", Data);
                      break;
                }
             }
@@ -119,12 +115,12 @@ __attribute__(( always_inline )) inline void IO1Hndlr_MIDI(uint8_t Address, bool
                      MIDITxBytesReceived = 3;
                   }
                }
-               else Printf_dbgMIDI("igd: %02x\n", Data);
+               else Printf_dbg("igd: %02x\n", Data);
             }
             rIORegMIDIStatus &= ~MIDIStatusIRQReq;
             if(MIDITxBytesReceived == 3) rIORegMIDIStatus &= ~MIDIStatusTxRdy; //not ready, waiting for USB transmit
          }
-         else Printf_dbgMIDI("Miss!\n");
+         else Printf_dbg("Miss!\n");
       }
       TraceLogAddValidData(Data);
    }
