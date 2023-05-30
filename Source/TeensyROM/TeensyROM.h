@@ -27,13 +27,14 @@
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 
+#define BigBufSize        5000
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
 #ifdef DbgMsgs_IO
    #define Printf_dbg Serial.printf
 #else
-   __attribute__((always_inline)) void inline Printf_dbg(...) {};
+   __attribute__((always_inline)) inline void Printf_dbg(...) {};
 #endif
 
 #define IOTLRead            0x10000
@@ -41,9 +42,9 @@ uint32_t* BigBuf = NULL;
 #define AdjustedCycleTiming 0x40000
 
 #ifdef DbgIOTraceLog
-   __attribute__((always_inline)) void inline TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
+   __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
 #else
-   __attribute__((always_inline)) void inline TraceLogAddValidData(...) {};
+   __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif
 
 
@@ -156,7 +157,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
    TraceLogAddValidData(Data);
 }
 
-__attribute__(( always_inline )) inline uint8_t DataPortWaitRead()
+__attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 {
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer

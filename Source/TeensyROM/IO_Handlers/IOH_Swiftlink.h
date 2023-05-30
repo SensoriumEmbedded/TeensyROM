@@ -18,9 +18,88 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//IO1 Handler for IOH_SwiftLink (Network, 6551 ACIA interface emulation) _________________________________________________________________________________________
+//Network, 6551 ACIA interface emulation
 
-__attribute__(( always_inline )) inline void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
+void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn);  
+void PollingHndlr_SwiftLink();                           
+void InitHndlr_SwiftLink();                           
+
+stcIOHandlers IOHndlr_SwiftLink =
+{
+  "SwiftLink",     //Name of handler
+  &InitHndlr_SwiftLink,   //Called once at handler startup
+  &IO1Hndlr_SwiftLink,    //IO1 R/W handler
+  NULL,    //IO2 R/W handler
+  NULL,   //ROML Read handler, in addition to any ROM data sent
+  NULL,                     //ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_SwiftLink,                     //Polled in main routine
+  NULL,  //called at the end of EVERY c64 cycle
+};
+
+extern bool EthernetInit();
+
+volatile uint8_t SwiftTxBuf, SwiftRxBuf = 0;
+volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+volatile uint32_t SwiftLastRxMicros = 0;
+
+// 6551 ACIA interface emulation
+//register locations (IO1, DExx)
+#define IORegSwiftData    0x00   // Swift Emulation Data Reg
+#define IORegSwiftStatus  0x01   // Swift Emulation Status Reg
+#define IORegSwiftCommand 0x02   // Swift Emulation Command Reg
+#define IORegSwiftControl 0x03   // Swift Emulation Control Reg
+
+//status reg flags
+#define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
+#define SwiftStatusDSR     0x40   // reflects state of DSR line
+#define SwiftStatusDCD     0x20   // reflects state of DCD line
+#define SwiftStatusTxEmpty 0x10   // high if xmit-data register is empty
+#define SwiftStatusRxFull  0x08   // high if receive-data register full
+#define SwiftStatusErrOver 0x04   // high if overrun error
+#define SwiftStatusErrFram 0x02   // high if framing error
+#define SwiftStatusErrPar  0x01   // high if parity error
+
+//command reg flags
+#define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
+
+void SwiftConnectToHost(uint8_t HostNum)
+{
+   struct stcHostInfo
+   {
+     char Name[25];
+     uint16_t  Port;
+   };
+   
+   stcHostInfo Hosts[] =
+   {
+      "13th.hoyvision.com", 6400,
+      "oasisbbs.hopto.org", 6400,
+   };
+   
+   if(HostNum >= sizeof(Hosts)/sizeof(Hosts[0]))
+   {
+      Serial.printf("Host %d out of bounds\n", HostNum);
+      return;
+   }
+   
+   Serial.printf("Connecting to #%02d- %s:%d ...", HostNum, Hosts[HostNum].Name, Hosts[HostNum].Port);
+   if (client.connect(Hosts[HostNum].Name, Hosts[HostNum].Port)) Serial.println("Done");
+   else Serial.println("Failed!");
+}
+
+//__________________________________________________________________________________________
+
+void InitHndlr_SwiftLink()
+{
+   EthernetInit();
+   //if(!EthernetInit())  //could let this go and check later?
+   SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
+   SwiftRegCommand = 0;
+   SwiftRegControl = 0;
+}   
+
+
+void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
    
@@ -74,35 +153,9 @@ __attribute__(( always_inline )) inline void IO1Hndlr_SwiftLink(uint8_t Address,
    }
 }
 
+#define MinMicrosBetweenRx 417 //26  //417
 
-void SwiftConnectToHost(uint8_t HostNum)
-{
-   struct stcHostInfo
-   {
-     char Name[25];
-     uint16_t  Port;
-   };
-   
-   stcHostInfo Hosts[] =
-   {
-      "13th.hoyvision.com", 6400,
-      "oasisbbs.hopto.org", 6400,
-   };
-   
-   if(HostNum >= sizeof(Hosts)/sizeof(Hosts[0]))
-   {
-      Serial.printf("Host %d out of bounds\n", HostNum);
-      return;
-   }
-   
-   Serial.printf("Connecting to #%02d- %s:%d ...", HostNum, Hosts[HostNum].Name, Hosts[HostNum].Port);
-   if (client.connect(Hosts[HostNum].Name, Hosts[HostNum].Port)) Serial.println("Done");
-   else Serial.println("Failed!");
-}
-
-#define MinMicrosBetweenRx 26  //417
-
-void SwiftlinkPolling()
+void PollingHndlr_SwiftLink()
 {
    if (client.connected()) 
    {
@@ -131,8 +184,6 @@ void SwiftlinkPolling()
          }
       }
    }
-   
-   
    
    else  //off-line, at commands, etc..................................
    {

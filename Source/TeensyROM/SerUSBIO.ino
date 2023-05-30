@@ -45,12 +45,16 @@ void ServiceSerial()
                break;
          }
          break;
+      //case 'p':
+      //   Serial.printf("val: %s\n", IOHandler[0]->Name);
+      //   IOHandler[0]->InitHndlr();
+      //   break;
       case 'l':
          PrintDebugLog();
          break;
       case 'c':
          inByte = Serial.read(); //READ NEXT BYTE
-         SwiftConnectToHost(inByte - '0');
+         SwiftConnectToHost(inByte - '0');  //See Hosts definition
          break;
       case 'k':
          client.stop();
@@ -96,7 +100,7 @@ void PrintDebugLog()
       LogDatavalid = true;
    #endif
       
-   if (IOHandler == IOH_Debug)
+   if (CurrentIOHandler == IOH_Debug)
    {
       Serial.println("Debug IO Handler enabled");
       LogDatavalid = true;
@@ -271,68 +275,4 @@ bool EthernetInit()
    return true;
 }
    
-void getNtpTime() 
-{
-   if (!EthernetInit()) return;
-   
-   udp.begin(localPort);
-   
-   const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
-   byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
-   
-   Serial.printf("Updating time from: %s\n", timeServer);
-   while (udp.parsePacket() > 0) ; // discard any previously received packets
-   
-   // send an NTP request to the time server at the given address
-   // set all bytes in the buffer to 0
-   memset(packetBuffer, 0, NTP_PACKET_SIZE);
-   // Initialize values needed to form NTP request
-   packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-   packetBuffer[1] = 0;     // Stratum, or type of clock
-   packetBuffer[2] = 6;     // Polling Interval
-   packetBuffer[3] = 0xEC;  // Peer Clock Precision
-   // 8 bytes of zero for Root Delay & Root Dispersion
-   packetBuffer[12]  = 49;
-   packetBuffer[13]  = 0x4E;
-   packetBuffer[14]  = 49;
-   packetBuffer[15]  = 52;
-   // all NTP fields have been given values, now send a packet requesting a timestamp:
-   udp.beginPacket(timeServer, 123); // NTP requests are to port 123
-   udp.write(packetBuffer, NTP_PACKET_SIZE);
-   udp.endPacket();
-
-   uint32_t beginWait = millis();
-   while (millis() - beginWait < 1500) 
-   {
-      int size = udp.parsePacket();
-      if (size >= NTP_PACKET_SIZE) 
-      {
-         udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
-         uint32_t secsSince1900;
-         // convert four bytes starting at location 40 to a long integer
-         secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
-         secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-         secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
-         secsSince1900 |= (unsigned long)packetBuffer[43];
-         Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
-
-         //since we don't need the date, leaving out TimeLib.h all together
-         IO1[rRegLastSecBCD] =DecToBCD(secsSince1900 % 60);
-         secsSince1900 /=60; //to  minutes
-         IO1[rRegLastMinBCD] =DecToBCD(secsSince1900 % 60);
-         secsSince1900 = (secsSince1900/60 + (int8_t)IO1[rwRegTimezone]) % 24; //to hours, offset timezone
-         if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
-         else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
-   
-         Serial.printf("Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
-         return;
-      }
-   }
-   Serial.println("NTP Response timeout!");
-}
-
-uint8_t DecToBCD(uint8_t DecVal)
-{
-   return (int(DecVal/10)<<4) | (DecVal%10);
-}
 

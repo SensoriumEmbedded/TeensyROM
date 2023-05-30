@@ -145,17 +145,3 @@ struct StructMenuItem
   uint16_t Size;
 };
 
-void MenuChange();
-void HandleExecution();
-void getNtpTime();
-void IOHandlerInitToNext();
-void WriteEEPROM();
-
-void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
-{
-   &MenuChange,          // rsChangeMenu 
-   &HandleExecution,     // rsStartItem  
-   &getNtpTime,          // rsGetTime    
-   &IOHandlerInitToNext, // rsIOHWinit   
-   &WriteEEPROM,         // rsWriteEEPROM
-};

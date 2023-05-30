@@ -24,7 +24,8 @@ FASTRUN void isrButton()
 }
 
 
-FASTRUN void isrPHI2() //Phi2 rising edge
+//Phi2 rising edge:
+FASTRUN void isrPHI2() 
 {
    StartCycCnt = ARM_DWT_CYCCNT;
    uint32_t CycSinceLast = StartCycCnt-LastCycCnt;
@@ -63,7 +64,7 @@ FASTRUN void isrPHI2() //Phi2 rising edge
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]); 
-      if (IOHandler == IOH_EpyxFastLoad) EpyxFastLoadCycleReset;
+      if (IOHandler[CurrentIOHandler]->ROMLHndlr != NULL) IOHandler[CurrentIOHandler]->ROMLHndlr(Address);
    }  //ROML
    else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
    {
@@ -75,69 +76,43 @@ FASTRUN void isrPHI2() //Phi2 rising edge
       #ifdef DbgIOTraceLog
          BigBuf[BigBufCount] = Address; //initialize w/ address
       #endif
-      switch(IOHandler)
-      {
-         case IOH_TeensyROM:
-            IO1Hndlr_TeensyROM(Address, GP6_R_Wn(GPIO_6));
-            break;
-         case IOH_MIDI_Datel:
-         //case IOH_MIDI_Sequential:  //changed to Datel after init (reg addrs set)
-         //case IOH_MIDI_Passport:    //changed to Datel after init (reg addrs set)
-         //case IOH_MIDI_NamesoftIRQ: //changed to Datel after init (reg addrs set)
-            IO1Hndlr_MIDI(Address, GP6_R_Wn(GPIO_6));
-            break;
-         case IOH_SwiftLink:
-            IO1Hndlr_SwiftLink(Address, GP6_R_Wn(GPIO_6));
-            break;
-         case IOH_EpyxFastLoad:
-            IO1Hndlr_EpyxFastLoad(Address, GP6_R_Wn(GPIO_6));
-         case IOH_Debug:
-            IO1Hndlr_Debug(Address, GP6_R_Wn(GPIO_6));
-            break;
-      }
+
+      if (IOHandler[CurrentIOHandler]->IO1Hndlr != NULL) IOHandler[CurrentIOHandler]->IO1Hndlr(Address, GP6_R_Wn(GPIO_6));
+
       #ifdef DbgIOTraceLog
          if (GP6_R_Wn(GPIO_6)) BigBuf[BigBufCount] |= IOTLRead;
          if (BigBufCount < BigBufSize) BigBufCount++;
       #endif
    }  //IO1
-   //IO2: DFxx address space
-   else if (!GP9_IO2n(GPIO_9))
+   
+   else if (!GP9_IO2n(GPIO_9))  //IO2: DFxx address space
    {
-      //Serial.printf("IO2 %s %d\n", GP6_R_Wn(GPIO_6) ? "Rd from" : "Wr to", Address);
       Address &= 0xFF;
-      //#ifdef DbgIOTraceLog
-      //   BigBuf[BigBufCount] = Address; //initialize w/ address
-      //#endif
-      if (IOHandler == IOH_EpyxFastLoad) 
+
+      if (IOHandler[CurrentIOHandler]->IO2Hndlr != NULL) IOHandler[CurrentIOHandler]->IO2Hndlr(Address, GP6_R_Wn(GPIO_6));
+   }
+   
+   
+   if (EmulateVicCycles)
+   {
+      while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
+      //phi2 has gone low..........................................................................
+      
+      StartCycCnt = ARM_DWT_CYCCNT;
+
+      WaitUntil_nS(nS_VICStart);
+      
+      GPIO_6 = ReadGPIO6; //Address bus and R/*W 
+      Address = GP6_Address(GPIO_6); //parse out address
+      GPIO_9 = ReadGPIO9; //Now read the derived signals
+
+      if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
       {
-         DataPortWriteWait(LOROM_Image[Address | 0x1F00]); 
-      }
+         DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
+      } 
    }
-   
-   
-if (EmulateVicCycles)
-{
-   while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
-   //phi2 has gone low..........................................................................
-   
-   StartCycCnt = ARM_DWT_CYCCNT;
 
-   WaitUntil_nS(nS_VICStart);
-   
-   GPIO_6 = ReadGPIO6; //Address bus and R/*W 
-   Address = GP6_Address(GPIO_6); //parse out address
-   GPIO_9 = ReadGPIO9; //Now read the derived signals
-
-   if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
-   {
-      DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
-   } 
-}
-
-if (CycleCountdown)
-   {
-      if(--CycleCountdown == 0) SetExROMDeassert; //validate that we are using Epyx?  Only one using it currently
-   }
+   if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
    
    //leave time enough time to re-trigger on rising edge!
    SetDebugDeassert;    

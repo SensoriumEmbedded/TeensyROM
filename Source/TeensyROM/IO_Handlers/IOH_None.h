@@ -18,19 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//IO1 Handler for <Template> _________________________________________________________________________________________
-
-#define EpyxFastLoadCycleReset {SetExROMAssert;if(CycleCountdown<EpyxMaxCycleCount)CycleCountdown=EpyxMaxCycleCount;}  //don't interfere with long count set at init
-
-__attribute__(( always_inline )) inline void IO1Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn)
+stcIOHandlers IOHndlr_None =
 {
-   //uint8_t Data;
-   //
-   //if (!R_Wn) // IO1 write    -------------------------------------------------
-   //{
-   //   Data = DataPortWaitRead();
-   //   TraceLogAddValidData(Data);
-   //}
-   
-   EpyxFastLoadCycleReset;
-}
+  "None",  //Name of handler
+  NULL,    //Called once at handler startup
+  NULL,    //IO1 R/W handler
+  NULL,    //IO2 R/W handler
+  NULL,    //ROML Read handler, in addition to any ROM data sent
+  NULL,    //ROMH Read handler, in addition to any ROM data sent
+  NULL,    //Polled in main routine
+  NULL,    //called at the end of EVERY c64 cycle
+};
+
+
