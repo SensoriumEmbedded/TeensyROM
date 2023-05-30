@@ -56,12 +56,12 @@ enum enumIOHandlers //Synch order/qty with TblSpecialIO & stcIOHandlers (below)
    IOH_Num_Handlers       //always last
 };
 
-#include "IO_Handlers\IOH_None.h"
-#include "IO_Handlers\IOH_MIDI.h"
-#include "IO_Handlers\IOH_Debug.h"
-#include "IO_Handlers\IOH_TeensyROM.h" 
-#include "IO_Handlers\IOH_Swiftlink.h"
-#include "IO_Handlers\IOH_EpyxFastLoad.h"
+#include "IO_Handlers\IOH_None.c"
+#include "IO_Handlers\IOH_MIDI.c"
+#include "IO_Handlers\IOH_Debug.c"
+#include "IO_Handlers\IOH_TeensyROM.c" 
+#include "IO_Handlers\IOH_Swiftlink.c"
+#include "IO_Handlers\IOH_EpyxFastLoad.c"
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with TblSpecialIO & enumIOHandlers (above)
 {
