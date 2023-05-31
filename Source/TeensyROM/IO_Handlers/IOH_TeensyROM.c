@@ -38,6 +38,14 @@ stcIOHandlers IOHndlr_TeensyROM =
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
+__attribute__((always_inline)) inline uint8_t ToPETSCII(uint8_t x)
+{
+   //Convert to PETscii, make this a table? Seems fast enough   
+   if (x==95) x=32; //underscore->space
+   else if (x>64) x^=32; 
+   return x;
+}
+
 extern StructMenuItem* MenuSource;
 extern uint8_t* IO1; 
 extern uint16_t StreamOffsetAddr;
@@ -300,10 +308,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             break;
          case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
             Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
-            //Convert to PETscii, make this a table? Seems fast enough
-            if (Data==95) Data=32; //underscore->space
-            else if (Data>64) Data ^=32; 
-            DataPortWriteWaitLog(Data);  
+            DataPortWriteWaitLog(ToPETSCII(Data));  
             break;
          case rRegStreamData:
             DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);

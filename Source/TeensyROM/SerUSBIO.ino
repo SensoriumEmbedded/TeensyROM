@@ -45,26 +45,27 @@ void ServiceSerial()
                break;
          }
          break;
-      //case 'p':
-      //   Serial.printf("val: %s\n", IOHandler[0]->Name);
-      //   IOHandler[0]->InitHndlr();
-      //   break;
-      case 'l':
+      case 'l': 
          PrintDebugLog();
          break;
-      case 'c':
-         inByte = Serial.read(); //READ NEXT BYTE
-         SwiftConnectToHost(inByte - '0');  //See Hosts definition
+         
+      case 'p':
+         AddStringToRxQueue("0123456789abcdef\r");
          break;
-      case 'k':
+      case 'k': //kill client connection
          client.stop();
          Serial.printf("Client stopped\n");
          break;
-      case 'r':
-         SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+      case 'r': //reset status/NMI
+         SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
+         SwiftRegCommand = 0;
+         SwiftRegControl = 0;
+         RxQueueHead = RxQueueTail = 0;
+         //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
          SetNMIDeassert;
+         Serial.printf("Swiftlink Reset\n"); 
          break;
-      case 's':
+      case 's': //status
          {
             char stNot[] = " Not";
             
@@ -72,6 +73,8 @@ void ServiceSerial()
             Serial.printf("  client is");
             if (!client.connected()) Serial.printf(stNot);
             Serial.printf(" connected\n");
+            
+            Serial.printf("  Rx Queue Used: %d\n", RxQueueUsed); 
             
             Serial.printf("  RxIRQ is"); 
             if((SwiftRegCommand & SwiftCmndRxIRQEn) != 0) Serial.printf(stNot); 
