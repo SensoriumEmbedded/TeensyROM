@@ -50,7 +50,7 @@ void ServiceSerial()
          break;
          
       case 'p':
-         AddStringToRxQueue("0123456789abcdef\r");
+         AddASCIIStrToRxQueue("0123456789abcdef\r");
          break;
       case 'k': //kill client connection
          client.stop();

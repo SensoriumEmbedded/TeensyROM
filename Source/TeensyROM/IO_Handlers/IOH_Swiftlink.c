@@ -46,9 +46,9 @@ volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
 volatile uint32_t SwiftLastRxMicros = 0;
 
-#define RxQueueSize        2048
+#define RxQueueSize         512
 #define TxMsgSize           128
-#define MinMicrosBetweenRx  100 //stops NMI from re-asserting too quickly. CCGMS fails below 70uS (~14khz, 114 baud);   for 38400 baud, just need to be below 208: 1/38400*8=208.3
+#define MinMicrosBetweenRx  200 //stops NMI from re-asserting too quickly. CCGMS fails below 70uS (~14khz, 114 baud);   for 38400 baud, just need to be below 208: 1/38400*8=208.3
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -76,14 +76,18 @@ void AddCharToRxQueue(uint8_t c)
 {
   if (RxQueueUsed >= RxQueueSize-1)
   {
-     Serial.println("RxBuff full!");
+     Serial.println("RxBuff Overflow!");
+     RxQueueHead = RxQueueTail = 0;
+     //just in case...
+     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+     SetNMIDeassert;
      return;
   }
   RxQueue[RxQueueHead++] = c; 
   if (RxQueueHead == RxQueueSize) RxQueueHead = 0;
 }
 
-void AddStringToRxQueue(const char* s)
+void AddASCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
    while(s[CharNum] != 0) AddCharToRxQueue((char)ToPETSCII(s[CharNum++]));
@@ -93,14 +97,14 @@ void AddNumToRxQueue(uint8_t Num)
 {
    char buf[6];
    sprintf(buf, "%d", Num);
-   AddStringToRxQueue(buf);
+   AddASCIIStrToRxQueue(buf);
 }
 
 void ProcessATCommand(char* CmdMsg)
 {
    if (CmdMsg[0] != 'A' || CmdMsg[1] != 'T')
    {
-      AddStringToRxQueue("AT not found");
+      AddASCIIStrToRxQueue("AT not found");
       return;
    }
    
@@ -112,11 +116,11 @@ void ProcessATCommand(char* CmdMsg)
    {
          if(EthernetInit())
          {
-            AddStringToRxQueue("Connected to Ethernet");
+            AddASCIIStrToRxQueue("Connected to Ethernet");
             //uint8_t *ip = (uint8_t*)&current_options.ip_address.s_addr;
             uint32_t ip32 = Ethernet.localIP();
             uint8_t *ip = (uint8_t*)&ip32;
-            AddStringToRxQueue("\rIPAddress: ");
+            AddASCIIStrToRxQueue("\rIPAddress: ");
             AddNumToRxQueue((uint8_t)*ip++);
             AddCharToRxQueue('.');
             AddNumToRxQueue((uint8_t)*ip++);
@@ -128,12 +132,11 @@ void ProcessATCommand(char* CmdMsg)
          }
          else
          {
-            AddStringToRxQueue("Ethernet connect failed!");
-            if (Ethernet.hardwareStatus() == EthernetNoHardware) AddStringToRxQueue("\r HW was not found");
-            else if (Ethernet.linkStatus() == LinkOFF) AddStringToRxQueue("\r Cable is not connected");
+            AddASCIIStrToRxQueue("Ethernet connect failed!");
+            if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueue("\r HW was not found");
+            else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueue("\r Cable is not connected");
             return;
          }
-   
    }
    
    if (CmdMsg[0] == 'D' && CmdMsg[1] == 'T') //ATDT<HostName>:<Port>   Connect telnet
@@ -156,18 +159,18 @@ void ProcessATCommand(char* CmdMsg)
          //Port = strtol((Delim+1), (char **)NULL, 10); //takes ~32k of ram?
          //Port = atoi(Delim+1);  //takes ~32k of ram?
          //sscanf((), "%d", &Port); //takes ~60k of ram???
-         if (Port==0) AddStringToRxQueue("Invalid Port #");
+         //if (Port==0) AddASCIIStrToRxQueue("Invalid Port #");
       }
-   
-      if (client.connect(CmdMsg, Port)) AddStringToRxQueue("Connected to Host");
-      else AddStringToRxQueue("Host connect Failed");
+      
+      if (client.connect(CmdMsg, Port)) AddASCIIStrToRxQueue("Connected to Host");
+      else AddASCIIStrToRxQueue("Host connect Failed");
       Printf_dbg("Host name: %s  Port: %d\n", CmdMsg, Port);
    
       return;
    }
    
    Printf_dbg("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
-   AddStringToRxQueue("Unknown Command");
+   AddASCIIStrToRxQueue("Unknown Command");
 }
 
 uint8_t PullFromRxQueue()
@@ -253,10 +256,24 @@ void PollingHndlr_SwiftLink()
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
-      AddStringToRxQueue("\r\r\r*** ");
-      if (ConnectedToHost) AddStringToRxQueue("Connected to host\r");
-      else AddStringToRxQueue("Not connected\r");
+      AddASCIIStrToRxQueue("\r\r\r*** ");
+      if (ConnectedToHost) AddASCIIStrToRxQueue("Connected to host\r");
+      else AddASCIIStrToRxQueue("Not connected\r");
    }
+   
+   //if client data available, add to Rx Queue
+   while (client.available()) AddCharToRxQueue(client.read());
+   //if(client.available())
+   //{
+   //   uint16_t Cnt = 0;
+   //   Serial.printf("%d+", RxQueueUsed);
+   //   while (client.available())
+   //   {
+   //      AddCharToRxQueue(client.read());
+   //      Cnt++;
+   //   }
+   //   Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
+   //}
    
    if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) //Tx data available from C64
    {
@@ -275,17 +292,13 @@ void PollingHndlr_SwiftLink()
          {
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             ProcessATCommand((char*)TxMsg);
-            AddStringToRxQueue("\rok\r");
+            AddASCIIStrToRxQueue("\rok\r");
             TxMsgOffset = 0;
          }
       }
       SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
    }
    
-   //if client data available, add to Rx Queue
-   //change to if?   qualify with connected????????????????????????
-   while (client.available()) AddCharToRxQueue(client.read());
-
    //  if Rx data available to send to C64, IRQ enabled, and ready (not set), 
    //  and enough time has passed, then read/send to C64...
    if (RxQueueUsed > 0 && \
