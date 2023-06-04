@@ -343,7 +343,7 @@ SelectMenuItem:
    rts
    
 XferCopyRun:
-   ;copy PRGLoadStart code to tape buffer area in case this (Cxxx) area gets overwritten
+   ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
    ;192 byte limit, watch size of PRGLoadStart block!  check below
    lda rRegStrAvailable+IO1Port
    bne +
@@ -430,6 +430,7 @@ SynchEthernetTime:
    !src "source\SettingsMenu.asm"
    !src "source\PRGLoadStartReloc.s"
    !src "source\SIDRelated.s"
+   !src "source\StringFunctions.s"
    !src "source\StringsMsgs.s"
 
 EndOfAllMenuCode = *

@@ -77,13 +77,14 @@
    ;  1: Out of voices indicator
    ;  3: spaces betw
    ; 14 total w// term:  ON# ON# ON# X
-   rRegSIDOutOfVoices= StartSIDRegs + 38
-   rRegSIDStringTerm = StartSIDRegs + 39
-   
-   rwRegPwrUpDefaults= StartSIDRegs + 40 ; power up default reg, see bit mask defs
-   rwRegTimezone     = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr  = StartSIDRegs + 42  
-  
+   rRegSIDOutOfVoices  = StartSIDRegs + 38
+   rRegSIDStringTerm   = StartSIDRegs + 39
+                       
+   rwRegPwrUpDefaults  = StartSIDRegs + 40 ; power up default reg, see bit mask defs
+   rwRegTimezone       = StartSIDRegs + 41 ; signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = StartSIDRegs + 42 ; Which IO handler will take over upone exit/execute/emulate
+   rwRegNextIOHndlrName= StartSIDRegs + 43 ; Serially read out IOHandlerName selected in rwRegNextIOHndlr, write anything to reset pointer
+
    ;;;;;;;;;;;;;;;;;;  end IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on

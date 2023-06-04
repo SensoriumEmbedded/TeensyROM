@@ -40,6 +40,7 @@ enum IO1_Registers  //offset from 0xDE00
    rRegItemType      = 14 , //regItemTypes: type of item 
    rRegItemNameStart = 15 , //MaxItemNameLength bytes long (incl term)
    rRegItemNameTerm  = rRegItemNameStart + MaxItemNameLength,
+   
    StartSIDRegs      = rRegItemNameTerm+1 , //start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1    = StartSIDRegs +  0, 
    rRegSIDFreqHi1    = StartSIDRegs +  1,
@@ -76,13 +77,14 @@ enum IO1_Registers  //offset from 0xDE00
    //  1: Out of voices indicator
    //  3: spaces betw
    // 14 total w// term:  ON# ON# ON# X
-   rRegSIDOutOfVoices= StartSIDRegs + 38,
-   rRegSIDStringTerm = StartSIDRegs + 39,
-   
-   rwRegPwrUpDefaults= StartSIDRegs + 40,  // power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone     = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr = StartSIDRegs + 42,  // Which IO1 handler will take over upone exit/execute/emulate
-   
+   rRegSIDOutOfVoices  = StartSIDRegs + 38,
+   rRegSIDStringTerm   = StartSIDRegs + 39,
+                       
+   rwRegPwrUpDefaults  = StartSIDRegs + 40,  // power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = StartSIDRegs + 41,  // signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = StartSIDRegs + 42,  // Which IO handler will take over upone exit/execute/emulate
+   rwRegNextIOHndlrName= StartSIDRegs + 43,  //Serially read out IOHandlerName selected in rwRegNextIOHndlr, write anything to reset pointer
+
    //~87/256 locations used
 };
 

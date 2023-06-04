@@ -23,6 +23,7 @@
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn);  
 void PollingHndlr_SwiftLink();                           
 void InitHndlr_SwiftLink();                           
+void CycleHndlr_SwiftLink();                           
 
 stcIOHandlers IOHndlr_SwiftLink =
 {
@@ -33,22 +34,24 @@ stcIOHandlers IOHndlr_SwiftLink =
   NULL,                     //ROML Read handler, in addition to any ROM data sent
   NULL,                     //ROMH Read handler, in addition to any ROM data sent
   &PollingHndlr_SwiftLink,  //Polled in main routine
-  NULL,                     //called at the end of EVERY c64 cycle
+  &CycleHndlr_SwiftLink,    //called at the end of EVERY c64 cycle
 };
 
 extern bool EthernetInit();
+extern uint32_t CycleCountdown;
 
 uint8_t* RxQueue;  //circular queue to pipe data to the c64 
 uint8_t* TxMsg;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost = false;
+uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
-volatile uint32_t SwiftLastRxMicros = 0;
 
-#define RxQueueSize         512
-#define TxMsgSize           128
-#define MinMicrosBetweenRx  200 //stops NMI from re-asserting too quickly. CCGMS fails below 70uS (~14khz, 114 baud);   for 38400 baud, just need to be below 208: 1/38400*8=208.3
+#define TxMsgSize          128
+#define RxQueueSize       8192 
+#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. 
+#define NMITimeoutnS       300   //if Rx not within this time, deassert NMI
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -72,6 +75,14 @@ volatile uint32_t SwiftLastRxMicros = 0;
 
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
 
+uint8_t PullFromRxQueue()
+{
+  uint8_t c = RxQueue[RxQueueTail++]; 
+  if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
+  //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
+  return c;
+}
+
 void AddCharToRxQueue(uint8_t c)
 {
   if (RxQueueUsed >= RxQueueSize-1)
@@ -85,12 +96,18 @@ void AddCharToRxQueue(uint8_t c)
   }
   RxQueue[RxQueueHead++] = c; 
   if (RxQueueHead == RxQueueSize) RxQueueHead = 0;
+  //Printf_dbg("Push H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
 }
 
 void AddASCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
-   while(s[CharNum] != 0) AddCharToRxQueue((char)ToPETSCII(s[CharNum++]));
+   //Printf_dbg("StrToRx(Len=%d): %s\n", strlen(s), s);
+   while(s[CharNum] != 0)
+   {
+      AddCharToRxQueue(ToPETSCII(s[CharNum]));
+      CharNum++; //putting this inside the above statment breaks it due to petscii macro multiple references
+   }  
 }
 
 void AddNumToRxQueue(uint8_t Num)
@@ -120,7 +137,7 @@ void ProcessATCommand(char* CmdMsg)
             //uint8_t *ip = (uint8_t*)&current_options.ip_address.s_addr;
             uint32_t ip32 = Ethernet.localIP();
             uint8_t *ip = (uint8_t*)&ip32;
-            AddASCIIStrToRxQueue("\rIPAddress: ");
+            AddASCIIStrToRxQueue("\rIP Address: ");
             AddNumToRxQueue((uint8_t)*ip++);
             AddCharToRxQueue('.');
             AddNumToRxQueue((uint8_t)*ip++);
@@ -173,13 +190,6 @@ void ProcessATCommand(char* CmdMsg)
    AddASCIIStrToRxQueue("Unknown Command");
 }
 
-uint8_t PullFromRxQueue()
-{
-  uint8_t c = RxQueue[RxQueueTail++]; 
-  if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
-  return c;
-}
-
 
 //__________________________________________________________________________________________
 
@@ -189,6 +199,7 @@ void InitHndlr_SwiftLink()
    SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
    SwiftRegCommand = 0;
    SwiftRegControl = 0;
+   CycleCountdown=0;
    
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
    free(RxQueue);
@@ -208,9 +219,9 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
       {
          case IORegSwiftData:   
             DataPortWriteWaitLog(SwiftRxBuf);
-            SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+            CycleCountdown = C64CycBetweenRx;
             SetNMIDeassert;
-            SwiftLastRxMicros = micros(); //mark time of last receive
+            SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
             break;
          case IORegSwiftStatus:  
             DataPortWriteWaitLog(SwiftRegStatus);
@@ -262,24 +273,29 @@ void PollingHndlr_SwiftLink()
    }
    
    //if client data available, add to Rx Queue
-   while (client.available()) AddCharToRxQueue(client.read());
-   //if(client.available())
-   //{
-   //   uint16_t Cnt = 0;
-   //   Serial.printf("%d+", RxQueueUsed);
-   //   while (client.available())
-   //   {
-   //      AddCharToRxQueue(client.read());
-   //      Cnt++;
-   //   }
-   //   Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
-   //}
+   #ifdef DbgMsgs_IO
+      if(client.available())
+      {
+         uint16_t Cnt = 0;
+         //Serial.printf("RxIn %d+", RxQueueUsed);
+         while (client.available())
+         {
+            uint8_t c=client.read();
+            AddCharToRxQueue(c);
+            Cnt++;
+         }
+         //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
+         if (RxQueueUsed>3000) Serial.printf("RxQueue added: %d  total: %d\n", Cnt, RxQueueUsed);
+      }
+   #else
+      while (client.available()) AddCharToRxQueue(client.read());
+   #endif
    
    if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) //Tx data available from C64
    {
       if (client.connected()) //send Tx data to host
       {
-         Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
+         //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
          client.print((char)SwiftTxBuf);
       }
       else  //off-line, at commands, etc..................................
@@ -291,6 +307,7 @@ void PollingHndlr_SwiftLink()
          if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgSize) //return hit or max size
          {
             TxMsg[TxMsgOffset-1] = 0; //terminate it
+            //Printf_dbg("TxMsg: %s\n", TxMsg);
             ProcessATCommand((char*)TxMsg);
             AddASCIIStrToRxQueue("\rok\r");
             TxMsgOffset = 0;
@@ -304,12 +321,28 @@ void PollingHndlr_SwiftLink()
    if (RxQueueUsed > 0 && \
       (SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
       (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
-      (micros() - SwiftLastRxMicros) > MinMicrosBetweenRx)
+      CycleCountdown == 0)
    {
       SwiftRxBuf = PullFromRxQueue();
+      //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
       SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
       SetNMIAssert;
+      NMIassertMicros = micros();
    }
       
+   //Rx NMI timeout: Isn't needed unless a lot of printing enabled (ie DbgMsgs_IO) causing missed reg reads
+   if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutnS))
+   {
+     Serial.println("Rx NMI Timeout!");
+     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+     SetNMIDeassert;
+   }
+   
+
+}
+
+void CycleHndlr_SwiftLink()
+{
+   if (CycleCountdown) CycleCountdown--;
 }
 

@@ -32,20 +32,11 @@
 #include "ROM_Images.h"
 #include "IOHandlers.h"
 
-uint8_t* IO1;  //io1 space/regs
-uint16_t StreamOffsetAddr = 0;
-volatile uint8_t doReset = true;
-const unsigned char *HIROM_Image = NULL;
-const unsigned char *LOROM_Image = NULL;
-
 uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 volatile uint8_t CurrentIOHandler = IOH_None;
-
-
-StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
 StructMenuItem SDMenu[MaxMenuItems];
 char SDPath[250] = "/";
@@ -65,16 +56,14 @@ uint8_t NumUSBHostItems = 1;
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
+extern float tempmonGetTemp(void);
 
 void setup() 
 {
    set_arm_clock( 816000000 );  //slight overclocking, no cooling required
    
    Serial.begin(115200);
-   //Serial.println(F("File: " __FILE__ ));
-   Serial.println(F("Date: " __DATE__ ));
-   Serial.println(F("Time: " __TIME__ ));
-   Serial.printf("CPU Freq: %lu Hz\n", F_CPU_ACTUAL);
+   Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
    
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    DataBufDisable; //buffer disabled
@@ -122,6 +111,8 @@ void setup()
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
+
+   for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1);
 
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    //BigBufCount = 0;
@@ -185,4 +176,7 @@ void SetUpMainMenuROM()
    doReset = true;
 }
 
-
+void PadSpace(char* StrToPad, uint8_t PadToLength)
+{
+   while(strlen(StrToPad)<PadToLength) strcat(StrToPad, " ");
+}

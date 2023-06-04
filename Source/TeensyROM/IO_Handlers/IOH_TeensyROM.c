@@ -36,29 +36,24 @@ stcIOHandlers IOHndlr_TeensyROM =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
-#define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
-
-__attribute__((always_inline)) inline uint8_t ToPETSCII(uint8_t x)
-{
-   //Convert to PETscii, make this a table? Seems fast enough   
-   if (x==95) x=32; //underscore->space
-   else if (x>64) x^=32; 
-   return x;
-}
-
-extern StructMenuItem* MenuSource;
-extern uint8_t* IO1; 
-extern uint16_t StreamOffsetAddr;
-extern const unsigned char *LOROM_Image;
-extern const unsigned char *HIROM_Image;
-extern volatile uint8_t doReset;
+volatile uint8_t* IO1;  //io1 space/regs
+volatile uint16_t StreamOffsetAddr = 0;
+volatile uint8_t doReset = true;
+const unsigned char *HIROM_Image = NULL;
+const unsigned char *LOROM_Image = NULL;
+volatile uint8_t eepAddrToWrite, eepDataToWrite;
+StructMenuItem *MenuSource = ROMMenu; //init to internal memory
 
 extern bool EthernetInit();
 extern void MenuChange();
 extern void HandleExecution();
 extern void IOHandlerInitToNext();
+extern stcIOHandlers* IOHandler[];
 
-volatile uint8_t eepAddrToWrite, eepDataToWrite;
+#define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
+
+//Convert to PETscii and underscore to space, could make this a table, but seems fast enough
+#define ToPETSCII(x) (x==95 ? 32 : x>64 ? x^32 : x)
 
 void getNtpTime() 
 {
@@ -311,9 +306,13 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(ToPETSCII(Data));  
             break;
          case rRegStreamData:
-            DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
+            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
             //inc on read, check for end:
             if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
+            break;
+         case rwRegNextIOHndlrName:
+            Data = IOHandler[IO1[rwRegNextIOHndlr]]->Name[StreamOffsetAddr++];
+            DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          default: //used for all other IO1 reads
             DataPortWriteWaitLog(IO1[Address]); 
@@ -351,6 +350,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepAddrToWrite = eepAdTimezone;
             eepDataToWrite = Data;
             IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
+         case rwRegNextIOHndlrName:
+            StreamOffsetAddr = 0;
             break;
          case wRegControl:
             switch(Data)

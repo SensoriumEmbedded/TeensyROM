@@ -19,7 +19,7 @@
 
 
    ;this code is relocated to PRGLoadStartReloc and run from there as it 
-   ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers)
+   ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers are offset)
    
    ;stream PRG file from TeensyROM to RAM and set end of prg/start of variables
    ;assumes TeensyROM is set up to transfer, PRG selected and waited to complete
@@ -58,7 +58,7 @@ PRGLoadStart:
    sta $ae  ;End of load address (Lo)
    stx $af  ; (Hi)
    
-   lda #rCtlRunningPRG    ;let TR know we're done, change IO1 handler
+   lda #rCtlRunningPRG    ;let TR know we're done, change IO handler
    sta wRegControl+IO1Port 
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)

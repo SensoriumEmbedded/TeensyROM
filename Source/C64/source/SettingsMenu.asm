@@ -79,12 +79,15 @@ ShowSettings:
    ldy #19 ;col
    clc
    jsr SetCursor
-   lda rwRegNextIOHndlr+IO1Port 
-   asl
-   tax
-   lda TblSpecialIO,x
-   ldy TblSpecialIO+1,x
-   jsr PrintString
+
+
+ 
+   lda #rwRegNextIOHndlrName
+   jsr PrintSerialString
+  
+   
+   
+   
 
 
 WaitForSettingsKey:     
