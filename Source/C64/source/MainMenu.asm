@@ -223,8 +223,8 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    lda #<MsgBanner
    ldy #>MsgBanner
    jsr PrintString 
-   lda #<MsgFrom
-   ldy #>MsgFrom
+   lda #<MsgSource
+   ldy #>MsgSource
    jsr PrintString 
    ;print menu source:
    lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read

@@ -29,7 +29,7 @@
 #include <EEPROM.h>
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
-#include "ROM_Images.h"
+#include "MainMenuItems.h"
 #include "IOHandlers.h"
 
 uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
@@ -60,11 +60,12 @@ extern float tempmonGetTemp(void);
 
 void setup() 
 {
-   set_arm_clock( 816000000 );  //slight overclocking, no cooling required
+   set_arm_clock(816000000);  //slight overclocking, no cooling required
    
    Serial.begin(115200);
-   Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
-   
+   if (CrashReport) Serial.print(CrashReport); //~4k of RAM
+   Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    DataBufDisable; //buffer disabled
    SetDataPortDirOut; //default to output (for C64 Read)
@@ -180,3 +181,4 @@ void PadSpace(char* StrToPad, uint8_t PadToLength)
 {
    while(strlen(StrToPad)<PadToLength) strcat(StrToPad, " ");
 }
+

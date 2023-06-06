@@ -50,8 +50,8 @@ volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
 
 #define TxMsgSize          128
 #define RxQueueSize       8192 
-#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. 
-#define NMITimeoutnS       300   //if Rx not within this time, deassert NMI
+#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
+#define NMITimeoutnS       300   //if Rx data not read within this time, deassert NMI anyway
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -165,17 +165,7 @@ void ProcessATCommand(char* CmdMsg)
       if (Delim != NULL) //port defined, read it
       {
          Delim[0]=0; //terminate host name
-         Delim++;
-         Port = 0;
-         while (*Delim >='0' && *Delim <='9')
-         {
-            Port*=10;
-            Port += *Delim-'0';
-            Delim++;
-         }
-         //Port = strtol((Delim+1), (char **)NULL, 10); //takes ~32k of ram?
-         //Port = atoi(Delim+1);  //takes ~32k of ram?
-         //sscanf((), "%d", &Port); //takes ~60k of ram???
+         Port = atoi(Delim+1);
          //if (Port==0) AddASCIIStrToRxQueue("Invalid Port #");
       }
       

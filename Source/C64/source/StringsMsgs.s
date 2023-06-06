@@ -22,8 +22,8 @@
 
 MsgBanner:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM v0.2             ", ChrRvsOff, 0
-MsgFrom:    
-   !tx ChrReturn, SourcesColor, "From ", 0 
+MsgSource:    
+   !tx ChrReturn, SourcesColor, "Source: ", 0 
 MsgSelect:
    !tx SourcesColor, "Sources:          "
    !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
@@ -42,13 +42,13 @@ MsgNoItems:
    !tx ChrReturn, OptionColor, " Nothing to show!", 0
 
 MsgMenuSD:
-   !tx "SD Card:", 0
+   !tx "SD Card", 0
 MsgMenuTeensy:
-   !tx "Teensy Mem:", 0
+   !tx "Teensy Mem", 0
 MsgMenuUSBHost:
-   !tx "USB Host:", 0
+   !tx "USB Host", 0
 MsgMenuUSBDrive:
-   !tx "USB Drive:", 0
+   !tx "USB Drive", 0
 
 MsgSettingsMenu:
    !tx ChrReturn, SourcesColor, "Settings Menu:", ChrReturn

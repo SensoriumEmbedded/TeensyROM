@@ -41,7 +41,7 @@ struct stcIOHandlers
   void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
 };
 
-enum enumIOHandlers //Synch order/qty with TblSpecialIO & stcIOHandlers (below)
+enum enumIOHandlers //Synch order/qty with stcIOHandlers (below)
 {
    IOH_None,
    IOH_MIDI_Datel,      
@@ -63,7 +63,7 @@ enum enumIOHandlers //Synch order/qty with TblSpecialIO & stcIOHandlers (below)
 #include "IO_Handlers\IOH_Swiftlink.c"
 #include "IO_Handlers\IOH_EpyxFastLoad.c"
 
-stcIOHandlers* IOHandler[] =  //Synch order/qty with TblSpecialIO & enumIOHandlers (above)
+stcIOHandlers* IOHandler[] =  //Synch order/qty with enumIOHandlers (above)
 {
    &IOHndlr_None,
    &IOHndlr_MIDI_Datel,      
