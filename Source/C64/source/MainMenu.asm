@@ -37,6 +37,9 @@
    MaxMenuDispItems = 16
    M2SDataColumn    = 14
 
+   GreyOutColor     = PokeDrkGrey
+   UpIndicColorLoc  = ScreenColorMemStart+20*40+18
+   DnIndicColorLoc  = ScreenColorMemStart+20*40+21
 
    ;Zero page RAM Registers:
    PtrAddrLo   = $fb
@@ -223,46 +226,44 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
    lda #<MsgBanner
    ldy #>MsgBanner
    jsr PrintString 
+   
+   ldx #20 ;row   Print the select message now so we can grey out the up/dn below if needed
+   ldy #0  ;col
+   clc
+   jsr SetCursor
+   lda #<MsgSelect
+   ldy #>MsgSelect
+   jsr PrintString
+   
+   ldx #2  ;row
+   ldy #0  ;col
+   ;clc
+   jsr SetCursor
    lda #<MsgSource
    ldy #>MsgSource
    jsr PrintString 
-   ;print menu source:
+   ;print menu source from table:
    lda rWRegCurrMenuWAIT+IO1Port ;don't have to wait on a read
-   cmp #rmtSD
-   bne +
-   lda #<MsgMenuSD
-   ldy #>MsgMenuSD
-   jmp cont1
-
-+  cmp #rmtTeensy
-   bne +
-   lda #<MsgMenuTeensy
-   ldy #>MsgMenuTeensy
-   jmp cont1
-   
-+  cmp #rmtUSBDrive
-   bne +
-   lda #<MsgMenuUSBDrive
-   ldy #>MsgMenuUSBDrive
-   jmp cont1
-   
-+  ;cmp #rmtUSBHost
-   ;bne +
-   lda #<MsgMenuUSBHost
-   ldy #>MsgMenuUSBHost
-   ;jmp cont1
-   
-cont1   
+   asl ;double it to point to word
+   tax
+   lda TblMsgMenuName,x
+   ldy TblMsgMenuName+1,x
    jsr PrintString
+   
    lda rRegNumItems+IO1Port
    bne +
+   jsr GreyOutUp  ;no items, no up/dn
+   jsr GreyOutDn  ;no items, no up/dn
    lda #<MsgNoItems
    ldy #>MsgNoItems
    jsr PrintString
    jmp finishMenu
-+  lda RegMenuPageStart
++  lda RegMenuPageStart  
    sta rwRegSelItem+IO1Port
-   lda #'A' ;initialize to start of page
+   cmp #0
+   bne +
+   jsr GreyOutUp  ;we're at the top of the item list,no up
++  lda #'A' ;initialize to start of page
 nextLine
    pha ;remember menu letter
    lda #ChrReturn
@@ -285,9 +286,8 @@ nextLine
 ; print name
    lda #NameColor
    jsr SendChar
-   lda #<rRegItemNameStart+IO1Port
-   ldy #>rRegItemNameStart+IO1Port
-   jsr PrintString
+   lda #rwRegItemName
+   jsr PrintSerialString
 ;align to col
    sec
    jsr SetCursor ;read current to load y (row)
@@ -312,21 +312,30 @@ nextLine
    inc rwRegSelItem+IO1Port
    ldx rwRegSelItem+IO1Port
    cpx rRegNumItems+IO1Port
-   beq finishMenu
-   clc
+   bne +
+   ;all items listed, no more below
+   jsr GreyOutDn
+   jmp finishMenu
++  clc
    adc #01
    cmp #'A' + MaxMenuDispItems
    bne nextLine  
+   ;out of screen rows, stop listing
 finishMenu
-   ldx #20 ;row
-   ldy #0  ;col
-   clc
-   jsr SetCursor
-   lda #<MsgSelect
-   ldy #>MsgSelect
-   jsr PrintString
    rts
 
+GreyOutUp:
+   lda #GreyOutColor
+   sta UpIndicColorLoc
+   sta UpIndicColorLoc+1
+   rts
+   
+GreyOutDn:
+   lda #GreyOutColor
+   sta DnIndicColorLoc
+   sta DnIndicColorLoc+1
+   rts
+   
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
@@ -355,9 +364,8 @@ XferCopyRun:
    lda #<MsgLoading
    ldy #>MsgLoading
    jsr PrintString
-   lda #<rRegItemNameStart+IO1Port
-   ldy #>rRegItemNameStart+IO1Port
-   jsr PrintString
+   lda #rwRegItemName
+   jsr PrintSerialString
 
    lda #>PRGLoadStart
    ldy #<PRGLoadStart   
@@ -385,7 +393,7 @@ WaitForTR:  ;wait for ready status, uses acc, X and Y
    jsr PrintString
 !ifndef Debug {
 -- ldx#5 ;require 5 consecutive reads of ready to continue
-   inc ScreenMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
+   inc ScreenCharMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
 -  lda rRegStatus+IO1Port
    cmp #rsReady
    bne --

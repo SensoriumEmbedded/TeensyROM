@@ -301,9 +301,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rRegItemType:
             DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].ItemType);  
             break;
-         case rRegItemNameStart ... (rRegItemNameStart+MaxItemNameLength-1):
-            Data = MenuSource[IO1[rwRegSelItem]].Name[Address-rRegItemNameStart];
-            DataPortWriteWaitLog(ToPETSCII(Data));  
+         case rwRegItemName:
+            Data = MenuSource[IO1[rwRegSelItem]].Name[StreamOffsetAddr++];
+            DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          case rRegStreamData:
             DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
@@ -351,6 +351,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepDataToWrite = Data;
             IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
+         case rwRegItemName:
          case rwRegNextIOHndlrName:
             StreamOffsetAddr = 0;
             break;

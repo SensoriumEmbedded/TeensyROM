@@ -19,15 +19,16 @@
 
 
    ;System Mem locations
-   ScreenMemStart    = $0400
-   BorderColorReg    = $d020 
-   BackgndColorReg   = $d021
-   SIDLoc            = $d400
-   IO1Port           = $de00
-   TODHoursBCD       = $dc0b
-   TODMinBCD         = $dc0a
-   TODSecBCD         = $dc09
-   TODTenthSecBCD    = $dc08
+   ScreenCharMemStart = $0400
+   ScreenColorMemStart= $D800
+   BorderColorReg     = $d020 
+   BackgndColorReg    = $d021
+   SIDLoc             = $d400
+   IO1Port            = $de00
+   TODHoursBCD        = $dc0b
+   TODMinBCD          = $dc0a
+   TODSecBCD          = $dc09
+   TODTenthSecBCD     = $dc08
    
    ;Kernal routines:
    IRQDefault = $ea31
