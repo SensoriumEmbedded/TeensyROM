@@ -43,6 +43,7 @@ const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 volatile uint8_t eepAddrToWrite, eepDataToWrite;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
+char BuildCPUInfoStr[100];
 
 extern bool EthernetInit();
 extern void MenuChange();
@@ -123,6 +124,12 @@ void WriteEEPROM()
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
+void MakeBuildCPUInfoStr()
+{
+   //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+   sprintf(BuildCPUInfoStr, " Build Date/Time: %s, %s\r\n    Teensy Freq: %luMHz  Temp: %.1fC\r\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu 
@@ -130,6 +137,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &getNtpTime,          // rsGetTime    
    &IOHandlerInitToNext, // rsIOHWinit   
    &WriteEEPROM,         // rsWriteEEPROM
+   &MakeBuildCPUInfoStr, // rsMakeBuildCPUInfoStr
 };
 
 
@@ -314,6 +322,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             Data = IOHandler[IO1[rwRegNextIOHndlr]]->Name[StreamOffsetAddr++];
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
+         case rwRegBuildCPUInfoStr:
+            Data = BuildCPUInfoStr[StreamOffsetAddr++];
+            DataPortWriteWaitLog(ToPETSCII(Data));
+            break;
          default: //used for all other IO1 reads
             DataPortWriteWaitLog(IO1[Address]); 
             break;
@@ -351,10 +363,13 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepDataToWrite = Data;
             IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
+            
+         case rwRegBuildCPUInfoStr:
          case rwRegItemName:
          case rwRegNextIOHndlrName:
             StreamOffsetAddr = 0;
             break;
+            
          case wRegControl:
             switch(Data)
             {
@@ -377,6 +392,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlRunningPRG:
                   IO1[rRegStatus] = rsIOHWinit; //Support IO handlers in PRG
+                  break;
+               case rCtlMakeInfoStrWAIT:
+                  IO1[rRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code
                   break;
             }
             break;

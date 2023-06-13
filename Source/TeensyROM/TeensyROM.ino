@@ -63,8 +63,7 @@ void setup()
    set_arm_clock(816000000);  //slight overclocking, no cooling required
    
    Serial.begin(115200);
-   if (CrashReport) Serial.print(CrashReport); //~4k of RAM
-   Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+   if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
    DataBufDisable; //buffer disabled
@@ -83,7 +82,7 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
-   Serial.print("SD Card initialization... ");
+   Serial.print("\nSD Card initialization... ");
    if (SD.begin(BUILTIN_SDCARD)) Serial.println("passed.");
    else Serial.println("***Failed!***");
   
@@ -129,8 +128,8 @@ void setup()
    //}
    //free(BigBuf);
    
-   Serial.print("TeensyROM 0.2 is on-line\n");
-   Serial.flush();
+   MakeBuildCPUInfoStr();
+   Serial.printf("\n%sTeensyROM 0.2 is on-line\n", BuildCPUInfoStr);
 } 
      
 void loop()
@@ -181,4 +180,5 @@ void PadSpace(char* StrToPad, uint8_t PadToLength)
 {
    while(strlen(StrToPad)<PadToLength) strcat(StrToPad, " ");
 }
+
 

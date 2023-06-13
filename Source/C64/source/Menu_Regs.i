@@ -17,6 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 ;!!!!!!!!!!!!!!!!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    MaxItemNameLength = 28
@@ -42,9 +43,10 @@
    rwRegPwrUpDefaults  = 16 ;// power up default reg, see bit mask defs
    rwRegTimezone       = 17 ;// signed char for timezone: UTC +/-12 
    rwRegNextIOHndlr    = 18 ;// Which IO handler will take over upone exit/execute/emulate
-   rwRegNextIOHndlrName= 19 ;// Serially read out IOHandlerName selected in rwRegNextIOHndlr, write anything to reset pointer
+   rwRegNextIOHndlrName= 19 ;// IOHandler Name selected in rwRegNextIOHndlr: Serially read out, write anything to reset pointer
+   rwRegBuildCPUInfoStr= 20 ;// String containing Build date/time and CPU Freq/Temp: Serially read out, write anything to create string and reset pointer
 
-   StartSIDRegs        = 20   ;//start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 21   ;//start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2
@@ -89,25 +91,29 @@
    rpudNetTimeMask   = 0x02 ; rwRegPwrUpDefaults bit 1=synch net time
 
 ;enum RegStatusTypes  //rRegStatus
-   rsChangeMenu    = 0x00  ;
-   rsStartItem     = 0x01  ;
-   rsGetTime       = 0x02  ;
-   rsIOHWinit      = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
-   rsWriteEEPROM   = 0x04  ;
-   rsNumStatusTypes= 0x05  ;
-   rsReady         = 0x5a
-   ;rsError        = 0x48,
+   rsChangeMenu         = 0x00  ;
+   rsStartItem          = 0x01  ;
+   rsGetTime            = 0x02  ;
+   rsIOHWinit           = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
+   rsWriteEEPROM        = 0x04  ;
+   rsMakeBuildCPUInfoStr= 0x05  ;
+   
+   rsNumStatusTypes     = 0x06  ;
+
+   rsReady              = 0x5a
+   ;rsError              = 0x48,
 
    rmtSD        = 0
    rmtTeensy    = 1
    rmtUSBHost   = 2
    rmtUSBDrive  = 3
    
-   rCtlVanishROM        = 0
-   rCtlBasicReset       = 1
-   rCtlStartSelItemWAIT = 2
-   rCtlGetTimeWAIT      = 3
-   rCtlRunningPRG       = 4 ; final signal before running prg, allows IO1 handler change
+   rCtlVanishROM          = 0
+   rCtlBasicReset         = 1
+   rCtlStartSelItemWAIT   = 2
+   rCtlGetTimeWAIT        = 3
+   rCtlRunningPRG         = 4 ; final signal before running prg, allows IO1 handler change
+   rCtlMakeInfoStrWAIT    = 5 ; Make BuildCPUInfoStr
 
    ;synch with TblItemType & regItemTypes
    rtNone      = 0

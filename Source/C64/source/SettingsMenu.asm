@@ -29,12 +29,24 @@ SettingsMenu:
    ldy #>MsgCreditsInfo
    jsr PrintString 
 
+   lda #rCtlMakeInfoStrWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTR
+   ldx #16 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   lda #NameColor
+   jsr SendChar
+   lda #rwRegBuildCPUInfoStr
+   jsr PrintSerialString
+
 ShowSettings:
    lda #NameColor
    jsr SendChar
 
    ldx #5 ;row Synch Time
-   ldy #23 ;col
+   ldy #21 ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -42,7 +54,7 @@ ShowSettings:
    jsr PrintOnOff
 
    ldx #6 ;row Music State
-   ldy #23 ;col
+   ldy #21 ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -50,7 +62,7 @@ ShowSettings:
    jsr PrintOnOff
    
    ldx #7 ;row Time Zone
-   ldy #26 ;col
+   ldy #24 ;col
    clc
    jsr SetCursor
    ldx #'+'
@@ -75,20 +87,13 @@ ShowSettings:
    ora #$10
 +  jsr PrintHexByte
 
-   ldx #14 ;row Special IO
-   ldy #19 ;col
+   ldx #8  ;row Special IO
+   ldy #21 ;col
    clc
    jsr SetCursor
-
-
- 
    lda #rwRegNextIOHndlrName
    jsr PrintSerialString
   
-   
-   
-   
-
 
 WaitForSettingsKey:     
    jsr DisplayTime   
@@ -122,6 +127,15 @@ WaitForSettingsKey:
    jsr WaitForTR
    jmp ShowSettings  
 
++  cmp #ChrF7  ;Special IO
+   bne +
+   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad
+   ldx rwRegNextIOHndlr+IO1Port
+   inx
+   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
+   jsr WaitForTR
+   jmp ShowSettings  
+
 +  cmp #ChrF2  ;Synch Time now
    bne +
    jsr SynchEthernetTime
@@ -136,21 +150,13 @@ WaitForSettingsKey:
    bne +
    rts
 
-+  cmp #ChrF7  ;Special IO
-   bne +
-   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad
-   ldx rwRegNextIOHndlr+IO1Port
-   inx
-   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
-   jsr WaitForTR
-   jmp ShowSettings  
-
 +  cmp #ChrF8  ;Test IO
    bne +
    jsr TestIO
    jmp WaitForSettingsKey  
 
-+  jmp WaitForSettingsKey  
++  jmp SettingsMenu  ;refresh full screen (& temp read) on any other key
+;+  jmp WaitForSettingsKey  
 
 TestIO:
    jsr CursorToTest    
@@ -193,8 +199,8 @@ TestIO:
    rts
 
 CursorToTest
-   ldx #15 ;row 
-   ldy #17 ;col
+   ldx #14 ;row 
+   ldy #18 ;col
    clc
    jsr SetCursor   
    rts

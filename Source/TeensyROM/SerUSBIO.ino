@@ -95,7 +95,9 @@ void ServiceSerial()
          }
          break;
       case 'f':
-         Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+         MakeBuildCPUInfoStr();
+         Serial.println(BuildCPUInfoStr);
+         //Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
          break;
       case 'p':
          AddASCIIStrToRxQueue("0123456789abcdef\r");

@@ -57,26 +57,26 @@ MsgMenuUSBDrive:
 
 MsgSettingsMenu:
    !tx ChrReturn, SourcesColor, "Settings Menu:", ChrReturn
-   !tx ChrReturn, OptionColor 
-   !tx "    Power-up Defaults", ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor, "  Synch Time:", ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor, " Music State:", ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor, "   Time Zone:", NameColor, " UTC", ChrReturn
-   !tx ChrReturn, OptionColor 
-   !tx "    Immediate", ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, SourcesColor, " Synch Time via Ethernet", ChrReturn
-   !tx "       ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, SourcesColor, " Toggle Music On/Off", ChrReturn, ChrReturn
+   !tx ChrReturn, MenuMiscColor 
+   !tx "   Defaults", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor, "  Synch Time:", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor, " Music State:", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor, "   Time Zone:", NameColor, " UTC", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor, "  Special IO:", ChrReturn
+   !tx ChrReturn, MenuMiscColor 
+   !tx "   Immediate", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, SourcesColor, " Synch Time via Ethernet", ChrReturn
    !tx 0  ;near max of 256 bytes
 
 MsgCreditsInfo:
-   !tx "    ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
-   !tx "    ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " Special IO:", ChrReturn
-   !tx "    ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, SourcesColor,  " Self Test", ChrReturn
-   !tx ChrReturn, ChrReturn, MenuMiscColor 
-   !tx "   2023 by Travis Smith @ Sensorium", ChrReturn, ChrReturn
-   !tx " TeensyROM is 100% Open Source HW & SW!", ChrReturn
-   !tx " github.com/SensoriumEmbedded/TeensyROM", ChrReturn, ChrReturn
-   !tx "           Music by Frank Zappa", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, SourcesColor, " Toggle Music On/Off", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
+   !tx "     ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, SourcesColor,  " Self Test", ChrReturn
+   !tx ChrReturn, ChrReturn, ChrReturn, ChrReturn, MenuMiscColor 
+   !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
+   !tx "          Music by Frank Zappa", ChrReturn, ChrReturn
+   !tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
+   !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
 MsgM2SPolyMenu:    
