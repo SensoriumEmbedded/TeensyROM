@@ -37,7 +37,7 @@ stcIOHandlers IOHndlr_TeensyROM =
 };
 
 volatile uint8_t* IO1;  //io1 space/regs
-volatile uint16_t StreamOffsetAddr = 0;
+volatile uint16_t StreamOffsetAddr, StringOffset = 0;
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
@@ -309,21 +309,21 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rRegItemType:
             DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].ItemType);  
             break;
-         case rwRegItemName:
-            Data = MenuSource[IO1[rwRegSelItem]].Name[StreamOffsetAddr++];
-            DataPortWriteWaitLog(ToPETSCII(Data));
-            break;
          case rRegStreamData:
             DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
             //inc on read, check for end:
             if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
+         case rwRegItemName:
+            Data = MenuSource[IO1[rwRegSelItem]].Name[StringOffset++];
+            DataPortWriteWaitLog(ToPETSCII(Data));
+            break;
          case rwRegNextIOHndlrName:
-            Data = IOHandler[IO1[rwRegNextIOHndlr]]->Name[StreamOffsetAddr++];
+            Data = IOHandler[IO1[rwRegNextIOHndlr]]->Name[StringOffset++];
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          case rwRegBuildCPUInfoStr:
-            Data = BuildCPUInfoStr[StreamOffsetAddr++];
+            Data = BuildCPUInfoStr[StringOffset++];
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          default: //used for all other IO1 reads
@@ -367,7 +367,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegBuildCPUInfoStr:
          case rwRegItemName:
          case rwRegNextIOHndlrName:
-            StreamOffsetAddr = 0;
+            StringOffset = 0;
             break;
             
          case wRegControl:
