@@ -52,7 +52,7 @@ void ServiceSerial()
       case 'm':
          {  
             //RxIn 497+551=1048
-	    //big 8-bity playground buffer for testing
+            //big 8-bity playground buffer for testing
             uint8_t inbuf[] ={
             168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,168,13,32,32,
             18,28,220,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,162,162,162,32,172,162,162,162,172,162,162,162,
@@ -90,8 +90,6 @@ void ServiceSerial()
             };
             
             for(uint16_t Cnt=0; Cnt<sizeof(inbuf); Cnt++) AddCharToRxQueue(inbuf[Cnt]);
-            //for(uint16_t Cnt=0; Cnt<sizeof(inbuf); Cnt++) AddCharToRxQueue(inbuf[Cnt]);
-
          }
          break;
       case 'f':
@@ -108,7 +106,7 @@ void ServiceSerial()
          break;
       case 'r': //reset status/NMI
          SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
-         SwiftRegCommand = 0;
+         SwiftRegCommand = SwiftCmndDefault;
          SwiftRegControl = 0;
          RxQueueHead = RxQueueTail = 0;
          //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
@@ -305,27 +303,4 @@ bool SerialAvailabeTimeout()
    Serial.print("Timeout!\n");  
    return(false);
 }
-
-bool EthernetInit()
-{
-   uint32_t beginWait = millis();
-
-   Serial.print("\nEthernet init... ");
-   if (Ethernet.begin(mac, 9000, 4000) == 0)  //reduce timeout from 60 to 9 sec, should be longer, or option to skip
-   {
-      Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
-      // Check for Ethernet hardware present
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
-      else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
-      
-      IO1[rRegLastSecBCD]  = 0;      
-      IO1[rRegLastMinBCD]  = 0;      
-      IO1[rRegLastHourBCD] = 0;      
-      return false;
-   }
-   Serial.printf("passed. took %d mS\nIP: ", (millis() - beginWait));
-   Serial.println(Ethernet.localIP());
-   return true;
-}
-   
 

@@ -27,7 +27,7 @@ void CycleHndlr_SwiftLink();
 
 stcIOHandlers IOHndlr_SwiftLink =
 {
-  "SwiftLink",              //Name of handler
+  "SwiftLink/Modem",        //Name of handler
   &InitHndlr_SwiftLink,     //Called once at handler startup
   &IO1Hndlr_SwiftLink,      //IO1 R/W handler
   NULL,                     //IO2 R/W handler
@@ -37,16 +37,16 @@ stcIOHandlers IOHndlr_SwiftLink =
   &CycleHndlr_SwiftLink,    //called at the end of EVERY c64 cycle
 };
 
-extern bool EthernetInit();
-extern uint32_t CycleCountdown;
+extern volatile uint32_t CycleCountdown;
 
 uint8_t* RxQueue;  //circular queue to pipe data to the c64 
-uint8_t* TxMsg;  //to hold messages (AT commands) when off line
+char* TxMsg;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost = false;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 #define TxMsgSize          128
 #define RxQueueSize       8192 
@@ -72,15 +72,68 @@ volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
 
 //command reg flags
 #define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
+#define SwiftCmndDefault   0xE0   // Default command reg state
 
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
 
+bool EthernetInit()
+{
+   uint32_t beginWait = millis();
+
+   Serial.print("\nEthernet init... ");
+   if (Ethernet.begin(mac, 9000, 4000) == 0)  //reduce timeout from 60 to 9 sec, should be longer, or option to skip
+   {
+      Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
+      // Check for Ethernet hardware present
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
+      else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
+      
+      IO1[rRegLastSecBCD]  = 0;      
+      IO1[rRegLastMinBCD]  = 0;      
+      IO1[rRegLastHourBCD] = 0;      
+      return false;
+   }
+   Serial.printf("passed. took %d mS\nIP: ", (millis() - beginWait));
+   Serial.println(Ethernet.localIP());
+   return true;
+}
+   
 uint8_t PullFromRxQueue()
 {
   uint8_t c = RxQueue[RxQueueTail++]; 
   if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
   //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
   return c;
+}
+
+void CheckSendRx()
+{
+   //  if Rx data available to send to C64, IRQ enabled, and ready (not set), 
+   //  and enough time has passed, then read/send to C64...
+   if (RxQueueUsed > 0 && \
+      (SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
+      (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
+      CycleCountdown == 0)
+   {
+      SwiftRxBuf = PullFromRxQueue();
+      //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
+      SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
+      SetNMIAssert;
+      NMIassertMicros = micros();
+   }
+      
+   //Rx NMI timeout: Isn't needed unless a lot of printing enabled (ie DbgMsgs_IO) causing missed reg reads
+   if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutnS))
+   {
+     Serial.println("Rx NMI Timeout!");
+     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+     SetNMIDeassert;
+   }
+}
+
+void FlushRxQueue()
+{
+   while (RxQueueUsed) CheckSendRx();  
 }
 
 void AddCharToRxQueue(uint8_t c)
@@ -110,84 +163,118 @@ void AddASCIIStrToRxQueue(const char* s)
    }  
 }
 
-void AddNumToRxQueue(uint8_t Num)
+//_____________________________________AT Commands_____________________________________________________
+
+#define MaxATcmdLength   20
+
+struct stcATCommand
 {
-   char buf[6];
-   sprintf(buf, "%d", Num);
-   AddASCIIStrToRxQueue(buf);
+  char Command[MaxATcmdLength];
+  void (*Function)(char*); 
+};
+
+void AT_DT(char* CmdArg)
+{  //ATDT<HostName>:<Port>   Connect telnet
+   uint16_t  Port = 6400; //default if not defined
+   char* Delim = strstr(CmdArg, ":");
+
+
+   if (Delim != NULL) //port defined, read it
+   {
+      Delim[0]=0; //terminate host name
+      Port = atoi(Delim+1);
+      //if (Port==0) AddASCIIStrToRxQueue("invalid port #");
+   }
+   
+   char Buf[100];
+   sprintf(Buf, "trying %s\r\non port %d...\r\n", CmdArg, Port);
+   AddASCIIStrToRxQueue(Buf);
+   FlushRxQueue();
+   //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
+   
+   if (client.connect(CmdArg, Port)) AddASCIIStrToRxQueue("done");
+   else AddASCIIStrToRxQueue("failed!");
 }
 
-void ProcessATCommand(char* CmdMsg)
-{
-   if (CmdMsg[0] != 'A' || CmdMsg[1] != 'T')
+void AT_C(char* CmdArg)
+{  //ATC: Connect Ethernet
+   AddASCIIStrToRxQueue("connecting to ethernet...");
+   FlushRxQueue();
+   
+   if (EthernetInit()==true)
    {
-      AddASCIIStrToRxQueue("AT not found");
-      return;
-   }
-   
-   CmdMsg+=2; //past the AT
-   
-   if (CmdMsg[0] == 0) return;              //AT: ping
-   
-   if (CmdMsg[0] == 'C' && CmdMsg[1] == 0)  //ATC: Connect Ethernet
-   {
-         if(EthernetInit())
-         {
-            AddASCIIStrToRxQueue("Connected to Ethernet");
-            //uint8_t *ip = (uint8_t*)&current_options.ip_address.s_addr;
-            uint32_t ip32 = Ethernet.localIP();
-            uint8_t *ip = (uint8_t*)&ip32;
-            AddASCIIStrToRxQueue("\rIP Address: ");
-            AddNumToRxQueue((uint8_t)*ip++);
-            AddCharToRxQueue('.');
-            AddNumToRxQueue((uint8_t)*ip++);
-            AddCharToRxQueue('.');
-            AddNumToRxQueue((uint8_t)*ip++);
-            AddCharToRxQueue('.');
-            AddNumToRxQueue((uint8_t)*ip);
-            return;
-         }
-         else
-         {
-            AddASCIIStrToRxQueue("Ethernet connect failed!");
-            if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueue("\r HW was not found");
-            else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueue("\r Cable is not connected");
-            return;
-         }
-   }
-   
-   if (CmdMsg[0] == 'D' && CmdMsg[1] == 'T') //ATDT<HostName>:<Port>   Connect telnet
-   {   
-      CmdMsg+=2; //past the DT
-   
-      uint16_t  Port = 6400; //default if not defined
-      char* Delim = strstr(CmdMsg, ":");
-      if (Delim != NULL) //port defined, read it
-      {
-         Delim[0]=0; //terminate host name
-         Port = atoi(Delim+1);
-         //if (Port==0) AddASCIIStrToRxQueue("Invalid Port #");
-      }
+      AddASCIIStrToRxQueue("done");
       
-      if (client.connect(CmdMsg, Port)) AddASCIIStrToRxQueue("Connected to Host");
-      else AddASCIIStrToRxQueue("Host connect Failed");
-      Printf_dbg("Host name: %s  Port: %d\n", CmdMsg, Port);
+      uint32_t ip32 = Ethernet.localIP();
+      uint8_t *ip = (uint8_t*)&ip32;
+      char Buf[100];
+      sprintf(Buf, "\r\nIP Address: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+      AddASCIIStrToRxQueue(Buf);
+      sprintf(Buf, "\r\nMAC Address: %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      AddASCIIStrToRxQueue(Buf);
+   }
+   else
+   {
+      AddASCIIStrToRxQueue("failed!");
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueue("\r\n hw was not found");
+      else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueue("\r\n cable is not connected");
+   }
+}
+
+stcATCommand ATCommands[] =
+{
+   "dt"                    ,&AT_DT,
+   "c"                    ,&AT_C,
+};
+
+void ProcessATCommand()
+{
+   char* CmdMsg = TxMsg; //local copy for manipulation
+   uint16_t Num=0;
    
+   while (CmdMsg[Num])
+   {  //conv to lower case ASCII
+      CmdMsg[Num] &= 127;
+      if(CmdMsg[Num] >= 'A') CmdMsg[Num] ^= 32;
+      Num++;
+   }
+   Printf_dbg("AT Msg recvd: %s\n", CmdMsg);
+   
+   if (strstr(CmdMsg, "at")!=CmdMsg)
+   {
+      AddASCIIStrToRxQueue("at not found");
       return;
+   }
+   CmdMsg+=2; //past the AT
+   if(CmdMsg[0]==0) return;  //ping
+   
+   Num=0;
+   while(Num < sizeof(ATCommands)/sizeof(ATCommands[0]))
+   {
+      if (strstr(CmdMsg, ATCommands[Num].Command) == CmdMsg)
+      {
+         CmdMsg+=strlen(ATCommands[Num].Command); //move past the Command
+         ATCommands[Num].Function(CmdMsg);
+         return;
+      }
+      Num++;
    }
    
    Printf_dbg("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
-   AddASCIIStrToRxQueue("Unknown Command");
+   AddASCIIStrToRxQueue("unknown command: ");
+   AddASCIIStrToRxQueue(TxMsg);
 }
 
 
-//__________________________________________________________________________________________
+
+
+//_____________________________________Handlers_____________________________________________________
 
 void InitHndlr_SwiftLink()
 {
    EthernetInit();
    SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
-   SwiftRegCommand = 0;
+   SwiftRegCommand = SwiftCmndDefault;
    SwiftRegControl = 0;
    CycleCountdown=0;
    
@@ -195,7 +282,7 @@ void InitHndlr_SwiftLink()
    free(RxQueue);
    RxQueue = (uint8_t*)malloc(RxQueueSize);
    free(TxMsg);
-   TxMsg = (uint8_t*)malloc(TxMsgSize);
+   TxMsg = (char*)malloc(TxMsgSize);
 }   
 
 
@@ -236,7 +323,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftStatus:  
             //Write to status reg is a programmed reset
-            //not doing anything for now
+            SwiftRegCommand = SwiftCmndDefault;
             break;
          case IORegSwiftControl:
             SwiftRegControl = Data;
@@ -257,9 +344,9 @@ void PollingHndlr_SwiftLink()
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
-      AddASCIIStrToRxQueue("\r\r\r*** ");
-      if (ConnectedToHost) AddASCIIStrToRxQueue("Connected to host\r");
-      else AddASCIIStrToRxQueue("Not connected\r");
+      AddASCIIStrToRxQueue("\r\n\r\n\r\n*** ");
+      if (ConnectedToHost) AddASCIIStrToRxQueue("connected to host\r\n");
+      else AddASCIIStrToRxQueue("not connected\r\n");
    }
    
    //if client data available, add to Rx Queue
@@ -287,6 +374,7 @@ void PollingHndlr_SwiftLink()
       {
          //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
          client.print((char)SwiftTxBuf);
+         SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
       }
       else  //off-line, at commands, etc..................................
       {
@@ -294,45 +382,24 @@ void PollingHndlr_SwiftLink()
          AddCharToRxQueue(SwiftTxBuf); //echo it
          
          TxMsg[TxMsgOffset++] = SwiftTxBuf;
-         if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgSize) //return hit or max size
+         SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
+         if (TxMsg[TxMsgOffset-1] == 13 || TxMsgOffset == TxMsgSize) //return hit or max size
          {
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             //Printf_dbg("TxMsg: %s\n", TxMsg);
-            ProcessATCommand((char*)TxMsg);
-            AddASCIIStrToRxQueue("\rok\r");
+            ProcessATCommand();
+            AddASCIIStrToRxQueue("\r\nok\r\n");
             TxMsgOffset = 0;
          }
       }
-      SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
    }
-   
-   //  if Rx data available to send to C64, IRQ enabled, and ready (not set), 
-   //  and enough time has passed, then read/send to C64...
-   if (RxQueueUsed > 0 && \
-      (SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
-      (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
-      CycleCountdown == 0)
-   {
-      SwiftRxBuf = PullFromRxQueue();
-      //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
-      SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
-      SetNMIAssert;
-      NMIassertMicros = micros();
-   }
-      
-   //Rx NMI timeout: Isn't needed unless a lot of printing enabled (ie DbgMsgs_IO) causing missed reg reads
-   if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutnS))
-   {
-     Serial.println("Rx NMI Timeout!");
-     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
-     SetNMIDeassert;
-   }
-   
 
+   CheckSendRx();
 }
 
 void CycleHndlr_SwiftLink()
 {
    if (CycleCountdown) CycleCountdown--;
 }
+
 

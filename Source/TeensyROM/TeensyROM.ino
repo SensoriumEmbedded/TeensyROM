@@ -53,8 +53,6 @@ StructMenuItem USBHostMenu = {
 uint8_t* HOST_Image = NULL; //For receiving files from USB Host
 uint8_t NumUSBHostItems = 1;
 
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 

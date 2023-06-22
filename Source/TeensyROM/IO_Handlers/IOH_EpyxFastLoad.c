@@ -41,7 +41,7 @@ stcIOHandlers IOHndlr_EpyxFastLoad =
 
 extern const unsigned char *LOROM_Image;
 
-uint32_t CycleCountdown=0;
+volatile uint32_t CycleCountdown=0;
 
 void InitHndlr_EpyxFastLoad()
 {
