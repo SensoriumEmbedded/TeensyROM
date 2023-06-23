@@ -48,6 +48,8 @@ bool ConnectedToHost = false;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+uint8_t PlusCount=0;
+uint32_t LastTxMillis = millis();
 
 #define TxMsgSize          128
 #define RxQueueSize       8192 
@@ -553,6 +555,7 @@ void InitHndlr_SwiftLink()
    SwiftRegCommand = SwiftCmndDefault;
    SwiftRegControl = 0;
    CycleCountdown=0;
+   PlusCount=0;
    
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
    free(RxQueue);
@@ -639,7 +642,7 @@ void PollingHndlr_SwiftLink()
             Cnt++;
          }
          //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
-         if (RxQueueUsed>3000) Serial.printf("RxQueue added: %d  total: %d\n", Cnt, RxQueueUsed);
+         if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
       }
    #else
       while (client.available()) AddCharToRxQueue(client.read());
@@ -650,15 +653,23 @@ void PollingHndlr_SwiftLink()
       if (client.connected()) //send Tx data to host
       {
          //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
-         client.print((char)SwiftTxBuf);
+         client.print((char)SwiftTxBuf);  //send it
+         if(SwiftTxBuf=='+')
+         {
+            if(millis()-LastTxMillis>1000 || PlusCount!=0) //Must be preceded by at least 1 second of no characters
+            {   
+               if(++PlusCount>3) PlusCount=0;
+            }
+         }
+         else PlusCount=0;
+         
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
       }
       else  //off-line, at commands, etc..................................
       {
          //Printf_dbg("echo %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
          AddCharToRxQueue(SwiftTxBuf); //echo it
-         
-         TxMsg[TxMsgOffset++] = SwiftTxBuf;
+         TxMsg[TxMsgOffset++] = SwiftTxBuf; //store it
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
          if (TxMsg[TxMsgOffset-1] == 13 || TxMsgOffset == TxMsgSize) //return hit or max size
          {
@@ -669,6 +680,14 @@ void PollingHndlr_SwiftLink()
             TxMsgOffset = 0;
          }
       }
+      LastTxMillis = millis();
+   }
+   
+   if(PlusCount==3 && millis()-LastTxMillis>1000) //Must be followed by one second of no characters
+   {
+      PlusCount=0;
+      client.stop();
+      AddASCIIStrToRxQueueLN("\r\n*click*");
    }
 
    CheckSendRx();
