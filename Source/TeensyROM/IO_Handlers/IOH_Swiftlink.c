@@ -38,6 +38,8 @@ stcIOHandlers IOHndlr_SwiftLink =
 };
 
 extern volatile uint32_t CycleCountdown;
+extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
+extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
 
 uint8_t* RxQueue;  //circular queue to pipe data to the c64 
 char* TxMsg;  //to hold messages (AT commands) when off line
@@ -46,7 +48,6 @@ bool ConnectedToHost = false;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 #define TxMsgSize          128
 #define RxQueueSize       8192 
@@ -79,23 +80,59 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 bool EthernetInit()
 {
    uint32_t beginWait = millis();
+   uint8_t  mac[6];
+   bool retval = true;
+   Serial.print("\nEthernet init ");
+   
+   EEPreadBuf(eepAdMyMAC, mac, 6);
 
-   Serial.print("\nEthernet init... ");
-   if (Ethernet.begin(mac, 9000, 4000) == 0)  //reduce timeout from 60 to 9 sec, should be longer, or option to skip
+   if (EEPROM.read(eepAdDHCPEnabled))
    {
-      Serial.printf("***Failed!*** took %d mS\n", (millis() - beginWait));
-      // Check for Ethernet hardware present
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
-      else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
-      
-      IO1[rRegLastSecBCD]  = 0;      
-      IO1[rRegLastMinBCD]  = 0;      
-      IO1[rRegLastHourBCD] = 0;      
-      return false;
+      Serial.print("via DHCP... ");
+
+      uint16_t DHCPTimeout, DHCPRespTO;
+      EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
+      EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
+      if (Ethernet.begin(mac, DHCPTimeout, DHCPRespTO) == 0)
+      {
+         Serial.println("*Failed!*");
+         // Check for Ethernet hardware present
+         if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
+         else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");   
+         retval = false;
+      }
+      else
+      {
+         Serial.println("passed.");
+      }
    }
-   Serial.printf("passed. took %d mS\nIP: ", (millis() - beginWait));
-   Serial.println(Ethernet.localIP());
-   return true;
+   else
+   {
+      Serial.println("using Static");
+      uint32_t ip, dns, gateway, subnetmask;
+      EEPROM.get(eepAdMyIP, ip);
+      EEPROM.get(eepAdDNSIP, dns);
+      EEPROM.get(eepAdGtwyIP, gateway);
+      EEPROM.get(eepAdMaskIP, subnetmask);
+      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+   }
+   
+   Serial.printf("Took %d mS\n", (millis() - beginWait));
+   //Serial.println(Ethernet.localIP());
+   return retval;
+}
+   
+void SetEthEEPDefaults()
+{
+   EEPROM.write(eepAdDHCPEnabled, 1); //DHCP enabled
+   uint8_t buf[6]={0xBE, 0x0C, 0x64, 0xC0, 0xFF, 0xEE};
+   EEPwriteBuf(eepAdMyMAC, buf, 6);
+   EEPROM.put(eepAdMyIP       , (uint32_t)IPAddress(192,168,1,10));
+   EEPROM.put(eepAdDNSIP      , (uint32_t)IPAddress(192,168,1,1));
+   EEPROM.put(eepAdGtwyIP     , (uint32_t)IPAddress(192,168,1,1));
+   EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
+   EEPROM.put(eepAdDHCPTimeout, (uint16_t)9000);
+   EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);   
 }
    
 uint8_t PullFromRxQueue()
@@ -163,6 +200,85 @@ void AddASCIIStrToRxQueue(const char* s)
    }  
 }
 
+void AddASCIIStrToRxQueueLN(const char* s)
+{
+   AddASCIIStrToRxQueue(s);
+   AddASCIIStrToRxQueue("\r\n");
+}
+
+void AddIPaddrToRxQueueLN(IPAddress ip)
+{
+   char Buf[50];
+   sprintf(Buf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+   AddASCIIStrToRxQueueLN(Buf);
+}
+
+void AddMACToRxQueueLN(uint8_t* mac)
+{
+   char Buf[50];
+   sprintf(Buf, " MAC Address: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+   AddASCIIStrToRxQueueLN(Buf);
+}
+
+void AddInvalidFormatToRxQueueLN()
+{
+   AddASCIIStrToRxQueueLN("Invalid Format");
+}
+
+void AddUpdatedToRxQueueLN()
+{
+   AddASCIIStrToRxQueueLN("Updated");
+}
+
+void AddDHCPEnDisToRxQueueLN()
+{
+   AddASCIIStrToRxQueue(" DHCP: ");
+   if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueueLN("Enabled");
+   else AddASCIIStrToRxQueueLN("Disabled");
+}
+  
+void AddDHCPTimeoutToRxQueueLN()
+{
+   uint16_t invalU16;
+   char buf[50];
+   EEPROM.get(eepAdDHCPTimeout, invalU16);
+   sprintf(buf, " DHCP Timeout: %dmS", invalU16);
+   AddASCIIStrToRxQueueLN(buf);
+}
+  
+void AddDHCPRespTOToRxQueueLN()
+{
+   uint16_t invalU16;
+   char buf[50];
+   EEPROM.get(eepAdDHCPRespTO, invalU16);
+   sprintf(buf, " DHCP Response Timeout: %dmS", invalU16);
+   AddASCIIStrToRxQueueLN(buf);
+} 
+  
+void StrToIPToEE(char* Arg, uint8_t EEPaddress)
+{
+   uint8_t octnum =1;
+   IPAddress ip;   
+   
+   AddASCIIStrToRxQueueLN(" IP Addr");
+   ip[0]=atoi(Arg);
+   while(octnum<4)
+   {
+      Arg=strchr(Arg, '.');
+      if(Arg==NULL)
+      {
+         AddInvalidFormatToRxQueueLN();
+         return;
+      }
+      ip[octnum++]=atoi(++Arg);
+   }
+   EEPROM.put(EEPaddress, (uint32_t)ip);
+   AddUpdatedToRxQueueLN();
+   AddASCIIStrToRxQueue("to ");
+   AddIPaddrToRxQueueLN(ip);
+}
+
+
 //_____________________________________AT Commands_____________________________________________________
 
 #define MaxATcmdLength   20
@@ -182,49 +298,209 @@ void AT_DT(char* CmdArg)
    if (Delim != NULL) //port defined, read it
    {
       Delim[0]=0; //terminate host name
-      Port = atoi(Delim+1);
-      //if (Port==0) AddASCIIStrToRxQueue("invalid port #");
+      Port = atol(Delim+1);
+      //if (Port==0) AddASCIIStrToRxQueueLN("invalid port #");
    }
    
    char Buf[100];
-   sprintf(Buf, "trying %s\r\non port %d...\r\n", CmdArg, Port);
-   AddASCIIStrToRxQueue(Buf);
+   sprintf(Buf, "Trying %s\r\non port %d...", CmdArg, Port);
+   AddASCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
    
-   if (client.connect(CmdArg, Port)) AddASCIIStrToRxQueue("done");
-   else AddASCIIStrToRxQueue("failed!");
+   if (client.connect(CmdArg, Port)) AddASCIIStrToRxQueueLN("Done");
+   else AddASCIIStrToRxQueueLN("Failed!");
 }
 
 void AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
-   AddASCIIStrToRxQueue("connecting to ethernet...");
+   AddASCIIStrToRxQueue("Connect Ethernet ");
+   if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueue("via DHCP...");
+   else AddASCIIStrToRxQueue("using Static...");
    FlushRxQueue();
    
    if (EthernetInit()==true)
    {
-      AddASCIIStrToRxQueue("done");
+      AddASCIIStrToRxQueueLN("Done");
       
-      uint32_t ip32 = Ethernet.localIP();
-      uint8_t *ip = (uint8_t*)&ip32;
-      char Buf[100];
-      sprintf(Buf, "\r\nIP Address: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-      AddASCIIStrToRxQueue(Buf);
-      sprintf(Buf, "\r\nMAC Address: %02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-      AddASCIIStrToRxQueue(Buf);
+      byte mac[6]; 
+      Ethernet.MACAddress(mac);
+      AddMACToRxQueueLN(mac);
+      
+      uint32_t ip = Ethernet.localIP();
+      AddASCIIStrToRxQueue(" Local IP: ");
+      AddIPaddrToRxQueueLN(ip);
+
+      ip = Ethernet.subnetMask();
+      AddASCIIStrToRxQueue(" Subnet Mask: ");
+      AddIPaddrToRxQueueLN(ip);
+
+      ip = Ethernet.gatewayIP();
+      AddASCIIStrToRxQueue(" Gateway IP: ");
+      AddIPaddrToRxQueueLN(ip);
    }
    else
    {
-      AddASCIIStrToRxQueue("failed!");
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueue("\r\n hw was not found");
-      else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueue("\r\n cable is not connected");
+      AddASCIIStrToRxQueueLN("Failed!");
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueueLN(" HW was not found");
+      else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueueLN(" Cable is not connected");
    }
+}
+
+void AT_S(char* CmdArg)
+{
+   uint32_t ip;
+   uint8_t  mac[6];
+   
+   AddASCIIStrToRxQueueLN("Default Settings:");
+
+   EEPreadBuf(eepAdMyMAC, mac, 6);
+   AddMACToRxQueueLN(mac);
+   
+   AddDHCPEnDisToRxQueueLN();
+   
+   AddASCIIStrToRxQueueLN("DHCP only:");    
+   AddDHCPTimeoutToRxQueueLN();
+   AddDHCPRespTOToRxQueueLN();
+   
+   AddASCIIStrToRxQueueLN("Static only:");    
+   AddASCIIStrToRxQueue(" My IP: ");
+   EEPROM.get(eepAdMyIP, ip);
+   AddIPaddrToRxQueueLN(ip);
+
+   AddASCIIStrToRxQueue(" DNS IP: ");
+   EEPROM.get(eepAdDNSIP, ip);
+   AddIPaddrToRxQueueLN(ip);
+
+   AddASCIIStrToRxQueue(" Gateway IP: ");
+   EEPROM.get(eepAdGtwyIP, ip);
+   AddIPaddrToRxQueueLN(ip);
+
+   AddASCIIStrToRxQueue(" Subnet Mask: ");
+   EEPROM.get(eepAdMaskIP, ip);
+   AddIPaddrToRxQueueLN(ip);
+
+}
+
+void AT_RNDMAC(char* CmdArg)
+{
+   uint8_t mac[6];   
+   
+   AddASCIIStrToRxQueueLN("Random MAC Addr");
+   for(uint8_t octnum =0; octnum<6; octnum++) mac[octnum]=random(0,256);
+   mac[0] &= 0xFE; //Unicast
+   mac[0] |= 0x02; //Local Admin
+   EEPwriteBuf(eepAdMyMAC, mac, 6);
+   AddUpdatedToRxQueueLN();
+   AddMACToRxQueueLN(mac);
+}
+
+void AT_MAC(char* CmdArg)
+{
+   uint8_t octnum =1;
+   uint8_t mac[6];   
+   
+   AddASCIIStrToRxQueueLN("MAC Addr");
+   mac[0]=strtoul(CmdArg, NULL, 16);
+   while(octnum<6)
+   {
+      CmdArg=strchr(CmdArg, ':');
+      if(CmdArg==NULL)
+      {
+         AddInvalidFormatToRxQueueLN();
+         return;
+      }
+      mac[octnum++]=strtoul(++CmdArg, NULL, 16);     
+   }
+   EEPwriteBuf(eepAdMyMAC, mac, 6);
+   AddUpdatedToRxQueueLN();
+   AddMACToRxQueueLN(mac);
+}
+
+void AT_DHCP(char* CmdArg)
+{
+   if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
+   {
+      AddInvalidFormatToRxQueueLN();
+      return;
+   }
+   EEPROM.write(eepAdDHCPEnabled, CmdArg[0]-'0');
+   AddUpdatedToRxQueueLN();
+   AddDHCPEnDisToRxQueueLN();
+}
+
+void AT_DHCPTIME(char* CmdArg)
+{
+   uint16_t NewTime = atol(CmdArg);
+   if(NewTime==0)
+   {
+      AddInvalidFormatToRxQueueLN();
+      return;
+   }   
+   EEPROM.put(eepAdDHCPTimeout, NewTime);
+   AddUpdatedToRxQueueLN();
+   AddDHCPTimeoutToRxQueueLN();
+}
+
+void AT_DHCPRESP(char* CmdArg)
+{
+   uint16_t NewTime = atol(CmdArg);
+   if(NewTime==0)
+   {
+      AddInvalidFormatToRxQueueLN();
+      return;
+   }
+   EEPROM.put(eepAdDHCPRespTO, NewTime);
+   AddUpdatedToRxQueueLN();
+   AddDHCPRespTOToRxQueueLN();
+}
+
+void AT_MYIP(char* CmdArg)
+{
+   AddASCIIStrToRxQueue("My");
+   StrToIPToEE(CmdArg, eepAdMyIP);
+}
+
+void AT_DNSIP(char* CmdArg)
+{
+   AddASCIIStrToRxQueue("DNS");
+   StrToIPToEE(CmdArg, eepAdDNSIP);
+}
+
+void AT_GTWYIP(char* CmdArg)
+{
+   AddASCIIStrToRxQueue("Gateway");
+   StrToIPToEE(CmdArg, eepAdGtwyIP);
+}
+
+void AT_MASKIP(char* CmdArg)
+{
+   AddASCIIStrToRxQueue("Subnet Mask");
+   StrToIPToEE(CmdArg, eepAdMaskIP);
+}
+
+void AT_DEFAULTS(char* CmdArg)
+{
+   AddUpdatedToRxQueueLN();
+   SetEthEEPDefaults();
+   AT_S(NULL);
 }
 
 stcATCommand ATCommands[] =
 {
-   "dt"                    ,&AT_DT,
-   "c"                    ,&AT_C,
+   "dt"        , &AT_DT,
+   "c"         , &AT_C,
+   "+s"        , &AT_S,
+   "+rndmac"   , &AT_RNDMAC,
+   "+mac="     , &AT_MAC,
+   "+dhcp="    , &AT_DHCP,
+   "+dhcptime=", &AT_DHCPTIME,
+   "+dhcpresp=", &AT_DHCPRESP,
+   "+myip="    , &AT_MYIP,
+   "+dnsip="   , &AT_DNSIP,
+   "+gtwyip="  , &AT_GTWYIP,
+   "+maskip="  , &AT_MASKIP,
+   "+defaults" , &AT_DEFAULTS,
 };
 
 void ProcessATCommand()
@@ -242,7 +518,7 @@ void ProcessATCommand()
    
    if (strstr(CmdMsg, "at")!=CmdMsg)
    {
-      AddASCIIStrToRxQueue("at not found");
+      AddASCIIStrToRxQueueLN("AT not found");
       return;
    }
    CmdMsg+=2; //past the AT
@@ -262,7 +538,7 @@ void ProcessATCommand()
    
    Printf_dbg("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
    AddASCIIStrToRxQueue("unknown command: ");
-   AddASCIIStrToRxQueue(TxMsg);
+   AddASCIIStrToRxQueueLN(TxMsg);
 }
 
 
@@ -283,6 +559,7 @@ void InitHndlr_SwiftLink()
    RxQueue = (uint8_t*)malloc(RxQueueSize);
    free(TxMsg);
    TxMsg = (char*)malloc(TxMsgSize);
+   randomSeed(ARM_DWT_CYCCNT);
 }   
 
 
@@ -345,8 +622,8 @@ void PollingHndlr_SwiftLink()
    {
       ConnectedToHost = client.connected();
       AddASCIIStrToRxQueue("\r\n\r\n\r\n*** ");
-      if (ConnectedToHost) AddASCIIStrToRxQueue("connected to host\r\n");
-      else AddASCIIStrToRxQueue("not connected\r\n");
+      if (ConnectedToHost) AddASCIIStrToRxQueueLN("connected to host");
+      else AddASCIIStrToRxQueueLN("not connected");
    }
    
    //if client data available, add to Rx Queue
@@ -388,7 +665,7 @@ void PollingHndlr_SwiftLink()
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             //Printf_dbg("TxMsg: %s\n", TxMsg);
             ProcessATCommand();
-            AddASCIIStrToRxQueue("\r\nok\r\n");
+            AddASCIIStrToRxQueueLN("ok\r\n");
             TxMsgOffset = 0;
          }
       }

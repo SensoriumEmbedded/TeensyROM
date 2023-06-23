@@ -58,7 +58,13 @@ extern stcIOHandlers* IOHandler[];
 
 void getNtpTime() 
 {
-   if (!EthernetInit()) return;
+   if (!EthernetInit()) 
+   {
+      IO1[rRegLastSecBCD]  = 0;      
+      IO1[rRegLastMinBCD]  = 0;      
+      IO1[rRegLastHourBCD] = 0;      
+      return;
+   }
    
    unsigned int localPort = 8888;       // local port to listen for UDP packets
    const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
