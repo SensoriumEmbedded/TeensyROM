@@ -62,8 +62,8 @@ I'm planning to continue to publish all PCB design files and source code here fo
        +++ | Disconnect from host and enter command mode
   
 ## Hardware/PCB Design
-**v0.2 PCB is completed and fully validated/tested**
-The primary change from v0.1 was the addition of Ethernet and USB host connectors to eliminate the need for dongles.  A full list of changes is available in the [PCB Readme](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/PCB/PCB_Readme.md) as well as a link to purchase bare PCBs.    Software is fully compatible for both PCB versions, just have to set one #define at build time to differentiate.
+**v0.2 PCB is completed and fully validated/tested.**  
+Complete BOM and Assembly Instructions are available in the [PCB Readme](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/PCB/PCB_Readme.md) as well as a link to purchase bare PCBs.    Software is fully compatible for both PCB versions, just have to set one #define at build time to differentiate.
 ![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/v0.2%20ang.jpg)
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
 
