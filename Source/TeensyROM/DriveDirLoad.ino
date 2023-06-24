@@ -263,6 +263,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    switch (HWType)
       {
       case Cart_Generic:
+         //leave IOH as default or user set
          break;
       case Cart_MIDI_Datel:
          IO1[rwRegNextIOHndlr] = IOH_MIDI_Datel;
