@@ -37,9 +37,10 @@ The first 3 columns of the [TeensyROM BOM](https://github.com/SensoriumEmbedded/
 ![enter image description here](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Teensy/Teensy%20Power.jpg)
 
 ## Teensy header placement
-- **BOM item # 10-12**
+- **BOM item # 9a-12**
 - Place 1x24 headers on bottom of Teensy, solder from top.  Use a solderless proto board or completed TeensyROM to hold the pins in position while soldering.
 - Based on USB/Ethernet connection type you choose, mount the 2x3 Ethernet and 1x5 USB header on the top or bottom of Teensy.  Use either tape to hold them straight (top mount) or use completed TeensyROM to hold the pins while soldering (bottom mount).
+- Remove adhesive cover and attach heatsink to Teensy CPU (center).  Be sure heatsink is not contacting large capacitor near it.
 ## TeensyROM/Teensy Final Assembly
 - Full socket config: insert Teensy into sockets, use on-board USB/Ethernet conns
 - Direct attach: insert Teensy into TeensyROM and solder directly, use on-board USB/Ethernet conns- IO only config: insert Teensy into sockets, use USB/Ethernet dongles
