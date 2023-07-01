@@ -32,30 +32,35 @@ The first 3 columns of the [TeensyROM BOM](https://github.com/SensoriumEmbedded/
 - **BOM item # 16**  For full socketed Teensy or IO only configs
 - **BOM item # 17-18**  For full socketed Teensy only
 - Hold/tape sockets straight, or insert male headers to hold with a proto board.
-## Teensy power prep
-**This is an important step!**  Regardless of the attach method chosen, the 5v/USB connection must be cut so that the C64 won't be back-fed power from USB.  There is a small jumper trace between two pads on the back side of the Teensy that must be cut, see picture below.   You can use an ohm meter to be sure the connection between the two pads is severed.  This can be un-done later for other project either with a solder blob, or a jumper between the 5v pin and Vin.
+## Teensy prep
+**Important steps!**  
+- Load the initial firmware to be used. This should be done before connecting to a C64/128 for the first time so that IO is driven correctly.
+- Regardless of the attach method chosen, the 5v/USB connection must be cut so that the C64 won't be back-fed power from USB.  There is a small jumper trace between two pads on the back side of the Teensy that must be cut, see picture below.   You can use an ohm meter to be sure the connection between the two pads is severed.  This can be un-done later for other project either with a solder blob, or a jumper between the 5v pin and Vin.
 ![enter image description here](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Teensy/Teensy%20Power.jpg)
 
 ## Teensy header placement
 - **BOM item # 9a-12**
-- Place 1x24 headers on bottom of Teensy, solder from top.  Use a solderless proto board or completed TeensyROM to hold the pins in position while soldering.
+- Place 1x24 headers on bottom of Teensy, solder from top.  Use a solderless proto board or TeensyROM itself to hold the pins in position while soldering.
 - Based on USB/Ethernet connection type you choose, mount the 2x3 Ethernet and 1x5 USB header on the top or bottom of Teensy.  Use either tape to hold them straight (top mount) or use completed TeensyROM to hold the pins while soldering (bottom mount).
 - Remove adhesive cover and attach heatsink to Teensy CPU (center).  Be sure heatsink is not contacting large capacitor near it.
 ## TeensyROM/Teensy Final Assembly
 - Full socket config: insert Teensy into sockets, use on-board USB/Ethernet conns
 - Direct attach: insert Teensy into TeensyROM and solder directly, use on-board USB/Ethernet conns- IO only config: insert Teensy into sockets, use USB/Ethernet dongles
-> **Assembly complete, next step is to load the Firmware!**
+> **Assembly complete!**
 
 # PCB/Design History:
 ## **v0.2: Released Feb 23, 2023**
+### **v0.2b: Minor Update released July 1, 2023**
+
 ![TeensyROM v0.2](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2/v0.2%20top.jpg)
-### **Link to design at OSH Park :**    <a href="https://oshpark.com/shared_projects/zJfB98zq"><img src="https://oshpark.com/packs/media/images/badge-5f4e3bf4bf68f72ff88bd92e0089e9cf.png" alt="Order from OSH Park"></img></a>
+### **Link to design at OSH Park :**    <a href="https://oshpark.com/shared_projects/m7YLgscM"><img src="https://oshpark.com/packs/media/images/badge-5f4e3bf4bf68f72ff88bd92e0089e9cf.png" alt="Order from OSH Park"></img></a>
 
 ### **Changes from 0.1 PCB:**
   * New features:
     * Ethernet port connector
     * USB host port connector
   * Other Improvements/Notes:
+    * R3 added to ensure data buffer is off during reset/programming
     * Corrected: Data bits 2 and 1 swapped in v0.1 (worked around in SW)
     * shield connections:  USB is GND, Eth shorted to gnd via JP1
     * 0805 shapes:  left them the same, R's accomodate 0603s, prob not caps
