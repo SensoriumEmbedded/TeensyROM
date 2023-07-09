@@ -354,7 +354,7 @@ void AT_S(char* CmdArg)
    uint32_t ip;
    uint8_t  mac[6];
    
-   AddASCIIStrToRxQueueLN("Default Settings:");
+   AddASCIIStrToRxQueueLN("General Settings:");
 
    EEPreadBuf(eepAdMyMAC, mac, 6);
    AddMACToRxQueueLN(mac);

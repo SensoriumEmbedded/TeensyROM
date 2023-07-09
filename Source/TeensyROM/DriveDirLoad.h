@@ -17,6 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+//Known/public Cartridge HW types:
 
 #define Cart_Generic                  0  //Supported
 #define Cart_ActionReplay             1
@@ -99,10 +100,29 @@
 #define Cart_Partner64               78
 
 // IO handlers only
+#define Cart_DigiMax               -100 
+#define Cart_DQBB                  -101 
+#define Cart_GeoRAM                -102 
+#define Cart_ISEPIC                -103 
+#define Cart_RAMcart               -104 
+#define Cart_REU                   -105 
+#define Cart_SFX_Sound_Expander    -106 
+#define Cart_SFX_Sound_Sampler     -107 
 #define Cart_MIDI_Passport         -108  //Supported
 #define Cart_MIDI_Datel            -109  //Supported
 #define Cart_MIDI_Sequential       -110  //Supported
 #define Cart_MIDI_Namesoft         -111  //Supported
+#define Cart_MIDI_Maplin           -112
+#define Cart_DS12C887RTC           -113
+#define Cart_TFE                   -116
+#define Cart_Turbo232              -117
+#define Cart_SwiftLink             -118  //Supported
+#define Cart_ACIA                  -119
+#define Cart_Plus60K               -120
+#define Cart_Plus256K              -121
+#define Cart_C64_256K              -122
+#define Cart_CPM                   -123
+#define Cart_DebugCart             -124
 
 
 

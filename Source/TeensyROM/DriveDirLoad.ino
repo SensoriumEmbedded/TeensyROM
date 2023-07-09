@@ -277,6 +277,9 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       case Cart_MIDI_Namesoft:
          IO1[rwRegNextIOHndlr] = IOH_MIDI_NamesoftIRQ;
          break;
+      case Cart_SwiftLink:
+         IO1[rwRegNextIOHndlr] = IOH_Swiftlink;
+         break;
       case Cart_EpyxFastload:
          IO1[rwRegNextIOHndlr] = IOH_EpyxFastLoad;
          break;
