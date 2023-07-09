@@ -15073,7 +15073,7 @@ by exp-lbrs.ulp</description>
 <part name="C3" library="TeensyROM" deviceset="CAP-0805-" device="0.1UF-50V" value="0.1 uF"/>
 <part name="SUPPLY3" library="supply2" deviceset="GND" device=""/>
 <part name="J4" library="TeensyROM" deviceset="PINHD-1X3" device="" value="3 pin Header"/>
-<part name="R1" library="resistor" deviceset="R-US_" device="R0805" value="1k"/>
+<part name="R1" library="resistor" deviceset="R-US_" device="R0805" value="10k"/>
 <part name="SUPPLY13" library="supply2" deviceset="GND" device=""/>
 <part name="+3V7" library="supply1" deviceset="+3V3" device=""/>
 <part name="SUPPLY15" library="supply2" deviceset="GND" device=""/>

@@ -3243,7 +3243,7 @@ Please make sure your boards conform to these design rules.</description>
 <attribute name="NAME" x="57.4548" y="49.8348" size="1.143" layer="25" font="vector" ratio="10"/>
 <attribute name="VALUE" x="60.96" y="51.181" size="1.27" layer="27" rot="R90"/>
 </element>
-<element name="R1" library="resistor" package="R0805" value="1k" x="54.229" y="58.928" smashed="yes" rot="MR270">
+<element name="R1" library="resistor" package="R0805" value="10k" x="54.229" y="58.928" smashed="yes" rot="MR270">
 <attribute name="NAME" x="51.0794" y="59.4868" size="1.143" layer="26" font="vector" ratio="10" rot="MR180"/>
 <attribute name="VALUE" x="56.769" y="59.563" size="1.27" layer="28" rot="MR270"/>
 </element>
