@@ -50,12 +50,10 @@ Component selection was done using parts large enough (SOIC and 0805s at the sma
 The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per the app, external cooling is not required for this speed.  However, in abundance of caution, a heatsink is specified in the BOM for this project.  In addition, the temperature can be read on the setup screen of the main TeensyROM app. The max spec is 95C, and there is a panic shutdown at 90C.  In my experience, even on a warm day running for hours with no heatsink, the temp doesn't excede 75C.
 
 ## Compatibility
-* TeensyROM been tested on ~20 different NTSC C64, C64C, and C128 machines to this point. 
-* Waiting for my Kawari to implement PAL timing  :)
+* TeensyROM been tested on ~20 different NTSC C64, C64C, and C128 and ~4 PAL C64 machines to this point. 
 
 ## Future/potential SW development/features:
 * More Special HW cartridge emulation
-* PAL Support
 * .d64, .tap file support
 * Host USB Printers
 
