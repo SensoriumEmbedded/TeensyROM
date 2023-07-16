@@ -119,8 +119,8 @@ bool EthernetInit()
       Ethernet.begin(mac, ip, dns, gateway, subnetmask);
    }
    
-   Serial.printf("Took %d mS\n", (millis() - beginWait));
-   //Serial.println(Ethernet.localIP());
+   Serial.printf("Took %d mS\nIP: ", (millis() - beginWait));
+   Serial.println(Ethernet.localIP());
    return retval;
 }
    

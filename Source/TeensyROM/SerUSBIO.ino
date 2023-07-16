@@ -23,7 +23,7 @@ void ServiceSerial()
    uint8_t inByte = Serial.read();
    switch (inByte)
    {
-      case 0x64: //command from app
+      case 0x64: //'d' command from app
          inByte = Serial.read(); //READ NEXT BYTE
          switch (inByte)
          {
@@ -133,9 +133,50 @@ void ServiceSerial()
             Serial.printf(" set\n");
          }
          break;
+      case 'c': //Clear buffer
+         BigBufCount = 0;
+         Serial.println("Buffer Reset");
+         break;
+   #ifdef Dbg_SerTimChg
+      case 'v': //VIC timing change
+         GetDigits(3, &nS_VICStart);
+         PrintTimingParams();
+         break;
+      case 'a': //nS_MaxAdj change
+         GetDigits(4, &nS_MaxAdj);
+         PrintTimingParams();
+         break;
+   #endif
    }
 }
 
+void PrintTimingParams()
+{
+   Serial.printf("   nS_MaxAdj: %d\n", nS_MaxAdj);
+   Serial.printf(" nS_RWnReady: %d\n", nS_RWnReady);
+   Serial.printf("  nS_PLAprop: %d\n", nS_PLAprop);
+   Serial.printf("nS_DataSetup: %d\n", nS_DataSetup);
+   Serial.printf(" nS_DataHold: %d\n", nS_DataHold);
+   Serial.printf(" nS_VICStart: %d\n", nS_VICStart);
+}
+
+void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
+{
+   char inStr[NumDigits+1];
+   
+   for(uint8_t DigNum=0; DigNum<NumDigits; DigNum++)
+   {
+      if(!Serial.available())
+      {
+         Serial.println("\nNot enough Digits!\n");
+         return;
+      }
+      inStr[DigNum] = Serial.read(); 
+   }
+   inStr[NumDigits]=0;
+   *SetInt = atol(inStr);
+   Serial.printf("\nVal Set to: %d\n\n", *SetInt);
+}
 
 void PrintDebugLog()
 {
@@ -148,6 +189,11 @@ void PrintDebugLog()
       
    #ifdef DbgCycAdjLog
       Serial.println("DbgCycAdjLog enabled");
+      LogDatavalid = true;
+   #endif
+      
+   #ifdef DbgSpecial
+      Serial.println("DbgSpecial enabled");
       LogDatavalid = true;
    #endif
       
@@ -170,15 +216,27 @@ void PrintDebugLog()
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
       Serial.printf("#%04d ", Cnt);
-      if (BigBuf[Cnt] & AdjustedCycleTiming)
+      if (BigBuf[Cnt] & DbgSpecialData)
+      {
+         //BigBuf[Cnt] &= ~DbgSpecialData;
+         Serial.printf("DbgSpecialData %04x : %02x\n", BigBuf[Cnt] & 0xFFFF, (BigBuf[Cnt] >> 24));
+            //code used previously, in-situ:
+               //#ifdef DbgSpecial
+               //   if (BigBuf != NULL){
+               //     BigBuf[BigBufCount] = Address | (HIROM_Image[Address & 0x1FFF]<<24) | DbgSpecialData;
+               //     if (BigBufCount < BigBufSize) BigBufCount++;
+               //   }
+               //#endif
+      }
+      else if (BigBuf[Cnt] & AdjustedCycleTiming)
       {
          BigBuf[Cnt] &= ~AdjustedCycleTiming;
-         Serial.printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdjThresh);
+         Serial.printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
       else
       {
          Serial.printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
-         
+
          if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else Serial.printf("n/a\n");
       }

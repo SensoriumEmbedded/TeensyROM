@@ -26,6 +26,8 @@
 //#define DbgMsgs_IO    //IO messages (Printf_dbg): Swift, MIDI (mostly out) 
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
+//#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
+//#define DbgSpecial    //Special case logging to BigBuf
 
 #define BigBufSize          5000
 uint16_t BigBufCount = 0;
@@ -40,6 +42,7 @@ uint32_t* BigBuf = NULL;
 #define IOTLRead            0x10000
 #define IOTLDataValid       0x20000
 #define AdjustedCycleTiming 0x40000
+#define DbgSpecialData      0x80000
 
 #ifdef DbgIOTraceLog
    __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
@@ -73,7 +76,7 @@ enum InternalEEPROMmap
    //???=34, //(
 };
 
-uint32_t StartCycCnt, LastCycCnt=0;
+volatile uint32_t StartCycCnt, LastCycCnt=0;
    
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN    31  
@@ -136,15 +139,15 @@ const uint8_t OutputPins[] = {
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
     
-#define nS_MaxAdjThresh     993   //above this nS since last int causes adjustment
+uint32_t nS_MaxAdj    =  1030;  //above this nS since last int causes adjustment, formerly 993 for NTSC only
 // Times from Phi2 rising (interrupt):
-uint32_t nS_RWnReady   =     95;  //Phi2 rise to RWn valid
-uint32_t nS_PLAprop    =    150;  //delay through PLA to decode address (IO1/2, ROML/H)
-uint32_t nS_DataSetup  =    220;  //On a C64 write, when to latch data bus.
-uint32_t nS_DataHold   =    350;  //On a C64 read, when to stop driving the data bus
+uint32_t nS_RWnReady  =    95;  //Phi2 rise to RWn valid
+uint32_t nS_PLAprop   =   150;  //delay through PLA to decode address (IO1/2, ROML/H)
+uint32_t nS_DataSetup =   220;  //On a C64 write, when to latch data bus.
+uint32_t nS_DataHold  =   350;  //On a C64 read, when to stop driving the data bus
 
 // Times from Phi2 falling:
-uint32_t nS_VICStart   =    210;  //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
+uint32_t nS_VICStart  =   210;  //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 //  Hold time for VIC cycle is same as normal cyc (nS_DataHold)
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)

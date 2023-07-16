@@ -36,7 +36,7 @@ uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
-volatile uint8_t CurrentIOHandler = IOH_None;
+uint8_t CurrentIOHandler = IOH_None;
 
 StructMenuItem SDMenu[MaxMenuItems];
 char SDPath[250] = "/";
@@ -170,6 +170,8 @@ void SetUpMainMenuROM()
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
+   NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
+   NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;

@@ -43,6 +43,7 @@ void IOHandlerInit(uint8_t NewIOHandler)
    
    if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
    
+   Serial.flush();
    CurrentIOHandler = NewIOHandler;
 }
 

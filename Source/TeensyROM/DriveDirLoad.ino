@@ -79,6 +79,8 @@ void HandleExecution()
          LOROM_Image = NULL;
          HIROM_Image = MenuSel.Code_Image;
          CartLoaded=true;
+         NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt when emulating VIC cycles
+         NVIC_DISABLE_IRQ(IRQ_PIT);
          EmulateVicCycles = true;
          break;
       case rtBin8kLo:
@@ -263,7 +265,8 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    switch (HWType)
       {
       case Cart_Generic:
-         //leave IOH as default or user set
+         //leave IOH as default/user set for generic
+         //IO1[rwRegNextIOHndlr] = IOH_None;  
          break;
       case Cart_MIDI_Datel:
          IO1[rwRegNextIOHndlr] = IOH_MIDI_Datel;

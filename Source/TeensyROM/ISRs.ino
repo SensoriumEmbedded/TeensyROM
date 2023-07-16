@@ -31,9 +31,9 @@ FASTRUN void isrPHI2()
    uint32_t CycSinceLast = StartCycCnt-LastCycCnt;
    LastCycCnt = StartCycCnt;
    
-   if (CycSinceLast > nSToCyc(nS_MaxAdjThresh)) // If we're late, adjust...
+   if (CycSinceLast > nSToCyc(nS_MaxAdj)) // If we're late, adjust...
    {
-      StartCycCnt += nSToCyc(nS_MaxAdjThresh) - CycSinceLast; 
+      StartCycCnt += nSToCyc(nS_MaxAdj) - CycSinceLast; 
       #ifdef DbgCycAdjLog      
          if (BigBuf != NULL)
          {
@@ -93,6 +93,7 @@ FASTRUN void isrPHI2()
       if (IOHandler[CurrentIOHandler]->IO2Hndlr != NULL) IOHandler[CurrentIOHandler]->IO2Hndlr(Address, GP6_R_Wn(GPIO_6));
    }
    
+   if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
    
    if (EmulateVicCycles)
    {
@@ -106,14 +107,12 @@ FASTRUN void isrPHI2()
       GPIO_6 = ReadGPIO6; //Address bus and R/*W 
       Address = GP6_Address(GPIO_6); //parse out address
       GPIO_9 = ReadGPIO9; //Now read the derived signals
-
+      
       if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
       {
-         DataPortWriteWait(HIROM_Image[(Address & 0x1FFF)]); //uses same hold time as normal cycle
+         DataPortWriteWait(HIROM_Image[Address & 0x1FFF]); //uses same hold time as normal cycle
       } 
    }
-
-   if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
    
    //leave time enough time to re-trigger on rising edge!
    SetDebugDeassert;    
