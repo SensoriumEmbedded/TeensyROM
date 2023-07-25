@@ -196,7 +196,9 @@ void HWEOnSystemExclusive(uint8_t *data, unsigned int size)
    MIDIRxBytesToSend = size;
    SetMidiIRQ();
    
-   //if (data[0]!=0xf0 || data[size-1]!=0xf7) Printf_dbg("Bad SysEx: %d %02x %02x\n", size, data[0], data[size-1]);
+   #ifdef DbgMsgs_IO
+      if (data[0]!=0xf0 || data[size-1]!=0xf7) Printf_dbg("Bad SysEx: %d %02x %02x\n", size, data[0], data[size-1]);
+   #endif
 }
 
 void HWEOnTimeCodeQuarterFrame(uint8_t data) 
@@ -246,34 +248,34 @@ void MIDIinHndlrInit()
    for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
    
    // MIDI USB Host input handlers
-   midi1.setHandleNoteOff             (HWEOnNoteOff);             // 8x
-   midi1.setHandleNoteOn              (HWEOnNoteOn);              // 9x
-   midi1.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
-   midi1.setHandleControlChange       (HWEOnControlChange);       // Bx
-   midi1.setHandleProgramChange       (HWEOnProgramChange);       // Cx
-   midi1.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
-   midi1.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-   midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
-   midi1.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
-   midi1.setHandleSongPosition        (HWEOnSongPosition);        // F2
-   midi1.setHandleSongSelect          (HWEOnSongSelect);          // F3
-   midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
-   midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+   usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
+   usbHostMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
+   usbHostMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
+   usbHostMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
+   usbHostMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
+   usbHostMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
+   usbHostMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
+   usbHostMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
+   usbHostMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
+   usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
+   usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
+   usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
+   usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
 
    // MIDI USB Device input handlers
-   usbMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
-   usbMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
-   usbMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
-   usbMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
-   usbMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
-   usbMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
-   usbMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-   usbMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
-   usbMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
-   usbMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
-   usbMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
-   usbMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
-   usbMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+   usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
+   usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
+   usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
+   usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx
+   usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx
+   usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
+   usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex
+   usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
+   usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
+   usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
+   usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
+   usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
+   usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
    // not catching F0, F4, F5, F7 (end of SysEx), and FD         
 }   
    
@@ -424,14 +426,14 @@ void PollingHndlr_MIDI()
 {
    if (MIDIRxBytesToSend == 0) //read MIDI-in data in only if ready to send to C64 (buffer empty)
    {
-      midi1.read(); 
-      if (MIDIRxBytesToSend == 0) usbMIDI.read(); //dito, giving hosted device priority
+      usbHostMIDI.read(); 
+      if (MIDIRxBytesToSend == 0) usbDevMIDI.read(); //dito, giving hosted device priority
    }
    
    if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
    {
-      if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
-      else midi1.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
+      if (MIDITxBuf[0]<0xf0) usbHostMIDI.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      else usbHostMIDI.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
       
       Printf_dbg("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
       MIDITxBytesReceived = 0;

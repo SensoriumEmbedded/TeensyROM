@@ -139,34 +139,34 @@ void DbgOnRealTimeSystem(uint8_t realtimebyte)
 
 void InitHndlr_Debug()
 {
-   midi1.setHandleNoteOff             (DbgOnNoteOff);             // 8x
-   midi1.setHandleNoteOn              (DbgOnNoteOn);              // 9x
-   midi1.setHandleAfterTouchPoly      (DbgOnAfterTouchPoly);      // Ax
-   midi1.setHandleControlChange       (DbgOnControlChange);       // Bx
-   midi1.setHandleProgramChange       (DbgOnProgramChange);       // Cx
-   midi1.setHandleAfterTouch          (DbgOnAfterTouch);          // Dx
-   midi1.setHandlePitchChange         (DbgOnPitchChange);         // Ex
-   midi1.setHandleSystemExclusive     (DbgOnSystemExclusive);     // F0   
-   midi1.setHandleTimeCodeQuarterFrame(DbgOnTimeCodeQuarterFrame);// F1
-   midi1.setHandleSongPosition        (DbgOnSongPosition);        // F2
-   midi1.setHandleSongSelect          (DbgOnSongSelect);          // F3
-   midi1.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
-   midi1.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
+   usbHostMIDI.setHandleNoteOff             (DbgOnNoteOff);             // 8x
+   usbHostMIDI.setHandleNoteOn              (DbgOnNoteOn);              // 9x
+   usbHostMIDI.setHandleAfterTouchPoly      (DbgOnAfterTouchPoly);      // Ax
+   usbHostMIDI.setHandleControlChange       (DbgOnControlChange);       // Bx
+   usbHostMIDI.setHandleProgramChange       (DbgOnProgramChange);       // Cx
+   usbHostMIDI.setHandleAfterTouch          (DbgOnAfterTouch);          // Dx
+   usbHostMIDI.setHandlePitchChange         (DbgOnPitchChange);         // Ex
+   usbHostMIDI.setHandleSystemExclusive     (DbgOnSystemExclusive);     // F0   
+   usbHostMIDI.setHandleTimeCodeQuarterFrame(DbgOnTimeCodeQuarterFrame);// F1
+   usbHostMIDI.setHandleSongPosition        (DbgOnSongPosition);        // F2
+   usbHostMIDI.setHandleSongSelect          (DbgOnSongSelect);          // F3
+   usbHostMIDI.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
+   usbHostMIDI.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
    // not catching F4, F5, F7 (end of SysEx), and FD                  
 
-   usbMIDI.setHandleNoteOff             (DbgOnNoteOff);             // 8x
-   usbMIDI.setHandleNoteOn              (DbgOnNoteOn);              // 9x
-   usbMIDI.setHandleAfterTouchPoly      (DbgOnAfterTouchPoly);      // Ax
-   usbMIDI.setHandleControlChange       (DbgOnControlChange);       // Bx
-   usbMIDI.setHandleProgramChange       (DbgOnProgramChange);       // Cx
-   usbMIDI.setHandleAfterTouch          (DbgOnAfterTouch);          // Dx
-   usbMIDI.setHandlePitchChange         (DbgOnPitchChange);         // Ex
-   usbMIDI.setHandleSystemExclusive     (DbgOnSystemExclusive);     // F0   
-   usbMIDI.setHandleTimeCodeQuarterFrame(DbgOnTimeCodeQuarterFrame);// F1
-   usbMIDI.setHandleSongPosition        (DbgOnSongPosition);        // F2
-   usbMIDI.setHandleSongSelect          (DbgOnSongSelect);          // F3
-   usbMIDI.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
-   usbMIDI.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
+   usbDevMIDI.setHandleNoteOff             (DbgOnNoteOff);             // 8x
+   usbDevMIDI.setHandleNoteOn              (DbgOnNoteOn);              // 9x
+   usbDevMIDI.setHandleAfterTouchPoly      (DbgOnAfterTouchPoly);      // Ax
+   usbDevMIDI.setHandleControlChange       (DbgOnControlChange);       // Bx
+   usbDevMIDI.setHandleProgramChange       (DbgOnProgramChange);       // Cx
+   usbDevMIDI.setHandleAfterTouch          (DbgOnAfterTouch);          // Dx
+   usbDevMIDI.setHandlePitchChange         (DbgOnPitchChange);         // Ex
+   usbDevMIDI.setHandleSystemExclusive     (DbgOnSystemExclusive);     // F0   
+   usbDevMIDI.setHandleTimeCodeQuarterFrame(DbgOnTimeCodeQuarterFrame);// F1
+   usbDevMIDI.setHandleSongPosition        (DbgOnSongPosition);        // F2
+   usbDevMIDI.setHandleSongSelect          (DbgOnSongSelect);          // F3
+   usbDevMIDI.setHandleTuneRequest         (DbgOnTuneRequest);         // F6
+   usbDevMIDI.setHandleRealTimeSystem      (DbgOnRealTimeSystem);      // F8-FF (except FD)
 }
 
 void IO1Hndlr_Debug(uint8_t Address, bool R_Wn)
@@ -193,7 +193,7 @@ void IO1Hndlr_Debug(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_Debug()
 {
-   midi1.read();
-   usbMIDI.read();
+   usbHostMIDI.read();
+   usbDevMIDI.read();
 }
 

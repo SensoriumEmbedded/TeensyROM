@@ -55,17 +55,17 @@ void NothingOnSystemExclusive(uint8_t *data, unsigned int size)
 
 void SetMIDIHandlersNULL()
 {
-   midi1.setHandleNoteOff             (NULL); // 8x
-   midi1.setHandleNoteOn              (NULL); // 9x
-   midi1.setHandleAfterTouchPoly      (NULL); // Ax
-   midi1.setHandleControlChange       (NULL); // Bx
-   midi1.setHandleProgramChange       (NULL); // Cx
-   midi1.setHandleAfterTouch          (NULL); // Dx
-   midi1.setHandlePitchChange         (NULL); // Ex
-   midi1.setHandleSystemExclusive     (NothingOnSystemExclusive); // F0   
-   midi1.setHandleTimeCodeQuarterFrame(NULL); // F1
-   midi1.setHandleSongPosition        (NULL); // F2
-   midi1.setHandleSongSelect          (NULL); // F3
-   midi1.setHandleTuneRequest         (NULL); // F6
-   midi1.setHandleRealTimeSystem      (NULL); // F8-FF (except FD)
+   usbHostMIDI.setHandleNoteOff             (NULL); // 8x
+   usbHostMIDI.setHandleNoteOn              (NULL); // 9x
+   usbHostMIDI.setHandleAfterTouchPoly      (NULL); // Ax
+   usbHostMIDI.setHandleControlChange       (NULL); // Bx
+   usbHostMIDI.setHandleProgramChange       (NULL); // Cx
+   usbHostMIDI.setHandleAfterTouch          (NULL); // Dx
+   usbHostMIDI.setHandlePitchChange         (NULL); // Ex
+   usbHostMIDI.setHandleSystemExclusive     (NothingOnSystemExclusive); // F0   
+   usbHostMIDI.setHandleTimeCodeQuarterFrame(NULL); // F1
+   usbHostMIDI.setHandleSongPosition        (NULL); // F2
+   usbHostMIDI.setHandleSongSelect          (NULL); // F3
+   usbHostMIDI.setHandleTuneRequest         (NULL); // F6
+   usbHostMIDI.setHandleRealTimeSystem      (NULL); // F8-FF (except FD)
 }

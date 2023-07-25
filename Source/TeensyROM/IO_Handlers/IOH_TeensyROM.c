@@ -299,10 +299,10 @@ void InitHndlr_TeensyROM()
 {
    IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
    //MIDI handlers for MIDI2SID:
-   midi1.setHandleNoteOff      (M2SOnNoteOff);             // 8x
-   midi1.setHandleNoteOn       (M2SOnNoteOn);              // 9x
-   midi1.setHandleControlChange(M2SOnControlChange);       // Bx
-   midi1.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+   usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
+   usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
+   usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
+   usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
 }   
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -417,7 +417,7 @@ void PollingHndlr_TeensyROM()
       Serial.flush();
       IO1[rRegStatus] = rsReady;
    }
-   midi1.read();
+   usbHostMIDI.read();
 }
    
 

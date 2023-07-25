@@ -84,7 +84,7 @@ void setup()
    if (SD.begin(BUILTIN_SDCARD)) Serial.println("passed.");
    else Serial.println("***Failed!***");
   
-   myusb.begin(); // Start USBHost_t36, HUB(s) and USB devices.
+   myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
 
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
@@ -155,7 +155,7 @@ void loop()
    }
   
    if (Serial.available()) ServiceSerial();
-   myusb.Task();
+   myusbHost.Task();
    
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
