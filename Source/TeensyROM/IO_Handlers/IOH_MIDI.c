@@ -89,8 +89,8 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
-volatile uint8_t MIDIRxBytesToSend = 0;
-volatile uint8_t MIDIRxBuf[3];
+volatile uint16_t MIDIRxBytesToSend = 0;
+volatile uint8_t MIDIRxBuf[USB_MIDI_SYSEX_MAX]; //currently 290, defined in cores\teensy4\usb_midi.h  
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
 uint8_t MIDIControlVals[NumMIDIControls];
@@ -190,7 +190,13 @@ void HWEOnPitchChange(uint8_t channel, int pitch)
 // F0 SysEx single call, message larger than buffer is truncated
 void HWEOnSystemExclusive(uint8_t *data, unsigned int size) 
 {
-   //need a bigger buffer and lots of time, not forwarding for now
+   //data already contains starting f0 and ending f7
+   //just have to reverse the order to the RxBuf "stack"
+   for(uint16_t Cnt=0; Cnt<size; Cnt++) MIDIRxBuf[size-Cnt-1]=data[Cnt];
+   MIDIRxBytesToSend = size;
+   SetMidiIRQ();
+   
+   //if (data[0]!=0xf0 || data[size-1]!=0xf7) Printf_dbg("Bad SysEx: %d %02x %02x\n", size, data[0], data[size-1]);
 }
 
 void HWEOnTimeCodeQuarterFrame(uint8_t data) 
@@ -238,6 +244,8 @@ void HWEOnRealTimeSystem(uint8_t realtimebyte)
 void MIDIinHndlrInit()
 {
    for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
+   
+   // MIDI USB Host input handlers
    midi1.setHandleNoteOff             (HWEOnNoteOff);             // 8x
    midi1.setHandleNoteOn              (HWEOnNoteOn);              // 9x
    midi1.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
@@ -245,12 +253,27 @@ void MIDIinHndlrInit()
    midi1.setHandleProgramChange       (HWEOnProgramChange);       // Cx
    midi1.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
    midi1.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-   midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0 *not implemented
+   midi1.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
    midi1.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
    midi1.setHandleSongPosition        (HWEOnSongPosition);        // F2
    midi1.setHandleSongSelect          (HWEOnSongSelect);          // F3
    midi1.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
    midi1.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+
+   // MIDI USB Device input handlers
+   usbMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
+   usbMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
+   usbMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
+   usbMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
+   usbMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
+   usbMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
+   usbMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
+   usbMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
+   usbMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
+   usbMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
+   usbMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
+   usbMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
+   usbMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
    // not catching F0, F4, F5, F7 (end of SysEx), and FD         
 }   
    
@@ -399,8 +422,12 @@ void IO1Hndlr_MIDI(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_MIDI()
 {
-   if (MIDIRxBytesToSend == 0) midi1.read(); //read MIDI-in data in only if ready to send to C64 (buffer empty)
-      
+   if (MIDIRxBytesToSend == 0) //read MIDI-in data in only if ready to send to C64 (buffer empty)
+   {
+      midi1.read(); 
+      if (MIDIRxBytesToSend == 0) usbMIDI.read(); //dito, giving hosted device priority
+   }
+   
    if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
    {
       if (MIDITxBuf[0]<0xf0) midi1.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
