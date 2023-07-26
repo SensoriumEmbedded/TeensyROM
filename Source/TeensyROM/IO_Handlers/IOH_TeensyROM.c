@@ -303,6 +303,11 @@ void InitHndlr_TeensyROM()
    usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
    usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
    usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+
+   usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
+   usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
+   usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
+   usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
 }   
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -418,6 +423,7 @@ void PollingHndlr_TeensyROM()
       IO1[rRegStatus] = rsReady;
    }
    usbHostMIDI.read();
+   usbDevMIDI.read();
 }
    
 

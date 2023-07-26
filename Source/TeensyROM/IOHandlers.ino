@@ -68,4 +68,18 @@ void SetMIDIHandlersNULL()
    usbHostMIDI.setHandleSongSelect          (NULL); // F3
    usbHostMIDI.setHandleTuneRequest         (NULL); // F6
    usbHostMIDI.setHandleRealTimeSystem      (NULL); // F8-FF (except FD)
+
+   usbDevMIDI.setHandleNoteOff              (NULL); // 8x
+   usbDevMIDI.setHandleNoteOn               (NULL); // 9x
+   usbDevMIDI.setHandleAfterTouchPoly       (NULL); // Ax
+   usbDevMIDI.setHandleControlChange        (NULL); // Bx
+   usbDevMIDI.setHandleProgramChange        (NULL); // Cx
+   usbDevMIDI.setHandleAfterTouch           (NULL); // Dx
+   usbDevMIDI.setHandlePitchChange          (NULL); // Ex
+   usbDevMIDI.setHandleSystemExclusive      (NothingOnSystemExclusive); // F0   
+   usbDevMIDI.setHandleTimeCodeQuarterFrame (NULL); // F1
+   usbDevMIDI.setHandleSongPosition         (NULL); // F2
+   usbDevMIDI.setHandleSongSelect           (NULL); // F3
+   usbDevMIDI.setHandleTuneRequest          (NULL); // F6
+   usbDevMIDI.setHandleRealTimeSystem       (NULL); // F8-FF (except FD)
 }
