@@ -27,6 +27,7 @@
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 //#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
+//#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
 //#define DbgSpecial    //Special case logging to BigBuf
 
 #define BigBufSize          5000
@@ -74,6 +75,7 @@ enum InternalEEPROMmap
    eepAdDHCPTimeout   =30, // (2:uint16_t)   DNS Timeout
    eepAdDHCPRespTO    =32, // (2:uint16_t)   DNS Response Timeout
    //???=34, //(
+   //Max size = 4284 (4k, emulated in flash)
 };
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;
