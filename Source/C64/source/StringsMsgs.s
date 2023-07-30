@@ -84,14 +84,14 @@ MsgFWUpdate:
    !tx 0
 
 MsgFWVerify:
-   !tx ChrReturn, ChrReturn, OptionColor, "Update TeensyROM FirmWare? y/n "
+   !tx ChrReturn, ChrReturn, ChrOrange, "Update TeensyROM FirmWare? y/n "
    !tx 0
 
 MsgFWInProgress:
-   !tx "Yes", ChrReturn, ChrReturn, ChrLtRed
+   !tx ChrLtRed, "Yes", ChrReturn, ChrReturn
    !tx "Firmware update in progress!", ChrReturn
    !tx "It will take about 1 minute to complete", ChrReturn
-   !tx "DO NOT OFF POWER WHILE UPDATING!!!", ChrReturn, MenuMiscColor
+   !tx "DO NOT TURN OFF POWER WHILE UPDATING!!!", ChrReturn, MenuMiscColor
    !tx 0
 
 MsgAnyKey:

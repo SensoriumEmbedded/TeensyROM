@@ -27,29 +27,30 @@ void HandleExecution()
    
    if (MenuSel.ItemType == rtNone || MenuSel.ItemType == rtUnknown) return;  //no action taken for these types
    
-   if (MenuSel.ItemType == rtFileHex && IO1[rWRegCurrMenuWAIT] == rmtSD)  //FW update from hex file on SD
-   {
-      char FullFilePath[300];
-      char * myPath = SDPath;
-      
-      if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
-      else sprintf(FullFilePath, "%s/%s", myPath, MenuSel.Name);
-
-      DoFlashUpdate(FullFilePath);
-      IO1[rwRegFWUpdStatCont] = rFWUSCC64Finish; //last thing, tell C64 we're done
-      return;  //we're done here...
-   }
    
    //if SD card or USB Drive,  update path & load dir   or   load file to RAM
    if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) 
    {
       bool SD_nUSBDrive = (IO1[rWRegCurrMenuWAIT] == rmtSD);
+      char * myPath;
+      
+      if (SD_nUSBDrive) myPath = SDPath;
+      else myPath = USBDrivePath;
+      
+      if (MenuSel.ItemType == rtFileHex)  //FW update from hex file
+      {
+         char FullFilePath[300];
+         
+         if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
+         else sprintf(FullFilePath, "%s/%s", myPath, MenuSel.Name);
+
+         DoFlashUpdate(SD_nUSBDrive, FullFilePath);
+         IO1[rwRegFWUpdStatCont] = rFWUSCC64Finish; //last thing, tell C64 we're done
+         return;  //we're done here...
+      }
       
       if (MenuSel.ItemType == rtDirectory)
       {  //edit path as needed and load the new directory from SD/USB
-         char * myPath;
-         if (SD_nUSBDrive) myPath = SDPath;
-         else myPath = USBDrivePath;
          
          if(strcmp(MenuSel.Name, UpDirString)==0)
          {  //up dir

@@ -64,7 +64,7 @@ extern "C" {
 }
 
 
-void DoFlashUpdate(const char *FilePathName)
+void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
 {
    uint32_t buffer_addr, buffer_size;
 
@@ -84,30 +84,33 @@ void DoFlashUpdate(const char *FilePathName)
       buffer_addr, buffer_addr + buffer_size);
    FWUpdMessageReady();
    
-   FWUpdMessage( "SD initialization " );
-   if (!SD.begin( BUILTIN_SDCARD )) 
-   {
-      FWUpdMsgFailed();
-      return;
-   }
-   FWUpdMsgOK();
+   //Already initialized to get to this point...
+   //FWUpdMessage( "SD initialization " );
+   //if (!SD.begin( BUILTIN_SDCARD )) 
+   //{
+   //   FWUpdMsgFailed();
+   //   return;
+   //}
+   //FWUpdMsgOK();
 
-   sprintf(BuildCPUInfoStr, "\r\nOpen: %s\r\n", FilePathName); 
+   sprintf(BuildCPUInfoStr, "\r\nOpen: %s%s  ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
    FWUpdMessageReady();
 
-   File hexFile = SD.open(FilePathName, FILE_READ );
+   File hexFile;
+   if (SD_nUSBDrive) hexFile = SD.open(FilePathName, FILE_READ );
+   else hexFile= firstPartition.open(FilePathName, FILE_READ);
+      
    if (!hexFile) {
       FWUpdMsgFailed();
       return;
    }
    FWUpdMsgOK();
    
-   //FWUpdMessage( "skipping update" );
    // read hex file, write new firmware to flash, clean up, reboot
    update_firmware( &hexFile, &Serial, buffer_addr, buffer_size );
   
    // return from update_firmware() means error or user abort, so clean up and
-   // reboot to ensure that static vars get boot-up initialized before retry(?)
+   // reboot to ensure that static vars get boot-up initialized before retry(? nah)
    FWUpdMessage( "Erasing Flash buffer ");  
    firmware_buffer_free( buffer_addr, buffer_size );
    FWUpdMsgOK();
