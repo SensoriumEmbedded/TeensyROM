@@ -3,20 +3,20 @@
 ## Hardware connection:
   * Use an Ethernet cable (RJ-45) to connect your TeensyROM to an Ethernet hub/router with internet access.
 
-## TeensyROM Setup
-  * Select "Swiftlink/Modem" Special IO HW from the settings menu prior to running a terminal program.
-  * The TeensyROM default Ethernet settings are as follows:
-    * DHCP enabled
-    * MAC Address: BE:0C:64:C0:FF:EE
-  * If different settings such as static IP or a custom MAC are needed, use AT commands in any terminal program as described below.
-    * Customized settings are stored in the TeensyROM for later use, even when power is removed or Firmware updated.
-
 ## Using a Terminal program to connect to the internet
   ### Yes, bulletin board and other telnet based services are still out there and popular!
   * Here are just a few:
     * [Oasis BBS:](https://theoasisbbs.com/) oasisbbs.hopto.org
     * 8-Bir Playground: 8bit.hoyvision.com    
     * 13th Floor BBS: 13th.hoyvision.com
+
+  ### TeensyROM Setup
+  * Select "Swiftlink/Modem" Special IO HW from the settings menu prior to running a terminal program.
+  * The TeensyROM default Ethernet settings are as follows:
+    * DHCP enabled
+    * MAC Address: BE:0C:64:C0:FF:EE
+  * If different settings such as static IP or a custom MAC are needed, use AT commands in any terminal program as described below.
+    * Customized settings are stored in the TeensyROM for later use, even when power is removed or Firmware updated.
 
   ### Most C64/128 terminal programs can be used with the TeensyROM
   * Configure them to use a SwiftLink cartridge at address $DExx
