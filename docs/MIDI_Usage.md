@@ -15,7 +15,7 @@
     
 ### Sending MIDI/SID data to your C64/128 from a modern computer
 
-  * **Playing .sid files on your C64 from a computer**
+  * **Playing .sid files on your C64 from a computer** (FW v0.4 and higher)
     * You can use your C64/128 as a directly controlled SID chip with the use of the ASID MIDI protocol.
     * This protocol was designed by Elektron to send data to their SIDstation device, but has been adopted for general use by the community
     * **C64/128 Setup**

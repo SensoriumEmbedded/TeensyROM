@@ -5,7 +5,7 @@
 
 Although there other emulators/loaders out there, I really wanted to design one around the Teensy 4.1 to take advantage of all its external interface capabilities (USB Host, SD card, Ethernet).  I also wanted to use its many IO pins to do "direct" interfacing so it can be largely software defined. 
 
-I'll continue to publish all PCB design files and source code here for anyone else who is interested.   If you have any input on the project, features you'd like to see, or are interested in trying one out, just send [me a note](mailto:travis@sensoriumembedded.com).    I'm also interested in any feedback/contributions from other engineers/developers out there.
+I'll continue to publish all PCB design files and source code here for anyone else who is interested.   If you have any input on the project, features you'd like to see, or are interested in trying one out, just [send me a note](mailto:travis@sensoriumembedded.com).    I'm also interested in any feedback/contributions from other engineers/developers out there.
 
 ## Features
 * Immediate Emulation or Load from:
@@ -35,14 +35,14 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * Use with released software such as **CCGMS, StrikeTerm2014, DesTerm128,** etc
   * **Swiftlink** cartridge + 38.4k modem emulation
   * Send AT commands from terminal software to configure the Ethernet connection
-    * See full list [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/pics-info/AT_Commands.md)
+    * See full list [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/media/Ethernet_Usage.md)
   * Sets C64 system time from internet
 
-![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2b/v0.2b_angle.jpg)
+![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_angle.jpg)
   
 ## Hardware/PCB Design
 * **PCB design is fully validated/tested.** 
-* Complete BOM and Assembly Instructions are available via the [PCB Readme](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/PCB/PCB_Readme.md) 
+* Complete BOM and Assembly Instructions are available via the [PCB Readme](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/PCB/PCB_Assembly.md) 
 
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
 
@@ -69,11 +69,11 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Frank Z**: Music is The Best.
 
 ## Pictures/screen captures:
-|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2b/v0.2b_top.jpg) |![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2b/v0.2b_top_loaded.jpg) | 
+|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_top.jpg) |![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_top_loaded.jpg) | 
 |:--:|:--:|
-|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2b/v0.2b_insitu_MIDI.jpg) |![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/v0.2b/v0.2b_insitu_USBdrive.jpg)  |
-|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/MIDI%20to%20SID.png)|
-|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/Settings%20Menu.png)|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/pics-info/Screen%20captures/WinPC%20x-fer%20app.png)|
+|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_insitu_MIDI.jpg) |![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_insitu_USBdrive.jpg)  |
+|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/Screen%20captures/MIDI%20to%20SID.png)|
+|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/Screen%20captures/Settings%20Menu.png)|![TeensyROM pic1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/Screen%20captures/WinPC%20x-fer%20app.png)|
 
-See [pics-info](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/pics-info) folder for more, including some oscilloscope shots showing VIC cycle timing.
+See the [media](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/media) folder for more, including some oscilloscope shots showing VIC cycle timing.
 

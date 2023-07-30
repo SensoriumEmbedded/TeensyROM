@@ -1,9 +1,0 @@
-
-Source/C64/build/*
-Source/TeensyROM/build/teensy.avr.teensy41/*.eep
-Source/TeensyROM/build/teensy.avr.teensy41/*.elf
-Source/TeensyROM/build/teensy.avr.teensy41/*.lst
-Source/TeensyROM/build/teensy.avr.teensy41/*.sym
-Source/TeensyROM/.vscode/*
-Source/Win/.vs/*
-Source/Win/obj/*
