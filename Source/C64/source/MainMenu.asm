@@ -341,6 +341,8 @@ GreyOutDn:
 ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
 SelectMenuItem:
    lda rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
+   cmp #rtFileHex  ;check for .hex file selected and prep for FW update
+   beq FWUpdate  
    pha
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
@@ -350,7 +352,7 @@ SelectMenuItem:
    beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
    jsr ListMenuItemsInit
    rts
-   
+
 XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
    ;192 byte limit, watch size of PRGLoadStart block!  check below
@@ -382,7 +384,74 @@ XferCopyRun:
    cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
    bne -   
    jmp PRGLoadStartReloc     
-     
+
+FWUpdate:
+   lda #<MsgBanner  ;Header banner
+   ldy #>MsgBanner
+   jsr PrintString 
+   lda #<MsgFWUpdate  ;Page Title
+   ldy #>MsgFWUpdate
+   jsr PrintString 
+   lda #rwRegItemName  ;File name
+   jsr PrintSerialString
+   lda #<MsgFWVerify  ;Verification prompt
+   ldy #>MsgFWVerify
+   jsr PrintString 
+
+-  jsr GetIn    ; wait for user confirmation
+   beq -
+   cmp #'n'  
+   beq fwAbort
+   cmp #'y'  
+   bne -
+
+   lda #<MsgFWInProgress  ;In Progress Warning
+   ldy #>MsgFWInProgress
+   jsr PrintString 
+   lda #rFWUSCContinue   ;TR FW in control, init for loop below
+   sta rwRegFWUpdStatCont+IO1Port
+   lda #rCtlStartSelItemWAIT ;kick off the update routine
+   sta wRegControl+IO1Port
+   ldy TODSecBCD ;reset dot second counter
+   
+FWWaitLoop ;waiting loop that shows 1 dot/sec and waits for rwRegFWUpdStatCont
+   cpy TODSecBCD  ;no latch/unlatch needed for only reading seconds
+   beq +
+   ldy TODSecBCD  ;print 1 dot/sec while waiting
+   lda #'.'
+   jsr SendChar
++  lda rwRegFWUpdStatCont+IO1Port
+   cmp #rFWUSCC64Message
+   beq ++
+   cmp #rFWUSCC64Finish
+   bne FWWaitLoop
+++ ldx#5 ;require 5 consecutive reads of rFWUSCC64* to continue
+-  cmp rwRegFWUpdStatCont+IO1Port
+   bne FWWaitLoop
+   dex
+   bne -
+   ; the ball is in the C64 court, finish or display message and cont
+   cmp #rFWUSCC64Finish
+   beq fwFinish
+   ; display message:
+   lda #rwRegBuildCPUInfoStr 
+   jsr PrintSerialString
+   lda #rFWUSCContinue   ;tell fw we're done reading msg, continue
+   sta rwRegFWUpdStatCont+IO1Port
+   jmp FWWaitLoop
+
+fwFinish
+   jsr WaitForTRNoPr  ;be sure original update routine has finished
+   lda #<MsgAnyKey  ;wait for any key to continue 
+   ldy #>MsgAnyKey
+   jsr PrintString 
+-  jsr GetIn    
+   beq -
+fwAbort   
+   jsr ListMenuItemsInit
+   rts
+
+
 WaitForTR:  ;wait for ready status, uses acc, X and Y
    ldx #1 ;row   Show "Waiting:" over time disp
    ldy #29  ;col
@@ -391,6 +460,7 @@ WaitForTR:  ;wait for ready status, uses acc, X and Y
    lda #<MsgWaiting
    ldy #>MsgWaiting
    jsr PrintString
+WaitForTRNoPr:
 !ifndef Debug {
 -- ldx#5 ;require 5 consecutive reads of ready to continue
    inc ScreenCharMemStart+40*2-2 ;spinner @ end of 'Time' print loc.

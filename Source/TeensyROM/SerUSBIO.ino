@@ -57,12 +57,6 @@ void ServiceSerial()
          Serial.println(BuildCPUInfoStr);
          //Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
          break;
-      case 'x': // Update Flash
-         Serial.printf( "***Flashing...\n");
-         DoFlashUpdate();
-         //if we return, we failed...
-         Serial.printf( "***Flashing Failed!\n");
-         break;
          
    // m, p, k, r, s
    #ifdef Dbg_SerSwift

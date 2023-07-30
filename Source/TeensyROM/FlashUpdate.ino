@@ -57,51 +57,91 @@
 
 #include <SD.h>
 #include "Flash/FXUtil.h"		// read_ascii_line(), hex file support
-#include "Flash/FXUtil.cpp"		// read_ascii_line(), hex file support
+#include "Flash/FXUtil.cpp"
 extern "C" {
   #include "Flash/FlashTxx.h"		// TLC/T3x/T4x/TMM flash primitives
-  #include "Flash/FlashTxx.c"		// TLC/T3x/T4x/TMM flash primitives
+  #include "Flash/FlashTxx.c"
 }
 
-#define HEX_FILE_NAME "TeensyROM.SDtest.hex"
 
-void DoFlashUpdate()
+void DoFlashUpdate(const char *FilePathName)
 {
    uint32_t buffer_addr, buffer_size;
-   
-   Serial.printf( "target = %s (%dK flash in %dK sectors)\n", FLASH_ID, FLASH_SIZE/1024, FLASH_SECTOR_SIZE/1024);
+
+   //Serial.printf( "target = %s (%dK flash in %dK sectors)\n", FLASH_ID, FLASH_SIZE/1024, FLASH_SECTOR_SIZE/1024);
    
    // create flash buffer to hold new firmware
-   if (firmware_buffer_init( &buffer_addr, &buffer_size ) == 0) {
-     Serial.printf( "unable to create buffer\n" );
-     Serial.flush();
+   FWUpdMessage( "Create buffer " );
+   if (firmware_buffer_init( &buffer_addr, &buffer_size ) != FLASH_BUFFER_TYPE) 
+   {
+     FWUpdMsgFailed();
      return;
    }
+   FWUpdMsgOK();
    
-   Serial.printf( "created buffer = %1luK %s (%08lX - %08lX)\n",
-		buffer_size/1024, IN_FLASH(buffer_addr) ? "FLASH" : "RAM",
-		buffer_addr, buffer_addr + buffer_size );
+   sprintf(BuildCPUInfoStr, "\r\n%s Buffer = %1luK of %1luK total\r\n(%08lX - %08lX)", 
+      IN_FLASH(buffer_addr) ? "Flash" : "RAM", buffer_size/1024, FLASH_SIZE/1024, 
+      buffer_addr, buffer_addr + buffer_size);
+   FWUpdMessageReady();
+   
+   FWUpdMessage( "SD initialization " );
+   if (!SD.begin( BUILTIN_SDCARD )) 
+   {
+      FWUpdMsgFailed();
+      return;
+   }
+   FWUpdMsgOK();
 
-   if (!SD.begin( BUILTIN_SDCARD )) {
-      Serial.println( "SD initialization failed" );
-      return;
-   }
-   File hexFile;
-   Serial.println( "SD initialization OK" );
-   hexFile = SD.open( HEX_FILE_NAME, FILE_READ );
+   sprintf(BuildCPUInfoStr, "\r\nOpen: %s\r\n", FilePathName); 
+   FWUpdMessageReady();
+
+   File hexFile = SD.open(FilePathName, FILE_READ );
    if (!hexFile) {
-      Serial.println( "SD file open failed" );
+      FWUpdMsgFailed();
       return;
    }
-   Serial.println( "SD file open OK" );
+   FWUpdMsgOK();
+   
+   //FWUpdMessage( "skipping update" );
    // read hex file, write new firmware to flash, clean up, reboot
    update_firmware( &hexFile, &Serial, buffer_addr, buffer_size );
   
    // return from update_firmware() means error or user abort, so clean up and
-   // reboot to ensure that static vars get boot-up initialized before retry
-   Serial.printf( "erase FLASH buffer...\n");  //   / free RAM buffer...\n" );
+   // reboot to ensure that static vars get boot-up initialized before retry(?)
+   FWUpdMessage( "Erasing Flash buffer ");  
    firmware_buffer_free( buffer_addr, buffer_size );
-   Serial.flush();
-   REBOOT;
+   FWUpdMsgOK();
+   
+   //FWUpdMessage( "Rebooting  Teensy");  
+   //REBOOT;
 }
 
+void FWUpdMessage(const char *Msg)
+{
+   strcpy(BuildCPUInfoStr, "\r\n");
+   strcat(BuildCPUInfoStr, Msg);
+   FWUpdMessageReady();
+}
+
+void FWUpdMsgOK()
+{
+   strcpy(BuildCPUInfoStr, "OK");
+   FWUpdMessageReady();
+}
+
+void FWUpdMsgFailed()
+{
+   strcpy(BuildCPUInfoStr, "Failed!");
+   FWUpdMessageReady();
+}
+
+void FWUpdMessageReady() 
+{  //BuildCPUInfoStr already populated
+   Serial.printf("\n*%s", BuildCPUInfoStr);
+   Serial.flush();
+   IO1[rwRegFWUpdStatCont] = rFWUSCC64Message; //tell C64 there's a message
+   uint32_t beginWait = millis();
+   //wait for C64 to read message:
+   while (millis()-beginWait<3000) if(IO1[rwRegFWUpdStatCont] == rFWUSCContinue) return;
+   Serial.printf("\nTimeout!\n");
+}

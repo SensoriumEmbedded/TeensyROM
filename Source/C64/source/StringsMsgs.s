@@ -79,6 +79,25 @@ MsgCreditsInfo:
    !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
+MsgFWUpdate:
+   !tx ChrReturn, SourcesColor, "Firmware Update:", ChrReturn, "  ", NameColor  ;filename printed next 
+   !tx 0
+
+MsgFWVerify:
+   !tx ChrReturn, ChrReturn, OptionColor, "Update TeensyROM FirmWare? y/n "
+   !tx 0
+
+MsgFWInProgress:
+   !tx "Yes", ChrReturn, ChrReturn, ChrLtRed
+   !tx "Firmware update in progress!", ChrReturn
+   !tx "It will take about 1 minute to complete", ChrReturn
+   !tx "DO NOT OFF POWER WHILE UPDATING!!!", ChrReturn, MenuMiscColor
+   !tx 0
+
+MsgAnyKey:
+   !tx ChrReturn, ChrReturn, OptionColor, "Update failed, Press any key to return"
+   !tx 0
+
 MsgM2SPolyMenu:    
    !tx ChrReturn, ChrReturn, SourcesColor, "MIDI to SID Polyphonic Mode"
    !tx ChrReturn, ChrReturn, OptionColor 
@@ -142,4 +161,5 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx "Dir "  ; rtDirectory = 6,
    !tx "Prg "  ; rtFilePrg   = 7,
    !tx "Crt "  ; rtFileCrt   = 8,
+   !tx "Hex "  ; rtFileHex   = 9,
    

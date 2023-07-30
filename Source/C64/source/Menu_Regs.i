@@ -44,9 +44,11 @@
    rwRegTimezone       = 17 ;// signed char for timezone: UTC +/-12 
    rwRegNextIOHndlr    = 18 ;// Which IO handler will take over upone exit/execute/emulate
    rwRegNextIOHndlrName= 19 ;// IOHandler Name selected in rwRegNextIOHndlr: Serially read out, write anything to reset pointer
-   rwRegBuildCPUInfoStr= 20 ;// String containing Build date/time and CPU Freq/Temp: Serially read out, write anything to create string and reset pointer
+   rwRegBuildCPUInfoStr= 20 ;// String containing Build date/time and CPU Freq/Temp: Serially read out, write anything to reset pointer
+                            ;// also used for FW update messages
+   rwRegFWUpdStatCont  = 21 ;// FW update Status/Control, see RegFWUpdCommands
 
-   StartSIDRegs        = 21   ;//start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 22   ;//start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2
@@ -87,6 +89,7 @@
 
    ;;;;;;;;;;;;;;;;;;  end IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
+;enum RegPowerUpDefaultMasks
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
    rpudNetTimeMask   = 0x02 ; rwRegPwrUpDefaults bit 1=synch net time
 
@@ -103,11 +106,18 @@
    rsReady              = 0x5a
    ;rsError              = 0x48,
 
+;enum RegMenuTypes //must match TblMsgMenuName order/qty
    rmtSD        = 0
    rmtTeensy    = 1
    rmtUSBHost   = 2
    rmtUSBDrive  = 3
-   
+  
+;enum RegFWUpdCommands
+   rFWUSCC64Message       = 0x5a ; //message for the C64, set to continue when finished
+   rFWUSCC64Finish        = 0xa5 ; //update finished (done, abort, or otherwise)
+   rFWUSCContinue         = 0x3c ; //Tells the FW to continue with update
+  
+;enum RegCtlCommands
    rCtlVanishROM          = 0
    rCtlBasicReset         = 1
    rCtlStartSelItemWAIT   = 2
@@ -115,7 +125,7 @@
    rCtlRunningPRG         = 4 ; final signal before running prg, allows IO1 handler change
    rCtlMakeInfoStrWAIT    = 5 ; Make BuildCPUInfoStr
 
-   ;synch with TblItemType & regItemTypes
+;enum regItemTypes //synch with TblItemType
    rtNone      = 0
    rtUnknown   = 1
    rtBin16k    = 2
@@ -125,6 +135,7 @@
    rtDirectory = 6
    rtFilePrg   = 7
    rtFileCrt   = 8
-
+   rtFileHex   = 9
+   
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

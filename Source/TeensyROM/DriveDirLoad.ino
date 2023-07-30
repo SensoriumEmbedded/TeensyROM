@@ -27,6 +27,19 @@ void HandleExecution()
    
    if (MenuSel.ItemType == rtNone || MenuSel.ItemType == rtUnknown) return;  //no action taken for these types
    
+   if (MenuSel.ItemType == rtFileHex && IO1[rWRegCurrMenuWAIT] == rmtSD)  //FW update from hex file on SD
+   {
+      char FullFilePath[300];
+      char * myPath = SDPath;
+      
+      if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
+      else sprintf(FullFilePath, "%s/%s", myPath, MenuSel.Name);
+
+      DoFlashUpdate(FullFilePath);
+      IO1[rwRegFWUpdStatCont] = rFWUSCC64Finish; //last thing, tell C64 we're done
+      return;  //we're done here...
+   }
+   
    //if SD card or USB Drive,  update path & load dir   or   load file to RAM
    if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) 
    {
@@ -221,6 +234,7 @@ void LoadDirectory(bool SD_nUSBDrive)
          
          if (strcmp(Extension, ".prg")==0) DrvMenuItem[NumItems].ItemType = rtFilePrg;
          else if (strcmp(Extension, ".crt")==0) DrvMenuItem[NumItems].ItemType = rtFileCrt;
+         else if (strcmp(Extension, ".hex")==0) DrvMenuItem[NumItems].ItemType = rtFileHex;
          else DrvMenuItem[NumItems].ItemType = rtUnknown;
       }
       

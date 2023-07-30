@@ -48,66 +48,87 @@ void update_firmware( Stream *in, Stream *out,
     0, 0						//   eof,lines
   };
 
-  out->printf( "reading hex lines...\n" );
+  FWUpdMessage( "Reading hex file");  
 
   // read and process intel hex lines until EOF or error
   while (!hex.eof)  {
-
     read_ascii_line( in, line, sizeof(line) );
-    // reliability of transfer via USB is improved by this printf/flush
-    if (in == out && out == (Stream*)&Serial) {
-      out->printf( "%s\n", line );
-      out->flush();
-    }
+    //// reliability of transfer via USB is improved by this printf/flush
+    //if (in == out && out == (Stream*)&Serial) {
+    //  out->printf( "%s\n", line );
+    //  out->flush();
+    //}
 
-    if (parse_hex_line( (const char*)line, hex.data, &hex.addr, &hex.num, &hex.code ) == 0) {
-      out->printf( "abort - bad hex line %s\n", line );
-    }
-    else if (process_hex_record( &hex ) != 0) { // error on bad hex code
-      out->printf( "abort - invalid hex code %d\n", hex.code );
+    if (parse_hex_line( (const char*)line, hex.data, &hex.addr, &hex.num, &hex.code ) == 0) 
+    {
+      //out->printf( "abort - bad hex line %s\n", line );
+      sprintf(BuildCPUInfoStr, "\r\nBad hex line: %s", line);
+      FWUpdMessageReady();
       return;
     }
-    else if (hex.code == 0) { // if data record
+    else if (process_hex_record( &hex ) != 0) 
+    { // error on bad hex code
+      //out->printf( "abort - invalid hex code %d\n", hex.code );
+      sprintf(BuildCPUInfoStr, "\r\nInvalid hex code %d", hex.code);
+      FWUpdMessageReady();
+      return;
+    }
+    else if (hex.code == 0) 
+    { // if data record
       uint32_t addr = buffer_addr + hex.base + hex.addr - FLASH_BASE_ADDR;
-      if (hex.max > (FLASH_BASE_ADDR + buffer_size)) {
-        out->printf( "abort - max address %08lX too large\n", hex.max );
+      if (hex.max > (FLASH_BASE_ADDR + buffer_size)) 
+      {
+        //out->printf( "abort - max address %08lX too large\n", hex.max );
+        sprintf(BuildCPUInfoStr, "\r\nMax address %08lX too large", hex.max);
+        FWUpdMessageReady();
         return;
       }
-      else if (!IN_FLASH(buffer_addr)) {
+      else if (!IN_FLASH(buffer_addr)) 
+      {
         memcpy( (void*)addr, (void*)hex.data, hex.num );
       }
-      else if (IN_FLASH(buffer_addr)) {
+      else if (IN_FLASH(buffer_addr)) 
+      {
         int error = flash_write_block( addr, hex.data, hex.num );
-        if (error) {
-          out->printf( "abort - error %02X in flash_write_block()\n", error );
-	  return;
+        if (error) 
+        {
+           //out->printf( "abort - error %02X in flash_write_block()\n", error );
+           sprintf(BuildCPUInfoStr, "\r\nMax address %08lX too large", hex.max);
+           FWUpdMessageReady();
+           return;
         }
       }
     }
     hex.lines++;
   }
     
-  out->printf( "\nhex file: %1d lines %1lu bytes (%1luk) (%08lX - %08lX)\n",
-			hex.lines, hex.max-hex.min, (hex.max-hex.min)/1024, hex.min, hex.max );
+  sprintf(BuildCPUInfoStr, "\r\nHex file: %1d lines, %1luK\r\n(%08lX - %08lX)",
+			hex.lines, (hex.max-hex.min)/1024, hex.min, hex.max );
+  FWUpdMessageReady();
+  //out->printf( "\nhex file: %1d lines %1lu bytes (%1luk) (%08lX - %08lX)\n",
+  //		hex.lines, hex.max-hex.min, (hex.max-hex.min)/1024, hex.min, hex.max );
 
   // check FSEC value in new code -- abort if incorrect
-  #if defined(KINETISK) || defined(KINETISL)
-  uint32_t value = *(uint32_t *)(0x40C + buffer_addr);
-  if (value == 0xfffff9de) {
-    out->printf( "new code contains correct FSEC value %08lX\n", value );
-  }
-  else {
-    out->printf( "abort - FSEC value %08lX should be FFFFF9DE\n", value );
-    return;
-  } 
-  #endif
+  //#if defined(KINETISK) || defined(KINETISL)
+  //uint32_t value = *(uint32_t *)(0x40C + buffer_addr);
+  //if (value == 0xfffff9de) {
+  //  out->printf( "new code contains correct FSEC value %08lX\n", value );
+  //}
+  //else {
+  //  out->printf( "abort - FSEC value %08lX should be FFFFF9DE\n", value );
+  //  return;
+  //} 
+  //#endif
 
   // check FLASH_ID in new code - abort if not found
+  FWUpdMessage("Verifying file is for TeensyROM ");
   if (check_flash_id( buffer_addr, hex.max - hex.min )) {
-    out->printf( "new code contains correct target ID %s\n", FLASH_ID );
+    //out->printf( "new code contains correct target ID %s\n", FLASH_ID );
+    FWUpdMsgOK();
   }
   else {
-    out->printf( "abort - new code missing string %s\n", FLASH_ID );
+    //out->printf( "abort - new code missing string %s\n", FLASH_ID );
+    FWUpdMsgFailed();
     return;
   }
   
@@ -124,11 +145,21 @@ void update_firmware( Stream *in, Stream *out,
   //  return;
   //}
   //else {
-    out->printf( "calling flash_move() to load new firmware...\n" );
-    out->flush();
+  FWUpdMessage("Copying Buffer over main Flash area\r\n");
+
+  //  out->printf( "calling flash_move() to load new firmware...\n" );
+  //  out->flush();
   //}
   
   // move new program from buffer to flash, free buffer, and reboot
+  //will run out of RAM to copy flash, disable interrupts
+  
+  detachInterrupt(digitalPinToInterrupt(Reset_Btn_In_PIN));
+  detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
+  NVIC_DISABLE_IRQ(IRQ_ENET); 
+  NVIC_DISABLE_IRQ(IRQ_PIT);
+  //SetResetAssert;
+  
   flash_move( FLASH_BASE_ADDR, buffer_addr, hex.max-hex.min );
 
   // should not return from flash_move(), but put REBOOT here as reminder

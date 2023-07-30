@@ -43,7 +43,7 @@ const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 volatile uint8_t eepAddrToWrite, eepDataToWrite;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
-char BuildCPUInfoStr[100];
+char BuildCPUInfoStr[300]; //also used for message passing in FW update, up to full path length
 
 extern bool EthernetInit();
 extern void MenuChange();
@@ -350,6 +350,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       {
          case rwRegSelItem:
             IO1[rwRegSelItem]=Data;
+            break;
+         case rwRegFWUpdStatCont:
+            IO1[rwRegFWUpdStatCont]=Data;
             break;
          case rwRegNextIOHndlr:
             if (Data >= IOH_Num_Handlers) Data=0;
