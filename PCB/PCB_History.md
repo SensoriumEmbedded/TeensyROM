@@ -7,7 +7,7 @@
 
 ## **v0.2: Released Feb 23, 2023**
 
-![TeensyROM v0.2](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2/v0.2%20top.jpg)
+![TeensyROM v0.2](/media/v0.2/v0.2%20top.jpg)
 
 ### **Changes from 0.1 PCB:**
   * New features:
@@ -29,13 +29,13 @@
     * Text size/vectors same for ref-des
 
 ## **v0.1: Released January 29, 2023**
-![TeensyROM v0.1](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.1/v0.1.jpg)   First PCB prototype, fully tested and working with released code using "#define HWv0_1_PCB" build option
+![TeensyROM v0.1](/media/v0.1/v0.1.jpg)   First PCB prototype, fully tested and working with released code using "#define HWv0_1_PCB" build option
    No USB Host or Ethernet connectors, dongles directly from Teensy needed for these.  This makes this board slightly smaller.
 
 ## **v0.0: Early January 23**
-![TeensyROM v0.0](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.0/v0.0.jpg)
+![TeensyROM v0.0](/media/v0.0/v0.0.jpg)
 Protoboard proof of concept.  It worked in proving the basic concept and allowed PCB design with confidence. 
 
 <br>
 
-[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
+[Back to main ReadMe](/README.md)

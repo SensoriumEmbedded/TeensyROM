@@ -2,7 +2,7 @@
 
 The TeensyROM was designed with hand assembly in mind. While surface mount packages are used, they are the larger types (SOIC IC packages and 0805 passives).  If you feel this is beyond your solder capabilities, assembled units are usually available at a fair price. If there are additional questions, feel free to [contact me](mailto:travis@sensoriumembedded.com).
 
-| ![Top View](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_top.jpg) | ![Bot View](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/v0.2b/v0.2b_Bot.jpg) |
+| ![Top View](/media/v0.2b/v0.2b_top.jpg) | ![Bot View](/media/v0.2b/v0.2b_Bot.jpg) |
 |--|--|
 
 - Tools/materials needed: 
@@ -12,14 +12,15 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - Vice to hold work
   - Small knife (ie Exacto)
   - Workspace with good lighting and magnification
-  - Parts listed in the **[TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)**
-  - [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
+  - Computer with USB and the [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
+  - Parts listed in the [TeensyROM BOM](/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)
+    - Including bare PCB [Link to latest design at OSH Park](https://oshpark.com/shared_projects/m7YLgscM)
 
 ## Teensy prep: *Important: complete these in order shown!*  
 - These steps need to be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
 - Load the initial firmware to be used into the Teensy 4.1 module. 
   - This first programming needs to be done using Teensyduino app
-  - Process is described in the [General Usage Document](SensoriumEmbedded/TeensyROM/docs/General_Usage.md)
+  - Process is described in the [General Usage Document](/docs/General_Usage.md)
 - Disconnect the Teensy module from USB
 - The 5v/USB connection on the Teensy module must be cut so that the C64 won't be back-feed power from USB, or vice-versa.
   - Find the small jumper trace between two pads on the back side of the Teensy (see pic below)
@@ -27,7 +28,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - After cutting, plug the module back in to USB to be sure the LED does ***not*** come on.
     - This verifies that the trace is cut.
   - The module will be supplied power from the C64/128 when fully assembled.
-![Pwr_cut_view](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/media/Teensy/T41_pwr_cut.jpg)
+![Pwr_cut_view](/media/Teensy/T41_pwr_cut.jpg)
 
 ## Assembly steps, in recommended order:
 ### TeensyROM Surface Mount Assembly
@@ -60,4 +61,4 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 
 <br>
 
-[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
+[Back to main ReadMe](/README.md)

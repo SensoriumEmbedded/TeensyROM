@@ -18,7 +18,7 @@
      * Build the project and download directly to TeensyROM
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
      * Alternately, you can generate a .hex file and put it on a SD/USB drive
-       * See FW update section of the [General Usage doc](SensoriumEmbedded/TeensyROM/docs/General_Usage.md)
+       * See FW update section of the [General Usage doc](/docs/General_Usage.md)
 
 ### Latest Support tool/lib versions as of v0.4 on 7/31/23
    * Arduino IDE 2.1.1
@@ -62,4 +62,4 @@ These steps only needed if modifying the Windows C# app used to directly pass .c
 
 <br>
 
-[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
+[Back to main ReadMe](/README.md)

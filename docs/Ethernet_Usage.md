@@ -93,5 +93,5 @@ The TeensyROM main menu/application can synch the C64/128 system time with the i
 
  <br>
 
-[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
+[Back to main ReadMe](/README.md)
  

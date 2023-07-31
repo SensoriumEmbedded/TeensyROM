@@ -89,5 +89,5 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 |![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/MIDI%20to%20SID.png)|
 |![TeensyROM pic1](media/Screen%20captures/Settings%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/WinPC%20x-fer%20app.png)|
 
-See the [media](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/media) folder for more, including some oscilloscope shots showing VIC cycle timing.
+See the [media](media/) folder for more, including some oscilloscope shots showing VIC cycle timing.
 
