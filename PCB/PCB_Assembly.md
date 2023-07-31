@@ -16,16 +16,14 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
 
 ## Teensy prep: *Important: complete these in order shown!*  
-- These steps should be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
+- These steps need to be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
 - Load the initial firmware to be used into the Teensy 4.1 module. 
-  - Get the latest .hex file from [Here](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/Source/TeensyROM/build/teensy.avr.teensy41) 
-  - Connect the Teensy to computer with a USB cable.
-  - Launch the TeensyDuino app and File/Open HEX File, select the .hex file
-  - Press the button on the Teensy module as shown in the app.
-  - Watch for it to Erase, Program, and Reboot OK to be sure it programmed correctly.
-  - Disconnect the Teensy module from USB
-- The 5v/USB connection on the Teensy module must be cut so that the C64 won't be back-fed power from USB.
+  - This first programming needs to be done using Teensyduino app
+  - Process is described in the [General Usage Document](SensoriumEmbedded/TeensyROM/docs/General_Usage.md)
+- Disconnect the Teensy module from USB
+- The 5v/USB connection on the Teensy module must be cut so that the C64 won't be back-feed power from USB, or vice-versa.
   - Find the small jumper trace between two pads on the back side of the Teensy (see pic below)
+  - Crefully cut the trace with an Exacto knife
   - After cutting, plug the module back in to USB to be sure the LED does ***not*** come on.
     - This verifies that the trace is cut.
   - The module will be supplied power from the C64/128 when fully assembled.
