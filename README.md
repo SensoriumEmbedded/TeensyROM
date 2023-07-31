@@ -46,7 +46,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * **Hardware/PCB Related**
     * **[TeensyROM Assembly Instructions](PCB/PCB_Assembly.md)**
     * **[PCB Design History](PCB/PCB_History.md)**
-    * **[Bill of materials with cost info](PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)**
+    * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)**
     * **[PDF Schematic](PCB/v0.2%20archive/TeensyROM_v0.2b_Schem.pdf)**
   * **Code developnment/modification**
     * **[Software Build Instructions](Source/BuildInfo.md)**

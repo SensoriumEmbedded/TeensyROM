@@ -13,7 +13,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - Small knife (ie Exacto)
   - Workspace with good lighting and magnification
   - Computer with USB and the [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
-  - Parts listed in the [TeensyROM BOM](/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)
+  - Parts listed in the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)
     - Including bare PCB [Link to latest design at OSH Park](https://oshpark.com/shared_projects/m7YLgscM)
 
 ## Teensy prep: *Important: complete these in order shown!*  
