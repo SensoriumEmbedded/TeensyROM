@@ -82,7 +82,7 @@
 ### **From SD Card or USB Thumb Drive** (easiest method)
   * This method is only available in FW v0.4 and higher.
     * Older versions will have to use another method one time to update
-  * Get the .hex file of the latest released version [from here](SensoriumEmbedded/TeensyROM/bin/TeensyROM)
+  * Get the .hex file of the latest released version [from here](/bin/TeensyROM)
   * Copy the file to a USB Thumb drive or SD card
   * Attach the card/drive to the TeensyROM and power up your C64/128
   * In the USB or SD Menu, select the Firmware  .hex file
@@ -96,7 +96,7 @@
     * If there are any problems, take note of any messages shown before pressing any key to return to the main menu.
 
 ### **Using the Teensy aplication** (requires computer with USB connection)
-  * Get the .hex file of the latest released version [from here](SensoriumEmbedded/TeensyROM/bin/TeensyROM)
+  * Get the .hex file of the latest released version [from here](/bin/TeensyROM/)
   * Download and instal the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
     * Teensyduino requires arduino to run, which works fine.
     * Alternately, the Teensyloader stand alone file can be downloaded via a link further down the page
@@ -110,9 +110,9 @@
   * You should see the app process through erasing and programming before your C64/128 reboots with the new version
 
 ### **Using the arduino environment** (for custom builds/code)
-  * See the [Software build document](SensoriumEmbedded/TeensyROM/Source/BuildInfo.md) for details on this process.
+  * See the [Software build document](/Source/BuildInfo.md) for details on this process.
 
 <br>
 
-[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
+[Back to main ReadMe](/README.md)
 
