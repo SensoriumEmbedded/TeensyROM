@@ -1,23 +1,65 @@
 
-C64: ACME Compiler, bin2header
-   Customize build batch file tool pointers for your system
-   After updates, compile C64 Assy code into bin header (batch file automation) before compiling/programming Teensy
+# TeensyROM software/firmware build instructions
+
+## Main TeensyROM C/C++ aplication
+### Software tools needed
+  * [Arduino IDE 2.x or 1.x](https://www.arduino.cc/en/software)
+  * [Teenyduino app](https://www.pjrc.com/teensy/td_download.html)
+  * Instal as directed in links above
+
+### Build parameters/instructions
+  *  In the Arduino IDE
+     * Load the Teensy.ino file from the /Source/Teensy directory
+     * Tools menu item settings:
+       * Board: "Teensy 4.1"
+       * Port: Select target Teensy
+       * USB Type: "Serial + MIDI"
+       * Default settings are fine for all others
+     * Build the project and download directly to TeensyROM
+       * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
+     * Alternately, you can generate a .hex file and put it on a SD/USB drive
+       * See FW update section of the [General Usage doc](SensoriumEmbedded/TeensyROM/docs/General_Usage.md)
+
+### Latest Support tool/lib versions as of v0.4 on 7/31/23
+   * Arduino IDE 2.1.1
+   * Teensyduino 1.58
+   * Included libraries
+     * SD at version 2.0.0            
+     * SdFat at version 2.1.2         
+     * SPI at version 1.0             
+     * USBHost_t36 at version 0.2     
+     * NativeEthernet at version 1.0.5
+     * FNET at version 0.1.3          
+     * EEPROM at version 2.0       
+
+## C64/128 6502 Assembly code
+These steps are only needed if modifying the aplication menu assembly code running on the C64/128.
+### Software tools needed
+  * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/)
+  * [bin2header util](https://github.com/AntumDeluge/bin2header)
+
+### Build instructions
+  * Edit the "build8000CartBin.bat" file in the C64 directory
+    * Set "toolPath" to an absolute path of the SW tools
+    * Edit the following 2 variables to point to the associated tool directory
+      * Relative, based on toolPath: "compilerPath", "bin2headerPath"
+  * Execute the batch file to complete the following
+    * Compile the main TeensyROM Code
+    * Compile the Cartridge loader executed on startup
+    * Convert the final binary into a header file for the Teensy code
+    * Copy the updated header file to the Teensy directory
+  * Any compile errors will cause early exit
+  * build info displayed and files created
+  * Main TeensyROM aplication must be recompiled to incorporate header/code and load to Teensy module for execution
    
-Teensy: Arduino/Teensyduino
-   As of 6/23/23:
-      Arduino IDE 2.1.0
-      Teensy Loader 1.58.1
-         Using library SD at version 2.0.0 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\SD 
-         Using library SdFat at version 2.1.2 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\SdFat 
-         Using library SPI at version 1.0 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\SPI 
-         Using library USBHost_t36 at version 0.2 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\USBHost_t36 
-         Using library NativeEthernet at version 1.0.5 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\NativeEthernet 
-         Using library FNET at version 0.1.3 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\FNET 
-         Using library EEPROM at version 2.0 in folder: C:\Users\trav\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.58.1\libraries\EEPROM 
-      Memory Usage on Teensy 4.1:
-        FLASH: code:308548, data:303596, headers:8876   free for files:7505444
-         RAM1: variables:295012, code:168120, padding:28488   free for local variables:32668
-         RAM2: variables:12448  free for malloc/new:511840
+## Windows C# Utility
+These steps only needed if modifying the Windows C# app used to directly pass .crt or .prg files from a PC to the TeensyROM
+### Software tools needed
+  * [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (Community or higher)
+    * Include C# tools
 
-Windows: C# MS Visual Studio
+### Edit and build in the Visual Studio Environment
 
+<br>
+
+[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)

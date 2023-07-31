@@ -4,8 +4,19 @@
 ## USB MIDI Host port
 ### Hardware connection:
   * Cable from a USB MIDI Keyboard/Controller device to the USB-A Host port on the TeensyROM board.
-  * Use CynthCart, Station64, the MIDI2SID app, etc. to receive/play the MIDI data from your controller
+### Sending MIDI data to/from your C64 from a MIDI/USB kayboard
+  * Select "MIDI:*" Special IO HW from the settings menu prior to running a MIDI program.
+    * The following MIDI cartridges can be emulated/selected:
+      * Sequential
+      * Datel/Siel
+      * Passport/Sentech (w/o 6480 timer)
+      * Namesoft (w/o 6480 timer)
+    * All use DExx address space and IRQ for interrupts
+
+  * Select CynthCart, Station64, the MIDI2SID app, etc. to receive/play the MIDI data from your controller
   * Play around and have fun!
+  * MIDI out (C64 to MIDI Device) is alo implemeted so that keyboards, etc with their own sound capability can be "played" by the C64
+  * Some sequencer apps work, others require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.  May add later if needed/requested
     
 <BR>
 
@@ -23,7 +34,7 @@
       * Power up C64/128 to TeensyROM main menu.
       * Select Station64+Passport MIDI to play the ASID/MIDI data
         * In Station64, select F4 to enter setup mode, then F2 for the ASID player
-        * A/SID control keys:
+        * ASID player control keys:
           * F7: Screen on/off
           * F8: SID Reset
           * 1/2/3: Toggle SID Voice
@@ -67,3 +78,6 @@
         * Remember that there are only 3 voices in the SID, so complex midi files with many simultaneous notes/voices won't sound right.
       * The playback should be eminating from your C64/128!
 
+<br>
+
+[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)

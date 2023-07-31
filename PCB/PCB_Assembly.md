@@ -59,3 +59,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 - Make sure the heatsink is not contacting any pins or other components, such as the large capacitor near it.
 
 ### **Assembly complete, ready for fun!**
+
+<br>
+
+[Back to main ReadMe](SensoriumEmbedded/TeensyROM/README.md)
