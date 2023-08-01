@@ -5,7 +5,7 @@
 ### Software tools needed
   * [Arduino IDE 2.x or 1.x](https://www.arduino.cc/en/software)
   * [Teenyduino app](https://www.pjrc.com/teensy/td_download.html)
-  * Instal as directed in links above
+  * Install as directed in links above
 
 ### Build parameters/instructions
   *  In the Arduino IDE
@@ -33,7 +33,7 @@
      * EEPROM at version 2.0       
 
 ## C64/128 6502 Assembly code
-These steps are only needed if modifying the aplication menu assembly code running on the C64/128.
+These steps are only needed if modifying the application menu assembly code running on the C64/128.
 ### Software tools needed
   * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/)
   * [bin2header util](https://github.com/AntumDeluge/bin2header)
@@ -49,8 +49,8 @@ These steps are only needed if modifying the aplication menu assembly code runni
     * Convert the final binary into a header file for the Teensy code
     * Copy the updated header file to the Teensy directory
   * Any compile errors will cause early exit
-  * build info displayed and files created
-  * Main TeensyROM aplication must be recompiled to incorporate header/code and load to Teensy module for execution
+  * Build information is displayed and files are created
+  * Main TeensyROM application must be recompiled to incorporate header/code and load to Teensy module for execution
    
 ## Windows C# Utility
 These steps only needed if modifying the Windows C# app used to directly pass .crt or .prg files from a PC to the TeensyROM
