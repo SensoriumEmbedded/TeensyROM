@@ -7,7 +7,9 @@ Although there other emulators/loaders out there, I really wanted to design one 
 
 I'll continue to publish all PCB design files and source code here for anyone else who is interested.   If you have any input on the project, features you'd like to see, or are interested in trying one out, please send me a note. I'm also interested in any feedback/contributions from other engineers/developers out there.
 
-## Features
+![TeensyROM pic1](media/v0.2b/v0.2b_angle.jpg)
+  
+## TeensyROM Features
 ### **Super fast load or ROM emulation** directly from:
   * USB thumb Drive
   * SD card
@@ -38,7 +40,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
 ### Key parameters stored in internal EEPROM
   * Startup, Ethernet, timezone, etc retained after power down.
 
-## Links to documentation
+## Links to detailed documentation
   * **Usage Documentats**
     * **[General Usage document](docs/General_Usage.md)**
     * **[MIDI Usage document](docs/MIDI_Usage.md)**
@@ -51,10 +53,6 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * **Code developnment/modification**
     * **[Software Build Instructions](Source/BuildInfo.md)**
 
-<BR>
-
-![TeensyROM pic1](media/v0.2b/v0.2b_angle.jpg)
-  
 ## Demo Videos:
   * [TeensyROM real-time video/audio capture](https://www.youtube.com/watch?v=RyowR9huh0A) of menu navigation and loading/running/emulating various programs/cartridges
   * [Demo using Cynthcart and Datel MIDI emulation](https://www.youtube.com/watch?v=-LumhU60d_k) to play with a USB keyboard 
