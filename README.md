@@ -10,6 +10,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
 ![TeensyROM pic1](media/v0.2b/v0.2b_angle.jpg)
   
 ## TeensyROM Features
+### Compatable with C64 and C128 machines/variants, NTSC and PAL supported
 ### **Super fast load or ROM emulation** directly from:
   * USB thumb Drive
   * SD card
@@ -33,10 +34,8 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * **Swiftlink** cartridge + 38.4k modem emulation
   * Send AT commands from terminal software to configure the Ethernet connection
   * Sets C64 system time from internet
-
 ### **Firmware updates directly from SD card or USB thumb drive**
   * Just drop the .hex file on an SD card or USB drive, no need for extra software to update.
-
 ### Key parameters stored in internal EEPROM
   * Startup, Ethernet, timezone, etc retained after power down.
 
@@ -59,7 +58,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * [MIDI2SID Demo ](https://www.youtube.com/watch?v=3BsX_jxIYKY) using MIDI keyboard => TeensyROM => C64/SID
 
 ## Hardware/PCB Design
-**PCB design is fully validated and tested.** 
+**PCB design has been fully validated and tested.** 
 
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
 
