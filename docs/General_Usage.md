@@ -13,7 +13,7 @@
   * Power on, the TeensyROM main menu should be displayed
   * The Restart button can be pressed at any time to return to the TeensyROM main menu from another program
   * Additional external hardware connection points:
-* ![TeensyROM connections](media/v0.2b/TR_Connections.jpg)
+* ![TeensyROM connections](/media/v0.2b/TR_Connections.jpg)
 
 ## Main Menu Options
   * Keyboard commands available from the main menu:
