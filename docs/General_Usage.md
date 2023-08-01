@@ -1,6 +1,14 @@
 # General TeensyROM usage
 
-## Hardware connection/button:
+## Table of contents
+  * [Hardware connection and button](#hardware-connection-and-button)
+  * [Main Menu Options](#main-menu-options)
+  * [Loading programs and emulating ROMs](#loading-programs-and-emulating-roms)
+  * [The Settings Menu](#the-settings-menu)
+  * [Selecting and associating Special HW](#selecting-and-associating-special-hw)
+  * [Firmware updates](#firmware-updates)
+
+## Hardware connection and button:
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
   * Power on, the TeensyROM main menu should be displayed
   * The button can be pressed at any time to return to the TeensyROM main menu from another program
@@ -64,7 +72,7 @@
       * Even in extended use, I've never seen the internal temperature exceded 75C.
     * Open source reminder, URL to the Github location
 
-## Selecting/associating "Special HW"
+## Selecting and associating Special HW
   * What is it?
     * "Special HW" in this context means additional HW that is emulated to assist with SW function.
     * This emulation runs at the same time as a selected program/cartridge software
@@ -95,9 +103,9 @@
     * When the update completes succesfully, your computer will reset and the new version of TeensyROM will be shown
     * If there are any problems, take note of any messages shown before pressing any key to return to the main menu.
 
-### **Using the Teensy aplication** (requires computer with USB connection)
+### **Using the Teensy application** (requires computer with USB connection)
   * Get the .hex file of the latest released version [from here](/bin/TeensyROM/)
-  * Download and instal the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
+  * Download and install the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
     * Teensyduino requires arduino to run, which works fine.
     * Alternately, the Teensyloader stand alone file can be downloaded via a link further down the page
   * Launch the Teensyloader/teensyduino app (teensy.exe)

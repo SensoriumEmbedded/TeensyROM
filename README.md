@@ -10,12 +10,12 @@ I'll continue to publish all PCB design files and source code here for anyone el
 ## Table of contents
   * [TeensyROM Features](#teensyrom-features)
   * [Links to detailed documentation](#links-to-detailed-documentation)
-  * [Demo Videos](#demo-videos-)
+  * [Demo Videos](#demo-videos)
   * [Hardware/PCB Design](#hardware-pcb-design)
   * [Compatibility](#compatibility)
-  * [Future/potential SW development/features](#future-potential-sw-development-features-)
-  * [Inspiration](#inspiration-)
-  * [Pictures/screen captures](#pictures-screen-captures-)
+  * [Future/potential SW development/features](#future-potential-sw-development-features)
+  * [Inspiration](#inspiration)
+  * [Pictures/screen captures](#pictures-screen-captures)
 
 <BR>
 
@@ -69,7 +69,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
   * [Demo using Cynthcart and Datel MIDI emulation](https://www.youtube.com/watch?v=-LumhU60d_k) to play with a USB keyboard 
   * [MIDI2SID Demo ](https://www.youtube.com/watch?v=3BsX_jxIYKY) using MIDI keyboard => TeensyROM => C64/SID
 
-## Hardware/PCB Design
+## Hardware-PCB Design
 **PCB design has been fully validated and tested.** 
 
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
@@ -80,7 +80,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 ## Compatibility
 * TeensyROM been tested on many different NTSC C64, C64C, and C128 machines, and several PAL C64 machines to this point. 
 
-## Future/potential SW development/features:
+## Future-potential SW development-features:
 * More Special HW cartridge emulation
 * .d64, .tap file support
 * Host USB Printers
@@ -91,7 +91,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE
 * **Frank Z**: Music is The Best.
 
-## Pictures/screen captures:
+## Pictures-screen captures:
 |![TeensyROM pic1](media/v0.2b/v0.2b_top.jpg) |![TeensyROM pic1](media/v0.2b/v0.2b_top_loaded.jpg) | 
 |:--:|:--:|
 |![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg) |![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)  |

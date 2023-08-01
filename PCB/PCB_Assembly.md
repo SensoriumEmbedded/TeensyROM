@@ -19,12 +19,12 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 ## Teensy prep: *Important: complete these in order shown!*  
 - These steps need to be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
 - Load the initial firmware to be used into the Teensy 4.1 module. 
-  - This first programming needs to be done using Teensyduino app
-  - Process is described in the [General Usage Document](/docs/General_Usage.md)
+  - This initial programming needs to be done using the Teensyduino app
+  - Update process is described in the [General Usage Document](/docs/General_Usage.md)
 - Disconnect the Teensy module from USB
-- The 5v/USB connection on the Teensy module must be cut so that the C64 won't be back-feed power from USB, or vice-versa.
+- The 5v/USB connection on the Teensy module must be cut so that the C64 won't back-feed power from USB, or vice-versa.
   - Find the small jumper trace between two pads on the back side of the Teensy (see pic below)
-  - Crefully cut the trace with an Exacto knife
+  - Carefully cut the trace with an Exacto knife
   - After cutting, plug the module back in to USB to be sure the LED does ***not*** come on.
     - This verifies that the trace is cut.
   - The module will be supplied power from the C64/128 when fully assembled.
@@ -35,7 +35,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 - **BOM item # 1-6**
 - Observe pin 1 marking/orientation on the 5ea ICs
 - Recommend tinning a single pad of each device and attaching first.
-  - Once placement looks good with single pin, solder remainig pin(s)  
+  - Once placement looks good with single pin, solder remaining pin(s)  
 
 ### Teensy/header placement
 - **BOM item # 7-10**
@@ -54,7 +54,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   
 ### Teensy Heatsink Assembly
 - **BOM item # 16**
-- Use a small amount of thermal glue (prefered) or thermal tape to attach heatsink to center of the microcontroller in the center of the Teensy module.
+- Use a small amount of thermal glue (preferred) or thermal tape to attach heatsink to center of the microcontroller in the center of the Teensy module.
 - Make sure the heatsink is not contacting any pins or other components, such as the large capacitor near it.
 
 ### **Assembly complete, ready for fun!**
