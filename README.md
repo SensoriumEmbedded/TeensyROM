@@ -7,6 +7,18 @@ Although there other emulators/loaders out there, I really wanted to design one 
 
 I'll continue to publish all PCB design files and source code here for anyone else who is interested.   If you have any input on the project, features you'd like to see, or are interested in trying one out, please send me a note. I'm also interested in any feedback/contributions from other engineers/developers out there.
 
+## Table of contents
+  * [TeensyROM Features](#teensyrom-features)
+  * [Links to detailed documentation](#links-to-detailed-documentation)
+  * [Demo Videos](#demo-videos-)
+  * [Hardware/PCB Design](#hardware-pcb-design)
+  * [Compatibility](#compatibility)
+  * [Future/potential SW development/features](#future-potential-sw-development-features-)
+  * [Inspiration](#inspiration-)
+  * [Pictures/screen captures](#pictures-screen-captures-)
+
+<BR>
+
 ![TeensyROM pic1](media/v0.2b/v0.2b_angle.jpg)
   
 ## TeensyROM Features
