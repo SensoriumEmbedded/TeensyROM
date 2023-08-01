@@ -67,6 +67,7 @@ I'll continue to publish all PCB design files and source code here for anyone el
 ## Demo Videos:
   * [TeensyROM real-time video/audio capture](https://www.youtube.com/watch?v=RyowR9huh0A) of menu navigation and loading/running/emulating various programs/cartridges
   * [Demo using Cynthcart and Datel MIDI emulation](https://www.youtube.com/watch?v=-LumhU60d_k) to play with a USB keyboard 
+  * [MIDI ASID Demo:](https://www.youtube.com/watch?v=MU1PgFn0eQc) Stream .SID & .MIDI files directly to your C64/SID
   * [MIDI2SID Demo ](https://www.youtube.com/watch?v=3BsX_jxIYKY) using MIDI keyboard => TeensyROM => C64/SID
 
 ## Hardware-PCB Design
