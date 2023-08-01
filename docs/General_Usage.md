@@ -1,17 +1,19 @@
 # General TeensyROM usage
 
 ## Table of contents
-  * [Hardware connection and button](#hardware-connection-and-button)
+  * [TeensyROM connections and Restart button](#teensyrom-connections-and-restart-button)
   * [Main Menu Options](#main-menu-options)
   * [Loading programs and emulating ROMs](#loading-programs-and-emulating-roms)
   * [The Settings Menu](#the-settings-menu)
   * [Selecting and associating Special HW](#selecting-and-associating-special-hw)
   * [Firmware updates](#firmware-updates)
 
-## Hardware connection and button:
+## TeensyROM connections and Restart button:
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
   * Power on, the TeensyROM main menu should be displayed
-  * The button can be pressed at any time to return to the TeensyROM main menu from another program
+  * The Restart button can be pressed at any time to return to the TeensyROM main menu from another program
+  * Additional external hardware connection points:
+* ![TeensyROM connections](media/v0.2b/TR_Connections.jpg)
 
 ## Main Menu Options
   * Keyboard commands available from the main menu:
