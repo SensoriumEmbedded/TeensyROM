@@ -18,15 +18,9 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 PrintSerialString:
-   ;for TR only, IO1 space is implied.
-   ;load Acc with RegIO # that will serialize output string(& write to reset pointer)
-   ;   lda #rwRegNextIOHndlrName,  jsr PrintSerialString
-   sta PtrAddrLo
-   ldy #>IO1Port
-   sty PtrAddrHi
-   ldy #0
-   sta (PtrAddrLo), y ;write any value to reset pointer
--  lda (PtrAddrLo), y
+   ;load Acc with RegSerialStringSelect # that will be serialized out 
+   sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
+-  lda rwRegSerialString+IO1Port
    beq +
    jsr SendChar
    jmp -
@@ -45,6 +39,23 @@ PrintString:
    bne -
 +  rts
 
+PrintBanner:
+   lda #<MsgBanner
+   ldy #>MsgBanner
+   jsr PrintString 
+   lda #rsstVersionNum
+   jsr PrintSerialString
+   sec
+   jsr SetCursor ;read column into y reg
+   lda #ChrSpace ;spaces to the end of the line
+-  jsr SendChar  
+   iny
+   cpy #40
+   bne -
+   lda #ChrRvsOff
+   jsr SendChar   
+   rts
+   
 DisplayTime:
    ldx #1 ;row
    ldy #29  ;col

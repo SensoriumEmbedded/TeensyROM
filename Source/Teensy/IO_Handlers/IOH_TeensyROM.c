@@ -38,12 +38,13 @@ stcIOHandlers IOHndlr_TeensyROM =
 
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
+volatile char*    ptrSerialString; //pointer to selected serialstring
+char SerialStringBuf[300] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 volatile uint8_t eepAddrToWrite, eepDataToWrite;
 StructMenuItem *MenuSource = ROMMenu; //init to internal memory
-char BuildCPUInfoStr[300]; //also used for message passing in FW update, up to full path length
 
 extern bool EthernetInit();
 extern void MenuChange();
@@ -133,7 +134,7 @@ void WriteEEPROM()
 void MakeBuildCPUInfoStr()
 {
    //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
-   sprintf(BuildCPUInfoStr, " Build Date/Time: %s, %s\r\n    Teensy Freq: %luMHz  Temp: %.1fC\r\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+   sprintf(SerialStringBuf, " Build Date/Time: %s, %s\r\n    Teensy Freq: %luMHz  Temp: %.1fC\r\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
@@ -325,17 +326,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             //inc on read, check for end:
             if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
-         case rwRegItemName:
-            Data = MenuSource[IO1[rwRegSelItem]].Name[StringOffset++];
-            DataPortWriteWaitLog(ToPETSCII(Data));
-            break;
-         case rwRegNextIOHndlrName:
-            Data = IOHandler[IO1[rwRegNextIOHndlr]]->Name[StringOffset++];
-            DataPortWriteWaitLog(ToPETSCII(Data));
-            break;
-         case rwRegBuildCPUInfoStr:
-            Data = BuildCPUInfoStr[StringOffset++];
-            DataPortWriteWaitLog(ToPETSCII(Data));
+         case rwRegSerialString:
+            Data = ptrSerialString[StringOffset++];
+            DataPortWriteWaitLog(ToPETSCII(Data));            
             break;
          default: //used for all other IO1 reads
             DataPortWriteWaitLog(IO1[Address]); 
@@ -377,11 +370,24 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepDataToWrite = Data;
             IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
-            
-         case rwRegBuildCPUInfoStr:
-         case rwRegItemName:
-         case rwRegNextIOHndlrName:
+         case rwRegSerialString:
             StringOffset = 0;
+            switch(Data)
+            {
+               case rsstItemName:
+                  ptrSerialString = MenuSource[IO1[rwRegSelItem]].Name;
+                  break;
+               case rsstNextIOHndlrName:
+                  ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
+                  break;
+               case rsstSerialStringBuf:
+                  //assumes SerialStringBuf built first...(FWUpd msg or BuildInfo)
+                  ptrSerialString = SerialStringBuf; 
+                  break;
+               case rsstVersionNum:
+                  ptrSerialString = strVersionNumber;
+                  break;        
+            }
             break;
             
          case wRegControl:

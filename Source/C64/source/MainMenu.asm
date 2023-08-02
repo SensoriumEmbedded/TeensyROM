@@ -223,9 +223,7 @@ ListMenuItemsInit:
    lda #0       ;initialize to first Item
    sta RegMenuPageStart
 ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
-   lda #<MsgBanner
-   ldy #>MsgBanner
-   jsr PrintString 
+   jsr PrintBanner 
    
    ldx #20 ;row   Print the select message now so we can grey out the up/dn below if needed
    ldy #0  ;col
@@ -286,12 +284,12 @@ nextLine
 ; print name
    lda #NameColor
    jsr SendChar
-   lda #rwRegItemName
+   lda #rsstItemName
    jsr PrintSerialString
 ;align to col
    sec
-   jsr SetCursor ;read current to load y (row)
-   ldy #MaxItemNameLength + 3  ;col
+   jsr SetCursor ;read current to load x (row)
+   ldy #MaxItemNameLength + 3  ;set y = col
    clc
    jsr SetCursor
 ; print type
@@ -366,7 +364,7 @@ XferCopyRun:
    lda #<MsgLoading
    ldy #>MsgLoading
    jsr PrintString
-   lda #rwRegItemName
+   lda #rsstItemName
    jsr PrintSerialString
 
    lda #>PRGLoadStart
@@ -386,13 +384,11 @@ XferCopyRun:
    jmp PRGLoadStartReloc     
 
 FWUpdate:
-   lda #<MsgBanner  ;Header banner
-   ldy #>MsgBanner
-   jsr PrintString 
+   jsr PrintBanner 
    lda #<MsgFWUpdate  ;Page Title
    ldy #>MsgFWUpdate
    jsr PrintString 
-   lda #rwRegItemName  ;File name
+   lda #rsstItemName  ;File name
    jsr PrintSerialString
    lda #<MsgFWVerify  ;Verification prompt
    ldy #>MsgFWVerify
@@ -434,7 +430,7 @@ FWWaitLoop ;waiting loop that shows 1 dot/sec and waits for rwRegFWUpdStatCont
    cmp #rFWUSCC64Finish
    beq fwFinish
    ; display message:
-   lda #rwRegBuildCPUInfoStr 
+   lda #rsstSerialStringBuf ;FW upd populated message
    jsr PrintSerialString
    lda #rFWUSCContinue   ;tell fw we're done reading msg, continue
    sta rwRegFWUpdStatCont+IO1Port

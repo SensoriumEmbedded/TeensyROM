@@ -21,9 +21,7 @@
 
 MIDI2SID:
    jsr SIDMusicOff
-   lda #<MsgBanner
-   ldy #>MsgBanner
-   jsr PrintString 
+   jsr PrintBanner 
    lda #<MsgM2SPolyMenu
    ldy #>MsgM2SPolyMenu
    jsr PrintString 

@@ -93,7 +93,7 @@ Warmstart:
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
    !tx "                                        "
-   !tx "     *** Sensorium Embedded 2023 ***    "   ;*VERS*
+   !tx "     *** Sensorium Embedded 2023 ***    "   ;*VERSION*
    !tx "                                        ", ChrRvsOff, 0
    
 ; ******************************* Subroutines ******************************* 

@@ -62,14 +62,14 @@ void update_firmware( Stream *in, Stream *out,
     if (parse_hex_line( (const char*)line, hex.data, &hex.addr, &hex.num, &hex.code ) == 0) 
     {
       //out->printf( "abort - bad hex line %s\n", line );
-      sprintf(BuildCPUInfoStr, "\r\nBad hex line: %s", line);
+      sprintf(SerialStringBuf, "\r\nBad hex line: %s", line);
       FWUpdMessageReady();
       return;
     }
     else if (process_hex_record( &hex ) != 0) 
     { // error on bad hex code
       //out->printf( "abort - invalid hex code %d\n", hex.code );
-      sprintf(BuildCPUInfoStr, "\r\nInvalid hex code %d", hex.code);
+      sprintf(SerialStringBuf, "\r\nInvalid hex code %d", hex.code);
       FWUpdMessageReady();
       return;
     }
@@ -79,7 +79,7 @@ void update_firmware( Stream *in, Stream *out,
       if (hex.max > (FLASH_BASE_ADDR + buffer_size)) 
       {
         //out->printf( "abort - max address %08lX too large\n", hex.max );
-        sprintf(BuildCPUInfoStr, "\r\nMax address %08lX too large", hex.max);
+        sprintf(SerialStringBuf, "\r\nMax address %08lX too large", hex.max);
         FWUpdMessageReady();
         return;
       }
@@ -93,7 +93,7 @@ void update_firmware( Stream *in, Stream *out,
         if (error) 
         {
            //out->printf( "abort - error %02X in flash_write_block()\n", error );
-           sprintf(BuildCPUInfoStr, "\r\nMax address %08lX too large", hex.max);
+           sprintf(SerialStringBuf, "\r\nMax address %08lX too large", hex.max);
            FWUpdMessageReady();
            return;
         }
@@ -102,7 +102,7 @@ void update_firmware( Stream *in, Stream *out,
     hex.lines++;
   }
     
-  sprintf(BuildCPUInfoStr, "\r\nHex file: %1d lines, %1luK\r\n(%08lX - %08lX)",
+  sprintf(SerialStringBuf, "\r\nHex file: %1d lines, %1luK\r\n(%08lX - %08lX)",
 			hex.lines, (hex.max-hex.min)/1024, hex.min, hex.max );
   FWUpdMessageReady();
   //out->printf( "\nhex file: %1d lines %1lu bytes (%1luk) (%08lX - %08lX)\n",

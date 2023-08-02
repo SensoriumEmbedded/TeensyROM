@@ -19,9 +19,7 @@
 
    
 SettingsMenu:
-   lda #<MsgBanner
-   ldy #>MsgBanner
-   jsr PrintString 
+   jsr PrintBanner 
    lda #<MsgSettingsMenu
    ldy #>MsgSettingsMenu
    jsr PrintString 
@@ -38,7 +36,7 @@ SettingsMenu:
    jsr SetCursor
    lda #NameColor
    jsr SendChar
-   lda #rwRegBuildCPUInfoStr
+   lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
    jsr PrintSerialString
 
 ShowSettings:
@@ -91,7 +89,7 @@ ShowSettings:
    ldy #21 ;col
    clc
    jsr SetCursor
-   lda #rwRegNextIOHndlrName
+   lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
 

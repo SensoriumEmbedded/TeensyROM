@@ -79,7 +79,7 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    }
    FWUpdMsgOK();
    
-   sprintf(BuildCPUInfoStr, "\r\n%s Buffer = %1luK of %1luK total\r\n(%08lX - %08lX)", 
+   sprintf(SerialStringBuf, "\r\n%s Buffer = %1luK of %1dK total\r\n(%08lX - %08lX)", 
       IN_FLASH(buffer_addr) ? "Flash" : "RAM", buffer_size/1024, FLASH_SIZE/1024, 
       buffer_addr, buffer_addr + buffer_size);
    FWUpdMessageReady();
@@ -93,7 +93,7 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //}
    //FWUpdMsgOK();
 
-   sprintf(BuildCPUInfoStr, "\r\nOpen: %s%s  ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
+   sprintf(SerialStringBuf, "\r\nOpen: %s%s  ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
    FWUpdMessageReady();
 
    File hexFile;
@@ -121,26 +121,26 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
 
 void FWUpdMessage(const char *Msg)
 {
-   strcpy(BuildCPUInfoStr, "\r\n");
-   strcat(BuildCPUInfoStr, Msg);
+   strcpy(SerialStringBuf, "\r\n");
+   strcat(SerialStringBuf, Msg);
    FWUpdMessageReady();
 }
 
 void FWUpdMsgOK()
 {
-   strcpy(BuildCPUInfoStr, "OK");
+   strcpy(SerialStringBuf, "OK");
    FWUpdMessageReady();
 }
 
 void FWUpdMsgFailed()
 {
-   strcpy(BuildCPUInfoStr, "Failed!");
+   strcpy(SerialStringBuf, "Failed!");
    FWUpdMessageReady();
 }
 
 void FWUpdMessageReady() 
-{  //BuildCPUInfoStr already populated
-   Serial.printf("\n*%s", BuildCPUInfoStr);
+{  //SerialStringBuf already populated
+   Serial.printf("\n*%s", SerialStringBuf);
    Serial.flush();
    IO1[rwRegFWUpdStatCont] = rFWUSCC64Message; //tell C64 there's a message
    uint32_t beginWait = millis();

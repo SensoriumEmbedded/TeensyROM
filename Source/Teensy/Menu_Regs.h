@@ -39,16 +39,13 @@ enum IO1_Registers  //offset from 0xDE00
    rwRegSelItem        = 12 , // select Menu Item for name, type, execution, etc
    rRegNumItems        = 13 , // num items in menu list
    rRegItemType        = 14 , // regItemTypes: type of item 
-   rwRegItemName       = 15 , // Name of selected item: Serially read out, write anything to reset pointer
-   rwRegPwrUpDefaults  = 16 , // power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 17 , // signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 18 , // Which IO handler will take over upone exit/execute/emulate
-   rwRegNextIOHndlrName= 19 , // IOHandler Name selected in rwRegNextIOHndlr: Serially read out, write anything to reset pointer
-   rwRegBuildCPUInfoStr= 20 , // String containing Build date/time and CPU Freq/Temp: Serially read out, write anything to reset pointer
-                              // also used for FW update messages
-   rwRegFWUpdStatCont  = 21 , // FW update Status/Control, see RegFWUpdCommands
-   
-   StartSIDRegs        = 22 , //start of SID Regs, matching SID Reg order ($D400)
+   rwRegPwrUpDefaults  = 15 , // power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = 16 , // signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 17 , // Which IO handler will take over upone exit/execute/emulate
+   rwRegFWUpdStatCont  = 18 , // FW update Status/Control, see RegFWUpdCommands
+   rwRegSerialString   = 19 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+
+   StartSIDRegs        = 20 , // start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0, 
    rRegSIDFreqHi1      = StartSIDRegs +  1,
    rRegSIDDutyLo1      = StartSIDRegs +  2,
@@ -87,6 +84,14 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDOutOfVoices  = StartSIDRegs + 38,
    rRegSIDStringTerm   = StartSIDRegs + 39,
 
+};
+
+enum RegSerialStringSelect // rwRegSerialString
+{
+   rsstItemName        = 0,  // Name of selected item
+   rsstNextIOHndlrName = 1,  // IOHandler Name selected in rwRegNextIOHndlr
+   rsstSerialStringBuf = 2,  // build SerialStringBuf prior to selecting
+   rsstVersionNum      = 3,     
 };
 
 enum RegPowerUpDefaultMasks
@@ -132,7 +137,7 @@ enum RegCtlCommands
    rCtlStartSelItemWAIT   = 2,
    rCtlGetTimeWAIT        = 3,
    rCtlRunningPRG         = 4, // final signal before running prg, allows IO1 handler change
-   rCtlMakeInfoStrWAIT    = 5, // Make BuildCPUInfoStr
+   rCtlMakeInfoStrWAIT    = 5, // MakeBuildCPUInfoStr
 };
 
 enum regItemTypes //synch with TblItemType

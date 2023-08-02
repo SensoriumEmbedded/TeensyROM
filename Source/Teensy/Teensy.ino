@@ -120,7 +120,7 @@ void setup()
    //free(BigBuf);
    
    MakeBuildCPUInfoStr();
-   Serial.printf("\n%sTeensyROM 0.4 is on-line\n", BuildCPUInfoStr);  //*VERS*
+   Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 } 
      
 void loop()

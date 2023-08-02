@@ -52,9 +52,9 @@ void ServiceSerial()
          BigBufCount = 0;
          Serial.println("Buffer Reset");
          break;
-      case 'f': //show build info
+      case 'f': //show build info.  Menu must be idle, interferes with any serialstring in progress
          MakeBuildCPUInfoStr();
-         Serial.println(BuildCPUInfoStr);
+         Serial.println(SerialStringBuf);
          //Serial.printf("Build Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
          break;
       case 'e': //Reset EEPROM to defaults

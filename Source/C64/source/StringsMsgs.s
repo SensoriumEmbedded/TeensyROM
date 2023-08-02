@@ -21,7 +21,7 @@
 ; ******************************* Strings/Messages ******************************* 
 
 MsgBanner:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM v0.4             ", ChrRvsOff, 0  ;*VERS*
+   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
    !tx SourcesColor, "Source: ", 0 
 MsgSelect:

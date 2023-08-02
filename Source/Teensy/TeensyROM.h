@@ -17,6 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+char strVersionNumber[] = "v0.4+"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
