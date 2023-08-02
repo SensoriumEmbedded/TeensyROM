@@ -88,15 +88,7 @@ void setup()
 
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
-   if (MagNumRead != eepMagicNum)
-   {
-      Serial.println("EEPROM first use, setting defaults");
-      EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
-      EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
-      EEPROM.write(eepAdTimezone, -7); //default to pacific time
-      EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
-      SetEthEEPDefaults();
-   }
+   if (MagNumRead != eepMagicNum) SetEEPDefaults();
 
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rRegStatus]        = rsReady;
@@ -190,4 +182,14 @@ void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len)
 void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len)
 {
    while (len--) buf[len] = EEPROM.read(addr+len);   
+}
+
+void SetEEPDefaults()
+{
+   Serial.println("Setting EEPROM to defaults");
+   EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
+   EEPROM.write(eepAdPwrUpDefaults, rpudMusicMask /* | rpudNetTimeMask */); //default music on, eth time synch off
+   EEPROM.write(eepAdTimezone, -7); //default to pacific time
+   EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
+   SetEthEEPDefaults();
 }
