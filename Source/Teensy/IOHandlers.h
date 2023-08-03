@@ -42,21 +42,6 @@ struct stcIOHandlers
   void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
 };
 
-enum enumIOHandlers //Synch order/qty with stcIOHandlers (below)
-{
-   IOH_None,
-   IOH_MIDI_Datel,      
-   IOH_MIDI_Sequential, 
-   IOH_MIDI_Passport,   
-   IOH_MIDI_NamesoftIRQ,
-   IOH_Debug,
-   IOH_TeensyROM, 
-   IOH_Swiftlink,
-   IOH_EpyxFastLoad,
-   
-   IOH_Num_Handlers       //always last
-};
-
 #include "IO_Handlers\IOH_None.c"
 #include "IO_Handlers\IOH_MIDI.c"
 #include "IO_Handlers\IOH_Debug.c"

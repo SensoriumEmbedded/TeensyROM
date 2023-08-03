@@ -276,7 +276,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    if (HeaderLen < 0x40) HeaderLen = 0x40;
    
    int16_t HWType = (int16_t)toU16(CRT_Image+0x16);
-   Serial.printf("HW Type: %d\n", HWType);
+   Serial.printf("HW Type: %d ($%04x)\n", HWType, (uint16_t)HWType);
    switch (HWType)
       {
       case Cart_Generic:
@@ -369,5 +369,21 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    }      
    
    Serial.println("\nHW config unknown!");
+}
+
+uint32_t toU32(uint8_t* src)
+{
+   return
+      ((uint32_t)src[0]<<24) + 
+      ((uint32_t)src[1]<<16) + 
+      ((uint32_t)src[2]<<8 ) + 
+      ((uint32_t)src[3]    ) ;
+}
+
+uint16_t toU16(uint8_t* src)
+{
+   return
+      ((uint16_t)src[0]<<8 ) + 
+      ((uint16_t)src[1]    ) ;
 }
 

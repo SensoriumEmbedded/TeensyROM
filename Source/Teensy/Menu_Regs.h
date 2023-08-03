@@ -159,8 +159,24 @@ enum regItemTypes //synch with TblItemType
 struct StructMenuItem
 {
   unsigned char ItemType;
+  uint8_t IOHndlrAssoc;   //enumIOHandlers
   char Name[MaxItemNameLength];
   uint8_t *Code_Image;
   uint16_t Size;
+};
+
+enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
+{
+   IOH_None,
+   IOH_MIDI_Datel,      
+   IOH_MIDI_Sequential, 
+   IOH_MIDI_Passport,   
+   IOH_MIDI_NamesoftIRQ,
+   IOH_Debug,
+   IOH_TeensyROM, 
+   IOH_Swiftlink,
+   IOH_EpyxFastLoad,
+   
+   IOH_Num_Handlers       //always last
 };
 

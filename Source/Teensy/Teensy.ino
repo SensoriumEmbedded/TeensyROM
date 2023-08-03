@@ -45,10 +45,11 @@ StructMenuItem USBDriveMenu[MaxMenuItems];
 char USBDrivePath[250] = "/";
   
 StructMenuItem USBHostMenu = {
-   rtNone,  //unsigned char ItemType;
-   "<Nothing Sent>",      //char Name[MaxItemNameLength];
-   NULL,    //const unsigned char *Code_Image;
-   0        //uint16_t Size;
+   rtNone,  // ItemType;
+   IOH_None, // IOHndlrAssoc;  enumIOHandlers
+   "<Nothing Sent>",      // Name[MaxItemNameLength];
+   NULL,    // *Code_Image;
+   0        // Size;
 };
 uint8_t* HOST_Image = NULL; //For receiving files from USB Host
 uint8_t NumUSBHostItems = 1;

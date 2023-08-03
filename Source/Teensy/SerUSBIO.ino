@@ -342,23 +342,6 @@ void ReceiveFile()
  
 }
 
-   
-uint32_t toU32(uint8_t* src)
-{
-   return
-      ((uint32_t)src[0]<<24) + 
-      ((uint32_t)src[1]<<16) + 
-      ((uint32_t)src[2]<<8 ) + 
-      ((uint32_t)src[3]    ) ;
-}
-
-uint16_t toU16(uint8_t* src)
-{
-   return
-      ((uint16_t)src[0]<<8 ) + 
-      ((uint16_t)src[1]    ) ;
-}
-
 bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
