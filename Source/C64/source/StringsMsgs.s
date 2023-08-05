@@ -24,9 +24,12 @@ MsgBanner:
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
    !tx SourcesColor, "Source: ", 0 
-MsgSelect:
+MsgSelect1:
    !tx SourcesColor, "Sources:          "
-   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, MenuMiscColor, "CRSR: Page", ChrReturn
+   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, "CRSR", MenuMiscColor, "  Page ("
+   !tx 0
+MsgSelect2:
+   !tx ")", ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
    !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
@@ -35,7 +38,7 @@ MsgSelect:
    !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Settings", ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
    !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID"
-    !tx 0
+   !tx 0
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
 MsgNoItems:

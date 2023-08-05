@@ -49,12 +49,15 @@
    Ptr2AddrHi  = $fe
    ;other RAM Registers/code space
    ;$0334-033b is "free space"
-   RegMenuPageStart = $0334 ;first logical item # on current menu page
-   SIDVoicCont      = $0335 ;midi2sid polyphonic voice/envelope controls
-   SIDAttDec        = $0336
-   SIDSusRel        = $0337
-   SIDDutyHi        = $0338
-   MusicPlaying     = $0339 ;is the music playing?
+   MusicPlaying     = $0335 ;is the music playing?
+   RegMenuPageNum   = $0334 ;Current Page # 
+   RegMenuPageStart = $0336 ;first logical item # on current menu page
+   
+   SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
+   SIDAttDec        = $0339
+   SIDSusRel        = $033a
+   SIDDutyHi        = $033b
+   
    ;$033c-03fb is the tape buffer (192 bytes)
    PRGLoadStartReloc= $033c 
    
@@ -146,6 +149,7 @@ WaitForKey:
    cmp rRegNumItems+IO1Port
    bpl WaitForKey  ;already on last page
    sta RegMenuPageStart
+   inc RegMenuPageNum
    jsr ListMenuItems
    jmp WaitForKey
 
@@ -157,6 +161,7 @@ WaitForKey:
    sec
    sbc #MaxMenuDispItems
    sta RegMenuPageStart
+   dec RegMenuPageNum
    jsr ListMenuItems
    jmp WaitForKey  
 
@@ -216,22 +221,29 @@ WaitForKey:
 ___Subroutines________________________________:
 
 
-;                           list out rom number, type, & names
-ListMenuItemsChangeInit:  ;Prep: Load acc with menu to change to
+;                           list out item number, type, & names
+ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTR
 ListMenuItemsInit:
    lda #0       ;initialize to first Item
    sta RegMenuPageStart
-ListMenuItems:  ;Prep: load RegMenuPageStart with first ROM on menu page
+   lda #1       ;initialize to first Page
+   sta RegMenuPageNum
+ListMenuItems:  ;Prep: load RegMenuPageStart with first item on menu page
    jsr PrintBanner 
    
    ldx #20 ;row   Print the select message now so we can grey out the up/dn below if needed
    ldy #0  ;col
    clc
    jsr SetCursor
-   lda #<MsgSelect
-   ldy #>MsgSelect
+   lda #<MsgSelect1
+   ldy #>MsgSelect1
+   jsr PrintString
+   lda RegMenuPageNum
+   jsr PrintHexByte
+   lda #<MsgSelect2
+   ldy #>MsgSelect2
    jsr PrintString
    
    ldx #2  ;row
