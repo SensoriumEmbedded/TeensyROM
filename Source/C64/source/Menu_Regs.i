@@ -20,28 +20,28 @@
 
 ;!!!!!!!!!!!!!!!!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   MaxItemNameLength = 28
+   MaxItemNameLength = 32
 
    ;;;;;;;;;;;;;;;;;;  start IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    
-   rRegStatus          =  0 ;// Busy when doing SD/USB access.  note: loc 0(DE00) gets written to at reset
-   rRegStrAddrLo       =  1 ;// lo byte of start address of the prg file being transfered to mem
-   rRegStrAddrHi       =  2 ;// Hi byte of start address
-   rRegStrAvailable    =  3 ;// zero when inactive/complete 
-   rRegStreamData      =  4 ;// next byte of data to transfer, auto increments when read
+   rRegStatus          =  0 ;// Indicates busy (not rsReady) when doing SD/USB access, etc.
+   rRegStrAddrLo       =  1 ;// Stream PRG: lo byte of start address of the prg file being transfered to mem
+   rRegStrAddrHi       =  2 ;// Stream PRG: Hi byte of start address
+   rRegStrAvailable    =  3 ;// Stream PRG: zero when inactive/complete 
+   rRegStreamData      =  4 ;// Stream PRG: next byte of data to transfer, auto increments when read
    wRegControl         =  5 ;// RegCtlCommands: execute specific functions
-   rRegPresence1       =  6 ;// for HW detect: 0x55
-   rRegPresence2       =  7 ;// for HW detect: 0xAA
-   rRegLastHourBCD     =  8 ;// Last TOD Hours read
-   rRegLastMinBCD      =  9 ;// Last TOD Minutes read
-   rRegLastSecBCD      = 10 ;// Last TOD Seconds read
+   rRegPresence1       =  6 ;// HW detect: 0x55
+   rRegPresence2       =  7 ;// HW detect: 0xAA
+   rRegLastHourBCD     =  8 ;// Last TOD: Hours read
+   rRegLastMinBCD      =  9 ;// Last TOD: Minutes read
+   rRegLastSecBCD      = 10 ;// Last TOD: Seconds read
    rWRegCurrMenuWAIT   = 11 ;// enum RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItem        = 12 ;// select Menu Item for name, type, execution, etc
-   rRegNumItems        = 13 ;// num items in menu list
-   rRegItemType        = 14 ;// regItemTypes: type of item 
-   rwRegPwrUpDefaults  = 15 ;// power up default reg, see bit mask defs
-   rwRegTimezone       = 16 ;// signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 17 ;// Which IO handler will take over upone exit/execute/emulate
+   rwRegSelItem        = 12 ;// Item sel/info: select Menu Item for name, type, execution, etc
+   rRegNumItems        = 13 ;// Item sel/info: num items in menu list
+   rRegItemTypePlusIOH = 14 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rwRegPwrUpDefaults  = 15 ;// EEPROM stored: power up default reg, see bit mask defs
+   rwRegTimezone       = 16 ;// EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 17 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
    rwRegFWUpdStatCont  = 18 ;// FW update Status/Control, see RegFWUpdCommands
    rwRegSerialString   = 19 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
 

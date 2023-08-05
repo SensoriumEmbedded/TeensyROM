@@ -152,14 +152,14 @@ MsgFail:
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx "--- "  ; rtNone      = 0,
-   !tx "Unk "  ; rtUnknown   = 1,
-   !tx "16k "  ; rtBin16k    = 2,
-   !tx "8Hi "  ; rtBin8kHi   = 3,
-   !tx "8Lo "  ; rtBin8kLo   = 4,
-   !tx "128 "  ; rtBinC128   = 5,
-   !tx "Dir "  ; rtDirectory = 6,
-   !tx "Prg "  ; rtFilePrg   = 7,
-   !tx "Crt "  ; rtFileCrt   = 8,
-   !tx "Hex "  ; rtFileHex   = 9,
+   !tx " ---"  ; rtNone      = 0,
+   !tx " Unk"  ; rtUnknown   = 1,
+   !tx " 16k"  ; rtBin16k    = 2,
+   !tx " 8Hi"  ; rtBin8kHi   = 3,
+   !tx " 8Lo"  ; rtBin8kLo   = 4,
+   !tx " 128"  ; rtBinC128   = 5,
+   !tx " Dir"  ; rtDirectory = 6,
+   !tx " Prg"  ; rtFilePrg   = 7,
+   !tx " Crt"  ; rtFileCrt   = 8,
+   !tx " Hex"  ; rtFileHex   = 9,
    

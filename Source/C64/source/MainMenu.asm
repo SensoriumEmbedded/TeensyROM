@@ -30,6 +30,7 @@
    TimeColor        = ChrOrange
    MenuMiscColor    = ChrGreen
    ROMNumColor      = ChrDrkGrey
+   AssignedIOHColor = ChrCyan
    OptionColor      = ChrYellow
    SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
@@ -289,7 +290,7 @@ nextLine
 ;align to col
    sec
    jsr SetCursor ;read current to load x (row)
-   ldy #MaxItemNameLength + 3  ;set y = col
+   ldy #MaxItemNameLength + 2  ;set y = col
    clc
    jsr SetCursor
 ; print type
@@ -297,15 +298,25 @@ nextLine
    jsr SendChar
    ldx #<TblItemType
    ldy #>TblItemType
-   lda rRegItemType+IO1Port 
+   lda rRegItemTypePlusIOH+IO1Port 
+   and #$7f  ;bit 7 indicates an assigned IOHandler, don't care yet
    jsr Print4CharTable
-;print ROM #
-   lda #ROMNumColor
+;;print ROM #
+;   lda #ROMNumColor
+;   jsr SendChar
+;   lda rwRegSelItem+IO1Port
+;   jsr PrintHexByte
+; Assigned IO Handler? '+' if so
+   lda rRegItemTypePlusIOH+IO1Port 
+   and #$80  ;bit 7 indicates an assigned IOHandler, now we care!   bne +
+   beq MenuLineDone
+   lda #AssignedIOHColor
    jsr SendChar
-   lda rwRegSelItem+IO1Port
-   jsr PrintHexByte
+   lda #'+'
+   jsr SendChar
    
 ;line is done printing, check for next...
+MenuLineDone
    pla ;menu select letter
    inc rwRegSelItem+IO1Port
    ldx rwRegSelItem+IO1Port
@@ -338,7 +349,8 @@ GreyOutDn:
 ; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
 SelectMenuItem:
-   lda rRegItemType+IO1Port ;grab this now it will change if new directory is loaded
+   lda rRegItemTypePlusIOH+IO1Port ;grab this now it will change if new directory is loaded
+   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtFileHex  ;check for .hex file selected and prep for FW update
    beq FWUpdate  
    pha

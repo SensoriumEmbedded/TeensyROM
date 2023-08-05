@@ -318,8 +318,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    {
       switch(Address)
       {
-         case rRegItemType:
-            DataPortWriteWaitLog(MenuSource[IO1[rwRegSelItem]].ItemType);  
+         case rRegItemTypePlusIOH:
+            Data = MenuSource[IO1[rwRegSelItem]].ItemType;
+            if(MenuSource == ROMMenu && MenuSource[IO1[rwRegSelItem]].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+            DataPortWriteWaitLog(Data);  
             break;
          case rRegStreamData:
             DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
