@@ -23,7 +23,7 @@
 
 void HandleExecution()
 {
-   StructMenuItem MenuSel = MenuSource[IO1[rwRegSelItem]]; //local copy of selected menu item
+   StructMenuItem MenuSel = MenuSource[IO1[rwRegSelItem]]; //Condensed pointer to selected menu item
    
    if (MenuSel.ItemType == rtNone || MenuSel.ItemType == rtUnknown) return;  //no action taken for these types
    
@@ -75,6 +75,8 @@ void HandleExecution()
    
    if (MenuSel.ItemType == rtFileCrt) ParseCRTFile(&MenuSel); //will update MenuSel.ItemType & .Code_Image, if checks ok
  
+   if (MenuSel.ItemType == rtFileP00) ParseP00File(&MenuSel); //will update MenuSel.ItemType & .Code_Image, if checks ok
+
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
    uint8_t CartLoaded = false;
@@ -236,6 +238,7 @@ void LoadDirectory(bool SD_nUSBDrive)
          if (strcmp(Extension, ".prg")==0) DrvMenuItem[NumItems].ItemType = rtFilePrg;
          else if (strcmp(Extension, ".crt")==0) DrvMenuItem[NumItems].ItemType = rtFileCrt;
          else if (strcmp(Extension, ".hex")==0) DrvMenuItem[NumItems].ItemType = rtFileHex;
+         else if (strcmp(Extension, ".p00")==0) DrvMenuItem[NumItems].ItemType = rtFileP00;
          else DrvMenuItem[NumItems].ItemType = rtUnknown;
       }
       
@@ -252,8 +255,25 @@ void LoadDirectory(bool SD_nUSBDrive)
   
 }
 
+void ParseP00File(StructMenuItem* MyMenuItem)   
+{  //update .ItemType(rtUnknown or rtFilePrg) & .Code_Image
+   //Sources:
+   // https://www.infinite-loop.at/Power64/Documentation/Power64-ReadMe/AE-File_Formats.html
+   
+   if(strcmp(MyMenuItem->Code_Image, "C64File") == 0)
+   {
+      MyMenuItem->Code_Image += 26;
+      MyMenuItem->ItemType = rtFilePrg;
+   }
+   else
+   {
+      Serial.println("Magic constant not found");
+      MyMenuItem->ItemType = rtUnknown;
+   }
+}
+
 void ParseCRTFile(StructMenuItem* MyMenuItem)   
-{
+{  //update .ItemType(rtUnknown or rtBin*) & .Code_Image
    //Sources:
    // https://codebase64.org/doku.php?id=base:crt_file_format
    // https://rr.pokefinder.org/wiki/CRT_ID

@@ -137,10 +137,6 @@ MsgLoading:
    !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
 MsgWaiting:
    !tx TimeColor, " Waiting:", 0
-MsgError:
-   !tx ChrRed, "Error: ", 0
-MsgErrNoData:
-   !tx "No Data Available", 0
 MsgTesting:
    !tx NameColor, "  Test", 0
 MsgPass:
@@ -159,7 +155,9 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx " 8Lo"  ; rtBin8kLo   = 4,
    !tx " 128"  ; rtBinC128   = 5,
    !tx " Dir"  ; rtDirectory = 6,
+   ;file extension matching:
    !tx " Prg"  ; rtFilePrg   = 7,
    !tx " Crt"  ; rtFileCrt   = 8,
    !tx " Hex"  ; rtFileHex   = 9,
+   !tx " P00"  ; rtFileP00   = 10,
    

@@ -149,9 +149,11 @@ enum regItemTypes //synch with TblItemType
    rtBin8kLo   = 4,
    rtBinC128   = 5,
    rtDirectory = 6,
+   //file extension matching:
    rtFilePrg   = 7,
    rtFileCrt   = 8,
    rtFileHex   = 9,
+   rtFileP00   = 10,
    
    //127 max, bit 7 used to indicate assigned IOH to TR
 };

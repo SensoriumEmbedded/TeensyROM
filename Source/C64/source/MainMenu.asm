@@ -349,30 +349,26 @@ GreyOutDn:
 ; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
 SelectMenuItem:
-   lda rRegItemTypePlusIOH+IO1Port ;grab this now it will change if new directory is loaded
+   lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtFileHex  ;check for .hex file selected and prep for FW update
    beq FWUpdate  
-   pha
+
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
    jsr WaitForTR ;if it's a ROM/crt image, it won't return from this
-   pla
-   cmp #rtFilePrg
-   beq XferCopyRun  ;if it's a program, x-fer and launch, otherwise reprint menu and return
-   jsr ListMenuItemsInit
+
+   lda rRegStrAvailable+IO1Port 
+   bne XferCopyRun       ; if it's a program (x-fer ready), x-fer it and launch
+   jsr ListMenuItemsInit ; otherwise reprint menu and return
    rts
 
 XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
    ;192 byte limit, watch size of PRGLoadStart block!  check below
-   lda rRegStrAvailable+IO1Port
-   bne +
-   lda #<MsgErrNoData;no data to read!
-   ldy #>MsgErrNoData
-   jmp ErrOut
+
    ;no going back now...
-+  jsr SIDMusicOff    
+   jsr SIDMusicOff    
    lda #<MsgLoading
    ldy #>MsgLoading
    jsr PrintString
@@ -468,7 +464,7 @@ WaitForTR:  ;wait for ready status, uses acc, X and Y
    lda #<MsgWaiting
    ldy #>MsgWaiting
    jsr PrintString
-WaitForTRNoPr:
+WaitForTRNoPr:  ;wait without moving cursor/printing
 !ifndef Debug {
 -- ldx#5 ;require 5 consecutive reads of ready to continue
    inc ScreenCharMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
@@ -478,24 +474,6 @@ WaitForTRNoPr:
    dex
    bne -
 }
-   rts
-
-ErrOut:   
-   ;Error msg pointer stored in acc/y
-   pha
-   tya
-   pha
-   ldx #19 ;row
-   ldy #0  ;col
-   clc
-   jsr SetCursor
-   lda #<MsgError
-   ldy #>MsgError
-   jsr PrintString   
-   pla
-   tay
-   pla
-   jsr PrintString
    rts
 
 SynchEthernetTime:
