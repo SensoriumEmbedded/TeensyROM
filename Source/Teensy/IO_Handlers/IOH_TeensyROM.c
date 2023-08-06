@@ -39,7 +39,7 @@ stcIOHandlers IOHndlr_TeensyROM =
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
-char SerialStringBuf[300] = "err"; // used for message passing to C64, up to full path length
+char SerialStringBuf[MaxPathLength] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;

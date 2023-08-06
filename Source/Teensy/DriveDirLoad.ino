@@ -32,17 +32,13 @@ void HandleExecution()
    if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) 
    {
       bool SD_nUSBDrive = (IO1[rWRegCurrMenuWAIT] == rmtSD);
-      char * myPath;
-      
-      if (SD_nUSBDrive) myPath = SDPath;
-      else myPath = USBDrivePath;
       
       if (MenuSel.ItemType == rtFileHex)  //FW update from hex file
       {
-         char FullFilePath[300];
+         char FullFilePath[MaxPathLength];
          
-         if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
-         else sprintf(FullFilePath, "%s/%s", myPath, MenuSel.Name);
+         if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
+         else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSel.Name);
 
          DoFlashUpdate(SD_nUSBDrive, FullFilePath);
          IO1[rwRegFWUpdStatCont] = rFWUSCC64Finish; //last thing, tell C64 we're done
@@ -54,10 +50,10 @@ void HandleExecution()
          
          if(strcmp(MenuSel.Name, UpDirString)==0)
          {  //up dir
-            char * LastSlash = strrchr(myPath, '/'); //find last slash
+            char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
             if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
          }
-         else strcat(myPath, MenuSel.Name); //append selected dir name
+         else strcat(DriveDirPath, MenuSel.Name); //append selected dir name
          
          LoadDirectory(SD_nUSBDrive); 
          return;  //we're done here...
@@ -141,14 +137,14 @@ void MenuChange()
          SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
-         stpcpy(SDPath, "/");
+         stpcpy(DriveDirPath, "/");
          LoadDirectory(true);
-         MenuSource = SDMenu; 
+         MenuSource = DriveDirMenu; 
          break;
       case rmtUSBDrive:
-         stpcpy(USBDrivePath, "/");
+         stpcpy(DriveDirPath, "/");
          LoadDirectory(false);
-         MenuSource = USBDriveMenu; 
+         MenuSource = DriveDirMenu; 
          break;
       case rmtUSBHost:
          MenuSource = &USBHostMenu; 
@@ -159,14 +155,10 @@ void MenuChange()
 
 bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
 {
-   char *myPath;
-   if (SD_nUSBDrive) myPath= SDPath;
-   else myPath = USBDrivePath;
-   
-   char FullFilePath[300];
+   char FullFilePath[MaxPathLength];
 
-   if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "%s%s", myPath, MenuSource[SelItemFullIdx].Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", myPath, MenuSource[SelItemFullIdx].Name);
+   if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);
       
    Serial.printf("Openning: %s\n", FullFilePath);
    
@@ -178,6 +170,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 
    free(RAM_Image);
    RAM_Image = (uint8_t*)malloc(myFile.size());
+   Serial.printf("Size: %ul bytes\n", myFile.size());
 
    uint16_t count=0;
    while (myFile.available() && count < myFile.size()) RAM_Image[count++]=myFile.read();
@@ -192,27 +185,15 @@ void LoadDirectory(bool SD_nUSBDrive)
 {
    uint16_t NumItems = 0;
    File dir;
-   char *DrvPath;
-   StructMenuItem* DrvMenuItem;
- 
-   if (SD_nUSBDrive)
-   {  //SD card
-      dir         = SD.open(SDPath);
-      DrvPath     = SDPath;
-      DrvMenuItem = SDMenu;
-   }
-   else 
-   {  //USB Drive
-      dir         = firstPartition.open(USBDrivePath);
-      DrvPath     = USBDrivePath;
-      DrvMenuItem = USBDriveMenu;
-   }
+      
+   if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
+   else dir = firstPartition.open(DriveDirPath); //USB Drive
    
-   if (!(strlen(DrvPath) == 1 && DrvPath[0] == '/'))
+   if (!(strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/'))
    {  // *not* at root, add up dir option
       NumItems = 1;
-      strcpy(DrvMenuItem[0].Name, UpDirString);
-      DrvMenuItem[0].ItemType = rtDirectory;
+      strcpy(DriveDirMenu[0].Name, UpDirString);
+      DriveDirMenu[0].ItemType = rtDirectory;
    }
    
    const char *filename;
@@ -222,27 +203,27 @@ void LoadDirectory(bool SD_nUSBDrive)
       filename = entry.name();
       if (entry.isDirectory())
       {
-         DrvMenuItem[NumItems].Name[0] = '/';
-         memcpy(DrvMenuItem[NumItems].Name+1, filename, MaxItemNameLength-1);
+         DriveDirMenu[NumItems].Name[0] = '/';
+         memcpy(DriveDirMenu[NumItems].Name+1, filename, MaxItemNameLength-1);
       }
-      else memcpy(DrvMenuItem[NumItems].Name, filename, MaxItemNameLength);
+      else memcpy(DriveDirMenu[NumItems].Name, filename, MaxItemNameLength);
       
-      DrvMenuItem[NumItems].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
+      DriveDirMenu[NumItems].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
       
-      if (entry.isDirectory()) DrvMenuItem[NumItems].ItemType = rtDirectory;
+      if (entry.isDirectory()) DriveDirMenu[NumItems].ItemType = rtDirectory;
       else 
       {
          char* Extension = (filename + strlen(filename) - 4);
          for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
          
-         if (strcmp(Extension, ".prg")==0) DrvMenuItem[NumItems].ItemType = rtFilePrg;
-         else if (strcmp(Extension, ".crt")==0) DrvMenuItem[NumItems].ItemType = rtFileCrt;
-         else if (strcmp(Extension, ".hex")==0) DrvMenuItem[NumItems].ItemType = rtFileHex;
-         else if (strcmp(Extension, ".p00")==0) DrvMenuItem[NumItems].ItemType = rtFileP00;
-         else DrvMenuItem[NumItems].ItemType = rtUnknown;
+         if (strcmp(Extension, ".prg")==0) DriveDirMenu[NumItems].ItemType = rtFilePrg;
+         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[NumItems].ItemType = rtFileCrt;
+         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[NumItems].ItemType = rtFileHex;
+         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[NumItems].ItemType = rtFileP00;
+         else DriveDirMenu[NumItems].ItemType = rtUnknown;
       }
       
-      //Serial.printf("%d- %s\n", NumItems, DrvMenuItem[NumItems].Name); 
+      //Serial.printf("%d- %s\n", NumItems, DriveDirMenu[NumItems].Name); 
       entry.close();
       if (NumItems++ == MaxMenuItems)
       {

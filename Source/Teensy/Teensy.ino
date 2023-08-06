@@ -38,12 +38,9 @@ volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 uint8_t CurrentIOHandler = IOH_None;
 
-StructMenuItem *SDMenu;
-char SDPath[250] = "/";
+StructMenuItem *DriveDirMenu;
+char DriveDirPath[MaxPathLength];
 
-StructMenuItem *USBDriveMenu; // = SDMenu; //[MaxMenuItems];
-char USBDrivePath = SDPath; //[250] = "/";
-  
 StructMenuItem USBHostMenu = {
    rtNone,  // ItemType;
    IOH_None, // IOHndlrAssoc;  enumIOHandlers
@@ -102,8 +99,7 @@ void setup()
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
-   SDMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 150k of RAM2
-   USBDriveMenu = SDMenu;
+   DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 150k of RAM2
    SetUpMainMenuROM();
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1);

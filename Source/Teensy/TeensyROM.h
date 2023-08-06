@@ -55,7 +55,7 @@ uint32_t* BigBuf = NULL;
    __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif
 
-
+#define MaxPathLength       300
 #define MaxMenuItems        (255*MaxItemsPerPage)  //255 pages max
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"
