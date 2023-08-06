@@ -44,7 +44,9 @@ volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 volatile uint8_t eepAddrToWrite, eepDataToWrite;
-StructMenuItem *MenuSource = ROMMenu; //init to internal memory
+StructMenuItem *MenuSource = TeensyROMMenu; //init to internal memory
+uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
+uint16_t NumItemsFull;  //Num Items in Current Menu
 
 extern bool EthernetInit();
 extern void MenuChange();
@@ -319,14 +321,14 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rRegItemTypePlusIOH:
-            Data = MenuSource[IO1[rwRegSelItem]].ItemType;
-            if(MenuSource == ROMMenu && MenuSource[IO1[rwRegSelItem]].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+            Data = MenuSource[SelItemFullIdx].ItemType;
+            if(MenuSource == TeensyROMMenu && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
             DataPortWriteWaitLog(Data);  
             break;
          case rRegStreamData:
-            DataPortWriteWait(MenuSource[IO1[rwRegSelItem]].Code_Image[StreamOffsetAddr]);
+            DataPortWriteWait(MenuSource[SelItemFullIdx].Code_Image[StreamOffsetAddr]);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= MenuSource[IO1[rwRegSelItem]].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
+            if (++StreamOffsetAddr >= MenuSource[SelItemFullIdx].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
             Data = ptrSerialString[StringOffset++];
@@ -343,8 +345,13 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       TraceLogAddValidData(Data);
       switch(Address)
       {
-         case rwRegSelItem:
-            IO1[rwRegSelItem]=Data;
+         case rwRegSelItemOnPage:
+            SelItemFullIdx=Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            IO1[rwRegSelItemOnPage]=Data;
+            break;
+         case rwRegPageNumber:
+            IO1[rwRegPageNumber]=Data;
+            IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
             break;
          case rwRegFWUpdStatCont:
             IO1[rwRegFWUpdStatCont]=Data;
@@ -377,7 +384,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  ptrSerialString = MenuSource[IO1[rwRegSelItem]].Name;
+                  ptrSerialString = MenuSource[SelItemFullIdx].Name;
                   break;
                case rsstNextIOHndlrName:
                   ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;

@@ -23,7 +23,7 @@
 
 void HandleExecution()
 {
-   StructMenuItem MenuSel = MenuSource[IO1[rwRegSelItem]]; //Condensed pointer to selected menu item
+   StructMenuItem MenuSel = MenuSource[SelItemFullIdx]; //Condensed pointer to selected menu item
    
    if (MenuSel.ItemType == rtNone || MenuSel.ItemType == rtUnknown) return;  //no action taken for these types
    
@@ -115,8 +115,8 @@ void HandleExecution()
          break;      
       case rtFilePrg:
          //set up for transfer
-         MenuSource[IO1[rwRegSelItem]].Code_Image = MenuSel.Code_Image; 
-         MenuSource[IO1[rwRegSelItem]].Size = MenuSel.Size; //only copy the pointer & Size back, not type
+         MenuSource[SelItemFullIdx].Code_Image = MenuSel.Code_Image; 
+         MenuSource[SelItemFullIdx].Size = MenuSel.Size; //only copy the pointer & Size back, not type
          IO1[rRegStrAddrLo]=MenuSel.Code_Image[0];
          IO1[rRegStrAddrHi]=MenuSel.Code_Image[1];
          IO1[rRegStrAvailable]=0xff;
@@ -137,8 +137,8 @@ void MenuChange()
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
-         MenuSource = ROMMenu; 
-         IO1[rRegNumItems] = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+         MenuSource = TeensyROMMenu; 
+         SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
          stpcpy(SDPath, "/");
@@ -152,7 +152,7 @@ void MenuChange()
          break;
       case rmtUSBHost:
          MenuSource = &USBHostMenu; 
-         IO1[rRegNumItems] = NumUSBHostItems;
+         SetNumItems(NumUSBHostItems);
          break;
    }
 }
@@ -165,8 +165,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    
    char FullFilePath[300];
 
-   if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "%s%s", myPath, MenuSource[IO1[rwRegSelItem]].Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", myPath, MenuSource[IO1[rwRegSelItem]].Name);
+   if (strlen(myPath) == 1 && myPath[0] == '/') sprintf(FullFilePath, "%s%s", myPath, MenuSource[SelItemFullIdx].Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", myPath, MenuSource[SelItemFullIdx].Name);
       
    Serial.printf("Openning: %s\n", FullFilePath);
    
@@ -190,7 +190,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 
 void LoadDirectory(bool SD_nUSBDrive) 
 {
-   uint8_t NumItems = 0;
+   uint16_t NumItems = 0;
    File dir;
    char *DrvPath;
    StructMenuItem* DrvMenuItem;
@@ -232,7 +232,7 @@ void LoadDirectory(bool SD_nUSBDrive)
       if (entry.isDirectory()) DrvMenuItem[NumItems].ItemType = rtDirectory;
       else 
       {
-         char* Extension = (DrvMenuItem[NumItems].Name + strlen(DrvMenuItem[NumItems].Name) - 4);
+         char* Extension = (filename + strlen(filename) - 4);
          for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
          
          if (strcmp(Extension, ".prg")==0) DrvMenuItem[NumItems].ItemType = rtFilePrg;
@@ -251,8 +251,7 @@ void LoadDirectory(bool SD_nUSBDrive)
       }
    }
    
-   IO1[rRegNumItems] = NumItems;
-  
+   SetNumItems(NumItems);
 }
 
 void ParseP00File(StructMenuItem* MyMenuItem)   
@@ -260,7 +259,7 @@ void ParseP00File(StructMenuItem* MyMenuItem)
    //Sources:
    // https://www.infinite-loop.at/Power64/Documentation/Power64-ReadMe/AE-File_Formats.html
    
-   if(strcmp(MyMenuItem->Code_Image, "C64File") == 0)
+   if(strcmp((char*)MyMenuItem->Code_Image, "C64File") == 0)
    {
       MyMenuItem->Code_Image += 26;
       MyMenuItem->ItemType = rtFilePrg;

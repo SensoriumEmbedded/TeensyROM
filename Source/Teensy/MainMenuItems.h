@@ -27,7 +27,7 @@
  #include "ROMs\disp_fract.prg.h"
  #include "ROMs\draw01.prg.h"
 
-StructMenuItem ROMMenu[] = 
+StructMenuItem TeensyROMMenu[] = 
 {
 //regItemTypes,enumIOHandlers   
 // ItemType , IOHndlrAssoc     , Name[MaxItemNameLength]          , *Code_Image                          , Size ,

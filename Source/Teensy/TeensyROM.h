@@ -34,7 +34,7 @@ char strVersionNumber[] = "v0.4+"; //*VERSION*
 //#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
 //#define DbgSpecial    //Special case logging to BigBuf
 
-#define BigBufSize          5000
+#define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
@@ -56,7 +56,7 @@ uint32_t* BigBuf = NULL;
 #endif
 
 
-#define MaxMenuItems        254
+#define MaxMenuItems        (255*MaxItemsPerPage)  //255 pages max
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730

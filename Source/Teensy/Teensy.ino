@@ -38,11 +38,11 @@ volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
 uint8_t CurrentIOHandler = IOH_None;
 
-StructMenuItem SDMenu[MaxMenuItems];
+StructMenuItem *SDMenu;
 char SDPath[250] = "/";
 
-StructMenuItem USBDriveMenu[MaxMenuItems];
-char USBDrivePath[250] = "/";
+StructMenuItem *USBDriveMenu; // = SDMenu; //[MaxMenuItems];
+char USBDrivePath = SDPath; //[250] = "/";
   
 StructMenuItem USBHostMenu = {
    rtNone,  // ItemType;
@@ -94,7 +94,7 @@ void setup()
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rRegStatus]        = rsReady;
    IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-   IO1[rRegNumItems]      = sizeof(ROMMenu)/sizeof(ROMMenu[0]);
+   SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
    IO1[rRegPresence1]     = 0x55;   
    IO1[rRegPresence2]     = 0xAA;   
    for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
@@ -102,6 +102,8 @@ void setup()
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
+   SDMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 150k of RAM2
+   USBDriveMenu = SDMenu;
    SetUpMainMenuROM();
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1);
@@ -194,3 +196,12 @@ void SetEEPDefaults()
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
 }
+
+void SetNumItems(uint16_t NumItems)
+{
+   NumItemsFull = NumItems;
+   IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
+   IO1[rwRegPageNumber] = 1;
+   IO1[rRegNumPages] = NumItems/MaxItemsPerPage + 1;
+}
+

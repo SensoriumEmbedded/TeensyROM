@@ -20,10 +20,10 @@
 
 void IOHandlerInitToNext()
 { //called after cart loaded, PRG x-fer finished, or exit to basic (rsIOHWinit)
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && ROMMenu[IO1[rwRegSelItem]].IOHndlrAssoc != IOH_None)
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && TeensyROMMenu[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
       Serial.println("IO Handler set by Teensy Menu");
-      IOHandlerInit(ROMMenu[IO1[rwRegSelItem]].IOHndlrAssoc); //Could use MenuSource, same thing as ROMMenu here
+      IOHandlerInit(TeensyROMMenu[SelItemFullIdx].IOHndlrAssoc); //Could use MenuSource, same thing as TeensyROMMenu here
    }
    else
    {

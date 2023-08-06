@@ -35,7 +35,6 @@
    SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
    NameColor        = ChrLtGreen
-   MaxMenuDispItems = 16
    M2SDataColumn    = 14
 
    GreyOutColor     = PokeDrkGrey
@@ -50,9 +49,6 @@
    ;other RAM Registers/code space
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
-   RegMenuPageNum   = $0334 ;Current Page # 
-   RegMenuPageStart = $0336 ;first logical item # on current menu page
-   
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
    SIDSusRel        = $033a
@@ -98,7 +94,7 @@ NoHW:
    lda #$00
    jsr SIDCodeRAM ;Initialize music
    
-   jsr ListMenuItemsInit
+   jsr ListMenuItems
 
    ;check default registers for music & time settings
    lda rwRegPwrUpDefaults+IO1Port
@@ -127,41 +123,32 @@ WaitForKey:
 
    cmp #'a'  
    bmi +   ;skip if below 'a'
-   cmp #'a'+ MaxMenuDispItems + 1  
-   bpl +   ;skip if above MaxMenuDispItems
-   ;convert to ROM number
+   cmp #'a'+ MaxItemsPerPage + 1  
+   bpl +   ;skip if above MaxItemsPerPage
    sec       ;set to subtract without carry
-   sbc #'a'  ;now 0-?
-   clc
-   adc RegMenuPageStart   
-   ;ROMSelected, ROM num in acc
-   cmp rRegNumItems+IO1Port 
-   bpl WaitForKey   ;skip if above num of ROMs
-   sta rwRegSelItem+IO1Port ;select Item from list
+   sbc #'a'  ;convert to Item Number on page, now 0-?
+   cmp rRegNumItemsOnPage+IO1Port 
+   bpl WaitForKey   ;skip if above num of items on page
+   sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr SelectMenuItem
    jmp WaitForKey
 
 +  cmp #ChrCSRSDn  ;Next Page
    bne +
-   lda RegMenuPageStart
-   clc
-   adc #MaxMenuDispItems
-   cmp rRegNumItems+IO1Port
-   bpl WaitForKey  ;already on last page
-   sta RegMenuPageStart
-   inc RegMenuPageNum
+   lda rwRegPageNumber+IO1Port
+   cmp rRegNumPages+IO1Port
+   beq WaitForKey ;already on last page
+   inc rwRegPageNumber+IO1Port ;Tell TR to Page Down
    jsr ListMenuItems
    jmp WaitForKey
 
 +  cmp #ChrCSRSUp  ;Prev Page
    bne +
-   lda RegMenuPageStart
-   ;cmp #0     
-   beq WaitForKey  ;already on first page
-   sec
-   sbc #MaxMenuDispItems
-   sta RegMenuPageStart
-   dec RegMenuPageNum
+
+   lda rwRegPageNumber+IO1Port
+   cmp #1
+   beq WaitForKey ;already on first page
+   dec rwRegPageNumber+IO1Port ;Tell TR to Page Up
    jsr ListMenuItems
    jmp WaitForKey  
 
@@ -225,23 +212,24 @@ ___Subroutines________________________________:
 ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTR
-ListMenuItemsInit:
-   lda #0       ;initialize to first Item
-   sta RegMenuPageStart
-   lda #1       ;initialize to first Page
-   sta RegMenuPageNum
-ListMenuItems:  ;Prep: load RegMenuPageStart with first item on menu page
+ListMenuItems:
    jsr PrintBanner 
    
-   ldx #20 ;row   Print the select message now so we can grey out the up/dn below if needed
+   ldx #20 ;row   Print the select message now so we can grey out the up/dn soon if needed
    ldy #0  ;col
    clc
    jsr SetCursor
    lda #<MsgSelect1
    ldy #>MsgSelect1
    jsr PrintString
-   lda RegMenuPageNum
+   
+   lda rwRegPageNumber+IO1Port
    jsr PrintHexByte
+   lda #'/'
+   jsr SendChar   
+   lda rRegNumPages+IO1Port
+   jsr PrintHexByte
+   
    lda #<MsgSelect2
    ldy #>MsgSelect2
    jsr PrintString
@@ -261,22 +249,26 @@ ListMenuItems:  ;Prep: load RegMenuPageStart with first item on menu page
    ldy TblMsgMenuName+1,x
    jsr PrintString
    
-   lda rRegNumItems+IO1Port
+   lda rRegNumItemsOnPage+IO1Port
    bne +
    jsr GreyOutUp  ;no items, no up/dn
    jsr GreyOutDn  ;no items, no up/dn
    lda #<MsgNoItems
    ldy #>MsgNoItems
    jsr PrintString
-   jmp finishMenu
-+  lda RegMenuPageStart  
-   sta rwRegSelItem+IO1Port
-   cmp #0
+   rts ;early exit
+   
++  ldx rwRegPageNumber+IO1Port
+   cpx #1
    bne +
-   jsr GreyOutUp  ;we're at the top of the item list,no up
-+  lda #'A' ;initialize to start of page
+   jsr GreyOutUp  ;we're at the first page,no up
++  cpx rRegNumPages+IO1Port
+   bne +
+   jsr GreyOutDn  ;we're at the last page,no down
+
++  lda #0       ;initialize to first Item on Page
+   sta rwRegSelItemOnPage+IO1Port
 nextLine
-   pha ;remember menu letter
    lda #ChrReturn
    jsr SendChar
    
@@ -287,8 +279,9 @@ nextLine
    jsr SendChar
    lda #ChrRvsOn
    jsr SendChar
-   pla
-   pha
+   lda rwRegSelItemOnPage+IO1Port
+   clc
+   adc #'A'
    jsr SendChar
    lda #ChrRvsOff
    jsr SendChar
@@ -313,11 +306,6 @@ nextLine
    lda rRegItemTypePlusIOH+IO1Port 
    and #$7f  ;bit 7 indicates an assigned IOHandler, don't care yet
    jsr Print4CharTable
-;;print ROM #
-;   lda #ROMNumColor
-;   jsr SendChar
-;   lda rwRegSelItem+IO1Port
-;   jsr PrintHexByte
 ; Assigned IO Handler? '+' if so
    lda rRegItemTypePlusIOH+IO1Port 
    and #$80  ;bit 7 indicates an assigned IOHandler, now we care!   bne +
@@ -329,20 +317,11 @@ nextLine
    
 ;line is done printing, check for next...
 MenuLineDone
-   pla ;menu select letter
-   inc rwRegSelItem+IO1Port
-   ldx rwRegSelItem+IO1Port
-   cpx rRegNumItems+IO1Port
-   bne +
-   ;all items listed, no more below
-   jsr GreyOutDn
-   jmp finishMenu
-+  clc
-   adc #01
-   cmp #'A' + MaxMenuDispItems
-   bne nextLine  
-   ;out of screen rows, stop listing
-finishMenu
+   inc rwRegSelItemOnPage+IO1Port
+   ldx rwRegSelItemOnPage+IO1Port
+   cpx rRegNumItemsOnPage+IO1Port
+   bne nextLine
+   ;all items listed
    rts
 
 GreyOutUp:
@@ -359,7 +338,7 @@ GreyOutDn:
    
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
-;Pre-Load rwRegSelItem+IO1Port with Item # to execute/select
+;Pre-Load rwRegSelItemOnPage+IO1Port with Item # to execute/select
 SelectMenuItem:
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
@@ -372,7 +351,7 @@ SelectMenuItem:
 
    lda rRegStrAvailable+IO1Port 
    bne XferCopyRun       ; if it's a program (x-fer ready), x-fer it and launch
-   jsr ListMenuItemsInit ; otherwise reprint menu and return
+   jsr ListMenuItems ; otherwise reprint menu and return
    rts
 
 XferCopyRun:
@@ -464,7 +443,7 @@ fwFinish
 -  jsr GetIn    
    beq -
 fwAbort   
-   jsr ListMenuItemsInit
+   jsr ListMenuItems
    rts
 
 

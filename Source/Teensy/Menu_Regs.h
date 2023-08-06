@@ -20,7 +20,8 @@
 
 //  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define MaxItemNameLength 32
+#define MaxItemNameLength  32
+#define MaxItemsPerPage    16
 
 enum IO1_Registers  //offset from 0xDE00
 {
@@ -36,16 +37,18 @@ enum IO1_Registers  //offset from 0xDE00
    rRegLastMinBCD      =  9 , // Last TOD: Minutes read
    rRegLastSecBCD      = 10 , // Last TOD: Seconds read
    rWRegCurrMenuWAIT   = 11 , // enum RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItem        = 12 , // Item sel/info: select Menu Item for name, type, execution, etc
-   rRegNumItems        = 13 , // Item sel/info: num items in menu list
-   rRegItemTypePlusIOH = 14 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
-   rwRegPwrUpDefaults  = 15 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 16 , // EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 17 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegFWUpdStatCont  = 18 , // FW update Status/Control, see RegFWUpdCommands
-   rwRegSerialString   = 19 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   rwRegSelItemOnPage  = 12 , // Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
+   rRegNumItemsOnPage  = 13 , // Item sel/info: num items on current menu page
+   rwRegPageNumber     = 14 , // Item sel/info: (one based) current page number
+   rRegNumPages        = 15 , // Item sel/info: total number of pages
+   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rwRegPwrUpDefaults  = 17 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = 18 , // EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 19 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegFWUpdStatCont  = 20 , // FW update Status/Control, see RegFWUpdCommands
+   rwRegSerialString   = 21 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
 
-   StartSIDRegs        = 20 , // start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 22, // start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0, 
    rRegSIDFreqHi1      = StartSIDRegs +  1,
    rRegSIDDutyLo1      = StartSIDRegs +  2,

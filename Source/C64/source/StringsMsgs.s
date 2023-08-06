@@ -26,10 +26,10 @@ MsgSource:
    !tx SourcesColor, "Source: ", 0 
 MsgSelect1:
    !tx SourcesColor, "Sources:          "
-   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, "CRSR", MenuMiscColor, "  Page ("
+   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, "CRSR", MenuMiscColor, " Pg "
    !tx 0
 MsgSelect2:
-   !tx ")", ChrReturn
+   !tx ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
    !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
    !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
