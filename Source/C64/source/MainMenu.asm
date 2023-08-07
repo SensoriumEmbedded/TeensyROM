@@ -37,10 +37,6 @@
    NameColor        = ChrLtGreen
    M2SDataColumn    = 14
 
-   GreyOutColor     = PokeDrkGrey
-   UpIndicColorLoc  = ScreenColorMemStart+20*40+18
-   DnIndicColorLoc  = ScreenColorMemStart+20*40+21
-
    ;Zero page RAM Registers:
    PtrAddrLo   = $fb
    PtrAddrHi   = $fc
@@ -135,20 +131,24 @@ WaitForKey:
 
 +  cmp #ChrCSRSDn  ;Next Page
    bne +
-   lda rwRegPageNumber+IO1Port
-   cmp rRegNumPages+IO1Port
-   beq WaitForKey ;already on last page
-   inc rwRegPageNumber+IO1Port ;Tell TR to Page Down
+   ldx rwRegPageNumber+IO1Port
+   cpx rRegNumPages+IO1Port
+   bne ++
+   ldx #0 ;on last page, roll over
+++ inx
+   stx rwRegPageNumber+IO1Port
    jsr ListMenuItems
    jmp WaitForKey
 
 +  cmp #ChrCSRSUp  ;Prev Page
    bne +
-
-   lda rwRegPageNumber+IO1Port
-   cmp #1
-   beq WaitForKey ;already on first page
-   dec rwRegPageNumber+IO1Port ;Tell TR to Page Up
+   ldx rwRegPageNumber+IO1Port
+   cpx #1
+   bne ++
+   ldx rRegNumPages+IO1Port ;on first page, roll over
+   inx
+++ dex   
+   stx rwRegPageNumber+IO1Port
    jsr ListMenuItems
    jmp WaitForKey  
 
@@ -251,20 +251,11 @@ ListMenuItems:
    
    lda rRegNumItemsOnPage+IO1Port
    bne +
-   jsr GreyOutUp  ;no items, no up/dn
-   jsr GreyOutDn  ;no items, no up/dn
    lda #<MsgNoItems
    ldy #>MsgNoItems
    jsr PrintString
    rts ;early exit
    
-+  ldx rwRegPageNumber+IO1Port
-   cpx #1
-   bne +
-   jsr GreyOutUp  ;we're at the first page,no up
-+  cpx rRegNumPages+IO1Port
-   bne +
-   jsr GreyOutDn  ;we're at the last page,no down
 
 +  lda #0       ;initialize to first Item on Page
    sta rwRegSelItemOnPage+IO1Port
@@ -324,17 +315,6 @@ MenuLineDone
    ;all items listed
    rts
 
-GreyOutUp:
-   lda #GreyOutColor
-   sta UpIndicColorLoc
-   sta UpIndicColorLoc+1
-   rts
-   
-GreyOutDn:
-   lda #GreyOutColor
-   sta DnIndicColorLoc
-   sta DnIndicColorLoc+1
-   rts
    
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
