@@ -317,6 +317,7 @@ void ReceiveFile()
    USBHostMenu.Size = len;  
    
    //check extension
+   //Change this to just accept all files?
    char* Extension = (USBHostMenu.Name + strlen(USBHostMenu.Name) - 4);
    for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
    

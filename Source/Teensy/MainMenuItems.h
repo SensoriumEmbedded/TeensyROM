@@ -1,6 +1,6 @@
 
 
-#include "ROMs\ccgms_2021.prg.h"
+#include "ROMs\ccgms_2021_Swiftlink_DE_38400.prg.h"
 #include "ROMs\cynthcart_201.prg.h"
 #include "ROMs\sta64_v2_6.prg.h"
 #include "ROMs\Epyx_Fast_Load.crt.h"
@@ -33,7 +33,7 @@ StructMenuItem TeensyROMMenu[] =
 // ItemType , IOHndlrAssoc     , Name[MaxItemNameLength]          , *Code_Image                          , Size ,
 
    rtNone   , IOH_None         , "Utilities/MIDI-----------------", NULL                                 , 1, //sepparator
-   rtFilePrg, IOH_Swiftlink    , " CCGMS 2021 Term     +SwiftLink", (uint8_t*)ccgms_2021_prg             , sizeof(ccgms_2021_prg) ,
+   rtFilePrg, IOH_Swiftlink    , " CCGMS 2021 Term     +SwiftLink", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
    rtFilePrg, IOH_MIDI_Datel   , " Cynthcart 2.0.1    +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
    rtFilePrg, IOH_MIDI_Passport, " Station64 2.6   +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
    rtFileCrt, IOH_None         , " Epyx Fast Load Cart"           , (uint8_t*)Epyx_Fast_Load_crt         , 1, //size not needed for CRTs

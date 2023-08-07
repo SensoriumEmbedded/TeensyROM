@@ -488,6 +488,35 @@ void AT_DEFAULTS(char* CmdArg)
    AT_S(NULL);
 }
 
+void AT_HELP(char* CmdArg)
+{  //                      1234567890123456789012345678901234567890
+   AddASCIIStrToRxQueueLN("General AT Commands:");
+   AddASCIIStrToRxQueueLN(" AT?   This help menu");
+   AddASCIIStrToRxQueueLN(" AT    Ping");
+   AddASCIIStrToRxQueueLN(" ATC   Connect Ethernet, display info");
+   AddASCIIStrToRxQueueLN(" ATDT<HostName>:<Port>  Connect to host");
+
+   AddASCIIStrToRxQueueLN("Modify saved parameters:");
+   AddASCIIStrToRxQueueLN(" AT+S  Display stored Ethernet settings");
+   AddASCIIStrToRxQueueLN(" AT+DEFAULTS  Set defaults for all ");
+   AddASCIIStrToRxQueueLN(" AT+RNDMAC  MAC address to random value");
+   AddASCIIStrToRxQueueLN(" AT+MAC=<XX:XX:XX:XX:XX:XX>  Set MAC");
+   AddASCIIStrToRxQueueLN(" AT+DHCP=<0:1>  DHCP On(1)/Off(0)");
+
+   AddASCIIStrToRxQueueLN("DHCP mode only: ");
+   AddASCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  DHCP Timeout in mS");
+   AddASCIIStrToRxQueueLN(" AT+DHCPRESP=<D>  DHCP Response Timeout");
+
+   AddASCIIStrToRxQueueLN("Static mode only: ");
+   AddASCIIStrToRxQueueLN(" AT+MYIP=<D.D.D.D>   Local IP address");
+   AddASCIIStrToRxQueueLN(" AT+DNSIP=<D.D.D.D>  DNS IP address");
+   AddASCIIStrToRxQueueLN(" AT+GTWYIP=<D.D.D.D> Gateway IP address");
+   AddASCIIStrToRxQueueLN(" AT+MASKIP=<D.D.D.D> Subnet Mask");
+
+   AddASCIIStrToRxQueueLN("When in connected/on-line mode:");
+   AddASCIIStrToRxQueueLN(" +++   Disconnect from host");
+}
+
 stcATCommand ATCommands[] =
 {
    "dt"        , &AT_DT,
@@ -503,6 +532,7 @@ stcATCommand ATCommands[] =
    "+gtwyip="  , &AT_GTWYIP,
    "+maskip="  , &AT_MASKIP,
    "+defaults" , &AT_DEFAULTS,
+   "?"         , &AT_HELP,
 };
 
 void ProcessATCommand()
@@ -523,7 +553,7 @@ void ProcessATCommand()
       AddASCIIStrToRxQueueLN("AT not found");
       return;
    }
-   CmdMsg+=2; //past the AT
+   CmdMsg+=2; //move past the AT
    if(CmdMsg[0]==0) return;  //ping
    
    Num=0;
@@ -532,6 +562,7 @@ void ProcessATCommand()
       if (strstr(CmdMsg, ATCommands[Num].Command) == CmdMsg)
       {
          CmdMsg+=strlen(ATCommands[Num].Command); //move past the Command
+         while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after AT command
          ATCommands[Num].Function(CmdMsg);
          return;
       }
