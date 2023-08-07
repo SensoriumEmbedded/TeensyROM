@@ -224,11 +224,11 @@ ListMenuItems:
    jsr PrintString
    
    lda rwRegPageNumber+IO1Port
-   jsr PrintHexByte
+   jsr PrintIntByte
    lda #'/'
    jsr SendChar   
    lda rRegNumPages+IO1Port
-   jsr PrintHexByte
+   jsr PrintIntByte
    
    lda #<MsgSelect2
    ldy #>MsgSelect2

@@ -102,6 +102,48 @@ nz tya
    lda #'m'
    jsr SendChar
    rts
+
+PrintIntByte: 
+   ;Print acc as int
+;Hundreds
+   ldx #0
+-  cmp #100
+   bmi +     ;skip if below 100
+   sec       ;set to subtract without carry
+   sbc #100   ;subtract 100
+   inx
+   jmp -
+
+;+  cpx #0
+;   beq Tens  ;don't print padded zeros
++  tay  ;preserve remainder
+   txa
+   clc
+   adc #'0'
+   jsr SendChar
+   tya
+
+;Tens   
+   ldx #0
+-  cmp #10
+   bmi +     ;skip if below 10
+   sec       ;set to subtract without carry
+   sbc #10   ;subtract 10
+   inx
+   jmp -
+
++  tay  ;preserve remainder
+   txa
+   clc
+   adc #'0'
+   jsr SendChar
+   tya
+   
+;Ones
+   adc #'0'
+   jsr SendChar
+
+   rts
    
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)
