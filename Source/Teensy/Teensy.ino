@@ -44,7 +44,7 @@ char DriveDirPath[MaxPathLength];
 StructMenuItem USBHostMenu = {
    rtNone,  // ItemType;
    IOH_None, // IOHndlrAssoc;  enumIOHandlers
-   "<Nothing Sent>",      // Name[MaxItemNameLength];
+   "<Nothing Sent>",      // Name[];
    NULL,    // *Code_Image;
    0        // Size;
 };
@@ -99,7 +99,7 @@ void setup()
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
-   DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 150k of RAM2
+   DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 265k of RAM2
    SetUpMainMenuROM();
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1);
@@ -198,6 +198,6 @@ void SetNumItems(uint16_t NumItems)
    NumItemsFull = NumItems;
    IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
    IO1[rwRegPageNumber] = 1;
-   IO1[rRegNumPages] = NumItems/MaxItemsPerPage + 1;
+   IO1[rRegNumPages] = NumItems/MaxItemsPerPage + (NumItems%MaxItemsPerPage!=0 ? 1 : 0);
 }
 

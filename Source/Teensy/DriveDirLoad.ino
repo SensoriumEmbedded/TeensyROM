@@ -111,6 +111,9 @@ void HandleExecution()
          break;      
       case rtFilePrg:
          //set up for transfer
+         
+         Serial.printf("PRG loading $%04x:$%04x\n", 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
+
          MenuSource[SelItemFullIdx].Code_Image = MenuSel.Code_Image; 
          MenuSource[SelItemFullIdx].Size = MenuSel.Size; //only copy the pointer & Size back, not type
          IO1[rRegStrAddrLo]=MenuSel.Code_Image[0];
@@ -166,16 +169,25 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    if (SD_nUSBDrive) myFile= SD.open(FullFilePath, FILE_READ);
    else myFile= firstPartition.open(FullFilePath, FILE_READ);
    
-   if (!myFile) return false;
-
+   if (!myFile) 
+   {
+      Serial.println("File Not Found");
+      return false;
+   }
+   
+   Serial.printf("Size: %ulK\n", (myFile.size()/1024));
    free(RAM_Image);
    RAM_Image = (uint8_t*)malloc(myFile.size());
-   Serial.printf("Size: %ul bytes\n", myFile.size());
 
-   uint16_t count=0;
+   uint32_t count=0;
    while (myFile.available() && count < myFile.size()) RAM_Image[count++]=myFile.read();
 
-   if (count != myFile.size()) return false;
+   if (count != myFile.size())
+   {
+      Serial.println("Size Mismatch");
+      return false;
+   }
+
    MyMenuItem->Size = count;
    myFile.close();
    return true;
@@ -183,7 +195,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 
 void LoadDirectory(bool SD_nUSBDrive) 
 {
-   uint16_t NumItems = 0;
+   uint16_t ItemNum = 0;
    File dir;
       
    if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
@@ -191,7 +203,7 @@ void LoadDirectory(bool SD_nUSBDrive)
    
    if (!(strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/'))
    {  // *not* at root, add up dir option
-      NumItems = 1;
+      ItemNum++;
       strcpy(DriveDirMenu[0].Name, UpDirString);
       DriveDirMenu[0].ItemType = rtDirectory;
    }
@@ -203,36 +215,39 @@ void LoadDirectory(bool SD_nUSBDrive)
       filename = entry.name();
       if (entry.isDirectory())
       {
-         DriveDirMenu[NumItems].Name[0] = '/';
-         memcpy(DriveDirMenu[NumItems].Name+1, filename, MaxItemNameLength-1);
+         DriveDirMenu[ItemNum].Name[0] = '/';
+         memcpy(DriveDirMenu[ItemNum].Name+1, filename, MaxItemNameLength-1);
       }
-      else memcpy(DriveDirMenu[NumItems].Name, filename, MaxItemNameLength);
+      else memcpy(DriveDirMenu[ItemNum].Name, filename, MaxItemNameLength);
       
-      DriveDirMenu[NumItems].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
+      DriveDirMenu[ItemNum].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
+      //if (strlen(filename)>MaxItemNameLength-1) DriveDirMenu[ItemNum].Name[MaxItemNameLength-2]='*';
       
-      if (entry.isDirectory()) DriveDirMenu[NumItems].ItemType = rtDirectory;
+      if (entry.isDirectory()) DriveDirMenu[ItemNum].ItemType = rtDirectory;
       else 
       {
-         char* Extension = (filename + strlen(filename) - 4);
+         //char* Extension = (filename + strlen(filename) - 4);
+         //this way marks too long names as unknown:
+         char* Extension = (DriveDirMenu[ItemNum].Name + strlen(DriveDirMenu[ItemNum].Name) - 4);
          for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
          
-         if (strcmp(Extension, ".prg")==0) DriveDirMenu[NumItems].ItemType = rtFilePrg;
-         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[NumItems].ItemType = rtFileCrt;
-         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[NumItems].ItemType = rtFileHex;
-         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[NumItems].ItemType = rtFileP00;
-         else DriveDirMenu[NumItems].ItemType = rtUnknown;
+         if (strcmp(Extension, ".prg")==0) DriveDirMenu[ItemNum].ItemType = rtFilePrg;
+         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[ItemNum].ItemType = rtFileCrt;
+         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[ItemNum].ItemType = rtFileHex;
+         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[ItemNum].ItemType = rtFileP00;
+         else DriveDirMenu[ItemNum].ItemType = rtUnknown;
       }
       
-      //Serial.printf("%d- %s\n", NumItems, DriveDirMenu[NumItems].Name); 
+      //Serial.printf("%d- %s\n", ItemNum, DriveDirMenu[ItemNum].Name); 
       entry.close();
-      if (NumItems++ == MaxMenuItems)
+      if (ItemNum++ == MaxMenuItems)
       {
          Serial.println("Too many files!");
          break;
       }
    }
    
-   SetNumItems(NumItems);
+   SetNumItems(ItemNum);
 }
 
 void ParseP00File(StructMenuItem* MyMenuItem)   

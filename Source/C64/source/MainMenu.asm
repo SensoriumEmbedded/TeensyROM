@@ -295,7 +295,7 @@ nextLine
 ;align to col
    sec
    jsr SetCursor ;read current to load x (row)
-   ldy #MaxItemNameLength + 2  ;set y = col
+   ldy #MaxItemDispLength + 2  ;set y = col
    clc
    jsr SetCursor
 ; print type

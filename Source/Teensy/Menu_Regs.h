@@ -20,7 +20,7 @@
 
 //  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define MaxItemNameLength  32
+#define MaxItemDispLength  32
 #define MaxItemsPerPage    16
 
 enum IO1_Registers  //offset from 0xDE00
@@ -162,6 +162,8 @@ enum regItemTypes //synch with TblItemType
 };
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#define    MaxItemNameLength  60
 
 struct StructMenuItem
 {

@@ -384,7 +384,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  ptrSerialString = MenuSource[SelItemFullIdx].Name;
+                  memcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength);
+                  SerialStringBuf[MaxItemDispLength-1] = 0;
+                  ptrSerialString = SerialStringBuf;
                   break;
                case rsstNextIOHndlrName:
                   ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
