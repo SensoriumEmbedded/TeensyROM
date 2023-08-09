@@ -28,6 +28,7 @@
 #include <NativeEthernetUdp.h>
 #include <EEPROM.h>
 #include "TeensyROM.h"
+#include "DriveDirLoad.h"
 #include "Menu_Regs.h"
 #include "MainMenuItems.h"
 #include "IOHandlers.h"

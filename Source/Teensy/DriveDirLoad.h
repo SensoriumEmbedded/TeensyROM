@@ -125,4 +125,12 @@
 #define Cart_DebugCart             -124
 
 
+#define MAX_CRT_CHIPS   128
+
+struct StructCrtChip
+{
+   uint8_t *ChipROM;
+   uint16_t LoadAddress;
+   uint16_t ROMSize;
+};
 

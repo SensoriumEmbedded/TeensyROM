@@ -171,7 +171,7 @@ struct StructMenuItem
   uint8_t IOHndlrAssoc;   //enumIOHandlers
   char Name[MaxItemNameLength];
   uint8_t *Code_Image;
-  uint16_t Size;
+  uint32_t Size;
 };
 
 enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
@@ -184,7 +184,9 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Debug,
    IOH_TeensyROM, 
    IOH_Swiftlink,
+   //indicate end of manually selectable
    IOH_EpyxFastLoad,
+   IOH_MagicDesk,
    
    IOH_Num_Handlers       //always last
 };
