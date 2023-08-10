@@ -79,10 +79,6 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
-   Serial.print("\nSD Card initialization... ");
-   if (SD.begin(BUILTIN_SDCARD)) Serial.println("passed.");
-   else Serial.println("***Failed!***");
-  
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
 
    uint32_t MagNumRead;
@@ -103,8 +99,9 @@ void setup()
    DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 265k of RAM2
    SetUpMainMenuROM();
 
-   for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1);
+   for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 
+   //bus timing check prep:
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    //BigBufCount = 0;
    //Phi2ISRState = P2I_TimingCheck;

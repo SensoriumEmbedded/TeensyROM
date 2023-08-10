@@ -143,7 +143,9 @@ void MenuChange()
          break;
       case rmtSD:
          stpcpy(DriveDirPath, "/");
-         LoadDirectory(true);
+         // SD.begin takes 3 seconds for fail/unpopulated, 20-200mS populated
+         if (SD.begin(BUILTIN_SDCARD)) LoadDirectory(true);
+         else SetNumItems(0);
          MenuSource = DriveDirMenu; 
          break;
       case rmtUSBDrive:
