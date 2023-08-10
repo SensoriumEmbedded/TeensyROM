@@ -357,7 +357,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[rwRegFWUpdStatCont]=Data;
             break;
          case rwRegNextIOHndlr:
-            if (Data >= IOH_Num_Handlers) Data=0;
+            if (Data > LastSelectableIOH) Data=0; //wrap around to first item
             IO1[rwRegNextIOHndlr]= Data;
             eepAddrToWrite = eepAdNextIOHndlr;
             eepDataToWrite = Data;

@@ -52,14 +52,15 @@ struct stcIOHandlers
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
-   &IOHndlr_None,
-   &IOHndlr_MIDI_Datel,      
-   &IOHndlr_MIDI_Sequential, 
-   &IOHndlr_MIDI_Passport,   
-   &IOHndlr_MIDI_NamesoftIRQ,
-   &IOHndlr_Debug,
-   &IOHndlr_TeensyROM, 
-   &IOHndlr_SwiftLink,
-   &IOHndlr_EpyxFastLoad,
-   &IOHndlr_MagicDesk,
+   &IOHndlr_None,               //IOH_None,
+   &IOHndlr_SwiftLink,          //IOH_Swiftlink,
+   &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
+   &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
+   &IOHndlr_MIDI_Passport,      //IOH_MIDI_Passport,   
+   &IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
+   &IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
+                                
+   &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
+   &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
+   &IOHndlr_MagicDesk,          //IOH_MagicDesk,
 };
