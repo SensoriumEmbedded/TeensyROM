@@ -199,6 +199,9 @@ void SetNumItems(uint16_t NumItems)
    NumItemsFull = NumItems;
    IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
    IO1[rwRegPageNumber] = 1;
-   IO1[rRegNumPages] = NumItems/MaxItemsPerPage + (NumItems%MaxItemsPerPage!=0 ? 1 : 0);
+   IO1[rRegNumPages] = 
+      NumItems/MaxItemsPerPage + 
+      (NumItems%MaxItemsPerPage!=0 ? 1 : 0) +
+      (NumItems==0 ? 1 : 0);
 }
 
