@@ -82,12 +82,9 @@ MsgCreditsInfo:
    !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
-MsgFWUpdate:
-   !tx ChrReturn, SourcesColor, "Firmware Update:", ChrReturn, "  ", NameColor  ;filename printed next 
-   !tx 0
-
 MsgFWVerify:
-   !tx ChrReturn, ChrReturn, ChrOrange, "Update TeensyROM FirmWare? y/n "
+   !tx ChrReturn, ChrReturn, ChrOrange, "Please Confirm:"
+   !tx ChrReturn, "Update TeensyROM FirmWare? y/n "
    !tx 0
 
 MsgFWInProgress:
@@ -98,7 +95,7 @@ MsgFWInProgress:
    !tx 0
 
 MsgAnyKey:
-   !tx ChrReturn, ChrReturn, OptionColor, "Update failed, Press any key to return"
+   !tx ChrReturn, ChrReturn, OptionColor, "Failed, Press any key to return"
    !tx 0
 
 MsgM2SPolyMenu:    
@@ -136,8 +133,6 @@ MsgOn:
    !tx "On ", 0
 MsgOff:
    !tx "Off", 0
-MsgLoading:
-   !tx ChrClear, ChrYellow, ChrToUpper, "loading: ", 0
 MsgWaiting:
    !tx TimeColor, " Waiting:", 0
 MsgTesting:

@@ -71,9 +71,9 @@ PRGLoadStart:
    ;jmp (BasicWarmStartVect)  
    
 MsgRunning:
-   !tx ChrReturn, ChrReturn, "running", ChrReturn, 0
+   !tx ChrReturn, ChrReturn, "Running...", ChrReturn, 0
 MsgOverflow:
-   !tx ChrReturn, "overflow!", ChrReturn, 0
+   !tx ChrReturn, "Overflow!", ChrReturn, 0
    
 
 PRGLoadEnd = *

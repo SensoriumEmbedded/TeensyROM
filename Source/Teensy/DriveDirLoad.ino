@@ -113,7 +113,7 @@ void HandleExecution()
       case rtFilePrg:
          //set up for transfer
          
-         Serial.printf("PRG loading $%04x:$%04x\n", 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
+         SendMsgPrintfln("PRG xfer $%04x:$%04x\n", 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
 
          MenuSource[SelItemFullIdx].Code_Image = MenuSel.Code_Image; 
          MenuSource[SelItemFullIdx].Size = MenuSel.Size; //only copy the pointer & Size back, not type
@@ -123,7 +123,7 @@ void HandleExecution()
          StreamOffsetAddr = 2; //set to start of data
          break;
       default:
-         Serial.printf("Unk Item Type: %d\n", MenuSel.ItemType);
+         SendMsgPrintfln("Unk Item Type: %d\n", MenuSel.ItemType);
          break;
    }
    
@@ -169,33 +169,35 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);
       
-   Serial.printf("Openning: %s\n", FullFilePath);
-   
+   SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
+
    File myFile;
    if (SD_nUSBDrive) myFile= SD.open(FullFilePath, FILE_READ);
    else myFile= firstPartition.open(FullFilePath, FILE_READ);
    
    if (!myFile) 
    {
-      Serial.println("File Not Found");
+      SendMsgPrintfln("File Not Found");
       return false;
    }
    
-   Serial.printf("Size: %lu bytes\n", myFile.size());
+   uint32_t FileSize = myFile.size();
+   SendMsgPrintfln("Size: %lu bytes", FileSize);
    free(RAM_Image);
-   RAM_Image = (uint8_t*)malloc(myFile.size());
+   RAM_Image = (uint8_t*)malloc(FileSize);
 
    uint32_t count=0;
-   while (myFile.available() && count < myFile.size()) RAM_Image[count++]=myFile.read();
+   while (myFile.available() && count < FileSize) RAM_Image[count++]=myFile.read();
 
-   if (count != myFile.size())
+   if (count != FileSize)
    {
-      Serial.println("Size Mismatch");
+      SendMsgPrintfln("Size Mismatch");
       return false;
    }
 
    MyMenuItem->Size = count;
    myFile.close();
+   SendMsgPrintfln("Done");
    return true;
 }
 
@@ -248,7 +250,7 @@ void LoadDirectory(bool SD_nUSBDrive)
       entry.close();
       if (ItemNum++ == MaxMenuItems)
       {
-         Serial.println("Too many files!");
+         Serial.println("Too many files!"); //no messaging in dir load
          break;
       }
    }
@@ -261,6 +263,7 @@ void ParseP00File(StructMenuItem* MyMenuItem)
    //Sources:
    // https://www.infinite-loop.at/Power64/Documentation/Power64-ReadMe/AE-File_Formats.html
    
+   SendMsgPrintfln("Parsing P00 File ");
    if(strcmp((char*)MyMenuItem->Code_Image, "C64File") == 0)
    {
       MyMenuItem->Code_Image += 26;
@@ -268,9 +271,10 @@ void ParseP00File(StructMenuItem* MyMenuItem)
    }
    else
    {
-      Serial.println("Magic constant not found");
+      SendMsgPrintfln("\"C64File\" not found");
       MyMenuItem->ItemType = rtUnknown;
    }
+   SendMsgOK();
 }
 
 void ParseCRTFile(StructMenuItem* MyMenuItem)   
@@ -284,6 +288,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
    MyMenuItem->ItemType = rtUnknown; //default to fail
 
+   SendMsgPrintfln("Parsing CRT File");
    Serial.printf("CRT image size: %luK  $%08x\n", MyMenuItem->Size/1024, MyMenuItem->Size);
    
    uint8_t  C128Cart = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
@@ -437,26 +442,41 @@ uint16_t toU16(uint8_t* src)
 
 void SendMsgOK()
 {
-   strcpy(SerialStringBuf, "OK");
-   SendMsgSerialStringBuf();
+   SendMsgPrintf("OK");
 }
 
 void SendMsgFailed()
 {
-   strcpy(SerialStringBuf, "Failed!");
+   SendMsgPrintf("Failed!");
+}
+
+void SendMsgPrintfln(const char *Fmt, ...)
+{
+   va_list ap;
+   va_start(ap,Fmt);
+   vsprintf(SerialStringBuf, Fmt, ap); 
+   va_end(ap);
+   
+   //add \r\n to the beginning:
+   for(uint16_t pos=strlen(SerialStringBuf)+2; pos>1; pos--) SerialStringBuf[pos]=SerialStringBuf[pos-2];
+   SerialStringBuf[0] = '\r';
+   SerialStringBuf[1] = '\n';
+   
    SendMsgSerialStringBuf();
 }
 
-void SendMsgStrRet(const char *Msg)
+void SendMsgPrintf(const char *Fmt, ...)
 {
-   strcpy(SerialStringBuf, "\r\n");
-   strcat(SerialStringBuf, Msg);
-   SendMsgSerialStringBuf();
+   va_list ap;
+   va_start(ap,Fmt);
+   vsprintf(SerialStringBuf, Fmt, ap); 
+   va_end(ap);
+   SendMsgSerialStringBuf() ;
 }
 
 void SendMsgSerialStringBuf() 
 {  //SerialStringBuf already populated
-   Serial.printf("\n*%s", SerialStringBuf);
+   Serial.printf("%s<--", SerialStringBuf);
    Serial.flush();
    IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
    uint32_t beginWait = millis();

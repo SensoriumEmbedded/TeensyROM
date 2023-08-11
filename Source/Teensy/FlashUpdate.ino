@@ -71,7 +71,7 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //Serial.printf( "target = %s (%dK flash in %dK sectors)\n", FLASH_ID, FLASH_SIZE/1024, FLASH_SECTOR_SIZE/1024);
    
    // create flash buffer to hold new firmware
-   SendMsgStrRet( "Create buffer " );
+   SendMsgPrintfln("Create buffer ");
    if (firmware_buffer_init( &buffer_addr, &buffer_size ) != FLASH_BUFFER_TYPE) 
    {
      SendMsgFailed();
@@ -79,13 +79,12 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    }
    SendMsgOK();
    
-   sprintf(SerialStringBuf, "\r\n%s Buffer = %1luK of %1dK total\r\n(%08lX - %08lX)", 
+   SendMsgPrintfln("%s Buffer = %1luK of %1dK total\r\n(%08lX - %08lX)", 
       IN_FLASH(buffer_addr) ? "Flash" : "RAM", buffer_size/1024, FLASH_SIZE/1024, 
       buffer_addr, buffer_addr + buffer_size);
-   SendMsgSerialStringBuf();
-   
+  
    //Already initialized to get to this point...
-   //SendMsgStrRet( "SD initialization " );
+   //SendMsgPrintfln( "SD initialization " );
    //if (!SD.begin( BUILTIN_SDCARD )) 
    //{
    //   SendMsgFailed();
@@ -93,8 +92,7 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //}
    //SendMsgOK();
 
-   sprintf(SerialStringBuf, "\r\nOpen: %s%s  ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
-   SendMsgSerialStringBuf();
+   SendMsgPrintfln("Open: %s%s\r\n", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
 
    File hexFile;
    if (SD_nUSBDrive) hexFile = SD.open(FilePathName, FILE_READ );
@@ -111,10 +109,10 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
   
    // return from update_firmware() means error or user abort, so clean up and
    // reboot to ensure that static vars get boot-up initialized before retry(? nah)
-   SendMsgStrRet( "Erasing Flash buffer ");  
+   SendMsgPrintfln( "Erasing Flash buffer ");  
    firmware_buffer_free( buffer_addr, buffer_size );
    SendMsgOK();
    
-   //SendMsgStrRet( "Rebooting  Teensy");  
+   //SendMsgPrintfln( "Rebooting  Teensy");  
    //REBOOT;
 }

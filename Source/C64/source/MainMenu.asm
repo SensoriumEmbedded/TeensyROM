@@ -127,6 +127,7 @@ WaitForKey:
    bpl WaitForKey   ;skip if above num of items on page
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr SelectMenuItem
+   jsr ListMenuItems ; reprint menu
    jmp WaitForKey
 
 +  cmp #ChrCSRSDn  ;Next Page
@@ -315,37 +316,74 @@ MenuLineDone
    ;all items listed
    rts
 
-   
+
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
 ;Pre-Load rwRegSelItemOnPage+IO1Port with Item # to execute/select
 SelectMenuItem:
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
-   cmp #rtFileHex  ;check for .hex file selected and prep for FW update
+   cmp #rtDirectory  ;check for dir selected
+   beq DirUpdate  
+   cmp #rtFileHex  ;check for .hex file selected
    beq FWUpdate  
+
+   ;not a dir or hex file, prep for messaging
+   jsr PrintBanner
+   lda #NameColor
+   jsr SendChar
 
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg ;if it's a ROM/crt image, it won't return from this
+   jsr WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
 
    lda rRegStrAvailable+IO1Port 
-   bne XferCopyRun       ; if it's a program (x-fer ready), x-fer it and launch
-   jsr ListMenuItems ; otherwise reprint menu and return
-   rts
+   bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!
+   
+   ;If at this point, couldn't load item, and wasn't a dir, .hex, .prg or .p00
+   jsr AnyKeyMsgWait   
+   rts ;SelectMenuItem
+
+DirUpdate:
+   lda #rCtlStartSelItemWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg ;if it's a ROM/crt image, it won't return from this unless error
+   rts ;SelectMenuItem
+
+FWUpdate:
+   jsr PrintBanner ;clear screen for messaging
+   lda #NameColor
+   jsr SendChar
+   lda #ChrReturn
+   jsr SendChar
+   lda #rsstItemName
+   jsr PrintSerialString
+   lda #<MsgFWVerify  ;Verification prompt
+   ldy #>MsgFWVerify
+   jsr PrintString 
+
+-  jsr GetIn    ; wait for user confirmation
+   beq -
+   cmp #'n'  
+   beq +
+   cmp #'y'  
+   bne -
+
+   lda #<MsgFWInProgress  ;In Progress Warning
+   ldy #>MsgFWInProgress
+   jsr PrintString 
+   lda #rCtlStartSelItemWAIT ;kick off the update routine
+   sta wRegControl+IO1Port   
+   jsr WaitForTRDots   
+   ;if we get to this point without rebooting, there's been an error...
+   jsr AnyKeyMsgWait
++  rts ;SelectMenuItem
 
 XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
    ;192 byte limit, watch size of PRGLoadStart block!  check below
-
    ;no going back now...
    jsr SIDMusicOff    
-   lda #<MsgLoading
-   ldy #>MsgLoading
-   jsr PrintString
-   lda #rsstItemName
-   jsr PrintSerialString
-
    lda #>PRGLoadStart
    ldy #<PRGLoadStart   
    sta PtrAddrHi
@@ -361,39 +399,14 @@ XferCopyRun:
    cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
    bne -   
    jmp PRGLoadStartReloc     
+   ;rts ;SelectMenuItem never returns
 
-FWUpdate:
-   jsr PrintBanner 
-   lda #<MsgFWUpdate  ;Page Title
-   ldy #>MsgFWUpdate
-   jsr PrintString 
-   lda #rsstItemName  ;File name
-   jsr PrintSerialString
-   lda #<MsgFWVerify  ;Verification prompt
-   ldy #>MsgFWVerify
-   jsr PrintString 
-
--  jsr GetIn    ; wait for user confirmation
-   beq -
-   cmp #'n'  
-   beq fwAbort
-   cmp #'y'  
-   bne -
-
-   lda #<MsgFWInProgress  ;In Progress Warning
-   ldy #>MsgFWInProgress
-   jsr PrintString 
-   lda #rCtlStartSelItemWAIT ;kick off the update routine
-   sta wRegControl+IO1Port   
-   jsr WaitForTRDots   
-   ;if we get to this point without rebooting, there's been an error...
+AnyKeyMsgWait:
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey
    jsr PrintString 
 -  jsr GetIn    
    beq -
-fwAbort   
-   jsr ListMenuItems
    rts
 
 ;WaitForTR* uses acc, X and Y
