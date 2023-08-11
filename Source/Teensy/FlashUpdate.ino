@@ -71,80 +71,50 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //Serial.printf( "target = %s (%dK flash in %dK sectors)\n", FLASH_ID, FLASH_SIZE/1024, FLASH_SECTOR_SIZE/1024);
    
    // create flash buffer to hold new firmware
-   FWUpdMessage( "Create buffer " );
+   SendMsgStrRet( "Create buffer " );
    if (firmware_buffer_init( &buffer_addr, &buffer_size ) != FLASH_BUFFER_TYPE) 
    {
-     FWUpdMsgFailed();
+     SendMsgFailed();
      return;
    }
-   FWUpdMsgOK();
+   SendMsgOK();
    
    sprintf(SerialStringBuf, "\r\n%s Buffer = %1luK of %1dK total\r\n(%08lX - %08lX)", 
       IN_FLASH(buffer_addr) ? "Flash" : "RAM", buffer_size/1024, FLASH_SIZE/1024, 
       buffer_addr, buffer_addr + buffer_size);
-   FWUpdMessageReady();
+   SendMsgSerialStringBuf();
    
    //Already initialized to get to this point...
-   //FWUpdMessage( "SD initialization " );
+   //SendMsgStrRet( "SD initialization " );
    //if (!SD.begin( BUILTIN_SDCARD )) 
    //{
-   //   FWUpdMsgFailed();
+   //   SendMsgFailed();
    //   return;
    //}
-   //FWUpdMsgOK();
+   //SendMsgOK();
 
    sprintf(SerialStringBuf, "\r\nOpen: %s%s  ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
-   FWUpdMessageReady();
+   SendMsgSerialStringBuf();
 
    File hexFile;
    if (SD_nUSBDrive) hexFile = SD.open(FilePathName, FILE_READ );
    else hexFile= firstPartition.open(FilePathName, FILE_READ);
       
    if (!hexFile) {
-      FWUpdMsgFailed();
+      SendMsgFailed();
       return;
    }
-   FWUpdMsgOK();
+   SendMsgOK();
    
    // read hex file, write new firmware to flash, clean up, reboot
    update_firmware( &hexFile, &Serial, buffer_addr, buffer_size );
   
    // return from update_firmware() means error or user abort, so clean up and
    // reboot to ensure that static vars get boot-up initialized before retry(? nah)
-   FWUpdMessage( "Erasing Flash buffer ");  
+   SendMsgStrRet( "Erasing Flash buffer ");  
    firmware_buffer_free( buffer_addr, buffer_size );
-   FWUpdMsgOK();
+   SendMsgOK();
    
-   //FWUpdMessage( "Rebooting  Teensy");  
+   //SendMsgStrRet( "Rebooting  Teensy");  
    //REBOOT;
-}
-
-void FWUpdMessage(const char *Msg)
-{
-   strcpy(SerialStringBuf, "\r\n");
-   strcat(SerialStringBuf, Msg);
-   FWUpdMessageReady();
-}
-
-void FWUpdMsgOK()
-{
-   strcpy(SerialStringBuf, "OK");
-   FWUpdMessageReady();
-}
-
-void FWUpdMsgFailed()
-{
-   strcpy(SerialStringBuf, "Failed!");
-   FWUpdMessageReady();
-}
-
-void FWUpdMessageReady() 
-{  //SerialStringBuf already populated
-   Serial.printf("\n*%s", SerialStringBuf);
-   Serial.flush();
-   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
-   uint32_t beginWait = millis();
-   //wait up to 3 sec for C64 to read message:
-   while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
-   Serial.printf("\nTimeout!\n");
 }

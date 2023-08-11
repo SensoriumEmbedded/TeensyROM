@@ -434,3 +434,34 @@ uint16_t toU16(uint8_t* src)
       ((uint16_t)src[1]    ) ;
 }
 
+
+void SendMsgOK()
+{
+   strcpy(SerialStringBuf, "OK");
+   SendMsgSerialStringBuf();
+}
+
+void SendMsgFailed()
+{
+   strcpy(SerialStringBuf, "Failed!");
+   SendMsgSerialStringBuf();
+}
+
+void SendMsgStrRet(const char *Msg)
+{
+   strcpy(SerialStringBuf, "\r\n");
+   strcat(SerialStringBuf, Msg);
+   SendMsgSerialStringBuf();
+}
+
+void SendMsgSerialStringBuf() 
+{  //SerialStringBuf already populated
+   Serial.printf("\n*%s", SerialStringBuf);
+   Serial.flush();
+   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
+   uint32_t beginWait = millis();
+   //wait up to 3 sec for C64 to read message:
+   while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
+   Serial.printf("\nTimeout!\n");
+}
+

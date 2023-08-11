@@ -48,7 +48,7 @@ void update_firmware( Stream *in, Stream *out,
     0, 0						//   eof,lines
   };
 
-  FWUpdMessage( "Reading hex file");  
+  SendMsgStrRet( "Reading hex file");  
 
   // read and process intel hex lines until EOF or error
   while (!hex.eof)  {
@@ -63,14 +63,14 @@ void update_firmware( Stream *in, Stream *out,
     {
       //out->printf( "abort - bad hex line %s\n", line );
       sprintf(SerialStringBuf, "\r\nBad hex line: %s", line);
-      FWUpdMessageReady();
+      SendMsgSerialStringBuf();
       return;
     }
     else if (process_hex_record( &hex ) != 0) 
     { // error on bad hex code
       //out->printf( "abort - invalid hex code %d\n", hex.code );
       sprintf(SerialStringBuf, "\r\nInvalid hex code %d", hex.code);
-      FWUpdMessageReady();
+      SendMsgSerialStringBuf();
       return;
     }
     else if (hex.code == 0) 
@@ -80,7 +80,7 @@ void update_firmware( Stream *in, Stream *out,
       {
         //out->printf( "abort - max address %08lX too large\n", hex.max );
         sprintf(SerialStringBuf, "\r\nMax address %08lX too large", hex.max);
-        FWUpdMessageReady();
+        SendMsgSerialStringBuf();
         return;
       }
       else if (!IN_FLASH(buffer_addr)) 
@@ -94,7 +94,7 @@ void update_firmware( Stream *in, Stream *out,
         {
            //out->printf( "abort - error %02X in flash_write_block()\n", error );
            sprintf(SerialStringBuf, "\r\nMax address %08lX too large", hex.max);
-           FWUpdMessageReady();
+           SendMsgSerialStringBuf();
            return;
         }
       }
@@ -104,7 +104,7 @@ void update_firmware( Stream *in, Stream *out,
     
   sprintf(SerialStringBuf, "\r\nHex file: %1d lines, %1luK\r\n(%08lX - %08lX)",
 			hex.lines, (hex.max-hex.min)/1024, hex.min, hex.max );
-  FWUpdMessageReady();
+  SendMsgSerialStringBuf();
   //out->printf( "\nhex file: %1d lines %1lu bytes (%1luk) (%08lX - %08lX)\n",
   //		hex.lines, hex.max-hex.min, (hex.max-hex.min)/1024, hex.min, hex.max );
 
@@ -121,14 +121,14 @@ void update_firmware( Stream *in, Stream *out,
   //#endif
 
   // check FLASH_ID in new code - abort if not found
-  FWUpdMessage("Verifying file is for TeensyROM ");
+  SendMsgStrRet("Verifying file is for TeensyROM ");
   if (check_flash_id( buffer_addr, hex.max - hex.min )) {
     //out->printf( "new code contains correct target ID %s\n", FLASH_ID );
-    FWUpdMsgOK();
+    SendMsgOK();
   }
   else {
     //out->printf( "abort - new code missing string %s\n", FLASH_ID );
-    FWUpdMsgFailed();
+    SendMsgFailed();
     return;
   }
   
@@ -145,7 +145,7 @@ void update_firmware( Stream *in, Stream *out,
   //  return;
   //}
   //else {
-  FWUpdMessage("Copying Buffer over main Flash area\r\n");
+  SendMsgStrRet("Copying Buffer over main Flash area\r\n");
 
   //  out->printf( "calling flash_move() to load new firmware...\n" );
   //  out->flush();
