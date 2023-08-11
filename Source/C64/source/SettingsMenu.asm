@@ -29,7 +29,7 @@ SettingsMenu:
 
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
    ldx #16 ;row
    ldy #0 ;col
    clc
@@ -103,7 +103,7 @@ WaitForSettingsKey:
    lda rwRegPwrUpDefaults+IO1Port
    eor #rpudNetTimeMask  
    sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
 +  cmp #ChrF3  ;Power-up Music State toggle
@@ -111,7 +111,7 @@ WaitForSettingsKey:
    lda rwRegPwrUpDefaults+IO1Port
    eor #rpudMusicMask  
    sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
 +  cmp #ChrF5  ;Power-up Time Zone increment
@@ -122,7 +122,7 @@ WaitForSettingsKey:
    bne ++
    ldx #-12
 ++ stx rwRegTimezone+IO1Port
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
 +  cmp #ChrF7  ;Special IO
@@ -131,7 +131,7 @@ WaitForSettingsKey:
    ldx rwRegNextIOHndlr+IO1Port
    inx
    stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
 +  cmp #ChrF2  ;Synch Time now

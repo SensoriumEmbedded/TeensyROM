@@ -43,7 +43,7 @@ void IOHandlerInit(uint8_t NewIOHandler)
    
    if (NewIOHandler>=IOH_Num_Handlers)
    {
-      Serial.println("***No IO handler loaded");
+      Serial.println("***IOHandler out of range");
       return;
    }
    

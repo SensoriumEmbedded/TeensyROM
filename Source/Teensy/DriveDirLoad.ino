@@ -43,7 +43,6 @@ void HandleExecution()
          else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSel.Name);
 
          DoFlashUpdate(SD_nUSBDrive, FullFilePath);
-         IO1[rwRegFWUpdStatCont] = rFWUSCC64Finish; //last thing, tell C64 we're done
          return;  //we're done here...
       }
       
@@ -122,6 +121,9 @@ void HandleExecution()
          IO1[rRegStrAddrHi]=MenuSel.Code_Image[1];
          IO1[rRegStrAvailable]=0xff;
          StreamOffsetAddr = 2; //set to start of data
+         break;
+      default:
+         Serial.printf("Unk Item Type: %d\n", MenuSel.ItemType);
          break;
    }
    

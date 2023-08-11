@@ -86,7 +86,7 @@ void setup()
    if (MagNumRead != eepMagicNum) SetEEPDefaults();
 
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
-   IO1[rRegStatus]        = rsReady;
+   IO1[rwRegStatus]        = rsReady;
    IO1[rWRegCurrMenuWAIT] = rmtTeensy;
    SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
    IO1[rRegPresence1]     = 0x55;   

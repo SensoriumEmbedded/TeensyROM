@@ -211,7 +211,7 @@ ___Subroutines________________________________:
 ;                           list out item number, type, & names
 ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
-   jsr WaitForTR
+   jsr WaitForTRWaitMsg
 ListMenuItems:
    jsr PrintBanner 
    
@@ -327,7 +327,7 @@ SelectMenuItem:
 
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTR ;if it's a ROM/crt image, it won't return from this
+   jsr WaitForTRWaitMsg ;if it's a ROM/crt image, it won't return from this
 
    lda rRegStrAvailable+IO1Port 
    bne XferCopyRun       ; if it's a program (x-fer ready), x-fer it and launch
@@ -383,40 +383,10 @@ FWUpdate:
    lda #<MsgFWInProgress  ;In Progress Warning
    ldy #>MsgFWInProgress
    jsr PrintString 
-   lda #rFWUSCContinue   ;TR FW in control, init for loop below
-   sta rwRegFWUpdStatCont+IO1Port
    lda #rCtlStartSelItemWAIT ;kick off the update routine
-   sta wRegControl+IO1Port
-   ldy TODSecBCD ;reset dot second counter
-   
-FWWaitLoop ;waiting loop that shows 1 dot/sec and waits for rwRegFWUpdStatCont
-   cpy TODSecBCD  ;no latch/unlatch needed for only reading seconds
-   beq +
-   ldy TODSecBCD  ;print 1 dot/sec while waiting
-   lda #'.'
-   jsr SendChar
-+  lda rwRegFWUpdStatCont+IO1Port
-   cmp #rFWUSCC64Message
-   beq ++
-   cmp #rFWUSCC64Finish
-   bne FWWaitLoop
-++ ldx#5 ;require 5 consecutive reads of rFWUSCC64* to continue
--  cmp rwRegFWUpdStatCont+IO1Port
-   bne FWWaitLoop
-   dex
-   bne -
-   ; the ball is in the C64 court, finish or display message and cont
-   cmp #rFWUSCC64Finish
-   beq fwFinish
-   ; display message:
-   lda #rsstSerialStringBuf ;FW upd populated message
-   jsr PrintSerialString
-   lda #rFWUSCContinue   ;tell fw we're done reading msg, continue
-   sta rwRegFWUpdStatCont+IO1Port
-   jmp FWWaitLoop
-
-fwFinish
-   jsr WaitForTRNoPr  ;be sure original update routine has finished
+   sta wRegControl+IO1Port   
+   jsr WaitForTRDots   
+   ;if we get to this point without rebooting, there's been an error...
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey
    jsr PrintString 
@@ -426,8 +396,11 @@ fwAbort
    jsr ListMenuItems
    rts
 
-
-WaitForTR:  ;wait for ready status, uses acc, X and Y
+;WaitForTR* uses acc, X and Y
+WaitForTRDots:  ;prints a dot per second while waiting, doesn't move cursor
+   ldy TODSecBCD ;reset dot second counter
+   jmp WaitForTRMain
+WaitForTRWaitMsg:  ;Print Waiting message in upper right and waits
    ldx #1 ;row   Show "Waiting:" over time disp
    ldy #29  ;col
    clc
@@ -435,22 +408,42 @@ WaitForTR:  ;wait for ready status, uses acc, X and Y
    lda #<MsgWaiting
    ldy #>MsgWaiting
    jsr PrintString
-WaitForTRNoPr:  ;wait without moving cursor/printing
-!ifndef Debug {
--- ldx#5 ;require 5 consecutive reads of ready to continue
-   inc ScreenCharMemStart+40*2-2 ;spinner @ end of 'Time' print loc.
--  lda rRegStatus+IO1Port
+   ldy #$ff ;don't print dots
+WaitForTRMain   ;Main wait loop
+   ;!ifndef Debug {   ;} 
+   inc ScreenCharMemStart+40*2-2 ;spinner @ top-1, right-1
+   cpy #$ff
+   beq +    ;skip dot printing if wait message selected
+   cpy TODSecBCD  ;no latch/unlatch needed for only reading seconds
+   beq +
+   ldy TODSecBCD  ;print 1 dot/sec while waiting
+   lda #'.'
+   jsr SendChar
++  lda rwRegStatus+IO1Port
+   cmp #rsC64Message
+   beq ++
    cmp #rsReady
-   bne --
+   bne WaitForTRMain
+++ ldx#5 ;require 1+5 consecutive reads of same rsC64Message/rsReady to continue
+-  cmp rwRegStatus+IO1Port
+   bne WaitForTRMain
    dex
    bne -
-}
-   rts
+   ; the ball is in the C64 court, either done or display message and cont waiting
+   cmp #rsReady
+   beq +
+   ; display message:
+   lda #rsstSerialStringBuf ;pre-populated message
+   jsr PrintSerialString
+   lda #rsContinue    ;tell fw we're done reading msg, continue
+   sta rwRegStatus+IO1Port
+   jmp WaitForTRMain
++  rts
 
 SynchEthernetTime:
    lda #rCtlGetTimeWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTR 
+   jsr WaitForTRWaitMsg 
    lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
    lda rRegLastMinBCD+IO1Port

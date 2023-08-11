@@ -142,9 +142,9 @@ void FWUpdMessageReady()
 {  //SerialStringBuf already populated
    Serial.printf("\n*%s", SerialStringBuf);
    Serial.flush();
-   IO1[rwRegFWUpdStatCont] = rFWUSCC64Message; //tell C64 there's a message
+   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
    uint32_t beginWait = millis();
-   //wait for C64 to read message:
-   while (millis()-beginWait<3000) if(IO1[rwRegFWUpdStatCont] == rFWUSCContinue) return;
+   //wait up to 3 sec for C64 to read message:
+   while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
    Serial.printf("\nTimeout!\n");
 }

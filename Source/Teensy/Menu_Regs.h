@@ -25,27 +25,27 @@
 
 enum IO1_Registers  //offset from 0xDE00
 {
-   rRegStatus          =  0 , // Indicates busy (not rsReady) when doing SD/USB access, etc.
-   rRegStrAddrLo       =  1 , // Stream PRG: lo byte of start address of the prg file being transfered to mem
-   rRegStrAddrHi       =  2 , // Stream PRG: Hi byte of start address
-   rRegStrAvailable    =  3 , // Stream PRG: zero when inactive/complete 
-   rRegStreamData      =  4 , // Stream PRG: next byte of data to transfer, auto increments when read
-   wRegControl         =  5 , // RegCtlCommands: execute specific functions
-   rRegPresence1       =  6 , // HW detect: 0x55
-   rRegPresence2       =  7 , // HW detect: 0xAA
-   rRegLastHourBCD     =  8 , // Last TOD: Hours read
-   rRegLastMinBCD      =  9 , // Last TOD: Minutes read
-   rRegLastSecBCD      = 10 , // Last TOD: Seconds read
-   rWRegCurrMenuWAIT   = 11 , // enum RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItemOnPage  = 12 , // Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
-   rRegNumItemsOnPage  = 13 , // Item sel/info: num items on current menu page
-   rwRegPageNumber     = 14 , // Item sel/info: (one based) current page number
-   rRegNumPages        = 15 , // Item sel/info: total number of pages
-   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
-   rwRegPwrUpDefaults  = 17 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 18 , // EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 19 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegFWUpdStatCont  = 20 , // FW update Status/Control, see RegFWUpdCommands
+   //skipping 0: Used by many others and accessed on reset
+   rwRegStatus         =  1 , // Indicates busy when waiting for FW to complete something
+   rRegStrAddrLo       =  2 , // Stream PRG: lo byte of start address of the prg file being transfered to mem
+   rRegStrAddrHi       =  3 , // Stream PRG: Hi byte of start address
+   rRegStrAvailable    =  4 , // Stream PRG: zero when inactive/complete 
+   rRegStreamData      =  5 , // Stream PRG: next byte of data to transfer, auto increments when read
+   wRegControl         =  6 , // RegCtlCommands: execute specific functions
+   rRegPresence1       =  7 , // HW detect: 0x55
+   rRegPresence2       =  8 , // HW detect: 0xAA
+   rRegLastHourBCD     =  9 , // Last TOD: Hours read
+   rRegLastMinBCD      = 10 , // Last TOD: Minutes read
+   rRegLastSecBCD      = 11 , // Last TOD: Seconds read
+   rWRegCurrMenuWAIT   = 12 , // enum RegMenuTypes: select Menu type: SD, USB, etc
+   rwRegSelItemOnPage  = 13 , // Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
+   rRegNumItemsOnPage  = 14 , // Item sel/info: num items on current menu page
+   rwRegPageNumber     = 15 , // Item sel/info: (one based) current page number
+   rRegNumPages        = 16 , // Item sel/info: total number of pages
+   rRegItemTypePlusIOH = 17 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rwRegPwrUpDefaults  = 18 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = 19 , // EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 20 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
    rwRegSerialString   = 21 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
 
    StartSIDRegs        = 22, // start of SID Regs, matching SID Reg order ($D400)
@@ -103,7 +103,7 @@ enum RegPowerUpDefaultMasks
    rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1=synch net time
 };
 
-enum RegStatusTypes  //rRegStatus, match StatusFunction order
+enum RegStatusTypes  //rwRegStatus, match StatusFunction order
 {
    rsChangeMenu         = 0x00,
    rsStartItem          = 0x01,
@@ -113,9 +113,11 @@ enum RegStatusTypes  //rRegStatus, match StatusFunction order
    rsMakeBuildCPUInfoStr= 0x05,
    
    rsNumStatusTypes     = 0x06,
-   
-   rsReady              = 0x5a,
-   //rsError              = 0x48,
+
+   rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
+   rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
+   rsContinue           = 0xc3, //64->FW (Wr) Tells the FW to continue with update
+
 };
 
 enum RegMenuTypes //must match TblMsgMenuName order/qty
@@ -124,13 +126,6 @@ enum RegMenuTypes //must match TblMsgMenuName order/qty
    rmtTeensy    = 1,
    rmtUSBHost   = 2,
    rmtUSBDrive  = 3,
-};
-
-enum RegFWUpdCommands
-{
-   rFWUSCC64Message       = 0x5a, //message for the C64, set to continue when finished
-   rFWUSCC64Finish        = 0xa5, //update finished (done, abort, or otherwise)
-   rFWUSCContinue         = 0x3c, //Tells the FW to continue with update
 };
 
 enum RegCtlCommands

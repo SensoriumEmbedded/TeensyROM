@@ -345,6 +345,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       TraceLogAddValidData(Data);
       switch(Address)
       {
+         case rwRegStatus:
+            IO1[rwRegStatus]=Data;
+            break;
          case rwRegSelItemOnPage:
             SelItemFullIdx=Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
             IO1[rwRegSelItemOnPage]=Data;
@@ -353,31 +356,28 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[rwRegPageNumber]=Data;
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
             break;
-         case rwRegFWUpdStatCont:
-            IO1[rwRegFWUpdStatCont]=Data;
-            break;
          case rwRegNextIOHndlr:
             if (Data > LastSelectableIOH) Data=0; //wrap around to first item
             IO1[rwRegNextIOHndlr]= Data;
             eepAddrToWrite = eepAdNextIOHndlr;
             eepDataToWrite = Data;
-            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case rWRegCurrMenuWAIT:
             IO1[rWRegCurrMenuWAIT]=Data;
-            IO1[rRegStatus] = rsChangeMenu; //work this in the main code
+            IO1[rwRegStatus] = rsChangeMenu; //work this in the main code
             break;
          case rwRegPwrUpDefaults:
             IO1[rwRegPwrUpDefaults]= Data;
             eepAddrToWrite = eepAdPwrUpDefaults;
             eepDataToWrite = Data;
-            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case rwRegTimezone:
             IO1[rwRegTimezone]= Data;
             eepAddrToWrite = eepAdTimezone;
             eepDataToWrite = Data;
-            IO1[rRegStatus] = rsWriteEEPROM; //work this in the main code
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
          case rwRegSerialString:
             StringOffset = 0;
@@ -413,19 +413,19 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlBasicReset:  
                   //SetLEDOff;
                   doReset=true;
-                  IO1[rRegStatus] = rsIOHWinit; //Support IO handlers at reset
+                  IO1[rwRegStatus] = rsIOHWinit; //Support IO handlers at reset
                   break;
                case rCtlStartSelItemWAIT:
-                  IO1[rRegStatus] = rsStartItem; //work this in the main code
+                  IO1[rwRegStatus] = rsStartItem; //work this in the main code
                   break;
                case rCtlGetTimeWAIT:
-                  IO1[rRegStatus] = rsGetTime;   //work this in the main code
+                  IO1[rwRegStatus] = rsGetTime;   //work this in the main code
                   break;
                case rCtlRunningPRG:
-                  IO1[rRegStatus] = rsIOHWinit; //Support IO handlers in PRG
+                  IO1[rwRegStatus] = rsIOHWinit; //Support IO handlers in PRG
                   break;
                case rCtlMakeInfoStrWAIT:
-                  IO1[rRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code
+                  IO1[rwRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code
                   break;
             }
             break;
@@ -435,12 +435,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_TeensyROM()
 {
-   if (IO1[rRegStatus] != rsReady) 
+   if (IO1[rwRegStatus] != rsReady) 
    {  //ISR requested work
-      if (IO1[rRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rRegStatus]]();
-      else Serial.printf("?Stat: %02x\n", IO1[rRegStatus]);
+      if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
+      else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
       Serial.flush();
-      IO1[rRegStatus] = rsReady;
+      IO1[rwRegStatus] = rsReady;
    }
    usbHostMIDI.read();
    usbDevMIDI.read();

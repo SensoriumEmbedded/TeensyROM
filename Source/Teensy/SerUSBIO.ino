@@ -63,7 +63,9 @@ void ServiceSerial()
          SetEEPDefaults();
          Serial.println("Applied upon reboot");
          break;
-         
+      case 'x':
+         break;
+      
    // m, p, k, r, s
    #ifdef Dbg_SerSwift
       case 'm':
