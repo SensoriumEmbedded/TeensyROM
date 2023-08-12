@@ -375,7 +375,11 @@ FWUpdate:
    lda #rCtlStartSelItemWAIT ;kick off the update routine
    sta wRegControl+IO1Port   
    jsr WaitForTRDots   
+
    ;if we get to this point without rebooting, there's been an error...
+   lda #<MsgFWUpdateFailed 
+   ldy #>MsgFWUpdateFailed
+   jsr PrintString 
    jsr AnyKeyMsgWait
 +  rts ;SelectMenuItem
 

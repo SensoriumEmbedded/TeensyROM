@@ -36,7 +36,7 @@ StructMenuItem TeensyROMMenu[] =
    rtFilePrg, IOH_Swiftlink    , " CCGMS 2021 Term     +SwiftLink", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
    rtFilePrg, IOH_MIDI_Datel   , " Cynthcart 2.0.1    +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
    rtFilePrg, IOH_MIDI_Passport, " Station64 2.6   +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
-   rtFileCrt, IOH_None         , " Epyx Fast Load Cart"           , (uint8_t*)Epyx_Fast_Load_crt         , 1, //size not needed for CRTs
+   rtFileCrt, IOH_None         , " Epyx Fast Load Cart"           , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
    rtFilePrg, IOH_None         , " 80 Columns"                    , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
    rtFilePrg, IOH_None         , " Hex Mon"                       , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
    rtNone   , IOH_None         , ""                               , NULL                                 , 1, //sepparator
@@ -44,7 +44,7 @@ StructMenuItem TeensyROMMenu[] =
    rtNone   , IOH_None         , "Test/Diags---------------------", NULL                                 , 1, //sepparator
    rtBin8kHi, IOH_None         , " 781220 C64 Dead Test"          , (uint8_t*)a781220_Dead_Test_BIN      , 1, //size not needed for ROMs
    rtBin8kLo, IOH_None         , " 586220* C64 Diagnostics"       , (uint8_t*)a586220ast_Diagnostics_BIN , 1, //size not needed for ROMs
-   rtFileCrt, IOH_None         , " 789010 C128 Diagnostics"       , (uint8_t*)C128_789010_crt            , 1, //size not needed for CRTs
+   rtFileCrt, IOH_None         , " 789010 C128 Diagnostics"       , (uint8_t*)C128_789010_crt            , sizeof(C128_789010_crt) ,
    rtBin8kLo, IOH_None         , " 1541 Diagnostics"              , (uint8_t*)a1541_Diagnostics_BIN      , 1, //size not needed for ROMs
    rtBin8kLo, IOH_None         , " SID Tester"                    , (uint8_t*)SID_Tester_BIN             , 1, //size not needed for ROMs
    rtFilePrg, IOH_None         , " Game Controller Tester"        , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,

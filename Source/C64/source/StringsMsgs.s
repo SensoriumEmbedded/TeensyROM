@@ -94,8 +94,12 @@ MsgFWInProgress:
    !tx "DO NOT TURN OFF POWER WHILE UPDATING!!!", ChrReturn, MenuMiscColor
    !tx 0
 
+MsgFWUpdateFailed:
+   !tx ChrLtRed, ChrReturn, "FW Update failed"
+   !tx 0
+
 MsgAnyKey:
-   !tx ChrReturn, ChrReturn, OptionColor, "Failed, Press any key to return"
+   !tx ChrReturn, OptionColor, "Press any key to return"
    !tx 0
 
 MsgM2SPolyMenu:    

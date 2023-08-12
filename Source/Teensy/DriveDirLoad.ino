@@ -27,8 +27,16 @@ void HandleExecution()
 {
    StructMenuItem MenuSel = MenuSource[SelItemFullIdx]; //Condensed pointer to selected menu item
    
-   if (MenuSel.ItemType == rtNone || MenuSel.ItemType == rtUnknown) return;  //no action taken for these types
-   
+   if (MenuSel.ItemType == rtNone) 
+   {
+      SendMsgPrintfln("%s\r\nis not a valid item", MenuSel.Name);
+      return;
+   }
+   if (MenuSel.ItemType == rtUnknown)
+   {
+      SendMsgPrintfln("%s\r\nUnknown Type", MenuSel.Name);
+      return;
+   }
    
    //if SD card or USB Drive,  update path & load dir   or   load file to RAM
    if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) 
@@ -63,6 +71,10 @@ void HandleExecution()
       if(!LoadFile(&MenuSel, SD_nUSBDrive)) MenuSel.ItemType=rtUnknown; //mark unknown if error      
 
       MenuSel.Code_Image = RAM_Image;
+   }
+   else //Print name for Teensy Mem or USB Host item since they are already loaded
+   {
+      SendMsgPrintfln(MenuSel.Name);      
    }
     
    if (IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
@@ -112,9 +124,10 @@ void HandleExecution()
          break;      
       case rtFilePrg:
          //set up for transfer
-         
-         SendMsgPrintfln("PRG xfer $%04x:$%04x\n", 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
-
+         SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 
+            MenuSel.Size/1024,
+            256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], 
+            MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
          MenuSource[SelItemFullIdx].Code_Image = MenuSel.Code_Image; 
          MenuSource[SelItemFullIdx].Size = MenuSel.Size; //only copy the pointer & Size back, not type
          IO1[rRegStrAddrLo]=MenuSel.Code_Image[0];
@@ -122,8 +135,12 @@ void HandleExecution()
          IO1[rRegStrAvailable]=0xff;
          StreamOffsetAddr = 2; //set to start of data
          break;
+      case rtUnknown: //had to have been marked unknown after check at start
+         //SendMsgFailed();
+         SendMsgPrintfln(" :(");
+         break;
       default:
-         SendMsgPrintfln("Unk Item Type: %d\n", MenuSel.ItemType);
+         SendMsgPrintfln("Unk Item Type: %d", MenuSel.ItemType);
          break;
    }
    
@@ -289,29 +306,29 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    MyMenuItem->ItemType = rtUnknown; //default to fail
 
    SendMsgPrintfln("Parsing CRT File");
-   Serial.printf("CRT image size: %luK  $%08x\n", MyMenuItem->Size/1024, MyMenuItem->Size);
+   SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
    uint8_t  C128Cart = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
-   if (C128Cart) Serial.println("C128 crt");
-   else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) Serial.println("C64 crt");
+   if (C128Cart) SendMsgPrintfln("C128 crt");
+   else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
-      Serial.println("\"C64/128 CARTRIDGE\" not found");
+      SendMsgPrintfln("\"C64/128 CARTRIDGE\" not found");
       return;
    }
    
    uint32_t HeaderLen = toU32(CRT_Image+0x10);
-   Serial.printf("Header len: $%08x\n", HeaderLen);
+   SendMsgPrintfln("Header len: $%08x", HeaderLen);
    if (HeaderLen < 0x40) 
    {
-      Serial.println(" adjusted to $40");
+      SendMsgPrintfln(" adjusted to $40");
       HeaderLen = 0x40;
    }
 
-   Serial.printf("Ver: %02x.%02x\n", CRT_Image[0x14], CRT_Image[0x15]);
+   SendMsgPrintfln("Ver: %02x.%02x", CRT_Image[0x14], CRT_Image[0x15]);
    
    int16_t HWType = (int16_t)toU16(CRT_Image+0x16);
-   Serial.printf("HW Type: %d ($%04x)\n", HWType, (uint16_t)HWType);
+   SendMsgPrintfln("HW Type: %d ($%04x)", HWType, (uint16_t)HWType);
    switch (HWType)
       {
       case Cart_Generic:
@@ -340,28 +357,27 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
          IO1[rwRegNextIOHndlr] = IOH_MagicDesk;
          break;
       default:
-         Serial.println("Unsupported HW Type");
+         SendMsgPrintfln("Unsupported HW Type (so far)");
          return;
       }
    
    uint8_t EXROM = CRT_Image[0x18];
    uint8_t GAME = CRT_Image[0x19];
-   Serial.printf("EXROM: %d\n", EXROM);
-   Serial.printf(" GAME: %d\n", GAME);
+   SendMsgPrintfln("EXROM: %d   GAME: %d", EXROM, GAME);
    
-   Serial.printf("Name: %s\n", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
    
    //On to CHIP packet(s)...
    uint32_t PacketLength;
    NumCrtChips = 0;
    uint8_t *ChipImage = CRT_Image + HeaderLen;
    
+   Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
    while ((uint32_t)ChipImage-(uint32_t)CRT_Image < MyMenuItem->Size)
    {   
-      Serial.printf("Chip #: %d\n",  NumCrtChips);
       if (memcmp(ChipImage, "CHIP", 4)!=0)
       {
-         Serial.println("\"CHIP\" not found");
+         SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
          return;
       }
      
@@ -370,17 +386,15 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       CrtChips[NumCrtChips].ChipROM = ChipImage+0x10;
       PacketLength = toU32(ChipImage+0x04);
       
-      Serial.printf("   Len: $%08x\n", PacketLength);
-      Serial.printf("  Type: $%04x\n", toU16(ChipImage+0x08));
-      Serial.printf("  Bank: $%04x\n", toU16(ChipImage+0x0A));
-      Serial.printf("  Addr: $%04x\n", CrtChips[NumCrtChips].LoadAddress);
-      Serial.printf("  Size: $%04x\n", CrtChips[NumCrtChips].ROMSize);
-      
+      Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x\n", 
+         NumCrtChips, PacketLength, toU16(ChipImage+0x08), toU16(ChipImage+0x0A), 
+         CrtChips[NumCrtChips].LoadAddress, CrtChips[NumCrtChips].ROMSize);
+
       ChipImage += PacketLength;
       NumCrtChips++;
    }
        
-   Serial.printf("CRT Image verified, %d Chips found\n", NumCrtChips); 
+   SendMsgPrintfln("CRT Image verified, %d Chip(s) found", NumCrtChips); 
    //We have a good CRT image, is it a config we support?
    
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
@@ -388,39 +402,39 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    if(HWType==Cart_EpyxFastload && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //sets EXROM & GAME high in crt
    {
       MyMenuItem->ItemType = rtBin8kLo;
-      Serial.println("\n 8kLo config");
+      SendMsgPrintfln(" EpyxFastload 8kLo config");
       return;
    }
    
    if(EXROM==0 &&            CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
    {
       MyMenuItem->ItemType = rtBin8kLo;
-      Serial.println("\n 8kLo config");
+      SendMsgPrintfln(" 8kLo config");
       return;
    }      
 
    if(EXROM==1 && GAME==0 && CrtChips[0].LoadAddress == 0xe000 && CrtChips[0].ROMSize == 0x2000)
    {
       MyMenuItem->ItemType = rtBin8kHi;
-      Serial.println("\n 8kHi/Ultimax config");
+      SendMsgPrintfln(" 8kHi/Ultimax config");
       return;
    }      
 
    if(EXROM==0 && GAME==0 && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x4000)
    {
       MyMenuItem->ItemType = rtBin16k;
-      Serial.println("\n 16k config");
+      SendMsgPrintfln(" 16k config");
       return;
    }      
    
    if(EXROM==0 && GAME==0 && CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && C128Cart)
    {
       MyMenuItem->ItemType = rtBinC128;
-      Serial.println("\n C128 config");
+      SendMsgPrintfln(" C128 config");
       return;
    }      
    
-   Serial.println("\nHW config unknown!");
+   SendMsgPrintfln("HW config unknown!");
 }
 
 uint32_t toU32(uint8_t* src)

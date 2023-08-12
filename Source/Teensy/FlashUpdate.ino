@@ -92,7 +92,7 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //}
    //SendMsgOK();
 
-   SendMsgPrintfln("Open: %s%s\r\n", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
+   SendMsgPrintfln("Open: %s%s ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
 
    File hexFile;
    if (SD_nUSBDrive) hexFile = SD.open(FilePathName, FILE_READ );

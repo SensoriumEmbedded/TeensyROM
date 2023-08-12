@@ -67,7 +67,7 @@ echo ***bin2header
 
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
 
-pause
+::pause
 exit /b
 
 ::only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
