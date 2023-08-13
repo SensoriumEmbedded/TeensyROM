@@ -51,7 +51,7 @@ volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
 uint8_t PlusCount=0;
 uint32_t LastTxMillis = millis();
 
-#define TxMsgSize          128
+#define TxMsgMaxSize       128
 #define RxQueueSize       8192 
 #define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
 #define NMITimeoutnS       300   //if Rx data not read within this time, deassert NMI anyway
@@ -538,14 +538,7 @@ stcATCommand ATCommands[] =
 void ProcessATCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
-   uint16_t Num=0;
    
-   while (CmdMsg[Num])
-   {  //conv to lower case ASCII
-      CmdMsg[Num] &= 127;
-      if(CmdMsg[Num] >= 'A') CmdMsg[Num] ^= 32;
-      Num++;
-   }
    Printf_dbg("AT Msg recvd: %s\n", CmdMsg);
    
    if (strstr(CmdMsg, "at")!=CmdMsg)
@@ -556,7 +549,7 @@ void ProcessATCommand()
    CmdMsg+=2; //move past the AT
    if(CmdMsg[0]==0) return;  //ping
    
-   Num=0;
+   uint16_t Num = 0;
    while(Num < sizeof(ATCommands)/sizeof(ATCommands[0]))
    {
       if (strstr(CmdMsg, ATCommands[Num].Command) == CmdMsg)
@@ -592,7 +585,7 @@ void InitHndlr_SwiftLink()
    free(RxQueue);
    RxQueue = (uint8_t*)malloc(RxQueueSize);
    free(TxMsg);
-   TxMsg = (char*)malloc(TxMsgSize);
+   TxMsg = (char*)malloc(TxMsgMaxSize);
    randomSeed(ARM_DWT_CYCCNT);
 }   
 
@@ -697,19 +690,27 @@ void PollingHndlr_SwiftLink()
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
       }
       else  //off-line, at commands, etc..................................
-      {
-         //Printf_dbg("echo %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
+      {         
+         Printf_dbg("echo %02x: %c ->", SwiftTxBuf, SwiftTxBuf);
          AddCharToRxQueue(SwiftTxBuf); //echo it
-         TxMsg[TxMsgOffset++] = SwiftTxBuf; //store it
-         SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
-         if (TxMsg[TxMsgOffset-1] == 13 || TxMsgOffset == TxMsgSize) //return hit or max size
+         
+         SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
+         if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case ANSCII
+         Printf_dbg("%02x\n", SwiftTxBuf);
+         
+         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--;
+         else TxMsg[TxMsgOffset++] = SwiftTxBuf; //store it
+         
+         if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgMaxSize) //return hit or max size
          {
+            SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
             TxMsg[TxMsgOffset-1] = 0; //terminate it
-            //Printf_dbg("TxMsg: %s\n", TxMsg);
+            Printf_dbg("TxMsg: %s\n", TxMsg);
             ProcessATCommand();
             AddASCIIStrToRxQueueLN("ok\r\n");
             TxMsgOffset = 0;
          }
+         else SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
       }
       LastTxMillis = millis();
    }
