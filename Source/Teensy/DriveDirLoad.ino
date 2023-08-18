@@ -341,8 +341,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    switch (HWType)
       {
       case Cart_Generic:
-         //leave IOH as default/user set for generic
-         //IO1[rwRegNextIOHndlr] = IOH_None;  
+         //IO1[rwRegNextIOHndlr] = IOH_None;  //leave IOH as default/user set for generic
          break;
       case Cart_MIDI_Datel:
          IO1[rwRegNextIOHndlr] = IOH_MIDI_Datel;
@@ -362,8 +361,11 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       case Cart_EpyxFastload:
          IO1[rwRegNextIOHndlr] = IOH_EpyxFastLoad;
          break;
-      case Cart_MagicDeskDomarkHES:
+      case Cart_MagicDesk:
          IO1[rwRegNextIOHndlr] = IOH_MagicDesk;
+         break;
+      case Cart_Dinamic:   
+         IO1[rwRegNextIOHndlr] = IOH_Dinamic;
          break;
       default:
          SendMsgPrintfln("Unsupported HW Type (so far)");
@@ -415,7 +417,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       return;
    }
    
-   if(EXROM==0 &&            CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
+   if(EXROM==0                  && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
    {
       MyMenuItem->ItemType = rtBin8kLo;
       SendMsgPrintfln(" 8kLo config");

@@ -36,9 +36,9 @@
 #define Cart_MagicFormel             14
 #define Cart_C64GameSystemSystem3    15
 #define Cart_WarpSpeed               16
-#define Cart_Dinamic                 17
-#define Cart_ZaxxonSupeZaxxon        18
-#define Cart_MagicDeskDomarkHES      19
+#define Cart_Dinamic                 17  //Supported
+#define Cart_ZaxxonSuperZaxxon       18
+#define Cart_MagicDesk               19  //Supported
 #define Cart_SuperSnapshotV5         20
 #define Cart_Comal80                 21
 #define Cart_StructuredBASIC         22

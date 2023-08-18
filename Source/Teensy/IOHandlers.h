@@ -49,6 +49,7 @@ struct stcIOHandlers
 #include "IO_Handlers\IOH_Swiftlink.c"
 #include "IO_Handlers\IOH_EpyxFastLoad.c"
 #include "IO_Handlers\IOH_MagicDesk.c"
+#include "IO_Handlers\IOH_Dinamic.c"
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
@@ -63,4 +64,6 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
+   &IOHndlr_Dinamic,            //IOH_Dinamic,
+   
 };
