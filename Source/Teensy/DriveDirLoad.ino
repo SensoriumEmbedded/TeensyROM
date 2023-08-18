@@ -181,7 +181,7 @@ void MenuChange()
 
 bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
 {
-   char FullFilePath[MaxPathLength];
+   char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
    if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);
@@ -201,6 +201,14 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    uint32_t FileSize = myFile.size();
    SendMsgPrintfln("Size: %lu bytes", FileSize);
    free(RAM_Image);
+   
+   if(RAM2BytesFree() <= FileSize)
+   {
+      SendMsgPrintfln("Max size: %lu bytes", RAM2BytesFree());
+      myFile.close();
+      return false;
+   }
+   
    RAM_Image = (uint8_t*)malloc(FileSize);
 
    uint32_t count=0;
@@ -209,6 +217,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    if (count != FileSize)
    {
       SendMsgPrintfln("Size Mismatch");
+      myFile.close();
       return false;
    }
 
