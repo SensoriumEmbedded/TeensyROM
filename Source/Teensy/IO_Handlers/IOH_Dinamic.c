@@ -17,7 +17,6 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-void InitHndlr_Dinamic();                           
 void IO1Hndlr_Dinamic(uint8_t Address, bool R_Wn);  
 
 stcIOHandlers IOHndlr_Dinamic =
