@@ -357,6 +357,8 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    
    //On to CHIP packet(s)...
    uint32_t PacketLength;
+   uint16_t Ch0LoadAddress, Ch0ROMSize;
+   
    NumCrtChips = 0;
    uint8_t *ChipImage = CRT_Image + HeaderLen;
    
@@ -369,53 +371,57 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
          return;
       }
      
-      CrtChips[NumCrtChips].LoadAddress = toU16(ChipImage+0x0C);
-      CrtChips[NumCrtChips].ROMSize = toU16(ChipImage+0x0E);
+      //CrtChips[NumCrtChips].LoadAddress = toU16(ChipImage+0x0C);
+      //CrtChips[NumCrtChips].ROMSize = toU16(ChipImage+0x0E);
       CrtChips[NumCrtChips].ChipROM = ChipImage+0x10;
       PacketLength = toU32(ChipImage+0x04);
       
       Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x\n", 
          NumCrtChips, PacketLength, toU16(ChipImage+0x08), toU16(ChipImage+0x0A), 
-         CrtChips[NumCrtChips].LoadAddress, CrtChips[NumCrtChips].ROMSize);
+         toU16(ChipImage+0x0C), toU16(ChipImage+0x0E));
 
+      if (NumCrtChips++ == 0)
+      {
+         Ch0LoadAddress = toU16(ChipImage+0x0C);
+         Ch0ROMSize = toU16(ChipImage+0x0E);
+      }
       ChipImage += PacketLength;
-      NumCrtChips++;
    }
        
    SendMsgPrintfln("CRT Image verified, %d Chip(s) found", NumCrtChips); 
-   //We have a good CRT image, is it a config we support?
+   //We have a good CRT image, check configuration
    
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
-   if(HWType==Cart_EpyxFastload && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //sets EXROM & GAME high in crt
+   if(HWType==Cart_EpyxFastload && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x2000) //sets EXROM & GAME high in crt
    {
       MyMenuItem->ItemType = rtBin8kLo;
       SendMsgPrintfln(" EpyxFastload 8kLo config");
       return;
    }
    
-   if(EXROM==0                  && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
+   if(EXROM==0                  && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
    {
       MyMenuItem->ItemType = rtBin8kLo;
       SendMsgPrintfln(" 8kLo config");
       return;
    }      
 
-   if(EXROM==1 && GAME==0 && CrtChips[0].LoadAddress == 0xe000 && CrtChips[0].ROMSize == 0x2000)
+   if(EXROM==1 && GAME==0       && Ch0LoadAddress == 0xe000 && Ch0ROMSize == 0x2000)
    {
       MyMenuItem->ItemType = rtBin8kHi;
       SendMsgPrintfln(" 8kHi/Ultimax config");
       return;
    }      
 
-   if(EXROM==0 && GAME==0 && CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x4000)
+   if(EXROM==0 && GAME==0       && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x4000)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
       return;
    }      
    
-   if(EXROM==0 && GAME==0 && CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && C128Cart)
+   if(EXROM==0 && GAME==0       && Ch0LoadAddress == 0x0000 && Ch0ROMSize == 0x2000 && C128Cart)
    {
       MyMenuItem->ItemType = rtBinC128;
       SendMsgPrintfln(" C128 config");

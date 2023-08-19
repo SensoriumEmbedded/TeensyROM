@@ -147,10 +147,10 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 
 #define MAX_CRT_CHIPS   128
 
-struct StructCrtChip
+struct StructCrtChip //leaving as struct in case we need to add info back in
 {
    uint8_t *ChipROM;
-   uint16_t LoadAddress;
-   uint16_t ROMSize;
+   //uint16_t LoadAddress;
+   //uint16_t ROMSize;
 };
 
