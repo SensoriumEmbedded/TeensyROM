@@ -185,6 +185,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Dinamic,
    IOH_Ocean1,
    IOH_FunPlay,
+   IOH_SuperGames,
    
    IOH_Num_Handlers       //always last
 };

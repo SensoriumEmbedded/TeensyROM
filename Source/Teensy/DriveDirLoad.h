@@ -27,7 +27,7 @@
 #define Cart_Oceantype1               5  //Supported
 #define Cart_ExpertCartridge          6
 #define Cart_FunPlayPowerPlay         7  //Supported
-#define Cart_SuperGames               8
+#define Cart_SuperGames               8  //Supported
 #define Cart_AtomicPower              9
 #define Cart_EpyxFastload            10  //Supported
 #define Cart_WestermannLearning      11
@@ -143,6 +143,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_Dinamic,         IOH_Dinamic,
    (uint16_t)Cart_Oceantype1,      IOH_Ocean1,
    (uint16_t)Cart_FunPlayPowerPlay,IOH_FunPlay,
+   (uint16_t)Cart_SuperGames      ,IOH_SuperGames,
 };
 
 #define MAX_CRT_CHIPS   128
