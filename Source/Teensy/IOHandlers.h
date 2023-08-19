@@ -51,6 +51,7 @@ struct stcIOHandlers
 #include "IO_Handlers\IOH_MagicDesk.c"
 #include "IO_Handlers\IOH_Dinamic.c"
 #include "IO_Handlers\IOH_Ocean1.c"
+#include "IO_Handlers\IOH_FunPlay.c"
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
@@ -67,5 +68,5 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
    &IOHndlr_Dinamic,            //IOH_Dinamic,
    &IOHndlr_Ocean1,             //IOH_Ocean1,
-   
+   &IOHndlr_FunPlay,            //IOH_FunPlay,
 };
