@@ -158,13 +158,13 @@ enum regItemTypes //synch with TblItemType
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define    MaxItemNameLength  60
+#define    MaxItemNameLength  76
 
 struct StructMenuItem
 {
   unsigned char ItemType;       //1  regItemTypes 
   uint8_t IOHndlrAssoc;         //1  enumIOHandlers
-  char Name[MaxItemNameLength]; //60
+  char Name[MaxItemNameLength]; //76
   uint8_t *Code_Image;          //1
   uint32_t Size;                //4
 };

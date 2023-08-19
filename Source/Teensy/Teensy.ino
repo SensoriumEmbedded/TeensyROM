@@ -96,7 +96,7 @@ void setup()
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
-   DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 201k of RAM2
+   DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems * sizeof(StructMenuItem)); //takes about 194k of RAM2
    SetUpMainMenuROM();
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous

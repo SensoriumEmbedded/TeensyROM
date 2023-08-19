@@ -56,7 +56,7 @@ uint32_t* BigBuf = NULL;
 #endif
 
 #define MaxPathLength       300
-#define MaxMenuItems        3000  //(255*MaxItemsPerPage)  //255 pages max * 16 = 4080
+#define MaxMenuItems        2400  //(Max Pages * MaxItemsPerPage) = 255 * 16 = 4080 max to keep page # 8-bit
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730

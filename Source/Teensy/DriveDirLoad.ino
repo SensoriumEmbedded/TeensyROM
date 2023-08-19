@@ -203,9 +203,10 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    free(RAM_Image);
    RAM_Image = NULL;
    
-   if(RAM2BytesFree() <= FileSize)
+   SendMsgPrintfln("Mem Avail: %lu bytes", RAM2BytesFree());
+   if(RAM2BytesFree() < FileSize)
    {
-      SendMsgPrintfln("Max size: %lu bytes", RAM2BytesFree());
+      SendMsgPrintfln("Not enough mem");
       myFile.close();
       return false;
    }
@@ -376,6 +377,7 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       CrtChips[NumCrtChips].ChipROM = ChipImage+0x10;
       PacketLength = toU32(ChipImage+0x04);
       
+      //too much for C64 disaply, just send to serial:
       Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x\n", 
          NumCrtChips, PacketLength, toU16(ChipImage+0x08), toU16(ChipImage+0x0A), 
          toU16(ChipImage+0x0C), toU16(ChipImage+0x0E));
