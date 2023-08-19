@@ -183,6 +183,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_EpyxFastLoad,
    IOH_MagicDesk,
    IOH_Dinamic,
+   IOH_Ocean1,
    
    IOH_Num_Handlers       //always last
 };

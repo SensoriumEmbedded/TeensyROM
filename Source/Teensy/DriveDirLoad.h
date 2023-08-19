@@ -24,7 +24,7 @@
 #define Cart_KCSPowerCartridge        2
 #define Cart_FinalCartridgeIII        3
 #define Cart_SimonsBASIC              4
-#define Cart_Oceantype1               5
+#define Cart_Oceantype1               5  //Supported
 #define Cart_ExpertCartridge          6
 #define Cart_FunPlayPowerPlay         7
 #define Cart_SuperGames               8
@@ -124,6 +124,25 @@
 #define Cart_CPM                   -123
 #define Cart_DebugCart             -124
 
+
+struct StructHWID_IOH_Assoc
+{ 
+   uint16_t HWID;
+   uint8_t  IOH;
+};
+
+StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
+{
+   (uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
+   (uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
+   (uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
+   (uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
+   (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
+   (uint16_t)Cart_EpyxFastload,    IOH_EpyxFastLoad,
+   (uint16_t)Cart_MagicDesk,       IOH_MagicDesk,
+   (uint16_t)Cart_Dinamic,         IOH_Dinamic,
+   (uint16_t)Cart_Oceantype1,      IOH_Ocean1,
+};
 
 #define MAX_CRT_CHIPS   128
 

@@ -201,6 +201,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    uint32_t FileSize = myFile.size();
    SendMsgPrintfln("Size: %lu bytes", FileSize);
    free(RAM_Image);
+   RAM_Image = NULL;
    
    if(RAM2BytesFree() <= FileSize)
    {
@@ -338,39 +339,15 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    
    int16_t HWType = (int16_t)toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", HWType, (uint16_t)HWType);
-   switch (HWType)
+   
+   if (HWType != Cart_Generic) //leave IOH as default/user set for generic
+   {
+      if (!AssocHWID_IOH(HWType))
       {
-      case Cart_Generic:
-         //IO1[rwRegNextIOHndlr] = IOH_None;  //leave IOH as default/user set for generic
-         break;
-      case Cart_MIDI_Datel:
-         IO1[rwRegNextIOHndlr] = IOH_MIDI_Datel;
-         break;
-      case Cart_MIDI_Sequential:
-         IO1[rwRegNextIOHndlr] = IOH_MIDI_Sequential;
-         break;
-      case Cart_MIDI_Passport:
-         IO1[rwRegNextIOHndlr] = IOH_MIDI_Passport;
-         break;
-      case Cart_MIDI_Namesoft:
-         IO1[rwRegNextIOHndlr] = IOH_MIDI_NamesoftIRQ;
-         break;
-      case Cart_SwiftLink:
-         IO1[rwRegNextIOHndlr] = IOH_Swiftlink;
-         break;
-      case Cart_EpyxFastload:
-         IO1[rwRegNextIOHndlr] = IOH_EpyxFastLoad;
-         break;
-      case Cart_MagicDesk:
-         IO1[rwRegNextIOHndlr] = IOH_MagicDesk;
-         break;
-      case Cart_Dinamic:   
-         IO1[rwRegNextIOHndlr] = IOH_Dinamic;
-         break;
-      default:
          SendMsgPrintfln("Unsupported HW Type (so far)");
-         return;
+         return;         
       }
+   }
    
    uint8_t EXROM = CRT_Image[0x18];
    uint8_t GAME = CRT_Image[0x19];
@@ -462,6 +439,22 @@ uint16_t toU16(uint8_t* src)
    return
       ((uint16_t)src[0]<<8 ) + 
       ((uint16_t)src[1]    ) ;
+}
+
+bool AssocHWID_IOH(int16_t HWType)
+{
+   uint8_t Num = 0;
+   
+   while (Num < sizeof(HWID_IOH_Assoc)/sizeof(HWID_IOH_Assoc[0]))
+   {
+      if (HWType == HWID_IOH_Assoc[Num].HWID)
+      {
+         IO1[rwRegNextIOHndlr] = HWID_IOH_Assoc[Num].IOH;
+         return true;
+      }
+      Num++;
+   }
+   return false;
 }
 
 

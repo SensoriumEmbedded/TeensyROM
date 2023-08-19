@@ -23,7 +23,7 @@ void IO1Hndlr_Dinamic(uint8_t Address, bool R_Wn);
 stcIOHandlers IOHndlr_Dinamic =
 {
   "Dinamic",            //Name of handler
-  &InitHndlr_Dinamic,   //Called once at handler startup
+  NULL,                 //Called once at handler startup
   &IO1Hndlr_Dinamic,    //IO1 R/W handler
   NULL,                 //IO2 R/W handler
   NULL,                 //ROML Read handler, in addition to any ROM data sent
@@ -32,18 +32,11 @@ stcIOHandlers IOHndlr_Dinamic =
   NULL,                 //called at the end of EVERY c64 cycle
 };
 
-extern uint8_t BankReg; 
-
-void InitHndlr_Dinamic()
-{
-   BankReg = 0;
-}
-
 void IO1Hndlr_Dinamic(uint8_t Address, bool R_Wn)
 {
    if (R_Wn) //IO1 Read  -------------------------------------------------
    {
-      BankReg = Address & 0x0f;
+      uint8_t BankReg = Address & 0x0f;
       if (BankReg<NumCrtChips) LOROM_Image = CrtChips[BankReg].ChipROM;
       //DataPortWriteWaitLog(BankReg);  //actual value read doesn't matter, address selects bank
    }
