@@ -45,6 +45,7 @@
    ;other RAM Registers/code space
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
+   MusicInterrupted = $0336 ;Music muted for item selection
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
    SIDSusRel        = $033a
@@ -88,6 +89,7 @@ NoHW:
    sta wRegControl+IO1Port
 
    lda #$00
+   sta MusicInterrupted ;init reg
    jsr SIDCodeRAM ;Initialize music
    
    jsr ListMenuItems
@@ -127,7 +129,12 @@ WaitForKey:
    bpl WaitForKey   ;skip if above num of items on page
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr SelectMenuItem
-   jsr ListMenuItems ; reprint menu
+   lda MusicInterrupted ;turn music back on if it was before...
+   beq ++
+   lda #0
+   sta MusicInterrupted
+   jsr SIDMusicOn 
+++ jsr ListMenuItems ; reprint menu
    jmp WaitForKey
 
 +  cmp #ChrCSRSDn  ;Next Page
@@ -325,9 +332,16 @@ SelectMenuItem:
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtDirectory  ;check for dir selected
    beq DirUpdate  
+   
+   pha
+   lda MusicPlaying ;turn music off if it's on
+   beq ++
+   sta MusicInterrupted
+   jsr SIDMusicOff     
+++ pla
+   
    cmp #rtFileHex  ;check for .hex file selected
    beq FWUpdate  
-
    ;not a dir or hex file, prep for messaging
    jsr PrintBanner
    lda #NameColor
@@ -387,7 +401,6 @@ XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
    ;192 byte limit, watch size of PRGLoadStart block!  check below
    ;no going back now...
-   jsr SIDMusicOff    
    lda #>PRGLoadStart
    ldy #<PRGLoadStart   
    sta PtrAddrHi
