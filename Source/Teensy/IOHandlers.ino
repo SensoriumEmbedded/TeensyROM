@@ -38,8 +38,6 @@ void IOHandlerInit(uint8_t NewIOHandler)
    MIDIRxBytesToSend = 0;
    rIORegMIDIStatus = 0;
    BigBufCount = 0;
-   free(BigBuf);
-   BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    
    if (NewIOHandler>=IOH_Num_Handlers)
    {

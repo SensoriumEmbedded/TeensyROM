@@ -34,6 +34,7 @@
 #include "IOHandlers.h"
 
 uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
+uint32_t MaxFileSize;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 volatile uint8_t Phi2ISRState = P2I_Normal;
@@ -101,6 +102,11 @@ void setup()
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 
+   BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
+   //determine max file size here as RAM2BytesFree not reliable after free()
+   MaxFileSize = RAM2BytesFree() - 1024*8; //leave 8k
+   Serial.printf("Free, Max FS: %lu, %lu\n", RAM2BytesFree(), MaxFileSize);   
+
    //bus timing check prep:
    //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    //BigBufCount = 0;
@@ -162,6 +168,10 @@ void SetUpMainMenuROM()
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
+   //could have a deconstructor for these:
+   free(RAM_Image); RAM_Image = NULL;
+   free(RxQueue); RxQueue = NULL;
+   free(TxMsg); TxMsg = NULL;
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }

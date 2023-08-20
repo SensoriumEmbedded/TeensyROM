@@ -200,13 +200,12 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    
    uint32_t FileSize = myFile.size();
    SendMsgPrintfln("Size: %lu bytes", FileSize);
-   free(RAM_Image);
-   RAM_Image = NULL;
    
-   SendMsgPrintfln("Mem Avail: %lu bytes", RAM2BytesFree());
-   if(RAM2BytesFree() < FileSize)
+   SendMsgPrintfln("Max: %lu", MaxFileSize);
+   Serial.printf("\nFree: %ul\n", RAM2BytesFree());
+   if(FileSize > MaxFileSize)
    {
-      SendMsgPrintfln("Not enough mem");
+      SendMsgPrintfln("Not enough space");
       myFile.close();
       return false;
    }
