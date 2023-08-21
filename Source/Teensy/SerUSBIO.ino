@@ -17,6 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+void   getFreeITCM();
 
 void ServiceSerial()
 {
@@ -52,12 +53,24 @@ void ServiceSerial()
          BigBufCount = 0;
          Serial.println("Buffer Reset");
          break;
+      case 'i':
       case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
-         MakeBuildCPUInfoStr();
-         Serial.print(SerialStringBuf);
-         //memInfo();
-         //getFreeITCM();
-         Serial.printf("RAM2 Bytes Free: %lu (%luK)\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+         {
+            MakeBuildCPUInfoStr();
+            Serial.println("\n***** Build & Mem info *****");
+            Serial.println(SerialStringBuf);
+            Serial.printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+            memInfo();
+            getFreeITCM();
+            uint32_t TotalSize = 0;
+            Serial.printf("\nTeensyROMMenu Items:\n");
+            for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
+            {
+               TotalSize += TeensyROMMenu[ROMNum].Size;
+               Serial.printf(" #%02d %5d %s\n", ROMNum, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
+            }
+            Serial.printf(" Total Size: %d (%dk)\n\n", TotalSize, TotalSize/1024);
+         }
          break;
       case 'e': //Reset EEPROM to defaults
          SetEEPDefaults();
@@ -262,7 +275,6 @@ void PrintDebugLog()
    BigBufCount = 0;
 }
 
-
 void ReceiveFile()
 { 
       //   App: SendFileToken 0x64AA
@@ -361,28 +373,18 @@ bool SerialAvailabeTimeout()
    return(false);
 }
 
-
-
-
-
-//free in RAM2:
-extern unsigned long _heap_start;
-extern unsigned long _heap_end;
-extern char *__brkval;
-
 uint32_t RAM2BytesFree() 
 {
-  return (char *)&_heap_end - __brkval;
+   extern char _heap_end[];
+   extern char *__brkval;
+   return (_heap_end - __brkval);
 }
 
 //memory info display via:
 // https://forum.pjrc.com/threads/33443-How-to-display-free-ram
 // https://www.pjrc.com/store/teensy41.html#memory
-/*
-void   getFreeITCM();
 
 #define printf Serial.printf
-
 #if ARDUINO_TEENSY41
   extern "C" uint8_t external_psram_size;
 #endif
@@ -409,6 +411,7 @@ void memInfo ()
 
   auto sp = (char*) __builtin_frame_address(0);
 
+  printf("MemInfo:\n");
   printf("_stext        %08x\n",      _stext);
   printf("_etext        %08x +%db\n", _etext, _etext - _stext);
   printf("_sdata        %08x\n",      _sdata);
@@ -456,12 +459,14 @@ void memInfo ()
 #endif
 }
 
+
 uint32_t *ptrFreeITCM;  // Set to Usable ITCM free RAM
 uint32_t  sizeofFreeITCM; // sizeof free RAM in uint32_t units.
 uint32_t  SizeLeft_etext;
 extern char _stext[], _etext[];
-FLASHMEM void   getFreeITCM() { // end of CODE ITCM, skip full 32 bits
-  Serial.println("\n\n++++++++++++++++++++++");
+
+FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
+  Serial.println("\ngetFreeITCM:");
   SizeLeft_etext = (32 * 1024) - (((uint32_t)&_etext - (uint32_t)&_stext) % (32 * 1024));
   sizeofFreeITCM = SizeLeft_etext - 4;
   sizeofFreeITCM /= sizeof(ptrFreeITCM[0]);
@@ -474,5 +479,5 @@ FLASHMEM void   getFreeITCM() { // end of CODE ITCM, skip full 32 bits
   for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
   printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
-*/
+
 
