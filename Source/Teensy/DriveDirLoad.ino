@@ -25,16 +25,16 @@ StructCrtChip CrtChips[MAX_CRT_CHIPS];
 
 void HandleExecution()
 {
-   StructMenuItem MenuSel = MenuSource[SelItemFullIdx]; //Condensed pointer to selected menu item
+   StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
    
-   if (MenuSel.ItemType == rtNone) 
+   if (MenuSelCpy.ItemType == rtNone) 
    {
-      SendMsgPrintfln("%s\r\nis not a valid item", MenuSel.Name);
+      SendMsgPrintfln("%s\r\nis not a valid item", MenuSelCpy.Name);
       return;
    }
-   if (MenuSel.ItemType == rtUnknown)
+   if (MenuSelCpy.ItemType == rtUnknown)
    {
-      SendMsgPrintfln("%s\r\nUnknown Type", MenuSel.Name);
+      SendMsgPrintfln("%s\r\nUnknown Type", MenuSelCpy.Name);
       return;
    }
    
@@ -43,66 +43,66 @@ void HandleExecution()
    {
       bool SD_nUSBDrive = (IO1[rWRegCurrMenuWAIT] == rmtSD);
       
-      if (MenuSel.ItemType == rtFileHex)  //FW update from hex file
+      if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
       {
          char FullFilePath[MaxPathLength+MaxItemNameLength+2];
          
-         if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSel.Name);  // at root
-         else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSel.Name);
+         if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
+         else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
 
          DoFlashUpdate(SD_nUSBDrive, FullFilePath);
          return;  //we're done here...
       }
       
-      if (MenuSel.ItemType == rtDirectory)
+      if (MenuSelCpy.ItemType == rtDirectory)
       {  //edit path as needed and load the new directory from SD/USB
          
-         if(strcmp(MenuSel.Name, UpDirString)==0)
+         if(strcmp(MenuSelCpy.Name, UpDirString)==0)
          {  //up dir
             char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
             if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
          }
-         else strcat(DriveDirPath, MenuSel.Name); //append selected dir name
+         else strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
          
          LoadDirectory(SD_nUSBDrive); 
          return;  //we're done here...
       }
       
-      if(!LoadFile(&MenuSel, SD_nUSBDrive)) MenuSel.ItemType=rtUnknown; //mark unknown if error      
+      if(!LoadFile(&MenuSelCpy, SD_nUSBDrive)) MenuSelCpy.ItemType=rtUnknown; //mark unknown if error      
 
-      MenuSel.Code_Image = RAM_Image;
+      MenuSelCpy.Code_Image = RAM_Image;
    }
    else //Print name for Teensy Mem or USB Host item since they are already loaded
    {
-      SendMsgPrintfln(MenuSel.Name);      
+      SendMsgPrintfln(MenuSelCpy.Name);      
    }
     
    if (IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
    {
-      MenuSel.Code_Image = HOST_Image; 
+      MenuSelCpy.Code_Image = HOST_Image; 
    }
    
-   if (MenuSel.ItemType == rtFileCrt) ParseCRTFile(&MenuSel); //will update MenuSel.ItemType & .Code_Image, if checks ok
+   if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
  
-   if (MenuSel.ItemType == rtFileP00) ParseP00File(&MenuSel); //will update MenuSel.ItemType & .Code_Image, if checks ok
+   if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
 
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
    uint8_t CartLoaded = false;
-   switch(MenuSel.ItemType)
+   switch(MenuSelCpy.ItemType)
    {
       case rtBin16k:
          SetGameAssert;
          SetExROMAssert;
-         LOROM_Image = MenuSel.Code_Image;
-         HIROM_Image = MenuSel.Code_Image+0x2000;
+         LOROM_Image = MenuSelCpy.Code_Image;
+         HIROM_Image = MenuSelCpy.Code_Image+0x2000;
          CartLoaded=true;
          break;
       case rtBin8kHi:
          SetGameAssert;
          SetExROMDeassert;
          LOROM_Image = NULL;
-         HIROM_Image = MenuSel.Code_Image;
+         HIROM_Image = MenuSelCpy.Code_Image;
          CartLoaded=true;
          NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt when emulating VIC cycles
          NVIC_DISABLE_IRQ(IRQ_PIT);
@@ -111,28 +111,28 @@ void HandleExecution()
       case rtBin8kLo:
          SetGameDeassert;
          SetExROMAssert;
-         LOROM_Image = MenuSel.Code_Image;
+         LOROM_Image = MenuSelCpy.Code_Image;
          HIROM_Image = NULL;
          CartLoaded=true;
          break;
       case rtBinC128:
          SetGameDeassert;
          SetExROMDeassert;
-         LOROM_Image = MenuSel.Code_Image;
+         LOROM_Image = MenuSelCpy.Code_Image;
          HIROM_Image = NULL;
          CartLoaded=true;
          break;      
       case rtFilePrg:
          //set up for transfer
          SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 
-            MenuSel.Size/1024,
-            256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0], 
-            MenuSel.Size + 256*MenuSel.Code_Image[1]+MenuSel.Code_Image[0]);
-         MenuSource[SelItemFullIdx].Code_Image = MenuSel.Code_Image; 
-         MenuSource[SelItemFullIdx].Size = MenuSel.Size; //only copy the pointer & Size back, not type
-         IO1[rRegStrAddrLo]=MenuSel.Code_Image[0];
-         IO1[rRegStrAddrHi]=MenuSel.Code_Image[1];
-         IO1[rRegStrAvailable]=0xff;
+            MenuSelCpy.Size/1024,
+            256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0], 
+            MenuSelCpy.Size + 256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0]);
+         XferImage = MenuSelCpy.Code_Image; 
+         XferSize  = MenuSelCpy.Size; 
+         IO1[rRegStrAddrLo] = XferImage[0];
+         IO1[rRegStrAddrHi] = XferImage[1];
+         IO1[rRegStrAvailable] = 0xff;
          StreamOffsetAddr = 2; //set to start of data
          break;
       case rtUnknown: //had to have been marked unknown after check at start
@@ -140,7 +140,7 @@ void HandleExecution()
          SendMsgPrintfln(" :(");
          break;
       default:
-         SendMsgPrintfln("Unk Item Type: %d", MenuSel.ItemType);
+         SendMsgPrintfln("Unk Item Type: %d", MenuSelCpy.ItemType);
          break;
    }
    
@@ -183,8 +183,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
-   if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSource[SelItemFullIdx].Name);
+   if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
@@ -199,10 +199,10 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    }
    
    uint32_t FileSize = myFile.size();
-   SendMsgPrintfln("Size: %lu bytes", FileSize);
+   SendMsgPrintfln("File Size: %lu bytes", FileSize);
    
    SendMsgPrintfln("Max: %lu", MaxFileSize);
-   Serial.printf("\nFree: %ul\n", RAM2BytesFree());
+   SendMsgPrintfln("Free: %lu", RAM2BytesFree());
    if(FileSize > MaxFileSize)
    {
       SendMsgPrintfln("Not enough space");
@@ -211,6 +211,12 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    }
    
    RAM_Image = (uint8_t*)malloc(FileSize);
+   if (RAM_Image == NULL)
+   {
+      SendMsgPrintfln("Could not allocate");
+      myFile.close();
+      return false;
+   }
 
    uint32_t count=0;
    while (myFile.available() && count < FileSize) RAM_Image[count++]=myFile.read();

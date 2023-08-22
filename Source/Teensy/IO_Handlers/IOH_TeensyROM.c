@@ -47,6 +47,8 @@ volatile uint8_t eepAddrToWrite, eepDataToWrite;
 StructMenuItem *MenuSource = TeensyROMMenu; //init to internal memory
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
+uint8_t *XferImage = NULL; //pointer to image being transfered to C64 
+uint32_t XferSize = 0;  //size of image being transfered to C64
 
 extern bool EthernetInit();
 extern void MenuChange();
@@ -326,9 +328,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(Data);  
             break;
          case rRegStreamData:
-            DataPortWriteWait(MenuSource[SelItemFullIdx].Code_Image[StreamOffsetAddr]);
+            DataPortWriteWait(XferImage[StreamOffsetAddr]);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= MenuSource[SelItemFullIdx].Size) IO1[rRegStrAvailable]=0; //signal end of transfer
+            if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
             Data = ptrSerialString[StringOffset++];
