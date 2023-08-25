@@ -67,7 +67,7 @@ void ServiceSerial()
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                TotalSize += TeensyROMMenu[ROMNum].Size;
-               Serial.printf(" #%02d %5d %s\n", ROMNum, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
+               Serial.printf(" #%02d %08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
             }
             Serial.printf(" Total Size: %d (%dk)\n\n", TotalSize, TotalSize/1024);
          }

@@ -37,7 +37,6 @@ uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
 uint32_t MaxFileSize;
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
-volatile uint8_t Phi2ISRState = P2I_Normal;
 uint8_t CurrentIOHandler = IOH_None;
 
 StructMenuItem *DriveDirMenu;
@@ -107,21 +106,6 @@ void setup()
    MaxFileSize = RAM2BytesFree() - 1024*8; //leave 8k
    Serial.printf("Free, Max FS: %lu, %lu\n", RAM2BytesFree(), MaxFileSize);   
 
-   //bus timing check prep:
-   //BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   //BigBufCount = 0;
-   //Phi2ISRState = P2I_TimingCheck;
-   //while (Phi2ISRState!=P2I_Normal);
-   //for (uint8_t SampNum = 0; SampNum < BigBufSize; SampNum++) 
-   //{
-   //   Serial.print(SampNum);
-   //   Serial.print(" : ");
-   //   Serial.print(BigBuf[SampNum]);
-   //   Serial.print(" : ");
-   //   Serial.println(CycTonS(BigBuf[SampNum]));
-   //}
-   //free(BigBuf);
-   
    MakeBuildCPUInfoStr();
    Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 } 
@@ -134,7 +118,6 @@ void loop()
       SetLEDOn;
       BtnPressed=false;
       SetUpMainMenuROM(); //back to main menu
-      Phi2ISRState=P2I_Normal;
    }
    
    if (doReset)

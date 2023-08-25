@@ -39,8 +39,6 @@ stcIOHandlers IOHndlr_EpyxFastLoad =
 #define EpyxMaxCycleCount  512 //Numer for C64 clock cycles to disable Epyx
 #define EpyxFastLoadCycleReset {SetExROMAssert;if(CycleCountdown<EpyxMaxCycleCount)CycleCountdown=EpyxMaxCycleCount;}  //don't interfere with long count set at init
 
-extern const unsigned char *LOROM_Image;
-
 volatile uint32_t CycleCountdown=0;
 
 void InitHndlr_EpyxFastLoad()
@@ -61,7 +59,7 @@ void IO2Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn)
 
 void ROMLHndlr_EpyxFastLoad(uint32_t Address)
 {
-   EpyxFastLoadCycleReset
+   EpyxFastLoadCycleReset;
 }
 
 void CycleHndlr_EpyxFastLoad()

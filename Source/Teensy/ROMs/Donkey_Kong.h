@@ -1,21 +1,10 @@
 #ifndef DONKEY_KONG_BIN_H
 #define DONKEY_KONG_BIN_H
 
-// D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW>"D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\Emulation\GTK3VICE-3.6.1-win64\bin\cartconv.exe" -f "D:\MyData\Geek Stuff\Projects\Commodore 64\Software\Games\Big Torrent\D\Donkey Kong (Nintendo)\Donkey Kong.crt"
-// CRT Version: 1.0 (C64 CARTRIDGE )
-// Name: Donkey Kong
-// Hardware ID: 0 (Generic C64 Cartridge)
-// Hardware Revision: 0
 // Mode: exrom: 0 game: 0 (16k Game)
-// 
-// offset  sig  type  bank start size  chunklen
-// $000040 CHIP ROM   #000 $8000 $4000 $4010
-// 
 // total banks: 1 size: $004000
-// 
 
-
-static const unsigned char Donkey_Kong_BIN[] = {
+PROGMEM static const unsigned char Donkey_Kong_BIN[] = {
 	0x00, 0x00, 0x04, 0x02, 0x61, 0x04, 0x46, 0x83, 0x20, 0x11, 0x04, 0x07,
 	0x34, 0x00, 0x04, 0x25, 0x49, 0x03, 0x04, 0x25, 0x66, 0x00, 0x04, 0x25,
 	0x83, 0x03, 0x04, 0x25, 0xa0, 0x00, 0x04, 0x25, 0xbd, 0x00, 0x04, 0x28,

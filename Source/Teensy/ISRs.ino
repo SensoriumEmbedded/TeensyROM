@@ -43,15 +43,6 @@ FASTRUN void isrPHI2()
       #endif
    }
    
-   if (Phi2ISRState != P2I_Normal) 
-   {
-      if (Phi2ISRState == P2I_TimingCheck)
-      {
-         BigBuf[BigBufCount++] = CycSinceLast;
-         if (BigBufCount == BigBufSize) Phi2ISRState = P2I_Normal;
-      }
-      return;
-   }
    SetDebugAssert;
    
    WaitUntil_nS(nS_RWnReady); 

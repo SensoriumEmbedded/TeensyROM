@@ -38,48 +38,55 @@ void HandleExecution()
       return;
    }
    
-   //if SD card or USB Drive,  update path & load dir   or   load file to RAM
-   if (IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) 
+   bool SD_nUSBDrive = false;
+   switch(IO1[rWRegCurrMenuWAIT])
    {
-      bool SD_nUSBDrive = (IO1[rWRegCurrMenuWAIT] == rmtSD);
+      case rmtSD:
+         SD_nUSBDrive = true;
+      case rmtUSBDrive:
       
-      if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
-      {
-         char FullFilePath[MaxPathLength+MaxItemNameLength+2];
-         
-         if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
-         else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
+         if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
+         {
+            char FullFilePath[MaxPathLength+MaxItemNameLength+2];
+            
+            if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
+            else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
 
-         DoFlashUpdate(SD_nUSBDrive, FullFilePath);
-         return;  //we're done here...
-      }
-      
-      if (MenuSelCpy.ItemType == rtDirectory)
-      {  //edit path as needed and load the new directory from SD/USB
-         
-         if(strcmp(MenuSelCpy.Name, UpDirString)==0)
-         {  //up dir
-            char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
-            if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
+            DoFlashUpdate(SD_nUSBDrive, FullFilePath);
+            return;  //we're done here...
          }
-         else strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
          
-         LoadDirectory(SD_nUSBDrive); 
-         return;  //we're done here...
-      }
-      
-      if(!LoadFile(&MenuSelCpy, SD_nUSBDrive)) MenuSelCpy.ItemType=rtUnknown; //mark unknown if error      
+         if (MenuSelCpy.ItemType == rtDirectory)
+         {  //edit path as needed and load the new directory from SD/USB
+            
+            if(strcmp(MenuSelCpy.Name, UpDirString)==0)
+            {  //up dir
+               char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
+               if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
+            }
+            else strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+            
+            LoadDirectory(SD_nUSBDrive); 
+            return;  //we're done here...
+         }
+         
+         if(!LoadFile(&MenuSelCpy, SD_nUSBDrive)) return;     
 
-      MenuSelCpy.Code_Image = RAM_Image;
-   }
-   else //Print name for Teensy Mem or USB Host item since they are already loaded
-   {
-      SendMsgPrintfln(MenuSelCpy.Name);      
-   }
-    
-   if (IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
-   {
-      MenuSelCpy.Code_Image = HOST_Image; 
+         MenuSelCpy.Code_Image = RAM_Image;
+         break;
+         
+      case rmtTeensy:
+         SendMsgPrintfln(MenuSelCpy.Name); 
+         //Copy from (slow) Flash to RAM buff
+         if(!MakeRAM_Image(MenuSelCpy.Size)) return;  
+         memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
+         MenuSelCpy.Code_Image = RAM_Image;   
+         SendMsgPrintfln("Copied to RAM"); 
+         break;
+      case rmtUSBHost:
+         SendMsgPrintfln(MenuSelCpy.Name);  
+         MenuSelCpy.Code_Image = HOST_Image; 
+         break;
    }
    
    if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
@@ -89,6 +96,7 @@ void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
    uint8_t CartLoaded = false;
+   
    switch(MenuSelCpy.ItemType)
    {
       case rtBin16k:
@@ -179,6 +187,26 @@ void MenuChange()
    }
 }
 
+bool MakeRAM_Image(uint32_t ImageSize)
+{
+   SendMsgPrintfln("Image Size: %lu bytes", ImageSize);
+   SendMsgPrintfln("Max: %lu", MaxFileSize);
+   SendMsgPrintfln("Free: %lu", RAM2BytesFree());
+   if(ImageSize > MaxFileSize)
+   {
+      SendMsgPrintfln("Not enough space");
+      return false;
+   }
+   
+   RAM_Image = (uint8_t*)malloc(ImageSize);
+   if (RAM_Image == NULL)
+   {
+      SendMsgPrintfln("Could not allocate");
+      return false;
+   }
+   return true;
+} 
+
 bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
@@ -199,21 +227,9 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    }
    
    uint32_t FileSize = myFile.size();
-   SendMsgPrintfln("File Size: %lu bytes", FileSize);
    
-   SendMsgPrintfln("Max: %lu", MaxFileSize);
-   SendMsgPrintfln("Free: %lu", RAM2BytesFree());
-   if(FileSize > MaxFileSize)
+   if(!MakeRAM_Image(FileSize)) //Sends msg on fail
    {
-      SendMsgPrintfln("Not enough space");
-      myFile.close();
-      return false;
-   }
-   
-   RAM_Image = (uint8_t*)malloc(FileSize);
-   if (RAM_Image == NULL)
-   {
-      SendMsgPrintfln("Could not allocate");
       myFile.close();
       return false;
    }
@@ -363,13 +379,14 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    
    //On to CHIP packet(s)...
    uint32_t PacketLength;
-   uint16_t Ch0LoadAddress, Ch0ROMSize;
+   uint16_t Ch0LoadAddress = 0;
+   uint16_t Ch0ROMSize = 0;
    
    NumCrtChips = 0;
    uint8_t *ChipImage = CRT_Image + HeaderLen;
    
    Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
-   while ((uint32_t)ChipImage-(uint32_t)CRT_Image < MyMenuItem->Size)
+   while (MyMenuItem->Size + (uint32_t)CRT_Image - (uint32_t)ChipImage > 1) //allow for off by 1 in header file creation
    {   
       if (memcmp(ChipImage, "CHIP", 4)!=0)
       {
