@@ -211,6 +211,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
+   //MyMenuItem->ItemType
    if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
@@ -252,15 +253,19 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 
 void LoadDirectory(bool SD_nUSBDrive) 
 {
-   uint16_t ItemNum = 0;
    File dir;
-      
+   
+   //free/clear prev loaded directory
+   for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
+   NumDrvDirMenuItems = 0;
+
    if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
    else dir = firstPartition.open(DriveDirPath); //USB Drive
    
    if (!(strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/'))
    {  // *not* at root, add up dir option
-      ItemNum++;
+      NumDrvDirMenuItems++;
+      DriveDirMenu[0].Name = (char*)malloc(strlen(UpDirString)+1);
       strcpy(DriveDirMenu[0].Name, UpDirString);
       DriveDirMenu[0].ItemType = rtDirectory;
    }
@@ -272,39 +277,36 @@ void LoadDirectory(bool SD_nUSBDrive)
       filename = entry.name();
       if (entry.isDirectory())
       {
-         DriveDirMenu[ItemNum].Name[0] = '/';
-         memcpy(DriveDirMenu[ItemNum].Name+1, filename, MaxItemNameLength-1);
+         DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+2);
+         DriveDirMenu[NumDrvDirMenuItems].Name[0] = '/';
+         strcpy(DriveDirMenu[NumDrvDirMenuItems].Name+1, filename);
+         DriveDirMenu[NumDrvDirMenuItems].ItemType = rtDirectory;
       }
-      else memcpy(DriveDirMenu[ItemNum].Name, filename, MaxItemNameLength);
-      
-      DriveDirMenu[ItemNum].Name[MaxItemNameLength-1]=0; //terminate in case too long. 
-      //if (strlen(filename)>MaxItemNameLength-1) DriveDirMenu[ItemNum].Name[MaxItemNameLength-2]='*';
-      
-      if (entry.isDirectory()) DriveDirMenu[ItemNum].ItemType = rtDirectory;
-      else 
+      else //it's a file
       {
-         //char* Extension = (filename + strlen(filename) - 4);
-         //this way marks too long names as unknown:
-         char* Extension = (DriveDirMenu[ItemNum].Name + strlen(DriveDirMenu[ItemNum].Name) - 4);
+         DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+1);
+         strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, filename);
+
+         char* Extension = (filename + strlen(filename) - 4);
          for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
          
-         if (strcmp(Extension, ".prg")==0) DriveDirMenu[ItemNum].ItemType = rtFilePrg;
-         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[ItemNum].ItemType = rtFileCrt;
-         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[ItemNum].ItemType = rtFileHex;
-         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[ItemNum].ItemType = rtFileP00;
-         else DriveDirMenu[ItemNum].ItemType = rtUnknown;
+         if (strcmp(Extension, ".prg")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFilePrg;
+         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileCrt;
+         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileHex;
+         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileP00;
+         else DriveDirMenu[NumDrvDirMenuItems].ItemType = rtUnknown;
       }
       
-      //Serial.printf("%d- %s\n", ItemNum, DriveDirMenu[ItemNum].Name); 
+      //Serial.printf("%d- %s\n", NumDrvDirMenuItems, DriveDirMenu[NumDrvDirMenuItems].Name); 
       entry.close();
-      if (ItemNum++ == MaxMenuItems)
+      if (++NumDrvDirMenuItems == MaxMenuItems)
       {
          Serial.println("Too many files!"); //no messaging in dir load
          break;
       }
    }
    
-   SetNumItems(ItemNum);
+   SetNumItems(NumDrvDirMenuItems);
 }
 
 void ParseP00File(StructMenuItem* MyMenuItem)   

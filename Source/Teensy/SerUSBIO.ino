@@ -77,6 +77,18 @@ void ServiceSerial()
          Serial.println("Applied upon reboot");
          break;
       case 'x':
+         {
+            char *ptrChip[70]; //64 8k blocks would be 512k (size of RAM2)
+            uint16_t ChipNum = 0;
+            while(1)
+            {
+               ptrChip[ChipNum] = (char *)malloc(8192);
+               if (ptrChip[ChipNum] == NULL) break;
+               ChipNum++;
+            } 
+            for(uint16_t Cnt=0; Cnt < ChipNum; Cnt++) free(ptrChip[Cnt]);
+            Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
+         }
          break;
       
    // m, p, k, r, s

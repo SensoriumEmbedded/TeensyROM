@@ -37,10 +37,11 @@
 #include "ROMs\swinth_LIGHT_FANTASTIC.PRG.h"
 #include "ROMs\Tetris.prg.h"
 
+
 StructMenuItem TeensyROMMenu[] = 
 {
 //regItemTypes,enumIOHandlers   
-// ItemType , IOHndlrAssoc     , Name[MaxItemNameLength]          , *Code_Image                          , Size ,
+// ItemType , IOHndlrAssoc     , Name                             , *Code_Image                          , Size ,
 
    rtNone   , IOH_None         , "MIDI/Terminal------------------", NULL                                 , 0, //sepparator
    rtFilePrg, IOH_MIDI_Datel   , " Cynthcart 2.0.1    +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
