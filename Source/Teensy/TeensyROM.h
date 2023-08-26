@@ -34,6 +34,7 @@ char strVersionNumber[] = "v0.4.5+"; //*VERSION*
 //#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
 //#define DbgSpecial    //Special case logging to BigBuf
 
+#define RAM_ImageSize       (128*1024)
 #define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;

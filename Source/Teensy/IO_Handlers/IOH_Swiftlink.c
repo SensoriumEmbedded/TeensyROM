@@ -40,7 +40,6 @@ stcIOHandlers IOHndlr_SwiftLink =
 extern volatile uint32_t CycleCountdown;
 extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
 extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
-extern uint32_t MaxFileSize;
 
 uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
@@ -82,18 +81,10 @@ uint32_t LastTxMillis = millis();
 
 bool EthernetInit()
 {
-   static bool FirstPass = true;
    uint32_t beginWait = millis();
    uint8_t  mac[6];
    bool retval = true;
    Serial.print("\nEthernet init ");
-   
-   if (FirstPass)
-   {
-      FirstPass=false;
-      MaxFileSize -= 100*1024;
-      Serial.printf("Max FS reduced to: %lu\n", MaxFileSize);   
-   }
    
    EEPreadBuf(eepAdMyMAC, mac, 6);
 

@@ -33,8 +33,7 @@
 #include "MainMenuItems.h"
 #include "IOHandlers.h"
 
-uint8_t* RAM_Image = NULL; //For receiving files from USB Drive & SD
-uint32_t MaxFileSize;
+uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
@@ -43,11 +42,11 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 
 StructMenuItem USBHostMenu = {
-   rtNone,  // ItemType;
-   IOH_None, // IOHndlrAssoc;  enumIOHandlers
-   "<Nothing Sent>",      // Name[];
-   NULL,    // *Code_Image;
-   0        // Size;
+   rtNone,                   // ItemType;
+   IOH_None,                 // IOHndlrAssoc;  enumIOHandlers
+   (char*)"<Nothing Sent>",  // Name;
+   NULL,                     // *Code_Image;
+   0                         // Size;
 };
 uint8_t* HOST_Image = NULL; //For receiving files from USB Host
 uint8_t NumUSBHostItems = 1;
@@ -101,10 +100,6 @@ void setup()
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   //determine max file size here as RAM2BytesFree not reliable after free()
-   MaxFileSize = RAM2BytesFree() - 1024*8; //leave 8k
-   Serial.printf("Free, Max FS: %lu, %lu\n", RAM2BytesFree(), MaxFileSize);   
-
    MakeBuildCPUInfoStr();
    Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 } 
@@ -150,8 +145,8 @@ void SetUpMainMenuROM()
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
-   //could have a deconstructor for these:
-   free(RAM_Image); RAM_Image = NULL;
+   
+   FreeCrtChips();
    free(RxQueue); RxQueue = NULL;
    free(TxMsg); TxMsg = NULL;
    IOHandlerInit(IOH_TeensyROM);   

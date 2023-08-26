@@ -75,21 +75,53 @@ void HandleExecution()
          MenuSelCpy.Code_Image = RAM_Image;
          break;
          
-      case rmtTeensy:
+      case rmtTeensy:  //not many size checks as this is loading internally
          SendMsgPrintfln(MenuSelCpy.Name); 
-         //Copy from (slow) Flash to RAM buff
-         if(!MakeRAM_Image(MenuSelCpy.Size)) return;  
-         memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
-         MenuSelCpy.Code_Image = RAM_Image;   
+         
+         if (MenuSelCpy.ItemType == rtFileCrt)
+         {  //load the CRT into RAM
+            uint8_t EXROM;
+            uint8_t GAME;
+            
+            //load header and parse (sends error messages)
+            if (!ParseCRTHeader(&MenuSelCpy, &EXROM, &GAME)) return;
+            
+            //process Chip Packets
+            uint8_t *ptrChipOffset = MenuSelCpy.Code_Image + CRT_MAIN_HDR_LEN; //Skip header
+            FreeCrtChips();  //clears any previous and resets NumCrtChips
+            Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
+            while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
+            {
+               if (!ParseChipHeader(ptrChipOffset)) //sends error messages
+               {
+                  FreeCrtChips();
+                  return;        
+               }
+               ptrChipOffset += CRT_CHIP_HDR_LEN;
+               memcpy(CrtChips[NumCrtChips].ChipROM, ptrChipOffset, CrtChips[NumCrtChips].ROMSize);
+               ptrChipOffset += CrtChips[NumCrtChips].ROMSize;
+               NumCrtChips++;
+            }
+            
+            //check configuration (sends error messages)
+            if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) return;
+         }
+         
+         else
+         {  //non-CRT: copy the whole thing into the RAM1 buffer
+            memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
+            MenuSelCpy.Code_Image = RAM_Image;   
+         }            
          SendMsgPrintfln("Copied to RAM"); 
          break;
+         
       case rmtUSBHost:
          SendMsgPrintfln(MenuSelCpy.Name);  
          MenuSelCpy.Code_Image = HOST_Image; 
          break;
    }
    
-   if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
+   //if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
  
    if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
 
@@ -187,31 +219,10 @@ void MenuChange()
    }
 }
 
-bool MakeRAM_Image(uint32_t ImageSize)
-{
-   SendMsgPrintfln("Image Size: %lu bytes", ImageSize);
-   SendMsgPrintfln("Max: %lu", MaxFileSize);
-   SendMsgPrintfln("Free: %lu", RAM2BytesFree());
-   if(ImageSize > MaxFileSize)
-   {
-      SendMsgPrintfln("Not enough space");
-      return false;
-   }
-   
-   RAM_Image = (uint8_t*)malloc(ImageSize);
-   if (RAM_Image == NULL)
-   {
-      SendMsgPrintfln("Could not allocate");
-      return false;
-   }
-   return true;
-} 
-
 bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
-   //MyMenuItem->ItemType
    if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
@@ -227,28 +238,78 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
       return false;
    }
    
-   uint32_t FileSize = myFile.size();
-   
-   if(!MakeRAM_Image(FileSize)) //Sends msg on fail
-   {
-      myFile.close();
-      return false;
-   }
-
+   MyMenuItem->Size = myFile.size();
    uint32_t count=0;
-   while (myFile.available() && count < FileSize) RAM_Image[count++]=myFile.read();
-
-   if (count != FileSize)
-   {
-      SendMsgPrintfln("Size Mismatch");
-      myFile.close();
-      return false;
+   
+   if (MyMenuItem->ItemType == rtFileCrt)
+   {  //load the CRT
+      uint8_t lclBuf[CRT_MAIN_HDR_LEN];
+      uint8_t EXROM;
+      uint8_t GAME;
+      
+      if (MyMenuItem->Size < 0x1000)
+      {
+         SendMsgPrintfln("Too Short for CRT");
+         myFile.close();
+         return false;        
+      }
+      
+      //load header and parse
+      for (count = 0; count < CRT_MAIN_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read main header
+      MyMenuItem->Code_Image = lclBuf;
+      if (!ParseCRTHeader(MyMenuItem, &EXROM, &GAME)) //sends error messages
+      {
+         myFile.close();
+         return false;        
+      }
+      
+      //process Chip Packets
+      FreeCrtChips();  //clears any previous and resets NumCrtChips
+      Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
+      while (myFile.available())
+      {
+         for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
+         if (!ParseChipHeader(lclBuf)) //sends error messages
+         {
+            myFile.close();
+            FreeCrtChips();
+            return false;        
+         }
+         for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
+         NumCrtChips++;
+      }
+      
+      //check configuration
+      if (!SetTypeFromCRT(MyMenuItem, EXROM, GAME)) //sends error messages
+      {
+         myFile.close();
+         return false;        
+      }
    }
+   
+   else //non-CRT: Load the whole thing into the RAM1 buffer
+   {
+      if (MyMenuItem->Size > RAM_ImageSize)
+      {
+         SendMsgPrintfln("Non-CRT file too large");
+         myFile.close();
+         return false;
+      }
+      
+      while (myFile.available() && count < MyMenuItem->Size) RAM_Image[count++]=myFile.read();
 
-   MyMenuItem->Size = count;
-   myFile.close();
+      myFile.close();
+      if (count != MyMenuItem->Size)
+      {
+         SendMsgPrintfln("Size Mismatch");
+         myFile.close();
+         return false;
+      }
+   }
+   
    SendMsgPrintfln("Done");
-   return true;
+   myFile.close();
+   return true;      
 }
 
 void LoadDirectory(bool SD_nUSBDrive) 
@@ -287,7 +348,8 @@ void LoadDirectory(bool SD_nUSBDrive)
          DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+1);
          strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, filename);
 
-         char* Extension = (filename + strlen(filename) - 4);
+         //convert extension to lower case:
+         char* Extension = DriveDirMenu[NumDrvDirMenuItems].Name + strlen(DriveDirMenu[NumDrvDirMenuItems].Name) - 4;
          for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
          
          if (strcmp(Extension, ".prg")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFilePrg;
@@ -327,9 +389,9 @@ void ParseP00File(StructMenuItem* MyMenuItem)
    }
    SendMsgOK();
 }
-
-void ParseCRTFile(StructMenuItem* MyMenuItem)   
-{  //update .ItemType(rtUnknown or rtBin*) & .Code_Image
+ 
+bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)   
+{  
    //Sources:
    // https://codebase64.org/doku.php?id=base:crt_file_format
    // https://rr.pokefinder.org/wiki/CRT_ID
@@ -337,26 +399,22 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
    // http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
    
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
-   MyMenuItem->ItemType = rtUnknown; //default to fail
 
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   uint8_t  C128Cart = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
-   if (C128Cart) SendMsgPrintfln("C128 crt");
+   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
       SendMsgPrintfln("\"C64/128 CARTRIDGE\" not found");
-      return;
+      return false;
    }
    
-   uint32_t HeaderLen = toU32(CRT_Image+0x10);
-   SendMsgPrintfln("Header len: $%08x", HeaderLen);
-   if (HeaderLen < 0x40) 
+   if (toU32(CRT_Image+0x10) != CRT_MAIN_HDR_LEN) //Header Length
    {
-      SendMsgPrintfln(" adjusted to $40");
-      HeaderLen = 0x40;
+      SendMsgPrintfln("Unexp Header Len: $%08x", toU32(CRT_Image+0x10));
+      return false;
    }
 
    SendMsgPrintfln("Ver: %02x.%02x", CRT_Image[0x14], CRT_Image[0x15]);
@@ -369,93 +427,113 @@ void ParseCRTFile(StructMenuItem* MyMenuItem)
       if (!AssocHWID_IOH(HWType))
       {
          SendMsgPrintfln("Unsupported HW Type (so far)");
-         return;         
+         return false;         
       }
    }
    
-   uint8_t EXROM = CRT_Image[0x18];
-   uint8_t GAME = CRT_Image[0x19];
-   SendMsgPrintfln("EXROM: %d   GAME: %d", EXROM, GAME);
+
+   *EXROM = CRT_Image[0x18];
+   *GAME = CRT_Image[0x19];
+   SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
    SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   return true;
+}
    
-   //On to CHIP packet(s)...
+bool ParseChipHeader(uint8_t* ChipHeader)   
+{
    uint32_t PacketLength;
-   uint16_t Ch0LoadAddress = 0;
-   uint16_t Ch0ROMSize = 0;
+   static uint8_t *ptrRAM_ImageEnd = NULL;
    
-   NumCrtChips = 0;
-   uint8_t *ChipImage = CRT_Image + HeaderLen;
-   
-   Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
-   while (MyMenuItem->Size + (uint32_t)CRT_Image - (uint32_t)ChipImage > 1) //allow for off by 1 in header file creation
-   {   
-      if (memcmp(ChipImage, "CHIP", 4)!=0)
-      {
-         SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
-         return;
-      }
-     
-      //CrtChips[NumCrtChips].LoadAddress = toU16(ChipImage+0x0C);
-      //CrtChips[NumCrtChips].ROMSize = toU16(ChipImage+0x0E);
-      CrtChips[NumCrtChips].ChipROM = ChipImage+0x10;
-      PacketLength = toU32(ChipImage+0x04);
-      
-      //too much for C64 disaply, just send to serial:
-      Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x\n", 
-         NumCrtChips, PacketLength, toU16(ChipImage+0x08), toU16(ChipImage+0x0A), 
-         toU16(ChipImage+0x0C), toU16(ChipImage+0x0E));
-
-      if (NumCrtChips++ == 0)
-      {
-         Ch0LoadAddress = toU16(ChipImage+0x0C);
-         Ch0ROMSize = toU16(ChipImage+0x0E);
-      }
-      ChipImage += PacketLength;
+   if (memcmp(ChipHeader, "CHIP", 4)!=0)
+   {
+      SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
+      return false;
    }
+     
+   PacketLength = toU32(ChipHeader+0x04);
+      
+   //too much for C64 disaply, just send to serial:
+   Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
+      NumCrtChips, PacketLength, toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
+      toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
+
        
-   SendMsgPrintfln("CRT Image verified, %d Chip(s) found", NumCrtChips); 
-   //We have a good CRT image, check configuration
+   CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
+   CrtChips[NumCrtChips].ROMSize = toU16(ChipHeader+0x0E);
    
+   //chips in main buffer, then malloc in RAM2.  Drop Directory names if space needed?
+   if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //init RAM1 Buffer pointer
+
+   if (CrtChips[NumCrtChips].ROMSize + (uint32_t)ptrRAM_ImageEnd - (uint32_t)RAM_Image <= RAM_ImageSize)
+   {
+      CrtChips[NumCrtChips].ChipROM = ptrRAM_ImageEnd;
+      ptrRAM_ImageEnd += CrtChips[NumCrtChips].ROMSize;
+      Serial.print("1");
+   }
+   else
+   {
+      CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize);
+      if (CrtChips[NumCrtChips].ChipROM == NULL)
+      {
+         SendMsgPrintfln("Not enough room"); 
+         return false;
+      }
+      Serial.print("2");
+   } 
+   Serial.printf(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
+   return true;
+}
+ 
+void FreeCrtChips()
+{ //free chips allocated in RAM2 and reset NumCrtChips
+   for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
+      if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
+   NumCrtChips = 0;
+}
+ 
+bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)   
+{
+   SendMsgPrintfln("%d Chip(s) found/loaded", NumCrtChips); 
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
-   if(HWType==Cart_EpyxFastload && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x2000) //sets EXROM & GAME high in crt
-   {
-      MyMenuItem->ItemType = rtBin8kLo;
-      SendMsgPrintfln(" EpyxFastload 8kLo config");
-      return;
-   }
-   
-   if(EXROM==0                  && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x2000) //GAME is usually==1, Centiped calls for low but doesn't use it
+   //check configuration
+      
+   if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
+   //Usually GAME ==1 and EXROM==0
+   //Centiped calls for GAME low but doesn't use 16k
+   //Epyx Fastload sets EXROM & GAME high in crt
    {
       MyMenuItem->ItemType = rtBin8kLo;
       SendMsgPrintfln(" 8kLo config");
-      return;
+      return true;
    }      
 
-   if(EXROM==1 && GAME==0       && Ch0LoadAddress == 0xe000 && Ch0ROMSize == 0x2000)
+   if(CrtChips[0].LoadAddress == 0xe000 && CrtChips[0].ROMSize == 0x2000 && EXROM==1 && GAME==0)
    {
       MyMenuItem->ItemType = rtBin8kHi;
       SendMsgPrintfln(" 8kHi/Ultimax config");
-      return;
+      return true;
    }      
 
-   if(EXROM==0 && GAME==0       && Ch0LoadAddress == 0x8000 && Ch0ROMSize == 0x4000)
+   if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x4000 && EXROM==0 && GAME==0)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
-      return;
+      return true;
    }      
    
-   if(EXROM==0 && GAME==0       && Ch0LoadAddress == 0x0000 && Ch0ROMSize == 0x2000 && C128Cart)
+   if(CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && EXROM==0 && GAME==0)
    {
       MyMenuItem->ItemType = rtBinC128;
       SendMsgPrintfln(" C128 config");
-      return;
+      return true;
    }      
    
-   SendMsgPrintfln("HW config unknown!");
+   SendMsgPrintfln("HW config unknown");
+   return false;
 }
+
 
 uint32_t toU32(uint8_t* src)
 {
