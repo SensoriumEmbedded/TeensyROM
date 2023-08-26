@@ -34,7 +34,7 @@
 #define Cart_RexUtility              12
 #define Cart_FinalCartridgeI         13
 #define Cart_MagicFormel             14
-#define Cart_C64GameSystemSystem3    15
+#define Cart_C64GameSystem3          15  //Supported
 #define Cart_WarpSpeed               16
 #define Cart_Dinamic                 17  //Supported
 #define Cart_ZaxxonSuperZaxxon       18
@@ -144,6 +144,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_Oceantype1,      IOH_Ocean1,
    (uint16_t)Cart_FunPlayPowerPlay,IOH_FunPlay,
    (uint16_t)Cart_SuperGames      ,IOH_SuperGames,
+   (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
 };
 
 #define CRT_MAIN_HDR_LEN  0x40

@@ -53,6 +53,7 @@ struct stcIOHandlers
 #include "IO_Handlers\IOH_Ocean1.c"
 #include "IO_Handlers\IOH_FunPlay.c"
 #include "IO_Handlers\IOH_SuperGames.c"
+#include "IO_Handlers\IOH_C64GameSystem3.c"
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
@@ -71,4 +72,5 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_Ocean1,             //IOH_Ocean1,
    &IOHndlr_FunPlay,            //IOH_FunPlay,
    &IOHndlr_SuperGames,         //IOH_SuperGames,
+   &IOHndlr_C64GameSystem3,     //IOH_C64GameSystem3,
 };
