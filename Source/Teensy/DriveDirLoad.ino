@@ -454,9 +454,9 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    PacketLength = toU32(ChipHeader+0x04);
       
    //too much for C64 disaply, just send to serial:
-   Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
-      NumCrtChips, PacketLength, toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
-      toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
+   //Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
+   //   NumCrtChips, PacketLength, toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
+   //   toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
 
        
    CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
@@ -469,7 +469,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    {
       CrtChips[NumCrtChips].ChipROM = ptrRAM_ImageEnd;
       ptrRAM_ImageEnd += CrtChips[NumCrtChips].ROMSize;
-      Serial.print("1");
+      //Serial.print("1");
    }
    else
    {
@@ -479,9 +479,9 @@ bool ParseChipHeader(uint8_t* ChipHeader)
          SendMsgPrintfln("Not enough room"); 
          return false;
       }
-      Serial.print("2");
+      //Serial.print("2");
    } 
-   Serial.printf(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
+   //Serial.printf(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
    return true;
 }
  
