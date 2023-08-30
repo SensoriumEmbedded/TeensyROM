@@ -90,7 +90,7 @@ MsgFWVerify:
 MsgFWInProgress:
    !tx ChrLtRed, "Yes", ChrReturn, ChrReturn
    !tx "Firmware update in progress!", ChrReturn
-   !tx "It will take about 1 minute to complete", ChrReturn
+   !tx "It will take about 2 minutes to complete" ;, ChrReturn
    !tx "DO NOT TURN OFF POWER WHILE UPDATING!!!", ChrReturn, MenuMiscColor
    !tx 0
 
