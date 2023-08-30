@@ -442,7 +442,6 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    
 bool ParseChipHeader(uint8_t* ChipHeader)   
 {
-   uint32_t PacketLength;
    static uint8_t *ptrRAM_ImageEnd = NULL;
    
    if (memcmp(ChipHeader, "CHIP", 4)!=0)
@@ -450,13 +449,11 @@ bool ParseChipHeader(uint8_t* ChipHeader)
       SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
       return false;
    }
-     
-   PacketLength = toU32(ChipHeader+0x04);
       
-   //too much for C64 disaply, just send to serial:
-   //Serial.printf(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
-   //   NumCrtChips, PacketLength, toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
-   //   toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
+   //clutters C64 disaply, just send to serial/debug
+   Printf_dbg(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
+      NumCrtChips, toU32(ChipHeader+0x04), toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
+      toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
 
        
    CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
@@ -469,7 +466,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    {
       CrtChips[NumCrtChips].ChipROM = ptrRAM_ImageEnd;
       ptrRAM_ImageEnd += CrtChips[NumCrtChips].ROMSize;
-      //Serial.print("1");
+      Printf_dbg("1");
    }
    else
    {
@@ -479,9 +476,9 @@ bool ParseChipHeader(uint8_t* ChipHeader)
          SendMsgPrintfln("Not enough room"); 
          return false;
       }
-      //Serial.print("2");
+      Printf_dbg("2");
    } 
-   //Serial.printf(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
+   Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
    return true;
 }
  

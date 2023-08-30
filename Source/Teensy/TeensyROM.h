@@ -20,18 +20,19 @@
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart
 
 
-char strVersionNumber[] = "v0.4.6"; //*VERSION*
+char strVersionNumber[] = "v0.4.6+"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
 
 //enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-//#define DbgMsgs_IO    //IO messages (Printf_dbg): Swift, MIDI (mostly out) 
+//#define DbgMsgs_IO    //IO messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 //#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
 //#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
+#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
 #define RAM_ImageSize       (128*1024)

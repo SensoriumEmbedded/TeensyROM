@@ -46,6 +46,13 @@ void ServiceSerial()
                break;
          }
          break;
+      case 'e': //Reset EEPROM to defaults
+         SetEEPDefaults();
+         Serial.println("Applied upon reboot");
+         break;
+
+   // l, c, i, f, x
+   #ifdef Dbg_SerLogMem 
       case 'l':  //Show Debug Log
          PrintDebugLog();
          break;
@@ -62,22 +69,26 @@ void ServiceSerial()
             Serial.printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
             memInfo();
             getFreeITCM();
+ 
             uint32_t TotalSize = 0;
+            for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
+            Serial.printf("\nMem usage:\nFilenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\nRAM_Image: %lu (%luk) @ $%08x\n", 
+               TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
+               sizeof(DriveDirMenu), sizeof(DriveDirMenu)/1024, (uint32_t)DriveDirMenu,
+               sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
+            
+            TotalSize = 0;
             Serial.printf("\nTeensyROMMenu Items:\n");
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                TotalSize += TeensyROMMenu[ROMNum].Size;
                Serial.printf(" #%02d %08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
             }
-            Serial.printf(" Total Size: %d (%dk)\n\n", TotalSize, TotalSize/1024);
+            Serial.printf(" Total Size: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
          break;
-      case 'e': //Reset EEPROM to defaults
-         SetEEPDefaults();
-         Serial.println("Applied upon reboot");
-         break;
       case 'x':
-         {
+         { //see how many 8k banks will fit in RAM2
             char *ptrChip[70]; //64 8k blocks would be 512k (size of RAM2)
             uint16_t ChipNum = 0;
             while(1)
@@ -90,7 +101,8 @@ void ServiceSerial()
             Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
          }
          break;
-      
+   #endif
+   
    // m, p, k, r, s
    #ifdef Dbg_SerSwift
       case 'm':
