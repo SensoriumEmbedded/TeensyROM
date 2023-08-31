@@ -89,7 +89,7 @@ void HandleExecution()
             //process Chip Packets
             uint8_t *ptrChipOffset = MenuSelCpy.Code_Image + CRT_MAIN_HDR_LEN; //Skip header
             FreeCrtChips();  //clears any previous and resets NumCrtChips
-            Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
+            Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
             while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
             {
                if (!ParseChipHeader(ptrChipOffset)) //sends error messages
@@ -265,7 +265,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
       
       //process Chip Packets
       FreeCrtChips();  //clears any previous and resets NumCrtChips
-      Serial.printf("\n Chp# Length    Type  Bank  Addr  Size\n");
+      Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
       while (myFile.available())
       {
          for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
@@ -454,8 +454,8 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    Printf_dbg(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
       NumCrtChips, toU32(ChipHeader+0x04), toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
       toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
-
        
+   CrtChips[NumCrtChips].BankNum = toU16(ChipHeader+0x0A);
    CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
    CrtChips[NumCrtChips].ROMSize = toU16(ChipHeader+0x0E);
    
@@ -506,7 +506,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
       return true;
    }      
 
-   if(CrtChips[0].LoadAddress == 0xe000 && CrtChips[0].ROMSize == 0x2000 && EXROM==1 && GAME==0)
+   if(                                     CrtChips[0].ROMSize == 0x2000 && EXROM==1 && GAME==0)
    {
       MyMenuItem->ItemType = rtBin8kHi;
       SendMsgPrintfln(" 8kHi/Ultimax config");

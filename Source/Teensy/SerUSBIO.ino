@@ -72,13 +72,16 @@ void ServiceSerial()
  
             uint32_t TotalSize = 0;
             for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
-            Serial.printf("\nMem usage:\nFilenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\nRAM_Image: %lu (%luk) @ $%08x\n", 
+            Serial.printf("\nMem usage:\nFilenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
                TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
-               sizeof(DriveDirMenu), sizeof(DriveDirMenu)/1024, (uint32_t)DriveDirMenu,
-               sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
+               sizeof(DriveDirMenu), sizeof(DriveDirMenu)/1024, (uint32_t)DriveDirMenu);
+            
+            Serial.printf("RAM_Image: %lu (%luk) @ $%08x\nTeensyROMMenu: %lu (%luk) @ $%08x\n", 
+               sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image,
+               sizeof(TeensyROMMenu), sizeof(TeensyROMMenu)/1024, (uint32_t)TeensyROMMenu);
             
             TotalSize = 0;
-            Serial.printf("\nTeensyROMMenu Items:\n");
+            Serial.printf("TeensyROMMenu Items:\n");
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                TotalSize += TeensyROMMenu[ROMNum].Size;

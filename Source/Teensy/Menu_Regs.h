@@ -187,6 +187,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_FunPlay,
    IOH_SuperGames,
    IOH_C64GameSystem3,
+   IOH_EasyFlash,
    
    IOH_Num_Handlers       //always last
 };

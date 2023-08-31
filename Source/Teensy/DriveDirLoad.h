@@ -51,7 +51,7 @@
 #define Cart_FinalCartridgePlus      29
 #define Cart_ActionReplay4           30
 #define Cart_Stardos                 31
-#define Cart_EasyFlash               32
+#define Cart_EasyFlash               32  //Supported*
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
 #define Cart_ActionReplay3           35
@@ -145,6 +145,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_FunPlayPowerPlay,IOH_FunPlay,
    (uint16_t)Cart_SuperGames      ,IOH_SuperGames,
    (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
+   (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
 };
 
 #define CRT_MAIN_HDR_LEN  0x40
@@ -156,5 +157,6 @@ struct StructCrtChip
    uint8_t *ChipROM;
    uint16_t LoadAddress;
    uint16_t ROMSize;
+   uint16_t BankNum;
 };
 
