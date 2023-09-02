@@ -20,7 +20,7 @@
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart
 
 
-char strVersionNumber[] = "v0.4.7"; //*VERSION*
+char strVersionNumber[] = "v0.4.7+"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
@@ -35,7 +35,7 @@ char strVersionNumber[] = "v0.4.7"; //*VERSION*
 #define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
-#define RAM_ImageSize       (128*1024)
+#define RAM_ImageSize       (184*1024)
 #define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;

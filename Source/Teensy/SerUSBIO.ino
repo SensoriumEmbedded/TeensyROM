@@ -70,11 +70,18 @@ void ServiceSerial()
             memInfo();
             getFreeITCM();
  
+            Serial.printf("\nMem usage:\n");
             uint32_t TotalSize = 0;
-            for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
-            Serial.printf("\nMem usage:\nFilenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
-               TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
-               sizeof(DriveDirMenu), sizeof(DriveDirMenu)/1024, (uint32_t)DriveDirMenu);
+            if(DriveDirMenu != NULL) 
+            {
+               for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
+               Serial.printf("Filenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
+                  TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
+                  MaxMenuItems*sizeof(StructMenuItem), MaxMenuItems*sizeof(StructMenuItem)/1024, (uint32_t)DriveDirMenu);
+               TotalSize += MaxMenuItems*sizeof(StructMenuItem);
+            }
+            Serial.printf("DriveDirMenu+Filenames: %lu (%luk)\n", 
+               TotalSize, TotalSize/1024);
             
             Serial.printf("RAM_Image: %lu (%luk) @ $%08x\nTeensyROMMenu: %lu (%luk) @ $%08x\n", 
                sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image,
@@ -85,7 +92,7 @@ void ServiceSerial()
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                TotalSize += TeensyROMMenu[ROMNum].Size;
-               Serial.printf(" #%02d %08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
+               //Serial.printf(" #%02d %08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
             }
             Serial.printf(" Total Size: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
@@ -475,14 +482,14 @@ void memInfo ()
   printf("\n");
 
   auto stack = sp - _ebss;
-  printf("avail STACK %8d b %5d kb\n", stack, stack >> 10);
+  printf("avail STACK (RAM1) %8d b %5d kb\n", stack, stack >> 10);
 
   auto heap = _heap_end - __brkval;
-  printf("avail HEAP  %8d b %5d kb\n", heap, heap >> 10);
+  printf("avail HEAP  (RAM2) %8d b %5d kb\n", heap, heap >> 10);
 
 #if ARDUINO_TEENSY41
   auto psram = _extram_start + (external_psram_size << 20) - _extram_end;
-  printf("avail PSRAM %8d b %5d kb\n", psram, psram >> 10);
+  printf("avail PSRAM (ext)  %8d b %5d kb\n", psram, psram >> 10);
 #endif
 }
 

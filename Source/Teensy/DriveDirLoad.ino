@@ -273,6 +273,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
          {
             myFile.close();
             FreeCrtChips();
+            RedirectEmptyDriveDirMenu();
             return false;        
          }
          for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
@@ -283,6 +284,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
       if (!SetTypeFromCRT(MyMenuItem, EXROM, GAME)) //sends error messages
       {
          myFile.close();
+         FreeCrtChips();
+         RedirectEmptyDriveDirMenu();
          return false;        
       }
    }
@@ -316,10 +319,17 @@ void LoadDirectory(bool SD_nUSBDrive)
 {
    File dir;
    
-   //free/clear prev loaded directory
-   for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
+   if (DriveDirMenu == NULL) 
+   {
+      DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems*sizeof(StructMenuItem));
+   }
+   else
+   {
+      //free/clear prev loaded directory
+      for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
+   }
    NumDrvDirMenuItems = 0;
-
+   
    if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
    else dir = firstPartition.open(DriveDirPath); //USB Drive
    
@@ -462,22 +472,32 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    //chips in main buffer, then malloc in RAM2.  Drop Directory names if space needed?
    if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //init RAM1 Buffer pointer
 
+   //First try RAM1:
    if (CrtChips[NumCrtChips].ROMSize + (uint32_t)ptrRAM_ImageEnd - (uint32_t)RAM_Image <= RAM_ImageSize)
    {
       CrtChips[NumCrtChips].ChipROM = ptrRAM_ImageEnd;
       ptrRAM_ImageEnd += CrtChips[NumCrtChips].ROMSize;
       Printf_dbg("1");
    }
-   else
+   else //then try RAM2
    {
-      CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize);
-      if (CrtChips[NumCrtChips].ChipROM == NULL)
+      while(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
       {
-         SendMsgPrintfln("Not enough room"); 
-         return false;
+         if (DriveDirMenu == NULL)
+         {
+            SendMsgPrintfln("Not enough room"); 
+            return false;         
+         }
+         else
+         {
+            //free/clear prev loaded directory
+            Printf_dbg("Dir info removed"); 
+            for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
+            free(DriveDirMenu); DriveDirMenu = NULL;
+         }
       }
       Printf_dbg("2");
-   } 
+   }
    Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
    return true;
 }
@@ -489,6 +509,15 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
  
+void RedirectEmptyDriveDirMenu()
+{
+   if(DriveDirMenu == NULL) //return to Teensy Menu instead of re-loading dir
+   {
+      IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+      MenuChange();
+   }
+}
+                  
 bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)   
 {
    SendMsgPrintfln("%d Chip(s) found/loaded", NumCrtChips); 

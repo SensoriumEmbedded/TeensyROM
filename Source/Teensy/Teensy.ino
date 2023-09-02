@@ -37,7 +37,7 @@ uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
-StructMenuItem DriveDirMenu[MaxMenuItems];
+StructMenuItem *DriveDirMenu = NULL;
 uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 
@@ -148,7 +148,8 @@ void SetUpMainMenuROM()
    
    FreeCrtChips();
    free(RxQueue); RxQueue = NULL;
-   free(TxMsg); TxMsg = NULL;
+   free(TxMsg); TxMsg = NULL;   
+   RedirectEmptyDriveDirMenu();
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }
