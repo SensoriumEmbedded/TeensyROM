@@ -50,10 +50,10 @@ StructMenuItem TeensyROMMenu[] =
    rtNone   , IOH_None         , (char*)""                               , NULL                                 , 0, //sepparator
 
    rtNone   , IOH_None         , (char*)"Games:-------------------------", NULL                                 , 0, //sepparator
-   rtFileCrt, IOH_None         , (char*)" Beach Head II      256k MC"    , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
-   rtFileCrt, IOH_None         , (char*)" Robocop 2          256k Ocean" , (uint8_t*)Robocop_2_crt              , sizeof(Robocop_2_crt) ,
-   rtFileCrt, IOH_None         , (char*)" Terminator 2 +MM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
+   rtFileCrt, IOH_None         , (char*)" Robocop 2           256k Ocean", (uint8_t*)Robocop_2_crt              , sizeof(Robocop_2_crt) ,
+   rtFileCrt, IOH_None         , (char*)" Terminator 2 +MM+IM 512k Ocean", (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
    rtFilePrg, IOH_None         , (char*)" Super Mario Brothers"          , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
+   rtFileCrt, IOH_None         , (char*)" Beach Head II       256k MC"   , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
    rtBin8kHi, IOH_None         , (char*)" Jupiter Lander"                , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
    rtFilePrg, IOH_None         , (char*)" Joust!"                        , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
    rtBin16k , IOH_None         , (char*)" Donkey Kong"                   , (uint8_t*)Donkey_Kong_BIN            , sizeof(Donkey_Kong_BIN) ,      

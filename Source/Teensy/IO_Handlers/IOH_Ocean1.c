@@ -34,9 +34,19 @@ stcIOHandlers IOHndlr_Ocean1 =
 
 void InitHndlr_Ocean1()
 {
-   //16k config, 8k mirrored to support both types
-   SetGameAssert;
-   SetExROMAssert;
+   if (NumCrtChips == 64) // Type B, 512k
+   {
+      //8kLo config
+      SetGameDeassert;
+      SetExROMAssert;
+   }
+   else                  // Type A, all other sizes
+   {
+      //16k config, 8k mirrored
+      SetGameAssert;
+      SetExROMAssert;
+   }
+
    LOROM_Image = CrtChips[0].ChipROM;
    HIROM_Image = CrtChips[0].ChipROM;
 }
