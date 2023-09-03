@@ -17,7 +17,6 @@
 #include "ROMs\joust.prg.h"
 #include "ROMs\Terminator_2.crt.h" 
 #include "ROMs\Beach_Head_II.crt.h" 
-#include "ROMs\Robocop_2.crt.h" 
 #include "ROMs\Joystick_Tester.h" 
 #include "ROMs\Keyboard_Tester.h" 
 #include "ROMs\Donkey_Kong.h" 
@@ -36,6 +35,9 @@
 #include "ROMs\SID_check.prg.h"
 #include "ROMs\swinth_LIGHT_FANTASTIC.PRG.h"
 #include "ROMs\Tetris.prg.h"
+//#include "ROMs\Robocop_2.crt.h" 
+#include "ROMs\super_expander_64.crt.h" 
+#include "ROMs\Robocop_2_EasyFlash.crt.h" 
 
 
 StructMenuItem TeensyROMMenu[] = 
@@ -50,9 +52,9 @@ StructMenuItem TeensyROMMenu[] =
    rtNone   , IOH_None         , (char*)""                               , NULL                                 , 0, //sepparator
 
    rtNone   , IOH_None         , (char*)"Games:-------------------------", NULL                                 , 0, //sepparator
-   rtFileCrt, IOH_None         , (char*)" Robocop 2           256k Ocean", (uint8_t*)Robocop_2_crt              , sizeof(Robocop_2_crt) ,
+   rtFileCrt, IOH_None         , (char*)" Robocop 2           224k EZF"  , (uint8_t*)Robocop_2_EasyFlash_crt    , sizeof(Robocop_2_EasyFlash_crt) ,
    rtFileCrt, IOH_None         , (char*)" Terminator 2 +MM+IM 512k Ocean", (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
-   rtFilePrg, IOH_None         , (char*)" Super Mario Brothers"          , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
+   rtFilePrg, IOH_None         , (char*)" Super Mario Brothers 48k PRG"  , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
    rtFileCrt, IOH_None         , (char*)" Beach Head II       256k MC"   , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
    rtBin8kHi, IOH_None         , (char*)" Jupiter Lander"                , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
    rtFilePrg, IOH_None         , (char*)" Joust!"                        , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
@@ -67,7 +69,8 @@ StructMenuItem TeensyROMMenu[] =
 
    rtNone   , IOH_None         , (char*)"Utilities----------------------", NULL                                 , 0, //sepparator
    rtFileCrt, IOH_None         , (char*)" Epyx Fast Load Cart"           , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
-   rtFilePrg, IOH_None         , (char*)" S.A.M.    \x7dRECITER  SAY\"hello\"", (uint8_t*)sam_prg                    , sizeof(sam_prg) ,
+   rtFilePrg, IOH_None         , (char*)" S.A.M.    \x7dRECITER  SAY\"hello\"", (uint8_t*)sam_prg               , sizeof(sam_prg) ,
+   rtFileCrt, IOH_None         , (char*)" Super Expander 64"             , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
    rtFilePrg, IOH_None         , (char*)" 80 Columns"                    , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
    rtFilePrg, IOH_None         , (char*)" Hex Mon"                       , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
    rtFilePrg, IOH_None         , (char*)" DualCopy"                      , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg) ,
