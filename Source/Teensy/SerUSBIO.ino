@@ -88,13 +88,15 @@ void ServiceSerial()
                sizeof(TeensyROMMenu), sizeof(TeensyROMMenu)/1024, (uint32_t)TeensyROMMenu);
             
             TotalSize = 0;
-            Serial.printf("TeensyROMMenu Items:\n");
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                TotalSize += TeensyROMMenu[ROMNum].Size;
-               //Serial.printf(" #%02d %08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
+               if (((uint32_t)TeensyROMMenu[ROMNum].Code_Image & 0xF0000000) == 0x20000000)
+                  Serial.printf("#%02d is using RAM!!!  %s\n", ROMNum, TeensyROMMenu[ROMNum].Name);
+
+               //Serial.printf(" #%02d @ $%08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
             }
-            Serial.printf(" Total Size: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
+            Serial.printf("TeensyROMMenu Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
          break;
       case 'x':
