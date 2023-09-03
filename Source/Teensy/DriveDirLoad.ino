@@ -378,6 +378,19 @@ void LoadDirectory(bool SD_nUSBDrive)
       }
    }
    
+   //alphabetize the directory list
+   StructMenuItem TempMenuItem;
+   for(uint16_t i=0; i<NumDrvDirMenuItems; i++)
+      for(uint16_t j=i+1; j<NumDrvDirMenuItems; j++)
+      {
+           if(strcasecmp(DriveDirMenu[i].Name,DriveDirMenu[j].Name)>0)
+           {
+              TempMenuItem    = DriveDirMenu[i];
+              DriveDirMenu[i] = DriveDirMenu[j];
+              DriveDirMenu[j] = TempMenuItem;
+           }
+      }   
+   
    SetNumItems(NumDrvDirMenuItems);
 }
 
