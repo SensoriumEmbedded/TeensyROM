@@ -30,7 +30,7 @@
    TimeColor        = ChrOrange
    MenuMiscColor    = ChrGreen
    ROMNumColor      = ChrDrkGrey
-   AssignedIOHColor = ChrCyan
+   AssignedIOHColor = ChrGreen
    OptionColor      = ChrYellow
    SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
@@ -46,6 +46,7 @@
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
    MusicInterrupted = $0336 ;Music muted for item selection
+   CursorItemNum    = $0337 ;Which item on the current page is highlighted
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
    SIDSusRel        = $033a
@@ -105,7 +106,7 @@ NoHW:
    and #rpudNetTimeMask
    beq +
    jsr SynchEthernetTime
-   jmp WaitForKey
+   jmp SetToFirstHighlight
    
 +  lda #0  ;set clock to midnight if not synching
    sta TODHoursBCD  ;stop TOD regs incrementing
@@ -113,13 +114,46 @@ NoHW:
    sta TODSecBCD
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
 
-
+SetToFirstHighlight:
+   ldx #0
+StoreAndHighlight:
+   txa
+   sta CursorItemNum
+   jsr InverseRow ;highlight the next
 WaitForKey:     
    jsr DisplayTime
    jsr GetIn    
    beq WaitForKey
 
-   cmp #'a'  
++  cmp #ChrReturn
+   bne +
+   lda CursorItemNum
+   jmp SelectItem 
+   
++  cmp #ChrCRSRDn  ;Move cursor down
+   bne +
+   ldx CursorItemNum
+   txa
+   jsr InverseRow ;unhighlight the current
+   inx   
+   cpx rRegNumItemsOnPage+IO1Port
+   bne StoreAndHighlight
+   jsr PageDown   ;at bottom of page, page down
+   jmp SetToFirstHighlight
+   
++  cmp #ChrCRSRUp  ;Move cursor up
+   bne +
+   lda CursorItemNum 
+   tax
+   jsr InverseRow ;unhighlight the current
+   cpx #0
+   bne ++
+   jsr PageUp  ;at top of page, page up
+   ldx rRegNumItemsOnPage+IO1Port 
+++ dex   
+   jmp StoreAndHighlight
+   
++  cmp #'a'  
    bmi +   ;skip if below 'a'
    cmp #'a'+ MaxItemsPerPage + 1  
    bpl +   ;skip if above MaxItemsPerPage
@@ -127,6 +161,7 @@ WaitForKey:
    sbc #'a'  ;convert to Item Number on page, now 0-?
    cmp rRegNumItemsOnPage+IO1Port 
    bpl WaitForKey   ;skip if above num of items on page
+SelectItem:
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr SelectMenuItem
    lda MusicInterrupted ;turn music back on if it was before...
@@ -135,36 +170,26 @@ WaitForKey:
    sta MusicInterrupted
    jsr SIDMusicOn 
 ++ jsr ListMenuItems ; reprint menu
+   lda CursorItemNum
+   jsr InverseRow ;highlight the same one (or dir change sets to 0)
    jmp WaitForKey
+   ;jmp SetToFirstHighlight
 
-+  cmp #ChrCSRSDn  ;Next Page
++  cmp #ChrCRSRRight  ;Next Page
    bne +
-   ldx rwRegPageNumber+IO1Port
-   cpx rRegNumPages+IO1Port
-   bne ++
-   ldx #0 ;on last page, roll over
-++ inx
-   stx rwRegPageNumber+IO1Port
-   jsr ListMenuItems
-   jmp WaitForKey
+   jsr PageDown
+   jmp SetToFirstHighlight
 
-+  cmp #ChrCSRSUp  ;Prev Page
++  cmp #ChrCRSRLeft  ;Prev Page
    bne +
-   ldx rwRegPageNumber+IO1Port
-   cpx #1
-   bne ++
-   ldx rRegNumPages+IO1Port ;on first page, roll over
-   inx
-++ dex   
-   stx rwRegPageNumber+IO1Port
-   jsr ListMenuItems
-   jmp WaitForKey  
+   jsr PageUp
+   jmp SetToFirstHighlight  
 
 +  cmp #ChrF1  ;Teensy mem Menu
    bne +
    lda #rmtTeensy
    jsr ListMenuItemsChangeInit
-   jmp WaitForKey  
+   jmp SetToFirstHighlight  
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
@@ -176,7 +201,7 @@ WaitForKey:
    bne +
    lda #rmtSD
    jsr ListMenuItemsChangeInit
-   jmp WaitForKey  
+   jmp SetToFirstHighlight  
 
 +  cmp #ChrF4  ;toggle music
    bne +
@@ -187,25 +212,25 @@ WaitForKey:
    bne +
    lda #rmtUSBDrive
    jsr ListMenuItemsChangeInit
-   jmp WaitForKey  
+   jmp SetToFirstHighlight  
 
 +  cmp #ChrF6  ;Settings Menu
    bne +
    jsr SettingsMenu
    jsr ListMenuItems
-   jmp WaitForKey  
+   jmp SetToFirstHighlight  
 
 +  cmp #ChrF7  ;Exe USB Host file
    bne +
    lda #rmtUSBHost
    jsr ListMenuItemsChangeInit
-   jmp WaitForKey
+   jmp SetToFirstHighlight
 
 +  cmp #ChrF8  ;MIDI to SID
    bne +
    jsr MIDI2SID
    jsr ListMenuItems
-   jmp WaitForKey
+   jmp SetToFirstHighlight
 
 
 +  jmp WaitForKey
@@ -223,7 +248,7 @@ ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to ch
 ListMenuItems:
    jsr PrintBanner 
    
-   ldx #20 ;row   Print the select message now so we can grey out the up/dn soon if needed
+   ldx #20 ;row
    ldy #0  ;col
    clc
    jsr SetCursor
@@ -284,7 +309,7 @@ nextLine
    jsr SendChar
    lda #ChrRvsOff
    jsr SendChar
-   lda #'-'
+   lda #ChrSpace
    jsr SendChar
 ; print name
    lda #NameColor
@@ -361,7 +386,9 @@ SelectMenuItem:
 DirUpdate:
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg ;if it's a ROM/crt image, it won't return from this unless error
+   jsr WaitForTRWaitMsg
+   lda #0
+   sta CursorItemNum ;set cursor to the first item in dir
    rts ;SelectMenuItem
 
 FWUpdate:
@@ -483,6 +510,75 @@ SynchEthernetTime:
    lda #9
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    rts
+   
+PageUp:
+   ldx rwRegPageNumber+IO1Port
+   cpx #1  ;on first page?
+   bne +
+   ldx rRegNumPages+IO1Port ;roll over to last
+   cpx #1
+   beq ++ ;do nothing if there's only 1 page
+   inx ;avoids a jump to skip next
++  dex   
+   stx rwRegPageNumber+IO1Port
+   jsr ListMenuItems   
+++ rts
+
+PageDown:
+   ldx rwRegPageNumber+IO1Port
+   cpx rRegNumPages+IO1Port ;on last page?
+   bne +
+   ldx rRegNumPages+IO1Port 
+   cpx #1
+   beq ++ ;do nothing if there's only 1 page
+   ldx #0 ;on last page, roll over to first
++  inx
+   stx rwRegPageNumber+IO1Port
+   jsr ListMenuItems
+++ rts
+   
+InverseRow:
+   ;Acc contains item number to toggle reverse
+   ;Uses A and Y   
+   ;get mem loc from table:
+   asl ;double it to point to word
+   tay
+   lda TblRowToMemLoc+1,y
+   sta PtrAddrHi
+   lda TblRowToMemLoc,y
+   sta PtrAddrLo 
+
+   ldy #40
+-  lda (PtrAddrLo), y 
+   eor #$80 ; toggle reverse 
+   sta (PtrAddrLo),y
+   dey
+   bne -
+   rts
+
+TblRowToMemLoc:
+   !word ScreenCharMemStart+40*(3+ 0)-1
+   !word ScreenCharMemStart+40*(3+ 1)-1
+   !word ScreenCharMemStart+40*(3+ 2)-1
+   !word ScreenCharMemStart+40*(3+ 3)-1
+   !word ScreenCharMemStart+40*(3+ 4)-1
+   !word ScreenCharMemStart+40*(3+ 5)-1
+   !word ScreenCharMemStart+40*(3+ 6)-1
+   !word ScreenCharMemStart+40*(3+ 7)-1
+   !word ScreenCharMemStart+40*(3+ 8)-1
+   !word ScreenCharMemStart+40*(3+ 9)-1
+   !word ScreenCharMemStart+40*(3+10)-1
+   !word ScreenCharMemStart+40*(3+11)-1
+   !word ScreenCharMemStart+40*(3+12)-1
+   !word ScreenCharMemStart+40*(3+13)-1
+   !word ScreenCharMemStart+40*(3+14)-1
+   !word ScreenCharMemStart+40*(3+15)-1
+   !word ScreenCharMemStart+40*(3+16)-1
+   !word ScreenCharMemStart+40*(3+17)-1
+   !word ScreenCharMemStart+40*(3+18)-1
+   !word ScreenCharMemStart+40*(3+19)-1
+   !word ScreenCharMemStart+40*(3+20)-1
+   ; check MaxItemsPerPage
    
    
    !src "source\SettingsMenu.asm"

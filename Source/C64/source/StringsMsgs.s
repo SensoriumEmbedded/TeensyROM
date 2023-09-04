@@ -21,7 +21,7 @@
 ; ******************************* Strings/Messages ******************************* 
 
 MsgBanner:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn, "             TeensyROM ", 0
+   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
    !tx SourcesColor, "Source: ", 0 
 MsgSelect1:
@@ -150,16 +150,16 @@ MsgFail:
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx " ---"  ; rtNone      = 0,
-   !tx " Unk"  ; rtUnknown   = 1,
-   !tx " 16k"  ; rtBin16k    = 2,
-   !tx " 8Hi"  ; rtBin8kHi   = 3,
-   !tx " 8Lo"  ; rtBin8kLo   = 4,
-   !tx " 128"  ; rtBinC128   = 5,
-   !tx " Dir"  ; rtDirectory = 6,
+   !tx ChrCRSRRight, "---"  ; rtNone      = 0,
+   !tx ChrCRSRRight, "Unk"  ; rtUnknown   = 1,
+   !tx ChrCRSRRight, "16k"  ; rtBin16k    = 2,
+   !tx ChrCRSRRight, "8Hi"  ; rtBin8kHi   = 3,
+   !tx ChrCRSRRight, "8Lo"  ; rtBin8kLo   = 4,
+   !tx ChrCRSRRight, "128"  ; rtBinC128   = 5,
+   !tx ChrCRSRRight, "Dir"  ; rtDirectory = 6,
    ;file extension matching:
-   !tx " Prg"  ; rtFilePrg   = 7,
-   !tx " Crt"  ; rtFileCrt   = 8,
-   !tx " Hex"  ; rtFileHex   = 9,
-   !tx " P00"  ; rtFileP00   = 10,
+   !tx ChrCRSRRight, "Prg"  ; rtFilePrg   = 7,
+   !tx ChrCRSRRight, "Crt"  ; rtFileCrt   = 8,
+   !tx ChrCRSRRight, "Hex"  ; rtFileHex   = 9,
+   !tx ChrCRSRRight, "P00"  ; rtFileP00   = 10,
    

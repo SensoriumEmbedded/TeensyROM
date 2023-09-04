@@ -43,40 +43,42 @@
    ;PrintString =  $ab1e
 
    ;chr$ symbols
-   ChrBlack   = 144
-   ChrWhite   = 5
-   ChrRed     = 28
-   ChrCyan    = 159
-   ChrPurple  = 156
-   ChrGreen   = 30
-   ChrBlue    = 31
-   ChrYellow  = 158 
-   ChrOrange  = 129
-   ChrBrown   = 149
-   ChrLtRed   = 150
-   ChrDrkGrey = 151
-   ChrMedGrey = 152
-   ChrLtGreen = 153
-   ChrLtBlue  = 154
-   ChrLtGrey  = 155
-   
-   ChrF1      = 133
-   ChrF2      = 137
-   ChrF3      = 134
-   ChrF4      = 138
-   ChrF5      = 135
-   ChrF6      = 139
-   ChrF7      = 136
-   ChrF8      = 140
-   ChrToLower = 14
-   ChrToUpper = 142
-   ChrRvsOn   = 18
-   ChrRvsOff  = 146
-   ChrClear   = 147
-   ChrReturn  = 13
-   ChrSpace   = 32
-   ChrCSRSUp  = 145
-   ChrCSRSDn  = 17
+   ChrBlack    = 144
+   ChrWhite    = 5
+   ChrRed      = 28
+   ChrCyan     = 159
+   ChrPurple   = 156
+   ChrGreen    = 30
+   ChrBlue     = 31
+   ChrYellow   = 158 
+   ChrOrange   = 129
+   ChrBrown    = 149
+   ChrLtRed    = 150
+   ChrDrkGrey  = 151
+   ChrMedGrey  = 152
+   ChrLtGreen  = 153
+   ChrLtBlue   = 154
+   ChrLtGrey   = 155
+               
+   ChrF1       = 133
+   ChrF2       = 137
+   ChrF3       = 134
+   ChrF4       = 138
+   ChrF5       = 135
+   ChrF6       = 139
+   ChrF7       = 136
+   ChrF8       = 140
+   ChrToLower  = 14
+   ChrToUpper  = 142
+   ChrRvsOn    = 18
+   ChrRvsOff   = 146
+   ChrClear    = 147
+   ChrReturn   = 13
+   ChrSpace    = 32
+   ChrCRSRUp   = 145
+   ChrCRSRDn   = 17
+   ChrCRSRLeft = 157
+   ChrCRSRRight= 29
    
 ;Poke colors
    PokeBlack   = 0
