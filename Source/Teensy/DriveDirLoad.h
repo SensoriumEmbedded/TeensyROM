@@ -37,7 +37,7 @@
 #define Cart_C64GameSystem3          15  //Supported
 #define Cart_WarpSpeed               16
 #define Cart_Dinamic                 17  //Supported
-#define Cart_ZaxxonSuperZaxxon       18
+#define Cart_ZaxxonSuper             18  //Supported
 #define Cart_MagicDesk               19  //Supported
 #define Cart_SuperSnapshotV5         20
 #define Cart_Comal80                 21
@@ -51,7 +51,7 @@
 #define Cart_FinalCartridgePlus      29
 #define Cart_ActionReplay4           30
 #define Cart_Stardos                 31
-#define Cart_EasyFlash               32  //Supported*
+#define Cart_EasyFlash               32  //Supported (file size limit and no EAPI support)
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
 #define Cart_ActionReplay3           35
@@ -146,6 +146,8 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_SuperGames      ,IOH_SuperGames,
    (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
    (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
+   (uint16_t)Cart_ZaxxonSuper     ,IOH_ZaxxonSuper,
+   
 };
 
 #define CRT_MAIN_HDR_LEN  0x40

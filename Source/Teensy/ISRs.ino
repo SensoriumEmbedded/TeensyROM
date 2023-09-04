@@ -54,12 +54,12 @@ FASTRUN void isrPHI2()
    
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
-      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & 0x1FFF]); 
+      if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 
       if (IOHandler[CurrentIOHandler]->ROMLHndlr != NULL) IOHandler[CurrentIOHandler]->ROMLHndlr(Address);
    }  //ROML
    else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
    {
-      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[Address & 0x1FFF]); 
+      if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[Address & HIROM_Mask]); 
       if (IOHandler[CurrentIOHandler]->ROMHHndlr != NULL) IOHandler[CurrentIOHandler]->ROMHHndlr(Address);
    }  //ROMH
    else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space

@@ -555,7 +555,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
       return true;
    }      
 
-   if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x4000 && EXROM==0 && GAME==0)
+   if(CrtChips[0].LoadAddress == 0x8000                                  && EXROM==0 && GAME==0) //Zaxxon ROMSize is 0x1000, all others 0x4000
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");

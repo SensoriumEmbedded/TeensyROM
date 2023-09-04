@@ -40,6 +40,7 @@ uint8_t CurrentIOHandler = IOH_None;
 StructMenuItem *DriveDirMenu = NULL;
 uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
+uint16_t LOROM_Mask, HIROM_Mask;
 
 StructMenuItem USBHostMenu = {
    rtNone,                   // ItemType;
@@ -142,6 +143,7 @@ void SetUpMainMenuROM()
    SetExROMAssert;
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = TeensyROMC64_bin+0x2000;
+   LOROM_Mask = HIROM_Mask = 0x1fff;
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
