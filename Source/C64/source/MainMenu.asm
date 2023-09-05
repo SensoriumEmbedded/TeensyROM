@@ -126,7 +126,16 @@ WaitForKey:
 +  cmp #ChrReturn
    bne +
    lda rwRegCursorItemOnPg+IO1Port 
-   jmp SelectItem 
+SelectItem
+   sta rwRegSelItemOnPage+IO1Port ;select Item from page
+   jsr SelectMenuItem
+   lda MusicInterrupted ;turn music back on if it was before...
+   beq ++
+   lda #0
+   sta MusicInterrupted
+   jsr SIDMusicOn 
+++ jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent ;highlight the same one (or dir change sets to 0)
    
 +  cmp #ChrCRSRDn  ;Move cursor down
    bne +
@@ -164,22 +173,12 @@ WaitForKey:
    
 +  cmp #'a'  
    bmi +   ;skip if below 'a'
-   cmp #'a'+ MaxItemsPerPage + 1  
-   bpl +   ;skip if above MaxItemsPerPage
-   sec       ;set to subtract without carry
-   sbc #'a'  ;convert to Item Number on page, now 0-?
-   cmp rRegNumItemsOnPage+IO1Port 
-   bpl WaitForKey   ;skip if above num of items on page
-SelectItem:
-   sta rwRegSelItemOnPage+IO1Port ;select Item from page
-   jsr SelectMenuItem
-   lda MusicInterrupted ;turn music back on if it was before...
-   beq ++
-   lda #0
-   sta MusicInterrupted
-   jsr SIDMusicOn 
-++ jsr ListMenuItems ; reprint menu
-   jmp HighlightCurrent ;highlight the same one (or dir change sets to 0)
+   cmp #'z'+1
+   bpl +   ;skip if above 'z'
+   sta wRegSearchLetterWAIT+IO1Port
+   jsr WaitForTRWaitMsg
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent 
 
 +  cmp #ChrCRSRRight  ;Next Page
    bne +
@@ -297,33 +296,16 @@ ListMenuItems:
    ;display parent dir/path
    lda #ChrReturn
    jsr SendChar
-   lda #MenuMiscColor
-   jsr SendChar
    lda #rsstShortDirPath 
    jsr PrintSerialString
 
-   
    ;There should always be at least one item, even if it's "Empty"
    lda #0       ;initialize to first Item on Page
    sta rwRegSelItemOnPage+IO1Port
 nextLine
    lda #ChrReturn
-   jsr SendChar
-   
-;print option letter
-   lda #OptionColor
-   jsr SendChar
-   lda #ChrSpace
-   jsr SendChar
-   lda #ChrRvsOn
-   jsr SendChar
-   lda rwRegSelItemOnPage+IO1Port
-   clc
-   adc #'A'
-   jsr SendChar
-   lda #ChrRvsOff
-   jsr SendChar
-   lda #ChrSpace
+   jsr SendChar 
+   lda #ChrCRSRRight
    jsr SendChar
 ; print name
    lda #NameColor

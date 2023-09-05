@@ -48,8 +48,9 @@
    rwRegTimezone       = 10 ;// EEPROM stored: signed char for timezone: UTC +/-12 
    rwRegNextIOHndlr    = 21 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
    rwRegSerialString   = 22 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   wRegSearchLetterWAIT= 23 ;// Put cursor on first menu item with letter written
 
-   StartSIDRegs        = 23 ;// start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 24 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2
@@ -109,8 +110,9 @@
    rsWriteEEPROM        = 0x04  ;
    rsMakeBuildCPUInfoStr= 0x05  ;
    rsUpDirectory        = 0x06  ;
+   rsSearchForLetter    = 0x07  ;
 
-   rsNumStatusTypes     = 0x07  ;
+   rsNumStatusTypes     = 0x08  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished

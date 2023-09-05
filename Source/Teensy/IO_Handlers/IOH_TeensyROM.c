@@ -156,6 +156,25 @@ void UpDirectory()
    }
 }
 
+void SearchForLetter()
+{
+   uint16_t ItemNum = 0;
+   uint8_t SearchFor = IO1[wRegSearchLetterWAIT];
+   
+   //ascii upper case (toupper) matches petscii lower case ('a'=65)
+   while (ItemNum < NumItemsFull)
+   {
+      if (toupper(MenuSource[ItemNum].Name[0]) >= SearchFor)
+      {
+         IO1[rwRegPageNumber] = ItemNum/MaxItemsPerPage +1;
+         IO1[rwRegCursorItemOnPg] = ItemNum % MaxItemsPerPage;
+         IO1[rRegNumItemsOnPage] = (NumItemsFull > IO1[rwRegPageNumber]*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(IO1[rwRegPageNumber]-1)*MaxItemsPerPage);
+         return;
+      }
+      ItemNum++;
+   }
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu 
@@ -165,6 +184,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &WriteEEPROM,         // rsWriteEEPROM
    &MakeBuildCPUInfoStr, // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
+   &SearchForLetter,     // rsSearchForLetter
 };
 
 
@@ -397,7 +417,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepDataToWrite = Data;
             IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
-         case rwRegSerialString:
+         case wRegSearchLetterWAIT:
+            IO1[wRegSearchLetterWAIT] = Data;
+            IO1[rwRegStatus] = rsSearchForLetter; //work this in the main code
+            break;
+         case rwRegSerialString: //Select/build(no waiting) string to set ptrSerialString and read out serially
             StringOffset = 0;
             switch(Data)
             {
