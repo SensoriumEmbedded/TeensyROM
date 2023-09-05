@@ -153,6 +153,14 @@ WaitForKey:
 ++ dex   
    stx rwRegCursorItemOnPg+IO1Port 
    jmp HighlightCurrent
+
++  cmp #ChrUpArrow ;Up directory
+   bne +  
+   lda #rCtlUpDirectoryWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent 
    
 +  cmp #'a'  
    bmi +   ;skip if below 'a'
@@ -271,7 +279,7 @@ ListMenuItems:
    ldy #>MsgSelect2
    jsr PrintString
    
-   ldx #2  ;row
+   ldx #1  ;row
    ldy #0  ;col
    ;clc
    jsr SetCursor
@@ -285,6 +293,15 @@ ListMenuItems:
    lda TblMsgMenuName,x
    ldy TblMsgMenuName+1,x
    jsr PrintString
+   
+   ;display parent dir/path
+   lda #ChrReturn
+   jsr SendChar
+   lda #MenuMiscColor
+   jsr SendChar
+   lda #rsstShortDirPath 
+   jsr PrintSerialString
+
    
    ;There should always be at least one item, even if it's "Empty"
    lda #0       ;initialize to first Item on Page

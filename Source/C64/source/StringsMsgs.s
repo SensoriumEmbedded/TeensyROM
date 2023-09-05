@@ -26,7 +26,7 @@ MsgSource:
    !tx SourcesColor, "Source: ", 0 
 MsgSelect1:
    !tx SourcesColor, "Sources:          "
-   !tx ChrRvsOn, OptionColor, "Up", ChrRvsOff, MenuMiscColor, "/", ChrRvsOn, OptionColor, "Dn", ChrRvsOff, "CRSR", MenuMiscColor, " Pg "
+   !tx ChrRvsOn, OptionColor, "CRSR", ChrRvsOff, MenuMiscColor, " Sel/Pg "
    !tx 0
 MsgSelect2:
    !tx ChrReturn

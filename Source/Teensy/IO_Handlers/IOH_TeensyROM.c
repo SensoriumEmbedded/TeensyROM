@@ -53,8 +53,11 @@ uint32_t XferSize = 0;  //size of image being transfered to C64
 extern bool EthernetInit();
 extern void MenuChange();
 extern void HandleExecution();
+extern bool PathIsRoot();
+extern void LoadDirectory(bool SD_nUSBDrive);
 extern void IOHandlerInitToNext();
 extern stcIOHandlers* IOHandler[];
+extern char DriveDirPath[];
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -141,6 +144,18 @@ void MakeBuildCPUInfoStr()
    sprintf(SerialStringBuf, " Build Date/Time: %s, %s\r\n    Teensy Freq: %luMHz  Temp: %.1fC\r\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
+void UpDirectory()
+{
+   if(IO1[rWRegCurrMenuWAIT] != rmtSD && IO1[rWRegCurrMenuWAIT] != rmtUSBDrive) return;
+   
+   if(!PathIsRoot())
+   {
+      char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
+      if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
+      LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD);
+   }
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu 
@@ -149,6 +164,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &IOHandlerInitToNext, // rsIOHWinit   
    &WriteEEPROM,         // rsWriteEEPROM
    &MakeBuildCPUInfoStr, // rsMakeBuildCPUInfoStr
+   &UpDirectory,         // rsUpDirectory
 };
 
 
@@ -399,7 +415,25 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rsstVersionNum:
                   ptrSerialString = strVersionNumber;
-                  break;        
+                  break;      
+               case rsstShortDirPath:
+                  if(IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive)
+                  {
+                     uint16_t Len = strlen(DriveDirPath);
+                     if (Len >= 40) 
+                     {
+                        strcpy(SerialStringBuf, "...");
+                        strcat(SerialStringBuf, DriveDirPath+Len-36);
+                        ptrSerialString = SerialStringBuf;
+                     }
+                     else ptrSerialString = DriveDirPath;
+                  }
+                  else
+                  {
+                     SerialStringBuf[0]=0;
+                     ptrSerialString = SerialStringBuf;
+                  }
+                  break;
             }
             break;
             
@@ -428,6 +462,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlMakeInfoStrWAIT:
                   IO1[rwRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code
+                  break;
+               case rCtlUpDirectoryWAIT:
+                  IO1[rwRegStatus] = rsUpDirectory; //work this in the main code
                   break;
             }
             break;

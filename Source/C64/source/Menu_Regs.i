@@ -95,6 +95,7 @@
    rsstNextIOHndlrName = 1
    rsstSerialStringBuf = 2
    rsstVersionNum      = 3
+   rsstShortDirPath    = 4
    
 ;enum RegPowerUpDefaultMasks
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
@@ -107,8 +108,9 @@
    rsIOHWinit           = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
    rsWriteEEPROM        = 0x04  ;
    rsMakeBuildCPUInfoStr= 0x05  ;
-   
-   rsNumStatusTypes     = 0x06  ;
+   rsUpDirectory        = 0x06  ;
+
+   rsNumStatusTypes     = 0x07  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -127,6 +129,7 @@
    rCtlGetTimeWAIT        = 3
    rCtlRunningPRG         = 4 ; final signal before running prg, allows IO1 handler change
    rCtlMakeInfoStrWAIT    = 5 ; MakeBuildCPUInfoStr
+   rCtlUpDirectoryWAIT    = 6
 
 ;enum regItemTypes //synch with TblItemType
    rtNone      = 0

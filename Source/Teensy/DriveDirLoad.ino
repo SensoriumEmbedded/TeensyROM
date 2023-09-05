@@ -49,7 +49,7 @@ void HandleExecution()
          {
             char FullFilePath[MaxPathLength+MaxItemNameLength+2];
             
-            if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
+            if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
             else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
 
             DoFlashUpdate(SD_nUSBDrive, FullFilePath);
@@ -223,7 +223,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
-   if (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/') sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
+   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
@@ -333,7 +333,7 @@ void LoadDirectory(bool SD_nUSBDrive)
    if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
    else dir = firstPartition.open(DriveDirPath); //USB Drive
    
-   if (!(strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/'))
+   if (!PathIsRoot())
    {  // *not* at root, add up dir option
       DriveDirMenu[0].ItemType = rtDirectory;
       AddDirEntry(UpDirString);
@@ -541,7 +541,12 @@ void RedirectEmptyDriveDirMenu()
       MenuChange();
    }
 }
-                  
+
+bool PathIsRoot()
+{
+   return (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/');
+}
+
 bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)   
 {
    SendMsgPrintfln("%d Chip(s) found/loaded", NumCrtChips); 
