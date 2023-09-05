@@ -46,7 +46,6 @@
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
    MusicInterrupted = $0336 ;Music muted for item selection
-   CursorItemNum    = $0337 ;Which item on the current page is highlighted
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
    SIDSusRel        = $033a
@@ -78,7 +77,7 @@ Start:
    lda rRegPresence2+IO1Port
    cmp #$AA
    beq +
-NoHW:
+NoHW
    lda #<MsgNoHW
    ldy #>MsgNoHW
    jsr PrintString  
@@ -106,7 +105,7 @@ NoHW:
    and #rpudNetTimeMask
    beq +
    jsr SynchEthernetTime
-   jmp SetToFirstHighlight
+   jmp HighlightCurrent
    
 +  lda #0  ;set clock to midnight if not synching
    sta TODHoursBCD  ;stop TOD regs incrementing
@@ -114,12 +113,11 @@ NoHW:
    sta TODSecBCD
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
 
-SetToFirstHighlight:
-   ldx #0
-StoreAndHighlight:
-   txa
-   sta CursorItemNum
-   jsr InverseRow ;highlight the next
+   
+   
+HighlightCurrent:   
+   lda rwRegCursorItemOnPg+IO1Port 
+   jsr InverseRow
 WaitForKey:     
    jsr DisplayTime
    jsr GetIn    
@@ -127,23 +125,25 @@ WaitForKey:
 
 +  cmp #ChrReturn
    bne +
-   lda CursorItemNum
+   lda rwRegCursorItemOnPg+IO1Port 
    jmp SelectItem 
    
 +  cmp #ChrCRSRDn  ;Move cursor down
    bne +
-   ldx CursorItemNum
+   ldx rwRegCursorItemOnPg+IO1Port 
    txa
    jsr InverseRow ;unhighlight the current
    inx   
-   cpx rRegNumItemsOnPage+IO1Port
-   bne StoreAndHighlight
-   jsr PageDown   ;at bottom of page, page down
-   jmp SetToFirstHighlight
+   cpx rRegNumItemsOnPage+IO1Port ;last item?
+   beq ++ 
+   stx rwRegCursorItemOnPg+IO1Port 
+   jmp HighlightCurrent
+++ jsr PageDown   ;at bottom of page, page down
+   jmp HighlightCurrent
    
 +  cmp #ChrCRSRUp  ;Move cursor up
    bne +
-   lda CursorItemNum 
+   lda rwRegCursorItemOnPg+IO1Port  
    tax
    jsr InverseRow ;unhighlight the current
    cpx #0
@@ -151,7 +151,8 @@ WaitForKey:
    jsr PageUp  ;at top of page, page up
    ldx rRegNumItemsOnPage+IO1Port 
 ++ dex   
-   jmp StoreAndHighlight
+   stx rwRegCursorItemOnPg+IO1Port 
+   jmp HighlightCurrent
    
 +  cmp #'a'  
    bmi +   ;skip if below 'a'
@@ -170,26 +171,29 @@ SelectItem:
    sta MusicInterrupted
    jsr SIDMusicOn 
 ++ jsr ListMenuItems ; reprint menu
-   lda CursorItemNum
-   jsr InverseRow ;highlight the same one (or dir change sets to 0)
-   jmp WaitForKey
-   ;jmp SetToFirstHighlight
+   jmp HighlightCurrent ;highlight the same one (or dir change sets to 0)
 
 +  cmp #ChrCRSRRight  ;Next Page
    bne +
+   lda rwRegCursorItemOnPg+IO1Port 
+   jsr InverseRow ;unhighlight the current (in case 1 page)
    jsr PageDown
-   jmp SetToFirstHighlight
+   jmp HighlightCurrent
 
 +  cmp #ChrCRSRLeft  ;Prev Page
    bne +
+   lda rwRegCursorItemOnPg+IO1Port 
+   jsr InverseRow ;unhighlight the current (in case 1 page)
    jsr PageUp
-   jmp SetToFirstHighlight  
+   lda #0
+   sta rwRegCursorItemOnPg+IO1Port ;set cursor to the first item in dir
+   jmp HighlightCurrent  
 
 +  cmp #ChrF1  ;Teensy mem Menu
    bne +
    lda #rmtTeensy
    jsr ListMenuItemsChangeInit
-   jmp SetToFirstHighlight  
+   jmp HighlightCurrent  
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
@@ -201,7 +205,7 @@ SelectItem:
    bne +
    lda #rmtSD
    jsr ListMenuItemsChangeInit
-   jmp SetToFirstHighlight  
+   jmp HighlightCurrent  
 
 +  cmp #ChrF4  ;toggle music
    bne +
@@ -212,25 +216,25 @@ SelectItem:
    bne +
    lda #rmtUSBDrive
    jsr ListMenuItemsChangeInit
-   jmp SetToFirstHighlight  
+   jmp HighlightCurrent  
 
 +  cmp #ChrF6  ;Settings Menu
    bne +
    jsr SettingsMenu
    jsr ListMenuItems
-   jmp SetToFirstHighlight  
+   jmp HighlightCurrent  
 
 +  cmp #ChrF7  ;Exe USB Host file
    bne +
    lda #rmtUSBHost
    jsr ListMenuItemsChangeInit
-   jmp SetToFirstHighlight
+   jmp HighlightCurrent
 
 +  cmp #ChrF8  ;MIDI to SID
    bne +
    jsr MIDI2SID
    jsr ListMenuItems
-   jmp SetToFirstHighlight
+   jmp HighlightCurrent
 
 
 +  jmp WaitForKey
@@ -282,15 +286,8 @@ ListMenuItems:
    ldy TblMsgMenuName+1,x
    jsr PrintString
    
-   lda rRegNumItemsOnPage+IO1Port
-   bne +
-   lda #<MsgNoItems
-   ldy #>MsgNoItems
-   jsr PrintString
-   rts ;early exit
-   
-
-+  lda #0       ;initialize to first Item on Page
+   ;There should always be at least one item, even if it's "Empty"
+   lda #0       ;initialize to first Item on Page
    sta rwRegSelItemOnPage+IO1Port
 nextLine
    lda #ChrReturn
@@ -388,7 +385,7 @@ DirUpdate:
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg
    lda #0
-   sta CursorItemNum ;set cursor to the first item in dir
+   sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
    rts ;SelectMenuItem
 
 FWUpdate:
@@ -535,7 +532,9 @@ PageDown:
 +  inx
    stx rwRegPageNumber+IO1Port
    jsr ListMenuItems
-++ rts
+++ lda #0  ;set to first item
+   sta rwRegCursorItemOnPg+IO1Port 
+   rts
    
 InverseRow:
    ;Acc contains item number to toggle reverse

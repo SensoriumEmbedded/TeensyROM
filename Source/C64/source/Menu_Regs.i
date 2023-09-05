@@ -39,16 +39,17 @@
    rRegLastSecBCD      = 11 ;// Last TOD: Seconds read
    rWRegCurrMenuWAIT   = 12 ;// enum RegMenuTypes: select Menu type: SD, USB, etc
    rwRegSelItemOnPage  = 13 ;// Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
-   rRegNumItemsOnPage  = 14 ;// Item sel/info: num items on current menu page
-   rwRegPageNumber     = 15 ;// Item sel/info: (one based) current page number
-   rRegNumPages        = 16 ;// Item sel/info: total number of pages
-   rRegItemTypePlusIOH = 17 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
-   rwRegPwrUpDefaults  = 18 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 19 ;// EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 20 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegSerialString   = 21 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   rwRegCursorItemOnPg = 14 ;// Item sel/info: (zero based) Highlighted/cursor Menu Item On Current Page
+   rRegNumItemsOnPage  = 15 ;// Item sel/info: num items on current menu page
+   rwRegPageNumber     = 16 ;// Item sel/info: (one based) current page number
+   rRegNumPages        = 17 ;// Item sel/info: total number of pages
+   rRegItemTypePlusIOH = 18 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rwRegPwrUpDefaults  = 19 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = 10 ;// EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 21 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegSerialString   = 22 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
 
-   StartSIDRegs        = 22 ;// start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 23 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2

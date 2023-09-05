@@ -202,9 +202,8 @@ void MenuChange()
          break;
       case rmtSD:
          stpcpy(DriveDirPath, "/");
-         // SD.begin takes 3 seconds for fail/unpopulated, 20-200mS populated
-         if (SD.begin(BUILTIN_SDCARD)) LoadDirectory(true);
-         else SetNumItems(0);
+         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         LoadDirectory(true); //do this regardless of SD.begin result to populate one entry w/ message
          MenuSource = DriveDirMenu; 
          break;
       case rmtUSBDrive:
@@ -217,6 +216,7 @@ void MenuChange()
          SetNumItems(NumUSBHostItems);
          break;
    }
+   IO1[rwRegCursorItemOnPg] = 0;
 }
 
 bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
@@ -335,10 +335,8 @@ void LoadDirectory(bool SD_nUSBDrive)
    
    if (!(strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/'))
    {  // *not* at root, add up dir option
-      NumDrvDirMenuItems++;
-      DriveDirMenu[0].Name = (char*)malloc(strlen(UpDirString)+1);
-      strcpy(DriveDirMenu[0].Name, UpDirString);
       DriveDirMenu[0].ItemType = rtDirectory;
+      AddDirEntry(UpDirString);
    }
    
    const char *filename;
@@ -391,7 +389,20 @@ void LoadDirectory(bool SD_nUSBDrive)
            }
       }   
    
+   if(NumDrvDirMenuItems == 0)
+   {
+      DriveDirMenu[0].ItemType = rtNone;
+      AddDirEntry("<Empty>");
+   }
+   
    SetNumItems(NumDrvDirMenuItems);
+}
+
+void AddDirEntry(const char *EntryString)
+{
+   DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(EntryString)+1);
+   strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, EntryString);
+   NumDrvDirMenuItems++;
 }
 
 void ParseP00File(StructMenuItem* MyMenuItem)   
@@ -524,8 +535,8 @@ void FreeCrtChips()
  
 void RedirectEmptyDriveDirMenu()
 {
-   if(DriveDirMenu == NULL) //return to Teensy Menu instead of re-loading dir
-   {
+   if((IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) && DriveDirMenu == NULL)
+   {  //return to Teensy Menu instead of re-loading dir to save time
       IO1[rWRegCurrMenuWAIT] = rmtTeensy;
       MenuChange();
    }

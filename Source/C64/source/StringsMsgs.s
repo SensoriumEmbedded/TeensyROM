@@ -41,8 +41,6 @@ MsgSelect2:
    !tx 0
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
-MsgNoItems:
-   !tx ChrReturn, OptionColor, " Nothing to show!", 0
 
 TblMsgMenuName: ;must match enum RegMenuTypes order/qty
    !word MsgMenuSD

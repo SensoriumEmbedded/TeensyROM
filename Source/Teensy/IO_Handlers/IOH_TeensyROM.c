@@ -347,13 +347,13 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       TraceLogAddValidData(Data);
       switch(Address)
       {
-         case rwRegStatus:
-            IO1[rwRegStatus]=Data;
-            break;
          case rwRegSelItemOnPage:
             SelItemFullIdx=Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
-            IO1[rwRegSelItemOnPage]=Data;
-            break;
+         case rwRegStatus:
+         case rwRegCursorItemOnPg:
+            IO1[Address]=Data;
+            break;    
+            
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
