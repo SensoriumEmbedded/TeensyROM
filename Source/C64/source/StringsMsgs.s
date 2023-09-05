@@ -23,7 +23,7 @@
 MsgBanner:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
-   !tx SourcesColor, "Source: ", 0 
+   !tx SourcesColor, "Src: ", 0 
 MsgSelect1:
    !tx SourcesColor, "Sources:          "
    !tx ChrRvsOn, OptionColor, "CRSR", ChrRvsOff, MenuMiscColor, " Sel/Pg "
@@ -143,21 +143,21 @@ MsgPass:
    !tx "Pass  ", 0
 MsgFail:
    !tx ChrRed, "Fail  ", 0
-;MsgErrNoFile:
-;   !tx "No File Available", 0
+MsgHasHandler:
+   !tx ChrCRSRLeft, AssignedIOHColor, "+", 0
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx ChrCRSRRight, "---"  ; rtNone      = 0,
-   !tx ChrCRSRRight, "Unk"  ; rtUnknown   = 1,
-   !tx ChrCRSRRight, "16k"  ; rtBin16k    = 2,
-   !tx ChrCRSRRight, "8Hi"  ; rtBin8kHi   = 3,
-   !tx ChrCRSRRight, "8Lo"  ; rtBin8kLo   = 4,
-   !tx ChrCRSRRight, "128"  ; rtBinC128   = 5,
-   !tx ChrCRSRRight, "Dir"  ; rtDirectory = 6,
+   !tx NameColor, "---"  ; rtNone      = 0,
+   !tx ChrDrkGrey,"Unk"  ; rtUnknown   = 1,
+   !tx TypeColor, "16k"  ; rtBin16k    = 2,
+   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 3,
+   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 4,
+   !tx TypeColor, "128"  ; rtBinC128   = 5,
+   !tx TypeColor, "Dir"  ; rtDirectory = 6,
    ;file extension matching:
-   !tx ChrCRSRRight, "Prg"  ; rtFilePrg   = 7,
-   !tx ChrCRSRRight, "Crt"  ; rtFileCrt   = 8,
-   !tx ChrCRSRRight, "Hex"  ; rtFileHex   = 9,
-   !tx ChrCRSRRight, "P00"  ; rtFileP00   = 10,
+   !tx TypeColor, "Prg"  ; rtFilePrg   = 7,
+   !tx TypeColor, "Crt"  ; rtFileCrt   = 8,
+   !tx TypeColor, "Hex"  ; rtFileHex   = 9,
+   !tx TypeColor, "P00"  ; rtFileP00   = 10,
    

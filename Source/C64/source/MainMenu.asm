@@ -29,8 +29,7 @@
    BackgndColor     = PokeBlack
    TimeColor        = ChrOrange
    MenuMiscColor    = ChrGreen
-   ROMNumColor      = ChrDrkGrey
-   AssignedIOHColor = ChrGreen
+   AssignedIOHColor = ChrLtGrey
    OptionColor      = ChrYellow
    SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
@@ -168,6 +167,15 @@ SelectItem
    lda #rCtlUpDirectoryWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent 
+
++  cmp #ChrHome ;top of directory
+   bne +  
+   lda #1  ;first page
+   sta rwRegPageNumber+IO1Port
+   lda #0  ;set to first item
+   sta rwRegCursorItemOnPg+IO1Port 
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
    
@@ -315,25 +323,22 @@ nextLine
 ;align to col
    sec
    jsr SetCursor ;read current to load x (row)
-   ldy #MaxItemDispLength + 2  ;set y = col
+   ldy #MaxItemDispLength + 1  ;set y = col
    clc
    jsr SetCursor
-; print type
-   lda #TypeColor
-   jsr SendChar
-   ldx #<TblItemType
-   ldy #>TblItemType
-   lda rRegItemTypePlusIOH+IO1Port 
-   and #$7f  ;bit 7 indicates an assigned IOHandler, don't care yet
-   jsr Print4CharTable
 ; Assigned IO Handler? '+' if so
    lda rRegItemTypePlusIOH+IO1Port 
-   and #$80  ;bit 7 indicates an assigned IOHandler, now we care!   bne +
-   beq MenuLineDone
-   lda #AssignedIOHColor
-   jsr SendChar
-   lda #'+'
-   jsr SendChar
+   and #$80  ;bit 7 indicates an assigned IOHandler, now we care!
+   beq +
+   lda #<MsgHasHandler
+   ldy #>MsgHasHandler
+   jsr PrintString
+; print type, incl color
++  ldx #<TblItemType
+   ldy #>TblItemType
+   lda rRegItemTypePlusIOH+IO1Port 
+   and #$7f  ;bit 7 indicates an assigned IOHandler, don't care
+   jsr Print4CharTable
    
 ;line is done printing, check for next...
 MenuLineDone
