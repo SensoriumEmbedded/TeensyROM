@@ -146,14 +146,16 @@ void MakeBuildCPUInfoStr()
 
 void UpDirectory()
 {
+   //non-root of SD or USB drive only
    if(IO1[rWRegCurrMenuWAIT] != rmtSD && IO1[rWRegCurrMenuWAIT] != rmtUSBDrive) return;
+   if(PathIsRoot()) return;
    
-   if(!PathIsRoot())
-   {
-      char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
-      if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
-      LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD);
-   }
+   char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
+   if (LastSlash == NULL) return;
+   LastSlash[0] = 0;  //terminate it there 
+   LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD); 
+   IO1[rwRegCursorItemOnPg] = 0;
+   IO1[rwRegPageNumber]     = 1;
 }
 
 void SearchForLetter()

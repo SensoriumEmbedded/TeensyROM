@@ -61,11 +61,11 @@ void HandleExecution()
             
             if(strcmp(MenuSelCpy.Name, UpDirString)==0)
             {  //up dir
-               char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
-               if (LastSlash != NULL) LastSlash[0] = 0;  //terminate it there 
+               UpDirectory();
+               return;  //we're done here...
             }
-            else strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             
+            strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             LoadDirectory(SD_nUSBDrive); 
             return;  //we're done here...
          }
