@@ -21,7 +21,7 @@
 //  !!!!!!!!!!!!!!!!!!!!These need to match C64 Code: MainMenu.asm !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #define MaxItemDispLength  35
-#define MaxItemsPerPage    16
+#define MaxItemsPerPage    19
 
 enum IO1_Registers  //offset from 0xDE00
 {

@@ -25,20 +25,47 @@ MsgBanner:
 MsgSource:    
    !tx SourcesColor, "Src: ", 0 
 MsgSelect1:
-   !tx SourcesColor, "Sources:          "
-   !tx ChrRvsOn, OptionColor, "CRSR", ChrRvsOff, MenuMiscColor, " Sel/Pg "
+   !tx ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem  "
+   !tx ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive  "
+   !tx ChrLtRed, "Pg "
    !tx 0
 MsgSelect2:
    !tx ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
-   !tx " ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
-   !tx " ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
-   !tx " ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Settings", ChrReturn
-   !tx " ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
-   !tx " ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID"
+   !tx ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card     "
+   !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host   "
+   !tx ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
+   
+MsgHelp1:   
+   !tx ChrReturn, SourcesColor, "Help Menu:", ChrReturn
+;   !tx ChrReturn, "Keyboard/Joystick options from main menu", ChrReturn
+   !tx ChrReturn, " Main Menu Navigation:", ChrReturn
+   
+   !tx "  ", ChrRvsOn, OptionColor, "CRSR/Joy2", ChrCRSRRight, "U/D", ChrRvsOff, MenuMiscColor, " Cursor up/dn", ChrReturn
+   !tx "            ", ChrRvsOn, OptionColor, "L/R", ChrRvsOff, MenuMiscColor, " Page up/dn", ChrReturn
+   !tx "    ", ChrRvsOn, OptionColor, "Return/Fire", ChrRvsOff, MenuMiscColor, " Select file or dir", ChrReturn, ChrReturn
+   !tx 0
+MsgHelp2:   
+   !tx "     ", ChrRvsOn, OptionColor, ChrUpArrow, ChrRvsOff, MenuMiscColor, " Up directory", ChrReturn
+   !tx "   ", ChrRvsOn, OptionColor, "a-z", ChrRvsOff, MenuMiscColor, " Next entry starting with", ChrReturn
+   !tx "  ", ChrRvsOn, OptionColor, "Home", ChrRvsOff, MenuMiscColor, " Beginning of current dir", ChrReturn
+;   !tx "  ", ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor, " This Help menu", ChrReturn
+   
+   !tx ChrReturn, SourcesColor,  " Source Select:", MenuMiscColor, "   Other Options:", ChrReturn
+   !tx "  ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
+   !tx "  ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
+   !tx 0
+MsgHelp3:   
+   !tx "  ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
+   !tx "  ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
+   !tx "  ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
+   !tx "  ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Settings Menu", ChrReturn
+   !tx "  ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
+   !tx "  ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID app"
+   !tx ChrReturn
+   !tx 0
+MsgHelpEnd
+
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
 
@@ -148,7 +175,7 @@ MsgHasHandler:
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx NameColor, "---"  ; rtNone      = 0,
+   !tx NameColor, "   "  ; rtNone      = 0,
    !tx ChrDrkGrey,"Unk"  ; rtUnknown   = 1,
    !tx TypeColor, "16k"  ; rtBin16k    = 2,
    !tx TypeColor, "8Hi"  ; rtBin8kHi   = 3,

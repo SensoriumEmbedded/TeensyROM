@@ -21,7 +21,7 @@
 ;!!!!!!!!!!!!!!!!!!!!These need to match Teensy Code: Menu_Regs.h !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    MaxItemDispLength = 35
-   MaxItemsPerPage   = 16
+   MaxItemsPerPage   = 19
 
    ;;;;;;;;;;;;;;;;;;  start IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
    

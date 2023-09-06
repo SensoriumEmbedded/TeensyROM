@@ -124,8 +124,8 @@ WaitForKey:
 
 +  cmp #ChrReturn
    bne +
-   lda rwRegCursorItemOnPg+IO1Port 
 SelectItem
+   lda rwRegCursorItemOnPg+IO1Port 
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr SelectMenuItem
    lda MusicInterrupted ;turn music back on if it was before...
@@ -251,6 +251,12 @@ SelectItem
    jsr ListMenuItems
    jmp HighlightCurrent
 
++  cmp #ChrSpace  ;Help Menu
+   bne +
+   jsr HelpMenu
+   jsr ListMenuItems
+   jmp HighlightCurrent
+
 
 +  jmp WaitForKey
 
@@ -267,14 +273,14 @@ ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to ch
 ListMenuItems:
    jsr PrintBanner 
    
-   ldx #20 ;row
+   ldx #23 ;row
    ldy #0  ;col
    clc
    jsr SetCursor
    lda #<MsgSelect1
    ldy #>MsgSelect1
    jsr PrintString
-   
+   ;page x/y
    lda rwRegPageNumber+IO1Port
    jsr PrintIntByte
    lda #'/'
@@ -358,20 +364,21 @@ SelectMenuItem:
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtDirectory  ;check for dir selected
    beq DirUpdate  
+   cmp #rtNone ;do nothing for 'none' type
+   beq ++  
    
-   pha
+   pha ;store the type
    lda MusicPlaying ;turn music off if it's on
-   beq ++
+   beq +
    sta MusicInterrupted
    jsr SIDMusicOff     
-++ pla
-   
-   cmp #rtFileHex  ;check for .hex file selected
-   beq FWUpdate  
-   ;not a dir or hex file, prep for messaging
-   jsr PrintBanner
++  jsr PrintBanner ;clear screen for messaging
    lda #NameColor
    jsr SendChar
+   pla ;restore the type
+   cmp #rtFileHex  ;check for .hex file selected
+   beq FWUpdate  
+   ;not a dir, "none", or hex file, try to start/execute
 
    lda #rCtlStartSelItemWAIT
    sta wRegControl+IO1Port
@@ -380,9 +387,9 @@ SelectMenuItem:
    lda rRegStrAvailable+IO1Port 
    bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!
    
-   ;If at this point, couldn't load item, and wasn't a dir, .hex, .prg or .p00
+   ;If at this point, couldn't load item, and wasn't a dir, none, .hex, .prg or .p00
    jsr AnyKeyMsgWait   
-   rts ;SelectMenuItem
+++ rts ;SelectMenuItem
 
 DirUpdate:
    lda #rCtlStartSelItemWAIT
@@ -393,9 +400,6 @@ DirUpdate:
    rts ;SelectMenuItem
 
 FWUpdate:
-   jsr PrintBanner ;clear screen for messaging
-   lda #NameColor
-   jsr SendChar
    lda #ChrReturn
    jsr SendChar
    lda #rsstItemName
@@ -558,6 +562,20 @@ InverseRow:
    dey
    bne -
    rts
+
+HelpMenu:
+   jsr PrintBanner
+   lda #<MsgHelp1
+   ldy #>MsgHelp1
+   jsr PrintString 
+   lda #<MsgHelp2
+   ldy #>MsgHelp2
+   jsr PrintString 
+   lda #<MsgHelp3
+   ldy #>MsgHelp3
+   jsr PrintString 
+
+   jmp AnyKeyMsgWait ;return from there
 
 TblRowToMemLoc:
    !word ScreenCharMemStart+40*(3+ 0)-1
