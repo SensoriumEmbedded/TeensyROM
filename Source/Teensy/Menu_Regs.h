@@ -45,7 +45,7 @@ enum IO1_Registers  //offset from 0xDE00
    rRegNumPages        = 17 , // Item sel/info: total number of pages
    rRegItemTypePlusIOH = 18 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
    rwRegPwrUpDefaults  = 19 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 10 , // EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegTimezone       = 20 , // EEPROM stored: signed char for timezone: UTC +/-12 
    rwRegNextIOHndlr    = 21 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
    rwRegSerialString   = 22 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
    wRegSearchLetterWAIT= 23 , // Put cursor on first menu item with letter written
@@ -96,15 +96,15 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstItemName        = 0,  // Name of selected item
    rsstNextIOHndlrName = 1,  // IOHandler Name selected in rwRegNextIOHndlr
    rsstSerialStringBuf = 2,  // build SerialStringBuf prior to selecting
-   rsstVersionNum      = 3,     
-   rsstShortDirPath    = 4,  //printable current path
-
+   rsstVersionNum      = 3,  // version string for main banner 
+   rsstShortDirPath    = 4,  // printable current path
 };
 
 enum RegPowerUpDefaultMasks
 {
    rpudMusicMask     = 0x01, // rwRegPwrUpDefaults bit 0=music on
    rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1=synch net time
+   rpudJoySpeedMask  = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 
 enum RegStatusTypes  //rwRegStatus, match StatusFunction order
@@ -201,4 +201,4 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_Debug
+#define LastSelectableIOH  IOH_Debug     //127 max

@@ -152,7 +152,14 @@ JSDelay:
    lda rwRegCursorItemOnPg+IO1Port ;HighlightCurrent
    jsr InverseRow
    ;pause after action:
-   ldy #$18   ;$10 is pretty quick, but controllable;  $80 is fairly slow
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudJoySpeedMask  ;upper 4 bits = speed 0-15 (00-f0)
+   eor #rpudJoySpeedMask  ;make 15-0 (f0-00 step $10)
+   lsr ;conv to $78-$00 step $08
+   tay
+   iny ;can't be 0, now $79-$01 step $08
+   ;default of 9 ends up at $31 in y
+   ;prev testing:ldy #$18   ;$10 is pretty quick, but controllable(?);  $80 is fairly slow
 -- ldx #$ff
 -  dex
    bne -

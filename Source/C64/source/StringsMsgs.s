@@ -47,7 +47,7 @@ MsgHelp1:
    !tx 0
 MsgHelp2:   
    !tx "     ", ChrRvsOn, OptionColor, ChrUpArrow, ChrRvsOff, MenuMiscColor, " Up directory", ChrReturn
-   !tx "   ", ChrRvsOn, OptionColor, "a-z", ChrRvsOff, MenuMiscColor, " Next entry starting with", ChrReturn
+   !tx "   ", ChrRvsOn, OptionColor, "a-z", ChrRvsOff, MenuMiscColor, " Next entry starting with letter", ChrReturn
    !tx "  ", ChrRvsOn, OptionColor, "Home", ChrRvsOff, MenuMiscColor, " Beginning of current dir", ChrReturn
 ;   !tx "  ", ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor, " This Help menu", ChrReturn
    
@@ -83,29 +83,30 @@ MsgMenuUSBHost:
 MsgMenuUSBDrive:
    !tx "USB Drive", 0
 
-MsgSettingsMenu:
+MsgSettingsMenu1:
    !tx ChrReturn, SourcesColor, "Settings Menu:", ChrReturn
    !tx ChrReturn, MenuMiscColor 
-   !tx "   Defaults", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor, "  Synch Time:", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor, " Music State:", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor, "   Time Zone:", NameColor, " UTC", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor, "  Special IO:", ChrReturn
-   !tx ChrReturn, MenuMiscColor 
-   !tx "   Immediate", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, SourcesColor, " Synch Time via Ethernet", ChrReturn
-   !tx 0  ;near max of 256 bytes
-
-MsgCreditsInfo:
-   !tx "     ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, SourcesColor, " Toggle Music On/Off", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, SourcesColor,  " Back to Main menu", ChrReturn
-   !tx "     ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, SourcesColor,  " Self Test", ChrReturn
+   !tx "   Power-On Defaults:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, SourcesColor, "   Time Zone:", NameColor, " UTC", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "  Special IO:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, SourcesColor, "  Joy2 Speed:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "  Synch Time:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, " Music State:", ChrReturn
+   !tx MenuMiscColor, "   Immediate:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, " Synch Time via Ethernet", ChrReturn
+   !tx 0 
+MsgSettingsMenu2:
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, SourcesColor, " Toggle Music On/Off", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, SourcesColor,  " Self Test", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  " Back to Main menu", ChrReturn
+   !tx ChrReturn, OptionColor, " Key for Inc value, shift-Key for Dec", ChrReturn
    !tx ChrReturn, ChrReturn, ChrReturn, ChrReturn, MenuMiscColor 
    !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
-   !tx "          Music by Frank Zappa", ChrReturn, ChrReturn
+  ; !tx "          Music by Frank Zappa", ChrReturn, ChrReturn
    !tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
    !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
+MsgSettingsMenuend
 
 MsgFWVerify:
    !tx ChrReturn, ChrReturn, ChrOrange, "Please Confirm:"

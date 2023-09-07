@@ -65,7 +65,8 @@ uint32_t* BigBuf = NULL;
 #define PALBusFreq          985250
 #define IO1_Size            256
                             
-#define eepMagicNum         0xfeed6401 // 01:6/22/23 net settings added
+#define eepMagicNum         0xfeed6402 // 01: 6/22/23 net settings added 
+                                       // 02: 9/07/23 Joy2 speed added
 enum InternalEEPROMmap
 {
    eepAdMagicNum      = 0, // (4:uint32_t)   Indicated if internal EEPROM has been initialized

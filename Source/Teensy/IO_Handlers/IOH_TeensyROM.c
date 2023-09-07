@@ -135,6 +135,7 @@ void getNtpTime()
 
 void WriteEEPROM()
 {
+   Printf_dbg("Wrote $%02x to EEP addr %d\n", eepDataToWrite, eepAddrToWrite);
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
@@ -397,7 +398,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
             break;
          case rwRegNextIOHndlr:
-            if (Data > LastSelectableIOH) Data=0; //wrap around to first item
+            if (Data & 0x80) Data = LastSelectableIOH; //wrap around to last item if negative
+            else if (Data > LastSelectableIOH) Data = 0; //wrap around to first item if above max
             IO1[rwRegNextIOHndlr]= Data;
             eepAddrToWrite = eepAdNextIOHndlr;
             eepDataToWrite = Data;

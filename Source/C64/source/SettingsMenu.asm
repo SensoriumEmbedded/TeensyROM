@@ -20,17 +20,17 @@
    
 SettingsMenu:
    jsr PrintBanner 
-   lda #<MsgSettingsMenu
-   ldy #>MsgSettingsMenu
+   lda #<MsgSettingsMenu1
+   ldy #>MsgSettingsMenu1
    jsr PrintString 
-   lda #<MsgCreditsInfo
-   ldy #>MsgCreditsInfo
+   lda #<MsgSettingsMenu2
+   ldy #>MsgSettingsMenu2
    jsr PrintString 
 
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg
-   ldx #16 ;row
+   ldx #18 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
@@ -43,23 +43,7 @@ ShowSettings:
    lda #NameColor
    jsr SendChar
 
-   ldx #5 ;row Synch Time
-   ldy #21 ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNetTimeMask  
-   jsr PrintOnOff
-
-   ldx #6 ;row Music State
-   ldy #21 ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudMusicMask  
-   jsr PrintOnOff
-   
-   ldx #7 ;row Time Zone
+   ldx #5 ;row Time Zone
    ldy #24 ;col
    clc
    jsr SetCursor
@@ -74,47 +58,58 @@ ShowSettings:
    tay
    iny ;2's comp
    ldx #'-' 
+   ;x=sign char, y=abs val
 +  txa
    jsr SendChar
    tya
-   ;conv to bcd
-   cmp #10
-   bmi +     ;skip if below 10
-   sec       ;set to subtract without carry
-   sbc #10   ;subtract 10
-   ora #$10
-+  jsr PrintHexByte
+   jsr PrintIntByte
+   lda #' '
+   jsr SendChar
 
-   ldx #8  ;row Special IO
+   ldx #6  ;row Special IO
    ldy #21 ;col
    clc
    jsr SetCursor
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
+   ldx #7  ;row Joy 2 Speed
+   ldy #21 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   ;and #rpudJoySpeedMask ;no need, upper 4 bits
+   lsr
+   lsr
+   lsr
+   lsr
+   jsr PrintIntByte
+   lda #' '
+   jsr SendChar
+
+   ldx #8 ;row Synch Time
+   ldy #21 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNetTimeMask  
+   jsr PrintOnOff
+
+   ldx #9 ;row Music State
+   ldy #21 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudMusicMask  
+   jsr PrintOnOff
+   
 
 WaitForSettingsKey:     
    jsr DisplayTime   
    jsr GetIn
    beq WaitForSettingsKey
 
-   cmp #ChrF1  ;Power-up Synch Time toggle
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudNetTimeMask  
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #ChrF3  ;Power-up Music State toggle
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudMusicMask  
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #ChrF5  ;Power-up Time Zone increment
++  cmp #'a'  ;Power-up Time Zone Increment
    bne +
    ldx rwRegTimezone+IO1Port
    inx
@@ -125,36 +120,96 @@ WaitForSettingsKey:
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #ChrF7  ;Special IO
++  cmp #'A'  ;Power-up Time Zone Decrement
    bne +
-   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad
+   ldx rwRegTimezone+IO1Port
+   dex
+   cpx #-13
+   bne ++
+   ldx #14
+++ stx rwRegTimezone+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'b'  ;Special IO Increment
+   bne +
+   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
    ldx rwRegNextIOHndlr+IO1Port
    inx
    stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #ChrF2  ;Synch Time now
++  cmp #'B'  ;Special IO Decrement
+   bne +
+   ;dec rwRegNextIOHndlr+IO1Port ;dec causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
+   ldx rwRegNextIOHndlr+IO1Port
+   dex
+   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over underflow
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'c'  ;Joystick 2 Speed Increment
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   clc
+   adc #$10
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'C'  ;Joystick 2 Speed Decrement
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   sec       ;set to subtract without carry
+   sbc #$10   
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
+;--------------------Shift/non-shift mean the same from here on...---------------------
++  and #$7f  ;Force to lower case
+
+   cmp #'d'  ;Power-up Synch Time toggle
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudNetTimeMask  
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'e'  ;Power-up Music State toggle
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudMusicMask  
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'f'  ;Synch Time now
    bne +
    jsr SynchEthernetTime
    jmp WaitForSettingsKey  
 
-+  cmp #ChrF4  ;Toggle Music now
++  cmp #'g'  ;Toggle Music now
    bne +
    jsr ToggleSIDMusic
    jmp WaitForSettingsKey  
 
-+  cmp #ChrF6  ;Exit
-   bne +
-   rts
-
-+  cmp #ChrF8  ;Test IO
++  cmp #'h'  ;Test IO
    bne +
    jsr TestIO
    jmp WaitForSettingsKey  
+   
++  cmp #ChrSpace  ;Exit
+   bne +
+   rts
 
-+  jmp SettingsMenu  ;refresh full screen (& temp read) on any other key
-;+  jmp WaitForSettingsKey  
++  cmp #ChrReturn  ;force refresh full screen (& temp read)
+   bne +
+   jmp SettingsMenu  
+
++  jmp WaitForSettingsKey  
 
 TestIO:
    jsr CursorToTest    
@@ -162,7 +217,7 @@ TestIO:
    ldy #>MsgTesting
    jsr PrintString 
 
-   ldx #$05  ;outer loop count, each takes a couple seconds
+   ldx #$03  ;outer loop count, each takes a couple seconds
 -- stx PtrAddrLo ;storage for outer counter
    jsr CursorToTest    
    lda PtrAddrLo
@@ -197,7 +252,7 @@ TestIO:
    rts
 
 CursorToTest
-   ldx #14 ;row 
+   ldx #13 ;row 
    ldy #18 ;col
    clc
    jsr SetCursor   

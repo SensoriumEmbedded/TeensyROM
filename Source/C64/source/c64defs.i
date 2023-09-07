@@ -83,7 +83,9 @@
    ChrCRSRRight= 29
    ChrUpArrow  = 94
    ChrHome     = 19
-   
+   ChrFillLeft = 181
+   ChrFillRight= 182
+ 
 ;Poke colors
    PokeBlack   = 0
    PokeWhite   = 1

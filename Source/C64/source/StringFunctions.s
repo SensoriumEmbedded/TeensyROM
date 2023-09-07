@@ -104,29 +104,31 @@ nz tya
    rts
 
 PrintIntByte: 
-   ;Print acc as int
-;Hundreds
+   ;Print acc as int, no padding
+;Hundreds 
    ldx #0
+   cmp #10
+   bmi Ones ;skip 100s/10s if <10
 -  cmp #100
-   bmi +     ;skip if below 100
+   bmi +     ;loop until below 100
    sec       ;set to subtract without carry
    sbc #100   ;subtract 100
-   inx
+   inx      ;100s place in X
    jmp -
 
-;+  cpx #0
-;   beq Tens  ;don't print padded zeros
-+  tay  ;preserve remainder
++  cpx #0
+   beq Tens  ;skip 100s if <100
+   tay  ;preserve remainder in Y
    txa
    clc
    adc #'0'
    jsr SendChar
    tya
 
-;Tens   
+Tens   
    ldx #0
 -  cmp #10
-   bmi +     ;skip if below 10
+   bmi +     ;loop until below 10
    sec       ;set to subtract without carry
    sbc #10   ;subtract 10
    inx
@@ -139,7 +141,8 @@ PrintIntByte:
    jsr SendChar
    tya
    
-;Ones
+Ones
+   clc
    adc #'0'
    jsr SendChar
 
