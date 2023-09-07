@@ -25,6 +25,8 @@
    BackgndColorReg    = $d021
    SIDLoc             = $d400
    IO1Port            = $de00
+   GamePort2          = $dc00
+   GamePort1          = $dc01   
    TODHoursBCD        = $dc0b
    TODMinBCD          = $dc0a
    TODSecBCD          = $dc09

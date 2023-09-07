@@ -117,50 +117,79 @@ NoHW
 HighlightCurrent:   
    lda rwRegCursorItemOnPg+IO1Port 
    jsr InverseRow
+   
 WaitForKey:     
    jsr DisplayTime
+   ;Check joystick first:
+   lda GamePort2  
+   ;and GamePort1  keyboard input scan interferes with this port
+   lsr
+   bcs +
+   jsr CursorUp    ;js Up
+   jmp JSDelay
+   
++  lsr
+   bcs +
+   jsr CursorDown  ;js Down
+   jmp JSDelay
+   
++  lsr
+   bcs +
+   jsr PrevPage    ;js Left
+   jmp JSDelay
+   
++  lsr
+   bcs +
+   jsr NextPage    ;js Right
+   jmp JSDelay
+   
++  lsr
+   bcs ReadKeyboard
+   jsr SelectItem  ;js Fire
+   ;jmp JSDelay
+
+JSDelay:   
+   lda rwRegCursorItemOnPg+IO1Port ;HighlightCurrent
+   jsr InverseRow
+   ;pause after action:
+   ldy #$18   ;$10 is pretty quick, but controllable;  $80 is fairly slow
+-- ldx #$ff
+-  dex
+   bne -
+   dey
+   bne --
+   ;lda #0
+   ;sta 198 ;clear keyboard buffer (only needed for port 1)
+   ;jmp WaitForKey
+
+ReadKeyboard:
    jsr GetIn    
    beq WaitForKey
 
 +  cmp #ChrReturn
    bne +
-SelectItem
-   lda rwRegCursorItemOnPg+IO1Port 
-   sta rwRegSelItemOnPage+IO1Port ;select Item from page
-   jsr SelectMenuItem
-   lda MusicInterrupted ;turn music back on if it was before...
-   beq ++
-   lda #0
-   sta MusicInterrupted
-   jsr SIDMusicOn 
-++ jsr ListMenuItems ; reprint menu
+   jsr SelectItem
    jmp HighlightCurrent ;highlight the same one (or dir change sets to 0)
    
 +  cmp #ChrCRSRDn  ;Move cursor down
    bne +
-   ldx rwRegCursorItemOnPg+IO1Port 
-   txa
-   jsr InverseRow ;unhighlight the current
-   inx   
-   cpx rRegNumItemsOnPage+IO1Port ;last item?
-   beq ++ 
-   stx rwRegCursorItemOnPg+IO1Port 
-   jmp HighlightCurrent
-++ jsr PageDown   ;at bottom of page, page down
+   jsr CursorDown
    jmp HighlightCurrent
    
 +  cmp #ChrCRSRUp  ;Move cursor up
    bne +
-   lda rwRegCursorItemOnPg+IO1Port  
-   tax
-   jsr InverseRow ;unhighlight the current
-   cpx #0
-   bne ++
-   jsr PageUp  ;at top of page, page up
-   ldx rRegNumItemsOnPage+IO1Port 
-++ dex   
-   stx rwRegCursorItemOnPg+IO1Port 
+   jsr CursorUp
    jmp HighlightCurrent
+
++  cmp #ChrCRSRRight  ;Next Page
+   bne +
+   jsr NextPage
+   jmp HighlightCurrent
+
++  cmp #ChrCRSRLeft  ;Prev Page
+   bne +
+   jsr PrevPage
+   jmp HighlightCurrent  
 
 +  cmp #ChrUpArrow ;Up directory
    bne +  
@@ -187,22 +216,6 @@ SelectItem
    jsr WaitForTRWaitMsg
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
-
-+  cmp #ChrCRSRRight  ;Next Page
-   bne +
-   lda rwRegCursorItemOnPg+IO1Port 
-   jsr InverseRow ;unhighlight the current (in case 1 page)
-   jsr PageDown
-   jmp HighlightCurrent
-
-+  cmp #ChrCRSRLeft  ;Prev Page
-   bne +
-   lda rwRegCursorItemOnPg+IO1Port 
-   jsr InverseRow ;unhighlight the current (in case 1 page)
-   jsr PageUp
-   lda #0
-   sta rwRegCursorItemOnPg+IO1Port ;set cursor to the first item in dir
-   jmp HighlightCurrent  
 
 +  cmp #ChrF1  ;Teensy mem Menu
    bne +
@@ -356,16 +369,28 @@ MenuLineDone
    rts
 
 
+
+SelectItem:
 ;Execute/select an item from the list
 ; Dir, ROM, copy PRG to RAM and run, etc
-;Pre-Load rwRegSelItemOnPage+IO1Port with Item # to execute/select
-SelectMenuItem:
+   lda rwRegCursorItemOnPg+IO1Port 
+   sta rwRegSelItemOnPage+IO1Port ;select Item from page
+   jsr InverseRow ;unhighlight the current
+   
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtDirectory  ;check for dir selected
-   beq DirUpdate  
-   cmp #rtNone ;do nothing for 'none' type
-   beq ++  
+   bne + 
+   ;DirUpdate:
+   lda #rCtlStartSelItemWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg
+   lda #0
+   sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
+   jmp ListAndDone
+
++  cmp #rtNone ;do nothing for 'none' type
+   beq AllDone 
    
    pha ;store the type
    lda MusicPlaying ;turn music off if it's on
@@ -375,31 +400,12 @@ SelectMenuItem:
 +  jsr PrintBanner ;clear screen for messaging
    lda #NameColor
    jsr SendChar
+   
    pla ;restore the type
    cmp #rtFileHex  ;check for .hex file selected
-   beq FWUpdate  
-   ;not a dir, "none", or hex file, try to start/execute
-
-   lda #rCtlStartSelItemWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
-
-   lda rRegStrAvailable+IO1Port 
-   bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!
+   bne +
    
-   ;If at this point, couldn't load item, and wasn't a dir, none, .hex, .prg or .p00
-   jsr AnyKeyMsgWait   
-++ rts ;SelectMenuItem
-
-DirUpdate:
-   lda #rCtlStartSelItemWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg
-   lda #0
-   sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
-   rts ;SelectMenuItem
-
-FWUpdate:
+   ;FWUpdate  
    lda #ChrReturn
    jsr SendChar
    lda #rsstItemName
@@ -411,7 +417,7 @@ FWUpdate:
 -  jsr GetIn    ; wait for user confirmation
    beq -
    cmp #'n'  
-   beq +
+   beq CheckMusicContinue
    cmp #'y'  
    bne -
 
@@ -427,7 +433,29 @@ FWUpdate:
    ldy #>MsgFWUpdateFailed
    jsr PrintString 
    jsr AnyKeyMsgWait
-+  rts ;SelectMenuItem
+   jmp CheckMusicContinue
+    
+   ;not a dir, "none", or hex file, try to start/execute
++  lda #rCtlStartSelItemWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
+
+   lda rRegStrAvailable+IO1Port 
+   bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!!!
+   
+   ;If at this point, couldn't load item, and wasn't a dir, none, .hex, .prg or .p00
+   jsr AnyKeyMsgWait   
+
+CheckMusicContinue   
+   lda MusicInterrupted ;turn music back on if it was before...
+   beq ListAndDone
+   lda #0
+   sta MusicInterrupted
+   jsr SIDMusicOn 
+ListAndDone
+   jsr ListMenuItems ; reprint menu
+AllDone
+   rts
 
 XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
@@ -448,7 +476,7 @@ XferCopyRun:
    cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
    bne -   
    jmp PRGLoadStartReloc     
-   ;rts ;SelectMenuItem never returns
+   ;rts ;SelectItem never returns
 
 AnyKeyMsgWait:
    lda #<MsgAnyKey  ;wait for any key to continue 
@@ -515,6 +543,38 @@ SynchEthernetTime:
    lda #9
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    rts
+
+CursorUp:
+   lda rwRegCursorItemOnPg+IO1Port  
+   tax
+   jsr InverseRow ;unhighlight the current
+   cpx #0
+   bne ++
+   jsr PageUp  ;at top of page, page up
+   ldx rRegNumItemsOnPage+IO1Port 
+++ dex   
+   stx rwRegCursorItemOnPg+IO1Port 
+   rts
+
+CursorDown:
+   ldx rwRegCursorItemOnPg+IO1Port 
+   txa
+   jsr InverseRow ;unhighlight the current
+   inx   
+   cpx rRegNumItemsOnPage+IO1Port ;last item?
+   beq ++ 
+   stx rwRegCursorItemOnPg+IO1Port 
+   rts
+++ jsr PageDown   ;at bottom of page, page down
+   rts
+
+PrevPage:
+   lda rwRegCursorItemOnPg+IO1Port 
+   jsr InverseRow ;unhighlight the current (in case 1 page)
+   jsr PageUp
+   lda #0
+   sta rwRegCursorItemOnPg+IO1Port ;set cursor to the first item in dir
+   rts
    
 PageUp:
    ldx rwRegPageNumber+IO1Port
@@ -528,6 +588,12 @@ PageUp:
    stx rwRegPageNumber+IO1Port
    jsr ListMenuItems   
 ++ rts
+
+NextPage:
+   lda rwRegCursorItemOnPg+IO1Port 
+   jsr InverseRow ;unhighlight the current (in case 1 page)
+   jsr PageDown
+   rts
 
 PageDown:
    ldx rwRegPageNumber+IO1Port
