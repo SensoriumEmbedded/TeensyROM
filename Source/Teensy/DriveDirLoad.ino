@@ -27,14 +27,14 @@ void HandleExecution()
 {
    StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
    
-   if (MenuSelCpy.ItemType == rtNone) 
+   if (MenuSelCpy.ItemType == rtNone) //should no longer reach here
    {
       SendMsgPrintfln("%s\r\nis not a valid item", MenuSelCpy.Name);
       return;
    }
    if (MenuSelCpy.ItemType == rtUnknown)
    {
-      SendMsgPrintfln("%s\r\nUnknown Type", MenuSelCpy.Name);
+      SendMsgPrintfln("%s\r\nUnknown File Type", MenuSelCpy.Name);
       return;
    }
    
@@ -86,6 +86,7 @@ void HandleExecution()
             //load header and parse (sends error messages)
             if (!ParseCRTHeader(&MenuSelCpy, &EXROM, &GAME)) return;
             
+            //IO1[rwRegNextIOHndlr] is now assigned from crt!
             //process Chip Packets
             uint8_t *ptrChipOffset = MenuSelCpy.Code_Image + CRT_MAIN_HDR_LEN; //Skip header
             FreeCrtChips();  //clears any previous and resets NumCrtChips
@@ -95,6 +96,7 @@ void HandleExecution()
                if (!ParseChipHeader(ptrChipOffset)) //sends error messages
                {
                   FreeCrtChips();
+                  IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
                   return;        
                }
                ptrChipOffset += CRT_CHIP_HDR_LEN;
@@ -104,7 +106,11 @@ void HandleExecution()
             }
             
             //check configuration (sends error messages)
-            if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) return;
+            if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) 
+            {
+               IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+               return;
+            }
          }
          
          else
@@ -263,6 +269,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
          return false;        
       }
       
+      //IO1[rwRegNextIOHndlr] is now assigned from crt!
       //process Chip Packets
       FreeCrtChips();  //clears any previous and resets NumCrtChips
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
@@ -273,6 +280,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
          {
             myFile.close();
             FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
             RedirectEmptyDriveDirMenu();
             return false;        
          }
@@ -285,6 +293,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
       {
          myFile.close();
          FreeCrtChips();
+         IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
          RedirectEmptyDriveDirMenu();
          return false;        
       }
@@ -389,7 +398,7 @@ void LoadDirectory(bool SD_nUSBDrive)
            }
       }   
    
-   if(NumDrvDirMenuItems == 0)
+   if(NumDrvDirMenuItems == 0) //empty or missing drive, always need at least one entry
    {
       DriveDirMenu[0].ItemType = rtNone;
       AddDirEntry("<Empty>");
@@ -453,8 +462,8 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
 
    SendMsgPrintfln("Ver: %02x.%02x", CRT_Image[0x14], CRT_Image[0x15]);
    
-   int16_t HWType = (int16_t)toU16(CRT_Image+0x16);
-   SendMsgPrintfln("HW Type: %d ($%04x)", HWType, (uint16_t)HWType);
+   uint16_t HWType = toU16(CRT_Image+0x16);
+   SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
    
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
@@ -606,7 +615,7 @@ uint16_t toU16(uint8_t* src)
       ((uint16_t)src[1]    ) ;
 }
 
-bool AssocHWID_IOH(int16_t HWType)
+bool AssocHWID_IOH(uint16_t HWType)
 {
    uint8_t Num = 0;
    

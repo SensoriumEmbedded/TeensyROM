@@ -133,6 +133,7 @@ struct StructHWID_IOH_Assoc
 
 StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 {
+           //HWID                  IOH
    (uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
    (uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
    (uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
