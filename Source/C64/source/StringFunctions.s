@@ -37,6 +37,8 @@ PrintString:
    jsr SendChar
    iny
    bne -
+   inc PtrAddrHi
+   bne -
 +  rts
 
 PrintBanner:

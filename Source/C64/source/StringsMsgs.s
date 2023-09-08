@@ -24,47 +24,44 @@ MsgBanner:
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
    !tx SourcesColor, "Src: ", 0 
-MsgSelect1:
+MsgMainOptions1:
    !tx ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem  "
    !tx ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive  "
-   !tx ChrLtRed, "Pg "
+   !tx ChrLtRed, "Pg " 
    !tx 0
-MsgSelect2:
+;page x/y printed here
+MsgMainOptions2:
    !tx ChrReturn
    !tx ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card     "
    !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host   "
    !tx ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
    
-MsgHelp1:   
+MsgHelpMenu:   
    !tx ChrReturn, SourcesColor, "Help Menu:", ChrReturn
-;   !tx ChrReturn, "Keyboard/Joystick options from main menu", ChrReturn
    !tx ChrReturn, " Main Menu Navigation:", ChrReturn
-   
-   !tx "  ", ChrRvsOn, OptionColor, "CRSR/Joy2", ChrCRSRRight, "U/D", ChrRvsOff, MenuMiscColor, " Cursor up/dn", ChrReturn
-   !tx "            ", ChrRvsOn, OptionColor, "L/R", ChrRvsOff, MenuMiscColor, " Page up/dn", ChrReturn
-   !tx "    ", ChrRvsOn, OptionColor, "Return/Fire", ChrRvsOff, MenuMiscColor, " Select file or dir", ChrReturn, ChrReturn
+   !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Cursor up/dn", ChrReturn
+   !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Page up/dn", ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Select file or dir", ChrReturn, ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Up directory", ChrReturn
+   !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Next entry starting with letter", ChrReturn
+   !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Beginning of current dir", ChrReturn
+   !tx ChrReturn, ChrReturn
+   !tx SourcesColor, " Available here and on Main Menu:", ChrReturn
+   !tx "   Source Select:   ", MenuMiscColor, "Other:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, SourcesColor,  "Teensy Mem"
+   !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Exit to BASIC", ChrReturn
+               
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, SourcesColor,  "SD Card   "
+   !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Music on/off", ChrReturn
+               
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, SourcesColor,  "USB Drive "
+   !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Settings Menu", ChrReturn
+               
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, SourcesColor,  "USB Host  "
+   !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, MenuMiscColor, "MIDI2SID app", ChrReturn
+   !tx ChrReturn, ChrReturn
    !tx 0
-MsgHelp2:   
-   !tx "     ", ChrRvsOn, OptionColor, ChrUpArrow, ChrRvsOff, MenuMiscColor, " Up directory", ChrReturn
-   !tx "   ", ChrRvsOn, OptionColor, "a-z", ChrRvsOff, MenuMiscColor, " Next entry starting with letter", ChrReturn
-   !tx "  ", ChrRvsOn, OptionColor, "Home", ChrRvsOff, MenuMiscColor, " Beginning of current dir", ChrReturn
-;   !tx "  ", ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor, " This Help menu", ChrReturn
-   
-   !tx ChrReturn, SourcesColor,  " Source Select:", MenuMiscColor, "   Other Options:", ChrReturn
-   !tx "  ", ChrRvsOn, OptionColor, "F1", ChrRvsOff, SourcesColor,  " Teensy Mem   "
-   !tx "  ", ChrRvsOn, OptionColor, "F2", ChrRvsOff, MenuMiscColor, " Exit to BASIC", ChrReturn
-   !tx 0
-MsgHelp3:   
-   !tx "  ", ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card      "
-   !tx "  ", ChrRvsOn, OptionColor, "F4", ChrRvsOff, MenuMiscColor, " Music on/off", ChrReturn
-   !tx "  ", ChrRvsOn, OptionColor, "F5", ChrRvsOff, SourcesColor,  " USB Drive    "
-   !tx "  ", ChrRvsOn, OptionColor, "F6", ChrRvsOff, MenuMiscColor, " Settings Menu", ChrReturn
-   !tx "  ", ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host     "
-   !tx "  ", ChrRvsOn, OptionColor, "F8", ChrRvsOff, MenuMiscColor, " MIDI to SID app"
-   !tx ChrReturn
-   !tx 0
-MsgHelpEnd
 
 MsgNoHW:
    !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
@@ -85,28 +82,29 @@ MsgMenuUSBDrive:
 
 MsgSettingsMenu1:
    !tx ChrReturn, SourcesColor, "Settings Menu:", ChrReturn
-   !tx ChrReturn, MenuMiscColor 
+   !tx MenuMiscColor 
    !tx "   Power-On Defaults:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, SourcesColor, "   Time Zone:", NameColor, " UTC", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "  Special IO:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, SourcesColor, "  Joy2 Speed:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "  Synch Time:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, " Music State:", ChrReturn
+   !tx OptionColor, "    Key=next value, shift+key=previous", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, SourcesColor, "  Time Zone:", NameColor, " UTC", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, " Special IO:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, SourcesColor, " Joy2 Speed:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, " Synch Time:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, "Music State:", ChrReturn
    !tx MenuMiscColor, "   Immediate:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, " Synch Time via Ethernet", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, "Synch Time via Ethernet", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, SourcesColor, "Toggle Music On/Off", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, SourcesColor, "Self Test", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, SourcesColor, "Help Menu", ChrReturn
+   !tx ChrReturn, 0 
+MsgSettingsMenu2SpaceRet:
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
-MsgSettingsMenu2:
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, SourcesColor, " Toggle Music On/Off", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, SourcesColor,  " Self Test", ChrReturn
-   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  " Back to Main menu", ChrReturn
-   !tx ChrReturn, OptionColor, " Key for Inc value, shift-Key for Dec", ChrReturn
+MsgSettingsMenu3:
    !tx ChrReturn, ChrReturn, ChrReturn, ChrReturn, MenuMiscColor 
    !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
-  ; !tx "          Music by Frank Zappa", ChrReturn, ChrReturn
    !tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
    !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
-MsgSettingsMenuend
 
 MsgFWVerify:
    !tx ChrReturn, ChrReturn, ChrOrange, "Please Confirm:"

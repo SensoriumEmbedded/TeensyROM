@@ -23,8 +23,11 @@ SettingsMenu:
    lda #<MsgSettingsMenu1
    ldy #>MsgSettingsMenu1
    jsr PrintString 
-   lda #<MsgSettingsMenu2
-   ldy #>MsgSettingsMenu2
+   lda #<MsgSettingsMenu2SpaceRet
+   ldy #>MsgSettingsMenu2SpaceRet
+   jsr PrintString 
+   lda #<MsgSettingsMenu3
+   ldy #>MsgSettingsMenu3
    jsr PrintString 
 
    lda #rCtlMakeInfoStrWAIT
@@ -44,7 +47,7 @@ ShowSettings:
    jsr SendChar
 
    ldx #5 ;row Time Zone
-   ldy #24 ;col
+   ldy #23 ;col
    clc
    jsr SetCursor
    ldx #'+'
@@ -67,14 +70,14 @@ ShowSettings:
    jsr SendChar
 
    ldx #6  ;row Special IO
-   ldy #21 ;col
+   ldy #20 ;col
    clc
    jsr SetCursor
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
    ldx #7  ;row Joy 2 Speed
-   ldy #21 ;col
+   ldy #20 ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -88,7 +91,7 @@ ShowSettings:
    jsr SendChar
 
    ldx #8 ;row Synch Time
-   ldy #21 ;col
+   ldy #20 ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -96,7 +99,7 @@ ShowSettings:
    jsr PrintOnOff
 
    ldx #9 ;row Music State
-   ldy #21 ;col
+   ldy #20 ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -200,6 +203,10 @@ WaitForSettingsKey:
    bne +
    jsr TestIO
    jmp WaitForSettingsKey  
+   
++  cmp #'i'  ;Help Menu
+   bne +
+   jmp HelpMenu  ;return from there  
    
 +  cmp #ChrSpace  ;Exit
    bne +

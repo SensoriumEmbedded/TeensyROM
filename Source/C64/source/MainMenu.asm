@@ -118,7 +118,7 @@ HighlightCurrent:
    lda rwRegCursorItemOnPg+IO1Port 
    jsr InverseRow
    
-WaitForKey:     
+WaitForJSorKey:     
    jsr DisplayTime
    ;Check joystick first:
    lda GamePort2  
@@ -167,11 +167,11 @@ JSDelay:
    bne --
    ;lda #0
    ;sta 198 ;clear keyboard buffer (only needed for port 1)
-   ;jmp WaitForKey
+   ;jmp WaitForJSorKey
 
 ReadKeyboard:
    jsr GetIn    
-   beq WaitForKey
+   beq WaitForJSorKey
 
 +  cmp #ChrReturn
    bne +
@@ -245,7 +245,7 @@ ReadKeyboard:
 +  cmp #ChrF4  ;toggle music
    bne +
    jsr ToggleSIDMusic
-   jmp WaitForKey  
+   jmp WaitForJSorKey  
 
 +  cmp #ChrF5  ;USB Drive Menu
    bne +
@@ -278,7 +278,7 @@ ReadKeyboard:
    jmp HighlightCurrent
 
 
-+  jmp WaitForKey
++  jmp WaitForJSorKey
 
    
 ; ******************************* Subroutines ******************************* 
@@ -297,8 +297,8 @@ ListMenuItems:
    ldy #0  ;col
    clc
    jsr SetCursor
-   lda #<MsgSelect1
-   ldy #>MsgSelect1
+   lda #<MsgMainOptions1
+   ldy #>MsgMainOptions1
    jsr PrintString
    ;page x/y
    lda rwRegPageNumber+IO1Port
@@ -308,8 +308,8 @@ ListMenuItems:
    lda rRegNumPages+IO1Port
    jsr PrintIntByte
    
-   lda #<MsgSelect2
-   ldy #>MsgSelect2
+   lda #<MsgMainOptions2
+   ldy #>MsgMainOptions2
    jsr PrintString
    
    ldx #1  ;row
@@ -638,17 +638,70 @@ InverseRow:
 
 HelpMenu:
    jsr PrintBanner
-   lda #<MsgHelp1
-   ldy #>MsgHelp1
-   jsr PrintString 
-   lda #<MsgHelp2
-   ldy #>MsgHelp2
-   jsr PrintString 
-   lda #<MsgHelp3
-   ldy #>MsgHelp3
+   lda #<MsgHelpMenu
+   ldy #>MsgHelpMenu
    jsr PrintString 
 
-   jmp AnyKeyMsgWait ;return from there
+   lda #<MsgSettingsMenu2SpaceRet
+   ldy #>MsgSettingsMenu2SpaceRet
+   jsr PrintString 
+
+WaitHelpMenuKey:
+   jsr DisplayTime   
+   jsr GetIn    
+   beq WaitHelpMenuKey
+
++  cmp #ChrF1  ;Teensy mem Menu
+   bne +
+   lda #rmtTeensy
+   jsr MenuChangeInit
+   rts  
+
++  cmp #ChrF2  ;Exit to BASIC
+   bne +
+   lda #rCtlBasicReset ;reset to BASIC
+   sta wRegControl+IO1Port
+-  jmp -  ;should be resetting to BASIC
+
++  cmp #ChrF3  ;SD Card Menu
+   bne +
+   lda #rmtSD
+   jsr MenuChangeInit
+   rts  
+
++  cmp #ChrF4  ;toggle music
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitHelpMenuKey  
+
++  cmp #ChrF5  ;USB Drive Menu
+   bne +
+   lda #rmtUSBDrive
+   jsr MenuChangeInit
+   rts  
+
++  cmp #ChrF6  ;Settings Menu
+   bne +
+   jmp SettingsMenu  ;return from there
+
++  cmp #ChrF7  ;Exe USB Host file
+   bne +
+   lda #rmtUSBHost
+   jsr MenuChangeInit
+   rts  
+
++  cmp #ChrF8  ;MIDI to SID
+   bne +
+   jmp MIDI2SID  ;return from there
+
++  cmp #ChrSpace  ;back to Main Menu
+   bne WaitHelpMenuKey   
+   rts
+
+MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
+   sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
+   jsr WaitForTRWaitMsg
+   rts
 
 TblRowToMemLoc:
    !word ScreenCharMemStart+40*(3+ 0)-1
