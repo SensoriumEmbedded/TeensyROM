@@ -21,20 +21,7 @@
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
-
-   ;color scheme:
-   BorderColor       = PokePurple
-   BackgndColor      = PokeBlack
-
-   ;RAM Registers:
-   PtrAddrLo   = $fb
-   PtrAddrHi   = $fc
-   Ptr2AddrLo  = $fd
-   Ptr2AddrHi  = $fe
-   
-   ;RAM coppies:
-   MainCodeRAM = $2400    ;Main execution point 
-   SIDCodeRAM  = $1000 
+   !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
 
 ;********************************   Cartridge begin   ********************************   

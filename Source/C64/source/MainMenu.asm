@@ -22,26 +22,10 @@
    ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
    !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
 
-   ;color scheme:
-   BorderColor      = PokePurple
-   BackgndColor     = PokeBlack
-   TimeColor        = ChrOrange
-   MenuMiscColor    = ChrGreen
-   AssignedIOHColor = ChrLtGrey
-   OptionColor      = ChrYellow
-   SourcesColor     = ChrLtBlue
-   TypeColor        = ChrBlue
-   NameColor        = ChrLtGreen
-   M2SDataColumn    = 14
-
-   ;Zero page RAM Registers:
-   PtrAddrLo   = $fb
-   PtrAddrHi   = $fc
-   Ptr2AddrLo  = $fd
-   Ptr2AddrHi  = $fe
-   ;other RAM Registers/code space
+   ;other RAM Registers
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
    MusicInterrupted = $0336 ;Music muted for item selection
@@ -50,12 +34,7 @@
    SIDSusRel        = $033a
    SIDDutyHi        = $033b
    
-   ;$033c-03fb is the tape buffer (192 bytes)
-   PRGLoadStartReloc= $033c 
-   
-   ;RAM coppies:
-   MainCodeRAM = $2400    ;this file
-   SIDCodeRAM = $1000 
+   M2SDataColumn    = 14
 
 ;******************************* Main Code Start ************************************   
 
@@ -480,7 +459,7 @@ XferCopyRun:
 -  lda (PtrAddrLo), y 
    sta (Ptr2AddrLo),y
    iny
-   cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here
+   cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here against PRGLoadStartReloc available
    bne -   
    jmp PRGLoadStartReloc     
    ;rts ;SelectItem never returns
