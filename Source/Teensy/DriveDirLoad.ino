@@ -349,6 +349,7 @@ void LoadDirectory(bool SD_nUSBDrive)
    }
    
    const char *filename;
+   uint32_t beginWait = millis();
    
    while (File entry = dir.openNextFile()) 
    {
@@ -384,6 +385,8 @@ void LoadDirectory(bool SD_nUSBDrive)
          break;
       }
    }
+   
+   Printf_dbg("Loaded %d items in %lumS from %s\n", NumDrvDirMenuItems, (millis()-beginWait), DriveDirPath);
    
    //alphabetize the directory list
    StructMenuItem TempMenuItem;

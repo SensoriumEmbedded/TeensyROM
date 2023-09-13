@@ -198,29 +198,43 @@ void ServiceSerial()
          break;
    #endif
    
-   // v, a   
+   // t...
    #ifdef Dbg_SerTimChg
-      case 'v': //VIC timing change
-         GetDigits(3, &nS_VICStart);
-         PrintTimingParams();
-         break;
-      case 'a': //nS_MaxAdj change
-         GetDigits(4, &nS_MaxAdj);
-         PrintTimingParams();
-         break;
+      case 't': //timing commands, 2 letters and 3-4 numbers
+         switch (Serial.read())
+         {
+            case 'm': //nS_MaxAdj change
+               GetDigits(4, &nS_MaxAdj);
+               break;
+            case 'r': //nS_RWnReady change
+               GetDigits(3, &nS_RWnReady);
+               break;
+            case 'p': //nS_PLAprop change
+               GetDigits(3, &nS_PLAprop);
+               break;
+            case 's': //nS_DataSetup change
+               GetDigits(3, &nS_DataSetup);
+               break;
+            case 'h': //nS_DataHold change
+               GetDigits(3, &nS_DataHold);
+               break;
+            case 'v': //VIC timing change
+               GetDigits(3, &nS_VICStart);
+               break;
+            default:
+               Serial.printf("No changes\n");
+               break;
+         }
+         Serial.printf("   nS_MaxAdj(tm) %04d\n", nS_MaxAdj);
+         Serial.printf(" nS_RWnReady(tr)  %03d\n", nS_RWnReady);
+         Serial.printf("  nS_PLAprop(tp)  %03d\n", nS_PLAprop);
+         Serial.printf("nS_DataSetup(ts)  %03d\n", nS_DataSetup);
+         Serial.printf(" nS_DataHold(th)  %03d\n", nS_DataHold);
+         Serial.printf(" nS_VICStart(tv)  %03d\n", nS_VICStart);
+         break;  
    #endif
-
+   
    }
-}
-
-void PrintTimingParams()
-{
-   Serial.printf("   nS_MaxAdj: %d\n", nS_MaxAdj);
-   Serial.printf(" nS_RWnReady: %d\n", nS_RWnReady);
-   Serial.printf("  nS_PLAprop: %d\n", nS_PLAprop);
-   Serial.printf("nS_DataSetup: %d\n", nS_DataSetup);
-   Serial.printf(" nS_DataHold: %d\n", nS_DataHold);
-   Serial.printf(" nS_VICStart: %d\n", nS_VICStart);
 }
 
 void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
