@@ -88,11 +88,10 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 ## Pictures-screen captures:
 |![TeensyROM pic1](media/v0.2b/v0.2b_top.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_top_loaded.jpg)| 
 |:--:|:--:|
-|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)|
-|![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/MIDI%20to%20SID.png)|
+|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg)|
+|![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|
 |![TeensyROM pic1](media/Screen%20captures/Settings%20Menu.png)|![TeensyROM help](media/Screen%20captures/Help%20Menu.png)|
-
-![TeensyROM pic1](media/Screen%20captures/WinPC%20x-fer%20app.png)
+|![TeensyROM pic1](media/Screen%20captures/WinPC%20x-fer%20app.png)|![TeensyROM help](media/Screen%20captures/MIDI%20to%20SID.png)|
 
 See the [media](media/) folder for more pics, videos, and oscilloscope shots.
 
