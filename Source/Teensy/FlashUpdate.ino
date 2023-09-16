@@ -64,7 +64,7 @@ extern "C" {
 }
 
 
-void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
+void DoFlashUpdate(FS *sourceFS, const char *FilePathName)
 {
    uint32_t buffer_addr, buffer_size;
 
@@ -92,11 +92,9 @@ void DoFlashUpdate(bool SD_nUSBDrive, const char *FilePathName)
    //}
    //SendMsgOK();
 
-   SendMsgPrintfln("Open: %s%s ", SD_nUSBDrive ? "SD" : "USB", FilePathName); 
+   SendMsgPrintfln("Open: %s%s ", sourceFS==&SD ? "SD" : "USB", FilePathName); 
 
-   File hexFile;
-   if (SD_nUSBDrive) hexFile = SD.open(FilePathName, FILE_READ );
-   else hexFile= firstPartition.open(FilePathName, FILE_READ);
+   File hexFile = sourceFS->open(FilePathName, FILE_READ );
       
    if (!hexFile) {
       SendMsgFailed();

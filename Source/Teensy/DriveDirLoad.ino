@@ -38,11 +38,11 @@ void HandleExecution()
       return;
    }
    
-   bool SD_nUSBDrive = false;
+   FS *sourceFS = &firstPartition;
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtSD:
-         SD_nUSBDrive = true;
+         sourceFS = &SD;
       case rmtUSBDrive:
       
          if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
@@ -52,7 +52,7 @@ void HandleExecution()
             if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
             else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
 
-            DoFlashUpdate(SD_nUSBDrive, FullFilePath);
+            DoFlashUpdate(sourceFS, FullFilePath);
             return;  //we're done here...
          }
          
@@ -66,11 +66,11 @@ void HandleExecution()
             }
             
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
-            LoadDirectory(SD_nUSBDrive); 
+            LoadDirectory(sourceFS); 
             return;  //we're done here...
          }
          
-         if(!LoadFile(&MenuSelCpy, SD_nUSBDrive)) return;     
+         if(!LoadFile(&MenuSelCpy, sourceFS)) return;     
 
          MenuSelCpy.Code_Image = RAM_Image;
          break;
@@ -221,11 +221,11 @@ void MenuChange()
          break;
       case rmtSD:
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-         LoadDirectory(true); //do this regardless of SD.begin result to populate one entry w/ message
+         LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
          MenuSource = DriveDirMenu; 
          break;
       case rmtUSBDrive:
-         LoadDirectory(false);
+         LoadDirectory(&firstPartition);
          MenuSource = DriveDirMenu; 
          break;
       case rmtUSBHost:
@@ -236,7 +236,7 @@ void MenuChange()
    IO1[rwRegCursorItemOnPg] = 0;
 }
 
-bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive) 
+bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS) 
 {
    char FullFilePath[MaxPathLength+MaxItemNameLength+2];
 
@@ -245,9 +245,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
-   File myFile;
-   if (SD_nUSBDrive) myFile= SD.open(FullFilePath, FILE_READ);
-   else myFile= firstPartition.open(FullFilePath, FILE_READ);
+   File myFile = sourceFS->open(FullFilePath, FILE_READ);
    
    if (!myFile) 
    {
@@ -335,9 +333,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, bool SD_nUSBDrive)
    return true;      
 }
 
-void LoadDirectory(bool SD_nUSBDrive) 
+void LoadDirectory(FS *sourceFS) 
 {
-   File dir;
    
    if (DriveDirMenu == NULL) 
    {
@@ -350,8 +347,7 @@ void LoadDirectory(bool SD_nUSBDrive)
    }
    NumDrvDirMenuItems = 0;
    
-   if (SD_nUSBDrive) dir = SD.open(DriveDirPath);//SD card
-   else dir = firstPartition.open(DriveDirPath); //USB Drive
+   File dir = sourceFS->open(DriveDirPath);
    
    if (!PathIsRoot())
    {  // *not* at root, add up dir option

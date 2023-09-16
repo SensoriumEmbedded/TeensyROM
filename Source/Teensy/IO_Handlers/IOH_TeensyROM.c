@@ -54,7 +54,7 @@ extern bool EthernetInit();
 extern void MenuChange();
 extern void HandleExecution();
 extern bool PathIsRoot();
-extern void LoadDirectory(bool SD_nUSBDrive);
+extern void LoadDirectory(FS *sourceFS);
 extern void IOHandlerInitToNext();
 extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
@@ -157,7 +157,8 @@ void UpDirectory()
       char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
       if (LastSlash == NULL) return;
       LastSlash[0] = 0;  //terminate it there 
-      LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD); 
+      if (IO1[rWRegCurrMenuWAIT] == rmtSD) LoadDirectory(&SD); 
+      else LoadDirectory(&firstPartition); 
       IO1[rwRegCursorItemOnPg] = 0;
       IO1[rwRegPageNumber]     = 1;
    }
