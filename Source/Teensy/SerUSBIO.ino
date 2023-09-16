@@ -83,20 +83,27 @@ void ServiceSerial()
             Serial.printf("DriveDirMenu+Filenames: %lu (%luk)\n", 
                TotalSize, TotalSize/1024);
             
-            Serial.printf("RAM_Image: %lu (%luk) @ $%08x\nTeensyROMMenu: %lu (%luk) @ $%08x\n", 
-               sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image,
-               sizeof(TeensyROMMenu), sizeof(TeensyROMMenu)/1024, (uint32_t)TeensyROMMenu);
-            
+            Serial.printf("RAM_Image: %lu (%luk) @ $%08x\n", 
+               sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
+         
             TotalSize = 0;
+            uint32_t TotalStructSize = sizeof(TeensyROMMenu);
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
-               TotalSize += TeensyROMMenu[ROMNum].Size;
-               if (((uint32_t)TeensyROMMenu[ROMNum].Code_Image & 0xF0000000) == 0x20000000)
-                  Serial.printf("#%02d is using RAM!!!  %s\n", ROMNum, TeensyROMMenu[ROMNum].Name);
-
-               //Serial.printf(" #%02d @ $%08x %7d %s\n", ROMNum, (uint32_t)TeensyROMMenu[ROMNum].Code_Image, TeensyROMMenu[ROMNum].Size, TeensyROMMenu[ROMNum].Name);
+               if(TeensyROMMenu[ROMNum].ItemType == rtDirectory)
+               {
+                  StructMenuItem *subTROMMenu = (StructMenuItem*)TeensyROMMenu[ROMNum].Code_Image;
+                  TotalStructSize += TeensyROMMenu[ROMNum].Size;
+                  for(uint8_t subROMNum=0; subROMNum < TeensyROMMenu[ROMNum].Size/sizeof(StructMenuItem); subROMNum++)
+                  {
+                     if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize);
+                  }
+               }
+               else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize);
             }
-            Serial.printf("TeensyROMMenu Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
+            Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
+               TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
+            Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
          break;
       case 'x':
@@ -235,6 +242,14 @@ void ServiceSerial()
    #endif
    
    }
+}
+
+void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
+{
+   *TotalSize += SourceMenu.Size;
+   Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
+   if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
+      Serial.printf("%s is using RAM!!!\n", SourceMenu.Name);
 }
 
 void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
