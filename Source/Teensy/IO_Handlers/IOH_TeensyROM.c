@@ -44,7 +44,7 @@ volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
 volatile uint8_t eepAddrToWrite, eepDataToWrite;
-StructMenuItem *MenuSource = TeensyROMMenu; //init to internal memory
+StructMenuItem *MenuSource;
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
 uint8_t *XferImage = NULL; //pointer to image being transfered to C64 
@@ -147,16 +147,20 @@ void MakeBuildCPUInfoStr()
 
 void UpDirectory()
 {
-   //non-root of SD or USB drive only
-   if(IO1[rWRegCurrMenuWAIT] != rmtSD && IO1[rWRegCurrMenuWAIT] != rmtUSBDrive) return;
+   //non-root of Teensy, SD or USB drive only
+   if(IO1[rWRegCurrMenuWAIT] == rmtUSBHost) return;
    if(PathIsRoot()) return;
-   
-   char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
-   if (LastSlash == NULL) return;
-   LastSlash[0] = 0;  //terminate it there 
-   LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD); 
-   IO1[rwRegCursorItemOnPg] = 0;
-   IO1[rwRegPageNumber]     = 1;
+
+   if(IO1[rWRegCurrMenuWAIT] == rmtTeensy) MenuChange(); //back to root, only 1 dir level
+   else
+   {   
+      char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
+      if (LastSlash == NULL) return;
+      LastSlash[0] = 0;  //terminate it there 
+      LoadDirectory(IO1[rWRegCurrMenuWAIT] == rmtSD); 
+      IO1[rwRegCursorItemOnPg] = 0;
+      IO1[rwRegPageNumber]     = 1;
+   }
 }
 
 void SearchForLetter()
@@ -363,7 +367,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       {
          case rRegItemTypePlusIOH:
             Data = MenuSource[SelItemFullIdx].ItemType;
-            if(MenuSource == TeensyROMMenu && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+            if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
             DataPortWriteWaitLog(Data);  
             break;
          case rRegStreamData:
@@ -445,7 +449,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   ptrSerialString = strVersionNumber;
                   break;      
                case rsstShortDirPath:
-                  if(IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive)
+                  if(IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
+                  {
+                     SerialStringBuf[0]=0;
+                     ptrSerialString = SerialStringBuf;
+                  }
+                  else
                   {
                      uint16_t Len = strlen(DriveDirPath);
                      if (Len >= 40) 
@@ -455,11 +464,6 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                         ptrSerialString = SerialStringBuf;
                      }
                      else ptrSerialString = DriveDirPath;
-                  }
-                  else
-                  {
-                     SerialStringBuf[0]=0;
-                     ptrSerialString = SerialStringBuf;
                   }
                   break;
             }

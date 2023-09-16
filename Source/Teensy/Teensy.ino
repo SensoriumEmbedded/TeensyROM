@@ -88,7 +88,6 @@ void setup()
    IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rwRegStatus]        = rsReady;
    IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-   SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
    IO1[rRegPresence1]     = 0x55;   
    IO1[rRegPresence2]     = 0xAA;   
    for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
@@ -97,6 +96,7 @@ void setup()
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
+   MenuChange(); //set up drive path, menu source/size
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 

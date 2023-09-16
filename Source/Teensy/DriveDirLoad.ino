@@ -76,8 +76,20 @@ void HandleExecution()
          break;
          
       case rmtTeensy:  //not many size checks as this is loading internally
-         SendMsgPrintfln(MenuSelCpy.Name); 
          
+         if (MenuSelCpy.ItemType == rtDirectory)
+         {
+            if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
+            else 
+            {
+               MenuSource = (StructMenuItem*)MenuSelCpy.Code_Image;
+               SetNumItems(MenuSelCpy.Size/sizeof(StructMenuItem));
+               strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+            }
+            return;
+         }
+         
+         SendMsgPrintfln(MenuSelCpy.Name); 
          if (MenuSelCpy.ItemType == rtFileCrt)
          {  //load the CRT into RAM
             uint8_t EXROM;
@@ -200,6 +212,7 @@ void HandleExecution()
 
 void MenuChange()
 {
+   stpcpy(DriveDirPath, "/");
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
@@ -207,13 +220,11 @@ void MenuChange()
          SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
-         stpcpy(DriveDirPath, "/");
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(true); //do this regardless of SD.begin result to populate one entry w/ message
          MenuSource = DriveDirMenu; 
          break;
       case rmtUSBDrive:
-         stpcpy(DriveDirPath, "/");
          LoadDirectory(false);
          MenuSource = DriveDirMenu; 
          break;
