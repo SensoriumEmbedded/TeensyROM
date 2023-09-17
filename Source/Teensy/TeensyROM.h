@@ -20,7 +20,7 @@
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart
 
 
-char strVersionNumber[] = "v0.4.8+"; //*VERSION*
+char strVersionNumber[] = "v0.5"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
@@ -32,7 +32,7 @@ char strVersionNumber[] = "v0.4.8+"; //*VERSION*
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 //#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
 //#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
-#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
+//#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
 #define RAM_ImageSize       (184*1024)
