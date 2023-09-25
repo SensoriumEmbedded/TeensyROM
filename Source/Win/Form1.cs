@@ -16,12 +16,18 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO.Ports;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Serial_Logger
 {
     public partial class Form1 : Form
     {
         volatile bool USBLost = false;
+
+        //synch with TeensyROM code:
+        const UInt16 SendFileToken = 0x64AA;
+        const UInt16 AckToken      = 0x64CC;
+        const UInt16 FailToken     = 0x9B7F;
 
         public Form1()
         {
@@ -101,7 +107,7 @@ namespace Serial_Logger
                 }
                 btnConnected.Text = "Not Connected";
                 btnConnected.BackColor = Color.Yellow;
-                gbCommButtons.Visible = false;
+                pnlCommButtons.Enabled = false;
             }
             else
             {   //connect
@@ -124,7 +130,7 @@ namespace Serial_Logger
                 }
                 btnConnected.Text = "Connected";
                 btnConnected.BackColor = Color.LightGreen;
-                gbCommButtons.Visible = true;
+                pnlCommButtons.Enabled = true;
                 USBLost = false;
                 timer1.Enabled = true;
             }
@@ -139,69 +145,99 @@ namespace Serial_Logger
 
         private void btnSendFile_Click(object sender, EventArgs e)
         {
-            openFileDialog1.FileName = "";
-            openFileDialog1.Filter = "C64 Files (*.prg;*.crt)|*.prg;*.crt|PRG files (*.prg)|*.prg|CRT files (*.crt)|*.crt|All files (*.*)|*.*";
-            if (openFileDialog1.ShowDialog() == DialogResult.Cancel) return;
-
+            if(!File.Exists(tbSource.Text))
+            {
+                WriteToOutput("\nInvalid Source File/Path", Color.DarkRed);
+                return;
+            }
+            
             //Read/store file, get length, calc checksum
-            WriteToOutput("\nReading file: " + openFileDialog1.SafeFileName, Color.Black);
-            BinaryReader br = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
-            int len = (int)br.BaseStream.Length;
-            byte[] fileBuf = br.ReadBytes(len);  //read full file to array
+            WriteToOutput("\nReading file: " + tbSource.Text, Color.Black);
+            BinaryReader br = new BinaryReader(File.Open(tbSource.Text, FileMode.Open));
+            UInt32 len = (UInt32)br.BaseStream.Length;
+            byte[] fileBuf = br.ReadBytes((Int32)len);  //read full file to array
             br.Close();
             UInt16 CheckSum = 0;
             for (UInt32 num = 0; num < len; num++) CheckSum += fileBuf[num];
 
 
             //   App: SendFileToken 0x64AA
-            //Teensy: ack 0x6464
-            //   App: Send Length(2), CS(2), Name(MaxItemNameLength=25 incl term), file(length)
-            //Teensy: Pass 0x6480 or Fail 0x9b7f (or anything else received) 
+            //Teensy: AckToken 0x64CC
+            //   App: Send Length(4), CS(2), SD_nUSB(1), 
+            //          DestPath/Name(up to MaxNamePathLength, null term)
+            //Teensy: AckToken 0x64CC
+            //   App: Send file(length)
+            //Teensy: AckToken 0x64CC on Pass,  0x9b7f on Fail
+
+            SendIntBytes(SendFileToken, 2);
+            if (!GetAck()) return;
+
+            UInt32 SD_nUSB = (rbSDCard.Checked ? 1U:0U);
+            if (!tbDestPath.Text.EndsWith("/")) tbDestPath.Text += "/";
+            string DestPathFile = tbDestPath.Text;
+            DestPathFile += Path.GetFileName(tbSource.Text);
+
+            WriteToOutput("Transferring " + len + " bytes, CS= 0x" + CheckSum.ToString("X4"), Color.Black);
+            WriteToOutput("  to TeensyROM " + (SD_nUSB==1U ? "SD:" : "USB:") + DestPathFile, Color.Black);
+
+            SendIntBytes(len, 4);//Send Length
+            SendIntBytes(CheckSum, 2);//Send Checksum
+            SendIntBytes(SD_nUSB, 1);//Send SD or USB
+
+            serialPort1.Write(DestPathFile + "\0");                    //Send path/name, null terminate
+            if (!GetAck()) return;
+
+            WriteToOutput("Sending...", Color.Black);
+            Int32 BytesSent = 0;
+            while (len>BytesSent)
+            {
+                Int32 BytesToSend = 16*1024; //block size
+                if (len - BytesSent < BytesToSend) BytesToSend = (Int32)len - BytesSent;
+                //serialPort1.Write(fileBuf, 0, (Int32)len); //Send file
+                serialPort1.Write(fileBuf, BytesSent, BytesToSend); //Send file
+                //WriteToOutput("Sent " + BytesToSend, Color.Black);
+                rtbOutput.AppendText(".");
+                //rtbOutput.ScrollToCaret();
+                BytesSent += BytesToSend;
+            }
+            WriteToOutput("\n...Finished", Color.Black);
+
+            if (!GetAck())
+            {
+                WriteToOutput("Transfer Failed!", Color.DarkRed);
+                return;
+            }
+            WriteToOutput("Transfer Sucessful!", Color.Green);
+            //btnConnected.PerformClick(); //auto disconnect
+        }
+
+        bool GetAck()
+        {
+            if (!WaitForSerial(2, 500)) return false; //sends message on fail
+
             byte[] recBuf = new byte[2];
-            byte[] LenHiLo = { (byte)len, (byte)(len >> 8) };
-            byte[] CSHiLo = { (byte)CheckSum, (byte)(CheckSum >> 8) };
-            byte[] SendFileToken = { 0x64, 0xAA };
-            timer1.Enabled = false;
-            WriteToOutput("Transferring " + len + " bytes, CS= " +CheckSum, Color.Black);
-
-            serialPort1.Write(SendFileToken, 0, 2);
-            if (!WaitForSerial(2, 500)) return;
             serialPort1.Read(recBuf, 0, 2);
-            if (to16(recBuf) != 0x6464)
+            UInt16 recU16 = to16(recBuf);
+            if (recU16 == AckToken)
             {
-                WriteToOutput("TeensyROM Not Communicating: " + recBuf[0] + " & " + recBuf[1], Color.DarkRed);
-                timer1.Enabled = true;
-                return;
+                WriteToOutput("Ack", Color.DarkGreen);
+                return true;
+            }
+            if (recU16 == FailToken)
+            {
+                WriteToOutput("Transfer Failed...", Color.DarkRed);
+                return false;
             }
 
-            serialPort1.Write(LenHiLo, 0, 2);  //Send Length
-            serialPort1.Write(CSHiLo, 0, 2);  //Send Checksum
+            WriteToOutput("Bad Ack: " + recBuf[0].ToString("X2") + ":" + recBuf[1].ToString("X2"), Color.DarkRed);
+            return false;
+        }
 
-            //Send name (MaxItemNameLength=28 incl term)
-            const int MaxItemNameLength = 28;  //must synch with TeensyROM code!!!
-            string fname = openFileDialog1.SafeFileName.ToLower();
-            if (fname.Length > MaxItemNameLength-1) fname = fname.Substring(0, MaxItemNameLength-5) + fname.Substring(fname.Length - 4); //compress but leave extension
-
-            serialPort1.Write(fname);
-            byte[] NullByte = new byte[1] { 0 };
-            for (int i = fname.Length; i < MaxItemNameLength; i++) serialPort1.Write(NullByte, 0, 1);
-
-            serialPort1.Write(fileBuf, 0, len); //Send file
-            WriteToOutput("Finished sending...", Color.Black);
-
-            if (!WaitForSerial(2, 1000)) return;
-            serialPort1.Read(recBuf, 0, 2);
-            timer1.Enabled = true;
-            if (to16(recBuf) == 0x6480)
-            {
-                WriteToOutput("Sucess!", Color.Green);
-                btnConnected.PerformClick(); //auto disconnect
-                return;
-            }
-            else
-            {
-                WriteToOutput("Failed!" + recBuf[0] + " & " + recBuf[1], Color.DarkRed);
-            }
+        void SendIntBytes(UInt32 IntToSend, Int16 NumBytes)
+        {
+            byte[] BytesToSend = BitConverter.GetBytes(IntToSend);
+            for(Int16 ByteNum=(Int16)(NumBytes-1); ByteNum>=0; ByteNum--) 
+                serialPort1.Write(BytesToSend, ByteNum, 1);
         }
 
         private void btnRefreshCOMList_Click(object sender, EventArgs e)
@@ -243,6 +279,39 @@ namespace Serial_Logger
             serialPort1.Write(TestCode, 0, 2);
         }
 
+        private void btnSelectSource_Click(object sender, EventArgs e)
+        {
+            openFileDialog1.FileName = "";
+            openFileDialog1.Filter = "C64 Files (*.prg;*.crt)|*.prg;*.crt|PRG files (*.prg)|*.prg|CRT files (*.crt)|*.crt|All files (*.*)|*.*";
+            if (openFileDialog1.ShowDialog() == DialogResult.Cancel) return;
+            tbSource.Text = openFileDialog1.FileName;
+        }
+
+        private void tbSource_DragDrop(object sender, DragEventArgs e)
+        {
+            //tbSource.Text = e.ToString();
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files != null && files.Length != 0)
+            {
+                tbSource.Text = files[0];
+                tbSource.SelectionStart = tbSource.Text.Length;
+                tbSource.SelectionLength = 0;
+            }
+        }
+
+        private void tbSource_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                e.Effect = DragDropEffects.Copy;
+            else
+                e.Effect = DragDropEffects.None;
+        }
+        private void rbUSBDRive_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rbUSBDRive.Checked) lblDestPath.Text = "USB Drive Path:";
+            else lblDestPath.Text = "SD Card Path:";
+        }
+
         /********************************  Stand Alone Functions *****************************************/
 
         private void WriteToOutput(string strMsg, Color color)
@@ -253,7 +322,7 @@ namespace Serial_Logger
         }
         private UInt16 to16(byte[] buf)
         {
-            return (UInt16)(buf[0]*256 + buf[1]);
+            return (UInt16)(buf[1]*256 + buf[0]);
         }
 
         private bool WaitForSerial(int NumBytes, int iTimeoutmSec)
@@ -270,7 +339,7 @@ namespace Serial_Logger
             }
 
             WriteToOutput("Timeout waiting for Teensy", Color.Red);
-            timer1.Enabled = true;
+            //timer1.Enabled = true;
             return false;
         }
 

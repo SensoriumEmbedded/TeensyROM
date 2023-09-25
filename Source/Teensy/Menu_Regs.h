@@ -165,7 +165,6 @@ enum regItemTypes //synch with TblItemType
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define    MaxItemNameLength  100
 
 struct StructMenuItem
 {

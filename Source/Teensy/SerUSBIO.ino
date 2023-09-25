@@ -18,6 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 void   getFreeITCM();
+//synch with win app:
+#define SendFileToken  0x64AA 
+#define AckToken       0x64CC
+#define FailToken      0x9B7F
 
 void ServiceSerial()
 {
@@ -25,11 +29,12 @@ void ServiceSerial()
    switch (inByte)
    {
       case 0x64: //'d' command from app
+         if(!SerialAvailabeTimeout()) return;
          inByte = Serial.read(); //READ NEXT BYTE
          switch (inByte)
          {
             case 0x55:  //ping
-               Serial.println("TeensyROM Ready!");
+               Serial.printf("TeensyROM %s ready!\n", strVersionNumber);
                break;
             case 0xAA: //file x-fer pc->TR
                ReceiveFile();        
@@ -342,89 +347,120 @@ void PrintDebugLog()
 
 void ReceiveFile()
 { 
-      //   App: SendFileToken 0x64AA
-      //Teensy: ack 0x6464
-      //   App: Send Length(2), CS(2), Name(MaxItemNameLength 25, incl term), file(length)
-      //Teensy: Pass 0x6480 or Fail 0x9b7f
+   //   App: SendFileToken 0x64AA
+   //Teensy: AckToken 0x64CC
+   //   App: Send Length(4), CS(2), SD_nUSB(1), 
+   //          DestPath/Name(up to MaxNamePathLength, null term)
+   //Teensy: AckToken 0x64CC
+   //   App: Send file(length)
+   //Teensy: AckToken 0x64CC on Pass,  0x9b7f on Fail
+   
 
-      //send file token has been received, only 2 byte responses until final response
+   //send file token has been received, only 2 byte responses until after final response
+   SendU16(AckToken);
    
-   Serial.write(0x64);  //ack
-   Serial.write(0x64);  
-   //USBHostMenu.ItemType = rtNone;  
-   NumUSBHostItems = 0; //in case we fail
+   uint32_t len;
+   if (!GetUInt(&len, 4)) return;
    
-   if(!SerialAvailabeTimeout()) return;
-   uint16_t len = Serial.read();
-   len = len + 256 * Serial.read();
-   if(!SerialAvailabeTimeout()) return;
-   uint16_t CheckSum = Serial.read();
-   CheckSum = CheckSum + 256 * Serial.read();
+   uint32_t CheckSum;
+   if (!GetUInt(&CheckSum, 2)) return;
    
-   for (int i = 0; i < MaxItemNameLength; i++) 
+   uint32_t SD_nUSB;
+   if (!GetUInt(&SD_nUSB, 1)) return;
+ 
+   char FileNamePath[MaxNamePathLength];
+   uint16_t CharNum=0;
+   while (1) 
    {
       if(!SerialAvailabeTimeout()) return;
-      USBHostMenu.Name[i] = Serial.read();
+      FileNamePath[CharNum] = Serial.read();
+      if (FileNamePath[CharNum]==0) break;
+      if (++CharNum == MaxNamePathLength)
+      {
+         SendU16(FailToken);
+         Serial.print("Path too long!\n");  
+         return;
+      }
    }
    
-   free(HOST_Image);
-   HOST_Image = (uint8_t*)malloc(len);
-   uint16_t bytenum = 0;
+   FS *sourceFS = &firstPartition;
+   if (SD_nUSB)
+   {
+      if (!SD.begin(BUILTIN_SDCARD))
+      {
+         //SendU16(FailToken); //will timeout waiting for SD init
+         Serial.printf("No SD card?\n");  
+         return;               
+      }
+      sourceFS = &SD;   
+   }
+   
+   if (sourceFS->exists(FileNamePath))
+   {
+      SendU16(FailToken);
+      Serial.printf("File already exists.\n");  
+      return;      
+   }
+   
+   File myFile = sourceFS->open(FileNamePath, FILE_WRITE);
+   if (!myFile) 
+   {
+      SendU16(FailToken);
+      Serial.printf("Could not open for write: %s:%s\n", (SD_nUSB ? "SD" : "USB"), FileNamePath);  
+      return;
+   }
+   
+   SendU16(AckToken); //starts file data streaming 
+   //Serial.printf("Len: %lu  CS: 0x%04x\n %s:%s\n", len, CheckSum, (SD_nUSB ? "SD" : "USB"), FileNamePath);
+  
+   uint32_t bytenum = 0;
+   uint8_t ByteIn;
    while(bytenum < len)
    {
       if(!SerialAvailabeTimeout())
       {
-         Serial.printf("(PayL) Rec %d of %d, RCS:%d, Name:%s\n", bytenum, len, CheckSum, USBHostMenu.Name);
+         SendU16(FailToken);
+         Serial.printf("Rec %lu of %lu bytes\n", bytenum, len);
+         myFile.close();
          return;
       }
-      HOST_Image[bytenum] = Serial.read();
-      CheckSum-=HOST_Image[bytenum++];
-
+      //uint8_t ByteIn = Serial.read();
+      myFile.write(ByteIn = Serial.read());
+      CheckSum-=ByteIn;
+      bytenum++;
    }  
+   
+   myFile.close();
+   
+   CheckSum &= 0xffff;
    if (CheckSum!=0)
    {  //Failed
-     Serial.write(0x9B);  // 155
-     Serial.write(0x7F);  // 127
-     
-     Serial.printf("Failed! Len:%d, RCS:%d, Name:%s\n", len, CheckSum, USBHostMenu.Name);
-     //for (int i = 0; i < MaxItemNameLength; i++) Serial.printf("%02d-%d\n", i, USBHostMenu.Name[i]);
-     return;
+      SendU16(FailToken);
+      Serial.printf("CS Failed! RCS:%lu\n", CheckSum);
+      return;
    }   
-
-   //success!
-   Serial.write(0x64);  
-   Serial.write(0x80);  
-   Serial.printf("%s received succesfully\n", USBHostMenu.Name);
    
-   USBHostMenu.Size = len;  
-   
-   //check extension
-   //Change this to just accept all files?
-   char* Extension = (USBHostMenu.Name + strlen(USBHostMenu.Name) - 4);
-   for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
-   
-   if (strcmp(Extension, ".prg")==0)
-   {
-      USBHostMenu.ItemType = rtFilePrg;
-      Serial.println(".PRG file detected");
-      NumUSBHostItems = 1;
-      return;
-   }
-   
-   if (strcmp(Extension, ".crt")==0)
-   {
-      USBHostMenu.ItemType = rtFileCrt;
-      Serial.println(".CRT file detected"); 
-      NumUSBHostItems = 1;
-      return;
-   }
-   
-   //NumUSBHostItems = 0, set at start
-   Serial.println("File type unknown!");
-   return;
- 
+   SendU16(AckToken); //success!
 }
 
+bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
+{
+   *InVal=0;
+   for(int8_t ByteNum=NumBytes-1; ByteNum>=0; ByteNum--)
+   {
+      if(!SerialAvailabeTimeout()) return false;
+      uint32_t ByteIn = Serial.read();
+      *InVal += (ByteIn << (ByteNum*8));
+   }
+   return true;
+}
+
+void SendU16(uint16_t SendVal)
+{
+   Serial.write((uint8_t)(SendVal & 0xff));
+   Serial.write((uint8_t)((SendVal >> 8) & 0xff));
+}
+   
 bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
@@ -432,8 +468,7 @@ bool SerialAvailabeTimeout()
    while(!Serial.available() && (millis() - StartTOMillis) < SerialTimoutMillis); // timeout loop
    if (Serial.available()) return(true);
    
-   Serial.write(0x9B);  // 155
-   Serial.write(0x7F);  // 127
+   SendU16(FailToken);
    Serial.print("Timeout!\n");  
    return(false);
 }

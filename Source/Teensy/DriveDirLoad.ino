@@ -47,7 +47,7 @@ void HandleExecution()
       
          if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
          {
-            char FullFilePath[MaxPathLength+MaxItemNameLength+2];
+            char FullFilePath[MaxNamePathLength];
             
             if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
             else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
@@ -238,7 +238,7 @@ void MenuChange()
 
 bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS) 
 {
-   char FullFilePath[MaxPathLength+MaxItemNameLength+2];
+   char FullFilePath[MaxNamePathLength];
 
    if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);

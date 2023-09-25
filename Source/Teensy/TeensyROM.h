@@ -20,7 +20,7 @@
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart
 
 
-char strVersionNumber[] = "v0.5+"; //*VERSION*
+char strVersionNumber[] = "v0.5.0+"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
@@ -57,7 +57,9 @@ uint32_t* BigBuf = NULL;
    __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif
 
+#define MaxItemNameLength   100
 #define MaxPathLength       300
+#define MaxNamePathLength   (MaxPathLength+MaxItemNameLength+2)
 #define MaxMenuItems        3000  //(Max Pages * MaxItemsPerPage) = 255 * 16 = 4080 max to keep page # 8-bit
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"
