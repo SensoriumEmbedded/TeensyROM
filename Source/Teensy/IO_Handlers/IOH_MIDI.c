@@ -85,7 +85,8 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 #define MIDIStatusTxRdy   0x02   // Transmit Data Register Empty (Ready to receive Tx data)
 #define MIDIStatusRxFull  0x01   // Receive Data Register Full (Rx Data waiting to be read)
 
-#define NumMIDIControls   16  //must be power of 2, may want to do this differently?
+//#define NumMIDIControls   16  //must be power of 2, may want to do this differently?
+//uint8_t MIDIControlVals[NumMIDIControls];
 
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
@@ -93,7 +94,6 @@ volatile uint16_t MIDIRxBytesToSend = 0;
 volatile uint8_t MIDIRxBuf[USB_MIDI_SYSEX_MAX]; //currently 290, defined in cores\teensy4\usb_midi.h  
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
-uint8_t MIDIControlVals[NumMIDIControls];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
 
@@ -144,17 +144,18 @@ void HWEOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
 
 void HWEOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
-   if (value==64) return; //sends ref first, always 64 so just assume it
-   control &= (NumMIDIControls-1);
-   
-   int NewVal = MIDIControlVals[control] + value - 64;
-   if (NewVal<0) NewVal=0;
-   if (NewVal>127) NewVal=127;
-   MIDIControlVals[control] = NewVal;
+   //did this to accomodate relative mode, but turns out it's not so widely used...
+      //if (value==64) return; //sends ref first, always 64 so just assume it
+      //control &= (NumMIDIControls-1);
+      //
+      //int NewVal = MIDIControlVals[control] + value - 64;
+      //if (NewVal<0) NewVal=0;
+      //if (NewVal>127) NewVal=127;
+      //MIDIControlVals[control] = NewVal;
       
    MIDIRxBuf[2] = 0xb0 | channel;  //Bx
    MIDIRxBuf[1] = control;
-   MIDIRxBuf[0] = NewVal;
+   MIDIRxBuf[0] = value; //NewVal;
    MIDIRxBytesToSend = 3;
    SetMidiIRQ();
 }
@@ -245,7 +246,7 @@ void HWEOnRealTimeSystem(uint8_t realtimebyte)
 
 void MIDIinHndlrInit()
 {
-   for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
+   //for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
    
    // MIDI USB Host input handlers
    usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x

@@ -323,8 +323,8 @@ void M2SOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
     Serial.print(channel);
     Serial.print(", control=");
     Serial.print(control);
-    Serial.print(", NewVal=");
-    Serial.print(NewVal);
+    Serial.print(", value=");
+    Serial.print(value);
     Serial.println();
    #endif
 }

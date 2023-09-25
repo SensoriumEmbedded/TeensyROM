@@ -54,7 +54,7 @@ void DbgOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
 
 void DbgOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
-   Serial.printf("Bx Control Change, ch=%d, control=%d, NewVal=%d\n", channel, control, value);
+   Serial.printf("Bx Control Change, ch=%d, control=%d, value=%d\n", channel, control, value);
 }
 
 void DbgOnProgramChange(uint8_t channel, uint8_t program)
