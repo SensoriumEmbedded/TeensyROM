@@ -266,10 +266,10 @@ void MIDIinHndlrInit()
    usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
    usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
    usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
-   //usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //disabling as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
-   //usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //disabling as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
+   usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //disabling as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
+   usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //disabling as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
    usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
-   //usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex  //disabling as apps like cakewalk write pitch to 0 on stop and crash cynthcart
+   usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex  //disabling as apps like cakewalk write pitch to 0 on stop and crash cynthcart
    usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
    usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
    usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
