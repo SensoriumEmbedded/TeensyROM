@@ -42,16 +42,6 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 
-StructMenuItem USBHostMenu = {
-   rtNone,                   // ItemType;
-   IOH_None,                 // IOHndlrAssoc;  enumIOHandlers
-   (char*)"<Nothing Sent>",  // Name;
-   NULL,                     // *Code_Image;
-   0                         // Size;
-};
-uint8_t* HOST_Image = NULL; //For receiving files from USB Host
-uint8_t NumUSBHostItems = 1;
-
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 

@@ -388,7 +388,7 @@ void ReceiveFile()
    {
       if (!SD.begin(BUILTIN_SDCARD))
       {
-         //SendU16(FailToken); //will timeout waiting for SD init
+         //SendU16(FailToken); //app will timeout waiting for SD init
          Serial.printf("No SD card?\n");  
          return;               
       }

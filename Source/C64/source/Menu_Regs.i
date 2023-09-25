@@ -122,8 +122,7 @@
 ;enum RegMenuTypes //must match TblMsgMenuName order/qty
    rmtSD        = 0
    rmtTeensy    = 1
-   rmtUSBHost   = 2
-   rmtUSBDrive  = 3
+   rmtUSBDrive  = 2
     
 ;enum RegCtlCommands
    rCtlVanishROM          = 0

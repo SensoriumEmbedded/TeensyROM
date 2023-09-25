@@ -148,7 +148,6 @@ void MakeBuildCPUInfoStr()
 void UpDirectory()
 {
    //non-root of Teensy, SD or USB drive only
-   if(IO1[rWRegCurrMenuWAIT] == rmtUSBHost) return;
    if(PathIsRoot()) return;
 
    if(IO1[rWRegCurrMenuWAIT] == rmtTeensy) MenuChange(); //back to root, only 1 dir level
@@ -450,12 +449,6 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   ptrSerialString = strVersionNumber;
                   break;      
                case rsstShortDirPath:
-                  if(IO1[rWRegCurrMenuWAIT] == rmtUSBHost)
-                  {
-                     SerialStringBuf[0]=0;
-                     ptrSerialString = SerialStringBuf;
-                  }
-                  else
                   {
                      uint16_t Len = strlen(DriveDirPath);
                      if (Len >= 40) 

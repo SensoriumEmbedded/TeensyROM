@@ -133,10 +133,6 @@ void HandleExecution()
          SendMsgPrintfln("Copied to RAM"); 
          break;
          
-      case rmtUSBHost:
-         SendMsgPrintfln(MenuSelCpy.Name);  
-         MenuSelCpy.Code_Image = HOST_Image; 
-         break;
    }
    
    //if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
@@ -227,10 +223,6 @@ void MenuChange()
       case rmtUSBDrive:
          LoadDirectory(&firstPartition);
          MenuSource = DriveDirMenu; 
-         break;
-      case rmtUSBHost:
-         MenuSource = &USBHostMenu; 
-         SetNumItems(NumUSBHostItems);
          break;
    }
    IO1[rwRegCursorItemOnPg] = 0;

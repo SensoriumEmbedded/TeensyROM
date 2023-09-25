@@ -238,21 +238,15 @@ ReadKeyboard:
    jsr ListMenuItems
    jmp HighlightCurrent  
 
-+  cmp #ChrF7  ;Exe USB Host file
++  cmp #ChrF7  ;Help Menu
    bne +
-   lda #rmtUSBHost
-   jsr ListMenuItemsChangeInit
+   jsr HelpMenu
+   jsr ListMenuItems
    jmp HighlightCurrent
 
 +  cmp #ChrF8  ;MIDI to SID
    bne +
    jsr MIDI2SID
-   jsr ListMenuItems
-   jmp HighlightCurrent
-
-+  cmp #ChrSpace  ;Help Menu
-   bne +
-   jsr HelpMenu
    jsr ListMenuItems
    jmp HighlightCurrent
 
@@ -633,8 +627,7 @@ WaitHelpMenuKey:
 +  cmp #ChrF1  ;Teensy mem Menu
    bne +
    lda #rmtTeensy
-   jsr MenuChangeInit
-   rts  
+   jmp MenuChangeInit
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
@@ -645,8 +638,7 @@ WaitHelpMenuKey:
 +  cmp #ChrF3  ;SD Card Menu
    bne +
    lda #rmtSD
-   jsr MenuChangeInit
-   rts  
+   jmp MenuChangeInit
 
 +  cmp #ChrF4  ;toggle music
    bne +
@@ -656,18 +648,15 @@ WaitHelpMenuKey:
 +  cmp #ChrF5  ;USB Drive Menu
    bne +
    lda #rmtUSBDrive
-   jsr MenuChangeInit
-   rts  
+   jmp MenuChangeInit
 
 +  cmp #ChrF6  ;Settings Menu
    bne +
    jmp SettingsMenu  ;return from there
 
-+  cmp #ChrF7  ;Exe USB Host file
++  cmp #ChrF7  ;Help
    bne +
-   lda #rmtUSBHost
-   jsr MenuChangeInit
-   rts  
+   jmp HelpMenu ;refresh (could ignore)
 
 +  cmp #ChrF8  ;MIDI to SID
    bne +
@@ -676,6 +665,7 @@ WaitHelpMenuKey:
 +  cmp #ChrSpace  ;back to Main Menu
    bne WaitHelpMenuKey   
    rts
+
 
 MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)

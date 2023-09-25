@@ -33,8 +33,7 @@ MsgMainOptions1:
 MsgMainOptions2:
    !tx ChrReturn
    !tx ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card     "
-   !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, SourcesColor,  " USB Host   "
-   !tx ChrRvsOn, OptionColor, "Space", ChrRvsOff, MenuMiscColor,  " Help"
+   !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
    
 MsgHelpMenu:   
@@ -58,7 +57,7 @@ MsgHelpMenu:
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, SourcesColor,  "USB Drive "
    !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Settings Menu", ChrReturn
                
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, SourcesColor,  "USB Host  "
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Help      "
    !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, MenuMiscColor, "MIDI2SID app", ChrReturn
    !tx ChrReturn, ChrReturn
    !tx 0
@@ -69,14 +68,11 @@ MsgNoHW:
 TblMsgMenuName: ;must match enum RegMenuTypes order/qty
    !word MsgMenuSD
    !word MsgMenuTeensy
-   !word MsgMenuUSBHost
    !word MsgMenuUSBDrive
 MsgMenuSD:
    !tx "SD Card", 0
 MsgMenuTeensy:
    !tx "Teensy Mem", 0
-MsgMenuUSBHost:
-   !tx "USB Host", 0
 MsgMenuUSBDrive:
    !tx "USB Drive", 0
 
