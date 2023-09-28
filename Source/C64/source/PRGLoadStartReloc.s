@@ -59,7 +59,7 @@ PRGLoadStart:
    stx $af  ; (Hi)
    
    lda #rCtlRunningPRG    ;let TR know we're done, change IO handler
-   sta wRegControl+IO1Port 
+   sta wRegControl+IO1Port  ;can't wait for it because handler is changing...
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
    jsr $ab1e   ;PrintString

@@ -67,24 +67,12 @@ Warmstart:
    sty PtrAddrHi
    ldy #0
 -  lda (PtrAddrLo), y
-   beq +
+   beq MainCopyToRAM
    jsr SendChar
    iny
    bne -
-   
-+  jsr SIDCopyToRAM
-   jsr MainCopyToRAM
-   jmp MainCodeRAM
-   
-   
-MsgCartBanner:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
-   !tx "                                        "
-   !tx "     *** Sensorium Embedded 2023 ***    "   ;*VERSION*
-   !tx "                                        ", ChrRvsOff, 0
-   
-; ******************************* Subroutines ******************************* 
-MainCopyToRAM:
+      
+MainCopyToRAM
    lda #>MainCode
    ldy #<MainCode   
    sta PtrAddrHi
@@ -95,22 +83,7 @@ MainCopyToRAM:
    ldy #<MainCodeRAM   
    sta Ptr2AddrHi
    sty Ptr2AddrLo 
-   jmp CodeCopy
-   
-SIDCopyToRAM:
-   ;have to copy SID code to RAM because it self modifies...
-   lda #>SIDCode
-   ldy #<SIDCode   
-   sta PtrAddrHi
-   sty PtrAddrLo 
-   ldx #>EndSIDCode
-   
-   lda #>SIDCodeRAM
-   ldy #<SIDCodeRAM   
-   sta Ptr2AddrHi
-   sty Ptr2AddrLo 
-   
-CodeCopy:
+
    ; Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
    inx ;last page+1, will copy ((EndCode-StartCode) | 0xFF) bytes
    ldy #0 ;initialize
@@ -122,16 +95,18 @@ CodeCopy:
    inc Ptr2AddrHi
    cpx PtrAddrHi
    bne -
-   rts
-   
-SIDCode = *
-   !binary "source\SleepDirt_extra_ntsc_1000_6581.sid.seq",, $7c+2   ;;skip header and 2 byte load address
-EndSIDCode = *
 
+   jmp MainCodeRAM
+
+MsgCartBanner:    
+   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
+   !tx "                                        "
+   !tx "     *** Sensorium Embedded 2023 ***    "   ;*VERSION*
+   !tx "                                        ", ChrRvsOff, 0
+      
 MainCode = *
    !binary "build\MainMenu.bin"
 EndMainCode = *
-
    
 EndOfAllCartCode = *
    !byte 0

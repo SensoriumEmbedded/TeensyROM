@@ -66,7 +66,28 @@ NoHW
 +  lda #rCtlVanishROM ;Deassert Game & ExROM
    sta wRegControl+IO1Port
 
-   lda #$00
+   ;load SID to TR RAM
+   lda #rCtlLoadSIDWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg
+   ;load SID to C64 RAM, same as PRGLoadStart...
+   lda rRegStrAddrHi+IO1Port
+   sta PtrAddrHi
+   lda rRegStrAddrLo+IO1Port   
+   sta PtrAddrLo
+   ldy #0   ;zero offset
+   
+-  lda rRegStrAvailable+IO1Port ;are we done?
+   beq +   ;exit the loop
+   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
+   sta (PtrAddrLo), y 
+   iny
+   bne -
+   inc PtrAddrHi
+   bne -
+   ;good luck if we get to here... Trying to overflow and write to zero page
+
++  lda #$00
    sta MusicInterrupted ;init reg
    jsr SIDCodeRAM ;Initialize music
    

@@ -17,8 +17,9 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart
-
+#include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+#include "SIDs\SleepDirt_extra_ntsc_1000_6581.sid.h" //background music SID, stored in flash (PROGMEM)
+#define SIDforBackground     SleepDirt_extra_ntsc_1000_6581_sid
 
 char strVersionNumber[] = "v0.5.1+"; //*VERSION*
 
