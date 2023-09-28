@@ -126,13 +126,12 @@ void loop()
 
 void SetUpMainMenuROM()
 {
-   //emulate 16k cart ROM
    SetIRQDeassert;
    SetNMIDeassert;
-   SetGameAssert;
-   SetExROMAssert;
+   SetGameDeassert;
+   SetExROMAssert; //emulate 8k cart ROM
    LOROM_Image = TeensyROMC64_bin;
-   HIROM_Image = TeensyROMC64_bin+0x2000;
+   HIROM_Image = NULL;
    LOROM_Mask = HIROM_Mask = 0x1fff;
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);

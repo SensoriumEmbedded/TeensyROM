@@ -28,8 +28,8 @@
 
 ; 8k Cartridge/ROM   ROML $8000-$9FFF
 ;16k Cartridge/ROM   ROML $8000-$BFFF (Replaces BASIC ROM)
-* = $bfff                     ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
-   !byte 0
+;* = $9fff      ; set a byte to cause fill up to -$9fff (or $bfff if 16K)
+;   !byte 0     ; only have to fill it when converting to CRT for emulation
    
 * = $8000  ;Cart Start
 ;  jump vectors and autostart key     
@@ -62,15 +62,16 @@ Warmstart:
 
    lda #<MsgCartBanner
    ldy #>MsgCartBanner
-   ;jsr PrintString  
-   sta PtrAddrLo
-   sty PtrAddrHi
-   ldy #0
--  lda (PtrAddrLo), y
-   beq MainCopyToRAM
-   jsr SendChar
-   iny
-   bne -
+   jsr $ab1e   ;PrintString; can use basic since this is an 8k cart
+;   ;jsr PrintString  
+;   sta PtrAddrLo
+;   sty PtrAddrHi
+;   ldy #0
+;-  lda (PtrAddrLo), y
+;   beq MainCopyToRAM
+;   jsr SendChar
+;   iny
+;   bne -
       
 MainCopyToRAM
    lda #>MainCode
@@ -100,9 +101,7 @@ MainCopyToRAM
 
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
-   !tx "                                        "
-   !tx "     *** Sensorium Embedded 2023 ***    "   ;*VERSION*
-   !tx "                                        ", ChrRvsOff, 0
+   !tx "     *** Sensorium Embedded 2023 ***    ", ChrRvsOff, 0   ;*VERSION*
       
 MainCode = *
    !binary "build\MainMenu.bin"
