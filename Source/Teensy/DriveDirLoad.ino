@@ -543,6 +543,71 @@ void FreeCrtChips()
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
    NumCrtChips = 0;
 }
+
+bool ParseSIDHeader()
+{
+   // XferImage and XferSize are populated w/ SID file info
+   // Need to parse dataOffset (StreamOffsetAddr), loadAddress (rRegStrAddrLo/Hi)
+   //      initAddress() and playAddress ()
+   
+   //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
+   //https://hvsc.c64.org/
+
+   //*** SleepDirt_extra_ntsc_1000_6581.sid
+   //    magicID: PSID		    version: 0002
+   //Mem Loc 1000:2376   (4982 bytes, 4k)
+   
+   //  File Size: 5109 (4k)
+   //       Name:                                 
+   //     Author: 
+   //   Released: 
+   // dataOffset: 007E		v1loadAddress: 0000
+   //initAddress: 1000		playAddress: 1003
+   //      songs: 0001		  startSong: 0001
+   //      speed: 00000000
+   //V2+   flags: 0018		  startPage: 00
+   // 2ndSIDAddr: 00		 3rdSIDAddr: 00
+   // pageLength: 00		loadAddress: 1000
+
+   if (memcmp(XferImage, "PSID", 4) != 0) 
+   {
+      SendMsgPrintfln("PSID not found");
+      return false;
+   }
+   
+   uint16_t sidVersion = toU16(XferImage+0x04);
+   if ( sidVersion<2 || sidVersion>4) 
+   {
+      SendMsgPrintfln("Unexp Version: $%04x", sidVersion);
+      return false;
+   }
+
+   StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
+   if (StreamOffsetAddr!= 0x7c) 
+   {
+      SendMsgPrintfln("Unexp dataOffset: $%04x", StreamOffsetAddr);
+      return false;
+   }
+   
+   uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
+   IO1[rRegStrAddrLo] = XferImage[StreamOffsetAddr];
+   IO1[rRegStrAddrHi] = XferImage[StreamOffsetAddr + 1];
+   StreamOffsetAddr +=2; //add in address offset
+
+   //check for conflict with TR code
+   
+
+   IO1[rRegSIDInitHi] = XferImage[0x0A];
+   IO1[rRegSIDInitLo] = XferImage[0x0B];
+   IO1[rRegSIDPlayHi] = XferImage[0x0C];
+   IO1[rRegSIDPlayLo] = XferImage[0x0D];
+   
+   IO1[rRegStrAvailable] = 0xff;
+   SendMsgPrintfln("SID Loaded: %04x:%04x", LoadAddress, LoadAddress+XferSize);
+   SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));
+   SendMsgPrintfln("Play: %04x", toU16(XferImage+0x0C));
+   return false; //true;
+}
  
 void RedirectEmptyDriveDirMenu()
 {

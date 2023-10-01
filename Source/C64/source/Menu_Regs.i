@@ -49,8 +49,12 @@
    rwRegNextIOHndlr    = 21 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
    rwRegSerialString   = 22 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
    wRegSearchLetterWAIT= 23 ;// Put cursor on first menu item with letter written
+   rRegSIDInitHi       = 24 ;// SID Play Info: Init address Hi
+   rRegSIDInitLo       = 25 ;// SID Play Info: Init Address Lo
+   rRegSIDPlayHi       = 26 ;// SID Play Info: Play Address Hi
+   rRegSIDPlayLo       = 27 ;// SID Play Info: Play Address Lo
 
-   StartSIDRegs        = 24 ;// start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 28 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2

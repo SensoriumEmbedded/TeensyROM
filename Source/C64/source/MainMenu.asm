@@ -67,9 +67,10 @@ NoHW
    sta wRegControl+IO1Port
 
    ;load SID to TR RAM
-   lda #rCtlLoadSIDWAIT
+   lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg
+   jsr WaitForTRDots   ; WaitForTRWaitMsg
+
    ;load SID to C64 RAM, same as PRGLoadStart...
    lda rRegStrAddrHi+IO1Port
    sta PtrAddrHi
@@ -87,9 +88,11 @@ NoHW
    bne -
    ;good luck if we get to here... Trying to overflow and write to zero page
 
+   ;continue initializing...
 +  lda #$00
    sta MusicInterrupted ;init reg
-   jsr SIDCodeRAM ;Initialize music
+
+   jsr SIDMusicInit
    
    jsr ListMenuItems
 

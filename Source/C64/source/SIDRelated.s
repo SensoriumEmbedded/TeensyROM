@@ -304,6 +304,26 @@ rcnt
 
 +  jmp M2SUpdateKeyInLoop
 
+SIDMusicInit:
+
+   ;self-modifying init jump
+   lda rRegSIDInitLo+IO1Port
+   sta smcSIDInit+1
+   lda rRegSIDInitHi+IO1Port
+   sta smcSIDInit+2
+   
+   ;self-modifying play jump
+   lda rRegSIDPlayLo+IO1Port
+   sta smcSIDPlay+1
+   lda rRegSIDPlayHi+IO1Port
+   sta smcSIDPlay+2
+
+   lda #$00  ;set to first song in SID
+smcSIDInit
+   jsr $fffe ;Initialize music (self modified)
+   
+   rts
+   
 ToggleSIDMusic:
    lda MusicPlaying
    eor #rpudMusicMask   ;toggle playing status
@@ -347,7 +367,6 @@ SIDMusicOff:  ;stop SID interrupt
    inc $d019
    lda $dc0d  ;CIA int ctl
    cli 
-   ;jsr SIDCodeRAM  ;turns voices off, but resets song to start
    jsr SIDVoicesOff
    lda #BorderColor
    sta BorderColorReg   ;restore border in case we ended in mid region
@@ -363,7 +382,8 @@ SIDVoicesOff:
 irqRastSID:
    inc $d019   ;ACK raster IRQs
    inc BorderColorReg ;tweak display border
-   jsr SIDCodeRAM+3 ;Play the music
+smcSIDPlay
+   jsr $fffe ;Play the music, self modifying
    lda #<irqRast2
    ldx #>irqRast2
    sta $314    ;CINV, HW IRQ Int Lo

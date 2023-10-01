@@ -42,5 +42,4 @@
    ;$033c-03fb is the tape buffer (192 bytes)
    PRGLoadStartReloc= $033c  ;during .PRG transfer, PRG transfer code location/execution point
    MainCodeRAM      = $6000  ;Main code location/execution point 
-   SIDCodeRAM       = $1000  ;SID code/data location/execution point
    

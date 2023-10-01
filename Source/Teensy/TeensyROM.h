@@ -18,8 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-#include "SIDs\SleepDirt_extra_ntsc_1000_6581.sid.h" //background music SID, stored in flash (PROGMEM)
+//background music SID, stored in flash (PROGMEM):
+#include "SIDs\SleepDirt_extra_ntsc_1000_6581.sid.h"
 #define SIDforBackground     SleepDirt_extra_ntsc_1000_6581_sid
+//#include "SIDs\Echoes.sid.h"
+//#define SIDforBackground     Echoes_sid
 
 char strVersionNumber[] = "v0.5.1+"; //*VERSION*
 

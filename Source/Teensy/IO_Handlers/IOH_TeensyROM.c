@@ -56,6 +56,7 @@ extern void HandleExecution();
 extern bool PathIsRoot();
 extern void LoadDirectory(FS *sourceFS);
 extern void IOHandlerInitToNext();
+extern bool ParseSIDHeader();
 extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
 extern uint8_t RAM_Image[];
@@ -183,36 +184,12 @@ void SearchForLetter()
    }
 }
 
-void LoadSIDforXfer()
+void LoadMainSIDforXfer()
 {
-   //https://hvsc.c64.org/
-   //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
-
-   //*** SleepDirt_extra_ntsc_1000_6581.sid
-   //    magicID: PSID		    version: 0002
-   //Mem Loc 1000:2376   (4982 bytes, 4k)
-   //  File Size: 5109 (4k)
-   //       Name:                                 
-   //     Author: 
-   //   Released: 
-   // dataOffset: 007E		v1loadAddress: 0000
-   //initAddress: 1000		playAddress: 1003
-   //      songs: 0001		  startSong: 0001
-   //      speed: 00000000
-   //V2+   flags: 0018		  startPage: 00
-   // 2ndSIDAddr: 00		 3rdSIDAddr: 00
-   // pageLength: 00		loadAddress: 1000
-
    XferImage = RAM_Image; 
    XferSize  = sizeof(SIDforBackground); 
    memcpy(XferImage, SIDforBackground, XferSize);
-   
-   IO1[rRegStrAddrLo] = 0x00; //XferImage[0];
-   IO1[rRegStrAddrHi] = 0x10; //XferImage[1];
-   IO1[rRegStrAvailable] = 0xff;
-   StreamOffsetAddr = 0x7c+2; //set to start of data
-   Serial.printf("SID Size: %lu  at $%04x\n", 
-      XferSize, ((uint16_t)IO1[rRegStrAddrHi] << 8) | IO1[rRegStrAddrLo]);
+   ParseSIDHeader(); //returns pass/fail, but assuming it passes for buit-in
 }
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
@@ -225,7 +202,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MakeBuildCPUInfoStr, // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
    &SearchForLetter,     // rsSearchForLetter
-   &LoadSIDforXfer,      //rsLoadSIDforXfer
+   &LoadMainSIDforXfer,  // rsLoadSIDforXfer
 };
 
 
