@@ -163,3 +163,18 @@ struct StructCrtChip
    uint16_t BankNum;
 };
 
+struct StructExt_ItemType_Assoc
+{ 
+   char    Extension[4];
+   uint8_t ItemType;
+};
+
+StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
+{
+  //Ext ,  ItemType
+   "prg",  rtFilePrg,
+   "crt",  rtFileCrt,
+   "hex",  rtFileHex,
+   "p00",  rtFileP00,
+};
+

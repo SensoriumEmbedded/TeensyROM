@@ -360,20 +360,13 @@ void LoadDirectory(FS *sourceFS)
          strcpy(DriveDirMenu[NumDrvDirMenuItems].Name+1, filename);
          DriveDirMenu[NumDrvDirMenuItems].ItemType = rtDirectory;
       }
-      else //it's a file
+      else //it's a file. copy name and get item type from extension
       {
          DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+1);
          strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, filename);
 
-         //convert extension to lower case:
-         char* Extension = DriveDirMenu[NumDrvDirMenuItems].Name + strlen(DriveDirMenu[NumDrvDirMenuItems].Name) - 4;
-         for(uint8_t cnt=1; cnt<=3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
-         
-         if (strcmp(Extension, ".prg")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFilePrg;
-         else if (strcmp(Extension, ".crt")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileCrt;
-         else if (strcmp(Extension, ".hex")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileHex;
-         else if (strcmp(Extension, ".p00")==0) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFileP00;
-         else DriveDirMenu[NumDrvDirMenuItems].ItemType = rtUnknown;
+         DriveDirMenu[NumDrvDirMenuItems].ItemType = 
+            Assoc_Ext_ItemType(DriveDirMenu[NumDrvDirMenuItems].Name, strlen(DriveDirMenu[NumDrvDirMenuItems].Name));
       }
       
       //Serial.printf("%d- %s\n", NumDrvDirMenuItems, DriveDirMenu[NumDrvDirMenuItems].Name); 
@@ -680,6 +673,27 @@ uint16_t toU16(uint8_t* src)
    return
       ((uint16_t)src[0]<<8 ) + 
       ((uint16_t)src[1]    ) ;
+}
+
+uint8_t Assoc_Ext_ItemType(char * FileName, uint32_t Length)
+{ //returns ItemType from enum regItemTypes
+   if (Length < 4) return rtUnknown;
+
+   char* Extension = FileName + Length - 4;
+   if (Extension[0] != '.') return rtUnknown;
+   
+   Extension++; //skip '.'
+   //convert to lower case:
+   for(uint8_t cnt=0; cnt<3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
+   
+   uint8_t Num = 0;
+   
+   while (Num < sizeof(Ext_ItemType_Assoc)/sizeof(Ext_ItemType_Assoc[0]))
+   {
+      if (strcmp(Extension, Ext_ItemType_Assoc[Num].Extension)==0) return Ext_ItemType_Assoc[Num].ItemType;
+      Num++;
+   }
+   return rtUnknown;
 }
 
 bool AssocHWID_IOH(uint16_t HWType)
