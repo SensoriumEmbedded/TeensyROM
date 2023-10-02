@@ -28,7 +28,7 @@
    ;other RAM Registers
    ;$0334-033b is "free space"
    MusicPlaying     = $0335 ;is the music playing?
-   MusicInterrupted = $0336 ;Music muted for item selection
+
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
    SIDSusRel        = $033a
@@ -72,9 +72,6 @@ NoHW
    jsr WaitForTRDots
 
    jsr SIDLoadInit
- 
-   lda #$00
-   sta MusicInterrupted ;init reg
  
    jsr ListMenuItems
 
@@ -381,7 +378,6 @@ SelectItem:
    pha ;store the type
    lda MusicPlaying ;turn music off if it's on
    beq +
-   sta MusicInterrupted
    jsr SIDMusicOff     
 +  jsr PrintBanner
    lda #NameColor
@@ -419,12 +415,14 @@ SelectItem:
    jsr AnyKeyMsgWait
    jmp CheckMusicContinue
       
+      
 +  cmp #rtFileSID  ;check for .sid file selected
    bne +
    jsr StartSelItem_WaitForTRDots
    ;if succesful, transfer to RAM and start playing
    jsr SIDLoadInit
    jmp CheckMusicContinue
+    
     
    ;not a dir, "none", hex file, or SID, try to start/execute
 +  jsr StartSelItem_WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
@@ -436,10 +434,8 @@ SelectItem:
    jsr AnyKeyMsgWait   
 
 CheckMusicContinue   
-   lda MusicInterrupted ;turn music back on if it was before...
+   lda MusicPlaying ;turn music back on if it was before...
    beq ListAndDone
-   lda #0
-   sta MusicInterrupted
    jsr SIDMusicOn 
 ListAndDone
    jsr ListMenuItems ; reprint menu
@@ -609,14 +605,17 @@ InverseRow:
    asl ;double it to point to word
    tay
    lda TblRowToMemLoc+1,y
-   sta PtrAddrHi
+   sta smcInverseRowSrc+2
+   sta smcInverseRowDest+2
    lda TblRowToMemLoc,y
-   sta PtrAddrLo 
-
+   sta smcInverseRowSrc+1 
+   sta smcInverseRowDest+1 
    ldy #40
--  lda (PtrAddrLo), y 
+smcInverseRowSrc
+-  lda $fffe, y 
    eor #$80 ; toggle reverse 
-   sta (PtrAddrLo),y
+smcInverseRowDest
+   sta $fffe,y
    dey
    bne -
    rts

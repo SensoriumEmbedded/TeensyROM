@@ -224,12 +224,8 @@ TestIO:
    ldy #>MsgTesting
    jsr PrintString 
 
-   ldx #$03  ;outer loop count, each takes a couple seconds
--- stx PtrAddrLo ;storage for outer counter
-   jsr CursorToTest    
-   lda PtrAddrLo
-   jsr PrintHexNibble
-   ;jsr PrintHexByte
+   ldx #$02  ;init outer loop count, each takes a couple seconds
+-- stx smcTestIOCnt+1 ;storage for outer counter
    ldx #$00
    ldy #$00
 -  lda rRegPresence1+IO1Port
@@ -242,7 +238,8 @@ TestIO:
    bne -
    dey
    bne -
-   ldx PtrAddrLo
+smcTestIOCnt
+   ldx #0   ;outer loop count, each takes a couple seconds
    dex
    bne --
 

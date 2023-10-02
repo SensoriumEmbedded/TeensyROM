@@ -29,15 +29,16 @@ PrintSerialString:
 PrintString:
    ;replaces BASIC routine jsr $ab1e when unavailable
    ;usage: lda #<MsgM2SPolyMenu,  ldy #>MsgM2SPolyMenu,  jsr PrintString 
-   sta PtrAddrLo
-   sty PtrAddrHi
+   sta smcPrintStringAddr+1
+   sty smcPrintStringAddr+2
    ldy #0
--  lda (PtrAddrLo), y
+smcPrintStringAddr
+-  lda $fffe, y
    beq +
    jsr SendChar
    iny
    bne -
-   inc PtrAddrHi
+   inc smcPrintStringAddr+2
    bne -
 +  rts
 
@@ -199,12 +200,13 @@ Print4CharTable:
 ;prints 4 chars from a table of continuous 4 char sets (no termination)
 ;X=table base lo, y=table base high, acc=index to item# (63 max)
 ;   and #0xfc 
-   stx PtrAddrLo
-   sty PtrAddrHi
+   stx smc4CharTableAddr+1
+   sty smc4CharTableAddr+2
    asl
    asl  ;mult by 4
    tay
--  lda (PtrAddrLo),y
+smc4CharTableAddr
+-  lda $fffe,y
    jsr SendChar   ;type (4 chars)
    iny
    tya

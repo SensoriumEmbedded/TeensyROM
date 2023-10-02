@@ -555,7 +555,7 @@ bool ParseSIDHeader()
    // Need to parse dataOffset (StreamOffsetAddr), loadAddress (rRegStrAddrLo/Hi), 
    //    initAddress(rRegSIDInitLo/Hi) and playAddress (rRegSIDPlayLo/Hi)
    // Kick off x-fer (rRegStrAvailable) if successful
-   
+      
    //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
    //https://hvsc.c64.org/
 
@@ -584,8 +584,19 @@ bool ParseSIDHeader()
    IO1[rRegStrAddrHi] = XferImage[StreamOffsetAddr + 1];
    StreamOffsetAddr +=2; //add in address offset
 
+   SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
+   //SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));
+   //SendMsgPrintfln("Play: %04x", toU16(XferImage+0x0C));
+
    //check for conflict with TR code
-   
+   //C64 mem conflict detection:
+   //   MainCodeRAM       = $6000
+   //assume full 8k length ($2000)
+   if (LoadAddress < 0x8000 && LoadAddress+XferSize >= 0x6000)
+   {
+      SendMsgPrintfln("Mem conflict w/ TR app 6000:8000");
+      return false;
+   }
 
    IO1[rRegSIDInitHi] = XferImage[0x0A];
    IO1[rRegSIDInitLo] = XferImage[0x0B];
@@ -593,9 +604,6 @@ bool ParseSIDHeader()
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    
    IO1[rRegStrAvailable] = 0xff;
-   SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
-   SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));
-   SendMsgPrintfln("Play: %04x", toU16(XferImage+0x0C));
    return true;
 }
  

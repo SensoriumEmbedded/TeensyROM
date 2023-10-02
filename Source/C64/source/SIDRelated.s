@@ -345,17 +345,17 @@ SIDLoadInit:
    lda #$00  ;set to first song in SID
 smcSIDInit
    jsr $fffe ;Initialize music (self modified)
+   
+   lda #rpudMusicMask
+   sta MusicPlaying  ;turn music on
    rts
    
 ToggleSIDMusic:
    lda MusicPlaying
    eor #rpudMusicMask   ;toggle playing status
    sta MusicPlaying
-   beq +
-   jsr SIDMusicOn ;sid is off, turn it on
-   rts
-+  jsr SIDMusicOff ;sid is on, turn it off
-   rts
+   beq SIDMusicOff ;sid is on, turn it off & return
+   jmp SIDMusicOn ;sid is off, turn it on & return
    
 SIDMusicOn:  ;Start SID interrupt
    lda #$7f    ;disable all ints

@@ -31,7 +31,7 @@
    TypeColor        = ChrBlue
    NameColor        = ChrLtGreen
 
-   ;Zero page RAM Registers:
+   ;Zero page RAM Registers. Some .SIDs use these, so make sure SID/Music is off 
    PtrAddrLo   = $fb
    PtrAddrHi   = $fc
    Ptr2AddrLo  = $fd
@@ -41,5 +41,5 @@
    
    ;$033c-03fb is the tape buffer (192 bytes)
    PRGLoadStartReloc= $033c  ;during .PRG transfer, PRG transfer code location/execution point
-   MainCodeRAM      = $6000  ;Main code location/execution point 
+   MainCodeRAM      = $6000  ;Main code location/execution point, synch w/ ParseSIDHeader checks
    
