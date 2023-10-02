@@ -69,31 +69,13 @@ NoHW
    ;load SID to TR RAM
    lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
-   jsr WaitForTRDots   ; WaitForTRWaitMsg
+   jsr WaitForTRDots
 
-   ;load SID to C64 RAM, same as PRGLoadStart...
-   lda rRegStrAddrHi+IO1Port
-   sta PtrAddrHi
-   lda rRegStrAddrLo+IO1Port   
-   sta PtrAddrLo
-   ldy #0   ;zero offset
-   
--  lda rRegStrAvailable+IO1Port ;are we done?
-   beq +   ;exit the loop
-   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
-   sta (PtrAddrLo), y 
-   iny
-   bne -
-   inc PtrAddrHi
-   bne -
-   ;good luck if we get to here... Trying to overflow and write to zero page
-
-   ;continue initializing...
-+  lda #$00
+   jsr SIDLoadInit
+ 
+   lda #$00
    sta MusicInterrupted ;init reg
-
-   jsr SIDMusicInit
-   
+ 
    jsr ListMenuItems
 
    ;check default registers for music & time settings
@@ -376,7 +358,6 @@ MenuLineDone
 
 SelectItem:
 ;Execute/select an item from the list
-; Dir, ROM, copy PRG to RAM and run, etc
    lda rwRegCursorItemOnPg+IO1Port 
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr InverseRow ;unhighlight the current
@@ -396,12 +377,13 @@ SelectItem:
 +  cmp #rtNone ;do nothing for 'none' type
    beq AllDone 
    
+   ;turn off music and clear screen for messaging for remaining types:
    pha ;store the type
    lda MusicPlaying ;turn music off if it's on
    beq +
    sta MusicInterrupted
    jsr SIDMusicOff     
-+  jsr PrintBanner ;clear screen for messaging
++  jsr PrintBanner
    lda #NameColor
    jsr SendChar
    
@@ -427,10 +409,8 @@ SelectItem:
 
    lda #<MsgFWInProgress  ;In Progress Warning
    ldy #>MsgFWInProgress
-   jsr PrintString 
-   lda #rCtlStartSelItemWAIT ;kick off the update routine
-   sta wRegControl+IO1Port   
-   jsr WaitForTRDots   
+   jsr PrintString  
+   jsr StartSelItem_WaitForTRDots    ;kick off the update routine
 
    ;if we get to this point without rebooting, there's been an error...
    lda #<MsgFWUpdateFailed 
@@ -438,11 +418,16 @@ SelectItem:
    jsr PrintString 
    jsr AnyKeyMsgWait
    jmp CheckMusicContinue
+      
++  cmp #rtFileSID  ;check for .sid file selected
+   bne +
+   jsr StartSelItem_WaitForTRDots
+   ;if succesful, transfer to RAM and start playing
+   jsr SIDLoadInit
+   jmp CheckMusicContinue
     
-   ;not a dir, "none", or hex file, try to start/execute
-+  lda #rCtlStartSelItemWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
+   ;not a dir, "none", hex file, or SID, try to start/execute
++  jsr StartSelItem_WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
 
    lda rRegStrAvailable+IO1Port 
    bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!!!
@@ -490,6 +475,9 @@ AnyKeyMsgWait:
    beq -
    rts
 
+StartSelItem_WaitForTRDots:
+   lda #rCtlStartSelItemWAIT ;kick off the update routine
+   sta wRegControl+IO1Port   
 ;WaitForTR* uses acc, X and Y
 WaitForTRDots:  ;prints a dot per second while waiting, doesn't move cursor
    ldy TODSecBCD ;reset dot second counter

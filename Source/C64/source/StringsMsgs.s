@@ -182,4 +182,4 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx TypeColor, "Crt"  ; rtFileCrt   = 8,
    !tx TypeColor, "Hex"  ; rtFileHex   = 9,
    !tx TypeColor, "P00"  ; rtFileP00   = 10,
-   
+   !tx TypeColor, "SID"  ; rtFileSID   = 11,

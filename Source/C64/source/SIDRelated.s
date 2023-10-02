@@ -304,10 +304,34 @@ rcnt
 
 +  jmp M2SUpdateKeyInLoop
 
-SIDMusicInit:
+SIDLoadInit:
+
+   lda rRegStrAvailable+IO1Port 
+   bne +   ;Make sure ready to x-fer
+   jsr AnyKeyMsgWait  ;an error occurred
+   rts
+   
+   ;load SID to C64 RAM, same as PRGLoadStart...
++  lda rRegStrAddrHi+IO1Port
+   sta PtrAddrHi
+   lda rRegStrAddrLo+IO1Port   
+   sta PtrAddrLo
+   ldy #0   ;zero offset
+   
+-  lda rRegStrAvailable+IO1Port ;are we done?
+   beq +   ;exit the loop
+   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
+   sta (PtrAddrLo), y 
+   iny
+   bne -
+   inc PtrAddrHi
+   bne -
+   ;good luck if we get to here... Trying to overflow and write to zero page
+   jsr AnyKeyMsgWait
+   rts
 
    ;self-modifying init jump
-   lda rRegSIDInitLo+IO1Port
++  lda rRegSIDInitLo+IO1Port
    sta smcSIDInit+1
    lda rRegSIDInitHi+IO1Port
    sta smcSIDInit+2
@@ -321,7 +345,6 @@ SIDMusicInit:
    lda #$00  ;set to first song in SID
 smcSIDInit
    jsr $fffe ;Initialize music (self modified)
-   
    rts
    
 ToggleSIDMusic:

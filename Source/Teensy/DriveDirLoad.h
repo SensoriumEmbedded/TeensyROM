@@ -176,5 +176,6 @@ StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
    "crt",  rtFileCrt,
    "hex",  rtFileHex,
    "p00",  rtFileP00,
+   "sid",  rtFileSID,
 };
 

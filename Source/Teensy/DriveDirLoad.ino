@@ -139,6 +139,18 @@ void HandleExecution()
  
    if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
 
+   if (MenuSelCpy.ItemType == rtFileSID) 
+   {
+      XferImage = MenuSelCpy.Code_Image;
+      XferSize = MenuSelCpy.Size;
+      if (!ParseSIDHeader()) return; //Parse SID File 
+      
+      //set up to transfer to C64 RAM
+      
+      
+      return;   //we're done here
+   }
+   
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep PRG tranfer
    uint8_t CartLoaded = false;
@@ -540,27 +552,12 @@ void FreeCrtChips()
 bool ParseSIDHeader()
 {
    // XferImage and XferSize are populated w/ SID file info
-   // Need to parse dataOffset (StreamOffsetAddr), loadAddress (rRegStrAddrLo/Hi)
-   //      initAddress() and playAddress ()
+   // Need to parse dataOffset (StreamOffsetAddr), loadAddress (rRegStrAddrLo/Hi), 
+   //    initAddress(rRegSIDInitLo/Hi) and playAddress (rRegSIDPlayLo/Hi)
+   // Kick off x-fer (rRegStrAvailable) if successful
    
    //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
    //https://hvsc.c64.org/
-
-   //*** SleepDirt_extra_ntsc_1000_6581.sid
-   //    magicID: PSID		    version: 0002
-   //Mem Loc 1000:2376   (4982 bytes, 4k)
-   
-   //  File Size: 5109 (4k)
-   //       Name:                                 
-   //     Author: 
-   //   Released: 
-   // dataOffset: 007E		v1loadAddress: 0000
-   //initAddress: 1000		playAddress: 1003
-   //      songs: 0001		  startSong: 0001
-   //      speed: 00000000
-   //V2+   flags: 0018		  startPage: 00
-   // 2ndSIDAddr: 00		 3rdSIDAddr: 00
-   // pageLength: 00		loadAddress: 1000
 
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
@@ -596,10 +593,10 @@ bool ParseSIDHeader()
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    
    IO1[rRegStrAvailable] = 0xff;
-   SendMsgPrintfln("SID Loaded: %04x:%04x", LoadAddress, LoadAddress+XferSize);
+   SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));
    SendMsgPrintfln("Play: %04x", toU16(XferImage+0x0C));
-   return false; //true;
+   return true;
 }
  
 void RedirectEmptyDriveDirMenu()
