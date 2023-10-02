@@ -305,17 +305,18 @@ rcnt
 +  jmp M2SUpdateKeyInLoop
 
 SIDLoadInit:
-
+   ;SID is Prepared to transfer from TR RAM before calling
+   
    lda rRegStrAvailable+IO1Port 
    bne +   ;Make sure ready to x-fer
    jsr AnyKeyMsgWait  ;an error occurred
    rts
    
    ;load SID to C64 RAM, same as PRGLoadStart...
-+  lda rRegStrAddrHi+IO1Port
-   sta PtrAddrHi
-   lda rRegStrAddrLo+IO1Port   
++  lda rRegStreamData+IO1Port
    sta PtrAddrLo
+   lda rRegStreamData+IO1Port
+   sta PtrAddrHi
    ldy #0   ;zero offset
    
 -  lda rRegStrAvailable+IO1Port ;are we done?

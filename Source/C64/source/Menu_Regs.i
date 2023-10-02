@@ -23,38 +23,35 @@
    MaxItemDispLength = 35
    MaxItemsPerPage   = 19
 
-   ;;;;;;;;;;;;;;;;;;  start IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
-   
+   ;enum IO1_Registers  //offset from 0xDE00
    ;skipping 0: Used by many others and accessed on reset
    rwRegStatus         =  1 ;// Indicates busy when waiting for FW to complete something
-   rRegStrAddrLo       =  2 ;// Stream PRG: lo byte of start address of the prg file being transfered to mem
-   rRegStrAddrHi       =  3 ;// Stream PRG: Hi byte of start address
-   rRegStrAvailable    =  4 ;// Stream PRG: zero when inactive/complete 
-   rRegStreamData      =  5 ;// Stream PRG: next byte of data to transfer, auto increments when read
-   wRegControl         =  6 ;// RegCtlCommands: execute specific functions
-   rRegPresence1       =  7 ;// HW detect: 0x55
-   rRegPresence2       =  8 ;// HW detect: 0xAA
-   rRegLastHourBCD     =  9 ;// Last TOD: Hours read
-   rRegLastMinBCD      = 10 ;// Last TOD: Minutes read
-   rRegLastSecBCD      = 11 ;// Last TOD: Seconds read
-   rWRegCurrMenuWAIT   = 12 ;// enum RegMenuTypes: select Menu type: SD, USB, etc
-   rwRegSelItemOnPage  = 13 ;// Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
-   rwRegCursorItemOnPg = 14 ;// Item sel/info: (zero based) Highlighted/cursor Menu Item On Current Page
-   rRegNumItemsOnPage  = 15 ;// Item sel/info: num items on current menu page
-   rwRegPageNumber     = 16 ;// Item sel/info: (one based) current page number
-   rRegNumPages        = 17 ;// Item sel/info: total number of pages
-   rRegItemTypePlusIOH = 18 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
-   rwRegPwrUpDefaults  = 19 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 20 ;// EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 21 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegSerialString   = 22 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
-   wRegSearchLetterWAIT= 23 ;// Put cursor on first menu item with letter written
-   rRegSIDInitHi       = 24 ;// SID Play Info: Init address Hi
-   rRegSIDInitLo       = 25 ;// SID Play Info: Init Address Lo
-   rRegSIDPlayHi       = 26 ;// SID Play Info: Play Address Hi
-   rRegSIDPlayLo       = 27 ;// SID Play Info: Play Address Lo
+   rRegStrAvailable    =  2 ;// Stream PRG: zero when inactive/complete 
+   rRegStreamData      =  3 ;// Stream PRG: next byte of data to transfer, auto increments when read
+   wRegControl         =  4 ;// RegCtlCommands: execute specific functions
+   rRegPresence1       =  5 ;// HW detect: 0x55
+   rRegPresence2       =  6 ;// HW detect: 0xAA
+   rRegLastHourBCD     =  7 ;// Last TOD: Hours read
+   rRegLastMinBCD      =  8 ;// Last TOD: Minutes read
+   rRegLastSecBCD      =  9 ;// Last TOD: Seconds read
+   rWRegCurrMenuWAIT   = 10 ;// enum RegMenuTypes: select Menu type: SD, USB, etc
+   rwRegSelItemOnPage  = 11 ;// Item sel/info: (zero based) select Menu Item On Current Page for name, type, execution, etc
+   rwRegCursorItemOnPg = 12 ;// Item sel/info: (zero based) Highlighted/cursor Menu Item On Current Page
+   rRegNumItemsOnPage  = 13 ;// Item sel/info: num items on current menu page
+   rwRegPageNumber     = 14 ;// Item sel/info: (one based) current page number
+   rRegNumPages        = 15 ;// Item sel/info: total number of pages
+   rRegItemTypePlusIOH = 16 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rwRegPwrUpDefaults  = 17 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
+   rwRegTimezone       = 18 ;// EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 19 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegSerialString   = 20 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   wRegSearchLetterWAIT= 21 ;// Put cursor on first menu item with letter written
+   rRegSIDInitHi       = 22 ;// SID Play Info: Init address Hi
+   rRegSIDInitLo       = 23 ;// SID Play Info: Init Address Lo
+   rRegSIDPlayHi       = 24 ;// SID Play Info: Play Address Hi
+   rRegSIDPlayLo       = 25 ;// SID Play Info: Play Address Lo
 
-   StartSIDRegs        = 28 ;// start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 26 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2

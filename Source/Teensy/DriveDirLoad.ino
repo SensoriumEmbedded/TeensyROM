@@ -196,10 +196,8 @@ void HandleExecution()
             MenuSelCpy.Size + 256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0]);
          XferImage = MenuSelCpy.Code_Image; 
          XferSize  = MenuSelCpy.Size; 
-         IO1[rRegStrAddrLo] = XferImage[0];
-         IO1[rRegStrAddrHi] = XferImage[1];
+         StreamOffsetAddr = 0; //set to start of data
          IO1[rRegStrAvailable] = 0xff;
-         StreamOffsetAddr = 2; //set to start of data
          break;
       case rtUnknown: //had to have been marked unknown after check at start
          //SendMsgFailed();
@@ -552,7 +550,7 @@ void FreeCrtChips()
 bool ParseSIDHeader()
 {
    // XferImage and XferSize are populated w/ SID file info
-   // Need to parse dataOffset (StreamOffsetAddr), loadAddress (rRegStrAddrLo/Hi), 
+   // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
    //    initAddress(rRegSIDInitLo/Hi) and playAddress (rRegSIDPlayLo/Hi)
    // Kick off x-fer (rRegStrAvailable) if successful
       
@@ -580,9 +578,6 @@ bool ParseSIDHeader()
    }
    
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
-   IO1[rRegStrAddrLo] = XferImage[StreamOffsetAddr];
-   IO1[rRegStrAddrHi] = XferImage[StreamOffsetAddr + 1];
-   StreamOffsetAddr +=2; //add in address offset
 
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    //SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));

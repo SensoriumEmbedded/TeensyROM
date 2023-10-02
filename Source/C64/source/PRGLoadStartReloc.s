@@ -27,10 +27,10 @@
 
 PRGLoadStart:
    ;jsr $A644 ;new   
-   lda rRegStrAddrHi+IO1Port
-   sta PtrAddrHi
-   lda rRegStrAddrLo+IO1Port   
+   lda rRegStreamData+IO1Port
    sta PtrAddrLo
+   lda rRegStreamData+IO1Port
+   sta PtrAddrHi
    ldy #0   ;zero offset
    
 -  lda rRegStrAvailable+IO1Port ;are we done?
