@@ -580,8 +580,9 @@ bool ParseSIDHeader()
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
 
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
-   //SendMsgPrintfln("Init: %04x", toU16(XferImage+0x0A));
-   //SendMsgPrintfln("Play: %04x", toU16(XferImage+0x0C));
+   
+   Printf_dbg("\nInit: %04x", toU16(XferImage+0x0A));
+   Printf_dbg("\nPlay: %04x", toU16(XferImage+0x0C));
 
    //check for conflict with TR code
    //C64 mem conflict detection:

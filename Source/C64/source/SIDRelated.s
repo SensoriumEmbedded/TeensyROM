@@ -343,9 +343,16 @@ SIDLoadInit:
    lda rRegSIDPlayHi+IO1Port
    sta smcSIDPlay+2
 
+   sei
+   lda #$35; Disable Kernal and BASIC ROMs
+   ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
+   sta $01
    lda #$00  ;set to first song in SID
 smcSIDInit
-   jsr $fffe ;Initialize music (self modified)
+   jsr $fffe ;Initialize music (self modified code)
+   lda #$37 ; Reset the Kernal and BASIC ROMs
+   sta $01
+   cli
    
    lda #rpudMusicMask
    sta MusicPlaying  ;turn music on
@@ -406,13 +413,18 @@ SIDVoicesOff:
 irqRastSID:
    inc $d019   ;ACK raster IRQs
    inc BorderColorReg ;tweak display border
+   lda #$35; Disable Kernal and BASIC ROMs
+   ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
+   sta $01
 smcSIDPlay
    jsr $fffe ;Play the music, self modifying
+   lda #$37 ; Reset the Kernal and BASIC ROMs
+   sta $01
    lda #<irqRast2
    ldx #>irqRast2
    sta $314    ;CINV, HW IRQ Int Lo
    stx $315    ;CINV, HW IRQ Int Hi
-   lda #200    ;loweer part of screen
+   lda #234    ;loweer part of screen
    sta $d012   ;raster scan line compare reg
    jmp IRQDefault
 
@@ -423,7 +435,7 @@ irqRast2:
    ldx #>irqRastSID
    sta $314    ;CINV, HW IRQ Int Lo
    stx $315    ;CINV, HW IRQ Int Hi
-   lda #100    ;upper part of screen
+   lda #74    ;upper part of screen
    sta $d012   ;raster scan line compare reg
    
    jmp IRQDefault
