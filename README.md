@@ -3,7 +3,7 @@
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-If you have thoughts/input on this project, questions, or features you'd like to see, please post in the [TeensyROM Discord](https://discord.com/channels/1157142170688573470/1157142171426754601). 
+If you have thoughts/input on this project, questions, or features you'd like to see, please consider yourself invited to the [TeensyROM Discord Server](https://discord.gg/2EYYscWmRt). 
 
 I chose the Teensy 4.1 for this project to take advantage of all its external interface capabilities (USB Host & Device, SD card, Ethernet).  I also wanted to use its many IO pins to do "direct" interfacing so it can be largely software defined. 
 
