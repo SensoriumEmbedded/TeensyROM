@@ -6,7 +6,7 @@
   * MIDI CC messaging now passthrough/absolute instead of relative/calculated
   * Enabled USB MIDI Device In messages: 
     * ControlChange, ProgramChange, and PitchChange
-  * Revamped Windows File Transfer app support
+  * Revamped Windows File Transfer app support (see [WinApp Release History](../WinApp/WinApp_Release_History.md))
 
 ## 0.5: built 9/17/23  14:01:48
 * Main UI  improvements:
