@@ -577,7 +577,8 @@ bool ParseSIDHeader()
       return false;
    }
    
-   uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
+   uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
+      | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
 
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    
@@ -594,6 +595,48 @@ bool ParseSIDHeader()
       return false;
    }
 
+   //check play address
+   
+   
+
+   //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
+   //                            1 specifies CIA 1 timer interrupt (default 60Hz)
+   Printf_dbg("\nSpeed reg: %08x", toU32(XferImage+0x12));
+
+   //flags:  Bits 2-3 specify the video standard (clock):
+   char *VStandard[] =
+   {
+      "Unknown",  //    00 = Unknown, use PAL
+      "PAL",      //    01 = PAL,
+      "NTSC",     //    10 = NTSC,
+      "PAL+NTSC", //    11 = PAL and NTSC, use NTSC
+   };
+   
+   uint8_t CIATimer[4][2] =
+   {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
+      0x4c, 0x25,   // PAL  SID on  PAL machine
+      0x4F, 0xB2,   // PAL  SID on NTSC machine
+      //0x3F, 0x50,   // NTSC SID on  PAL machine
+      0x40, 0xC0,   // NTSC SID on  PAL machine
+      0x42, 0x95,   // NTSC SID on NTSC machine
+   };
+   
+   //set playback speed based on SID and Machine type
+   uint16_t SidFlags = toU16(XferImage+0x76);
+   Printf_dbg("\nSidFlags: %04x", SidFlags);
+   SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
+   SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
+
+   //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
+   Printf_dbg("\nMachine Clocks: %s Vid, %d0Hz TOD clk", 
+      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1],
+      (IO1[wRegVid_TOD_Clks] & 2)==2 ? 6 : 5 );
+
+   SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
+   Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
+
+   IO1[rwRegSIDSpeedHi] = CIATimer[SidFlags][0];
+   IO1[rwRegSIDSpeedLo] = CIATimer[SidFlags][1];  
    IO1[rRegSIDInitHi] = XferImage[0x0A];
    IO1[rRegSIDInitLo] = XferImage[0x0B];
    IO1[rRegSIDPlayHi] = XferImage[0x0C];
@@ -659,7 +702,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    return false;
 }
 
-
+//Big endian byte to int conversions:
 uint32_t toU32(uint8_t* src)
 {
    return

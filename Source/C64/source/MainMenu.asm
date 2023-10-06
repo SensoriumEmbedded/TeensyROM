@@ -66,6 +66,44 @@ NoHW
 +  lda #rCtlVanishROM ;Deassert Game & ExROM
    sta wRegControl+IO1Port
 
+   ;Get video standard and TOD frequency
+   ; https://codebase64.org/doku.php?id=base:efficient_tod_initialisation
+   ; Detecting TOD frequency by Silver Dream ! / Thorgal / W.F.M.H.
+   sei             ; accounting for NMIs is not needed when
+   lda #$00        ; used as part of application initialisation
+   sta $dd08       ; TO2TEN start TOD - in case it wasn't running
+-  cmp $dd08       ; TO2TEN wait until tenths
+   beq -           ; register changes its value
+   lda #$ff        ; count from $ffff (65535) down
+   sta $dd04       ; TI2ALO both timer A register
+   sta $dd05       ; TI2AHI set to $ff
+   lda #%00010001  ; bit seven = 0 - 60Hz TOD mode
+   sta $dd0e       ; CI2CRA start the timer
+   lda $dd08       ; TO2TEN
+-  cmp $dd08       ; poll TO2TEN for change
+   beq -
+   lda $dd05       ; TI2AHI expect (approximate) $7f4a $70a6 $3251 $20c0
+   cli
+   ;$7f4a for 60Hz TOD clock and 985248.444(PAL) CPU/CIA clock    10
+   ;$70a6 for 60Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   11
+   ;$3251 for 50Hz TOD clock and 985248.444(PAL) CPU/CIA clock    00
+   ;$20c0 for 50Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   01
+   ;convert from MSB timing to: bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
+   cmp #$29
+   bcs +  ;(>29)
+   ldx #%00000001  ;50/NTSC
+   jmp ++
++  cmp #$51
+   bcs +  ;(>51)
+   ldx #%00000000  ;50/PAL
+   jmp ++
++  cmp #$78
+   bcs +  ;(>78)
+   ldx #%00000011  ;60/NTSC
+   jmp ++
++  ldx #%00000010  ;60/PAL
+++ stx wRegVid_TOD_Clks+IO1Port   
+
    ;load SID to TR RAM
    lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
@@ -179,6 +217,28 @@ ReadKeyboard:
    bne +
    jsr PrevPage
    jmp HighlightCurrent  
+
++  cmp #'+'  ;increase SID speed
+   bne +
+   ldx rwRegSIDSpeedHi+IO1Port
+   dex   
+   jmp updatespeed  
+
++  cmp #'-'  ;decrease SID speed
+   bne +
+   ldx rwRegSIDSpeedHi+IO1Port
+   inx
+updatespeed
+   stx rwRegSIDSpeedHi+IO1Port
+   stx $dc05  ; =timer Hi, dc04=timer Low
+   ;;print the full timer value
+   ;lda #ChrReturn
+   ;jsr SendChar
+   ;txa
+   ;jsr PrintHexByte
+   ;lda rwRegSIDSpeedLo+IO1Port
+   ;jsr PrintHexByte
+   jmp WaitForJSorKey  
 
 +  cmp #ChrUpArrow ;Up directory
    bne +  
