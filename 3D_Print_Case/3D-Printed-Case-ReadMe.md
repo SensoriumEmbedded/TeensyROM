@@ -6,9 +6,9 @@
 
 3D print files are located here: [SensoriumEmbedded/TeensyROM/3D_Print_Case](/3D_Print_Case/)
 
-![case front](SensoriumEmbedded/TeensyROM/media/case/case_front.jpg)
+![case front](../media/case/case_front.jpg)
 
-![case back](SensoriumEmbedded/TeensyROM/media/case/case_back.jpg)
+![case back](../media/case/case_back.jpg)
 
-![case bottom](SensoriumEmbedded/TeensyROM/media/case/case_bot.jpg)
+![case bottom](../media/case/case_bot.jpg)
 
