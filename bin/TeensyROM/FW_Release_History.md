@@ -6,14 +6,10 @@
   * Determining Vid standard (NTSC/PAL) and mains freq (50/60Hz) on start
   * Changed SID play interrupt from raster to timer based
   * '+' and '-' to change SID speed from main Menu
-  * Parsing SID playback speed/flags regs
   * Playback speed set based on SID and Machine type
   * stopped border color tweak for now since IRQ is not raster
   * Banking out BASIC and Kernal during SID play and init
-  * Replaced PtrAddrLo/Hi with Self Mod Code in mult places where SID can be playing (they use zero page too)
-  * check for SID/TR mem conflict
-  * SID file init and play addresses from file header, IO1 regs to support
-  * First Self modifying code (smc) for smcSIDPlay and smcSIDInit
+  * check for SID/TR mem conflict (eventually enable TR code relocation)
   * SID file type association/selectability
 
 * Swiftlink updates:
@@ -28,6 +24,7 @@
   * Removed USB Host menu since file x-fer is direct to USB/SD
   * Menu tweak: F7 for help instead of Space
   * Removed IO1 regs rRegStrAddrLo/Hi, just get from stream
+  * First Self modifying code (smc) for smcSIDPlay and smcSIDInit
 
 ### 0.5.1 sub-release 10/1/23
 * MIDI CC messaging now passthrough/absolute instead of relative/calculated
