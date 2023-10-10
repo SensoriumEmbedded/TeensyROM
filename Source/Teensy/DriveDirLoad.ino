@@ -555,6 +555,7 @@ bool ParseSIDHeader()
    // Kick off x-fer (rRegStrAvailable) if successful
       
    //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
+   //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
    //https://hvsc.c64.org/
 
    if (memcmp(XferImage, "PSID", 4) != 0) 
@@ -579,11 +580,11 @@ bool ParseSIDHeader()
    
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
       | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
-
+   uint16_t PlayAddress = toU16(XferImage+0x0C);
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    
    Printf_dbg("\nInit: %04x", toU16(XferImage+0x0A));
-   Printf_dbg("\nPlay: %04x", toU16(XferImage+0x0C));
+   Printf_dbg("\nPlay: %04x", PlayAddress);
 
    //check for conflict with TR code
    //C64 mem conflict detection:
@@ -596,7 +597,12 @@ bool ParseSIDHeader()
    }
 
    //check play address
-   
+   if (PlayAddress == 0)
+   {
+      SendMsgPrintfln("Play Address 0 not allowed");
+      return false;
+   }
+  
    
 
    //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
@@ -616,8 +622,7 @@ bool ParseSIDHeader()
    {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
       0x4c, 0x25,   // PAL  SID on  PAL machine
       0x4F, 0xB2,   // PAL  SID on NTSC machine
-      //0x3F, 0x50,   // NTSC SID on  PAL machine
-      0x40, 0xC0,   // NTSC SID on  PAL machine
+      0x3F, 0x50,   // NTSC SID on  PAL machine
       0x42, 0x95,   // NTSC SID on NTSC machine
    };
    

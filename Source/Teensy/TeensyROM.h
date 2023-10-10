@@ -19,8 +19,8 @@
 
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 //background music SID, stored in flash (PROGMEM):
-#include "SIDs\SleepDirt_extra_ntsc_1000_6581.sid.h"
-#define SIDforBackground     SleepDirt_extra_ntsc_1000_6581_sid
+#include "SIDs\SleepDirt_norm_ntsc_1000_6581.sid.h"
+#define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
 //#include "SIDs\Echoes.sid.h"
 //#define SIDforBackground     Echoes_sid
 
