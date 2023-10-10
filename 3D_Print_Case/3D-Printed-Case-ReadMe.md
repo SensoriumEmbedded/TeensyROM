@@ -12,3 +12,7 @@
 
 ![case bottom](../media/case/case_bot.jpg)
 
+![case back](../media/case/case-front-corner.jpg)
+
+![case bottom](../media/case/case-rear-corner.jpg)
+
