@@ -24,7 +24,7 @@
 //#include "SIDs\Echoes.sid.h"
 //#define SIDforBackground     Echoes_sid
 
-char strVersionNumber[] = "v0.5.1+"; //*VERSION*
+char strVersionNumber[] = "v0.5.2"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build

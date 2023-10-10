@@ -1,19 +1,46 @@
 
 # FW Release Version history:
 
+### 0.5.2 sub-release 10/10/23
+* SID Player
+  * Determining Vid standard (NTSC/PAL) and mains freq (50/60Hz) on start
+  * Changed SID play interrupt from raster to timer based
+  * '+' and '-' to change SID speed from main Menu
+  * Parsing SID playback speed/flags regs
+  * Playback speed set based on SID and Machine type
+  * stopped border color tweak for now since IRQ is not raster
+  * Banking out BASIC and Kernal during SID play and init
+  * Replaced PtrAddrLo/Hi with Self Mod Code in mult places where SID can be playing (they use zero page too)
+  * check for SID/TR mem conflict
+  * SID file init and play addresses from file header, IO1 regs to support
+  * First Self modifying code (smc) for smcSIDPlay and smcSIDInit
+  * SID file type association/selectability
+
+* Swiftlink updates:
+  * ATSEARCH command initial implementation
+  * Using www.frogfind.com to get results
+  * <br> </b> and <b> tags caught
+
+* Arhitecture/General:
+  * Changed back to 8k cart from 16k for main menu
+  * Changed C64 RAM location from $2400 to $6000
+  * Loading SID from Flash after main app startup instead of transfer from cart
+  * Removed USB Host menu since file x-fer is direct to USB/SD
+  * Menu tweak: F7 for help instead of Space
+  * Removed IO1 regs rRegStrAddrLo/Hi, just get from stream
 
 ### 0.5.1 sub-release 10/1/23
-  * MIDI CC messaging now passthrough/absolute instead of relative/calculated
-  * Enabled USB MIDI Device In messages: 
-    * ControlChange, ProgramChange, and PitchChange
-  * Revamped Windows File Transfer app support (see [WinApp Release History](../WinApp/WinApp_Release_History.md))
+* MIDI CC messaging now passthrough/absolute instead of relative/calculated
+* Enabled USB MIDI Device In messages: 
+  * ControlChange, ProgramChange, and PitchChange
+* Revamped Windows File Transfer app support (see [WinApp Release History](../WinApp/WinApp_Release_History.md))
 
 ## 0.5: built 9/17/23  14:01:48
 * Main UI  improvements:
   * Many ROMs added to main menu (with room for more)
   * 1 level sub-dirs from TR Mem menu
   * Cursor based navigation/selection
-  * Joystick 2 menu control  *Joystick speed in Settings/EEPROM
+  * Joystick 2 menu control: Joystick speed in Settings/EEPROM
   * Display parent dir Path at top
   * Display page number and num pages in Menu/directory
   * alphabetize the directory list   
@@ -41,9 +68,9 @@
   * disabled some unused usbDevMIDI(in) commands causing probs using Cakewalk with Sta64/Cynthcart
 
 ## 0.4: built 7/29/23  22:56:39
-  * Enabled TeensyROM as a MIDI USB Device. 
-    * USB MIDI Host is still present, can use both at the same time.
-  * Update TeensyROM Firmware from SD card or USB Drive. 
+* Enabled TeensyROM as a MIDI USB Device. 
+  * USB MIDI Host is still present, can use both at the same time.
+* Update TeensyROM Firmware from SD card or USB Drive. 
 
 ## 0.3: built 7/15/23  18:56:01
    
