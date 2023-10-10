@@ -612,10 +612,10 @@ bool ParseSIDHeader()
    //flags:  Bits 2-3 specify the video standard (clock):
    char *VStandard[] =
    {
-      "Unknown",  //    00 = Unknown, use PAL
-      "PAL",      //    01 = PAL,
-      "NTSC",     //    10 = NTSC,
-      "PAL+NTSC", //    11 = PAL and NTSC, use NTSC
+      (char*)"Unknown",  //    00 = Unknown, use PAL
+      (char*)"PAL",      //    01 = PAL,
+      (char*)"NTSC",     //    10 = NTSC,
+      (char*)"PAL+NTSC", //    11 = PAL and NTSC, use NTSC
    };
    
    uint8_t CIATimer[4][2] =

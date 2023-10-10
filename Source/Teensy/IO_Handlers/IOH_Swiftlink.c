@@ -45,6 +45,7 @@ uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost = false;
+bool ParseHTML = false;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
@@ -52,7 +53,7 @@ uint8_t PlusCount=0;
 uint32_t LastTxMillis = millis();
 
 #define TxMsgMaxSize       128
-#define RxQueueSize       8192 
+#define RxQueueSize       (1024*16) 
 #define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
 #define NMITimeoutnS       300   //if Rx data not read within this time, deassert NMI anyway
 
@@ -154,8 +155,36 @@ void CheckSendRx()
       (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
       CycleCountdown == 0)
    {
-      SwiftRxBuf = PullFromRxQueue();
+      
       //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
+      SwiftRxBuf = PullFromRxQueue();
+      if (ParseHTML)
+      {
+         if(SwiftRxBuf == '<')
+         {
+            char TagBuf[300];
+            uint16_t BufCnt = 0;
+            
+            while (RxQueueUsed > 0)
+            {
+               if((TagBuf[BufCnt] = PullFromRxQueue()) == '>') break;
+               BufCnt++;
+            }
+            TagBuf[BufCnt] = 0;
+
+            if(strcmp(TagBuf, "br")==0) SwiftRxBuf = 13;
+            else if(strcmp(TagBuf, "/b")==0) SwiftRxBuf = 5;  //white
+            else if(strcmp(TagBuf, "b")==0) SwiftRxBuf = 158; //yellow
+            else
+            {
+               Printf_dbg("Unk Tag: <%s>\n", TagBuf);
+               return; //skip sending anything
+               //SwiftRxBuf = 0; //'*';
+            }
+         }
+         else SwiftRxBuf = ToPETSCII(SwiftRxBuf);
+      }
+      
       SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
       SetNMIAssert;
       NMIassertMicros = micros();
@@ -290,6 +319,21 @@ struct stcATCommand
   char Command[MaxATcmdLength];
   void (*Function)(char*); 
 };
+
+void AT_SEARCH(char* CmdArg)
+{  //ATSEARCH<Search Term>   Search Internet
+      
+   if (client.connect("www.frogfind.com", 80)) 
+   {
+      //AddASCIIStrToRxQueueLN("Connecteded");
+      client.printf("GET /?q=%s HTTP/1.1\r\n", CmdArg);
+      client.println("Host: www.frogfind.com");
+      client.println("Connection: close");
+      client.println();   
+      ParseHTML = true;
+   }
+   else AddASCIIStrToRxQueueLN("Connect Failed");
+}
 
 void AT_DT(char* CmdArg)
 {  //ATDT<HostName>:<Port>   Connect telnet
@@ -533,14 +577,13 @@ stcATCommand ATCommands[] =
    "+maskip="  , &AT_MASKIP,
    "+defaults" , &AT_DEFAULTS,
    "?"         , &AT_HELP,
+   "search"    , &AT_SEARCH,
 };
 
 void ProcessATCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
-   
-   Printf_dbg("AT Msg recvd: %s\n", CmdMsg);
-   
+      
    if (strstr(CmdMsg, "at")!=CmdMsg)
    {
       AddASCIIStrToRxQueueLN("AT not found");
@@ -646,9 +689,25 @@ void PollingHndlr_SwiftLink()
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
-      AddASCIIStrToRxQueue("\r\n\r\n\r\n*** ");
-      if (ConnectedToHost) AddASCIIStrToRxQueueLN("connected to host");
-      else AddASCIIStrToRxQueueLN("not connected");
+      if (ParseHTML)
+      {
+         if (ConnectedToHost) 
+         {
+            AddASCIIStrToRxQueueLN("***start");
+         }
+         else 
+         {
+            FlushRxQueue();
+            AddASCIIStrToRxQueueLN("end***");
+            ParseHTML = false;
+         }
+      }
+      else
+      {
+         AddASCIIStrToRxQueue("\r\n\r\n\r\n*** ");
+         if (ConnectedToHost) AddASCIIStrToRxQueueLN("connected to host");
+         else AddASCIIStrToRxQueueLN("not connected");
+      }
    }
    
    //if client data available, add to Rx Queue
