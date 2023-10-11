@@ -578,8 +578,18 @@ bool ParseSIDHeader()
       return false;
    }
    
+   if (toU16(XferImage+0x08) != 0)
+   {
+      Printf_dbg("\nNon-standard load addr");     
+      //make standard by adding the addr in front of the data:
+      StreamOffsetAddr -=2;
+      XferImage[StreamOffsetAddr] = XferImage[0x09];
+      XferImage[StreamOffsetAddr+1] = XferImage[0x08];
+   }
+   
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
       | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
+      
    uint16_t PlayAddress = toU16(XferImage+0x0C);
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    
@@ -603,8 +613,6 @@ bool ParseSIDHeader()
       return false;
    }
   
-   
-
    //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
    //                            1 specifies CIA 1 timer interrupt (default 60Hz)
    Printf_dbg("\nSpeed reg: %08x", toU32(XferImage+0x12));
