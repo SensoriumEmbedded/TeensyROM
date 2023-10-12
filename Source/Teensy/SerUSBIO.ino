@@ -31,6 +31,11 @@ void ServiceSerial()
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
          inByte = Serial.read(); //READ NEXT BYTE
+         if (CurrentIOHandler != IOH_TeensyROM)
+         {
+            SendU16(FailToken);
+            Serial.print("Busy!\n");
+         }
          switch (inByte)
          {
             case 0x55:  //ping
