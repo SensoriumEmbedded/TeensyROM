@@ -45,7 +45,8 @@ uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost = false;
-bool ParseHTML = false;
+bool BrowserMode = false;
+uint32_t PageCharsReceived = 0;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
@@ -158,7 +159,7 @@ void CheckSendRx()
       
       //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
       SwiftRxBuf = PullFromRxQueue();
-      if (ParseHTML)
+      if (BrowserMode)
       {
          if(SwiftRxBuf == '<')
          {
@@ -172,19 +173,24 @@ void CheckSendRx()
             }
             TagBuf[BufCnt] = 0;
 
-            if(strcmp(TagBuf, "br")==0) SwiftRxBuf = 13;
-            else if(strcmp(TagBuf, "/b")==0) SwiftRxBuf = 5;  //white
-            else if(strcmp(TagBuf, "b")==0) SwiftRxBuf = 158; //yellow
+            if(strcmp(TagBuf, "BR")==0) 
+            {
+               SwiftRxBuf = 13;
+               PageCharsReceived += 40-(PageCharsReceived % 40);
+            }
+            else if(strcmp(TagBuf, "/B")==0) SwiftRxBuf = 5;  //white
+            else if(strcmp(TagBuf, "B")==0) SwiftRxBuf = 158; //yellow
             else
             {
                Printf_dbg("Unk Tag: <%s>\n", TagBuf);
+               //SwiftRxBuf = 0;
                return; //skip sending anything
-               //SwiftRxBuf = 0; //'*';
             }
          }
-         else SwiftRxBuf = ToPETSCII(SwiftRxBuf);
+         else PageCharsReceived++; //normal char
       }
       
+      //send character
       SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
       SetNMIAssert;
       NMIassertMicros = micros();
@@ -312,27 +318,10 @@ void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 //_____________________________________AT Commands_____________________________________________________
 
-#define MaxATcmdLength   20
-
-struct stcATCommand
-{
-  char Command[MaxATcmdLength];
-  void (*Function)(char*); 
-};
-
-void AT_SEARCH(char* CmdArg)
-{  //ATSEARCH<Search Term>   Search Internet
-      
-   if (client.connect("www.frogfind.com", 80)) 
-   {
-      //AddASCIIStrToRxQueueLN("Connecteded");
-      client.printf("GET /?q=%s HTTP/1.1\r\n", CmdArg);
-      client.println("Host: www.frogfind.com");
-      client.println("Connection: close");
-      client.println();   
-      ParseHTML = true;
-   }
-   else AddASCIIStrToRxQueueLN("Connect Failed");
+void AT_BROWSE(char* CmdArg)
+{  //ATBROWSE   Enter Browser mode
+   AddASCIIStrToRxQueueLN("\r\nBrowse: X,S{Term},J{URL},{Link#},Ret");
+   BrowserMode = true;
 }
 
 void AT_DT(char* CmdArg)
@@ -561,27 +550,34 @@ void AT_HELP(char* CmdArg)
    AddASCIIStrToRxQueueLN(" +++   Disconnect from host");
 }
 
-stcATCommand ATCommands[] =
+#define MaxATcmdLength   20
+
+struct stcATCommand
 {
-   "dt"        , &AT_DT,
-   "c"         , &AT_C,
-   "+s"        , &AT_S,
-   "+rndmac"   , &AT_RNDMAC,
-   "+mac="     , &AT_MAC,
-   "+dhcp="    , &AT_DHCP,
-   "+dhcptime=", &AT_DHCPTIME,
-   "+dhcpresp=", &AT_DHCPRESP,
-   "+myip="    , &AT_MYIP,
-   "+dnsip="   , &AT_DNSIP,
-   "+gtwyip="  , &AT_GTWYIP,
-   "+maskip="  , &AT_MASKIP,
-   "+defaults" , &AT_DEFAULTS,
-   "?"         , &AT_HELP,
-   "search"    , &AT_SEARCH,
+  char Command[MaxATcmdLength];
+  void (*Function)(char*); 
 };
 
 void ProcessATCommand()
 {
+   stcATCommand ATCommands[] =
+   {
+      "dt"        , &AT_DT,
+      "c"         , &AT_C,
+      "+s"        , &AT_S,
+      "+rndmac"   , &AT_RNDMAC,
+      "+mac="     , &AT_MAC,
+      "+dhcp="    , &AT_DHCP,
+      "+dhcptime=", &AT_DHCPTIME,
+      "+dhcpresp=", &AT_DHCPRESP,
+      "+myip="    , &AT_MYIP,
+      "+dnsip="   , &AT_DNSIP,
+      "+gtwyip="  , &AT_GTWYIP,
+      "+maskip="  , &AT_MASKIP,
+      "+defaults" , &AT_DEFAULTS,
+      "?"         , &AT_HELP,
+      "browse"    , &AT_BROWSE,
+   };
    char* CmdMsg = TxMsg; //local copy for manipulation
       
    if (strstr(CmdMsg, "at")!=CmdMsg)
@@ -610,6 +606,36 @@ void ProcessATCommand()
    AddASCIIStrToRxQueueLN(TxMsg);
 }
 
+void ProcessBrowserCommand()
+{
+   char* CmdMsg = TxMsg; //local copy for manipulation
+
+   PageCharsReceived = 0; //un-pause on any command, or just return
+   if(strcmp(CmdMsg, "x") ==0)
+   {
+      client.stop();
+      BrowserMode = false;
+      RxQueueHead = RxQueueTail = 0; //dump the queue
+      AddASCIIStrToRxQueueLN("\r\nBrowser mode exit");
+   }
+   
+   if(CmdMsg[0] == 's') //search
+   {
+      CmdMsg++; //past the 's'
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
+      client.stop();
+      RxQueueHead = RxQueueTail = 0; //dump the queue
+      if (client.connect("www.frogfind.com", 80)) 
+      {
+         //AddASCIIStrToRxQueueLN("Connecteded");
+         client.printf("GET /?q=%s HTTP/1.1\r\n", CmdMsg);
+         client.println("Host: www.frogfind.com");
+         client.println("Connection: close");
+         client.println();   
+      }
+      else AddASCIIStrToRxQueueLN("Search Failed");
+   }
+}
 
 
 
@@ -686,21 +712,14 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_SwiftLink()
 {
+   //detect connection change
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
-      if (ParseHTML)
+      if (BrowserMode)
       {
-         if (ConnectedToHost) 
-         {
-            AddASCIIStrToRxQueueLN("***start");
-         }
-         else 
-         {
-            FlushRxQueue();
-            AddASCIIStrToRxQueueLN("end***");
-            ParseHTML = false;
-         }
+         if (ConnectedToHost) AddASCIIStrToRxQueueLN("\r\n*start*");
+         else AddASCIIStrToRxQueueLN("*end*");
       }
       else
       {
@@ -718,7 +737,8 @@ void PollingHndlr_SwiftLink()
          //Serial.printf("RxIn %d+", RxQueueUsed);
          while (client.available())
          {
-            uint8_t c=client.read();
+            uint8_t c = client.read();
+            if(BrowserMode) c = ToPETSCII(c);
             AddCharToRxQueue(c);
             Cnt++;
          }
@@ -726,12 +746,18 @@ void PollingHndlr_SwiftLink()
          if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
       }
    #else
-      while (client.available()) AddCharToRxQueue(client.read());
+      while (client.available()) 
+      {
+         uint8_t c = client.read();
+         if(BrowserMode) c = ToPETSCII(c);
+         AddCharToRxQueue(c);
+      }
    #endif
    
-   if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) //Tx data available from C64
+   //if Tx data available, get it from C64
+   if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) 
    {
-      if (client.connected()) //send Tx data to host
+      if (client.connected() && !BrowserMode) //send Tx data to host
       {
          //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
          client.print((char)SwiftTxBuf);  //send it
@@ -746,25 +772,29 @@ void PollingHndlr_SwiftLink()
          
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
       }
-      else  //off-line, at commands, etc..................................
+      else  //off-line/at commands or BrowserMode..................................
       {         
          Printf_dbg("echo %02x: %c ->", SwiftTxBuf, SwiftTxBuf);
-         AddCharToRxQueue(SwiftTxBuf); //echo it
+         AddCharToRxQueue(SwiftTxBuf); //echo it, will add to the end if pause in BrowserMode
          
          SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
          if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case ANSCII
          Printf_dbg("%02x\n", SwiftTxBuf);
          
-         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--;
-         else TxMsg[TxMsgOffset++] = SwiftTxBuf; //store it
+         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Delete or Backspace?
+         else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
          
          if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgMaxSize) //return hit or max size
          {
             SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             Printf_dbg("TxMsg: %s\n", TxMsg);
-            ProcessATCommand();
-            AddASCIIStrToRxQueueLN("ok\r\n");
+            if(BrowserMode) ProcessBrowserCommand();
+            else
+            {
+               ProcessATCommand();
+               AddASCIIStrToRxQueueLN("ok\r\n");
+            }
             TxMsgOffset = 0;
          }
          else SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
@@ -779,7 +809,8 @@ void PollingHndlr_SwiftLink()
       AddASCIIStrToRxQueueLN("\r\n*click*");
    }
 
-   CheckSendRx();
+   if (PageCharsReceived < 919) CheckSendRx();
+
 }
 
 void CycleHndlr_SwiftLink()
