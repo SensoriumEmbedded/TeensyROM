@@ -18,20 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-//background music SID, stored in flash (PROGMEM):
-#include "SIDs\SleepDirt_norm_ntsc_1000_6581.sid.h"
-#define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
-//#include "SIDs\Echoes.sid.h"
-//#define SIDforBackground     Echoes_sid
 
-char strVersionNumber[] = "v0.5.2"; //*VERSION*
+char strVersionNumber[] = "v0.5.2+"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
 
 //enable debug messaging at your own risk, can cause emulation interference/fails
+//#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-//#define DbgMsgs_IO    //IO messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 //#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 //#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
@@ -46,8 +41,16 @@ uint32_t* BigBuf = NULL;
 
 #ifdef DbgMsgs_IO
    #define Printf_dbg Serial.printf
+   
+   //Debug mode background music SID, stored in flash (PROGMEM):
+   #include "SIDs\Echoes.sid.h"
+   #define SIDforBackground     Echoes_sid
 #else
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
+
+   //Normal mode background music SID, stored in flash (PROGMEM):
+   #include "SIDs\SleepDirt_norm_ntsc_1000_6581.sid.h"
+   #define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
 #endif
 
 #define IOTLRead            0x10000
