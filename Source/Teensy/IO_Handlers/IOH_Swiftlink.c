@@ -44,8 +44,7 @@ extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
 uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
-bool ConnectedToHost = false;
-bool BrowserMode = false;
+bool ConnectedToHost, BrowserMode, PagePaused;
 uint32_t PageCharsReceived = 0;
 uint32_t NMIassertMicros = 0;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
@@ -147,22 +146,71 @@ uint8_t PullFromRxQueue()
   return c;
 }
 
-void CheckSendRx()
+bool ReadyToSendRx()
 {
-   //  if Rx data available to send to C64, IRQ enabled, and ready (not set), 
-   //  and enough time has passed, then read/send to C64...
-   if (RxQueueUsed > 0 && \
-      (SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
+   //  if IRQ enabled, 
+   //  and IRQ not set, 
+   //  and enough time has passed
+   //  then C64 is ready to receive...
+   return ((SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
       (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
-      CycleCountdown == 0)
+      CycleCountdown == 0);
+}
+
+bool CheckRxNMITimeout()
+{
+   //Check for Rx NMI timeout: Doesn't happen unless a lot of serial printing enabled (ie DbgMsgs_IO) causing missed reg reads
+   if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutnS))
    {
+     Serial.println("Rx NMI Timeout!");
+     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+     SetNMIDeassert;
+     return false;
+   }
+   return true;
+}
+
+void SendRxByte(uint8_t ToSend) 
+{
+   //send character if non-zero, otherwise skip it to save a full c64 char cycle
+   //assumes ReadyToSendRx() is true before calling
+   if(ToSend)
+   {  
+      SwiftRxBuf = ToSend;
+      SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
+      SetNMIAssert;
+      NMIassertMicros = micros();
+   }
+}
+
+void SendRxImmediate(char CharToSend)
+{
+   //wait for c64 to be ready or NMI timeout
+   while(!ReadyToSendRx()) if(!CheckRxNMITimeout) return;
+
+   if (BrowserMode) PageCharsReceived++;
+   
+   SendRxByte(CharToSend);
+}
+
+void SendRxImmediate(char* CharsToSend)
+{
+   for(uint16_t CharNum = 0; CharNum < strlen(CharsToSend); CharNum++)
+      SendRxImmediate(CharsToSend[CharNum]);
+}
+
+void CheckSendRxQueue()
+{  
+   //  if queued Rx data available to send to C64, and C64 is ready, then read/send 1 character to C64...
+   if (RxQueueUsed > 0 && ReadyToSendRx())
+   {
+      uint8_t ToSend = PullFromRxQueue();
+      //Printf_dbg("RxBuf=%02x: %c\n", ToSend, ToSend); //not recommended
       
-      //Printf_dbg("RxBuf=%02x: %c\n", SwiftRxBuf, SwiftRxBuf);
-      SwiftRxBuf = PullFromRxQueue();
       if (BrowserMode)
       {
-         if(SwiftRxBuf == '<')
-         {
+         if(ToSend == '<')
+         { //retrieve and interpret HTML Tag
             char TagBuf[300];
             uint16_t BufCnt = 0;
             
@@ -175,39 +223,29 @@ void CheckSendRx()
 
             if(strcmp(TagBuf, "BR")==0) 
             {
-               SwiftRxBuf = 13;
+               ToSend = 13;
                PageCharsReceived += 40-(PageCharsReceived % 40);
             }
-            else if(strcmp(TagBuf, "/B")==0) SwiftRxBuf = 5;  //white
-            else if(strcmp(TagBuf, "B")==0) SwiftRxBuf = 158; //yellow
+            else if(strcmp(TagBuf, "/B")==0) ToSend = 5;  //white
+            else if(strcmp(TagBuf, "B")==0) ToSend = 158; //yellow
             else
             {
                Printf_dbg("Unk Tag: <%s>\n", TagBuf);
-               //SwiftRxBuf = 0;
-               return; //skip sending anything
+               ToSend = 0;  //skip sending anything
             }
          }
          else PageCharsReceived++; //normal char
       }
       
-      //send character
-      SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
-      SetNMIAssert;
-      NMIassertMicros = micros();
+      SendRxByte(ToSend);
    }
-      
-   //Rx NMI timeout: Isn't needed unless a lot of printing enabled (ie DbgMsgs_IO) causing missed reg reads
-   if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutnS))
-   {
-     Serial.println("Rx NMI Timeout!");
-     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
-     SetNMIDeassert;
-   }
+   
+   CheckRxNMITimeout();
 }
 
 void FlushRxQueue()
 {
-   while (RxQueueUsed) CheckSendRx();  
+   while (RxQueueUsed) CheckSendRxQueue();  
 }
 
 void AddCharToRxQueue(uint8_t c)
@@ -610,7 +648,8 @@ void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
 
-   PageCharsReceived = 0; //un-pause on any command, or just return
+   PageCharsReceived = 0; //un-pause on any command, or just return key
+   PagePaused = false;
    if(strcmp(CmdMsg, "x") ==0)
    {
       client.stop();
@@ -649,6 +688,9 @@ void InitHndlr_SwiftLink()
    SwiftRegControl = 0;
    CycleCountdown=0;
    PlusCount=0;
+   ConnectedToHost = false;
+   BrowserMode = false;
+   PagePaused = false;
    
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
    RxQueue = (uint8_t*)malloc(RxQueueSize);
@@ -774,14 +816,16 @@ void PollingHndlr_SwiftLink()
       }
       else  //off-line/at commands or BrowserMode..................................
       {         
-         Printf_dbg("echo %02x: %c ->", SwiftTxBuf, SwiftTxBuf);
-         AddCharToRxQueue(SwiftTxBuf); //echo it, will add to the end if pause in BrowserMode
+         Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
+         
+         if(BrowserMode) SendRxImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
+         else AddCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
          
          SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
          if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case ANSCII
-         Printf_dbg("%02x\n", SwiftTxBuf);
+         Printf_dbg("%02x: %c\n", SwiftTxBuf);
          
-         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Delete or Backspace?
+         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
          else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
          
          if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgMaxSize) //return hit or max size
@@ -809,8 +853,15 @@ void PollingHndlr_SwiftLink()
       AddASCIIStrToRxQueueLN("\r\n*click*");
    }
 
-   if (PageCharsReceived < 919) CheckSendRx();
-
+   if (PageCharsReceived < 919) CheckSendRxQueue();
+   else
+   {
+      if (!PagePaused)
+      {
+         PagePaused = true;
+         SendRxImmediate((char*)"pAUSED!"); //ANSCII
+      }
+   }
 }
 
 void CycleHndlr_SwiftLink()
