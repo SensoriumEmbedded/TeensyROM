@@ -13,9 +13,8 @@
   * SID file type association/selectability
 
 * Swiftlink updates:
-  * ATSEARCH command initial implementation
-  * Using www.frogfind.com to get results
-  * <br> </b> and <b> tags caught
+  * ATSEARCH command initial implementation (more to come)
+  * Using www.frogfind.com to get search results
 
 * Arhitecture/General:
   * Changed back to 8k cart from 16k for main menu
