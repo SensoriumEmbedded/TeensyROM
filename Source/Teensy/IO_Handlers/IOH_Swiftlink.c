@@ -40,11 +40,12 @@ stcIOHandlers IOHndlr_SwiftLink =
 extern volatile uint32_t CycleCountdown;
 extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
 extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
+void AddBrowserCommandsToRxQueue();
 
 uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
-bool ConnectedToHost, BrowserMode, PagePaused;
+bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
 uint32_t PageCharsReceived;
 uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
@@ -213,6 +214,7 @@ void CheckSendRxQueue()
          { //retrieve and interpret HTML Tag
             char TagBuf[300];
             uint16_t BufCnt = 0;
+            ToSend = 0; //default to no char if not set below
             
             while (RxQueueUsed > 0)
             {
@@ -221,18 +223,31 @@ void CheckSendRxQueue()
             }
             TagBuf[BufCnt] = 0;
 
+
             if(strcmp(TagBuf, "BR")==0) 
             {
                ToSend = 13;
                PageCharsReceived += 40-(PageCharsReceived % 40);
             }
             else if(strcmp(TagBuf, "/B")==0) ToSend = 5;  //white
-            else if(strcmp(TagBuf, "B")==0) ToSend = 158; //yellow
-            else
+            else if(strcmp(TagBuf, "B")==0) ToSend = PrintingHyperlink ? 0 : 158; //yellow
+            else if(strcmp(TagBuf, "EOFTAG")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
+            else if(strncmp(TagBuf, "A HREF='", 8)==0) 
             {
-               Printf_dbg("Unk Tag: <%s>\n", TagBuf);
-               ToSend = 0;  //skip sending anything
+               SendRxImmediate("\x9a\x12"); //light blue, RVS On
+               SendRxImmediate('1');
+               SendRxImmediate(0x92); //light blue, RVS On
+               //ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
+               PageCharsReceived++;
+               PrintingHyperlink = true;
             }
+            else if(strcmp(TagBuf, "/A")==0)
+            {
+               ToSend = 5;  //white
+               PrintingHyperlink = false;
+            }
+            else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
+            
          }
          else PageCharsReceived++; //normal char
       }
@@ -277,15 +292,14 @@ void AddASCIIStrToRxQueue(const char* s)
    //Printf_dbg("AStrToRx(Len=%d): %s\n", strlen(s), s);
    while(s[CharNum] != 0)
    {
-      AddCharToRxQueue(ToPETSCII(s[CharNum]));
-      CharNum++; //putting this inside the above statment breaks it due to petscii macro multiple references
+      AddCharToRxQueue(ToPETSCII(s[CharNum++]));
    }  
 }
 
 void AddASCIIStrToRxQueueLN(const char* s)
 {
    AddASCIIStrToRxQueue(s);
-   AddASCIIStrToRxQueue("\r\n");
+   AddASCIIStrToRxQueue("\r");
 }
 
 void AddIPaddrToRxQueueLN(IPAddress ip)
@@ -309,14 +323,15 @@ void AddInvalidFormatToRxQueueLN()
 
 void AddBrowserCommandsToRxQueue()
 {
-   AddPETSCIIStrToRxQueue("\r\x9C\x12"); //ANSCII purp, rvs on
-   AddASCIIStrToRxQueueLN("Browser Commands:");
-   AddPETSCIIStrToRxQueue("\x12"); //ANSCII rvs on
-   AddASCIIStrToRxQueueLN("X, S{Term}, J{URL}, {Link#}, Ret");
-   AddPETSCIIStrToRxQueue("\x05"); //ANSCII Wht
-
-   PageCharsReceived = 0; //un-pause on any command, or just return key
+   PageCharsReceived = 0;
    PagePaused = false;
+   
+   AddPETSCIIStrToRxQueue("\r\x9C\x12"); //PETSCII purp, rvs on
+   AddASCIIStrToRxQueueLN("Browser Commands:");
+   AddASCIIStrToRxQueueLN("S[Term]: Search    [Link#]: Go to link");
+   AddASCIIStrToRxQueueLN(" U[URL]: Go to URL       X: Exit");
+   AddASCIIStrToRxQueueLN(" Return: Continue from pause");
+   AddPETSCIIStrToRxQueue("\x05"); //PETSCII Wht
 }
 
 void AddUpdatedToRxQueueLN()
@@ -615,26 +630,28 @@ struct stcATCommand
   void (*Function)(char*); 
 };
 
+stcATCommand ATCommands[] =
+{
+   "dt"        , &AT_DT,
+   "c"         , &AT_C,
+   "+s"        , &AT_S,
+   "+rndmac"   , &AT_RNDMAC,
+   "+mac="     , &AT_MAC,
+   "+dhcp="    , &AT_DHCP,
+   "+dhcptime=", &AT_DHCPTIME,
+   "+dhcpresp=", &AT_DHCPRESP,
+   "+myip="    , &AT_MYIP,
+   "+dnsip="   , &AT_DNSIP,
+   "+gtwyip="  , &AT_GTWYIP,
+   "+maskip="  , &AT_MASKIP,
+   "+defaults" , &AT_DEFAULTS,
+   "?"         , &AT_HELP,
+   "browse"    , &AT_BROWSE,
+};
+   
 void ProcessATCommand()
 {
-   stcATCommand ATCommands[] =
-   {
-      "dt"        , &AT_DT,
-      "c"         , &AT_C,
-      "+s"        , &AT_S,
-      "+rndmac"   , &AT_RNDMAC,
-      "+mac="     , &AT_MAC,
-      "+dhcp="    , &AT_DHCP,
-      "+dhcptime=", &AT_DHCPTIME,
-      "+dhcpresp=", &AT_DHCPRESP,
-      "+myip="    , &AT_MYIP,
-      "+dnsip="   , &AT_DNSIP,
-      "+gtwyip="  , &AT_GTWYIP,
-      "+maskip="  , &AT_MASKIP,
-      "+defaults" , &AT_DEFAULTS,
-      "?"         , &AT_HELP,
-      "browse"    , &AT_BROWSE,
-   };
+
    char* CmdMsg = TxMsg; //local copy for manipulation
       
    if (strstr(CmdMsg, "at")!=CmdMsg)
@@ -679,7 +696,7 @@ void ProcessBrowserCommand()
       client.stop();
       BrowserMode = false;
       RxQueueHead = RxQueueTail = 0; //dump the queue
-      AddASCIIStrToRxQueueLN("\r\nBrowser mode exit");
+      AddASCIIStrToRxQueueLN("\rBrowser mode exit");
    }
    
    if(CmdMsg[0] == 's') //search
@@ -719,6 +736,7 @@ void InitHndlr_SwiftLink()
    ConnectedToHost = false;
    BrowserMode = false;
    PagePaused = false;
+   PrintingHyperlink = false;
    
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
    RxQueue = (uint8_t*)malloc(RxQueueSize);
@@ -788,15 +806,11 @@ void PollingHndlr_SwiftLink()
       ConnectedToHost = client.connected();
       if (BrowserMode)
       {
-         if (!ConnectedToHost) 
-         {
-            AddASCIIStrToRxQueue("*End of Page*"); 
-            AddBrowserCommandsToRxQueue();
-         }
+         if (!ConnectedToHost) AddASCIIStrToRxQueue("*End of Page*<eoftag>");  //add special tag to catch when complete
       }
       else
       {
-         AddASCIIStrToRxQueue("\r\n\r\n\r\n*** ");
+         AddASCIIStrToRxQueue("\r\r\r*** ");
          if (ConnectedToHost) AddASCIIStrToRxQueueLN("connected to host");
          else AddASCIIStrToRxQueueLN("not connected");
       }
@@ -811,7 +825,7 @@ void PollingHndlr_SwiftLink()
          while (client.available())
          {
             uint8_t c = client.read();
-            if(BrowserMode) c = ToPETSCII(c);
+            if(BrowserMode) c = ToPETSCII(c); //incoming browser data is ascii
             AddCharToRxQueue(c);
             Cnt++;
          }
@@ -822,7 +836,7 @@ void PollingHndlr_SwiftLink()
       while (client.available()) 
       {
          uint8_t c = client.read();
-         if(BrowserMode) c = ToPETSCII(c);
+         if(BrowserMode) c = ToPETSCII(c); //incoming browser data is ascii
          AddCharToRxQueue(c);
       }
    #endif
@@ -853,7 +867,7 @@ void PollingHndlr_SwiftLink()
          else AddCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
          
          SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
-         if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case ANSCII
+         if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case PETSCII
          Printf_dbg("%02x: %c\n", SwiftTxBuf);
          
          if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
@@ -868,7 +882,7 @@ void PollingHndlr_SwiftLink()
             else
             {
                ProcessATCommand();
-               if (!BrowserMode) AddASCIIStrToRxQueueLN("ok\r\n");
+               if (!BrowserMode) AddASCIIStrToRxQueueLN("ok\r");
             }
             TxMsgOffset = 0;
          }
@@ -881,16 +895,16 @@ void PollingHndlr_SwiftLink()
    {
       PlusCount=0;
       client.stop();
-      AddASCIIStrToRxQueueLN("\r\n*click*");
+      AddASCIIStrToRxQueueLN("\r*click*");
    }
 
-   if (PageCharsReceived < 920) CheckSendRxQueue();
+   if (PageCharsReceived < 920 || PrintingHyperlink) CheckSendRxQueue();
    else
    {
       if (!PagePaused)
       {
          PagePaused = true;
-         SendRxImmediate("\x12\x9CpAUSE (rET,#,x,sX,jX)\x92\x05"); //ANSCII rvs, purp, rvs off, Wht
+         SendRxImmediate("\x12\x9CpAUSE (#,s[],u[],x,rET)\x92\x05"); //PETSCII rvs, purp, rvs off, Wht
       }
    }
 }
