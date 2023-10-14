@@ -45,11 +45,11 @@ uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64
 char* TxMsg = NULL;  //to hold messages (AT commands) when off line
 uint16_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost, BrowserMode, PagePaused;
-uint32_t PageCharsReceived = 0;
-uint32_t NMIassertMicros = 0;
+uint32_t PageCharsReceived;
+uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
-uint8_t PlusCount=0;
+uint8_t PlusCount;
 uint32_t LastTxMillis = millis();
 
 #define TxMsgMaxSize       128
@@ -186,14 +186,14 @@ void SendRxByte(uint8_t ToSend)
 void SendRxImmediate(char CharToSend)
 {
    //wait for c64 to be ready or NMI timeout
-   while(!ReadyToSendRx()) if(!CheckRxNMITimeout) return;
+   while(!ReadyToSendRx()) if(!CheckRxNMITimeout()) return;
 
    if (BrowserMode) PageCharsReceived++;
    
    SendRxByte(CharToSend);
 }
 
-void SendRxImmediate(char* CharsToSend)
+void SendRxImmediate(const char* CharsToSend)
 {
    for(uint16_t CharNum = 0; CharNum < strlen(CharsToSend); CharNum++)
       SendRxImmediate(CharsToSend[CharNum]);
@@ -264,10 +264,17 @@ void AddCharToRxQueue(uint8_t c)
   //Printf_dbg("Push H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
 }
 
+void AddPETSCIIStrToRxQueue(const char* s)
+{
+   uint8_t CharNum = 0;
+   //Printf_dbg("PStrToRx(Len=%d): %s\n", strlen(s), s);
+   while(s[CharNum] != 0) AddCharToRxQueue(s[CharNum++]);
+}
+
 void AddASCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
-   //Printf_dbg("StrToRx(Len=%d): %s\n", strlen(s), s);
+   //Printf_dbg("AStrToRx(Len=%d): %s\n", strlen(s), s);
    while(s[CharNum] != 0)
    {
       AddCharToRxQueue(ToPETSCII(s[CharNum]));
@@ -298,6 +305,18 @@ void AddMACToRxQueueLN(uint8_t* mac)
 void AddInvalidFormatToRxQueueLN()
 {
    AddASCIIStrToRxQueueLN("Invalid Format");
+}
+
+void AddBrowserCommandsToRxQueue()
+{
+   AddPETSCIIStrToRxQueue("\r\x9C\x12"); //ANSCII purp, rvs on
+   AddASCIIStrToRxQueueLN("Browser Commands:");
+   AddPETSCIIStrToRxQueue("\x12"); //ANSCII rvs on
+   AddASCIIStrToRxQueueLN("X, S{Term}, J{URL}, {Link#}, Ret");
+   AddPETSCIIStrToRxQueue("\x05"); //ANSCII Wht
+
+   PageCharsReceived = 0; //un-pause on any command, or just return key
+   PagePaused = false;
 }
 
 void AddUpdatedToRxQueueLN()
@@ -358,7 +377,7 @@ void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 void AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
-   AddASCIIStrToRxQueueLN("\r\nBrowse: X,S{Term},J{URL},{Link#},Ret");
+   AddBrowserCommandsToRxQueue();
    BrowserMode = true;
 }
 
@@ -648,8 +667,13 @@ void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
 
-   PageCharsReceived = 0; //un-pause on any command, or just return key
-   PagePaused = false;
+   if(PagePaused)
+   {
+      PageCharsReceived = 0; //un-pause on any command, or just return key
+      PagePaused = false;
+      SendRxImmediate("\x05\x93"); //White, clear screen
+   }
+   
    if(strcmp(CmdMsg, "x") ==0)
    {
       client.stop();
@@ -664,6 +688,7 @@ void ProcessBrowserCommand()
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
       client.stop();
       RxQueueHead = RxQueueTail = 0; //dump the queue
+      SendRxImmediate("\rcONNECTING");
       if (client.connect("www.frogfind.com", 80)) 
       {
          //AddASCIIStrToRxQueueLN("Connecteded");
@@ -672,7 +697,7 @@ void ProcessBrowserCommand()
          client.println("Connection: close");
          client.println();   
       }
-      else AddASCIIStrToRxQueueLN("Search Failed");
+      else AddASCIIStrToRxQueueLN("Connect Failed");
    }
 }
 
@@ -687,6 +712,9 @@ void InitHndlr_SwiftLink()
    SwiftRegCommand = SwiftCmndDefault;
    SwiftRegControl = 0;
    CycleCountdown=0;
+   PlusCount=0;
+   PageCharsReceived = 0;
+   NMIassertMicros = 0;
    PlusCount=0;
    ConnectedToHost = false;
    BrowserMode = false;
@@ -760,8 +788,11 @@ void PollingHndlr_SwiftLink()
       ConnectedToHost = client.connected();
       if (BrowserMode)
       {
-         if (ConnectedToHost) AddASCIIStrToRxQueueLN("\r\n*start*");
-         else AddASCIIStrToRxQueueLN("*end*");
+         if (!ConnectedToHost) 
+         {
+            AddASCIIStrToRxQueue("*End of Page*"); 
+            AddBrowserCommandsToRxQueue();
+         }
       }
       else
       {
@@ -837,7 +868,7 @@ void PollingHndlr_SwiftLink()
             else
             {
                ProcessATCommand();
-               AddASCIIStrToRxQueueLN("ok\r\n");
+               if (!BrowserMode) AddASCIIStrToRxQueueLN("ok\r\n");
             }
             TxMsgOffset = 0;
          }
@@ -853,13 +884,13 @@ void PollingHndlr_SwiftLink()
       AddASCIIStrToRxQueueLN("\r\n*click*");
    }
 
-   if (PageCharsReceived < 919) CheckSendRxQueue();
+   if (PageCharsReceived < 920) CheckSendRxQueue();
    else
    {
       if (!PagePaused)
       {
          PagePaused = true;
-         SendRxImmediate((char*)"pAUSED!"); //ANSCII
+         SendRxImmediate("\x12\x9CpAUSE (rET,#,x,sX,jX)\x92\x05"); //ANSCII rvs, purp, rvs off, Wht
       }
    }
 }
