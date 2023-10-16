@@ -196,7 +196,7 @@ extern uint8_t RAM_Image[];
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
 //#define ToPETSCII(x) (x==95 ? 32 : x>64 ? x^32 : x)
-#define ToPETSCII(x) ASCIItoPETSCII[x & 0x7f]
+#define ToPETSCII(x) ASCIItoPETSCII[(x) & 0x7f]
 
 void getNtpTime() 
 {
