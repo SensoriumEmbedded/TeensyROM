@@ -255,11 +255,12 @@ void CheckSendRxQueue()
             else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
             else if(strncmp(TagBuf, "a href=", 7)==0) 
             { //start of hyperlink text, save hyperlink
+               Printf_dbg("LinkTag: %s\n", TagBuf);
                SendPETSCIICharImmediate(PETSCIIpurple); 
                SendPETSCIICharImmediate(PETSCIIrvsOn); 
                if (UsedLinkBuffs < NumLinkBuffs)
                {
-                  for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++)
+                  for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip "a href=\""
                   { //terminate at first 
                      if(TagBuf[CharNum]==' ' || 
                         TagBuf[CharNum]=='\'' ||
@@ -267,6 +268,7 @@ void CheckSendRxQueue()
                         TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
                   }
                   strcpy(LinkBuf[UsedLinkBuffs], TagBuf+8); // and from beginning
+                  
                   Printf_dbg("Link #%d: %s\n", UsedLinkBuffs+1, LinkBuf[UsedLinkBuffs]);
                   SendPETSCIICharImmediate(ToPETSCII('1' + UsedLinkBuffs++));
                }
@@ -285,10 +287,11 @@ void CheckSendRxQueue()
             }
             else if(strcmp(TagBuf, "/form")==0)
             { //OK as a standard?   FrogFind specific....
-               ToSend = PETSCIIclearScreen;
+               ToSend = PETSCIIclearScreen;  // comment these two lines out to 
+               UsedLinkBuffs = 0;            //  scroll header instead of clear
+               
                PageCharsReceived = 0;
                PagePaused = false;
-               UsedLinkBuffs = 0;
             }
             else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
             
@@ -735,23 +738,55 @@ void ProcessATCommand()
    AddASCIIStrToRxQueueLN(TxMsg);
 }
 
-void WebConnect(char *WebPage)
+void WebConnect(const char *PrePend, const char *OrigWebPage, bool DoFilter)
 {
+   char UpdWebPage[MaxTagSize*3]; //space for all encoded
+   
+   strcpy(UpdWebPage, PrePend);
+   uint16_t UWPCharNum = strlen(UpdWebPage);
+
+   if (DoFilter)
+   {
+      char HexChar[16] = "01234567890abcdef";
+      
+      ////https://www.eso.org/~ndelmott/url_encode.html
+      for(uint16_t CharNum=0; CharNum <= strlen(OrigWebPage); CharNum++) //include terminator
+      {
+         //already lower case(?)
+         uint8_t NextChar = OrigWebPage[CharNum];
+         if((NextChar >= 'a' && NextChar <= 'z') ||
+            (NextChar >= 'A' && NextChar <= 'Z') ||
+            (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
+             NextChar == 0) 
+         {      
+            UpdWebPage[UWPCharNum++] = NextChar;      
+         }
+         else
+         {
+            //encode character (%xx hex val)
+            UpdWebPage[UWPCharNum++] = '%';
+            UpdWebPage[UWPCharNum++] = HexChar[NextChar >> 4];
+            UpdWebPage[UWPCharNum++] = HexChar[NextChar & 0x0f];
+         }
+      }
+   }
+   else strcat(UpdWebPage, OrigWebPage);
+ 
    client.stop();
-   Printf_dbg("Connecting to: \"%s\"\n", WebPage);
+   Printf_dbg("Connect: \"%s\"\n", UpdWebPage);
    RxQueueHead = RxQueueTail = 0; //dump the queue
    SendASCIIStrImmediate("\rConnecting to: ");
-   SendASCIIStrImmediate(WebPage);
+   SendASCIIStrImmediate(UpdWebPage);
    SendPETSCIICharImmediate(PETSCIIreturn);
    
    if (client.connect("www.frogfind.com", 80)) //filter all through FrogFind
    {
-      client.printf("GET %s HTTP/1.1\r\n", WebPage);
+      client.printf("GET %s HTTP/1.1\r\n", UpdWebPage);
       client.println("Host: www.frogfind.com");
       client.println("Connection: close");
       client.println();   
       
-	  //Debug: Read full page now to see full size
+	   //Debug: Read full page now to see full size
       //while (client.connected()) 
       //{
       //   while (client.available()) 
@@ -782,29 +817,20 @@ void ProcessBrowserCommand()
    else if(CmdMsg[0] >= '1' && CmdMsg[0] <= '9') //Hyperlink
    {
       uint8_t LinkNum = CmdMsg[0] - '1';  //now zero based
-      if (LinkNum < UsedLinkBuffs) WebConnect(LinkBuf[LinkNum]);
+      if (LinkNum < UsedLinkBuffs) WebConnect("", LinkBuf[LinkNum], false);
+   }
+   else if(CmdMsg[0] == 'u') //URL
+   {
+      CmdMsg++; //past the 'u'
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
+      WebConnect("/read.php?a=http://", CmdMsg, false); //no filter
    }
    else if(CmdMsg[0] == 's') //search
    {
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
       
-      char WebPage[MaxTagSize];
-      strcpy(WebPage, "/?q=");
-      uint16_t WPChar = strlen(WebPage);
-      //replace space with %20, could do this to all special characters, or entire string...
-      //https://www.eso.org/~ndelmott/url_encode.html
-      for(uint16_t CharNum=0; CharNum<=strlen(CmdMsg);CharNum++) //include terminator
-      {
-         if(CmdMsg[CharNum] == ' ') 
-         {
-            WebPage[WPChar++] = '%';
-            WebPage[WPChar++] = '2';
-            WebPage[WPChar++] = '0';
-         }
-         else WebPage[WPChar++] = CmdMsg[CharNum];
-      }
-      WebConnect(WebPage);
+      WebConnect("/?q=", CmdMsg, true); //flag for Char Filter
    }
    else if(PagePaused) //unrecognized or no command, and paused
    {
