@@ -34,7 +34,7 @@ char strVersionNumber[] = "v0.5.2+"; //*VERSION*
 //#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
-#define RAM_ImageSize       (184*1024)
+#define RAM_ImageSize       (160*1024)
 #define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
