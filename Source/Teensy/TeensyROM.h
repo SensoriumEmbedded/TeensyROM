@@ -19,7 +19,7 @@
 
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
-char strVersionNumber[] = "v0.5.2+"; //*VERSION*
+char strVersionNumber[] = "v0.5.3"; //*VERSION*
 
 //Build options:
 //#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build

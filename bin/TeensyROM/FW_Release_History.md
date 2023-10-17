@@ -1,6 +1,22 @@
 
 # FW Release Version history:
 
+### 0.5.3 sub-release 10/16/23
+* Swiftlink updates:
+  * ATBROWSE command to enter Browser mode from teminal program such as CCGMS
+  * Links enumerated per page
+  * www.frogfind.com filterring all pages/searches
+  * PETSCII conversion improvement
+  * Browser Mode Commands implemented
+    * S <Term>: Web Search
+    * U <URL>: Go to URL
+    * #1-9: Jump to link #
+    * Return: Continue when paused
+    * X: Exit Browser mode
+
+* SID Player
+  * Compensate for non-standard SID load address
+
 ### 0.5.2 sub-release 10/10/23
 * SID Player
   * Determining Vid standard (NTSC/PAL) and mains freq (50/60Hz) on start
