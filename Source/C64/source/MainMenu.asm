@@ -20,6 +20,7 @@
 
 ; ********************************   Symbols   ********************************   
    ;!set Debug = 1 ;if defined, skips HW checks/waits 
+   ;!set SidDisp = 1; if defined, displayed speed info when changed and border tweaks durring int.
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
@@ -231,13 +232,17 @@ ReadKeyboard:
 updatespeed
    stx rwRegSIDSpeedHi+IO1Port
    stx $dc05  ; =timer Hi, dc04=timer Low
-   ;;print the full timer value
-   ;lda #ChrReturn
-   ;jsr SendChar
-   ;txa
-   ;jsr PrintHexByte
-   ;lda rwRegSIDSpeedLo+IO1Port
-   ;jsr PrintHexByte
+   
+   !ifdef SidDisp {
+   ;print the full timer value
+   lda #ChrReturn
+   jsr SendChar
+   txa
+   jsr PrintHexByte
+   lda rwRegSIDSpeedLo+IO1Port
+   jsr PrintHexByte
+   }
+   
    jmp WaitForJSorKey  
 
 +  cmp #ChrUpArrow ;Up directory

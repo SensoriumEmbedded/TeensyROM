@@ -97,7 +97,7 @@ MsgSettingsMenu2SpaceRet:
    !tx 0 
 MsgSettingsMenu3:
    !tx ChrReturn, ChrReturn, ChrReturn, ChrReturn, MenuMiscColor 
-   !tx "    2023 by Travis Smith @ Sensorium", ChrReturn
+   !tx "      2023 by Travis S @ Sensorium", ChrReturn
    !tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
    !tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0

@@ -405,8 +405,8 @@ SIDMusicOff:  ;stop SID player interrupt
    lda $dc0d  ;CIA int ctl
    cli 
    jsr SIDVoicesOff
-   ;lda #BorderColor
-   ;sta BorderColorReg   ;restore border in case we ended in mid region
+   lda #BorderColor
+   sta BorderColorReg   ;restore border in case we ended in mid region
    rts
 
 SIDVoicesOff:
@@ -418,7 +418,9 @@ SIDVoicesOff:
    
 irqCIATimer:
    lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
-   ;inc BorderColorReg ;tweak display border
+   !ifdef SidDisp {
+   inc BorderColorReg ;tweak display border
+   }
    lda #$35; Disable Kernal and BASIC ROMs
    ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
    sta $01
@@ -426,7 +428,9 @@ smcSIDPlay
    jsr $fffe          ;Play the music, self modifying
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
-   ;dec BorderColorReg ;tweak display border
+   !ifdef SidDisp {
+   dec BorderColorReg ;tweak display border
+   }
    jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
 
 ;SIDMusicOn:  ;Start SID player Raster based interrupt
