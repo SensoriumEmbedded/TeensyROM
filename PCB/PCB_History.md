@@ -1,5 +1,5 @@
 # PCB/Design History:
-## Firmware will work with all PCB versions, but recommend always building with the latest
+## Firmware will work with PCB versions 0.2 and higher, recommend always building with the latest
 ### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/m7YLgscM)**
 
 ## **v0.2b: Minor Update released July 1, 2023**
@@ -14,7 +14,7 @@
     * Ethernet port connector
     * USB host port connector
   * Other Improvements/Notes:
-    * Corrected: Data bits 2 and 1 swapped in v0.1 (worked around in SW)
+    * Corrected: Data bits 2 and 1 swapped in v0.1
     * shield connections:  USB is GND, Eth shorted to gnd via JP1
     * 0805 shapes:  left them the same, R's accomodate 0603s, prob not caps
     * Teensy symbol: Removed unused pins, made LAN header holes larger
@@ -29,12 +29,12 @@
     * Text size/vectors same for ref-des
 
 ## **v0.1: Released January 29, 2023**
-![TeensyROM v0.1](/media/v0.1/v0.1.jpg)   First PCB prototype, fully tested and working with released code using "#define HWv0_1_PCB" build option
+![TeensyROM v0.1](/media/v0.1/v0.1.jpg)   First PCB prototype, no longer supported.
    No USB Host or Ethernet connectors, dongles directly from Teensy needed for these.  This makes this board slightly smaller.
 
 ## **v0.0: Early January 23**
 ![TeensyROM v0.0](/media/v0.0/v0.0.jpg)
-Protoboard proof of concept.  It worked in proving the basic concept and allowed PCB design with confidence. 
+Protoboard proof of concept.  It worked well to prove out the basic architecture+FW, and allowed PCB design with confidence. 
 
 <br>
 

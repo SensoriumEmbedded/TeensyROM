@@ -19,12 +19,9 @@
 
 #include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
-char strVersionNumber[] = "v0.5.3"; //*VERSION*
+char strVersionNumber[] = "v0.5.3+"; //*VERSION*
 
-//Build options:
-//#define HWv0_1_PCB  //work around swapped data bits in v0.1 PCA build
-
-//enable debug messaging at your own risk, can cause emulation interference/fails
+//Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 //#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 //#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
@@ -171,9 +168,6 @@ uint32_t nS_VICStart  =   210;  //delay from Phi2 falling to look for ROMH.  Too
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
    DataBufEnable; 
-   #ifdef HWv0_1_PCB
-     Data= (Data&0xf9) | ((Data & 0x02)<<1) | ((Data & 0x04)>>1);  //Workaround: Data bits swapped on v0.1 schematic!
-   #endif
    register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
@@ -195,12 +189,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
    register uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
-   #ifdef HWv0_1_PCB
-      DataIn = ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
-      return (DataIn&0xf9) | ((DataIn & 0x02)<<1) | ((DataIn & 0x04)>>1);   //Workaround: Data bits swapped on v0.1 schematic!
-   #else
-      return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
-   #endif
+   return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
 
 enum Phi2ISRStates
