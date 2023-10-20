@@ -42,12 +42,16 @@ extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
 extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
 void AddBrowserCommandsToRxQueue();
 
-#define NumLinkBuffs  9
+#define NumPageLinkBuffs  9
+#define NumPrevLinkBuffs  8
 
 uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
 char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
-char* LinkBuf[NumLinkBuffs]; //hold links from tags for user selection in browser
-uint8_t  UsedLinkBuffs;   //how many LinkBuf elements have been Used
+char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
+char* PrevLinkBuff[NumPrevLinkBuffs]; //For browse previous
+
+uint8_t  PrevLinkBuffNum;   //where we are in the link history queue
+uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
 uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
 uint32_t PageCharsReceived;
@@ -255,10 +259,10 @@ void CheckSendRxQueue()
             else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
             else if(strncmp(TagBuf, "a href=", 7)==0) 
             { //start of hyperlink text, save hyperlink
-               Printf_dbg("LinkTag: %s\n", TagBuf);
+               //Printf_dbg("LinkTag: %s\n", TagBuf);
                SendPETSCIICharImmediate(PETSCIIpurple); 
                SendPETSCIICharImmediate(PETSCIIrvsOn); 
-               if (UsedLinkBuffs < NumLinkBuffs)
+               if (UsedPageLinkBuffs < NumPageLinkBuffs)
                {
                   for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip "a href=\""
                   { //terminate at first 
@@ -267,10 +271,10 @@ void CheckSendRxQueue()
                         TagBuf[CharNum]=='\"' ||
                         TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
                   }
-                  strcpy(LinkBuf[UsedLinkBuffs], TagBuf+8); // and from beginning
+                  strcpy(PageLinkBuff[UsedPageLinkBuffs], TagBuf+8); // and from beginning
                   
-                  Printf_dbg("Link #%d: %s\n", UsedLinkBuffs+1, LinkBuf[UsedLinkBuffs]);
-                  SendPETSCIICharImmediate(ToPETSCII('1' + UsedLinkBuffs++));
+                  Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
+                  SendPETSCIICharImmediate(ToPETSCII('1' + UsedPageLinkBuffs++));
                }
                else SendPETSCIICharImmediate('*');
                
@@ -288,7 +292,7 @@ void CheckSendRxQueue()
             else if(strcmp(TagBuf, "/form")==0)
             { //OK as a standard?   FrogFind specific....
                ToSend = PETSCIIclearScreen;  // comment these two lines out to 
-               UsedLinkBuffs = 0;            //  scroll header instead of clear
+               UsedPageLinkBuffs = 0;            //  scroll header instead of clear
                
                PageCharsReceived = 0;
                PagePaused = false;
@@ -322,7 +326,7 @@ void AddPETSCIICharToRxQueue(uint8_t c)
 {
   if (RxQueueUsed >= RxQueueSize-1)
   {
-     Serial.println("RxBuff Overflow!");
+     Printf_dbg("RxBuff Overflow!");
      //RxQueueHead = RxQueueTail = 0;
      ////just in case...
      //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
@@ -331,7 +335,6 @@ void AddPETSCIICharToRxQueue(uint8_t c)
   }
   RxQueue[RxQueueHead++] = c; 
   if (RxQueueHead == RxQueueSize) RxQueueHead = 0;
-  //Printf_dbg("Push H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
 }
 
 void AddStrToRxQueue(const char* s)
@@ -387,7 +390,7 @@ void AddBrowserCommandsToRxQueue()
    SendASCIIStrImmediate("Browser Commands:\r");
    SendASCIIStrImmediate("S[Term]: Search    [Link#]: Go to link\r");
    SendASCIIStrImmediate(" U[URL]: Go to URL       X: Exit\r");
-   SendASCIIStrImmediate(" Return: Continue from pause\r");
+   SendASCIIStrImmediate(" Return: Continue        B: Back\r");
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
@@ -450,7 +453,7 @@ void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 void AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
    AddBrowserCommandsToRxQueue();
-   UsedLinkBuffs = 0;
+   UsedPageLinkBuffs = 0;
    BrowserMode = true;
 }
 
@@ -740,7 +743,8 @@ void ProcessATCommand()
 
 void WebConnect(const char *PrePend, const char *OrigWebPage, bool DoFilter)
 {
-   char UpdWebPage[MaxTagSize*3]; //space for all encoded
+   char UpdWebPage[MaxTagSize];
+   char ServerName[] = "www.frogfind.com";
    
    strcpy(UpdWebPage, PrePend);
    uint16_t UWPCharNum = strlen(UpdWebPage);
@@ -772,6 +776,9 @@ void WebConnect(const char *PrePend, const char *OrigWebPage, bool DoFilter)
    }
    else strcat(UpdWebPage, OrigWebPage);
  
+   strcpy(PrevLinkBuff[PrevLinkBuffNum], UpdWebPage); //overwrite previous entry
+   if (++PrevLinkBuffNum == NumPrevLinkBuffs) PrevLinkBuffNum = 0; //wrap around top
+ 
    client.stop();
    Printf_dbg("Connect: \"%s\"\n", UpdWebPage);
    RxQueueHead = RxQueueTail = 0; //dump the queue
@@ -779,13 +786,12 @@ void WebConnect(const char *PrePend, const char *OrigWebPage, bool DoFilter)
    SendASCIIStrImmediate(UpdWebPage);
    SendPETSCIICharImmediate(PETSCIIreturn);
    
-   if (client.connect("www.frogfind.com", 80)) //filter all through FrogFind
+   if (client.connect(ServerName, 80)) //filter all through FrogFind
    {
-      client.printf("GET %s HTTP/1.1\r\n", UpdWebPage);
-      client.println("Host: www.frogfind.com");
-      client.println("Connection: close");
-      client.println();   
+      client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
+         UpdWebPage, ServerName);
       
+      //download option will go here...
 	   //Debug: Read full page now to see full size
       //while (client.connected()) 
       //{
@@ -807,17 +813,25 @@ void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
    
-   if(strcmp(CmdMsg, "x") ==0)
+   if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
    {
       client.stop();
       BrowserMode = false;
       RxQueueHead = RxQueueTail = 0; //dump the queue
       AddASCIIStrToRxQueueLN("\rBrowser mode exit");
    }
+   else if(strcmp(CmdMsg, "b") ==0) // Back/previous web page
+   {
+      if (PrevLinkBuffNum<2) PrevLinkBuffNum += NumPrevLinkBuffs-2; //wrap around bottom
+      else PrevLinkBuffNum -= 2;
+      
+      Printf_dbg("PrevLink# %d\n", PrevLinkBuffNum);
+      WebConnect("", PrevLinkBuff[PrevLinkBuffNum], false); //no filter
+   }
    else if(CmdMsg[0] >= '1' && CmdMsg[0] <= '9') //Hyperlink
    {
       uint8_t LinkNum = CmdMsg[0] - '1';  //now zero based
-      if (LinkNum < UsedLinkBuffs) WebConnect("", LinkBuf[LinkNum], false);
+      if (LinkNum < UsedPageLinkBuffs) WebConnect("", PageLinkBuff[LinkNum], false);
    }
    else if(CmdMsg[0] == 'u') //URL
    {
@@ -833,7 +847,7 @@ void ProcessBrowserCommand()
       WebConnect("/?q=", CmdMsg, true); //flag for Char Filter
    }
    else if(PagePaused) //unrecognized or no command, and paused
-   {
+   {  //un-paused
       SendPETSCIICharImmediate(PETSCIIcursorUp); //Cursor up to overwrite prompt & scroll on
       //SendPETSCIICharImmediate(PETSCIIclearScreen); //clear screen for next page
    }
@@ -841,7 +855,7 @@ void ProcessBrowserCommand()
    SendPETSCIICharImmediate(PETSCIIwhite); 
    PageCharsReceived = 0; //un-pause on any command, or just return key
    PagePaused = false;
-   UsedLinkBuffs = 0;
+   UsedPageLinkBuffs = 0;
 }
 
 //_____________________________________Handlers_____________________________________________________
@@ -855,6 +869,7 @@ void InitHndlr_SwiftLink()
    CycleCountdown=0;
    PlusCount=0;
    PageCharsReceived = 0;
+   PrevLinkBuffNum = 0;
    NMIassertMicros = 0;
    PlusCount=0;
    ConnectedToHost = false;
@@ -865,10 +880,16 @@ void InitHndlr_SwiftLink()
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
    RxQueue = (uint8_t*)malloc(RxQueueSize);
    TxMsg = (char*)malloc(TxMsgMaxSize);
-   for(uint8_t cnt=0; cnt<NumLinkBuffs; cnt++) LinkBuf[cnt] = (char*)malloc(MaxTagSize);
+   for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) PageLinkBuff[cnt] = (char*)malloc(MaxTagSize);
+   for(uint8_t cnt=0; cnt<NumPrevLinkBuffs; cnt++) 
+   {
+      PrevLinkBuff[cnt] = (char*)malloc(MaxTagSize);
+      strcpy(PrevLinkBuff[cnt], "/read.php?a=http://github.com/SensoriumEmbedded/TeensyROM");
+      //strcpy(PrevLinkBuff[cnt], "/read.php?a=http://SensoriumEmbedded.com/TeensyROM");
+      //strcpy(PrevLinkBuff[cnt], "/?q=TeensyROM");
+   }
    randomSeed(ARM_DWT_CYCCNT);
 }   
-
 
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 {
@@ -1024,7 +1045,7 @@ void PollingHndlr_SwiftLink()
          PagePaused = true;
          SendPETSCIICharImmediate(PETSCIIrvsOn);
          SendPETSCIICharImmediate(PETSCIIpurple);
-         SendASCIIStrImmediate("\rPause (#,S[],U[],X,Ret)");
+         SendASCIIStrImmediate("\rPause (#,S[],U[],X,B,Ret)");
          SendPETSCIICharImmediate(PETSCIIrvsOff);
          SendPETSCIICharImmediate(PETSCIIlightGreen);
       }
