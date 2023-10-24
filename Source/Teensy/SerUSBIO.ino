@@ -23,7 +23,7 @@ void   getFreeITCM();
 #define AckToken       0x64CC
 #define FailToken      0x9B7F
 
-void ServiceSerial()
+FLASHMEM void ServiceSerial()
 {
    uint8_t inByte = Serial.read();
    switch (inByte)
@@ -255,7 +255,7 @@ void ServiceSerial()
    }
 }
 
-void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
+FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
 {
    *TotalSize += SourceMenu.Size;
    Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
@@ -263,7 +263,7 @@ void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
       Serial.printf("%s is using RAM!!!\n", SourceMenu.Name);
 }
 
-void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
+FLASHMEM void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
 {
    char inStr[NumDigits+1];
    
@@ -281,7 +281,7 @@ void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
    Serial.printf("\nVal Set to: %d\n\n", *SetInt);
 }
 
-void PrintDebugLog()
+FLASHMEM void PrintDebugLog()
 {
    bool LogDatavalid = false;
    
@@ -351,7 +351,7 @@ void PrintDebugLog()
    BigBufCount = 0;
 }
 
-void ReceiveFile()
+FLASHMEM void ReceiveFile()
 { 
    //   App: SendFileToken 0x64AA
    //Teensy: AckToken 0x64CC
@@ -449,7 +449,7 @@ void ReceiveFile()
    SendU16(AckToken); //success!
 }
 
-bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
+FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
 {
    *InVal=0;
    for(int8_t ByteNum=NumBytes-1; ByteNum>=0; ByteNum--)
@@ -461,13 +461,13 @@ bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
    return true;
 }
 
-void SendU16(uint16_t SendVal)
+FLASHMEM void SendU16(uint16_t SendVal)
 {
    Serial.write((uint8_t)(SendVal & 0xff));
    Serial.write((uint8_t)((SendVal >> 8) & 0xff));
 }
    
-bool SerialAvailabeTimeout()
+FLASHMEM bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
    
@@ -495,7 +495,7 @@ uint32_t RAM2BytesFree()
   extern "C" uint8_t external_psram_size;
 #endif
   
-void memInfo () 
+FLASHMEM void memInfo () 
 {
   constexpr auto RAM_BASE   = 0x2020'0000;
   constexpr auto RAM_SIZE   = 512 << 10;
