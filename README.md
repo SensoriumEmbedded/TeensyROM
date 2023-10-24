@@ -38,6 +38,7 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
   * Teensy Internal Flash Memory
   * Transfer directly from PC
     * C# Windows app included
+  * See file support details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#loading-programs-and-emulating-roms)
 ### **MIDI in/out via USB Host connection:** 
   * Play your SID with a USB MIDI keyboard!
   * Use with popular software such as **Cynthcart, Station64** etc, or the included MIDI2SID app
