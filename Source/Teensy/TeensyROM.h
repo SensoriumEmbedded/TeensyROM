@@ -17,8 +17,6 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-
 char strVersionNumber[] = "v0.5.3+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
@@ -31,23 +29,23 @@ char strVersionNumber[] = "v0.5.3+"; //*VERSION*
 //#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
-#define RAM_ImageSize       (160*1024)
+#include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
-#ifdef DbgMsgs_IO
+#ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize
    #define Printf_dbg Serial.printf
-   
-   //Debug mode background music SID, stored in flash (PROGMEM):
+   #define RAM_ImageSize       (160*1024)
    #include "SIDs\Echoes.sid.h"
    #define SIDforBackground     Echoes_sid
-#else
+   
+#else //Normal mode: Specific background SID, maximize RAM_ImageSize
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
-
-   //Normal mode background music SID, stored in flash (PROGMEM):
+   #define RAM_ImageSize       (184*1024)
    #include "SIDs\SleepDirt_norm_ntsc_1000_6581.sid.h"
    #define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
+   
 #endif
 
 #define IOTLRead            0x10000

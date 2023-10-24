@@ -104,7 +104,7 @@ uint32_t LastTxMillis = millis();
 
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
 
-bool EthernetInit()
+FLASHMEM bool EthernetInit()
 {
    uint32_t beginWait = millis();
    uint8_t  mac[6];
@@ -149,7 +149,7 @@ bool EthernetInit()
    return retval;
 }
    
-void SetEthEEPDefaults()
+FLASHMEM void SetEthEEPDefaults()
 {
    EEPROM.write(eepAdDHCPEnabled, 1); //DHCP enabled
    uint8_t buf[6]={0xBE, 0x0C, 0x64, 0xC0, 0xFF, 0xEE};
@@ -354,32 +354,32 @@ void AddASCIIStrToRxQueue(const char* s)
    }  
 }
 
-void AddASCIIStrToRxQueueLN(const char* s)
+FLASHMEM void AddASCIIStrToRxQueueLN(const char* s)
 {
    AddASCIIStrToRxQueue(s);
    AddASCIIStrToRxQueue("\r");
 }
 
-void AddIPaddrToRxQueueLN(IPAddress ip)
+FLASHMEM void AddIPaddrToRxQueueLN(IPAddress ip)
 {
    char Buf[50];
    sprintf(Buf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
    AddASCIIStrToRxQueueLN(Buf);
 }
 
-void AddMACToRxQueueLN(uint8_t* mac)
+FLASHMEM void AddMACToRxQueueLN(uint8_t* mac)
 {
    char Buf[50];
    sprintf(Buf, " MAC Address: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
    AddASCIIStrToRxQueueLN(Buf);
 }
 
-void AddInvalidFormatToRxQueueLN()
+FLASHMEM void AddInvalidFormatToRxQueueLN()
 {
    AddASCIIStrToRxQueueLN("Invalid Format");
 }
 
-void AddBrowserCommandsToRxQueue()
+FLASHMEM void AddBrowserCommandsToRxQueue()
 {
    PageCharsReceived = 0;
    PagePaused = false;
@@ -394,19 +394,19 @@ void AddBrowserCommandsToRxQueue()
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
-void AddUpdatedToRxQueueLN()
+FLASHMEM void AddUpdatedToRxQueueLN()
 {
    AddASCIIStrToRxQueueLN("Updated");
 }
 
-void AddDHCPEnDisToRxQueueLN()
+FLASHMEM void AddDHCPEnDisToRxQueueLN()
 {
    AddASCIIStrToRxQueue(" DHCP: ");
    if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueueLN("Enabled");
    else AddASCIIStrToRxQueueLN("Disabled");
 }
   
-void AddDHCPTimeoutToRxQueueLN()
+FLASHMEM void AddDHCPTimeoutToRxQueueLN()
 {
    uint16_t invalU16;
    char buf[50];
@@ -415,7 +415,7 @@ void AddDHCPTimeoutToRxQueueLN()
    AddASCIIStrToRxQueueLN(buf);
 }
   
-void AddDHCPRespTOToRxQueueLN()
+FLASHMEM void AddDHCPRespTOToRxQueueLN()
 {
    uint16_t invalU16;
    char buf[50];
@@ -424,7 +424,7 @@ void AddDHCPRespTOToRxQueueLN()
    AddASCIIStrToRxQueueLN(buf);
 } 
   
-void StrToIPToEE(char* Arg, uint8_t EEPaddress)
+FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 {
    uint8_t octnum =1;
    IPAddress ip;   
@@ -450,14 +450,14 @@ void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 //_____________________________________AT Commands_____________________________________________________
 
-void AT_BROWSE(char* CmdArg)
+FLASHMEM void AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
    AddBrowserCommandsToRxQueue();
    UsedPageLinkBuffs = 0;
    BrowserMode = true;
 }
 
-void AT_DT(char* CmdArg)
+FLASHMEM void AT_DT(char* CmdArg)
 {  //ATDT<HostName>:<Port>   Connect telnet
    uint16_t  Port = 6400; //default if not defined
    char* Delim = strstr(CmdArg, ":");
@@ -480,7 +480,7 @@ void AT_DT(char* CmdArg)
    else AddASCIIStrToRxQueueLN("Failed!");
 }
 
-void AT_C(char* CmdArg)
+FLASHMEM void AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
    AddASCIIStrToRxQueue("Connect Ethernet ");
    if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueue("via DHCP...");
@@ -515,7 +515,7 @@ void AT_C(char* CmdArg)
    }
 }
 
-void AT_S(char* CmdArg)
+FLASHMEM void AT_S(char* CmdArg)
 {
    uint32_t ip;
    uint8_t  mac[6];
@@ -550,7 +550,7 @@ void AT_S(char* CmdArg)
 
 }
 
-void AT_RNDMAC(char* CmdArg)
+FLASHMEM void AT_RNDMAC(char* CmdArg)
 {
    uint8_t mac[6];   
    
@@ -563,7 +563,7 @@ void AT_RNDMAC(char* CmdArg)
    AddMACToRxQueueLN(mac);
 }
 
-void AT_MAC(char* CmdArg)
+FLASHMEM void AT_MAC(char* CmdArg)
 {
    uint8_t octnum =1;
    uint8_t mac[6];   
@@ -585,7 +585,7 @@ void AT_MAC(char* CmdArg)
    AddMACToRxQueueLN(mac);
 }
 
-void AT_DHCP(char* CmdArg)
+FLASHMEM void AT_DHCP(char* CmdArg)
 {
    if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
    {
@@ -597,7 +597,7 @@ void AT_DHCP(char* CmdArg)
    AddDHCPEnDisToRxQueueLN();
 }
 
-void AT_DHCPTIME(char* CmdArg)
+FLASHMEM void AT_DHCPTIME(char* CmdArg)
 {
    uint16_t NewTime = atol(CmdArg);
    if(NewTime==0)
@@ -610,7 +610,7 @@ void AT_DHCPTIME(char* CmdArg)
    AddDHCPTimeoutToRxQueueLN();
 }
 
-void AT_DHCPRESP(char* CmdArg)
+FLASHMEM void AT_DHCPRESP(char* CmdArg)
 {
    uint16_t NewTime = atol(CmdArg);
    if(NewTime==0)
@@ -623,38 +623,38 @@ void AT_DHCPRESP(char* CmdArg)
    AddDHCPRespTOToRxQueueLN();
 }
 
-void AT_MYIP(char* CmdArg)
+FLASHMEM void AT_MYIP(char* CmdArg)
 {
    AddASCIIStrToRxQueue("My");
    StrToIPToEE(CmdArg, eepAdMyIP);
 }
 
-void AT_DNSIP(char* CmdArg)
+FLASHMEM void AT_DNSIP(char* CmdArg)
 {
    AddASCIIStrToRxQueue("DNS");
    StrToIPToEE(CmdArg, eepAdDNSIP);
 }
 
-void AT_GTWYIP(char* CmdArg)
+FLASHMEM void AT_GTWYIP(char* CmdArg)
 {
    AddASCIIStrToRxQueue("Gateway");
    StrToIPToEE(CmdArg, eepAdGtwyIP);
 }
 
-void AT_MASKIP(char* CmdArg)
+FLASHMEM void AT_MASKIP(char* CmdArg)
 {
    AddASCIIStrToRxQueue("Subnet Mask");
    StrToIPToEE(CmdArg, eepAdMaskIP);
 }
 
-void AT_DEFAULTS(char* CmdArg)
+FLASHMEM void AT_DEFAULTS(char* CmdArg)
 {
    AddUpdatedToRxQueueLN();
    SetEthEEPDefaults();
    AT_S(NULL);
 }
 
-void AT_HELP(char* CmdArg)
+FLASHMEM void AT_HELP(char* CmdArg)
 {  //                      1234567890123456789012345678901234567890
    AddASCIIStrToRxQueueLN("General AT Commands:");
    AddASCIIStrToRxQueueLN(" AT?   This help menu");
@@ -860,7 +860,7 @@ void ProcessBrowserCommand()
 
 //_____________________________________Handlers_____________________________________________________
 
-void InitHndlr_SwiftLink()
+FLASHMEM void InitHndlr_SwiftLink()
 {
    EthernetInit();
    SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
