@@ -37,42 +37,23 @@ stcIOHandlers IOHndlr_SwiftLink =
   &CycleHndlr_SwiftLink,    //called at the end of EVERY c64 cycle
 };
 
-extern volatile uint32_t CycleCountdown;
-extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
-extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
-void AddBrowserCommandsToRxQueue();
 
-#define NumPageLinkBuffs  9
-#define NumPrevLinkBuffs  8
-
-uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
-char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
-char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
-char* PrevLinkBuff[NumPrevLinkBuffs]; //For browse previous
-
-uint8_t  PrevLinkBuffNum;   //where we are in the link history queue
-uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
-uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
-bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
-uint32_t PageCharsReceived;
-uint32_t NMIassertMicros;
-volatile uint8_t SwiftTxBuf, SwiftRxBuf;
-volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
-uint8_t PlusCount;
-uint32_t LastTxMillis = millis();
-
-#define MaxTagSize         300
+#define NumPageLinkBuffs   9
+#define NumPrevLinkBuffs   8
+#define MaxURLHostSize     100
+#define MaxURLPathSize     200
+#define MaxTagSize         (MaxURLHostSize+MaxURLPathSize)
 #define TxMsgMaxSize       128
-#define RxQueueSize       (1024*320) 
-#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
+#define RxQueueSize        (1024*320) 
+#define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
 #define NMITimeoutnS       300   //if Rx data not read within this time, deassert NMI anyway
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
-#define IORegSwiftData    0x00   // Swift Emulation Data Reg
-#define IORegSwiftStatus  0x01   // Swift Emulation Status Reg
-#define IORegSwiftCommand 0x02   // Swift Emulation Command Reg
-#define IORegSwiftControl 0x03   // Swift Emulation Control Reg
+#define IORegSwiftData     0x00   // Swift Emulation Data Reg
+#define IORegSwiftStatus   0x01   // Swift Emulation Status Reg
+#define IORegSwiftCommand  0x02   // Swift Emulation Command Reg
+#define IORegSwiftControl  0x03   // Swift Emulation Control Reg
 
 //status reg flags
 #define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
@@ -102,7 +83,42 @@ uint32_t LastTxMillis = millis();
 #define PETSCIIclearScreen 0x93
 #define PETSCIIcursorUp    0x91
 
+//WebConnect argument actions
+#define wc_Filter          0x01 //filter URL through FrogFind
+#define wc_Raw             0x02 //Use direct/raw URL
+#define wc_Download        0x03 //download URL to SD/USB
+#define wc_Search          0x04 //Search for term (incl filer output)
+
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
+
+struct stcURLParse
+{
+   char host[MaxURLHostSize];
+   uint16_t port;
+   char path[MaxURLPathSize];
+};
+
+extern volatile uint32_t CycleCountdown;
+extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
+extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
+void AddBrowserCommandsToRxQueue();
+
+uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
+char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
+char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
+char* PrevLinkBuff[NumPrevLinkBuffs]; //For browse previous
+
+uint8_t  PrevLinkBuffNum;   //where we are in the link history queue
+uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
+uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
+bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
+uint32_t PageCharsReceived;
+uint32_t NMIassertMicros;
+volatile uint8_t SwiftTxBuf, SwiftRxBuf;
+volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+uint8_t PlusCount;
+uint32_t LastTxMillis = millis();
+
 
 FLASHMEM bool EthernetInit()
 {
@@ -741,40 +757,114 @@ void ProcessATCommand()
    AddASCIIStrToRxQueueLN(TxMsg);
 }
 
-void WebConnect(const char *PrePend, const char *OrigWebPage, bool DoFilter)
+void ParseURL(const char * URL, stcURLParse &URLParse)
+{
+   //https://www.w3.org/Library/src/HTParse.html
+   //https://en.wikipedia.org/wiki/URL
+   //https://stackoverflow.com/questions/726122/best-ways-of-parsing-a-url-using-c
+   //https://gist.github.com/j3j5/8336b0224167636bed462950400ff2df       Test URLs
+   //the format of a URI is as follows: "ACCESS :// HOST : PORT / PATH # ANCHOR"
+   
+   URLParse.host[0] = 0;
+   URLParse.port = 80;
+   URLParse.path[0] = 0;
+   
+   //Find/skip access ID
+   if(strstr(URL, "http://") != URL && strstr(URL, "https://") != URL) //no access ID, relative path only
+   {
+      strcpy(URLParse.path, URL);
+      //return; //early, we're done...
+   }
+   else
+   {
+      const char * ptrServerName = strstr(URL, "://")+3; //move past the access ID
+      char * ptrPort = strstr(ptrServerName, ":");  //find port identifier
+      char * ptrPath = strstr(ptrServerName, "/");  //find path identifier
+      
+      //need to check for userid? http://userid@example.com:8080/
+      
+      //finalize server name and update port, if present
+      if (ptrPort != NULL) //there's a port ID
+      {
+         URLParse.port = atoi(ptrPort+1);  //skip the ":"
+         strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
+         URLParse.host[ptrPort-ptrServerName]=0; //terminate it
+      }
+      else if (ptrPath != NULL)  //there's a path
+      {
+         strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
+         URLParse.host[ptrPath-ptrServerName]=0; //terminate it
+      }
+      else strcpy(URLParse.host, ptrServerName);  //no port or path
+   
+      //copy path, if present
+      if (ptrPath != NULL) 
+      {
+         strcpy(URLParse.path, ptrPath+1); //skip the "/"
+      }
+   }
+
+   Serial.printf("\nOrig  = \"%s\"\n", URL);
+   Serial.printf(" serv = \"%s\"\n", URLParse.host);
+   Serial.printf(" port = %d\n", URLParse.port);
+   Serial.printf(" path = \"%s\"\n", URLParse.path);
+   //Printf_dbg
+} 
+
+void WebConnect(const char *OrigWebPage, uint8_t Action)
 {
    char UpdWebPage[MaxTagSize];
    char ServerName[] = "www.frogfind.com";
-   
-   strcpy(UpdWebPage, PrePend);
-   uint16_t UWPCharNum = strlen(UpdWebPage);
 
-   if (DoFilter)
+   switch(Action)
    {
-      char HexChar[16] = "01234567890abcdef";
+      case wc_Filter:
+         strcpy(UpdWebPage, "/read.php?a=http://");
+         strcat(UpdWebPage, OrigWebPage);
+         break;
+         
+      case wc_Raw:
+         strcpy(UpdWebPage, OrigWebPage);
+         break;
+         
+      case wc_Download:
       
-      ////https://www.eso.org/~ndelmott/url_encode.html
-      for(uint16_t CharNum=0; CharNum <= strlen(OrigWebPage); CharNum++) //include terminator
+         break;
+         
+      case wc_Search:
       {
-         //already lower case(?)
-         uint8_t NextChar = OrigWebPage[CharNum];
-         if((NextChar >= 'a' && NextChar <= 'z') ||
-            (NextChar >= 'A' && NextChar <= 'Z') ||
-            (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
-             NextChar == 0) 
-         {      
-            UpdWebPage[UWPCharNum++] = NextChar;      
-         }
-         else
+         char HexChar[] = "01234567890abcdef";
+         
+         strcpy(UpdWebPage, "/?q=");
+         uint16_t UWPCharNum = strlen(UpdWebPage);
+         
+         //encode special chars:
+         //https://www.eso.org/~ndelmott/url_encode.html
+         for(uint16_t CharNum=0; CharNum <= strlen(OrigWebPage); CharNum++) //include terminator
          {
-            //encode character (%xx hex val)
-            UpdWebPage[UWPCharNum++] = '%';
-            UpdWebPage[UWPCharNum++] = HexChar[NextChar >> 4];
-            UpdWebPage[UWPCharNum++] = HexChar[NextChar & 0x0f];
+            //already lower case(?)
+            uint8_t NextChar = OrigWebPage[CharNum];
+            if((NextChar >= 'a' && NextChar <= 'z') ||
+               (NextChar >= 'A' && NextChar <= 'Z') ||
+               (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
+                NextChar == 0)                          //include terminator
+            {      
+               UpdWebPage[UWPCharNum++] = NextChar;      
+            }
+            else
+            {
+               //encode character (%xx hex val)
+               UpdWebPage[UWPCharNum++] = '%';
+               UpdWebPage[UWPCharNum++] = HexChar[NextChar >> 4];
+               UpdWebPage[UWPCharNum++] = HexChar[NextChar & 0x0f];
+            }
          }
       }
+      
+         break;
+         
    }
-   else strcat(UpdWebPage, OrigWebPage);
+
  
    strcpy(PrevLinkBuff[PrevLinkBuffNum], UpdWebPage); //overwrite previous entry
    if (++PrevLinkBuffNum == NumPrevLinkBuffs) PrevLinkBuffNum = 0; //wrap around top
@@ -826,25 +916,25 @@ void ProcessBrowserCommand()
       else PrevLinkBuffNum -= 2;
       
       Printf_dbg("PrevLink# %d\n", PrevLinkBuffNum);
-      WebConnect("", PrevLinkBuff[PrevLinkBuffNum], false); //no filter
+      WebConnect(PrevLinkBuff[PrevLinkBuffNum], wc_Raw);
    }
    else if(CmdMsg[0] >= '1' && CmdMsg[0] <= '9') //Hyperlink
    {
       uint8_t LinkNum = CmdMsg[0] - '1';  //now zero based
-      if (LinkNum < UsedPageLinkBuffs) WebConnect("", PageLinkBuff[LinkNum], false);
+      if (LinkNum < UsedPageLinkBuffs) WebConnect(PageLinkBuff[LinkNum], wc_Raw);
    }
    else if(CmdMsg[0] == 'u') //URL
    {
       CmdMsg++; //past the 'u'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
-      WebConnect("/read.php?a=http://", CmdMsg, false); //no filter
+      WebConnect(CmdMsg, wc_Filter);
    }
    else if(CmdMsg[0] == 's') //search
    {
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
       
-      WebConnect("/?q=", CmdMsg, true); //flag for Char Filter
+      WebConnect(CmdMsg, wc_Search);
    }
    else if(PagePaused) //unrecognized or no command, and paused
    {  //un-paused
