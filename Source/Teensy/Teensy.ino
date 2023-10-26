@@ -91,7 +91,7 @@ void setup()
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 
    for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) PageLinkBuff[cnt] = NULL; //initialize page link buffer for swiftlink browser mode
-   for(uint8_t cnt=0; cnt<NumPrevLinkBuffs; cnt++) PrevLinkBuff[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
+   for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildCPUInfoStr();
@@ -142,7 +142,7 @@ void SetUpMainMenuROM()
    
    FreeCrtChips();
    for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) {free(PageLinkBuff[cnt]); PageLinkBuff[cnt]=NULL;}
-   for(uint8_t cnt=0; cnt<NumPrevLinkBuffs; cnt++) {free(PrevLinkBuff[cnt]); PrevLinkBuff[cnt]=NULL;}
+   for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) {free(PrevURLQueue[cnt]); PrevURLQueue[cnt]=NULL;}
    free(RxQueue); RxQueue = NULL;
    free(TxMsg); TxMsg = NULL;   
    RedirectEmptyDriveDirMenu();
