@@ -38,7 +38,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 };
 
 
-#define NumPageLinkBuffs   9
+#define NumPageLinkBuffs   99
 #define NumPrevURLQueues   8
 #define MaxURLHostSize     100
 #define MaxURLPathSize     200
@@ -77,12 +77,15 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define PETSCIIpink        0x96
 #define PETSCIIlightGreen  0x99
 #define PETSCIIdarkGrey    0x97
+#define PETSCIIgrey        0x98
 
 #define PETSCIIreturn      0x0d
 #define PETSCIIrvsOn       0x12
 #define PETSCIIrvsOff      0x92
 #define PETSCIIclearScreen 0x93
 #define PETSCIIcursorUp    0x91
+#define PETSCIIhorizBar    0x60
+#define PETSCIIspace       0x20
 
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
 
@@ -234,6 +237,88 @@ void SendASCIIStrImmediate(const char* CharsToSend)
       SendPETSCIICharImmediate(ToPETSCII(CharsToSend[CharNum]));
 }
 
+void ParseHTMLTag(uint8_t &ToSend)
+{ //retrieve and interpret HTML Tag
+   char TagBuf[MaxTagSize];
+   uint16_t BufCnt = 0;
+   ToSend = 0; //default to no char if not set below
+   
+   //pull tag from queue until >, queue empty, or buff max size
+   while (RxQueueUsed > 0)
+   {
+      TagBuf[BufCnt] = PullFromRxQueue();
+      if(TagBuf[BufCnt] == '>') break;
+      if(++BufCnt == MaxTagSize-1) break;
+   }
+   TagBuf[BufCnt] = 0;  //terminate it
+
+   //execute tag, if needed
+   if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
+   {
+      ToSend = PETSCIIreturn;
+      PageCharsReceived += 40-(PageCharsReceived % 40);
+   }
+   else if(strcmp(TagBuf, "/b")==0) ToSend = PETSCIIwhite; //unbold
+   else if(strcmp(TagBuf, "b")==0) ToSend = PrintingHyperlink ? 0 : PETSCIIyellow; //bold, but don't change hyperlink color
+   else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
+   else if(strcmp(TagBuf, "li")==0) //list item
+   {
+      SendPETSCIICharImmediate(PETSCIIreturn);
+      SendPETSCIICharImmediate(PETSCIIgrey); 
+      SendPETSCIICharImmediate(PETSCIIspace); 
+      SendPETSCIICharImmediate('*'); 
+      SendPETSCIICharImmediate(PETSCIIspace); 
+      SendPETSCIICharImmediate(PETSCIIwhite); 
+      PageCharsReceived += 40-(PageCharsReceived % 40)+3;
+      //Leave ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
+   }
+   else if(strncmp(TagBuf, "a href=", 7)==0) 
+   { //start of hyperlink text, save hyperlink
+      //Printf_dbg("LinkTag: %s\n", TagBuf);
+      SendPETSCIICharImmediate(PETSCIIpurple); 
+      SendPETSCIICharImmediate(PETSCIIrvsOn); 
+      if (UsedPageLinkBuffs < NumPageLinkBuffs)
+      {
+         for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip "a href=\""
+         { //terminate at first 
+            if(TagBuf[CharNum]==' ' || 
+               TagBuf[CharNum]=='\'' ||
+               TagBuf[CharNum]=='\"' ||
+               TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
+         }
+         strcpy(PageLinkBuff[UsedPageLinkBuffs], TagBuf+8); // remove quote from beginning
+         
+         Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
+         UsedPageLinkBuffs++;
+         
+         if (UsedPageLinkBuffs > 9) SendPETSCIICharImmediate(ToPETSCII('0' + UsedPageLinkBuffs/10));
+         SendPETSCIICharImmediate(ToPETSCII('0' + (UsedPageLinkBuffs%10)));
+      }
+      else SendPETSCIICharImmediate('*');
+      
+      SendPETSCIICharImmediate(PETSCIIlightBlue); 
+      SendPETSCIICharImmediate(PETSCIIrvsOff);
+      //Leave ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
+      PageCharsReceived++;
+      PrintingHyperlink = true;
+   }
+   else if(strcmp(TagBuf, "/a")==0)
+   { //end of hyperlink text
+      ToSend = PETSCIIwhite; 
+      PrintingHyperlink = false;
+   }
+   else if(strcmp(TagBuf, "html")==0)
+   { //Start of HTML
+      ToSend = PETSCIIclearScreen;  // comment these two lines out to 
+      UsedPageLinkBuffs = 0;        //  scroll header instead of clear
+      PageCharsReceived = 0;
+      PagePaused = false;
+   }
+   else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
+   
+} 
+
+
 void CheckSendRxQueue()
 {  
    //  if queued Rx data available to send to C64, and C64 is ready, then read/send 1 character to C64...
@@ -244,80 +329,7 @@ void CheckSendRxQueue()
       
       if (BrowserMode)
       {  //browser data is stored in ASCII to preserve tag info, convert rest to PETSCII before sending
-         if(ToSend == '<')
-         { //retrieve and interpret HTML Tag
-            char TagBuf[MaxTagSize];
-            uint16_t BufCnt = 0;
-            ToSend = 0; //default to no char if not set below
-            
-            //pull tag from queue until >, queue empty, or buff max size
-            while (RxQueueUsed > 0)
-            {
-               TagBuf[BufCnt] = PullFromRxQueue();
-               if(TagBuf[BufCnt] == '>') break;
-               if(++BufCnt == MaxTagSize-1) break;
-            }
-            TagBuf[BufCnt] = 0;
-
-            //execute tag, if needed
-            if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "li")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
-            {
-               ToSend = PETSCIIreturn;
-               PageCharsReceived += 40-(PageCharsReceived % 40);
-            }
-            else if(strcmp(TagBuf, "/b")==0) ToSend = PETSCIIwhite; //unbold
-            else if(strcmp(TagBuf, "b")==0) ToSend = PrintingHyperlink ? 0 : PETSCIIyellow; //bold, but don't change hyperlink color
-            else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
-            else if(strncmp(TagBuf, "a href=", 7)==0) 
-            { //start of hyperlink text, save hyperlink
-               //Printf_dbg("LinkTag: %s\n", TagBuf);
-               SendPETSCIICharImmediate(PETSCIIpurple); 
-               SendPETSCIICharImmediate(PETSCIIrvsOn); 
-               if (UsedPageLinkBuffs < NumPageLinkBuffs)
-               {
-                  for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip "a href=\""
-                  { //terminate at first 
-                     if(TagBuf[CharNum]==' ' || 
-                        TagBuf[CharNum]=='\'' ||
-                        TagBuf[CharNum]=='\"' ||
-                        TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
-                  }
-                  strcpy(PageLinkBuff[UsedPageLinkBuffs], TagBuf+8); // and from beginning
-                  
-                  Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
-                  SendPETSCIICharImmediate(ToPETSCII('1' + UsedPageLinkBuffs++));
-               }
-               else SendPETSCIICharImmediate('*');
-               
-               SendPETSCIICharImmediate(PETSCIIlightBlue); 
-               SendPETSCIICharImmediate(PETSCIIrvsOff);
-               //Leave ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
-               PageCharsReceived++;
-               PrintingHyperlink = true;
-            }
-            else if(strcmp(TagBuf, "/a")==0)
-            { //end of hyperlink text
-               ToSend = PETSCIIwhite; 
-               PrintingHyperlink = false;
-            }
-            else if(strcmp(TagBuf, "html")==0)
-            { //Start of HTML
-               ToSend = PETSCIIclearScreen;  // comment these two lines out to 
-               UsedPageLinkBuffs = 0;        //  scroll header instead of clear
-               PageCharsReceived = 0;
-               PagePaused = false;
-            }
-            //else if(strcmp(TagBuf, "/form")==0)
-            //{ //OK as a standard?   FrogFind specific....
-            //   ToSend = PETSCIIclearScreen;  // comment these two lines out to 
-            //   UsedPageLinkBuffs = 0;            //  scroll header instead of clear
-            //   
-            //   PageCharsReceived = 0;
-            //   PagePaused = false;
-            //}
-            else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
-            
-         } // '<' (tag) received
+         if(ToSend == '<') ParseHTMLTag(ToSend);
          else 
          {
             if(ToSend == 13) ToSend = 0; //ignore return chars
@@ -888,6 +900,8 @@ void DoSearch(const char *Term)
 void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
+   uint8_t CmdMsgVal = atoi(CmdMsg);
+   
    if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
    {
       client.stop();
@@ -903,31 +917,31 @@ void ProcessBrowserCommand()
       Printf_dbg("PrevURL# %d\n", PrevURLQueueNum);
       WebConnect(*PrevURLQueue[PrevURLQueueNum]);
    }
-   else if(CmdMsg[0] >= '1' && CmdMsg[0] <= '9') //Hyperlink
+   else if(CmdMsgVal >= 1 && CmdMsgVal <= UsedPageLinkBuffs) //Hyperlink #
    {
-      uint8_t LinkNum = CmdMsg[0] - '1';  //now zero based
-      if (LinkNum < UsedPageLinkBuffs) 
+      stcURLParse URL;
+      
+      ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
+      //check for modifier
+      
+      
+      if(URL.host[0] == 0) //relative path, use same server/port, append path
       {
-         stcURLParse URL;
-         ParseURL(PageLinkBuff[LinkNum], URL);
-         if(URL.host[0] == 0) //relative path, use same server/port, append path
-         {
-            uint8_t CurQueuNum;
-            if (PrevURLQueueNum == 0) CurQueuNum = NumPrevURLQueues - 1;
-            else  CurQueuNum = PrevURLQueueNum - 1;
-            
-            if(URL.path[0] != '/')
-            {  //not root ref, add previous path to beginning
-               char temp[MaxURLPathSize];
-               strcpy(temp, URL.path); 
-               strcpy(URL.path, PrevURLQueue[CurQueuNum]->path);
-               strcat(URL.path, temp);
-            }
-            URL.port = PrevURLQueue[CurQueuNum]->port;
-            strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
+         uint8_t CurQueuNum;
+         if (PrevURLQueueNum == 0) CurQueuNum = NumPrevURLQueues - 1;
+         else  CurQueuNum = PrevURLQueueNum - 1;
+         
+         if(URL.path[0] != '/')
+         {  //not root ref, add previous path to beginning
+            char temp[MaxURLPathSize];
+            strcpy(temp, URL.path); 
+            strcpy(URL.path, PrevURLQueue[CurQueuNum]->path);
+            strcat(URL.path, temp);
          }
-         WebConnect(URL);
+         URL.port = PrevURLQueue[CurQueuNum]->port;
+         strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
       }
+      WebConnect(URL);
    }
    else if(CmdMsg[0] == 'u') //URL
    {
