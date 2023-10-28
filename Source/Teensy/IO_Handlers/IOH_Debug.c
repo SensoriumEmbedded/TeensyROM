@@ -17,6 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define DEBUG_MEMLOC   FLASHMEM
 
 void IO1Hndlr_Debug(uint8_t Address, bool R_Wn);  
 void PollingHndlr_Debug();                           
@@ -37,72 +38,72 @@ stcIOHandlers IOHndlr_Debug =
 
 //MIDI input handlers for Debug _________________________________________________________________________
 
-void DbgOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
+DEBUG_MEMLOC void DbgOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
 {
    Serial.printf("8x Note Off, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
 }
 
-void DbgOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
+DEBUG_MEMLOC void DbgOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 {   
    Serial.printf("9x Note On, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
 }
 
-void DbgOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
+DEBUG_MEMLOC void DbgOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
 {
    Serial.printf("Ax After Touch Poly, ch=%d, note=%d, velocity=%d\n", channel, note, velocity);
 }
 
-void DbgOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
+DEBUG_MEMLOC void DbgOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
    Serial.printf("Bx Control Change, ch=%d, control=%d, value=%d\n", channel, control, value);
 }
 
-void DbgOnProgramChange(uint8_t channel, uint8_t program)
+DEBUG_MEMLOC void DbgOnProgramChange(uint8_t channel, uint8_t program)
 {   
    Serial.printf("Cx Program Change, ch=%d, program=%d\n", channel, program);
 }
 
-void DbgOnAfterTouch(uint8_t channel, uint8_t pressure)
+DEBUG_MEMLOC void DbgOnAfterTouch(uint8_t channel, uint8_t pressure)
 {   
    Serial.printf("Dx After Touch, ch=%d, pressure=%d\n", channel, pressure);
 }
 
-void DbgOnPitchChange(uint8_t channel, int pitch) 
+DEBUG_MEMLOC void DbgOnPitchChange(uint8_t channel, int pitch) 
 {
    Serial.printf("Ex Pitch Change, ch=%d, (int)pitch=%d\n", channel, pitch);
 }
 
 // F0 SysEx single call, message larger than buffer is truncated
-void DbgOnSystemExclusive(uint8_t *data, unsigned int size) 
+DEBUG_MEMLOC void DbgOnSystemExclusive(uint8_t *data, unsigned int size) 
 {
    Serial.printf("F0 SysEx, (int)size=%d, (hex)data=", size);
    for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" %02x", data[Cnt]);
    Serial.println();
 }
 
-void DbgOnTimeCodeQuarterFrame(uint8_t data)
+DEBUG_MEMLOC void DbgOnTimeCodeQuarterFrame(uint8_t data)
 {
    Serial.printf("F1 TimeCodeQuarterFrame, data=%d\n", data);
    //could decode this, see example
 }
 
-void DbgOnSongPosition(uint16_t beats)       
+DEBUG_MEMLOC void DbgOnSongPosition(uint16_t beats)       
 {
    Serial.printf("F2 Song Position, (uint)beats=%d\n", beats);
 }
 
-void DbgOnSongSelect(uint8_t songnumber)     
+DEBUG_MEMLOC void DbgOnSongSelect(uint8_t songnumber)     
 {
    Serial.printf("F3 Song Select, songnumber=%d\n", songnumber);
 }
 
-void DbgOnTuneRequest(void)
+DEBUG_MEMLOC void DbgOnTuneRequest(void)
 {
    Serial.printf("F6 TuneRequest\n");
 }
 
 // F8-FF (except FD)
-void DbgOnRealTimeSystem(uint8_t realtimebyte)     
+DEBUG_MEMLOC void DbgOnRealTimeSystem(uint8_t realtimebyte)     
 {
    Serial.printf("%02x Real Time: ", realtimebyte);
    switch(realtimebyte)
@@ -137,7 +138,7 @@ void DbgOnRealTimeSystem(uint8_t realtimebyte)
 
 //______________________________________________________________________________________________
 
-void InitHndlr_Debug()
+DEBUG_MEMLOC void InitHndlr_Debug()
 {
    usbHostMIDI.setHandleNoteOff             (DbgOnNoteOff);             // 8x
    usbHostMIDI.setHandleNoteOn              (DbgOnNoteOn);              // 9x
