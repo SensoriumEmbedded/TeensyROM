@@ -118,6 +118,12 @@ uint8_t PlusCount;
 uint32_t LastTxMillis = millis();
 
 
+// Browser mode: Buffer saved in ASCII from host, converted before sending out
+//               Uses Send...Immediate  commands for direct output
+// AT/regular:   Buffer saved in (usually) PETSCII from host
+//               Uses Add...ToRxQueue for direct output
+
+
 FLASHMEM bool EthernetInit()
 {
    uint32_t beginWait = millis();
@@ -177,7 +183,7 @@ FLASHMEM void SetEthEEPDefaults()
 }
    
 uint8_t PullFromRxQueue()
-{
+{  //assumes queue data is available before calling
   uint8_t c = RxQueue[RxQueueTail++]; 
   if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
   //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
@@ -267,11 +273,8 @@ void ParseHTMLTag()
    else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
    else if(strcmp(TagBuf, "li")==0) //list item
    {
-      SendPETSCIICharImmediate(PETSCIIreturn);
-      SendPETSCIICharImmediate(PETSCIIgrey); 
-      SendPETSCIICharImmediate(PETSCIIspace); 
-      SendPETSCIICharImmediate('*'); 
-      SendPETSCIICharImmediate(PETSCIIspace); 
+      SendPETSCIICharImmediate(PETSCIIdarkGrey); 
+      SendASCIIStrImmediate("\r * ");
       SendPETSCIICharImmediate(PETSCIIwhite); 
       PageCharsReceived += 40-(PageCharsReceived % 40)+3;
    }
@@ -316,7 +319,7 @@ void ParseHTMLTag()
       PageCharsReceived = 0;
       PagePaused = false;
    }
-   else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
+   //else Printf_dbg("Unk Tag: <%s>\n", TagBuf);  //There can be a lot of these...
    
 } 
 
@@ -357,7 +360,7 @@ void FlushRxQueue()
    while (RxQueueUsed) CheckSendRxQueue();  
 }
 
-void AddPETSCIICharToRxQueue(uint8_t c)
+void AddRawCharToRxQueue(uint8_t c)
 {
   if (RxQueueUsed >= RxQueueSize-1)
   {
@@ -372,24 +375,22 @@ void AddPETSCIICharToRxQueue(uint8_t c)
   if (RxQueueHead == RxQueueSize) RxQueueHead = 0;
 }
 
-void AddStrToRxQueue(const char* s)
+void AddRawStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
-   //Printf_dbg("PStrToRx(Len=%d): %s\n", strlen(s), s);
-   while(s[CharNum] != 0) AddPETSCIICharToRxQueue(s[CharNum++]);
+   
+   while(s[CharNum] != 0) AddRawCharToRxQueue(s[CharNum++]);
 }
 
 void AddASCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
+   
    //Printf_dbg("AStrToRx(Len=%d): %s\n", strlen(s), s);
-   while(s[CharNum] != 0)
-   {
-      AddPETSCIICharToRxQueue(ToPETSCII(s[CharNum++]));
-   }  
+   while(s[CharNum] != 0) AddRawCharToRxQueue(ToPETSCII(s[CharNum++]));
 }
 
-FLASHMEM void AddASCIIStrToRxQueueLN(const char* s)
+void AddASCIIStrToRxQueueLN(const char* s)
 {
    AddASCIIStrToRxQueue(s);
    AddASCIIStrToRxQueue("\r");
@@ -826,7 +827,28 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
    Printf_dbg(" path = \"%s\"\n", URLParse.path);
 } 
 
-void WebConnect(const stcURLParse &DestURL)
+bool ReadClientLine(char* linebuf, uint16_t MaxLen)
+{
+   uint16_t charcount = 0;
+   
+   while (client.connected()) 
+   {
+      while (client.available()) 
+      {
+         uint8_t c = client.read();
+         linebuf[charcount++] = c;
+         if(charcount == MaxLen) return false;
+         if (c=='\n')
+         {
+            linebuf[charcount] = 0; //terminate it
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
+bool WebConnect(const stcURLParse &DestURL)
 {
    //   case wc_Filter:   strcpy(UpdWebPage, "/read.php?a=http://");
    
@@ -845,24 +867,27 @@ void WebConnect(const stcURLParse &DestURL)
    
    if (client.connect(DestURL.host, DestURL.port))
    {
+      const uint16_t MaxBuf = 200;
+      char inbuf[MaxBuf];
+      
       client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL.path, DestURL.host);
-      
-      //Wait for header
-	   //Debug: Read full page now to see full size
-      //while (client.connected()) 
-      //{
-      //   while (client.available()) 
-      //   {
-      //      uint8_t c = client.read();
-      //      if(BrowserMode) c = ToPETSCII(c); //incoming browser data is ascii
-      //      AddPETSCIICharToRxQueue(c);
-      //   }
-      //   Printf_dbg("None available: %lu\n", RxQueueUsed);
-      //}
-      //Printf_dbg("Page size: %lu\n", RxQueueUsed);
+
+      while(ReadClientLine(inbuf, MaxBuf))
+      {
+         Printf_dbg("H: %s", inbuf); 
+         if (strcmp(inbuf, "\r\n") == 0) 
+         {
+            SendASCIIStrImmediate("Connected\r");
+            return true; //blank line indicates end of header
+         }
+      }
+      client.stop();
+      SendASCIIStrImmediate("Bad Header\r");
    }
-   else AddASCIIStrToRxQueueLN("Connect Failed");
+
+   SendASCIIStrImmediate("Connect Failed\r");
+   return false;
 }
 
 void DoSearch(const char *Term)
@@ -902,38 +927,43 @@ void DoSearch(const char *Term)
    WebConnect(URL);
 }
 
-void DownloadFile() //assumes client connected and ready for download
-{
-   char FileName[] = "download.bin";
+void DownloadFile()
+{  //assumes client connected and ready for download
+   char FileName[] = "download1.prg";
    if (!client.connected())    
    {
-      AddASCIIStrToRxQueueLN("No data");  
+      SendPETSCIICharImmediate(PETSCIIpink);
+      SendASCIIStrImmediate("No data\r");  
       return;      
    }
 
    if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
    {
-      AddASCIIStrToRxQueueLN("No SD card");  
+      SendPETSCIICharImmediate(PETSCIIpink);
+      SendASCIIStrImmediate("No SD card\r");  
       return;      
    }
    
    //if (sourceFS->exists(FileNamePath))
    if (SD.exists(FileName))
    {
-      AddASCIIStrToRxQueueLN("File already exists");  
+      SendPETSCIICharImmediate(PETSCIIpink);
+      SendASCIIStrImmediate("File already exists\r");  
       return;      
    }
    
    File dataFile = SD.open(FileName, FILE_WRITE);
    if (!dataFile) 
    {
-      AddASCIIStrToRxQueueLN("Error opening file");
+      SendPETSCIICharImmediate(PETSCIIpink);
+      SendASCIIStrImmediate("Error opening file\r");
       return;
    }   
    
    SendASCIIStrImmediate("Downloading: ");
    SendASCIIStrImmediate(FileName);
-   
+   SendPETSCIICharImmediate(PETSCIIreturn);
+
    uint32_t BytesRead = 0;
    while (client.connected()) 
    {
@@ -946,7 +976,7 @@ void DownloadFile() //assumes client connected and ready for download
    dataFile.close();
    char buf[100];
    sprintf(buf, "\rFinished: %lu bytes", BytesRead);
-   AddASCIIStrToRxQueueLN(buf);
+   SendASCIIStrImmediate(buf);
 }
 
 void ProcessBrowserCommand()
@@ -976,6 +1006,7 @@ void ProcessBrowserCommand()
       
       if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
       {
+         //we have a valid link # to follow...
          stcURLParse URL;
          
          ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
@@ -999,7 +1030,11 @@ void ProcessBrowserCommand()
          }
          WebConnect(URL);
          
-         if (*CmdMsg == 'd') DownloadFile();         
+         if (*CmdMsg == 'd') 
+         {
+            DownloadFile();   
+            client.stop();  //in case of unfinished/error, don't read it in as text
+         }            
       }
    }
    
@@ -1022,8 +1057,14 @@ void ProcessBrowserCommand()
       DoSearch(CmdMsg);  //includes WebConnect
    }
    
-   else if(PagePaused) //unrecognized or no command, and paused
-   {  //un-paused
+   else if(*CmdMsg != 0) //unrecognized command
+   {
+      SendPETSCIICharImmediate(PETSCIIpink);
+      SendASCIIStrImmediate("Unknown Command\r");
+   }
+   
+   else if(PagePaused) //empty command, and paused
+   { 
       SendPETSCIICharImmediate(PETSCIIcursorUp); //Cursor up to overwrite prompt & scroll on
       //SendPETSCIICharImmediate(PETSCIIclearScreen); //clear screen for next page
    }
@@ -1128,7 +1169,7 @@ void PollingHndlr_SwiftLink()
       ConnectedToHost = client.connected();
       if (BrowserMode)
       {
-         if (!ConnectedToHost) AddStrToRxQueue("<br>*End of Page*<eoftag>");  //add special tag to catch when complete
+         if (!ConnectedToHost) AddRawStrToRxQueue("<br>*End of Page*<eoftag>");  //add special tag to catch when complete
       }
       else
       {
@@ -1146,14 +1187,14 @@ void PollingHndlr_SwiftLink()
          //Serial.printf("RxIn %d+", RxQueueUsed);
          while (client.available())
          {
-            AddPETSCIICharToRxQueue(client.read());
+            AddRawCharToRxQueue(client.read());
             Cnt++;
          }
          //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
          if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
       }
    #else
-      while (client.available()) AddPETSCIICharToRxQueue(client.read());
+      while (client.available()) AddRawCharToRxQueue(client.read());
    #endif
    
    //if Tx data available, get it from C64
@@ -1179,7 +1220,7 @@ void PollingHndlr_SwiftLink()
          Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
          
          if(BrowserMode) SendPETSCIICharImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
-         else AddPETSCIICharToRxQueue(SwiftTxBuf); //echo it at end of buffer
+         else AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
          
          SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
          if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case PETSCII
