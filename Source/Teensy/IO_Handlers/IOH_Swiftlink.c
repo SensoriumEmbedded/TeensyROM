@@ -476,7 +476,7 @@ void ProcessBrowserCommand()
       client.stop();
       BrowserMode = false;
       RxQueueHead = RxQueueTail = 0; //dump the queue
-      AddASCIIStrToRxQueueLN("\rBrowser mode exit");
+      AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
    }
    
    else if(strcmp(CmdMsg, "b") ==0) // Back/previous web page
@@ -661,9 +661,9 @@ void PollingHndlr_SwiftLink()
       }
       else
       {
-         AddASCIIStrToRxQueue("\r\r\r*** ");
-         if (ConnectedToHost) AddASCIIStrToRxQueueLN("connected to host");
-         else AddASCIIStrToRxQueueLN("not connected");
+         AddToPETSCIIStrToRxQueue("\r\r\r*** ");
+         if (ConnectedToHost) AddToPETSCIIStrToRxQueueLN("connected to host");
+         else AddToPETSCIIStrToRxQueueLN("not connected");
       }
    }
    
@@ -726,7 +726,7 @@ void PollingHndlr_SwiftLink()
             else
             {
                ProcessATCommand();
-               if (!BrowserMode) AddASCIIStrToRxQueueLN("ok\r");
+               if (!BrowserMode) AddToPETSCIIStrToRxQueueLN("ok\r");
             }
             TxMsgOffset = 0;
          }
@@ -739,7 +739,7 @@ void PollingHndlr_SwiftLink()
    {
       PlusCount=0;
       client.stop();
-      AddASCIIStrToRxQueueLN("\r*click*");
+      AddToPETSCIIStrToRxQueueLN("\r*click*");
    }
 
    if (PageCharsReceived < 880 || PrintingHyperlink) CheckSendRxQueue();

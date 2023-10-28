@@ -38,51 +38,51 @@ FLASHMEM void AT_DT(char* CmdArg)
    {
       Delim[0]=0; //terminate host name
       Port = atol(Delim+1);
-      //if (Port==0) AddASCIIStrToRxQueueLN("invalid port #");
+      //if (Port==0) AddToPETSCIIStrToRxQueueLN("invalid port #");
    }
    
    char Buf[100];
    sprintf(Buf, "Trying %s\r\non port %d...", CmdArg, Port);
-   AddASCIIStrToRxQueueLN(Buf);
+   AddToPETSCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
    
-   if (client.connect(CmdArg, Port)) AddASCIIStrToRxQueueLN("Done");
-   else AddASCIIStrToRxQueueLN("Failed!");
+   if (client.connect(CmdArg, Port)) AddToPETSCIIStrToRxQueueLN("Done");
+   else AddToPETSCIIStrToRxQueueLN("Failed!");
 }
 
 FLASHMEM void AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
-   AddASCIIStrToRxQueue("Connect Ethernet ");
-   if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueue("via DHCP...");
-   else AddASCIIStrToRxQueue("using Static...");
+   AddToPETSCIIStrToRxQueue("Connect Ethernet ");
+   if (EEPROM.read(eepAdDHCPEnabled)) AddToPETSCIIStrToRxQueue("via DHCP...");
+   else AddToPETSCIIStrToRxQueue("using Static...");
    FlushRxQueue();
    
    if (EthernetInit()==true)
    {
-      AddASCIIStrToRxQueueLN("Done");
+      AddToPETSCIIStrToRxQueueLN("Done");
       
       byte mac[6]; 
       Ethernet.MACAddress(mac);
       AddMACToRxQueueLN(mac);
       
       uint32_t ip = Ethernet.localIP();
-      AddASCIIStrToRxQueue(" Local IP: ");
+      AddToPETSCIIStrToRxQueue(" Local IP: ");
       AddIPaddrToRxQueueLN(ip);
 
       ip = Ethernet.subnetMask();
-      AddASCIIStrToRxQueue(" Subnet Mask: ");
+      AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
       AddIPaddrToRxQueueLN(ip);
 
       ip = Ethernet.gatewayIP();
-      AddASCIIStrToRxQueue(" Gateway IP: ");
+      AddToPETSCIIStrToRxQueue(" Gateway IP: ");
       AddIPaddrToRxQueueLN(ip);
    }
    else
    {
-      AddASCIIStrToRxQueueLN("Failed!");
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddASCIIStrToRxQueueLN(" HW was not found");
-      else if (Ethernet.linkStatus() == LinkOFF) AddASCIIStrToRxQueueLN(" Cable is not connected");
+      AddToPETSCIIStrToRxQueueLN("Failed!");
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddToPETSCIIStrToRxQueueLN(" HW was not found");
+      else if (Ethernet.linkStatus() == LinkOFF) AddToPETSCIIStrToRxQueueLN(" Cable is not connected");
    }
 }
 
@@ -91,31 +91,31 @@ FLASHMEM void AT_S(char* CmdArg)
    uint32_t ip;
    uint8_t  mac[6];
    
-   AddASCIIStrToRxQueueLN("General Settings:");
+   AddToPETSCIIStrToRxQueueLN("General Settings:");
 
    EEPreadBuf(eepAdMyMAC, mac, 6);
    AddMACToRxQueueLN(mac);
    
    AddDHCPEnDisToRxQueueLN();
    
-   AddASCIIStrToRxQueueLN("DHCP only:");    
+   AddToPETSCIIStrToRxQueueLN("DHCP only:");    
    AddDHCPTimeoutToRxQueueLN();
    AddDHCPRespTOToRxQueueLN();
    
-   AddASCIIStrToRxQueueLN("Static only:");    
-   AddASCIIStrToRxQueue(" My IP: ");
+   AddToPETSCIIStrToRxQueueLN("Static only:");    
+   AddToPETSCIIStrToRxQueue(" My IP: ");
    EEPROM.get(eepAdMyIP, ip);
    AddIPaddrToRxQueueLN(ip);
 
-   AddASCIIStrToRxQueue(" DNS IP: ");
+   AddToPETSCIIStrToRxQueue(" DNS IP: ");
    EEPROM.get(eepAdDNSIP, ip);
    AddIPaddrToRxQueueLN(ip);
 
-   AddASCIIStrToRxQueue(" Gateway IP: ");
+   AddToPETSCIIStrToRxQueue(" Gateway IP: ");
    EEPROM.get(eepAdGtwyIP, ip);
    AddIPaddrToRxQueueLN(ip);
 
-   AddASCIIStrToRxQueue(" Subnet Mask: ");
+   AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
    EEPROM.get(eepAdMaskIP, ip);
    AddIPaddrToRxQueueLN(ip);
 
@@ -125,7 +125,7 @@ FLASHMEM void AT_RNDMAC(char* CmdArg)
 {
    uint8_t mac[6];   
    
-   AddASCIIStrToRxQueueLN("Random MAC Addr");
+   AddToPETSCIIStrToRxQueueLN("Random MAC Addr");
    for(uint8_t octnum =0; octnum<6; octnum++) mac[octnum]=random(0,256);
    mac[0] &= 0xFE; //Unicast
    mac[0] |= 0x02; //Local Admin
@@ -139,7 +139,7 @@ FLASHMEM void AT_MAC(char* CmdArg)
    uint8_t octnum =1;
    uint8_t mac[6];   
    
-   AddASCIIStrToRxQueueLN("MAC Addr");
+   AddToPETSCIIStrToRxQueueLN("MAC Addr");
    mac[0]=strtoul(CmdArg, NULL, 16);
    while(octnum<6)
    {
@@ -196,25 +196,25 @@ FLASHMEM void AT_DHCPRESP(char* CmdArg)
 
 FLASHMEM void AT_MYIP(char* CmdArg)
 {
-   AddASCIIStrToRxQueue("My");
+   AddToPETSCIIStrToRxQueue("My");
    StrToIPToEE(CmdArg, eepAdMyIP);
 }
 
 FLASHMEM void AT_DNSIP(char* CmdArg)
 {
-   AddASCIIStrToRxQueue("DNS");
+   AddToPETSCIIStrToRxQueue("DNS");
    StrToIPToEE(CmdArg, eepAdDNSIP);
 }
 
 FLASHMEM void AT_GTWYIP(char* CmdArg)
 {
-   AddASCIIStrToRxQueue("Gateway");
+   AddToPETSCIIStrToRxQueue("Gateway");
    StrToIPToEE(CmdArg, eepAdGtwyIP);
 }
 
 FLASHMEM void AT_MASKIP(char* CmdArg)
 {
-   AddASCIIStrToRxQueue("Subnet Mask");
+   AddToPETSCIIStrToRxQueue("Subnet Mask");
    StrToIPToEE(CmdArg, eepAdMaskIP);
 }
 
@@ -227,31 +227,31 @@ FLASHMEM void AT_DEFAULTS(char* CmdArg)
 
 FLASHMEM void AT_HELP(char* CmdArg)
 {  //                      1234567890123456789012345678901234567890
-   AddASCIIStrToRxQueueLN("General AT Commands:");
-   AddASCIIStrToRxQueueLN(" AT?   This help menu");
-   AddASCIIStrToRxQueueLN(" AT    Ping");
-   AddASCIIStrToRxQueueLN(" ATC   Connect Ethernet, display info");
-   AddASCIIStrToRxQueueLN(" ATDT<HostName>:<Port>  Connect to host");
+   AddToPETSCIIStrToRxQueueLN("General AT Commands:");
+   AddToPETSCIIStrToRxQueueLN(" AT?   This help menu");
+   AddToPETSCIIStrToRxQueueLN(" AT    Ping");
+   AddToPETSCIIStrToRxQueueLN(" ATC   Connect Ethernet, display info");
+   AddToPETSCIIStrToRxQueueLN(" ATDT<HostName>:<Port>  Connect to host");
 
-   AddASCIIStrToRxQueueLN("Modify saved parameters:");
-   AddASCIIStrToRxQueueLN(" AT+S  Display stored Ethernet settings");
-   AddASCIIStrToRxQueueLN(" AT+DEFAULTS  Set defaults for all ");
-   AddASCIIStrToRxQueueLN(" AT+RNDMAC  MAC address to random value");
-   AddASCIIStrToRxQueueLN(" AT+MAC=<XX:XX:XX:XX:XX:XX>  Set MAC");
-   AddASCIIStrToRxQueueLN(" AT+DHCP=<0:1>  DHCP On(1)/Off(0)");
+   AddToPETSCIIStrToRxQueueLN("Modify saved parameters:");
+   AddToPETSCIIStrToRxQueueLN(" AT+S  Display stored Ethernet settings");
+   AddToPETSCIIStrToRxQueueLN(" AT+DEFAULTS  Set defaults for all ");
+   AddToPETSCIIStrToRxQueueLN(" AT+RNDMAC  MAC address to random value");
+   AddToPETSCIIStrToRxQueueLN(" AT+MAC=<XX:XX:XX:XX:XX:XX>  Set MAC");
+   AddToPETSCIIStrToRxQueueLN(" AT+DHCP=<0:1>  DHCP On(1)/Off(0)");
 
-   AddASCIIStrToRxQueueLN("DHCP mode only: ");
-   AddASCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  DHCP Timeout in mS");
-   AddASCIIStrToRxQueueLN(" AT+DHCPRESP=<D>  DHCP Response Timeout");
+   AddToPETSCIIStrToRxQueueLN("DHCP mode only: ");
+   AddToPETSCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  DHCP Timeout in mS");
+   AddToPETSCIIStrToRxQueueLN(" AT+DHCPRESP=<D>  DHCP Response Timeout");
 
-   AddASCIIStrToRxQueueLN("Static mode only: ");
-   AddASCIIStrToRxQueueLN(" AT+MYIP=<D.D.D.D>   Local IP address");
-   AddASCIIStrToRxQueueLN(" AT+DNSIP=<D.D.D.D>  DNS IP address");
-   AddASCIIStrToRxQueueLN(" AT+GTWYIP=<D.D.D.D> Gateway IP address");
-   AddASCIIStrToRxQueueLN(" AT+MASKIP=<D.D.D.D> Subnet Mask");
+   AddToPETSCIIStrToRxQueueLN("Static mode only: ");
+   AddToPETSCIIStrToRxQueueLN(" AT+MYIP=<D.D.D.D>   Local IP address");
+   AddToPETSCIIStrToRxQueueLN(" AT+DNSIP=<D.D.D.D>  DNS IP address");
+   AddToPETSCIIStrToRxQueueLN(" AT+GTWYIP=<D.D.D.D> Gateway IP address");
+   AddToPETSCIIStrToRxQueueLN(" AT+MASKIP=<D.D.D.D> Subnet Mask");
 
-   AddASCIIStrToRxQueueLN("When in connected/on-line mode:");
-   AddASCIIStrToRxQueueLN(" +++   Disconnect from host");
+   AddToPETSCIIStrToRxQueueLN("When in connected/on-line mode:");
+   AddToPETSCIIStrToRxQueueLN(" +++   Disconnect from host");
 }
 
 #define MaxATcmdLength   20
@@ -288,7 +288,7 @@ void ProcessATCommand()
       
    if (strstr(CmdMsg, "at")!=CmdMsg)
    {
-      AddASCIIStrToRxQueueLN("AT not found");
+      AddToPETSCIIStrToRxQueueLN("AT not found");
       return;
    }
    CmdMsg+=2; //move past the AT
@@ -308,6 +308,6 @@ void ProcessATCommand()
    }
    
    Printf_dbg("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
-   AddASCIIStrToRxQueue("unknown command: ");
-   AddASCIIStrToRxQueueLN(TxMsg);
+   AddToPETSCIIStrToRxQueue("unknown command: ");
+   AddToPETSCIIStrToRxQueueLN(TxMsg);
 }

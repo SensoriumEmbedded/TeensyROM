@@ -139,7 +139,7 @@ void AddRawStrToRxQueue(const char* s)
    while(s[CharNum] != 0) AddRawCharToRxQueue(s[CharNum++]);
 }
 
-void AddASCIIStrToRxQueue(const char* s)
+void AddToPETSCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
    
@@ -147,29 +147,29 @@ void AddASCIIStrToRxQueue(const char* s)
    while(s[CharNum] != 0) AddRawCharToRxQueue(ToPETSCII(s[CharNum++]));
 }
 
-void AddASCIIStrToRxQueueLN(const char* s)
+void AddToPETSCIIStrToRxQueueLN(const char* s)
 {
-   AddASCIIStrToRxQueue(s);
-   AddASCIIStrToRxQueue("\r");
+   AddToPETSCIIStrToRxQueue(s);
+   AddToPETSCIIStrToRxQueue("\r");
 }
 
 FLASHMEM void AddIPaddrToRxQueueLN(IPAddress ip)
 {
    char Buf[50];
    sprintf(Buf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-   AddASCIIStrToRxQueueLN(Buf);
+   AddToPETSCIIStrToRxQueueLN(Buf);
 }
 
 FLASHMEM void AddMACToRxQueueLN(uint8_t* mac)
 {
    char Buf[50];
    sprintf(Buf, " MAC Address: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-   AddASCIIStrToRxQueueLN(Buf);
+   AddToPETSCIIStrToRxQueueLN(Buf);
 }
 
 FLASHMEM void AddInvalidFormatToRxQueueLN()
 {
-   AddASCIIStrToRxQueueLN("Invalid Format");
+   AddToPETSCIIStrToRxQueueLN("Invalid Format");
 }
 
 FLASHMEM void AddBrowserCommandsToRxQueue()
@@ -189,14 +189,14 @@ FLASHMEM void AddBrowserCommandsToRxQueue()
 
 FLASHMEM void AddUpdatedToRxQueueLN()
 {
-   AddASCIIStrToRxQueueLN("Updated");
+   AddToPETSCIIStrToRxQueueLN("Updated");
 }
 
 FLASHMEM void AddDHCPEnDisToRxQueueLN()
 {
-   AddASCIIStrToRxQueue(" DHCP: ");
-   if (EEPROM.read(eepAdDHCPEnabled)) AddASCIIStrToRxQueueLN("Enabled");
-   else AddASCIIStrToRxQueueLN("Disabled");
+   AddToPETSCIIStrToRxQueue(" DHCP: ");
+   if (EEPROM.read(eepAdDHCPEnabled)) AddToPETSCIIStrToRxQueueLN("Enabled");
+   else AddToPETSCIIStrToRxQueueLN("Disabled");
 }
   
 FLASHMEM void AddDHCPTimeoutToRxQueueLN()
@@ -205,7 +205,7 @@ FLASHMEM void AddDHCPTimeoutToRxQueueLN()
    char buf[50];
    EEPROM.get(eepAdDHCPTimeout, invalU16);
    sprintf(buf, " DHCP Timeout: %dmS", invalU16);
-   AddASCIIStrToRxQueueLN(buf);
+   AddToPETSCIIStrToRxQueueLN(buf);
 }
   
 FLASHMEM void AddDHCPRespTOToRxQueueLN()
@@ -214,7 +214,7 @@ FLASHMEM void AddDHCPRespTOToRxQueueLN()
    char buf[50];
    EEPROM.get(eepAdDHCPRespTO, invalU16);
    sprintf(buf, " DHCP Response Timeout: %dmS", invalU16);
-   AddASCIIStrToRxQueueLN(buf);
+   AddToPETSCIIStrToRxQueueLN(buf);
 } 
   
 FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
@@ -222,7 +222,7 @@ FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
    uint8_t octnum =1;
    IPAddress ip;   
    
-   AddASCIIStrToRxQueueLN(" IP Addr");
+   AddToPETSCIIStrToRxQueueLN(" IP Addr");
    ip[0]=atoi(Arg);
    while(octnum<4)
    {
@@ -236,7 +236,7 @@ FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
    }
    EEPROM.put(EEPaddress, (uint32_t)ip);
    AddUpdatedToRxQueueLN();
-   AddASCIIStrToRxQueue("to ");
+   AddToPETSCIIStrToRxQueue("to ");
    AddIPaddrToRxQueueLN(ip);
 }
 

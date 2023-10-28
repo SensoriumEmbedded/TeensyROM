@@ -179,7 +179,7 @@ FLASHMEM void ServiceSerial()
          }
          break;
       case 'p':
-         AddASCIIStrToRxQueueLN("0123456789abcdef");
+         AddToPETSCIIStrToRxQueueLN("0123456789abcdef");
          break;
       case 'k': //kill client connection
          client.stop();
