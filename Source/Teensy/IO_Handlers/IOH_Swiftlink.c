@@ -237,11 +237,12 @@ void SendASCIIStrImmediate(const char* CharsToSend)
       SendPETSCIICharImmediate(ToPETSCII(CharsToSend[CharNum]));
 }
 
-void ParseHTMLTag(uint8_t &ToSend)
+void ParseHTMLTag()
 { //retrieve and interpret HTML Tag
+  //https://www.w3schools.com/tags/
+  
    char TagBuf[MaxTagSize];
    uint16_t BufCnt = 0;
-   ToSend = 0; //default to no char if not set below
    
    //pull tag from queue until >, queue empty, or buff max size
    while (RxQueueUsed > 0)
@@ -252,14 +253,17 @@ void ParseHTMLTag(uint8_t &ToSend)
    }
    TagBuf[BufCnt] = 0;  //terminate it
 
-   //execute tag, if needed
+   //check for known tags and do formatting, etc
    if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
    {
-      ToSend = PETSCIIreturn;
+      SendPETSCIICharImmediate(PETSCIIreturn);
       PageCharsReceived += 40-(PageCharsReceived % 40);
    }
-   else if(strcmp(TagBuf, "/b")==0) ToSend = PETSCIIwhite; //unbold
-   else if(strcmp(TagBuf, "b")==0) ToSend = PrintingHyperlink ? 0 : PETSCIIyellow; //bold, but don't change hyperlink color
+   else if(strcmp(TagBuf, "/b")==0) SendPETSCIICharImmediate(PETSCIIwhite); //unbold
+   else if(strcmp(TagBuf, "b")==0) //bold, but don't change hyperlink color
+   {
+      if(!PrintingHyperlink) SendPETSCIICharImmediate(PETSCIIyellow);
+   } 
    else if(strcmp(TagBuf, "eoftag")==0) AddBrowserCommandsToRxQueue();  // special tag to signal complete
    else if(strcmp(TagBuf, "li")==0) //list item
    {
@@ -270,7 +274,6 @@ void ParseHTMLTag(uint8_t &ToSend)
       SendPETSCIICharImmediate(PETSCIIspace); 
       SendPETSCIICharImmediate(PETSCIIwhite); 
       PageCharsReceived += 40-(PageCharsReceived % 40)+3;
-      //Leave ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
    }
    else if(strncmp(TagBuf, "a href=", 7)==0) 
    { //start of hyperlink text, save hyperlink
@@ -279,9 +282,9 @@ void ParseHTMLTag(uint8_t &ToSend)
       SendPETSCIICharImmediate(PETSCIIrvsOn); 
       if (UsedPageLinkBuffs < NumPageLinkBuffs)
       {
-         for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip "a href=\""
+         for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip a href="
          { //terminate at first 
-            if(TagBuf[CharNum]==' ' || 
+            if(TagBuf[CharNum]==' '  || 
                TagBuf[CharNum]=='\'' ||
                TagBuf[CharNum]=='\"' ||
                TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
@@ -291,33 +294,31 @@ void ParseHTMLTag(uint8_t &ToSend)
          Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
          UsedPageLinkBuffs++;
          
-         if (UsedPageLinkBuffs > 9) SendPETSCIICharImmediate(ToPETSCII('0' + UsedPageLinkBuffs/10));
-         SendPETSCIICharImmediate(ToPETSCII('0' + (UsedPageLinkBuffs%10)));
+         if (UsedPageLinkBuffs > 9) SendPETSCIICharImmediate('0' + UsedPageLinkBuffs/10);
+         SendPETSCIICharImmediate('0' + (UsedPageLinkBuffs%10));
       }
       else SendPETSCIICharImmediate('*');
       
       SendPETSCIICharImmediate(PETSCIIlightBlue); 
       SendPETSCIICharImmediate(PETSCIIrvsOff);
-      //Leave ToSend as 0, can't send again until we wait for prev to complete (ReadyToSendRx)
       PageCharsReceived++;
       PrintingHyperlink = true;
    }
    else if(strcmp(TagBuf, "/a")==0)
    { //end of hyperlink text
-      ToSend = PETSCIIwhite; 
+      SendPETSCIICharImmediate(PETSCIIwhite); 
       PrintingHyperlink = false;
    }
    else if(strcmp(TagBuf, "html")==0)
    { //Start of HTML
-      ToSend = PETSCIIclearScreen;  // comment these two lines out to 
-      UsedPageLinkBuffs = 0;        //  scroll header instead of clear
+      SendPETSCIICharImmediate(PETSCIIclearScreen); // comment these two lines out to 
+      UsedPageLinkBuffs = 0;                        //  scroll header instead of clear
       PageCharsReceived = 0;
       PagePaused = false;
    }
    else Printf_dbg("Unk Tag: <%s>\n", TagBuf);
    
 } 
-
 
 void CheckSendRxQueue()
 {  
@@ -329,7 +330,11 @@ void CheckSendRxQueue()
       
       if (BrowserMode)
       {  //browser data is stored in ASCII to preserve tag info, convert rest to PETSCII before sending
-         if(ToSend == '<') ParseHTMLTag(ToSend);
+         if(ToSend == '<') 
+         {
+            ParseHTMLTag();
+            ToSend = 0;
+         }
          else 
          {
             if(ToSend == 13) ToSend = 0; //ignore return chars
@@ -843,7 +848,7 @@ void WebConnect(const stcURLParse &DestURL)
       client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL.path, DestURL.host);
       
-      //download option will go here...
+      //Wait for header
 	   //Debug: Read full page now to see full size
       //while (client.connected()) 
       //{
@@ -897,10 +902,56 @@ void DoSearch(const char *Term)
    WebConnect(URL);
 }
 
+void DownloadFile() //assumes client connected and ready for download
+{
+   char FileName[] = "download.bin";
+   if (!client.connected())    
+   {
+      AddASCIIStrToRxQueueLN("No data");  
+      return;      
+   }
+
+   if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   {
+      AddASCIIStrToRxQueueLN("No SD card");  
+      return;      
+   }
+   
+   //if (sourceFS->exists(FileNamePath))
+   if (SD.exists(FileName))
+   {
+      AddASCIIStrToRxQueueLN("File already exists");  
+      return;      
+   }
+   
+   File dataFile = SD.open(FileName, FILE_WRITE);
+   if (!dataFile) 
+   {
+      AddASCIIStrToRxQueueLN("Error opening file");
+      return;
+   }   
+   
+   SendASCIIStrImmediate("Downloading: ");
+   SendASCIIStrImmediate(FileName);
+   
+   uint32_t BytesRead = 0;
+   while (client.connected()) 
+   {
+      while (client.available()) 
+      {
+         dataFile.write(client.read());
+         BytesRead++;
+      }
+   }      
+   dataFile.close();
+   char buf[100];
+   sprintf(buf, "\rFinished: %lu bytes", BytesRead);
+   AddASCIIStrToRxQueueLN(buf);
+}
+
 void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
-   uint8_t CmdMsgVal = atoi(CmdMsg);
    
    if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
    {
@@ -909,6 +960,7 @@ void ProcessBrowserCommand()
       RxQueueHead = RxQueueTail = 0; //dump the queue
       AddASCIIStrToRxQueueLN("\rBrowser mode exit");
    }
+   
    else if(strcmp(CmdMsg, "b") ==0) // Back/previous web page
    {
       if (PrevURLQueueNum<2) PrevURLQueueNum += NumPrevURLQueues-2; //wrap around bottom
@@ -917,33 +969,41 @@ void ProcessBrowserCommand()
       Printf_dbg("PrevURL# %d\n", PrevURLQueueNum);
       WebConnect(*PrevURLQueue[PrevURLQueueNum]);
    }
-   else if(CmdMsgVal >= 1 && CmdMsgVal <= UsedPageLinkBuffs) //Hyperlink #
+   
+   else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
    {
-      stcURLParse URL;
+      uint8_t CmdMsgVal = atoi(CmdMsg);
       
-      ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
-      //check for modifier
-      
-      
-      if(URL.host[0] == 0) //relative path, use same server/port, append path
+      if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
       {
-         uint8_t CurQueuNum;
-         if (PrevURLQueueNum == 0) CurQueuNum = NumPrevURLQueues - 1;
-         else  CurQueuNum = PrevURLQueueNum - 1;
+         stcURLParse URL;
          
-         if(URL.path[0] != '/')
-         {  //not root ref, add previous path to beginning
-            char temp[MaxURLPathSize];
-            strcpy(temp, URL.path); 
-            strcpy(URL.path, PrevURLQueue[CurQueuNum]->path);
-            strcat(URL.path, temp);
+         ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
+         while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
+         
+         if(URL.host[0] == 0) //relative path, use same server/port, append path
+         {
+            uint8_t CurQueuNum;
+            if (PrevURLQueueNum == 0) CurQueuNum = NumPrevURLQueues - 1;
+            else  CurQueuNum = PrevURLQueueNum - 1;
+            
+            if(URL.path[0] != '/') //if not root ref, add previous path to beginning
+            {  
+               char temp[MaxURLPathSize];
+               strcpy(temp, URL.path); 
+               strcpy(URL.path, PrevURLQueue[CurQueuNum]->path);
+               strcat(URL.path, temp);
+            }
+            URL.port = PrevURLQueue[CurQueuNum]->port;
+            strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
          }
-         URL.port = PrevURLQueue[CurQueuNum]->port;
-         strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
+         WebConnect(URL);
+         
+         if (*CmdMsg == 'd') DownloadFile();         
       }
-      WebConnect(URL);
    }
-   else if(CmdMsg[0] == 'u') //URL
+   
+   else if(*CmdMsg == 'u') //URL
    {
       CmdMsg++; //past the 'u'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
@@ -954,12 +1014,14 @@ void ProcessBrowserCommand()
       ParseURL(httpServer, URL);
       WebConnect(URL);
    }
-   else if(CmdMsg[0] == 's') //search
+   
+   else if(*CmdMsg == 's') //search
    {
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
       DoSearch(CmdMsg);  //includes WebConnect
    }
+   
    else if(PagePaused) //unrecognized or no command, and paused
    {  //un-paused
       SendPETSCIICharImmediate(PETSCIIcursorUp); //Cursor up to overwrite prompt & scroll on
