@@ -175,7 +175,7 @@ FLASHMEM void ServiceSerial()
             69,65,83,69,32,67,65,76,76,32,66,65,67,75,32,76,65,84,69,82,46,13,13,13,13,13,13
             };
             
-            for(uint16_t Cnt=0; Cnt<sizeof(inbuf); Cnt++) AddPETSCIICharToRxQueue(inbuf[Cnt]);
+            for(uint16_t Cnt=0; Cnt<sizeof(inbuf); Cnt++) AddRawCharToRxQueue(inbuf[Cnt]);
          }
          break;
       case 'p':
