@@ -64,22 +64,6 @@ void SendRxByte(uint8_t ToSend)
    }
 }
 
-void SendPETSCIICharImmediate(char CharToSend)
-{
-   //wait for c64 to be ready or NMI timeout
-   while(!ReadyToSendRx()) if(!CheckRxNMITimeout()) return;
-
-   if (BrowserMode) PageCharsReceived++;
-   
-   SendRxByte(CharToSend);
-}
-
-void SendASCIIStrImmediate(const char* CharsToSend)
-{
-   for(uint16_t CharNum = 0; CharNum < strlen(CharsToSend); CharNum++)
-      SendPETSCIICharImmediate(ToPETSCII(CharsToSend[CharNum]));
-}
-
 void CheckSendRxQueue()
 {  
    //  if queued Rx data available to send to C64, and C64 is ready, then read/send 1 character to C64...
@@ -170,21 +154,6 @@ FLASHMEM void AddMACToRxQueueLN(uint8_t* mac)
 FLASHMEM void AddInvalidFormatToRxQueueLN()
 {
    AddToPETSCIIStrToRxQueueLN("Invalid Format");
-}
-
-FLASHMEM void AddBrowserCommandsToRxQueue()
-{
-   PageCharsReceived = 0;
-   PagePaused = false;
-
-   SendPETSCIICharImmediate(PETSCIIreturn);
-   SendPETSCIICharImmediate(PETSCIIpurple); 
-   SendPETSCIICharImmediate(PETSCIIrvsOn); 
-   SendASCIIStrImmediate("Browser Commands:\r");
-   SendASCIIStrImmediate("S[Term]: Search    [Link#]: Go to link\r");
-   SendASCIIStrImmediate(" U[URL]: Go to URL       X: Exit\r");
-   SendASCIIStrImmediate(" Return: Continue        B: Back\r");
-   SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
 FLASHMEM void AddUpdatedToRxQueueLN()

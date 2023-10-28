@@ -23,7 +23,7 @@
 
 FLASHMEM void AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
-   AddBrowserCommandsToRxQueue();
+   SendBrowserCommandsImmediate();
    UsedPageLinkBuffs = 0;
    BrowserMode = true;
 }
