@@ -17,14 +17,16 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 // Swiftlink Browser Functions
+
 
 void SendPETSCIICharImmediate(char CharToSend)
 {
    //wait for c64 to be ready or NMI timeout
    while(!ReadyToSendRx()) if(!CheckRxNMITimeout()) return;
 
-   if (BrowserMode) PageCharsReceived++;
+   if (BrowserMode) PageCharsReceived++; //only called from browser mode?
    
    SendRxByte(CharToSend);
 }
@@ -197,7 +199,11 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
       {
          uint8_t c = client.read();
          linebuf[charcount++] = c;
-         if(charcount == MaxLen) return false;
+         if(charcount == MaxLen) 
+         {
+            SendASCIIErrorStrImmediate("Hdr: line too long");
+            return false;
+         }
          if (c=='\n')
          {
             linebuf[charcount] = 0; //terminate it
@@ -205,6 +211,7 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
          }
       }
    }
+   SendASCIIErrorStrImmediate("Hdr: dropped");
    return false;
 }
 
@@ -235,6 +242,7 @@ bool WebConnect(const stcURLParse &DestURL)
       client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL.path, DestURL.host);
 
+      //get response header
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
          Printf_dbg("H: %s", inbuf); 
@@ -246,7 +254,6 @@ bool WebConnect(const stcURLParse &DestURL)
       }
       while (client.available()) client.read(); //clear client buffer
       client.stop();
-      SendASCIIErrorStrImmediate("Bad Header");
    }
 
    SendASCIIErrorStrImmediate("Connect Failed");
@@ -290,8 +297,37 @@ void DoSearch(const char *Term)
    WebConnect(URL);
 }
 
-void DownloadFile(const char *FileName)
-{  //assumes client connected, header read, and ready for download
+uint8_t HexCharToInt(uint8_t HexChar)
+{
+   return ((HexChar & 0xF) + (HexChar >> 6) | ((HexChar >> 3) & 0x8));
+}
+
+void DownloadFile(char *FileName)
+{  // Modifies (decodes) FileName
+   // assumes client connected, header read, and ready for download
+
+   //decode special chars
+   uint16_t NewCharNum = 0;
+   uint16_t RawCharNum = 0;
+   while(FileName[RawCharNum] != 0)
+   {
+      uint8_t NextChar = FileName[RawCharNum];
+      if(NextChar == '%' && FileName[RawCharNum+1] && FileName[RawCharNum+2])
+      {
+         NextChar = HexCharToInt(FileName[++RawCharNum])<<4;
+         NextChar |= HexCharToInt(FileName[++RawCharNum]);
+         
+         //RawCharNum+=2;
+         Serial.printf("dec: %d\r\n", NextChar);
+      }
+      FileName[NewCharNum++] = NextChar;
+      RawCharNum++;
+   }
+   FileName[NewCharNum] = 0;
+
+   SendASCIIStrImmediate("File: \"");
+   SendASCIIStrImmediate(FileName);
+   SendASCIIStrImmediate("\"\r");
 
    if (!client.connected())    
    {
@@ -319,9 +355,7 @@ void DownloadFile(const char *FileName)
       return;
    }   
    
-   SendASCIIStrImmediate("Downloading: \"");
-   SendASCIIStrImmediate(FileName);
-   SendASCIIStrImmediate("\"\r");
+   SendASCIIStrImmediate("Downloading\r");
 
    uint32_t BytesRead = 0;
    while (client.connected()) 
@@ -334,7 +368,7 @@ void DownloadFile(const char *FileName)
    }      
    dataFile.close();
    char buf[100];
-   sprintf(buf, "\rFinished: %lu bytes", BytesRead);
+   sprintf(buf, "Finished: %lu bytes\r", BytesRead);
    SendASCIIStrImmediate(buf);
 }
 
@@ -390,12 +424,12 @@ void ProcessBrowserCommand()
          }
          WebConnect(URL);
          
-         if (*CmdMsg == 'd') 
+         if (*CmdMsg == 'd') //download
          {
             char * ptrFilename = strrchr(URL.path, '/'); //find last slash
             if (ptrFilename == NULL) ptrFilename = URL.path;
             else ptrFilename++;
-
+                        
             DownloadFile(ptrFilename);   
             while (client.available()) client.read(); //clear client buffer
             client.stop();  //in case of unfinished/error, don't read it in as text
