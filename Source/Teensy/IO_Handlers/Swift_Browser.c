@@ -290,9 +290,9 @@ void DoSearch(const char *Term)
    WebConnect(URL);
 }
 
-void DownloadFile()
-{  //assumes client connected and ready for download
-   char FileName[] = "download1.prg";
+void DownloadFile(const char *FileName)
+{  //assumes client connected, header read, and ready for download
+
    if (!client.connected())    
    {
       SendASCIIErrorStrImmediate("No data");  
@@ -319,9 +319,9 @@ void DownloadFile()
       return;
    }   
    
-   SendASCIIStrImmediate("Downloading: ");
+   SendASCIIStrImmediate("Downloading: \"");
    SendASCIIStrImmediate(FileName);
-   SendPETSCIICharImmediate(PETSCIIreturn);
+   SendASCIIStrImmediate("\"\r");
 
    uint32_t BytesRead = 0;
    while (client.connected()) 
@@ -392,7 +392,11 @@ void ProcessBrowserCommand()
          
          if (*CmdMsg == 'd') 
          {
-            DownloadFile();   
+            char * ptrFilename = strrchr(URL.path, '/'); //find last slash
+            if (ptrFilename == NULL) ptrFilename = URL.path;
+            else ptrFilename++;
+
+            DownloadFile(ptrFilename);   
             while (client.available()) client.read(); //clear client buffer
             client.stop();  //in case of unfinished/error, don't read it in as text
          }            
