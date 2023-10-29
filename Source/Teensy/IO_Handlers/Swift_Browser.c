@@ -53,9 +53,12 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendPETSCIICharImmediate(PETSCIIpurple); 
    SendPETSCIICharImmediate(PETSCIIrvsOn); 
    SendASCIIStrImmediate("Browser Commands:\r");
-   SendASCIIStrImmediate("S[Term]: Search    [Link#]: Go to link\r");
-   SendASCIIStrImmediate(" U[URL]: Go to URL       X: Exit\r");
-   SendASCIIStrImmediate(" Return: Continue        B: Back\r");
+   SendASCIIStrImmediate("S [Term]: Search   [Link#]m: Go to link\r");
+   SendASCIIStrImmediate("Um [URL]: Go to URL       X: Exit\r");
+   SendASCIIStrImmediate("  Return: Continue        P: Prev Page\r");
+   
+   //SendASCIIStrImmediate("  Rm: Reload page     Bm: Bookmark #/s/?\r");
+   //SendASCIIStrImmediate("       D[s/u/?] [path]: Set Download dir");
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
@@ -215,11 +218,11 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
    return false;
 }
 
-bool WebConnect(const stcURLParse &DestURL)
+bool WebConnect(const stcURLParse *DestURL)
 {
    //   case wc_Filter:   strcpy(UpdWebPage, "/read.php?a=http://");
    
-   memcpy(PrevURLQueue[PrevURLQueueNum], &DestURL, sizeof(stcURLParse)); //overwrite previous entry
+   memcpy(PrevURLQueue[PrevURLQueueNum], DestURL, sizeof(stcURLParse)); //overwrite previous entry
    if (++PrevURLQueueNum == NumPrevURLQueues) PrevURLQueueNum = 0; //inc/wrap around top
  
    while (client.available()) client.read(); //clear client buffer
@@ -227,20 +230,20 @@ bool WebConnect(const stcURLParse &DestURL)
 
    RxQueueHead = RxQueueTail = 0; //dump the queue
    
-   Printf_dbg("Connect: \"%s%s\"\n", DestURL.host, DestURL.path);
+   Printf_dbg("Connect: \"%s%s\"\n", DestURL->host, DestURL->path);
    
    SendASCIIStrImmediate("\rConnecting to: ");
-   SendASCIIStrImmediate(DestURL.host);
-   SendASCIIStrImmediate(DestURL.path);
+   SendASCIIStrImmediate(DestURL->host);
+   SendASCIIStrImmediate(DestURL->path);
    SendPETSCIICharImmediate(PETSCIIreturn);
    
-   if (client.connect(DestURL.host, DestURL.port))
+   if (client.connect(DestURL->host, DestURL->port))
    {
       const uint16_t MaxBuf = 200;
       char inbuf[MaxBuf];
       
       client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
-         DestURL.path, DestURL.host);
+         DestURL->path, DestURL->host);
 
       //get response header
       while(ReadClientLine(inbuf, MaxBuf)==true)
@@ -294,34 +297,38 @@ void DoSearch(const char *Term)
       }
    }
    
-   WebConnect(URL);
+   WebConnect(&URL);
 }
 
 uint8_t HexCharToInt(uint8_t HexChar)
 {
-   return ((HexChar & 0xF) + (HexChar >> 6) | ((HexChar >> 3) & 0x8));
+   // https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
+   return (((HexChar & 0xF) + (HexChar >> 6)) | ((HexChar >> 3) & 0x8));
 }
 
-void DownloadFile(char *FileName)
+void DownloadFile(const char *origPathName)
 {  // Modifies (decodes) FileName
    // assumes client connected, header read, and ready for download
 
-   //decode special chars
+   char FileName[MaxURLPathSize]; //local copy for decoded version
+
+   const char* ptrOrigFilename = strrchr(origPathName, '/'); //pointer to nav orig path/file name, find last slash
+   if (ptrOrigFilename == NULL) ptrOrigFilename = origPathName; //use the whole thing if no slash
+   else ptrOrigFilename++; //skip the slash
+
+   //copy/decode special chars
    uint16_t NewCharNum = 0;
-   uint16_t RawCharNum = 0;
-   while(FileName[RawCharNum] != 0)
+   uint16_t OrigCharNum = 0;
+   while(ptrOrigFilename[OrigCharNum])
    {
-      uint8_t NextChar = FileName[RawCharNum];
-      if(NextChar == '%' && FileName[RawCharNum+1] && FileName[RawCharNum+2])
+      uint8_t NextChar = ptrOrigFilename[OrigCharNum];
+      if(NextChar == '%' && ptrOrigFilename[OrigCharNum+1] && ptrOrigFilename[OrigCharNum+2])
       {
-         NextChar = HexCharToInt(FileName[++RawCharNum])<<4;
-         NextChar |= HexCharToInt(FileName[++RawCharNum]);
-         
-         //RawCharNum+=2;
-         Serial.printf("dec: %d\r\n", NextChar);
+         NextChar = HexCharToInt(ptrOrigFilename[++OrigCharNum])<<4;
+         NextChar |= HexCharToInt(ptrOrigFilename[++OrigCharNum]);
       }
       FileName[NewCharNum++] = NextChar;
-      RawCharNum++;
+      OrigCharNum++;
    }
    FileName[NewCharNum] = 0;
 
@@ -372,6 +379,22 @@ void DownloadFile(char *FileName)
    SendASCIIStrImmediate(buf);
 }
 
+void ModWebConnect(const stcURLParse *DestURL, char* strMods)
+{  //Do WebConnect, apply Modifier argument
+          
+   if (*strMods == 'd') //download
+   {
+      if (WebConnect(DestURL)==true)
+      {                     
+         DownloadFile(DestURL->path);
+         while (client.available()) client.read(); //clear client buffer
+         client.stop();  //in case of unfinished/error, don't read it in as text
+      }
+   }  
+   else WebConnect(DestURL); //default to reader, prev defined filterring
+   
+}
+
 void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local copy for manipulation
@@ -385,13 +408,22 @@ void ProcessBrowserCommand()
       AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
    }
    
-   else if(strcmp(CmdMsg, "b") ==0) // Back/previous web page
+   else if(strcmp(CmdMsg, "p") ==0) // Previous web page
    {
       if (PrevURLQueueNum<2) PrevURLQueueNum += NumPrevURLQueues-2; //wrap around bottom
       else PrevURLQueueNum -= 2;
       
       Printf_dbg("PrevURL# %d\n", PrevURLQueueNum);
-      WebConnect(*PrevURLQueue[PrevURLQueueNum]);
+      WebConnect(PrevURLQueue[PrevURLQueueNum]);
+   }
+   
+   else if(*CmdMsg == 'r') // Reload web page
+   {
+      if (PrevURLQueueNum == 0) PrevURLQueueNum = NumPrevURLQueues - 1; //wrap around bottom
+	   else  PrevURLQueueNum--;
+      
+      Printf_dbg("CurrURL# %d\n", PrevURLQueueNum);
+      ModWebConnect(PrevURLQueue[PrevURLQueueNum], ++CmdMsg);
    }
    
    else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
@@ -422,18 +454,7 @@ void ProcessBrowserCommand()
             URL.port = PrevURLQueue[CurQueuNum]->port;
             strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
          }
-         WebConnect(URL);
-         
-         if (*CmdMsg == 'd') //download
-         {
-            char * ptrFilename = strrchr(URL.path, '/'); //find last slash
-            if (ptrFilename == NULL) ptrFilename = URL.path;
-            else ptrFilename++;
-                        
-            DownloadFile(ptrFilename);   
-            while (client.available()) client.read(); //clear client buffer
-            client.stop();  //in case of unfinished/error, don't read it in as text
-         }            
+         ModWebConnect(&URL, CmdMsg);
       }
    }
    
@@ -446,7 +467,7 @@ void ProcessBrowserCommand()
       char httpServer[MaxTagSize] = "http://";
       strcat(httpServer, CmdMsg);
       ParseURL(httpServer, URL);
-      WebConnect(URL);
+      WebConnect(&URL);
    }
    
    else if(*CmdMsg == 's') //search
