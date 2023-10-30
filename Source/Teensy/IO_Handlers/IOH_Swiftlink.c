@@ -19,6 +19,8 @@
 
 
 //Network, 6551 ACIA interface emulation
+//with AT Command sub-system and Internet Browser
+
 
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn);  
 void PollingHndlr_SwiftLink();                           
@@ -74,6 +76,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define PETSCIIwhite       0x05
 #define PETSCIIlightBlue   0x9a
 #define PETSCIIyellow      0x9e
+#define PETSCIIbrown       0x95
 #define PETSCIIpink        0x96
 #define PETSCIIlightGreen  0x99
 #define PETSCIIdarkGrey    0x97

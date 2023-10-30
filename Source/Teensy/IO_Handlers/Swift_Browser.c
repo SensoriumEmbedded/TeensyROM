@@ -56,8 +56,7 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendASCIIStrImmediate("S [Term]: Search   [Link#]m: Go to link\r");
    SendASCIIStrImmediate("Um [URL]: Go to URL       X: Exit\r");
    SendASCIIStrImmediate("  Return: Continue        P: Prev Page\r");
-   
-   //SendASCIIStrImmediate("  Rm: Reload page     Bm: Bookmark #/s/?\r");
+   SendASCIIStrImmediate("  Rm: Reload page   B#x: Bookmark #/s/?\r");
    //SendASCIIStrImmediate("       D[s/u/?] [path]: Set Download dir");
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
@@ -186,7 +185,7 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
       else strcpy(URLParse.path, "/");
    }
 
-   Printf_dbg("\nOrig  = \"%s\"\n", URL);
+   Printf_dbg("\nOrig = \"%s\"\nParsed:\n", URL);
    Printf_dbg(" serv = \"%s\"\n", URLParse.host);
    Printf_dbg(" port = %d\n", URLParse.port);
    Printf_dbg(" path = \"%s\"\n", URLParse.path);
@@ -220,8 +219,8 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
 
 bool WebConnect(const stcURLParse *DestURL)
 {
-   //   case wc_Filter:   strcpy(UpdWebPage, "/read.php?a=http://");
-   
+  
+   //add URL to the prev queue
    memcpy(PrevURLQueue[PrevURLQueueNum], DestURL, sizeof(stcURLParse)); //overwrite previous entry
    if (++PrevURLQueueNum == NumPrevURLQueues) PrevURLQueueNum = 0; //inc/wrap around top
  
@@ -236,10 +235,11 @@ bool WebConnect(const stcURLParse *DestURL)
    SendASCIIStrImmediate(DestURL->host);
    SendASCIIStrImmediate(DestURL->path);
    SendPETSCIICharImmediate(PETSCIIreturn);
+   SendPETSCIICharImmediate(PETSCIIbrown);
    
    if (client.connect(DestURL->host, DestURL->port))
    {
-      const uint16_t MaxBuf = 200;
+      const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
       client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
@@ -249,6 +249,7 @@ bool WebConnect(const stcURLParse *DestURL)
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
          Printf_dbg("H: %s", inbuf); 
+         SendASCIIStrImmediate(inbuf);
          if (strcmp(inbuf, "\r\n") == 0) 
          {
             SendASCIIStrImmediate("Connected\r");
@@ -391,6 +392,41 @@ void ModWebConnect(const stcURLParse *DestURL, char* strMods)
          client.stop();  //in case of unfinished/error, don't read it in as text
       }
    }  
+   else if (*strMods == 'f') //filter via FrogFind
+   {
+      if(strcmp(DestURL->host, "www.frogfind.com")!=0) //skip if already filtered
+      {
+         stcURLParse URL =
+         {
+            "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
+            80,                     //URL.port = 80;
+            "/read.php?a=http://",  //strcpy(URL.path = "/read.php?a=http://");
+         };
+               
+         strcat(URL.path, DestURL->host);
+         strcat(URL.path, DestURL->path);
+         WebConnect(&URL);
+      }
+      else WebConnect(DestURL);
+   }
+   else if (*strMods == 'r') //Raw, no filterring
+   {
+      if(strcmp(DestURL->host, "www.frogfind.com")==0) //skip if already raw
+      {  //strip off frogfind
+         stcURLParse URL;
+         char * ptrURL = strstr(DestURL->path, "http");
+         if (ptrURL == NULL)
+         {
+            SendASCIIErrorStrImmediate("Could not convert");
+         }
+         else
+         {
+            ParseURL(ptrURL, URL);
+            WebConnect(&URL);  
+         }
+      }
+      else WebConnect(DestURL);
+   }
    else WebConnect(DestURL); //default to reader, prev defined filterring
    
 }
@@ -461,13 +497,15 @@ void ProcessBrowserCommand()
    else if(*CmdMsg == 'u') //URL
    {
       CmdMsg++; //past the 'u'
-      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command
+      char Mod = *CmdMsg;
+      if (Mod) CmdMsg++; //past the Mod or first space
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for more spaces after command
       
       stcURLParse URL;
       char httpServer[MaxTagSize] = "http://";
       strcat(httpServer, CmdMsg);
       ParseURL(httpServer, URL);
-      WebConnect(&URL);
+      ModWebConnect(&URL, &Mod);
    }
    
    else if(*CmdMsg == 's') //search
