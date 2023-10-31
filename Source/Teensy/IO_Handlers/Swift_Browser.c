@@ -42,6 +42,8 @@ void SendASCIIErrorStrImmediate(const char* CharsToSend)
    SendPETSCIICharImmediate(PETSCIIpink);
    SendASCIIStrImmediate(CharsToSend);
    SendPETSCIICharImmediate(PETSCIIreturn);
+   SendPETSCIICharImmediate(PETSCIIwhite);
+   Printf_dbg("*Err: %s\n", CharsToSend);
 }
 
 FLASHMEM void SendBrowserCommandsImmediate()
@@ -56,7 +58,9 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendASCIIStrImmediate("S [Term]: Search   [Link#]m: Go to link\r");
    SendASCIIStrImmediate("Um [URL]: Go to URL       X: Exit\r");
    SendASCIIStrImmediate("  Return: Continue        P: Prev Page\r");
-   SendASCIIStrImmediate("  Rm: Reload page   B#x: Bookmark #/s/?\r");
+   SendASCIIStrImmediate("  Rm: Reload page   \r");
+   
+   //SendASCIIStrImmediate("  B#x: Bookmark #/s/?\r");
    //SendASCIIStrImmediate("       D[s/u/?] [path]: Set Download dir");
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
@@ -246,12 +250,14 @@ bool WebConnect(const stcURLParse *DestURL)
          DestURL->path, DestURL->host);
 
       //get response header
+      //https://www.tutorialspoint.com/http/http_responses.htm
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
-         Printf_dbg("H: %s", inbuf); 
+         //Printf_dbg("H: %s", inbuf);  //causes lost data
          SendASCIIStrImmediate(inbuf);
          if (strcmp(inbuf, "\r\n") == 0) 
          {
+            if(!client.connected()) SendASCIIStrImmediate("Not "); //may have been header only
             SendASCIIStrImmediate("Connected\r");
             return true; //blank line indicates end of header
          }
@@ -380,55 +386,77 @@ void DownloadFile(const char *origPathName)
    SendASCIIStrImmediate(buf);
 }
 
-void ModWebConnect(const stcURLParse *DestURL, char* strMods)
-{  //Do WebConnect, apply Modifier argument
-          
-   if (*strMods == 'd') //download
+bool ValidModifier(const char cMod)
+{
+   char ValidMods[] = "dfr ";
+   for (uint8_t charnum=0; charnum<=strlen(ValidMods); charnum++) // <= to include term check as valid
    {
-      if (WebConnect(DestURL)==true)
-      {                     
-         DownloadFile(DestURL->path);
-         while (client.available()) client.read(); //clear client buffer
-         client.stop();  //in case of unfinished/error, don't read it in as text
-      }
-   }  
-   else if (*strMods == 'f') //filter via FrogFind
-   {
-      if(strcmp(DestURL->host, "www.frogfind.com")!=0) //skip if already filtered
-      {
-         stcURLParse URL =
-         {
-            "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
-            80,                     //URL.port = 80;
-            "/read.php?a=http://",  //strcpy(URL.path = "/read.php?a=http://");
-         };
-               
-         strcat(URL.path, DestURL->host);
-         strcat(URL.path, DestURL->path);
-         WebConnect(&URL);
-      }
-      else WebConnect(DestURL);
+      if(cMod == ValidMods[charnum]) return true;
    }
-   else if (*strMods == 'r') //Raw, no filterring
-   {
-      if(strcmp(DestURL->host, "www.frogfind.com")==0) //skip if already raw
-      {  //strip off frogfind
-         stcURLParse URL;
-         char * ptrURL = strstr(DestURL->path, "http");
-         if (ptrURL == NULL)
-         {
-            SendASCIIErrorStrImmediate("Could not convert");
-         }
-         else
-         {
-            ParseURL(ptrURL, URL);
-            WebConnect(&URL);  
-         }
-      }
-      else WebConnect(DestURL);
-   }
-   else WebConnect(DestURL); //default to reader, prev defined filterring
    
+   SendASCIIErrorStrImmediate("Unexpected modifier");         
+   return false;
+}
+
+bool isURLFiltered(const stcURLParse *URL)
+{
+   return (strcmp(URL->host, "www.frogfind.com")==0); 
+}
+
+void ModWebConnect(const stcURLParse *DestURL, char cMod)
+{  //Do WebConnect, apply Modifier argument
+   //assumes char already qualified via ValidModifier()
+   
+   switch (cMod)
+   {
+      case 'd': //download
+         if (WebConnect(DestURL)==true)
+         {                     
+            DownloadFile(DestURL->path);
+            while (client.available()) client.read(); //clear client buffer
+            client.stop();  //in case of unfinished/error, don't read it in as text
+         }      
+         break;
+         
+      case 'f':  //filter via FrogFind
+         if(isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already filtered
+         else 
+         {  //make filtered URL & connect
+            stcURLParse URL =
+            {
+               "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
+               80,                     //URL.port = 80;
+               "/read.php?a=http://",  //strcpy(URL.path = "/read.php?a=http://");
+            };
+                  
+            strcat(URL.path, DestURL->host);
+            strcat(URL.path, DestURL->path);
+            WebConnect(&URL);
+         }
+         break;
+         
+      case 'r': //Raw, no filterring
+         if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
+         else
+         {  //strip off frogfind
+            stcURLParse URL;
+            char * ptrURL = strstr(DestURL->path, "http");
+            if (ptrURL == NULL)
+            {
+               SendASCIIErrorStrImmediate("Could not remove filter");
+               WebConnect(DestURL);
+            }
+            else
+            {
+               ParseURL(ptrURL, URL);
+               WebConnect(&URL);  
+            }
+         }
+         break;
+      default:   
+         WebConnect(DestURL); //no mod, default to reader, prev defined filterring
+         break;
+   }
 }
 
 void ProcessBrowserCommand()
@@ -455,11 +483,14 @@ void ProcessBrowserCommand()
    
    else if(*CmdMsg == 'r') // Reload web page
    {
+      CmdMsg++; //past the 'r'
+      if (!ValidModifier(*CmdMsg)) return; //early return, may remain paused
+
       if (PrevURLQueueNum == 0) PrevURLQueueNum = NumPrevURLQueues - 1; //wrap around bottom
 	   else  PrevURLQueueNum--;
       
       Printf_dbg("CurrURL# %d\n", PrevURLQueueNum);
-      ModWebConnect(PrevURLQueue[PrevURLQueueNum], ++CmdMsg);
+      ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg);
    }
    
    else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
@@ -468,12 +499,14 @@ void ProcessBrowserCommand()
       
       if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
       {
+         while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
+         if (!ValidModifier(*CmdMsg)) return; //early return, may remain paused
+         
          //we have a valid link # to follow...
          stcURLParse URL;
          
          ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
-         while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
-         
+
          if(URL.host[0] == 0) //relative path, use same server/port, append path
          {
             uint8_t CurQueuNum;
@@ -490,7 +523,7 @@ void ProcessBrowserCommand()
             URL.port = PrevURLQueue[CurQueuNum]->port;
             strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
          }
-         ModWebConnect(&URL, CmdMsg);
+         ModWebConnect(&URL, *CmdMsg);
       }
    }
    
@@ -498,6 +531,7 @@ void ProcessBrowserCommand()
    {
       CmdMsg++; //past the 'u'
       char Mod = *CmdMsg;
+      if (!ValidModifier(Mod)) return; //early return, may remain paused
       if (Mod) CmdMsg++; //past the Mod or first space
       while(*CmdMsg==' ') CmdMsg++;  //Allow for more spaces after command
       
@@ -505,7 +539,7 @@ void ProcessBrowserCommand()
       char httpServer[MaxTagSize] = "http://";
       strcat(httpServer, CmdMsg);
       ParseURL(httpServer, URL);
-      ModWebConnect(&URL, &Mod);
+      ModWebConnect(&URL, Mod);
    }
    
    else if(*CmdMsg == 's') //search
