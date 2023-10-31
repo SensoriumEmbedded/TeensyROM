@@ -65,6 +65,22 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
+uint8_t HexCharToInt(uint8_t HexChar)
+{
+   // https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
+   return (((HexChar & 0xF) + (HexChar >> 6)) | ((HexChar >> 3) & 0x8));
+}
+
+bool CheckAndDecode(const char *ptrChars, char *ptrRetChar)
+{  //check if next 3 chars are decodable, decode if they are, otherwise return false
+   if(*ptrChars == '%' && ptrChars[1] && ptrChars[2]) //something there, not end of chars
+   {
+      *ptrRetChar = (HexCharToInt(ptrChars[1])<<4) | HexCharToInt(ptrChars[2]);
+      return true;
+   }
+   return false;
+}
+
 void ParseHTMLTag()
 { //retrieve and interpret HTML Tag
   //https://www.w3schools.com/tags/
@@ -81,18 +97,23 @@ void ParseHTMLTag()
    }
    TagBuf[BufCnt] = 0;  //terminate it
 
+
    //check for known tags and do formatting, etc
    if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
    {
       SendPETSCIICharImmediate(PETSCIIreturn);
       PageCharsReceived += 40-(PageCharsReceived % 40);
    }
+   
    else if(strcmp(TagBuf, "/b")==0) SendPETSCIICharImmediate(PETSCIIwhite); //unbold
+   
    else if(strcmp(TagBuf, "b")==0) //bold, but don't change hyperlink color
    {
       if(!PrintingHyperlink) SendPETSCIICharImmediate(PETSCIIyellow);
    } 
+   
    else if(strcmp(TagBuf, "eoftag")==0) SendBrowserCommandsImmediate();  // special tag to signal complete
+   
    else if(strcmp(TagBuf, "li")==0) //list item
    {
       SendPETSCIICharImmediate(PETSCIIdarkGrey); 
@@ -100,8 +121,21 @@ void ParseHTMLTag()
       SendPETSCIICharImmediate(PETSCIIwhite); 
       PageCharsReceived += 40-(PageCharsReceived % 40)+3;
    }
-   else if(strncmp(TagBuf, "a href=", 7)==0) 
-   { //start of hyperlink text, save hyperlink
+   
+   else if(strncmp(TagBuf, "petscii", 7)==0) // custom tag for PETSCII chars
+   {
+      uint8_t NextChar;
+      uint16_t CharNum = 7; //start after "petscii" offset
+
+      while(CheckAndDecode(TagBuf+CharNum, &NextChar))
+      {
+         SendPETSCIICharImmediate(NextChar); 
+         CharNum+=3;
+      }
+   }
+   
+   else if(strncmp(TagBuf, "a href=", 7)==0) //start of hyperlink text, save hyperlink
+   { 
       //Printf_dbg("LinkTag: %s\n", TagBuf);
       SendPETSCIICharImmediate(PETSCIIpurple); 
       SendPETSCIICharImmediate(PETSCIIrvsOn); 
@@ -129,13 +163,15 @@ void ParseHTMLTag()
       PageCharsReceived++;
       PrintingHyperlink = true;
    }
-   else if(strcmp(TagBuf, "/a")==0)
-   { //end of hyperlink text
+   
+   else if(strcmp(TagBuf, "/a")==0) //end of hyperlink text
+   {
       SendPETSCIICharImmediate(PETSCIIwhite); 
       PrintingHyperlink = false;
    }
-   else if(strcmp(TagBuf, "html")==0)
-   { //Start of HTML
+   
+   else if(strcmp(TagBuf, "html")==0) //Start of HTML
+   {
       SendPETSCIICharImmediate(PETSCIIclearScreen); // comment these two lines out to 
       UsedPageLinkBuffs = 0;                        //  scroll header instead of clear
       PageCharsReceived = 0;
@@ -307,12 +343,6 @@ void DoSearch(const char *Term)
    WebConnect(&URL);
 }
 
-uint8_t HexCharToInt(uint8_t HexChar)
-{
-   // https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
-   return (((HexChar & 0xF) + (HexChar >> 6)) | ((HexChar >> 3) & 0x8));
-}
-
 void DownloadFile(const char *origPathName)
 {  // Modifies (decodes) FileName
    // assumes client connected, header read, and ready for download
@@ -328,14 +358,12 @@ void DownloadFile(const char *origPathName)
    uint16_t OrigCharNum = 0;
    while(ptrOrigFilename[OrigCharNum])
    {
-      uint8_t NextChar = ptrOrigFilename[OrigCharNum];
-      if(NextChar == '%' && ptrOrigFilename[OrigCharNum+1] && ptrOrigFilename[OrigCharNum+2])
-      {
-         NextChar = HexCharToInt(ptrOrigFilename[++OrigCharNum])<<4;
-         NextChar |= HexCharToInt(ptrOrigFilename[++OrigCharNum]);
-      }
+      uint8_t NextChar;
+      if(CheckAndDecode(ptrOrigFilename+OrigCharNum, &NextChar)) OrigCharNum+=3;
+      else NextChar = ptrOrigFilename[OrigCharNum++];
+      
       FileName[NewCharNum++] = NextChar;
-      OrigCharNum++;
+      //OrigCharNum++;
    }
    FileName[NewCharNum] = 0;
 
