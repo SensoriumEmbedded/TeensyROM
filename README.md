@@ -23,7 +23,7 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
 
 <BR>
 
-![TeensyROM pic1](media/v0.2b/v0.2b_angle.jpg)
+![TeensyROM pic1](media/v0.2c/v0.2c_angle.jpg)
 
 |![TeensyROM pic1](media/case/case-front-corner.jpg)|![TeensyROM case](media/case/case-rear-corner.jpg)| 
 |:--:|:--:|
@@ -98,7 +98,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE
 
 ## Pictures-screen captures:
-|![TeensyROM pic1](media/v0.2b/v0.2b_top.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)| 
+|![TeensyROM pic1](media/v0.2c/v0.2c_top.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)| 
 |:--:|:--:|
 |![TeensyROM pic1](media/v0.2b/v0.2b_top_loaded.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg)|
 |![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|

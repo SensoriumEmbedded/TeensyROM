@@ -14,6 +14,8 @@
     * serial number location and label box on back under Teensy
     * values (1k/10k) by 3ea SMT Rs
 
+![TeensyROM v0.2c](/media/v0.2c/v0.2c_top.jpg)
+
 ## **v0.2b: Minor Update released July 1, 2023**
   * R3 added to ensure data buffer is off during reset/programming
 
