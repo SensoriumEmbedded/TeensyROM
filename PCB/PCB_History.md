@@ -1,6 +1,18 @@
 # PCB/Design History:
-## Firmware will work with PCB versions 0.2 and higher, recommend always building with the latest
-### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/m7YLgscM)**
+## Firmware will work with all PCB versions 0.2 and higher, recommend always building with the latest
+### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/I2BzuXb5)**
+
+## **v0.2c: Minor Update released Nov 1, 2023**
+  * **No electrical changes from previous version**
+  * **Mounting hole added to better accomodate cartridge case**
+  * Removed C9 and JP1 (both unused)
+  * Added 4th pin to unused header (J4)
+  * Narrowed C1/C2 pad spacing 2.5->2.0mm to better fit caps
+  * Slightly increased 6ea 0805 cap SMT pad sizes for easier assy
+  * Silk screen changes:
+    * under Teensy: "Reminder: Program/Prep Teensy before installing"
+    * serial number location and label box on back under Teensy
+    * values (1k/10k) by 3ea SMT Rs
 
 ## **v0.2b: Minor Update released July 1, 2023**
   * R3 added to ensure data buffer is off during reset/programming
