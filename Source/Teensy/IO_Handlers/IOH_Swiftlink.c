@@ -97,6 +97,7 @@ struct stcURLParse
    char host[MaxURLHostSize];
    uint16_t port;
    char path[MaxURLPathSize];
+   char postpath[MaxURLPathSize];
 };
 
 extern volatile uint32_t CycleCountdown;
@@ -217,6 +218,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    {
       PrevURLQueue[cnt] = (stcURLParse*)malloc(sizeof(stcURLParse));
       strcpy(PrevURLQueue[cnt]->path, "/teensyrom/");
+      PrevURLQueue[cnt]->postpath[0] = 0;
       strcpy(PrevURLQueue[cnt]->host, "sensoriumembedded.com");
       PrevURLQueue[cnt]->port = 80;
    }

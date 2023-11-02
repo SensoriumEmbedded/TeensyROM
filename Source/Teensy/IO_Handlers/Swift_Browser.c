@@ -234,6 +234,7 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
    URLParse.host[0] = 0;
    URLParse.port = 80;
    URLParse.path[0] = 0;
+   URLParse.postpath[0] = 0;
    
    //Find/skip access ID
    if(strstr(URL, "http://") != URL && strstr(URL, "https://") != URL) //no access ID, relative path only
@@ -249,13 +250,13 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
       //need to check for userid? http://userid@example.com:8080/
       
       //finalize server name and update port, if present
-      if (ptrPort != NULL) //there's a port ID
+      if (ptrPort != NULL) //there's a port ID; capture and set host name
       {
          URLParse.port = atoi(ptrPort+1);  //skip the ":"
          strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
          URLParse.host[ptrPort-ptrServerName]=0; //terminate it
       }
-      else if (ptrPath != NULL)  //there's a path
+      else if (ptrPath != NULL)  //no port, but there's a path; set host name
       {
          strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
          URLParse.host[ptrPath-ptrServerName]=0; //terminate it
@@ -266,11 +267,22 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
       if (ptrPath != NULL) strcpy(URLParse.path, ptrPath);
       else strcpy(URLParse.path, "/");
    }
+   
+   //check for query or fragment;
+   char * ptrPostPath = strstr(URLParse.path, "?"); //check for query first
+   if (ptrPostPath == NULL) ptrPostPath = strstr(URLParse.path, "#"); //if not, then check for fragment
+
+   if (ptrPostPath != NULL) //capture Post Path info separately.
+   {
+      strcpy(URLParse.postpath, ptrPostPath);
+      *ptrPostPath=0; //terminate URLParse.path there
+   }
 
    Printf_dbg("\nOrig = \"%s\"\nParsed:\n", URL);
    Printf_dbg(" serv = \"%s\"\n", URLParse.host);
    Printf_dbg(" port = %d\n", URLParse.port);
    Printf_dbg(" path = \"%s\"\n", URLParse.path);
+   Printf_dbg(" post = \"%s\"\n", URLParse.postpath);
 } 
 
 bool ReadClientLine(char* linebuf, uint16_t MaxLen)
@@ -311,11 +323,12 @@ bool WebConnect(const stcURLParse *DestURL)
 
    RxQueueHead = RxQueueTail = 0; //dump the queue
    
-   Printf_dbg("Connect: \"%s%s\"\n", DestURL->host, DestURL->path);
+   Printf_dbg("Connect: \"%s%s%s\"\n", DestURL->host, DestURL->path, DestURL->postpath);
    
    SendASCIIStrImmediate("\rConnecting to: ");
    SendASCIIStrImmediate(DestURL->host);
    SendASCIIStrImmediate(DestURL->path);
+   SendASCIIStrImmediate(DestURL->postpath);
    SendPETSCIICharImmediate(PETSCIIreturn);
    SendPETSCIICharImmediate(PETSCIIbrown);
    
@@ -324,8 +337,8 @@ bool WebConnect(const stcURLParse *DestURL)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
-      client.printf("GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
-         DestURL->path, DestURL->host);
+      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
+         DestURL->path, DestURL->postpath, DestURL->host);
 
       //get response header
       //https://www.tutorialspoint.com/http/http_responses.htm
@@ -335,6 +348,7 @@ bool WebConnect(const stcURLParse *DestURL)
          SendASCIIStrImmediate(inbuf);
          if (strcmp(inbuf, "\r\n") == 0) 
          {
+            SendPETSCIICharImmediate(PETSCIIwhite);
             if(!client.connected()) SendASCIIStrImmediate("Not "); //may have been header only
             SendASCIIStrImmediate("Connected\r");
             return true; //blank line indicates end of header
@@ -355,10 +369,11 @@ void DoSearch(const char *Term)
    {
       "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
       80,                 //URL.port = 80;
-      "/?q=",             //strcpy(URL.path = "/?q=");
+      "/",                //strcpy(URL.path = "/");
+      "?q=",              //strcpy(URL.postpath = "?q=");
    };
       
-   uint16_t UWPCharNum = strlen(URL.path);
+   uint16_t UWPCharNum = strlen(URL.postpath);
    
    //encode special chars:
    //https://www.eso.org/~ndelmott/url_encode.html
@@ -371,14 +386,14 @@ void DoSearch(const char *Term)
          (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
           NextChar == 0)                          //include terminator
       {      
-         URL.path[UWPCharNum++] = NextChar;      
+         URL.postpath[UWPCharNum++] = NextChar;      
       }
       else
       {
          //encode character (%xx hex val)
-         URL.path[UWPCharNum++] = '%';
-         URL.path[UWPCharNum++] = HexChar[NextChar >> 4];
-         URL.path[UWPCharNum++] = HexChar[NextChar & 0x0f];
+         URL.postpath[UWPCharNum++] = '%';
+         URL.postpath[UWPCharNum++] = HexChar[NextChar >> 4];
+         URL.postpath[UWPCharNum++] = HexChar[NextChar & 0x0f];
       }
    }
    
@@ -409,7 +424,7 @@ void DownloadFile(const char *origPathName)
    }
    FileName[NewCharNum] = 0;
 
-   SendASCIIStrImmediate("File: \"");
+   SendASCIIStrImmediate("Filename: \"");
    SendASCIIStrImmediate(FileName);
    SendASCIIStrImmediate("\"\r");
 
@@ -473,9 +488,42 @@ bool isURLFiltered(const stcURLParse *URL)
    return (strcmp(URL->host, "www.frogfind.com")==0); 
 }
 
+FLASHMEM bool DLExtension(const char * Extension)
+{
+   uint8_t ExtNum = 0;
+   const char DLExts [][9] =
+   {
+      "prg",
+      "crt",
+      "sid",
+      "hex",
+   };   
+   
+   while(ExtNum < sizeof(DLExts)/sizeof(DLExts[0]))
+   {
+      if(strcmp(Extension, DLExts[ExtNum++])==0) return true;
+   }
+   return false;
+}
+
 void ModWebConnect(const stcURLParse *DestURL, char cMod)
 {  //Do WebConnect, apply Modifier argument
    //assumes char already qualified via ValidModifier()
+   
+   if (cMod == ' ' || cMod == 0) //modifier not specified, check for forced download
+   {
+      char * Extension = strrchr(DestURL->path, '.');
+      Printf_dbg("*--Ext: ");
+      if (Extension != NULL)
+      {
+         Extension++; //spip the '.'
+         Printf_dbg("%s\n", Extension);
+         
+         if(DLExtension(Extension)) cMod = 'd';
+      }
+      else {Printf_dbg("none\n");}
+            
+   }
    
    switch (cMod)
    {
@@ -496,11 +544,13 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod)
             {
                "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
                80,                     //URL.port = 80;
-               "/read.php?a=http://",  //strcpy(URL.path = "/read.php?a=http://");
+               "/read.php",            //strcpy(URL.path = "/read.php?a=http://");
+               "?a=http://"            //URL.postpath
             };
                   
-            strcat(URL.path, DestURL->host);
-            strcat(URL.path, DestURL->path);
+            strcat(URL.postpath, DestURL->host);
+            strcat(URL.postpath, DestURL->path);
+            strcat(URL.postpath, DestURL->postpath);
             WebConnect(&URL);
          }
          break;
@@ -509,8 +559,7 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod)
          if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
          else
          {  //strip off frogfind
-            stcURLParse URL;
-            char * ptrURL = strstr(DestURL->path, "http");
+            char * ptrURL = strstr(DestURL->postpath, "http");  // "/read.php?a=http://"
             if (ptrURL == NULL)
             {
                SendASCIIErrorStrImmediate("Could not remove filter");
@@ -518,6 +567,7 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod)
             }
             else
             {
+               stcURLParse URL;
                ParseURL(ptrURL, URL);
                WebConnect(&URL);  
             }
@@ -592,6 +642,7 @@ void ProcessBrowserCommand()
             }
             URL.port = PrevURLQueue[CurQueuNum]->port;
             strcpy(URL.host, PrevURLQueue[CurQueuNum]->host);
+            //leave postpath data in-tact
          }
          ModWebConnect(&URL, *CmdMsg);
       }
