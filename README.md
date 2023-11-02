@@ -92,10 +92,12 @@ Component selection was done using parts large enough (SOIC and 0805s at the sma
 **A note about overclocking**
 The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per the app, external cooling is not required for this speed.  However, in abundance of caution, a heatsink is specified in the BOM for this project.  In addition, the temperature can be read on the setup screen of the main TeensyROM app. The max spec is 95C, and there is a panic shutdown at 90C.  In my experience, even on a warm day running for hours with no heatsink, the temp doesn't excede 75C.
 
-## Inspiration:
-* **Heather S**: Loving wife through whom all things are possible
-* **Paul D**: Thought provoker, Maker, and Beta tester extraordinaire
-* **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE
+## Inspiration and Thank-Yous:
+* **Heather S**: Loving wife, continuous encourager
+* **Paul D**: Thought provoker, promoter, Maker, and Beta tester extraordinaire
+* [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, case support
+* **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
 ## Pictures-screen captures:
 |![TeensyROM pic1](media/v0.2c/v0.2c_top.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)| 
