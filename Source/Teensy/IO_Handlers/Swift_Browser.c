@@ -46,6 +46,21 @@ void SendASCIIErrorStrImmediate(const char* CharsToSend)
    Printf_dbg("*Err: %s\n", CharsToSend);
 }
 
+FLASHMEM void SendCommandSummaryImmediate(bool Paused)
+{
+   SendPETSCIICharImmediate(PETSCIIreturn);
+   SendPETSCIICharImmediate(PETSCIIpurple);
+   if (Paused) 
+   {
+      SendPETSCIICharImmediate(PETSCIIrvsOn);
+      SendASCIIStrImmediate("Paused (Ret, ");
+   }
+   else SendASCIIStrImmediate("\rFinished (");
+   SendASCIIStrImmediate("#,S[],U[],X,B)");
+   SendPETSCIICharImmediate(PETSCIIrvsOff);
+   SendPETSCIICharImmediate(PETSCIIlightGreen);   
+}
+
 FLASHMEM void SendBrowserCommandsImmediate()
 {
    PageCharsReceived = 0;
@@ -71,7 +86,7 @@ uint8_t HexCharToInt(uint8_t HexChar)
    return (((HexChar & 0xF) + (HexChar >> 6)) | ((HexChar >> 3) & 0x8));
 }
 
-bool CheckAndDecode(const char *ptrChars, char *ptrRetChar)
+bool CheckAndDecode(const char *ptrChars, uint8_t *ptrRetChar)
 {  //check if next 3 chars are decodable, decode if they are, otherwise return false
    if(*ptrChars == '%' && ptrChars[1] && ptrChars[2]) //something there, not end of chars
    {
@@ -112,7 +127,32 @@ void ParseHTMLTag()
       if(!PrintingHyperlink) SendPETSCIICharImmediate(PETSCIIyellow);
    } 
    
-   else if(strcmp(TagBuf, "eoftag")==0) SendBrowserCommandsImmediate();  // special tag to signal complete
+   else if(strcmp(TagBuf, "eoftag")==0) // special tag to signal page complete
+   {
+      //SendPETSCIICharImmediate(PETSCIIgrey); 
+      //SendASCIIStrImmediate("\r\r-end-");
+      SendCommandSummaryImmediate(false);
+      //SendBrowserCommandsImmediate();  
+   }
+   
+   else if(strcmp(TagBuf, "title")==0) //page title
+   {
+      char PageTitle[100];
+      uint8_t CharNum = 0;
+      
+      while (RxQueueUsed > 0 && CharNum < 100-1)
+      {
+         uint8_t InChar = PullFromRxQueue();
+         if(InChar == '<') //asumes Title tag has no embedded tags
+         {
+            while (RxQueueUsed > 0 && InChar != '>') InChar = PullFromRxQueue();
+            break;
+         }
+         else PageTitle[CharNum++] = InChar;
+      }
+      PageTitle[CharNum]=0;
+      Printf_dbg("Title: %s\n", PageTitle);
+   }
    
    else if(strcmp(TagBuf, "li")==0) //list item
    {
@@ -125,12 +165,14 @@ void ParseHTMLTag()
    else if(strncmp(TagBuf, "petscii", 7)==0) // custom tag for PETSCII chars
    {
       uint8_t NextChar;
-      uint16_t CharNum = 7; //start after "petscii" offset
+      char * ptrCharNum = TagBuf+7; //start after "petscii" offset
+      while(*ptrCharNum==' ') ptrCharNum++;  //Allow for spaces after petscii
 
-      while(CheckAndDecode(TagBuf+CharNum, &NextChar))
+      while(CheckAndDecode(ptrCharNum, &NextChar))
       {
          SendPETSCIICharImmediate(NextChar); 
-         CharNum+=3;
+         ptrCharNum+=3;
+         while(*ptrCharNum==' ') ptrCharNum++;  //Allow for spaces after values
       }
    }
    

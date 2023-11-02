@@ -284,7 +284,7 @@ void PollingHndlr_SwiftLink()
       ConnectedToHost = client.connected();
       if (BrowserMode)
       {
-         if (!ConnectedToHost) AddRawStrToRxQueue("<br>*End of Page*<eoftag>");  //add special tag to catch when complete
+         if (!ConnectedToHost) AddRawStrToRxQueue("<eoftag>");  //add special tag to catch when complete
       }
       else
       {
@@ -376,11 +376,7 @@ void PollingHndlr_SwiftLink()
       if (!PagePaused)
       {
          PagePaused = true;
-         SendPETSCIICharImmediate(PETSCIIrvsOn);
-         SendPETSCIICharImmediate(PETSCIIpurple);
-         SendASCIIStrImmediate("\rPause (#,S[],U[],X,B,Ret)");
-         SendPETSCIICharImmediate(PETSCIIrvsOff);
-         SendPETSCIICharImmediate(PETSCIIlightGreen);
+         SendCommandSummaryImmediate(true);
       }
    }
 }
