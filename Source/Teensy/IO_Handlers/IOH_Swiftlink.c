@@ -109,7 +109,7 @@ char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
 char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
 stcURLParse* PrevURLQueue[NumPrevURLQueues]; //For browse previous
 
-uint8_t  PrevURLQueueNum;   //where we are in the link history queue
+uint8_t  PrevURLQueueNum;   //current/latest in the link history queue
 uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
 uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
 bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;

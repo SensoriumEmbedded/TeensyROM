@@ -17,7 +17,9 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 // Swiftlink Rx Queue Functions
+
 
 uint8_t PullFromRxQueue()
 {  //assumes queue data is available before calling
@@ -187,7 +189,7 @@ FLASHMEM void AddDHCPRespTOToRxQueueLN()
 } 
   
 FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
-{
+{  // Arg is an IP address string, decode it and write it to EEPROM at EEPaddress
    uint8_t octnum =1;
    IPAddress ip;   
    
