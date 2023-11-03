@@ -603,6 +603,28 @@ void ProcessBrowserCommand()
       WebConnect(PrevURLQueue[PrevURLQueueNum], false);
    }
    
+   else if(strcmp(CmdMsg, "b") ==0) // Bookmark Commands
+   {
+      char buf[eepBMURLSize];
+      
+      RxQueueHead = RxQueueTail = 0; //dump the queue
+      
+      AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
+      for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
+      {
+         AddRawStrToRxQueue("<li><a href=\"");
+         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,buf); //URL
+         Printf_dbg("BM#%d- %s", BMNum, buf);
+         AddRawStrToRxQueue(buf);
+         AddRawStrToRxQueue("\">");
+         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),buf); //Title
+         Printf_dbg("- %s\n", buf);
+         AddRawStrToRxQueue(buf);         
+         AddRawStrToRxQueue("</a>");
+      }
+      AddRawStrToRxQueue("<eoftag>");
+   }   
+   
    else if(*CmdMsg == 'r') // Reload web page
    {
       CmdMsg++; //past the 'r'
@@ -628,18 +650,31 @@ void ProcessBrowserCommand()
 
          if(URL.host[0] == 0) //relative path, use same server/port, append path
          {         
+            if (URL.path[0] == 0)
+            {
+               SendASCIIErrorStrImmediate("Empty Link");
+               return;  //early return, may remain paused
+            }
+          
             if(URL.path[0] != '/') //if not root ref, add previous path to beginning
             {  
                char temp[MaxURLPathSize];
-               strcpy(temp, URL.path); 
-               strcpy(URL.path, PrevURLQueue[PrevURLQueueNum]->path);
-               strcat(URL.path, temp);
+               strcpy(temp, URL.path); //store the path temprarily
+               strcpy(URL.path, PrevURLQueue[PrevURLQueueNum]->path); 
+               char * ptrLastSlash = strrchr(URL.path, '/'); // find last slash
+               if (ptrLastSlash != NULL) *(ptrLastSlash+1) = 0; //terminate after last slash
+               strcat(URL.path, temp); //add rel path back to end
             }
             URL.port = PrevURLQueue[PrevURLQueueNum]->port;
             strcpy(URL.host, PrevURLQueue[PrevURLQueueNum]->host);
             //leave postpath data in-tact
          }
          ModWebConnect(&URL, *CmdMsg, true);
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("Link# Unknown");
+         return;  //early return, may remain paused
       }
    }
    
@@ -663,6 +698,11 @@ void ProcessBrowserCommand()
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
       DoSearch(CmdMsg);  //includes WebConnect
+   }
+   
+   else if(*CmdMsg == '?') //List commands
+   {
+      SendBrowserCommandsImmediate();
    }
    
    else if(*CmdMsg != 0) //unrecognized command

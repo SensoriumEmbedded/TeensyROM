@@ -93,7 +93,7 @@ FLASHMEM void AT_S(char* CmdArg)
    
    AddToPETSCIIStrToRxQueueLN("General Settings:");
 
-   EEPreadBuf(eepAdMyMAC, mac, 6);
+   EEPreadNBuf(eepAdMyMAC, mac, 6);
    AddMACToRxQueueLN(mac);
    
    AddDHCPEnDisToRxQueueLN();
@@ -129,7 +129,7 @@ FLASHMEM void AT_RNDMAC(char* CmdArg)
    for(uint8_t octnum =0; octnum<6; octnum++) mac[octnum]=random(0,256);
    mac[0] &= 0xFE; //Unicast
    mac[0] |= 0x02; //Local Admin
-   EEPwriteBuf(eepAdMyMAC, mac, 6);
+   EEPwriteNBuf(eepAdMyMAC, mac, 6);
    AddUpdatedToRxQueueLN();
    AddMACToRxQueueLN(mac);
 }
@@ -151,7 +151,7 @@ FLASHMEM void AT_MAC(char* CmdArg)
       }
       mac[octnum++]=strtoul(++CmdArg, NULL, 16);     
    }
-   EEPwriteBuf(eepAdMyMAC, mac, 6);
+   EEPwriteNBuf(eepAdMyMAC, mac, 6);
    AddUpdatedToRxQueueLN();
    AddMACToRxQueueLN(mac);
 }

@@ -43,7 +43,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define NumPageLinkBuffs   99
 #define NumPrevURLQueues   8
 #define MaxURLHostSize     100
-#define MaxURLPathSize     200
+#define MaxURLPathSize     300
 #define MaxTagSize         (MaxURLHostSize+MaxURLPathSize)
 #define TxMsgMaxSize       128
 #define RxQueueSize        (1024*320) 
@@ -101,8 +101,10 @@ struct stcURLParse
 };
 
 extern volatile uint32_t CycleCountdown;
-extern void EEPreadBuf(uint16_t addr, uint8_t* buf, uint8_t len);
-extern void EEPwriteBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
+extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint8_t len);
+extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
+extern void EEPwriteStr(uint16_t addr, const char* buf);
+extern void EEPreadStr(uint16_t addr, char* buf);
 
 uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
 char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
@@ -140,7 +142,7 @@ FLASHMEM bool EthernetInit()
    bool retval = true;
    Serial.print("\nEthernet init ");
    
-   EEPreadBuf(eepAdMyMAC, mac, 6);
+   EEPreadNBuf(eepAdMyMAC, mac, 6);
 
    if (EEPROM.read(eepAdDHCPEnabled))
    {
@@ -182,13 +184,31 @@ FLASHMEM void SetEthEEPDefaults()
 {
    EEPROM.write(eepAdDHCPEnabled, 1); //DHCP enabled
    uint8_t buf[6]={0xBE, 0x0C, 0x64, 0xC0, 0xFF, 0xEE};
-   EEPwriteBuf(eepAdMyMAC, buf, 6);
+   EEPwriteNBuf(eepAdMyMAC, buf, 6);
    EEPROM.put(eepAdMyIP       , (uint32_t)IPAddress(192,168,1,10));
    EEPROM.put(eepAdDNSIP      , (uint32_t)IPAddress(192,168,1,1));
    EEPROM.put(eepAdGtwyIP     , (uint32_t)IPAddress(192,168,1,1));
    EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
    EEPROM.put(eepAdDHCPTimeout, (uint16_t)9000);
-   EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);   
+   EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);  
+   
+   const char * DefBookmarks[eepNumBookmarks][2] =
+   {
+      "TinyWeb64", "http://sensoriumembedded.com/teensyrom/",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+      "", "",
+   };
+   for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
+   {
+      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),DefBookmarks[BMNum][0]);
+      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,DefBookmarks[BMNum][1]);
+   }
 }
 
 //_____________________________________Handlers_____________________________________________________
@@ -217,9 +237,9 @@ FLASHMEM void InitHndlr_SwiftLink()
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) 
    {
       PrevURLQueue[cnt] = (stcURLParse*)malloc(sizeof(stcURLParse));
-      strcpy(PrevURLQueue[cnt]->path, "/teensyrom/");
+      PrevURLQueue[cnt]->path[0] = 0;
       PrevURLQueue[cnt]->postpath[0] = 0;
-      strcpy(PrevURLQueue[cnt]->host, "sensoriumembedded.com");
+      PrevURLQueue[cnt]->host[0] = 0;
       PrevURLQueue[cnt]->port = 80;
    }
    randomSeed(ARM_DWT_CYCCNT);
