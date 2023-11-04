@@ -528,7 +528,6 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
          if(DLExtension(Extension)) cMod = 'd';
       }
       else {Printf_dbg("none\n");}
-            
    }
    
    switch (cMod)
@@ -613,7 +612,7 @@ void ProcessBrowserCommand()
       CmdMsg++; //past the 'b'
       
       if (*CmdMsg == 0) //no modifier
-      {
+      {  //print bookmark list via buffer
          char buf[eepBMURLSize];
          
          AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
@@ -631,8 +630,21 @@ void ProcessBrowserCommand()
          }
          AddRawStrToRxQueue("<eoftag>");
       }
+      
+      else if(*CmdMsg >= '1' && *CmdMsg <= '9')
+      {  //jump to bookmark
+         stcURLParse URL;
+         char buf[eepBMURLSize];
+         uint8_t BMNum = *CmdMsg - '1'; //zero based
+         
+         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, buf); //URL
+         ParseURL(buf, URL);
+         WebConnect(&URL, true);
+      }
+      
       else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
-      {  //set bookmark
+      {  //set bookmark # to current
+   
          //re-encode to maximize eeprom usage, but could be too long...
          char strURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12]; //   +"HTTP:// & :Prt"
          
@@ -649,11 +661,11 @@ void ProcessBrowserCommand()
          }
          CmdMsg++;
          uint8_t BMNum = *CmdMsg - '1'; //zero based
-         while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes
+         while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
          EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize), CurrPageTitle); //Title
          EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, strURL); //URL
-         //delay(5); //eeprom still doing background tasks that can interfere with register emulation
          
+         //Send confirmation
          AddRawStrToRxQueue("<br><b>Bookmark #"); 
          AddRawCharToRxQueue(*CmdMsg);
          AddRawStrToRxQueue(" updated to:</b><br>\"");
