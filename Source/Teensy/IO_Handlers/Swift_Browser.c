@@ -137,21 +137,20 @@ void ParseHTMLTag()
    
    else if(strcmp(TagBuf, "title")==0) //page title
    {
-      char PageTitle[100];
       uint8_t CharNum = 0;
       
-      while (RxQueueUsed > 0 && CharNum < 100-1)
+      while (RxQueueUsed > 0 && CharNum < eepBMTitleSize-1)
       {
          uint8_t InChar = PullFromRxQueue();
-         if(InChar == '<') //asumes Title tag has no embedded tags
+         if(InChar == '<') //found the end of title, asumes Title tag has no embedded tags
          {
             while (RxQueueUsed > 0 && InChar != '>') InChar = PullFromRxQueue();
             break;
          }
-         else PageTitle[CharNum++] = InChar;
+         else CurrPageTitle[CharNum++] = InChar;
       }
-      PageTitle[CharNum]=0;
-      Printf_dbg("Title: %s\n", PageTitle);
+      CurrPageTitle[CharNum]=0;
+      Printf_dbg("Title: %s\n", CurrPageTitle);
    }
    
    else if(strcmp(TagBuf, "li")==0) //list item
@@ -313,7 +312,12 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
 
 bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
 {
-  
+   if (DestURL->host[0] == 0)
+   {
+      SendASCIIErrorStrImmediate("No Host");
+      return false;
+   }
+   
    if (AddToHist) //add URL to the prev queue
    {
       if (++PrevURLQueueNum == NumPrevURLQueues) PrevURLQueueNum = 0; //inc/wrap around top
@@ -603,26 +607,66 @@ void ProcessBrowserCommand()
       WebConnect(PrevURLQueue[PrevURLQueueNum], false);
    }
    
-   else if(strcmp(CmdMsg, "b") ==0) // Bookmark Commands
+   else if(*CmdMsg == 'b') // Bookmark Commands
    {
-      char buf[eepBMURLSize];
+      RxQueueHead = RxQueueTail = 0; //dump the queue         
+      CmdMsg++; //past the 'b'
       
-      RxQueueHead = RxQueueTail = 0; //dump the queue
-      
-      AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
-      for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
+      if (*CmdMsg == 0) //no modifier
       {
-         AddRawStrToRxQueue("<li><a href=\"");
-         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,buf); //URL
-         Printf_dbg("BM#%d- %s", BMNum, buf);
-         AddRawStrToRxQueue(buf);
-         AddRawStrToRxQueue("\">");
-         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),buf); //Title
-         Printf_dbg("- %s\n", buf);
-         AddRawStrToRxQueue(buf);         
-         AddRawStrToRxQueue("</a>");
+         char buf[eepBMURLSize];
+         
+         AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
+         for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
+         {
+            AddRawStrToRxQueue("<li><a href=\"");
+            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,buf); //URL
+            Printf_dbg("BM#%d- %s", BMNum, buf);
+            AddRawStrToRxQueue(buf);
+            AddRawStrToRxQueue("\">");
+            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),buf); //Title
+            Printf_dbg("- %s\n", buf);
+            AddRawStrToRxQueue(buf);         
+            AddRawStrToRxQueue("</a>");
+         }
+         AddRawStrToRxQueue("<eoftag>");
       }
-      AddRawStrToRxQueue("<eoftag>");
+      else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
+      {  //set bookmark
+         //re-encode to maximize eeprom usage, but could be too long...
+         char strURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12]; //   +"HTTP:// & :Prt"
+         
+         sprintf(strURL, "http://%s:%d%s%s",
+            PrevURLQueue[PrevURLQueueNum]->host,
+            PrevURLQueue[PrevURLQueueNum]->port,
+            PrevURLQueue[PrevURLQueueNum]->path,
+            PrevURLQueue[PrevURLQueueNum]->postpath);
+         
+         if (strlen(strURL) >= eepBMURLSize)
+         {
+            SendASCIIErrorStrImmediate("URL too long");
+            return;  //early return, may remain paused            
+         }
+         CmdMsg++;
+         uint8_t BMNum = *CmdMsg - '1'; //zero based
+         while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes
+         EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize), CurrPageTitle); //Title
+         EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, strURL); //URL
+         //delay(5); //eeprom still doing background tasks that can interfere with register emulation
+         
+         AddRawStrToRxQueue("<br><b>Bookmark #"); 
+         AddRawCharToRxQueue(*CmdMsg);
+         AddRawStrToRxQueue(" updated to:</b><br>\"");
+         AddRawStrToRxQueue(CurrPageTitle);
+         AddRawStrToRxQueue("\" at<br>");
+         AddRawStrToRxQueue(strURL);
+         AddRawStrToRxQueue("<eoftag>");
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("Unk Bookmark Mod");
+         return;  //early return, may remain paused
+      }
    }   
    
    else if(*CmdMsg == 'r') // Reload web page

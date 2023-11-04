@@ -48,7 +48,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define TxMsgMaxSize       128
 #define RxQueueSize        (1024*320) 
 #define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
-#define NMITimeoutnS       300   //if Rx data not read within this time, deassert NMI anyway
+#define NMITimeoutnS       300    //if Rx data not read within this time, deassert NMI anyway
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -110,6 +110,7 @@ uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64
 char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
 char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
 stcURLParse* PrevURLQueue[NumPrevURLQueues]; //For browse previous
+char CurrPageTitle[eepBMTitleSize]; //keep current page title, could move to RAM2
 
 uint8_t  PrevURLQueueNum;   //current/latest in the link history queue
 uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
@@ -242,8 +243,9 @@ FLASHMEM void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->host[0] = 0;
       PrevURLQueue[cnt]->port = 80;
    }
+   strcpy(CurrPageTitle, "None");
    randomSeed(ARM_DWT_CYCCNT);
-}   
+}
 
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 {
