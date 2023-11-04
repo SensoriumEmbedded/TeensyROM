@@ -31,11 +31,19 @@ FLASHMEM void ServiceSerial()
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
          inByte = Serial.read(); //READ NEXT BYTE
+         if (inByte == 0xEE) //Reset C64, only command available when busy
+         {
+            Serial.println("Reset cmd received");
+            SetUpMainMenuROM();
+            return;
+         }
          if (CurrentIOHandler != IOH_TeensyROM)
          {
             SendU16(FailToken);
             Serial.print("Busy!\n");
+            return;
          }
+         
          switch (inByte)
          {
             case 0x55:  //ping
@@ -43,10 +51,6 @@ FLASHMEM void ServiceSerial()
                break;
             case 0xAA: //file x-fer pc->TR
                ReceiveFile();        
-               break;
-            case 0xEE: //Reset C64
-               Serial.println("Reset cmd received");
-               SetUpMainMenuROM();
                break;
             case 0x67: //Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
