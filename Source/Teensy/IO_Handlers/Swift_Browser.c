@@ -167,7 +167,7 @@ void ParseHTMLTag()
       char * ptrCharNum = TagBuf+7; //start after "petscii" offset
       while(*ptrCharNum==' ') ptrCharNum++;  //Allow for spaces after petscii
 
-      while(CheckAndDecode(ptrCharNum, &NextChar))
+      while(CheckAndDecode(ptrCharNum, &NextChar) == true)
       {
          SendPETSCIICharImmediate(NextChar); 
          ptrCharNum+=3;
@@ -328,9 +328,11 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
    client.stop();
 
    RxQueueHead = RxQueueTail = 0; //dump the queue
+   strcpy(CurrPageTitle, "Unknown"); //gets populated via title tag 
    
    Printf_dbg("Connect: \"%s%s%s\"\n", DestURL->host, DestURL->path, DestURL->postpath);
    
+   SendPETSCIICharImmediate(PETSCIIyellow);
    SendASCIIStrImmediate("\rConnecting to: ");
    SendASCIIStrImmediate(DestURL->host);
    SendASCIIStrImmediate(DestURL->path);
@@ -440,20 +442,41 @@ void DownloadFile(const char *origPathName)
       return;      
    }
 
-   if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
+   FS *sourceFS;
+   uint8_t USB_SD = EEPROM.read(eepAdDLPathSD_USB);
+   EEPreadStr(eepAdDLPath, FileNamePath); 
+   
+   SendASCIIStrImmediate("Path: ");
+
+   if(USB_SD == Drive_SD)
    {
-      SendASCIIErrorStrImmediate("No SD card");  
-      return;      
+      if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      {
+         SendASCIIErrorStrImmediate("No SD card");  
+         return;      
+      }
+      SendASCIIStrImmediate("SD:");
+      sourceFS = &SD;
+   }
+   else
+   {
+      SendASCIIStrImmediate("USB:");
+      sourceFS = &firstPartition;      
    }
    
-   //if (sourceFS->exists(FileNamePath))
-   if (SD.exists(FileName))
+   SendASCIIStrImmediate(FileNamePath);
+   SendASCIIStrImmediate("\r");
+
+   strcat(FileNamePath, FileName); //add filename to dest path
+
+   if (sourceFS->exists(FileNamePath))
    {
       SendASCIIErrorStrImmediate("File already exists");  
       return;      
    }
    
-   File dataFile = SD.open(FileName, FILE_WRITE);
+   File dataFile = sourceFS->open(FileNamePath, FILE_WRITE);
    if (!dataFile) 
    {
       SendASCIIErrorStrImmediate("Error opening file");
@@ -586,18 +609,10 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
 
 void ProcessBrowserCommand()
 {
-   char* CmdMsg = TxMsg; //local copy for manipulation
+   char* CmdMsg = TxMsg; //local pointer for manipulation
    
-   if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
-   {
-      while (client.available()) client.read(); //clear client buffer
-      client.stop();
-      BrowserMode = false;
-      RxQueueHead = RxQueueTail = 0; //dump the queue
-      AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
-   }
    
-   else if(strcmp(CmdMsg, "p") ==0) // Previous web page
+   if(strcmp(CmdMsg, "p") ==0) // Previous web page
    {
       if (PrevURLQueueNum == 0) PrevURLQueueNum = NumPrevURLQueues - 1; //wrap around bottom
 	   else  PrevURLQueueNum--;
@@ -761,6 +776,65 @@ void ProcessBrowserCommand()
       SendBrowserCommandsImmediate();
    }
    
+   else if(*CmdMsg == 'd') //download path update
+   {
+      uint8_t USB_SD;
+      FS *sourceFS;
+      
+      CmdMsg++; //past the 'd'
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
+      if (strncmp(CmdMsg, "usb:", 4) == 0)
+      {
+         CmdMsg+=4;
+         USB_SD = Drive_USB;
+         sourceFS = &firstPartition;
+      }
+      else if (strncmp(CmdMsg, "sd:", 3) == 0)
+      {
+         CmdMsg+=3;
+         USB_SD = Drive_SD;
+         if (!SD.begin(BUILTIN_SDCARD))
+         {
+            SendASCIIErrorStrImmediate("SD not present");
+            return;  //early return, may remain paused
+         }
+         sourceFS = &SD; 
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("SD: or USB: missing");
+         return;  //early return, may remain paused
+      }
+      
+      //check that path exists
+      if (sourceFS->exists(CmdMsg))
+      {
+         if(CmdMsg[strlen(CmdMsg)-1] != '/') strcat(CmdMsg, "/");
+         while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
+         EEPROM.write(eepAdDLPathSD_USB, USB_SD);
+         EEPwriteStr(eepAdDLPath, CmdMsg); 
+         
+         SendPETSCIICharImmediate(PETSCIIyellow);
+         SendASCIIStrImmediate("Download path updated\r");
+         SendPETSCIICharImmediate(PETSCIIwhite);
+         return;  //early return, may remain paused
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("Path not found");
+         return;  //early return, may remain paused
+      }
+   }
+   
+   else if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
+   {
+      while (client.available()) client.read(); //clear client buffer
+      client.stop();
+      BrowserMode = false;
+      RxQueueHead = RxQueueTail = 0; //dump the queue
+      AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
+   }
+
    else if(*CmdMsg != 0) //unrecognized command
    {
       SendASCIIErrorStrImmediate("Unknown Command");

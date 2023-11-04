@@ -49,6 +49,8 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define RxQueueSize        (1024*320) 
 #define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
 #define NMITimeoutnS       300    //if Rx data not read within this time, deassert NMI anyway
+#define Drive_USB          1
+#define Drive_SD           2
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -192,7 +194,9 @@ FLASHMEM void SetEthEEPDefaults()
    EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
    EEPROM.put(eepAdDHCPTimeout, (uint16_t)9000);
    EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);  
-   
+   EEPROM.write(eepAdDLPathSD_USB, Drive_SD); //default to root of SD card
+   EEPwriteStr(eepAdDLPath, "/"); 
+
    const char * DefBookmarks[eepNumBookmarks][2] =
    {
       "TinyWeb64", "http://sensoriumembedded.com/teensyrom/",
@@ -205,6 +209,7 @@ FLASHMEM void SetEthEEPDefaults()
       "", "",
       "", "",
    };
+   
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
    {
       EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),DefBookmarks[BMNum][0]);
