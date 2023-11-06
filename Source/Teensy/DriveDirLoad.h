@@ -177,6 +177,6 @@ StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
    "hex",  rtFileHex,
    "p00",  rtFileP00,
    "sid",  rtFileSID,
-   "c64",  rtFilePrg,
+   //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
 
