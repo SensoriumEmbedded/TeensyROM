@@ -426,14 +426,13 @@ void DoSearch(const char *Term)
    WebConnect(&URL, true);
 }
 
-void DownloadFile(const char *origPathName)
+void DownloadFile(stcURLParse *DestURL)
 {  // Modifies (decodes) FileName
-   // assumes client connected, header read, and ready for download
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
 
-   const char* ptrOrigFilename = strrchr(origPathName, '/'); //pointer to nav orig path/file name, find last slash
-   if (ptrOrigFilename == NULL) ptrOrigFilename = origPathName; //use the whole thing if no slash
+   const char* ptrOrigFilename = strrchr(DestURL->path, '/'); //pointer to nav orig path/file name, find last slash
+   if (ptrOrigFilename == NULL) ptrOrigFilename = DestURL->path; //use the whole thing if no slash
    else ptrOrigFilename++; //skip the slash
 
    //copy/decode special chars
@@ -453,12 +452,6 @@ void DownloadFile(const char *origPathName)
    SendASCIIStrImmediate("Filename: \"");
    SendASCIIStrImmediate(FileName);
    SendASCIIStrImmediate("\"\r");
-
-   if (!client.connected())    
-   {
-      SendASCIIErrorStrImmediate("No data");  
-      return;      
-   }
 
    char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
    FS *sourceFS;
@@ -491,6 +484,14 @@ void DownloadFile(const char *origPathName)
    if (sourceFS->exists(FileNamePath))
    {
       SendASCIIErrorStrImmediate("File already exists");  
+      return;      
+   }
+   
+   if (!WebConnect(DestURL, false)) return;
+
+   if (!client.connected())    
+   {
+      SendASCIIErrorStrImmediate("No data");  
       return;      
    }
    
@@ -538,7 +539,8 @@ bool isURLFiltered(const stcURLParse *URL)
 FLASHMEM bool DLExtension(const char * Extension)
 {
    uint8_t ExtNum = 0;
-   const char DLExts [][9] =
+   char ExtLower[strlen(Extension)+1]; //for lower case copy
+   const char DLExts [][5] =
    {
       "prg",
       "crt",
@@ -546,9 +548,11 @@ FLASHMEM bool DLExtension(const char * Extension)
       "hex",
    };   
    
+   for(uint16_t CharNum=0; CharNum <= strlen(Extension); CharNum++) ExtLower[CharNum] = tolower(Extension[CharNum]);
+   
    while(ExtNum < sizeof(DLExts)/sizeof(DLExts[0]))
    {
-      if(strcmp(Extension, DLExts[ExtNum++])==0) return true;
+      if(strcmp(ExtLower, DLExts[ExtNum++])==0) return true;
    }
    return false;
 }
@@ -557,7 +561,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
 {  //Do WebConnect, apply Modifier argument
    //assumes char already qualified via ValidModifier()
    
-   if (cMod == ' ' || cMod == 0) //modifier not specified, check for forced download
+   if (cMod == ' ' || cMod == 0) //modifier not specified, check for auto-download
    {
       char * Extension = strrchr(DestURL->path, '.');
       Printf_dbg("*--Ext: ");
@@ -574,12 +578,9 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
    switch (cMod)
    {
       case 'd': //download
-         if (WebConnect(DestURL, false)==true)
-         {                     
-            DownloadFile(DestURL->path);
-            while (client.available()) client.read(); //clear client buffer
-            client.stop();  //in case of unfinished/error, don't read it in as text
-         }      
+         DownloadFile(DestURL);
+         while (client.available()) client.read(); //clear client buffer
+         client.stop();  //in case of unfinished/error, don't read it in as text
          break;
          
       case 'f':  //filter via FrogFind
