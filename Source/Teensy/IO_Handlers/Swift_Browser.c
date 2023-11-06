@@ -311,11 +311,9 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
       while (client.available()) 
       {
          uint8_t c = client.read();
-         linebuf[charcount++] = c;
-         if(charcount == MaxLen) 
+         if(charcount < MaxLen-1) //leave room for term 
          {
-            SendASCIIErrorStrImmediate("Hdr: line too long");
-            return false;
+            linebuf[charcount++] = c;
          }
          if (c=='\n')
          {
@@ -356,12 +354,13 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
    SendASCIIStrImmediate(DestURL->path);
    SendASCIIStrImmediate(DestURL->postpath);
    SendPETSCIICharImmediate(PETSCIIreturn);
-   SendPETSCIICharImmediate(PETSCIIbrown);
+   SendPETSCIICharImmediate(PETSCIIbrown);  // header info color
    
    if (client.connect(DestURL->host, 80))  //DestURL->port))
    {
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
+      bool ShowHeader = true; //initially true
       
       client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL->path, DestURL->postpath, DestURL->host);
@@ -370,8 +369,14 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
       //https://www.tutorialspoint.com/http/http_responses.htm
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
+         
          //Printf_dbg("H: %s", inbuf);  //causes lost data
-         SendASCIIStrImmediate(inbuf);
+         if (ShowHeader) 
+         {
+            if (strstr(inbuf, "HTTP/1.1 200") != NULL) ShowHeader = false;
+            else SendASCIIStrImmediate(inbuf);
+         }
+         
          if (strcmp(inbuf, "\r\n") == 0) 
          {
             SendPETSCIICharImmediate(PETSCIIwhite);
@@ -539,7 +544,7 @@ bool isURLFiltered(const stcURLParse *URL)
 FLASHMEM bool DLExtension(const char * Extension)
 {
    uint8_t ExtNum = 0;
-   char ExtLower[strlen(Extension)+1]; //for lower case copy
+   char ExtLower[strlen(Extension)+1]; //for lower case copy w/ term
    const char DLExts [][5] =
    {
       "prg",
@@ -548,6 +553,7 @@ FLASHMEM bool DLExtension(const char * Extension)
       "hex",
    };   
    
+   //copy to lower case local str
    for(uint16_t CharNum=0; CharNum <= strlen(Extension); CharNum++) ExtLower[CharNum] = tolower(Extension[CharNum]);
    
    while(ExtNum < sizeof(DLExts)/sizeof(DLExts[0]))
@@ -863,7 +869,7 @@ void ProcessBrowserCommand()
       AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
    }
 
-   else if(*CmdMsg != 0) //unrecognized command
+   else if(*CmdMsg != 0) //something there, but not recognized command
    {
       SendASCIIErrorStrImmediate("Unknown Command");
    }
