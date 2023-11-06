@@ -100,19 +100,24 @@ void ParseHTMLTag()
 { //retrieve and interpret HTML Tag
   //https://www.w3schools.com/tags/
   
+   //pull tag from queue until '>', or queue empty
    char TagBuf[MaxTagSize];
    uint16_t BufCnt = 0;
+   bool ToLowerCase = true;
    
-   //pull tag from queue until >, queue empty, or buff max size
    while (RxQueueUsed > 0)
    {
-      TagBuf[BufCnt] = PullFromRxQueue();
-      if(TagBuf[BufCnt] == '>') break;
-      if(++BufCnt == MaxTagSize-1) break;
+      uint8_t NextChar = PullFromRxQueue();
+      if(NextChar == '>') break;
+      if(BufCnt < MaxTagSize-1)
+      { //keep incrementing until full, then keep going until > or empty queue
+         if(NextChar == '=') ToLowerCase = false; //stop lower case at/after '=' separator (URL)
+         
+         TagBuf[BufCnt++] = ToLowerCase ? tolower(NextChar) : NextChar;
+      }
    }
    TagBuf[BufCnt] = 0;  //terminate it
-
-
+   
    //check for known tags and do formatting, etc
    if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
    {
@@ -175,21 +180,27 @@ void ParseHTMLTag()
       }
    }
    
-   else if(strncmp(TagBuf, "a href=", 7)==0) //start of hyperlink text, save hyperlink
+   else if(strncmp(TagBuf, "a ", 2)==0) //start of hyperlink text, save hyperlink
    { 
-      //Printf_dbg("LinkTag: %s\n", TagBuf);
+      //allow for things like <a data-pw="storyLink" href="/...">
+      char * ptrCharNum = strstr(TagBuf, "href=");
+      if (ptrCharNum == NULL) return; //not really a link?
+      
+      ptrCharNum += 6; //skip href= and openning quote
+      
+      //Printf_dbg("LinkTag: %s\n", ptrCharNum);
       SendPETSCIICharImmediate(PETSCIIpurple); 
       SendPETSCIICharImmediate(PETSCIIrvsOn); 
       if (UsedPageLinkBuffs < NumPageLinkBuffs)
       {
-         for(uint16_t CharNum = 8; CharNum < strlen(TagBuf); CharNum++) //skip a href="
+         for(uint16_t CharNum = 0; CharNum < strlen(ptrCharNum); CharNum++) 
          { //terminate at first 
-            if(TagBuf[CharNum]==' '  || 
-               TagBuf[CharNum]=='\'' ||
-               TagBuf[CharNum]=='\"' ||
-               TagBuf[CharNum]=='#') TagBuf[CharNum] = 0; //terminate at space, #, ', or "
+            if(ptrCharNum[CharNum]==' '  || 
+               ptrCharNum[CharNum]=='\'' ||
+               ptrCharNum[CharNum]=='\"' ||
+               ptrCharNum[CharNum]=='#') ptrCharNum[CharNum] = 0; //terminate at space, #, ', or "
          }
-         strcpy(PageLinkBuff[UsedPageLinkBuffs], TagBuf+8); // remove quote from beginning
+         strcpy(PageLinkBuff[UsedPageLinkBuffs], ptrCharNum);
          
          Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
          UsedPageLinkBuffs++;
@@ -231,7 +242,7 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
    //the format of a URI is as follows: "ACCESS :// HOST : PORT / PATH # ANCHOR"
    
    URLParse.host[0] = 0;
-   URLParse.port = 80;
+   //URLParse.port = 80;
    URLParse.path[0] = 0;
    URLParse.postpath[0] = 0;
    
@@ -243,24 +254,31 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
    else
    {
       const char * ptrServerName = strstr(URL, "://")+3; //move past the access ID
-      char * ptrPort = strstr(ptrServerName, ":");  //find port identifier
+      //char * ptrPort = strstr(ptrServerName, ":");  //find port identifier
       char * ptrPath = strstr(ptrServerName, "/");  //find path identifier
       
       //need to check for userid? http://userid@example.com:8080/
       
+      // skipping port parsing, always 80 anyway
+      // "port" commented out throughout...
+      
       //finalize server name and update port, if present
-      if (ptrPort != NULL) //there's a port ID; capture and set host name
-      {
-         URLParse.port = atoi(ptrPort+1);  //skip the ":"
-         strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
-         URLParse.host[ptrPort-ptrServerName]=0; //terminate it
-      }
-      else if (ptrPath != NULL)  //no port, but there's a path; set host name
+      //if (ptrPort != NULL) //there's a potential port ID 
+      //{
+      //   if (ptrPort < ptrPath) //is the : before the path start? 
+      //   {  //capture and set host name
+      //      URLParse.port = atoi(ptrPort+1);  //skip the ":"
+      //      strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
+      //      URLParse.host[ptrPort-ptrServerName]=0; //terminate it
+      //   }
+      //}
+      //else //no port
+      if (ptrPath != NULL)  //there's a path; set host name
       {
          strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
          URLParse.host[ptrPath-ptrServerName]=0; //terminate it
       }
-      else strcpy(URLParse.host, ptrServerName);  //no port or path
+      else strcpy(URLParse.host, ptrServerName);  //no path
    
       //copy path, if present
       if (ptrPath != NULL) strcpy(URLParse.path, ptrPath);
@@ -279,7 +297,7 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
 
    Printf_dbg("\nOrig = \"%s\"\nParsed:\n", URL);
    Printf_dbg(" serv = \"%s\"\n", URLParse.host);
-   Printf_dbg(" port = %d\n", URLParse.port);
+   //Printf_dbg(" port = %d\n", URLParse.port);
    Printf_dbg(" path = \"%s\"\n", URLParse.path);
    Printf_dbg(" post = \"%s\"\n", URLParse.postpath);
 } 
@@ -340,7 +358,7 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
    SendPETSCIICharImmediate(PETSCIIreturn);
    SendPETSCIICharImmediate(PETSCIIbrown);
    
-   if (client.connect(DestURL->host, DestURL->port))
+   if (client.connect(DestURL->host, 80))  //DestURL->port))
    {
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
@@ -376,7 +394,7 @@ void DoSearch(const char *Term)
    stcURLParse URL =
    {
       "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
-      80,                 //URL.port = 80;
+      //80,                 //URL.port = 80;
       "/",                //strcpy(URL.path = "/");
       "?q=",              //strcpy(URL.postpath = "?q=");
    };
@@ -535,7 +553,7 @@ FLASHMEM bool DLExtension(const char * Extension)
    return false;
 }
 
-void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
+void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
 {  //Do WebConnect, apply Modifier argument
    //assumes char already qualified via ValidModifier()
    
@@ -571,7 +589,7 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
             stcURLParse URL =
             {
                "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
-               80,                     //URL.port = 80;
+               //80,                     //URL.port = 80;
                "/read.php",            //strcpy(URL.path = "/read.php?a=http://");
                "?a=http://"            //URL.postpath
             };
@@ -579,6 +597,10 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
             strcat(URL.postpath, DestURL->host);
             strcat(URL.postpath, DestURL->path);
             strcat(URL.postpath, DestURL->postpath);
+            //write back filtered URL in case it's pointing to a history queue item (ie 'rf' command) 
+            //  so link patchs will be relative to correct server
+            memcpy(DestURL, &URL, sizeof(stcURLParse)); 
+            
             WebConnect(&URL, AddToHist);
          }
          break;
@@ -597,6 +619,11 @@ void ModWebConnect(const stcURLParse *DestURL, char cMod, bool AddToHist)
             {
                stcURLParse URL;
                ParseURL(ptrURL, URL);
+               
+               //write back unfiltered URL in case it's pointing to a history queue item (ie 'rr' command) 
+               //  so link patchs will be relative to correct server
+               memcpy(DestURL, &URL, sizeof(stcURLParse)); 
+                  
                WebConnect(&URL, AddToHist);  
             }
          }
@@ -663,9 +690,9 @@ void ProcessBrowserCommand()
          //re-encode to maximize eeprom usage, but could be too long...
          char strURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12]; //   +"HTTP:// & :Prt"
          
-         sprintf(strURL, "http://%s:%d%s%s",
+         sprintf(strURL, "http://%s%s%s",
             PrevURLQueue[PrevURLQueueNum]->host,
-            PrevURLQueue[PrevURLQueueNum]->port,
+            //PrevURLQueue[PrevURLQueueNum]->port,
             PrevURLQueue[PrevURLQueueNum]->path,
             PrevURLQueue[PrevURLQueueNum]->postpath);
          
@@ -736,7 +763,7 @@ void ProcessBrowserCommand()
                if (ptrLastSlash != NULL) *(ptrLastSlash+1) = 0; //terminate after last slash
                strcat(URL.path, temp); //add rel path back to end
             }
-            URL.port = PrevURLQueue[PrevURLQueueNum]->port;
+            //URL.port = PrevURLQueue[PrevURLQueueNum]->port;
             strcpy(URL.host, PrevURLQueue[PrevURLQueueNum]->host);
             //leave postpath data in-tact
          }

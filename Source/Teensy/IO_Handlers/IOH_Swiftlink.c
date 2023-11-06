@@ -44,7 +44,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define NumPrevURLQueues   8
 #define MaxURLHostSize     100
 #define MaxURLPathSize     300
-#define MaxTagSize         (MaxURLHostSize+MaxURLPathSize)
+#define MaxTagSize         300
 #define TxMsgMaxSize       128
 #define RxQueueSize        (1024*320) 
 #define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
@@ -97,7 +97,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 struct stcURLParse
 {
    char host[MaxURLHostSize];
-   uint16_t port;
+   //uint16_t port;
    char path[MaxURLPathSize];
    char postpath[MaxURLPathSize];
 };
@@ -199,15 +199,15 @@ FLASHMEM void SetEthEEPDefaults()
 
    const char * DefBookmarks[eepNumBookmarks][2] =
    {
-      "TinyWeb64", "http://sensoriumembedded.com/teensyrom/",
-      "", "",
-      "", "",
-      "", "",
-      "", "",
-      "", "",
-      "", "",
-      "", "",
-      "", "",
+      "TinyWeb64 at Sensorium", "http://sensoriumembedded.com/teensyrom/",
+      "68k.news: Headlines from the Future", "http://68k.news/",
+      "CNN Lite (filtered)", "http://www.frogfind.com/read.php?a=http://lite.cnn.com/",
+      "CBC Lite News (filtered)", "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
+      "textfiles.com", "http://textfiles.com/directory.html",
+      "Hyperlinked Text (filtered)", "http://www.frogfind.com/read.php?a=http://sjmulder.nl/en/textonly.html",
+      "legiblenews.com (filtered)", "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
+      "text-only news sites (filtered)", "http://www.frogfind.com/read.php?a=http://greycoder.com/a-list-of-text-only-new-sites",
+      "-unused-", "",
    };
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
@@ -246,7 +246,7 @@ FLASHMEM void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->path[0] = 0;
       PrevURLQueue[cnt]->postpath[0] = 0;
       PrevURLQueue[cnt]->host[0] = 0;
-      PrevURLQueue[cnt]->port = 80;
+      //PrevURLQueue[cnt]->port = 80;
    }
    strcpy(CurrPageTitle, "None");
    randomSeed(ARM_DWT_CYCCNT);
