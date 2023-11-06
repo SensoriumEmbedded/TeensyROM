@@ -24,7 +24,7 @@
 FLASHMEM void AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
    SendBrowserCommandsImmediate();
-   UsedPageLinkBuffs = 0;
+   UnPausePage();
    BrowserMode = true;
 }
 

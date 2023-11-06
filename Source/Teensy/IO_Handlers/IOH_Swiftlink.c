@@ -134,6 +134,7 @@ uint32_t LastTxMillis = millis();
 void ParseHTMLTag();
 void SetEthEEPDefaults();
 void SendBrowserCommandsImmediate();
+void UnPausePage();
 #include "Swift_RxQueue.c"
 #include "Swift_ATcommands.c"
 #include "Swift_Browser.c"
@@ -227,13 +228,12 @@ FLASHMEM void InitHndlr_SwiftLink()
    SwiftRegControl = 0;
    CycleCountdown=0;
    PlusCount=0;
-   PageCharsReceived = 0;
    PrevURLQueueNum = 0;
    NMIassertMicros = 0;
    PlusCount=0;
    ConnectedToHost = false;
    BrowserMode = false;
-   PagePaused = false;
+   UnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false;   
    PrintingHyperlink = false;
    
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
@@ -378,7 +378,11 @@ void PollingHndlr_SwiftLink()
             SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             Printf_dbg("TxMsg: %s\n", TxMsg);
-            if(BrowserMode) ProcessBrowserCommand();
+            if(BrowserMode) 
+            {
+               ProcessBrowserCommand();
+               SendPETSCIICharImmediate(PETSCIIwhite); 
+            }
             else
             {
                ProcessATCommand();

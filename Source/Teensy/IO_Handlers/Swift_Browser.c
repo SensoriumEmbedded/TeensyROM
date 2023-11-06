@@ -63,9 +63,6 @@ FLASHMEM void SendCommandSummaryImmediate(bool Paused)
 
 FLASHMEM void SendBrowserCommandsImmediate()
 {
-   PageCharsReceived = 0;
-   PagePaused = false;
-
    SendPETSCIICharImmediate(PETSCIIreturn);
    SendPETSCIICharImmediate(PETSCIIpurple); 
    SendPETSCIICharImmediate(PETSCIIrvsOn); 
@@ -94,6 +91,13 @@ bool CheckAndDecode(const char *ptrChars, uint8_t *ptrRetChar)
       return true;
    }
    return false;
+}
+
+void UnPausePage()
+{
+   UsedPageLinkBuffs = 0;
+   PageCharsReceived = 0;
+   PagePaused = false;   
 }
 
 void ParseHTMLTag()
@@ -137,7 +141,6 @@ void ParseHTMLTag()
       //SendPETSCIICharImmediate(PETSCIIgrey); 
       //SendASCIIStrImmediate("\r\r-end-");
       SendCommandSummaryImmediate(false);
-      //SendBrowserCommandsImmediate();  
    }
    
    else if(strcmp(TagBuf, "title")==0) //page title
@@ -224,10 +227,8 @@ void ParseHTMLTag()
    
    else if(strcmp(TagBuf, "html")==0) //Start of HTML
    {
-      SendPETSCIICharImmediate(PETSCIIclearScreen); // comment these two lines out to 
-      UsedPageLinkBuffs = 0;                        //  scroll header instead of clear
-      PageCharsReceived = 0;
-      PagePaused = false;
+      SendPETSCIICharImmediate(PETSCIIclearScreen);
+      UnPausePage();
    }
    //else Printf_dbg("Unk Tag: <%s>\n", TagBuf);  //There can be a lot of these...
    
@@ -344,6 +345,7 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
    client.stop();
 
    RxQueueHead = RxQueueTail = 0; //dump the queue
+   UnPausePage();
    strcpy(CurrPageTitle, "Unknown"); //gets populated via title tag 
    
    Printf_dbg("Connect: \"%s%s%s\"\n", DestURL->host, DestURL->path, DestURL->postpath);
@@ -658,6 +660,8 @@ void ProcessBrowserCommand()
    else if(*CmdMsg == 'b') // Bookmark Commands
    {
       RxQueueHead = RxQueueTail = 0; //dump the queue         
+      UnPausePage();
+      
       CmdMsg++; //past the 'b'
       
       if (*CmdMsg == 0) //no modifier
@@ -706,7 +710,7 @@ void ProcessBrowserCommand()
          if (strlen(strURL) >= eepBMURLSize)
          {
             SendASCIIErrorStrImmediate("URL too long");
-            return;  //early return, may remain paused            
+            return;              
          }
          CmdMsg++;
          uint8_t BMNum = *CmdMsg - '1'; //zero based
@@ -726,14 +730,14 @@ void ProcessBrowserCommand()
       else
       {
          SendASCIIErrorStrImmediate("Unk Bookmark Mod");
-         return;  //early return, may remain paused
+         return;  
       }
    }   
    
    else if(*CmdMsg == 'r') // Reload web page
    {
       CmdMsg++; //past the 'r'
-      if (!ValidModifier(*CmdMsg)) return; //early return, may remain paused
+      if (!ValidModifier(*CmdMsg)) return; 
       
       Printf_dbg("CurrURL# %d\n", PrevURLQueueNum);
       ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg, false);
@@ -746,7 +750,7 @@ void ProcessBrowserCommand()
       if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
       {
          while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
-         if (!ValidModifier(*CmdMsg)) return; //early return, may remain paused
+         if (!ValidModifier(*CmdMsg)) return; 
          
          //we have a valid link # to follow...
          stcURLParse URL;
@@ -758,7 +762,7 @@ void ProcessBrowserCommand()
             if (URL.path[0] == 0)
             {
                SendASCIIErrorStrImmediate("Empty Link");
-               return;  //early return, may remain paused
+               return;  
             }
           
             if(URL.path[0] != '/') //if not root ref, add previous path to beginning
@@ -779,7 +783,7 @@ void ProcessBrowserCommand()
       else
       {
          SendASCIIErrorStrImmediate("Link# Unknown");
-         return;  //early return, may remain paused
+         return;  
       }
    }
    
@@ -787,7 +791,7 @@ void ProcessBrowserCommand()
    {
       CmdMsg++; //past the 'u'
       char Mod = *CmdMsg;
-      if (!ValidModifier(Mod)) return; //early return, may remain paused
+      if (!ValidModifier(Mod)) return; 
       if (Mod) CmdMsg++; //past the Mod or first space
       while(*CmdMsg==' ') CmdMsg++;  //Allow for more spaces after command
       
@@ -830,14 +834,14 @@ void ProcessBrowserCommand()
          if (!SD.begin(BUILTIN_SDCARD))
          {
             SendASCIIErrorStrImmediate("SD not present");
-            return;  //early return, may remain paused
+            return;  
          }
          sourceFS = &SD; 
       }
       else
       {
          SendASCIIErrorStrImmediate("SD: or USB: missing");
-         return;  //early return, may remain paused
+         return;  
       }
       
       //check that path exists
@@ -851,12 +855,12 @@ void ProcessBrowserCommand()
          SendPETSCIICharImmediate(PETSCIIyellow);
          SendASCIIStrImmediate("Download path updated\r");
          SendPETSCIICharImmediate(PETSCIIwhite);
-         return;  //early return, may remain paused
+         return;  
       }
       else
       {
          SendASCIIErrorStrImmediate("Path not found");
-         return;  //early return, may remain paused
+         return;  
       }
    }
    
@@ -866,6 +870,7 @@ void ProcessBrowserCommand()
       client.stop();
       BrowserMode = false;
       RxQueueHead = RxQueueTail = 0; //dump the queue
+      UnPausePage();
       AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
    }
 
@@ -874,14 +879,11 @@ void ProcessBrowserCommand()
       SendASCIIErrorStrImmediate("Unknown Command");
    }
    
-   else if(PagePaused) //empty command, and paused
+   else if(PagePaused) //empty command, and paused;  un-pause on return key alone
    { 
-      SendPETSCIICharImmediate(PETSCIIcursorUp); //Cursor up to overwrite prompt & scroll on
+      //SendPETSCIICharImmediate(PETSCIIcursorUp); //Cursor up to overwrite prompt & scroll on
       //SendPETSCIICharImmediate(PETSCIIclearScreen); //clear screen for next page
+      UnPausePage();
    }
    
-   SendPETSCIICharImmediate(PETSCIIwhite); 
-   PageCharsReceived = 0; //un-pause on any command, or just return key
-   PagePaused = false;
-   UsedPageLinkBuffs = 0;
 }
