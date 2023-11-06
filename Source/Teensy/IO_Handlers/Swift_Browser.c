@@ -474,12 +474,12 @@ void DownloadFile(stcURLParse *DestURL)
          SendASCIIErrorStrImmediate("No SD card");  
          return;      
       }
-      SendASCIIStrImmediate("SD:");
+      SendASCIIStrImmediate("sd:");
       sourceFS = &SD;
    }
    else
    {
-      SendASCIIStrImmediate("USB:");
+      SendASCIIStrImmediate("usb:");
       sourceFS = &firstPartition;      
    }
    
@@ -646,7 +646,14 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
 void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local pointer for manipulation
-   
+  
+   //make lower case until first space or end
+   while(*CmdMsg != ' ' && *CmdMsg) 
+   {
+      *CmdMsg = tolower(*CmdMsg);
+      CmdMsg++;
+   }
+   CmdMsg = TxMsg;
    
    if(strcmp(CmdMsg, "p") ==0) // Previous web page
    {
@@ -840,7 +847,7 @@ void ProcessBrowserCommand()
       }
       else
       {
-         SendASCIIErrorStrImmediate("SD: or USB: missing");
+         SendASCIIErrorStrImmediate("sd: or usb: missing");
          return;  
       }
       

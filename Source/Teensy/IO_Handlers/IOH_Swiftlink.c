@@ -363,11 +363,18 @@ void PollingHndlr_SwiftLink()
       {         
          Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
          
-         if(BrowserMode) SendPETSCIICharImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
-         else AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
-         
-         SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
-         if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case PETSCII
+         if(BrowserMode)
+         {
+            SendPETSCIICharImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
+            if (SwiftTxBuf & 0x80) SwiftTxBuf &= 0x7f; //Cap to ascii
+            else if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //lower case to ascii
+         }
+         else 
+         {
+            AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
+            SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
+            if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case
+         }
          Printf_dbg("%02x: %c\n", SwiftTxBuf);
          
          if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
