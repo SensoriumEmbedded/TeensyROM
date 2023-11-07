@@ -46,7 +46,9 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define MaxURLPathSize     300
 #define MaxTagSize         300
 #define TxMsgMaxSize       128
-#define RxQueueSize        (1024*320) 
+#define RxQueueNumBlocks   40 
+#define RxQueueBlockSize   (1024*8) // 40*8k=320k
+#define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
 #define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
 #define NMITimeoutnS       300    //if Rx data not read within this time, deassert NMI anyway
 #define Drive_USB          1
@@ -108,8 +110,10 @@ extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint8_t len);
 extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
 extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern void EEPreadStr(uint16_t addr, char* buf);
+extern void FreeDriveDirMenu();
+extern uint32_t RAM2BytesFree();
 
-uint8_t* RxQueue = NULL;  //circular queue to pipe data to the c64 
+uint8_t* RxQueue[RxQueueNumBlocks];  //circular queue to pipe data to the c64, divided into blocks for better malloc
 char* TxMsg = NULL;  //to hold messages (AT/browser commands) when off line
 char* PageLinkBuff[NumPageLinkBuffs]; //hold links from tags for user selection in browser
 stcURLParse* PrevURLQueue[NumPrevURLQueues]; //For browse previous
@@ -237,13 +241,31 @@ FLASHMEM void InitHndlr_SwiftLink()
    UnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false;   
    PrintingHyperlink = false;
    
+   FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
+   // RAM2 usage as of 11/7/23:
+   //    Queues/link buffs (below): 320k+128+29k+5.5k= ~355k total
+   //    RAM2 free w/ ethernet loaded & drive menu cleared: 392k (though will show less if fragmented)
+   Printf_dbg("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+
    RxQueueHead = RxQueueTail = TxMsgOffset =0;
-   RxQueue = (uint8_t*)malloc(RxQueueSize);
+   
+   for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) 
+   {
+      RxQueue[cnt] = (uint8_t*)malloc(RxQueueBlockSize);
+      if(RxQueue[cnt] == NULL) Serial.println("OOM RxQ");
+   }
    TxMsg = (char*)malloc(TxMsgMaxSize);
-   for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) PageLinkBuff[cnt] = (char*)malloc(MaxTagSize);
+   if(TxMsg == NULL) Serial.println("OOM TxQ");
+   
+   for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++)
+   {
+      PageLinkBuff[cnt] = (char*)malloc(MaxTagSize);
+      if(PageLinkBuff[cnt] == NULL) Serial.println("OOM PageLinkBuff");
+   }
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) 
    {
       PrevURLQueue[cnt] = (stcURLParse*)malloc(sizeof(stcURLParse));
+      if(PrevURLQueue[cnt] == NULL) Serial.println("OOM PrevURLQueue");
       PrevURLQueue[cnt]->path[0] = 0;
       PrevURLQueue[cnt]->postpath[0] = 0;
       PrevURLQueue[cnt]->host[0] = 0;

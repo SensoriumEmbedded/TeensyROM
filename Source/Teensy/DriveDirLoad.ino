@@ -528,10 +528,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
          }
          else
          {
-            //free/clear prev loaded directory
-            Printf_dbg("Dir info removed"); 
-            for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
-            free(DriveDirMenu); DriveDirMenu = NULL;
+            FreeDriveDirMenu(); //free/clear prev loaded directory to make space
          }
       }
       Printf_dbg("2");
@@ -540,6 +537,17 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    return true;
 }
  
+void FreeDriveDirMenu()
+{
+   //free/clear prev loaded directory
+   if(DriveDirMenu != NULL)
+   {
+      Printf_dbg("Dir info removed\n"); 
+      for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
+      free(DriveDirMenu); DriveDirMenu = NULL;
+   }
+}
+
 void FreeCrtChips()
 { //free chips allocated in RAM2 and reset NumCrtChips
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 

@@ -23,10 +23,11 @@
 
 uint8_t PullFromRxQueue()
 {  //assumes queue data is available before calling
-  uint8_t c = RxQueue[RxQueueTail++]; 
-  if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
-  //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
-  return c;
+   uint8_t c = RxQueue[RxQueueTail/RxQueueBlockSize][RxQueueTail%RxQueueBlockSize];
+   RxQueueTail++;  
+   if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
+   //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
+   return c;
 }
 
 bool ReadyToSendRx()
@@ -114,7 +115,9 @@ void AddRawCharToRxQueue(uint8_t c)
      //SetNMIDeassert;
      return;
   }
-  RxQueue[RxQueueHead++] = c; 
+  
+  RxQueue[RxQueueHead/RxQueueBlockSize][RxQueueHead%RxQueueBlockSize] = c;
+  RxQueueHead++; 
   if (RxQueueHead == RxQueueSize) RxQueueHead = 0;
 }
 
