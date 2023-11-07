@@ -81,6 +81,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define PETSCIIbrown       0x95
 #define PETSCIIpink        0x96
 #define PETSCIIlightGreen  0x99
+#define PETSCIIgreen       0x1e
 #define PETSCIIdarkGrey    0x97
 #define PETSCIIgrey        0x98
 
@@ -200,7 +201,7 @@ FLASHMEM void SetEthEEPDefaults()
 
    const char * DefBookmarks[eepNumBookmarks][2] =
    {
-      "TinyWeb64 at Sensorium", "http://sensoriumembedded.com/teensyrom/",
+      "TinyWeb64 @ Sensorium", "http://sensoriumembedded.com/tinyweb64/",
       "68k.news: Headlines from the Future", "http://68k.news/",
       "CNN Lite (filtered)", "http://www.frogfind.com/read.php?a=http://lite.cnn.com/",
       "CBC Lite News (filtered)", "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",

@@ -53,11 +53,11 @@ FLASHMEM void SendCommandSummaryImmediate(bool Paused)
    if (Paused) 
    {
       SendPETSCIICharImmediate(PETSCIIrvsOn);
-      SendASCIIStrImmediate("Paused (Ret, ");
+      SendASCIIStrImmediate("Pause (Ret or ");
    }
    else SendASCIIStrImmediate("\rFinished (");
-   SendASCIIStrImmediate("#,S[],U[],X,B)");
-   SendPETSCIICharImmediate(PETSCIIrvsOff);
+   SendASCIIStrImmediate("#,S,P,R,U,B,D,X,?)\r");
+   //SendPETSCIICharImmediate(PETSCIIrvsOff);
    SendPETSCIICharImmediate(PETSCIIlightGreen);   
 }
 
@@ -67,13 +67,25 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendPETSCIICharImmediate(PETSCIIpurple); 
    SendPETSCIICharImmediate(PETSCIIrvsOn); 
    SendASCIIStrImmediate("Browser Commands:\r");
-   SendASCIIStrImmediate("S [Term]: Search   [Link#]m: Go to link\r");
-   SendASCIIStrImmediate("Um [URL]: Go to URL       X: Exit\r");
-   SendASCIIStrImmediate("  Return: Continue        P: Prev Page\r");
-   SendASCIIStrImmediate("  Rm: Reload page   \r");
-   
-   //SendASCIIStrImmediate("  B#x: Bookmark #/s/?\r");
-   //SendASCIIStrImmediate("       D[s/u/?] [path]: Set Download dir");
+   SendPETSCIICharImmediate(PETSCIIgreen); 
+   SendASCIIStrImmediate("S [Term]: Search         Bx: Bookmarks\rU");
+   SendPETSCIICharImmediate(PETSCIIpink); 
+   SendASCIIStrImmediate("m");
+   SendPETSCIICharImmediate(PETSCIIgreen); 
+   SendASCIIStrImmediate(" [URL]: Go to URL  Return: Continue\r[Link#]");
+   SendPETSCIICharImmediate(PETSCIIpink); 
+   SendASCIIStrImmediate("m");
+   SendPETSCIICharImmediate(PETSCIIgreen); 
+   SendASCIIStrImmediate(": Go to link  D d:p: Set DL dir\r      R");
+   SendPETSCIICharImmediate(PETSCIIpink); 
+   SendASCIIStrImmediate("m");
+   SendPETSCIICharImmediate(PETSCIIgreen); 
+   SendASCIIStrImmediate(": Reload page     X: Exit\r");
+   SendASCIIStrImmediate("       P: Prev Page       ?: This List\r");
+   SendPETSCIICharImmediate(PETSCIIpink); 
+   SendASCIIStrImmediate("m");
+   //SendPETSCIICharImmediate(PETSCIIpurple); 
+   SendASCIIStrImmediate("=(D)ownload,(F)ilter,(R)aw,(none)deflt\r");
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
