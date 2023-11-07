@@ -2123,19 +2123,19 @@ Please make sure your boards conform to these design rules.</description>
 <attribute name="NAME" x="1.0668" y="56.3626" size="1.143" layer="25" font="vector" ratio="10" rot="R180"/>
 <attribute name="VALUE" x="4.826" y="56.007" size="1.27" layer="27" ratio="10" rot="R90"/>
 </element>
-<element name="U4" library="TeensyROM" package="SO20W" value="74LCV245" x="22.86" y="19.05" smashed="yes" rot="R180">
+<element name="U4" library="TeensyROM" package="SO20W" value="74LVC245" x="22.86" y="19.05" smashed="yes" rot="R180">
 <attribute name="VALUE" x="26.67" y="20.828" size="1.27" layer="27" ratio="10" rot="R180"/>
 <attribute name="NAME" x="29.718" y="17.272" size="1.143" layer="25" font="vector" ratio="10"/>
 </element>
-<element name="U2" library="TeensyROM" package="SO20W" value="74LCV245" x="45.72" y="19.685" smashed="yes" rot="MR180">
+<element name="U2" library="TeensyROM" package="SO20W" value="74LVC245" x="45.72" y="19.685" smashed="yes" rot="MR180">
 <attribute name="VALUE" x="41.91" y="21.463" size="1.27" layer="28" ratio="10" rot="MR180"/>
 <attribute name="NAME" x="38.735" y="22.0218" size="1.143" layer="26" font="vector" ratio="10" rot="MR0"/>
 </element>
-<element name="U3" library="TeensyROM" package="SO20W" value="74LCV245" x="23.495" y="19.685" smashed="yes" rot="MR180">
+<element name="U3" library="TeensyROM" package="SO20W" value="74LVC245" x="23.495" y="19.685" smashed="yes" rot="MR180">
 <attribute name="VALUE" x="19.685" y="21.463" size="1.27" layer="28" ratio="10" rot="MR180"/>
 <attribute name="NAME" x="16.6116" y="21.8694" size="1.143" layer="26" font="vector" ratio="10" rot="MR0"/>
 </element>
-<element name="U5" library="TeensyROM" package="SO20W" value="74LCV245" x="46.355" y="19.05" smashed="yes" rot="R180">
+<element name="U5" library="TeensyROM" package="SO20W" value="74LVC245" x="46.355" y="19.05" smashed="yes" rot="R180">
 <attribute name="VALUE" x="50.165" y="20.828" size="1.27" layer="27" ratio="10" rot="R180"/>
 <attribute name="NAME" x="53.213" y="21.209" size="1.143" layer="25" font="vector" ratio="10"/>
 </element>

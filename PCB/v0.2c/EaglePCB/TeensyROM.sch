@@ -12144,10 +12144,10 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <part name="S1" library="AudioLooper" deviceset="SWITCH-MOMENTARY-2" device="PTH" value="SW-MOM"/>
 <part name="C1" library="TeensyROM" deviceset="CPOL-EU" device="E2-4" value="100uF"/>
 <part name="C2" library="TeensyROM" deviceset="CPOL-EU" device="E2-4" value="100uF"/>
-<part name="U4" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LCV245"/>
-<part name="U2" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LCV245"/>
-<part name="U3" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LCV245"/>
-<part name="U5" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LCV245"/>
+<part name="U4" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LVC245"/>
+<part name="U2" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LVC245"/>
+<part name="U3" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LVC245"/>
+<part name="U5" library="TeensyROM" deviceset="74*245" device="DW" technology="LS" value="74LVC245"/>
 <part name="SUPPLY4" library="supply2" deviceset="GND" device=""/>
 <part name="SUPPLY5" library="supply2" deviceset="GND" device=""/>
 <part name="+3V3" library="supply1" deviceset="+3V3" device=""/>
