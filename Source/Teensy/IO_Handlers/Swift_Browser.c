@@ -339,12 +339,12 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
    return false;
 }
 
-bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
+uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
 {
    if (DestURL->host[0] == 0)
    {
       SendASCIIErrorStrImmediate("No Host");
-      return false;
+      return 0;
    }
    
    if (AddToHist) //add URL to the prev queue
@@ -375,6 +375,7 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       bool ShowHeader = true; //initially true
+      uint32_t Length = 0;
       
       client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL->path, DestURL->postpath, DestURL->host);
@@ -391,12 +392,14 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
             else SendASCIIStrImmediate(inbuf);
          }
          
-         if (strcmp(inbuf, "\r\n") == 0) 
+         if (strncmp(inbuf, "Content-Length: ", 16) == 0) Length = strtoul(inbuf+16, NULL, 10);
+         
+         if (strcmp(inbuf, "\r\n") == 0) //blank line indicates end of header
          {
             SendPETSCIICharImmediate(PETSCIIwhite);
             if(!client.connected()) SendASCIIStrImmediate("Not "); //may have been header only
             SendASCIIStrImmediate("Connected\r");
-            return true; //blank line indicates end of header
+            return Length;
          }
       }
       while (client.available()) client.read(); //clear client buffer
@@ -404,7 +407,7 @@ bool WebConnect(const stcURLParse *DestURL, bool AddToHist)
    }
 
    SendASCIIErrorStrImmediate("Connect Failed");
-   return false;
+   return 0;
 }
 
 void DoSearch(const char *Term)
@@ -506,9 +509,9 @@ void DownloadFile(stcURLParse *DestURL)
       return;      
    }
    
-   if (!WebConnect(DestURL, false)) return;
+   uint32_t Length = WebConnect(DestURL, false);
 
-   if (!client.connected())    
+   if (!client.connected() || Length == 0)    
    {
       SendASCIIErrorStrImmediate("No data");  
       return;      
@@ -521,21 +524,25 @@ void DownloadFile(stcURLParse *DestURL)
       return;
    }   
    
-   SendASCIIStrImmediate("Downloading\r");
+   char buf[50];
+   sprintf(buf, "Downloading %lu bytes\r", Length);
+   SendASCIIStrImmediate(buf);
 
-   uint32_t BytesRead = 0;
    while (client.connected()) 
    {
       while (client.available()) 
       {
          dataFile.write(client.read());
-         BytesRead++;
+         if(--Length == 0)
+         {
+            dataFile.close();
+            SendASCIIStrImmediate("Finished\r"); 
+            return;            
+         }
       }
    }      
    dataFile.close();
-   char buf[100];
-   sprintf(buf, "Finished: %lu bytes\r", BytesRead);
-   SendASCIIStrImmediate(buf);
+   SendASCIIStrImmediate("Connection lost, incomplete\r");
 }
 
 bool ValidModifier(const char cMod)
