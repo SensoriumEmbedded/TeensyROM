@@ -410,7 +410,7 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
    return 0;
 }
 
-void DoSearch(const char *Term)
+FLASHMEM void DoSearch(const char *Term)
 {
    char HexChar[] = "01234567890abcdef";
    stcURLParse URL =
@@ -448,7 +448,7 @@ void DoSearch(const char *Term)
    WebConnect(&URL, true);
 }
 
-void DownloadFile(stcURLParse *DestURL)
+FLASHMEM void DownloadFile(stcURLParse *DestURL)
 {  // Modifies (decodes) FileName
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
@@ -545,7 +545,7 @@ void DownloadFile(stcURLParse *DestURL)
    SendASCIIStrImmediate("Connection lost, incomplete\r");
 }
 
-bool ValidModifier(const char cMod)
+FLASHMEM bool ValidModifier(const char cMod)
 {
    char ValidMods[] = "dfr ";
    for (uint8_t charnum=0; charnum<=strlen(ValidMods); charnum++) // <= to include term check as valid
@@ -662,7 +662,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
    }
 }
 
-void ProcessBrowserCommand()
+FLASHMEM void ProcessBrowserCommand()
 {
    char* CmdMsg = TxMsg; //local pointer for manipulation
   
