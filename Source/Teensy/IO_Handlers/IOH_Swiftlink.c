@@ -46,6 +46,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define MaxURLPathSize     300
 #define MaxTagSize         300
 #define TxMsgMaxSize       128
+#define BytesPerDot        (25*1024) //dot every 25k when downloading
 #define RxQueueNumBlocks   40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
@@ -84,6 +85,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define PETSCIIpink        0x96
 #define PETSCIIlightGreen  0x99
 #define PETSCIIgreen       0x1e
+#define PETSCIIlightGrey   0x9b
 #define PETSCIIdarkGrey    0x97
 #define PETSCIIgrey        0x98
 

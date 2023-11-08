@@ -190,24 +190,50 @@ FLASHMEM void AddDHCPRespTOToRxQueueLN()
    sprintf(buf, " DHCP Response Timeout: %dmS", invalU16);
    AddToPETSCIIStrToRxQueueLN(buf);
 } 
-  
+
+//From Dns.cpp of ethernet lib, didn't want the baggage
+//  Arduino DNS client for WizNet5100-based Ethernet shield
+//  (c) Copyright 2009-2010 MCQN Ltd.
+//  Released under Apache License, version 2.0
+bool inet_aton(const char* address, IPAddress& result)
+{
+	uint16_t acc = 0; // Accumulator
+	uint8_t dots = 0;
+
+	while (*address) 
+   {
+		char c = *address++;
+		if (c >= '0' && c <= '9') 
+      {
+			acc = acc * 10 + (c - '0');
+			if (acc > 255) return false; // Value out of [0..255] range
+		} 
+      else if (c == '.') 
+      {
+			if (dots == 3) return false; // Too mmany dots (must be 3)
+			result[dots++] = acc;
+			acc = 0;
+		} 
+      else return false; // Invalid char
+	}
+
+	if (dots != 3) return false; // Too few dots (must be 3)
+	result[3] = acc;
+	return true;
+}
+
+
 FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
 {  // Arg is an IP address string, decode it and write it to EEPROM at EEPaddress
-   uint8_t octnum =1;
    IPAddress ip;   
    
    AddToPETSCIIStrToRxQueueLN(" IP Addr");
-   ip[0]=atoi(Arg);
-   while(octnum<4)
+   if (!inet_aton(Arg, ip)) 
    {
-      Arg=strchr(Arg, '.');
-      if(Arg==NULL)
-      {
-         AddInvalidFormatToRxQueueLN();
-         return;
-      }
-      ip[octnum++]=atoi(++Arg);
+      AddInvalidFormatToRxQueueLN();
+      return;
    }
+   
    EEPROM.put(EEPaddress, (uint32_t)ip);
    AddUpdatedToRxQueueLN();
    AddToPETSCIIStrToRxQueue("to ");

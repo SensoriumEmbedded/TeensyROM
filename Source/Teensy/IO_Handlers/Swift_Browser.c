@@ -359,18 +359,28 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
    RxQueueHead = RxQueueTail = 0; //dump the queue
    UnPausePage();
    strcpy(CurrPageTitle, "Unknown"); //gets populated via title tag 
-   
+      
    Printf_dbg("Connect: \"%s%s%s\"\n", DestURL->host, DestURL->path, DestURL->postpath);
    
+   SendPETSCIICharImmediate(PETSCIIpurple);
+   SendASCIIStrImmediate("\rConnecting to:\r");
    SendPETSCIICharImmediate(PETSCIIyellow);
-   SendASCIIStrImmediate("\rConnecting to: ");
    SendASCIIStrImmediate(DestURL->host);
    SendASCIIStrImmediate(DestURL->path);
    SendASCIIStrImmediate(DestURL->postpath);
    SendPETSCIICharImmediate(PETSCIIreturn);
-   SendPETSCIICharImmediate(PETSCIIbrown);  // header info color
+
+   bool Connected;
+   IPAddress HostIP;
+   if(inet_aton(DestURL->host, HostIP)) 
+   {
+      SendPETSCIICharImmediate(PETSCIIlightGrey);
+      SendASCIIStrImmediate("Using IPaddr\r");
+      Connected = client.connect(HostIP, 80);
+   }
+   else Connected = client.connect(DestURL->host, 80);
    
-   if (client.connect(DestURL->host, 80))  //DestURL->port))
+   if (Connected)  //DestURL->port))
    {
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
@@ -382,9 +392,9 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
 
       //get response header
       //https://www.tutorialspoint.com/http/http_responses.htm
+      SendPETSCIICharImmediate(PETSCIIbrown);  // header info color
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
-         
          //Printf_dbg("H: %s", inbuf);  //causes lost data
          if (ShowHeader) 
          {
@@ -448,7 +458,7 @@ FLASHMEM void DoSearch(const char *Term)
    WebConnect(&URL, true);
 }
 
-FLASHMEM void DownloadFile(stcURLParse *DestURL)
+void DownloadFile(stcURLParse *DestURL)
 {  // Modifies (decodes) FileName
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
@@ -471,17 +481,18 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
    }
    FileName[NewCharNum] = 0;
 
-   SendASCIIStrImmediate("Filename: \"");
+   SendPETSCIICharImmediate(PETSCIIpurple);
+   SendASCIIStrImmediate("\rDownload:\r");
+   SendPETSCIICharImmediate(PETSCIIyellow);
+   SendASCIIStrImmediate("File \"");
    SendASCIIStrImmediate(FileName);
-   SendASCIIStrImmediate("\"\r");
+   SendASCIIStrImmediate("\"\rPath ");
 
    char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
    FS *sourceFS;
    uint8_t USB_SD = EEPROM.read(eepAdDLPathSD_USB);
    EEPreadStr(eepAdDLPath, FileNamePath); 
    
-   SendASCIIStrImmediate("Path: ");
-
    if(USB_SD == Drive_SD)
    {
       if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
@@ -525,24 +536,45 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
    }   
    
    char buf[50];
+   const uint16_t MaxChunkSize = 1460; //matches client buffer size
+   uint8_t DataChunk[MaxChunkSize];
+   
    sprintf(buf, "Downloading %lu bytes\r", Length);
    SendASCIIStrImmediate(buf);
 
+   uint32_t DotThresh = Length; //when to print a dot
    while (client.connected()) 
    {
-      while (client.available()) 
+      uint32_t ChunkSize = client.available();
+      if (ChunkSize)
       {
-         dataFile.write(client.read());
-         if(--Length == 0)
+         if (ChunkSize > MaxChunkSize) ChunkSize = MaxChunkSize;
+         client.read(DataChunk, ChunkSize);
+         dataFile.write(DataChunk, ChunkSize);
+         Printf_dbg("Chunk: %d\n", ChunkSize);
+         if (ChunkSize > Length)
          {
             dataFile.close();
-            SendASCIIStrImmediate("Finished\r"); 
+            SendASCIIErrorStrImmediate("\rExtra data received");
+            return;
+         }
+         Length -= ChunkSize;
+         if(Length == 0)
+         {
+            dataFile.close();
+            SendASCIIStrImmediate("\rDownload Complete\r"); 
             return;            
+         }
+         if (DotThresh > Length)
+         {
+            if(DotThresh < BytesPerDot) DotThresh=0;
+            else DotThresh -= BytesPerDot;
+            SendPETSCIICharImmediate('.');
          }
       }
    }      
    dataFile.close();
-   SendASCIIStrImmediate("Connection lost, incomplete\r");
+   SendASCIIErrorStrImmediate("\rConnection lost, incomplete");
 }
 
 FLASHMEM bool ValidModifier(const char cMod)
