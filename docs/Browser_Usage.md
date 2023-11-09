@@ -10,7 +10,7 @@
   * Path saved in TeensyROM
 * Use search engine terms to find content quickly
 
-## Using a C64/128 Terminal program to surf the web, limitations
+### Using a C64/128 Terminal program to surf the web, limitations
 * This is a text based interface only.  There is some formatting and colors based on HTML tags, and the ability to download, but no in-line graphics, etc. 
 * HTTPS is not supported directly.  However, secure sites can be filtered/loaded via FrogFind.  If you see a message regarding this, try the reload/filtered command: 'rf'
 * Redirects are not automatic. Either apply filter or follow link.

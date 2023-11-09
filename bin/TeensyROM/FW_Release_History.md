@@ -1,6 +1,14 @@
 
 # FW Release Version history:
 
+### 0.5.4 sub-release 11/8/23
+* Note: This FW release resets stored EEPROM settings to defaults
+* Swiftlink/Browser updates:
+  * Bookmark favorite sites for quick access later.
+  * Previously visited sites saved in a browsing queue
+  * Download files directly to specified path on USB or SD 
+  * TinyWeb premier, downloads and <petscii %9b> type tags
+
 ### 0.5.3 sub-release 10/16/23
 * Swiftlink updates:
   * ATBROWSE command to enter Browser mode from teminal program such as CCGMS
