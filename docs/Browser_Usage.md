@@ -41,7 +41,7 @@
 | Modifier | Description |
 |--|--|
 | (none) | Use previous/default |
-| D | Download as file to the Download path |
+| D | Download as file to the Download path<br>Note that .prg, .crt, .sid, and .hex files are auomatically downloaded without modifier |
 | F | Filter the URL response through FrogFind |
 | R | Read raw, directly from unfiltered URL |
 
