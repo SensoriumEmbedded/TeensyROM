@@ -54,6 +54,7 @@
 |AT? | Quick help list of AT commands  |
 |ATC | Connect Ethernet using saved parameters and/or display connection info|
 |ATDT\<HostName>:\<Port> | Connect to host and enter On-line mode|
+|ATBROWSE | Start the TeensyROM Web Browser ([Documented here](Browser_Usage.md))
 
 ### Commands that modify the saved parameters
 **Use ATC to apply these settings to current Ethernet connection.**
