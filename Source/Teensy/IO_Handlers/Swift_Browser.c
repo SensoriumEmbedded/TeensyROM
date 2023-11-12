@@ -21,13 +21,17 @@
 // Swiftlink Browser Functions
 
 
-void SendPETSCIICharImmediate(char CharToSend)
+void SendPETSCIICharImmediate(uint8_t CharToSend)
 {
    //wait for c64 to be ready or NMI timeout
    while(!ReadyToSendRx()) if(!CheckRxNMITimeout()) return;
 
-   if (BrowserMode) PageCharsReceived++; //only called from browser mode?
-   
+   if (BrowserMode)  //perhaps only called from browser mode anyway?
+   {  //count printable chars only
+      if (CharToSend>=160 || (CharToSend >=32 && CharToSend <128)) PageCharsReceived++; //printable char
+      else if (CharToSend==PETSCIIclearScreen) PageCharsReceived = 0;  //reset count on screen clear
+      else if (CharToSend==PETSCIIreturn) PageCharsReceived += 40-(PageCharsReceived % 40); //add to start of next row
+   }
    SendRxByte(CharToSend);
 }
 
@@ -53,16 +57,17 @@ FLASHMEM void SendCommandSummaryImmediate(bool Paused)
    if (Paused) 
    {
       SendPETSCIICharImmediate(PETSCIIrvsOn);
-      SendASCIIStrImmediate("Pause (Ret or ");
+      SendASCIIStrImmediate("pause (ret or ");
    }
-   else SendASCIIStrImmediate("\rFinished (");
-   SendASCIIStrImmediate("#,S,P,R,U,B,D,X,?)\r");
+   else SendASCIIStrImmediate("\rfinished (");
+   SendASCIIStrImmediate("#,s,p,r,u,b,d,x,?)\r");
    //SendPETSCIICharImmediate(PETSCIIrvsOff);
    SendPETSCIICharImmediate(PETSCIIlightGreen);   
 }
 
 FLASHMEM void SendBrowserCommandsImmediate()
 {
+   SendPETSCIICharImmediate(PETSCIIhiLoChrSet);
    SendPETSCIICharImmediate(PETSCIIreturn);
    SendPETSCIICharImmediate(PETSCIIpurple); 
    SendPETSCIICharImmediate(PETSCIIrvsOn); 
@@ -138,7 +143,6 @@ void ParseHTMLTag()
    if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
    {
       SendPETSCIICharImmediate(PETSCIIreturn);
-      PageCharsReceived += 40-(PageCharsReceived % 40);
    }
    
    else if(strcmp(TagBuf, "/b")==0) SendPETSCIICharImmediate(PETSCIIwhite); //unbold
@@ -178,7 +182,6 @@ void ParseHTMLTag()
       SendPETSCIICharImmediate(PETSCIIdarkGrey); 
       SendASCIIStrImmediate("\r * ");
       SendPETSCIICharImmediate(PETSCIIwhite); 
-      PageCharsReceived += 40-(PageCharsReceived % 40)+3;
    }
    
    else if(strncmp(TagBuf, "petscii", 7)==0) // custom tag for PETSCII chars
@@ -227,7 +230,6 @@ void ParseHTMLTag()
       
       SendPETSCIICharImmediate(PETSCIIlightBlue); 
       SendPETSCIICharImmediate(PETSCIIrvsOff);
-      PageCharsReceived++;
       PrintingHyperlink = true;
    }
    
@@ -255,48 +257,56 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
    //the format of a URI is as follows: "ACCESS :// HOST : PORT / PATH # ANCHOR"
    
    URLParse.host[0] = 0;
-   //URLParse.port = 80;
+   URLParse.port = 80;
    URLParse.path[0] = 0;
    URLParse.postpath[0] = 0;
    
    //Find/skip access ID
-   if(strstr(URL, "http://") != URL && strstr(URL, "https://") != URL) //no access ID, relative path only
-   {
-      strcat(URLParse.path, URL);
-   }
-   else
-   {
+   if(strstr(URL, "http://") == URL || strstr(URL, "https://") == URL) 
+   {  //parse full URL
       const char * ptrServerName = strstr(URL, "://")+3; //move past the access ID
-      //char * ptrPort = strstr(ptrServerName, ":");  //find port identifier
+      char * ptrPort = strstr(ptrServerName, ":");  //find port identifier
       char * ptrPath = strstr(ptrServerName, "/");  //find path identifier
+      bool PortPresent = false;  //Is the Port defined in the URL?
       
       //need to check for userid? http://userid@example.com:8080/
-      
-      // skipping port parsing, always 80 anyway
-      // "port" commented out throughout...
-      
-      //finalize server name and update port, if present
-      //if (ptrPort != NULL) //there's a potential port ID 
-      //{
-      //   if (ptrPort < ptrPath) //is the : before the path start? 
-      //   {  //capture and set host name
-      //      URLParse.port = atoi(ptrPort+1);  //skip the ":"
-      //      strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
-      //      URLParse.host[ptrPort-ptrServerName]=0; //terminate it
-      //   }
-      //}
-      //else //no port
-      if (ptrPath != NULL)  //there's a path; set host name
+         
+      //check for port presence
+      if (ptrPort != NULL) //there's a potential port ID 
       {
-         strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
-         URLParse.host[ptrPath-ptrServerName]=0; //terminate it
+         if(ptrPath != NULL)
+         {
+            if (ptrPort < ptrPath) PortPresent = true; //is the : before the path start? 
+         }
+         else PortPresent = true; //port, but no path
       }
-      else strcpy(URLParse.host, ptrServerName);  //no path
-   
+      
+      //set host name & port (if present):
+      if (PortPresent)
+      {
+         URLParse.port = atoi(ptrPort+1);  //skip the ":"
+         strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
+         URLParse.host[ptrPort-ptrServerName]=0; //terminate it
+      }
+      else
+      {
+         if (ptrPath != NULL)  //there's a path; set host name
+         {
+            strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
+            URLParse.host[ptrPath-ptrServerName]=0; //terminate it
+         }
+         else strcpy(URLParse.host, ptrServerName);  //no path
+      }
+      
       //copy path, if present
       if (ptrPath != NULL) strcpy(URLParse.path, ptrPath);
       else strcpy(URLParse.path, "/");
    }
+   else
+   {  //no access ID, relative path only
+      strcat(URLParse.path, URL);
+   }
+
    
    //check for query or fragment;
    char * ptrPostPath = strstr(URLParse.path, "?"); //check for query first
@@ -310,7 +320,7 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
 
    Printf_dbg("\nOrig = \"%s\"\nParsed:\n", URL);
    Printf_dbg(" serv = \"%s\"\n", URLParse.host);
-   //Printf_dbg(" port = %d\n", URLParse.port);
+   Printf_dbg(" port = %d\n", URLParse.port);
    Printf_dbg(" path = \"%s\"\n", URLParse.path);
    Printf_dbg(" post = \"%s\"\n", URLParse.postpath);
 } 
@@ -360,32 +370,37 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
    UnPausePage();
    strcpy(CurrPageTitle, "Unknown"); //gets populated via title tag 
       
-   Printf_dbg("Connect: \"%s%s%s\"\n", DestURL->host, DestURL->path, DestURL->postpath);
+   
+   bool Connected;
+   IPAddress HostIP;
+   char buf[20];
+   
+   Printf_dbg("Connect: \"%s:%d%s%s\"\n", DestURL->host, DestURL->port, DestURL->path, DestURL->postpath);
    
    SendPETSCIICharImmediate(PETSCIIpurple);
    SendASCIIStrImmediate("\rConnecting to:\r");
    SendPETSCIICharImmediate(PETSCIIyellow);
    SendASCIIStrImmediate(DestURL->host);
+   sprintf(buf, ":%d", DestURL->port);
+   SendASCIIStrImmediate(buf);
    SendASCIIStrImmediate(DestURL->path);
    SendASCIIStrImmediate(DestURL->postpath);
    SendPETSCIICharImmediate(PETSCIIreturn);
 
-   bool Connected;
-   IPAddress HostIP;
    if(inet_aton(DestURL->host, HostIP)) 
    {
       SendPETSCIICharImmediate(PETSCIIlightGrey);
       SendASCIIStrImmediate("Using IPaddr\r");
-      Connected = client.connect(HostIP, 80);
+      Connected = client.connect(HostIP, DestURL->port);
    }
-   else Connected = client.connect(DestURL->host, 80);
+   else Connected = client.connect(DestURL->host, DestURL->port);
    
-   if (Connected)  //DestURL->port))
+   if (Connected)
    {
-      const uint16_t MaxBuf = 350;
-      char inbuf[MaxBuf];
       bool ShowHeader = true; //initially true
       uint32_t Length = 0;
+      const uint16_t MaxBuf = 350;
+      char inbuf[MaxBuf];
       
       client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
          DestURL->path, DestURL->postpath, DestURL->host);
@@ -426,7 +441,7 @@ FLASHMEM void DoSearch(const char *Term)
    stcURLParse URL =
    {
       "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
-      //80,                 //URL.port = 80;
+      80,                 //URL.port = 80;
       "/",                //strcpy(URL.path = "/");
       "?q=",              //strcpy(URL.postpath = "?q=");
    };
@@ -649,7 +664,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
             stcURLParse URL =
             {
                "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
-               //80,                     //URL.port = 80;
+               80,                     //URL.port = 80;
                "/read.php",            //strcpy(URL.path = "/read.php?a=http://");
                "?a=http://"            //URL.postpath
             };
@@ -743,7 +758,7 @@ FLASHMEM void ProcessBrowserCommand()
       }
       
       else if(*CmdMsg >= '1' && *CmdMsg <= '9')
-      {  //jump to bookmark
+      {  //jump to bookmark #
          stcURLParse URL;
          char buf[eepBMURLSize];
          uint8_t BMNum = *CmdMsg - '1'; //zero based
@@ -759,9 +774,9 @@ FLASHMEM void ProcessBrowserCommand()
          //re-encode to maximize eeprom usage, but could be too long...
          char strURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12]; //   +"HTTP:// & :Prt"
          
-         sprintf(strURL, "http://%s%s%s",
+         sprintf(strURL, "http://%s:%d%s%s",
             PrevURLQueue[PrevURLQueueNum]->host,
-            //PrevURLQueue[PrevURLQueueNum]->port,
+            PrevURLQueue[PrevURLQueueNum]->port,
             PrevURLQueue[PrevURLQueueNum]->path,
             PrevURLQueue[PrevURLQueueNum]->postpath);
          
@@ -832,7 +847,7 @@ FLASHMEM void ProcessBrowserCommand()
                if (ptrLastSlash != NULL) *(ptrLastSlash+1) = 0; //terminate after last slash
                strcat(URL.path, temp); //add rel path back to end
             }
-            //URL.port = PrevURLQueue[PrevURLQueueNum]->port;
+            URL.port = PrevURLQueue[PrevURLQueueNum]->port;
             strcpy(URL.host, PrevURLQueue[PrevURLQueueNum]->host);
             //leave postpath data in-tact
          }

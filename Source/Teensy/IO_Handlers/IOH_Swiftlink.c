@@ -96,13 +96,15 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define PETSCIIcursorUp    0x91
 #define PETSCIIhorizBar    0x60
 #define PETSCIIspace       0x20
+#define PETSCIIhiLoChrSet  0x0e
+#define PETSCIIupGfxChrSet 0x8e
 
 #define RxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+RxQueueSize-RxQueueTail))
 
 struct stcURLParse
 {
    char host[MaxURLHostSize];
-   //uint16_t port;
+   uint16_t port;
    char path[MaxURLPathSize];
    char postpath[MaxURLPathSize];
 };
@@ -271,7 +273,7 @@ FLASHMEM void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->path[0] = 0;
       PrevURLQueue[cnt]->postpath[0] = 0;
       PrevURLQueue[cnt]->host[0] = 0;
-      //PrevURLQueue[cnt]->port = 80;
+      PrevURLQueue[cnt]->port = 80;
    }
    strcpy(CurrPageTitle, "None");
    randomSeed(ARM_DWT_CYCCNT);
