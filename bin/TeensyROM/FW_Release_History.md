@@ -1,6 +1,13 @@
 
 # FW Release Version history:
 
+### 0.5.5 sub-release 11/12/23
+* Swiftlink/Browser updates:
+  * Port selection available for host or ip address (host:port/path)
+  * Char count for pause Improvements
+  * command summary all lower case to make readable in upper/gfx mode
+  * Force lower case for Browser command list
+
 ### 0.5.4 sub-release 11/8/23
 * Note: This FW release resets stored EEPROM settings to defaults
 * Swiftlink/Browser updates:
