@@ -74,15 +74,16 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
   * **Hardware/PCB Related**
     * **[TeensyROM Assembly Instructions](PCB/PCB_Assembly.md)**
     * **[PCB Design History](PCB/PCB_History.md)**
-    * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2%20archive/TeensyROM%20v0.2b%20BOM.xlsx)**
-    * **[PDF Schematic](PCB/v0.2%20archive/TeensyROM_v0.2b_Schem.pdf)**
+    * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM%20v0.2c%20BOM.xlsx)**
+    * **[PDF Schematic](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM_v0.2c_Schem.pdf)**
 
 
 ## Demo Videos:
-  * [TeensyROM real-time video/audio capture](https://www.youtube.com/watch?v=e0A-DPZf2GI) of menu navigation and loading/running/emulating various programs/cartridges
-  * [Demo using Cynthcart and Datel MIDI emulation](https://www.youtube.com/watch?v=-LumhU60d_k) to play with a USB keyboard 
-  * [MIDI ASID Demo:](https://www.youtube.com/watch?v=MU1PgFn0eQc) Stream .SID & .MIDI files directly to your C64/SID
-  * [MIDI2SID Demo ](https://www.youtube.com/watch?v=3BsX_jxIYKY) using MIDI keyboard => TeensyROM => C64/SID
+  * **[This YouTube Playlist](https://www.youtube.com/playlist?list=PL3fTdu8e_1iChAsRr9KjWtC3A8Ql8IaDn)** contains all the latest TeensyROM demo videos, such as: 
+    * Real-time video/audio capture of menu navigation and loading/running/emulating various programs/cartridges
+    * Demo using Cynthcart and Datel MIDI emulation to play with a USB keyboard 
+    * MIDI ASID Demo: Stream .SID & .MIDI files directly to your C64/SID
+    * Web Browser and internet file download demo 
 
 ## Compatibility
 * TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 

@@ -31,7 +31,7 @@
 | S [Term] | Search the internet for [Term] via the [FrogFind](http://frogfind.com/about.php) text search engine |
 | P | Go to Previous Page |
 | R[m] | Re-load current page<br>Common modifiers (see below). |
-| U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host:port/path<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
+| U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host[:port][/path]<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
 | #[m] | Follow link shown on current screen<br>Common modifiers (see below). |
 | B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmarks with links<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;s# : Set Current page as bookmark # |
 | D [d]:[p] | Set download path, in this format:<br>[drive]:[path/directory] <br>Where drive is "usb" or "sd"  |
