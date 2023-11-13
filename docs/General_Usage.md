@@ -118,10 +118,11 @@
     * Older versions will have to use one of the other methods one time to update
   * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from here](/bin/TeensyROM)
   * Copy the file to a USB Thumb drive or SD card
-  * Attach the card/drive to the TeensyROM and power up your C64/128
-  * In the USB or SD Menu, select the Firmware  .hex file
+    * This can be done via the traditional method of moving the card to a capable computer
+    * or over USB using the provided C64Transfer Windows app
+  * In the TeensyROM USB or SD Menu, select the Firmware  .hex file
   * A new screen will open and ask you to confirm that you want to update
-    * Double check that the file name shown is correct
+    * Check that the file name shown is correct
     * 'y' to confirm/continue, 'n' to abort
     * The update process takes about 2 minutes and goes through several stages.
     * ***Important*** You must leave your C64/128 powered up during the update
