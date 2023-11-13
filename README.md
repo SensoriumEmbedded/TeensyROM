@@ -62,10 +62,11 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
   * Startup, Ethernet, timezone, etc retained after power down.
 
 ## Links to detailed documentation
-  * **Usage Documentats**
-    * **[General Usage document](docs/General_Usage.md)**
-    * **[MIDI Usage document](docs/MIDI_Usage.md)**
-    * **[Ethernet Usage document](docs/Ethernet_Usage.md)**
+  * **Usage Documents**
+    * **[General Usage](docs/General_Usage.md)**
+    * **[MIDI Usage](docs/MIDI_Usage.md)**
+    * **[Ethernet Usage](docs/Ethernet_Usage.md)**
+    * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
   * **SW Release notes/developnment**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Win App Release History](bin/WinApp/WinApp_Release_History.md)**

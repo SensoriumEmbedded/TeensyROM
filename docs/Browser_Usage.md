@@ -9,6 +9,7 @@
 * Download files directly to specified path on USB or SD 
   * Path saved in TeensyROM
 * Use search engine terms to find content quickly
+* Displays PETSCII characters via HTML ([development tools here](http://sensoriumembedded.com/tinyweb64/petsciitag/))
 
 ### Using a C64/128 Terminal program to surf the web, limitations
 * This is a text based interface only.  There is some formatting and colors based on HTML tags, and the ability to download, but no in-line graphics, etc. 
@@ -30,12 +31,11 @@
 | S [Term] | Search the internet for [Term] via the [FrogFind](http://frogfind.com/about.php) text search engine |
 | P | Go to Previous Page |
 | R[m] | Re-load current page<br>Common modifiers (see below). |
-| U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
+| U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host:port/path<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
 | #[m] | Follow link shown on current screen<br>Common modifiers (see below). |
 | B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmarks with links<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;s# : Set Current page as bookmark # |
 | D [d]:[p] | Set download path, in this format:<br>[drive]:[path/directory] <br>Where drive is "usb" or "sd"  |
 | X | Exit Browser mode |
-
 
 ### Modifiers for R[m], U[m], #[m] Commands
 | Modifier | Description |
