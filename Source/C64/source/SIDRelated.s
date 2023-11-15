@@ -20,7 +20,7 @@
 ; ******************************* SID Related ******************************* 
 
 MIDI2SID:
-   jsr SIDMusicOff
+   jsr IRQDisable
    jsr PrintBanner 
    lda #<MsgM2SPolyMenu
    ldy #>MsgM2SPolyMenu
@@ -297,9 +297,7 @@ rcnt
 +  cmp #'x'  ;Exit M2S
    bne +
    jsr SIDVoicesOff
-   lda MusicPlaying ;turn music back on if it was before...
-   beq ++
-   jsr SIDMusicOn
+   jsr IRQEnable
 ++ rts 
 
 +  jmp M2SUpdateKeyInLoop
@@ -333,105 +331,123 @@ SIDLoadInit:
 
    ;self-modifying init jump
 +  lda rRegSIDInitLo+IO1Port
-   sta smcSIDInit+1
+   sta smcSIDInitAddr+1
    lda rRegSIDInitHi+IO1Port
-   sta smcSIDInit+2
+   sta smcSIDInitAddr+2
    
    ;self-modifying play jump
    lda rRegSIDPlayLo+IO1Port
-   sta smcSIDPlay+1
+   sta smcSIDPlayAddr+1
    lda rRegSIDPlayHi+IO1Port
-   sta smcSIDPlay+2
+   sta smcSIDPlayAddr+2
 
    sei
    lda #$35; Disable Kernal and BASIC ROMs
    ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
    sta $01
    lda #$00  ;set to first song in SID
-smcSIDInit
+smcSIDInitAddr
    jsr $fffe ;Initialize music (self modified code)
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
    cli
-   
-   lda #rpudMusicMask
-   sta MusicPlaying  ;turn music on if called from load
    rts
    
 ToggleSIDMusic:
-   lda MusicPlaying
+   lda smcSIDPlayEnable+1
    eor #rpudMusicMask   ;toggle playing status
-   sta MusicPlaying
-   beq SIDMusicOff ;sid is on, turn it off & return
-   jmp SIDMusicOn ;sid is off, turn it on & return
+   sta smcSIDPlayEnable+1
+   beq SIDVoicesOff ; if now off, turn voices off & return
+   rts
    
-; borrowed from cryptoboy code at https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
-SIDMusicOn:  ;Start SID player Timer/CIA bassed interrupt
-   sei              ; DISABLE MASKABLE INTERRUPTS, AND THEN TURN THEM OFF (BELOW)
+; interpreted from cryptoboy code at https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
+IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
+
+   ; DISABLE MASKABLE INTERRUPTS, AND THEN TURN THEM OFF
+   sei              
    lda #%01111111   ; BIT 7 (OFF) MEANS THAT ANY 1S WRITTEN TO CIA ICRS TURN THOSE BITS OFF
    sta $dc0d        ;    CIA#1 INTERRUPT CONTROL REGISTER (IRC): DISABLE ALL INTERRUPTS
    sta $dd0d        ;    CIA#2 ICR: DISABLE ALL INTERRUPTS
    lda $dc0d        ; ACK (CLEAR) ANY PENDING CIA1 INTERRUPTS (READING CLEARS 'EM)
    lda $dd0d        ;    SAME FOR CIA2
    asl $d019        ; TOSS ANY PENDING VIC INTERRUPTS (WRITING CLEARS 'EM, VIA RMW MAGIC)
+
+   ;Set the timer interval
    lda rwRegSIDSpeedLo+IO1Port
    sta $dc04        ;    CIA#1 TIMER A LO
    lda rwRegSIDSpeedHi+IO1Port
    sta $dc05        ;    CIA#1 TIMER A HI
-   lda #<irqCIATimer ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
+
+   ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
+   lda #<IRQwedge 
    sta $0314
-   lda #>irqCIATimer
+   lda #>IRQwedge
    sta $0315
+   
+   ;Set the timer behavior
    lda #%10000001   ; CIA#1 ICR: B0->1 = ENABLE TIMER A INTERRUPT,
    sta $dc0d        ;    B7->1 = FOR B0-B6, 1 BITS GET SET, AND 0 BITS IGNORED
    lda $dc0e        ; CIA#1 TIMER A CONTROL REGISTER
    and #%10000000   ; PRESERVE KERNAL-SET TOD CLOCK NTSC OR PAL SELECTION
    ora #%00010001   ; START TIMER A,CONTINUOUS RUN MODE, LATCHED VALUE INTO TIMER A COUNTER
-   sta $dc0e        ; Write it back (missing from posted code)
+   sta $dc0e        ; Write it back 
+   
    cli              ; RESTORE INTERRUPTS, HOOKING COMPLETE
    rts
 
-SIDMusicOff:  ;stop SID player interrupt
+IRQDisable:
    sei
    lda #<IRQDefault
    ldx #>IRQDefault
    sta $314   ;CINV, HW IRQ Int Lo
    stx $315   ;CINV, HW IRQ Int Hi
-   lda #$81
+
+   lda #%10000001 
    sta $dc0d  ;CIA int ctl
+   
    lda #0
    sta $d01a  ;irq enable
    inc $d019
    lda $dc0d  ;CIA int ctl
    cli 
-   jsr SIDVoicesOff
-   lda #BorderColor
-   sta BorderColorReg   ;restore border in case we ended in mid region
-   rts
+   ;jsr SIDVoicesOff ;in case we stopped playback, turn voices off too
+   ;rts
+   ;continue...
 
 SIDVoicesOff:
+   lda #BorderColor
+   sta BorderColorReg   ;restore border in case we ended in mid region
    lda #0x00 ; turn 3 voices off
    sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
    sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
    sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
    rts
    
-irqCIATimer:
+IRQwedge:
    lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
+   bne +
+   
+   ;interrupt from TR
+   inc BorderColorReg ;tweak display border
+   jmp IRQDefault
+   
+smcSIDPlayEnable
++  lda #0  ;default to disabled
+   beq +
    !ifdef SidDisp {
    inc BorderColorReg ;tweak display border
    }
    lda #$35; Disable Kernal and BASIC ROMs
    ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
    sta $01
-smcSIDPlay
+smcSIDPlayAddr
    jsr $fffe          ;Play the music, self modifying
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
    !ifdef SidDisp {
    dec BorderColorReg ;tweak display border
    }
-   jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
++  jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
 
 ;SIDMusicOn:  ;Start SID player Raster based interrupt
 ;   lda #$7f    ;disable all ints
@@ -460,7 +476,7 @@ smcSIDPlay
 ;   lda #$35; Disable Kernal and BASIC ROMs
 ;   ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
 ;   sta $01
-;smcSIDPlay
+;smcSIDPlayAddr
 ;   jsr $fffe ;Play the music, self modifying
 ;   lda #$37 ; Reset the Kernal and BASIC ROMs
 ;   sta $01

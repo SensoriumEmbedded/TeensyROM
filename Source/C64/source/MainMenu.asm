@@ -28,7 +28,6 @@
 
    ;other RAM Registers
    ;$0334-033b is "free space"
-   MusicPlaying     = $0335 ;is the music playing?
 
    SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
    SIDAttDec        = $0339
@@ -110,18 +109,17 @@ NoHW
    sta wRegControl+IO1Port
    jsr WaitForTRDots
 
-   jsr SIDLoadInit
+   jsr SIDLoadInit  ;Load SID first to set timer rate regs
+   jsr IRQEnable  ; start the IRQ wedge, initial default is SID playback disable.  
  
    jsr ListMenuItems
 
    ;check default registers for music & time settings
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudMusicMask
-   sta MusicPlaying
-   beq +
-   jsr SIDMusicOn
+   sta smcSIDPlayEnable+1  ;set default SID playback
 
-+  lda rwRegPwrUpDefaults+IO1Port
+   lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
    beq +
    jsr SynchEthernetTime
@@ -439,12 +437,10 @@ SelectItem:
 +  cmp #rtNone ;do nothing for 'none' type
    beq AllDone 
    
-   ;turn off music and clear screen for messaging for remaining types:
+   ;any type except None and sub-dir, clear screen and stop interrupts
    pha ;store the type
-   lda MusicPlaying ;turn music off if it's on
-   beq +
-   jsr SIDMusicOff     
-+  jsr PrintBanner
+   jsr IRQDisable  ;turn off interrupt (also stops SID playback, if on)
+   jsr PrintBanner ;clear screen for messaging for remaining types:
    lda #NameColor
    jsr SendChar
    
@@ -464,7 +460,7 @@ SelectItem:
 -  jsr GetIn    ; wait for user confirmation
    beq -
    cmp #'n'  
-   beq CheckMusicContinue
+   beq IRQEnContinue
    cmp #'y'  
    bne -
 
@@ -478,15 +474,16 @@ SelectItem:
    ldy #>MsgFWUpdateFailed
    jsr PrintString 
    jsr AnyKeyMsgWait
-   jmp CheckMusicContinue
+   jmp IRQEnContinue
       
       
 +  cmp #rtFileSID  ;check for .sid file selected
    bne +
    jsr StartSelItem_WaitForTRDots
-   ;if succesful, transfer to RAM and start playing
-   jsr SIDLoadInit
-   jmp CheckMusicContinue
+   jsr SIDLoadInit ;check success, return or transfer to RAM and start playing
+   lda #rpudMusicMask ;enable playback
+   sta smcSIDPlayEnable+1
+   jmp IRQEnContinue
     
     
    ;not a dir, "none", hex file, or SID, try to start/execute
@@ -498,10 +495,8 @@ SelectItem:
    ;If at this point, couldn't load item, and wasn't a dir, none, .hex, .prg or .p00
    jsr AnyKeyMsgWait   
 
-CheckMusicContinue   
-   lda MusicPlaying ;turn music back on if it was before...
-   beq ListAndDone
-   jsr SIDMusicOn 
+IRQEnContinue   
+   jsr IRQEnable
 ListAndDone
    jsr ListMenuItems ; reprint menu
 AllDone
@@ -537,7 +532,7 @@ AnyKeyMsgWait:
    rts
 
 StartSelItem_WaitForTRDots:
-   lda #rCtlStartSelItemWAIT ;kick off the update routine
+   lda #rCtlStartSelItemWAIT ;kick off the selection
    sta wRegControl+IO1Port   
 ;WaitForTR* uses acc, X and Y
 WaitForTRDots:  ;prints a dot per second while waiting, doesn't move cursor
