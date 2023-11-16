@@ -189,6 +189,7 @@ JSDelay:
    ;jmp WaitForJSorKey
 
 ReadKeyboard:
+   jsr CheckForIRQ
    jsr GetIn    
    beq WaitForJSorKey
 
@@ -414,7 +415,19 @@ MenuLineDone
    ;all items listed
    rts
 
+CheckForIRQ:
+smcIRQFlagged
+   lda #0  ;default to no IRQ detected
+   beq +
 
+   lda #2   
+   sta wRegIRQ_ACK+IO1Port  ;send ack 2 to TR
+   lda #0  ;clear local flag
+   sta smcIRQFlagged+1
+
+   ;start TR selected app...
+   
++  rts
 
 SelectItem:
 ;Execute/select an item from the list
@@ -501,6 +514,7 @@ ListAndDone
    jsr ListMenuItems ; reprint menu
 AllDone
    rts
+
 
 XferCopyRun:
    ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten

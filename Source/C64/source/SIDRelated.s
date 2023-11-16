@@ -429,6 +429,9 @@ IRQwedge:
    
    ;interrupt from TR
    inc BorderColorReg ;tweak display border
+   lda #1   
+   sta smcIRQFlagged+1  ;flag for action in main routine
+   sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
    jmp IRQDefault
    
 smcSIDPlayEnable
