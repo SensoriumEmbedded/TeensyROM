@@ -426,7 +426,15 @@ smcIRQFlagged
    sta smcIRQFlagged+1
 
    ;start TR selected app...
+   jsr RunSelected
    
+   ;menu was built for remote start,
+   ;  Force back to main TR Mem menu and reload
+   ;  could load from rWRegCurrMenuWAIT+IO1Port to stay on same drive?
+   lda #rmtTeensy
+   jsr ListMenuItemsChangeInit
+   lda rwRegCursorItemOnPg+IO1Port ;HighlightCurrent
+   jsr InverseRow
 +  rts
 
 SelectItem:
@@ -434,7 +442,8 @@ SelectItem:
    lda rwRegCursorItemOnPg+IO1Port 
    sta rwRegSelItemOnPage+IO1Port ;select Item from page
    jsr InverseRow ;unhighlight the current
-   
+
+RunSelected:   
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtDirectory  ;check for dir selected

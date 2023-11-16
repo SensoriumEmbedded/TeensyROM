@@ -483,34 +483,6 @@ void M2SOnPitchChange(uint8_t channel, int pitch)
    #endif
 }
 
-bool RemoteLaunch()
-{
-   // assumes CurrentIOHandler == IOH_TeensyROM, c64 app running
-   uint32_t beginWait = millis();
-   IO1[wRegIRQ_ACK] = 0;
-   SetIRQAssert;
-   //wait for C64 app to respond from IRQ then main loop
-   while (IO1[wRegIRQ_ACK] != 1) 
-   {
-      if (millis()-beginWait>50) 
-      {
-         SetIRQDeassert;
-         return false; // Timeout, Ack 1
-      }
-   }
-   SetIRQDeassert;
-   Printf_dbg("Ack 1 took %lumS\n", (millis()-beginWait));
-   while (IO1[wRegIRQ_ACK] != 2) 
-   {
-      if (millis()-beginWait>500) return false; // Timeout, Ack 2
-   }
-   Printf_dbg("Ack 2 took %lumS\n", (millis()-beginWait));
-   
-   
-   
-   return true;
-}
-
 //__________________________________________________________________________________
 
 

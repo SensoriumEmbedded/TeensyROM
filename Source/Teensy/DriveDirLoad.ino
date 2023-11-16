@@ -21,7 +21,72 @@
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 
-//these functions triggered from ISR and use current menu selection information while c64 code waits
+bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
+{  //assumes file exists & TR is not "busy"
+   
+   RemoteLaunched = true;
+   //Like MenuChange()
+   IO1[rWRegCurrMenuWAIT] = SD_nUSB ? rmtSD : rmtUSBDrive;
+   if (SD_nUSB) SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   
+   //set path & filename
+   strcpy(DriveDirPath, FileNamePath);
+   char* ptrFilename = strrchr(DriveDirPath, '/'); //pointer file name, find last slash
+   if (ptrFilename == NULL) 
+   {  //no path:
+      strcpy(DriveDirPath, "/");
+      ptrFilename = (char*)FileNamePath; 
+   }
+   else
+   {  //separate path/filename
+      *ptrFilename = 0; //terminate DriveDirPath
+      ptrFilename++; //inc to point to filename
+   }
+   
+   // Set up DriveDirMenu to point to file to load
+   //    without doing LoadDirectory(&SD/&firstPartition);
+   InitDriveDirMenu();
+   SetDriveDirMenuNameType(0, ptrFilename);
+   NumDrvDirMenuItems = 1;
+   MenuSource = DriveDirMenu; 
+   SetNumItems(1); //sets # of menu items, but avoid displaying?
+   IO1[rwRegCursorItemOnPg] = 0;
+   SelItemFullIdx = 0;  //  "Select" item
+   
+   Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
+   
+   //Get the attention of the C64 via IRQ or reset:
+   if(CurrentIOHandler == IOH_TeensyROM)
+   {
+      uint32_t beginWait = millis();
+      IO1[wRegIRQ_ACK] = 0;
+      SetIRQAssert;
+      //wait for C64 app to respond from IRQ then main loop
+      while (IO1[wRegIRQ_ACK] != 1) 
+      {
+         if (millis()-beginWait > 50) 
+         {
+            SetIRQDeassert;
+            return false; // Timeout, Ack 1
+         }
+      }
+      SetIRQDeassert;
+      Printf_dbg("Ack 1 took %lumS\n", (millis()-beginWait));
+      while (IO1[wRegIRQ_ACK] != 2) 
+      {
+         if (millis()-beginWait > 500) return false; // Timeout, Ack 2
+      }
+      Printf_dbg("Ack 2 took %lumS\n", (millis()-beginWait));
+   }
+   else
+   {
+      //force reset then launch
+      
+   }
+   
+   
+   return true;
+}
 
 void HandleExecution()
 {
@@ -218,7 +283,7 @@ void HandleExecution()
 
 void MenuChange()
 {
-   stpcpy(DriveDirPath, "/");
+   strcpy(DriveDirPath, "/");
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
@@ -335,7 +400,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    return true;      
 }
 
-void LoadDirectory(FS *sourceFS) 
+void InitDriveDirMenu() 
 {
    
    if (DriveDirMenu == NULL) 
@@ -348,6 +413,21 @@ void LoadDirectory(FS *sourceFS)
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
    }
    NumDrvDirMenuItems = 0;
+}
+
+void SetDriveDirMenuNameType(uint16_t ItemNum, const char *filename)
+{
+   //malloc, copy file name and get item type from extension
+   DriveDirMenu[ItemNum].Name = (char*)malloc(strlen(filename)+1);
+   strcpy(DriveDirMenu[ItemNum].Name, filename);
+   
+   DriveDirMenu[ItemNum].ItemType = 
+      Assoc_Ext_ItemType(DriveDirMenu[ItemNum].Name);
+}
+
+void LoadDirectory(FS *sourceFS) 
+{
+   InitDriveDirMenu();
    
    File dir = sourceFS->open(DriveDirPath);
    
@@ -372,11 +452,7 @@ void LoadDirectory(FS *sourceFS)
       }
       else //it's a file. copy name and get item type from extension
       {
-         DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+1);
-         strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, filename);
-
-         DriveDirMenu[NumDrvDirMenuItems].ItemType = 
-            Assoc_Ext_ItemType(DriveDirMenu[NumDrvDirMenuItems].Name, strlen(DriveDirMenu[NumDrvDirMenuItems].Name));
+         SetDriveDirMenuNameType(NumDrvDirMenuItems, filename);
       }
       
       //Serial.printf("%d- %s\n", NumDrvDirMenuItems, DriveDirMenu[NumDrvDirMenuItems].Name); 
@@ -740,8 +816,11 @@ uint16_t toU16(uint8_t* src)
       ((uint16_t)src[1]    ) ;
 }
 
-uint8_t Assoc_Ext_ItemType(char * FileName, uint32_t Length)
+uint8_t Assoc_Ext_ItemType(char * FileName)
 { //returns ItemType from enum regItemTypes
+
+   uint32_t Length = strlen(FileName);
+   
    if (Length < 4) return rtUnknown;
 
    char* Extension = FileName + Length - 4;

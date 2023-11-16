@@ -41,6 +41,7 @@ StructMenuItem *DriveDirMenu = NULL;
 uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
+bool RemoteLaunched = false; //last app was launched remotely
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
@@ -147,6 +148,12 @@ void SetUpMainMenuROM()
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) {free(RxQueue[cnt]); RxQueue[cnt]=NULL;}
    free(TxMsg); TxMsg = NULL;   
    RedirectEmptyDriveDirMenu();
+   if (RemoteLaunched)
+   {
+      IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+      MenuChange();
+      RemoteLaunched = false;
+   }   
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }

@@ -177,7 +177,7 @@ enum regItemTypes //synch with TblItemType
 struct StructMenuItem
 {
   unsigned char ItemType;       //1  regItemTypes 
-  uint8_t IOHndlrAssoc;         //1  enumIOHandlers
+  uint8_t IOHndlrAssoc;         //1  enumIOHandlers (Teensy Mem Menu only)
   char *Name;                   //4
   uint8_t *Code_Image;          //1
   uint32_t Size;                //4
