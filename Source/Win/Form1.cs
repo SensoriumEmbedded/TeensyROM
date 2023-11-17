@@ -1,10 +1,5 @@
 ﻿
-/*
- * Serial datalogger and RTC setting utility
- * 
- * Written by Travis Smith 2010, trav@tnhsmith.net
- *  
- */
+
 
 using System;
 using System.IO;
@@ -25,9 +20,10 @@ namespace Serial_Logger
         volatile bool USBLost = false;
 
         //synch with TeensyROM code:
-        const UInt16 SendFileToken = 0x64AA;
-        const UInt16 AckToken      = 0x64CC;
-        const UInt16 FailToken     = 0x9B7F;
+        const UInt16 LaunchFileToken = 0x6444;
+        const UInt16 SendFileToken   = 0x64AA;
+        const UInt16 AckToken        = 0x64CC;
+        const UInt16 FailToken       = 0x9B7F;
 
         public Form1()
         {
@@ -211,9 +207,9 @@ namespace Serial_Logger
             //btnConnected.PerformClick(); //auto disconnect
         }
 
-        bool GetAck()
+        bool GetAck(int iTimeoutmSec = 500)
         {
-            if (!WaitForSerial(2, 500)) return false; //sends message on fail
+            if (!WaitForSerial(2, iTimeoutmSec)) return false; //sends message on fail
 
             byte[] recBuf = new byte[2];
             serialPort1.Read(recBuf, 0, 2);
@@ -310,6 +306,29 @@ namespace Serial_Logger
         {
             if (rbUSBDRive.Checked) lblDestPath.Text = "USB Drive Path:";
             else lblDestPath.Text = "SD Card Path:";
+        }
+        private void btnLaunch_Click(object sender, EventArgs e)
+        {
+            //   App: LaunchFileToken 0x6444
+            //Teensy: AckToken 0x64CC
+            //   App: Send CS(2), SD_nUSB(1), 
+            //          DestPath/Name(up to MaxNamePathLength, null term)
+            //Teensy: AckToken 0x64CC on Pass,  0x9b7f on Fail
+
+            SendIntBytes(LaunchFileToken, 2);
+            if (!GetAck()) return;
+
+            UInt32 SD_nUSB = (rbSDCard.Checked ? 1U : 0U);
+            //if (!tbDestPath.Text.EndsWith("/")) tbDestPath.Text += "/";
+            string DestPathFile = tbDestPath.Text;
+            //DestPathFile += Path.GetFileName(tbSource.Text);
+
+            WriteToOutput("Launching " + (SD_nUSB == 1U ? "SD:" : "USB:") + DestPathFile, Color.Black);
+
+            SendIntBytes(SD_nUSB, 1);//Send SD or USB
+
+            serialPort1.Write(DestPathFile + "\0");                    //Send path/name, null terminate
+            if (!GetAck()) WriteToOutput("Launch Failed!", Color.Red); ;
         }
 
         /********************************  Stand Alone Functions *****************************************/

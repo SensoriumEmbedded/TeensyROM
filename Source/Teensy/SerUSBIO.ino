@@ -52,12 +52,16 @@ FLASHMEM void ServiceSerial()
             case 0xAA: //file x-fer pc->TR
                ReceiveFile();        
                break;
-            case 0x67: //Test/debug
+            case 0x44: //Launch File
+               if(LaunchFile()) Serial.println("Launched!");  
+               else Serial.println("Launch Failed");  
+               break;
+            case 0x67: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                PrintDebugLog();
                break;
             default:
-               Serial.printf("Unk cmd: %02x\n", inByte); 
+               Serial.printf("Unk cmd: 0x64%02x\n", inByte); 
                break;
          }
          break;
@@ -355,6 +359,47 @@ FLASHMEM void PrintDebugLog()
    BigBufCount = 0;
 }
 
+FLASHMEM bool LaunchFile()
+{            
+   //   App: LaunchFileToken 0x6444
+   //Teensy: AckToken 0x64CC
+   //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
+   //Teensy: AckToken 0x64CC on Pass
+
+   //Launch file token has been received, only 2 byte responses until after final response
+   SendU16(AckToken);
+
+   uint32_t SD_nUSB;
+   char FileNamePath[MaxNamePathLength];
+   if (!ReceiveFileName(&SD_nUSB, FileNamePath)) return false;
+
+   if(RemoteLaunch(SD_nUSB !=0 , FileNamePath)) 
+   {
+      SendU16(AckToken);
+      return true;
+   }
+   return false;
+}
+
+FLASHMEM bool ReceiveFileName(uint32_t *SD_nUSB, char *FileNamePath)
+{
+   if (!GetUInt(SD_nUSB, 1)) return false;
+ 
+   uint16_t CharNum=0;
+   while (1) 
+   {
+      if(!SerialAvailabeTimeout()) return false;
+      FileNamePath[CharNum] = Serial.read();
+      if (FileNamePath[CharNum]==0) return true;
+      if (++CharNum == MaxNamePathLength)
+      {
+         SendU16(FailToken);
+         Serial.print("Path too long!\n");  
+         return false;
+      }
+   }
+}
+               
 FLASHMEM void ReceiveFile()
 { 
    //   App: SendFileToken 0x64AA
@@ -376,22 +421,8 @@ FLASHMEM void ReceiveFile()
    if (!GetUInt(&CheckSum, 2)) return;
    
    uint32_t SD_nUSB;
-   if (!GetUInt(&SD_nUSB, 1)) return;
- 
    char FileNamePath[MaxNamePathLength];
-   uint16_t CharNum=0;
-   while (1) 
-   {
-      if(!SerialAvailabeTimeout()) return;
-      FileNamePath[CharNum] = Serial.read();
-      if (FileNamePath[CharNum]==0) break;
-      if (++CharNum == MaxNamePathLength)
-      {
-         SendU16(FailToken);
-         Serial.print("Path too long!\n");  
-         return;
-      }
-   }
+   if (!ReceiveFileName(&SD_nUSB, FileNamePath)) return;
    
    FS *sourceFS = &firstPartition;
    if (SD_nUSB)

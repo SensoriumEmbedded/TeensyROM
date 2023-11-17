@@ -50,6 +50,7 @@
             this.tbSource = new System.Windows.Forms.TextBox();
             this.btnTest = new System.Windows.Forms.Button();
             this.pnlCommButtons = new System.Windows.Forms.Panel();
+            this.btnLaunch = new System.Windows.Forms.Button();
             this.pnlCommButtons.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -57,7 +58,7 @@
             // 
             this.btnConnected.BackColor = System.Drawing.Color.Yellow;
             this.btnConnected.Location = new System.Drawing.Point(149, 23);
-            this.btnConnected.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnConnected.Margin = new System.Windows.Forms.Padding(4);
             this.btnConnected.Name = "btnConnected";
             this.btnConnected.Size = new System.Drawing.Size(120, 28);
             this.btnConnected.TabIndex = 0;
@@ -75,8 +76,8 @@
             // 
             // btnSendFile
             // 
-            this.btnSendFile.Location = new System.Drawing.Point(84, 9);
-            this.btnSendFile.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnSendFile.Location = new System.Drawing.Point(89, 8);
+            this.btnSendFile.Margin = new System.Windows.Forms.Padding(4);
             this.btnSendFile.Name = "btnSendFile";
             this.btnSendFile.Size = new System.Drawing.Size(72, 28);
             this.btnSendFile.TabIndex = 8;
@@ -91,17 +92,17 @@
             // rtbOutput
             // 
             this.rtbOutput.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rtbOutput.Location = new System.Drawing.Point(16, 209);
+            this.rtbOutput.Location = new System.Drawing.Point(16, 238);
             this.rtbOutput.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.rtbOutput.Name = "rtbOutput";
-            this.rtbOutput.Size = new System.Drawing.Size(592, 408);
+            this.rtbOutput.Size = new System.Drawing.Size(592, 379);
             this.rtbOutput.TabIndex = 9;
             this.rtbOutput.Text = "";
             // 
             // btnPing
             // 
-            this.btnPing.Location = new System.Drawing.Point(4, 8);
-            this.btnPing.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnPing.Location = new System.Drawing.Point(9, 8);
+            this.btnPing.Margin = new System.Windows.Forms.Padding(4);
             this.btnPing.Name = "btnPing";
             this.btnPing.Size = new System.Drawing.Size(72, 28);
             this.btnPing.TabIndex = 10;
@@ -131,8 +132,8 @@
             // 
             // btnClear
             // 
-            this.btnClear.Location = new System.Drawing.Point(536, 24);
-            this.btnClear.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnClear.Location = new System.Drawing.Point(15, 204);
+            this.btnClear.Margin = new System.Windows.Forms.Padding(4);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(72, 28);
             this.btnClear.TabIndex = 13;
@@ -142,8 +143,8 @@
             // 
             // btnReset
             // 
-            this.btnReset.Location = new System.Drawing.Point(164, 9);
-            this.btnReset.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnReset.Location = new System.Drawing.Point(245, 8);
+            this.btnReset.Margin = new System.Windows.Forms.Padding(4);
             this.btnReset.Name = "btnReset";
             this.btnReset.Size = new System.Drawing.Size(72, 28);
             this.btnReset.TabIndex = 14;
@@ -157,7 +158,7 @@
             this.lblDestPath.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblDestPath.Location = new System.Drawing.Point(128, 142);
             this.lblDestPath.Name = "lblDestPath";
-            this.lblDestPath.Size = new System.Drawing.Size(114, 20);
+            this.lblDestPath.Size = new System.Drawing.Size(91, 16);
             this.lblDestPath.TabIndex = 23;
             this.lblDestPath.Text = "SD Card Path:";
             // 
@@ -241,8 +242,8 @@
             // 
             // btnTest
             // 
-            this.btnTest.Location = new System.Drawing.Point(330, 121);
-            this.btnTest.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnTest.Location = new System.Drawing.Point(426, 204);
+            this.btnTest.Margin = new System.Windows.Forms.Padding(4);
             this.btnTest.Name = "btnTest";
             this.btnTest.Size = new System.Drawing.Size(102, 28);
             this.btnTest.TabIndex = 15;
@@ -253,14 +254,26 @@
             // 
             // pnlCommButtons
             // 
+            this.pnlCommButtons.Controls.Add(this.btnLaunch);
             this.pnlCommButtons.Controls.Add(this.btnPing);
             this.pnlCommButtons.Controls.Add(this.btnReset);
             this.pnlCommButtons.Controls.Add(this.btnSendFile);
             this.pnlCommButtons.Enabled = false;
-            this.pnlCommButtons.Location = new System.Drawing.Point(276, 15);
+            this.pnlCommButtons.Location = new System.Drawing.Point(281, 15);
             this.pnlCommButtons.Name = "pnlCommButtons";
-            this.pnlCommButtons.Size = new System.Drawing.Size(240, 45);
+            this.pnlCommButtons.Size = new System.Drawing.Size(332, 45);
             this.pnlCommButtons.TabIndex = 24;
+            // 
+            // btnLaunch
+            // 
+            this.btnLaunch.Location = new System.Drawing.Point(165, 8);
+            this.btnLaunch.Margin = new System.Windows.Forms.Padding(4);
+            this.btnLaunch.Name = "btnLaunch";
+            this.btnLaunch.Size = new System.Drawing.Size(72, 28);
+            this.btnLaunch.TabIndex = 15;
+            this.btnLaunch.Text = "Launch";
+            this.btnLaunch.UseVisualStyleBackColor = true;
+            this.btnLaunch.Click += new System.EventHandler(this.btnLaunch_Click);
             // 
             // Form1
             // 
@@ -284,7 +297,7 @@
             this.Controls.Add(this.btnSelectSource);
             this.Controls.Add(this.tbSource);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Form1";
             this.Text = "TeensyROM Transfer v0.3";
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -317,6 +330,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox tbSource;
         private System.Windows.Forms.Panel pnlCommButtons;
+        private System.Windows.Forms.Button btnLaunch;
     }
 }
 
