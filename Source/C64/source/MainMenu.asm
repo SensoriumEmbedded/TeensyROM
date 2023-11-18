@@ -109,10 +109,9 @@ NoHW
    sta wRegControl+IO1Port
    jsr WaitForTRDots
 
-   jsr SIDLoadInit  ;Load SID first to set timer rate regs
-   jsr IRQEnable  ; start the IRQ wedge, initial default is SID playback disable.  
+   jsr SIDLoadInit  ;Load SID, start the IRQ wedge, initial default is SID playback disable. 
  
-   jsr ListMenuItems
+   jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
 
    ;check default registers for music & time settings
    lda rwRegPwrUpDefaults+IO1Port
@@ -189,8 +188,7 @@ JSDelay:
    ;jmp WaitForJSorKey
 
 ReadKeyboard:
-   jsr CheckForIRQ
-   jsr GetIn    
+   jsr CheckForIRQGetIn
    beq WaitForJSorKey
 
 +  cmp #ChrReturn
@@ -415,28 +413,30 @@ MenuLineDone
    ;all items listed
    rts
 
-CheckForIRQ:
+CheckForIRQGetIn:
+
 smcIRQFlagged
    lda #0  ;default to no IRQ detected
-   beq +
+   bne +
+   jsr GetIn ;No IRQ, read key and return it in the acc 
+   rts
 
-   lda #2   
++  lda #2   
    sta wRegIRQ_ACK+IO1Port  ;send ack 2 to TR
    lda #0  ;clear local flag
    sta smcIRQFlagged+1
 
-   ;start TR selected app...
-   jsr RunSelected
+   jsr RunSelected  ;start TR selected app...
    
-   ;menu was built for remote start,
-   ;  Force back to main TR Mem menu and reload
-   ;  could load from rWRegCurrMenuWAIT+IO1Port to stay on same drive?
+   ;menu was custom built for remote start, not display
+   ;  Force back to main TR Mem menu, display to be done after return (via F1)
    lda #rmtTeensy
-   jsr ListMenuItemsChangeInit
-   lda rwRegCursorItemOnPg+IO1Port ;HighlightCurrent
-   jsr InverseRow
-+  rts
+   jsr MenuChangeInit
 
+   lda #ChrF1 ; simulate F1 keypress
+   rts
+   
+   
 SelectItem:
 ;Execute/select an item from the list
    lda rwRegCursorItemOnPg+IO1Port 
@@ -482,8 +482,10 @@ RunSelected:
 -  jsr GetIn    ; wait for user confirmation
    beq -
    cmp #'n'  
-   beq IRQEnContinue
-   cmp #'y'  
+   bne ++
+   jsr IRQEnable
+   jmp ListAndDone
+++ cmp #'y'  
    bne -
 
    lda #<MsgFWInProgress  ;In Progress Warning
@@ -495,17 +497,17 @@ RunSelected:
    lda #<MsgFWUpdateFailed 
    ldy #>MsgFWUpdateFailed
    jsr PrintString 
-   jsr AnyKeyMsgWait
-   jmp IRQEnContinue
+   jsr AnyKeyErrMsgWait  ;turns IRQ back on
+   jmp ListAndDone
       
       
 +  cmp #rtFileSID  ;check for .sid file selected
    bne +
    jsr StartSelItem_WaitForTRDots
-   jsr SIDLoadInit ;check success, return or transfer to RAM and start playing
-   lda #rpudMusicMask ;enable playback
+   lda #rpudMusicMask ;default to enable playback, may be turned off if error
    sta smcSIDPlayEnable+1
-   jmp IRQEnContinue
+   jsr SIDLoadInit ;check success, return or transfer to RAM and start playing.  Turns IRQ on regardless
+   jmp ListAndDone  
     
     
    ;not a dir, "none", hex file, or SID, try to start/execute
@@ -515,10 +517,9 @@ RunSelected:
    bne XferCopyRun   ;if it's a PRG (x-fer ready), x-fer it and launch. Won't return!!!
    
    ;If at this point, couldn't load item, and wasn't a dir, none, .hex, .prg or .p00
-   jsr AnyKeyMsgWait   
-
-IRQEnContinue   
-   jsr IRQEnable
+   jsr AnyKeyErrMsgWait  ;turns IRQ back on
+   ;continue to...
+   
 ListAndDone
    jsr ListMenuItems ; reprint menu
 AllDone
@@ -546,11 +547,14 @@ XferCopyRun:
    jmp PRGLoadStartReloc     
    ;rts ;SelectItem never returns
 
-AnyKeyMsgWait:
+AnyKeyErrMsgWait:
+   lda #0         ;turn off SID playback on error
+   sta smcSIDPlayEnable+1
+   jsr IRQEnable  ;turn on IRQ
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey
    jsr PrintString 
--  jsr GetIn    
+-  jsr CheckForIRQGetIn    
    beq -
    rts
 
@@ -715,7 +719,7 @@ HelpMenu:
 
 WaitHelpMenuKey:
    jsr DisplayTime   
-   jsr GetIn    
+   jsr CheckForIRQGetIn    
    beq WaitHelpMenuKey
 
 +  cmp #ChrF1  ;Teensy mem Menu

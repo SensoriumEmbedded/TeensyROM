@@ -20,7 +20,8 @@
 ; ******************************* SID Related ******************************* 
 
 MIDI2SID:
-   jsr IRQDisable
+   lda #0  ;disable SID playback, but leave IRQ on
+   sta smcSIDPlayEnable+1
    jsr PrintBanner 
    lda #<MsgM2SPolyMenu
    ldy #>MsgM2SPolyMenu
@@ -188,7 +189,7 @@ M2SUpdateKeyInLoop:
    ldy #>rRegSIDStrStart+IO1Port
    jsr PrintString 
    
-   jsr GetIn
+   jsr CheckForIRQGetIn
    beq M2SUpdateKeyInLoop
    
    cmp #'t'  ;Triangle
@@ -295,10 +296,11 @@ rcnt
    jmp M2SDispUpdate
 
 +  cmp #'x'  ;Exit M2S
-   bne +
-   jsr SIDVoicesOff
-   jsr IRQEnable
-++ rts 
+   beq ++
+   cmp #ChrF1
+   bne +  
+++ jsr SIDVoicesOff
+   rts 
 
 +  jmp M2SUpdateKeyInLoop
 
@@ -307,7 +309,7 @@ SIDLoadInit:
    
    lda rRegStrAvailable+IO1Port 
    bne +   ;Make sure ready to x-fer
-   jsr AnyKeyMsgWait  ;an error occurred
+   jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
    rts
    
    ;load SID to C64 RAM, same as PRGLoadStart...
@@ -326,7 +328,7 @@ SIDLoadInit:
    inc PtrAddrHi
    bne -
    ;good luck if we get to here... Trying to overflow and write to zero page
-   jsr AnyKeyMsgWait
+   jsr AnyKeyErrMsgWait  ;turns IRQ back on
    rts
 
    ;self-modifying init jump
@@ -351,6 +353,7 @@ smcSIDInitAddr
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
    cli
+   jsr IRQEnable  ;start the IRQ wedge
    rts
    
 ToggleSIDMusic:
@@ -428,9 +431,9 @@ IRQwedge:
    bne +
    
    ;interrupt from TR
-   inc BorderColorReg ;tweak display border
+   ;inc BorderColorReg ;tweak display border
    lda #1   
-   sta smcIRQFlagged+1  ;flag for action in main routine
+   sta smcIRQFlagged+1  ;local flag for action in main code
    sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
    jmp IRQDefault
    

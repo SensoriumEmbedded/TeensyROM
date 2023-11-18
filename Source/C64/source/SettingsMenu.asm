@@ -109,7 +109,7 @@ ShowSettings:
 
 WaitForSettingsKey:     
    jsr DisplayTime   
-   jsr GetIn
+   jsr CheckForIRQGetIn
    beq WaitForSettingsKey
 
 +  cmp #'a'  ;Power-up Time Zone Increment
@@ -169,6 +169,10 @@ WaitForSettingsKey:
    sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
+
++  cmp #ChrF1  ;Exit (special for IRQ remote start return)
+   bne +
+   rts
 
 ;--------------------Shift/non-shift mean the same from here on...---------------------
 +  and #$7f  ;Force to lower case
