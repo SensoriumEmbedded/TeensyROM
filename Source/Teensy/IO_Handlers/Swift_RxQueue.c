@@ -56,15 +56,12 @@ bool CheckRxNMITimeout()
 
 void SendRxByte(uint8_t ToSend) 
 {
-   //send character if non-zero, otherwise skip it to save a full c64 char cycle
    //assumes ReadyToSendRx() is true before calling
-   if(ToSend)
-   {  
-      SwiftRxBuf = ToSend;
-      SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
-      SetNMIAssert;
-      NMIassertMicros = micros();
-   }
+   
+   SwiftRxBuf = ToSend;
+   SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
+   SetNMIAssert;
+   NMIassertMicros = micros();
 }
 
 void CheckSendRxQueue()
@@ -84,13 +81,14 @@ void CheckSendRxQueue()
          }
          else 
          {
-            if(ToSend == 13) ToSend = 0; //ignore return chars
-            else
-            {
-               ToSend = ToPETSCII(ToSend);
-               if (ToSend) PageCharsReceived++; //normal char
-            }
+            if(ToSend == 13 || ToSend == 10) ToSend = 0; //ignore return char & New Line
+            else ToSend = ToPETSCII(ToSend);
          }
+         
+         //if zero, skip sending to save a full c64 char cycle
+         //ok during BrowserMode, but skipping 0s in regular mode kills downloads (no zeros sent)
+         if(!ToSend) return;
+         PageCharsReceived++; //normal char, not return or special PETSCII
       } //BrowserMode
       
       SendRxByte(ToSend);

@@ -140,7 +140,7 @@ void ParseHTMLTag()
    TagBuf[BufCnt] = 0;  //terminate it
    
    //check for known tags and do formatting, etc
-   if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0) 
+   if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0 || strcmp(TagBuf, "/ul")==0) 
    {
       SendPETSCIICharImmediate(PETSCIIreturn);
    }
@@ -641,7 +641,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
       Printf_dbg("*--Ext: ");
       if (Extension != NULL)
       {
-         Extension++; //spip the '.'
+         Extension++; //skip the '.'
          Printf_dbg("%s\n", Extension);
          
          if(DLExtension(Extension)) cMod = 'd';
