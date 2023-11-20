@@ -1,6 +1,17 @@
 
 # FW Release Version history:
 
+### 0.5.6 sub-release 11/19/23
+* New feature: Remote Launch
+  * Ability to launch stored files remotely via USB connection 
+    * includes SID playback, PRGs, CRTs, etc 
+  * Works with updated Win App (0.4 just released)
+    * Look for massively improved v2 Win App from hExx in the future :)
+  
+* Swiftlink
+  * Bug fix: wasn't sending 0s in normal mode (corrupted xmodem downloads)
+  * Browser mode minor html tag tweaks
+  
 ### 0.5.5 sub-release 11/12/23
 * Swiftlink/Browser updates:
   * Port selection available for host or ip address (host:port/path)
