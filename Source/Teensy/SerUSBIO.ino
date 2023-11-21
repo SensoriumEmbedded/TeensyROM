@@ -17,11 +17,14 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-void   getFreeITCM();
 //synch with win app:
-#define SendFileToken  0x64AA 
-#define AckToken       0x64CC
-#define FailToken      0x9B7F
+#define LaunchFileToken 0x6444
+#define PauseSIDToken   0x6466
+#define SendFileToken   0x64AA 
+#define AckToken        0x64CC
+#define FailToken       0x9B7F
+
+void   getFreeITCM();
 
 FLASHMEM void ServiceSerial()
 {
@@ -55,6 +58,10 @@ FLASHMEM void ServiceSerial()
             case 0x44: //Launch File
                if(LaunchFile()) Serial.println("Launched!");  
                else Serial.println("Launch Failed");  
+               break;
+            case 0x66: //Pause SID
+               if(RemotePauseSID()) SendU16(AckToken);
+               else SendU16(FailToken);
                break;
             case 0x67: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);

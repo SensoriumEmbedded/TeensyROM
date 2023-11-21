@@ -21,6 +21,7 @@ namespace Serial_Logger
 
         //synch with TeensyROM code:
         const UInt16 LaunchFileToken = 0x6444;
+        const UInt16 PauseSIDToken   = 0x6466;
         const UInt16 SendFileToken   = 0x64AA;
         const UInt16 AckToken        = 0x64CC;
         const UInt16 FailToken       = 0x9B7F;
@@ -328,7 +329,16 @@ namespace Serial_Logger
             SendIntBytes(SD_nUSB, 1);//Send SD or USB
 
             serialPort1.Write(DestPathFile + "\0");                    //Send path/name, null terminate
-            if (!GetAck()) WriteToOutput("Launch Failed!", Color.Red); ;
+            if (!GetAck()) WriteToOutput("Launch Failed!", Color.Red);
+        }
+
+        private void btnPauseSID_Click(object sender, EventArgs e)
+        {
+            //   App: PauseSIDToken 0x6466
+            //Teensy: AckToken 0x64CC on Pass,  0x9b7f on Fail
+            SendIntBytes(PauseSIDToken, 2);
+            if (GetAck()) WriteToOutput("Sent Pause SID", Color.DarkGreen);
+            else WriteToOutput("Pause SID Failed!", Color.Red);
         }
 
         /********************************  Stand Alone Functions *****************************************/

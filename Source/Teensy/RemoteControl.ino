@@ -29,15 +29,53 @@
 // C64: Executes command
 
 
-//bool RemotePauseSID()
-//{  //assumes TR is not "busy" (Handler active)
-//   
-//}
-//
-//bool InterruptC64(RegIRQCommands IRQCommand)
-//{
-//   
-//}
+bool RemotePauseSID()
+{  //assumes TR is not "busy" (Handler active)
+   IO1[rRegIRQ_CMD] = ricmdSIDPause;
+   bool IRQSuccess = InterruptC64();
+   IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none for default
+   return IRQSuccess;   
+}
+
+bool InterruptC64()
+{
+
+   uint32_t beginWait = millis();
+   IO1[wRegIRQ_ACK] = ricmdNone;
+   SetIRQAssert;
+   
+   //wait for C64 app to respond from IRQ 
+   while (IO1[wRegIRQ_ACK] != ricmdAck1) 
+   {
+      if (millis()-beginWait > 50) 
+      {
+         SetIRQDeassert;
+         Printf_dbg("Ack1 Timeout\n");
+         return false; // Timeout, Ack 1 (from IRQ)
+      }
+   }
+   SetIRQDeassert;
+   Printf_dbg("Ack 1 took %lumS\n", (millis()-beginWait));
+   
+   //now wait for it to respond from main loop
+   while (IO1[wRegIRQ_ACK] == ricmdAck1) 
+   {
+      if (millis()-beginWait > 200) 
+      {
+         Printf_dbg("Ack2 Timeout\n");
+         return false; // Timeout, Ack 2 (from main code)
+      }
+   }
+   Printf_dbg("Ack 1+2 took %lumS\n", (millis()-beginWait));
+   
+   if (IO1[wRegIRQ_ACK] != IO1[rRegIRQ_CMD]) //mismatch!
+   {
+      Printf_dbg("Mismatch\n");
+      return false; // echoed ack2 does not match command sent
+   }
+   
+   return true;
+}
 
 bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
 {  //assumes file exists & TR is not "busy" (Handler active)
@@ -76,43 +114,10 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    //Get the attention of the C64 via IRQ or reset:
    if(CurrentIOHandler == IOH_TeensyROM)
    {
-      uint32_t beginWait = millis();
-      IO1[wRegIRQ_ACK] = ricmdNone;
       IO1[rRegIRQ_CMD] = ricmdLaunch;
-      SetIRQAssert;
-      
-      //wait for C64 app to respond from IRQ 
-      while (IO1[wRegIRQ_ACK] != ricmdAck1) 
-      {
-         if (millis()-beginWait > 50) 
-         {
-            SetIRQDeassert;
-            IO1[rRegIRQ_CMD] = ricmdNone;
-            Printf_dbg("Ack1 Timeout\n");
-            return false; // Timeout, Ack 1 (from IRQ)
-         }
-      }
-      SetIRQDeassert;
-      Printf_dbg("Ack 1 took %lumS\n", (millis()-beginWait));
-      
-      //now wait for it to respond from main loop
-      while (IO1[wRegIRQ_ACK] == ricmdAck1) 
-      {
-         if (millis()-beginWait > 200) 
-         {
-            IO1[rRegIRQ_CMD] = ricmdNone;
-            Printf_dbg("Ack2 Timeout\n");
-            return false; // Timeout, Ack 2 (from main code)
-         }
-      }
-      Printf_dbg("Ack 1+2 took %lumS\n", (millis()-beginWait));
-      if (IO1[wRegIRQ_ACK] != IO1[rRegIRQ_CMD]) //mismatch!
-      {
-         IO1[rRegIRQ_CMD] = ricmdNone;
-         Printf_dbg("Mismatch\n");
-         return false; // echoed ack2 does not match command sent
-      }
-      
+      bool IRQSuccess = InterruptC64();
+      IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none for default
+      if (!IRQSuccess) return false;
    }
    else
    {
@@ -122,7 +127,6 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
       //SetUpMainMenuROM(); //not all of this, but probably some?
    }
    
-   IO1[rRegIRQ_CMD] = ricmdNone;
    return true;
 }
 

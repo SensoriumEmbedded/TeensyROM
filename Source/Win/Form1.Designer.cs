@@ -51,6 +51,7 @@
             this.btnTest = new System.Windows.Forms.Button();
             this.pnlCommButtons = new System.Windows.Forms.Panel();
             this.btnLaunch = new System.Windows.Forms.Button();
+            this.btnPauseSID = new System.Windows.Forms.Button();
             this.pnlCommButtons.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -92,10 +93,10 @@
             // rtbOutput
             // 
             this.rtbOutput.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rtbOutput.Location = new System.Drawing.Point(16, 238);
+            this.rtbOutput.Location = new System.Drawing.Point(16, 251);
             this.rtbOutput.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.rtbOutput.Name = "rtbOutput";
-            this.rtbOutput.Size = new System.Drawing.Size(592, 379);
+            this.rtbOutput.Size = new System.Drawing.Size(592, 366);
             this.rtbOutput.TabIndex = 9;
             this.rtbOutput.Text = "";
             // 
@@ -132,7 +133,7 @@
             // 
             // btnClear
             // 
-            this.btnClear.Location = new System.Drawing.Point(15, 204);
+            this.btnClear.Location = new System.Drawing.Point(15, 217);
             this.btnClear.Margin = new System.Windows.Forms.Padding(4);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(72, 28);
@@ -143,7 +144,7 @@
             // 
             // btnReset
             // 
-            this.btnReset.Location = new System.Drawing.Point(245, 8);
+            this.btnReset.Location = new System.Drawing.Point(169, 8);
             this.btnReset.Margin = new System.Windows.Forms.Padding(4);
             this.btnReset.Name = "btnReset";
             this.btnReset.Size = new System.Drawing.Size(72, 28);
@@ -156,7 +157,7 @@
             // 
             this.lblDestPath.AutoSize = true;
             this.lblDestPath.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblDestPath.Location = new System.Drawing.Point(128, 142);
+            this.lblDestPath.Location = new System.Drawing.Point(128, 155);
             this.lblDestPath.Name = "lblDestPath";
             this.lblDestPath.Size = new System.Drawing.Size(91, 16);
             this.lblDestPath.TabIndex = 23;
@@ -164,7 +165,7 @@
             // 
             // tbDestPath
             // 
-            this.tbDestPath.Location = new System.Drawing.Point(140, 162);
+            this.tbDestPath.Location = new System.Drawing.Point(140, 175);
             this.tbDestPath.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.tbDestPath.Name = "tbDestPath";
             this.tbDestPath.Size = new System.Drawing.Size(468, 22);
@@ -174,7 +175,7 @@
             // rbUSBDRive
             // 
             this.rbUSBDRive.AutoSize = true;
-            this.rbUSBDRive.Location = new System.Drawing.Point(16, 171);
+            this.rbUSBDRive.Location = new System.Drawing.Point(16, 184);
             this.rbUSBDRive.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.rbUSBDRive.Name = "rbUSBDRive";
             this.rbUSBDRive.Size = new System.Drawing.Size(91, 20);
@@ -187,7 +188,7 @@
             // 
             this.rbSDCard.AutoSize = true;
             this.rbSDCard.Checked = true;
-            this.rbSDCard.Location = new System.Drawing.Point(16, 146);
+            this.rbSDCard.Location = new System.Drawing.Point(16, 159);
             this.rbSDCard.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.rbSDCard.Name = "rbSDCard";
             this.rbSDCard.Size = new System.Drawing.Size(79, 20);
@@ -200,7 +201,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(12, 127);
+            this.label2.Location = new System.Drawing.Point(12, 140);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(89, 16);
             this.label2.TabIndex = 19;
@@ -208,7 +209,7 @@
             // 
             // btnSelectSource
             // 
-            this.btnSelectSource.Location = new System.Drawing.Point(16, 84);
+            this.btnSelectSource.Location = new System.Drawing.Point(16, 97);
             this.btnSelectSource.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btnSelectSource.Name = "btnSelectSource";
             this.btnSelectSource.Size = new System.Drawing.Size(29, 27);
@@ -221,7 +222,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(12, 65);
+            this.label1.Location = new System.Drawing.Point(12, 78);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(60, 16);
             this.label1.TabIndex = 17;
@@ -230,7 +231,7 @@
             // tbSource
             // 
             this.tbSource.AllowDrop = true;
-            this.tbSource.Location = new System.Drawing.Point(51, 86);
+            this.tbSource.Location = new System.Drawing.Point(51, 99);
             this.tbSource.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.tbSource.Name = "tbSource";
             this.tbSource.ReadOnly = true;
@@ -242,7 +243,7 @@
             // 
             // btnTest
             // 
-            this.btnTest.Location = new System.Drawing.Point(426, 204);
+            this.btnTest.Location = new System.Drawing.Point(426, 217);
             this.btnTest.Margin = new System.Windows.Forms.Padding(4);
             this.btnTest.Name = "btnTest";
             this.btnTest.Size = new System.Drawing.Size(102, 28);
@@ -254,6 +255,7 @@
             // 
             // pnlCommButtons
             // 
+            this.pnlCommButtons.Controls.Add(this.btnPauseSID);
             this.pnlCommButtons.Controls.Add(this.btnLaunch);
             this.pnlCommButtons.Controls.Add(this.btnPing);
             this.pnlCommButtons.Controls.Add(this.btnReset);
@@ -261,12 +263,12 @@
             this.pnlCommButtons.Enabled = false;
             this.pnlCommButtons.Location = new System.Drawing.Point(281, 15);
             this.pnlCommButtons.Name = "pnlCommButtons";
-            this.pnlCommButtons.Size = new System.Drawing.Size(332, 45);
+            this.pnlCommButtons.Size = new System.Drawing.Size(332, 79);
             this.pnlCommButtons.TabIndex = 24;
             // 
             // btnLaunch
             // 
-            this.btnLaunch.Location = new System.Drawing.Point(165, 8);
+            this.btnLaunch.Location = new System.Drawing.Point(249, 8);
             this.btnLaunch.Margin = new System.Windows.Forms.Padding(4);
             this.btnLaunch.Name = "btnLaunch";
             this.btnLaunch.Size = new System.Drawing.Size(72, 28);
@@ -274,6 +276,17 @@
             this.btnLaunch.Text = "Launch";
             this.btnLaunch.UseVisualStyleBackColor = true;
             this.btnLaunch.Click += new System.EventHandler(this.btnLaunch_Click);
+            // 
+            // btnPauseSID
+            // 
+            this.btnPauseSID.Location = new System.Drawing.Point(231, 44);
+            this.btnPauseSID.Margin = new System.Windows.Forms.Padding(4);
+            this.btnPauseSID.Name = "btnPauseSID";
+            this.btnPauseSID.Size = new System.Drawing.Size(90, 28);
+            this.btnPauseSID.TabIndex = 16;
+            this.btnPauseSID.Text = "Pause SID";
+            this.btnPauseSID.UseVisualStyleBackColor = true;
+            this.btnPauseSID.Click += new System.EventHandler(this.btnPauseSID_Click);
             // 
             // Form1
             // 
@@ -331,6 +344,7 @@
         private System.Windows.Forms.TextBox tbSource;
         private System.Windows.Forms.Panel pnlCommButtons;
         private System.Windows.Forms.Button btnLaunch;
+        private System.Windows.Forms.Button btnPauseSID;
     }
 }
 
