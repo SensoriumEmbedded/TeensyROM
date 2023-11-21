@@ -1,6 +1,11 @@
 
 # FW Release Version history:
 
+### 0.5.7 sub-release 11/21/23
+* Remote Launch updates:
+  * Command to Remotely pause/unpause SID playback
+  * IRQ command incorporated to protect from false IRQs
+
 ### 0.5.6 sub-release 11/19/23
 * New feature: Remote Launch
   * Ability to launch stored files remotely via USB connection 
