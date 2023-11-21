@@ -349,6 +349,12 @@ bool ReadClientLine(char* linebuf, uint16_t MaxLen)
    return false;
 }
 
+void ClearClientStop()
+{  //clear client buffer and stop client
+   while (client.available()) client.read(); 
+   client.stop();
+}
+
 uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
 {
    if (DestURL->host[0] == 0)
@@ -363,8 +369,7 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
       memcpy(PrevURLQueue[PrevURLQueueNum], DestURL, sizeof(stcURLParse)); //overwrite previous entry
    }
    
-   while (client.available()) client.read(); //clear client buffer
-   client.stop();
+   ClearClientStop();
 
    RxQueueHead = RxQueueTail = 0; //dump the queue
    UnPausePage();
@@ -427,8 +432,7 @@ uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
             return Length;
          }
       }
-      while (client.available()) client.read(); //clear client buffer
-      client.stop();
+      ClearClientStop();
    }
 
    SendASCIIErrorStrImmediate("Connect Failed");
@@ -473,7 +477,7 @@ FLASHMEM void DoSearch(const char *Term)
    WebConnect(&URL, true);
 }
 
-void DownloadFile(stcURLParse *DestURL)
+void DownloadFile(stcURLParse *DestURL, bool OverWrite)
 {  // Modifies (decodes) FileName
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
@@ -531,11 +535,18 @@ void DownloadFile(stcURLParse *DestURL)
 
    if (sourceFS->exists(FileNamePath))
    {
-      SendASCIIErrorStrImmediate("File already exists");  
-      return;      
+      if (OverWrite)
+      {
+         SendASCIIStrImmediate("File exists, overwriting\r");
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("File exists, aborting");  
+         return;   
+      }      
    }
    
-   uint32_t Length = WebConnect(DestURL, false);
+   uint32_t Length = WebConnect(DestURL, true);
 
    if (!client.connected() || Length == 0)    
    {
@@ -594,7 +605,7 @@ void DownloadFile(stcURLParse *DestURL)
 
 FLASHMEM bool ValidModifier(const char cMod)
 {
-   char ValidMods[] = "dfr ";
+   char ValidMods[] = "dofr ";
    for (uint8_t charnum=0; charnum<=strlen(ValidMods); charnum++) // <= to include term check as valid
    {
       if(cMod == ValidMods[charnum]) return true;
@@ -609,8 +620,21 @@ bool isURLFiltered(const stcURLParse *URL)
    return (strcmp(URL->host, "www.frogfind.com")==0); 
 }
 
-FLASHMEM bool DLExtension(const char * Extension)
+FLASHMEM bool DLExtension(const char * Filename)
 {
+   char * Extension = strrchr(Filename, '.');
+   Printf_dbg("*--Ext: ");
+   if (Extension != NULL)
+   {
+      Extension++; //skip the '.'
+      Printf_dbg("%s\n", Extension);
+   }
+   else 
+   {
+      Printf_dbg("none\n");
+      return false;
+   }
+      
    uint8_t ExtNum = 0;
    char ExtLower[strlen(Extension)+1]; //for lower case copy w/ term
    const char DLExts [][5] =
@@ -620,7 +644,7 @@ FLASHMEM bool DLExtension(const char * Extension)
       "sid",
       "hex",
    };   
-   
+
    //copy to lower case local str
    for(uint16_t CharNum=0; CharNum <= strlen(Extension); CharNum++) ExtLower[CharNum] = tolower(Extension[CharNum]);
    
@@ -637,24 +661,15 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
    
    if (cMod == ' ' || cMod == 0) //modifier not specified, check for auto-download
    {
-      char * Extension = strrchr(DestURL->path, '.');
-      Printf_dbg("*--Ext: ");
-      if (Extension != NULL)
-      {
-         Extension++; //skip the '.'
-         Printf_dbg("%s\n", Extension);
-         
-         if(DLExtension(Extension)) cMod = 'd';
-      }
-      else {Printf_dbg("none\n");}
+      if(DLExtension(DestURL->path)) cMod = 'd'; //don't overwrite on auto-download
    }
    
    switch (cMod)
    {
-      case 'd': //download
-         DownloadFile(DestURL);
-         while (client.available()) client.read(); //clear client buffer
-         client.stop();  //in case of unfinished/error, don't read it in as text
+      case 'd': //download, don't overwrite
+      case 'o': //download w/ overwrite
+         DownloadFile(DestURL, (cMod == 'o'));
+         ClearClientStop();  //in case of unfinished/error, don't read it in as text
          break;
          
       case 'f':  //filter via FrogFind
@@ -737,22 +752,28 @@ FLASHMEM void ProcessBrowserCommand()
       
       CmdMsg++; //past the 'b'
       
-      if (*CmdMsg == 0) //no modifier
+      if (*CmdMsg == 0 || *CmdMsg == 'u') //no modifier or show URLs
       {  //print bookmark list via buffer
-         char buf[eepBMURLSize];
+         char bufURL[eepBMURLSize];
+         char bufTitle[eepBMTitleSize];
          
          AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
          for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
          {
             AddRawStrToRxQueue("<li><a href=\"");
-            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,buf); //URL
-            Printf_dbg("BM#%d- %s", BMNum, buf);
-            AddRawStrToRxQueue(buf);
+            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,bufURL); //URL
+            Printf_dbg("BM#%d- %s", BMNum, bufURL);
+            AddRawStrToRxQueue(bufURL);
             AddRawStrToRxQueue("\">");
-            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),buf); //Title
-            Printf_dbg("- %s\n", buf);
-            AddRawStrToRxQueue(buf);         
+            EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),bufTitle); //Title
+            Printf_dbg("- %s\n", bufTitle);
+            AddRawStrToRxQueue(bufTitle);         
             AddRawStrToRxQueue("</a>");
+            if (*CmdMsg == 'u')
+            {
+               AddRawStrToRxQueue("<br>   ");
+               AddRawStrToRxQueue(bufURL);
+            }
          }
          AddRawStrToRxQueue("<eoftag>");
       }
@@ -765,7 +786,9 @@ FLASHMEM void ProcessBrowserCommand()
          
          EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, buf); //URL
          ParseURL(buf, URL);
-         WebConnect(&URL, true);
+         
+         if(DLExtension(URL.path)) DownloadFile(&URL, false); //don't overwrite from bookmark
+         else WebConnect(&URL, true);
       }
       
       else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
@@ -939,8 +962,7 @@ FLASHMEM void ProcessBrowserCommand()
    
    else if(strcmp(CmdMsg, "x") ==0) //Exit browse mode
    {
-      while (client.available()) client.read(); //clear client buffer
-      client.stop();
+      ClearClientStop();
       BrowserMode = false;
       RxQueueHead = RxQueueTail = 0; //dump the queue
       UnPausePage();

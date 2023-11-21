@@ -432,8 +432,7 @@ void PollingHndlr_SwiftLink()
    if(PlusCount==3 && millis()-LastTxMillis>1000) //Must be followed by one second of no characters
    {
       PlusCount=0;
-      while (client.available()) client.read(); //clear client buffer
-      client.stop();
+      ClearClientStop();
       AddToPETSCIIStrToRxQueueLN("\r*click*");
    }
 
