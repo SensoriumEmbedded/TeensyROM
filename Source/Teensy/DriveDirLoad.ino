@@ -21,11 +21,30 @@
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 
+//  TR: Set up wRegIRQ_ACK, rRegIRQ_CMD, & launch menu info (if needed)
+//  TR: Assert IRQ, wait for ack1
+// C64: IRQ handler catches, sets local reg (smcIRQFlagged) and sends ACK1 to wRegIRQ_ACK
+//  TR: sees ack1, deasserts IRQ, waits for ack2 (echo of command)
+// C64: Main code sees local reg, reads IRQ command, and echoes it to ack (ack 2)
+//  TR: sees ack2, success/return
+// C64: Executes command
+
+
+//bool RemotePauseSID()
+//{  //assumes TR is not "busy" (Handler active)
+//   
+//}
+//
+//bool InterruptC64(RegIRQCommands IRQCommand)
+//{
+//   
+//}
+
 bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
-{  //assumes file exists & TR is not "busy"
+{  //assumes file exists & TR is not "busy" (Handler active)
    
    RemoteLaunched = true;
-   //Like MenuChange()
+   //Set selected drive
    IO1[rWRegCurrMenuWAIT] = SD_nUSB ? rmtSD : rmtUSBDrive;
    if (SD_nUSB) SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
    
@@ -49,7 +68,7 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    SetDriveDirMenuNameType(0, ptrFilename);
    NumDrvDirMenuItems = 1;
    MenuSource = DriveDirMenu; 
-   SetNumItems(1); //sets # of menu items, but avoid displaying?
+   SetNumItems(1); //sets # of menu items
    IO1[rwRegCursorItemOnPg] = 0;
    SelItemFullIdx = 0;  //  "Select" item
    
@@ -59,32 +78,52 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    if(CurrentIOHandler == IOH_TeensyROM)
    {
       uint32_t beginWait = millis();
-      IO1[wRegIRQ_ACK] = 0;
+      IO1[wRegIRQ_ACK] = ricmdNone;
+      IO1[rRegIRQ_CMD] = ricmdLaunch;
       SetIRQAssert;
-      //wait for C64 app to respond from IRQ then main loop
-      while (IO1[wRegIRQ_ACK] != 1) 
+      
+      //wait for C64 app to respond from IRQ 
+      while (IO1[wRegIRQ_ACK] != ricmdAck1) 
       {
          if (millis()-beginWait > 50) 
          {
             SetIRQDeassert;
-            return false; // Timeout, Ack 1
+            IO1[rRegIRQ_CMD] = ricmdNone;
+            Printf_dbg("Ack1 Timeout\n");
+            return false; // Timeout, Ack 1 (from IRQ)
          }
       }
       SetIRQDeassert;
       Printf_dbg("Ack 1 took %lumS\n", (millis()-beginWait));
-      while (IO1[wRegIRQ_ACK] != 2) 
+      
+      //now wait for it to respond from main loop
+      while (IO1[wRegIRQ_ACK] == ricmdAck1) 
       {
-         if (millis()-beginWait > 500) return false; // Timeout, Ack 2
+         if (millis()-beginWait > 200) 
+         {
+            IO1[rRegIRQ_CMD] = ricmdNone;
+            Printf_dbg("Ack2 Timeout\n");
+            return false; // Timeout, Ack 2 (from main code)
+         }
       }
-      Printf_dbg("Ack 2 took %lumS\n", (millis()-beginWait));
+      Printf_dbg("Ack 1+2 took %lumS\n", (millis()-beginWait));
+      if (IO1[wRegIRQ_ACK] != IO1[rRegIRQ_CMD]) //mismatch!
+      {
+         IO1[rRegIRQ_CMD] = ricmdNone;
+         Printf_dbg("Mismatch\n");
+         return false; // echoed ack2 does not match command sent
+      }
+      
    }
    else
    {
       //force reset then launch
-      
+      //set up to launch on reset
+      //doReset = true; //if called from SerUSBIO, it can't block
+      //SetUpMainMenuROM(); //not all of this, but probably some?
    }
    
-   
+   IO1[rRegIRQ_CMD] = ricmdNone;
    return true;
 }
 

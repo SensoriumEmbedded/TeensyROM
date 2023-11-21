@@ -432,7 +432,7 @@ IRQwedge:
    
    ;interrupt from TR
    ;inc BorderColorReg ;tweak display border
-   lda #1   
+   lda #ricmdAck1   
    sta smcIRQFlagged+1  ;local flag for action in main code
    sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
    jmp IRQDefault

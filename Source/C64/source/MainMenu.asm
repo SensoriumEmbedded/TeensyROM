@@ -416,16 +416,26 @@ MenuLineDone
 CheckForIRQGetIn:
 
 smcIRQFlagged
-   lda #0  ;default to no IRQ detected
+   lda #ricmdNone  ;default to no IRQ detected (0)
    bne +
-   jsr GetIn ;No IRQ, read key and return it in the acc 
+-  jsr GetIn ;No IRQ, read key and return it in the acc 
    rts
 
-+  lda #2   
-   sta wRegIRQ_ACK+IO1Port  ;send ack 2 to TR
-   lda #0  ;clear local flag
-   sta smcIRQFlagged+1
++  lda rRegIRQ_CMD+IO1Port  ;Read command from TR
+   sta wRegIRQ_ACK+IO1Port  ;echo command as ack 2 to TR
+   ldx #ricmdNone  ;clear local flag
+   stx smcIRQFlagged+1
+   
+   ;cmp ricmdNone   ;just check acceptable and do nothing otherwise
+   cmp #ricmdSIDPause
+   bne +
+   jsr ToggleSIDMusic
+   jmp -
+   
++  cmp #ricmdLaunch
+   bne -    ;no command or false irq
 
+   ;launch app set up by TR
    jsr RunSelected  ;start TR selected app...
    
    ;menu was custom built for remote start, not display
