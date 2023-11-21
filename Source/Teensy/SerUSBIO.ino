@@ -18,11 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //synch with win app:
-#define LaunchFileToken 0x6444
-#define PauseSIDToken   0x6466
-#define SendFileToken   0x64AA 
-#define AckToken        0x64CC
-#define FailToken       0x9B7F
+#define LaunchFileToken   0x6444
+#define PauseSIDToken     0x6466
+#define SendFileToken     0x64AA 
+#define AckToken          0x64CC
+#define FailToken         0x9B7F
+#define PostFileToken     0x64BB 
+#define GetDirectoryToken 0x64DD 
 
 void   getFreeITCM();
 
@@ -55,6 +57,12 @@ FLASHMEM void ServiceSerial()
             case 0xAA: //file x-fer pc->TR
                ReceiveFile();        
                break;
+            case 0xBB:  // v2 file x-fer pc->TR.  For use with v2 UI.
+                PostFileCommand();
+                break;
+            case 0xDD:  // v2 directory listing from TR
+                GetDirectoryCommand();
+                break;
             case 0x44: //Launch File
                if(LaunchFile()) Serial.println("Launched!");  
                else Serial.println("Launch Failed");  
