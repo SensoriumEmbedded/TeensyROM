@@ -264,7 +264,7 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // Send --> StartDirectoryListToken 0x5A5A or FailToken 0x9b7f
 // Send --> Write content as json
 // Send --> EndDirectoryListToken 0xA5A5,  0x9b7f on Fail
-FLASHMEM void ListDirectoryCommand()
+FLASHMEM void GetDirectoryCommand()
 {
     const uint16_t StartDirectoryListToken = 0x5A5A;
     const uint16_t EndDirectoryListToken = 0xA5A5;
