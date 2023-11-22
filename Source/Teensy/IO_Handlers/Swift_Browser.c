@@ -355,18 +355,18 @@ void ClearClientStop()
    client.stop();
 }
 
-uint32_t WebConnect(const stcURLParse *DestURL, bool AddToHist)
+void AddToPrevURLQueue(const stcURLParse *URL) //add URL to the prev queue
+{
+   if (++PrevURLQueueNum == NumPrevURLQueues) PrevURLQueueNum = 0; //inc/wrap around top
+   memcpy(PrevURLQueue[PrevURLQueueNum], URL, sizeof(stcURLParse)); //overwrite previous entry
+}
+
+uint32_t WebConnect(const stcURLParse *DestURL)
 {
    if (DestURL->host[0] == 0)
    {
       SendASCIIErrorStrImmediate("No Host");
       return 0;
-   }
-   
-   if (AddToHist) //add URL to the prev queue
-   {
-      if (++PrevURLQueueNum == NumPrevURLQueues) PrevURLQueueNum = 0; //inc/wrap around top
-      memcpy(PrevURLQueue[PrevURLQueueNum], DestURL, sizeof(stcURLParse)); //overwrite previous entry
    }
    
    ClearClientStop();
@@ -474,7 +474,8 @@ FLASHMEM void DoSearch(const char *Term)
       }
    }
    
-   WebConnect(&URL, true);
+   WebConnect(&URL);
+   AddToPrevURLQueue(&URL);
 }
 
 void DownloadFile(stcURLParse *DestURL, bool OverWrite)
@@ -546,8 +547,9 @@ void DownloadFile(stcURLParse *DestURL, bool OverWrite)
       }      
    }
    
-   uint32_t Length = WebConnect(DestURL, true);
-
+   uint32_t Length = WebConnect(DestURL);
+   AddToPrevURLQueue(DestURL);
+   
    if (!client.connected() || Length == 0)    
    {
       SendASCIIErrorStrImmediate("No data");  
@@ -655,7 +657,7 @@ FLASHMEM bool DLExtension(const char * Filename)
    return false;
 }
 
-void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
+void ModWebConnect(stcURLParse *DestURL, char cMod)
 {  //Do WebConnect, apply Modifier argument
    //assumes char already qualified via ValidModifier()
    
@@ -673,7 +675,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
          break;
          
       case 'f':  //filter via FrogFind
-         if(isURLFiltered(DestURL)) WebConnect(DestURL, AddToHist); //go now if already filtered
+         if(isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already filtered
          else 
          {  //make filtered URL & connect
             stcURLParse URL =
@@ -691,19 +693,19 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
             //  so link patchs will be relative to correct server
             memcpy(DestURL, &URL, sizeof(stcURLParse)); 
             
-            WebConnect(&URL, AddToHist);
+            WebConnect(&URL);
          }
          break;
          
       case 'r': //Raw, no filterring
-         if(!isURLFiltered(DestURL)) WebConnect(DestURL, AddToHist); //go now if already raw
+         if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
          else
          {  //strip off frogfind
             char * ptrURL = strstr(DestURL->postpath, "http");  // "/read.php?a=http://"
             if (ptrURL == NULL)
             {
                SendASCIIErrorStrImmediate("Could not remove filter");
-               WebConnect(DestURL, AddToHist);
+               WebConnect(DestURL);
             }
             else
             {
@@ -714,12 +716,12 @@ void ModWebConnect(stcURLParse *DestURL, char cMod, bool AddToHist)
                //  so link patchs will be relative to correct server
                memcpy(DestURL, &URL, sizeof(stcURLParse)); 
                   
-               WebConnect(&URL, AddToHist);  
+               WebConnect(&URL);  
             }
          }
          break;
       default:   
-         WebConnect(DestURL, AddToHist); //no mod, default to reader, prev defined filterring
+         WebConnect(DestURL); //no mod, default to reader, prev defined filterring
          break;
    }
 }
@@ -742,7 +744,7 @@ FLASHMEM void ProcessBrowserCommand()
 	   else  PrevURLQueueNum--;
       
       Printf_dbg("PrevURL# %d\n", PrevURLQueueNum);
-      WebConnect(PrevURLQueue[PrevURLQueueNum], false);
+      WebConnect(PrevURLQueue[PrevURLQueueNum]); //not updating PrevURLQueue
    }
    
    else if(*CmdMsg == 'b') // Bookmark Commands
@@ -760,7 +762,15 @@ FLASHMEM void ProcessBrowserCommand()
          AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
          for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
          {
-            AddRawStrToRxQueue("<li><a href=\"");
+            if (*CmdMsg == 'u')
+            {
+               AddRawStrToRxQueue("<br><petscii%1e>#"); //green
+               AddRawCharToRxQueue('1'+BMNum);
+               AddRawStrToRxQueue(":");
+            }
+            else AddRawStrToRxQueue("<li>");
+            
+            AddRawStrToRxQueue("<a href=\"");
             EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,bufURL); //URL
             Printf_dbg("BM#%d- %s", BMNum, bufURL);
             AddRawStrToRxQueue(bufURL);
@@ -771,8 +781,9 @@ FLASHMEM void ProcessBrowserCommand()
             AddRawStrToRxQueue("</a>");
             if (*CmdMsg == 'u')
             {
-               AddRawStrToRxQueue("<br>   ");
-               AddRawStrToRxQueue(bufURL);
+               AddRawStrToRxQueue("<br> ");
+               if(strncmp(bufURL, "http://", 7)==0) AddRawStrToRxQueue(bufURL+7);
+               else AddRawStrToRxQueue(bufURL);
             }
          }
          AddRawStrToRxQueue("<eoftag>");
@@ -787,8 +798,9 @@ FLASHMEM void ProcessBrowserCommand()
          EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, buf); //URL
          ParseURL(buf, URL);
          
-         if(DLExtension(URL.path)) DownloadFile(&URL, false); //don't overwrite from bookmark
-         else WebConnect(&URL, true);
+         if(DLExtension(URL.path)) DownloadFile(&URL, true); //overwrite from bookmark
+         else WebConnect(&URL);
+         AddToPrevURLQueue(&URL);
       }
       
       else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
@@ -836,7 +848,7 @@ FLASHMEM void ProcessBrowserCommand()
       if (!ValidModifier(*CmdMsg)) return; 
       
       Printf_dbg("CurrURL# %d\n", PrevURLQueueNum);
-      ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg, false);
+      ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg); //no Add To PrevURLQueue
    }
    
    else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
@@ -874,7 +886,8 @@ FLASHMEM void ProcessBrowserCommand()
             strcpy(URL.host, PrevURLQueue[PrevURLQueueNum]->host);
             //leave postpath data in-tact
          }
-         ModWebConnect(&URL, *CmdMsg, true);
+         ModWebConnect(&URL, *CmdMsg);
+         AddToPrevURLQueue(&URL);
       }
       else
       {
@@ -895,7 +908,8 @@ FLASHMEM void ProcessBrowserCommand()
       char httpServer[MaxTagSize] = "http://";
       strcat(httpServer, CmdMsg);
       ParseURL(httpServer, URL);
-      ModWebConnect(&URL, Mod, true);
+      ModWebConnect(&URL, Mod);
+      AddToPrevURLQueue(&URL);
    }
    
    else if(*CmdMsg == 's') //search
