@@ -22,24 +22,22 @@
 
 //  TR: Set up wRegIRQ_ACK, rRegIRQ_CMD, & launch menu info (if needed)
 //  TR: Assert IRQ, wait for ack1
-// C64: IRQ handler catches, sets local reg (smcIRQFlagged) and sends ACK1 to wRegIRQ_ACK
+// C64: IRQ handler catches, sets local reg (smcIRQFlagged) and sends ack1 to wRegIRQ_ACK
 //  TR: sees ack1, deasserts IRQ, waits for ack2 (echo of command)
 // C64: Main code sees local reg, reads IRQ command, and echoes it to ack (ack 2)
 //  TR: sees ack2, success/return
 // C64: Executes command
 
-
-bool RemotePauseSID()
-{  //assumes TR is not "busy" (Handler active)
-   IO1[rRegIRQ_CMD] = ricmdSIDPause;
-   bool IRQSuccess = InterruptC64();
-   IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none for default
+bool InterruptC64(RegIRQCommands IRQCommand)
+{
+   IO1[rRegIRQ_CMD] = IRQCommand;
+   bool IRQSuccess = DoC64IRQ();
+   IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none/0 for default/protection 
    return IRQSuccess;   
 }
 
-bool InterruptC64()
+bool DoC64IRQ()
 {
-
    uint32_t beginWait = millis();
    IO1[wRegIRQ_ACK] = ricmdNone;
    SetIRQAssert;
@@ -75,6 +73,11 @@ bool InterruptC64()
    }
    
    return true;
+}
+
+bool RemotePauseSID()
+{  //assumes TR is not "busy" (Handler active)
+   return InterruptC64(ricmdSIDPause);
 }
 
 bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
@@ -114,19 +117,14 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    //Get the attention of the C64 via IRQ or reset:
    if(CurrentIOHandler == IOH_TeensyROM)
    {
-      IO1[rRegIRQ_CMD] = ricmdLaunch;
-      bool IRQSuccess = InterruptC64();
-      IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none for default
-      if (!IRQSuccess) return false;
+      return InterruptC64(ricmdLaunch);
    }
-   else
-   {
-      //force reset then launch
-      //set up to launch on reset
-      //doReset = true; //if called from SerUSBIO, it can't block
-      //SetUpMainMenuROM(); //not all of this, but probably some?
-   }
+
+   //force reset then launch
+   //set up to launch on reset
+   //doReset = true; //if called from SerUSBIO, it can't block
+   //SetUpMainMenuROM(); //not all of this, but probably some?
    
-   return true;
+   return false;
 }
 

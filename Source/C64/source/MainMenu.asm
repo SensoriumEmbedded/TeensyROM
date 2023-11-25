@@ -104,6 +104,16 @@ NoHW
 +  ldx #%00000010  ;60/PAL
 ++ stx wRegVid_TOD_Clks+IO1Port   
 
+   ;;check for reset/launch
+   ;lda rRegIRQ_CMD+IO1Port
+   ;cmp #ricmdLaunch
+   ;bne +
+   ;jsr RunSelected  ;start TR selected app...
+   ;lda #ricmdNone
+   ;sta rRegIRQ_CMD+IO1Port
+   ;jsr ListMenuItems
+   ;jmp ++
+   
    ;load SID to TR RAM
    lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
