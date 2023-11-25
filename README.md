@@ -3,7 +3,7 @@
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-**If you have thoughts/input on this project, questions, or features you'd like to see, please consider yourself invited to the [TeensyROM Discord Server](https://discord.gg/NkGQYtaZ)**
+**If you have thoughts/input on this project, questions, or features you'd like to see, please consider yourself invited to the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U)**
 
 **Update: The TeensyROM now has a 3D printable case!  A big thank you to those who contributed.  [See details and pictures here](3D_Print_Case/3D-Printed-Case-ReadMe.md)**
 
