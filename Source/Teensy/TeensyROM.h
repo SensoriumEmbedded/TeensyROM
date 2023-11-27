@@ -29,7 +29,7 @@ char strVersionNumber[] = "v0.5.7+"; //*VERSION*
 //#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
 //#define DbgSpecial    //Special case logging to BigBuf
 
-#include "ROMs\TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          500
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
@@ -37,13 +37,13 @@ uint32_t* BigBuf = NULL;
 #ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize
    #define Printf_dbg Serial.printf
    #define RAM_ImageSize       (160*1024)
-   #include "SIDs\Echoes.sid.h"
+   #include "SIDs/Echoes.sid.h"
    #define SIDforBackground     Echoes_sid
    
 #else //Normal mode: Specific background SID, maximize RAM_ImageSize
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
    #define RAM_ImageSize       (184*1024)
-   #include "SIDs\SleepDirt_norm_ntsc_1000_6581.sid.h"
+   #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
    #define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
    
 #endif
