@@ -105,11 +105,12 @@ NoHW
 ++ stx wRegVid_TOD_Clks+IO1Port   
 
    ;check for remote launch on reset
-   lda rRegIRQ_CMD+IO1Port
+   lda rwRegIRQ_CMD+IO1Port
    cmp #ricmdLaunch
    bne +
+   ;inc BorderColorReg
    lda #ricmdNone
-   sta rRegIRQ_CMD+IO1Port
+   sta rwRegIRQ_CMD+IO1Port
    jsr RunSelected  ;start TR selected app...
    ;prg/crt won't return from here, likely SID or error
    lda #rmtTeensy ; force back to TR menu
@@ -433,7 +434,7 @@ smcIRQFlagged
 -  jsr GetIn ;No IRQ, read key and return it in the acc 
    rts
 
-+  lda rRegIRQ_CMD+IO1Port  ;Read command from TR
++  lda rwRegIRQ_CMD+IO1Port  ;Read command from TR
    sta wRegIRQ_ACK+IO1Port  ;echo command as ack 2 to TR
    ldx #ricmdNone  ;clear local flag
    stx smcIRQFlagged+1

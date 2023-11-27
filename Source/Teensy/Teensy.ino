@@ -107,6 +107,7 @@ void loop()
       Serial.print("Button detected\n"); 
       SetLEDOn;
       BtnPressed=false;
+      IO1[rwRegIRQ_CMD] = ricmdNone; //just to be sure, should already be 0/none
       if (RemoteLaunched)
       {
          IO1[rWRegCurrMenuWAIT] = rmtTeensy;

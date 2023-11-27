@@ -20,7 +20,7 @@
 //Functions to control C64/TR via USB connection
 
 
-//  TR: Set up wRegIRQ_ACK, rRegIRQ_CMD, & launch menu info (if needed)
+//  TR: Set up wRegIRQ_ACK, rwRegIRQ_CMD, & launch menu info (if needed)
 //  TR: Assert IRQ, wait for ack1
 // C64: IRQ handler catches, sets local reg (smcIRQFlagged) and sends ack1 to wRegIRQ_ACK
 //  TR: sees ack1, deasserts IRQ, waits for ack2 (echo of command)
@@ -30,9 +30,9 @@
 
 bool InterruptC64(RegIRQCommands IRQCommand)
 {
-   IO1[rRegIRQ_CMD] = IRQCommand;
+   IO1[rwRegIRQ_CMD] = IRQCommand;
    bool IRQSuccess = DoC64IRQ();
-   IO1[rRegIRQ_CMD] = ricmdNone; //always set back to none/0 for default/protection 
+   IO1[rwRegIRQ_CMD] = ricmdNone; //always set back to none/0 for default/protection 
    return IRQSuccess;   
 }
 
@@ -66,7 +66,7 @@ bool DoC64IRQ()
    }
    Printf_dbg("Ack 1+2 took %lumS\n", (millis()-beginWait));
    
-   if (IO1[wRegIRQ_ACK] != IO1[rRegIRQ_CMD]) //mismatch!
+   if (IO1[wRegIRQ_ACK] != IO1[rwRegIRQ_CMD]) //mismatch!
    {
       Printf_dbg("Mismatch\n");
       return false; // echoed ack2 does not match command sent
@@ -123,8 +123,8 @@ void RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
 
    //force reset then launch
    Printf_dbg("Reset/launch"); 
-   IO1[rRegIRQ_CMD] = ricmdLaunch;
-   SetUpMainMenuROM(); 
+   IO1[rwRegIRQ_CMD] = ricmdLaunch;
+   SetUpMainMenuROM(); //includes DoReset flag set
    
 }
 
