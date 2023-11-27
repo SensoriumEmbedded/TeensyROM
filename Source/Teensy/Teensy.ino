@@ -107,6 +107,13 @@ void loop()
       Serial.print("Button detected\n"); 
       SetLEDOn;
       BtnPressed=false;
+      if (RemoteLaunched)
+      {
+         IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+         MenuChange();
+         RemoteLaunched = false;
+         Printf_dbg("Remote recovery\n"); 
+      }   
       SetUpMainMenuROM(); //back to main menu
    }
    
@@ -148,12 +155,6 @@ void SetUpMainMenuROM()
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) {free(RxQueue[cnt]); RxQueue[cnt]=NULL;}
    free(TxMsg); TxMsg = NULL;   
    RedirectEmptyDriveDirMenu();
-   if (RemoteLaunched)
-   {
-      IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-      MenuChange();
-      RemoteLaunched = false;
-   }   
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }

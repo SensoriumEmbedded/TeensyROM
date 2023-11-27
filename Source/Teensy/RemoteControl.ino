@@ -80,7 +80,7 @@ bool RemotePauseSID()
    return InterruptC64(ricmdSIDPause);
 }
 
-bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
+void RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
    RemoteLaunched = true;
@@ -117,14 +117,14 @@ bool RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    //Get the attention of the C64 via IRQ or reset:
    if(CurrentIOHandler == IOH_TeensyROM)
    {
-      return InterruptC64(ricmdLaunch);
+      Printf_dbg("Interrupt/launch"); 
+      if(InterruptC64(ricmdLaunch)) return;
    }
 
    //force reset then launch
-   //set up to launch on reset
-   //doReset = true; //if called from SerUSBIO, it can't block
-   //SetUpMainMenuROM(); //not all of this, but probably some?
+   Printf_dbg("Reset/launch"); 
+   IO1[rRegIRQ_CMD] = ricmdLaunch;
+   SetUpMainMenuROM(); 
    
-   return false;
 }
 

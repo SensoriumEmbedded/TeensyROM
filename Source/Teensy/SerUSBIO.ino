@@ -36,18 +36,26 @@ FLASHMEM void ServiceSerial()
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
          inByte = Serial.read(); //READ NEXT BYTE
-         if (inByte == 0xEE) //Reset C64, only command available when busy
+         //only commands available when busy:
+         if (inByte == 0xEE) //Reset C64
          {
             Serial.println("Reset cmd received");
-            SetUpMainMenuROM();
+            BtnPressed = true;
             return;
          }
+         else if (inByte == 0x44) //Launch File
+         {
+            LaunchFile();
+            return;
+         }
+         
          if (CurrentIOHandler != IOH_TeensyROM)
          {
             SendU16(FailToken);
             Serial.print("Busy!\n");
             return;
          }
+         //TeensyROM IO Handler is active...
          
          switch (inByte)
          {
@@ -60,10 +68,6 @@ FLASHMEM void ServiceSerial()
                break;
             case 0xDD:  // v2 directory listing from TR
                GetDirectoryCommand();
-               break;
-            case 0x44: //Launch File
-               if(LaunchFile()) Serial.println("Launched!");  
-               else Serial.println("Launch Failed");  
                break;
             case 0x66: //Pause SID
                if(RemotePauseSID()) SendU16(AckToken);
@@ -372,26 +376,23 @@ FLASHMEM void PrintDebugLog()
    BigBufCount = 0;
 }
 
-FLASHMEM bool LaunchFile()
+FLASHMEM void LaunchFile()
 {            
    //   App: LaunchFileToken 0x6444
    //Teensy: AckToken 0x64CC
    //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
-   //Teensy: AckToken 0x64CC on Pass
+   //Teensy: AckToken 0x64CC
 
    //Launch file token has been received, only 2 byte responses until after final response
    SendU16(AckToken);
 
    uint32_t SD_nUSB;
    char FileNamePath[MaxNamePathLength];
-   if (!ReceiveFileName(&SD_nUSB, FileNamePath)) return false;
-
-   if(RemoteLaunch(SD_nUSB !=0 , FileNamePath)) 
+   if (ReceiveFileName(&SD_nUSB, FileNamePath))
    {
+      RemoteLaunch(SD_nUSB !=0 , FileNamePath);
       SendU16(AckToken);
-      return true;
    }
-   return false;
 }
 
 FLASHMEM bool ReceiveFileName(uint32_t *SD_nUSB, char *FileNamePath)
