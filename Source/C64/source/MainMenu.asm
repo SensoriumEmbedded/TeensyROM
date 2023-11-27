@@ -104,20 +104,33 @@ NoHW
 +  ldx #%00000010  ;60/PAL
 ++ stx wRegVid_TOD_Clks+IO1Port   
 
+   ;check for remote launch on reset
+   lda rwRegIRQ_CMD+IO1Port
+   cmp #ricmdLaunch
+   bne +
+   ;inc BorderColorReg
+   lda #ricmdNone
+   sta rwRegIRQ_CMD+IO1Port
+   jsr RunSelected  ;start TR selected app...
+   ;prg/crt won't return from here, likely SID or error
+   lda #rmtTeensy ; force back to TR menu
+   jsr MenuChangeInit   
+   jmp ++
+   
    ;load SID to TR RAM
-   lda #rCtlLoadSIDWAIT ; sends SID Parse messages
++  lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
    jsr WaitForTRDots
 
-   jsr SIDLoadInit  ;Load SID, start the IRQ wedge, initial default is SID playback disable. 
+   jsr SIDLoadInit  ;Load SID to C64, start the IRQ wedge, initial default is SID playback disable. 
  
-   jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
-
-   ;check default registers for music & time settings
+   ;check default register for music playback
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudMusicMask
    sta smcSIDPlayEnable+1  ;set default SID playback
 
+++ jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
+   ;check default register for time update
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
    beq +
@@ -421,7 +434,7 @@ smcIRQFlagged
 -  jsr GetIn ;No IRQ, read key and return it in the acc 
    rts
 
-+  lda rRegIRQ_CMD+IO1Port  ;Read command from TR
++  lda rwRegIRQ_CMD+IO1Port  ;Read command from TR
    sta wRegIRQ_ACK+IO1Port  ;echo command as ack 2 to TR
    ldx #ricmdNone  ;clear local flag
    stx smcIRQFlagged+1

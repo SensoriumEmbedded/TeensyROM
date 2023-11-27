@@ -540,6 +540,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegSIDSpeedHi:
          case rwRegSIDSpeedLo:
          case wRegIRQ_ACK:
+         case rwRegIRQ_CMD:
          case rwRegCursorItemOnPg:
             IO1[Address]=Data;
             break;    

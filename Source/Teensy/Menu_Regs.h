@@ -55,7 +55,7 @@ enum IO1_Registers  //offset from 0xDE00
    rwRegSIDSpeedLo     = 27 , // SID Play Info: CIA interrupt timer speed Lo
    wRegVid_TOD_Clks    = 28 , // C64/128 Video Standard and TOD clock frequencies
    wRegIRQ_ACK         = 29 , // IRQ Ack from C64 app
-   rRegIRQ_CMD         = 30 , // IRQ Command from TeensyROM
+   rwRegIRQ_CMD        = 30 , // IRQ Command from TeensyROM
 
    StartSIDRegs        = 31 , // start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0, 
@@ -98,7 +98,7 @@ enum IO1_Registers  //offset from 0xDE00
 
 };
 
-enum RegIRQCommands       //rRegIRQ_CMD, echoed to wRegIRQ_ACK
+enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
 {
    ricmdNone           = 0, // no command, always 0 (init)
    ricmdAck1           = 1, // Ack1 response from C64 IRQ routine
