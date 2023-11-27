@@ -151,10 +151,7 @@ void SetUpMainMenuROM()
    EmulateVicCycles = false;
    
    FreeCrtChips();
-   for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) {free(PageLinkBuff[cnt]); PageLinkBuff[cnt]=NULL;}
-   for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) {free(PrevURLQueue[cnt]); PrevURLQueue[cnt]=NULL;}
-   for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) {free(RxQueue[cnt]); RxQueue[cnt]=NULL;}
-   free(TxMsg); TxMsg = NULL;   
+   FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
