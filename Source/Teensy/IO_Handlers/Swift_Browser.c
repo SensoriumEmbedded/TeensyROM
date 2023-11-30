@@ -20,6 +20,7 @@
 
 // Swiftlink Browser Functions
 
+extern void RemoteLaunch(bool SD_nUSB, const char *FileNamePath);
 
 void SendPETSCIICharImmediate(uint8_t CharToSend)
 {
@@ -94,13 +95,13 @@ FLASHMEM void SendBrowserCommandsImmediate()
    SendPETSCIICharImmediate(PETSCIIlightGreen);
 }
 
-uint8_t HexCharToInt(uint8_t HexChar)
+FLASHMEM uint8_t HexCharToInt(uint8_t HexChar)
 {
    // https://stackoverflow.com/questions/10156409/convert-hex-string-char-to-int
    return (((HexChar & 0xF) + (HexChar >> 6)) | ((HexChar >> 3) & 0x8));
 }
 
-bool CheckAndDecode(const char *ptrChars, uint8_t *ptrRetChar)
+FLASHMEM bool CheckAndDecode(const char *ptrChars, uint8_t *ptrRetChar)
 {  //check if next 3 chars are decodable, decode if they are, otherwise return false
    if(*ptrChars == '%' && ptrChars[1] && ptrChars[2]) //something there, not end of chars
    {
@@ -108,6 +109,59 @@ bool CheckAndDecode(const char *ptrChars, uint8_t *ptrRetChar)
       return true;
    }
    return false;
+}
+
+FLASHMEM void CopyDecode(const char *FromEncoded, char *ToDecoded)
+{  //copy or overwrite str, decode special chars, terminate new end
+   uint16_t NewCharNum = 0;
+   uint16_t OrigCharNum = 0;
+   uint8_t NextChar;
+   
+   Printf_dbg("Dec From: %s\n", FromEncoded);
+   while(FromEncoded[OrigCharNum])
+   {
+      if(CheckAndDecode(FromEncoded+OrigCharNum, &NextChar)) OrigCharNum+=3;
+      else NextChar = FromEncoded[OrigCharNum++];
+      
+      ToDecoded[NewCharNum++] = NextChar;
+   }
+   ToDecoded[NewCharNum] = 0;
+   Printf_dbg("To: %s\n", ToDecoded);
+}
+
+FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
+{
+   uint16_t EncCharNum = 0;
+   char HexChar[] = "0123456789abcdef";
+   
+   Printf_dbg("Enc From: %s\n", FromRaw);
+   //encode special chars:
+   //https://www.eso.org/~ndelmott/url_encode.html
+   for(uint16_t RawCharNum=0; RawCharNum <= strlen(FromRaw); RawCharNum++) //include terminator
+   {
+      uint8_t NextChar = FromRaw[RawCharNum];
+      if((NextChar >= 'a' && NextChar <= 'z') ||
+         (NextChar >= 'A' && NextChar <= 'Z') ||
+         (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
+          NextChar == 0)                          //include terminator
+      {      
+         ToEncoded[EncCharNum++] = NextChar;  //normal char, just copy  
+      }
+      else
+      {
+         //encode character (%xx hex val)
+         ToEncoded[EncCharNum++] = '%';
+         ToEncoded[EncCharNum++] = HexChar[NextChar >> 4];
+         ToEncoded[EncCharNum++] = HexChar[NextChar & 0x0f];
+      }
+   }
+   Printf_dbg("To: %s\n", ToEncoded);
+}
+
+void DumpQueueUnPausePage()
+{
+   RxQueueHead = RxQueueTail = 0;
+   UnPausePage();
 }
 
 void UnPausePage()
@@ -189,7 +243,8 @@ void ParseHTMLTag()
       uint8_t NextChar;
       char * ptrCharNum = TagBuf+7; //start after "petscii" offset
       while(*ptrCharNum==' ') ptrCharNum++;  //Allow for spaces after petscii
-
+      
+      //only acceptable argument is encoded values %xx, spaces allowed in between
       while(CheckAndDecode(ptrCharNum, &NextChar) == true)
       {
          SendPETSCIICharImmediate(NextChar); 
@@ -205,7 +260,7 @@ void ParseHTMLTag()
       if (ptrCharNum == NULL) return; //not really a link?
       
       ptrCharNum += 6; //skip href= and openning quote
-      
+            
       //Printf_dbg("LinkTag: %s\n", ptrCharNum);
       SendPETSCIICharImmediate(PETSCIIpurple); 
       SendPETSCIICharImmediate(PETSCIIrvsOn); 
@@ -371,8 +426,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
    
    ClearClientStop();
 
-   RxQueueHead = RxQueueTail = 0; //dump the queue
-   UnPausePage();
+   DumpQueueUnPausePage();
    strcpy(CurrPageTitle, "Unknown"); //gets populated via title tag 
       
    
@@ -441,7 +495,6 @@ uint32_t WebConnect(const stcURLParse *DestURL)
 
 FLASHMEM void DoSearch(const char *Term)
 {
-   char HexChar[] = "01234567890abcdef";
    stcURLParse URL =
    {
       "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
@@ -449,36 +502,24 @@ FLASHMEM void DoSearch(const char *Term)
       "/",                //strcpy(URL.path = "/");
       "?q=",              //strcpy(URL.postpath = "?q=");
    };
-      
-   uint16_t UWPCharNum = strlen(URL.postpath);
    
-   //encode special chars:
-   //https://www.eso.org/~ndelmott/url_encode.html
-   for(uint16_t CharNum=0; CharNum <= strlen(Term); CharNum++) //include terminator
-   {
-      //already lower case(?)
-      uint8_t NextChar = Term[CharNum];
-      if((NextChar >= 'a' && NextChar <= 'z') ||
-         (NextChar >= 'A' && NextChar <= 'Z') ||
-         (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
-          NextChar == 0)                          //include terminator
-      {      
-         URL.postpath[UWPCharNum++] = NextChar;      
-      }
-      else
-      {
-         //encode character (%xx hex val)
-         URL.postpath[UWPCharNum++] = '%';
-         URL.postpath[UWPCharNum++] = HexChar[NextChar >> 4];
-         URL.postpath[UWPCharNum++] = HexChar[NextChar & 0x0f];
-      }
-   }
-   
+   CopyEncode(Term, URL.postpath+strlen(URL.postpath)); //add encoded to end
+
    WebConnect(&URL);
    AddToPrevURLQueue(&URL);
 }
 
-void DownloadFile(stcURLParse *DestURL, bool OverWrite)
+FLASHMEM bool InitCheckSD()
+{
+   if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   {
+      SendASCIIErrorStrImmediate("No SD card");  
+      return false;      
+   }
+   return true;
+}
+
+FLASHMEM void DownloadFile(stcURLParse *DestURL, bool OverWrite)
 {  // Modifies (decodes) FileName
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
@@ -487,19 +528,7 @@ void DownloadFile(stcURLParse *DestURL, bool OverWrite)
    if (ptrOrigFilename == NULL) ptrOrigFilename = DestURL->path; //use the whole thing if no slash
    else ptrOrigFilename++; //skip the slash
 
-   //copy/decode special chars
-   uint16_t NewCharNum = 0;
-   uint16_t OrigCharNum = 0;
-   while(ptrOrigFilename[OrigCharNum])
-   {
-      uint8_t NextChar;
-      if(CheckAndDecode(ptrOrigFilename+OrigCharNum, &NextChar)) OrigCharNum+=3;
-      else NextChar = ptrOrigFilename[OrigCharNum++];
-      
-      FileName[NewCharNum++] = NextChar;
-      //OrigCharNum++;
-   }
-   FileName[NewCharNum] = 0;
+   CopyDecode(ptrOrigFilename, FileName);
 
    SendPETSCIICharImmediate(PETSCIIpurple);
    SendASCIIStrImmediate("\rDownload:\r");
@@ -515,11 +544,7 @@ void DownloadFile(stcURLParse *DestURL, bool OverWrite)
    
    if(USB_SD == Drive_SD)
    {
-      if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-      {
-         SendASCIIErrorStrImmediate("No SD card");  
-         return;      
-      }
+      if (!InitCheckSD()) return;      
       SendASCIIStrImmediate("sd:");
       sourceFS = &SD;
    }
@@ -726,10 +751,9 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
    }
 }
 
-FLASHMEM void BC_Bookmarks(char* CmdMsg)   //*CmdMsg == 'b'
-{
-   RxQueueHead = RxQueueTail = 0; //dump the queue         
-   UnPausePage();
+FLASHMEM void BC_Bookmarks(char* CmdMsg) 
+{  //*CmdMsg == 'b'
+   DumpQueueUnPausePage();
    
    CmdMsg++; //past the 'b'
    
@@ -737,13 +761,14 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)   //*CmdMsg == 'b'
    {  //print bookmark list via buffer
       char bufURL[eepBMURLSize];
       char bufTitle[eepBMTitleSize];
-      
-      AddRawStrToRxQueue("<br><b>Saved Bookmarks:</b>"); 
+
+      AddRawStrToRxQueue("<html><b>Saved Bookmarks:</b>"); 
       for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
       {
          if (*CmdMsg == 'u')
          {
-            AddRawStrToRxQueue("<br><petscii%1e>#"); //green
+            Add_BR_ToRxQueue();
+            AddRawStrToRxQueue("<petscii%1e>#"); //green
             AddRawCharToRxQueue('1'+BMNum);
             AddRawStrToRxQueue(":");
          }
@@ -760,7 +785,8 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)   //*CmdMsg == 'b'
          AddRawStrToRxQueue("</a>");
          if (*CmdMsg == 'u')
          {
-            AddRawStrToRxQueue("<br> ");
+            Add_BR_ToRxQueue();
+            AddRawStrToRxQueue(" ");
             if(strncmp(bufURL, "http://", 7)==0) AddRawStrToRxQueue(bufURL+7);
             else AddRawStrToRxQueue(bufURL);
          }
@@ -806,11 +832,13 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)   //*CmdMsg == 'b'
       EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, strURL); //URL
       
       //Send confirmation
-      AddRawStrToRxQueue("<br><b>Bookmark #"); 
+      Add_BR_ToRxQueue();
+      AddRawStrToRxQueue("<b>Bookmark #"); 
       AddRawCharToRxQueue(*CmdMsg);
       AddRawStrToRxQueue(" updated to:</b><br>\"");
       AddRawStrToRxQueue(CurrPageTitle);
-      AddRawStrToRxQueue("\" at<br>");
+      AddRawStrToRxQueue("\" at");
+      Add_BR_ToRxQueue();
       AddRawStrToRxQueue(strURL);
       AddRawStrToRxQueue("<eoftag>");
    }
@@ -821,57 +849,110 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)   //*CmdMsg == 'b'
    }   
 }
 
-FLASHMEM void BC_Downloads(char* CmdMsg)  //*CmdMsg == 'd'
-{
+FLASHMEM void BC_Downloads(char* CmdMsg)
+{  //*CmdMsg == 'd'   List DL files, set DL path
    uint8_t USB_SD;
    FS *sourceFS;
    
    CmdMsg++; //past the 'd'
    
-   while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
-   if (strncmp(CmdMsg, "usb:", 4) == 0)
-   {
-      CmdMsg+=4;
-      USB_SD = Drive_USB;
-      sourceFS = &firstPartition;
-   }
-   else if (strncmp(CmdMsg, "sd:", 3) == 0)
-   {
-      CmdMsg+=3;
-      USB_SD = Drive_SD;
-      if (!SD.begin(BUILTIN_SDCARD))
+   if (*CmdMsg=='l')
+   {  //List downloads command
+      char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
+      bool Empty = true;
+      
+      USB_SD = EEPROM.read(eepAdDLPathSD_USB);
+      EEPreadStr(eepAdDLPath, FileNamePath); 
+      
+      DumpQueueUnPausePage();
+      AddRawStrToRxQueue("<html><b>Download Directory:<br> ");
+      if(USB_SD == Drive_SD)
       {
-         SendASCIIErrorStrImmediate("SD not present");
+         if (!InitCheckSD()) return;      
+         AddRawStrToRxQueue("sd:");
+         sourceFS = &SD;
+      }
+      else
+      {
+         AddRawStrToRxQueue("usb:");
+         sourceFS = &firstPartition;      
+      }
+      
+      AddRawStrToRxQueue(FileNamePath);
+      AddRawStrToRxQueue("</b><br>Select Link to Lauch<br>");
+
+      File dir = sourceFS->open(FileNamePath);
+      while (File entry = dir.openNextFile()) 
+      {
+         AddRawStrToRxQueue("<li>"); //return and bullet
+         Empty = false;
+         if (entry.isDirectory())
+         {  //not linking to sub-dirs, for now...
+            AddRawCharToRxQueue('/');
+            AddRawStrToRxQueue(entry.name());
+         }
+         else 
+         {  //it's a file. add as local hyperlink          
+            AddRawStrToRxQueue("<a href=\"lcl:");
+            CopyEncode(entry.name(), FileNamePath);
+            AddRawStrToRxQueue(FileNamePath);
+            AddRawStrToRxQueue("\">");
+            AddRawStrToRxQueue(entry.name()); //name shown
+            AddRawStrToRxQueue("</a>");
+         }
+         entry.close();
+      }
+      if (Empty) AddRawStrToRxQueue(" -empty-");
+      Add_BR_ToRxQueue();
+      AddRawStrToRxQueue("<eoftag>");      
+      return;
+   } 
+   else if (*CmdMsg=='s')
+   {  //Set download path
+      CmdMsg++; //past the 's'
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
+      if (strncmp(CmdMsg, "usb:", 4) == 0)
+      {
+         CmdMsg+=4;
+         USB_SD = Drive_USB;
+         sourceFS = &firstPartition;
+      }
+      else if (strncmp(CmdMsg, "sd:", 3) == 0)
+      {
+         CmdMsg+=3;
+         USB_SD = Drive_SD;
+         if (!InitCheckSD()) return;      
+         sourceFS = &SD; 
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("sd: or usb: missing");
          return;  
       }
-      sourceFS = &SD; 
-   }
-   else
-   {
-      SendASCIIErrorStrImmediate("sd: or usb: missing");
-      return;  
-   }
-   
-   //check that path exists
-   if (sourceFS->exists(CmdMsg))
-   {
-      if(CmdMsg[strlen(CmdMsg)-1] != '/') strcat(CmdMsg, "/");
-      while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
-      EEPROM.write(eepAdDLPathSD_USB, USB_SD);
-      EEPwriteStr(eepAdDLPath, CmdMsg); 
       
-      SendPETSCIICharImmediate(PETSCIIyellow);
-      SendASCIIStrImmediate("Download path updated\r");
-      SendPETSCIICharImmediate(PETSCIIwhite);
+      //check that path exists
+      if (sourceFS->exists(CmdMsg))
+      {
+         if(CmdMsg[strlen(CmdMsg)-1] != '/') strcat(CmdMsg, "/");
+         while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
+         EEPROM.write(eepAdDLPathSD_USB, USB_SD);
+         EEPwriteStr(eepAdDLPath, CmdMsg); 
+         
+         SendPETSCIICharImmediate(PETSCIIyellow);
+         SendASCIIStrImmediate("Download path updated\r");
+         SendPETSCIICharImmediate(PETSCIIwhite);
+      }
+      else
+      {
+         SendASCIIErrorStrImmediate("Path not found");
+      }
    }
-   else
-   {
-      SendASCIIErrorStrImmediate("Path not found");
-   }
+   else SendASCIIErrorStrImmediate("Unknown arg");
+
 }
 
-FLASHMEM void BC_FollowHyperlink(char* CmdMsg)   // *CmdMsg >= '0' && *CmdMsg <= '9'
-{
+FLASHMEM void BC_FollowHyperlink(char* CmdMsg) 
+{  // *CmdMsg >= '0' && *CmdMsg <= '9'
    uint8_t CmdMsgVal = atoi(CmdMsg);
    
    if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
@@ -879,10 +960,25 @@ FLASHMEM void BC_FollowHyperlink(char* CmdMsg)   // *CmdMsg >= '0' && *CmdMsg <=
       while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
       if (!ValidModifier(*CmdMsg)) return; 
       
-      //we have a valid link # to follow...
+      //we have a valid modifier and link # to follow...
+      char *LinkBuff = PageLinkBuff[CmdMsgVal-1];
+      
+      if(strncmp(LinkBuff, "lcl:", 4)==0)
+      {  //special local (download dir) link to launch
+         char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
+         bool SD_nUSB = (EEPROM.read(eepAdDLPathSD_USB) == Drive_SD);
+         
+         LinkBuff +=4; //past "lcl:"
+         EEPreadStr(eepAdDLPath, FileNamePath); 
+         CopyDecode(LinkBuff, LinkBuff); //overwrite
+         strcat(FileNamePath, LinkBuff);
+         RemoteLaunch(SD_nUSB, FileNamePath);
+         return; //get back to main loop for reset execution
+      }
+
       stcURLParse URL;
       
-      ParseURL(PageLinkBuff[CmdMsgVal-1], URL); //zero based
+      ParseURL(LinkBuff, URL); //zero based
 
       if(URL.host[0] == 0) //relative path, use same server/port, append path
       {         
@@ -991,8 +1087,7 @@ FLASHMEM void ProcessBrowserCommand()
    {
       ClearClientStop();
       BrowserMode = false;
-      RxQueueHead = RxQueueTail = 0; //dump the queue
-      UnPausePage();
+      DumpQueueUnPausePage();
       AddToPETSCIIStrToRxQueueLN("\rBrowser mode exit");
    }
 

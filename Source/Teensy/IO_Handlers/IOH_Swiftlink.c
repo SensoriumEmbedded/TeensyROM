@@ -250,7 +250,8 @@ FLASHMEM void InitHndlr_SwiftLink()
    PlusCount=0;
    ConnectedToHost = false;
    BrowserMode = false;
-   UnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false;   
+   DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
+   TxMsgOffset =0;
    PrintingHyperlink = false;
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
@@ -258,9 +259,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    //    Queues/link buffs (below): 320k+128+29k+5.5k= ~355k total
    //    RAM2 free w/ ethernet loaded & drive menu cleared: 392k (though will show less if fragmented)
    Printf_dbg("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
-
-   RxQueueHead = RxQueueTail = TxMsgOffset =0;
-   
+ 
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) 
    {
       RxQueue[cnt] = (uint8_t*)malloc(RxQueueBlockSize);

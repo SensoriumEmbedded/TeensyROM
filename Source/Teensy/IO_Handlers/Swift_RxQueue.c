@@ -189,6 +189,12 @@ FLASHMEM void AddDHCPRespTOToRxQueueLN()
    AddToPETSCIIStrToRxQueueLN(buf);
 } 
 
+FLASHMEM void Add_BR_ToRxQueue()
+{
+   AddRawStrToRxQueue("<br>");
+}
+
+
 //From Dns.cpp of ethernet lib, didn't want the baggage
 //  Arduino DNS client for WizNet5100-based Ethernet shield
 //  (c) Copyright 2009-2010 MCQN Ltd.
