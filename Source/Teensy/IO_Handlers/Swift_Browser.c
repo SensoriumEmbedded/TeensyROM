@@ -809,7 +809,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
    }
    
    else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
-   {  //set bookmark # to current
+   {  //set bookmark # to current page
 
       //re-encode to maximize eeprom usage, but could be too long...
       char strURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12]; //   +"HTTP:// & :Prt"
@@ -840,6 +840,24 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       AddRawStrToRxQueue("\" at");
       Add_BR_ToRxQueue();
       AddRawStrToRxQueue(strURL);
+      AddRawStrToRxQueue("<eoftag>");
+   }
+   else if(*CmdMsg == 'r' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
+   {  //rename bookmark # to argument
+      CmdMsg++; //past the 'r'
+      char cBMNum = *CmdMsg;
+      CmdMsg++; //past the #
+      while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
+
+      while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
+      EEPwriteStr(eepAdBookmarks+(cBMNum - '1')*(eepBMTitleSize+eepBMURLSize), CmdMsg); //rename, cBMNum to zero based
+
+      Add_BR_ToRxQueue();
+      AddRawStrToRxQueue("<b>Bookmark #"); 
+      AddRawCharToRxQueue(cBMNum);
+      AddRawStrToRxQueue(" renamed to:</b><br>\"");
+      AddRawStrToRxQueue(CmdMsg);
+      AddRawStrToRxQueue("\"");
       AddRawStrToRxQueue("<eoftag>");
    }
    else
