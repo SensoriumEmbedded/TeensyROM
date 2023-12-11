@@ -475,7 +475,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       SendPETSCIICharImmediate(PETSCIIbrown);  // header info color
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
-         //Printf_dbg("H: %s", inbuf);  //causes lost data
+         //Printf_dbg(inbuf);  //causes lost data
          if (ShowHeader) 
          {
             if (strstr(inbuf, "HTTP/1.1 200") != NULL) ShowHeader = false;
@@ -894,58 +894,7 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
    
    CmdMsg++; //past the 'd'
    
-   if (*CmdMsg=='l')
-   {  //List downloads command
-      char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
-      bool Empty = true;
-      
-      USB_SD = EEPROM.read(eepAdDLPathSD_USB);
-      EEPreadStr(eepAdDLPath, FileNamePath); 
-      
-      DumpQueueUnPausePage();
-      AddRawStrToRxQueue("<html><b>Download Directory:<br> ");
-      if(USB_SD == Drive_SD)
-      {
-         if (!InitCheckSD()) return;      
-         AddRawStrToRxQueue("sd:");
-         sourceFS = &SD;
-      }
-      else
-      {
-         AddRawStrToRxQueue("usb:");
-         sourceFS = &firstPartition;      
-      }
-      
-      AddRawStrToRxQueue(FileNamePath);
-      AddRawStrToRxQueue("</b><br>Select Link to Lauch<br>");
-
-      File dir = sourceFS->open(FileNamePath);
-      while (File entry = dir.openNextFile()) 
-      {
-         AddRawStrToRxQueue("<li>"); //return and bullet
-         Empty = false;
-         if (entry.isDirectory())
-         {  //not linking to sub-dirs, for now...
-            AddRawCharToRxQueue('/');
-            AddRawStrToRxQueue(entry.name());
-         }
-         else 
-         {  //it's a file. add as local hyperlink          
-            AddRawStrToRxQueue("<a href=\"lcl:");
-            CopyEncode(entry.name(), FileNamePath);
-            AddRawStrToRxQueue(FileNamePath);
-            AddRawStrToRxQueue("\">");
-            AddRawStrToRxQueue(entry.name()); //name shown
-            AddRawStrToRxQueue("</a>");
-         }
-         entry.close();
-      }
-      if (Empty) AddRawStrToRxQueue(" -empty-");
-      Add_BR_ToRxQueue();
-      AddRawStrToRxQueue("<eoftag>");      
-      return;
-   } 
-   else if (*CmdMsg=='s')
+   if (*CmdMsg=='s')
    {  //Set download path
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
@@ -985,8 +934,57 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
          SendASCIIErrorStrImmediate("Path not found");
       }
    }
-   else SendASCIIErrorStrImmediate("Unknown arg");
+   else
+   {  //List downloads 
+      char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
+      bool Empty = true;
+      
+      USB_SD = EEPROM.read(eepAdDLPathSD_USB);
+      EEPreadStr(eepAdDLPath, FileNamePath); 
+      
+      DumpQueueUnPausePage();
+      AddRawStrToRxQueue("<html><b>Download Directory:<br> ");
+      if(USB_SD == Drive_SD)
+      {
+         if (!InitCheckSD()) return;      
+         AddRawStrToRxQueue("sd:");
+         sourceFS = &SD;
+      }
+      else
+      {
+         AddRawStrToRxQueue("usb:");
+         sourceFS = &firstPartition;      
+      }
+      
+      AddRawStrToRxQueue(FileNamePath);
+      AddRawStrToRxQueue("<br> (ds to change)</b><br>Select Link to Lauch<br>");
 
+      File dir = sourceFS->open(FileNamePath);
+      while (File entry = dir.openNextFile()) 
+      {
+         AddRawStrToRxQueue("<li>"); //return and bullet
+         Empty = false;
+         if (entry.isDirectory())
+         {  //not linking to sub-dirs, for now...
+            AddRawCharToRxQueue('/');
+            AddRawStrToRxQueue(entry.name());
+         }
+         else 
+         {  //it's a file. add as local hyperlink          
+            AddRawStrToRxQueue("<a href=\"lcl:");
+            CopyEncode(entry.name(), FileNamePath);
+            AddRawStrToRxQueue(FileNamePath);
+            AddRawStrToRxQueue("\">");
+            AddRawStrToRxQueue(entry.name()); //name shown
+            AddRawStrToRxQueue("</a>");
+         }
+         entry.close();
+      }
+      if (Empty) AddRawStrToRxQueue(" -empty-");
+      Add_BR_ToRxQueue();
+      AddRawStrToRxQueue("<eoftag>");      
+   }
+   
 }
 
 FLASHMEM void BC_FollowHyperlink(char* CmdMsg) 
