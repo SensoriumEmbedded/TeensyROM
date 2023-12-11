@@ -22,6 +22,12 @@
 
 extern void RemoteLaunch(bool SD_nUSB, const char *FileNamePath);
 
+void ToLcaseASSCII(uint8_t *FromPETSCII)
+{
+   *FromPETSCII &= 0x7f; //bit 7 is Cap in Graphics mode
+   if (*FromPETSCII & 0x40) *FromPETSCII |= 0x20;  //conv to lower case
+}
+
 void SendPETSCIICharImmediate(uint8_t CharToSend)
 {
    //wait for c64 to be ready or NMI timeout
@@ -519,7 +525,7 @@ FLASHMEM bool InitCheckSD()
    return true;
 }
 
-FLASHMEM void DownloadFile(stcURLParse *DestURL, bool OverWrite)
+FLASHMEM void DownloadFile(stcURLParse *DestURL)
 {  // Modifies (decodes) FileName
 
    char FileName[MaxURLPathSize]; //local copy for decoded version
@@ -561,15 +567,30 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL, bool OverWrite)
 
    if (sourceFS->exists(FileNamePath))
    {
-      if (OverWrite)
+      //Prompt for overwrite
+      SendPETSCIICharImmediate(PETSCIIorange); 
+      SendASCIIStrImmediate("File exists, overwrite?(y/n) ");
+      while(SwiftRegStatus & SwiftStatusTxEmpty) 
       {
-         SendASCIIStrImmediate("File exists, overwriting\r");
+         if (BtnPressed || Serial.available()) 
+         {  //watch for button press or serial during this blocking loop 
+            SendASCIIErrorStrImmediate("btn/ser int"); 
+            return; 
+         }
       }
-      else
+      
+      SendPETSCIICharImmediate(SwiftTxBuf);
+      ToLcaseASSCII(&SwiftTxBuf);
+      if (SwiftTxBuf != 'y')
       {
-         SendASCIIErrorStrImmediate("File exists, aborting");  
-         return;   
-      }      
+         SendASCIIErrorStrImmediate("\raborting"); 
+         SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
+         return;         
+      }
+      SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
+
+      SendPETSCIICharImmediate(PETSCIIyellow); 
+      SendASCIIStrImmediate("\rOverwriting\r");
    }
    
    uint32_t Length = WebConnect(DestURL);
@@ -693,9 +714,8 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
    
    switch (cMod)
    {
-      case 'd': //download, don't overwrite
-      case 'o': //download w/ overwrite
-         DownloadFile(DestURL, (cMod == 'o'));
+      case 'd': //download
+         DownloadFile(DestURL);
          ClearClientStop();  //in case of unfinished/error, don't read it in as text
          break;
          
@@ -803,7 +823,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, buf); //URL
       ParseURL(buf, URL);
       
-      if(DLExtension(URL.path)) DownloadFile(&URL, true); //overwrite from bookmark
+      if(DLExtension(URL.path)) DownloadFile(&URL);
       else WebConnect(&URL);
       AddToPrevURLQueue(&URL);
    }
