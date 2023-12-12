@@ -409,7 +409,7 @@ void PollingHndlr_SwiftLink()
          else 
          {
             AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
-            ToLcaseASSCII(&SwiftTxBuf);
+            SwiftTxBufToLcaseASSCII();
          }
          Printf_dbg("%02x: %c\n", SwiftTxBuf);
          

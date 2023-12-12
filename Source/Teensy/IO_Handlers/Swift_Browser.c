@@ -22,10 +22,10 @@
 
 extern void RemoteLaunch(bool SD_nUSB, const char *FileNamePath);
 
-void ToLcaseASSCII(uint8_t *FromPETSCII)
+void SwiftTxBufToLcaseASSCII()
 {
-   *FromPETSCII &= 0x7f; //bit 7 is Cap in Graphics mode
-   if (*FromPETSCII & 0x40) *FromPETSCII |= 0x20;  //conv to lower case
+   SwiftTxBuf &= 0x7f; //bit 7 is Cap in Graphics mode
+   if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //conv to lower case
 }
 
 void SendPETSCIICharImmediate(uint8_t CharToSend)
@@ -580,7 +580,7 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
       }
       
       SendPETSCIICharImmediate(SwiftTxBuf);
-      ToLcaseASSCII(&SwiftTxBuf);
+      SwiftTxBufToLcaseASSCII();
       if (SwiftTxBuf != 'y')
       {
          SendASCIIErrorStrImmediate("\raborting"); 
