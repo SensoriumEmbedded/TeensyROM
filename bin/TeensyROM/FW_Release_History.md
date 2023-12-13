@@ -1,6 +1,23 @@
 
 # FW Release Version history:
 
+### 0.5.8 sub-release 12/13/23
+* Swiftlink/Browser updates: ([Web Browser Usage](/docs/Browser_Usage.md) is updated)
+  * 'd' command to list download directory contents
+    * Select Link # to launch directly from browser
+  * Overwrite option/prompt if requested download filename exists
+  * Bookmark option 'bu' to list bookmark names w/ URLs
+  * 'br# [name]' command added to rename bookmarks
+  * Include Downloaded file links in history and bookmarks
+  * "Digitalman TeensyROM Demo" link added as bookmark #2
+  * Mem mgt improvements for direct launch
+* Remote Launch updates:
+  * Remote command/file/dir enhancements from [**MetalHexx**](https://github.com/MetalHexx)
+    * To support new Remote Command GUI, in development by MetalHexx
+  * Launch with forced reset ability added
+    * enables remote launch at any time or launch from another app
+* "SID Cover Tunes" directory and Files added to main TR menu
+
 ### 0.5.7 sub-release 11/21/23
 * Remote Launch updates:
   * Command to Remotely pause/unpause SID playback

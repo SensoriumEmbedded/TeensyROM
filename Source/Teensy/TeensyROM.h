@@ -17,17 +17,18 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.7+"; //*VERSION*
+char strVersionNumber[] = "v0.5.8"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-//#define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-//#define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
-//#define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
-//#define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
-//#define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
-//#define Dbg_SerLogMem //Allow commands over serial that display log and memory info
-//#define DbgSpecial    //Special case logging to BigBuf
+//less used:
+// #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
+// #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
+// #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
+// #define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
+// #define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
+// #define Dbg_SerLogMem //Allow commands over serial that display log and memory info
+// #define DbgSpecial    //Special case logging to BigBuf
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          500

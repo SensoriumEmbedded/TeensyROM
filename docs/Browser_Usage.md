@@ -8,6 +8,7 @@
 * Ability to Read filtered (via [FrogFind](http://www.frogfind.com/)) or raw/unfiltered web pages
 * Download files directly to specified path on USB or SD 
   * Path saved in TeensyROM
+* View doawnloaded files and launch directly from browser
 * Use search engine terms to find content quickly
 * Displays PETSCII characters via HTML ([development tools here](http://sensoriumembedded.com/tinyweb64/petsciitag/))
 
@@ -17,7 +18,8 @@
 * Redirects are not automatic. Either apply filter or follow link.
 
 ### TeensyROM Setup
-* These commands are available in FW version 0.5.4 and higher. See [these instructions](General_Usage.md#firmware-updates) if you need to update.
+* These commands are available in **FW version 0.5.8 and higher**.
+  * See [these instructions](General_Usage.md#firmware-updates) if you need to update
 * Connect to the internet using a terminal program (such as the built-in CCGMS) as described in the [Ethernet Usage Document](Ethernet_Usage.md)
 * TeensyROM will attempt to initialize Ethernet when Swiftlink starts, but you can retry/verify using **"ATC"**
 * Enter **"atbrowse"** and hit return to enter browser mode
@@ -33,8 +35,9 @@
 | R[m] | Re-load current page<br>Common modifiers (see below). |
 | U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host[:port][/path]<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
 | #[m] | Follow link shown on current screen<br>Common modifiers (see below). |
-| B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmarks with links<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;s# : Set Current page as bookmark # |
-| D [d]:[p] | Set download path, in this format:<br>[drive]:[path/directory] <br>Where drive is "usb" or "sd"  |
+| B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmark names with links<br>&ensp;&ensp;U : List Bookmark namess w/ links, also show URL<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;S# : Set Current page as bookmark #<br>&ensp;&ensp;R# [Name] : Rename bookmark # to [Name] |
+| DS [d]:[p] | Set download path, in this format:<br>[drive]:[path/directory] <br>Where drive is "usb" or "sd"  |
+| D  | Show Download Path Directory Contents<br>Select link # to launch directly |
 | X | Exit Browser mode |
 
 ### Modifiers for R[m], U[m], #[m] Commands
