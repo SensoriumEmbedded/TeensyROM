@@ -530,6 +530,7 @@ RunSelected:
    lda #rpudMusicMask ;default to enable playback, may be turned off if error
    sta smcSIDPlayEnable+1
    jsr SIDLoadInit ;check success, return or transfer to RAM and start playing.  Turns IRQ on regardless
+   jsr ShowSIDInfoPage
    jmp ListAndDone  
     
     

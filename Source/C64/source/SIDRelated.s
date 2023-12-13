@@ -504,3 +504,42 @@ smcSIDPlayAddr
 ;   lda #74    ;upper part of screen
 ;   sta $d012   ;raster scan line compare reg
 ;   jmp IRQDefault
+
+ShowSIDInfoPage:
+   jsr PrintBanner
+   lda #<MsgSIDInfo
+   ldy #>MsgSIDInfo
+   jsr PrintString 
+
+   lda #<MsgSettingsMenu2SpaceRet
+   ldy #>MsgSettingsMenu2SpaceRet
+   jsr PrintString 
+
+WaitSIDInfoKey:
+   jsr DisplayTime   
+   jsr CheckForIRQGetIn    
+   beq WaitSIDInfoKey
+
+   cmp #ChrF4  ;toggle music
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitSIDInfoKey  
+
+;+  cmp #ChrF6  ;Settings Menu
+;   bne +
+;   jmp SettingsMenu  ;return from there
+;
+;+  cmp #ChrF7  ;Help
+;   bne +
+;   jmp HelpMenu ;refresh (could ignore)
+;
+;+  cmp #ChrF8  ;MIDI to SID
+;   bne +
+;   jmp MIDI2SID  ;return from there
+
++  cmp #ChrF1  ;Teensy mem Menu
+   beq ++
+   cmp #ChrSpace  ;back to Main Menu
+   bne WaitSIDInfoKey   
+++ rts
+   

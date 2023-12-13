@@ -36,6 +36,18 @@ MsgMainOptions2:
    !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
    
+MsgSIDInfo:   
+   !tx ChrReturn, SourcesColor, "SID Info:", ChrReturn
+   !tx " Header Info:", ChrReturn
+   !tx "   Filename, length, name, author, etc", ChrReturn
+   !tx " Playback Speed: (large/small steps)", ChrReturn
+   !tx " Border Effect on/off", ChrReturn
+   !tx " F4 pause/unpause", ChrReturn
+   !tx " Machine Info:", ChrReturn
+   !tx "   PAL, 50Hz", ChrReturn
+   !tx " return to main menu, other menus?", ChrReturn
+   !tx 0
+   
 MsgHelpMenu:   
    !tx ChrReturn, SourcesColor, "Help Menu:", ChrReturn
    !tx ChrReturn, " Main Menu Navigation:", ChrReturn
