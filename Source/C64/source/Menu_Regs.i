@@ -104,11 +104,13 @@
    ricmdSIDPause       = 3 ; SID pause/play
    
 ;enum RegSerialStringSelect // rwRegSerialString
-   rsstItemName        = 0
-   rsstNextIOHndlrName = 1
-   rsstSerialStringBuf = 2
-   rsstVersionNum      = 3
-   rsstShortDirPath    = 4
+   rsstItemName        = 0  ; Name of selected item
+   rsstNextIOHndlrName = 1  ; IOHandler Name selected in rwRegNextIOHndlr
+   rsstSerialStringBuf = 2  ; build SerialStringBuf prior to selecting
+   rsstVersionNum      = 3  ; version string for main banner 
+   rsstShortDirPath    = 4  ; printable current path
+   rsstSIDInfo         = 5  ; Info on last SID loaded
+   rsstMachineInfo     = 6  ; Info on current machine vid/TOD clk (set when SID loaded)
    
 ;enum RegPowerUpDefaultMasks
    rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on

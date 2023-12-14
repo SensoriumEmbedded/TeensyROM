@@ -36,15 +36,18 @@ MsgMainOptions2:
    !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
    
-MsgSIDInfo:   
-   !tx ChrReturn, SourcesColor, "SID Info:", ChrReturn
-   !tx " Header Info:", ChrReturn
-   !tx "   Filename, length, name, author, etc", ChrReturn
-   !tx " Playback Speed: (large/small steps)", ChrReturn
+MsgSIDInfo1:   
+   !tx ChrReturn, SourcesColor, "SID Information:", ChrReturn, ChrReturn
+   !tx " File Header:", NameColor  ;MenuMiscColor
+   !tx 0
+MsgSIDInfo2:   
+   !tx ChrReturn, ChrReturn, SourcesColor, " This Machine: ", NameColor
+   !tx 0
+MsgSIDInfo3:   
+   !tx "0Hz TOD", ChrReturn
+   !tx SourcesColor, " Playback Speed: (large/small steps)", ChrReturn
    !tx " Border Effect on/off", ChrReturn
    !tx " F4 pause/unpause", ChrReturn
-   !tx " Machine Info:", ChrReturn
-   !tx "   PAL, 50Hz", ChrReturn
    !tx " return to main menu, other menus?", ChrReturn
    !tx 0
    

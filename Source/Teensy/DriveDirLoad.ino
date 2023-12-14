@@ -20,7 +20,8 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
-
+char StrSIDInfo[35+35+35+60]; //~10 extra
+char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
 {
@@ -565,7 +566,7 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
-bool ParseSIDHeader()
+FLASHMEM bool ParseSIDHeader()
 {
    // XferImage and XferSize are populated w/ SID file info
    // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
@@ -575,6 +576,16 @@ bool ParseSIDHeader()
    //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
    //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
    //https://hvsc.c64.org/
+
+   char RetSpc[] = "\r  "; //return char + space
+   strcpy(StrSIDInfo, RetSpc); //clear/init SID info
+   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name
+   strcat(StrSIDInfo, RetSpc); 
+   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author
+   strcat(StrSIDInfo, RetSpc); 
+   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released
+   strcat(StrSIDInfo, RetSpc); 
+   
 
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
@@ -644,7 +655,7 @@ bool ParseSIDHeader()
       "PAL+NTSC", //    11 = PAL and NTSC, use NTSC
    };
    
-   uint8_t CIATimer[4][2] =
+   const uint8_t CIATimer[4][2] =
    {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
       0x4c, 0x25,   // PAL  SID on  PAL machine
       0x4F, 0xB2,   // PAL  SID on NTSC machine
@@ -653,18 +664,29 @@ bool ParseSIDHeader()
    };
    
    //set playback speed based on SID and Machine type
-   uint16_t SidFlags = toU16(XferImage+0x76);
+   uint16_t SidFlags = toU16(XferImage+0x76); //WORD flags
    Printf_dbg("\nSidFlags: %04x", SidFlags);
    SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
    SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
+   
+   strcat(StrSIDInfo, "Clk: "); 
+   strcat(StrSIDInfo, VStandard[SidFlags]); 
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
-   Printf_dbg("\nMachine Clocks: %s Vid, %d0Hz TOD clk", 
-      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1],
-      (IO1[wRegVid_TOD_Clks] & 2)==2 ? 6 : 5 );
+   char MainsFreq = (IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5';
+   Printf_dbg("\nMachine Clocks: %s Vid, %c0Hz TOD", 
+      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
+      
+   //"NTSC vid, 6"
+   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
+   strcat(StrMachineInfo, " Vid, "); 
+   strncat(StrMachineInfo, &MainsFreq, 1); 
 
    SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
+
+   Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
+   Printf_dbg("\relocPages: %02x", XferImage[0x79]);
 
    IO1[rwRegSIDSpeedHi] = CIATimer[SidFlags][0];
    IO1[rwRegSIDSpeedLo] = CIATimer[SidFlags][1];  

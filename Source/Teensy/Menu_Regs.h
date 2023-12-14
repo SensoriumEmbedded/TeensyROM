@@ -113,6 +113,8 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstSerialStringBuf = 2,  // build SerialStringBuf prior to selecting
    rsstVersionNum      = 3,  // version string for main banner 
    rsstShortDirPath    = 4,  // printable current path
+   rsstSIDInfo         = 5,  // Info on last SID loaded
+   rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
 };
 
 enum RegPowerUpDefaultMasks

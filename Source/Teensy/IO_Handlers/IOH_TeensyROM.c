@@ -192,6 +192,8 @@ extern bool ParseSIDHeader();
 extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
 extern uint8_t RAM_Image[];
+extern char StrSIDInfo[];
+extern char StrMachineInfo[];
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -595,6 +597,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rsstVersionNum:
                   ptrSerialString = strVersionNumber;
+                  break;      
+               case rsstSIDInfo:
+                  ptrSerialString = StrSIDInfo;
+                  break;      
+               case rsstMachineInfo:
+                  ptrSerialString = StrMachineInfo;
                   break;      
                case rsstShortDirPath:
                   {

@@ -507,8 +507,22 @@ smcSIDPlayAddr
 
 ShowSIDInfoPage:
    jsr PrintBanner
-   lda #<MsgSIDInfo
-   ldy #>MsgSIDInfo
+   lda #<MsgSIDInfo1
+   ldy #>MsgSIDInfo1
+   jsr PrintString 
+
+   lda #rsstSIDInfo
+   jsr PrintSerialString
+
+   lda #<MsgSIDInfo2
+   ldy #>MsgSIDInfo2
+   jsr PrintString 
+
+   lda #rsstMachineInfo
+   jsr PrintSerialString
+
+   lda #<MsgSIDInfo3
+   ldy #>MsgSIDInfo3
    jsr PrintString 
 
    lda #<MsgSettingsMenu2SpaceRet
