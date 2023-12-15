@@ -529,6 +529,20 @@ ShowSIDInfoPage:
    ldy #>MsgSettingsMenu2SpaceRet
    jsr PrintString 
 
+PrintSIDVars:
+   lda #NameColor
+   jsr SendChar
+
+   ;print the timer interval in hex  
+   ldx #11 ;row 
+   ldy #27 ;col
+   clc
+   jsr SetCursor
+   lda rwRegSIDSpeedHi+IO1Port
+   jsr PrintHexByte
+   lda rwRegSIDSpeedLo+IO1Port
+   jsr PrintHexByte
+   
 WaitSIDInfoKey:
    jsr DisplayTime   
    jsr CheckForIRQGetIn    
@@ -551,6 +565,30 @@ WaitSIDInfoKey:
 ;   bne +
 ;   jmp MIDI2SID  ;return from there
 
++  cmp #'F'  ;increase SID speed (big step)
+   bne +
+   ldx rwRegSIDSpeedHi+IO1Port
+   dex   
+   jmp updateSpeedHi  
+
+;+  cmp #'s'  ;decrease SID speed (small step)
+;   bne +
+;   ldx rwRegSIDSpeedLo+IO1Port
+;   inx
+   
+   
++  cmp #'S'  ;decrease SID speed (big step)
+   bne +
+   ldx rwRegSIDSpeedHi+IO1Port
+   inx
+updateSpeedHi
+   stx rwRegSIDSpeedHi+IO1Port
+   stx $dc05  ; =CIA#1 TIMER A HI, dc04=timer Low   
+   ;!ifdef SidDisp { 
+   jmp PrintSIDVars  
+
+
+   
 +  cmp #ChrF1  ;Teensy mem Menu
    beq ++
    cmp #ChrSpace  ;back to Main Menu

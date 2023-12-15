@@ -36,19 +36,19 @@ MsgMainOptions2:
    !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
    
-MsgSIDInfo1:   
+MsgSIDInfo1:
    !tx ChrReturn, SourcesColor, "SID Information:", ChrReturn, ChrReturn
    !tx " File Header:", NameColor  ;MenuMiscColor
    !tx 0
-MsgSIDInfo2:   
+MsgSIDInfo2:
    !tx ChrReturn, ChrReturn, SourcesColor, " This Machine: ", NameColor
    !tx 0
-MsgSIDInfo3:   
+MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
-   !tx SourcesColor, " Playback Speed: (large/small steps)", ChrReturn
-   !tx " Border Effect on/off", ChrReturn
-   !tx " F4 pause/unpause", ChrReturn
-   !tx " return to main menu, other menus?", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "fF/sS", ChrRvsOff, ChrFillLeft, SourcesColor, "Playback Speed: ", NameColor,"0x", ChrReturn   
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "Border Effect On/Off", ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Play SID On/Off", ChrReturn
+   ;!tx " return to main menu, other menus?", ChrReturn
    !tx 0
    
 MsgHelpMenu:   

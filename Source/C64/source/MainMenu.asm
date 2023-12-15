@@ -229,32 +229,6 @@ ReadKeyboard:
    jsr PrevPage
    jmp HighlightCurrent  
 
-+  cmp #'+'  ;increase SID speed
-   bne +
-   ldx rwRegSIDSpeedHi+IO1Port
-   dex   
-   jmp updatespeed  
-
-+  cmp #'-'  ;decrease SID speed
-   bne +
-   ldx rwRegSIDSpeedHi+IO1Port
-   inx
-updatespeed
-   stx rwRegSIDSpeedHi+IO1Port
-   stx $dc05  ; =timer Hi, dc04=timer Low
-   
-   !ifdef SidDisp {
-   ;print the full timer value
-   lda #ChrReturn
-   jsr SendChar
-   txa
-   jsr PrintHexByte
-   lda rwRegSIDSpeedLo+IO1Port
-   jsr PrintHexByte
-   }
-   
-   jmp WaitForJSorKey  
-
 +  cmp #ChrUpArrow ;Up directory
    bne +  
    lda #rCtlUpDirectoryWAIT
