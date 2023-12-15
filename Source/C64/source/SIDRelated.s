@@ -377,9 +377,9 @@ IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
 
    ;Set the timer interval
    lda rwRegSIDSpeedLo+IO1Port
-   sta $dc04        ;    CIA#1 TIMER A LO
+   sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    lda rwRegSIDSpeedHi+IO1Port
-   sta $dc05        ;    CIA#1 TIMER A HI
+   sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
 
    ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
    lda #<IRQwedge 
@@ -439,21 +439,22 @@ IRQwedge:
    
 smcSIDPlayEnable
 +  lda #0  ;default to disabled
+   beq ++
+
+smcBorderEffect
+   lda #0  ;default to disabled
    beq +
-   !ifdef SidDisp {
    inc BorderColorReg ;tweak display border
-   }
-   lda #$35; Disable Kernal and BASIC ROMs
++  lda #$35; Disable Kernal and BASIC ROMs
    ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
    sta $01
 smcSIDPlayAddr
    jsr $fffe          ;Play the music, self modifying
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
-   !ifdef SidDisp {
-   dec BorderColorReg ;tweak display border
-   }
-+  jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+   lda #BorderColor
+   sta BorderColorReg
+++ jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
 
 ;SIDMusicOn:  ;Start SID player Raster based interrupt
 ;   lda #$7f    ;disable all ints
@@ -534,13 +535,15 @@ PrintSIDVars:
    jsr SendChar
 
    ;print the timer interval in hex  
-   ldx #11 ;row 
+   ldx #14 ;row 
    ldy #27 ;col
    clc
    jsr SetCursor
    lda rwRegSIDSpeedHi+IO1Port
+   ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
    lda rwRegSIDSpeedLo+IO1Port
+   ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
    
 WaitSIDInfoKey:
@@ -565,30 +568,49 @@ WaitSIDInfoKey:
 ;   bne +
 ;   jmp MIDI2SID  ;return from there
 
-+  cmp #'F'  ;increase SID speed (big step)
++  cmp #'b'  ;Toggle Border effect
    bne +
+   lda smcBorderEffect+1
+   eor #1
+   sta smcBorderEffect+1
+   jmp WaitSIDInfoKey   
+
++  cmp #ChrCRSRLeft  ;increase SID speed (small step)
+   bne +
+   ldx rwRegSIDSpeedLo+IO1Port
+   dex   
+   stx rwRegSIDSpeedLo+IO1Port
+   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   cpx #$ff
+   bne PrintSIDVars
+   jmp decSIDSpeedHi   ;underflow
+
++  cmp #ChrCRSRRight  ;decrease SID speed (small step)
+   bne +
+   ldx rwRegSIDSpeedLo+IO1Port
+   inx
+   stx rwRegSIDSpeedLo+IO1Port
+   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   bne PrintSIDVars
+   jmp incSIDSpeedHi   ;overflow
+   
++  cmp #ChrCRSRUp  ;increase SID speed (big step)
+   bne +
+decSIDSpeedHi
    ldx rwRegSIDSpeedHi+IO1Port
    dex   
    jmp updateSpeedHi  
 
-;+  cmp #'s'  ;decrease SID speed (small step)
-;   bne +
-;   ldx rwRegSIDSpeedLo+IO1Port
-;   inx
-   
-   
-+  cmp #'S'  ;decrease SID speed (big step)
++  cmp #ChrCRSRDn  ;decrease SID speed (big step)
    bne +
+incSIDSpeedHi
    ldx rwRegSIDSpeedHi+IO1Port
    inx
 updateSpeedHi
    stx rwRegSIDSpeedHi+IO1Port
-   stx $dc05  ; =CIA#1 TIMER A HI, dc04=timer Low   
-   ;!ifdef SidDisp { 
+   stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    jmp PrintSIDVars  
 
-
-   
 +  cmp #ChrF1  ;Teensy mem Menu
    beq ++
    cmp #ChrSpace  ;back to Main Menu

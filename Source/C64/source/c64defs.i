@@ -31,7 +31,9 @@
    TODMinBCD          = $dc0a
    TODSecBCD          = $dc09
    TODTenthSecBCD     = $dc08
-   
+   CIA1TimerA_Lo      = $dc04
+   CIA1TimerA_Hi      = $dc05
+  
    ;Kernal routines:
    IRQDefault = $ea31
    SendChar   = $ffd2
