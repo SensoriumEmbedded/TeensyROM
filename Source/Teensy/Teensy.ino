@@ -189,7 +189,7 @@ void EEPreadStr(uint16_t addr, char* buf)
 
 void SetEEPDefaults()
 {
-   Serial.println("Setting EEPROM to defaults");
+   Serial.println("--> Setting EEPROM to defaults");
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
    EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudMusicMask /* | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
    EEPROM.write(eepAdTimezone, -7); //default to pacific time
