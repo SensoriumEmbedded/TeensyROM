@@ -281,13 +281,13 @@ ReadKeyboard:
    bne +
    lda #rmtUSBDrive
    jsr ListMenuItemsChangeInit
-   jmp HighlightCurrent  
-
-+  cmp #ChrF6  ;Settings Menu
+   jmp HighlightCurrent
+   
++  cmp #ChrF6  ;Show SID info
    bne +
-   jsr SettingsMenu
+   jsr ShowSIDInfoPage
    jsr ListMenuItems
-   jmp HighlightCurrent  
+   jmp HighlightCurrent
 
 +  cmp #ChrF7  ;Help Menu
    bne +
@@ -295,7 +295,13 @@ ReadKeyboard:
    jsr ListMenuItems
    jmp HighlightCurrent
 
-+  cmp #ChrF8  ;MIDI to SID
++  cmp #ChrF8  ;Settings Menu
+   bne +
+   jsr SettingsMenu
+   jsr ListMenuItems
+   jmp HighlightCurrent  
+
++  cmp #'1'  ;MIDI to SID
    bne +
    jsr MIDI2SID
    jsr ListMenuItems
@@ -744,16 +750,20 @@ WaitHelpMenuKey:
    bne +
    lda #rmtUSBDrive
    jmp MenuChangeInit
-
-+  cmp #ChrF6  ;Settings Menu
+   
++  cmp #ChrF6  ;Show SID info
    bne +
-   jmp SettingsMenu  ;return from there
+   jmp ShowSIDInfoPage  ;return from there
 
 +  cmp #ChrF7  ;Help
    bne +
    jmp HelpMenu ;refresh (could ignore)
 
-+  cmp #ChrF8  ;MIDI to SID
++  cmp #ChrF8  ;Settings Menu
+   bne +
+   jmp SettingsMenu  ;return from there
+
++  cmp #'1'  ;MIDI to SID
    bne +
    jmp MIDI2SID  ;return from there
 
