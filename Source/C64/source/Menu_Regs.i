@@ -56,6 +56,7 @@
    wRegIRQ_ACK         = 29 ;// IRQ Ack from C64 app
    rwRegIRQ_CMD        = 30 ;// IRQ Command from TeensyROM
 
+   ; These are used for the MIDI2SID app:
    StartSIDRegs        = 31 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1

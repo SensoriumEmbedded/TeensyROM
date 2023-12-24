@@ -37,6 +37,8 @@
 #include "ROMs/Tetris.prg.h"
 #include "ROMs/super_expander_64.crt.h" 
 #include "ROMs/Robocop_2_EasyFlash.crt.h" 
+#include "ROMs/MIDI2SID.prg.h" 
+
 #include "SIDs/Echoes.sid.h"
 #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
 #include "SIDs/Aces_High.sid.h"
@@ -97,6 +99,7 @@ StructMenuItem dirUtilities[] =
 StructMenuItem dirMultimedia[] = 
 {
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+   rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Display Fractal"                  , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Draw!"                            , (uint8_t*)draw01_prg                 , sizeof(draw01_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,

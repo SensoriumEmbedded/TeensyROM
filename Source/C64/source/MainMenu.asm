@@ -28,12 +28,6 @@
    ;other RAM Registers
    ;$0334-033b is "free space"
 
-   SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
-   SIDAttDec        = $0339
-   SIDSusRel        = $033a
-   SIDDutyHi        = $033b
-   
-   M2SDataColumn    = 14
 
 ;******************************* Main Code Start ************************************   
 
@@ -300,12 +294,6 @@ ReadKeyboard:
    jsr SettingsMenu
    jsr ListMenuItems
    jmp HighlightCurrent  
-
-+  cmp #'1'  ;MIDI to SID
-   bne +
-   jsr MIDI2SID
-   jsr ListMenuItems
-   jmp HighlightCurrent
 
 
 +  jmp WaitForJSorKey
@@ -762,10 +750,6 @@ WaitHelpMenuKey:
 +  cmp #ChrF8  ;Settings Menu
    bne +
    jmp SettingsMenu  ;return from there
-
-+  cmp #'1'  ;MIDI to SID
-   bne +
-   jmp MIDI2SID  ;return from there
 
 +  cmp #ChrSpace  ;back to Main Menu
    bne WaitHelpMenuKey   
