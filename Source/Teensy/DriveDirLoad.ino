@@ -657,10 +657,11 @@ FLASHMEM bool ParseSIDHeader()
    
    const uint8_t CIATimer[4][2] =
    {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
-      0x4c, 0x25,   // PAL  SID on  PAL machine
-      0x4F, 0xB2,   // PAL  SID on NTSC machine
-      0x3F, 0x50,   // NTSC SID on  PAL machine
-      0x42, 0x95,   // NTSC SID on NTSC machine
+       //verified with o-scope on IRQ line using a Kawari machine 12/24/23
+      0x4c, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
+      0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
+      0x40, 0x58,   // NTSC SID on  PAL machine 59.81Hz IRQ rate
+      0x42, 0xC6,   // NTSC SID on NTSC machine 59.81Hz IRQ rate
    };
    
    //set playback speed based on SID and Machine type
@@ -673,14 +674,14 @@ FLASHMEM bool ParseSIDHeader()
    strcat(StrSIDInfo, VStandard[SidFlags]); 
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
-   char MainsFreq = (IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5';
-   Printf_dbg("\nMachine Clocks: %s Vid, %c0Hz TOD", 
+   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
+   Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
       VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
       
    //"NTSC vid, 6"
    strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
    strcat(StrMachineInfo, " Vid, "); 
-   strncat(StrMachineInfo, &MainsFreq, 1); 
+   strcat(StrMachineInfo, MainsFreq); 
 
    SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
