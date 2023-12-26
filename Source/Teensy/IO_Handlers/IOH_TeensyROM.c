@@ -539,8 +539,6 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             SelItemFullIdx=Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
          case rwRegStatus:
          case wRegVid_TOD_Clks:
-         case rwRegSIDSpeedHi:
-         case rwRegSIDSpeedLo:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
          case rwRegCursorItemOnPg:

@@ -91,11 +91,7 @@ IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
    lda $dd0d        ;    SAME FOR CIA2
    asl $d019        ; TOSS ANY PENDING VIC INTERRUPTS (WRITING CLEARS 'EM, VIA RMW MAGIC)
 
-   ;Set the timer interval
-   lda rwRegSIDSpeedLo+IO1Port
-   sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
-   lda rwRegSIDSpeedHi+IO1Port
-   sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
+   jsr SetSIDSpeedToDefault
 
    ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
    lda #<IRQwedge 
@@ -252,13 +248,13 @@ PrintSIDVars:
 
    ;print the timer interval in hex  
    ldx #15 ;row 
-   ldy #27 ;col
+   ldy #30 ;col
    clc
    jsr SetCursor
-   lda rwRegSIDSpeedHi+IO1Port
+   lda LclRegSIDSpeedHi
    ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
-   lda rwRegSIDSpeedLo+IO1Port
+   lda LclRegSIDSpeedLo
    ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
    
@@ -272,18 +268,6 @@ WaitSIDInfoKey:
    jsr ToggleSIDMusic
    jmp WaitSIDInfoKey  
 
-;+  cmp #ChrF6  ;Settings Menu
-;   bne +
-;   jmp SettingsMenu  ;return from there
-;
-;+  cmp #ChrF7  ;Help
-;   bne +
-;   jmp HelpMenu ;refresh (could ignore)
-;
-;+  cmp #ChrF8  ;MIDI to SID
-;   bne +
-;   jmp MIDI2SID  ;return from there
-
 +  cmp #'b'  ;Toggle Border effect
    bne +
    lda smcBorderEffect+1
@@ -291,11 +275,16 @@ WaitSIDInfoKey:
    sta smcBorderEffect+1
    jmp WaitSIDInfoKey   
 
++  cmp #'d'  ;Set SID speed to default
+   bne +
+   jsr SetSIDSpeedToDefault
+   jmp PrintSIDVars  
+
 +  cmp #ChrCRSRLeft  ;increase SID speed (small step)
    bne +
-   ldx rwRegSIDSpeedLo+IO1Port
+   ldx LclRegSIDSpeedLo
    dex   
-   stx rwRegSIDSpeedLo+IO1Port
+   stx LclRegSIDSpeedLo
    stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    cpx #$ff
    bne PrintSIDVars
@@ -303,9 +292,9 @@ WaitSIDInfoKey:
 
 +  cmp #ChrCRSRRight  ;decrease SID speed (small step)
    bne +
-   ldx rwRegSIDSpeedLo+IO1Port
+   ldx LclRegSIDSpeedLo
    inx
-   stx rwRegSIDSpeedLo+IO1Port
+   stx LclRegSIDSpeedLo
    stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    bne PrintSIDVars
    jmp incSIDSpeedHi   ;overflow
@@ -313,17 +302,17 @@ WaitSIDInfoKey:
 +  cmp #ChrCRSRUp  ;increase SID speed (big step)
    bne +
 decSIDSpeedHi
-   ldx rwRegSIDSpeedHi+IO1Port
+   ldx LclRegSIDSpeedHi
    dex   
    jmp updateSpeedHi  
 
 +  cmp #ChrCRSRDn  ;decrease SID speed (big step)
    bne +
 incSIDSpeedHi
-   ldx rwRegSIDSpeedHi+IO1Port
+   ldx LclRegSIDSpeedHi
    inx
 updateSpeedHi
-   stx rwRegSIDSpeedHi+IO1Port
+   stx LclRegSIDSpeedHi
    stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    jmp PrintSIDVars  
 
@@ -332,4 +321,18 @@ updateSpeedHi
    cmp #ChrSpace  ;back to Main Menu
    bne WaitSIDInfoKey   
 ++ rts
+
+SetSIDSpeedToDefault:
+   ;Set the timer interval to default
+   lda rRegSIDDefSpeedLo+IO1Port
+   sta LclRegSIDSpeedLo     ; set local reg to default
+   sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   lda rRegSIDDefSpeedHi+IO1Port
+   sta LclRegSIDSpeedHi     ; set local reg to default
+   sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
+   rts
    
+LclRegSIDSpeedHi:
+   !byte 0x40
+LclRegSIDSpeedLo:
+   !byte 0x40

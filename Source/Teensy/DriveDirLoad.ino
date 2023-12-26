@@ -659,7 +659,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    };
    
    const uint8_t CIATimer[4][2] =
-   {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
+   {   //rRegSIDDefSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
        //verified with o-scope on IRQ line using a Kawari machine 12/24/23
       0x4c, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
       0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
@@ -692,8 +692,8 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
    Printf_dbg("\relocPages: %02x", XferImage[0x79]);
 
-   IO1[rwRegSIDSpeedHi] = CIATimer[SidFlags][0];
-   IO1[rwRegSIDSpeedLo] = CIATimer[SidFlags][1];  
+   IO1[rRegSIDDefSpeedHi] = CIATimer[SidFlags][0];
+   IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  
    IO1[rRegSIDInitHi] = XferImage[0x0A];
    IO1[rRegSIDInitLo] = XferImage[0x0B];
    IO1[rRegSIDPlayHi] = XferImage[0x0C];

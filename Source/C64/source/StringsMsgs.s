@@ -46,7 +46,8 @@ MsgSIDInfo2:
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
    !tx ChrReturn, SourcesColor, " Settings:", ChrReturn
-   !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Playback Speed: ", NameColor,"0x", ChrReturn   
+   !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Adjust Play Speed: ", NameColor,"0x", ChrReturn   
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "Default Play Speed", ChrReturn
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Toggle SID On/Off", ChrReturn
    !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "Border Effect On/Off", ChrReturn, ChrReturn
    ;!tx " return to main menu, other menus?", ChrReturn
