@@ -143,7 +143,7 @@ void HandleExecution()
    {
       XferImage = MenuSelCpy.Code_Image;
       XferSize = MenuSelCpy.Size;
-      if (!ParseSIDHeader()) return; //Parse SID File 
+      if (!ParseSIDHeader(MenuSelCpy.Name)) return; //Parse SID File 
       
       //set up to transfer to C64 RAM
       
@@ -566,7 +566,7 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
-FLASHMEM bool ParseSIDHeader()
+FLASHMEM bool ParseSIDHeader(const char *filename)
 {
    // XferImage and XferSize are populated w/ SID file info
    // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
@@ -579,11 +579,14 @@ FLASHMEM bool ParseSIDHeader()
 
    char RetSpc[] = "\r  "; //return char + space
    strcpy(StrSIDInfo, RetSpc); //clear/init SID info
-   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name
+
+   strncat(StrSIDInfo, filename, 0x21); //filename, cut to 33 chars max to match main menu max
    strcat(StrSIDInfo, RetSpc); 
-   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author
+   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
-   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released
+   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author (32 chars max)
+   strcat(StrSIDInfo, RetSpc); 
+   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
    
 

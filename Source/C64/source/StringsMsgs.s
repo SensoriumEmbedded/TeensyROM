@@ -37,8 +37,8 @@ MsgMainOptions2:
    !tx 0
    
 MsgSIDInfo1:
-   !tx ChrReturn, SourcesColor, "SID Information:", ChrReturn, ChrReturn
-   !tx " File Header:", NameColor  ;MenuMiscColor
+   !tx ChrReturn, SourcesColor, "SID Info Page:", ChrReturn, ChrReturn
+   !tx " File Information:", NameColor  ;MenuMiscColor
    !tx 0
 MsgSIDInfo2:
    !tx ChrReturn, ChrReturn, SourcesColor, " This Machine:", NameColor, ChrReturn, "  "
