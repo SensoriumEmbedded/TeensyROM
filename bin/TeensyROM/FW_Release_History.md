@@ -1,6 +1,23 @@
 
 # FW Release Version history:
 
+### 0.5.9 sub-release 12/27/23
+* SID Player updates:
+  * SID info page added
+    * Shows current SID file info: Filename, Name, Author, Released, Clock
+    * Current Machine info: PAL/NTSC and Time of Day clk frequency
+    * Settings: 
+      * CRSR keys: Adjust playback Speed
+      * d: Set default playback speed
+      * F4: Toggle SID On/Off
+      * b: Border effect On/Off
+  * Default playback speeds (based on machine and SID info) dialed in with oscilloscope
+* Main menu changes:
+  * F6 changed to Show SID info (was Settings menu)
+  * F8 changed to Settings menu (was MIDI2SID)
+  * Help screen (still F7) updated to reflect key changes
+  * MIDI2SID app moved to stand-alone prg in Multimedia directory
+
 ### 0.5.8 sub-release 12/13/23
 * Swiftlink/Browser updates: ([Web Browser Usage](/docs/Browser_Usage.md) is updated)
   * 'd' command to list download directory contents
