@@ -249,7 +249,7 @@ PrintSIDVars:
    jsr SendChar
 
    ;print the timer interval in hex  
-   ldx #15 ;row 
+   ldx #16 ;row 
    ldy #30 ;col
    clc
    jsr SetCursor

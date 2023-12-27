@@ -20,7 +20,7 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
-char StrSIDInfo[35+35+35+60]; //~10 extra
+char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
 char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
@@ -566,6 +566,13 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
+FLASHMEM void SIDLoadError(const char* ErrMsg)
+{
+   strcat(StrSIDInfo, "Error: ");
+   strcat(StrSIDInfo, ErrMsg);
+   SendMsgPrintfln(ErrMsg);
+}
+
 FLASHMEM bool ParseSIDHeader(const char *filename)
 {
    // XferImage and XferSize are populated w/ SID file info
@@ -577,36 +584,43 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
    //https://hvsc.c64.org/
 
-   char RetSpc[] = "\r  "; //return char + space
+   char RetSpc[] = "\r "; //return char + space
    strcpy(StrSIDInfo, RetSpc); //clear/init SID info
 
-   strncat(StrSIDInfo, filename, 0x21); //filename, cut to 33 chars max to match main menu max
+   strncat(StrSIDInfo, filename, 38); //filename, cut to 38 chars max to not scroll
    strcat(StrSIDInfo, RetSpc); 
+   strcat(StrSIDInfo, RetSpc); //blank line to separate filename from header info
+   
+   strcat(StrSIDInfo, "Name: "); 
    strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
+   
+   strcat(StrSIDInfo, "Auth: "); 
    strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
+   
+   strcat(StrSIDInfo, " Rel: "); 
    strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
    
 
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
-      SendMsgPrintfln("PSID not found");
+      SIDLoadError("PSID not found");
       return false;
    }
    
    uint16_t sidVersion = toU16(XferImage+0x04);
    if ( sidVersion<2 || sidVersion>4) 
    {
-      SendMsgPrintfln("Unexp Version: $%04x", sidVersion);
+      SIDLoadError("Unexpected Version");
       return false;
    }
 
    StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
    if (StreamOffsetAddr!= 0x7c) 
    {
-      SendMsgPrintfln("Unexp dataOffset: $%04x", StreamOffsetAddr);
+      SIDLoadError("Unexpected Data Offset");
       return false;
    }
    
@@ -634,14 +648,14 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    //assume full 8k length ($2000)
    if (LoadAddress < 0x8000 && LoadAddress+XferSize >= 0x6000)
    {
-      SendMsgPrintfln("Mem conflict w/ TR app 6000:8000");
+      SIDLoadError("Mem conflict w/ TR app");
       return false;
    }
 
    //check play address
    if (PlayAddress == 0)
    {
-      SendMsgPrintfln("Play Address 0 not allowed");
+      SIDLoadError("Play Address is Zero");
       return false;
    }
   
@@ -673,7 +687,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
    SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
    
-   strcat(StrSIDInfo, "Clk: "); 
+   strcat(StrSIDInfo, " Clk: "); 
    strcat(StrSIDInfo, VStandard[SidFlags]); 
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz

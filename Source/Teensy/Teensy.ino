@@ -95,6 +95,7 @@ void setup()
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
 
+   StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildCPUInfoStr();
    Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
