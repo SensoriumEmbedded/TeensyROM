@@ -119,8 +119,8 @@ NoHW
  
    ;check default register for music playback
    lda rwRegPwrUpDefaults+IO1Port
-   and #rpudMusicMask
-   sta smcSIDPlayEnable+1  ;set default SID playback
+   and #rpudSIDPauseMask
+   sta smcSIDPauseStop+1  ;set default SID playback
 
 ++ jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
    ;check default register for time update
@@ -494,9 +494,11 @@ RunSelected:
 +  cmp #rtFileSID  ;check for .sid file selected
    bne +
    jsr StartSelItem_WaitForTRDots
-   lda #rpudMusicMask ;default to enable playback, may be turned off if error
-   sta smcSIDPlayEnable+1
+   lda #0    ;rpudSIDPauseMask ;default to enable playback (clear all bits), may be turned off if error
+   sta smcSIDPauseStop+1
    jsr SIDLoadInit ;check success, return or transfer to RAM and start playing.  Turns IRQ on regardless
+   lda smcSIDPauseStop+1
+   bne ListAndDone  ;skip sid info page on error
    jsr ShowSIDInfoPage
    jmp ListAndDone  
     
@@ -539,8 +541,8 @@ XferCopyRun:
    ;rts ;SelectItem never returns
 
 AnyKeyErrMsgWait:
-   lda #0         ;turn off SID playback on error
-   sta smcSIDPlayEnable+1
+   lda #rpudSIDPauseMask    ;Pause SID playback on error
+   sta smcSIDPauseStop+1
    jsr IRQEnable  ;turn on IRQ
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey

@@ -26,6 +26,8 @@ SIDLoadInit:
    lda rRegStrAvailable+IO1Port 
    bne +   ;Make sure ready to x-fer
    jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
+   lda #$ff      ;rpudSIDPauseMask  ;disable SID playback on error, all bits don't allow un-pause until reload
+   sta smcSIDPauseStop+1
    rts
    
    ;load SID to C64 RAM, same as PRGLoadStart...
@@ -73,10 +75,10 @@ smcSIDInitAddr
    rts
    
 ToggleSIDMusic:
-   lda smcSIDPlayEnable+1
-   eor #rpudMusicMask   ;toggle playing status
-   sta smcSIDPlayEnable+1
-   beq SIDVoicesOff ; if now off, turn voices off & return
+   lda smcSIDPauseStop+1
+   eor #rpudSIDPauseMask   ;toggle playing status
+   sta smcSIDPauseStop+1
+   bne SIDVoicesOff ; if now off, turn voices off & return
    rts
    
 ; interpreted from cryptoboy code at https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
@@ -149,9 +151,9 @@ IRQwedge:
    sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
    jmp IRQDefault
    
-smcSIDPlayEnable
-+  lda #0  ;default to disabled
-   beq ++
+smcSIDPauseStop
++  lda #rpudSIDPauseMask  ;default to disabled
+   bne ++                 ;any bits set skips playback
 
 smcBorderEffect
    lda #0  ;default to disabled

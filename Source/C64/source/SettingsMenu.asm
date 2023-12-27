@@ -103,7 +103,8 @@ ShowSettings:
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
-   and #rpudMusicMask  
+   and #rpudSIDPauseMask  
+   eor #rpudSIDPauseMask  
    jsr PrintOnOff
    
 
@@ -188,7 +189,7 @@ WaitForSettingsKey:
 +  cmp #'e'  ;Power-up Music State toggle
    bne +
    lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudMusicMask  
+   eor #rpudSIDPauseMask  
    sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
