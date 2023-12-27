@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.8"; //*VERSION*
+char strVersionNumber[] = "v0.5.8+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -70,10 +70,11 @@ uint32_t* BigBuf = NULL;
 #define PALBusFreq          985250
 #define IO1_Size            256
                             
-#define eepMagicNum         0xfeed6404 // 01: 6/22/23 net settings added 
-                                       // 02: 9/07/23 Joy2 speed added
-                                       // 03: 11/3/23 Browser Bookmarks added
-                                       // 04: 11/4/23 Browser DL drive/path added
+#define eepMagicNum         0xfeed6405 // 01: 6/22/23  net settings added 
+                                       // 02: 9/07/23  Joy2 speed added
+                                       // 03: 11/3/23  Browser Bookmarks added
+                                       // 04: 11/4/23  Browser DL drive/path added
+                                       // 05: 12/27/23 inverted default SID enable bit
 #define eepBMTitleSize       75  //max chars in bookmark title
 #define eepBMURLSize        225  //Max Chars in bookmark URL path
 #define eepNumBookmarks       9  //Num Bookmarks saved
@@ -81,7 +82,7 @@ uint32_t* BigBuf = NULL;
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =  0, // (4:uint32_t)   Indicated if internal EEPROM has been initialized
-   eepAdPwrUpDefaults =  4, // (1:uint8_t)    power up default reg, see bit mask defs rpudMusicMask, rpudNetTimeMask
+   eepAdPwrUpDefaults =  4, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
    eepAdTimezone      =  5, // (1:int8_t)     signed char for timezone: UTC +14/-12 
    eepAdNextIOHndlr   =  6, // (1:uint8_t)    default IO handler to load upon TR exit
    eepAdDHCPEnabled   =  7, // (1:uint8_t)    non-0=DHCP enabled, 0=DHCP disabled

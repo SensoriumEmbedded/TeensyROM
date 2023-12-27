@@ -20,7 +20,6 @@
 
 ; ********************************   Symbols   ********************************   
    ;!set Debug = 1 ;if defined, skips HW checks/waits 
-   ;!set SidDisp = 1; if defined, displayed speed info when changed and border tweaks durring int.
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
@@ -29,12 +28,6 @@
    ;other RAM Registers
    ;$0334-033b is "free space"
 
-   SIDVoicCont      = $0338 ;midi2sid polyphonic voice/envelope controls
-   SIDAttDec        = $0339
-   SIDSusRel        = $033a
-   SIDDutyHi        = $033b
-   
-   M2SDataColumn    = 14
 
 ;******************************* Main Code Start ************************************   
 
@@ -126,8 +119,8 @@ NoHW
  
    ;check default register for music playback
    lda rwRegPwrUpDefaults+IO1Port
-   and #rpudMusicMask
-   sta smcSIDPlayEnable+1  ;set default SID playback
+   and #rpudSIDPauseMask
+   sta smcSIDPauseStop+1  ;set default SID playback
 
 ++ jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
    ;check default register for time update
@@ -229,32 +222,6 @@ ReadKeyboard:
    jsr PrevPage
    jmp HighlightCurrent  
 
-+  cmp #'+'  ;increase SID speed
-   bne +
-   ldx rwRegSIDSpeedHi+IO1Port
-   dex   
-   jmp updatespeed  
-
-+  cmp #'-'  ;decrease SID speed
-   bne +
-   ldx rwRegSIDSpeedHi+IO1Port
-   inx
-updatespeed
-   stx rwRegSIDSpeedHi+IO1Port
-   stx $dc05  ; =timer Hi, dc04=timer Low
-   
-   !ifdef SidDisp {
-   ;print the full timer value
-   lda #ChrReturn
-   jsr SendChar
-   txa
-   jsr PrintHexByte
-   lda rwRegSIDSpeedLo+IO1Port
-   jsr PrintHexByte
-   }
-   
-   jmp WaitForJSorKey  
-
 +  cmp #ChrUpArrow ;Up directory
    bne +  
    lda #rCtlUpDirectoryWAIT
@@ -308,13 +275,13 @@ updatespeed
    bne +
    lda #rmtUSBDrive
    jsr ListMenuItemsChangeInit
-   jmp HighlightCurrent  
-
-+  cmp #ChrF6  ;Settings Menu
+   jmp HighlightCurrent
+   
++  cmp #ChrF6  ;Show SID info
    bne +
-   jsr SettingsMenu
+   jsr ShowSIDInfoPage
    jsr ListMenuItems
-   jmp HighlightCurrent  
+   jmp HighlightCurrent
 
 +  cmp #ChrF7  ;Help Menu
    bne +
@@ -322,11 +289,11 @@ updatespeed
    jsr ListMenuItems
    jmp HighlightCurrent
 
-+  cmp #ChrF8  ;MIDI to SID
++  cmp #ChrF8  ;Settings Menu
    bne +
-   jsr MIDI2SID
+   jsr SettingsMenu
    jsr ListMenuItems
-   jmp HighlightCurrent
+   jmp HighlightCurrent  
 
 
 +  jmp WaitForJSorKey
@@ -527,9 +494,12 @@ RunSelected:
 +  cmp #rtFileSID  ;check for .sid file selected
    bne +
    jsr StartSelItem_WaitForTRDots
-   lda #rpudMusicMask ;default to enable playback, may be turned off if error
-   sta smcSIDPlayEnable+1
+   lda #0    ;rpudSIDPauseMask ;default to enable playback (clear all bits), may be turned off if error
+   sta smcSIDPauseStop+1
    jsr SIDLoadInit ;check success, return or transfer to RAM and start playing.  Turns IRQ on regardless
+   lda smcSIDPauseStop+1
+   bne ListAndDone  ;skip sid info page on error
+   jsr ShowSIDInfoPage
    jmp ListAndDone  
     
     
@@ -571,8 +541,8 @@ XferCopyRun:
    ;rts ;SelectItem never returns
 
 AnyKeyErrMsgWait:
-   lda #0         ;turn off SID playback on error
-   sta smcSIDPlayEnable+1
+   lda #rpudSIDPauseMask    ;Pause SID playback on error
+   sta smcSIDPauseStop+1
    jsr IRQEnable  ;turn on IRQ
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey
@@ -770,18 +740,18 @@ WaitHelpMenuKey:
    bne +
    lda #rmtUSBDrive
    jmp MenuChangeInit
-
-+  cmp #ChrF6  ;Settings Menu
+   
++  cmp #ChrF6  ;Show SID info
    bne +
-   jmp SettingsMenu  ;return from there
+   jmp ShowSIDInfoPage  ;return from there
 
 +  cmp #ChrF7  ;Help
    bne +
    jmp HelpMenu ;refresh (could ignore)
 
-+  cmp #ChrF8  ;MIDI to SID
++  cmp #ChrF8  ;Settings Menu
    bne +
-   jmp MIDI2SID  ;return from there
+   jmp SettingsMenu  ;return from there
 
 +  cmp #ChrSpace  ;back to Main Menu
    bne WaitHelpMenuKey   

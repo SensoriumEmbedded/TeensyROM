@@ -20,7 +20,8 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
-
+char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
+char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
 {
@@ -142,7 +143,7 @@ void HandleExecution()
    {
       XferImage = MenuSelCpy.Code_Image;
       XferSize = MenuSelCpy.Size;
-      if (!ParseSIDHeader()) return; //Parse SID File 
+      if (!ParseSIDHeader(MenuSelCpy.Name)) return; //Parse SID File 
       
       //set up to transfer to C64 RAM
       
@@ -565,7 +566,14 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
-bool ParseSIDHeader()
+FLASHMEM void SIDLoadError(const char* ErrMsg)
+{
+   strcat(StrSIDInfo, "Error: ");
+   strcat(StrSIDInfo, ErrMsg);
+   SendMsgPrintfln(ErrMsg);
+}
+
+FLASHMEM bool ParseSIDHeader(const char *filename)
 {
    // XferImage and XferSize are populated w/ SID file info
    // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
@@ -576,23 +584,43 @@ bool ParseSIDHeader()
    //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
    //https://hvsc.c64.org/
 
+   char RetSpc[] = "\r "; //return char + space
+   strcpy(StrSIDInfo, RetSpc); //clear/init SID info
+
+   strncat(StrSIDInfo, filename, 38); //filename, cut to 38 chars max to not scroll
+   strcat(StrSIDInfo, RetSpc); 
+   strcat(StrSIDInfo, RetSpc); //blank line to separate filename from header info
+   
+   strcat(StrSIDInfo, "Name: "); 
+   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name (32 chars max)
+   strcat(StrSIDInfo, RetSpc); 
+   
+   strcat(StrSIDInfo, "Auth: "); 
+   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author (32 chars max)
+   strcat(StrSIDInfo, RetSpc); 
+   
+   strcat(StrSIDInfo, " Rel: "); 
+   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
+   strcat(StrSIDInfo, RetSpc); 
+   
+
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
-      SendMsgPrintfln("PSID not found");
+      SIDLoadError("PSID not found");
       return false;
    }
    
    uint16_t sidVersion = toU16(XferImage+0x04);
    if ( sidVersion<2 || sidVersion>4) 
    {
-      SendMsgPrintfln("Unexp Version: $%04x", sidVersion);
+      SIDLoadError("Unexpected Version");
       return false;
    }
 
    StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
    if (StreamOffsetAddr!= 0x7c) 
    {
-      SendMsgPrintfln("Unexp dataOffset: $%04x", StreamOffsetAddr);
+      SIDLoadError("Unexpected Data Offset");
       return false;
    }
    
@@ -620,14 +648,14 @@ bool ParseSIDHeader()
    //assume full 8k length ($2000)
    if (LoadAddress < 0x8000 && LoadAddress+XferSize >= 0x6000)
    {
-      SendMsgPrintfln("Mem conflict w/ TR app 6000:8000");
+      SIDLoadError("Mem conflict w/ TR app");
       return false;
    }
 
    //check play address
    if (PlayAddress == 0)
    {
-      SendMsgPrintfln("Play Address 0 not allowed");
+      SIDLoadError("Play Address is Zero");
       return false;
    }
   
@@ -644,30 +672,42 @@ bool ParseSIDHeader()
       "PAL+NTSC", //    11 = PAL and NTSC, use NTSC
    };
    
-   uint8_t CIATimer[4][2] =
-   {   //rwRegSIDSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
-      0x4c, 0x25,   // PAL  SID on  PAL machine
-      0x4F, 0xB2,   // PAL  SID on NTSC machine
-      0x3F, 0x50,   // NTSC SID on  PAL machine
-      0x42, 0x95,   // NTSC SID on NTSC machine
+   const uint8_t CIATimer[4][2] =
+   {   //rRegSIDDefSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
+       //verified with o-scope on IRQ line using a Kawari machine 12/24/23
+      0x4c, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
+      0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
+      0x40, 0x58,   // NTSC SID on  PAL machine 59.81Hz IRQ rate
+      0x42, 0xC6,   // NTSC SID on NTSC machine 59.81Hz IRQ rate
    };
    
    //set playback speed based on SID and Machine type
-   uint16_t SidFlags = toU16(XferImage+0x76);
+   uint16_t SidFlags = toU16(XferImage+0x76); //WORD flags
    Printf_dbg("\nSidFlags: %04x", SidFlags);
    SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
    SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
+   
+   strcat(StrSIDInfo, " Clk: "); 
+   strcat(StrSIDInfo, VStandard[SidFlags]); 
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
-   Printf_dbg("\nMachine Clocks: %s Vid, %d0Hz TOD clk", 
-      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1],
-      (IO1[wRegVid_TOD_Clks] & 2)==2 ? 6 : 5 );
+   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
+   Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
+      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
+      
+   //"NTSC vid, 6"
+   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
+   strcat(StrMachineInfo, " Vid, "); 
+   strcat(StrMachineInfo, MainsFreq); 
 
    SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
 
-   IO1[rwRegSIDSpeedHi] = CIATimer[SidFlags][0];
-   IO1[rwRegSIDSpeedLo] = CIATimer[SidFlags][1];  
+   Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
+   Printf_dbg("\relocPages: %02x", XferImage[0x79]);
+
+   IO1[rRegSIDDefSpeedHi] = CIATimer[SidFlags][0];
+   IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  
    IO1[rRegSIDInitHi] = XferImage[0x0A];
    IO1[rRegSIDInitLo] = XferImage[0x0B];
    IO1[rRegSIDPlayHi] = XferImage[0x0C];

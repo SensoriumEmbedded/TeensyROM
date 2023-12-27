@@ -95,6 +95,7 @@ void setup()
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
 
+   StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildCPUInfoStr();
    Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
@@ -189,9 +190,9 @@ void EEPreadStr(uint16_t addr, char* buf)
 
 void SetEEPDefaults()
 {
-   Serial.println("Setting EEPROM to defaults");
+   Serial.println("--> Setting EEPROM to defaults");
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum);
-   EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudMusicMask /* | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
+   EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
    EEPROM.write(eepAdTimezone, -7); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

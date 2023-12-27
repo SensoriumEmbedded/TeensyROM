@@ -37,6 +37,8 @@
 #include "ROMs/Tetris.prg.h"
 #include "ROMs/super_expander_64.crt.h" 
 #include "ROMs/Robocop_2_EasyFlash.crt.h" 
+#include "ROMs/MIDI2SID.prg.h" 
+
 #include "SIDs/Echoes.sid.h"
 #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
 #include "SIDs/Aces_High.sid.h"
@@ -97,6 +99,7 @@ StructMenuItem dirUtilities[] =
 StructMenuItem dirMultimedia[] = 
 {
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+   rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Display Fractal"                  , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Draw!"                            , (uint8_t*)draw01_prg                 , sizeof(draw01_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
@@ -107,15 +110,15 @@ StructMenuItem dirSID_Files[] =
 {
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
    rtFileSID  , IOH_None         , (char*)"Medley                Various"    , (uint8_t*)Medley_sid                 , sizeof(Medley_sid) ,
-   rtFileSID  , IOH_None         , (char*)"Switch 625            Def Leppard", (uint8_t*)Switch_625_sid             , sizeof(Switch_625_sid) ,
-   rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
    rtFileSID  , IOH_None         , (char*)"Popcorn               G. Kingsley", (uint8_t*)Popcorn_sid                , sizeof(Popcorn_sid) ,
-   rtFileSID  , IOH_None         , (char*)"Aces High             Iron Maiden", (uint8_t*)Aces_High_sid              , sizeof(Aces_High_sid) ,
    rtFileSID  , IOH_None         , (char*)"Comfortably Numb      Pink Floyd" , (uint8_t*)Comfortably_Numb_sid       , sizeof(Comfortably_Numb_sid) ,
    rtFileSID  , IOH_None         , (char*)"Echoes                Pink Floyd" , (uint8_t*)Echoes_sid                 , sizeof(Echoes_sid) ,
+   rtFileSID  , IOH_None         , (char*)"Wish You Were Here    Pink Floyd" , (uint8_t*)Wish_You_Were_Here_sid     , sizeof(Wish_You_Were_Here_sid) ,
    rtFileSID  , IOH_None         , (char*)"Another Brick In The Wall"        , (uint8_t*)Pink_Floyd_sid             , sizeof(Pink_Floyd_sid) ,
-   rtFileSID  , IOH_None         , (char*)"Wish You Were Here"               , (uint8_t*)Wish_You_Were_Here_sid     , sizeof(Wish_You_Were_Here_sid) ,
+   rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
    rtFileSID  , IOH_None         , (char*)"Tom Sawyer            Rush"       , (uint8_t*)Tom_Sawyer_sid             , sizeof(Tom_Sawyer_sid) ,
+   rtFileSID  , IOH_None         , (char*)"Aces High             Iron Maiden", (uint8_t*)Aces_High_sid              , sizeof(Aces_High_sid) ,
+   rtFileSID  , IOH_None         , (char*)"Switch 625            Def Leppard", (uint8_t*)Switch_625_sid             , sizeof(Switch_625_sid) ,
 };
 
 //define this last:
@@ -126,7 +129,7 @@ StructMenuItem TeensyROMMenu[] =
 
    rtDirectory, IOH_None         , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
    rtDirectory, IOH_None         , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
-   rtDirectory, IOH_None         , (char*)"/SID Files"                       , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
+   rtDirectory, IOH_None         , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
    rtDirectory, IOH_None         , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
    rtDirectory, IOH_None         , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
    rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,

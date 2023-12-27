@@ -51,8 +51,8 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDInitLo       = 23 , // SID Play Info: Init Address Lo
    rRegSIDPlayHi       = 24 , // SID Play Info: Play Address Hi
    rRegSIDPlayLo       = 25 , // SID Play Info: Play Address Lo
-   rwRegSIDSpeedHi     = 26 , // SID Play Info: CIA interrupt timer speed Hi
-   rwRegSIDSpeedLo     = 27 , // SID Play Info: CIA interrupt timer speed Lo
+   rRegSIDDefSpeedHi   = 26 , // SID Play Info: CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 27 , // SID Play Info: CIA interrupt timer speed Lo
    wRegVid_TOD_Clks    = 28 , // C64/128 Video Standard and TOD clock frequencies
    wRegIRQ_ACK         = 29 , // IRQ Ack from C64 app
    rwRegIRQ_CMD        = 30 , // IRQ Command from TeensyROM
@@ -113,12 +113,14 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstSerialStringBuf = 2,  // build SerialStringBuf prior to selecting
    rsstVersionNum      = 3,  // version string for main banner 
    rsstShortDirPath    = 4,  // printable current path
+   rsstSIDInfo         = 5,  // Info on last SID loaded
+   rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
 };
 
 enum RegPowerUpDefaultMasks
 {
-   rpudMusicMask     = 0x01, // rwRegPwrUpDefaults bit 0=music on
-   rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1=synch net time
+   rpudSIDPauseMask  = 0x01, // rwRegPwrUpDefaults bit  1=SID music paused
+   rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit  1=synch net time
    rpudJoySpeedMask  = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 

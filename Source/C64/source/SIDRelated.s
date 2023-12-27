@@ -19,290 +19,6 @@
 
 ; ******************************* SID Related ******************************* 
 
-MIDI2SID:
-   lda #0  ;disable SID playback, but leave IRQ on
-   sta smcSIDPlayEnable+1
-   jsr PrintBanner 
-   lda #<MsgM2SPolyMenu
-   ldy #>MsgM2SPolyMenu
-   jsr PrintString 
-   ;clear SID regs
-   lda #0
-   tax
--  sta SIDLoc, x
-   inx
-   cpx #(EndSIDRegs-StartSIDRegs)
-   bne -
-
-   ;  set default local settings:
-   lda #0x0f ; full volume
-   sta SIDLoc+rRegSIDVolFltSel-StartSIDRegs
-   lda #0x02 ; 12.5% duty cycle (12 bit resolution, lo reg left at 0)
-   sta SIDDutyHi
-   sta SIDLoc+rRegSIDDutyHi1-StartSIDRegs
-   sta SIDLoc+rRegSIDDutyHi2-StartSIDRegs
-   sta SIDLoc+rRegSIDDutyHi3-StartSIDRegs
-   lda #0x40 ; pulse wave
-   sta SIDVoicCont
-   sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
-   sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs
-   sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs
-   lda #0x23 ; Att=16mS, Dec=72mS
-   sta SIDAttDec
-   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   lda #0x34 ; Sus=20%, Rel=114mS
-   sta SIDSusRel
-   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   
-M2SDispUpdate:  ;upadte all M2S status display values
-   lda #NameColor
-   jsr SendChar
-   ldx # 5 ;row  Triangle
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   lda SIDVoicCont
-   and #0x10  
-   jsr PrintOnOff
-   
-   ldx # 6 ;row  Sawtooth
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   lda SIDVoicCont
-   and #0x20  
-   jsr PrintOnOff
-   
-   ldx # 7 ;row  Pulse
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   lda SIDVoicCont
-   and #0x40  
-   jsr PrintOnOff
-   
-   ldx #8 ;row  Duty Cycle
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   ldx #<TblM2SDutyPct
-   ldy #>TblM2SDutyPct
-   lda SIDDutyHi  ;duty cycle most sig nib = bits 3:0
-   and #$0f
-   jsr Print4CharTable
-   lda #'%'
-   jsr SendChar
-   
-   ldx # 9 ;row  Noise
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   lda SIDVoicCont
-   and #0x80  
-   jsr PrintOnOff
- 
-   ldx #11 ;row  attack
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   ldx #<TblM2SAttack
-   ldy #>TblM2SAttack
-   lda SIDAttDec  ;attack = bits 7:4
-   jsr Print4CharTableHiNib
-   lda #'S'
-   jsr SendChar
-
-   ldx #12 ;row  decay
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   ldx #<TblM2SDecayRelease
-   ldy #>TblM2SDecayRelease
-   lda SIDAttDec  ;decay = bits 3:0
-   and #$0f
-   jsr Print4CharTable
-   lda #'S'
-   jsr SendChar
-
-   ldx #13 ;row  sustain
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   ldx #<TblM2SSustPct
-   ldy #>TblM2SSustPct
-   lda SIDSusRel   ;sustain = bits 7:4
-   jsr Print4CharTableHiNib
-   lda #'%'
-   jsr SendChar
-
-   ldx #14 ;row  release
-   ldy #M2SDataColumn ;col
-   clc
-   jsr SetCursor
-   ldx #<TblM2SDecayRelease
-   ldy #>TblM2SDecayRelease
-   lda SIDSusRel  ;release = bits 3:0
-   and #$0f
-   jsr Print4CharTable
-   lda #'S'
-   jsr SendChar
-
-;continue into the main loop...
-M2SUpdateKeyInLoop:
-;refresh dynamic SID regs from MIDI:   todo: move this to an interrupt?
-   lda SIDVoicCont  ;waveform in upper nibble
-   ora rRegSIDVoicCont1+IO1Port ;latch bit (0) from MIDI
-   sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
-   lda rRegSIDFreqHi1+IO1Port 
-   sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
-   lda rRegSIDFreqLo1+IO1Port 
-   sta SIDLoc+rRegSIDFreqLo1-StartSIDRegs 
-
-   lda SIDVoicCont  ;waveform in upper nibble
-   ora rRegSIDVoicCont2+IO1Port ;latch bit (0) from MIDI
-   sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
-   lda rRegSIDFreqHi2+IO1Port 
-   sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
-   lda rRegSIDFreqLo2+IO1Port 
-   sta SIDLoc+rRegSIDFreqLo2-StartSIDRegs 
-
-   lda SIDVoicCont  ;waveform in upper nibble
-   ora rRegSIDVoicCont3+IO1Port ;latch bit (0) from MIDI
-   sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
-   lda rRegSIDFreqHi3+IO1Port 
-   sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
-   lda rRegSIDFreqLo3+IO1Port 
-   sta SIDLoc+rRegSIDFreqLo3-StartSIDRegs 
-
-   jsr DisplayTime
-   ldx #20 ;row   ;print note vals
-   ldy #3  ;col
-   clc
-   jsr SetCursor
-   lda #NameColor
-   jsr SendChar
-   lda #<rRegSIDStrStart+IO1Port
-   ldy #>rRegSIDStrStart+IO1Port
-   jsr PrintString 
-   
-   jsr CheckForIRQGetIn
-   beq M2SUpdateKeyInLoop
-   
-   cmp #'t'  ;Triangle
-   bne +
-   lda #0x10
-   eor SIDVoicCont
-   and #0x70  ;never combine with noise
-   sta SIDVoicCont
-   jmp M2SDispUpdate
-
-+  cmp #'w'  ;saWtooth
-   bne +
-   lda #0x20 
-   eor SIDVoicCont
-   and #0x70  ;never combine with noise
-   sta SIDVoicCont
-   jmp M2SDispUpdate
-
-+  cmp #'p'  ;Pulse
-   bne +
-   lda #0x40 
-   eor SIDVoicCont
-   and #0x70  ;never combine with noise
-   sta SIDVoicCont
-   jmp M2SDispUpdate
-
-+  cmp #'u'  ;dUty cycle
-   bne +
-   ldx SIDDutyHi  ;duty cycle most sig nib = bits 3:0, upper unused
-   inx
-   stx SIDDutyHi ;apply change at time of update
-   stx SIDLoc+rRegSIDDutyHi1-StartSIDRegs
-   stx SIDLoc+rRegSIDDutyHi2-StartSIDRegs
-   stx SIDLoc+rRegSIDDutyHi3-StartSIDRegs
-   jmp M2SDispUpdate
-
-+  cmp #'n'  ;Noise
-   bne +
-   lda #0x80 
-   ;eor SIDVoicCont  ;doesnt play nice with others
-   sta SIDVoicCont
-   jmp M2SDispUpdate
-
-+  cmp #'a'  ;Attack
-   bne +
-   lda SIDAttDec  ;attack = bits 7:4
-   clc
-   adc #$10
-   sta SIDAttDec ;apply change at time of update
-   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   jmp M2SDispUpdate
-
-+  cmp #'d'  ;Decay
-   bne +
-   lda SIDAttDec  ;decay = bits 3:0
-   tax
-   and #$0f
-   cmp #$0f
-   bne dok
-   txa
-   and #$f0 ;Wrap Around without overflow
-   jmp dcnt
-dok   
-   inx
-   txa
-dcnt
-   sta SIDAttDec ;apply change at time of update
-   sta SIDLoc+rRegSIDAttDec1-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec2-StartSIDRegs
-   sta SIDLoc+rRegSIDAttDec3-StartSIDRegs
-   jmp M2SDispUpdate
-
-+  cmp #'s'  ;Sustain
-   bne +
-   lda SIDSusRel  ;sustain = bits 7:4
-   clc
-   adc #$10
-   sta SIDSusRel ;apply change at time of update
-   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   jmp M2SDispUpdate
-
-+  cmp #'r'  ;Release
-   bne +
-   lda SIDSusRel  ;release = bits 3:0
-   tax
-   and #$0f
-   cmp #$0f
-   bne rok
-   txa
-   and #$f0 ;Wrap Around without overflow
-   jmp rcnt
-rok   
-   inx
-   txa
-rcnt
-   sta SIDSusRel ;apply change at time of update
-   sta SIDLoc+rRegSIDSusRel1-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
-   sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
-   jmp M2SDispUpdate
-
-+  cmp #'x'  ;Exit M2S
-   beq ++
-   cmp #ChrF1
-   bne +  
-++ jsr SIDVoicesOff
-   rts 
-
-+  jmp M2SUpdateKeyInLoop
 
 SIDLoadInit:
    ;SID is Prepared to transfer from TR RAM before calling
@@ -310,6 +26,8 @@ SIDLoadInit:
    lda rRegStrAvailable+IO1Port 
    bne +   ;Make sure ready to x-fer
    jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
+   lda #$ff      ;rpudSIDPauseMask  ;disable SID playback on error, all bits don't allow un-pause until reload
+   sta smcSIDPauseStop+1
    rts
    
    ;load SID to C64 RAM, same as PRGLoadStart...
@@ -357,10 +75,10 @@ smcSIDInitAddr
    rts
    
 ToggleSIDMusic:
-   lda smcSIDPlayEnable+1
-   eor #rpudMusicMask   ;toggle playing status
-   sta smcSIDPlayEnable+1
-   beq SIDVoicesOff ; if now off, turn voices off & return
+   lda smcSIDPauseStop+1
+   eor #rpudSIDPauseMask   ;toggle playing status
+   sta smcSIDPauseStop+1
+   bne SIDVoicesOff ; if now off, turn voices off & return
    rts
    
 ; interpreted from cryptoboy code at https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
@@ -375,11 +93,7 @@ IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
    lda $dd0d        ;    SAME FOR CIA2
    asl $d019        ; TOSS ANY PENDING VIC INTERRUPTS (WRITING CLEARS 'EM, VIA RMW MAGIC)
 
-   ;Set the timer interval
-   lda rwRegSIDSpeedLo+IO1Port
-   sta $dc04        ;    CIA#1 TIMER A LO
-   lda rwRegSIDSpeedHi+IO1Port
-   sta $dc05        ;    CIA#1 TIMER A HI
+   jsr SetSIDSpeedToDefault
 
    ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
    lda #<IRQwedge 
@@ -437,23 +151,24 @@ IRQwedge:
    sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
    jmp IRQDefault
    
-smcSIDPlayEnable
-+  lda #0  ;default to disabled
+smcSIDPauseStop
++  lda #rpudSIDPauseMask  ;default to disabled
+   bne ++                 ;any bits set skips playback
+
+smcBorderEffect
+   lda #0  ;default to disabled
    beq +
-   !ifdef SidDisp {
    inc BorderColorReg ;tweak display border
-   }
-   lda #$35; Disable Kernal and BASIC ROMs
++  lda #$35; Disable Kernal and BASIC ROMs
    ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
    sta $01
 smcSIDPlayAddr
    jsr $fffe          ;Play the music, self modifying
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
-   !ifdef SidDisp {
-   dec BorderColorReg ;tweak display border
-   }
-+  jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+   lda #BorderColor
+   sta BorderColorReg
+++ jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
 
 ;SIDMusicOn:  ;Start SID player Raster based interrupt
 ;   lda #$7f    ;disable all ints
@@ -504,3 +219,122 @@ smcSIDPlayAddr
 ;   lda #74    ;upper part of screen
 ;   sta $d012   ;raster scan line compare reg
 ;   jmp IRQDefault
+
+ShowSIDInfoPage:
+   jsr PrintBanner
+   lda #<MsgSIDInfo1
+   ldy #>MsgSIDInfo1
+   jsr PrintString 
+
+   lda #rsstSIDInfo
+   jsr PrintSerialString
+
+   lda #<MsgSIDInfo2
+   ldy #>MsgSIDInfo2
+   jsr PrintString 
+
+   lda #rsstMachineInfo
+   jsr PrintSerialString
+
+   lda #<MsgSIDInfo3
+   ldy #>MsgSIDInfo3
+   jsr PrintString 
+
+   lda #<MsgSettingsMenu2SpaceRet
+   ldy #>MsgSettingsMenu2SpaceRet
+   jsr PrintString 
+
+PrintSIDVars:
+   lda #NameColor
+   jsr SendChar
+
+   ;print the timer interval in hex  
+   ldx #16 ;row 
+   ldy #30 ;col
+   clc
+   jsr SetCursor
+   lda LclRegSIDSpeedHi
+   ;eor #$ff   ;make bigger numbers = faster
+   jsr PrintHexByte
+   lda LclRegSIDSpeedLo
+   ;eor #$ff   ;make bigger numbers = faster
+   jsr PrintHexByte
+   
+WaitSIDInfoKey:
+   jsr DisplayTime   
+   jsr CheckForIRQGetIn    
+   beq WaitSIDInfoKey
+
+   cmp #ChrF4  ;toggle music
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitSIDInfoKey  
+
++  cmp #'b'  ;Toggle Border effect
+   bne +
+   lda smcBorderEffect+1
+   eor #1
+   sta smcBorderEffect+1
+   jmp WaitSIDInfoKey   
+
++  cmp #'d'  ;Set SID speed to default
+   bne +
+   jsr SetSIDSpeedToDefault
+   jmp PrintSIDVars  
+
++  cmp #ChrCRSRLeft  ;increase SID speed (small step)
+   bne +
+   ldx LclRegSIDSpeedLo
+   dex   
+   stx LclRegSIDSpeedLo
+   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   cpx #$ff
+   bne PrintSIDVars
+   jmp decSIDSpeedHi   ;underflow
+
++  cmp #ChrCRSRRight  ;decrease SID speed (small step)
+   bne +
+   ldx LclRegSIDSpeedLo
+   inx
+   stx LclRegSIDSpeedLo
+   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   bne PrintSIDVars
+   jmp incSIDSpeedHi   ;overflow
+   
++  cmp #ChrCRSRUp  ;increase SID speed (big step)
+   bne +
+decSIDSpeedHi
+   ldx LclRegSIDSpeedHi
+   dex   
+   jmp updateSpeedHi  
+
++  cmp #ChrCRSRDn  ;decrease SID speed (big step)
+   bne +
+incSIDSpeedHi
+   ldx LclRegSIDSpeedHi
+   inx
+updateSpeedHi
+   stx LclRegSIDSpeedHi
+   stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
+   jmp PrintSIDVars  
+
++  cmp #ChrF1  ;Teensy mem Menu
+   beq ++
+   cmp #ChrSpace  ;back to Main Menu
+   bne WaitSIDInfoKey   
+++ rts
+
+SetSIDSpeedToDefault:
+   ;Set the timer interval to default
+   lda rRegSIDDefSpeedLo+IO1Port
+   sta LclRegSIDSpeedLo     ; set local reg to default
+   sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
+   lda rRegSIDDefSpeedHi+IO1Port
+   sta LclRegSIDSpeedHi     ; set local reg to default
+   sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
+   rts
+   
+LclRegSIDSpeedHi:
+   !byte 0x40
+LclRegSIDSpeedLo:
+   !byte 0x40

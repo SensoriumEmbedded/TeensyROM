@@ -151,6 +151,8 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    
 };
 
+#define StrSIDInfoSize    (5*40+5) // max 5 *full* lines + 1 blank line
+
 #define CRT_MAIN_HDR_LEN  0x40
 #define CRT_CHIP_HDR_LEN  0x10
 #define MAX_CRT_CHIPS     128

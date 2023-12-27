@@ -50,12 +50,13 @@
    rRegSIDInitLo       = 23 ;// SID Play Info: Init Address Lo
    rRegSIDPlayHi       = 24 ;// SID Play Info: Play Address Hi
    rRegSIDPlayLo       = 25 ;// SID Play Info: Play Address Lo
-   rwRegSIDSpeedHi     = 26 ;// SID Play Info: CIA interrupt timer speed Hi
-   rwRegSIDSpeedLo     = 27 ;// SID Play Info: CIA interrupt timer speed Lo
+   rRegSIDDefSpeedHi   = 26 ;// SID Play Info: CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 27 ;// SID Play Info: CIA interrupt timer speed Lo
    wRegVid_TOD_Clks    = 28 ;// C64/128 Video Standard and TOD clock frequencies
    wRegIRQ_ACK         = 29 ;// IRQ Ack from C64 app
    rwRegIRQ_CMD        = 30 ;// IRQ Command from TeensyROM
 
+   ; These are used for the MIDI2SID app:
    StartSIDRegs        = 31 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
@@ -104,16 +105,18 @@
    ricmdSIDPause       = 3 ; SID pause/play
    
 ;enum RegSerialStringSelect // rwRegSerialString
-   rsstItemName        = 0
-   rsstNextIOHndlrName = 1
-   rsstSerialStringBuf = 2
-   rsstVersionNum      = 3
-   rsstShortDirPath    = 4
+   rsstItemName        = 0  ; Name of selected item
+   rsstNextIOHndlrName = 1  ; IOHandler Name selected in rwRegNextIOHndlr
+   rsstSerialStringBuf = 2  ; build SerialStringBuf prior to selecting
+   rsstVersionNum      = 3  ; version string for main banner 
+   rsstShortDirPath    = 4  ; printable current path
+   rsstSIDInfo         = 5  ; Info on last SID loaded
+   rsstMachineInfo     = 6  ; Info on current machine vid/TOD clk (set when SID loaded)
    
 ;enum RegPowerUpDefaultMasks
-   rpudMusicMask     = 0x01 ; rwRegPwrUpDefaults bit 0=music on
-   rpudNetTimeMask   = 0x02 ; rwRegPwrUpDefaults bit 1=synch net time
-   rpudJoySpeedMask  = 0xf0 ; rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+   rpudSIDPauseMask    = 0x01 ; rwRegPwrUpDefaults bit  1=SID music paused
+   rpudNetTimeMask     = 0x02 ; rwRegPwrUpDefaults bit  1=synch net time
+   rpudJoySpeedMask    = 0xf0 ; rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 
 ;enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsChangeMenu         = 0x00  ;
