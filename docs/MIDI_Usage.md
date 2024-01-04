@@ -6,6 +6,7 @@
   * Cable from a USB MIDI Keyboard/Controller device to the USB-A Host port on the TeensyROM board.
 ### Sending MIDI data to/from your C64 from a MIDI/USB keyboard
   * Select "MIDI:*" Special IO HW from the settings menu prior to running a MIDI program.
+    * Note: if using the built-in CynthCart, Station64, or MIDI2SID app, the Special IO is already associated and you can skip this step.
     * The following MIDI cartridges can be emulated/selected:
       * Sequential
       * Datel/Siel
@@ -13,10 +14,10 @@
       * Namesoft (w/o 6480 timer)
     * All use DExx address space and IRQ for interrupts
 
-  * Select CynthCart, Station64, the MIDI2SID app, etc. to receive/play the MIDI data from your controller
+  * Select/load a MIDI capable application to receive/play the MIDI data from your controller
   * Play around and have fun!
   * MIDI out (C64 to MIDI Device) is also implemented so that keyboards, etc with their own sound capability can be "played" by the C64
-  * Some sequencer apps work, others require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.  May add later if needed/requested
+  * Some sequencer apps work, others require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.
     
 <BR>
 
