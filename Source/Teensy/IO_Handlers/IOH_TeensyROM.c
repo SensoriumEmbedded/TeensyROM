@@ -255,10 +255,10 @@ void getNtpTime()
          Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
 
          //since we don't need the date, leaving out TimeLib.h all together
-         IO1[rRegLastSecBCD] =DecToBCD(secsSince1900 % 60);
-         secsSince1900 /=60; //to  minutes
-         IO1[rRegLastMinBCD] =DecToBCD(secsSince1900 % 60);
-         secsSince1900 = (secsSince1900/60 + (int8_t)IO1[rwRegTimezone]) % 24; //to hours, offset timezone
+         IO1[rRegLastSecBCD] = DecToBCD(secsSince1900 % 60);
+         secsSince1900 = secsSince1900/60 + 30*(int8_t)IO1[rwRegTimezone]; //to  minutes, offset timezone (30 min increments)
+         IO1[rRegLastMinBCD] = DecToBCD(secsSince1900 % 60);
+         secsSince1900 = (secsSince1900/60) % 24; //to hours
          if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
          else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
    

@@ -65,7 +65,18 @@ ShowSettings:
 +  txa
    jsr SendChar
    tya
+   ror  ;divide by two, carry bit holds half hour
+   php  ;save carry bit on stack
    jsr PrintIntByte
+   
+   plp
+   bcc++
+   lda #'.'
+   jsr SendChar   
+   lda #'5'
+   jsr SendChar   
+++ lda #' '
+   jsr SendChar
    lda #' '
    jsr SendChar
 
@@ -117,21 +128,21 @@ WaitForSettingsKey:
    bne +
    ldx rwRegTimezone+IO1Port
    inx
-   cpx #15
-   bne ++
-   ldx #-12
-++ stx rwRegTimezone+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
+   ;tz rnge is -12 to +14 from UTC (x2)
+   cpx #29
+   bne UpdTimeZone
+   ldx #-24
+   jmp UpdTimeZone
 
 +  cmp #'A'  ;Power-up Time Zone Decrement
    bne +
    ldx rwRegTimezone+IO1Port
    dex
-   cpx #-13
-   bne ++
-   ldx #14
-++ stx rwRegTimezone+IO1Port
+   cpx #-25
+   bne UpdTimeZone
+   ldx #28
+UpdTimeZone
+   stx rwRegTimezone+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
