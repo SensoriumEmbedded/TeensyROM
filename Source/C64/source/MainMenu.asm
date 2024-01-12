@@ -31,7 +31,7 @@
 
 ;******************************* Main Code Start ************************************   
 
-* = MainCodeRAM
+* = MainCodeRAMStart
 Start:
 
 ;screen setup:     
@@ -97,6 +97,12 @@ NoHW
 +  ldx #%00000010  ;60/PAL
 ++ stx wRegVid_TOD_Clks+IO1Port   
 
+   ;store this code page range for SID conflict detection
+   lda #>MainCodeRAMStart   ;read hi byte of Start address
+   sta rwRegCodeStartPage+IO1Port
+   lda #>MainCodeRAMEnd   ;read hi byte of End address
+   sta rwRegCodeLastPage+IO1Port
+   
    ;check for remote launch on reset
    lda rwRegIRQ_CMD+IO1Port
    cmp #ricmdLaunch
@@ -794,5 +800,5 @@ TblRowToMemLoc:
    !src "source\StringFunctions.s"
    !src "source\StringsMsgs.s"
 
-EndOfAllMenuCode = *
+MainCodeRAMEnd = *
    !byte 0

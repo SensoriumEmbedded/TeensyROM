@@ -55,9 +55,11 @@
    wRegVid_TOD_Clks    = 28 ;// C64/128 Video Standard and TOD clock frequencies
    wRegIRQ_ACK         = 29 ;// IRQ Ack from C64 app
    rwRegIRQ_CMD        = 30 ;// IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 31 ;// TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 32 ;// TR Code last page used in C64 RAM
 
    ; These are used for the MIDI2SID app:
-   StartSIDRegs        = 31 ;// start of SID Regs, matching SID Reg order ($D400)
+   StartSIDRegs        = 33 ;// start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0 
    rRegSIDFreqHi1      = StartSIDRegs +  1
    rRegSIDDutyLo1      = StartSIDRegs +  2

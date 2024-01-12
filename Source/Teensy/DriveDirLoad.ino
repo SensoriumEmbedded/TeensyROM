@@ -641,12 +641,10 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    
    Printf_dbg("\nInit: %04x", toU16(XferImage+0x0A));
    Printf_dbg("\nPlay: %04x", PlayAddress);
+   Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
 
-   //check for conflict with TR code
-   //C64 mem conflict detection:
-   //   MainCodeRAM       = $6000
-   //assume full 8k length ($2000)
-   if (LoadAddress < 0x8000 && LoadAddress+XferSize >= 0x6000)
+   //check for RAM conflict with TR code:   
+   if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
    {
       SIDLoadError("Mem conflict w/ TR app");
       return false;

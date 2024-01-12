@@ -80,8 +80,8 @@ MainCopyToRAM
    sty PtrAddrLo 
    ldx #>EndMainCode
    
-   lda #>MainCodeRAM
-   ldy #<MainCodeRAM   
+   lda #>MainCodeRAMStart
+   ldy #<MainCodeRAMStart   
    sta Ptr2AddrHi
    sty Ptr2AddrLo 
 
@@ -97,7 +97,7 @@ MainCopyToRAM
    cpx PtrAddrHi
    bne -
 
-   jmp MainCodeRAM
+   jmp MainCodeRAMStart
 
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
