@@ -525,7 +525,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(ToPETSCII(Data));            
             break;
          default: //used for all other IO1 reads
-            DataPortWriteWaitLog(IO1[Address]); 
+            DataPortWriteWaitLog(IO1[Address]); //will read garbage if above IO1Size
             break;
       }
    }

@@ -76,7 +76,7 @@ void setup()
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) SetEEPDefaults();
 
-   IO1 = (uint8_t*)calloc(IO1_Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
+   IO1 = (uint8_t*)calloc(IO1Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rwRegStatus]        = rsReady;
    IO1[rWRegCurrMenuWAIT] = rmtTeensy;
    IO1[rRegPresence1]     = 0x55;   

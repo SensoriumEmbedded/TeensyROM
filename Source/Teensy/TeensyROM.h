@@ -68,7 +68,6 @@ uint32_t* BigBuf = NULL;
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730
 #define PALBusFreq          985250
-#define IO1_Size            256
                             
 #define eepMagicNum         0xfeed6405 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
