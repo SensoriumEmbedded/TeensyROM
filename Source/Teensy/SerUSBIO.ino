@@ -25,6 +25,8 @@
 #define FailToken         0x9B7F
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB
+#define CopyFileToken     0x64FF
+#define DeleteFileToken   0x64CF 
 #define AckToken          0x64CC
 #define GetDirectoryToken 0x64DD
 #define ResetC64Token     0x64EE
@@ -70,6 +72,12 @@ FLASHMEM void ServiceSerial()
             case 0xBB:  // v2 file x-fer pc->TR.  For use with v2 UI.
                PostFileCommand();
                break;
+            case 0xFF:
+                CopyFileCommand();
+                break;
+            case 0xCF:
+                DeleteFileCommand();
+                break;
             case 0xDD:  // v2 directory listing from TR
                GetDirectoryCommand();
                break;
