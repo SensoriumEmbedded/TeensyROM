@@ -606,8 +606,11 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
 
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
-      SIDLoadError("PSID not found");
-      return false;
+      if (memcmp(XferImage, "RSID", 4) != 0) 
+      {
+         SIDLoadError("PSID/RSID not found");
+         return false;
+      }
    }
    
    uint16_t sidVersion = toU16(XferImage+0x04);
@@ -636,11 +639,11 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
       | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
       
-   uint16_t PlayAddress = toU16(XferImage+0x0C);
+   //uint16_t PlayAddress = toU16(XferImage+0x0C);
    SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
    
    Printf_dbg("\nInit: %04x", toU16(XferImage+0x0A));
-   Printf_dbg("\nPlay: %04x", PlayAddress);
+   Printf_dbg("\nPlay: %04x", toU16(XferImage+0x0C));
    Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
 
    //check for RAM conflict with TR code:   
@@ -651,11 +654,11 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    }
 
    //check play address
-   if (PlayAddress == 0)
-   {
-      SIDLoadError("Play Address is Zero");
-      return false;
-   }
+   //if (PlayAddress == 0)
+   //{
+   //   SIDLoadError("Play Address is Zero");
+   //   return false;
+   //}
   
    //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
    //                            1 specifies CIA 1 timer interrupt (default 60Hz)
@@ -673,7 +676,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    const uint8_t CIATimer[4][2] =
    {   //rRegSIDDefSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
        //verified with o-scope on IRQ line using a Kawari machine 12/24/23
-      0x4c, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
+      0x4C, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
       0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
       0x40, 0x58,   // NTSC SID on  PAL machine 59.81Hz IRQ rate
       0x42, 0xC6,   // NTSC SID on NTSC machine 59.81Hz IRQ rate

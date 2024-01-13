@@ -71,7 +71,18 @@ smcSIDInitAddr
    lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
    cli
-   jsr IRQEnable  ;start the IRQ wedge
+   
+   lda rRegSIDPlayLo+IO1Port
+   bne +
+   lda rRegSIDPlayHi+IO1Port
+   bne +
+   ;play address is 0000: 
+   ;    Init will set up interrupt, don't enable it here
+   ;int won't catch IRQs, next SID will force reset
+   ;todo: Disable pause capability? Wedge our interrupt?
+   rts
+   
++  jsr IRQEnable  ;start the IRQ wedge
    rts
    
 ToggleSIDMusic:
