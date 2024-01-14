@@ -639,12 +639,20 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
       | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
       
-   //uint16_t PlayAddress = toU16(XferImage+0x0C);
-   SendMsgPrintfln("SID Loc %04x:%04x", LoadAddress, LoadAddress+XferSize);
+   uint16_t PlayAddress = toU16(XferImage+0x0C);
+   uint16_t InitAddress = toU16(XferImage+0x0A);
+   SendMsgPrintfln("SID Loc %04x:%04x, Play=%04x", LoadAddress, LoadAddress+XferSize, PlayAddress);
    
-   Printf_dbg("\nInit: %04x", toU16(XferImage+0x0A));
-   Printf_dbg("\nPlay: %04x", toU16(XferImage+0x0C));
+   Printf_dbg("\nInit: %04x", InitAddress);
+   Printf_dbg("\nPlay: %04x", PlayAddress);
    Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
+
+   //check for conflict with IO1 space:   
+   if (LoadAddress < 0xdf00 && LoadAddress+XferSize >= 0xde00)
+   {
+      SIDLoadError("IO1 mem conflict");
+      return false;
+   }
 
    //check for RAM conflict with TR code:   
    if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
@@ -653,13 +661,6 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
       return false;
    }
 
-   //check play address
-   //if (PlayAddress == 0)
-   //{
-   //   SIDLoadError("Play Address is Zero");
-   //   return false;
-   //}
-  
    //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
    //                            1 specifies CIA 1 timer interrupt (default 60Hz)
    Printf_dbg("\nSpeed reg: %08x", toU32(XferImage+0x12));
@@ -670,7 +671,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
       "Unknown",  //    00 = Unknown, use PAL
       "PAL",      //    01 = PAL,
       "NTSC",     //    10 = NTSC,
-      "PAL+NTSC", //    11 = PAL and NTSC, use NTSC
+      "Either",   //    11 = PAL and NTSC, use NTSC
    };
    
    const uint8_t CIATimer[4][2] =
@@ -688,8 +689,11 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
    SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
    
-   strcat(StrSIDInfo, " Clk: "); 
-   strcat(StrSIDInfo, VStandard[SidFlags]); 
+   char TechBuf[40];
+   strcat(StrSIDInfo, "Tech: "); //1+6
+   sprintf(TechBuf, "%04x:%04x i=%04x p=%04x %s", LoadAddress, LoadAddress+XferSize, InitAddress, PlayAddress, VStandard[SidFlags]);
+   strcat(StrSIDInfo, TechBuf); //24 + 7 max ("Unknown")
+  
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
    char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
