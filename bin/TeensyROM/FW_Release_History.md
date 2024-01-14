@@ -1,6 +1,29 @@
 
 # FW Release Version history:
 
+### 0.5.10 sub-release 1/13/23
+* SID Player updates:
+  * SID conflict check range reduced to $6000-70ff, set on compile
+    * ~1000 additional SIDs now playable
+  * RSID and Play address 0 support 
+    * ~1300 additional SIDs now playable
+  * Check for conflicts with IO1 space
+  * Show play address on load screen
+  * Show addr range, init addr, play addr, and clock type on SID info page    
+  * Added YYZ (Rush) to SID Covers local menu
+* Remote Launch updates from MetalHexx
+  * CopyFileCommand and DeleteFileCommand via USB Serial
+* Swiftlink/Browser updates:
+  * Expanded/detailed to browser local help menu (? command)
+* System Timezone update
+  * Timezone UTC offset resolution now 30 minutes (VK5LN Michael recommendation)
+  * hour offset range is -12.0 to +14.0  step 0.5
+  * TZ will need adjusting from previous value after this update
+* Housekeeping:
+  * New IO1 regs: rwRegCodeStartPage, rwRegCodeLastPage (set on TR app start)
+  * IO1 reg re-organization and size reduction
+  * MIDI2SID recompile for reg change
+
 ### 0.5.9 sub-release 12/27/23
 * SID Player updates:
   * SID info page added
