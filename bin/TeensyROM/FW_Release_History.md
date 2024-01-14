@@ -7,6 +7,7 @@
     * ~1000 additional SIDs now playable
   * RSID and Play address 0 support 
     * ~1300 additional SIDs now playable
+  * About 90% of ~57k known SIDs now playable
   * Check for conflicts with IO1 space
   * Show play address on load screen
   * Show addr range, init addr, play addr, and clock type on SID info page    
