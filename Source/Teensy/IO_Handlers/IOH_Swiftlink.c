@@ -143,6 +143,7 @@ uint32_t LastTxMillis = millis();
 //               Uses Add...ToRxQueue for direct output
 
 void ParseHTMLTag();
+void ParseEntityReference();
 void SetEthEEPDefaults();
 void SendBrowserCommandsImmediate();
 void UnPausePage();

@@ -263,9 +263,42 @@ void UnPausePage()
    PagePaused = false;   
 }
 
+void ParseEntityReference()
+{ // '&' has been received, retrieve and interpret Entity Reference
+  // https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references
+   
+   //pull from queue until ';', queue empty, or max size
+   const uint8_t MaxEntRefSize = 20;
+   char EntRef[MaxEntRefSize];
+   uint16_t BufCnt = 0;
+   uint8_t NextChar;
+  
+   while (RxQueueUsed > 0 && BufCnt < MaxEntRefSize-1)
+   {
+      NextChar = PullFromRxQueue();
+      if(NextChar == ';') break;         
+      EntRef[BufCnt++] = NextChar;
+   }
+   EntRef[BufCnt] = 0;  //terminate it
+   if(NextChar != ';') 
+   {
+      //end not found, print it verbatim and return
+      SendASCIIStrImmediate(EntRef);
+      return;
+   }      
+   
+   //  Valid EntRef found
+   if(strcmp(EntRef, "gt")==0) SendPETSCIICharImmediate('>'); //unbold
+   else if(strcmp(EntRef, "nbsp")==0) SendPETSCIICharImmediate(' '); //unbold
+   
+   //there are MANY more...
+   else Printf_dbg("Unk ER: &%s;\n", EntRef);  
+   
+}
+
 void ParseHTMLTag()
-{ //retrieve and interpret HTML Tag
-  //https://www.w3schools.com/tags/
+{ // '<' has been received, retrieve and interpret HTML Tag
+  // https://www.w3schools.com/tags/
   
    //pull tag from queue until '>', or queue empty
    char TagBuf[MaxTagSize];
@@ -286,7 +319,7 @@ void ParseHTMLTag()
    TagBuf[BufCnt] = 0;  //terminate it
    
    //check for known tags and do formatting, etc
-   if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0 || strcmp(TagBuf, "/ul")==0) 
+   if(strcmp(TagBuf, "br")==0 || strcmp(TagBuf, "p")==0 || strcmp(TagBuf, "/p")==0 || strcmp(TagBuf, "/ul")==0 || strcmp(TagBuf, "tr")==0) 
    {
       SendPETSCIICharImmediate(PETSCIIreturn);
    }
@@ -371,6 +404,7 @@ void ParseHTMLTag()
          UsedPageLinkBuffs++;
          
          if (UsedPageLinkBuffs > 9) SendPETSCIICharImmediate('0' + UsedPageLinkBuffs/10);
+         else SendPETSCIICharImmediate(' ');
          SendPETSCIICharImmediate('0' + (UsedPageLinkBuffs%10));
       }
       else SendPETSCIICharImmediate('*');

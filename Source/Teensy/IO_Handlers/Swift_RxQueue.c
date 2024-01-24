@@ -79,6 +79,11 @@ void CheckSendRxQueue()
             ParseHTMLTag();
             ToSend = 0;
          }
+         if(ToSend == '&') 
+         {
+            ParseEntityReference();
+            ToSend = 0;
+         }
          else 
          {
             if(ToSend == 13 || ToSend == 10) ToSend = 0; //ignore return char & New Line
