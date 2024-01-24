@@ -402,8 +402,8 @@ FLASHMEM void LaunchFile()
    char FileNamePath[MaxNamePathLength];
    if (ReceiveFileName(&SD_nUSB, FileNamePath))
    {
-      RemoteLaunch(SD_nUSB !=0 , FileNamePath);
       SendU16(AckToken);
+      RemoteLaunch(SD_nUSB !=0 , FileNamePath);
    }
 }
 
