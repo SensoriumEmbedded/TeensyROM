@@ -59,7 +59,7 @@
       * Additional CRT support info
         * Max file size is ~650MB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
-        * The [OneLoad Games Collection](https://www.youtube.com/watch?v=qNxJwLujaN8) is a great/free source for thousands of CRT files/games
+        * The [OneLoad Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games
     * ***.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
