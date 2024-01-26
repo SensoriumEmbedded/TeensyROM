@@ -17,39 +17,25 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//synch with win app:
-#define LaunchFileToken   0x6444
-#define PingToken         0x6455
-#define PauseSIDToken     0x6466
-#define DebugToken        0x6467
-#define FailToken         0x9B7F
-#define SendFileToken     0x64AA
-#define PostFileToken     0x64BB
-#define CopyFileToken     0x64FF
-#define DeleteFileToken   0x64CF 
-#define AckToken          0x64CC
-#define GetDirectoryToken 0x64DD
-#define ResetC64Token     0x64EE
-
 
 void   getFreeITCM();
 
 FLASHMEM void ServiceSerial()
-{
-   uint8_t inByte = Serial.read();
-   switch (inByte)
+{  //Serial.available() confirmed before calling
+   uint16_t inVal = Serial.read();
+   switch (inVal)
    {
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
-         inByte = Serial.read(); //READ NEXT BYTE
+         inVal = (inVal<<8) | Serial.read(); //READ NEXT BYTE
          //only commands available when busy:
-         if (inByte == 0xEE) //Reset C64
+         if (inVal == ResetC64Token) //Reset C64
          {
             Serial.println("Reset cmd received");
             BtnPressed = true;
             return;
          }
-         else if (inByte == 0x44) //Launch File
+         else if (inVal == LaunchFileToken) //Launch File
          {
             LaunchFile();
             return;
@@ -63,34 +49,34 @@ FLASHMEM void ServiceSerial()
          }
          //TeensyROM IO Handler is active...
          
-         switch (inByte)
+         switch (inVal)
          {
-            case 0x55:  //ping
+            case PingToken:  //ping
                Serial.printf("TeensyROM %s ready!\n", strVersionNumber);
                break;
-            case 0xAA: //file x-fer pc->TR
-            case 0xBB:  // v2 file x-fer pc->TR.  For use with v2 UI.
+            case SendFileToken: //file x-fer pc->TR
+            case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
                PostFileCommand();
                break;
-            case 0xFF:
+            case CopyFileToken:
                 CopyFileCommand();
                 break;
-            case 0xCF:
+            case DeleteFileToken:
                 DeleteFileCommand();
                 break;
-            case 0xDD:  // v2 directory listing from TR
+            case GetDirectoryToken:  // v2 directory listing from TR
                GetDirectoryCommand();
                break;
-            case 0x66: //Pause SID
+            case PauseSIDToken: //Pause SID
                if(RemotePauseSID()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
-            case 0x67: //'dg'Test/debug
+            case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                PrintDebugLog();
                break;
             default:
-               Serial.printf("Unk cmd: 0x64%02x\n", inByte); 
+               Serial.printf("Unk cmd: 0x%04x\n", inVal); 
                break;
          }
          break;

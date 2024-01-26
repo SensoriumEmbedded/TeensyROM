@@ -1,6 +1,5 @@
 
-#define AckToken                0x64CC
-#define FailToken               0x9B7F
+
 
 FLASHMEM bool GetPathParameter(char FileNamePath[])
 {

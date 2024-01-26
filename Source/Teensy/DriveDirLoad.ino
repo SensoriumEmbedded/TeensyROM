@@ -570,6 +570,7 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
 {
    strcat(StrSIDInfo, "Error: ");
    strcat(StrSIDInfo, ErrMsg);
+   SendU16(FailToken);
    SendMsgPrintfln(ErrMsg);
 }
 
@@ -691,7 +692,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    
    char TechBuf[40];
    strcat(StrSIDInfo, "Tech: "); //1+6
-   sprintf(TechBuf, "%04x:%04x i=%04x p=%04x %s", LoadAddress, LoadAddress+XferSize, InitAddress, PlayAddress, VStandard[SidFlags]);
+   sprintf(TechBuf, "%04x:%04x i=%04x p=%04x %s", LoadAddress, LoadAddress+(uint16_t)XferSize, InitAddress, PlayAddress, VStandard[SidFlags]);
    strcat(StrSIDInfo, TechBuf); //24 + 7 max ("Unknown")
   
 

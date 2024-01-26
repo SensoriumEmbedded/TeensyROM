@@ -98,6 +98,22 @@ enum InternalEEPROMmap
    //Max size = 4284 (4k, emulated in flash)
 };
 
+//synch with win app:
+//all commands must start with 0x64
+#define LaunchFileToken   0x6444
+#define PingToken         0x6455
+#define PauseSIDToken     0x6466
+#define DebugToken        0x6467
+#define SendFileToken     0x64AA
+#define PostFileToken     0x64BB
+#define CopyFileToken     0x64FF
+#define DeleteFileToken   0x64CF
+#define AckToken          0x64CC
+#define GetDirectoryToken 0x64DD
+#define ResetC64Token     0x64EE
+#define FailToken         0x9B7F
+
+
 volatile uint32_t StartCycCnt, LastCycCnt=0;
    
 #define PHI2_PIN            1  
