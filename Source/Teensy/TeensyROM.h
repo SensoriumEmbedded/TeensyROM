@@ -112,6 +112,7 @@ enum InternalEEPROMmap
 #define GetDirectoryToken 0x64DD
 #define ResetC64Token     0x64EE
 #define FailToken         0x9B7F
+#define PassToken         0x9B80
 
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;

@@ -39,12 +39,12 @@ void HandleExecution()
    }
    
    FS *sourceFS = &firstPartition;
-   switch(IO1[rWRegCurrMenuWAIT])
-   {
+   switch(IO1[rWRegCurrMenuWAIT]) 
+   {  //find source based on current menu, perform device specific actions
       case rmtSD:
          sourceFS = &SD;
       case rmtUSBDrive:
-      
+         //USB or SD drive actions:
          if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
          {
             char FullFilePath[MaxNamePathLength];
@@ -75,7 +75,9 @@ void HandleExecution()
          MenuSelCpy.Code_Image = RAM_Image;
          break;
          
-      case rmtTeensy:  //not many size checks as this is loading internally
+      case rmtTeensy:  
+         // local Teensy Flash menu actions
+         // not many size checks as this is loading internally
          
          if (MenuSelCpy.ItemType == rtDirectory)
          {
@@ -126,7 +128,7 @@ void HandleExecution()
          }
          
          else
-         {  //non-CRT: copy the whole thing into the RAM1 buffer
+         {  //non-CRT: copy the whole thing from flash into the RAM1 buffer
             memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
             MenuSelCpy.Code_Image = RAM_Image;   
          }            
@@ -143,11 +145,10 @@ void HandleExecution()
    {
       XferImage = MenuSelCpy.Code_Image;
       XferSize = MenuSelCpy.Size;
-      if (!ParseSIDHeader(MenuSelCpy.Name)) return; //Parse SID File 
-      
-      //set up to transfer to C64 RAM
-      
-      
+      //Parse SID File & set up to transfer to C64 RAM:
+      if (ParseSIDHeader(MenuSelCpy.Name)) SendU16(PassToken);
+      else SendU16(FailToken);
+
       return;   //we're done here
    }
    
@@ -569,8 +570,7 @@ void FreeCrtChips()
 FLASHMEM void SIDLoadError(const char* ErrMsg)
 {
    strcat(StrSIDInfo, "Error: ");
-   strcat(StrSIDInfo, ErrMsg);
-   SendU16(FailToken);
+   strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendMsgPrintfln(ErrMsg);
 }
 
@@ -719,7 +719,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    IO1[rRegSIDPlayHi] = XferImage[0x0C];
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    
-   IO1[rRegStrAvailable] = 0xff;
+   IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
    return true;
 }
  

@@ -380,8 +380,10 @@ FLASHMEM void LaunchFile()
    //Teensy: AckToken 0x64CC
    //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
    //Teensy: AckToken 0x64CC
+   //   C64: file Launches
+   //Teensy (SID only): FailToken or PassToken
 
-   //Launch file token has been received, only 2 byte responses until after final response
+   //Launch file token has been received
    SendU16(AckToken);
 
    uint32_t SD_nUSB;
