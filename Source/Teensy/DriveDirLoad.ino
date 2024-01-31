@@ -152,9 +152,7 @@ void HandleExecution()
       case rtFileSID:
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
-         //Parse SID File & set up to transfer to C64 RAM:
-         if (ParseSIDHeader(MenuSelCpy.Name)) SendU16(PassToken);
-         else SendU16(FailToken);
+         ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
          break;
       case rtFileKla:
          XferImage = MenuSelCpy.Code_Image;
@@ -573,13 +571,6 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
-FLASHMEM void SIDLoadError(const char* ErrMsg)
-{
-   strcat(StrSIDInfo, "Error: ");
-   strcat(StrSIDInfo, ErrMsg); //add to displayed info
-   SendMsgPrintfln(ErrMsg);
-}
-
 FLASHMEM bool ParseKLAHeader()
 {
   // XferImage and XferSize are populated w/ koala file info
@@ -601,7 +592,15 @@ FLASHMEM bool ParseKLAHeader()
    return true;
 }
 
-FLASHMEM bool ParseSIDHeader(const char *filename)
+FLASHMEM void SIDLoadError(const char* ErrMsg)
+{
+   strcat(StrSIDInfo, "Error: ");
+   strcat(StrSIDInfo, ErrMsg); //add to displayed info
+   SendU16(BadSIDToken);
+   SendMsgPrintfln(ErrMsg);
+}
+
+FLASHMEM void ParseSIDHeader(const char *filename)
 {
    // XferImage and XferSize are populated w/ SID file info
    // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
@@ -637,7 +636,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
       if (memcmp(XferImage, "RSID", 4) != 0) 
       {
          SIDLoadError("PSID/RSID not found");
-         return false;
+         return;
       }
    }
    
@@ -645,14 +644,14 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    if ( sidVersion<2 || sidVersion>4) 
    {
       SIDLoadError("Unexpected Version");
-      return false;
+      return;
    }
 
    StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
    if (StreamOffsetAddr!= 0x7c) 
    {
       SIDLoadError("Unexpected Data Offset");
-      return false;
+      return;
    }
    
    if (toU16(XferImage+0x08) != 0)
@@ -679,14 +678,14 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    if (LoadAddress < 0xdf00 && LoadAddress+XferSize >= 0xde00)
    {
       SIDLoadError("IO1 mem conflict");
-      return false;
+      return;
    }
 
    //check for RAM conflict with TR code:   
    if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
    {
       SIDLoadError("Mem conflict w/ TR app");
-      return false;
+      return;
    }
 
    //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
@@ -747,7 +746,7 @@ FLASHMEM bool ParseSIDHeader(const char *filename)
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    
    IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
-   return true;
+   //return true;
 }
  
 void RedirectEmptyDriveDirMenu()

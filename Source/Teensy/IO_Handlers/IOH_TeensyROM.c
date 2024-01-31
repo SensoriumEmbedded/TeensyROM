@@ -188,7 +188,7 @@ extern void HandleExecution();
 extern bool PathIsRoot();
 extern void LoadDirectory(FS *sourceFS);
 extern void IOHandlerInitToNext();
-extern bool ParseSIDHeader(const char *filename);
+extern void ParseSIDHeader(const char *filename);
 extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
 extern uint8_t RAM_Image[];
@@ -323,7 +323,7 @@ FLASHMEM void LoadMainSIDforXfer()
    XferImage = RAM_Image; 
    XferSize  = sizeof(SIDforBackground); 
    memcpy(XferImage, SIDforBackground, XferSize);
-   ParseSIDHeader("Main Background SID"); //returns pass/fail, but assuming it passes for buit-in
+   ParseSIDHeader("Main Background SID"); //assuming it passes for buit-in
 }
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
