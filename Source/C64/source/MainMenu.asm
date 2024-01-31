@@ -35,11 +35,8 @@
 Start:
 
 ;screen setup:     
-   lda #BorderColor
-   sta BorderColorReg
-   lda #BackgndColor
-   sta BackgndColorReg
-   
+   jsr TextScreenMemColor
+  
 !ifndef Debug {
 ;check for HW:
    lda rRegPresence1+IO1Port
@@ -421,6 +418,8 @@ smcIRQFlagged
 +  cmp #ricmdLaunch
    bne -    ;no command or false irq
 
+   jsr TextScreenMemColor  ;make sure we're in text mode:
+
    ;launch app set up by TR
    jsr RunSelected  ;start TR selected app...
    
@@ -777,16 +776,22 @@ MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
 LoadViewKoala:
    ;Koala file is highlighted/detected before calling
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
+   
+   ;force SID to stay paused (may have been overwritten)
+   lda #$ff      ;rpudSIDPauseMask  ;disable SID playback, all bits don't allow un-pause until reload
+   sta smcSIDPauseStop+1
+   
    jsr FastLoadFile ;check for error and load Koala file to C64 RAM
    bne +  ;check for error
 
-   lda #$00    
+   ;lda #$00    
    ;sta $d011   ;turn off the display
-   sta BorderColorReg   ;set border color to black
+   ;sta BorderColorReg   ;set border color to black
    lda KLABackground
    sta BackgndColorReg  ;set vic background color
-   ;sta BorderColorReg   ;set border color to same
+   sta BorderColorReg   ;set border color to same
 
+   ;copy color and screen data to their final locations:
    ldx #$00
 -  lda KLAColorRAM       ,x
    sta C64ColorRAM       ,x
@@ -809,42 +814,36 @@ LoadViewKoala:
    dex
    bne -
 
-;   lda #$78   ;default is 21 ($15)
-   lda #$18   ;default is 21 ($15)
-   sta $d018  ;set vic memory pointers
-   ;in bitmap mode 
-   ;  bits 0-2 unused
-   ;  bit  3:  bitmap screen data offset from vicii start 0 or 8k ($2000)
-   ;  bits 7:4   video matrix base address offset from vicii start *1k
-
-   ;lda #%00000010  ;$02 (bank1, $4000)    def is $97, bank 0
-   ;lda #%00000011  ;$03 (bank0, $0000)    def is $97, bank 0
-   ;sta $dd00  ;set vic memory bank via cia2
-   ;  bits 1:0  11=bank0 ($0000), 10=bank1 ($4000), 01=bank2 ($8000), 00=bank3 ($c000)
-
+   lda #$18   
+   sta $d018  ;set vic bitmap screen data offset to 8k ($2000)
    lda #$d8    
    sta $d016  ;turn on vic multi-color mode
+   lda #$3b    
+   sta $d011  ;bit 5 ($20) turns on bitmap graphics mode
 
-   lda #$3b    ;turn the vic's display back on.  Default is 27 ($1b), bit 5 ($20) turns on bitmap graphics mode
-   sta $d011
-
-   ;change this to include IRQ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
--  jsr GetIn ;read key
+   jsr IRQEnable  ;re-start the IRQ wedge
+-  jsr CheckForIRQGetIn ;read key/IRQ
    beq -  
 
-   jsr $fda3   ;initialise sid, cia and irq
-   jsr $e5a0   ;initialize the vic
+   jsr TextScreenMemColor
++  rts
+
+TextScreenMemColor:
+   ;vic/bitmap back to default for text:
+   ;jsr $fda3   ;initialise sid, cia and irq
+   ;jsr $e5a0   ;initialize the vic
+   lda #$15  
+   sta $d018 
+   lda #$c8  
+   sta $d016 
+   lda #$1b  
+   sta $d011 
    
    ;set screen and border colors back
    lda #BorderColor
    sta BorderColorReg
    lda #BackgndColor
    sta BackgndColorReg
-    
-   ;force SID to stay paused (may have been overwritten)
-+  lda #$ff      ;rpudSIDPauseMask  ;disable SID playback, all bits don't allow un-pause until reload
-   sta smcSIDPauseStop+1
-   jsr IRQEnable  ;start the IRQ wedge
    rts
 
 TblRowToMemLoc:

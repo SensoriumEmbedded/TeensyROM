@@ -577,7 +577,7 @@ FLASHMEM bool ParseKLAHeader()
   
    if(XferImage[0] != 0 || (XferImage[1] & 0xbf) != 0x20) //allow only $2000 & $6000
    {
-      SendMsgPrintfln("Bad load addr: $%02x%02x (exp $2000 or $6000)", XferImage[1], XferImage[0]);
+      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000 or $6000)", XferImage[1], XferImage[0]);
       return false;
    }
 
@@ -585,7 +585,7 @@ FLASHMEM bool ParseKLAHeader()
 
    if (XferSize != 10003) //exact expected image size
    {
-      SendMsgPrintfln("Bad size: %lu bytes (exp 10,003)", XferSize);
+      SendMsgPrintfln("Bad size: %lu bytes (exp 10003)", XferSize);
       return false;
    }
 
