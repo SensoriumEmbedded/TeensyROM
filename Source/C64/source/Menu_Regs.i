@@ -167,6 +167,6 @@
    rtFileHex   = 9
    rtFileP00   = 10
    rtFileSID   = 11
-   
+   rtFileKla   = 12
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

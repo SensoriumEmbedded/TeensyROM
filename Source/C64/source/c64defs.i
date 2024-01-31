@@ -19,11 +19,11 @@
 
 
    ;System Mem locations
-   ScreenCharMemStart = $0400
-   ScreenColorMemStart= $D800
+   C64ScreenRAM       = $0400  ;$5c00  ; to screen memory
    BorderColorReg     = $d020 
    BackgndColorReg    = $d021
    SIDLoc             = $d400
+   C64ColorRAM        = $d800  ; color memory (fixed)
    IO1Port            = $de00
    GamePort2          = $dc00
    GamePort1          = $dc01   
@@ -45,6 +45,13 @@
    ;BasicColdStartVect = $a000 ; $e394  58260
    BasicWarmStartVect = $a002 ; $e37b  58235
    ;PrintString =  $ab1e
+
+   ;Koala image file mem/offsets
+   ;File preceded by 2 byte for address: 00 60 ...
+   KLAStart     = $2000            ; $2711 (10,001) bytes, last is KLAStart+$2710
+   KLAScreenRAM = KLAStart + 8000  ;($1f40=8000) 1k of multi-color data 
+   KLAColorRAM  = KLAStart + 9000  ;($2328=9000) 1k of color data 
+   KLABackground= KLAStart + 10000 ;($2710=10000) Background color
 
    ;chr$ symbols
    ChrBlack    = 144

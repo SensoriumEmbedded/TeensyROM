@@ -23,32 +23,12 @@
 SIDLoadInit:
    ;SID is Prepared to transfer from TR RAM before calling
    
-   lda rRegStrAvailable+IO1Port 
-   bne +   ;Make sure ready to x-fer
-   jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
+   jsr FastLoadFile ;load SID to C64 RAM
+   beq +  ;check for error
    lda #$ff      ;rpudSIDPauseMask  ;disable SID playback on error, all bits don't allow un-pause until reload
    sta smcSIDPauseStop+1
    rts
    
-   ;load SID to C64 RAM, same as PRGLoadStart...
-+  lda rRegStreamData+IO1Port
-   sta PtrAddrLo
-   lda rRegStreamData+IO1Port
-   sta PtrAddrHi
-   ldy #0   ;zero offset
-   
--  lda rRegStrAvailable+IO1Port ;are we done?
-   beq +   ;exit the loop
-   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
-   sta (PtrAddrLo), y 
-   iny
-   bne -
-   inc PtrAddrHi
-   bne -
-   ;good luck if we get to here... Trying to overflow and write to zero page
-   jsr AnyKeyErrMsgWait  ;turns IRQ back on
-   rts
-
    ;self-modifying init jump
 +  lda rRegSIDInitLo+IO1Port
    sta smcSIDInitAddr+1
@@ -334,6 +314,33 @@ updateSpeedHi
    cmp #ChrSpace  ;back to Main Menu
    bne WaitSIDInfoKey   
 ++ rts
+
+FastLoadFile:   
+   ;load file from Teensy to C64 RAM, same as PRGLoadStart...
+   ;on return, zero flag clear if an error occured, set if OK
+   
+   lda rRegStrAvailable+IO1Port 
+   beq +   ;Make sure ready to x-fer
+   
+   lda rRegStreamData+IO1Port
+   sta PtrAddrLo
+   lda rRegStreamData+IO1Port
+   sta PtrAddrHi
+   ldy #0   ;zero offset
+   
+-  lda rRegStrAvailable+IO1Port ;are we done?
+   beq ++   ;exit the loop (zero flag set)
+   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
+   sta (PtrAddrLo), y 
+   iny
+   bne -
+   inc PtrAddrHi
+   bne -
+   ;good luck if we get to here... Trying to overflow and write to zero page
++  jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
+   lda #1  ;clear zero flag
+++ rts
+
 
 SetSIDSpeedToDefault:
    ;Set the timer interval to default

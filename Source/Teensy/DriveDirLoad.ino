@@ -137,27 +137,33 @@ void HandleExecution()
          
    }
    
-   //if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
+   //Have to do this differently for Flash vs ext media:
+   // if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
  
-   if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
-
-   if (MenuSelCpy.ItemType == rtFileSID) 
-   {
-      XferImage = MenuSelCpy.Code_Image;
-      XferSize = MenuSelCpy.Size;
-      //Parse SID File & set up to transfer to C64 RAM:
-      if (ParseSIDHeader(MenuSelCpy.Name)) SendU16(PassToken);
-      else SendU16(FailToken);
-
-      return;   //we're done here
-   }
+   //will update MenuSelCpy.ItemType & .Code_Image, if checks ok:
+   if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); 
    
    //has to be distilled down to one of these by this point, only ones supported so far.
-   //Emulate ROM or prep PRG tranfer
+   //Emulate ROM or prep for tranfer
    uint8_t CartLoaded = false;
    
    switch(MenuSelCpy.ItemType)
    {
+      case rtFileSID:
+         XferImage = MenuSelCpy.Code_Image;
+         XferSize = MenuSelCpy.Size;
+         //Parse SID File & set up to transfer to C64 RAM:
+         if (ParseSIDHeader(MenuSelCpy.Name)) SendU16(PassToken);
+         else SendU16(FailToken);
+         break;
+      case rtFileKla:
+         XferImage = MenuSelCpy.Code_Image;
+         XferSize = MenuSelCpy.Size;
+         //Parse Koala File:
+         if(!ParseKLAHeader()) return;
+         StreamOffsetAddr = 0; //set to start of data
+         IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
+         break;
       case rtBin16k:
          SetGameAssert;
          SetExROMAssert;
@@ -572,6 +578,27 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
    strcat(StrSIDInfo, "Error: ");
    strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendMsgPrintfln(ErrMsg);
+}
+
+FLASHMEM bool ParseKLAHeader()
+{
+  // XferImage and XferSize are populated w/ koala file info
+  
+   if(XferImage[0] != 0 || (XferImage[1] & 0xbf) != 0x20) //allow only $2000 & $6000
+   {
+      SendMsgPrintfln("Bad load addr: $%02x%02x (exp $2000 or $6000)", XferImage[1], XferImage[0]);
+      return false;
+   }
+
+   XferImage[1] = 0x20;  //force to $2000
+
+   if (XferSize != 10003) //exact expected image size
+   {
+      SendMsgPrintfln("Bad size: %lu bytes (exp 10,003)", XferSize);
+      return false;
+   }
+
+   return true;
 }
 
 FLASHMEM bool ParseSIDHeader(const char *filename)
