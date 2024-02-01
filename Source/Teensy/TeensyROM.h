@@ -178,16 +178,23 @@ const uint8_t OutputPins[] = {
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
     
-uint32_t nS_MaxAdj    =  1030;  //above this nS since last int causes adjustment, formerly 993 for NTSC only
-// Times from Phi2 rising (interrupt):
-uint32_t nS_RWnReady  =    95;  //Phi2 rise to RWn valid
-uint32_t nS_PLAprop   =   150;  //delay through PLA to decode address (IO1/2, ROML/H)
-uint32_t nS_DataSetup =   220;  //On a C64 write, when to latch data bus.
-uint32_t nS_DataHold  =   350;  //On a C64 read, when to stop driving the data bus
+#define Def_nS_MaxAdj      1030  //    above this nS since last int causes adjustment, formerly 993 for NTSC only
+                                 // Times from Phi2 rising (interrupt):
+#define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid
+#define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
+#define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
+#define Def_nS_DataHold     350  //    On a C64 read, when to stop driving the data bus
+                                 // Times from Phi2 falling:
+#define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
+                                 //    Hold time for VIC cycle is same as normal cyc (nS_DataHold)
 
-// Times from Phi2 falling:
-uint32_t nS_VICStart  =   210;  //delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
-//  Hold time for VIC cycle is same as normal cyc (nS_DataHold)
+uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
+uint32_t nS_RWnReady  = Def_nS_RWnReady;  
+uint32_t nS_PLAprop   = Def_nS_PLAprop;  
+uint32_t nS_DataSetup = Def_nS_DataSetup;  
+uint32_t nS_DataHold  = Def_nS_DataHold;  
+uint32_t nS_VICStart  = Def_nS_VICStart;  
+
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {

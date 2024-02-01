@@ -242,6 +242,7 @@ FLASHMEM void ServiceSerial()
    // t...
    #ifdef Dbg_SerTimChg
       case 't': //timing commands, 2 letters and 3-4 numbers
+         Serial.printf("-----\n");
          switch (Serial.read())
          {
             case 'm': //nS_MaxAdj change
@@ -262,16 +263,28 @@ FLASHMEM void ServiceSerial()
             case 'v': //VIC timing change
                GetDigits(3, &nS_VICStart);
                break;
+            case 'd': //Set Defaults
+               nS_MaxAdj    = Def_nS_MaxAdj; 
+               nS_RWnReady  = Def_nS_RWnReady;  
+               nS_PLAprop   = Def_nS_PLAprop;  
+               nS_DataSetup = Def_nS_DataSetup;  
+               nS_DataHold  = Def_nS_DataHold;  
+               nS_VICStart  = Def_nS_VICStart;  
+               Serial.printf("Defaults set\n");
+               break;
             default:
                Serial.printf("No changes\n");
                break;
          }
-         Serial.printf("   nS_MaxAdj(tm) %04d\n", nS_MaxAdj);
-         Serial.printf(" nS_RWnReady(tr)  %03d\n", nS_RWnReady);
-         Serial.printf("  nS_PLAprop(tp)  %03d\n", nS_PLAprop);
-         Serial.printf("nS_DataSetup(ts)  %03d\n", nS_DataSetup);
-         Serial.printf(" nS_DataHold(th)  %03d\n", nS_DataHold);
-         Serial.printf(" nS_VICStart(tv)  %03d\n", nS_VICStart);
+         Serial.printf("Current:    Variable  Val (Command)\n");
+         Serial.printf("\t   nS_MaxAdj %04d (tm####)\n", nS_MaxAdj);
+         Serial.printf("\t nS_RWnReady  %03d (tr###)\n", nS_RWnReady);
+         Serial.printf("\t  nS_PLAprop  %03d (tp###)\n", nS_PLAprop);
+         Serial.printf("\tnS_DataSetup  %03d (ts###)\n", nS_DataSetup);
+         Serial.printf("\t nS_DataHold  %03d (th###)\n", nS_DataHold);
+         Serial.printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
+         Serial.printf("\tSet Defaults      (td)\n");
+         Serial.printf("\tList current vals (t)\n-----\n");
          break;  
    #endif
    
