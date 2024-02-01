@@ -40,6 +40,6 @@
 ;RAM code locations:
    
    ;$033c-03fb is the tape buffer (192 bytes)
-   PRGLoadStartReloc= $033c  ;during .PRG transfer, PRG transfer code location/execution point
-   MainCodeRAMStart      = $6000  ;Main code location/execution point, synch w/ ParseSIDHeader checks
+   PRGLoadStartReloc = $033c  ;during .PRG transfer, PRG transfer code location/execution point
+   MainCodeRAMStart  = $6000  ;Main code location/execution point, synch w/ ParseSIDHeader checks
    

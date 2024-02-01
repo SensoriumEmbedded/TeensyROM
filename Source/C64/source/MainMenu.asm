@@ -846,7 +846,7 @@ TextScreenMemColor:
    ;vic/bitmap back to default for text:
    ;jsr $fda3   ;initialise sid, cia and irq
    ;jsr $e5a0   ;initialize the vic
-   lda #$15  
+   lda #$17  ;Lower case
    sta $d018 
    lda #$c8  
    sta $d016 
