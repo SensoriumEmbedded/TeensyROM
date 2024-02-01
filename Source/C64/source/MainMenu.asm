@@ -782,7 +782,7 @@ LoadViewKoala:
    sta smcSIDPauseStop+1
    
    jsr FastLoadFile ;check for error and load Koala file to C64 RAM
-   bne +  ;check for error
+   bne ++  ;check for error
 
    ;lda #$00    
    ;sta $d011   ;turn off the display
@@ -824,9 +824,23 @@ LoadViewKoala:
    jsr IRQEnable  ;re-start the IRQ wedge
 -  jsr CheckForIRQGetIn ;read key/IRQ
    beq -  
-
-   jsr TextScreenMemColor
-+  rts
+   ;a key was pressed
+   
+   cmp #ChrCRSRUp
+   beq LoadKbdBuf  
+   cmp #ChrCRSRDn
+   bne +
+   
+LoadKbdBuf
+   sta $0277 ;store cursor up/down in kbd buffer
+   lda #ChrReturn
+   sta $0278 ;store return in kbd buffer
+   lda #2
+   sta $c6 ;2 keypresses in the keyboard buffer
+   
+   ;any other key, just exit...
++  jsr TextScreenMemColor
+++ rts
 
 TextScreenMemColor:
    ;vic/bitmap back to default for text:
