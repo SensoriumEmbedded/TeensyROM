@@ -183,7 +183,7 @@ const uint8_t OutputPins[] = {
 #define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
-#define Def_nS_DataHold     350  //    On a C64 read, when to stop driving the data bus
+#define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus, updated from 350 to 365 2/1/24 v0.5.10+
                                  // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
                                  //    Hold time for VIC cycle is same as normal cyc (nS_DataHold)
