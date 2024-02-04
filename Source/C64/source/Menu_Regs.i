@@ -168,5 +168,6 @@
    rtFileP00   = 10
    rtFileSID   = 11
    rtFileKla   = 12
+   rtFileArt   = 13
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

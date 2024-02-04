@@ -510,6 +510,17 @@ RunSelected:
     
 +  cmp #rtFileKla  ;check for Koala file selected
    bne +
+   ldx #<KLABackground
+   ldy #>KLABackground
+   lda #$d8
+   jsr LoadViewKoala
+   jmp ListAndDone  
+
++  cmp #rtFileArt  ;check for Hi-res art file selected
+   bne +
+   ldx #<ARTBorder
+   ldy #>ARTBorder
+   lda #$c8
    jsr LoadViewKoala
    jmp ListAndDone  
 
@@ -775,6 +786,16 @@ MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
 
 LoadViewKoala:
    ;Koala file is highlighted/detected before calling
+   ;Load x, y, and a before calling:
+   ;    ldx #<KLABackground
+   ;    ldy #>KLABackground
+   ;    lda #$d8
+   
+   stx smcPicBackgroundSource+1
+   sty smcPicBackgroundSource+2
+   sta smcPicVICCtlSet+1
+
+   
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
    
    ;force SID to stay paused (may have been overwritten)
@@ -787,6 +808,7 @@ LoadViewKoala:
    ;lda #$00    
    ;sta $d011   ;turn off the display
    ;sta BorderColorReg   ;set border color to black
+smcPicBackgroundSource
    lda KLABackground
    sta BackgndColorReg  ;set vic background color
    sta BorderColorReg   ;set border color to same
@@ -816,8 +838,9 @@ LoadViewKoala:
 
    lda #$18   
    sta $d018  ;set vic bitmap screen data offset to 8k ($2000)
+smcPicVICCtlSet
    lda #$d8    
-   sta $d016  ;turn on vic multi-color mode
+   sta $d016  ;turn on vic multi-color  or hi-res mode
    lda #$3b    
    sta $d011  ;bit 5 ($20) turns on bitmap graphics mode
 

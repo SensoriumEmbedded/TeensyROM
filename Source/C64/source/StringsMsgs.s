@@ -170,3 +170,4 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx TypeColor, "P00"  ; rtFileP00   = 10,
    !tx TypeColor, "SID"  ; rtFileSID   = 11,
    !tx TypeColor, "Kla"  ; rtFileKla   = 12,
+   !tx TypeColor, "Art"  ; rtFileArt   = 13,

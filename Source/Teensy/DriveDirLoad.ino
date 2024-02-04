@@ -162,6 +162,14 @@ void HandleExecution()
          StreamOffsetAddr = 0; //set to start of data
          IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
          break;
+      case rtFileArt:
+         XferImage = MenuSelCpy.Code_Image;
+         XferSize = MenuSelCpy.Size;
+         //Parse Hi-Res Art File:
+         if(!ParseARTHeader()) return;
+         StreamOffsetAddr = 0; //set to start of data
+         IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
+         break;
       case rtBin16k:
          SetGameAssert;
          SetExROMAssert;
@@ -569,6 +577,25 @@ void FreeCrtChips()
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
    NumCrtChips = 0;
+}
+
+FLASHMEM bool ParseARTHeader()
+{
+  // XferImage and XferSize are populated w/ koala file info
+  
+   if(XferImage[0] != 0 || XferImage[1] != 0x20) //allow only $2000
+   {
+      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000)", XferImage[1], XferImage[0]);
+      return false;
+   }
+
+   if (XferSize != 9002 && XferSize != 9009) //exact expected image size
+   {
+      SendMsgPrintfln("Bad size: %lu bytes (exp 9002 or 9009)", XferSize);
+      return false;
+   }
+
+   return true;
 }
 
 FLASHMEM bool ParseKLAHeader()

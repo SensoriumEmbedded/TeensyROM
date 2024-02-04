@@ -52,6 +52,7 @@
    KLAScreenRAM = KLAStart + 8000  ;($1f40=8000) 1k of multi-color data 
    KLAColorRAM  = KLAStart + 9000  ;($2328=9000) 1k of color data 
    KLABackground= KLAStart + 10000 ;($2710=10000) Background color
+   ARTBorder    = KLAStart + 9000  ;($2328=9000)  Border color for hi-res files
 
    ;chr$ symbols
    ChrBlack    = 144
