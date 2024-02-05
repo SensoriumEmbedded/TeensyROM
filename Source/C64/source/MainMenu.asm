@@ -774,6 +774,7 @@ WaitHelpMenuKey:
 MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTRWaitMsg
+rets
    rts
 
 LoadViewKoala:
@@ -785,7 +786,7 @@ LoadViewKoala:
    ldy #>ARTBorder
    lda #$c8
    jmp ++
-+  ldx #<KLABackground
++  ldx #<KLABackground ;otherwise assume multi-color
    ldy #>KLABackground
    lda #$d8
 ++ stx smcPicBackgroundSource+1
@@ -798,8 +799,8 @@ LoadViewKoala:
    lda #$ff      ;rpudSIDPauseMask  ;disable SID playback, all bits don't allow un-pause until reload
    sta smcSIDPauseStop+1
    
-   jsr FastLoadFile ;check for error and load Koala file to C64 RAM
-   bne LeaveKoala  ;check for error
+   jsr FastLoadFile ;check for error and load file to C64 RAM
+   bne rets  ;zero flag clear if an error occured, jump to rts from 
 
 smcPicBackgroundSource
    lda KLABackground
@@ -842,7 +843,19 @@ smcPicVICCtlSet
    beq -  
    ;a key was pressed
    
-   cmp #'-'
+   cmp #ChrCRSRUp
+   bne +
+   inc BackgndColorReg 
+   inc BorderColorReg  
+   jmp -
+   
++  cmp #ChrCRSRDn
+   bne +
+   dec BackgndColorReg 
+   dec BorderColorReg  
+   jmp -
+   
++  cmp #'-'
    bne +  
    lda #rCtlLastPicture 
 CtlWaitReprint
@@ -858,13 +871,12 @@ CtlWaitReprint
    jmp LoadViewKoala
    
 +  cmp #'+'
-   bne LeaveKoala
+   bne +
    lda #rCtlNextPicture 
    jmp CtlWaitReprint
    
    ;any other key, just exit...
-LeaveKoala
-   jsr TextScreenMemColor
++  jsr TextScreenMemColor
    rts
 
 TextScreenMemColor:

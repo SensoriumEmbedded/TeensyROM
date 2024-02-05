@@ -594,7 +594,10 @@ FLASHMEM bool ParseARTHeader()
       SendMsgPrintfln("Bad size: %lu bytes (exp 9002 or 9009)", XferSize);
       return false;
    }
-
+   if (XferSize == 9002)
+   {  //border/screen color unknown for this size
+      XferImage[XferSize++] = 15; //PokeLtGrey
+   }
    return true;
 }
 
