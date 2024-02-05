@@ -510,21 +510,13 @@ RunSelected:
     
 +  cmp #rtFileKla  ;check for Koala file selected
    bne +
-   ldx #<KLABackground
-   ldy #>KLABackground
-   lda #$d8
-   jsr LoadViewKoala
+-- jsr LoadViewKoala
    jmp ListAndDone  
 
 +  cmp #rtFileArt  ;check for Hi-res art file selected
-   bne +
-   ldx #<ARTBorder
-   ldy #>ARTBorder
-   lda #$c8
-   jsr LoadViewKoala
-   jmp ListAndDone  
+   beq --
 
-    
+   
    ;not a dir, "none", hex file, Koala, or SID, try to start/execute
 +  jsr StartSelItem_WaitForTRDots ;if it's a ROM/crt image, it won't return from this unless error
 
@@ -786,15 +778,19 @@ MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
 
 LoadViewKoala:
    ;Koala file is highlighted/detected before calling
-   ;Load x, y, and a before calling:
-   ;    ldx #<KLABackground
-   ;    ldy #>KLABackground
-   ;    lda #$d8
-   
-   stx smcPicBackgroundSource+1
+   ; acc pre-loaded with ItemType
+   cmp #rtFileArt  ;check for Hi-res art file selected
+   bne +
+   ldx #<ARTBorder
+   ldy #>ARTBorder
+   lda #$c8
+   jmp ++
++  ldx #<KLABackground
+   ldy #>KLABackground
+   lda #$d8
+++ stx smcPicBackgroundSource+1
    sty smcPicBackgroundSource+2
    sta smcPicVICCtlSet+1
-
    
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
    
@@ -803,11 +799,8 @@ LoadViewKoala:
    sta smcSIDPauseStop+1
    
    jsr FastLoadFile ;check for error and load Koala file to C64 RAM
-   bne ++  ;check for error
+   bne LeaveKoala  ;check for error
 
-   ;lda #$00    
-   ;sta $d011   ;turn off the display
-   ;sta BorderColorReg   ;set border color to black
 smcPicBackgroundSource
    lda KLABackground
    sta BackgndColorReg  ;set vic background color
@@ -849,21 +842,30 @@ smcPicVICCtlSet
    beq -  
    ;a key was pressed
    
-   cmp #ChrCRSRUp
-   beq LoadKbdBuf  
-   cmp #ChrCRSRDn
-   bne +
+   cmp #'-'
+   bne +  
+   lda #rCtlLastPicture 
+CtlWaitReprint
+   sta wRegControl+IO1Port
+   lda #$00    
+   sta $d011   ;turn off the display   
+   jsr PrintBanner ;clear screen for messaging
+   lda #NameColor
+   jsr SendChar
+   jsr WaitForTRDots
+   lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
+   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
+   jmp LoadViewKoala
    
-LoadKbdBuf
-   sta $0277 ;store cursor up/down in kbd buffer
-   lda #ChrReturn
-   sta $0278 ;store return in kbd buffer
-   lda #2
-   sta $c6 ;2 keypresses in the keyboard buffer
++  cmp #'+'
+   bne LeaveKoala
+   lda #rCtlNextPicture 
+   jmp CtlWaitReprint
    
    ;any other key, just exit...
-+  jsr TextScreenMemColor
-++ rts
+LeaveKoala
+   jsr TextScreenMemColor
+   rts
 
 TextScreenMemColor:
    ;vic/bitmap back to default for text:

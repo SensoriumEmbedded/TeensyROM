@@ -299,6 +299,49 @@ void UpDirectory()
    }
 }
 
+void SetCursorToItemNum(uint16_t ItemNum)
+{
+   IO1[rwRegPageNumber] = ItemNum/MaxItemsPerPage +1;
+   IO1[rwRegCursorItemOnPg] = ItemNum % MaxItemsPerPage;
+   IO1[rRegNumItemsOnPage] = (NumItemsFull > IO1[rwRegPageNumber]*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(IO1[rwRegPageNumber]-1)*MaxItemsPerPage);
+}
+
+FLASHMEM void NextPicture()
+{
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   uint16_t InitItemNum = SelItemFullIdx;
+   
+   do
+   {
+      if (++SelItemFullIdx >= NumItemsFull) SelItemFullIdx=0;
+      if (MenuSource[SelItemFullIdx].ItemType == rtFileKla ||
+          MenuSource[SelItemFullIdx].ItemType == rtFileArt)
+      {
+         SetCursorToItemNum(SelItemFullIdx);
+         return;
+      }
+   } while (SelItemFullIdx != InitItemNum); //just 1 time through, but should stop on same initial one unless changed externally
+}
+
+FLASHMEM void LastPicture()
+{
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   uint16_t InitItemNum = SelItemFullIdx;
+   
+   do
+   {
+      if (SelItemFullIdx == 0) SelItemFullIdx = NumItemsFull-1;
+      else SelItemFullIdx--;
+      
+      if (MenuSource[SelItemFullIdx].ItemType == rtFileKla ||
+          MenuSource[SelItemFullIdx].ItemType == rtFileArt)
+      {
+         SetCursorToItemNum(SelItemFullIdx);
+         return;
+      }
+   } while (SelItemFullIdx != InitItemNum); //just 1 time through, but should stop on same initial one unless changed externally   
+}
+
 void SearchForLetter()
 {
    uint16_t ItemNum = 0;
@@ -309,9 +352,7 @@ void SearchForLetter()
    {
       if (toupper(MenuSource[ItemNum].Name[0]) >= SearchFor)
       {
-         IO1[rwRegPageNumber] = ItemNum/MaxItemsPerPage +1;
-         IO1[rwRegCursorItemOnPg] = ItemNum % MaxItemsPerPage;
-         IO1[rRegNumItemsOnPage] = (NumItemsFull > IO1[rwRegPageNumber]*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(IO1[rwRegPageNumber]-1)*MaxItemsPerPage);
+         SetCursorToItemNum(ItemNum);
          return;
       }
       ItemNum++;
@@ -337,6 +378,9 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &UpDirectory,         // rsUpDirectory
    &SearchForLetter,     // rsSearchForLetter
    &LoadMainSIDforXfer,  // rsLoadSIDforXfer
+   &NextPicture,         // rsNextPicture    
+   &LastPicture,         // rsLastPicture    
+
 };
 
 
@@ -650,6 +694,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlLoadSIDWAIT:
                   IO1[rwRegStatus] = rsLoadSIDforXfer; //work this in the main code
+                  break;
+               case rCtlNextPicture:
+                  IO1[rwRegStatus] = rsNextPicture; //work this in the main code
+                  break;
+               case rCtlLastPicture:
+                  IO1[rwRegStatus] = rsLastPicture; //work this in the main code
                   break;
             }
             break;

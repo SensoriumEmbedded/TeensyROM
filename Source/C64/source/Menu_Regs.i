@@ -131,8 +131,10 @@
    rsUpDirectory        = 0x06  ;
    rsSearchForLetter    = 0x07  ;
    rsLoadSIDforXfer     = 0x08  ;
+   rsNextPicture        = 0x09  ;
+   rsLastPicture        = 0x0a  ;
 
-   rsNumStatusTypes     = 0x09  ;
+   rsNumStatusTypes     = 0x0b  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -152,6 +154,9 @@
    rCtlMakeInfoStrWAIT    = 5 ; MakeBuildCPUInfoStr
    rCtlUpDirectoryWAIT    = 6
    rCtlLoadSIDWAIT        = 7 ;load .sid file to RAM buffer and prep for x-fer
+   rCtlNextPicture        = 8 
+   rCtlLastPicture        = 9 
+
 
 ;enum regItemTypes //synch with TblItemType
    rtNone      = 0

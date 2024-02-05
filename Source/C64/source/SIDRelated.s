@@ -337,7 +337,9 @@ FastLoadFile:
    inc PtrAddrHi
    bne -
    ;good luck if we get to here... Trying to overflow and write to zero page
-+  jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
+   
++  jsr TextScreenMemColor ;in case called while pic is displayed
+   jsr AnyKeyErrMsgWait  ;turns IRQ back on,    an error occurred
    lda #1  ;clear zero flag
 ++ rts
 
