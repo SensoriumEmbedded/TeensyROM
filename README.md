@@ -97,9 +97,9 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 
 ## Inspiration and Thank-Yous:
 * **Heather S**: Loving wife, continuous encourager
-* **Paul D**: Thought provoker, promoter, Maker, and Beta tester extraordinaire
+* [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, case support
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, Remote launch utility, case support
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
 ## Pictures-screen captures:

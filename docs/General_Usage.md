@@ -111,9 +111,9 @@
     * If a selected CRT file is associated with different Special IO (ie Epyx, EZFlash etc), that Special IO will be loaded instead
 
 ## Firmware updates
-  There are 3 ways to update the TeensyROM firmware
+  There are multiple ways to update the TeensyROM firmware, choose one of the following:
 
-### **From SD Card or USB Thumb Drive** (easiest method)
+### **From SD Card or USB Thumb Drive**
   * This method is only available in FW v0.4 and higher.
     * Older versions will have to use one of the other methods one time to update
   * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from here](/bin/TeensyROM)
@@ -130,7 +130,25 @@
     * When the update completes succesfully, your computer will reset and the new version of TeensyROM will be shown
     * If there are any problems, take note of any messages shown before pressing any key to return to the main menu.
 
-### **Using the Teensy application** (requires computer with USB connection)
+### **Directly using TeensyROM via Ethernet connection**
+  * Digitalman uses a similar approach in [this video](https://www.youtube.com/watch?v=PGRFLHmw0hY)
+  * This method uses features added in FW v0.5.8
+    * Older versions will have to use one of the other methods one time to update
+  * Connect active Ethernet cable to TeensyROM
+    * An inserted SD card (preferred) or USB Thumb drive is also required
+  * Open CCGMS from the main menu and type "atbrowse"
+  * There are two sites hosting TeensyROM firmware updates, use one of the default bookmarks to enter either of them
+    * Bookmark #1 is for the TinyWeb64 site, entering "b1" will take you to sensoriumembedded.com/tinyweb64
+    * Bookmark #2 is for Digitalman's site, so "b2" to go to digitalman.azurewebsites.net
+    * Alternately the 'U' command will also work: "u sensoriumembedded.com/tinyweb64"
+  * From the main menu, link #5 will take you to the Firmware download section on either site
+  * Choose the link # for the FW version you want to download/install
+    * The FW file will take a minute or two to download, dots shown on screen to indicate progress
+  * Use the "d" command to see the local downloaded files directory.
+  * Choose the link # of the firmware .hex file downloaded in the previous step to directly launch the update.
+    * Check the version and confirm as described in the section above.
+
+### **Using the TeensyLoader application** (requires computer with USB connection)
   * Get the .hex file of the latest released version [from here](/bin/TeensyROM/)
   * Download and install the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
     * Teensyduino requires arduino to run, which works fine.
