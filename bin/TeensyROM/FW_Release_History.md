@@ -1,6 +1,36 @@
 
 # FW Release Version history:
 
+### 0.5.11 sub-release 2/6/24
+* New feature: Picture viewer
+  * Koala multi-color and Art Studio Hi-res files viewable/supported
+  * File Extension association:
+    * .kla, .koa:  Koala multi-color
+    * .art, .aas, .hpi: Art Studio Hi-Res
+  * Compatible with output from [Retropixels online](https://www.micheldebree.nl/retropixels/)
+    * Create a C64 viewable file from any source format:
+      * Drag source picture in to Retropixels site
+      * Adjust picture parameters & types
+      * Save as Koala Painter or Art Studio
+      * Transfer to TeensyROM SD or USB and select to view
+  * Commands available while viewing:
+    * '+' & '-' to view next/prev picture in directory
+    * CRSR Up/Dn to change border color (+multicolor background)
+    * Any other key to exit viewer
+  * Added /Pictures dir to Main TR Menu w/ 16 sample pics
+* Swiftlink/Browser updates:
+  * Entity References now detected/parsed
+    * \&gt; ('>') and \&nbsp; (' ') implemented
+    * Other ERs ignored for now
+  * HTML tag \<tr> = return added
+* Remote Launch support updates
+  * BadSIDToken sent on SID load error
+* General/Housekeeping:
+  * Updated nS_DataHold time from 350 to 365 to accommodate Reloaded MK2 board
+    * Thanks to alterationx10 for the testing!
+  * Timing control via serial improvement (Dbg_SerTimChg)
+  * Removed 2 redundant pic .prgs (Fractal/Emb Head)
+
 ### 0.5.10 sub-release 1/13/23
 * SID Player updates:
   * SID conflict check range reduced to $6000-70ff, set on compile

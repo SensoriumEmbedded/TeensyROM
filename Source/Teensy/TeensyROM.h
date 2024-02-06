@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.10+"; //*VERSION*
+char strVersionNumber[] = "v0.5.11"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -179,11 +179,15 @@ const uint8_t OutputPins[] = {
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
     
 #define Def_nS_MaxAdj      1030  //    above this nS since last int causes adjustment, formerly 993 for NTSC only
+
                                  // Times from Phi2 rising (interrupt):
-#define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid
+#define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid.  
+                                 //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
-#define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus, updated from 350 to 365 2/1/24 v0.5.10+
+#define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus
+                                 //       2/1/24 v0.5.10+: updated from 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
+                                 
                                  // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
                                  //    Hold time for VIC cycle is same as normal cyc (nS_DataHold)
