@@ -22,8 +22,6 @@
 #include "ROMs/Donkey_Kong.h" 
 #include "ROMs/Dig_Dug.bin.h" 
 #include "ROMs/DualCopy.prg.h"
-#include "ROMs/ember_head.prg.h"
-#include "ROMs/disp_fract.prg.h"
 #include "ROMs/draw01.prg.h"
 #include "ROMs/super.m.bros.64.prg.h"
 #include "ROMs/Ms._Pac_Man.crt.h"
@@ -38,6 +36,8 @@
 #include "ROMs/super_expander_64.crt.h" 
 #include "ROMs/Robocop_2_EasyFlash.crt.h" 
 #include "ROMs/MIDI2SID.prg.h" 
+//#include "ROMs/ember_head.prg.h"
+//#include "ROMs/disp_fract.prg.h"
 
 #include "SIDs/Echoes.sid.h"
 #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
@@ -50,6 +50,23 @@
 #include "SIDs/Tom_Sawyer.sid.h"
 #include "SIDs/YYZ.sid.h"
 #include "SIDs/Wish_You_Were_Here.sid.h"
+
+#include "Pics/Ex_Pie2.art.h"
+#include "Pics/HA_Bluejay.kla.h"
+#include "Pics/HA_Hummingbird.kla.h"
+#include "Pics/HA_Sugar_Skull.kla.h"
+#include "Pics/KP_Bird.kla.h"
+#include "Pics/KP_Burger.kla.h"
+#include "Pics/KP_Koala.kla.h"
+#include "Pics/KP_Tiger.kla.h"
+#include "Pics/LP_Boston.kla.h"
+#include "Pics/LP_ELP_Tarkus.kla.h"
+#include "Pics/LP_Zappa_Apostrophe_(').kla.h"
+#include "Pics/LP_Zappa_Sleep_Dirt.kla.h"
+#include "Pics/T_BlackHole.kla.h"
+#include "Pics/T_Ember_Head.kla.h"
+#include "Pics/T_Sensorium_Heatmap.kla.h"
+#include "Pics/T_TeensyROM.kla.h"
 
 
 StructMenuItem dirGames[] = 
@@ -100,11 +117,11 @@ StructMenuItem dirUtilities[] =
 StructMenuItem dirMultimedia[] = 
 {
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
-   rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
-   rtFilePrg  , IOH_None         , (char*)"Display Fractal"                  , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
-   rtFilePrg  , IOH_None         , (char*)"Draw!"                            , (uint8_t*)draw01_prg                 , sizeof(draw01_prg) ,
-   rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Swinth/Light Fantastic"           , (uint8_t*)swinth_LIGHT_FANTASTIC_PRG , sizeof(swinth_LIGHT_FANTASTIC_PRG) ,
+   rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
+   rtFilePrg  , IOH_None         , (char*)"Draw!"                            , (uint8_t*)draw01_prg                 , sizeof(draw01_prg) ,
+//   rtFilePrg  , IOH_None         , (char*)"Display Fractal"                  , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
+//   rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
 };
 
 StructMenuItem dirSID_Files[] = 
@@ -123,6 +140,27 @@ StructMenuItem dirSID_Files[] =
    rtFileSID  , IOH_None         , (char*)"Switch 625            Def Leppard", (uint8_t*)Switch_625_sid             , sizeof(Switch_625_sid) ,
 };
 
+StructMenuItem dirPic_Files[] = 
+{
+   rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+   rtFileKla  , IOH_None         , (char*)"TS: TeensyROM"                    , (uint8_t*)T_TeensyROM_kla            , sizeof(T_TeensyROM_kla) ,
+   rtFileKla  , IOH_None         , (char*)"TS: BlackHole"                    , (uint8_t*)T_BlackHole_kla            , sizeof(T_BlackHole_kla) ,
+   rtFileKla  , IOH_None         , (char*)"TS: Ember Head"                   , (uint8_t*)T_Ember_Head_kla           , sizeof(T_Ember_Head_kla) ,
+   rtFileKla  , IOH_None         , (char*)"TS: Sensorium Heatmap"            , (uint8_t*)T_Sensorium_Heatmap_kla    , sizeof(T_Sensorium_Heatmap_kla) ,
+   rtFileKla  , IOH_None         , (char*)"HA: Bluejay"                      , (uint8_t*)HA_Bluejay_kla             , sizeof(HA_Bluejay_kla) ,
+   rtFileKla  , IOH_None         , (char*)"HA: Hummingbird"                  , (uint8_t*)HA_Hummingbird_kla         , sizeof(HA_Hummingbird_kla) ,
+   rtFileKla  , IOH_None         , (char*)"HA: Sugar Skull"                  , (uint8_t*)HA_Sugar_Skull_kla         , sizeof(HA_Sugar_Skull_kla) ,
+   rtFileKla  , IOH_None         , (char*)"LP: Boston"                       , (uint8_t*)LP_Boston_kla              , sizeof(LP_Boston_kla) ,
+   rtFileKla  , IOH_None         , (char*)"LP: ELP Tarkus"                   , (uint8_t*)LP_ELP_Tarkus_kla          , sizeof(LP_ELP_Tarkus_kla) ,
+   rtFileKla  , IOH_None         , (char*)"LP: Zappa Sleep Dirt"             , (uint8_t*)LP_Zappa_Sleep_Dirt_kla    , sizeof(LP_Zappa_Sleep_Dirt_kla) ,
+   rtFileKla  , IOH_None         , (char*)"LP: Zappa Apostrophe (')"         , (uint8_t*)LP_Zappa_Apostrophe_kla    , sizeof(LP_Zappa_Apostrophe_kla) ,
+   rtFileArt  , IOH_None         , (char*)"Pie2 Hi-Res"                      , (uint8_t*)Ex_Pie2_art                , sizeof(Ex_Pie2_art) ,
+   rtFileKla  , IOH_None         , (char*)"KP: Bird"                         , (uint8_t*)KP_Bird_kla                , sizeof(KP_Bird_kla) ,
+   rtFileKla  , IOH_None         , (char*)"KP: Burger"                       , (uint8_t*)KP_Burger_kla              , sizeof(KP_Burger_kla) ,
+   rtFileKla  , IOH_None         , (char*)"KP: Koala"                        , (uint8_t*)KP_Koala_kla               , sizeof(KP_Koala_kla) ,
+   rtFileKla  , IOH_None         , (char*)"KP: Tiger"                        , (uint8_t*)KP_Tiger_kla               , sizeof(KP_Tiger_kla) ,
+};
+
 //define this last:
 StructMenuItem TeensyROMMenu[] = 
 {
@@ -131,6 +169,7 @@ StructMenuItem TeensyROMMenu[] =
 
    rtDirectory, IOH_None         , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
    rtDirectory, IOH_None         , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
+   rtDirectory, IOH_None         , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
    rtDirectory, IOH_None         , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
    rtDirectory, IOH_None         , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
    rtDirectory, IOH_None         , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
