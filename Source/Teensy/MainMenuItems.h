@@ -61,7 +61,7 @@
 #include "Pics/KP_Tiger.kla.h"
 #include "Pics/LP_Boston.kla.h"
 #include "Pics/LP_ELP_Tarkus.kla.h"
-#include "Pics/LP_Zappa_Apostrophe_(').kla.h"
+#include "Pics/LP_Zappa_Apostrophe.kla.h"
 #include "Pics/LP_Zappa_Sleep_Dirt.kla.h"
 #include "Pics/T_BlackHole.kla.h"
 #include "Pics/T_Ember_Head.kla.h"
