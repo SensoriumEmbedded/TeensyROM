@@ -73,7 +73,7 @@ FLASHMEM void ServiceSerial()
                break;
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
-               PrintDebugLog();
+               //PrintDebugLog();
                break;
             default:
                Serial.printf("Unk cmd: 0x%04x\n", inVal); 
@@ -85,16 +85,19 @@ FLASHMEM void ServiceSerial()
          Serial.println("Applied upon reboot");
          break;
 
-   // l, c, i, f, x
-   #ifdef Dbg_SerLogMem 
+   // l, c
+   #ifdef Dbg_SerLog 
       case 'l':  //Show Debug Log
          PrintDebugLog();
          break;
       case 'c': //Clear Debug Log buffer
          BigBufCount = 0;
          Serial.println("Buffer Reset");
-         break;
-      case 'i':
+         break;       
+   #endif
+         
+   // f, x
+   #ifdef Dbg_SerMem 
       case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
          {
             MakeBuildCPUInfoStr();
@@ -140,18 +143,24 @@ FLASHMEM void ServiceSerial()
             Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
          break;
-      case 'x':
-         { //see how many 8k banks will fit in RAM2
-            char *ptrChip[70]; //64 8k blocks would be 512k (size of RAM2)
-            uint16_t ChipNum = 0;
-            while(1)
-            {
-               ptrChip[ChipNum] = (char *)malloc(8192);
-               if (ptrChip[ChipNum] == NULL) break;
-               ChipNum++;
-            } 
-            for(uint16_t Cnt=0; Cnt < ChipNum; Cnt++) free(ptrChip[Cnt]);
-            Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
+      case 'x': 
+         { 
+            FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
+            
+            uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
+            Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
+            
+            //uint32_t RAM2Free = (RAM2BytesFree() & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
+            //Serial.printf("RAM2 Free: %luK (%lu blks)\n", RAM2Free, RAM2Free/8);
+            
+            uint8_t NumChips = RAM2blocks();
+            //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+            NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
+            Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+           
+            CrtMax += NumChips*8;
+            Serial.printf("  CRT Max: %luK (%lu blks) ~%luK file\n", CrtMax, CrtMax/8, (uint32_t)(CrtMax*1.004));
+            //larger File size due to header info.
          }
          break;
    #endif
@@ -563,4 +572,17 @@ FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
   printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
-
+FLASHMEM uint8_t RAM2blocks()
+{  //see how many 8k banks will fit in RAM2
+   char *ptrChip[70]; //64 8k blocks would be 512k (size of RAM2)
+   uint8_t ChipNum = 0;
+   while(1)
+   {
+      ptrChip[ChipNum] = (char *)malloc(8192);
+      if (ptrChip[ChipNum] == NULL) break;
+      ChipNum++;
+   } 
+   for(uint8_t Cnt=0; Cnt < ChipNum; Cnt++) free(ptrChip[Cnt]);
+   //Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
+   return ChipNum;
+}

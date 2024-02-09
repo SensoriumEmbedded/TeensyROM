@@ -547,7 +547,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
       {
          if (DriveDirMenu == NULL)
          {
-            SendMsgPrintfln("Not enough room"); 
+            SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
             return false;         
          }
          else

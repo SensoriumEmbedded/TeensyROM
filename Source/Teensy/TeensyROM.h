@@ -28,11 +28,12 @@ char strVersionNumber[] = "v0.5.11+"; //*VERSION*
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 // #define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
 // #define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
-// #define Dbg_SerLogMem //Allow commands over serial that display log and memory info
+// #define Dbg_SerLog    //Allow commands over serial that display log info
+// #define Dbg_SerMem    //Allow commands over serial that display memory info
 // #define DbgSpecial    //Special case logging to BigBuf
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-#define BigBufSize          500
+#define BigBufSize          5
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
