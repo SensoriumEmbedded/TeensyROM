@@ -17,10 +17,11 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.11"; //*VERSION*
+char strVersionNumber[] = "v0.5.11+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
+//#define nfcScanner    //poll nfc scanner via serial device on USB Host port
 //less used:
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
@@ -35,15 +36,21 @@ char strVersionNumber[] = "v0.5.11"; //*VERSION*
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
+#ifdef nfcScanner
+   #define MaxRAM_ImageSize  152
+#else
+   #define MaxRAM_ImageSize  184  //normal max 
+#endif
+
 #ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize
    #define Printf_dbg Serial.printf
-   #define RAM_ImageSize       (160*1024)
+   #define RAM_ImageSize       ((MaxRAM_ImageSize-24)*1024)
    #include "SIDs/Echoes.sid.h"
    #define SIDforBackground     Echoes_sid
    
 #else //Normal mode: Specific background SID, maximize RAM_ImageSize
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
-   #define RAM_ImageSize       (184*1024)
+   #define RAM_ImageSize       (MaxRAM_ImageSize*1024)
    #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
    #define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
    
