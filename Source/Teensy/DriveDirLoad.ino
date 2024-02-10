@@ -183,8 +183,8 @@ void HandleExecution()
          LOROM_Image = NULL;
          HIROM_Image = MenuSelCpy.Code_Image;
          CartLoaded=true;
-         NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt when emulating VIC cycles
-         NVIC_DISABLE_IRQ(IRQ_PIT);
+         //NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt when emulating VIC cycles
+         //NVIC_DISABLE_IRQ(IRQ_PIT);
          EmulateVicCycles = true;
          break;
       case rtBin8kLo:

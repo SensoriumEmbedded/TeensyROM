@@ -24,8 +24,8 @@
 #include <SD.h>
 //#include <USBHost_t36.h>
 #include <SPI.h>
-#include <NativeEthernet.h>
-#include <NativeEthernetUdp.h>
+//#include <NativeEthernet.h>
+//#include <NativeEthernetUdp.h>
 #include <EEPROM.h>
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
@@ -153,8 +153,8 @@ void SetUpMainMenuROM()
    LOROM_Image = TeensyROMC64_bin;
    HIROM_Image = NULL;
    LOROM_Mask = HIROM_Mask = 0x1fff;
-   NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
-   NVIC_ENABLE_IRQ(IRQ_PIT);
+   //NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
+   //NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
    
    FreeCrtChips();

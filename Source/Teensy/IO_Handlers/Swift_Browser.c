@@ -510,32 +510,32 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
 
 bool ReadClientLine(char* linebuf, uint16_t MaxLen)
 {
-   uint16_t charcount = 0;
+   //uint16_t charcount = 0;
    
-   while (client.connected()) 
-   {
-      while (client.available()) 
-      {
-         uint8_t c = client.read();
-         if(charcount < MaxLen-1) //leave room for term 
-         {
-            linebuf[charcount++] = c;
-         }
-         if (c=='\n')
-         {
-            linebuf[charcount] = 0; //terminate it
-            return true;
-         }
-      }
-   }
+   //while (client.connected()) 
+   //{
+   //   while (client.available()) 
+   //   {
+   //      //uint8_t c = client.read();
+   //      if(charcount < MaxLen-1) //leave room for term 
+   //      {
+   //         linebuf[charcount++] = c;
+   //      }
+   //      if (c=='\n')
+   //      {
+   //         linebuf[charcount] = 0; //terminate it
+   //         return true;
+   //      }
+   //   }
+   //}
    SendASCIIErrorStrImmediate("Hdr: dropped");
    return false;
 }
 
 void ClearClientStop()
 {  //clear client buffer and stop client
-   while (client.available()) client.read(); 
-   client.stop();
+   //while (client.available()) client.read(); 
+   //client.stop();
 }
 
 void AddToPrevURLQueue(const stcURLParse *URL) //add URL to the prev queue
@@ -559,7 +559,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       
    
    bool Connected;
-   IPAddress HostIP;
+   //IPAddress HostIP;
    char buf[20];
    
    Printf_dbg("Connect: \"%s:%d%s%s\"\n", DestURL->host, DestURL->port, DestURL->path, DestURL->postpath);
@@ -574,13 +574,13 @@ uint32_t WebConnect(const stcURLParse *DestURL)
    SendASCIIStrImmediate(DestURL->postpath);
    SendPETSCIICharImmediate(PETSCIIreturn);
 
-   if(inet_aton(DestURL->host, HostIP)) 
-   {
-      SendPETSCIICharImmediate(PETSCIIlightGrey);
-      SendASCIIStrImmediate("Using IPaddr\r");
-      Connected = client.connect(HostIP, DestURL->port);
-   }
-   else Connected = client.connect(DestURL->host, DestURL->port);
+   //if(inet_aton(DestURL->host, HostIP)) 
+   //{
+   //   SendPETSCIICharImmediate(PETSCIIlightGrey);
+   //   SendASCIIStrImmediate("Using IPaddr\r");
+   //   Connected = client.connect(HostIP, DestURL->port);
+   //}
+   //else Connected = client.connect(DestURL->host, DestURL->port);
    
    if (Connected)
    {
@@ -589,8 +589,8 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
-      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
-         DestURL->path, DestURL->postpath, DestURL->host);
+      //client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
+      //   DestURL->path, DestURL->postpath, DestURL->host);
 
       //get response header
       //https://www.tutorialspoint.com/http/http_responses.htm
@@ -609,7 +609,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
          if (strcmp(inbuf, "\r\n") == 0) //blank line indicates end of header
          {
             SendPETSCIICharImmediate(PETSCIIwhite);
-            if(!client.connected()) SendASCIIStrImmediate("Not "); //may have been header only
+            //if(!client.connected()) SendASCIIStrImmediate("Not "); //may have been header only
             SendASCIIStrImmediate("Connected\r");
             return Length;
          }
@@ -667,7 +667,7 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
 
    char FileNamePath[TxMsgMaxSize+MaxURLPathSize];
    FS *sourceFS;
-   uint8_t USB_SD = EEPROM.read(eepAdDLPathSD_USB);
+   //uint8_t USB_SD = EEPROM.read(eepAdDLPathSD_USB);
    EEPreadStr(eepAdDLPath, FileNamePath); 
    
    //if(USB_SD == Drive_SD)
@@ -718,11 +718,11 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
    uint32_t Length = WebConnect(DestURL);
    AddToPrevURLQueue(DestURL);
    
-   if (!client.connected() || Length == 0)    
-   {
-      SendASCIIErrorStrImmediate("No data");  
-      return;      
-   }
+   //if (!client.connected() || Length == 0)    
+   //{
+   //   SendASCIIErrorStrImmediate("No data");  
+   //   return;      
+   //}
    
    File dataFile = sourceFS->open(FileNamePath, FILE_WRITE);
    if (!dataFile) 
@@ -739,13 +739,13 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
    SendASCIIStrImmediate(buf);
 
    uint32_t DotThresh = Length; //when to print a dot
-   while (client.connected()) 
+   while (0) //client.connected()) 
    {
-      uint32_t ChunkSize = client.available();
+      uint32_t ChunkSize = 0;//client.available();
       if (ChunkSize)
       {
          if (ChunkSize > MaxChunkSize) ChunkSize = MaxChunkSize;
-         client.read(DataChunk, ChunkSize);
+         //client.read(DataChunk, ChunkSize);
          dataFile.write(DataChunk, ChunkSize);
          Printf_dbg("Chunk: %d\n", ChunkSize);
          if (ChunkSize > Length)

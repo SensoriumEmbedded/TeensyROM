@@ -175,18 +175,18 @@ FLASHMEM bool EthernetInit()
       uint16_t DHCPTimeout, DHCPRespTO;
       EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
       EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
-      if (Ethernet.begin(mac, DHCPTimeout, DHCPRespTO) == 0)
-      {
-         Serial.println("*Failed!*");
-         // Check for Ethernet hardware present
-         if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
-         else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");   
-         retval = false;
-      }
-      else
-      {
-         Serial.println("passed.");
-      }
+      //if (Ethernet.begin(mac, DHCPTimeout, DHCPRespTO) == 0)
+      //{
+      //   Serial.println("*Failed!*");
+      //   // Check for Ethernet hardware present
+      //   if (Ethernet.hardwareStatus() == EthernetNoHardware) Serial.println("Ethernet HW was not found.");
+      //   else if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");   
+      //   retval = false;
+      //}
+      //else
+      //{
+      //   Serial.println("passed.");
+      //}
    }
    else
    {
@@ -196,11 +196,11 @@ FLASHMEM bool EthernetInit()
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
-      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      //Ethernet.begin(mac, ip, dns, gateway, subnetmask);
    }
    
    Serial.printf("Took %d mS\nIP: ", (millis() - beginWait));
-   Serial.println(Ethernet.localIP());
+   //Serial.println(Ethernet.localIP());
    return retval;
 }
    
@@ -209,10 +209,10 @@ FLASHMEM void SetEthEEPDefaults()
    EEPROM.write(eepAdDHCPEnabled, 1); //DHCP enabled
    uint8_t buf[6]={0xBE, 0x0C, 0x64, 0xC0, 0xFF, 0xEE};
    EEPwriteNBuf(eepAdMyMAC, buf, 6);
-   EEPROM.put(eepAdMyIP       , (uint32_t)IPAddress(192,168,1,10));
-   EEPROM.put(eepAdDNSIP      , (uint32_t)IPAddress(192,168,1,1));
-   EEPROM.put(eepAdGtwyIP     , (uint32_t)IPAddress(192,168,1,1));
-   EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
+   //EEPROM.put(eepAdMyIP       , (uint32_t)IPAddress(192,168,1,10));
+   //EEPROM.put(eepAdDNSIP      , (uint32_t)IPAddress(192,168,1,1));
+   //EEPROM.put(eepAdGtwyIP     , (uint32_t)IPAddress(192,168,1,1));
+   //EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
    EEPROM.put(eepAdDHCPTimeout, (uint16_t)9000);
    EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);  
    EEPROM.write(eepAdDLPathSD_USB, Drive_SD); //default to root of SD card
@@ -345,97 +345,97 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_SwiftLink()
 {
-   //detect connection change
-   if (ConnectedToHost != client.connected())
-   {
-      ConnectedToHost = client.connected();
-      if (BrowserMode)
-      {
-         if (!ConnectedToHost) AddRawStrToRxQueue("<eoftag>");  //add special tag to catch when complete
-      }
-      else
-      {
-         AddToPETSCIIStrToRxQueue("\r\r\r*** ");
-         if (ConnectedToHost) AddToPETSCIIStrToRxQueueLN("connected to host");
-         else AddToPETSCIIStrToRxQueueLN("not connected");
-      }
-   }
-   
-   //if client data available, add to Rx Queue
-   #ifdef DbgMsgs_IO
-      if(client.available())
-      {
-         uint16_t Cnt = 0;
-         //Serial.printf("RxIn %d+", RxQueueUsed);
-         while (client.available())
-         {
-            AddRawCharToRxQueue(client.read());
-            Cnt++;
-         }
-         //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
-         if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
-      }
-   #else
-      while (client.available()) AddRawCharToRxQueue(client.read());
-   #endif
+   ////detect connection change
+   //if (ConnectedToHost != client.connected())
+   //{
+   //   ConnectedToHost = client.connected();
+   //   if (BrowserMode)
+   //   {
+   //      if (!ConnectedToHost) AddRawStrToRxQueue("<eoftag>");  //add special tag to catch when complete
+   //   }
+   //   else
+   //   {
+   //      AddToPETSCIIStrToRxQueue("\r\r\r*** ");
+   //      if (ConnectedToHost) AddToPETSCIIStrToRxQueueLN("connected to host");
+   //      else AddToPETSCIIStrToRxQueueLN("not connected");
+   //   }
+   //}
+   //
+   ////if client data available, add to Rx Queue
+   //#ifdef DbgMsgs_IO
+   //   if(client.available())
+   //   {
+   //      uint16_t Cnt = 0;
+   //      //Serial.printf("RxIn %d+", RxQueueUsed);
+   //      while (client.available())
+   //      {
+   //         AddRawCharToRxQueue(client.read());
+   //         Cnt++;
+   //      }
+   //      //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
+   //      if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
+   //   }
+   //#else
+   //   while (client.available()) AddRawCharToRxQueue(client.read());
+   //#endif
    
    //if Tx data available, get it from C64
    if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) 
    {
-      if (client.connected() && !BrowserMode) //send Tx data to host
-      {
-         //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
-         client.print((char)SwiftTxBuf);  //send it
-         if(SwiftTxBuf=='+')
-         {
-            if(millis()-LastTxMillis>1000 || PlusCount!=0) //Must be preceded by at least 1 second of no characters
-            {   
-               if(++PlusCount>3) PlusCount=0;
-            }
-         }
-         else PlusCount=0;
-         
-         SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
-      }
-      else  //off-line/at commands or BrowserMode..................................
-      {         
-         Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
-         
-         if(BrowserMode)
-         {
-            SendPETSCIICharImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
-            if (SwiftTxBuf & 0x80) SwiftTxBuf &= 0x7f; //Cap to ascii
-            else if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //lower case to ascii
-         }
-         else 
-         {
-            AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
-            SwiftTxBufToLcaseASSCII();
-         }
-         Printf_dbg("%02x: %c\n", SwiftTxBuf);
-         
-         if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
-         else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
-         
-         if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgMaxSize) //return hit or max size
-         {
-            SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
-            TxMsg[TxMsgOffset-1] = 0; //terminate it
-            Printf_dbg("TxMsg: %s\n", TxMsg);
-            if(BrowserMode) 
-            {
-               ProcessBrowserCommand();
-               SendPETSCIICharImmediate(PETSCIIwhite); 
-            }
-            else
-            {
-               ProcessATCommand();
-               if (!BrowserMode) AddToPETSCIIStrToRxQueueLN("ok\r");
-            }
-            TxMsgOffset = 0;
-         }
-         else SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
-      }
+      //if (client.connected() && !BrowserMode) //send Tx data to host
+      //{
+      //   //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
+      //   client.print((char)SwiftTxBuf);  //send it
+      //   if(SwiftTxBuf=='+')
+      //   {
+      //      if(millis()-LastTxMillis>1000 || PlusCount!=0) //Must be preceded by at least 1 second of no characters
+      //      {   
+      //         if(++PlusCount>3) PlusCount=0;
+      //      }
+      //   }
+      //   else PlusCount=0;
+      //   
+      //   SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
+      //}
+      //else  //off-line/at commands or BrowserMode..................................
+      //{         
+      //   Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
+      //   
+      //   if(BrowserMode)
+      //   {
+      //      SendPETSCIICharImmediate(SwiftTxBuf); //echo it now, buffer may be paused or filling
+      //      if (SwiftTxBuf & 0x80) SwiftTxBuf &= 0x7f; //Cap to ascii
+      //      else if (SwiftTxBuf & 0x40) SwiftTxBuf |= 0x20;  //lower case to ascii
+      //   }
+      //   else 
+      //   {
+      //      AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
+      //      SwiftTxBufToLcaseASSCII();
+      //   }
+      //   Printf_dbg("%02x: %c\n", SwiftTxBuf);
+      //   
+      //   if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
+      //   else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
+      //   
+      //   if (SwiftTxBuf == 13 || TxMsgOffset == TxMsgMaxSize) //return hit or max size
+      //   {
+      //      SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
+      //      TxMsg[TxMsgOffset-1] = 0; //terminate it
+      //      Printf_dbg("TxMsg: %s\n", TxMsg);
+      //      if(BrowserMode) 
+      //      {
+      //         ProcessBrowserCommand();
+      //         SendPETSCIICharImmediate(PETSCIIwhite); 
+      //      }
+      //      else
+      //      {
+      //         ProcessATCommand();
+      //         if (!BrowserMode) AddToPETSCIIStrToRxQueueLN("ok\r");
+      //      }
+      //      TxMsgOffset = 0;
+      //   }
+      //   else SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
+      //}
       LastTxMillis = millis();
    }
    

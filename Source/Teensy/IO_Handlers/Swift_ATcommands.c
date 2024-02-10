@@ -47,77 +47,77 @@ FLASHMEM void AT_DT(char* CmdArg)
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
    
-   if (client.connect(CmdArg, Port)) AddToPETSCIIStrToRxQueueLN("Done");
-   else AddToPETSCIIStrToRxQueueLN("Failed!");
+   //if (client.connect(CmdArg, Port)) AddToPETSCIIStrToRxQueueLN("Done");
+   //else AddToPETSCIIStrToRxQueueLN("Failed!");
 }
 
 FLASHMEM void AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
    AddToPETSCIIStrToRxQueue("Connect Ethernet ");
-   if (EEPROM.read(eepAdDHCPEnabled)) AddToPETSCIIStrToRxQueue("via DHCP...");
-   else AddToPETSCIIStrToRxQueue("using Static...");
-   FlushRxQueue();
-   
-   if (EthernetInit()==true)
-   {
-      AddToPETSCIIStrToRxQueueLN("Done");
-      
-      byte mac[6]; 
-      Ethernet.MACAddress(mac);
-      AddMACToRxQueueLN(mac);
-      
-      uint32_t ip = Ethernet.localIP();
-      AddToPETSCIIStrToRxQueue(" Local IP: ");
-      AddIPaddrToRxQueueLN(ip);
-
-      ip = Ethernet.subnetMask();
-      AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
-      AddIPaddrToRxQueueLN(ip);
-
-      ip = Ethernet.gatewayIP();
-      AddToPETSCIIStrToRxQueue(" Gateway IP: ");
-      AddIPaddrToRxQueueLN(ip);
-   }
-   else
-   {
-      AddToPETSCIIStrToRxQueueLN("Failed!");
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) AddToPETSCIIStrToRxQueueLN(" HW was not found");
-      else if (Ethernet.linkStatus() == LinkOFF) AddToPETSCIIStrToRxQueueLN(" Cable is not connected");
-   }
+   //if (EEPROM.read(eepAdDHCPEnabled)) AddToPETSCIIStrToRxQueue("via DHCP...");
+   //else AddToPETSCIIStrToRxQueue("using Static...");
+   //FlushRxQueue();
+   //
+   //if (EthernetInit()==true)
+   //{
+   //   AddToPETSCIIStrToRxQueueLN("Done");
+   //   
+   //   byte mac[6]; 
+   //   Ethernet.MACAddress(mac);
+   //   AddMACToRxQueueLN(mac);
+   //   
+   //   uint32_t ip = Ethernet.localIP();
+   //   AddToPETSCIIStrToRxQueue(" Local IP: ");
+   //   AddIPaddrToRxQueueLN(ip);
+   //
+   //   ip = Ethernet.subnetMask();
+   //   AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
+   //   AddIPaddrToRxQueueLN(ip);
+   //
+   //   ip = Ethernet.gatewayIP();
+   //   AddToPETSCIIStrToRxQueue(" Gateway IP: ");
+   //   AddIPaddrToRxQueueLN(ip);
+   //}
+   //else
+   //{
+   //   AddToPETSCIIStrToRxQueueLN("Failed!");
+   //   if (Ethernet.hardwareStatus() == EthernetNoHardware) AddToPETSCIIStrToRxQueueLN(" HW was not found");
+   //   else if (Ethernet.linkStatus() == LinkOFF) AddToPETSCIIStrToRxQueueLN(" Cable is not connected");
+   //}
 }
 
 FLASHMEM void AT_S(char* CmdArg)
 {
-   uint32_t ip;
-   uint8_t  mac[6];
-   
-   AddToPETSCIIStrToRxQueueLN("General Settings:");
-
-   EEPreadNBuf(eepAdMyMAC, mac, 6);
-   AddMACToRxQueueLN(mac);
-   
-   AddDHCPEnDisToRxQueueLN();
-   
-   AddToPETSCIIStrToRxQueueLN("DHCP only:");    
-   AddDHCPTimeoutToRxQueueLN();
-   AddDHCPRespTOToRxQueueLN();
-   
-   AddToPETSCIIStrToRxQueueLN("Static only:");    
-   AddToPETSCIIStrToRxQueue(" My IP: ");
-   EEPROM.get(eepAdMyIP, ip);
-   AddIPaddrToRxQueueLN(ip);
-
-   AddToPETSCIIStrToRxQueue(" DNS IP: ");
-   EEPROM.get(eepAdDNSIP, ip);
-   AddIPaddrToRxQueueLN(ip);
-
-   AddToPETSCIIStrToRxQueue(" Gateway IP: ");
-   EEPROM.get(eepAdGtwyIP, ip);
-   AddIPaddrToRxQueueLN(ip);
-
-   AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
-   EEPROM.get(eepAdMaskIP, ip);
-   AddIPaddrToRxQueueLN(ip);
+   //uint32_t ip;
+   //uint8_t  mac[6];
+   //
+   //AddToPETSCIIStrToRxQueueLN("General Settings:");
+   //
+   //EEPreadNBuf(eepAdMyMAC, mac, 6);
+   //AddMACToRxQueueLN(mac);
+   //
+   //AddDHCPEnDisToRxQueueLN();
+   //
+   //AddToPETSCIIStrToRxQueueLN("DHCP only:");    
+   //AddDHCPTimeoutToRxQueueLN();
+   //AddDHCPRespTOToRxQueueLN();
+   //
+   //AddToPETSCIIStrToRxQueueLN("Static only:");    
+   //AddToPETSCIIStrToRxQueue(" My IP: ");
+   //EEPROM.get(eepAdMyIP, ip);
+   //AddIPaddrToRxQueueLN(ip);
+   //
+   //AddToPETSCIIStrToRxQueue(" DNS IP: ");
+   //EEPROM.get(eepAdDNSIP, ip);
+   //AddIPaddrToRxQueueLN(ip);
+   //
+   //AddToPETSCIIStrToRxQueue(" Gateway IP: ");
+   //EEPROM.get(eepAdGtwyIP, ip);
+   //AddIPaddrToRxQueueLN(ip);
+   //
+   //AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
+   //EEPROM.get(eepAdMaskIP, ip);
+   //AddIPaddrToRxQueueLN(ip);
 
 }
 

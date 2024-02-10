@@ -24,8 +24,8 @@
 //USBDrive myDrive(myusbHost);
 //USBFilesystem firstPartition(myusbHost);
 
-EthernetUDP udp;
-EthernetClient client;
+//EthernetUDP udp;
+//EthernetClient client;
 
 #define usbDevMIDI usbMIDI
 #define IOHNameLength 20  //limited by display location on C64
