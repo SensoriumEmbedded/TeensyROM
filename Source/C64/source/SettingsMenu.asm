@@ -208,7 +208,7 @@ UpdTimeZone
 +  cmp #'f'  ;Synch Time now
    bne +
    jsr SynchEthernetTime
-   jmp WaitForSettingsKey  
+   jmp SettingsMenu ;force to reprint all in case ram reduced  
 
 +  cmp #'g'  ;Toggle Music now
    bne +

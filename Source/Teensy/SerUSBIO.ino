@@ -100,7 +100,7 @@ FLASHMEM void ServiceSerial()
    #ifdef Dbg_SerMem 
       case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
          {
-            MakeBuildCPUInfoStr();
+            MakeBuildInfo();
             Serial.println("\n***** Build & Mem info *****");
             Serial.println(SerialStringBuf);
             Serial.printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
@@ -572,17 +572,4 @@ FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
   printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
-FLASHMEM uint8_t RAM2blocks()
-{  //see how many 8k banks will fit in RAM2
-   char *ptrChip[70]; //64 8k blocks would be 512k (size of RAM2)
-   uint8_t ChipNum = 0;
-   while(1)
-   {
-      ptrChip[ChipNum] = (char *)malloc(8192);
-      if (ptrChip[ChipNum] == NULL) break;
-      ChipNum++;
-   } 
-   for(uint8_t Cnt=0; Cnt < ChipNum; Cnt++) free(ptrChip[Cnt]);
-   //Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
-   return ChipNum;
-}
+
