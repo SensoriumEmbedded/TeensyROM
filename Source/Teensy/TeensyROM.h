@@ -17,11 +17,11 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.11+Bare"; //*VERSION*
+char strVersionNumber[] = "minimal v0"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
-//#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-//#define nfcScanner    //poll nfc scanner via serial device on USB Host port
+// #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
+// #define nfcScanner    //poll nfc scanner via serial device on USB Host port
 //less used:
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others

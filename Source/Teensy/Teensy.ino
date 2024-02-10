@@ -100,7 +100,7 @@ void setup()
 
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   MakeBuildCPUInfoStr();
+   MakeBuildInfo();
    Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 } 
      
