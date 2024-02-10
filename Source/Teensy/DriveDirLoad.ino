@@ -38,12 +38,12 @@ void HandleExecution()
       return;
    }
    
-   FS *sourceFS = &firstPartition;
+   FS *sourceFS = &SD;
    switch(IO1[rWRegCurrMenuWAIT]) 
    {  //find source based on current menu, perform device specific actions
       case rmtSD:
-         sourceFS = &SD;
       case rmtUSBDrive:
+         //sourceFS = &SD;
          //USB or SD drive actions:
          if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
          {
@@ -238,13 +238,10 @@ void MenuChange()
          MenuSource = TeensyROMMenu; 
          SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
+      case rmtUSBDrive:
       case rmtSD:
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
-         MenuSource = DriveDirMenu; 
-         break;
-      case rmtUSBDrive:
-         LoadDirectory(&firstPartition);
          MenuSource = DriveDirMenu; 
          break;
    }

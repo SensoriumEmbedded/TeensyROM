@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.11+"; //*VERSION*
+char strVersionNumber[] = "v0.5.11+Bare"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -29,7 +29,7 @@ char strVersionNumber[] = "v0.5.11+"; //*VERSION*
 // #define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
 // #define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
 // #define Dbg_SerLog    //Allow commands over serial that display log info
-// #define Dbg_SerMem    //Allow commands over serial that display memory info
+#define Dbg_SerMem    //Allow commands over serial that display memory info
 // #define DbgSpecial    //Special case logging to BigBuf
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM

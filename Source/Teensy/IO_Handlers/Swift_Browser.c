@@ -670,17 +670,17 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
    uint8_t USB_SD = EEPROM.read(eepAdDLPathSD_USB);
    EEPreadStr(eepAdDLPath, FileNamePath); 
    
-   if(USB_SD == Drive_SD)
-   {
+   //if(USB_SD == Drive_SD)
+   //{
       if (!InitCheckSD()) return;      
       SendASCIIStrImmediate("sd:");
       sourceFS = &SD;
-   }
-   else
-   {
-      SendASCIIStrImmediate("usb:");
-      sourceFS = &firstPartition;      
-   }
+   //}
+   //else
+   //{
+   //   SendASCIIStrImmediate("usb:");
+   //   sourceFS = &firstPartition;      
+   //}
    
    SendASCIIStrImmediate(FileNamePath);
    SendASCIIStrImmediate("\r");
@@ -1020,13 +1020,13 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
    {  //Set download path
       CmdMsg++; //past the 's'
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
-      if (strncmp(CmdMsg, "usb:", 4) == 0)
-      {
-         CmdMsg+=4;
-         USB_SD = Drive_USB;
-         sourceFS = &firstPartition;
-      }
-      else if (strncmp(CmdMsg, "sd:", 3) == 0)
+      //if (strncmp(CmdMsg, "usb:", 4) == 0)
+      //{
+      //   CmdMsg+=4;
+      //   USB_SD = Drive_USB;
+      //   sourceFS = &firstPartition;
+      //}
+      /*else*/ if (strncmp(CmdMsg, "sd:", 3) == 0)
       {
          CmdMsg+=3;
          USB_SD = Drive_SD;
@@ -1066,17 +1066,17 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
       
       DumpQueueUnPausePage();
       AddRawStrToRxQueue("<html><b>Download Directory:<br> ");
-      if(USB_SD == Drive_SD)
-      {
+      //if(USB_SD == Drive_SD)
+      //{
          if (!InitCheckSD()) return;      
          AddRawStrToRxQueue("sd:");
          sourceFS = &SD;
-      }
-      else
-      {
-         AddRawStrToRxQueue("usb:");
-         sourceFS = &firstPartition;      
-      }
+      //}
+      //else
+      //{
+      //   AddRawStrToRxQueue("usb:");
+      //   sourceFS = &firstPartition;      
+      //}
       
       AddRawStrToRxQueue(FileNamePath);
       AddRawStrToRxQueue("<br> (ds to change)</b><br>Select Link to Lauch<br>");

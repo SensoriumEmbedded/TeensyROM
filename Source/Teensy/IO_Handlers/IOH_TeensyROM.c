@@ -292,8 +292,9 @@ void UpDirectory()
       char * LastSlash = strrchr(DriveDirPath, '/'); //find last slash
       if (LastSlash == NULL) return;
       LastSlash[0] = 0;  //terminate it there 
-      if (IO1[rWRegCurrMenuWAIT] == rmtSD) LoadDirectory(&SD); 
-      else LoadDirectory(&firstPartition); 
+      //if (IO1[rWRegCurrMenuWAIT] == rmtSD) 
+      LoadDirectory(&SD); 
+      //else LoadDirectory(&firstPartition); 
       IO1[rwRegCursorItemOnPg] = 0;
       IO1[rwRegPageNumber]     = 1;
    }
@@ -536,15 +537,15 @@ void InitHndlr_TeensyROM()
 {
    IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
    //MIDI handlers for MIDI2SID:
-   usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
-   usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
-   usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
-   usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
-
-   usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
-   usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
-   usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
-   usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
+   //usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
+   //usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
+   //usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
+   //usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+   //
+   //usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
+   //usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
+   //usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
+   //usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
 }   
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -716,8 +717,8 @@ void PollingHndlr_TeensyROM()
       Serial.flush();
       IO1[rwRegStatus] = rsReady;
    }
-   usbHostMIDI.read();
-   usbDevMIDI.read();
+   //usbHostMIDI.read();
+   //usbDevMIDI.read();
 }
    
 

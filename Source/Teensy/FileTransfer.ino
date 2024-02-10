@@ -35,7 +35,7 @@ FLASHMEM bool GetPathParameter(char FileNamePath[])
 
 FLASHMEM FS* GetStorageDevice(uint32_t storageType)
 {
-    if (!storageType) return &firstPartition;
+    //if (!storageType) return &firstPartition;
 
     if (!SD.begin(BUILTIN_SDCARD))
     {

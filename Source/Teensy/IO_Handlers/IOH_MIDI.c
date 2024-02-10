@@ -91,7 +91,7 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 volatile uint8_t rIORegMIDIStatus   = 0;
 volatile uint8_t MIDIRxIRQEnabled = false;
 volatile uint16_t MIDIRxBytesToSend = 0;
-volatile uint8_t MIDIRxBuf[USB_MIDI_SYSEX_MAX]; //currently 290, defined in cores\teensy4\usb_midi.h  
+volatile uint8_t MIDIRxBuf[3]; //currently 290, defined in cores\teensy4\usb_midi.h  
 volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
@@ -249,34 +249,34 @@ void MIDIinHndlrInit()
    //for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
    
    // MIDI USB Host input handlers
-   usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
-   usbHostMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
-   usbHostMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
-   usbHostMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
-   usbHostMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
-   usbHostMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
-   usbHostMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-   usbHostMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
-   usbHostMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
-   usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
-   usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
-   usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
-   usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
-
-   // MIDI USB Device input handlers
-   usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
-   usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
-   usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
-   usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //was disabled as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
-   usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //was disabled as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
-   usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
-   usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex //was disabled as apps like cakewalk write pitch to 0 on stop and crash cynthcart
-   usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
-   usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
-   usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
-   usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
-   usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
-   usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
+   //usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
+   //usbHostMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
+   //usbHostMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
+   //usbHostMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
+   //usbHostMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
+   //usbHostMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
+   //usbHostMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
+   //usbHostMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
+   //usbHostMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
+   //usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
+   //usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
+   //usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
+   //usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+   //
+   //// MIDI USB Device input handlers
+   //usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
+   //usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
+   //usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
+   //usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //was disabled as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
+   //usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //was disabled as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
+   //usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
+   //usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex //was disabled as apps like cakewalk write pitch to 0 on stop and crash cynthcart
+   //usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
+   //usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
+   //usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
+   //usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
+   //usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
+   //usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
    // not catching F0, F4, F5, F7 (end of SysEx), and FD         
 }   
    
@@ -427,14 +427,14 @@ void PollingHndlr_MIDI()
 {
    if (MIDIRxBytesToSend == 0) //read MIDI-in data in only if ready to send to C64 (buffer empty)
    {
-      usbHostMIDI.read(); 
-      if (MIDIRxBytesToSend == 0) usbDevMIDI.read(); //dito, giving hosted device priority
+      //usbHostMIDI.read(); 
+      //if (MIDIRxBytesToSend == 0) usbDevMIDI.read(); //dito, giving hosted device priority
    }
    
    if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
    {
-      if (MIDITxBuf[0]<0xf0) usbHostMIDI.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
-      else usbHostMIDI.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
+      //if (MIDITxBuf[0]<0xf0) usbHostMIDI.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      //else usbHostMIDI.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
       
       Printf_dbg("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
       MIDITxBytesReceived = 0;

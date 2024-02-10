@@ -22,7 +22,7 @@
 
 
 #include <SD.h>
-#include <USBHost_t36.h>
+//#include <USBHost_t36.h>
 #include <SPI.h>
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
@@ -70,7 +70,7 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
-   myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
+   //myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
 #ifdef nfcScanner
    nfcInit(); //connect to nfc scanner
 #endif
@@ -135,7 +135,7 @@ void loop()
    }
   
    if (Serial.available()) ServiceSerial();
-   myusbHost.Task();
+   //myusbHost.Task();
 #ifdef nfcScanner
    nfcCheck();
 #endif

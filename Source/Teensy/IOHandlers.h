@@ -17,12 +17,12 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-USBHost myusbHost;
-USBHub hub1(myusbHost);
-USBHub hub2(myusbHost);
-MIDIDevice usbHostMIDI(myusbHost);
-USBDrive myDrive(myusbHost);
-USBFilesystem firstPartition(myusbHost);
+//USBHost myusbHost;
+//USBHub hub1(myusbHost);
+//USBHub hub2(myusbHost);
+//MIDIDevice usbHostMIDI(myusbHost);
+//USBDrive myDrive(myusbHost);
+//USBFilesystem firstPartition(myusbHost);
 
 EthernetUDP udp;
 EthernetClient client;
