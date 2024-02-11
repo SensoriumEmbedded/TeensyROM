@@ -108,15 +108,15 @@
 #define Cart_REU                   -105 
 #define Cart_SFX_Sound_Expander    -106 
 #define Cart_SFX_Sound_Sampler     -107 
-#define Cart_MIDI_Passport         -108  //Supported
-#define Cart_MIDI_Datel            -109  //Supported
-#define Cart_MIDI_Sequential       -110  //Supported
-#define Cart_MIDI_Namesoft         -111  //Supported
-#define Cart_MIDI_Maplin           -112
-#define Cart_DS12C887RTC           -113
-#define Cart_TFE                   -116
-#define Cart_Turbo232              -117
-#define Cart_SwiftLink             -118  //Supported
+#define Cart_MIDI_Passport         -108  //Not Supported, Minimal
+#define Cart_MIDI_Datel            -109  //Not Supported, Minimal
+#define Cart_MIDI_Sequential       -110  //Not Supported, Minimal
+#define Cart_MIDI_Namesoft         -111  //Not Supported, Minimal
+#define Cart_MIDI_Maplin           -112                
+#define Cart_DS12C887RTC           -113                
+#define Cart_TFE                   -116                
+#define Cart_Turbo232              -117                
+#define Cart_SwiftLink             -118  //Not Supported, Minimal
 #define Cart_ACIA                  -119
 #define Cart_Plus60K               -120
 #define Cart_Plus256K              -121
@@ -134,11 +134,11 @@ struct StructHWID_IOH_Assoc
 StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 {
            //HWID                  IOH
-   (uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
-   (uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
-   (uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
-   (uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
-   (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
+   //(uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
+   //(uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
+   //(uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
+   //(uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
+   //(uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
    (uint16_t)Cart_EpyxFastload,    IOH_EpyxFastLoad,
    (uint16_t)Cart_MagicDesk,       IOH_MagicDesk,
    (uint16_t)Cart_Dinamic,         IOH_Dinamic,

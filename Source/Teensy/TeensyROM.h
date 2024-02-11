@@ -40,7 +40,7 @@ uint32_t* BigBuf = NULL;
 #ifdef nfcScanner
    #define MaxRAM_ImageSize  152
 #else
-   #define MaxRAM_ImageSize  (184+116)  //normal max 
+   #define MaxRAM_ImageSize  (184+116+20)  //normal max 320
 #endif
 
 #ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize

@@ -27,7 +27,7 @@
 //EthernetUDP udp;
 //EthernetClient client;
 
-#define usbDevMIDI usbMIDI
+//#define usbDevMIDI usbMIDI
 #define IOHNameLength 20  //limited by display location on C64
 
 struct stcIOHandlers
@@ -43,10 +43,10 @@ struct stcIOHandlers
 };
 
 #include "IO_Handlers/IOH_None.c"
-#include "IO_Handlers/IOH_MIDI.c"
-#include "IO_Handlers/IOH_Debug.c"
+//#include "IO_Handlers/IOH_MIDI.c"
+//#include "IO_Handlers/IOH_Debug.c"
 #include "IO_Handlers/IOH_TeensyROM.c" 
-#include "IO_Handlers/IOH_Swiftlink.c"
+//#include "IO_Handlers/IOH_Swiftlink.c"
 #include "IO_Handlers/IOH_EpyxFastLoad.c"
 #include "IO_Handlers/IOH_MagicDesk.c"
 #include "IO_Handlers/IOH_Dinamic.c"
@@ -60,12 +60,12 @@ struct stcIOHandlers
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
    &IOHndlr_None,               //IOH_None,
-   &IOHndlr_SwiftLink,          //IOH_Swiftlink,
-   &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
-   &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
-   &IOHndlr_MIDI_Passport,      //IOH_MIDI_Passport,   
-   &IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
-   &IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
+   //&IOHndlr_SwiftLink,          //IOH_Swiftlink,
+   //&IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
+   //&IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
+   //&IOHndlr_MIDI_Passport,      //IOH_MIDI_Passport,   
+   //&IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
+   //&IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
                                 
    &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,

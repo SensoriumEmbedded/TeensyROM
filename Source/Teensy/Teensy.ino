@@ -23,7 +23,7 @@
 
 #include <SD.h>
 //#include <USBHost_t36.h>
-#include <SPI.h>
+//#include <SPI.h>
 //#include <NativeEthernet.h>
 //#include <NativeEthernetUdp.h>
 #include <EEPROM.h>
@@ -94,9 +94,9 @@ void setup()
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
 
-   for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) PageLinkBuff[cnt] = NULL; //initialize page link buffer for swiftlink browser mode
-   for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
-   for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
+   //for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++) PageLinkBuff[cnt] = NULL; //initialize page link buffer for swiftlink browser mode
+   //for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
+   //for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
 
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
@@ -158,7 +158,7 @@ void SetUpMainMenuROM()
    EmulateVicCycles = false;
    
    FreeCrtChips();
-   FreeSwiftlinkBuffs();
+   //FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
@@ -200,7 +200,7 @@ void SetEEPDefaults()
    EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
-   SetEthEEPDefaults();
+   //SetEthEEPDefaults();
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }
 

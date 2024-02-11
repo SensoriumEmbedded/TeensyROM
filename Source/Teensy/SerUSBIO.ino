@@ -345,11 +345,11 @@ FLASHMEM void PrintDebugLog()
       LogDatavalid = true;
    #endif
       
-   if (CurrentIOHandler == IOH_Debug)
-   {
-      Serial.println("Debug IO Handler enabled");
-      LogDatavalid = true;
-   }               
+   //if (CurrentIOHandler == IOH_Debug)
+   //{
+   //   Serial.println("Debug IO Handler enabled");
+   //   LogDatavalid = true;
+   //}               
    
    if (!LogDatavalid)
    {

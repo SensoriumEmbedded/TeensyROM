@@ -207,12 +207,12 @@ struct StructMenuItem
 enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
 {
    IOH_None,
-   IOH_Swiftlink,
-   IOH_MIDI_Datel,      
-   IOH_MIDI_Sequential, 
-   IOH_MIDI_Passport,   
-   IOH_MIDI_NamesoftIRQ,
-   IOH_Debug, //last manually selectable, see LastSelectableIOH
+   //IOH_Swiftlink,
+   //IOH_MIDI_Datel,      
+   //IOH_MIDI_Sequential, 
+   //IOH_MIDI_Passport,   
+   //IOH_MIDI_NamesoftIRQ,
+   //IOH_Debug, //last manually selectable, see LastSelectableIOH
    
    IOH_TeensyROM, 
    IOH_EpyxFastLoad,
@@ -229,4 +229,4 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_Debug     //127 max
+#define LastSelectableIOH  IOH_None     //127 max

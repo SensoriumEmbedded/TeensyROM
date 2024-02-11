@@ -104,7 +104,7 @@ void RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
-   FreeSwiftlinkBuffs();
+   //FreeSwiftlinkBuffs();
 
    // Set up DriveDirMenu to point to file to load
    //    without doing LoadDirectory(&SD/&firstPartition);
