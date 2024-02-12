@@ -205,10 +205,10 @@ UpdTimeZone
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'f'  ;Synch Time now
-   bne +
-   jsr SynchEthernetTime
-   jmp WaitForSettingsKey  
+;+  cmp #'f'  ;Synch Time now
+;   bne +
+;   jsr SynchEthernetTime
+;   jmp WaitForSettingsKey  
 
 +  cmp #'g'  ;Toggle Music now
    bne +

@@ -274,11 +274,11 @@ ReadKeyboard:
    jsr ToggleSIDMusic
    jmp WaitForJSorKey  
 
-+  cmp #ChrF5  ;USB Drive Menu
-   bne +
-   lda #rmtUSBDrive
-   jsr ListMenuItemsChangeInit
-   jmp HighlightCurrent
+;+  cmp #ChrF5  ;USB Drive Menu
+;   bne +
+;   lda #rmtUSBDrive
+;   jsr ListMenuItemsChangeInit
+;   jmp HighlightCurrent
    
 +  cmp #ChrF6  ;Show SID info
    bne +
@@ -749,10 +749,10 @@ WaitHelpMenuKey:
    jsr ToggleSIDMusic
    jmp WaitHelpMenuKey  
 
-+  cmp #ChrF5  ;USB Drive Menu
-   bne +
-   lda #rmtUSBDrive
-   jmp MenuChangeInit
+;+  cmp #ChrF5  ;USB Drive Menu
+;   bne +
+;   lda #rmtUSBDrive
+;   jmp MenuChangeInit
    
 +  cmp #ChrF6  ;Show SID info
    bne +

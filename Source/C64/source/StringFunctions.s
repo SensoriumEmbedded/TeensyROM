@@ -64,47 +64,57 @@ DisplayTime:
    ldy #29  ;col
    clc
    jsr SetCursor
-   lda #TimeColor
-   jsr SendChar
-   lda TODHoursBCD ;latches time in regs (stops incrementing)
-   tay ;save for re-use
-   and #$1f
-   bne nz   ;if hours is 0, make it 12...
-   tya
-   ora #$12
-   tay ;re-save for re-use
-nz tya
-   and #$10
-   bne +
+   
+;print spaces instead:
+   ldy #10
    lda #ChrSpace
-   jmp ++
-+  lda #'1'
-++ jsr SendChar
-   tya
-   and #$0f  ;ones of hours
-   jsr PrintHexNibble
-   lda #':'
-   jsr SendChar
-   lda TODMinBCD
-   jsr PrintHexByte
-   lda #':'
-   jsr SendChar
-   lda TODSecBCD
-   jsr PrintHexByte
-   ;lda #'.'
-   ;jsr SendChar
-   lda TODTenthSecBCD ;have to read 10ths to release latch
-   ;jsr PrintHexNibble
-   tya ;am/pm (pre latch release)
-   and #$80
-   bne +
-   lda #'a'
-   jmp ++
-+  lda #'p'
-++ jsr SendChar
-   lda #'m'
-   jsr SendChar
-   rts
+-  jsr SendChar
+   dey
+   bne -
++  rts  
+
+;only place time is disabled, when printing. Could revert if synchable. 
+;   lda #TimeColor
+;   jsr SendChar
+;   lda TODHoursBCD ;latches time in regs (stops incrementing)
+;   tay ;save for re-use
+;   and #$1f
+;   bne nz   ;if hours is 0, make it 12...
+;   tya
+;   ora #$12
+;   tay ;re-save for re-use
+;nz tya
+;   and #$10
+;   bne +
+;   lda #ChrSpace
+;   jmp ++
+;+  lda #'1'
+;++ jsr SendChar
+;   tya
+;   and #$0f  ;ones of hours
+;   jsr PrintHexNibble
+;   lda #':'
+;   jsr SendChar
+;   lda TODMinBCD
+;   jsr PrintHexByte
+;   lda #':'
+;   jsr SendChar
+;   lda TODSecBCD
+;   jsr PrintHexByte
+;   ;lda #'.'
+;   ;jsr SendChar
+;   lda TODTenthSecBCD ;have to read 10ths to release latch
+;   ;jsr PrintHexNibble
+;   tya ;am/pm (pre latch release)
+;   and #$80
+;   bne +
+;   lda #'a'
+;   jmp ++
+;+  lda #'p'
+;++ jsr SendChar
+;   lda #'m'
+;   jsr SendChar
+;   rts
 
 PrintIntByte: 
    ;Print acc as int, no padding

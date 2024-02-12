@@ -573,7 +573,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 
 void InitHndlr_TeensyROM()
 {
-   IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+   IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
    //MIDI handlers for MIDI2SID:
    //usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
    //usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x

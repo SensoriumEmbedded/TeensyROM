@@ -110,7 +110,7 @@ void HandleExecution()
                if (!ParseChipHeader(ptrChipOffset)) //sends error messages
                {
                   FreeCrtChips();
-                  IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+                  IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
                   return;        
                }
                ptrChipOffset += CRT_CHIP_HDR_LEN;
@@ -122,7 +122,7 @@ void HandleExecution()
             //check configuration (sends error messages)
             if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) 
             {
-               IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+               IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
                return;
             }
          }
@@ -301,7 +301,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          {
             myFile.close();
             FreeCrtChips();
-            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+            IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
             RedirectEmptyDriveDirMenu();
             return false;        
          }
@@ -314,7 +314,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       {
          myFile.close();
          FreeCrtChips();
-         IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+         IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
          RedirectEmptyDriveDirMenu();
          return false;        
       }
