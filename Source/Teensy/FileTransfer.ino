@@ -443,3 +443,88 @@ FLASHMEM void DeleteFileCommand()
 
     DeleteFile(FilePath, *sourceFS);
 }
+
+FLASHMEM bool SendFileData(File& file, uint32_t len) {
+    uint32_t bytenum = 0;
+    while (bytenum < len) {
+        if (Serial.availableForWrite()) {
+            Serial.write(file.read());
+            bytenum++;
+        } else {
+            SendU16(FailToken);
+            Serial.printf("Send %lu of %lu bytes\n", bytenum, len);
+            return false;
+        }
+    }
+    return true;
+}
+
+FLASHMEM uint32_t CalculateChecksum(File& file) {
+    uint32_t checksum = 0;
+    while (file.available()) {
+        checksum += file.read();
+    }
+    return checksum & 0xffff;
+}
+
+// Command: 
+// Retrieve File from specified directory and storage type on TeensyROM.
+// 
+// Workflow:
+// Receive <-- Get File Token (e.g., 0x64B0)
+// Send --> AckToken 0x64CC
+// Receive <-- SD_nUSB(1) Source Path(MaxNameLength, null terminator)
+// Send --> 0x64CC on Pass, 0x9b7f on Fail
+// Arduino reads the file from storage
+// Send --> File Length(4), Checksum(2)
+// Send --> File Data in chunks
+// Send --> AckToken 0x64CC on successful completion, 0x9b7f on Fail
+//
+// Notes: Once Get File Token is received, initial responses are 2 bytes in length. File data is sent in subsequent operations. Checksum is calculated for file validation.
+FLASHMEM void GetFileCommand() {
+    SendU16(AckToken);
+
+    uint32_t storageType;
+    char FilePath[MaxNamePathLength];
+
+    if (!GetUInt(&storageType, 1))
+    {
+        SendU16(FailToken);
+        Serial.println("Error receiving storage type!");
+        return;
+    }
+
+    if (!GetPathParameter(FilePath))
+    {
+        SendU16(FailToken);
+        Serial.println("Error receiving path!");
+        return;
+    }
+
+    FS* sourceFS = GetStorageDevice(storageType);
+    
+    if (!sourceFS) return;
+
+    File fileStream = sourceFS->open(FilePath, FILE_READ);
+    
+    if (!fileStream) {
+        SendU16(FailToken);
+        Serial.printf("Failed to open file: %s\n", FilePath);
+        return;
+    }
+
+    uint32_t fileLength = fileStream.size();
+    SendU32(fileLength);
+
+    uint32_t checksum = CalculateChecksum(fileStream);
+    SendU32(checksum);
+    fileStream.seek(0);
+
+    if (!SendFileData(fileStream, fileLength)) {
+        fileStream.close();
+        return;
+    }
+    fileStream.close();
+    
+    SendU16(AckToken);
+}

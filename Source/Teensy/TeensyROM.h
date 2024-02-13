@@ -115,6 +115,7 @@ enum InternalEEPROMmap
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB
 #define CopyFileToken     0x64FF
+#define GetFileToken      0x64B0
 #define DeleteFileToken   0x64CF
 #define AckToken          0x64CC
 #define GetDirectoryToken 0x64DD

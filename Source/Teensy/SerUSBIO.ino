@@ -64,6 +64,9 @@ FLASHMEM void ServiceSerial()
             case DeleteFileToken:
                 DeleteFileCommand();
                 break;
+            case GetFileToken:
+                GetFileCommand();
+                break;
             case GetDirectoryToken:  // v2 directory listing from TR
                GetDirectoryCommand();
                break;
@@ -451,6 +454,14 @@ FLASHMEM void SendU16(uint16_t SendVal)
 {
    Serial.write((uint8_t)(SendVal & 0xff));
    Serial.write((uint8_t)((SendVal >> 8) & 0xff));
+}
+
+FLASHMEM void SendU32(uint32_t SendVal)
+{
+    Serial.write((uint8_t)(SendVal & 0xff));
+    Serial.write((uint8_t)((SendVal >> 8) & 0xff));
+    Serial.write((uint8_t)((SendVal >> 16) & 0xff));
+    Serial.write((uint8_t)((SendVal >> 24) & 0xff));
 }
    
 FLASHMEM bool SerialAvailabeTimeout()
