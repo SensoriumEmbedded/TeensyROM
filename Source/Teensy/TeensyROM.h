@@ -212,7 +212,7 @@ uint32_t nS_VICStart  = Def_nS_VICStart;
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
    DataBufEnable; 
-   register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
+   uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_DataHold);  
@@ -230,7 +230,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
-   register uint32_t DataIn = ReadGPIO7;
+   uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
