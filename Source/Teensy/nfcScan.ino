@@ -132,11 +132,11 @@ FLASHMEM void ReadTagLaunch()
    
    
    //check for android pre-pended data, skip it
-   uint8_t T_enStart[] = {0x54, 0x02, 0x65, 0x6e};
-   uint8_t *pDataStart = memmem(TagData, CharNum, T_enStart, 4);
+   char T_enStart[] = {0x54, 0x02, 0x65, 0x6e};
+   char* pDataStart = (char*)memmem((char*)TagData, CharNum, T_enStart, 4);
    if(pDataStart == NULL) 
    {
-      pDataStart = TagData;
+      pDataStart = (char*)TagData;
       Serial.printf("No T_en found\n");
    }
    else pDataStart += 4; 
@@ -170,19 +170,19 @@ FLASHMEM void ReadTagLaunch()
  * The return value is a pointer to the beginning of the sub-string, or
  * NULL if the substring is not found.
  */
-FLASHMEM uint8_t *memmem(const uint8_t *haystack, size_t hlen, const uint8_t *needle, size_t nlen)
+FLASHMEM const char* memmem(const char *haystack, size_t hlen, const char *needle, size_t nlen)
 {
     int needle_first;
-    const uint8_t *p = haystack;
+    const char *p = haystack;
     size_t plen = hlen;
 
     if (!nlen) return NULL;
 
     needle_first = *(unsigned char *)needle;
 
-    while (plen >= nlen && (p = memchr(p, needle_first, plen - nlen + 1)))
+    while (plen >= nlen && (p = (char*)memchr(p, needle_first, plen - nlen + 1)))
     {
-        if (!memcmp(p, needle, nlen)) return (uint8_t *)p;
+        if (!memcmp(p, needle, nlen)) return p;
         p++;
         plen = hlen - (p - haystack);
     }
