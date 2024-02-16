@@ -22,8 +22,8 @@
 
 #ifdef nfcScanner
 
-#include <PN532_HSU.h>  //#define SeriaType added
-#include <PN532.h>
+#include <PN532.h>      //From: https://github.com/elechouse/PN532
+#include "PN532_UHSU.h" //Customized for USBSerial instead of HardwareSerial
  
 #define maxNfcDataSize     504
 
@@ -34,8 +34,8 @@ USBHIDParser hid3(myusbHost);
 USBSerial userial(myusbHost);  // works only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
 //USBSerial_BigBuffer userial(myusbHost, 1); // Handles anything up to 512 bytes
 //USBSerial_BigBuffer userial(myusbHost); // Handles up to 512 but by default only for those > 64 bytes
-PN532_HSU pn532hsu(userial);
-PN532 nfc(pn532hsu);
+PN532_UHSU pn532uhsu(userial);
+PN532 nfc(pn532uhsu);
 
 uint8_t Lastuid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the last UID read
 
