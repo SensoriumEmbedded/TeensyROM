@@ -156,7 +156,10 @@ void SetUpMainMenuROM()
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
-   
+#ifdef nfcScanner
+   memset(Lastuid, 0, sizeof Lastuid);
+#endif
+
    FreeCrtChips();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();

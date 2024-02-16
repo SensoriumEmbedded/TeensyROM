@@ -38,9 +38,12 @@ uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
 #ifdef nfcScanner
-   #define MaxRAM_ImageSize  152
+   #define MaxRAM_ImageSize  (184-40)  // ~18k added by host serial & nfc libs, crossed a 32k code boundry (22k more padding)
+   //"626k Free"
+   uint8_t Lastuid[7];  // Buffer to store the last UID read
 #else
    #define MaxRAM_ImageSize  184  //normal max 
+   //"666k Free"
 #endif
 
 #ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize

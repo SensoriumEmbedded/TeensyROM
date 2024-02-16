@@ -37,11 +37,11 @@ USBSerial userial(myusbHost);  // works only for those Serial devices who transf
 PN532_UHSU pn532uhsu(userial);
 PN532 nfc(pn532uhsu);
 
-uint8_t Lastuid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the last UID read
 
 FLASHMEM void nfcInit() //called once in setup()
 {
    nfc.begin();
+   memset(Lastuid, 0, sizeof Lastuid);
    
    uint32_t versiondata = nfc.getFirmwareVersion();
    if (!versiondata) 
@@ -84,15 +84,14 @@ void nfcCheck()
       if (uidLength == 7)
       { // We probably have a Mifare Ultralight card ...
          if(memcmp(uid, Lastuid, 7) == 0) return;  //same as previous
-         memcpy(Lastuid, uid, 7); //update previous
          //Serial.printf(" %d dig UID: ", uidLength);
          //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
-         ReadTagLaunch();
+         if (ReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
       }
    }
 }
 
-FLASHMEM void ReadTagLaunch()
+bool ReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
    bool MoreData = true;
@@ -102,8 +101,7 @@ FLASHMEM void ReadTagLaunch()
    while (MoreData)
    {
       //Serial.printf("Reading page %d\n", PageNum);
-      uint8_t success = nfc.mifareultralight_ReadPage (PageNum, TagData+CharNum);
-      if (success)
+      if (nfc.mifareultralight_ReadPage (PageNum, TagData+CharNum))
       {
          for(uint8_t Num = 0; Num<4; Num++)
          {
@@ -114,15 +112,15 @@ FLASHMEM void ReadTagLaunch()
                if (++CharNum >= maxNfcDataSize) 
                {
                   Serial.println("Tag too large");
-                  return;
+                  return false;
                }
             }
          }
       }
       else
       {
-         Serial.printf("Unable to read page %d\n", PageNum);
-         return;
+         Serial.printf("Couldn't read pg %d\n", PageNum);
+         return false;
       }
       PageNum++;
    }
@@ -156,10 +154,11 @@ FLASHMEM void ReadTagLaunch()
    else
    {
       Serial.println("SD:/USB: not found");
-      return;
+      return false;
    }
    
    RemoteLaunch(SD_nUSB, pDataStart);
+   return true;
 }
 
 /*
@@ -170,7 +169,7 @@ FLASHMEM void ReadTagLaunch()
  * The return value is a pointer to the beginning of the sub-string, or
  * NULL if the substring is not found.
  */
-FLASHMEM const char* memmem(const char *haystack, size_t hlen, const char *needle, size_t nlen)
+const char* memmem(const char *haystack, size_t hlen, const char *needle, size_t nlen)
 {
     int needle_first;
     const char *p = haystack;
