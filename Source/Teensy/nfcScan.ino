@@ -101,9 +101,9 @@ bool ReadTagLaunch()
    while (MoreData)
    {
       //Serial.printf("Reading page %d\n", PageNum);
-      if (nfc.mifareultralight_ReadPage (PageNum, TagData+CharNum))
-      {
-         for(uint8_t Num = 0; Num<4; Num++)
+      if (nfc.mifareclassic_ReadDataBlock (PageNum, TagData+CharNum)) //read 4 page block
+      {  
+         for(uint8_t Num = 0; Num<16; Num++)
          {
             //Serial.printf("  pg %d, char %03d: 0x%02x %c\n", PageNum, CharNum, TagData[CharNum], TagData[CharNum]);
             if(TagData[CharNum] == 0 || TagData[CharNum] == 0xfe) MoreData = false;
@@ -122,7 +122,7 @@ bool ReadTagLaunch()
          Serial.printf("Couldn't read pg %d\n", PageNum);
          return false;
       }
-      PageNum++;
+      PageNum+=4;
    }
    TagData[CharNum] = 0; //terminate it
    
