@@ -39,9 +39,44 @@
 ;  KERNAL RESET ROUTINE
 Coldstart:
    sei
+   ldx #$08
    stx $d016            ; Turn on VIC for PAL / NTSC check
    jsr $fda3            ; IOINIT - Init CIA chips
-   jsr $fd50            ; RANTAM - Clear/test system RAM
+
+   ; Initialize SID registers (not done by Kernal reset routine):
+   lda     #$00
+   ldx     #$18
+-  sta     $d400,x
+   dex
+   bpl     -
+
+   ; RAMTAS (JSR $FF87/$FD50) - Initialize System Constants
+   ; $FF87 is not actually called because it would do
+   ; a RAM-test which lasts a few seconds.
+   ; The following code does the same as RAMTAS ($FD50) but
+   ; without the RAM-test:
+   ;lda     #$00 ; accumulator already zero from above
+   tay
+-  sta     $0002,y
+   sta     $0200,y
+   sta     $0300,y
+   iny
+   bne     -
+
+   ; Set pointer to datasette buffer
+   ldx     #$3c
+   ldy     #$03
+   stx     $b2
+   sty     $b3
+
+   ; Set the top of memory
+   ldx     #$00
+   ldy     #$a0
+   jsr     $fd8c
+
+   ; RAMTAS ends
+   ;jsr $fd50            ; RANTAM - Clear/test system RAM
+
    jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
    jsr $ff5b            ; CINT   - Init VIC and screen editor
    cli                  ; Re-enable IRQ interrupts
