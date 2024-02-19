@@ -16,20 +16,22 @@ void PN532_UHSU::begin()
 
 void PN532_UHSU::wakeup()
 {
-    _serial->write((uint8_t)0x55);
-    _serial->write((uint8_t)0x55);
-    _serial->write((uint8_t)0);
-    _serial->write((uint8_t)0);
-    _serial->write((uint8_t)0);
+   uint8_t wakeupbuf[] = { 0x55, 0x55, 0x00, 0x00, 0x00 };
+   
+   // alt wakeup commend from StatMat, doesn't always find PN532 chip:
+   //uint8_t wakeupbuf[] = { 0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD4, 0x14, 0x01, 0x17, 0x00 };
+   
+   for(uint8_t CharNum=0; CharNum<sizeof(wakeupbuf); CharNum++)
+      _serial->write(wakeupbuf[CharNum]);
 
-    /** dump serial buffer */
-    if(_serial->available()){
-        DMSG("Dump serial buffer: ");
-    }
-    while(_serial->available()){
-        uint8_t ret = _serial->read();
-        DMSG_HEX(ret);
-    }
+   /** dump serial buffer */
+   if(_serial->available()){
+       DMSG("Dump serial buffer: ");
+   }
+   while(_serial->available()){
+       uint8_t ret = _serial->read();
+       DMSG_HEX(ret);
+   }
 
 }
 
