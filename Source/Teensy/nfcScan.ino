@@ -25,8 +25,6 @@
 #include <PN532.h>      //From: https://github.com/elechouse/PN532
 #include "PN532_UHSU.h" //Customized for USBSerial instead of HardwareSerial
  
-#define maxNfcDataSize     504
-
 USBHIDParser hid1(myusbHost);
 USBHIDParser hid2(myusbHost);
 USBHIDParser hid3(myusbHost);
@@ -38,22 +36,42 @@ PN532_UHSU pn532uhsu(userial);
 PN532 nfc(pn532uhsu);
 
 
-FLASHMEM void nfcInit() //called once in setup()
+FLASHMEM void nfcInit() //called once in setup(), if NFC enabled
 {
-   nfc.begin();
    memset(Lastuid, 0, sizeof Lastuid);
+   nfc.begin();
    
    uint32_t versiondata = nfc.getFirmwareVersion();
    if (!versiondata) 
    {
       Serial.println("PN53x board not found");
+      //todo: disable NFC
       return;
    }
-
+   
    Serial.printf("Found PN5%x nfc chip, FW v%d.%d\n", 
       (versiondata>>24) & 0xFF, 
       (versiondata>>16) & 0xFF,
       (versiondata>> 8) & 0xFF );      
+
+   uint8_t MaxRetries = 20;
+   while (MaxRetries--)
+   {
+      if (nfcConfigCheck()) return;
+   }
+   Serial.println("NFC config failed!");   
+   //todo: disable NFC
+}
+
+FLASHMEM bool nfcConfigCheck()
+{   
+   nfc.begin();
+   
+   if (!nfc.getFirmwareVersion()) 
+   {
+      Serial.println("Lost PN53x chip");     
+      return false;
+   }
 
    // Set the max number of retry attempts to read from a card
    // This prevents us from waiting forever (PN532 default)
@@ -68,8 +86,13 @@ FLASHMEM void nfcInit() //called once in setup()
    nfcCheck();
    beginWait = millis() - beginWait;
    Serial.printf("nfcCheck: %lu mS ", beginWait);
-   if(beginWait<11) Serial.println("Too fast!");
-   else Serial.println("(OK)");
+   if(beginWait<11) 
+   {
+      Serial.println("Too fast!");
+      return false;
+   }
+   Serial.println("(OK)");
+   return true;
 }
 
 
@@ -95,7 +118,7 @@ bool ReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
    bool MoreData = true;
-   uint8_t TagData[maxNfcDataSize];
+   uint8_t TagData[MaxPathLength];
    uint16_t CharNum = 0;
    
    while (MoreData)
@@ -109,9 +132,9 @@ bool ReadTagLaunch()
             if(TagData[CharNum] == 0 || TagData[CharNum] == 0xfe) MoreData = false;
             else 
             {
-               if (++CharNum >= maxNfcDataSize) 
+               if (++CharNum >= MaxPathLength) 
                {
-                  Serial.println("Tag too large");
+                  Serial.println("Path too long");
                   return false;
                }
             }
