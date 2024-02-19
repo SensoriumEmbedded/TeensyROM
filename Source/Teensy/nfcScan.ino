@@ -118,50 +118,60 @@ bool ReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
    bool MoreData = true;
-   uint8_t TagData[MaxPathLength];
+   uint8_t DataStart, messageLength, TagData[MaxPathLength];
    uint16_t CharNum = 0;
    
    while (MoreData)
    {
       //Serial.printf("Reading page %d\n", PageNum);
-      if (nfc.mifareclassic_ReadDataBlock (PageNum, TagData+CharNum)) //read 4 page block
-      {  
-         for(uint8_t Num = 0; Num<16; Num++)
-         {
-            //Serial.printf("  pg %d, char %03d: 0x%02x %c\n", PageNum, CharNum, TagData[CharNum], TagData[CharNum]);
-            if(TagData[CharNum] == 0 || TagData[CharNum] == 0xfe) MoreData = false;
-            else 
-            {
-               if (++CharNum >= MaxPathLength) 
-               {
-                  Serial.println("Path too long");
-                  return false;
-               }
-            }
-         }
-      }
-      else
+      if (!nfc.mifareclassic_ReadDataBlock (PageNum, TagData+CharNum)) //read 4 page block
       {
          Serial.printf("Couldn't read pg %d\n", PageNum);
          return false;
       }
+       
+      if(PageNum == 4)
+      { //extract start/length info when read (first pass through)
+         if(TagData[0] == 0x03)
+         {
+            messageLength = TagData[1];
+            DataStart = 2;
+         }
+         else if (TagData[5] == 0x03) 
+         {
+            messageLength = TagData[6];
+            DataStart = 7;
+         }
+         else
+         {
+            Serial.printf("Length token not found\n");
+            return false;
+         }
+      }         
+
+      for(uint8_t Num = 0; Num<16; Num++)
+      {
+         if(TagData[CharNum] == 0xfe || CharNum >= DataStart+messageLength) MoreData = false;
+         else CharNum++;
+      }
       PageNum+=4;
    }
+
    TagData[CharNum] = 0; //terminate it
-   
-   //check for 0x03 start and size, skip it
-   
-   
+     
+   Serial.printf("\nRec %d pgs, %d msg len, %d chars read:\n%s\n", PageNum-4, messageLength, CharNum, TagData+DataStart);
+   for(uint16_t cnt=DataStart; cnt<=CharNum; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
+
    //check for android pre-pended data, skip it
    char T_enStart[] = {0x54, 0x02, 0x65, 0x6e};
-   char* pDataStart = (char*)memmem((char*)TagData, CharNum, T_enStart, 4);
+   char* pDataStart = (char*)memmem((char*)TagData+DataStart, CharNum, T_enStart, 4);
    if(pDataStart == NULL) 
    {
-      pDataStart = (char*)TagData;
+      pDataStart = (char*)TagData+DataStart;
       Serial.printf("No T_en found\n");
    }
-   else pDataStart += 4; 
-   Serial.printf("Payload: %s\n\n", pDataStart);
+   else pDataStart += 4; //offset by T_enStart length
+   Serial.printf("Final Payload: %s\n\n", pDataStart);
    
    bool SD_nUSB = true;
    for(uint8_t num=0; num<3; num++) pDataStart[num]=toupper(pDataStart[num]);
