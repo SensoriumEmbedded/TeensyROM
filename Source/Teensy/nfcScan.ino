@@ -93,17 +93,16 @@ FLASHMEM bool nfcConfigCheck()
    uint32_t beginWait = millis();
    nfcCheck();
    beginWait = millis() - beginWait;
+   return (beginWait>10);
    //Printf_dbg("nfcCheck: %lu mS ", beginWait);
-   //if(beginWait<11) 
+   //if(beginWait<=10) 
    //{
    //   Printf_dbg("Too fast!\n");
    //   return false;
    //}
    //Printf_dbg("(OK)\n");
    //return true;
-   return (beginWait>10);
 }
-
 
 void nfcCheck()
 {
@@ -164,21 +163,55 @@ bool ReadTagLaunch()
       }
       PageNum+=4;
    }
-
    TagData[CharNum] = 0; //terminate it
-     
-   Printf_dbg("\nRec %d pgs, %d msg len, %d chars read:\n%s\n", PageNum-4, messageLength, CharNum, TagData+DataStart);
-   //for(uint16_t cnt=DataStart; cnt<=CharNum; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
 
-   //check for android pre-pended data, skip it
-   char T_enStart[] = {0x54, 0x02, 0x65, 0x6e};
-   char* pDataStart = (char*)memmem((char*)TagData+DataStart, CharNum, T_enStart, 4);
-   if(pDataStart == NULL) 
+   Printf_dbg("\nRec %d pgs, %d msg len, %d chars read:\n%s\n", PageNum-4, messageLength, CharNum, TagData+DataStart);
+   //for(uint16_t cnt=0; cnt<=CharNum; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
+ 
+ 
+   //*** Finished receiving data, now parse & check it ***
+
+   // https://www.oreilly.com/library/view/beginning-nfc/9781449324094/ch04.html
+   // https://www.eet-china.com/d/file/archives/ARTICLES/2006AUG/PDF/NFCForum-TS-NDEF.pdf
+   // https://github.com/haldean/ndef/blob/master/docs/NFCForum-TS-NDEF_1.0.pdf
+   // bytes 0 and 1 are 0x03 and messageLength
+   //                  Short Record Header
+   // Chr  2: 0xd1 ''      TNF+Flags (Well known record type, 1101 0xxx MB+ME+SR)
+   // Chr  3: 0x01 ''      Type length (1 byte)
+   // Chr  4: 0x3c ''      Payload length
+   //                      ID Length (if IL flag set)
+   // Chr  5: 0x54 'T'     Payload Type (Text)
+   // Chr  6: 0x02 ''      Type length (2 bytes)
+   // Chr  7: 0x65 'e'     Type Payload
+   // Chr  8: 0x6e 'n'     Type Payload
+   //                   Record Payload:
+   // Chr  9: 0x53 'S'   
+   // Chr 10: 0x44 'D'
+   // Chr 11: 0x3a ':'
+   //      ...
+   
+   char* pDataStart = TagData + DataStart;
+   
+   if((pDataStart[0] & 0x07) != 1) //Well-Known Type Name Format, could enforce SR, MB, ME...
    {
-      pDataStart = (char*)TagData+DataStart;
-      Printf_dbg("No T_en found\n");
+      Printf_dbg("Not Well-Known TNF: %02x\n", pDataStart[0]);
+      return false;      
    }
-   else pDataStart += 4; //offset by T_enStart length
+   //assuming short record format...
+   pDataStart += 2 + pDataStart[1] + ((pDataStart[0] & 0x08)>>3); //add 1 for ID length, if IL flagged
+   
+   if(pDataStart[0] != 'T') 
+   {
+      Printf_dbg("Not Text Type Payload: %02x\n", pDataStart[0]);
+      return false;      
+   }
+   if(pDataStart[1] & 0x80) 
+   {
+      Printf_dbg("Must be UTF-8: %02x\n", pDataStart[1]);
+      return false;      
+   }
+   pDataStart += 2 + (pDataStart[1] & 0x3f);
+  
    Printf_dbg("Final Payload: %s\n\n", pDataStart);
    
    bool SD_nUSB = true;
@@ -195,38 +228,12 @@ bool ReadTagLaunch()
    else
    {
       Printf_dbg("SD:/USB: not found\n");
-      return false;
+      //return false;
+      //default to SD if not specified, allows display on c64
    }
    
    RemoteLaunch(SD_nUSB, pDataStart);
    return true;
-}
-
-/*
- * The memmem() function finds the start of the first occurrence of the
- * substring 'needle' of length 'nlen' in the memory area 'haystack' of
- * length 'hlen'.
- *
- * The return value is a pointer to the beginning of the sub-string, or
- * NULL if the substring is not found.
- */
-const char* memmem(const char *haystack, size_t hlen, const char *needle, size_t nlen)
-{
-    int needle_first;
-    const char *p = haystack;
-    size_t plen = hlen;
-
-    if (!nlen) return NULL;
-
-    needle_first = *(unsigned char *)needle;
-
-    while (plen >= nlen && (p = (char*)memchr(p, needle_first, plen - nlen + 1)))
-    {
-        if (!memcmp(p, needle, nlen)) return p;
-        p++;
-        plen = hlen - (p - haystack);
-    }
-    return NULL;
 }
 
 #endif
