@@ -102,21 +102,24 @@ MsgSettingsMenu1:
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, " Special IO:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, SourcesColor, " Joy2 Speed:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, " Synch Time:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, "  SID State:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, "   Play SID:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, "NFC Enabled:", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, SourcesColor, "RW Read Dly:", ChrReturn
    !tx MenuMiscColor, "   Immediate:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, "Synch Time via Ethernet", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, SourcesColor, "Toggle SID On/Off", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, SourcesColor, "Self Test", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, SourcesColor, "Help Menu", ChrReturn
-   !tx ChrReturn, 0 
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, SourcesColor, "Synch Time via Ethernet", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, SourcesColor, "Pause/Play SID", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, SourcesColor, "Self Test", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, SourcesColor, "Help Menu", ChrReturn
+   !tx ChrReturn
 MsgSettingsMenu2SpaceRet:
    !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
 MsgSettingsMenu3:
-   !tx ChrReturn, ChrReturn, ChrReturn, ChrReturn, MenuMiscColor 
-   !tx "      2024 by Travis S @ Sensorium", ChrReturn
-   !tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
-   !tx " github.com/SensoriumEmbedded/TeensyROM"
+   !tx ChrReturn, ChrPurple   ;MenuMiscColor 
+   !tx "      2024 by Travis S @ Sensorium"
+   ;, ChrReturn
+   ;!tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
+   ;!tx " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
 MsgFWVerify:

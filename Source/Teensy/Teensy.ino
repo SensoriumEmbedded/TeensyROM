@@ -201,7 +201,7 @@ void EEPreadStr(uint16_t addr, char* buf)
 void SetEEPDefaults()
 {
    Serial.println("--> Setting EEPROM to defaults");
-   EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
+   EEPROM.write(eepAdPwrUpDefaults, 0x90); //default med js speed, music on, eth time synch off, NFC off, RW delay off
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

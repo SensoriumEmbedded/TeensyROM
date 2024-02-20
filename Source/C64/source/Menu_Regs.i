@@ -117,8 +117,10 @@
    rsstMachineInfo     = 6  ; Info on current machine vid/TOD clk (set when SID loaded)
    
 ;enum RegPowerUpDefaultMasks
-   rpudSIDPauseMask    = 0x01 ; rwRegPwrUpDefaults bit  1=SID music paused
-   rpudNetTimeMask     = 0x02 ; rwRegPwrUpDefaults bit  1=synch net time
+   rpudSIDPauseMask    = 0x01 ; rwRegPwrUpDefaults bit 0, 1=SID music paused
+   rpudNetTimeMask     = 0x02 ; rwRegPwrUpDefaults bit 1, 1=synch net time
+   rpudNFCEnabled      = 0x04 ; rwRegPwrUpDefaults bit 2, 1=NFC Enabled
+   rpudRWReadyDly      = 0x08 ; rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
    rpudJoySpeedMask    = 0xf0 ; rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 
 ;enum RegStatusTypes  //rwRegStatus, match StatusFunction order
