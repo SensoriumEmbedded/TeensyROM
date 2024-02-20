@@ -71,10 +71,7 @@ void setup()
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-#ifdef nfcScanner
-   nfcInit(); //connect to nfc scanner
-#endif
-  
+ 
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) SetEEPDefaults();
@@ -102,6 +99,10 @@ void setup()
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
+
+#ifdef nfcScanner
+   nfcInit(); //connect to nfc scanner
+#endif
 } 
      
 void loop()

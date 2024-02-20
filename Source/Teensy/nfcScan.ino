@@ -35,32 +35,40 @@ USBSerial userial(myusbHost);  // works only for those Serial devices who transf
 PN532_UHSU pn532uhsu(userial);
 PN532 nfc(pn532uhsu);
 
+#define MaxNfcConfRetries    20
 
 FLASHMEM void nfcInit() //called once in setup(), if NFC enabled
 {
+   Serial.println("nfc init");
+   
    memset(Lastuid, 0, sizeof Lastuid);
    nfc.begin();
    
    uint32_t versiondata = nfc.getFirmwareVersion();
    if (!versiondata) 
    {
-      Serial.println("PN53x board not found");
+      Serial.println(" PN53x board not found\n");
       //todo: disable NFC
       return;
    }
    
-   Serial.printf("Found PN5%x nfc chip, FW v%d.%d\n", 
+   Printf_dbg("Found PN5%x nfc chip, FW v%d.%d\n", 
       (versiondata>>24) & 0xFF, 
       (versiondata>>16) & 0xFF,
       (versiondata>> 8) & 0xFF );      
 
-   uint8_t MaxRetries = 20;
-   while (MaxRetries--)
+   uint8_t TryNum = 0;
+   while (!nfcConfigCheck())
    {
-      if (nfcConfigCheck()) return;
+      if (TryNum++ == MaxNfcConfRetries)
+      {
+         Serial.println(" config failed\n");   
+         //todo: disable NFC 
+         return;
+      }
    }
-   Serial.println("NFC config failed!");   
-   //todo: disable NFC
+
+   Serial.printf(" ready in %d retries\n", TryNum);
 }
 
 FLASHMEM bool nfcConfigCheck()
@@ -69,7 +77,7 @@ FLASHMEM bool nfcConfigCheck()
    
    if (!nfc.getFirmwareVersion()) 
    {
-      Serial.println("Lost PN53x chip");     
+      Printf_dbg("Lost PN53x chip\n");     
       return false;
    }
 
@@ -85,14 +93,15 @@ FLASHMEM bool nfcConfigCheck()
    uint32_t beginWait = millis();
    nfcCheck();
    beginWait = millis() - beginWait;
-   Serial.printf("nfcCheck: %lu mS ", beginWait);
-   if(beginWait<11) 
-   {
-      Serial.println("Too fast!");
-      return false;
-   }
-   Serial.println("(OK)");
-   return true;
+   //Printf_dbg("nfcCheck: %lu mS ", beginWait);
+   //if(beginWait<11) 
+   //{
+   //   Printf_dbg("Too fast!\n");
+   //   return false;
+   //}
+   //Printf_dbg("(OK)\n");
+   //return true;
+   return (beginWait>10);
 }
 
 
@@ -103,11 +112,11 @@ void nfcCheck()
    
    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) 
    {  //succesful read
-      //Serial.print("*");
+      //Printf_dbg("*");
       if (uidLength == 7)
       { // We probably have a Mifare Ultralight card ...
          if(memcmp(uid, Lastuid, 7) == 0) return;  //same as previous
-         //Serial.printf(" %d dig UID: ", uidLength);
+         //Printf_dbg(" %d dig UID: ", uidLength);
          //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
          if (ReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
       }
@@ -123,10 +132,9 @@ bool ReadTagLaunch()
    
    while (MoreData)
    {
-      //Serial.printf("Reading page %d\n", PageNum);
       if (!nfc.mifareclassic_ReadDataBlock (PageNum, TagData+CharNum)) //read 4 page block
       {
-         Serial.printf("Couldn't read pg %d\n", PageNum);
+         Printf_dbg("Couldn't read pg %d\n", PageNum);
          return false;
       }
        
@@ -144,7 +152,7 @@ bool ReadTagLaunch()
          }
          else
          {
-            Serial.printf("Length token not found\n");
+            Printf_dbg("Length token not found\n");
             return false;
          }
       }         
@@ -159,8 +167,8 @@ bool ReadTagLaunch()
 
    TagData[CharNum] = 0; //terminate it
      
-   Serial.printf("\nRec %d pgs, %d msg len, %d chars read:\n%s\n", PageNum-4, messageLength, CharNum, TagData+DataStart);
-   for(uint16_t cnt=DataStart; cnt<=CharNum; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
+   Printf_dbg("\nRec %d pgs, %d msg len, %d chars read:\n%s\n", PageNum-4, messageLength, CharNum, TagData+DataStart);
+   //for(uint16_t cnt=DataStart; cnt<=CharNum; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
 
    //check for android pre-pended data, skip it
    char T_enStart[] = {0x54, 0x02, 0x65, 0x6e};
@@ -168,10 +176,10 @@ bool ReadTagLaunch()
    if(pDataStart == NULL) 
    {
       pDataStart = (char*)TagData+DataStart;
-      Serial.printf("No T_en found\n");
+      Printf_dbg("No T_en found\n");
    }
    else pDataStart += 4; //offset by T_enStart length
-   Serial.printf("Final Payload: %s\n\n", pDataStart);
+   Printf_dbg("Final Payload: %s\n\n", pDataStart);
    
    bool SD_nUSB = true;
    for(uint8_t num=0; num<3; num++) pDataStart[num]=toupper(pDataStart[num]);
@@ -186,7 +194,7 @@ bool ReadTagLaunch()
    }
    else
    {
-      Serial.println("SD:/USB: not found");
+      Printf_dbg("SD:/USB: not found\n");
       return false;
    }
    
