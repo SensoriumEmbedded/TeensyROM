@@ -191,7 +191,7 @@ bool ReadTagLaunch()
    // Chr 11: 0x3a ':'
    //      ...
    
-   char* pDataStart = TagData + DataStart;
+   uint8_t* pDataStart = TagData + DataStart;
    
    if((pDataStart[0] & 0x07) != 1) //Well-Known Type Name Format, could enforce SR, MB, ME...
    {
@@ -233,7 +233,7 @@ bool ReadTagLaunch()
       //default to SD if not specified, allows display on c64
    }
    
-   RemoteLaunch(SD_nUSB, pDataStart);
+   RemoteLaunch(SD_nUSB, (char*)pDataStart);
    return true;
 }
 

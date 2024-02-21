@@ -237,10 +237,10 @@ UpdTimeZone
 
 +  cmp #'h'  ;Reboot TeensyROM
    bne +
-   lda #rCtlRebootTeensyROM 
-   sta wRegControl+IO1Port
    lda #$00    
    sta $d011   ;turn off the display   
+   lda #rCtlRebootTeensyROM 
+   sta wRegControl+IO1Port
    ;no need to wait, TR/C64 will be rebooting...
    jmp WaitForSettingsKey  
 

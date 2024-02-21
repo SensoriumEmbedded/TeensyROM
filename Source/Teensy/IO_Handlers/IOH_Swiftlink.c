@@ -220,15 +220,15 @@ FLASHMEM void SetEthEEPDefaults()
 
    const char * DefBookmarks[eepNumBookmarks][2] =
    {
-      "TinyWeb64 @ Sensorium", "http://sensoriumembedded.com/tinyweb64/",
-      "Digitalman TeensyROM Demo", "http://digitalman.azurewebsites.net/",
+      "TinyWeb64 @ Sensorium",              "http://sensoriumembedded.com/tinyweb64/",
+      "Digitalman TeensyROM Demo",          "http://digitalman.azurewebsites.net/",
       "68k.news Headlines from the Future", "http://68k.news/",
-      "CNN Lite (filtered)", "http://www.frogfind.com/read.php?a=http://lite.cnn.com/",
-      "CBC Lite News (filtered)", "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
-      "textfiles.com", "http://textfiles.com/directory.html",
-      "Hyperlinked Text (filtered)", "http://www.frogfind.com/read.php?a=http://sjmulder.nl/en/textonly.html",
-      "legiblenews.com (filtered)", "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
-      "text-only news sites (filtered)", "http://www.frogfind.com/read.php?a=http://greycoder.com/a-list-of-text-only-new-sites",
+      "CNN Lite (filtered)",                "http://www.frogfind.com/read.php?a=http://lite.cnn.com/",
+      "CBC Lite News (filtered)",           "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
+      "textfiles.com",                      "http://textfiles.com/directory.html",
+      "Hyperlinked Text (filtered)",        "http://www.frogfind.com/read.php?a=http://sjmulder.nl/en/textonly.html",
+      "legiblenews.com (filtered)",         "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
+      "text-only news sites (filtered)",    "http://www.frogfind.com/read.php?a=http://greycoder.com/a-list-of-text-only-new-sites",
    };
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
