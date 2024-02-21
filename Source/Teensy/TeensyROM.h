@@ -17,11 +17,12 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.11+"; //*VERSION*
+char strVersionNumber[] = "v0.5.11+NFC"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
-//#define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-//#define nfcScanner    //poll nfc scanner via serial device on USB Host port
+//#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
+#define nfcScanner     //nfc scanner libs/code included in build
+
 //less used:
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
@@ -194,7 +195,7 @@ const uint8_t OutputPins[] = {
 
                                  // Times from Phi2 rising (interrupt):
 #define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid.  
-                                 //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
+#define Def_nS_RWnReady_dly 135  //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
 #define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus
@@ -239,9 +240,3 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
 
-enum Phi2ISRStates
-{
-   P2I_Normal,
-   P2I_Off,
-   P2I_TimingCheck,
-};

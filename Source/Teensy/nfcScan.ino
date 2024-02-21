@@ -69,6 +69,7 @@ FLASHMEM void nfcInit() //called once in setup(), if NFC enabled
    }
 
    Serial.printf(" ready in %d retries\n", TryNum);
+   nfcEnabled = true;
 }
 
 FLASHMEM bool nfcConfigCheck()

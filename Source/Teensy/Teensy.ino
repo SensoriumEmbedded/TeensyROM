@@ -42,6 +42,7 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
+bool nfcEnabled = false; //default disabled unless set in eeprom and passes init
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
@@ -101,8 +102,11 @@ void setup()
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 
 #ifdef nfcScanner
-   nfcInit(); //connect to nfc scanner
+   if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
 #endif
+
+   if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
+
 } 
      
 void loop()
@@ -138,7 +142,7 @@ void loop()
    if (Serial.available()) ServiceSerial();
    myusbHost.Task();
 #ifdef nfcScanner
-   nfcCheck();
+   if (nfcEnabled) nfcCheck();
 #endif
    
    //handler specific polling items:
