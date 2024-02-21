@@ -235,22 +235,31 @@ UpdTimeZone
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'h'  ;Synch Time now
++  cmp #'h'  ;Reboot TeensyROM
+   bne +
+   lda #rCtlRebootTeensyROM 
+   sta wRegControl+IO1Port
+   lda #$00    
+   sta $d011   ;turn off the display   
+   ;no need to wait, TR/C64 will be rebooting...
+   jmp WaitForSettingsKey  
+
++  cmp #'i'  ;Synch Time now
    bne +
    jsr SynchEthernetTime
    jmp SettingsMenu ;force to reprint all in case ram reduced  
 
-+  cmp #'i'  ;Toggle Music now
++  cmp #'j'  ;Toggle Music now
    bne +
    jsr ToggleSIDMusic
    jmp WaitForSettingsKey  
 
-+  cmp #'j'  ;Test IO
++  cmp #'k'  ;Test IO
    bne +
    jsr TestIO
    jmp WaitForSettingsKey  
    
-+  cmp #'k'  ;Help Menu
++  cmp #'l'  ;Help Menu
    bne +
    jmp HelpMenu  ;return from there  
    
@@ -301,8 +310,8 @@ smcTestIOCnt
    jsr PrintString 
    rts
 
-CursorToTest
-   ldx #15 ;row 
+CursorToTest:
+   ldx #16 ;row 
    ldy #18 ;col
    clc
    jsr SetCursor   

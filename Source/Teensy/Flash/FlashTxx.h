@@ -81,11 +81,6 @@
   #define IN_FLASH(a) ((a) >= FLASH_BASE_ADDR && (a) < FLASH_BASE_ADDR+FLASH_SIZE)
 #endif
 
-// reboot is the same for all ARM devices
-#define CPU_RESTART_ADDR	((uint32_t *)0xE000ED0C)
-#define CPU_RESTART_VAL		(0x5FA0004)
-#define REBOOT			(*CPU_RESTART_ADDR = CPU_RESTART_VAL)
-
 #define NO_BUFFER_TYPE		(0)
 #define FLASH_BUFFER_TYPE	(1)
 #define RAM_BUFFER_TYPE		(2)

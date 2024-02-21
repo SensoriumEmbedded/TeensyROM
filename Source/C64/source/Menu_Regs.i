@@ -148,17 +148,17 @@
    rmtUSBDrive  = 2
     
 ;enum RegCtlCommands
-   rCtlVanishROM          = 0
-   rCtlBasicReset         = 1
-   rCtlStartSelItemWAIT   = 2
-   rCtlGetTimeWAIT        = 3
-   rCtlRunningPRG         = 4 ; final signal before running prg, allows IO1 handler change
-   rCtlMakeInfoStrWAIT    = 5 ; MakeBuildCPUInfoStr
-   rCtlUpDirectoryWAIT    = 6
-   rCtlLoadSIDWAIT        = 7 ;load .sid file to RAM buffer and prep for x-fer
-   rCtlNextPicture        = 8 
-   rCtlLastPicture        = 9 
-
+   rCtlVanishROM          =  0
+   rCtlBasicReset         =  1
+   rCtlStartSelItemWAIT   =  2
+   rCtlGetTimeWAIT        =  3
+   rCtlRunningPRG         =  4 ; final signal before running prg, allows IO1 handler change
+   rCtlMakeInfoStrWAIT    =  5 ; MakeBuildCPUInfoStr
+   rCtlUpDirectoryWAIT    =  6
+   rCtlLoadSIDWAIT        =  7 ;load .sid file to RAM buffer and prep for x-fer
+   rCtlNextPicture        =  8 
+   rCtlLastPicture        =  9 
+   rCtlRebootTeensyROM    = 10 
 
 ;enum regItemTypes //synch with TblItemType
    rtNone      = 0

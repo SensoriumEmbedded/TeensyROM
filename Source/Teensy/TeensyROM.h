@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.11+NFC"; //*VERSION*
+char strVersionNumber[] = "v0.5.11+NFC3"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -27,11 +27,11 @@ char strVersionNumber[] = "v0.5.11+NFC"; //*VERSION*
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
-// #define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
-// #define Dbg_SerSwift  //Allow commands over serial that tweak SwiftLink parameters.
-// #define Dbg_SerLog    //Allow commands over serial that display log info
-// #define Dbg_SerMem    //Allow commands over serial that display memory info
 // #define DbgSpecial    //Special case logging to BigBuf
+// #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
+// #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
+// #define Dbg_SerLog    //Serial commands that display log info
+// #define Dbg_SerMem    //Serial commands that display memory info
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          5
@@ -240,3 +240,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
 
+// reboot is the same for all ARM devices
+#define CPU_RESTART_ADDR	((uint32_t *)0xE000ED0C)
+#define CPU_RESTART_VAL		(0x5FA0004)
+#define REBOOT			(*CPU_RESTART_ADDR = CPU_RESTART_VAL)

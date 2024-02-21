@@ -739,6 +739,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlLastPicture:
                   IO1[rwRegStatus] = rsLastPicture; //work this in the main code
                   break;
+               case rCtlRebootTeensyROM:
+                  REBOOT;
+                  break;
             }
             break;
       }
