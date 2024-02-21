@@ -133,7 +133,24 @@ void loop()
       Serial.println("Resetting C64"); 
       Serial.flush();
       delay(50); 
-      while(ReadButton==0); //avoid self reset detection
+      uint32_t NextInterval = 10000, beginWait = millis();
+      bool LEDState = true, DefEEPReboot = false;
+      while(ReadButton==0)
+      {  //avoid self reset detection, check for long press
+         if(millis()-beginWait > NextInterval)
+         {
+            DefEEPReboot = true;
+            NextInterval += 150;
+            LEDState = !LEDState;
+            if (LEDState) SetLEDOn;
+            else SetLEDOff;
+         }
+      }
+      if (DefEEPReboot)
+      {
+         SetEEPDefaults();
+         REBOOT;
+      }
       doReset=false;
       BtnPressed = false;
       SetResetDeassert;
