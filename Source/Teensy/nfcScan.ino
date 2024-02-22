@@ -37,8 +37,8 @@ PN532 nfc(pn532uhsu);
 
 #define MaxNfcConfRetries    20
 
-FLASHMEM void nfcInit() //called once in setup(), if NFC enabled
-{
+FLASHMEM void nfcInit()
+{ //called once in setup(), if NFC enabled
    Serial.println("nfc init");
    
    memset(Lastuid, 0, sizeof Lastuid);
@@ -118,12 +118,12 @@ void nfcCheck()
          if(memcmp(uid, Lastuid, 7) == 0) return;  //same as previous
          //Printf_dbg(" %d dig UID: ", uidLength);
          //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
-         if (ReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
+         if (nfcReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
       }
    }
 }
 
-bool ReadTagLaunch()
+bool nfcReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
    bool MoreData = true;
@@ -233,8 +233,40 @@ bool ReadTagLaunch()
       //default to SD if not specified, allows display on c64
    }
    
+   //Printf_dbg("Launching...\n");
    RemoteLaunch(SD_nUSB, (char*)pDataStart);
    return true;
+}
+
+void nfcWriteTag(const char* TxtMsg)
+{
+   uint8_t TagData[MaxPathLength] = {0x03, 0x13, 0xd1, 0x01, 0x10, 0x54, 0x02, 0x65, 0x6e};
+   uint16_t messageLength = strlen(TxtMsg) + 9;
+   
+   if (messageLength>254)
+   {
+      Printf_dbg("Path too long\n");
+      return;
+   }
+   strcpy((char*)TagData + 9, TxtMsg);
+   TagData[1] = messageLength;
+   TagData[messageLength++] = 0xfe; //replace termination w/ NDEF term
+
+   Printf_dbg("Writing tag\n");
+   for(uint16_t cnt=0; cnt<=messageLength; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
+
+   for(uint16_t PageNum = 0; PageNum < messageLength/4+1; PageNum++)
+   {
+      Printf_dbg("Writing pg %d\n", PageNum+4);
+      //if (!nfc.mifareclassic_WriteDataBlock(4, TagData)) //only writes one page(?)
+      if (!nfc.mifareultralight_WritePage(PageNum+4, TagData+PageNum*4))
+      {
+         Printf_dbg("Failed!\n");
+         return;
+      }
+   }
+   Printf_dbg("Finished Writing tag\n");
+   memset(Lastuid, 0, sizeof Lastuid);
 }
 
 #endif
