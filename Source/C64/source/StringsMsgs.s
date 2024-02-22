@@ -35,7 +35,17 @@ MsgMainOptions2:
    !tx ChrRvsOn, OptionColor, "F3", ChrRvsOff, SourcesColor,  " SD Card     "
    !tx ChrRvsOn, OptionColor, "F7", ChrRvsOff, MenuMiscColor,  " Help"
    !tx 0
+
+MsgWriteNFCTag:
+   !tx ChrReturn, SourcesColor, "Write NFC Tag:", ChrReturn
+   !tx 0
    
+MsgPlaceNFCTag:
+   !tx ChrReturn, OptionColor, " Place tag in NFC reader,"
+   !tx ChrReturn, "  then press any key to write", ChrReturn, SourcesColor
+   ;!tx ChrReturn, "  Any other key to abort"
+   !tx 0
+
 MsgSIDInfo1:
    !tx ChrReturn, SourcesColor, "SID Info Page:", ChrReturn, ChrReturn
    !tx " File Information for", NameColor  ;MenuMiscColor

@@ -27,7 +27,7 @@
  
 USBHIDParser hid1(myusbHost);
 USBHIDParser hid2(myusbHost);
-USBHIDParser hid3(myusbHost);
+USBHIDParser hid3(myusbHost);  //need all 3?
 
 USBSerial userial(myusbHost);  // works only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
 //USBSerial_BigBuffer userial(myusbHost, 1); // Handles anything up to 512 bytes
@@ -238,14 +238,25 @@ bool nfcReadTagLaunch()
    return true;
 }
 
-void nfcWriteTag(const char* TxtMsg)
+FLASHMEM void nfcWriteTag(const char* TxtMsg)
 {
+   uint8_t uid[7];  // Buffer to store the returned UID
+   uint8_t uidLength;   // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
+   
+   if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength))
+   {
+      //Printf_dbg("Couldn't read tag\n");
+      SendMsgPrintfln(" Couldn't verify tag");
+      return;
+   }      
+   Printf_dbg("UID Length = %d\n", uidLength);
+   
    uint8_t TagData[MaxPathLength] = {0x03, 0x13, 0xd1, 0x01, 0x10, 0x54, 0x02, 0x65, 0x6e};
    uint16_t messageLength = strlen(TxtMsg) + 9;
    
    if (messageLength>254)
    {
-      Printf_dbg("Path too long\n");
+      SendMsgPrintfln("Path too long\n");
       return;
    }
    strcpy((char*)TagData + 9, TxtMsg);
@@ -262,10 +273,11 @@ void nfcWriteTag(const char* TxtMsg)
       if (!nfc.mifareultralight_WritePage(PageNum+4, TagData+PageNum*4))
       {
          Printf_dbg("Failed!\n");
+         SendMsgPrintfln("Write Failed!");
          return;
       }
    }
-   Printf_dbg("Finished Writing tag\n");
+   SendMsgPrintfln("Finished Writing tag");
    memset(Lastuid, 0, sizeof Lastuid);
 }
 

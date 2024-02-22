@@ -233,6 +233,12 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
 
++  cmp #ChrLeftArrow ;Write NFC Tag
+   bne +  
+   jsr WriteNFCTag
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent 
+
 +  cmp #ChrHome ;top of directory
    bne +  
    lda #1  ;first page
@@ -557,6 +563,7 @@ AnyKeyErrMsgWait:
    lda #rpudSIDPauseMask    ;Pause SID playback on error
    sta smcSIDPauseStop+1
    jsr IRQEnable  ;turn on IRQ
+AnyKeyMsgWait:
    lda #<MsgAnyKey  ;wait for any key to continue 
    ldy #>MsgAnyKey
    jsr PrintString 
@@ -897,6 +904,40 @@ TextScreenMemColor:
    sta BackgndColorReg
    rts
 
+WriteNFCTag:
+   jsr PrintBanner
+   lda #<MsgWriteNFCTag
+   ldy #>MsgWriteNFCTag
+   jsr PrintString 
+
+   lda #rCtlWriteNFCTagCheckWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+
+   ;error or ready to write?
+   lda rRegLastHourBCD+IO1Port ;using this reg as scratch to communicate outcome
+   beq +  ;skip to end if error
+
+   ;prompt to place card
+   lda #<MsgPlaceNFCTag
+   ldy #>MsgPlaceNFCTag
+   jsr PrintString 
+   
+-  jsr CheckForIRQGetIn ;read key/IRQ
+   beq -  
+   
+   ;cmp #ChrSpace
+   ;bne ++
+   lda #rCtlWriteNFCTagWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   
+   ;tag should launch after write, unless error occured
+   
+   ;any key to return
++  jsr AnyKeyMsgWait
+++ rts
+   
 TblRowToMemLoc:
    !word C64ScreenRAM+40*(3+ 0)-1
    !word C64ScreenRAM+40*(3+ 1)-1

@@ -765,8 +765,8 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
 
-   Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
-   Printf_dbg("\relocPages: %02x", XferImage[0x79]);
+   Printf_dbg("\nrelocStartPage: %02x", XferImage[0x78]);
+   Printf_dbg("\nrelocPages: %02x", XferImage[0x79]);
 
    IO1[rRegSIDDefSpeedHi] = CIATimer[SidFlags][0];
    IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  

@@ -92,6 +92,7 @@
    ChrCRSRLeft = 157
    ChrCRSRRight= 29
    ChrUpArrow  = 94
+   ChrLeftArrow= 95
    ChrHome     = 19
    ChrFillLeft = 181
    ChrFillRight= 182

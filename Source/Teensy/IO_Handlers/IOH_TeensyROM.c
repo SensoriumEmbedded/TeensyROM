@@ -196,6 +196,9 @@ extern char DriveDirPath[];
 extern uint8_t RAM_Image[];
 extern char* StrSIDInfo;
 extern char StrMachineInfo[];
+extern bool nfcEnabled;
+extern void SendMsgPrintfln(const char *Fmt, ...);
+extern void nfcWriteTag(const char* TxtMsg);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -351,7 +354,7 @@ FLASHMEM void NextPicture()
    
    do
    {
-      if (++SelItemFullIdx >= NumItemsFull) SelItemFullIdx=0;
+      if (++SelItemFullIdx >= NumItemsFull) SelItemFullIdx = 0;
       if (MenuSource[SelItemFullIdx].ItemType == rtFileKla ||
           MenuSource[SelItemFullIdx].ItemType == rtFileArt)
       {
@@ -397,6 +400,64 @@ void SearchForLetter()
    }
 }
 
+FLASHMEM void GetCurrentFilePathName(char* FilePathName)
+{
+   char SDUSB[6] = "SD";
+   if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
+
+   if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, MenuSource[SelItemFullIdx].Name);  // at root
+   else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, MenuSource[SelItemFullIdx].Name);   
+}
+
+FLASHMEM void WriteNFCTagCheck()
+{
+
+   IO1[rRegLastHourBCD] = 0; //using this reg as scratch to communicate outcome
+   
+   if (!nfcEnabled)
+   {
+      SendMsgPrintfln(" NFC not enabled/found\r");
+      return;      
+   }
+
+   if (IO1[rWRegCurrMenuWAIT] != rmtSD && IO1[rWRegCurrMenuWAIT] != rmtUSBDrive)
+   { 
+      SendMsgPrintfln(" Must be SD or USB source\r");
+      return;
+   }
+   
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+
+   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   {
+      SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
+      return;
+   }
+   
+   char PathMsg[MaxPathLength];
+   GetCurrentFilePathName(PathMsg);
+   SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
+   
+   nfcEnabled = false; //keep if from trigerring if re-using prev tag
+   IO1[rRegLastHourBCD] = 0xff; //checks look good!
+}
+
+FLASHMEM void WriteNFCTag()
+{   
+   //checks have been done, ready to write tag
+   nfcEnabled = true; //re-enable NFC
+   
+   char PathMsg[MaxPathLength];
+   GetCurrentFilePathName(PathMsg);
+   
+   SendMsgPrintfln("Writing NFC Tag");
+   //Serial.printf("WriteNFCTag: %s\n", PathMsg);
+
+   nfcWriteTag(PathMsg);
+
+   //pause for removal (in assy?)
+}
+
 FLASHMEM void LoadMainSIDforXfer()
 {
    XferImage = RAM_Image; 
@@ -418,7 +479,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &LoadMainSIDforXfer,  // rsLoadSIDforXfer
    &NextPicture,         // rsNextPicture    
    &LastPicture,         // rsLastPicture    
-
+   &WriteNFCTagCheck,    // rsWriteNFCTagCheck
+   &WriteNFCTag,         // rsWriteNFCTag
 };
 
 
@@ -618,7 +680,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rwRegSelItemOnPage:
-            SelItemFullIdx=Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
          case rwRegStatus:
          case wRegVid_TOD_Clks:
          case wRegIRQ_ACK:
@@ -738,6 +800,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlLastPicture:
                   IO1[rwRegStatus] = rsLastPicture; //work this in the main code
+                  break;
+               case rCtlWriteNFCTagCheckWAIT:
+                  IO1[rwRegStatus] = rsWriteNFCTagCheck; //work this in the main code
+                  break;
+               case rCtlWriteNFCTagWAIT:
+                  IO1[rwRegStatus] = rsWriteNFCTag; //work this in the main code
                   break;
                case rCtlRebootTeensyROM:
                   REBOOT;
