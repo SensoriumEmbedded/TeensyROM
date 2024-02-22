@@ -15,7 +15,7 @@
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/v0.2b/TR_Connections.jpg)
 
-## Main Menu Options/Navigation (as of FW v0.5)
+## Main Menu Options/Navigation (as of FW v0.5.12)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * **CRSR or Joystick Up/Down:** Move cursor up/down the list of files on the currently selected source device
     * **CRSR or Joystick Left/Right:** Page up/down the list of files
@@ -34,6 +34,7 @@
     * **F6:** Go to Settings Menu
     * **F8:** Enter the MIDI2SID application
     * **Space Bar:** Display the Help Menu
+    * **Left Arrow:** Write NFC tag representing the highlighted file
   * Screen contents:
     * **File Source and dir path** is shown in the upper left corner
     * **Page number and number of pages** is shown in the lower right corner
@@ -63,7 +64,7 @@
     * ***.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
-## The Settings Menu
+## The Settings Menu (as of FW v0.5.12)
   * Keyboard commands available from the Settings Menu:
     * These commands modify settings stored in the Teensy, and are recalled on power-up
       * **a/A:** Set local Time Zone for system/screen clock (applied next Ethernet time synch)
@@ -71,14 +72,17 @@
       * **c/C:** Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
       * **d:** Toggle auto Internet Time Synch on power-up
       * **e:** Toggle auto background music on power-up
+      * **f:** Toggle NFC Reader enabled on power-up
+      * **g:** Toggle RW Ready timing delay (to improve Hi-ROM games on Reloaded MKII and C64c)
     * These commands only change settings for this session and execute immediately
-      * **f:** Perform Internet Time Synch
-      * **g:** Toggle background music on/off
-      * **h:** Execute Self-Test (takes ~4 seconds)
+      * **h:** Reboot TeensyROM to execute updated power-up settings
+      * **i:** Perform Internet Time Synch
+      * **j:** Toggle background music on/off
+      * **k:** Execute Self-Test (takes ~4 seconds)
         * Tests the TeensyROM ability to rapidly read from emulated ROM
         * Helpful in testing out HW and debug, but should not fail in normal use
         * The is not an exhaustive test, but may be expanded later
-      * **i:** Display Help menu
+      * **l:** Display Help menu
       * **Space Bar:** Return to Main Menu
       * **Return:** Screen refresh.  Handy for updating the temperature reading 
   * Other information on the Settings screen
@@ -90,7 +94,7 @@
       * External cooling is not required for this speed. However, in abundance of caution, a heatsink is specified in the BOM for this project.
       * The max spec is 95C, and there is an automatic shutdown at 90C.
       * Even in extended use, I've never seen the internal temperature exceded 75C.
-    * Open source reminder, URL to the Github location
+    * Free RAM space available for large .CRT files
 
 ## Selecting and associating Special IO
   * What is it?
