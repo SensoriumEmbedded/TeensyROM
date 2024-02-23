@@ -4,7 +4,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 
 ## NFC Loader Hardware
 ### Electronics
-* The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are avaiable in discrete modules or in combination, here are some purchasing options:
+* The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
   * Combo module from [Aliexpress (PN532+CH340)](https://www.aliexpress.us/item/3256806140123574.html)
   * Combo module from [Elechouse (PN532+CH340)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
   * Individual modules from Amazon (and elsewhere):
@@ -13,6 +13,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
     * Connections to wire these two modules together: GND/GND, Vcc/5V, TxD/RxD, RxD/TxD
 ### Reader enclosure/case
 * There are a few 3D printable designs out there, [such as this](https://www.printables.com/model/737533-tapto-nfc-engine)
+  * ![NFCEngine](/media/NFC/NFC_Engine.webp)
 * Other designs are available and being designed, watch here for updates and let me know if you find other good ones.
 * Note that module mounting options vary and may not match your specific reader module. Unique mounting options may be needed. 
 ### NFC Tag cards/media
@@ -24,6 +25,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 * Labels can be created using this [TapTo Label Generator](https://tapto-designer.netlify.app/)
   * Choose the "HuCard (C64)" Card template
   * Recommend printing to glossy sticker sheets, then cut out individually for your tag cards.
+    * ![TapTo_Label_Designer](/media/NFC/TapTo_Label_Designer.webp)
 
 ## Tag programming
 * Tags are programmed with a text field containing the path to a local file to be executed by the TeensyROM.
@@ -46,7 +48,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
   * Here's a [demo video](https://youtu.be/YwQviLwWHYM?t=663) for tag writing. It's made for a different system, but the tag writing process is the same.
 
 ## TeensyROM Software setup
-* Be sure your TeensyROM is using Formware version 0.5.12 or later for NFC reader support
+* Be sure your TeensyROM is using Firmware version 0.5.12 or later for NFC reader support
   * See update instructions [here](General_Usage.md#firmware-updates) if update is needed.
 * Connect your NFC reader to the USB Host port of the TeensyROM.
   * Alternately, a powered USB hub can by used.  This allows the NFC reader, USB Thumb drive, and MIDI device(s) to be connected simultaneously.
