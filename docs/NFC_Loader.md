@@ -5,10 +5,9 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 ## NFC Loader Hardware
 ### Electronics
 * The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
-  * Combo module from [Aliexpress (PN532+CH340)](https://www.aliexpress.us/item/3256806140123574.html)
-    * ![Ali Combo](/media/NFC/Ali_Combo.jpg)
-  * Combo module from [Elechouse (PN532+CH340)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
-    * ![Elec Combo](/media/NFC/Elec_Combo.jpg)
+  * Combo modules (PN532+CH340) from [Aliexpress (Left)](https://www.aliexpress.us/item/3256806140123574.html) and [Elechouse (Right)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
+    |![Ali Combo](/media/NFC/Ali_Combo.jpg)|![Elec Combo](/media/NFC/Elec_Combo.jpg)| 
+    |:--:|:--:|
   * Individual modules from Amazon (and elsewhere):
     * [NFC module (PN532)](https://www.amazon.com/gp/product/B01I1J17LC)
     * [USB/Serial adapter (CH340)](https://www.amazon.com/gp/product/B00LZV1G6K)
