@@ -6,15 +6,14 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 ### Electronics
 * The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
   * Combo module from [Aliexpress (PN532+CH340)](https://www.aliexpress.us/item/3256806140123574.html)
-    * ![Modules Top](/media/NFC/Ali Combo.jpg)
+    * ![Ali Combo](/media/NFC/Ali_Combo.jpg)
   * Combo module from [Elechouse (PN532+CH340)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
-    * ![Modules Top](/media/NFC/Elec Combo.jpg)
+    * ![Elec Combo](/media/NFC/Elec_Combo.jpg)
   * Individual modules from Amazon (and elsewhere):
     * [NFC module (PN532)](https://www.amazon.com/gp/product/B01I1J17LC)
     * [USB/Serial adapter (CH340)](https://www.amazon.com/gp/product/B00LZV1G6K)
     * Connections to wire these two modules together: GND/GND, Vcc/5V, TxD/RxD, RxD/TxD
-    * ![Modules Top](/media/NFC/NFC_Modules_Above.webp)
-    * ![Modules Bottom](/media/NFC/NFC_Modules_Below.webp)
+    * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.jpg)
 ### Reader enclosure/case
 * There are a few 3D printable designs out there, [such as this](https://www.printables.com/model/737533-tapto-nfc-engine)
   * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
@@ -44,7 +43,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
   * Press the **Left Arrow** key to select it for tag writing.
   * Folow the on-screen instructions to load a tag and write to it.
-  * ![Write Tag Screen](/media/NFC/Write Tag.jpg)
+  * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
 * Programming via cell phone: (Alternate programming method)
   * Copy/type the paths you want to make tags from into a text file.
   * Send/e-mail the text file to your phone.
