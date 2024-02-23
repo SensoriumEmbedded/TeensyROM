@@ -18,7 +18,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 ### Reader enclosure/case
 * There are a few 3D printable designs out there, [such as this](https://www.printables.com/model/737533-tapto-nfc-engine)
   * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
-* This one will be released soon!
+* This adorable 1541 NFC reader case will be released soon!
   * ![NFCEngine](/media/NFC/1541_engine.jpg)
 * Other designs are available and being designed, watch here for updates and let me know if you find other good ones.
 * Note that module mounting options vary and may not match your specific reader module. Unique mounting options may be needed. 
