@@ -16,12 +16,12 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
     * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.webp)
 
 ### Reader enclosure/case
-* There are a few 3D printable designs out there, [such as this](https://www.printables.com/model/737533-tapto-nfc-engine)
-  * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
-* This adorable 1541 NFC reader case will be released soon!
-  * ![NFCEngine](/media/NFC/1541_engine.jpg)
-* Other designs are available and being designed, watch here for updates and let me know if you find other good ones.
-* Note that module mounting options vary and may not match your specific reader module. Unique mounting options may be needed. 
+* These 3D printable case designs by [Bedroom Ninja](https://www.printables.com/@bedroom_ninj_1665215) fit the theme perfectly!
+  * [TapTo NFC-Engine](https://www.printables.com/model/737533-tapto-nfc-engine)
+    * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
+  * 1541 NFC reader
+    * ![NFC1541](/media/NFC/1541_engine.jpg)
+* Since electronics modules vary in size, unique internal mounting methods may be needed. Tape or glue have been known to work. :)
 
 ### NFC Tag cards/media
 * 3 types of NFC tags are currently supported:
