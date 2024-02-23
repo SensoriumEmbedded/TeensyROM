@@ -3,6 +3,7 @@
 The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fast launch machine! Here's a [video](https://www.youtube.com/watch?v=mDrT1I4R0ls) of it in action. Huge thanks to [**StatMat**](https://github.com/Stat-Mat) for sharing his vision and support for this project! TeensyROM and the [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) project make a great pair! 
 
 ## NFC Loader Hardware
+
 ### Electronics
 * The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
   * Combo modules (PN532+CH340) from [Aliexpress (Left)](https://www.aliexpress.us/item/3256806140123574.html) and [Elechouse (Right)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
@@ -12,17 +13,22 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
     * [NFC module (PN532)](https://www.amazon.com/gp/product/B01I1J17LC)
     * [USB/Serial adapter (CH340)](https://www.amazon.com/gp/product/B00LZV1G6K)
     * Connections to wire these two modules together: GND/GND, Vcc/5V, TxD/RxD, RxD/TxD
-    * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.jpg)
+    * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.webp)
+
 ### Reader enclosure/case
 * There are a few 3D printable designs out there, [such as this](https://www.printables.com/model/737533-tapto-nfc-engine)
   * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
+* This one will be released soon!
+  * ![NFCEngine](/media/NFC/1541_engine.jpg)
 * Other designs are available and being designed, watch here for updates and let me know if you find other good ones.
 * Note that module mounting options vary and may not match your specific reader module. Unique mounting options may be needed. 
+
 ### NFC Tag cards/media
 * 3 types of NFC tags are currently supported:
   * NTAG215 (Recommended and [widely available](https://www.amazon.com/dp/B074M9J5L3))
   * NTAG213 (171 characters max)
   * NTAG216 (Not yet tested)
+
 ### Card labels
 * Labels can be created using this [TapTo Label Generator](https://tapto-designer.netlify.app/)
   * Choose the "HuCard (C64)" Card template
@@ -38,12 +44,14 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
       * **USB:path/filename**
     * Example: *SD:OneLoad v5/Donkey Kong Junior.crt*
     * Character limit is 246 chars (171 for NTAG213)
-* Programming directly with the TeensyROM:
+
+### Programming directly with the TeensyROM:
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
   * Press the **Left Arrow** key to select it for tag writing.
   * Folow the on-screen instructions to load a tag and write to it.
   * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
-* Programming via cell phone: (Alternate programming method)
+
+### Programming via cell phone: (Alternate programming method)
   * Copy/type the paths you want to make tags from into a text file.
   * Send/e-mail the text file to your phone.
   * Use the (free) [NFC tools](https://www.wakdev.com/en/) application to write individual path/filename lines to tags.  It's available for [iPhone](https://itunes.apple.com/us/app/nfc-tools/id1252962749) or [Android](https://play.google.com/store/apps/details?id=com.wakdev.wdnfc)
