@@ -1,6 +1,30 @@
 
 # FW Release Version history:
 
+### 0.5.12 sub-release 2/23/24
+* New feature: NFC Loading System!
+  * Use NFC tags to instantly launch you CRTs/PRGs/SIDs/etc.
+  * Write new tags right from your C64
+  * See documentation [here](/docs/NFC_Loader.md).
+  * A huge thank you to [**StatMat**](https://github.com/Stat-Mat) for sharing his vision and support
+  * Thanks also to the TapTo project for the inspiration! 
+* General updates
+  * Skipping RAM test at boot for faster boot and reduced screen garbage time.
+    * As used in the OneLoad64 collection, code provided by [**StatMat**](https://github.com/Stat-Mat)
+  * EEPROM setting reset to defaults
+    * Hold menu button for 10 seconds until LED starts flashing
+    * Upon release, setting will be reset and TeensyROM is rebooted
+  * Settings Menu 
+    * "Reboot TeensyROM" option to apply changed defaults without power-cycle
+    * "NFC Enabled" to enable attached NFC reader
+    * "RW Ready Dly" to improve Hi-ROM game graphics on Reloaded MKII and C64c
+      * Thanks to **alterationx10** for the testing!
+    * Free RAM now displayed to indicate max CRT file size
+  * YYZ.sid edited to *not* zero out time registers on SID init
+    * Thank you to **][avok** for reporting this issue
+* Remote Launch UI support updates
+  * Readback game preview file additions by [**MetalHexx**](https://github.com/MetalHexx)
+
 ### 0.5.11 sub-release 2/6/24
 * New feature: Picture viewer
   * Koala multi-color and Art Studio Hi-res files viewable/supported
@@ -27,7 +51,7 @@
   * BadSIDToken sent on SID load error
 * General/Housekeeping:
   * Updated nS_DataHold time from 350 to 365 to accommodate Reloaded MK2 board
-    * Thanks to alterationx10 for the testing!
+    * Thanks to **alterationx10** for the testing!
   * Timing control via serial improvement (Dbg_SerTimChg)
   * Removed 2 redundant pic .prgs (Fractal/Emb Head)
 
