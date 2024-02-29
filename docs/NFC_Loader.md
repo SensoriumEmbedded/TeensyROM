@@ -5,7 +5,6 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fas
 Thank you very much to:
 * [**StatMat**](https://github.com/Stat-Mat) for sharing his vision and support for this project! 
   * TeensyROM and the [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) project make a great pair!
-<BR>
 * The [**TapTo Project**](https://github.com/wizzomafizzo/tapto) for the genesis and inspiration for NFC launching capability.  
   * Happy to help make the C64 an officially supported platform! 
 
