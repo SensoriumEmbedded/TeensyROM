@@ -1,6 +1,13 @@
 
 # TeensyROM NFC Loading system
-The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fast launch machine! Here's a [video](https://www.youtube.com/watch?v=mDrT1I4R0ls) of it in action. Huge thanks to [**StatMat**](https://github.com/Stat-Mat) for sharing his vision and support for this project! TeensyROM and the [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) project make a great pair! 
+The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card fast launch machine! Here's a [video](https://www.youtube.com/watch?v=iNfQx2gx0hA) of it in action. 
+<BR><BR>
+Thank you very much to:
+* [**StatMat**](https://github.com/Stat-Mat) for sharing his vision and support for this project! 
+  * TeensyROM and the [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) project make a great pair!
+<BR>
+* The [**TapTo Project**](https://github.com/wizzomafizzo/tapto) for the genesis and inspiration for NFC launching capability.  
+  * Happy to help make the C64 an officially supported platform! 
 
 ## NFC Loader Hardware
 
