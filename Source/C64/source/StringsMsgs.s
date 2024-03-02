@@ -43,7 +43,10 @@ MsgWriteNFCTag:
 MsgPlaceNFCTag:
    !tx ChrReturn, OptionColor, " Place tag in NFC reader,"
    !tx ChrReturn, "  then press any key to write", ChrReturn, SourcesColor
-   ;!tx ChrReturn, "  Any other key to abort"
+   !tx 0
+
+MsgRemoveNFCTag:
+   !tx ChrReturn, ChrReturn, OptionColor, "Remove tag from reader, then"
    !tx 0
 
 MsgSIDInfo1:

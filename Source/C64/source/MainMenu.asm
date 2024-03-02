@@ -926,17 +926,23 @@ WriteNFCTag:
 -  jsr CheckForIRQGetIn ;read key/IRQ
    beq -  
    
-   ;cmp #ChrSpace
-   ;bne ++
    lda #rCtlWriteNFCTagWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots
    
-   ;tag should launch after write, unless error occured
-   
-   ;any key to return
-+  jsr AnyKeyMsgWait
-++ rts
+   ;Error may have occured, but   
+   ;Wait for tag removal either way
++  lda #<MsgRemoveNFCTag
+   ldy #>MsgRemoveNFCTag
+   jsr PrintString 
+   jsr AnyKeyMsgWait
+
+   ;re-enable NFC
+   lda #rCtlNFCReEnableWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+
+   rts
    
 TblRowToMemLoc:
    !word C64ScreenRAM+40*(3+ 0)-1

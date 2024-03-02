@@ -199,6 +199,7 @@ extern char StrMachineInfo[];
 extern bool nfcEnabled;
 extern void SendMsgPrintfln(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
+extern void nfcInit();
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -438,24 +439,30 @@ FLASHMEM void WriteNFCTagCheck()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
    
-   nfcEnabled = false; //keep if from trigerring if re-using prev tag
+   nfcEnabled = false; //keep if from trigerring if re-using prev programmed tag
    IO1[rRegLastHourBCD] = 0xff; //checks look good!
 }
 
 FLASHMEM void WriteNFCTag()
 {   
    //checks have been done, ready to write tag
-   nfcEnabled = true; //re-enable NFC
+   //nfc polling not Enabled here
    
    char PathMsg[MaxPathLength];
    GetCurrentFilePathName(PathMsg);
    
-   SendMsgPrintfln("Writing NFC Tag");
+   SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
 
    nfcWriteTag(PathMsg);
 
-   //pause for removal (in assy?)
+   //pause for removal (in assy)
+}
+
+FLASHMEM void NFCReEnable()
+{              
+   // nfc not currently enabled (just wrote a tag)
+   nfcInit(); //this should pass, was enabled/initialized previously...
 }
 
 FLASHMEM void LoadMainSIDforXfer()
@@ -481,6 +488,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &LastPicture,         // rsLastPicture    
    &WriteNFCTagCheck,    // rsWriteNFCTagCheck
    &WriteNFCTag,         // rsWriteNFCTag
+   &NFCReEnable,         // rsNFCReEnable
 };
 
 
@@ -806,6 +814,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlWriteNFCTagWAIT:
                   IO1[rwRegStatus] = rsWriteNFCTag; //work this in the main code
+                  break;
+               case rCtlNFCReEnableWAIT:
+                  IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
                   break;
                case rCtlRebootTeensyROM:
                   REBOOT;

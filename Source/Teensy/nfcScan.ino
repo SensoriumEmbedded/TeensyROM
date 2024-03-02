@@ -48,7 +48,7 @@ FLASHMEM void nfcInit()
    if (!versiondata) 
    {
       Serial.println(" PN53x board not found\n");
-      //todo: disable NFC
+      //nfcEnabled = false; (default) 
       return;
    }
    
@@ -63,7 +63,7 @@ FLASHMEM void nfcInit()
       if (TryNum++ == MaxNfcConfRetries)
       {
          Serial.println(" config failed\n");   
-         //todo: disable NFC 
+         //nfcEnabled = false; (default) 
          return;
       }
    }
@@ -241,30 +241,42 @@ bool nfcReadTagLaunch()
 FLASHMEM void nfcWriteTag(const char* TxtMsg)
 {
    uint8_t uid[7];  // Buffer to store the returned UID
-   uint8_t uidLength;   // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
+   uint8_t uidLength;   // Length of the UID (4 or 7 bytes depending on ISO14443A card type) 
+   uint8_t TryNum = 0;
    
-   if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength))
+   while (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength))
    {
-      //Printf_dbg("Couldn't read tag\n");
-      SendMsgPrintfln(" Couldn't verify tag");
+      if (TryNum++ == 10) // 10 retries, doesn't help much if out of range or too close
+      {
+         SendMsgPrintfln(" Couldn't verify tag");
+         return;
+      }
+   }
+
+   if (TryNum) SendMsgPrintfln("Verify took %d retries", TryNum);
+   Printf_dbg("Verify read took %d retries\nUID Length = %d\n", TryNum, uidLength);
+   
+   if (uidLength != 7)
+   {
+      SendMsgPrintfln(" Unsupported tag type");
       return;
    }      
-   Printf_dbg("UID Length = %d\n", uidLength);
    
    uint8_t TagData[MaxPathLength] = {0x03, 0x13, 0xd1, 0x01, 0x10, 0x54, 0x02, 0x65, 0x6e};
    uint16_t messageLength = strlen(TxtMsg) + 9;
    
    if (messageLength>254)
    {
-      SendMsgPrintfln("Path too long\n");
+      SendMsgPrintfln(" Path too long");
       return;
    }
    strcpy((char*)TagData + 9, TxtMsg);
    TagData[1] = messageLength;
    TagData[messageLength++] = 0xfe; //replace termination w/ NDEF term
 
-   Printf_dbg("Writing tag\n");
-   for(uint16_t cnt=0; cnt<=messageLength; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
+   SendMsgPrintfln("Writing NFC Tag...");
+   //Printf_dbg("Writing tag\n");
+   //for(uint16_t cnt=0; cnt<=messageLength; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
 
    for(uint16_t PageNum = 0; PageNum < messageLength/4+1; PageNum++)
    {
@@ -272,13 +284,12 @@ FLASHMEM void nfcWriteTag(const char* TxtMsg)
       //if (!nfc.mifareclassic_WriteDataBlock(4, TagData)) //only writes one page(?)
       if (!nfc.mifareultralight_WritePage(PageNum+4, TagData+PageNum*4))
       {
-         Printf_dbg("Failed!\n");
+         //Printf_dbg("Failed!\n");
          SendMsgPrintfln("Write Failed!");
          return;
       }
    }
-   SendMsgPrintfln("Finished Writing tag");
-   memset(Lastuid, 0, sizeof Lastuid);
+   SendMsgPrintfln("Success!");
 }
 
 #endif
