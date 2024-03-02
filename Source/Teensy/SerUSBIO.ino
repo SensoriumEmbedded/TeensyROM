@@ -31,7 +31,7 @@ FLASHMEM void ServiceSerial()
          //only commands available when busy:
          if (inVal == ResetC64Token) //Reset C64
          {
-            Serial.println("Reset cmd received");
+            Serial.println("Reset cmd received");  //UI looks for this string, do not change.
             BtnPressed = true;
             return;
          }
