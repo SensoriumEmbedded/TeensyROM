@@ -124,6 +124,9 @@ void loop()
          RemoteLaunched = false;
          Printf_dbg("Remote recovery\n"); 
       }   
+   #ifdef nfcScanner
+      if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
+   #endif
       SetUpMainMenuROM(); //back to main menu
    }
    
@@ -178,9 +181,6 @@ void SetUpMainMenuROM()
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
-#ifdef nfcScanner
-   memset(Lastuid, 0, sizeof Lastuid);
-#endif
 
    FreeCrtChips();
    FreeSwiftlinkBuffs();

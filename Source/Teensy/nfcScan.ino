@@ -38,9 +38,10 @@ PN532 nfc(pn532uhsu);
 #define MaxNfcConfRetries    20
 
 FLASHMEM void nfcInit()
-{ //called once in setup(), if NFC enabled
+{  
    Serial.println("nfc init");
    
+   nfcEnabled = false; // set default
    memset(Lastuid, 0, sizeof Lastuid);
    nfc.begin();
    
@@ -48,7 +49,6 @@ FLASHMEM void nfcInit()
    if (!versiondata) 
    {
       Serial.println(" PN53x board not found\n");
-      //nfcEnabled = false; (default) 
       return;
    }
    
@@ -63,7 +63,6 @@ FLASHMEM void nfcInit()
       if (TryNum++ == MaxNfcConfRetries)
       {
          Serial.println(" config failed\n");   
-         //nfcEnabled = false; (default) 
          return;
       }
    }
