@@ -25,8 +25,8 @@ Thank you very much to:
 * These 3D printable case designs by [Bedroom Ninja](https://www.printables.com/@bedroom_ninj_1665215) fit the theme perfectly!
   * [TapTo NFC-Engine](https://www.printables.com/model/737533-tapto-nfc-engine)
     * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
-  * 1541 NFC reader
-    * ![NFC1541](/media/NFC/1541_engine.jpg)
+  * [TapTo NFC-1541](https://www.printables.com/model/791580-tapto-nfc-1541)
+    * ![NFC-1541](/media/NFC/NFC_1541.jpg)
 * Since electronics modules vary in size, unique internal mounting methods may be needed. Tape or glue have been known to work. :)
 
 ### NFC Tag cards/media
