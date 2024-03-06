@@ -1,6 +1,21 @@
 
 # FW Release Version history:
 
+
+### 0.5.13 sub-release 3/6/24
+* NFC Loading System Updates:
+  * Tag write improvements:
+    * Prompt to remove nfc tag after writing to prevent auto-execute
+    * General messaging clarification
+    * Checks card type to reject Mifare Classic
+    * Always re-init and clear last UID after write operation
+    * Retries on tag verification read before write
+  * NFC re-initialized (if enabled) on menu button press
+    * Easier way to force init than power cycle, also insures reader stays in synch
+    * Note: If NFC is enabled but not attached to USB, power-up and button pushes will be slow to respond
+  * Check for "C64" at start of path and remove if path not present.  
+    * Keeps compatibility with TapTo w/ System ID
+  
 ### 0.5.12 sub-release 2/23/24
 * New feature: NFC Loading System!
   * Use NFC tags to instantly launch you CRTs/PRGs/SIDs/etc.
