@@ -13,6 +13,7 @@ Thank you very much to:
 ### Electronics
 * The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
   * Combo modules (PN532+CH340) from [Aliexpress (Left)](https://www.aliexpress.us/item/3256806140123574.html) and [Elechouse (Right)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
+  * Here's the [latest and lowest priced combo module](https://www.aliexpress.us/item/3256805076433294.html) yet, highly recommended!
     |![Ali Combo](/media/NFC/Ali_Combo.jpg)|![Elec Combo](/media/NFC/Elec_Combo.jpg)| 
     |:--:|:--:|
   * Individual modules from Amazon (and elsewhere):
