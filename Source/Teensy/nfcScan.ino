@@ -212,8 +212,9 @@ bool nfcReadTagLaunch()
    }
    pDataStart += 2 + (pDataStart[1] & 0x3f);
   
+  
    Printf_dbg("Final Payload: %s\n\n", pDataStart);
-   
+      
    bool SD_nUSB = true;
    for(uint8_t num=0; num<3; num++) pDataStart[num]=toupper(pDataStart[num]);
    if(memcmp(pDataStart, "SD:", 3) == 0)
@@ -228,10 +229,23 @@ bool nfcReadTagLaunch()
    else
    {
       Printf_dbg("SD:/USB: not found\n");
-      //return false;
       //default to SD if not specified, allows display on c64
    }
-   
+
+   if(memcmp(pDataStart, "C64", 3) == 0)
+   { //could be used to specify system type for TapTo
+      FS *sourceFS;
+      if(SD_nUSB) sourceFS = &SD;
+      else sourceFS = &firstPartition;    
+
+      Printf_dbg("C64 found\n");
+      if (!sourceFS->exists((char*)pDataStart)) 
+      {
+         pDataStart+=3; //skip it if file not found with it present
+         Printf_dbg(" & removed\n");
+      }
+   }
+      
    //Printf_dbg("Launching...\n");
    RemoteLaunch(SD_nUSB, (char*)pDataStart);
    return true;
