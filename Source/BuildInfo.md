@@ -2,10 +2,11 @@
 # TeensyROM software/firmware build instructions
 
 ## Main TeensyROM C/C++ aplication
-### Software tools needed
+### Software tools & lib needed
   * [Arduino IDE 2.x or 1.x](https://www.arduino.cc/en/software)
   * [Teenyduino app](https://www.pjrc.com/teensy/td_download.html)
   * Install as directed in links above
+  * The NFC library can be found [here](https://github.com/elechouse/PN532)
 
 ### Build parameters/instructions
   *  In the Arduino IDE
