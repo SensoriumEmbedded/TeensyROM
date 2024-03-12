@@ -235,7 +235,11 @@ bool nfcReadTagLaunch()
    if(memcmp(pDataStart, "C64", 3) == 0)
    { //could be used to specify system type for TapTo
       FS *sourceFS;
-      if(SD_nUSB) sourceFS = &SD;
+      if(SD_nUSB) 
+      {
+         sourceFS = &SD;
+         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      }
       else sourceFS = &firstPartition;    
 
       Printf_dbg("C64 found\n");
