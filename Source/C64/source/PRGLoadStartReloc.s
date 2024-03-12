@@ -60,6 +60,20 @@ PRGLoadStart:
    
    lda #rCtlRunningPRG    ;let TR know we're done, change IO handler
    sta wRegControl+IO1Port  ;can't wait for it because handler is changing...
+   
+   ;static delay instead of wait. 
+   ; without this, race condition fails under following conditions:
+   ;  PAL clock, NFC on (slowing down polling), start Cynthcart
+   ; because Cynthcart starts and queries IO space, 
+   ;  causing corruption when TR handler still loaded (internet time query added)
+   ; 6*256*(2+2)/985250Hz(PAL) = ~6.3mS
+   ldy #$06    ;<=3 fails, 4 intermittent, >=5 passes
+   ldx #$ff
+-  dex
+   bne -
+   dey
+   bne -
+   
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
    jsr $ab1e   ;PrintString
