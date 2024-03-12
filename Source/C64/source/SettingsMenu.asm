@@ -200,6 +200,11 @@ UpdTimeZone
    bne +
    rts
 
++  cmp #ChrF4  ;Toggle Music now
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitForSettingsKey  
+
 ;--------------------Shift/non-shift mean the same from here on...---------------------
 +  and #$7f  ;Force to lower case
 

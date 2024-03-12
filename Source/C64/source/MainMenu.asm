@@ -304,6 +304,30 @@ ReadKeyboard:
    jsr ListMenuItems
    jmp HighlightCurrent  
 
++  cmp #'1'  ;Hot Key #1
+   bne +
+   lda #7  ;set to Cynthcart
+HotKeyLaunch
+   ;launch item # stored in acc from main TR menu   
+   pha ;save program #
+   lda #rmtTeensy     ;point to Teensy menu, but don't display it
+   sta rWRegCurrMenuWAIT+IO1Port  
+   jsr WaitForTRWaitMsg
+   pla
+   sta rwRegCursorItemOnPg+IO1Port 
+   jsr SelectItem  ;won't come back from this...
+   jmp HighlightCurrent
+
++  cmp #'2'  ;Hot Key #2
+   bne +
+   lda #8  ;set to Station64
+   jmp HotKeyLaunch
+
++  cmp #'3'  ;Hot Key #3
+   bne +
+   lda #6  ;set to CCGMS
+   jmp HotKeyLaunch
+
 
 +  jmp WaitForJSorKey
 

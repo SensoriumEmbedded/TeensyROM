@@ -164,17 +164,19 @@ StructMenuItem dirPic_Files[] =
 //define this last:
 StructMenuItem TeensyROMMenu[] = 
 {
-//regItemTypes, enumIOHandlers   
-// ItemType   , IOHndlrAssoc     , Name                                      , *Code_Image                          , Size ,
+//Ref# used for hot keys, update MainMenu.asm if these change!
 
-   rtDirectory, IOH_None         , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
-   rtDirectory, IOH_None         , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
-   rtDirectory, IOH_None         , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
-   rtDirectory, IOH_None         , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
-   rtDirectory, IOH_None         , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
-   rtDirectory, IOH_None         , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
-   rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
-   rtFilePrg  , IOH_MIDI_Datel   , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
-   rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
+// Ref  regItemTypes, enumIOHandlers   
+//  #    ItemType   , IOHndlrAssoc     , Name                                      , *Code_Image                          , Size ,
+
+ /* 0 */ rtDirectory, IOH_None         , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
+ /* 1 */ rtDirectory, IOH_None         , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
+ /* 2 */ rtDirectory, IOH_None         , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
+ /* 3 */ rtDirectory, IOH_None         , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
+ /* 4 */ rtDirectory, IOH_None         , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
+ /* 5 */ rtDirectory, IOH_None         , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
+ /* 6 */ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
+ /* 7 */ rtFilePrg  , IOH_MIDI_Datel   , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
+ /* 8 */ rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
 };
 
