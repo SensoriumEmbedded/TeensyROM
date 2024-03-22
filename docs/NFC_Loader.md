@@ -12,8 +12,8 @@ Thank you very much to:
 
 ### Electronics
 * The PN532 NFC Reader and the CH340 USB to serial UART interface are the two components needed to enable NFC loading.  They are available in discrete modules or in combination, here are some purchasing options:
-  * Here's the [latest and lowest priced combo module](https://www.aliexpress.us/item/3256805076433294.html) yet, highly recommended!
-  * Combo modules (PN532+CH340) from [Aliexpress (Left)](https://www.aliexpress.us/item/3256806140123574.html) and [Elechouse (Right)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
+  * Here's the [lowest priced combo module](https://www.aliexpress.us/item/3256805076433294.html) (PN532+CH340) we've found, highly recommended!
+  * Other combo modules from [Aliexpress (Left)](https://www.aliexpress.us/item/3256806140123574.html) and [Elechouse (Right)](https://www.elechouse.com/product/pn532-nfc-usb-module/)
     |![Ali Combo](/media/NFC/Ali_Combo.jpg)|![Elec Combo](/media/NFC/Elec_Combo.jpg)| 
     |:--:|:--:|
   * Individual modules from Amazon (and elsewhere):
@@ -22,6 +22,19 @@ Thank you very much to:
     * Connections to wire these two modules together: GND/GND, Vcc/5V, TxD/RxD, RxD/TxD
     * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.webp)
 
+### NFC Tag cards/media
+* 3 types of NFC tags are currently supported:
+  * NTAG215 (Recommended and [widely available](https://www.amazon.com/dp/B074M9J5L3))
+  * NTAG213 (171 characters max)
+  * NTAG216 (Not yet tested)
+* Note: Tags sometimes bundled with the reader electronics are typically not one of the supported types and will not work with this system.
+
+### Card labels
+* Labels can be created using this [TapTo Label Generator](https://tapto-designer.netlify.app/)
+  * Choose the "HuCard (C64)" Card template
+  * Recommend printing to glossy sticker sheets, then cut out individually for your tag cards.
+    * ![TapTo_Label_Designer](/media/NFC/TapTo_Label_Designer.webp)
+
 ### Reader enclosure/case
 * These 3D printable case designs by [Bedroom Ninja](https://www.printables.com/@bedroom_ninj_1665215) fit the theme perfectly!
   * [TapTo NFC-Engine](https://www.printables.com/model/737533-tapto-nfc-engine)
@@ -29,18 +42,6 @@ Thank you very much to:
   * [TapTo NFC-1541](https://www.printables.com/model/791580-tapto-nfc-1541)
     * ![NFC-1541](/media/NFC/NFC_1541.jpg)
 * Since electronics modules vary in size, unique internal mounting methods may be needed. Tape or glue have been known to work. :)
-
-### NFC Tag cards/media
-* 3 types of NFC tags are currently supported:
-  * NTAG215 (Recommended and [widely available](https://www.amazon.com/dp/B074M9J5L3))
-  * NTAG213 (171 characters max)
-  * NTAG216 (Not yet tested)
-
-### Card labels
-* Labels can be created using this [TapTo Label Generator](https://tapto-designer.netlify.app/)
-  * Choose the "HuCard (C64)" Card template
-  * Recommend printing to glossy sticker sheets, then cut out individually for your tag cards.
-    * ![TapTo_Label_Designer](/media/NFC/TapTo_Label_Designer.webp)
 
 ## Tag programming
 * Tags are programmed with a text field containing the path to a local file to be executed by the TeensyROM.
@@ -63,7 +64,7 @@ Thank you very much to:
   * Send/e-mail the text file to your phone.
   * Use the (free) [NFC tools](https://www.wakdev.com/en/) application to write individual path/filename lines to tags.  It's available for [iPhone](https://itunes.apple.com/us/app/nfc-tools/id1252962749) or [Android](https://play.google.com/store/apps/details?id=com.wakdev.wdnfc)
     * Field requirements: One single NFC Record, Text Type, UTF-8, "Well Known" format  (default settings)
-  * Here's a [demo video](https://youtu.be/YwQviLwWHYM?t=663) for tag writing. It's made for a different system, but the tag writing process is the same.
+  * Here's a [demo video](https://youtu.be/YwQviLwWHYM?t=663) for tag writing via cell phone. It's made for a different system, but the tag writing process is the same.
 
 ## TeensyROM Software setup
 * Be sure your TeensyROM is using Firmware version 0.5.12 or later for NFC reader support

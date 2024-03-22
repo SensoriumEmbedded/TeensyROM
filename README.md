@@ -84,9 +84,11 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
     * Demo using Cynthcart and Datel MIDI emulation to play with a USB keyboard 
     * MIDI ASID Demo: Stream .SID & .MIDI files directly to your C64/SID
     * Web Browser and internet file download demo 
+    * SID Player and Picture viewer demo 
 
 ## Compatibility
-* TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 
+* TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as EVO64 and Reloaded MKII
+* The early "prototype" version of breadbin (PCA 36298 w/ 5 pin video) has a known issue with the reset circuit that must be corrected to be compatible with the TeensyROM and other fastload cartridges. See [this post](https://www.lemon64.com/forum/viewtopic.php?t=74222) or [this video](https://youtu.be/agDFLPP9yIw?t=813) for instructions on how to correct this issue.
 
 ## Hardware-PCB Design
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
@@ -98,7 +100,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Heather S**: Loving wife, continuous encourager
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, Remote launch utility, case support
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) development
 * [**StatMat**](https://github.com/Stat-Mat): NFC Scanner idea, Fast boot code, OneLoad64 creation
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
