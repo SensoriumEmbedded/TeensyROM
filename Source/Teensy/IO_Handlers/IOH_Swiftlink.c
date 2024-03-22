@@ -45,7 +45,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define MaxURLHostSize     100
 #define MaxURLPathSize     300
 #define MaxTagSize         300
-#define TxMsgMaxSize       128
+#define TxMsgMaxSize       128    //DL path saved in EEPROM is tied to this
 #define BytesPerDot        (25*1024) //dot every 25k when downloading
 #define RxQueueNumBlocks   40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
@@ -112,8 +112,8 @@ struct stcURLParse
 
 extern volatile uint32_t CycleCountdown;
 extern volatile uint8_t BtnPressed;
-extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint8_t len);
-extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint8_t len);
+extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
+extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
 extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern void EEPreadStr(uint16_t addr, char* buf);
 extern void FreeDriveDirMenu();

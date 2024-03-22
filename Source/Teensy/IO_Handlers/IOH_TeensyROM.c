@@ -195,11 +195,14 @@ extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
 extern uint8_t RAM_Image[];
 extern char* StrSIDInfo;
+extern char* LatestSIDLoaded;
 extern char StrMachineInfo[];
 extern bool nfcEnabled;
 extern void SendMsgPrintfln(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
+extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
+extern bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -465,12 +468,91 @@ FLASHMEM void NFCReEnable()
    nfcInit(); //this should pass, was enabled/initialized previously...
 }
 
+FLASHMEM int16_t FindTRMenuItem(StructMenuItem* MyMenu, uint16_t NumEntries, char* EntryName)
+{
+   for(uint16_t EntryNum=0; EntryNum < NumEntries; EntryNum++)
+   {
+      if(strcmp(MyMenu[EntryNum].Name, EntryName) == 0) return EntryNum;
+   }
+   return -1;
+}
+
 FLASHMEM void LoadMainSIDforXfer()
 {
+   //Load EEPROM default SID into TR RAM and prep for transfer
+   //if missing, load default
+   //Set XferImage and XferSize
+      
+   EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name fromEEPROM
+   char* LatestSIDName = LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2;
+   Printf_dbg("Sel SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
+
+   if (LatestSIDLoaded[0] != rmtTeensy) // SD or USB
+   {
+      StructMenuItem MyMenuItem;
+      FS *sourceFS = &firstPartition;
+      if(LatestSIDLoaded[0] == rmtSD)
+      {
+         sourceFS = &SD;
+         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      }
+      
+      strcpy(DriveDirPath, LatestSIDLoaded+1); 
+      MyMenuItem.Name = LatestSIDName;
+      MyMenuItem.ItemType = rtFileSID;
+
+      if(!LoadFile(&MyMenuItem, sourceFS))  
+      { //error, load default from TR     
+         Printf_dbg("Ld Err, Default SID\n");
+         LatestSIDLoaded[0] = DefSIDSource;  
+         strcpy(LatestSIDLoaded+1, DefSIDPath);
+         LatestSIDName = LatestSIDLoaded+strlen(DefSIDPath)+2;
+         strcpy(LatestSIDName, DefSIDName);
+      }
+      else 
+      {
+         XferSize = MyMenuItem.Size;
+      }
+      
+      strcpy(DriveDirPath, "/"); //back to root/default
+   }
+ 
+   if (LatestSIDLoaded[0] == rmtTeensy)
+   {
+      int16_t MenuNum;
+      StructMenuItem* DefSIDTRMenu = TeensyROMMenu;  //default to root menu
+      uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
+      
+      if(strcmp(LatestSIDLoaded+1, "/") !=0 )
+      {//find dir menu
+         MenuNum = FindTRMenuItem(DefSIDTRMenu, NumMenuItems, LatestSIDLoaded+1);
+         if(MenuNum<0)
+         {
+            Printf_dbg("No SID Dir\n");
+            //emty fields????
+            return;
+         }
+         DefSIDTRMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
+         NumMenuItems = TeensyROMMenu[MenuNum].Size/sizeof(StructMenuItem);
+      }
+      //Printf_dbg("SID Dir#%d, %d items\n", MenuNum, NumMenuItems);
+ 
+      //find SID name
+      MenuNum = FindTRMenuItem(DefSIDTRMenu, NumMenuItems, LatestSIDName);
+      if(MenuNum<0)
+      {
+         Printf_dbg("No SID Name\n");
+         //emty fields????
+         return;
+      }   
+      //Printf_dbg("SID #%d\n", MenuNum);
+      XferSize = DefSIDTRMenu[MenuNum].Size; 
+      memcpy(RAM_Image, DefSIDTRMenu[MenuNum].Code_Image, XferSize);
+   }
+   
+   //Printf_dbg("Load SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
    XferImage = RAM_Image; 
-   XferSize  = sizeof(SIDforBackground); 
-   memcpy(XferImage, SIDforBackground, XferSize);
-   ParseSIDHeader("Main Background SID"); //assuming it passes for buit-in
+   ParseSIDHeader(LatestSIDName);
 }
 
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order

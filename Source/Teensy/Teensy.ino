@@ -97,6 +97,7 @@ void setup()
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
 
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
+   LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
@@ -194,7 +195,7 @@ void PadSpace(char* StrToPad, uint8_t PadToLength)
    while(strlen(StrToPad)<PadToLength) strcat(StrToPad, " ");
 }
 
-void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint8_t len)
+void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len)
 {
    while (len--) EEPROM.write(addr+len, buf[len]);    
 }
@@ -204,7 +205,7 @@ void EEPwriteStr(uint16_t addr, const char* buf)
    EEPwriteNBuf(addr, (uint8_t*)buf, strlen(buf)+1); //include terminator    
 }
 
-void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint8_t len)
+void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len)
 {
    while (len--) buf[len] = EEPROM.read(addr+len);   
 }
@@ -226,6 +227,10 @@ void SetEEPDefaults()
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
+   EEPROM.write(eepAdDefaultSID, DefSIDSource);  
+   EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
+   EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
+   
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }
 

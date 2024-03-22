@@ -21,6 +21,7 @@
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
+char* LatestSIDLoaded; // allocated to RAM2 via MaxPathLength
 char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
@@ -152,6 +153,18 @@ void HandleExecution()
       case rtFileSID:
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
+         
+         //check for built-in SID
+         //LatestSIDLoaded[0] = IO1[rWRegCurrMenuWAIT];
+         //if(LatestSIDLoaded[0] == rmtTeensy)
+            
+         //   dirSID_Files
+         //dirSID_Files
+         //SelItemFullIdx
+         //create path
+         //if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
+         //else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
+         
          ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
          break;
       case rtFileKla:
