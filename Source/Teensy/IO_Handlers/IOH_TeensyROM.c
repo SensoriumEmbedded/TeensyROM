@@ -202,6 +202,7 @@ extern void SendMsgPrintfln(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
+extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
 extern bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
@@ -468,6 +469,11 @@ FLASHMEM void NFCReEnable()
    nfcInit(); //this should pass, was enabled/initialized previously...
 }
 
+FLASHMEM void SetBackgroundSID()
+{
+   EEPwriteNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //write the source/path/name to EEPROM   
+}
+
 FLASHMEM int16_t FindTRMenuItem(StructMenuItem* MyMenu, uint16_t NumEntries, char* EntryName)
 {
    for(uint16_t EntryNum=0; EntryNum < NumEntries; EntryNum++)
@@ -483,7 +489,7 @@ FLASHMEM void LoadMainSIDforXfer()
    //if missing, load default
    //Set XferImage and XferSize
       
-   EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name fromEEPROM
+   EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name from EEPROM
    char* LatestSIDName = LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2;
    Printf_dbg("Sel SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
 
@@ -571,6 +577,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &WriteNFCTagCheck,    // rsWriteNFCTagCheck
    &WriteNFCTag,         // rsWriteNFCTag
    &NFCReEnable,         // rsNFCReEnable
+   &SetBackgroundSID,    // rsSetBackgroundSID
 };
 
 
@@ -902,6 +909,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlRebootTeensyROM:
                   REBOOT;
+                  break;
+               case rCtlSetBackgroundSIDWAIT:
+                  IO1[rwRegStatus] = rsSetBackgroundSID; //work this in the main code
                   break;
             }
             break;

@@ -309,10 +309,25 @@ updateSpeedHi
    stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    jmp PrintSIDVars  
 
++  cmp #'s'  ;Set current SID as default/background
+   bne +
+   lda #rCtlSetBackgroundSIDWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg
+   ldx #20 ;row 
+   ldy #33 ;col
+   clc
+   jsr SetCursor      
+   lda #<MsgDone
+   ldy #>MsgDone
+   jsr PrintString 
+   jmp WaitSIDInfoKey  
+
 +  cmp #ChrF1  ;Teensy mem Menu
    beq ++
    cmp #ChrSpace  ;back to Main Menu
-   bne WaitSIDInfoKey   
+   beq ++
+   jmp WaitSIDInfoKey   
 ++ rts
 
 FastLoadFile:   

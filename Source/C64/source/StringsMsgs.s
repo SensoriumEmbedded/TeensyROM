@@ -62,8 +62,9 @@ MsgSIDInfo3:
    !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Adjust Play Speed: ", NameColor,"0x", ChrReturn   
    !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "Default Play Speed", ChrReturn
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Toggle SID On/Off", ChrReturn
-   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "Border Effect On/Off", ChrReturn, ChrReturn
-   ;!tx " return to main menu, other menus?", ChrReturn
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "Border Effect On/Off", ChrReturn
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, SourcesColor, "Set main background SID", ChrReturn, ChrReturn
+   ;!tx " direct to other menus?", ChrReturn
    !tx 0
    
 MsgHelpMenu:   
@@ -168,6 +169,8 @@ MsgPass:
    !tx "Passed ", 0
 MsgFail:
    !tx ChrRed, "Failed ", 0
+MsgDone:
+   !tx NameColor, "Done", 0
 MsgHasHandler:
    !tx ChrCRSRLeft, AssignedIOHColor, "+", 0
    

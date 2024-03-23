@@ -172,7 +172,7 @@ struct StructExt_ItemType_Assoc
 };
 
 StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
-{
+{ //Update Win UI if this changes
   //Ext ,  ItemType
    "prg",  rtFilePrg,
    "crt",  rtFileCrt,
