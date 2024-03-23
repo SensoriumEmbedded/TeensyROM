@@ -154,17 +154,36 @@ void HandleExecution()
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
          
-         //check for built-in SID
-         //LatestSIDLoaded[0] = IO1[rWRegCurrMenuWAIT];
-         //if(LatestSIDLoaded[0] == rmtTeensy)
-            
-         //   dirSID_Files
-         //dirSID_Files
-         //SelItemFullIdx
-         //create path
-         //if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
-         //else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
-         
+         //save source/path/name for later use
+         LatestSIDLoaded[0] = IO1[rWRegCurrMenuWAIT]; //set source
+         if(LatestSIDLoaded[0] == rmtTeensy)
+         { // built-in SID
+            //figure out what menu dir we're in
+            if (MenuSource == TeensyROMMenu) strcpy(LatestSIDLoaded + 1, "/"); //root
+            else
+            {
+               //find sub-dir
+               uint8_t DirNum = 0;
+               while(MenuSource != (StructMenuItem*)TeensyROMMenu[DirNum].Code_Image)
+               {
+                  //MenuSelCpy.Code_Image;
+                  if (++DirNum == sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]))
+                  {
+                     Printf_dbg("TR Dir not found\n"); //what now?
+                     DirNum = 3;  //choose SID dir?
+                     break;
+                  }
+               }
+               strcpy(LatestSIDLoaded + 1, TeensyROMMenu[DirNum].Name);
+            }
+         }
+         else
+         { // from SD or USB
+            strcpy(LatestSIDLoaded + 1, DriveDirPath);
+         }
+         strcpy(LatestSIDLoaded + strlen(LatestSIDLoaded + 1) + 2, MenuSelCpy.Name);
+         Printf_dbg("Saved SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2);
+                  
          ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
          break;
       case rtFileKla:
