@@ -50,6 +50,7 @@
 #include "SIDs/Tom_Sawyer.sid.h"
 #include "SIDs/YYZ.sid.h"
 #include "SIDs/Wish_You_Were_Here.sid.h"
+#include "SIDs/Odisey_2001_AD.sid.h"
 
 #include "Pics/Ex_Pie2.art.h"
 #include "Pics/HA_Bluejay.kla.h"
@@ -125,8 +126,9 @@ StructMenuItem dirMultimedia[] =
 };
 
 StructMenuItem dirSID_Files[] = 
-{
+{  //DefSIDName should match one of these
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+   rtFileSID  , IOH_None         , (char*)"Also sprach Zarathustra   Strauss", (uint8_t*)Odisey_2001_AD_sid         , sizeof(Odisey_2001_AD_sid) ,
    rtFileSID  , IOH_None         , (char*)"Medley                Various"    , (uint8_t*)Medley_sid                 , sizeof(Medley_sid) ,
    rtFileSID  , IOH_None         , (char*)"Popcorn               G. Kingsley", (uint8_t*)Popcorn_sid                , sizeof(Popcorn_sid) ,
    rtFileSID  , IOH_None         , (char*)"Comfortably Numb      Pink Floyd" , (uint8_t*)Comfortably_Numb_sid       , sizeof(Comfortably_Numb_sid) ,
@@ -165,6 +167,7 @@ StructMenuItem dirPic_Files[] =
 StructMenuItem TeensyROMMenu[] = 
 {
 //Ref# used for hot keys, update MainMenu.asm if these change!
+//DefSIDPath should be "/" or one of these names
 
 // Ref  regItemTypes, enumIOHandlers   
 //  #    ItemType   , IOHndlrAssoc     , Name                                      , *Code_Image                          , Size ,
