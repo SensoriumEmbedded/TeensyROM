@@ -215,7 +215,7 @@ bool nfcReadTagLaunch()
   
    Printf_dbg("Final Payload: %s\n\n", pDataStart);
       
-   bool SD_nUSB = true;
+   RegMenuTypes MenuSourceID = rmtSD;
    for(uint8_t num=0; num<3; num++) pDataStart[num]=toupper(pDataStart[num]);
    if(memcmp(pDataStart, "SD:", 3) == 0)
    {
@@ -223,8 +223,13 @@ bool nfcReadTagLaunch()
    }
    else if(memcmp(pDataStart, "USB:", 4) == 0)
    {
-      SD_nUSB = false;
+      MenuSourceID = rmtUSBDrive;
       pDataStart += 4;      
+   }
+   else if(memcmp(pDataStart, "TR:", 3) == 0)
+   {
+      MenuSourceID = rmtTeensy;
+      pDataStart += 3;      
    }
    else
    {
@@ -232,10 +237,10 @@ bool nfcReadTagLaunch()
       //default to SD if not specified, allows display on c64
    }
 
-   if(memcmp(pDataStart, "C64", 3) == 0)
-   { //could be used to specify system type for TapTo
+   if(memcmp(pDataStart, "C64", 3) == 0 && MenuSourceID != rmtTeensy)
+   { //could be used to specify system type for TapTo, only valid for SD/USB
       FS *sourceFS;
-      if(SD_nUSB) 
+      if(MenuSourceID == rmtSD) 
       {
          sourceFS = &SD;
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
@@ -251,7 +256,7 @@ bool nfcReadTagLaunch()
    }
       
    //Printf_dbg("Launching...\n");
-   RemoteLaunch(SD_nUSB, (char*)pDataStart);
+   RemoteLaunch(MenuSourceID, (char*)pDataStart);
    return true;
 }
 

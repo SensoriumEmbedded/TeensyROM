@@ -418,7 +418,7 @@ FLASHMEM void LaunchFile()
    if (ReceiveFileName(&SD_nUSB, FileNamePath))
    {
       SendU16(AckToken);
-      RemoteLaunch(SD_nUSB !=0 , FileNamePath);
+      RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath); //only SD and USB supported by UI
    }
 }
 

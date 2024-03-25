@@ -80,13 +80,13 @@ bool RemotePauseSID()
    return InterruptC64(ricmdSIDPause);
 }
 
-void RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
+void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
    RemoteLaunched = true;
    //Set selected drive
-   IO1[rWRegCurrMenuWAIT] = SD_nUSB ? rmtSD : rmtUSBDrive;
-   if (SD_nUSB) SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   IO1[rWRegCurrMenuWAIT] = MenuSourceID;
+   if (MenuSourceID == rmtSD) SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
    
    //set path & filename
    strcpy(DriveDirPath, FileNamePath);
@@ -105,16 +105,56 @@ void RemoteLaunch(bool SD_nUSB, const char *FileNamePath)
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
    FreeSwiftlinkBuffs();
-
-   // Set up DriveDirMenu to point to file to load
-   //    without doing LoadDirectory(&SD/&firstPartition);
    InitDriveDirMenu();
-   SetDriveDirMenuNameType(0, ptrFilename);
-   NumDrvDirMenuItems = 1;
-   MenuSource = DriveDirMenu; 
-   SetNumItems(1); //sets # of menu items
-   IO1[rwRegCursorItemOnPg] = 0;
-   SelItemFullIdx = 0;  //  "Select" item
+
+   if (MenuSourceID == rmtTeensy)
+   {
+      //point MenuSource to directory
+      int16_t MenuNum = -1;
+      StructMenuItem* DefTRMenu = TeensyROMMenu;  //default to root menu
+      uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
+      
+      if(strcmp(DriveDirPath, "/") !=0 )
+      {//find dir menu
+         MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, DriveDirPath);
+         if(MenuNum<0)
+         {
+            Printf_dbg("No TR Dir\n");
+            //Somehow notify user?  
+            return;
+         }
+         DefTRMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
+         NumMenuItems = TeensyROMMenu[MenuNum].Size/sizeof(StructMenuItem);
+      }
+      Printf_dbg("TR Dir Num = %d\n", MenuNum);
+      
+      //find file name
+      MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, ptrFilename);
+      if(MenuNum<0)
+      {
+         Printf_dbg("No TR File\n");
+         //Somehow notify user?  
+         return;
+      }   
+      Printf_dbg("TR File Num = %d\n", MenuNum);
+
+      //point to item # matching filename
+      MenuSource = DefTRMenu;
+      SetNumItems(NumMenuItems);
+      IO1[rwRegCursorItemOnPg] = MenuNum;
+      SelItemFullIdx = MenuNum;  //  "Select" item
+   }
+   else
+   {
+      // Set up DriveDirMenu to point to file to load
+      //    without doing LoadDirectory(&SD/&firstPartition);
+      SetDriveDirMenuNameType(0, ptrFilename);
+      NumDrvDirMenuItems = 1;
+      MenuSource = DriveDirMenu; 
+      SetNumItems(1); //sets # of menu items
+      IO1[rwRegCursorItemOnPg] = 0;
+      SelItemFullIdx = 0;  //  "Select" item
+   }
    
    Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
    

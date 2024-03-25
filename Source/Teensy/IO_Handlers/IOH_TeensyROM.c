@@ -407,11 +407,39 @@ void SearchForLetter()
 
 FLASHMEM void GetCurrentFilePathName(char* FilePathName)
 {
-   char SDUSB[6] = "SD";
-   if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
+   
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy) 
+   {
+      //figure out what menu dir we're in
+      char DirName[45] = "/";
 
-   if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, MenuSource[SelItemFullIdx].Name);  // at root
-   else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, MenuSource[SelItemFullIdx].Name);   
+      if (MenuSource != TeensyROMMenu)
+      {
+         //find sub-dir
+         uint8_t DirNum = 0;
+         while(MenuSource != (StructMenuItem*)TeensyROMMenu[DirNum].Code_Image)
+         {
+            //MenuSelCpy.Code_Image;
+            if (++DirNum == sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]))
+            {
+               Printf_dbg("TR Dir not found\n"); //what now?
+               sprintf(FilePathName, "TR:Dir not found");
+               return;
+            }
+         }
+         strcpy(DirName, TeensyROMMenu[DirNum].Name);
+      }
+      
+      sprintf(FilePathName, "TR:%s/%s", DirName, MenuSource[SelItemFullIdx].Name);
+   }
+   else
+   {
+      char SDUSB[6] = "SD";
+      if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
+      
+      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, MenuSource[SelItemFullIdx].Name);  // at root
+      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, MenuSource[SelItemFullIdx].Name);   
+   }
 }
 
 FLASHMEM void WriteNFCTagCheck()
@@ -423,12 +451,6 @@ FLASHMEM void WriteNFCTagCheck()
    {
       SendMsgPrintfln(" NFC not enabled/found\r");
       return;      
-   }
-
-   if (IO1[rWRegCurrMenuWAIT] != rmtSD && IO1[rWRegCurrMenuWAIT] != rmtUSBDrive)
-   { 
-      SendMsgPrintfln(" Must be SD or USB source\r");
-      return;
    }
    
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
@@ -535,7 +557,7 @@ FLASHMEM void LoadMainSIDforXfer()
          if(MenuNum<0)
          {
             Printf_dbg("No SID Dir\n");
-            //emty fields????
+            //empty fields????  Shouldn't happen unless compile change
             return;
          }
          DefSIDTRMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
@@ -548,7 +570,7 @@ FLASHMEM void LoadMainSIDforXfer()
       if(MenuNum<0)
       {
          Printf_dbg("No SID Name\n");
-         //emty fields????
+         //empty fields????  Shouldn't happen unless compile change
          return;
       }   
       //Printf_dbg("SID #%d\n", MenuNum);
