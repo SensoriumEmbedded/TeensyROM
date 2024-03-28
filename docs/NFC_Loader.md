@@ -46,20 +46,21 @@ Thank you very much to:
 ## Tag programming
 * Tags are programmed with a text field containing the path to a local file to be executed by the TeensyROM.
   * Text path format requirements:
-    * The text can be one of these three formats:
+    * The text can be one of these formats:
       * **path/filename** (defaults to SD)
-      * **SD:path/filename**
-      * **USB:path/filename**
+      * **SD:path/filename** (SD card source)
+      * **USB:path/filename** (USB drive source)
+      * **TR:path/filename** (TeensyROM built-in source)
     * Example: *SD:OneLoad v5/Donkey Kong Junior.crt*
     * Character limit is 246 chars (171 for NTAG213)
 
-### Programming directly with the TeensyROM:
+### Programming tag directly with the TeensyROM:
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
   * Press the **Left Arrow** key to select it for tag writing.
   * Folow the on-screen instructions to load a tag and write to it.
   * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
 
-### Programming via cell phone: (Alternate programming method)
+### Programming tag via cell phone: (Alternate programming method)
   * Copy/type the paths you want to make tags from into a text file.
   * Send/e-mail the text file to your phone.
   * Use the (free) [NFC tools](https://www.wakdev.com/en/) application to write individual path/filename lines to tags.  It's available for [iPhone](https://itunes.apple.com/us/app/nfc-tools/id1252962749) or [Android](https://play.google.com/store/apps/details?id=com.wakdev.wdnfc)

@@ -17,11 +17,10 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.13+"; //*VERSION*
+char strVersionNumber[] = "v0.5.14"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-#define nfcScanner     //nfc scanner libs/code included in build
 
 //less used:
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
@@ -33,6 +32,7 @@ char strVersionNumber[] = "v0.5.13+"; //*VERSION*
 // #define Dbg_SerLog    //Serial commands that display log info
 // #define Dbg_SerMem    //Serial commands that display memory info
 
+#define nfcScanner     //nfc scanner libs/code included in build
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          5
 uint16_t BigBufCount = 0;

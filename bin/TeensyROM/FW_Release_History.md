@@ -2,6 +2,29 @@
 # FW Release Version history:
 
 
+### 0.5.14 sub-release 3/28/24
+* New feature: Selectable default/background SID
+  * Select/play any SID normally, then 's' from SID Info screen (F6) to set it as default background SID
+    * Selection stored in EEPROM for future boot recollection
+  * SID can be TR built-in or from SD/USB
+    * If file not present on boot, loads "Sleep Dirt" from TR
+  * Feature requested by: ][avok
+* NFC Loading System Updates:
+  * Added ability create/read NFC tags for built-in TeensyROM files (in addition to SD/USB)
+    * Uses TR: path prefix to designate
+  * Feature requested by: Richard
+* New feature: Hot Keys to launch some programs
+  * Available from any main "Src:" menu screen:
+    * '1': Cynthcart
+    * '2': Station64
+    * '3': CCGMS
+  * Feature requested by: Niclashoyer
+* General updates
+  * "Also sprach Zarathustra" and "When I'm 64" added to TR built-in SIDs
+  * F4 in Setting menu toggles SID playback (same as 'j')
+  * Fixed race condition when starting Cynthcart in PAL mode with NFC enabled.
+  * Note: All EEPROM settings will be reset with this update
+
 ### 0.5.13 sub-release 3/6/24
 * NFC Loading System Updates:
   * Tag write improvements:
