@@ -1,6 +1,5 @@
 
 
-
 FLASHMEM bool GetPathParameter(char FileNamePath[])
 {
     uint16_t CharNum = 0;
@@ -56,6 +55,14 @@ FLASHMEM bool GetFileStream(uint32_t SD_nUSB, char FileNamePath[], FS* sourceFS,
     }
     file = sourceFS->open(FileNamePath, FILE_WRITE);
 
+    int retry = 0;
+
+    while(retry < 3 && !file)
+    {
+      file = sourceFS->open(FileNamePath, FILE_WRITE);
+      retry++;
+    }
+
     if (!file)
     {
         SendU16(FailToken);
@@ -95,10 +102,10 @@ FLASHMEM bool EnsureDirectory(const char* path, FS& fs)
     return result;
 }
 
-FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& CheckSum)
+FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
 {
     uint32_t bytenum = 0;
-    uint8_t ByteIn;
+    uint8_t byteIn;
 
     while (bytenum < len)
     {
@@ -109,22 +116,21 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& CheckSum)
             file.close();
             return false;
         }
-        file.write(ByteIn = Serial.read());
-        CheckSum -= ByteIn;
+        file.write(byteIn = Serial.read());
+        checksum -= byteIn;
         bytenum++;
-    }
+    }  
     file.close();
 
-    CheckSum &= 0xffff;
-    if (CheckSum != 0)
+    checksum &= 0xffff;
+    if (checksum != 0)
     {
         SendU16(FailToken);
-        Serial.printf("CS Failed! RCS:%lu\n", CheckSum);
+        Serial.printf("CS Failed! RCS:%lu\n", checksum);        
         return false;
     }
     return true;
 }
-
 
 // Command: 
 // Post File to target directory and storage type on TeensyROM.
@@ -303,21 +309,21 @@ FLASHMEM void GetDirectoryCommand()
     SendU16(EndDirectoryListToken);
 }
 
-FLASHMEM bool CopyFile(const char* SourcePath, const char* DestinationPath, FS& fs)
+FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& fs)
 {
-    File sourceFile = fs.open(SourcePath, FILE_READ);
+    File sourceFile = fs.open(sourcePath, FILE_READ);
     if (!sourceFile)
     {
         SendU16(FailToken);
-        Serial.printf("Failed to open source file: %s\n", SourcePath);
+        Serial.printf("Failed to open source file: %s\n", sourcePath);
         return false;
     }
 
-    File destinationFile = fs.open(DestinationPath, FILE_WRITE);
+    File destinationFile = fs.open(destinationPath, FILE_WRITE);
     if (!destinationFile)
     {
         SendU16(FailToken);
-        Serial.printf("Failed to open destination file: %s\n", DestinationPath);
+        Serial.printf("Failed to open destination file: %s\n", destinationPath);
         sourceFile.close();
         return false;
     }
@@ -351,8 +357,8 @@ FLASHMEM void CopyFileCommand()
     SendU16(AckToken);
 
     uint32_t storageType;
-    char SourcePath[MaxNamePathLength];
-    char DestinationPath[MaxNamePathLength];
+    char sourcePath[MaxNamePathLength];
+    char destinationPath[MaxNamePathLength];
 
     if (!GetUInt(&storageType, 1))
     {
@@ -361,22 +367,22 @@ FLASHMEM void CopyFileCommand()
         return;
     }
 
-    if (!GetPathParameter(SourcePath)) return;
+    if (!GetPathParameter(sourcePath)) return;
 
-    if (!GetPathParameter(DestinationPath)) return;
+    if (!GetPathParameter(destinationPath)) return;
 
     FS* sourceFS = GetStorageDevice(storageType);
 
     if (!sourceFS) return;
 
-    if (!EnsureDirectory(DestinationPath, *sourceFS))
+    if (!EnsureDirectory(destinationPath, *sourceFS))
     {
         SendU16(FailToken);
-        Serial.printf("Failed to ensure directory for: %s\n", DestinationPath);
+        Serial.printf("Failed to ensure directory for: %s\n", destinationPath);
         return;
     }
 
-    if (!CopyFile(SourcePath, DestinationPath, *sourceFS)) return;
+    if (!CopyFile(sourcePath, destinationPath, *sourceFS)) return;
 
     SendU16(AckToken);
 }
@@ -418,7 +424,7 @@ FLASHMEM void DeleteFileCommand()
     SendU16(AckToken);
 
     uint32_t storageType;
-    char FilePath[MaxNamePathLength];
+    char filePath[MaxNamePathLength];
 
     if (!GetUInt(&storageType, 1))
     {
@@ -427,7 +433,7 @@ FLASHMEM void DeleteFileCommand()
         return;
     }
 
-    if (!GetPathParameter(FilePath))
+    if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
         Serial.println("Error receiving path!");
@@ -441,7 +447,7 @@ FLASHMEM void DeleteFileCommand()
         Serial.println("Error getting storage device!");
     }
 
-    DeleteFile(FilePath, *sourceFS);
+    DeleteFile(filePath, *sourceFS);
 }
 
 FLASHMEM bool SendFileData(File& file, uint32_t len) {
@@ -485,7 +491,7 @@ FLASHMEM void GetFileCommand() {
     SendU16(AckToken);
 
     uint32_t storageType;
-    char FilePath[MaxNamePathLength];
+    char filePath[MaxNamePathLength];
 
     if (!GetUInt(&storageType, 1))
     {
@@ -494,7 +500,7 @@ FLASHMEM void GetFileCommand() {
         return;
     }
 
-    if (!GetPathParameter(FilePath))
+    if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
         Serial.println("Error receiving path!");
@@ -505,11 +511,11 @@ FLASHMEM void GetFileCommand() {
     
     if (!sourceFS) return;
 
-    File fileStream = sourceFS->open(FilePath, FILE_READ);
+    File fileStream = sourceFS->open(filePath, FILE_READ);
     
     if (!fileStream) {
         SendU16(FailToken);
-        Serial.printf("Failed to open file: %s\n", FilePath);
+        Serial.printf("Failed to open file: %s\n", filePath);
         return;
     }
 
