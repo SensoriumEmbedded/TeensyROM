@@ -5,7 +5,7 @@
 ### Hardware connection:
   * Cable from a USB MIDI Keyboard/Controller device to the USB-A Host port on the TeensyROM board.
 ### Sending MIDI data to/from your C64 from a MIDI/USB keyboard
-  * Select "MIDI:*" Special IO HW from the settings menu prior to running a MIDI program.
+  * Prior to running a MIDI program, go to the settings menu. Under "Special IO:", select your preferred "MIDI:*" device by cycling through the options.
     * Note: if using the built-in CynthCart, Station64, or MIDI2SID app, the Special IO is already associated and you can skip this step.
     * The following MIDI cartridges can be emulated/selected:
       * Sequential
