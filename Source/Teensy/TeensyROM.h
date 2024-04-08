@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.14"; //*VERSION*
+char strVersionNumber[] = "v0.5.14+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -126,7 +126,7 @@ enum InternalEEPROMmap
 #define ResetC64Token     0x64EE
 #define FailToken         0x9B7F
 #define BadSIDToken       0x9B80
-
+#define GoodSIDToken      0x9B81
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;
    

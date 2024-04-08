@@ -807,8 +807,8 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    IO1[rRegSIDPlayHi] = XferImage[0x0C];
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    
+   SendU16(GoodSIDToken);
    IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
-   //return true;
 }
  
 void RedirectEmptyDriveDirMenu()
