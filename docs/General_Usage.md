@@ -15,7 +15,7 @@
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/v0.2b/TR_Connections.jpg)
 
-## Main Menu Options/Navigation (as of FW v0.5.12)
+## Main Menu Options/Navigation (as of FW v0.5.14)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * **CRSR or Joystick Up/Down:** Move cursor up/down the list of files on the currently selected source device
     * **CRSR or Joystick Left/Right:** Page up/down the list of files
@@ -24,17 +24,21 @@
     * **Up Arrow:** Up 1 directory level
     * **Home:** Move cursor to first item in directory
     * **a-z:** Search current directory for first item beginning with letter pressed
-    * **F1:** Display files stored in Teensy Memory with firmware
+    * **1-3:** Hot Keys to launch the following:
+      * 1: Cynthcart
+      * 2: Station64
+      * 3: CCGMS
+    * **F1:** Display files stored in Teensy Memory via firmware
     * **F3:** Display files on an attached SD card
     * **F5:** Display files on an attached USB Drive
-    * **F7:** Display files sent via USB from the Windows utility
+    * **F7:** Show Help Menu
     * **F2:** Exit to regular BASIC startup screen, TeensyROM deactivated
       * Re-activate TeensyROM by pressing button
-    * **F4:** Toggle background music on/off
-    * **F6:** Go to Settings Menu
-    * **F8:** Enter the MIDI2SID application
-    * **Space Bar:** Display the Help Menu
-    * **Left Arrow:** Write NFC tag representing the highlighted file
+    * **F4:** Toggle background SID on/off
+    * **F6:** Show SID Informartion
+    * **F8:** Show Settings Menu
+    * **Space Bar:** 
+    * **Left Arrow:** Write NFC tag that will launch the highlighted file
   * Screen contents:
     * **File Source and dir path** is shown in the upper left corner
     * **Page number and number of pages** is shown in the lower right corner
@@ -43,7 +47,7 @@
       * **'+'** in front of file type means it is pre-associated with Special IO emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, hit space for detail help screen.
 
-## Loading programs and emulating ROMs
+## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
   * When a file is selected, load/run status is displayed on the screen.  Usually this will flash by too quickly to read, but in the case of an error, it will pause to provide additional information.
   * File types supported:
@@ -61,6 +65,14 @@
         * Max file size is ~650MB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
         * The [OneLoad Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games
+    * ***.SID files:**
+      * Play SID file: ~90% of known SID files are supported
+      * Adjusts playback speed based on machine and SID type (NTSC/PAL)
+      * SID info screen contains SID header information and playback controls
+    * ***.KLA/KOA files:**
+      * Displays Koala multi-color picture
+    * ***.ART/AAS/HPI files:**
+      * Displays Art Studio Hi-Res picture
     * ***.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
