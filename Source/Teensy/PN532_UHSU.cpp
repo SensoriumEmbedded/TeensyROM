@@ -29,8 +29,9 @@ void PN532_UHSU::wakeup()
        DMSG("Dump serial buffer: ");
    }
    while(_serial->available()){
-       uint8_t ret = _serial->read();
-       DMSG_HEX(ret);
+       //uint8_t ret = _serial->read();
+       //DMSG_HEX(ret);
+       _serial->read();
    }
 
 }
@@ -43,8 +44,9 @@ int8_t PN532_UHSU::writeCommand(const uint8_t *header, uint8_t hlen, const uint8
         DMSG("Dump serial buffer: ");
     }
     while(_serial->available()){
-        uint8_t ret = _serial->read();
-        DMSG_HEX(ret);
+        //uint8_t ret = _serial->read();
+        //DMSG_HEX(ret);
+        _serial->read();
     }
 
     command = header[0];

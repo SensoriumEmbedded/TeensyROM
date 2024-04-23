@@ -6,7 +6,6 @@
 #include "Arduino.h"
 #include "USBHost_t36.h"
 
-#define PN532_HSU_DEBUG
 
 #define PN532_HSU_READ_TIMEOUT						(1000)
 

@@ -186,19 +186,18 @@ enum regItemTypes //synch with TblItemType
 {
    rtNone      = 0,
    rtUnknown   = 1,
-   rtBin16k    = 2,
-   rtBin8kHi   = 3,
-   rtBin8kLo   = 4,
-   rtBinC128   = 5,
-   rtDirectory = 6,
-   //file extension matching:
-   rtFilePrg   = 7,  //alway first 
-   rtFileCrt   = 8,
-   rtFileHex   = 9,
-   rtFileP00   = 10,
-   rtFileSID   = 11,
-   rtFileKla   = 12,
-   rtFileArt   = 13,
+   rtDirectory = 2,
+   rtFilePrg   = 3,  //alway first valid executable file type
+   rtFileCrt   = 4,
+   rtFileHex   = 5,
+   rtFileP00   = 6,
+   rtFileSID   = 7,
+   rtFileKla   = 8,
+   rtFileArt   = 9,
+   rtBin16k    = 10,
+   rtBin8kHi   = 11,
+   rtBin8kLo   = 12,
+   rtBinC128   = 13,
 
    //127 max, bit 7 used to indicate assigned IOH to TR
 };

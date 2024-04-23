@@ -176,18 +176,17 @@ MsgHasHandler:
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx NameColor, "   "  ; rtNone      = 0,
-   !tx ChrDrkGrey,"Unk"  ; rtUnknown   = 1,
-   !tx TypeColor, "16k"  ; rtBin16k    = 2,
-   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 3,
-   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 4,
-   !tx TypeColor, "128"  ; rtBinC128   = 5,
-   !tx TypeColor, "Dir"  ; rtDirectory = 6,
-   ;file extension matching:
-   !tx TypeColor, "Prg"  ; rtFilePrg   = 7,
-   !tx TypeColor, "Crt"  ; rtFileCrt   = 8,
-   !tx TypeColor, "Hex"  ; rtFileHex   = 9,
-   !tx TypeColor, "P00"  ; rtFileP00   = 10,
-   !tx TypeColor, "SID"  ; rtFileSID   = 11,
-   !tx TypeColor, "Kla"  ; rtFileKla   = 12,
-   !tx TypeColor, "Art"  ; rtFileArt   = 13,
+   !tx NameColor, "   "  ; rtNone      = 0
+   !tx ChrDrkGrey,"Unk"  ; rtUnknown   = 1
+   !tx TypeColor, "Dir"  ; rtDirectory = 2 
+   !tx TypeColor, "Prg"  ; rtFilePrg   = 3  ;always first valid executable file type
+   !tx TypeColor, "Crt"  ; rtFileCrt   = 4 
+   !tx TypeColor, "Hex"  ; rtFileHex   = 5 
+   !tx TypeColor, "P00"  ; rtFileP00   = 6 
+   !tx TypeColor, "SID"  ; rtFileSID   = 7 
+   !tx TypeColor, "Kla"  ; rtFileKla   = 8 
+   !tx TypeColor, "Art"  ; rtFileArt   = 9 
+   !tx TypeColor, "16k"  ; rtBin16k    = 10 
+   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 11
+   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 12 
+   !tx TypeColor, "128"  ; rtBinC128   = 13 
