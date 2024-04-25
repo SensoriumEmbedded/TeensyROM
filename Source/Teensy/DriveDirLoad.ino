@@ -76,7 +76,7 @@ void HandleExecution()
             strcat(DriveDirPath, "/"); 
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             LoadD64Directory(sourceFS); 
-            strcat(DriveDirPath, "*"); //mark to indicate d64 file
+            strcat(DriveDirPath, "*"); //mark to indicate d64 file instead of "real" dir
             return;  //we're done here...
          }
          
@@ -86,7 +86,7 @@ void HandleExecution()
          }
          else 
          {
-            if(!LoadFile(&MenuSelCpy, sourceFS)) return;     
+            if(!LoadFile(sourceFS, DriveDirPath, &MenuSelCpy)) return;     
          }
          
          MenuSelCpy.Code_Image = RAM_Image;
@@ -299,12 +299,12 @@ void MenuChange()
    IO1[rwRegCursorItemOnPg] = 0;
 }
 
-bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS) 
+bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem) 
 {
    char FullFilePath[MaxNamePathLength];
 
-   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
+   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
+   else sprintf(FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 

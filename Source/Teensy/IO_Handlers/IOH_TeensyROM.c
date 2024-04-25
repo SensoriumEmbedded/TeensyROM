@@ -203,7 +203,7 @@ extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
 extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
-extern bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS);
+extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -525,11 +525,10 @@ FLASHMEM void LoadMainSIDforXfer()
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
       }
       
-      strcpy(DriveDirPath, LatestSIDLoaded+1); 
       MyMenuItem.Name = LatestSIDName;
       MyMenuItem.ItemType = rtFileSID;
 
-      if(!LoadFile(&MyMenuItem, sourceFS))  
+      if(!LoadFile(sourceFS, LatestSIDLoaded+1, &MyMenuItem))  
       { //error, load default from TR     
          Printf_dbg("Ld Err, Default SID\n");
          LatestSIDLoaded[0] = DefSIDSource;  
@@ -541,8 +540,6 @@ FLASHMEM void LoadMainSIDforXfer()
       {
          XferSize = MyMenuItem.Size;
       }
-      
-      strcpy(DriveDirPath, "/"); //back to root/default
    }
  
    if (LatestSIDLoaded[0] == rmtTeensy)
