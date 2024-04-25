@@ -461,6 +461,13 @@ smcIRQFlagged
    lda #ChrF1 ; simulate F1 keypress
    rts
    
+DirUpdate:
+   lda #rCtlStartSelItemWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg
+   lda #0
+   sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
+   jmp ListAndDone
    
 SelectItem:
 ;Execute/select an item from the list
@@ -472,16 +479,11 @@ RunSelected:
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
    cmp #rtDirectory  ;check for dir selected
-   bne + 
-   ;DirUpdate:
-   lda #rCtlStartSelItemWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg
-   lda #0
-   sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
-   jmp ListAndDone
+   beq DirUpdate 
+   cmp #rtD64  ;check for D64 file selected
+   beq DirUpdate 
 
-+  cmp #rtNone ;do nothing for 'none' type
+   cmp #rtNone ;do nothing for 'none' type
    bne + 
    rts
    

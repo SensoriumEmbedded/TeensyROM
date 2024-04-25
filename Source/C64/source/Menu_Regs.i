@@ -172,16 +172,17 @@
    rtNone      = 0
    rtUnknown   = 1
    rtDirectory = 2 
-   rtFilePrg   = 3  ;always first valid executable file type
-   rtFileCrt   = 4 
-   rtFileHex   = 5 
-   rtFileP00   = 6 
-   rtFileSID   = 7 
-   rtFileKla   = 8 
-   rtFileArt   = 9 
-   rtBin16k    = 10 
-   rtBin8kHi   = 11
-   rtBin8kLo   = 12 
-   rtBinC128   = 13 
+   rtD64       = 3
+   rtFilePrg   = 4   ;always first valid executable file type
+   rtFileCrt   = 5 
+   rtFileHex   = 6 
+   rtFileP00   = 7 
+   rtFileSID   = 8 
+   rtFileKla   = 9 
+   rtFileArt   = 10
+   rtBin16k    = 11 
+   rtBin8kHi   = 12
+   rtBin8kLo   = 13 
+   rtBinC128   = 14
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

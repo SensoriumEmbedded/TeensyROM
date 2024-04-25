@@ -71,8 +71,24 @@ void HandleExecution()
             return;  //we're done here...
          }
          
-         if(!LoadFile(&MenuSelCpy, sourceFS)) return;     
-
+         if (MenuSelCpy.ItemType == rtD64)
+         {  //edit path as needed and load the new directory from SD/USB
+            strcat(DriveDirPath, "/"); 
+            strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+            LoadD64Directory(sourceFS); 
+            strcat(DriveDirPath, "*"); //mark to indicate d64 file
+            return;  //we're done here...
+         }
+         
+         if(DriveDirPath[strlen(DriveDirPath)-1] == '*')
+         { //load from D64 file
+            if(!LoadFileD64(&MenuSelCpy, sourceFS)) return;
+         }
+         else 
+         {
+            if(!LoadFile(&MenuSelCpy, sourceFS)) return;     
+         }
+         
          MenuSelCpy.Code_Image = RAM_Image;
          break;
          
