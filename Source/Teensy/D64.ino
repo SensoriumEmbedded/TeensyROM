@@ -40,8 +40,22 @@ void LoadD64Directory(FS *sourceFS)
    File myFile = sourceFS->open(DriveDirPath, FILE_READ); //path includes d64 file
    if (!myFile) return;
    
-   //check size:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   //myFile.size();
+   //check size:
+     // Disk type                  File Size
+     // ---------                  ------
+     // Realm.d64                  171520
+     // 35 track, no errors        174848
+     // 35 track, 683 error bytes  175531
+     // 40 track, no errors        196608
+     // 40 track, 768 error bytes  197376
+   uint32_t FileSize = myFile.size(); 
+   Printf_dbg("Loading dir from %s (%lu bytes)\n", DriveDirPath, FileSize);
+   if(FileSize < 171520 || FileSize > 197376) 
+   {
+      Printf_dbg("Unexp file size\n");
+      myFile.close();
+      return;
+   }
    
    uint8_t Track = 18;
    uint8_t Sector = 1;
@@ -49,7 +63,6 @@ void LoadD64Directory(FS *sourceFS)
    uint8_t FileName[16];
    uint8_t NextTrack, NextSect, FileType, FileTrack, FileSect;
    
-   Printf_dbg("Loading from %s\n", DriveDirPath);
    while(Track != 0)
    {
       uint32_t CurTSOffset = D64Offset(Track, Sector);
@@ -64,7 +77,7 @@ void LoadD64Directory(FS *sourceFS)
          FileType  = myFile.read(); //0x02
          FileTrack = myFile.read(); //0x03
          FileSect  = myFile.read(); //0x04
-         myFile.read(FileName, 16); //0x05-0x14
+         myFile.read(FileName, 16); //0x05-0x14, padded with $a0 (space)
 
          if(SecOffset == 0)
          {
@@ -75,11 +88,17 @@ void LoadD64Directory(FS *sourceFS)
          if (FileTrack)
          {  //valid dir entry
             DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(19); // 16 char max + term + ftrack + fsec
+            
+            for(uint8_t CharNum=0; CharNum<16; CharNum++)
+            { //converting to ascii, then back to petscii for display later.  All other file names are ascii...
+               if (FileName[CharNum] & 0x80) FileName[CharNum] &= 0x7f; //Cap petscii to ascii
+               else if (FileName[CharNum] & 0x40) FileName[CharNum] |= 0x20;  //lower case petscii to ascii
+            }
+            
             memcpy(DriveDirMenu[NumDrvDirMenuItems].Name, FileName, 16); 
-            //terminate at $A0, PETSCII to ASCII?
             DriveDirMenu[NumDrvDirMenuItems].Name[16] = 0; //terminate it
-            DriveDirMenu[NumDrvDirMenuItems].Name[17] = FileTrack;
-            DriveDirMenu[NumDrvDirMenuItems].Name[18] = FileSect;
+            DriveDirMenu[NumDrvDirMenuItems].Name[17] = FileTrack; //store start track in case we need to load later 
+            DriveDirMenu[NumDrvDirMenuItems].Name[18] = FileSect;  //store start sector in case we need to load later
 
             if ((FileType & 0x0f) == 0x02) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFilePrg;
             else DriveDirMenu[NumDrvDirMenuItems].ItemType = rtUnknown;
@@ -91,19 +110,19 @@ void LoadD64Directory(FS *sourceFS)
             NumDrvDirMenuItems++;
          }
          else
-         { // FileTrack == 0 is end of dir, Track should also be 0
+         { // FileTrack == 0 is end of dir, Track should also be 0 at this point
             SecOffset = 0; 
          }    
          
       } while (SecOffset != 0);
    
    }
-   SetNumItems(NumDrvDirMenuItems);
    Printf_dbg("Loaded %d items from d64 in %lumS\n", NumDrvDirMenuItems, (millis()-beginWait));
+   myFile.close();
 
 }
 
-bool LoadFileD64(StructMenuItem* MyMenuItem, FS *sourceFS) 
+bool LoadD64File(StructMenuItem* MyMenuItem, FS *sourceFS) 
 {
    DriveDirPath[strlen(DriveDirPath)-1] = 0; //remove the "*" indicator at end
    File myFile = sourceFS->open(DriveDirPath, FILE_READ); //path includes d64 file
@@ -126,17 +145,17 @@ bool LoadFileD64(StructMenuItem* MyMenuItem, FS *sourceFS)
       uint32_t CurTSOffset = D64Offset(Track, Sector);
       Printf_dbg("Track:%d  Sector:%d = D64Offset:$%06x\n", Track, Sector, CurTSOffset); 
       
-      myFile.seek(CurTSOffset);
-      Track  = myFile.read();  //0x00
-      Sector  = myFile.read(); //0x01
-      myFile.read(RAM_Image+MyMenuItem->Size, 254); //read in the rest of the sector
-      MyMenuItem->Size += 254;
-      if (MyMenuItem->Size > RAM_ImageSize)
+      if (MyMenuItem->Size + 256 > RAM_ImageSize)
       {
          SendMsgPrintfln("File too large");
          myFile.close();
          return false;
       }
+      myFile.seek(CurTSOffset);
+      Track  = myFile.read();  //0x00
+      Sector  = myFile.read(); //0x01
+      myFile.read(RAM_Image+MyMenuItem->Size, 254); //read in the rest of the sector
+      MyMenuItem->Size += 254;
    }
    
    SendMsgPrintfln("Done");

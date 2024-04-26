@@ -522,7 +522,10 @@ FLASHMEM void LoadMainSIDforXfer()
       if(LatestSIDLoaded[0] == rmtSD)
       {
          sourceFS = &SD;
-         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         {
+            Printf_dbg("SD Init Fail\n");
+         }
       }
       
       MyMenuItem.Name = LatestSIDName;

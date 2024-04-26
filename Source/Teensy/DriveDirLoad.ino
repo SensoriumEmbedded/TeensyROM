@@ -74,15 +74,16 @@ void HandleExecution()
          if (MenuSelCpy.ItemType == rtD64)
          {  //edit path as needed and load the new directory from SD/USB
             strcat(DriveDirPath, "/"); 
-            strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+            strcat(DriveDirPath, MenuSelCpy.Name); //append selected d64 name as a dir
             LoadD64Directory(sourceFS); 
             strcat(DriveDirPath, "*"); //mark to indicate d64 file instead of "real" dir
+            SetNumItems(NumDrvDirMenuItems);
             return;  //we're done here...
          }
          
          if(DriveDirPath[strlen(DriveDirPath)-1] == '*')
          { //load from D64 file
-            if(!LoadFileD64(&MenuSelCpy, sourceFS)) return;
+            if(!LoadD64File(&MenuSelCpy, sourceFS)) return;
          }
          else 
          {
@@ -303,7 +304,8 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
 {
    char FullFilePath[MaxNamePathLength];
 
-   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
+   //PathIsRoot() uses DriveDirPath directly
+   if (strlen(FilePath) == 1 && FilePath[0] == '/') sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
