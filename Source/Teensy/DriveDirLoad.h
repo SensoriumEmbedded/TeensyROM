@@ -185,6 +185,8 @@ StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
    "aas",  rtFileArt,
    "hpi",  rtFileArt,
    "d64",  rtD64,
+   "d71",  rtD71,
+   "d81",  rtD81,
    //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
 

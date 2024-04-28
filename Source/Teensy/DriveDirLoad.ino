@@ -71,19 +71,21 @@ void HandleExecution()
             return;  //we're done here...
          }
          
-         if (MenuSelCpy.ItemType == rtD64)
+         if (MenuSelCpy.ItemType == rtD64 ||
+             MenuSelCpy.ItemType == rtD71 ||
+             MenuSelCpy.ItemType == rtD81)
          {  //edit path as needed and load the new directory from SD/USB
             strcat(DriveDirPath, "/"); 
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected d64 name as a dir
-            LoadD64Directory(sourceFS); 
+            LoadDxxDirectory(sourceFS, MenuSelCpy.ItemType); 
             strcat(DriveDirPath, "*"); //mark to indicate d64 file instead of "real" dir
             SetNumItems(NumDrvDirMenuItems);
             return;  //we're done here...
          }
          
          if(DriveDirPath[strlen(DriveDirPath)-1] == '*')
-         { //load from D64 file
-            if(!LoadD64File(&MenuSelCpy, sourceFS)) return;
+         { //load from D64/71/81 file
+            if(!LoadDxxFile(&MenuSelCpy, sourceFS)) return;
          }
          else 
          {

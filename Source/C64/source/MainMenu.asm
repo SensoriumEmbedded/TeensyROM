@@ -482,6 +482,10 @@ RunSelected:
    beq DirUpdate 
    cmp #rtD64  ;check for D64 file selected
    beq DirUpdate 
+   cmp #rtD71  ;check for D71 file selected
+   beq DirUpdate 
+   cmp #rtD81  ;check for D81 file selected
+   beq DirUpdate 
 
    cmp #rtNone ;do nothing for 'none' type
    bne + 
