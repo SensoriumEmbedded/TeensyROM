@@ -181,6 +181,8 @@ StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
    "sid",  rtFileSID,
    "kla",  rtFileKla,
    "koa",  rtFileKla,
+   "ocp",  rtFileArt,
+   "pic",  rtFileArt,
    "art",  rtFileArt,
    "aas",  rtFileArt,
    "hpi",  rtFileArt,

@@ -35,7 +35,7 @@ FLASHMEM uint32_t D64Offset(uint8_t Track, uint8_t Sector)
                  return (0x25600+((Track-31)*17+Sector)*256);
 }
 
-FLASHMEM uint32_t DxxOffset(regItemTypes DiskType, uint8_t Track, uint8_t Sector)
+FLASHMEM uint32_t DxxOffset(uint8_t DiskType, uint8_t Track, uint8_t Sector)
 {
    if (DiskType == rtD64) return D64Offset(Track, Sector);
 
@@ -48,9 +48,9 @@ FLASHMEM uint32_t DxxOffset(regItemTypes DiskType, uint8_t Track, uint8_t Sector
    return (((Track- 1)*40+Sector)*256);  // Defaulte to (DiskType == rtD81) 
 }
 
-FLASHMEM void LoadDxxDirectory(FS *sourceFS, regItemTypes DiskType) 
+FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType) 
 {
-   //Interpreted from: https://ist.uwaterloo.ca/~schepers/formats/D64.TXT  D71.TXT  D81.TXT
+   //Interpreted from: https://ist.uwaterloo.ca/~schepers/formats/D64.TXT  D71.TXT  D81.TXT  DISK.TXT
    
    uint32_t beginWait = millis();
    InitDriveDirMenu();
