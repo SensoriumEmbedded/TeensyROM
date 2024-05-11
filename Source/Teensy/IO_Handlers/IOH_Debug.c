@@ -35,6 +35,7 @@ stcIOHandlers IOHndlr_Debug =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
+extern uint8_t ASIDidToReg[];
 
 //MIDI input handlers for Debug _________________________________________________________________________
 
@@ -76,9 +77,56 @@ DEBUG_MEMLOC void DbgOnPitchChange(uint8_t channel, int pitch)
 // F0 SysEx single call, message larger than buffer is truncated
 DEBUG_MEMLOC void DbgOnSystemExclusive(uint8_t *data, unsigned int size) 
 {
-   Serial.printf("F0 SysEx, (int)size=%d, (hex)data=", size);
-   for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" %02x", data[Cnt]);
+   Serial.printf("\nSysEx: size=%d, data=", size);
+   for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);
    Serial.println();
+   
+   // Implemented based on:   http://paulus.kapsi.fi/asid_protocol.txt
+   
+   unsigned int NumRegs = 0; //number of regs to write
+   
+   if(data[0] != 0xf0 || data[1] != 0x2d || data[size-1] != 0xf7)
+   {
+      Serial.println("-->Invalid ASID/SysEx format");
+      return;
+   }
+   switch(data[2])
+   {
+      case 0x4c:
+         Serial.println("Start playing");
+         break;
+      case 0x4d:
+         Serial.println("Stop playback");
+         break;
+      case 0x4f:
+         //display characters
+         data[size-1] = 0; //replace 0xf7 with term
+         Serial.printf("Display chars: \"%s\"\n", data+3);
+         break;
+      case 0x4e:
+         //SID1 reg data
+         Serial.println("SID1 reg data");
+         for(uint8_t maskNum = 0; maskNum < 4; maskNum++)
+         {
+            for(uint8_t bitNum = 0; bitNum < 7; bitNum++)
+            {
+               if(data[3+maskNum] & (1<<bitNum))
+               { //reg is to be written
+                  uint8_t RegVal = data[11+NumRegs];
+                  if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
+                  NumRegs++;
+                  Serial.printf("#%d: reg $%02x = $%02x\n", NumRegs, ASIDidToReg[maskNum*7+bitNum], RegVal);
+               }
+            }
+         }
+         if(12+NumRegs > size)
+         {
+            Serial.println("-->More regs flagged than data available");    
+         }
+         break;
+      default:
+         Serial.printf("-->Unexpected msg type: $%02x\n", data[2]);
+   }
 }
 
 DEBUG_MEMLOC void DbgOnTimeCodeQuarterFrame(uint8_t data)

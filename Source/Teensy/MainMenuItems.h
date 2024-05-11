@@ -36,6 +36,7 @@
 #include "ROMs/super_expander_64.crt.h" 
 #include "ROMs/Robocop_2_EasyFlash.crt.h" 
 #include "ROMs/MIDI2SID.prg.h" 
+#include "ROMs/ASIDPlayer.prg.h" 
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -120,7 +121,6 @@ StructMenuItem dirMultimedia[] =
 {
    rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
    rtFilePrg  , IOH_None         , (char*)"Swinth/Light Fantastic"           , (uint8_t*)swinth_LIGHT_FANTASTIC_PRG , sizeof(swinth_LIGHT_FANTASTIC_PRG) ,
-   rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Draw!"                            , (uint8_t*)draw01_prg                 , sizeof(draw01_prg) ,
 //   rtFilePrg  , IOH_None         , (char*)"Display Fractal"                  , (uint8_t*)disp_fract_prg             , sizeof(disp_fract_prg) ,
 //   rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
@@ -183,5 +183,7 @@ StructMenuItem TeensyROMMenu[] =
  /* 6 */ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
  /* 7 */ rtFilePrg  , IOH_MIDI_Datel   , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
  /* 8 */ rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
+ /* 9 */ rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
+ /*10 */ rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
 };
 
