@@ -36,11 +36,12 @@ stcIOHandlers IOHndlr_ASID =
   NULL,                        //called at the end of EVERY c64 cycle
 };
 
-enum ASIDregsMatching
+enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
    ASIDAddrReg        = 0x02,   // Data type and SID Address Register
-   ASIDDataReg        = 0x03,   // ASID data
-                            
+   ASIDDataReg        = 0x04,   // ASID data
+   ASIDCompReg        = 0x08,   // Read Complete/good
+                         
    ASIDAddrType_Skip  = 0x00,   // No data/skip
    ASIDAddrType_Char  = 0x20,   // Character data
    ASIDAddrType_Start = 0x40,   // 
@@ -130,22 +131,22 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    switch(data[2])
    {
       case 0x4c:
-         //AddToASIDRxQueue(ASIDAddrType_Start, 0);
+         AddToASIDRxQueue(ASIDAddrType_Start, 0);
          //Printf_dbg("Start playing\n");
          break;
       case 0x4d:
-         //AddToASIDRxQueue(ASIDAddrType_Stop, 0);
+         AddToASIDRxQueue(ASIDAddrType_Stop, 0);
          //Printf_dbg("Stop playback\n");
          break;
       case 0x4f:
          //display characters
          //data[size-1] = 0; //replace 0xf7 with term
          //Printf_dbg("Display chars: \"%s\"\n", data+3);
-         //for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
-         //{
-         //   AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
-         //}
-         //AddToASIDRxQueue(ASIDAddrType_Char, 13);
+         for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
+         {
+            AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
+         }
+         AddToASIDRxQueue(ASIDAddrType_Char, 13);
          break;
       case 0x4e:
          //SID1 reg data
@@ -209,14 +210,18 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             if(ASIDRxQueueUsed)
             {
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail+1]);  
-               RxQueueTail+=2;  //inc on data read, must happen second after address read
-               if (RxQueueTail == USB_MIDI_SYSEX_MAX) RxQueueTail = 0;
             }
-            //else  //no data to send, let it read garbage data
-            //{
-            //   DataPortWriteWaitLog(0);
-            //}
+            else  //no data to send, send 0
+            {
+               DataPortWriteWaitLog(0);
+            }
             break;
+         case ASIDCompReg:
+            if(ASIDRxQueueUsed)
+            {
+               RxQueueTail+=2;  //inc on data read, must happen after address/data reads
+               if (RxQueueTail == USB_MIDI_SYSEX_MAX) RxQueueTail = 0;
+            }         
          default:
             DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
       }
@@ -226,7 +231,7 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_ASID()
 {
-   usbHostMIDI.read();
-   usbDevMIDI.read();   
+   if(ASIDRxQueueUsed == 0) usbHostMIDI.read();
+   if(ASIDRxQueueUsed == 0) usbDevMIDI.read();   
 }
 

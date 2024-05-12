@@ -5,9 +5,10 @@
    !src "..\source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "..\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
-;enum ASIDregsMatching
+;enum ASIDregsMatching   synch with IOH_ASID.c
    ASIDAddrReg        = 0x02; // Data type and SID Address Register
-   ASIDDataReg        = 0x03; // ASID data
+   ASIDDataReg        = 0x04; // ASID data
+   ASIDCompReg        = 0x08; // Read Complete/good
                       
    ASIDAddrType_Skip  = 0x00; // No data/skip
    ASIDAddrType_Char  = 0x20; // Character data
@@ -21,6 +22,11 @@
    ASIDAddrAddr_Mask  = 0x1f; // 
 
 
+   SpinIndUnexpVal    = C64ScreenRAM+40*2-1-0 ;spin top-1, right-0: unexpected read value
+   SpinIndAddrMiscomp = C64ScreenRAM+40*2-1-1 ;spin top-1, right-1: addr miscompare/retry
+   SpinIndDataMiscomp = C64ScreenRAM+40*2-1-2 ;spin top-1, right-2: data miscompare/retry
+   SpinIndSID1Write   = C64ScreenRAM+40*2-1-3 ;spin top-1, right-3: SID1 write
+   
 	BasicStart = $0801
    code       = $080D ;2061
 
@@ -46,7 +52,29 @@
 ASIDPlayLoop: 
    
    ldx ASIDAddrReg+IO1Port
+-  stx $fb
+   ;read it again to make sure:
+   lda ASIDAddrReg+IO1Port
+   cmp $fb
+   beq +
+   inc  SpinIndAddrMiscomp
+   tax
+   jmp -
++  
+
    ldy ASIDDataReg+IO1Port
+-  sty $fb
+   ;read it again to make sure:
+   lda ASIDDataReg+IO1Port
+   cmp $fb
+   beq +
+   inc SpinIndDataMiscomp
+   tay
+   jmp -
++  
+   
+   lda ASIDCompReg+IO1Port ;send read confirmed
+   
    txa
    and #ASIDAddrType_Mask
    
@@ -57,34 +85,35 @@ ASIDPlayLoop:
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
    sta SIDLoc,x
+   inc SpinIndSID1Write
    jmp ASIDPlayLoop ;keep grabbing data until caught up
    
-;+  cmp #ASIDAddrType_Start
-;   bne + 
-;   jsr SIDinit
-;   lda #<MsgASIDStart
-;   ldy #>MsgASIDStart
-;   jsr PrintString 
-;   jmp ASIDPlayLoop ;keep grabbing data until caught up
-;   
-;+  cmp #ASIDAddrType_Stop
-;   bne + 
-;   jsr SIDinit
-;   lda #<MsgASIDStop
-;   ldy #>MsgASIDStop
-;   jsr PrintString 
-;   jmp ASIDPlayLoop ;keep grabbing data until caught up
-;   
-;+  cmp #ASIDAddrType_Char
-;   bne + 
-;   tya
-;   jsr SendChar
-;   jmp ASIDPlayLoop ;keep grabbing data until caught up
++  cmp #ASIDAddrType_Start
+   bne + 
+   jsr SIDinit
+   lda #<MsgASIDStart
+   ldy #>MsgASIDStart
+   jsr PrintString 
+   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   
++  cmp #ASIDAddrType_Stop
+   bne + 
+   jsr SIDinit
+   lda #<MsgASIDStop
+   ldy #>MsgASIDStop
+   jsr PrintString 
+   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   
++  cmp #ASIDAddrType_Char
+   bne + 
+   tya
+   jsr SendChar
+   jmp ASIDPlayLoop ;keep grabbing data until caught up
    
 +  cmp #ASIDAddrType_Skip
    beq + 
    ;unexpected read
-   inc C64ScreenRAM+40*2-1 ;spin top-1, right
+   inc SpinIndUnexpVal
    ;txa ;addr
    ;jsr PrintHexByte
    ;lda #'+'
