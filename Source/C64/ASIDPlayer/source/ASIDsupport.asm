@@ -1,14 +1,15 @@
 
 ;subroutines, tables, and strings
 
-;SIDVoicesOff:
-;   lda #0x00 ; turn 3 voices off
-;   sta SIDLoc+$04 ; SIDVoicCont1
-;   sta SIDLoc+$0b ; SIDVoicCont2
-;   sta SIDLoc+$12 ; SIDVoicCont3 
-;   rts
+SIDVoicesOff:
+   lda #0x00 ; turn 3 voices off
+   sta SIDLoc+$04 ; SIDVoicCont1
+   sta SIDLoc+$0b ; SIDVoicCont2
+   sta SIDLoc+$12 ; SIDVoicCont3 
+   rts
 
 SIDinit:
+   jsr SIDVoicesOff ;voices off first to prevent pops
    ;clear SID regs
    lda #0
    tax
@@ -66,6 +67,7 @@ pr jsr SendChar
 MsgASIDPlayerMenu:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "       TeensyROM ASID Player v0.1       "
    !tx ChrReturn, OptionColor
+   !tx "                                  543210"
    !tx 0
    
 MsgASIDStart:    

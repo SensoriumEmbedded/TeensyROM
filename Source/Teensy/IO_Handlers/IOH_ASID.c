@@ -133,10 +133,12 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
       case 0x4c:
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
          //Printf_dbg("Start playing\n");
+         SetIRQAssert;
          break;
       case 0x4d:
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
          //Printf_dbg("Stop playback\n");
+         SetIRQAssert;
          break;
       case 0x4f:
          //display characters
@@ -147,6 +149,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
          }
          AddToASIDRxQueue(ASIDAddrType_Char, 13);
+         SetIRQAssert;
          break;
       case 0x4e:
          //SID1 reg data
@@ -169,9 +172,10 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          {
             Printf_dbg("-->More regs flagged than data available\n");    
          }
+         SetIRQAssert;
          break;
       default:
-         Printf_dbg("-->Unexpected msg type: $%02x\n", data[2]);
+         Printf_dbg("-->Unexpected ASID msg type: $%02x\n", data[2]);
    }
 }
 
@@ -202,7 +206,7 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail]); 
             }
             else  //no data to send, send skip message
-            {
+            { //should no longer happen...
                DataPortWriteWaitLog(ASIDAddrType_Skip);
             }
             break;
@@ -212,16 +216,18 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail+1]);  
             }
             else  //no data to send, send 0
-            {
+            { //should no longer happen...
                DataPortWriteWaitLog(0);
             }
             break;
          case ASIDCompReg:
+            DataPortWriteWaitLog(0);
             if(ASIDRxQueueUsed)
             {
                RxQueueTail+=2;  //inc on data read, must happen after address/data reads
                if (RxQueueTail == USB_MIDI_SYSEX_MAX) RxQueueTail = 0;
-            }         
+            }    
+            if(ASIDRxQueueUsed == 0) SetIRQDeassert;          
          default:
             DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
       }
@@ -231,7 +237,10 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_ASID()
 {
-   if(ASIDRxQueueUsed == 0) usbHostMIDI.read();
-   if(ASIDRxQueueUsed == 0) usbDevMIDI.read();   
+   if(ASIDRxQueueUsed == 0) //read MIDI-in data in only if ready to send to C64 (buffer empty)
+   {
+      usbDevMIDI.read();
+      if(ASIDRxQueueUsed == 0) usbHostMIDI.read();   //dito, giving USB device priority 
+   }
 }
 

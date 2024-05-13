@@ -22,10 +22,12 @@
    ASIDAddrAddr_Mask  = 0x1f; // 
 
 
-   SpinIndUnexpVal    = C64ScreenRAM+40*2-1-0 ;spin top-1, right-0: unexpected read value
-   SpinIndAddrMiscomp = C64ScreenRAM+40*2-1-1 ;spin top-1, right-1: addr miscompare/retry
-   SpinIndDataMiscomp = C64ScreenRAM+40*2-1-2 ;spin top-1, right-2: data miscompare/retry
-   SpinIndSID1Write   = C64ScreenRAM+40*2-1-3 ;spin top-1, right-3: SID1 write
+   SpinIndAddrMiscomp = C64ScreenRAM+40*2-1-0 ;spin top-1, right-0: addr miscompare/retry
+   SpinIndDataMiscomp = C64ScreenRAM+40*2-1-1 ;spin top-1, right-1: data miscompare/retry
+   SpinIndSkipType    = C64ScreenRAM+40*2-1-2 ;spin top-1, right-2: Skip message received
+   SpinIndUnexpVal    = C64ScreenRAM+40*2-1-3 ;spin top-1, right-3: unexpected read value
+   SpinIndNonASIDInt  = C64ScreenRAM+40*2-1-4 ;spin top-1, right-4: CIA generated IRQ received
+   SpinIndSID1Write   = C64ScreenRAM+40*2-1-5 ;spin top-1, right-5: SID1 write
    
 	BasicStart = $0801
    code       = $080D ;2061
@@ -49,15 +51,83 @@
    
    jsr SIDinit
 
-ASIDPlayLoop: 
+;set up ASID interrupt:
+
+   ; DISABLE MASKABLE INTERRUPTS, AND THEN TURN THEM OFF
+   sei              
+   lda #%01111111   ; BIT 7 (OFF) MEANS THAT ANY 1S WRITTEN TO CIA ICRS TURN THOSE BITS OFF
+   sta $dc0d        ;    CIA#1 INTERRUPT CONTROL REGISTER (IRC): DISABLE ALL INTERRUPTS
+   sta $dd0d        ;    CIA#2 ICR: DISABLE ALL INTERRUPTS
+   lda $dc0d        ; ACK (CLEAR) ANY PENDING CIA1 INTERRUPTS (READING CLEARS 'EM)
+   lda $dd0d        ;    SAME FOR CIA2
+   asl $d019        ; TOSS ANY PENDING VIC INTERRUPTS (WRITING CLEARS 'EM, VIA RMW MAGIC)
+
+   ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
+   lda #<ASIDInterrupt 
+   sta $0314
+   lda #>ASIDInterrupt
+   sta $0315
    
-   ldx ASIDAddrReg+IO1Port
+   ;;Set the timer behavior
+   ;lda #%10000001   ; CIA#1 ICR: B0->1 = ENABLE TIMER A INTERRUPT,
+   ;sta $dc0d        ;    B7->1 = FOR B0-B6, 1 BITS GET SET, AND 0 BITS IGNORED
+   ;lda $dc0e        ; CIA#1 TIMER A CONTROL REGISTER
+   ;and #%10000000   ; PRESERVE KERNAL-SET TOD CLOCK NTSC OR PAL SELECTION
+   ;ora #%00010001   ; START TIMER A,CONTINUOUS RUN MODE, LATCHED VALUE INTO TIMER A COUNTER
+   ;sta $dc0e        ; Write it back 
+   
+   cli              ; RESTORE INTERRUPTS, HOOKING COMPLETE   
+   
+   
+ASIDMainLoop: 
+   jsr ScanKey ;needed since timer/raster interrupts are disabled
+   jsr GetIn
+   beq ASIDMainLoop
+   
+   cmp #'x'  ;Exit M2S
+   bne +  
+   
+   ; IRQ back to default
+   sei
+   lda #<IRQDefault
+   ldx #>IRQDefault
+   sta $314   ;CINV, HW IRQ Int Lo
+   stx $315   ;CINV, HW IRQ Int Hi
+   lda #%10000001 
+   sta $dc0d  ;CIA int ctl
+   lda #0
+   sta $d01a  ;irq enable
+   inc $d019
+   lda $dc0d  ;CIA int ctl
+   cli 
+      
+   jsr SIDinit
+   rts ;return to BASIC
+
++  jmp ASIDMainLoop
+
+
+ASIDInterrupt: 
+        ;pha
+        ;txa
+        ;pha
+        ;tya
+        ;pha
+        ;dec $d019
+   ;lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
+   ;beq +
+   ;inc SpinIndNonASIDInt
+   ;;jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+   ;jmp ASIDIntFinished ;skip if IRQ was CIA generated
+
+;read the addr/type and data:
++  ldx ASIDAddrReg+IO1Port
 -  stx $fb
    ;read it again to make sure:
    lda ASIDAddrReg+IO1Port
    cmp $fb
    beq +
-   inc  SpinIndAddrMiscomp
+   inc SpinIndAddrMiscomp
    tax
    jmp -
 +  
@@ -75,6 +145,7 @@ ASIDPlayLoop:
    
    lda ASIDCompReg+IO1Port ;send read confirmed
    
+;apply the addr/type and data:
    txa
    and #ASIDAddrType_Mask
    
@@ -86,7 +157,7 @@ ASIDPlayLoop:
    tya ;acc now holds data to write
    sta SIDLoc,x
    inc SpinIndSID1Write
-   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   jmp ASIDIntFinished
    
 +  cmp #ASIDAddrType_Start
    bne + 
@@ -94,7 +165,7 @@ ASIDPlayLoop:
    lda #<MsgASIDStart
    ldy #>MsgASIDStart
    jsr PrintString 
-   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   jmp ASIDIntFinished
    
 +  cmp #ASIDAddrType_Stop
    bne + 
@@ -102,18 +173,21 @@ ASIDPlayLoop:
    lda #<MsgASIDStop
    ldy #>MsgASIDStop
    jsr PrintString 
-   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   jmp ASIDIntFinished
    
 +  cmp #ASIDAddrType_Char
    bne + 
    tya
    jsr SendChar
-   jmp ASIDPlayLoop ;keep grabbing data until caught up
+   jmp ASIDIntFinished
    
 +  cmp #ASIDAddrType_Skip
-   beq + 
+   bne + 
+   inc SpinIndSkipType
+   jmp ASIDIntFinished
+   
    ;unexpected read
-   inc SpinIndUnexpVal
++  inc SpinIndUnexpVal
    ;txa ;addr
    ;jsr PrintHexByte
    ;lda #'+'
@@ -123,16 +197,27 @@ ASIDPlayLoop:
    ;lda #' '
    ;jsr SendChar
    
-+  jsr GetIn
-   beq ASIDPlayLoop
+ASIDIntFinished:
+   ;lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
+   ;lda $dd0d        ;    SAME FOR CIA2
+   ;rti
+        ;dec $d019
+        ;pla
+        ;tay
+        ;pla
+        ;tax
+        ;pla
+        ;rti
+   jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+
    
-   cmp #'x'  ;Exit M2S
-   bne +  
-   jsr SIDinit
-   rts ;return to BASIC
-
-
-+  jmp ASIDPlayLoop
-
    !src "source\ASIDsupport.asm"
+
+
+
+
+
+
+   
+
 
