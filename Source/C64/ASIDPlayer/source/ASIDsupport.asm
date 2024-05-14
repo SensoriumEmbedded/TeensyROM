@@ -65,7 +65,7 @@ pr jsr SendChar
 
 
 MsgASIDPlayerMenu:    
-   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "       TeensyROM ASID Player v0.1       "
+   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
    !tx ChrReturn, OptionColor
    !tx "                                  543210"
    !tx 0

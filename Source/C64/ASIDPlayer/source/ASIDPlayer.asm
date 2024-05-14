@@ -8,7 +8,7 @@
 ;enum ASIDregsMatching   synch with IOH_ASID.c
    ASIDAddrReg        = 0x02; // Data type and SID Address Register
    ASIDDataReg        = 0x04; // ASID data
-   ASIDCompReg        = 0x08; // Read Complete/good
+;   ASIDCompReg        = 0x08; // Read Complete/good
                       
    ASIDAddrType_Skip  = 0x00; // No data/skip
    ASIDAddrType_Char  = 0x20; // Character data
@@ -21,12 +21,7 @@
    ASIDAddrType_Mask  = 0xe0; // 
    ASIDAddrAddr_Mask  = 0x1f; // 
 
-
-   SpinIndAddrMiscomp = C64ScreenRAM+40*2-1-0 ;spin top-1, right-0: addr miscompare/retry
-   SpinIndDataMiscomp = C64ScreenRAM+40*2-1-1 ;spin top-1, right-1: data miscompare/retry
-   SpinIndSkipType    = C64ScreenRAM+40*2-1-2 ;spin top-1, right-2: Skip message received
-   SpinIndUnexpVal    = C64ScreenRAM+40*2-1-3 ;spin top-1, right-3: unexpected read value
-   SpinIndNonASIDInt  = C64ScreenRAM+40*2-1-4 ;spin top-1, right-4: CIA generated IRQ received
+   SpinIndUnexpType   = C64ScreenRAM+40*2-1-4 ;spin top-1, right-4: Unexpected reg type or skip received
    SpinIndSID1Write   = C64ScreenRAM+40*2-1-5 ;spin top-1, right-5: SID1 write
    
 	BasicStart = $0801
@@ -52,7 +47,6 @@
    jsr SIDinit
 
 ;set up ASID interrupt:
-
    ; DISABLE MASKABLE INTERRUPTS, AND THEN TURN THEM OFF
    sei              
    lda #%01111111   ; BIT 7 (OFF) MEANS THAT ANY 1S WRITTEN TO CIA ICRS TURN THOSE BITS OFF
@@ -67,15 +61,7 @@
    sta $0314
    lda #>ASIDInterrupt
    sta $0315
-   
-   ;;Set the timer behavior
-   ;lda #%10000001   ; CIA#1 ICR: B0->1 = ENABLE TIMER A INTERRUPT,
-   ;sta $dc0d        ;    B7->1 = FOR B0-B6, 1 BITS GET SET, AND 0 BITS IGNORED
-   ;lda $dc0e        ; CIA#1 TIMER A CONTROL REGISTER
-   ;and #%10000000   ; PRESERVE KERNAL-SET TOD CLOCK NTSC OR PAL SELECTION
-   ;ora #%00010001   ; START TIMER A,CONTINUOUS RUN MODE, LATCHED VALUE INTO TIMER A COUNTER
-   ;sta $dc0e        ; Write it back 
-   
+      
    cli              ; RESTORE INTERRUPTS, HOOKING COMPLETE   
    
    
@@ -108,42 +94,10 @@ ASIDMainLoop:
 
 
 ASIDInterrupt: 
-        ;pha
-        ;txa
-        ;pha
-        ;tya
-        ;pha
-        ;dec $d019
-   ;lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
-   ;beq +
-   ;inc SpinIndNonASIDInt
-   ;;jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
-   ;jmp ASIDIntFinished ;skip if IRQ was CIA generated
 
 ;read the addr/type and data:
-+  ldx ASIDAddrReg+IO1Port
--  stx $fb
-   ;read it again to make sure:
-   lda ASIDAddrReg+IO1Port
-   cmp $fb
-   beq +
-   inc SpinIndAddrMiscomp
-   tax
-   jmp -
-+  
-
+   ldx ASIDAddrReg+IO1Port
    ldy ASIDDataReg+IO1Port
--  sty $fb
-   ;read it again to make sure:
-   lda ASIDDataReg+IO1Port
-   cmp $fb
-   beq +
-   inc SpinIndDataMiscomp
-   tay
-   jmp -
-+  
-   
-   lda ASIDCompReg+IO1Port ;send read confirmed
    
 ;apply the addr/type and data:
    txa
@@ -180,37 +134,14 @@ ASIDInterrupt:
    tya
    jsr SendChar
    jmp ASIDIntFinished
-   
-+  cmp #ASIDAddrType_Skip
-   bne + 
-   inc SpinIndSkipType
-   jmp ASIDIntFinished
-   
-   ;unexpected read
-+  inc SpinIndUnexpVal
-   ;txa ;addr
-   ;jsr PrintHexByte
-   ;lda #'+'
-   ;jsr SendChar
-   ;tya ;data
-   ;jsr PrintHexByte
-   ;lda #' '
-   ;jsr SendChar
+
+   ;unexpected type or skip received
++  inc SpinIndUnexpType
    
 ASIDIntFinished:
-   ;lda $dc0d          ; ACK (CLEAR) CIA#1 INTERRUPT
-   ;lda $dd0d        ;    SAME FOR CIA2
-   ;rti
-        ;dec $d019
-        ;pla
-        ;tay
-        ;pla
-        ;tax
-        ;pla
-        ;rti
-   jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+   jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S IRQ HANDLER ROUTINE
 
-   
+
    !src "source\ASIDsupport.asm"
 
 

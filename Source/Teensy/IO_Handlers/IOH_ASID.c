@@ -40,7 +40,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
    ASIDAddrReg        = 0x02,   // Data type and SID Address Register
    ASIDDataReg        = 0x04,   // ASID data
-   ASIDCompReg        = 0x08,   // Read Complete/good
+//   ASIDCompReg        = 0x08,   // Read Complete/good
                          
    ASIDAddrType_Skip  = 0x00,   // No data/skip
    ASIDAddrType_Char  = 0x20,   // Character data
@@ -54,7 +54,8 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDAddrAddr_Mask  = 0x1f,   // 
 };
 
-#define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+USB_MIDI_SYSEX_MAX-RxQueueTail))
+#define ASIDQueueSize   (USB_MIDI_SYSEX_MAX & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
+#define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 
 uint8_t ASIDidToReg[] = 
 {
@@ -94,7 +95,7 @@ uint8_t ASIDidToReg[] =
 
 void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
 {
-  if (ASIDRxQueueUsed >= USB_MIDI_SYSEX_MAX-2)
+  if (ASIDRxQueueUsed >= ASIDQueueSize-2)
   {
      Printf_dbg("-->ASID queue overflow!\n");
      return;
@@ -103,10 +104,8 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
   MIDIRxBuf[RxQueueHead] = Addr;
   MIDIRxBuf[RxQueueHead+1] = Data;
   
-  if (RxQueueHead == USB_MIDI_SYSEX_MAX-2) RxQueueHead = 0;
+  if (RxQueueHead == ASIDQueueSize-2) RxQueueHead = 0;
   else RxQueueHead +=2;
-  //assumes USB_MIDI_SYSEX_MAX is an even number
-  //  currently 290, defined in cores\teensy4\usb_midi.h
 }
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
@@ -119,7 +118,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    //for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);
    //Serial.println();
    
-   // Implemented based on:   http://paulus.kapsi.fi/asid_protocol.txt
+   // ASID decode based on:   http://paulus.kapsi.fi/asid_protocol.txt
    
    unsigned int NumRegs = 0; //number of regs to write
    
@@ -185,8 +184,12 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
 void InitHndlr_ASID()  
 {
    RxQueueHead = RxQueueTail = 0;
+
+   Printf_dbg("ASID Queue Size: %d\n", ASIDQueueSize);
    
-   //SetMIDIHandlersNULL(); is called prior to this, all other MIDI messages ignored.
+   // SetMIDIHandlersNULL(); is called prior to this, 
+   //    all other MIDI messages ignored.
+   
    // MIDI USB Host input handlers
    usbHostMIDI.setHandleSystemExclusive     (ASIDOnSystemExclusive);     // F0
 
@@ -205,8 +208,8 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             {
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail]); 
             }
-            else  //no data to send, send skip message
-            { //should no longer happen...
+            else  //no data to send, send skip message (should not happen)
+            {
                DataPortWriteWaitLog(ASIDAddrType_Skip);
             }
             break;
@@ -214,20 +217,15 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             if(ASIDRxQueueUsed)
             {
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail+1]);  
+               RxQueueTail+=2;  //inc on data read, must happen after address read
+               if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;
             }
-            else  //no data to send, send 0
-            { //should no longer happen...
+            else  //no data to send, send 0  (should not happen)
+            {
                DataPortWriteWaitLog(0);
             }
+            if(ASIDRxQueueUsed == 0) SetIRQDeassert;  //remove IRQ if queue empty        
             break;
-         case ASIDCompReg:
-            DataPortWriteWaitLog(0);
-            if(ASIDRxQueueUsed)
-            {
-               RxQueueTail+=2;  //inc on data read, must happen after address/data reads
-               if (RxQueueTail == USB_MIDI_SYSEX_MAX) RxQueueTail = 0;
-            }    
-            if(ASIDRxQueueUsed == 0) SetIRQDeassert;          
          default:
             DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
       }
