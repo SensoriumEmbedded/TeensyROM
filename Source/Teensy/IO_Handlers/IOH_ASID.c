@@ -38,20 +38,24 @@ stcIOHandlers IOHndlr_ASID =
 
 enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
-   ASIDAddrReg        = 0x02,   // Data type and SID Address Register
-   ASIDDataReg        = 0x04,   // ASID data
-//   ASIDCompReg        = 0x08,   // Read Complete/good
-                         
+   ASIDAddrReg        = 0x02,   // Data type and SID Address Register (Read only)
+   ASIDDataReg        = 0x04,   // ASID data, increment queue Tail (Read only)
+   ASIDContReg        = 0x08,   // Control Reg (Write only)
+
+   ASIDContIRQOn      = 0x01,   //enable ASID IRQ
+   ASIDContExit       = 0x02,   //Disable IRQ, Send TR to main menu
+   
    ASIDAddrType_Skip  = 0x00,   // No data/skip
    ASIDAddrType_Char  = 0x20,   // Character data
-   ASIDAddrType_Start = 0x40,   // 
-   ASIDAddrType_Stop  = 0x60,   // 
+   ASIDAddrType_Start = 0x40,   // ASID Start message
+   ASIDAddrType_Stop  = 0x60,   // ASID Stop message
    ASIDAddrType_SID1  = 0x80,   // Lower 5 bits are SID1 reg address
    ASIDAddrType_SID2  = 0xa0,   // Lower 5 bits are SID2 reg address 
    ASIDAddrType_SID3  = 0xc0,   // Lower 5 bits are SID3 reg address
    ASIDAddrType_SID4  = 0xe0,   // Lower 5 bits are SID4 reg address
-   ASIDAddrType_Mask  = 0xe0,   // 
-   ASIDAddrAddr_Mask  = 0x1f,   // 
+   
+   ASIDAddrType_Mask  = 0xe0,   // Mask for Type
+   ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
 };
 
 #define ASIDQueueSize   (USB_MIDI_SYSEX_MAX & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
@@ -108,6 +112,20 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
   else RxQueueHead +=2;
 }
 
+void SetASIDIRQ()
+{
+   if(MIDIRxIRQEnabled)
+   {
+      SetIRQAssert;
+   }
+   else
+   {
+      Printf_dbg("ASID IRQ is off\n");
+      RxQueueHead = RxQueueTail = 0;
+   }
+
+}
+
 //MIDI input handlers for HW Emulation _________________________________________________________________________
 
 // F0 SysEx single call, message larger than buffer is truncated
@@ -132,12 +150,12 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
       case 0x4c:
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
          //Printf_dbg("Start playing\n");
-         SetIRQAssert;
+         SetASIDIRQ();
          break;
       case 0x4d:
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
          //Printf_dbg("Stop playback\n");
-         SetIRQAssert;
+         SetASIDIRQ();
          break;
       case 0x4f:
          //display characters
@@ -148,7 +166,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
          }
          AddToASIDRxQueue(ASIDAddrType_Char, 13);
-         SetIRQAssert;
+         SetASIDIRQ();
          break;
       case 0x4e:
          //SID1 reg data
@@ -171,7 +189,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          {
             Printf_dbg("-->More regs flagged than data available\n");    
          }
-         SetIRQAssert;
+         SetASIDIRQ();
          break;
       default:
          Printf_dbg("-->Unexpected ASID msg type: $%02x\n", data[2]);
@@ -230,7 +248,26 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
       }
    }
-
+   else  // IO1 write    -------------------------------------------------
+   {
+      uint8_t Data = DataPortWaitRead(); 
+      if (Address == ASIDContReg)
+      {
+         switch(Data)
+         {
+            case ASIDContIRQOn:
+               MIDIRxIRQEnabled = true;
+               RxQueueHead = RxQueueTail = 0;
+               Printf_dbg("ASIDContIRQOn\n");
+               break;
+            case ASIDContExit:
+               MIDIRxIRQEnabled = false;
+               BtnPressed = true;   //main menu
+               Printf_dbg("ASIDContExit\n");
+               break;
+         }
+      }
+   }
 }
 
 void PollingHndlr_ASID()

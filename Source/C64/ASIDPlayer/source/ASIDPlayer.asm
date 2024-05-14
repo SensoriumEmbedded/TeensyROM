@@ -5,21 +5,26 @@
    !src "..\source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "..\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
-;enum ASIDregsMatching   synch with IOH_ASID.c
-   ASIDAddrReg        = 0x02; // Data type and SID Address Register
-   ASIDDataReg        = 0x04; // ASID data
-;   ASIDCompReg        = 0x08; // Read Complete/good
-                      
-   ASIDAddrType_Skip  = 0x00; // No data/skip
-   ASIDAddrType_Char  = 0x20; // Character data
-   ASIDAddrType_Start = 0x40; // 
-   ASIDAddrType_Stop  = 0x60; // 
-   ASIDAddrType_SID1  = 0x80; // Lower 5 bits are SID1 reg address
-   ASIDAddrType_SID2  = 0xa0; // Lower 5 bits are SID2 reg address 
-   ASIDAddrType_SID3  = 0xc0; // Lower 5 bits are SID3 reg address
-   ASIDAddrType_SID4  = 0xe0; // Lower 5 bits are SID4 reg address
-   ASIDAddrType_Mask  = 0xe0; // 
-   ASIDAddrAddr_Mask  = 0x1f; // 
+;enum ASIDregsMatching  //synch with ASIDPlayer.asm
+   ASIDAddrReg        = 0x02;   // Data type and SID Address Register (Read only)
+   ASIDDataReg        = 0x04;   // ASID data, increment queue Tail (Read only)
+   ASIDContReg        = 0x08;   // Control Reg (Write only)
+                            
+   ASIDContIRQOn      = 0x01;   //enable ASID IRQ
+   ASIDContExit       = 0x02;   //Disable IRQ, Send TR to main menu
+                             
+   ASIDAddrType_Skip  = 0x00;   // No data/skip
+   ASIDAddrType_Char  = 0x20;   // Character data
+   ASIDAddrType_Start = 0x40;   // ASID Start message
+   ASIDAddrType_Stop  = 0x60;   // ASID Stop message
+   ASIDAddrType_SID1  = 0x80;   // Lower 5 bits are SID1 reg address
+   ASIDAddrType_SID2  = 0xa0;   // Lower 5 bits are SID2 reg address 
+   ASIDAddrType_SID3  = 0xc0;   // Lower 5 bits are SID3 reg address
+   ASIDAddrType_SID4  = 0xe0;   // Lower 5 bits are SID4 reg address
+                            
+   ASIDAddrType_Mask  = 0xe0;   // Mask for Type
+   ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
+
 
    SpinIndUnexpType   = C64ScreenRAM+40*2-1-4 ;spin top-1, right-4: Unexpected reg type or skip received
    SpinIndSID1Write   = C64ScreenRAM+40*2-1-5 ;spin top-1, right-5: SID1 write
@@ -35,6 +40,7 @@
    
    *=code  ; Start location for code
 
+ASIDInit:
 ;screen setup:     
    lda #BorderColor
    sta BorderColorReg
@@ -64,6 +70,8 @@
       
    cli              ; RESTORE INTERRUPTS, HOOKING COMPLETE   
    
+   lda #ASIDContIRQOn  ;turn on the interrupt
+   sta ASIDContReg+IO1Port
    
 ASIDMainLoop: 
    jsr ScanKey ;needed since timer/raster interrupts are disabled
@@ -73,6 +81,10 @@ ASIDMainLoop:
    cmp #'x'  ;Exit M2S
    bne +  
    
+   lda #ASIDContExit  ;turn off the interrupt and go back to main menu
+   sta ASIDContReg+IO1Port
+   ;C64 is resetting, probably won't get far...
+
    ; IRQ back to default
    sei
    lda #<IRQDefault
