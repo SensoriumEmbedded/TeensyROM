@@ -40,6 +40,7 @@
    
    *=code  ; Start location for code
 
+
 ASIDInit:
 ;screen setup:     
    lda #BorderColor
@@ -61,30 +62,27 @@ ASIDInit:
    lda $dc0d        ; ACK (CLEAR) ANY PENDING CIA1 INTERRUPTS (READING CLEARS 'EM)
    lda $dd0d        ;    SAME FOR CIA2
    asl $d019        ; TOSS ANY PENDING VIC INTERRUPTS (WRITING CLEARS 'EM, VIA RMW MAGIC)
-
    ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
    lda #<ASIDInterrupt 
    sta $0314
    lda #>ASIDInterrupt
-   sta $0315
-      
+   sta $0315 
    cli              ; RESTORE INTERRUPTS, HOOKING COMPLETE   
    
-   lda #ASIDContIRQOn  ;turn on the interrupt
+   lda #ASIDContIRQOn  ;enable the interrupt from TR
    sta ASIDContReg+IO1Port
+
    
 ASIDMainLoop: 
    jsr ScanKey ;needed since timer/raster interrupts are disabled
    jsr GetIn
    beq ASIDMainLoop
    
-   cmp #'x'  ;Exit M2S
+   cmp #'x'  ;Exit TR ASID player
    bne +  
-   
    lda #ASIDContExit  ;turn off the interrupt and go back to main menu
    sta ASIDContReg+IO1Port
-   ;C64 is resetting, probably won't get far...
-
+   ;C64 is resetting now, probably won't get far...
    ; IRQ back to default
    sei
    lda #<IRQDefault
@@ -98,9 +96,31 @@ ASIDMainLoop:
    inc $d019
    lda $dc0d  ;CIA int ctl
    cli 
-      
    jsr SIDinit
-   rts ;return to BASIC
+   rts ;return to BASIC (if not TR main menu)
+
++  cmp #'s'  ;screen on/off
+   bne +  
+smcScreenOnOff
+   lda #0
+   bne TurnOff
+   ;Turn screen back on
+   dec smcScreenOnOff+1
+   lda #$00   ;turn off the display 
+   ldx #PokeBlack  ;set to black
+   jmp SetScreen
+TurnOff   
+   inc smcScreenOnOff+1
+   lda #$1b   ;turn the display back on
+   ldx #BorderColor  ;set to regular/default
+SetScreen
+   sta $d011 
+   stx BorderColorReg
+   jmp ASIDMainLoop
+
++  cmp #'v'  ;voices off
+   bne +  
+   jsr SIDVoicesOff
 
 +  jmp ASIDMainLoop
 
