@@ -307,7 +307,8 @@ ReadKeyboard:
 +  cmp #'1'  ;Hot Key #1
    bne +
    lda #7  ;set to Cynthcart
-HotKeyLaunch
+   
+HotKeyLaunch:
    ;launch item # stored in acc from main TR menu   
    pha ;save program #
    lda #rmtTeensy     ;point to Teensy menu, but don't display it
@@ -326,6 +327,11 @@ HotKeyLaunch
 +  cmp #'3'  ;Hot Key #3
    bne +
    lda #6  ;set to CCGMS
+   jmp HotKeyLaunch
+
++  cmp #'4'  ;Hot Key #4
+   bne +
+   lda #10  ;set to ASID Player
    jmp HotKeyLaunch
 
 
