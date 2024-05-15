@@ -66,8 +66,29 @@ pr jsr SendChar
 
 MsgASIDPlayerMenu:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
-   !tx ChrReturn, OptionColor
-   !tx "                                  543210"
+   !tx ChrReturn, ChrYellow, " SID1", ChrRed, " ", ChrDrkGrey, " ", ChrBlack, "*************************", "XXXXXXX", ChrReturn
+   !tx ChrDrkGrey, "     EA", ChrLtGreen, "FcPwTAS", ChrRvsOn, "FcPwTAS", ChrRvsOff, "FcPwTAS", ChrRvsOn, "CtRV" ;, "5678901"
+   !tx ChrReturn, ChrDrkGrey, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd
+   !tx ChrReturn, ChrReturn, ChrLtGrey
+   !tx "Keyboard Commands:", ChrReturn
+   !tx "   V: Voices Off", ChrReturn
+   !tx "   S: Screen On/Off", ChrReturn
+   !tx "   X: Exit ASID Player", ChrReturn
+   !tx "   ?: This Help List", ChrReturn
+   !tx ChrReturn
+   !tx ChrMedGrey, "Spinners:", ChrReturn, ChrDrkGrey
+   !tx "   E: Error Read   A: SID Access", ChrReturn
+   !tx ChrMedGrey, "Voice Reg Controls:", ChrReturn, ChrDrkGrey
+   !tx "  Fc: Frequency Lo/Hi", ChrReturn
+   !tx "  Pw: Pulse Width Lo/Hi", ChrReturn
+   !tx "   T: Wave Type", ChrReturn
+   !tx "   A: Attack/Decay", ChrReturn
+   !tx "   S: Sustain/Release", ChrReturn
+   !tx ChrMedGrey, "Filter Regs:", ChrReturn, ChrDrkGrey
+   !tx "  Ct: Cutoff Frequency Lo/Hi", ChrReturn
+   !tx "   R: Resonance", ChrReturn
+   !tx "   V: Volume & Select";, ChrReturn
+   ;!tx ChrReturn, OptionColor
    !tx 0
    
 MsgASIDStart:    

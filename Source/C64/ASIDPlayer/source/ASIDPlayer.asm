@@ -24,10 +24,15 @@
                             
    ASIDAddrType_Mask  = 0xe0;   // Mask for Type
    ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
+;end enum synch
 
-
-   SpinIndUnexpType   = C64ScreenRAM+40*2-1-4 ;spin top-1, right-4: Unexpected reg type or skip received
-   SpinIndSID1Write   = C64ScreenRAM+40*2-1-5 ;spin top-1, right-5: SID1 write
+   SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
+   SpinIndSID1Write   = C64ScreenRAM+40*2+6 ;spin indicator: SID1 write
+   SIDRegColorStart   = C64ColorRAM +40*2+7
+   
+   RegFirstColor  = PokeWhite; PokeLtRed ;PokeOrange ;PokeLtBlue ;PokeWhite
+   RegSecondColor = PokeDrkGrey; PokeRed ;PokeBrown ;PokeBlue ;PokeDrkGrey ; PokeLtGrey, PokeMedGrey, PokeDrkGrey
+                    ;then to black/off
    
 	BasicStart = $0801
    code       = $080D ;2061
@@ -74,6 +79,38 @@ ASIDInit:
 
    
 ASIDMainLoop: 
+  
+;SID reg color update: 25 SID registers updated once per 10th/sec
+   lda TODTenthSecBCD ;read 10ths releases latch
+smcLastUpd
+   cmp #0
+   beq GetKeypress
+   sta smcLastUpd+1
+   ;inc SpinIndUnexpType  ;temp to check update cycle
+
+   ldx #0
+regcolorupdate
+   lda SIDRegColorStart,x
+   and #$0f   ;only 4 bits are valid
+   beq nextsidreg   ;skip reg if 0 (black) already
+   
+   cmp #RegFirstColor ;color set by interrupt
+   bne +
+   lda #RegSecondColor ;RegFirstColor -> RegSecondColor
+   jmp setcolor   
++
+   lda #PokeBlack ;RegSecondColor (or anything else) -> black
+ 
+setcolor 
+   sta SIDRegColorStart,x
+nextsidreg
+   inx  ;next register
+   cpx #25 ;25 registers 0-24
+   bne regcolorupdate
+
+ 
+;get/check key press
+GetKeypress:
    jsr ScanKey ;needed since timer/raster interrupts are disabled
    jsr GetIn
    beq ASIDMainLoop
@@ -121,6 +158,15 @@ SetScreen
 +  cmp #'v'  ;voices off
    bne +  
    jsr SIDVoicesOff
+   jmp ASIDMainLoop
+
++  cmp #'?'  ;Help/refresh
+   bne +  
+   lda #<MsgASIDPlayerMenu
+   ldy #>MsgASIDPlayerMenu
+   jsr PrintString 
+   jmp ASIDMainLoop
+
 
 +  jmp ASIDMainLoop
 
@@ -142,6 +188,8 @@ ASIDInterrupt:
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
    sta SIDLoc,x
+   lda #RegFirstColor ;set the indicator color
+   sta SIDRegColorStart,x
    inc SpinIndSID1Write
    jmp ASIDIntFinished
    

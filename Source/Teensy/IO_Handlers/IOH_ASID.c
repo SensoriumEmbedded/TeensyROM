@@ -137,6 +137,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    //Serial.println();
    
    // ASID decode based on:   http://paulus.kapsi.fi/asid_protocol.txt
+   // originally by Elektron SIDStation
    
    unsigned int NumRegs = 0; //number of regs to write
    
