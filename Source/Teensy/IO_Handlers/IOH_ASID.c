@@ -126,15 +126,20 @@ void SetASIDIRQ()
 
 }
 
+#ifdef DbgMsgs_IO  //Debug msgs mode
+   #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
+#else //Normal mode
+   #define Printf_dbg_SysExInfo {}
+#endif
+
+
 //MIDI input handlers for HW Emulation _________________________________________________________________________
 
 // F0 SysEx single call, message larger than buffer is truncated
 void ASIDOnSystemExclusive(uint8_t *data, unsigned int size) 
 {
    //data already contains starting f0 and ending f7
-   //Serial.printf("\nSysEx: size=%d, data=", size);
-   //for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);
-   //Serial.println();
+   //Printf_dbg_SysExInfo;
    
    // ASID decode based on:   http://paulus.kapsi.fi/asid_protocol.txt
    // originally by Elektron SIDStation
@@ -143,6 +148,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    
    if(data[0] != 0xf0 || data[1] != 0x2d || data[size-1] != 0xf7)
    {
+      Printf_dbg_SysExInfo;
       Printf_dbg("-->Invalid ASID/SysEx format\n");
       return;
    }
@@ -188,11 +194,13 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          }
          if(12+NumRegs > size)
          {
+            Printf_dbg_SysExInfo;
             Printf_dbg("-->More regs flagged than data available\n");    
          }
          SetASIDIRQ();
          break;
       default:
+         Printf_dbg_SysExInfo;
          Printf_dbg("-->Unexpected ASID msg type: $%02x\n", data[2]);
    }
 }
