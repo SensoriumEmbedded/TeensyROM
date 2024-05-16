@@ -6,9 +6,9 @@
    !src "..\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
 ;enum ASIDregsMatching  //synch with ASIDPlayer.asm
-   ASIDAddrReg        = 0x02;   // Data type and SID Address Register (Read only)
-   ASIDDataReg        = 0x04;   // ASID data, increment queue Tail (Read only)
-   ASIDContReg        = 0x08;   // Control Reg (Write only)
+   ASIDAddrReg        = 0xc2;   // Data type and SID Address Register (Read only)
+   ASIDDataReg        = 0xc4;   // ASID data, increment queue Tail (Read only)
+   ASIDContReg        = 0xc8;   // Control Reg (Write only)
                             
    ASIDContIRQOn      = 0x01;   //enable ASID IRQ
    ASIDContExit       = 0x02;   //Disable IRQ, Send TR to main menu
@@ -26,8 +26,8 @@
    ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
 ;end enum synch
 
+   SpinIndSID1Write   = C64ScreenRAM+40*2+4 ;spin indicator: SID1 write
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
-   SpinIndSID1Write   = C64ScreenRAM+40*2+6 ;spin indicator: SID1 write
    SIDRegColorStart   = C64ColorRAM +40*2+7
    
    RegFirstColor  = PokeWhite; PokeLtRed ;PokeOrange ;PokeLtBlue ;PokeWhite
@@ -55,7 +55,7 @@ ASIDInit:
    lda #<MsgASIDPlayerMenu
    ldy #>MsgASIDPlayerMenu
    jsr PrintString 
-   
+ 
    jsr SIDinit
 
 ;set up ASID interrupt:
@@ -77,6 +77,7 @@ ASIDInit:
    lda #ASIDContIRQOn  ;enable the interrupt from TR
    sta ASIDContReg+IO1Port
 
+   jmp ShowKeyboardCommands
    
 ASIDMainLoop: 
   
@@ -160,17 +161,63 @@ SetScreen
    jsr SIDVoicesOff
    jmp ASIDMainLoop
 
-+  cmp #'?'  ;Help/refresh
++  cmp #'r'  ;Refresh/Clear Screen
    bne +  
    lda #<MsgASIDPlayerMenu
    ldy #>MsgASIDPlayerMenu
    jsr PrintString 
+   lda #0
+   sta smcScreenFull+1 
+   jmp ASIDMainLoop
+
++  cmp #'?'  ;Show Keyboard Commands
+   bne +  
+ShowKeyboardCommands:
+   jsr ClearLowerScreen
+   jsr SetCursorPosCol
+   lda #<MsgASIDPlayerCommands
+   ldy #>MsgASIDPlayerCommands
+   jsr PrintString 
+   jsr SetCursorPosCol
+   jmp ASIDMainLoop
+
++  cmp #'i'  ;Show Indicator Decoder
+   bne +  
+   jsr ClearLowerScreen
+   jsr SetCursorPosCol
+   lda #<MsgASIDPlayerDecoder
+   ldy #>MsgASIDPlayerDecoder
+   jsr PrintString 
+   jsr SetCursorPosCol
    jmp ASIDMainLoop
 
 
 +  jmp ASIDMainLoop
 
-
+ClearLowerScreen:
+   ;uses X and Acc 
+   lda #ChrSpace
+   ldx #$00
+-  sta C64ScreenRAM+40*6     ,x  ; 240 first block
+   sta C64ScreenRAM+40*6 +256,x  ; 496 second block
+                                 ; 752 8 byte overlap
+   sta C64ScreenRAM+40*25-256,x  ; 744 last block
+   dex
+   bne -
+   stx smcScreenFull+1 ;clear screen full flag
+   rts
+   
+SetCursorPosCol:
+   ;set cursor posision & default color
+   ldx #6 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor   
+   lda #OptionColor
+   jsr SendChar
+   inc smcScreenFull+1 ;set screen full flag
+   rts
+   
 ASIDInterrupt: 
 
 ;read the addr/type and data:
@@ -211,8 +258,23 @@ ASIDInterrupt:
    
 +  cmp #ASIDAddrType_Char
    bne + 
-   tya
+smcScreenFull
+   ldx #$01 ;non-zero means screen is full
+   beq ++
+   jsr ClearLowerScreen ;leaves y reg in tact
+++ tya
    jsr SendChar
+   
+   ;check cursor posision on return char
+   cmp #ChrReturn
+   bne ASIDIntFinished
+   
+   sec
+   jsr SetCursor ;read current to load x (row)
+   cpx #23
+   bmi ASIDIntFinished ;skip if row is <23
+   inc smcScreenFull+1 ;set screen full flag
+   jsr SetCursorPosCol
    jmp ASIDIntFinished
 
    ;unexpected type or skip received

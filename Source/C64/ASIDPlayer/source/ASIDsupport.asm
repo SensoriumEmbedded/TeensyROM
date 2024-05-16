@@ -66,29 +66,45 @@ pr jsr SendChar
 
 MsgASIDPlayerMenu:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
-   !tx ChrReturn, ChrYellow, " SID1", ChrRed, " ", ChrDrkGrey, " ", ChrBlack, "*************************", "XXXXXXX", ChrReturn
-   !tx ChrDrkGrey, "     EA", ChrLtGreen, "FcPwTAS", ChrRvsOn, "FcPwTAS", ChrRvsOff, "FcPwTAS", ChrRvsOn, "CtRV" ;, "5678901"
-   !tx ChrReturn, ChrDrkGrey, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd
-   !tx ChrReturn, ChrReturn, ChrLtGrey
+   !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", "XXXXXXX", ChrReturn
+   !tx ChrYellow, " 4321", ChrLtRed, "E ", ChrLtGreen, "FcPwTAS", ChrRvsOn, "FcPwTAS", ChrRvsOff, "FcPwTAS", ChrLtBlue, "CtRV" ;, "5678901"
+   !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  
+   !tx ChrReturn, ChrPurple, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
+   !tx                       $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
+   !tx OptionColor
+   !tx 0
+MsgASIDPlayerCommands:    
+   !tx ChrWhite
    !tx "Keyboard Commands:", ChrReturn
-   !tx "   V: Voices Off", ChrReturn
-   !tx "   S: Screen On/Off", ChrReturn
-   !tx "   X: Exit ASID Player", ChrReturn
-   !tx "   ?: This Help List", ChrReturn
-   !tx ChrReturn
-   !tx ChrMedGrey, "Spinners:", ChrReturn, ChrDrkGrey
-   !tx "   E: Error Read   A: SID Access", ChrReturn
-   !tx ChrMedGrey, "Voice Reg Controls:", ChrReturn, ChrDrkGrey
+   !tx ChrLtGrey
+   !tx "   v: Set Voice regs to Off", ChrReturn
+   !tx "   s: Screen toggle On/Off", ChrReturn
+   !tx "   i: Show Indicator Decoder", ChrReturn
+   !tx "   ?: Show this Commands List", ChrReturn
+   !tx "   r: Refresh/Clear Screen", ChrReturn
+   !tx "   x: Exit ASID Player", ChrReturn
+   !tx 0
+MsgASIDPlayerDecoder:    
+   !tx ChrLtGrey
+   !tx "Indicator Decoder:", ChrReturn
+   !tx ChrMedGrey, " Spinners:", ChrReturn, ChrYellow
+   !tx "   4: SID#4 Access", ChrReturn
+   !tx "   3: SID#3 Access", ChrReturn
+   !tx "   2: SID#2 Access", ChrReturn
+   !tx "   1: SID#1 Access", ChrReturn, ChrLtRed
+   !tx "   E: Error Detected", ChrReturn
+   !tx ChrMedGrey, " Voice Reg Access: (x3)", ChrReturn
+   !tx ChrLtGreen
    !tx "  Fc: Frequency Lo/Hi", ChrReturn
    !tx "  Pw: Pulse Width Lo/Hi", ChrReturn
    !tx "   T: Wave Type", ChrReturn
    !tx "   A: Attack/Decay", ChrReturn
    !tx "   S: Sustain/Release", ChrReturn
-   !tx ChrMedGrey, "Filter Regs:", ChrReturn, ChrDrkGrey
+   !tx ChrMedGrey, " Filter Reg Access:", ChrReturn
+   !tx ChrLtBlue
    !tx "  Ct: Cutoff Frequency Lo/Hi", ChrReturn
    !tx "   R: Resonance", ChrReturn
-   !tx "   V: Volume & Select";, ChrReturn
-   ;!tx ChrReturn, OptionColor
+   !tx "   V: Volume & Select", ChrReturn
    !tx 0
    
 MsgASIDStart:    

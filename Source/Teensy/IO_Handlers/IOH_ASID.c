@@ -38,9 +38,9 @@ stcIOHandlers IOHndlr_ASID =
 
 enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
-   ASIDAddrReg        = 0x02,   // Data type and SID Address Register (Read only)
-   ASIDDataReg        = 0x04,   // ASID data, increment queue Tail (Read only)
-   ASIDContReg        = 0x08,   // Control Reg (Write only)
+   ASIDAddrReg        = 0xc2,   // Data type and SID Address Register (Read only)
+   ASIDDataReg        = 0xc4,   // ASID data, increment queue Tail (Read only)
+   ASIDContReg        = 0xc8,   // Control Reg (Write only)
 
    ASIDContIRQOn      = 0x01,   //enable ASID IRQ
    ASIDContExit       = 0x02,   //Disable IRQ, Send TR to main menu
@@ -120,7 +120,7 @@ void SetASIDIRQ()
    }
    else
    {
-      Printf_dbg("ASID IRQ is off\n");
+      Printf_dbg("ASID IRQ not enabled\n");
       RxQueueHead = RxQueueTail = 0;
    }
 
@@ -253,8 +253,8 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             }
             if(ASIDRxQueueUsed == 0) SetIRQDeassert;  //remove IRQ if queue empty        
             break;
-         default:
-            DataPortWriteWaitLog(0); //read 0s from all other regs in IO1
+         //default:
+         //   DataPortWriteWaitLog(0); //leave other locations available for potential SID in IO1
       }
    }
    else  // IO1 write    -------------------------------------------------
