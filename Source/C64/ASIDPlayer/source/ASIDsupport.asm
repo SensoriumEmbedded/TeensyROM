@@ -63,8 +63,29 @@ l  clc
 pr jsr SendChar
    rts
 
-UpdateSID23Address:
-   ;set address' for SID 2 & 3 writes from table
+PrintSIDaddress:   
+   ;setup acc with high byte address and X reg with low byte
+   cmp #>memNoSID ;same page as no sid, print NONE
+   bne +
+   lda #<MsgNone
+   ldy #>MsgNone
+   jsr PrintString 
+   rts
++  jsr PrintHexByte
+   txa
+   jsr PrintHexByte
+   rts
+   
+UpdateAllSIDAddress:
+   ;set address' for all 3 SIDs from table
+   lda memSID1addrNum
+   asl ;to word offset
+   tax
+   lda memSIDaddrList,x
+   sta smcSID1address+1
+   lda memSIDaddrList+1,x
+   sta smcSID1address+2
+   
    lda memSID2addrNum
    asl ;to word offset
    tax
@@ -83,17 +104,20 @@ UpdateSID23Address:
    rts
 
 
+memSID1addrNum:
+   !byte 0
 memSID2addrNum:
-   !byte 2
-memSID3addrNum:
    !byte 1
-memNumSIDaddresses:
-   !byte 4 ;update to match list below!
+memSID3addrNum:
+   !byte 4
 memSIDaddrList:
-   !word $d420 ;addr 0
-   !word $d440 ;addr 1
-   !word $df00 ;addr 2
-   !word memNoSID ;garbage location for "none" writes
+   !word $d400    ;Num 0
+   !word $d420    ;Num 1
+   !word $d440    ;Num 2
+   !word $df00    ;Num 3
+   !word memNoSID ;Num 4 garbage location for "none" writes
+memNumSIDaddresses:
+   !byte 5 ;update to match list above!
 
 
 MsgASIDPlayerMenu:    
@@ -116,11 +140,21 @@ MsgASIDPlayerCommands1:
    !tx "   ?: This Help List", ChrReturn
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
-   !tx "   x: Exit", ChrReturn
-   !tx "   2: Second SID address ", ChrRvsOn, "$"
+   !tx "   x: Exit"
+   !tx ChrReturn, "   1: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    
+   !tx ChrReturn, "   2: Second SID address ", ChrRvsOn, "$"
+   !tx 0
+MsgASIDPlayerCommands3:    
    !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
+   !tx 0
+MsgASIDPlayerCommands4:    
+   !tx ChrReturn, ChrReturn, ChrDrkGrey, "Other information:"
+   !tx ChrReturn, " * During playback, command response"
+   !tx ChrReturn, "     may be slow and can glitch audio"
+   !tx ChrReturn, " * Recommend stopping playback"
+   !tx ChrReturn, "     when changing SID adresses"
    !tx 0
    
 MsgASIDPlayerDecoder:    

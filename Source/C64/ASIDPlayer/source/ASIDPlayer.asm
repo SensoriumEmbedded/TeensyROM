@@ -60,7 +60,7 @@ ASIDInit:
    ldy #>MsgASIDPlayerMenu
    jsr PrintString 
  
-   jsr UpdateSID23Address
+   jsr UpdateAllSIDAddress
    jsr SIDinit
 
 ;set up ASID interrupt:
@@ -90,37 +90,33 @@ ShowKeyboardCommands: ;including SID2/3 address from smcSIDxaddress
    jsr PrintString 
    
    ;sid2 addr:
-   lda smcSID2address+2 ;high byte
-   cmp #>memNoSID ;same page as no sid, print NONE
-   bne ++
-   lda #<MsgNone
-   ldy #>MsgNone
-   jsr PrintString 
-   jmp +++
-++ jsr PrintHexByte
-   lda smcSID2address+1 ;low byte
-   jsr PrintHexByte
+   lda smcSID1address+2 ;high byte
+   ldx smcSID1address+1 ;low byte
+   jsr PrintSIDaddress
    
-+++lda #<MsgASIDPlayerCommands2
+   lda #<MsgASIDPlayerCommands2
    ldy #>MsgASIDPlayerCommands2
    jsr PrintString 
    
-   ;sid3 addr:
-   lda smcSID3address+2
-   cmp #>memNoSID ;same page as no sid, print NONE
-   bne ++
-   lda #<MsgNone
-   ldy #>MsgNone
-   jsr PrintString 
-   jmp +++
-++ jsr PrintHexByte
-   lda smcSID3address+1
-   jsr PrintHexByte
+   ;sid2 addr:
+   lda smcSID2address+2 ;high byte
+   ldx smcSID2address+1 ;low byte
+   jsr PrintSIDaddress
    
-+++lda #ChrRvsOff
-   jsr SendChar
+   lda #<MsgASIDPlayerCommands3
+   ldy #>MsgASIDPlayerCommands3
+   jsr PrintString 
+   
+   ;sid3 addr:
+   lda smcSID3address+2 ;high byte
+   ldx smcSID3address+1 ;low byte
+   jsr PrintSIDaddress
+   
+   lda #<MsgASIDPlayerCommands4
+   ldy #>MsgASIDPlayerCommands4
+   jsr PrintString 
    jsr SetCursorPosCol
-   ;continue to main loop
+   ;end of ShowKeyboardCommands, continue to main loop...
    
 ASIDMainLoop: 
   
@@ -227,6 +223,18 @@ SetScreen
    jsr SetCursorPosCol
    jmp ASIDMainLoop
 
++  cmp #'1'  ;1st SID address
+   bne + 
+   ;increment to next table entry, or wrap around
+   ldx memSID1addrNum
+   inx
+   cpx memNumSIDaddresses
+   bne ++
+   ldx #0
+++ stx memSID1addrNum
+   jsr UpdateAllSIDAddress
+   jmp ShowKeyboardCommands
+
 +  cmp #'2'  ;2nd SID address
    bne + 
    ;increment to next table entry, or wrap around
@@ -236,7 +244,7 @@ SetScreen
    bne ++
    ldx #0
 ++ stx memSID2addrNum
-   jsr UpdateSID23Address
+   jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
 +  cmp #'3'  ;3rd SID address
@@ -248,7 +256,7 @@ SetScreen
    bne ++
    ldx #0
 ++ stx memSID3addrNum
-   jsr UpdateSID23Address
+   jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
 +  jmp ASIDMainLoop
@@ -294,7 +302,8 @@ ASIDInterrupt:
    and #ASIDAddrAddr_Mask
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
-   sta SIDLoc,x
+smcSID1address
+   sta $faca,x
    lda #RegFirstColor ;set the indicator color
    sta SIDRegColorStart,x
    inc SpinIndSID1Write
@@ -307,7 +316,7 @@ ASIDInterrupt:
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
 smcSID2address
-   sta $faca,x
+   sta $facb,x
    ;lda #RegFirstColor ;set the indicator color
    ;sta SIDRegColorStart,x
    inc SpinIndSID2Write
@@ -320,7 +329,7 @@ smcSID2address
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
 smcSID3address
-   sta $facb,x
+   sta $facc,x
    ;lda #RegFirstColor ;set the indicator color
    ;sta SIDRegColorStart,x
    inc SpinIndSID3Write
