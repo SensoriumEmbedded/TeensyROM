@@ -20,14 +20,18 @@
    ASIDAddrType_SID1  = 0x80;   // Lower 5 bits are SID1 reg address
    ASIDAddrType_SID2  = 0xa0;   // Lower 5 bits are SID2 reg address 
    ASIDAddrType_SID3  = 0xc0;   // Lower 5 bits are SID3 reg address
-   ASIDAddrType_SID4  = 0xe0;   // Lower 5 bits are SID4 reg address
+   ASIDAddrType_Error = 0xe0;   // Error from parser
                             
    ASIDAddrType_Mask  = 0xe0;   // Mask for Type
    ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
 ;end enum synch
 
+  ;SpinIndSID4Write   = C64ScreenRAM+40*2+1 ;spin indicator: SID1 write
+   SpinIndSID3Write   = C64ScreenRAM+40*2+2 ;spin indicator: SID1 write
+   SpinIndSID2Write   = C64ScreenRAM+40*2+3 ;spin indicator: SID1 write
    SpinIndSID1Write   = C64ScreenRAM+40*2+4 ;spin indicator: SID1 write
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
+   SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
    SIDRegColorStart   = C64ColorRAM +40*2+7
    
    RegFirstColor  = PokeWhite; PokeLtRed ;PokeOrange ;PokeLtBlue ;PokeWhite
@@ -208,7 +212,7 @@ ClearLowerScreen:
    rts
    
 SetCursorPosCol:
-   ;set cursor posision & default color
+   ;set cursor position & default color
    ldx #6 ;row
    ldy #0 ;col
    clc
@@ -218,8 +222,8 @@ SetCursorPosCol:
    inc smcScreenFull+1 ;set screen full flag
    rts
    
+   
 ASIDInterrupt: 
-
 ;read the addr/type and data:
    ldx ASIDAddrReg+IO1Port
    ldy ASIDDataReg+IO1Port
@@ -227,7 +231,7 @@ ASIDInterrupt:
 ;apply the addr/type and data:
    txa
    and #ASIDAddrType_Mask
-   
+   ;Acc holds msg type
    cmp #ASIDAddrType_SID1
    bne + 
    txa
@@ -239,6 +243,45 @@ ASIDInterrupt:
    sta SIDRegColorStart,x
    inc SpinIndSID1Write
    jmp ASIDIntFinished
+
++  cmp #ASIDAddrType_SID2
+   bne + 
+   txa
+   and #ASIDAddrAddr_Mask
+   tax ;x now holds SID offset address
+   tya ;acc now holds data to write
+smcSID2address
+   sta $d420,x
+   ;lda #RegFirstColor ;set the indicator color
+   ;sta SIDRegColorStart,x
+   inc SpinIndSID2Write
+   jmp ASIDIntFinished
+
++  cmp #ASIDAddrType_SID3
+   bne + 
+   txa
+   and #ASIDAddrAddr_Mask
+   tax ;x now holds SID offset address
+   tya ;acc now holds data to write
+smcSID3address
+   sta $d440,x
+   ;lda #RegFirstColor ;set the indicator color
+   ;sta SIDRegColorStart,x
+   inc SpinIndSID3Write
+   jmp ASIDIntFinished
+
+;+  cmp #ASIDAddrType_SID4
+;   bne + 
+;   txa
+;   and #ASIDAddrAddr_Mask
+;   tax ;x now holds SID offset address
+;   tya ;acc now holds data to write
+;smcSID4address
+;   sta $d460,x
+;   ;lda #RegFirstColor ;set the indicator color
+;   ;sta SIDRegColorStart,x
+;   inc SpinIndSID4Write
+;   jmp ASIDIntFinished
    
 +  cmp #ASIDAddrType_Start
    bne + 
@@ -256,25 +299,29 @@ ASIDInterrupt:
    jsr PrintString 
    jmp ASIDIntFinished
    
-+  cmp #ASIDAddrType_Char
++  cmp #ASIDAddrType_Char 
    bne + 
+   ;print a character after checking if screen is full.
 smcScreenFull
    ldx #$01 ;non-zero means screen is full
    beq ++
    jsr ClearLowerScreen ;leaves y reg in tact
 ++ tya
    jsr SendChar
-   
-   ;check cursor posision on return char
+   ;check cursor position if return char
    cmp #ChrReturn
    bne ASIDIntFinished
-   
    sec
    jsr SetCursor ;read current to load x (row)
    cpx #23
    bmi ASIDIntFinished ;skip if row is <23
-   inc smcScreenFull+1 ;set screen full flag
-   jsr SetCursorPosCol
+   inc smcScreenFull+1 ;otherwise set screen full flag
+   jsr SetCursorPosCol ; and set cursor position
+   jmp ASIDIntFinished
+
++  cmp #ASIDAddrType_Error 
+   bne + 
+   inc SpinIndPacketError
    jmp ASIDIntFinished
 
    ;unexpected type or skip received

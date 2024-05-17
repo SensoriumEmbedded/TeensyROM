@@ -52,7 +52,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDAddrType_SID1  = 0x80,   // Lower 5 bits are SID1 reg address
    ASIDAddrType_SID2  = 0xa0,   // Lower 5 bits are SID2 reg address 
    ASIDAddrType_SID3  = 0xc0,   // Lower 5 bits are SID3 reg address
-   ASIDAddrType_SID4  = 0xe0,   // Lower 5 bits are SID4 reg address
+   ASIDAddrType_Error = 0xe0,   // Error from parser
    
    ASIDAddrType_Mask  = 0xe0,   // Mask for Type
    ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
@@ -60,6 +60,12 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 
 #define ASIDQueueSize   (USB_MIDI_SYSEX_MAX & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
 #define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
+
+#ifdef DbgMsgs_IO  //Debug msgs mode
+   #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
+#else //Normal mode
+   #define Printf_dbg_SysExInfo {}
+#endif
 
 uint8_t ASIDidToReg[] = 
 {
@@ -123,14 +129,41 @@ void SetASIDIRQ()
       Printf_dbg("ASID IRQ not enabled\n");
       RxQueueHead = RxQueueTail = 0;
    }
-
 }
 
-#ifdef DbgMsgs_IO  //Debug msgs mode
-   #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
-#else //Normal mode
-   #define Printf_dbg_SysExInfo {}
-#endif
+void AddErrorToASIDRxQueue()
+{
+   AddToASIDRxQueue(ASIDAddrType_Error, 0);
+   SetASIDIRQ();
+}
+
+void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size) 
+{
+   unsigned int NumRegs = 0; //number of regs to write
+   
+   //Printf_dbg("SID$%02x reg data\n", SID_ID);
+   for(uint8_t maskNum = 0; maskNum < 4; maskNum++)
+   {
+      for(uint8_t bitNum = 0; bitNum < 7; bitNum++)
+      {
+         if(data[3+maskNum] & (1<<bitNum))
+         { //reg is to be written
+            uint8_t RegVal = data[11+NumRegs];
+            if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
+            AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal);
+            NumRegs++;
+            //Printf_dbg("#%d: reg $%02x = $%02x\n", NumRegs, ASIDidToReg[maskNum*7+bitNum], RegVal);
+         }
+      }
+   }
+   if(12+NumRegs > size)
+   {
+      AddErrorToASIDRxQueue();
+      Printf_dbg_SysExInfo;
+      Printf_dbg("-->More regs flagged than data available\n");    
+   }
+   SetASIDIRQ();   
+}
 
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
@@ -143,28 +176,27 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    
    // ASID decode based on:   http://paulus.kapsi.fi/asid_protocol.txt
    // originally by Elektron SIDStation
-   
-   unsigned int NumRegs = 0; //number of regs to write
-   
+      
    if(data[0] != 0xf0 || data[1] != 0x2d || data[size-1] != 0xf7)
    {
+      AddErrorToASIDRxQueue();
       Printf_dbg_SysExInfo;
       Printf_dbg("-->Invalid ASID/SysEx format\n");
       return;
    }
    switch(data[2])
    {
-      case 0x4c:
+      case 0x4c: //start playing message
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
          //Printf_dbg("Start playing\n");
          SetASIDIRQ();
          break;
-      case 0x4d:
+      case 0x4d: //stop playback message
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
          //Printf_dbg("Stop playback\n");
          SetASIDIRQ();
          break;
-      case 0x4f:
+      case 0x4f: //Display Characters
          //display characters
          //data[size-1] = 0; //replace 0xf7 with term
          //Printf_dbg("Display chars: \"%s\"\n", data+3);
@@ -175,31 +207,20 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          AddToASIDRxQueue(ASIDAddrType_Char, 13);
          SetASIDIRQ();
          break;
-      case 0x4e:
-         //SID1 reg data
-         //Printf_dbg("SID1 reg data\n");
-         for(uint8_t maskNum = 0; maskNum < 4; maskNum++)
-         {
-            for(uint8_t bitNum = 0; bitNum < 7; bitNum++)
-            {
-               if(data[3+maskNum] & (1<<bitNum))
-               { //reg is to be written
-                  uint8_t RegVal = data[11+NumRegs];
-                  if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
-                  AddToASIDRxQueue((ASIDAddrType_SID1 | ASIDidToReg[maskNum*7+bitNum]), RegVal);
-                  NumRegs++;
-                  //Printf_dbg("#%d: reg $%02x = $%02x\n", NumRegs, ASIDidToReg[maskNum*7+bitNum], RegVal);
-               }
-            }
-         }
-         if(12+NumRegs > size)
-         {
-            Printf_dbg_SysExInfo;
-            Printf_dbg("-->More regs flagged than data available\n");    
-         }
-         SetASIDIRQ();
+      case 0x4e:  //SID1 reg data (primary)
+         DecodeSendSIDRegData(ASIDAddrType_SID1, data, size);
          break;
+      case 0x50:  //SID2 reg data
+         DecodeSendSIDRegData(ASIDAddrType_SID2, data, size);
+         break;
+      case 0x51:  //SID3 reg data
+         DecodeSendSIDRegData(ASIDAddrType_SID3, data, size);
+         break;
+      //case 0x52:  //SID4 reg data.  ** Haven't seen this value used
+      //   DecodeSendSIDRegData(ASIDAddrType_SID4, data, size);
+      //   break;
       default:
+         AddErrorToASIDRxQueue();
          Printf_dbg_SysExInfo;
          Printf_dbg("-->Unexpected ASID msg type: $%02x\n", data[2]);
    }
@@ -254,7 +275,8 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             if(ASIDRxQueueUsed == 0) SetIRQDeassert;  //remove IRQ if queue empty        
             break;
          //default:
-         //   DataPortWriteWaitLog(0); //leave other locations available for potential SID in IO1
+            //leave other locations available for potential SID in IO1
+            //DataPortWriteWaitLog(0); 
       }
    }
    else  // IO1 write    -------------------------------------------------

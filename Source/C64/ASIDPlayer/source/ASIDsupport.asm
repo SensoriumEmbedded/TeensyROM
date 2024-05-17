@@ -67,7 +67,7 @@ pr jsr SendChar
 MsgASIDPlayerMenu:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
    !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", "XXXXXXX", ChrReturn
-   !tx ChrYellow, " 4321", ChrLtRed, "E ", ChrLtGreen, "FcPwTAS", ChrRvsOn, "FcPwTAS", ChrRvsOff, "FcPwTAS", ChrLtBlue, "CtRV" ;, "5678901"
+   !tx ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FcPwTAS", ChrRvsOn, "FcPwTAS", ChrRvsOff, "FcPwTAS", ChrLtBlue, "CtRV" ;, "5678901"
    !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  
    !tx ChrReturn, ChrPurple, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
    !tx                       $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
@@ -83,16 +83,19 @@ MsgASIDPlayerCommands:
    !tx "   ?: Show this Commands List", ChrReturn
    !tx "   r: Refresh/Clear Screen", ChrReturn
    !tx "   x: Exit ASID Player", ChrReturn
+   !tx "   2: Second SID address "
+   !tx "   3: Third SID address "
    !tx 0
 MsgASIDPlayerDecoder:    
    !tx ChrLtGrey
    !tx "Indicator Decoder:", ChrReturn
    !tx ChrMedGrey, " Spinners:", ChrReturn, ChrYellow
-   !tx "   4: SID#4 Access", ChrReturn
+   ;!tx "   4: SID#4 Access", ChrReturn
    !tx "   3: SID#3 Access", ChrReturn
    !tx "   2: SID#2 Access", ChrReturn
    !tx "   1: SID#1 Access", ChrReturn, ChrLtRed
-   !tx "   E: Error Detected", ChrReturn
+   !tx "   R: Read Error", ChrReturn
+   !tx "   P: Packet Error", ChrReturn
    !tx ChrMedGrey, " Voice Reg Access: (x3)", ChrReturn
    !tx ChrLtGreen
    !tx "  Fc: Frequency Lo/Hi", ChrReturn
