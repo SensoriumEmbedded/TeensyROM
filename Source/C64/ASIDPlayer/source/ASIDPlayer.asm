@@ -60,6 +60,7 @@ ASIDInit:
    ldy #>MsgASIDPlayerMenu
    jsr PrintString 
  
+   jsr UpdateSID23Address
    jsr SIDinit
 
 ;set up ASID interrupt:
@@ -81,7 +82,45 @@ ASIDInit:
    lda #ASIDContIRQOn  ;enable the interrupt from TR
    sta ASIDContReg+IO1Port
 
-   jmp ShowKeyboardCommands
+ShowKeyboardCommands: ;including SID2/3 address from smcSIDxaddress
+   jsr ClearLowerScreen
+   jsr SetCursorPosCol
+   lda #<MsgASIDPlayerCommands1
+   ldy #>MsgASIDPlayerCommands1
+   jsr PrintString 
+   
+   ;sid2 addr:
+   lda smcSID2address+2 ;high byte
+   cmp #>memNoSID ;same page as no sid, print NONE
+   bne ++
+   lda #<MsgNone
+   ldy #>MsgNone
+   jsr PrintString 
+   jmp +++
+++ jsr PrintHexByte
+   lda smcSID2address+1 ;low byte
+   jsr PrintHexByte
+   
++++lda #<MsgASIDPlayerCommands2
+   ldy #>MsgASIDPlayerCommands2
+   jsr PrintString 
+   
+   ;sid3 addr:
+   lda smcSID3address+2
+   cmp #>memNoSID ;same page as no sid, print NONE
+   bne ++
+   lda #<MsgNone
+   ldy #>MsgNone
+   jsr PrintString 
+   jmp +++
+++ jsr PrintHexByte
+   lda smcSID3address+1
+   jsr PrintHexByte
+   
++++lda #ChrRvsOff
+   jsr SendChar
+   jsr SetCursorPosCol
+   ;continue to main loop
    
 ASIDMainLoop: 
   
@@ -165,7 +204,7 @@ SetScreen
    jsr SIDVoicesOff
    jmp ASIDMainLoop
 
-+  cmp #'r'  ;Refresh/Clear Screen
++  cmp #'c'  ;Refresh/Clear Screen
    bne +  
    lda #<MsgASIDPlayerMenu
    ldy #>MsgASIDPlayerMenu
@@ -175,17 +214,10 @@ SetScreen
    jmp ASIDMainLoop
 
 +  cmp #'?'  ;Show Keyboard Commands
-   bne +  
-ShowKeyboardCommands:
-   jsr ClearLowerScreen
-   jsr SetCursorPosCol
-   lda #<MsgASIDPlayerCommands
-   ldy #>MsgASIDPlayerCommands
-   jsr PrintString 
-   jsr SetCursorPosCol
-   jmp ASIDMainLoop
+   bne + 
+   jmp ShowKeyboardCommands   
 
-+  cmp #'i'  ;Show Indicator Decoder
++  cmp #'d'  ;Show Register Decoder
    bne +  
    jsr ClearLowerScreen
    jsr SetCursorPosCol
@@ -195,6 +227,29 @@ ShowKeyboardCommands:
    jsr SetCursorPosCol
    jmp ASIDMainLoop
 
++  cmp #'2'  ;2nd SID address
+   bne + 
+   ;increment to next table entry, or wrap around
+   ldx memSID2addrNum
+   inx
+   cpx memNumSIDaddresses
+   bne ++
+   ldx #0
+++ stx memSID2addrNum
+   jsr UpdateSID23Address
+   jmp ShowKeyboardCommands
+
++  cmp #'3'  ;3rd SID address
+   bne + 
+   ;increment to next table entry, or wrap around
+   ldx memSID3addrNum
+   inx
+   cpx memNumSIDaddresses
+   bne ++
+   ldx #0
+++ stx memSID3addrNum
+   jsr UpdateSID23Address
+   jmp ShowKeyboardCommands
 
 +  jmp ASIDMainLoop
 
@@ -223,6 +278,7 @@ SetCursorPosCol:
    rts
    
    
+!align $ff, 0 , 0  ;page align interrupt to reduce some branch times.
 ASIDInterrupt: 
 ;read the addr/type and data:
    ldx ASIDAddrReg+IO1Port
@@ -251,7 +307,7 @@ ASIDInterrupt:
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
 smcSID2address
-   sta $d420,x
+   sta $faca,x
    ;lda #RegFirstColor ;set the indicator color
    ;sta SIDRegColorStart,x
    inc SpinIndSID2Write
@@ -264,7 +320,7 @@ smcSID2address
    tax ;x now holds SID offset address
    tya ;acc now holds data to write
 smcSID3address
-   sta $d440,x
+   sta $facb,x
    ;lda #RegFirstColor ;set the indicator color
    ;sta SIDRegColorStart,x
    inc SpinIndSID3Write
@@ -334,6 +390,9 @@ ASIDIntFinished:
    !src "source\ASIDsupport.asm"
 
 
+!align 32, 0 , 0  ;32 byte align to inxex within page.
+memNoSID:
+;set "none" sid 2/3 writes to here, don't add anything after this!
 
 
 
