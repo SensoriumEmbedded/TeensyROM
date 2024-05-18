@@ -43,7 +43,8 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDContReg        = 0xc8,   // Control Reg (Write only)
 
    ASIDContIRQOn      = 0x01,   //enable ASID IRQ
-   ASIDContExit       = 0x02,   //Disable IRQ, Send TR to main menu
+   ASIDContIRQOff     = 0x02,   //disable ASID IRQ
+   ASIDContExit       = 0x03,   //Disable IRQ, Send TR to main menu
    
    ASIDAddrType_Skip  = 0x00,   // No data/skip
    ASIDAddrType_Char  = 0x20,   // Character data
@@ -290,6 +291,11 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                MIDIRxIRQEnabled = true;
                RxQueueHead = RxQueueTail = 0;
                Printf_dbg("ASIDContIRQOn\n");
+               break;
+            case ASIDContIRQOff:
+               MIDIRxIRQEnabled = false;
+               RxQueueHead = RxQueueTail = 0;
+               Printf_dbg("ASIDContIRQOff\n");
                break;
             case ASIDContExit:
                MIDIRxIRQEnabled = false;

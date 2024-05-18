@@ -1,18 +1,33 @@
 
 ;subroutines, tables, and strings
 
-SIDVoicesOff:
-   lda #0x00 ; turn 3 voices off
-   sta SIDLoc+$04 ; SIDVoicCont1
-   sta SIDLoc+$0b ; SIDVoicCont2
-   sta SIDLoc+$12 ; SIDVoicCont3 
-   rts
+;SIDVoicesOff:
+;   lda #0x00 ; turn 3 voices off
+;   sta SIDLoc+$04 ; SIDVoicCont1
+;   sta SIDLoc+$0b ; SIDVoicCont2
+;   sta SIDLoc+$12 ; SIDVoicCont3 
+;   rts
 
 SIDinit:
-   jsr SIDVoicesOff ;voices off first to prevent pops
-   ;clear SID regs
+   ;jsr SIDVoicesOff ;voices off first to prevent pops?
+   ;clear all SID regs
+   lda smcSID1address+1
+   ldx smcSID1address+2
+   jsr OneSIDinit
+   lda smcSID2address+1
+   ldx smcSID2address+2
+   jsr OneSIDinit
+   lda smcSID3address+1
+   ldx smcSID3address+2
+   jsr OneSIDinit
+   rts
+   
+OneSIDinit:   
+   sta smcNextSIDLoc+1
+   stx smcNextSIDLoc+2
    lda #0
    tax
+smcNextSIDLoc
 -  sta SIDLoc, x
    inx
    cpx #$19
@@ -122,7 +137,7 @@ memNumSIDaddresses:
 
 MsgASIDPlayerMenu:    
    !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
-   !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", "XXXXXXX", ChrReturn
+   !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", ChrRvsOn, "XXXMute", ChrReturn
    !tx ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV" ;, "5678901"
    !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  
    !tx ChrMedGrey, "     ?-Help"
@@ -136,7 +151,8 @@ MsgASIDPlayerCommands1:
    !tx "Keyboard Commands:", ChrReturn
    !tx ChrLtGrey
    !tx "   v: Clear Voices", ChrReturn
-   !tx "   s: Toggle Screen", ChrReturn
+   !tx "   s: Screen Toggle", ChrReturn
+   !tx "   m: Mute Toggle", ChrReturn
    !tx "   ?: This Help List", ChrReturn
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
@@ -150,11 +166,12 @@ MsgASIDPlayerCommands3:
    !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
-   !tx ChrReturn, ChrReturn, ChrDrkGrey, "Other information:"
-   !tx ChrReturn, " * During playback, command response"
-   !tx ChrReturn, "     may be slow and can glitch audio"
-   !tx ChrReturn, " * Recommend stopping playback"
-   !tx ChrReturn, "     when changing SID adresses"
+   !tx ChrReturn, ChrDrkGrey
+   ;!tx ChrReturn, "Other information:"
+   ;!tx ChrReturn, " * During playback, command response"
+   ;!tx ChrReturn, "     may be slow"
+   !tx ChrReturn, "  Recommend muting playback"
+   !tx ChrReturn, "    when changing SID adresses"
    !tx 0
    
 MsgASIDPlayerDecoder:    

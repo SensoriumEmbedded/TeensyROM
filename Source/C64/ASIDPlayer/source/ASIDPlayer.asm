@@ -11,7 +11,8 @@
    ASIDContReg        = 0xc8;   // Control Reg (Write only)
                             
    ASIDContIRQOn      = 0x01;   //enable ASID IRQ
-   ASIDContExit       = 0x02;   //Disable IRQ, Send TR to main menu
+   ASIDContIRQOff     = 0x02;   //disable ASID IRQ
+   ASIDContExit       = 0x03;   //Disable IRQ, Send TR to main menu
                              
    ASIDAddrType_Skip  = 0x00;   // No data/skip
    ASIDAddrType_Char  = 0x20;   // Character data
@@ -33,9 +34,10 @@
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
    SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
    SIDRegColorStart   = C64ColorRAM +40*2+7
+   MuteColorStart     = C64ColorRAM +40*2+34 ;start of "Mute" diaply
    
-   RegFirstColor  = PokeWhite; PokeLtRed ;PokeOrange ;PokeLtBlue ;PokeWhite
-   RegSecondColor = PokeDrkGrey; PokeRed ;PokeBrown ;PokeBlue ;PokeDrkGrey ; PokeLtGrey, PokeMedGrey, PokeDrkGrey
+   RegFirstColor  = PokeWhite
+   RegSecondColor = PokeDrkGrey
                     ;then to black/off
    
 	BasicStart = $0801
@@ -197,7 +199,31 @@ SetScreen
 
 +  cmp #'v'  ;voices off
    bne +  
-   jsr SIDVoicesOff
+   jsr SIDinit
+   jmp ASIDMainLoop
+
++  cmp #'m'  ;mute toggle
+   bne +  
+smcPausePlay
+   lda #0   ;0=currently streaming/not muted, 1=muted
+   beq ++
+   ;stream is off, unmute:
+   dec smcPausePlay+1
+   lda #ASIDContIRQOn  ;enable the interrupt from TR
+   sta ASIDContReg+IO1Port
+   lda #PokeBlack
+   jmp MuteColor
+   ;stream is on, mute it and kill voices:
+++ inc smcPausePlay+1
+   lda #ASIDContIRQOff  ;disable the interrupt from TR
+   sta ASIDContReg+IO1Port
+   jsr SIDinit
+   lda #PokeRed
+MuteColor
+   ldx #4
+-  sta MuteColorStart,x
+   dex
+   bne -
    jmp ASIDMainLoop
 
 +  cmp #'c'  ;Refresh/Clear Screen
