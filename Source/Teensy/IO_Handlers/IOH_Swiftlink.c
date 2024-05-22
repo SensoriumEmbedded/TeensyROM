@@ -51,7 +51,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
 #define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly. chars missed in large buffs when lower
-#define NMITimeoutnS       300    //if Rx data not read within this time, deassert NMI anyway
+#define NMITimeoutuS       300    //if Rx data not read within this time, deassert NMI anyway
 #define Drive_USB          1
 #define Drive_SD           2
 
