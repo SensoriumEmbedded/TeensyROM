@@ -322,7 +322,8 @@ ASIDInterrupt:
    txa
    and #ASIDAddrType_Mask
    ;Acc holds msg type
-   cmp #ASIDAddrType_SID1
+   
+   cmp #ASIDAddrType_SID1 ;SID1 Register write
    bne + 
    txa
    and #ASIDAddrAddr_Mask
@@ -335,7 +336,7 @@ smcSID1address
    inc SpinIndSID1Write
    jmp ASIDIntFinished
 
-+  cmp #ASIDAddrType_SID2
++  cmp #ASIDAddrType_SID2 ;SID2 Register write
    bne + 
    txa
    and #ASIDAddrAddr_Mask
@@ -348,7 +349,7 @@ smcSID2address
    inc SpinIndSID2Write
    jmp ASIDIntFinished
 
-+  cmp #ASIDAddrType_SID3
++  cmp #ASIDAddrType_SID3 ;SID3 Register write
    bne + 
    txa
    and #ASIDAddrAddr_Mask
@@ -360,21 +361,8 @@ smcSID3address
    ;sta SIDRegColorStart,x
    inc SpinIndSID3Write
    jmp ASIDIntFinished
-
-;+  cmp #ASIDAddrType_SID4
-;   bne + 
-;   txa
-;   and #ASIDAddrAddr_Mask
-;   tax ;x now holds SID offset address
-;   tya ;acc now holds data to write
-;smcSID4address
-;   sta $d460,x
-;   ;lda #RegFirstColor ;set the indicator color
-;   ;sta SIDRegColorStart,x
-;   inc SpinIndSID4Write
-;   jmp ASIDIntFinished
    
-+  cmp #ASIDAddrType_Start
++  cmp #ASIDAddrType_Start ;Start Message
    bne + 
    jsr SIDinit
    lda #<MsgASIDStart
@@ -382,7 +370,7 @@ smcSID3address
    jsr PrintString 
    jmp ASIDIntFinished
    
-+  cmp #ASIDAddrType_Stop
++  cmp #ASIDAddrType_Stop ;Stop Message
    bne + 
    jsr SIDinit
    lda #<MsgASIDStop
@@ -390,7 +378,7 @@ smcSID3address
    jsr PrintString 
    jmp ASIDIntFinished
    
-+  cmp #ASIDAddrType_Char 
++  cmp #ASIDAddrType_Char  ;Sending Character 
    bne + 
    ;print a character after checking if screen is full.
 smcScreenFull
@@ -405,12 +393,12 @@ smcScreenFull
    sec
    jsr SetCursor ;read current to load x (row)
    cpx #23
-   bmi ASIDIntFinished ;skip if row is <23
+   bmi ASIDIntFinished ;Finished ;skip if row is <23
    inc smcScreenFull+1 ;otherwise set screen full flag
    jsr SetCursorPosCol ; and set cursor position
    jmp ASIDIntFinished
 
-+  cmp #ASIDAddrType_Error 
++  cmp #ASIDAddrType_Error ; Packet error flagged by TR
    bne + 
    inc SpinIndPacketError
    jmp ASIDIntFinished
@@ -419,13 +407,14 @@ smcScreenFull
 +  inc SpinIndUnexpType
    
 ASIDIntFinished:
-   jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S IRQ HANDLER ROUTINE
+   ;jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S IRQ HANDLER ROUTINE
+   jmp $ea81  ;jump to the *end* of the interrupt (pull YXA from the stack and RTI)
 
 
    !src "source\ASIDsupport.asm"
 
 
-!align 32, 0 , 0  ;32 byte align to inxex within page.
+!align 32, 0 , 0  ;32 byte align to index within page.
 memNoSID:
 ;set "none" sid 2/3 writes to here, don't add anything after this!
 
