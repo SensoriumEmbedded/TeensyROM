@@ -118,7 +118,38 @@ UpdateAllSIDAddress:
    sta smcSID3address+2
    rts
 
+ClearASIDScreen:
+   lda #<MsgASIDPlayerMainDisplay
+   ldy #>MsgASIDPlayerMainDisplay
+   jsr PrintString 
+   lda #0
+   sta smcScreenFull+1  ;clear screen full flag
+   jsr SetMuteIndicator
+   rts
 
+SetMuteIndicator:
+   lda memPausePlay
+   beq ++
+   ;stream is muted:
+   lda #PokeRed
+   jmp MuteColor
+   ;stream is not muted:
+++ lda #PokeBlack
+MuteColor
+   ldx #4
+-  sta MuteColorStart,x
+   dex
+   bne -
+   rts
+
+
+memPausePlay
+   !byte 0   ;0=currently streaming/not muted, 1=muted
+memTextCircQueueHead:
+   !byte 0
+memTextCircQueueTail:
+   !byte 0
+   
 memSID1addrNum:
    !byte 0
 memSID2addrNum:
@@ -135,8 +166,8 @@ memNumSIDaddresses:
    !byte 5 ;update to match list above!
 
 
-MsgASIDPlayerMenu:    
-   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "         TeensyROM ASID Player          "
+MsgASIDPlayerMainDisplay:    
+   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "       TeensyROM ASID Player 1.0        "
    !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", ChrRvsOn, "XXXMute", ChrReturn
    !tx ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV" ;, "5678901"
    !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  

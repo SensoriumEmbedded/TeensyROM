@@ -27,9 +27,8 @@
    ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
 ;end enum synch
 
-  ;SpinIndSID4Write   = C64ScreenRAM+40*2+1 ;spin indicator: SID1 write
-   SpinIndSID3Write   = C64ScreenRAM+40*2+2 ;spin indicator: SID1 write
-   SpinIndSID2Write   = C64ScreenRAM+40*2+3 ;spin indicator: SID1 write
+   SpinIndSID3Write   = C64ScreenRAM+40*2+2 ;spin indicator: SID3 write
+   SpinIndSID2Write   = C64ScreenRAM+40*2+3 ;spin indicator: SID2 write
    SpinIndSID1Write   = C64ScreenRAM+40*2+4 ;spin indicator: SID1 write
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
    SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
@@ -39,6 +38,9 @@
    RegFirstColor  = PokeWhite
    RegSecondColor = PokeDrkGrey
                     ;then to black/off
+   
+   StartMsgToken  = 1  ;In character queue, indicates start message
+   StopMsgToken   = 2  ;In character queue, indicates stop message
    
 	BasicStart = $0801
    code       = $080D ;2061
@@ -58,9 +60,6 @@ ASIDInit:
    sta BorderColorReg
    lda #BackgndColor
    sta BackgndColorReg
-   lda #<MsgASIDPlayerMenu
-   ldy #>MsgASIDPlayerMenu
-   jsr PrintString 
  
    jsr UpdateAllSIDAddress
    jsr SIDinit
@@ -84,49 +83,83 @@ ASIDInit:
    lda #ASIDContIRQOn  ;enable the interrupt from TR
    sta ASIDContReg+IO1Port
 
-ShowKeyboardCommands: ;including SID2/3 address from smcSIDxaddress
-   jsr ClearLowerScreen
-   jsr SetCursorPosCol
+ShowKeyboardCommands: ;including SID addresses
+   jsr ClearASIDScreen
    lda #<MsgASIDPlayerCommands1
    ldy #>MsgASIDPlayerCommands1
    jsr PrintString 
-   
    ;sid2 addr:
    lda smcSID1address+2 ;high byte
    ldx smcSID1address+1 ;low byte
    jsr PrintSIDaddress
-   
    lda #<MsgASIDPlayerCommands2
    ldy #>MsgASIDPlayerCommands2
    jsr PrintString 
-   
    ;sid2 addr:
    lda smcSID2address+2 ;high byte
    ldx smcSID2address+1 ;low byte
    jsr PrintSIDaddress
-   
    lda #<MsgASIDPlayerCommands3
    ldy #>MsgASIDPlayerCommands3
    jsr PrintString 
-   
    ;sid3 addr:
    lda smcSID3address+2 ;high byte
    ldx smcSID3address+1 ;low byte
    jsr PrintSIDaddress
-   
    lda #<MsgASIDPlayerCommands4
    ldy #>MsgASIDPlayerCommands4
    jsr PrintString 
-   jsr SetCursorPosCol
+   inc smcScreenFull+1 ;set screen full flag
    ;end of ShowKeyboardCommands, continue to main loop...
    
 ASIDMainLoop: 
-  
+ 
+;check queue for characters to send
+   ldy memTextCircQueueTail 
+   cpy memTextCircQueueHead
+   beq RegIndicatorUpdate  ;skip if head==tail
+   ;check screen full flag.
+smcScreenFull
+   ldx #$01 ;non-zero means screen is full
+   beq +  
+   jsr ClearASIDScreen
+   ldy memTextCircQueueTail ;reload tail into Y
+   ;print next character from queueu
++  lda memTextCircQueue,y
+   inc memTextCircQueueTail ;increment tail
+
+   cmp StartMsgToken
+   bne +
+   lda #<MsgASIDStart
+   ldy #>MsgASIDStart
+   jsr PrintString 
+   jmp CheckForScreenFull
+ 
++  cmp StopMsgToken
+   bne +
+   lda #<MsgASIDStop
+   ldy #>MsgASIDStop
+   jsr PrintString 
+   jmp CheckForScreenFull
+
++  jsr SendChar
+   ;check cursor position if return char
+   cmp #ChrReturn
+   bne RegIndicatorUpdate
+CheckForScreenFull
+   sec
+   jsr SetCursor ;read current to load x (row)
+   cpx #23
+   bmi RegIndicatorUpdate ;Finished ;skip if row is <23
+   inc smcScreenFull+1 ;set screen full flag
+   
+ 
+RegIndicatorUpdate: 
 ;SID reg color update: 25 SID registers updated once per 10th/sec
    lda TODTenthSecBCD ;read 10ths releases latch
 smcLastUpd
    cmp #0
-   beq GetKeypress
+   beq GetKeypress ;skip if tenths hasn't changed
    sta smcLastUpd+1
    ;inc SpinIndUnexpType  ;temp to check update cycle
 
@@ -204,35 +237,25 @@ SetScreen
 
 +  cmp #'m'  ;mute toggle
    bne +  
-smcPausePlay
-   lda #0   ;0=currently streaming/not muted, 1=muted
+   lda memPausePlay
    beq ++
    ;stream is off, unmute:
-   dec smcPausePlay+1
+   dec memPausePlay
    lda #ASIDContIRQOn  ;enable the interrupt from TR
    sta ASIDContReg+IO1Port
-   lda #PokeBlack
-   jmp MuteColor
+   jsr SetMuteIndicator
+   jmp ASIDMainLoop
    ;stream is on, mute it and kill voices:
-++ inc smcPausePlay+1
+++ inc memPausePlay
    lda #ASIDContIRQOff  ;disable the interrupt from TR
    sta ASIDContReg+IO1Port
    jsr SIDinit
-   lda #PokeRed
-MuteColor
-   ldx #4
--  sta MuteColorStart,x
-   dex
-   bne -
+   jsr SetMuteIndicator
    jmp ASIDMainLoop
-
+   
 +  cmp #'c'  ;Refresh/Clear Screen
    bne +  
-   lda #<MsgASIDPlayerMenu
-   ldy #>MsgASIDPlayerMenu
-   jsr PrintString 
-   lda #0
-   sta smcScreenFull+1 
+   jsr ClearASIDScreen
    jmp ASIDMainLoop
 
 +  cmp #'?'  ;Show Keyboard Commands
@@ -241,12 +264,11 @@ MuteColor
 
 +  cmp #'d'  ;Show Register Decoder
    bne +  
-   jsr ClearLowerScreen
-   jsr SetCursorPosCol
+   jsr ClearASIDScreen
    lda #<MsgASIDPlayerDecoder
    ldy #>MsgASIDPlayerDecoder
    jsr PrintString 
-   jsr SetCursorPosCol
+   inc smcScreenFull+1 ;set screen full flag
    jmp ASIDMainLoop
 
 +  cmp #'1'  ;1st SID address
@@ -287,32 +309,13 @@ MuteColor
 
 +  jmp ASIDMainLoop
 
-ClearLowerScreen:
-   ;uses X and Acc 
-   lda #ChrSpace
-   ldx #$00
--  sta C64ScreenRAM+40*6     ,x  ; 240 first block
-   sta C64ScreenRAM+40*6 +256,x  ; 496 second block
-                                 ; 752 8 byte overlap
-   sta C64ScreenRAM+40*25-256,x  ; 744 last block
-   dex
-   bne -
-   stx smcScreenFull+1 ;clear screen full flag
-   rts
+
    
-SetCursorPosCol:
-   ;set cursor position & default color
-   ldx #6 ;row
-   ldy #0 ;col
-   clc
-   jsr SetCursor   
-   lda #OptionColor
-   jsr SendChar
-   inc smcScreenFull+1 ;set screen full flag
-   rts
-   
-   
-!align $ff, 0 , 0  ;page align interrupt to reduce some branch times.
+   !align $ff, 0 , 0  ;page align Text queue and interrupt to reduce index/branch times.
+
+memTextCircQueue:
+   !fill 256, $00	; reserve 256 bytes for circular text queue
+
 ASIDInterrupt: 
 ;read the addr/type and data:
    ldx ASIDAddrReg+IO1Port
@@ -365,37 +368,22 @@ smcSID3address
 +  cmp #ASIDAddrType_Start ;Start Message
    bne + 
    jsr SIDinit
-   lda #<MsgASIDStart
-   ldy #>MsgASIDStart
-   jsr PrintString 
-   jmp ASIDIntFinished
+   lda StartMsgToken
+   jmp AddAccToCharQueue
    
 +  cmp #ASIDAddrType_Stop ;Stop Message
    bne + 
    jsr SIDinit
-   lda #<MsgASIDStop
-   ldy #>MsgASIDStop
-   jsr PrintString 
-   jmp ASIDIntFinished
+   lda StopMsgToken
+   jmp AddAccToCharQueue
    
-+  cmp #ASIDAddrType_Char  ;Sending Character 
++  cmp #ASIDAddrType_Char  ;Sending Character, add to queue
    bne + 
-   ;print a character after checking if screen is full.
-smcScreenFull
-   ldx #$01 ;non-zero means screen is full
-   beq ++
-   jsr ClearLowerScreen ;leaves y reg in tact
-++ tya
-   jsr SendChar
-   ;check cursor position if return char
-   cmp #ChrReturn
-   bne ASIDIntFinished
-   sec
-   jsr SetCursor ;read current to load x (row)
-   cpx #23
-   bmi ASIDIntFinished ;Finished ;skip if row is <23
-   inc smcScreenFull+1 ;otherwise set screen full flag
-   jsr SetCursorPosCol ; and set cursor position
+   tya
+AddAccToCharQueue
+   ldx memTextCircQueueHead
+   sta memTextCircQueue,x
+   inc memTextCircQueueHead ;increment head
    jmp ASIDIntFinished
 
 +  cmp #ASIDAddrType_Error ; Packet error flagged by TR
@@ -414,9 +402,9 @@ ASIDIntFinished:
    !src "source\ASIDsupport.asm"
 
 
-!align 32, 0 , 0  ;32 byte align to index within page.
-memNoSID:
-;set "none" sid 2/3 writes to here, don't add anything after this!
+   !align $1f, 0 , 0  ;32 byte align to index within page.
+memNoSID: ;set "none" sid writes to here, don't add anything after this!
+   !fill $20, $00	; reserve 32 bytes for "none" sid
 
 
 
