@@ -103,13 +103,16 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
          FileSect  = myFile.read(); //0x04
          myFile.read(FileName, DxxFNB_NameLength); //0x05-0x14, padded with $a0 (space)
 
+         Printf_dbg("  SecOffset $%02x:  NTrack:%02d NSect:%02d Type:$%02x FTrack:%02d FSect:%02d\n", 
+            SecOffset, NextTrack, NextSect, FileType, FileTrack, FileSect);             
+
          if(SecOffset == 0)
          {
             Track = NextTrack; //will be 0 if reading last sector
             Sector = NextSect;
          }
          
-         if (FileTrack)
+         if (FileName[0]) //check for end of dir, no entry
          {  //valid dir entry
             DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(DxxFNB_Bytes); // 16 char max + term + ftrack + fsec + DiskType
             
@@ -129,13 +132,12 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
             else DriveDirMenu[NumDrvDirMenuItems].ItemType = rtUnknown;
             //Display DEL, SEQ, USR, and REL as text files?
 
-            Printf_dbg("  SecOffset $%02x:  NTrack:%02d NSect:%02d Type:$%02x FTrack:%02d FSect:%02d Name:%s\n", 
-               SecOffset, NextTrack, NextSect, FileType, FileTrack, FileSect, DriveDirMenu[NumDrvDirMenuItems].Name);             
+            Printf_dbg("   Name:%s\n", DriveDirMenu[NumDrvDirMenuItems].Name);             
             SecOffset +=0x20;  //uint8_t rolls over to 0x00 at end of 256 byte sector
             NumDrvDirMenuItems++;
          }
          else
-         { // FileTrack == 0 is end of dir, Track should also be 0 at this point
+         { // end of dir, Track should also be 0 at this point
             SecOffset = 0; 
          }    
          
@@ -187,5 +189,12 @@ FLASHMEM bool LoadDxxFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    SendMsgPrintfln("Done");
    myFile.close();
    Printf_dbg("Size:$%04x\n", MyMenuItem->Size); 
+   
+   //file writeback for debug purposes
+   //Serial.printf("Writing file to SD/test.prg\n");
+   //File writebackFile = SD.open("/test.prg", FILE_WRITE);
+   //writebackFile.write(RAM_Image, MyMenuItem->Size);
+   //writebackFile.close();
+   
    return true;   
 }
