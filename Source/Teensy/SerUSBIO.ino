@@ -90,7 +90,51 @@ FLASHMEM void ServiceSerial()
          SetEEPDefaults();
          Serial.println("Applied upon reboot");
          break;
-
+         
+// *** The rest of these cases are used for debug/testing only  
+       
+   // a, b
+   #ifdef Dbg_SerASID
+      case 'a': //ASID Packet load
+      {
+         uint8_t VolReg = 0;
+         uint16_t RegsInPacket = 20, NumPackets = 1000;  // (ASIDQueueSize-2)/2;
+         uint32_t StartMicros, MaxMicros = 0, MinMicros = 100000;
+         for(uint32_t PacketNum = 0; PacketNum<NumPackets; PacketNum++)
+         {
+            for(uint8_t CmdNum=0; CmdNum<RegsInPacket; CmdNum++)
+            {
+               AddToASIDRxQueue(ASIDAddrType_SID1 | 0x18, VolReg); //toggle volume reg
+               VolReg ^= 0x0f;
+            }
+            StartMicros = micros();
+            SetASIDIRQ();
+            while(ASIDRxQueueUsed) if (micros() - StartMicros > 100000) break;
+            StartMicros = micros() - StartMicros;
+            if(StartMicros>MaxMicros) MaxMicros=StartMicros;
+            if(StartMicros<MinMicros) MinMicros=StartMicros;
+            Serial.printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
+            Serial.flush();
+            delay(10); //allow scope time to re-arm
+         }
+         Serial.printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
+      }
+         break;
+      case 'b': //Send text via ASID
+      {
+         char CharsToSend[] = "This is a long character test, it just  keeps going for 3 continuous lines of   text.  Just when you think it's done...\r";
+         AddToASIDRxQueue(ASIDAddrType_Start, 0);
+         for(uint8_t CharNum=0; CharNum<strlen(CharsToSend); CharNum++)
+         {
+            AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(CharsToSend[CharNum]));
+         }
+         AddToASIDRxQueue(ASIDAddrType_Stop, 0);
+         Serial.printf("Sent via ASID: Start, \"%s\", Stop\n", CharsToSend);  
+         Serial.flush();
+         SetASIDIRQ();
+      }
+   #endif
+   
    // l, c
    #ifdef Dbg_SerLog 
       case 'l':  //Show Debug Log

@@ -152,6 +152,9 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
             uint8_t RegVal = data[11+NumRegs];
             if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
             AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal);
+            #ifdef DbgMsgs_IO  //Debug msgs mode for secondary for reg or higher access
+               if(maskNum*7+bitNum>24) Serial.printf("High Reg: %d(->%d) = %d\n", maskNum*7+bitNum, ASIDidToReg[maskNum*7+bitNum], RegVal);
+            #endif  
             NumRegs++;
             //Printf_dbg("#%d: reg $%02x = $%02x\n", NumRegs, ASIDidToReg[maskNum*7+bitNum], RegVal);
          }
@@ -217,9 +220,6 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
       case 0x51:  //SID3 reg data
          DecodeSendSIDRegData(ASIDAddrType_SID3, data, size);
          break;
-      //case 0x52:  //SID4 reg data.  ** Haven't seen this value used
-      //   DecodeSendSIDRegData(ASIDAddrType_SID4, data, size);
-      //   break;
       default:
          AddErrorToASIDRxQueue();
          Printf_dbg_SysExInfo;

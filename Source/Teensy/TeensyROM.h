@@ -31,6 +31,7 @@ char strVersionNumber[] = "v0.5.14+ASID0.9"; //*VERSION*
 // #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
 // #define Dbg_SerLog    //Serial commands that display log info
 // #define Dbg_SerMem    //Serial commands that display memory info
+// #define Dbg_SerASID   //Serial commands that test the ASID player
 
 #define nfcScanner     //nfc scanner libs/code included in build
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
