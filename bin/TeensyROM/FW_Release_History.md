@@ -2,6 +2,32 @@
 # FW Release Version history:
 
 
+### 0.5.15 sub-release 5/24/24
+* New feature: Integrated high performance ASID Player
+  * TeensyROM specific implementation to accelerate data streaming and ASID packet decoding
+    * No dropouts or slowdowns due to decoding limitations
+  * Smoothly stream data from ChipSynthC64, DeepSID, or other ASID sources.
+  * Play streams with up to 3 SIDs played simultaneously
+    * Individually selectable address for each SID on system
+  * Displays text messages embedded in ASID data  
+  * Enter via main TeensyROM menu, or use Hot key '4' to enter immediately.
+  * Easy to use interface
+    * Real time indicators for Each SID and SID1 individual register writes
+      * Decoder screen shows description of each register indicator
+    * Help screen shows all available keyboard commands
+    * Screen enable option for maximum noise reduction
+    * Mute playback capability
+* New feature: .D64, .D71, and .D81 file type support
+  * Single file load only, multi-load not supported.
+* TeensyROM UI support
+  * GoodSIDToken send via serial on succesful SID load
+  * File open for writing retry in GetFileStream (by [**MetalHexx**](https://github.com/MetalHexx))
+* Other additions/fixes
+  * .OCP and .PIC graphic file viewer support (Art Studio files, used by OneLoad64)
+  * MIDI2SID prg source code added to repo
+  * Fix: 3 main menu filenames changed for NFC tag path compatibility
+  * Fix: Current file path retained on menu restart when loading default SID from SD/USB
+
 ### 0.5.14 sub-release 3/28/24
 * New feature: Selectable default/background SID
   * Select/play any SID normally, then 's' from SID Info screen (F6) to set it as default background SID
