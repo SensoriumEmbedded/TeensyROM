@@ -20,7 +20,7 @@
 
 ![case bottom](../media/case/case_bot.jpg)
 
-![case back](../media/case/case-front-corner.jpg)
+![case back](../media/case/case-front-corner.png)
 
-![case rear](../media/case/case-rear-corner.jpg)
+![case rear](../media/case/case-rear-corner.png)
 

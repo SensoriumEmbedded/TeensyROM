@@ -2,7 +2,7 @@
 
 The TeensyROM was designed with hand assembly in mind. While surface mount packages are used, they are the larger types (SOIC IC packages and 0805 passives).  If you feel this is beyond your solder capabilities, assembled units are usually available at a fair price. If there are additional questions, feel free to [contact me](mailto:travis@sensoriumembedded.com).
 
-| ![Top View](/media/v0.2c/v0.2c_top.jpg) | ![Bot View](/media/v0.2c/v0.2c_Bot.jpg) |
+| ![Top View](../media/v0.2c/v0.2c_top.png) | ![Bot View](../media/v0.2c/v0.2c_Bot.png) |
 |--|--|
 
 - Tools/materials needed: 

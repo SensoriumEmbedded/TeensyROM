@@ -1,13 +1,15 @@
 # TeensyROM
-**ROM emulator, super fast loader, MIDI Host/Device, Internet interface cartridge and more for the Commodore 64 & 128, based on the Teensy 4.1**
-*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
+**ROM emulator, instant loader, MIDI Host/Device, Internet interface cartridge and more for the Commodore 64 & 128, based on the Teensy 4.1**
+<br>*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-**If you have thoughts/input on this project, questions, or features you'd like to see, please consider yourself invited to the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U)**
+**Recent Update:** Integrated ASID player added for direct streaming to your SID chip(s). Check out the demo videos: [Hardware C64 ASID MIDI Synthesizer](https://www.youtube.com/watch?v=-Xs3h59-dOU) and [3SID ASID Streaming](https://www.youtube.com/watch?v=qVRgt0CftRw).
 
-**Recent Update: The TeensyROM now supports an NFC Loading System. Just tap an NFC tag on a reader to start any program! <br>
-See the [demo video here](https://www.youtube.com/watch?v=mDrT1I4R0ls) and [setup instructions here](docs/NFC_Loader.md).**
+If you'd like to make your own TeensyROM, the HW was designed with mid-level solder skills in mind. See assembly instructions [here](PCB/PCB_Assembly.md).  Alternately, I sell fully assembled/tested units available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).
+<BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
 
-The HW was designed with medium skilled solder skills in mind.  If you feel it's too advanced to build yourself, **I have fully assembled/tested units for sale in [my Tindie Store](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).**
+If you have thoughts/input on this project, questions, or would like to meet other TeensyROM users, please join us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U)
+
+
 
 ## Table of contents
   * [TeensyROM Features](#teensyrom-features)
@@ -15,14 +17,14 @@ The HW was designed with medium skilled solder skills in mind.  If you feel it's
   * [Demo Videos](#demo-videos)
   * [Hardware/PCB Design](#hardware-pcb-design)
   * [Compatibility](#compatibility)
-  * [Inspiration](#inspiration)
+  * [Inspiration](#inspiration-and-thank-yous)
   * [Pictures/screen captures](#pictures-screen-captures)
 
 <BR>
 
-![TeensyROM pic1](media/v0.2c/v0.2c_angle.jpg)
+![TeensyROM pic1](media/v0.2c/v0.2c_angle.png)
 
-|![TeensyROM pic1](media/case/case-front-corner.jpg)|![TeensyROM case](media/case/case-rear-corner.jpg)| 
+|![TeensyROM pic1](media/case/case-front-corner.png)|![TeensyROM case](media/case/case-rear-corner.png)| 
 |:--:|:--:|
 
 
@@ -98,19 +100,18 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 
 ## Inspiration and Thank-Yous:
 * **Heather S**: Loving wife, continuous encourager
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) development
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) development
 * [**StatMat**](https://github.com/Stat-Mat): NFC Scanner idea, Fast boot code, OneLoad64 creation
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
 ## Pictures-screen captures:
-|![TeensyROM pic1](media/v0.2c/v0.2c_top.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)| 
+|![TeensyROM pic1](media/v0.2c/v0.2c_top.png)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_USBdrive.jpg)| 
 |:--:|:--:|
 |![TeensyROM pic1](media/v0.2b/v0.2b_top_loaded.jpg)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg)|
 |![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|
 |![TeensyROM pic1](media/Screen%20captures/Settings%20Menu.png)|![TeensyROM help](media/Screen%20captures/Help%20Menu.png)|
-|![TeensyROM pic1](media/Screen%20captures/WinPC%20x-fer%20app.png)|![TeensyROM help](media/Screen%20captures/MIDI%20to%20SID.png)|
 
 See the [media](media/) folder for more pics, videos, and oscilloscope shots.
 
