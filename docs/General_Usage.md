@@ -15,7 +15,7 @@
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/v0.2b/TR_Connections.jpg)
 
-## Main Menu Options/Navigation (as of FW v0.5.14)
+## Main Menu Options/Navigation (as of FW v0.5.15)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * **CRSR or Joystick Up/Down:** Move cursor up/down the list of files on the currently selected source device
     * **CRSR or Joystick Left/Right:** Page up/down the list of files
@@ -24,10 +24,11 @@
     * **Up Arrow:** Up 1 directory level
     * **Home:** Move cursor to first item in directory
     * **a-z:** Search current directory for first item beginning with letter pressed
-    * **1-3:** Hot Keys to launch the following:
+    * **1-4:** Hot Keys to launch the following:
       * 1: Cynthcart
       * 2: Station64
       * 3: CCGMS
+      * 4: TeensyROM ASID Player
     * **F1:** Display files stored in Teensy Memory via firmware
     * **F3:** Display files on an attached SD card
     * **F5:** Display files on an attached USB Drive
