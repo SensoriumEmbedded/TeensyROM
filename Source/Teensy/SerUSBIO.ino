@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-void   getFreeITCM();
+void getFreeITCM();
 
 FLASHMEM void ServiceSerial()
 {  //Serial.available() confirmed before calling
@@ -92,7 +92,12 @@ FLASHMEM void ServiceSerial()
          break;
          
 // *** The rest of these cases are used for debug/testing only  
-       
+     
+      case 'u':  //Reboot to minimal build
+         EEPROM.write(eepAdCrtBootName, 1);
+         REBOOT;
+         break;
+
    // a, b
    #ifdef Dbg_SerASID
       case 'a': //ASID Packet load
@@ -133,6 +138,7 @@ FLASHMEM void ServiceSerial()
          Serial.flush();
          SetASIDIRQ();
       }
+         break;
    #endif
    
    // l, c
