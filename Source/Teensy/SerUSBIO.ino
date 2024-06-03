@@ -80,9 +80,12 @@ FLASHMEM void ServiceSerial()
                break;
          }
          break;
-      case 'e': //Reset EEPROM to defaults
-         SetEEPDefaults();
-         Serial.println("Applied upon reboot");
+      //case 'e': //Reset EEPROM to defaults
+      //   SetEEPDefaults();
+      //   Serial.println("Applied upon reboot");
+      //   break;
+      case 'u': //Jump to upper image (full build)
+         runApp(UpperAddr);  
          break;
 
    // l, c

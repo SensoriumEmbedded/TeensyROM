@@ -77,7 +77,9 @@ void setup()
   
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
-   if (MagNumRead != eepMagicNum) SetEEPDefaults();
+   if (MagNumRead != eepMagicNum) runApp(UpperAddr); //jump to main app if EEP not initialized
+   if (EEPROM.read(eepAdCrtBootName) == 0) runApp(UpperAddr); //jump to main app if not booting a CRT
+   EEPROM.write(eepAdCrtBootName, 0); //clear the boot flag for next boot
 
    IO1 = (uint8_t*)calloc(IO1Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
    IO1[rwRegStatus]        = rsReady;
@@ -108,18 +110,19 @@ void loop()
 {
    if (BtnPressed)
    {
-      Serial.print("Button detected\n"); 
-      SetLEDOn;
-      BtnPressed=false;
-      IO1[rwRegIRQ_CMD] = ricmdNone; //just to be sure, should already be 0/none
-      if (RemoteLaunched)
-      {
-         IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-         MenuChange();
-         RemoteLaunched = false;
-         Printf_dbg("Remote recovery\n"); 
-      }   
-      SetUpMainMenuROM(); //back to main menu
+      runApp(UpperAddr); 
+      Serial.print("Button detected (minimal)\n"); 
+      //SetLEDOn;
+      //BtnPressed=false;
+      //IO1[rwRegIRQ_CMD] = ricmdNone; //just to be sure, should already be 0/none
+      //if (RemoteLaunched)
+      //{
+      //   IO1[rWRegCurrMenuWAIT] = rmtTeensy;
+      //   MenuChange();
+      //   RemoteLaunched = false;
+      //   Printf_dbg("Remote recovery\n"); 
+      //}   
+      //SetUpMainMenuROM(); //back to main menu
    }
    
    if (doReset)
@@ -194,15 +197,15 @@ void EEPreadStr(uint16_t addr, char* buf)
    } while (buf[CharNum++] !=0); //end on termination, but include it in buffer
 }
 
-void SetEEPDefaults()
-{
-   Serial.println("--> Setting EEPROM to defaults");
-   EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
-   EEPROM.write(eepAdTimezone, -14); //default to pacific time
-   EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
-   //SetEthEEPDefaults();
-   EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
-}
+//void SetEEPDefaults()
+//{
+//   Serial.println("--> Setting EEPROM to defaults");
+//   EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
+//   EEPROM.write(eepAdTimezone, -14); //default to pacific time
+//   EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
+//   //SetEthEEPDefaults();
+//   EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
+//}
 
 void SetNumItems(uint16_t NumItems)
 {

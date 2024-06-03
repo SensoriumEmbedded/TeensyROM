@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "minimal v0.0.1"; //*VERSION*
+char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -76,13 +76,15 @@ uint32_t* BigBuf = NULL;
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730
 #define PALBusFreq          985250
+#define UpperAddr           0x040000  //address of upper (main) TR image
                             
-#define eepMagicNum         0xfeed6406 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6407 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
                                        // 05: 12/27/23 inverted default SID enable bit
                                        // 06: 3/13/24  Added eepAdDefaultSID
+                                       // 07: 6/3/24   Added eepAdCrtBootName
 #define eepBMTitleSize       75  //max chars in bookmark title
 #define eepBMURLSize        225  //Max Chars in bookmark URL path
 #define eepNumBookmarks       9  //Num Bookmarks saved
@@ -105,6 +107,7 @@ enum InternalEEPROMmap
    eepAdDLPath        = 35, // (TxMsgMaxSize=128)   Download path
    eepAdBookmarks     =163, // (75+225)*9     Bookmark Titles and Full Paths
    eepAdDefaultSID    = 2863, // (MaxPathLength=300) Path/filename of Default SID to play in background
+   eepAdCrtBootName   = 3163, // (MaxPathLength=300) Indicates boot tominimal code and .crt path to launch
    //Max size = 4284 (4k, emulated in flash)
 };
 
