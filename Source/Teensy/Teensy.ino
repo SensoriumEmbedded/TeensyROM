@@ -75,10 +75,19 @@ void setup()
    nfcInit(); //connect to nfc scanner
 #endif
   
+#ifdef Dbg_TestMin
+   //write a game path to execute
+   EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
+#endif  
+  
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runApp(UpperAddr); //jump to main app if EEP not initialized
    if (EEPROM.read(eepAdCrtBootName) == 0) runApp(UpperAddr); //jump to main app if not booting a CRT
+
+   char *CrtBootNamePath = (char*)malloc(MaxPathLength);
+   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM
+   Serial.printf("Sel CRT: %s\n", CrtBootNamePath);
    EEPROM.write(eepAdCrtBootName, 0); //clear the boot flag for next boot
 
    IO1 = (uint8_t*)calloc(IO1Size, sizeof(uint8_t)); //allocate IO1 space and init to 0
@@ -103,7 +112,24 @@ void setup()
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    MakeBuildInfo();
-   Serial.printf("\n%sTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
+   Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
+   
+#ifdef Dbg_TestMin
+   //calc/show free RAM space for CRT:
+   uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
+   //Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);   
+   uint8_t NumChips = RAM2blocks();
+   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+   NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
+   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+   CrtMax += NumChips*8;
+   Serial.printf(" %luk free for CRT\n", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
+#endif
+
+   //***todo: verify it's a .crt file, and present on SD drive
+   
+   LoadCRT(CrtBootNamePath);
+   
 } 
      
 void loop()
@@ -218,3 +244,42 @@ void SetNumItems(uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
+void LoadCRT( const char *FileNamePath)
+{
+   //Launch (emulate) .crt file
+
+   IO1[rWRegCurrMenuWAIT] = rmtSD;
+   SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   
+   //set path & filename
+   strcpy(DriveDirPath, FileNamePath);
+   char* ptrFilename = strrchr(DriveDirPath, '/'); //pointer file name, find last slash
+   if (ptrFilename == NULL) 
+   {  //no path:
+      strcpy(DriveDirPath, "/");
+      ptrFilename = (char*)FileNamePath; 
+   }
+   else
+   {  //separate path/filename
+      *ptrFilename = 0; //terminate DriveDirPath
+      ptrFilename++; //inc to point to filename
+   }
+   
+   //free mem for DriveDirMenu in case current (non-tr) handler is using it all
+   //FreeCrtChips();
+   //FreeSwiftlinkBuffs();
+
+   // Set up DriveDirMenu to point to file to load
+   //    without doing LoadDirectory(&SD/&firstPartition);
+   InitDriveDirMenu();
+   SetDriveDirMenuNameType(0, ptrFilename);
+   NumDrvDirMenuItems = 1;
+   MenuSource = DriveDirMenu; 
+   SetNumItems(1); //sets # of menu items
+   IO1[rwRegCursorItemOnPg] = 0;
+   SelItemFullIdx = 0;  //  "Select" item
+
+   //MenuSource[SelItemFullIdx]
+   
+   HandleExecution();
+}
