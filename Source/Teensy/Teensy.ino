@@ -30,7 +30,7 @@
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
 #include "DriveDirLoad.h"
-#include "MainMenuItems.h"
+//#include "MainMenuItems.h"
 #include "IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
@@ -179,7 +179,7 @@ void SetUpMainMenuROM()
    SetNMIDeassert;
    SetGameDeassert;
    SetExROMAssert; //emulate 8k cart ROM
-   LOROM_Image = TeensyROMC64_bin;
+   LOROM_Image = NULL; //TeensyROMC64_bin;
    HIROM_Image = NULL;
    LOROM_Mask = HIROM_Mask = 0x1fff;
    //NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
@@ -208,7 +208,7 @@ void EEPwriteStr(uint16_t addr, const char* buf)
    EEPwriteNBuf(addr, (uint8_t*)buf, strlen(buf)+1); //include terminator    
 }
 
-void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint8_t len)
+void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len)
 {
    while (len--) buf[len] = EEPROM.read(addr+len);   
 }

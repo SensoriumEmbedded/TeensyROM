@@ -33,7 +33,7 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 // #define DbgSpecial    //Special case logging to BigBuf
 #define Dbg_TestMin    //Test minimal build by loading a CRT on start
 
-#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+//#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          5
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
@@ -47,14 +47,14 @@ uint32_t* BigBuf = NULL;
 #ifdef DbgMsgs_IO  //Debug msgs mode: Specific background SID, reduced RAM_ImageSize
    #define Printf_dbg Serial.printf
    #define RAM_ImageSize       ((MaxRAM_ImageSize-24)*1024)
-   #include "SIDs/Echoes.sid.h"
-   #define SIDforBackground     Echoes_sid
+   //#include "SIDs/Echoes.sid.h"
+   //#define SIDforBackground     Echoes_sid
    
 #else //Normal mode: Specific background SID, maximize RAM_ImageSize
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
    #define RAM_ImageSize       (MaxRAM_ImageSize*1024)
-   #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
-   #define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
+   //#include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
+   //#define SIDforBackground     SleepDirt_norm_ntsc_1000_6581_sid
    
 #endif
 
@@ -217,7 +217,7 @@ uint32_t nS_VICStart  = Def_nS_VICStart;
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {
    DataBufEnable; 
-   register uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
+   uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_DataHold);  
@@ -235,7 +235,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
-   register uint32_t DataIn = ReadGPIO7;
+   uint32_t DataIn = ReadGPIO7;
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));

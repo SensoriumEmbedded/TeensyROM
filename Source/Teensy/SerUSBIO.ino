@@ -126,24 +126,24 @@ FLASHMEM void ServiceSerial()
             Serial.printf("RAM_Image: %lu (%luk) @ $%08x\n", 
                sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
          
-            TotalSize = 0;
-            uint32_t TotalStructSize = sizeof(TeensyROMMenu);
-            for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
-            {
-               if(TeensyROMMenu[ROMNum].ItemType == rtDirectory)
-               {
-                  StructMenuItem *subTROMMenu = (StructMenuItem*)TeensyROMMenu[ROMNum].Code_Image;
-                  TotalStructSize += TeensyROMMenu[ROMNum].Size;
-                  for(uint8_t subROMNum=0; subROMNum < TeensyROMMenu[ROMNum].Size/sizeof(StructMenuItem); subROMNum++)
-                  {
-                     if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize);
-                  }
-               }
-               else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize);
-            }
-            Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
-               TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
-            Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
+            //TotalSize = 0;
+            //uint32_t TotalStructSize = sizeof(TeensyROMMenu);
+            //for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
+            //{
+            //   if(TeensyROMMenu[ROMNum].ItemType == rtDirectory)
+            //   {
+            //      StructMenuItem *subTROMMenu = (StructMenuItem*)TeensyROMMenu[ROMNum].Code_Image;
+            //      TotalStructSize += TeensyROMMenu[ROMNum].Size;
+            //      for(uint8_t subROMNum=0; subROMNum < TeensyROMMenu[ROMNum].Size/sizeof(StructMenuItem); subROMNum++)
+            //      {
+            //         if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize);
+            //      }
+            //   }
+            //   else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize);
+            //}
+            //Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
+            //   TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
+            //Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
          }
          break;
       case 'x': 
@@ -488,7 +488,7 @@ FLASHMEM void memInfo ()
 {
   constexpr auto RAM_BASE   = 0x2020'0000;
   constexpr auto RAM_SIZE   = 512 << 10;
-  constexpr auto FLASH_BASE = 0x6000'0000;
+  //constexpr auto FLASH_BASE = 0x6000'0000;
   
 #if ARDUINO_TEENSY40
   constexpr auto FLASH_SIZE = 2 << 20;
@@ -533,8 +533,8 @@ FLASHMEM void memInfo ()
          _sdata, _estack - 1);
   printf("<RAM>   %08x .. %08x\n",
          RAM_BASE, RAM_BASE + RAM_SIZE - 1);
-  printf("<FLASH> %08x .. %08x\n",
-         FLASH_BASE, FLASH_BASE + FLASH_SIZE - 1);
+  //printf("<FLASH> %08x .. %08x\n",
+  //       FLASH_BASE, FLASH_BASE + FLASH_SIZE - 1);
 #if ARDUINO_TEENSY41
   if (external_psram_size > 0)
     printf("<PSRAM> %08x .. %08x\n",

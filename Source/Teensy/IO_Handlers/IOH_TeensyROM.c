@@ -401,8 +401,8 @@ void SearchForLetter()
 FLASHMEM void LoadMainSIDforXfer()
 {
    XferImage = RAM_Image; 
-   XferSize  = sizeof(SIDforBackground); 
-   memcpy(XferImage, SIDforBackground, XferSize);
+   //XferSize  = sizeof(SIDforBackground); 
+   //memcpy(XferImage, SIDforBackground, XferSize);
    ParseSIDHeader("Main Background SID"); //assuming it passes for buit-in
 }
 

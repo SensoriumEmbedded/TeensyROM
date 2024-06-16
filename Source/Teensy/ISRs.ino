@@ -46,11 +46,11 @@ FASTRUN void isrPHI2()
    SetDebugAssert;
    
    WaitUntil_nS(nS_RWnReady); 
-   register uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
-   register uint16_t Address = GP6_Address(GPIO_6); //parse out address
+   uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
+   uint16_t Address = GP6_Address(GPIO_6); //parse out address
    
    WaitUntil_nS(nS_PLAprop); 
-   register uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
+   uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {

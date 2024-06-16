@@ -27,113 +27,113 @@ void HandleExecution()
 {
    StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
    
-   if (MenuSelCpy.ItemType == rtNone) //should no longer reach here
-   {
-      SendMsgPrintfln("%s\r\nis not a valid item", MenuSelCpy.Name);
-      return;
-   }
-   if (MenuSelCpy.ItemType == rtUnknown)
-   {
-      SendMsgPrintfln("%s\r\nUnknown File Type", MenuSelCpy.Name);
-      return;
-   }
+   //if (MenuSelCpy.ItemType == rtNone) //should no longer reach here
+   //{
+   //   SendMsgPrintfln("%s\r\nis not a valid item", MenuSelCpy.Name);
+   //   return;
+   //}
+   //if (MenuSelCpy.ItemType == rtUnknown)
+   //{
+   //   SendMsgPrintfln("%s\r\nUnknown File Type", MenuSelCpy.Name);
+   //   return;
+   //}
    
    FS *sourceFS = &SD;
    switch(IO1[rWRegCurrMenuWAIT]) 
    {  //find source based on current menu, perform device specific actions
       case rmtSD:
-      case rmtUSBDrive:
+      //case rmtUSBDrive:
          //sourceFS = &SD;
          //USB or SD drive actions:
-         if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
-         {
-            char FullFilePath[MaxNamePathLength];
-            
-            if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
-            else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
-
-            DoFlashUpdate(sourceFS, FullFilePath);
-            return;  //we're done here...
-         }
-         
-         if (MenuSelCpy.ItemType == rtDirectory)
-         {  //edit path as needed and load the new directory from SD/USB
-            
-            if(strcmp(MenuSelCpy.Name, UpDirString)==0)
-            {  //up dir
-               UpDirectory();
-               return;  //we're done here...
-            }
-            
-            strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
-            LoadDirectory(sourceFS); 
-            return;  //we're done here...
-         }
+         //if (MenuSelCpy.ItemType == rtFileHex)  //FW update from hex file
+         //{
+         //   char FullFilePath[MaxNamePathLength];
+         //   
+         //   if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
+         //   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
+         //
+         //   DoFlashUpdate(sourceFS, FullFilePath);
+         //   return;  //we're done here...
+         //}
+         //
+         //if (MenuSelCpy.ItemType == rtDirectory)
+         //{  //edit path as needed and load the new directory from SD/USB
+         //   
+         //   if(strcmp(MenuSelCpy.Name, UpDirString)==0)
+         //   {  //up dir
+         //      UpDirectory();
+         //      return;  //we're done here...
+         //   }
+         //   
+         //   strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+         //   LoadDirectory(sourceFS); 
+         //   return;  //we're done here...
+         //}
          
          if(!LoadFile(&MenuSelCpy, sourceFS)) return;     
 
          MenuSelCpy.Code_Image = RAM_Image;
          break;
          
-      case rmtTeensy:  
-         // local Teensy Flash menu actions
-         // not many size checks as this is loading internally
-         
-         if (MenuSelCpy.ItemType == rtDirectory)
-         {
-            if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
-            else 
-            {
-               MenuSource = (StructMenuItem*)MenuSelCpy.Code_Image;
-               SetNumItems(MenuSelCpy.Size/sizeof(StructMenuItem));
-               strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
-            }
-            return;
-         }
-         
-         SendMsgPrintfln(MenuSelCpy.Name); 
-         if (MenuSelCpy.ItemType == rtFileCrt)
-         {  //load the CRT into RAM
-            uint8_t EXROM;
-            uint8_t GAME;
-            
-            //load header and parse (sends error messages)
-            if (!ParseCRTHeader(&MenuSelCpy, &EXROM, &GAME)) return;
-            
-            //IO1[rwRegNextIOHndlr] is now assigned from crt!
-            //process Chip Packets
-            uint8_t *ptrChipOffset = MenuSelCpy.Code_Image + CRT_MAIN_HDR_LEN; //Skip header
-            FreeCrtChips();  //clears any previous and resets NumCrtChips
-            Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
-            while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
-            {
-               if (!ParseChipHeader(ptrChipOffset)) //sends error messages
-               {
-                  FreeCrtChips();
-                  IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
-                  return;        
-               }
-               ptrChipOffset += CRT_CHIP_HDR_LEN;
-               memcpy(CrtChips[NumCrtChips].ChipROM, ptrChipOffset, CrtChips[NumCrtChips].ROMSize);
-               ptrChipOffset += CrtChips[NumCrtChips].ROMSize;
-               NumCrtChips++;
-            }
-            
-            //check configuration (sends error messages)
-            if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) 
-            {
-               IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
-               return;
-            }
-         }
-         
-         else
-         {  //non-CRT: copy the whole thing from flash into the RAM1 buffer
-            memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
-            MenuSelCpy.Code_Image = RAM_Image;   
-         }            
-         SendMsgPrintfln("Copied to RAM"); 
-         break;
+      //case rmtTeensy:  
+      //   // local Teensy Flash menu actions
+      //   // not many size checks as this is loading internally
+      //   
+      //   if (MenuSelCpy.ItemType == rtDirectory)
+      //   {
+      //      if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
+      //      else 
+      //      {
+      //         MenuSource = (StructMenuItem*)MenuSelCpy.Code_Image;
+      //         SetNumItems(MenuSelCpy.Size/sizeof(StructMenuItem));
+      //         strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
+      //      }
+      //      return;
+      //   }
+      //   
+      //   SendMsgPrintfln(MenuSelCpy.Name); 
+      //   if (MenuSelCpy.ItemType == rtFileCrt)
+      //   {  //load the CRT into RAM
+      //      uint8_t EXROM;
+      //      uint8_t GAME;
+      //      
+      //      //load header and parse (sends error messages)
+      //      if (!ParseCRTHeader(&MenuSelCpy, &EXROM, &GAME)) return;
+      //      
+      //      //IO1[rwRegNextIOHndlr] is now assigned from crt!
+      //      //process Chip Packets
+      //      uint8_t *ptrChipOffset = MenuSelCpy.Code_Image + CRT_MAIN_HDR_LEN; //Skip header
+      //      FreeCrtChips();  //clears any previous and resets NumCrtChips
+      //      Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
+      //      while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
+      //      {
+      //         if (!ParseChipHeader(ptrChipOffset)) //sends error messages
+      //         {
+      //            FreeCrtChips();
+      //            IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+      //            return;        
+      //         }
+      //         ptrChipOffset += CRT_CHIP_HDR_LEN;
+      //         memcpy(CrtChips[NumCrtChips].ChipROM, ptrChipOffset, CrtChips[NumCrtChips].ROMSize);
+      //         ptrChipOffset += CrtChips[NumCrtChips].ROMSize;
+      //         NumCrtChips++;
+      //      }
+      //      
+      //      //check configuration (sends error messages)
+      //      if (!SetTypeFromCRT(&MenuSelCpy, EXROM, GAME)) 
+      //      {
+      //         IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
+      //         return;
+      //      }
+      //   }
+      //   
+      //   else
+      //   {  //non-CRT: copy the whole thing from flash into the RAM1 buffer
+      //      memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
+      //      MenuSelCpy.Code_Image = RAM_Image;   
+      //   }            
+      //   SendMsgPrintfln("Copied to RAM"); 
+      //   break;
          
    }
    
@@ -141,7 +141,7 @@ void HandleExecution()
    // if (MenuSelCpy.ItemType == rtFileCrt) ParseCRTFile(&MenuSelCpy); //will update MenuSelCpy.ItemType & .Code_Image, if checks ok
  
    //will update MenuSelCpy.ItemType & .Code_Image, if checks ok:
-   if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); 
+   //if (MenuSelCpy.ItemType == rtFileP00) ParseP00File(&MenuSelCpy); 
    
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for tranfer
@@ -149,27 +149,27 @@ void HandleExecution()
    
    switch(MenuSelCpy.ItemType)
    {
-      case rtFileSID:
-         XferImage = MenuSelCpy.Code_Image;
-         XferSize = MenuSelCpy.Size;
-         ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
-         break;
-      case rtFileKla:
-         XferImage = MenuSelCpy.Code_Image;
-         XferSize = MenuSelCpy.Size;
-         //Parse Koala File:
-         if(!ParseKLAHeader()) return;
-         StreamOffsetAddr = 0; //set to start of data
-         IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
-         break;
-      case rtFileArt:
-         XferImage = MenuSelCpy.Code_Image;
-         XferSize = MenuSelCpy.Size;
-         //Parse Hi-Res Art File:
-         if(!ParseARTHeader()) return;
-         StreamOffsetAddr = 0; //set to start of data
-         IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
-         break;
+      //case rtFileSID:
+      //   XferImage = MenuSelCpy.Code_Image;
+      //   XferSize = MenuSelCpy.Size;
+      //   ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
+      //   break;
+      //case rtFileKla:
+      //   XferImage = MenuSelCpy.Code_Image;
+      //   XferSize = MenuSelCpy.Size;
+      //   //Parse Koala File:
+      //   if(!ParseKLAHeader()) return;
+      //   StreamOffsetAddr = 0; //set to start of data
+      //   IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
+      //   break;
+      //case rtFileArt:
+      //   XferImage = MenuSelCpy.Code_Image;
+      //   XferSize = MenuSelCpy.Size;
+      //   //Parse Hi-Res Art File:
+      //   if(!ParseARTHeader()) return;
+      //   StreamOffsetAddr = 0; //set to start of data
+      //   IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
+      //   break;
       case rtBin16k:
          SetGameAssert;
          SetExROMAssert;
@@ -201,17 +201,17 @@ void HandleExecution()
          HIROM_Image = NULL;
          CartLoaded=true;
          break;      
-      case rtFilePrg:
-         //set up for transfer
-         SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 
-            MenuSelCpy.Size/1024,
-            256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0], 
-            MenuSelCpy.Size + 256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0]);
-         XferImage = MenuSelCpy.Code_Image; 
-         XferSize  = MenuSelCpy.Size; 
-         StreamOffsetAddr = 0; //set to start of data
-         IO1[rRegStrAvailable] = 0xff;
-         break;
+      //case rtFilePrg:
+      //   //set up for transfer
+      //   SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 
+      //      MenuSelCpy.Size/1024,
+      //      256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0], 
+      //      MenuSelCpy.Size + 256*MenuSelCpy.Code_Image[1]+MenuSelCpy.Code_Image[0]);
+      //   XferImage = MenuSelCpy.Code_Image; 
+      //   XferSize  = MenuSelCpy.Size; 
+      //   StreamOffsetAddr = 0; //set to start of data
+      //   IO1[rRegStrAvailable] = 0xff;
+      //   break;
       case rtUnknown: //had to have been marked unknown after check at start
          //SendMsgFailed();
          SendMsgPrintfln(" :(");
@@ -234,11 +234,11 @@ void MenuChange()
    strcpy(DriveDirPath, "/");
    switch(IO1[rWRegCurrMenuWAIT])
    {
-      case rmtTeensy:
-         MenuSource = TeensyROMMenu; 
-         SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
-         break;
-      case rmtUSBDrive:
+      //case rmtTeensy:
+      //   MenuSource = TeensyROMMenu; 
+      //   SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
+      //   break;
+      //case rmtUSBDrive:
       case rmtSD:
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
