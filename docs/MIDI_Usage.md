@@ -46,6 +46,7 @@
       * Go to https://www.plogue.com/products/chipsynth-c64.html and download/install/launch "chipsynth C64"
         * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and "TeensyROM" as the destination
         * There are many things you can do with this great program, purchasing will unlock the 10 minute limit per use.
+        * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
         * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 
 <BR>
