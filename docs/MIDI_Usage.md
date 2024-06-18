@@ -16,7 +16,9 @@
   * Play around and have fun!
   * MIDI out (C64 to MIDI Device) is also implemented so that keyboards, etc with their own sound capability can be "played" by the C64
   * Some sequencer apps work, others require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.
+
 <BR>
+
 ## USB MIDI Device port 
 ### Streaming MIDI/SID data to your C64/128 from a modern computer
   * **Controlling your C64's SID chip using the ASID MIDI protocol** (FW v0.5.15 and higher)
