@@ -109,9 +109,9 @@ void setup()
    //for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) PrevURLQueue[cnt] = NULL; //initialize previous link buffer for swiftlink browser mode
    //for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) RxQueue[cnt] = NULL;      //initialize RxQueue for swiftlink
 
-   StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
+   //StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   MakeBuildInfo();
+   sprintf(SerialStringBuf, "       FW: %s, %s\r\n   Teensy: %luMHz  %.1fC", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
    
 #ifdef Dbg_TestMin
@@ -189,7 +189,7 @@ void SetUpMainMenuROM()
    FreeCrtChips();
    //FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
-   IOHandlerInit(IOH_TeensyROM);   
+   //IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }
 

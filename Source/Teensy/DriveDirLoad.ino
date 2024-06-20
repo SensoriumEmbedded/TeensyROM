@@ -20,8 +20,8 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
-char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
-char StrMachineInfo[16]; //~5 extra
+//char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
+//char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
 {
@@ -576,205 +576,205 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
 
-FLASHMEM bool ParseARTHeader()
-{
-  // XferImage and XferSize are populated w/ koala file info
-  
-   if(XferImage[0] != 0 || XferImage[1] != 0x20) //allow only $2000
-   {
-      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000)", XferImage[1], XferImage[0]);
-      return false;
-   }
-
-   if (XferSize != 9002 && XferSize != 9009) //exact expected image size
-   {
-      SendMsgPrintfln("Bad size: %lu bytes (exp 9002 or 9009)", XferSize);
-      return false;
-   }
-   if (XferSize == 9002)
-   {  //border/screen color unknown for this size
-      XferImage[XferSize++] = 15; //PokeLtGrey
-   }
-   return true;
-}
-
-FLASHMEM bool ParseKLAHeader()
-{
-  // XferImage and XferSize are populated w/ koala file info
-  
-   if(XferImage[0] != 0 || (XferImage[1] & 0xbf) != 0x20) //allow only $2000 & $6000
-   {
-      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000 or $6000)", XferImage[1], XferImage[0]);
-      return false;
-   }
-
-   XferImage[1] = 0x20;  //force to $2000
-
-   if (XferSize != 10003) //exact expected image size
-   {
-      SendMsgPrintfln("Bad size: %lu bytes (exp 10003)", XferSize);
-      return false;
-   }
-
-   return true;
-}
-
-FLASHMEM void SIDLoadError(const char* ErrMsg)
-{
-   strcat(StrSIDInfo, "Error: ");
-   strcat(StrSIDInfo, ErrMsg); //add to displayed info
-   SendU16(BadSIDToken);
-   SendMsgPrintfln(ErrMsg);
-}
-
-FLASHMEM void ParseSIDHeader(const char *filename)
-{
-   // XferImage and XferSize are populated w/ SID file info
-   // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
-   //    initAddress(rRegSIDInitLo/Hi) and playAddress (rRegSIDPlayLo/Hi)
-   // Kick off x-fer (rRegStrAvailable) if successful
-      
-   //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
-   //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
-   //https://hvsc.c64.org/
-
-   char RetSpc[] = "\r "; //return char + space
-   strcpy(StrSIDInfo, RetSpc); //clear/init SID info
-
-   strncat(StrSIDInfo, filename, 38); //filename, cut to 38 chars max to not scroll
-   strcat(StrSIDInfo, RetSpc); 
-   strcat(StrSIDInfo, RetSpc); //blank line to separate filename from header info
-   
-   strcat(StrSIDInfo, "Name: "); 
-   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name (32 chars max)
-   strcat(StrSIDInfo, RetSpc); 
-   
-   strcat(StrSIDInfo, "Auth: "); 
-   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author (32 chars max)
-   strcat(StrSIDInfo, RetSpc); 
-   
-   strcat(StrSIDInfo, " Rel: "); 
-   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
-   strcat(StrSIDInfo, RetSpc); 
-   
-
-   if (memcmp(XferImage, "PSID", 4) != 0) 
-   {
-      if (memcmp(XferImage, "RSID", 4) != 0) 
-      {
-         SIDLoadError("PSID/RSID not found");
-         return;
-      }
-   }
-   
-   uint16_t sidVersion = toU16(XferImage+0x04);
-   if ( sidVersion<2 || sidVersion>4) 
-   {
-      SIDLoadError("Unexpected Version");
-      return;
-   }
-
-   StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
-   if (StreamOffsetAddr!= 0x7c) 
-   {
-      SIDLoadError("Unexpected Data Offset");
-      return;
-   }
-   
-   if (toU16(XferImage+0x08) != 0)
-   {
-      Printf_dbg("\nNon-standard load addr");     
-      //make standard by adding the addr in front of the data:
-      StreamOffsetAddr -=2;
-      XferImage[StreamOffsetAddr] = XferImage[0x09];
-      XferImage[StreamOffsetAddr+1] = XferImage[0x08];
-   }
-   
-   uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
-      | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
-      
-   uint16_t PlayAddress = toU16(XferImage+0x0C);
-   uint16_t InitAddress = toU16(XferImage+0x0A);
-   SendMsgPrintfln("SID Loc %04x:%04x, Play=%04x", LoadAddress, LoadAddress+XferSize, PlayAddress);
-   
-   Printf_dbg("\nInit: %04x", InitAddress);
-   Printf_dbg("\nPlay: %04x", PlayAddress);
-   Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
-
-   //check for conflict with IO1 space:   
-   if (LoadAddress < 0xdf00 && LoadAddress+XferSize >= 0xde00)
-   {
-      SIDLoadError("IO1 mem conflict");
-      return;
-   }
-
-   //check for RAM conflict with TR code:   
-   if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
-   {
-      SIDLoadError("Mem conflict w/ TR app");
-      return;
-   }
-
-   //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
-   //                            1 specifies CIA 1 timer interrupt (default 60Hz)
-   Printf_dbg("\nSpeed reg: %08x", toU32(XferImage+0x12));
-
-   //flags:  Bits 2-3 specify the video standard (clock):
-   const char *VStandard[] =
-   {
-      "Unknown",  //    00 = Unknown, use PAL
-      "PAL",      //    01 = PAL,
-      "NTSC",     //    10 = NTSC,
-      "Either",   //    11 = PAL and NTSC, use NTSC
-   };
-   
-   const uint8_t CIATimer[4][2] =
-   {   //rRegSIDDefSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
-       //verified with o-scope on IRQ line using a Kawari machine 12/24/23
-      0x4C, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
-      0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
-      0x40, 0x58,   // NTSC SID on  PAL machine 59.81Hz IRQ rate
-      0x42, 0xC6,   // NTSC SID on NTSC machine 59.81Hz IRQ rate
-   };
-   
-   //set playback speed based on SID and Machine type
-   uint16_t SidFlags = toU16(XferImage+0x76); //WORD flags
-   Printf_dbg("\nSidFlags: %04x", SidFlags);
-   SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
-   SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
-   
-   char TechBuf[40];
-   strcat(StrSIDInfo, "Tech: "); //1+6
-   sprintf(TechBuf, "%04x:%04x i=%04x p=%04x %s", LoadAddress, LoadAddress+(uint16_t)XferSize, InitAddress, PlayAddress, VStandard[SidFlags]);
-   strcat(StrSIDInfo, TechBuf); //24 + 7 max ("Unknown")
-  
-
-   //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
-   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
-   Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
-      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
-      
-   //"NTSC vid, 6"
-   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
-   strcat(StrMachineInfo, " Vid, "); 
-   strcat(StrMachineInfo, MainsFreq); 
-
-   SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
-   Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
-
-   Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
-   Printf_dbg("\relocPages: %02x", XferImage[0x79]);
-
-   IO1[rRegSIDDefSpeedHi] = CIATimer[SidFlags][0];
-   IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  
-   IO1[rRegSIDInitHi] = XferImage[0x0A];
-   IO1[rRegSIDInitLo] = XferImage[0x0B];
-   IO1[rRegSIDPlayHi] = XferImage[0x0C];
-   IO1[rRegSIDPlayLo] = XferImage[0x0D];
-   
-   IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
-   //return true;
-}
+//FLASHMEM bool ParseARTHeader()
+//{
+//  // XferImage and XferSize are populated w/ koala file info
+//  
+//   if(XferImage[0] != 0 || XferImage[1] != 0x20) //allow only $2000
+//   {
+//      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000)", XferImage[1], XferImage[0]);
+//      return false;
+//   }
+//
+//   if (XferSize != 9002 && XferSize != 9009) //exact expected image size
+//   {
+//      SendMsgPrintfln("Bad size: %lu bytes (exp 9002 or 9009)", XferSize);
+//      return false;
+//   }
+//   if (XferSize == 9002)
+//   {  //border/screen color unknown for this size
+//      XferImage[XferSize++] = 15; //PokeLtGrey
+//   }
+//   return true;
+//}
+//
+//FLASHMEM bool ParseKLAHeader()
+//{
+//  // XferImage and XferSize are populated w/ koala file info
+//  
+//   if(XferImage[0] != 0 || (XferImage[1] & 0xbf) != 0x20) //allow only $2000 & $6000
+//   {
+//      SendMsgPrintfln("Bad addr: $%02x%02x (exp $2000 or $6000)", XferImage[1], XferImage[0]);
+//      return false;
+//   }
+//
+//   XferImage[1] = 0x20;  //force to $2000
+//
+//   if (XferSize != 10003) //exact expected image size
+//   {
+//      SendMsgPrintfln("Bad size: %lu bytes (exp 10003)", XferSize);
+//      return false;
+//   }
+//
+//   return true;
+//}
+//
+//FLASHMEM void SIDLoadError(const char* ErrMsg)
+//{
+//   strcat(StrSIDInfo, "Error: ");
+//   strcat(StrSIDInfo, ErrMsg); //add to displayed info
+//   SendU16(BadSIDToken);
+//   SendMsgPrintfln(ErrMsg);
+//}
+//
+//FLASHMEM void ParseSIDHeader(const char *filename)
+//{
+//   // XferImage and XferSize are populated w/ SID file info
+//   // Need to parse dataOffset (StreamOffsetAddr), loadAddress, 
+//   //    initAddress(rRegSIDInitLo/Hi) and playAddress (rRegSIDPlayLo/Hi)
+//   // Kick off x-fer (rRegStrAvailable) if successful
+//      
+//   //https://gist.github.com/cbmeeks/2b107f0a8d36fc461ebb056e94b2f4d6
+//   //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
+//   //https://hvsc.c64.org/
+//
+//   char RetSpc[] = "\r "; //return char + space
+//   strcpy(StrSIDInfo, RetSpc); //clear/init SID info
+//
+//   strncat(StrSIDInfo, filename, 38); //filename, cut to 38 chars max to not scroll
+//   strcat(StrSIDInfo, RetSpc); 
+//   strcat(StrSIDInfo, RetSpc); //blank line to separate filename from header info
+//   
+//   strcat(StrSIDInfo, "Name: "); 
+//   strncat(StrSIDInfo, (char*)XferImage+0x16, 0x20); //Name (32 chars max)
+//   strcat(StrSIDInfo, RetSpc); 
+//   
+//   strcat(StrSIDInfo, "Auth: "); 
+//   strncat(StrSIDInfo, (char*)XferImage+0x36, 0x20);  //Author (32 chars max)
+//   strcat(StrSIDInfo, RetSpc); 
+//   
+//   strcat(StrSIDInfo, " Rel: "); 
+//   strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
+//   strcat(StrSIDInfo, RetSpc); 
+//   
+//
+//   if (memcmp(XferImage, "PSID", 4) != 0) 
+//   {
+//      if (memcmp(XferImage, "RSID", 4) != 0) 
+//      {
+//         SIDLoadError("PSID/RSID not found");
+//         return;
+//      }
+//   }
+//   
+//   uint16_t sidVersion = toU16(XferImage+0x04);
+//   if ( sidVersion<2 || sidVersion>4) 
+//   {
+//      SIDLoadError("Unexpected Version");
+//      return;
+//   }
+//
+//   StreamOffsetAddr = toU16(XferImage+0x06); //dataOffset
+//   if (StreamOffsetAddr!= 0x7c) 
+//   {
+//      SIDLoadError("Unexpected Data Offset");
+//      return;
+//   }
+//   
+//   if (toU16(XferImage+0x08) != 0)
+//   {
+//      Printf_dbg("\nNon-standard load addr");     
+//      //make standard by adding the addr in front of the data:
+//      StreamOffsetAddr -=2;
+//      XferImage[StreamOffsetAddr] = XferImage[0x09];
+//      XferImage[StreamOffsetAddr+1] = XferImage[0x08];
+//   }
+//   
+//   uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
+//      | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
+//      
+//   uint16_t PlayAddress = toU16(XferImage+0x0C);
+//   uint16_t InitAddress = toU16(XferImage+0x0A);
+//   SendMsgPrintfln("SID Loc %04x:%04x, Play=%04x", LoadAddress, LoadAddress+XferSize, PlayAddress);
+//   
+//   Printf_dbg("\nInit: %04x", InitAddress);
+//   Printf_dbg("\nPlay: %04x", PlayAddress);
+//   Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
+//
+//   //check for conflict with IO1 space:   
+//   if (LoadAddress < 0xdf00 && LoadAddress+XferSize >= 0xde00)
+//   {
+//      SIDLoadError("IO1 mem conflict");
+//      return;
+//   }
+//
+//   //check for RAM conflict with TR code:   
+//   if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
+//   {
+//      SIDLoadError("Mem conflict w/ TR app");
+//      return;
+//   }
+//
+//   //speed: for each song (bit): 0 specifies vertical blank interrupt (50Hz PAL, 60Hz NTSC)
+//   //                            1 specifies CIA 1 timer interrupt (default 60Hz)
+//   Printf_dbg("\nSpeed reg: %08x", toU32(XferImage+0x12));
+//
+//   //flags:  Bits 2-3 specify the video standard (clock):
+//   const char *VStandard[] =
+//   {
+//      "Unknown",  //    00 = Unknown, use PAL
+//      "PAL",      //    01 = PAL,
+//      "NTSC",     //    10 = NTSC,
+//      "Either",   //    11 = PAL and NTSC, use NTSC
+//   };
+//   
+//   const uint8_t CIATimer[4][2] =
+//   {   //rRegSIDDefSpeedLo/Hi = SONGSPEED/1022730 seconds for NTSC, higher=slower playback (timer)
+//       //verified with o-scope on IRQ line using a Kawari machine 12/24/23
+//      0x4C, 0xC7,   // PAL  SID on  PAL machine 50.13Hz IRQ rate
+//      0x4F, 0xB2,   // PAL  SID on NTSC machine 50.13Hz IRQ rate
+//      0x40, 0x58,   // NTSC SID on  PAL machine 59.81Hz IRQ rate
+//      0x42, 0xC6,   // NTSC SID on NTSC machine 59.81Hz IRQ rate
+//   };
+//   
+//   //set playback speed based on SID and Machine type
+//   uint16_t SidFlags = toU16(XferImage+0x76); //WORD flags
+//   Printf_dbg("\nSidFlags: %04x", SidFlags);
+//   SidFlags = (SidFlags >> 2) & 3;  //now just PAL/NTSC
+//   SendMsgPrintfln("SID Clock: %s", VStandard[SidFlags]);
+//   
+//   char TechBuf[40];
+//   strcat(StrSIDInfo, "Tech: "); //1+6
+//   sprintf(TechBuf, "%04x:%04x i=%04x p=%04x %s", LoadAddress, LoadAddress+(uint16_t)XferSize, InitAddress, PlayAddress, VStandard[SidFlags]);
+//   strcat(StrSIDInfo, TechBuf); //24 + 7 max ("Unknown")
+//  
+//
+//   //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
+//   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
+//   Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
+//      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
+//      
+//   //"NTSC vid, 6"
+//   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
+//   strcat(StrMachineInfo, " Vid, "); 
+//   strcat(StrMachineInfo, MainsFreq); 
+//
+//   SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
+//   Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
+//
+//   Printf_dbg("\relocStartPage: %02x", XferImage[0x78]);
+//   Printf_dbg("\relocPages: %02x", XferImage[0x79]);
+//
+//   IO1[rRegSIDDefSpeedHi] = CIATimer[SidFlags][0];
+//   IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  
+//   IO1[rRegSIDInitHi] = XferImage[0x0A];
+//   IO1[rRegSIDInitLo] = XferImage[0x0B];
+//   IO1[rRegSIDPlayHi] = XferImage[0x0C];
+//   IO1[rRegSIDPlayLo] = XferImage[0x0D];
+//   
+//   IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
+//   //return true;
+//}
  
 void RedirectEmptyDriveDirMenu()
 {

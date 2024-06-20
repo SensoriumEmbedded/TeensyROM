@@ -214,7 +214,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    //IOH_MIDI_NamesoftIRQ,
    //IOH_Debug, //last manually selectable, see LastSelectableIOH
    
-   IOH_TeensyROM, 
+   //IOH_TeensyROM, 
    IOH_EpyxFastLoad,
    IOH_MagicDesk,
    IOH_Dinamic,

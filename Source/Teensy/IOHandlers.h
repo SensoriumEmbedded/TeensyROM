@@ -67,7 +67,7 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    //&IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
    //&IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
                                 
-   &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
+   //&IOHndlr_TeensyROM,          //IOH_TeensyROM, 
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
    &IOHndlr_Dinamic,            //IOH_Dinamic,

@@ -99,53 +99,8 @@ FLASHMEM void ServiceSerial()
          break;       
    #endif
          
-   // f, x
+   // x
    #ifdef Dbg_SerMem 
-      //case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
-      //   {
-      //      MakeBuildInfo();
-      //      Serial.println("\n***** Build & Mem info *****");
-      //      Serial.println(SerialStringBuf);
-      //      Serial.printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
-      //      memInfo();
-      //      getFreeITCM();
-      //
-      //      Serial.printf("\nMem usage:\n");
-      //      uint32_t TotalSize = 0;
-      //      if(DriveDirMenu != NULL) 
-      //      {
-      //         for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
-      //         Serial.printf("Filenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
-      //            TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
-      //            MaxMenuItems*sizeof(StructMenuItem), MaxMenuItems*sizeof(StructMenuItem)/1024, (uint32_t)DriveDirMenu);
-      //         TotalSize += MaxMenuItems*sizeof(StructMenuItem);
-      //      }
-      //      Serial.printf("DriveDirMenu+Filenames: %lu (%luk)\n", 
-      //         TotalSize, TotalSize/1024);
-      //      
-      //      Serial.printf("RAM_Image: %lu (%luk) @ $%08x\n", 
-      //         sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
-      //   
-      //      //TotalSize = 0;
-      //      //uint32_t TotalStructSize = sizeof(TeensyROMMenu);
-      //      //for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
-      //      //{
-      //      //   if(TeensyROMMenu[ROMNum].ItemType == rtDirectory)
-      //      //   {
-      //      //      StructMenuItem *subTROMMenu = (StructMenuItem*)TeensyROMMenu[ROMNum].Code_Image;
-      //      //      TotalStructSize += TeensyROMMenu[ROMNum].Size;
-      //      //      for(uint8_t subROMNum=0; subROMNum < TeensyROMMenu[ROMNum].Size/sizeof(StructMenuItem); subROMNum++)
-      //      //      {
-      //      //         if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize);
-      //      //      }
-      //      //   }
-      //      //   else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize);
-      //      //}
-      //      //Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
-      //      //   TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
-      //      //Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
-      //   }
-      //   break;
       case 'x': 
          { 
             FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
@@ -220,14 +175,6 @@ FLASHMEM void ServiceSerial()
    
    }
 }
-
-//FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
-//{
-//   *TotalSize += SourceMenu.Size;
-//   Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
-//   if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
-//      Serial.printf("%s is using RAM!!!\n", SourceMenu.Name);
-//}
 
 FLASHMEM void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
 {
@@ -317,57 +264,6 @@ FLASHMEM void PrintDebugLog()
    BigBufCount = 0;
 }
 
-//FLASHMEM void LaunchFile()
-//{            
-//   //   App: LaunchFileToken 0x6444
-//   //Teensy: AckToken 0x64CC
-//   //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
-//   //Teensy: AckToken 0x64CC
-//   //   C64: file Launches
-//
-//   //Launch file token has been received
-//   SendU16(AckToken);
-//
-//   uint32_t SD_nUSB;
-//   char FileNamePath[MaxNamePathLength];
-//   if (ReceiveFileName(&SD_nUSB, FileNamePath))
-//   {
-//      SendU16(AckToken);
-//      RemoteLaunch(SD_nUSB !=0 , FileNamePath);
-//   }
-//}
-
-//FLASHMEM bool ReceiveFileName(uint32_t *SD_nUSB, char *FileNamePath)
-//{
-//   if (!GetUInt(SD_nUSB, 1)) return false;
-// 
-//   uint16_t CharNum=0;
-//   while (1) 
-//   {
-//      if(!SerialAvailabeTimeout()) return false;
-//      FileNamePath[CharNum] = Serial.read();
-//      if (FileNamePath[CharNum]==0) return true;
-//      if (++CharNum == MaxNamePathLength)
-//      {
-//         SendU16(FailToken);
-//         Serial.print("Path too long!\n");  
-//         return false;
-//      }
-//   }
-//}
-
-//FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
-//{
-//   *InVal=0;
-//   for(int8_t ByteNum=NumBytes-1; ByteNum>=0; ByteNum--)
-//   {
-//      if(!SerialAvailabeTimeout()) return false;
-//      uint32_t ByteIn = Serial.read();
-//      *InVal += (ByteIn << (ByteNum*8));
-//   }
-//   return true;
-//}
-
 FLASHMEM void SendU16(uint16_t SendVal)
 {
    Serial.write((uint8_t)(SendVal & 0xff));
@@ -386,109 +282,3 @@ FLASHMEM bool SerialAvailabeTimeout()
    return(false);
 }
 
-//uint32_t RAM2BytesFree() 
-//{
-//   extern char _heap_end[];
-//   extern char *__brkval;
-//   return (_heap_end - __brkval);
-//}
-
-//memory info display via:
-// https://forum.pjrc.com/threads/33443-How-to-display-free-ram
-// https://www.pjrc.com/store/teensy41.html#memory
-
-//#define printf Serial.printf
-//#if ARDUINO_TEENSY41
-//  extern "C" uint8_t external_psram_size;
-//#endif
-//  
-//FLASHMEM void memInfo () 
-//{
-//  constexpr auto RAM_BASE   = 0x2020'0000;
-//  constexpr auto RAM_SIZE   = 512 << 10;
-//  //constexpr auto FLASH_BASE = 0x6000'0000;
-//  
-//#if ARDUINO_TEENSY40
-//  constexpr auto FLASH_SIZE = 2 << 20;
-//#elif ARDUINO_TEENSY41
-//  //constexpr auto FLASH_SIZE = 8 << 20;
-//#endif
-//
-//  // note: these values are defined by the linker, they are not valid memory
-//  // locations in all cases - by defining them as arrays, the C++ compiler
-//  // will use the address of these definitions - it's a big hack, but there's
-//  // really no clean way to get at linker-defined symbols from the .ld file
-//
-//  extern char _stext[], _etext[], _sbss[], _ebss[], _sdata[], _edata[],
-//         _estack[], _heap_start[], _heap_end[], _itcm_block_count[], *__brkval;
-//
-//  auto sp = (char*) __builtin_frame_address(0);
-//
-//  printf("MemInfo:\n");
-//  printf("_stext        %08x\n",      _stext);
-//  printf("_etext        %08x +%db\n", _etext, _etext - _stext);
-//  printf("_sdata        %08x\n",      _sdata);
-//  printf("_edata        %08x +%db\n", _edata, _edata - _sdata);
-//  printf("_sbss         %08x\n",      _sbss);
-//  printf("_ebss         %08x +%db\n", _ebss, _ebss - _sbss);
-//  printf("curr stack    %08x +%db\n", sp, sp - _ebss);
-//  printf("_estack       %08x +%db\n", _estack, _estack - sp);
-//  printf("_heap_start   %08x\n",      _heap_start);
-//  printf("__brkval      %08x +%db\n", __brkval, __brkval - _heap_start);
-//  printf("_heap_end     %08x +%db\n", _heap_end, _heap_end - __brkval);
-//  
-//#if ARDUINO_TEENSY41
-//  extern char _extram_start[], _extram_end[], *__brkval;
-//  printf("_extram_start %08x\n",      _extram_start);
-//  printf("_extram_end   %08x +%db\n", _extram_end,
-//         _extram_end - _extram_start);
-//#endif
-//  printf("\n");
-//
-//  printf("<ITCM>  %08x .. %08x\n",
-//         _stext, _stext + ((int) _itcm_block_count << 15) - 1);
-//  printf("<DTCM>  %08x .. %08x\n",
-//         _sdata, _estack - 1);
-//  printf("<RAM>   %08x .. %08x\n",
-//         RAM_BASE, RAM_BASE + RAM_SIZE - 1);
-//  //printf("<FLASH> %08x .. %08x\n",
-//  //       FLASH_BASE, FLASH_BASE + FLASH_SIZE - 1);
-//#if ARDUINO_TEENSY41
-//  if (external_psram_size > 0)
-//    printf("<PSRAM> %08x .. %08x\n",
-//           _extram_start, _extram_start + (external_psram_size << 20) - 1);
-//#endif
-//  printf("\n");
-//
-//  auto stack = sp - _ebss;
-//  printf("avail STACK (RAM1) %8d b %5d kb\n", stack, stack >> 10);
-//
-//  auto heap = _heap_end - __brkval;
-//  printf("avail HEAP  (RAM2) %8d b %5d kb\n", heap, heap >> 10);
-//
-//#if ARDUINO_TEENSY41
-//  auto psram = _extram_start + (external_psram_size << 20) - _extram_end;
-//  printf("avail PSRAM (ext)  %8d b %5d kb\n", psram, psram >> 10);
-//#endif
-//}
-
-
-//uint32_t *ptrFreeITCM;  // Set to Usable ITCM free RAM
-//uint32_t  sizeofFreeITCM; // sizeof free RAM in uint32_t units.
-//uint32_t  SizeLeft_etext;
-//extern char _stext[], _etext[];
-//
-//FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
-//  Serial.println("\ngetFreeITCM:");
-//  SizeLeft_etext = (32 * 1024) - (((uint32_t)&_etext - (uint32_t)&_stext) % (32 * 1024));
-//  sizeofFreeITCM = SizeLeft_etext - 4;
-//  sizeofFreeITCM /= sizeof(ptrFreeITCM[0]);
-//  ptrFreeITCM = (uint32_t *) ( (uint32_t)&_stext + (uint32_t)&_etext + 4 );
-//  printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
-//  printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
-//  printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
-//  for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
-//  uint32_t jj = 0;
-//  for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
-//  printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
-//}
