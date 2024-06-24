@@ -4,8 +4,8 @@
   * **Updated Design by [Stefan Wessels](https://github.com/StewBC)**
   * Modified from original for TeensyROM form factor
   * Screw hole accomodation for v0.2c PCB
-    * Screw: M3x18mm flat head wood screw [such as this](https://www.amazon.com/dp/B088F7Z4DZ)
-    * Version included for v0.2b PCB (No Hole)
+    * Use M2.5x15mm screw [such as this](https://www.amazon.com/dp/B01M0DCMHQ)
+    * Version included for v0.2b PCB (No Hole/screw)
   * Button guide/extenders
   * Alignment adjustments
   * Access hole detailing
