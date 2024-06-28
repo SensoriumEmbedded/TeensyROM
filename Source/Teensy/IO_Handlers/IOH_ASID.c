@@ -236,6 +236,10 @@ void InitHndlr_ASID()
 
    Printf_dbg("ASID Queue Size: %d\n", ASIDQueueSize);
    
+   nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
+   NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt during ASID
+   NVIC_DISABLE_IRQ(IRQ_PIT);
+
    // SetMIDIHandlersNULL(); is called prior to this, 
    //    all other MIDI messages ignored.
    

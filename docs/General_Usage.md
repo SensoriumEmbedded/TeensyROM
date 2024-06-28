@@ -13,7 +13,7 @@
   * Power on, the TeensyROM main menu should be displayed
   * The Restart button can be pressed at any time to return to the TeensyROM main menu from another program
   * Additional external hardware connection points:
-* ![TeensyROM connections](/media/v0.2b/TR_Connections.jpg)
+* ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options/Navigation (as of FW v0.5.15)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
