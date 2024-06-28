@@ -3,12 +3,12 @@
 <br>*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
 **Recent Updates:** 
+* **TeensyROM cases are now available to order in the US & Canada via sMs Retro Electronics!**  There are several colors of high quality 3D prints available.  Visit their store **[here](https://ko-fi.com/smsretroelectronics)**. 
+
 * **The [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) is here!** [MetalHexx](https://github.com/MetalHexx)'s amazing app for controlling your TeensyROM/C64 from Windows enables lightning fast exploration of Games, Scene Demos, Music and Images in very large file collections. Coupled with remote launch capability, you will cover a lot of ground very quickly and discover great content faster than ever.  See all the details in the [TeensyROM UI Repo](https://github.com/MetalHexx/TeensyROM-UI).
 
-* Integrated ASID player added for direct streaming to your SID chip(s). Check out the demo videos: [Hardware C64 ASID MIDI Synthesizer](https://www.youtube.com/watch?v=-Xs3h59-dOU) and [3SID ASID Streaming](https://www.youtube.com/watch?v=qVRgt0CftRw).  Included with the [latest TeensyROM Firmware](bin/TeensyROM).
-
   
-**I have fully assembled/tested units available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).**
+**Fully assembled/tested units are available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).**
 <BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
 <BR>If you'd prefer to make your own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 
