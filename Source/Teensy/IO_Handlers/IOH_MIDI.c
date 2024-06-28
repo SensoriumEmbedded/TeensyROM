@@ -96,6 +96,7 @@ volatile uint8_t MIDITxBytesReceived = 0;
 volatile uint8_t MIDITxBuf[3];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
+extern uint8_t nfcState;
 
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
@@ -278,6 +279,8 @@ void MIDIinHndlrInit()
    usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
    usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
    // not catching F0, F4, F5, F7 (end of SysEx), and FD         
+   
+   nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }   
    
 void InitHndlr_MIDI_Datel()  

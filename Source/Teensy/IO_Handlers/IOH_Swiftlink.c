@@ -288,6 +288,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    }
    strcpy(CurrPageTitle, "None");
    randomSeed(ARM_DWT_CYCCNT);
+   nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }
 
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)

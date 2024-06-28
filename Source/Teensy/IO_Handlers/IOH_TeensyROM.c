@@ -197,7 +197,7 @@ extern uint8_t RAM_Image[];
 extern char* StrSIDInfo;
 extern char* LatestSIDLoaded;
 extern char StrMachineInfo[];
-extern bool nfcEnabled;
+extern uint8_t nfcState;
 extern void SendMsgPrintfln(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
@@ -447,7 +447,7 @@ FLASHMEM void WriteNFCTagCheck()
 
    IO1[rRegLastHourBCD] = 0; //using this reg as scratch to communicate outcome
    
-   if (!nfcEnabled)
+   if (nfcState != nfcStateEnabled)
    {
       SendMsgPrintfln(" NFC not enabled/found\r");
       return;      
@@ -465,7 +465,7 @@ FLASHMEM void WriteNFCTagCheck()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
    
-   nfcEnabled = false; //keep if from trigerring if re-using prev programmed tag
+   nfcState |= nfcStateBitDisabled; //keep if from trigerring if re-using prev programmed tag
    IO1[rRegLastHourBCD] = 0xff; //checks look good!
 }
 

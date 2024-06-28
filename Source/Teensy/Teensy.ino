@@ -42,7 +42,7 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
-bool nfcEnabled = false; //default disabled unless set in eeprom and passes init
+uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
@@ -163,7 +163,7 @@ void loop()
    if (Serial.available()) ServiceSerial();
    myusbHost.Task();
 #ifdef nfcScanner
-   if (nfcEnabled) nfcCheck();
+   if (nfcState == nfcStateEnabled) nfcCheck();
 #endif
    
    //handler specific polling items:
@@ -182,7 +182,8 @@ void SetUpMainMenuROM()
    NVIC_ENABLE_IRQ(IRQ_ENET); //make sure ethernet interrupt is back on
    NVIC_ENABLE_IRQ(IRQ_PIT);
    EmulateVicCycles = false;
-
+   nfcState &= ~nfcStateBitPaused; //clear paused bit in case paused by time critical function
+   
    FreeCrtChips();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();

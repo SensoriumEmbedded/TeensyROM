@@ -41,7 +41,7 @@ FLASHMEM void nfcInit()
 {  
    Serial.println("nfc init");
    
-   nfcEnabled = false; // set default
+   nfcState = nfcStateBitDisabled; // set default
    memset(Lastuid, 0, sizeof Lastuid);
    nfc.begin();
    
@@ -68,7 +68,7 @@ FLASHMEM void nfcInit()
    }
 
    Serial.printf(" ready in %d retries\n", TryNum);
-   nfcEnabled = true;
+   nfcState = nfcStateEnabled;
 }
 
 FLASHMEM bool nfcConfigCheck()
