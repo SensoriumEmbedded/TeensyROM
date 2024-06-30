@@ -72,6 +72,7 @@
       * SID info screen contains SID header information and playback controls
     * ***.KLA/KOA files:**
       * Displays Koala multi-color picture
+      * Compatible with output from [Retropixels online](https://www.micheldebree.nl/retropixels/)
     * ***.ART/AAS/HPI files:**
       * Displays Art Studio Hi-Res picture
     * ***.HEX files:**
