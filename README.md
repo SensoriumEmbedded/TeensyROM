@@ -1,11 +1,16 @@
 # TeensyROM
-**ROM emulator, instant loader, MIDI Host/Device, Internet interface cartridge and more for the Commodore 64 & 128, based on the Teensy 4.1**
+**ROM emulator, instant loader, MIDI Host/Device, Internet interface cartridge and *much more* for the Commodore 64 & 128, based on the Teensy 4.1**
 <br>*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-**Recent Update:** Integrated ASID player added for direct streaming to your SID chip(s). Check out the demo videos: [Hardware C64 ASID MIDI Synthesizer](https://www.youtube.com/watch?v=-Xs3h59-dOU) and [3SID ASID Streaming](https://www.youtube.com/watch?v=qVRgt0CftRw).
+**Recent Updates:** 
+* **TeensyROM cases are now available to order in the US & Canada via sMs Retro Electronics!**  There are several colors of high quality 3D prints available.  Visit their store **[here](https://ko-fi.com/smsretroelectronics)**. 
 
-If you'd like to make your own TeensyROM, the HW was designed with mid-level solder skills in mind. See assembly instructions [here](PCB/PCB_Assembly.md).  Alternately, I sell fully assembled/tested units available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).
+* **The [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) is here!** [MetalHexx](https://github.com/MetalHexx)'s amazing app for controlling your TeensyROM/C64 from Windows enables lightning fast exploration of Games, Scene Demos, Music and Images in very large file collections. Coupled with remote launch capability, you will cover a lot of ground very quickly and discover great content faster than ever.  See all the details in the [TeensyROM UI Repo](https://github.com/MetalHexx/TeensyROM-UI).
+
+  
+**Fully assembled/tested units are available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).**
 <BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
+<BR>If you'd prefer to make your own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 
 If you have thoughts/input on this project, questions, or would like to meet other TeensyROM users, please join us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U)
 
@@ -35,8 +40,7 @@ If you have thoughts/input on this project, questions, or would like to meet oth
   * USB thumb Drive
   * SD card
   * Teensy Internal Flash Memory
-  * Transfer directly from PC
-    * C# Windows app included
+  * Transfer directly from PC using the [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)
   * See supported file details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#loading-programs-and-emulating-roms)
   * [NFC Loading system](docs/NFC_Loader.md) available to quickly select/load with NFC tags.
 ### **MIDI in/out via USB Host connection:** 
@@ -49,7 +53,7 @@ If you have thoughts/input on this project, questions, or would like to meet oth
 ### **MIDI in via USB Device connection:** 
   * Stream .SID or .MIDI files from a modern computer directly to your Commodore machine SID chip!
   * Play MIDI files out of your PC into C64 apps such as Cynthcart or the MIDI2SID app
-  * Play .SID files out of your PC using the ASID MIDI protocol to hear any SID file on original hardware.
+  * Stream .SID files out of your PC using the ASID MIDI protocol to hear any SID file on original hardware.
 ### **Internet communication via Ethernet connection**
   * Connect to your favorite C64/128 Telnet BBS!
   * Use with released software such as **CCGMS, StrikeTerm2014, DesTerm128,** etc

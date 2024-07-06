@@ -33,11 +33,11 @@
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
    SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
    SIDRegColorStart   = C64ColorRAM +40*2+7
-   MuteColorStart     = C64ColorRAM +40*2+34 ;start of "Mute" diaply
+   MuteColorStart     = C64ColorRAM +40*2+34 ;start of "Mute" display
    
    RegFirstColor  = PokeWhite
    RegSecondColor = PokeDrkGrey
-                    ;then to black/off
+   RegOffColor    = PokeBlack  ;then to black/off
    
    StartMsgToken  = 1  ;In character queue, indicates start message
    StopMsgToken   = 2  ;In character queue, indicates stop message
@@ -174,7 +174,7 @@ regcolorupdate
    lda #RegSecondColor ;RegFirstColor -> RegSecondColor
    jmp setcolor   
 +
-   lda #PokeBlack ;RegSecondColor (or anything else) -> black
+   lda #RegOffColor ;RegSecondColor (or anything else) -> Off (black)
  
 setcolor 
    sta SIDRegColorStart,x

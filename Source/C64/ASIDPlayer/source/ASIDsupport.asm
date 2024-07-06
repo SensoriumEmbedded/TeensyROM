@@ -155,15 +155,17 @@ memSID1addrNum:
 memSID2addrNum:
    !byte 1
 memSID3addrNum:
-   !byte 4
+   !byte 2
 memSIDaddrList:
    !word $d400    ;Num 0
    !word $d420    ;Num 1
    !word $d440    ;Num 2
-   !word $df00    ;Num 3
-   !word memNoSID ;Num 4 garbage location for "none" writes
+   !word $d500    ;Num 3
+   !word $d600    ;Num 4
+   !word $df00    ;Num 5
+   !word memNoSID ;Num 6 garbage location for "none" writes
 memNumSIDaddresses:
-   !byte 5 ;update to match list above!
+   !byte 7 ;update to match list above!
 
 
 MsgASIDPlayerMainDisplay:    

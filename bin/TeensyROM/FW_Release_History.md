@@ -1,6 +1,16 @@
 
 # FW Release Version history:
 
+### 0.5.16 sub-release 7/3/24
+* MIDI/ASID updates
+  * Hosted MIDI Device changed to "BigBuffer" model
+    * Now supports DirtyWave m8 tracker/sequencer
+  * Added $d500 and $d600 to available SID addresses in ASID player
+* General optimization
+  * NFC poling auto-paused during Swiftlink, MIDI, and ASID operations
+    * Avoids slow-down of these features when NFC is enabled 
+    * NFC (if enabled) will not respond when these apps are running
+      * Use button to return to main menu and resume NFC poling/usage
 
 ### 0.5.15 sub-release 5/24/24
 * New feature: Integrated high performance ASID Player

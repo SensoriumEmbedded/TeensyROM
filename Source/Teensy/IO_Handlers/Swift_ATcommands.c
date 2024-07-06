@@ -232,6 +232,7 @@ FLASHMEM void AT_HELP(char* CmdArg)
    AddToPETSCIIStrToRxQueueLN(" AT    Ping");
    AddToPETSCIIStrToRxQueueLN(" ATC   Connect Ethernet, display info");
    AddToPETSCIIStrToRxQueueLN(" ATDT<HostName>:<Port>  Connect to host");
+   AddToPETSCIIStrToRxQueueLN(" ATBROWSE  Enter Web Browser");
 
    AddToPETSCIIStrToRxQueueLN("Modify saved parameters:");
    AddToPETSCIIStrToRxQueueLN(" AT+S  Display stored Ethernet settings");

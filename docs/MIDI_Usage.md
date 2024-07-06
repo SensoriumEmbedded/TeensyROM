@@ -2,9 +2,8 @@
 # TeensyROM USB MIDI Usage
 
 ## USB MIDI Host port
-### Hardware connection:
-  * Cable from a USB MIDI Keyboard/Controller device to the USB-A Host port on the TeensyROM board.
-### Sending MIDI data to/from your C64 from a MIDI/USB keyboard
+### Sending MIDI data from a MIDI/USB keyboard to/from your C64
+  * Connect USB cable from a MIDI Keyboard/Controller device to the USB-A Host port on the TeensyROM board.
   * Prior to running a MIDI program, go to the settings menu. Under "Special IO:", select your preferred "MIDI:*" device by cycling through the options.
     * Note: if using the built-in CynthCart, Station64, or MIDI2SID app, the Special IO is already associated and you can skip this step.
     * The following MIDI cartridges can be emulated/selected:
@@ -13,33 +12,23 @@
       * Passport/Sentech (w/o 6480 timer)
       * Namesoft (w/o 6480 timer)
     * All use DExx address space and IRQ for interrupts
-
   * Select/load a MIDI capable application to receive/play the MIDI data from your controller
   * Play around and have fun!
   * MIDI out (C64 to MIDI Device) is also implemented so that keyboards, etc with their own sound capability can be "played" by the C64
   * Some sequencer apps work, others require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.
-    
+
 <BR>
 
-## USB MIDI Device port
-### Hardware connection:
-  * Cable from the Micro USB-B Device port on the Teensy module to a computer or sequencer with a USB-A Host port.
-    
+## USB MIDI Device port 
 ### Streaming MIDI/SID data to your C64/128 from a modern computer
-
-  * **Playing .SID files on your C64 from a computer** (FW v0.4 and higher)
-    * You can use your C64/128 as a directly controlled SID chip with the use of the ASID MIDI protocol.
+  * **Controlling your C64's SID chip using the ASID MIDI protocol** (FW v0.5.15 and higher)
     * This protocol was designed by Elektron to send data to their SIDstation device, but has been adopted for general use by the community
     * **C64/128 Setup**
-      * Make sure your TeensyROM is connected to the computer via USB
-      * Power up C64/128 to TeensyROM main menu.
-      * Select Station64+Passport MIDI to play the ASID/MIDI data
-        * In Station64, select F4 to enter setup mode, then F2 for the ASID player
-        * ASID player control keys:
-          * F7: Screen on/off
-          * F8: SID Reset
-          * 1/2/3: Toggle SID Voice
-          * <-(left arrow): Escape to synth/arp/perf window
+      * Connect USB cable from the Micro USB-B Device port on the Teensy module to a computer or sequencer with a USB-A Host port.
+      * Power up C64/128 to the TeensyROM main menu.
+      * Select "TeensyROM ASID Player", or press '4' for fast hotkey access.
+        * Starts ready to receive single SID ASID data
+        * See on-screen menu for additional commands.
     * **PC instructions to stream .sid files from the internet to your C64**
       * In your browser, navigate to https://deepsid.chordian.net/
         * Select "ASID (MIDI)" from the drop-down in the upper left corner
@@ -53,6 +42,12 @@
         * Click "Play"
         * The playback should be eminating from your C64/128!
         * You can play with the frequency to adjust the playback tempo if needed.
+    * **Control your SID chip directly as a synthesizer**
+      * Go to https://www.plogue.com/products/chipsynth-c64.html and download/install/launch "chipsynth C64"
+        * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and "TeensyROM" as the destination
+        * There are many things you can do with this great program, purchasing will unlock the 10 minute limit per use.
+        * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
+        * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 
 <BR>
 

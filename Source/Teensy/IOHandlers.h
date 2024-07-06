@@ -20,7 +20,7 @@
 USBHost myusbHost;
 USBHub hub1(myusbHost);
 USBHub hub2(myusbHost);
-MIDIDevice usbHostMIDI(myusbHost);
+MIDIDevice_BigBuffer usbHostMIDI(myusbHost);
 USBDrive myDrive(myusbHost);
 USBFilesystem firstPartition(myusbHost);
 
