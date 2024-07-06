@@ -191,6 +191,7 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
    strcat(StrSIDInfo, "Error: ");
    strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendU16(BadSIDToken);
+   SendMsgPrintfln("Error:");
    SendMsgPrintfln(ErrMsg);
 }
 
@@ -265,6 +266,17 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    uint16_t PlayAddress = toU16(XferImage+0x0C);
    uint16_t InitAddress = toU16(XferImage+0x0A);
    SendMsgPrintfln("SID Loc %04x:%04x, Play=%04x", LoadAddress, LoadAddress+XferSize, PlayAddress);
+
+   if (InitAddress == 0)
+   { //"init address is 0, means the address is equal to the effective load address"
+     // (Doesn't work)
+      //XferImage[0x0A] = XferImage[StreamOffsetAddr+1]; //rRegSIDInitHi
+      //XferImage[0x0B] = XferImage[StreamOffsetAddr];   //rRegSIDInitLo
+      //InitAddress = toU16(XferImage+0x0A);
+      //Printf_dbg("\n0000 init updated", IO1[rRegSIDInitHi], IO1[rRegSIDInitLo]);
+      SIDLoadError("Init addr is 0");
+      return;
+   }
    
    Printf_dbg("\nSongs: %d", toU16(XferImage+0x0E));
    Printf_dbg("\nStart Song: %d", toU16(XferImage+0x10));
@@ -341,7 +353,7 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    IO1[rRegSIDDefSpeedLo] = CIATimer[SidFlags][1];  
    IO1[rRegSIDInitHi] = XferImage[0x0A];
    IO1[rRegSIDInitLo] = XferImage[0x0B];
-   IO1[rRegSIDPlayHi] = XferImage[0x0C];
+   IO1[rRegSIDPlayHi] = XferImage[0x0C]; //Play address of 0 handled in assy code
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
    IO1[rRegSIDNumSongsZ] = abs(toU16(XferImage+0x0E)-1); //Make Zero based, range is 1-256
    IO1[rwRegSIDSongNumZ] = abs(toU16(XferImage+0x10)-1); //Make Zero based, range is 1-256
