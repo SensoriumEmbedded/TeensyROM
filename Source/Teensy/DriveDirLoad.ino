@@ -693,6 +693,7 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    //https://www.lemon64.com/forum/viewtopic.php?t=71980&start=30
    //https://hvsc.c64.org/
 
+   //** Construct first few lines of StrSIDInfo
    char RetSpc[] = "\r "; //return char + space
    strcpy(StrSIDInfo, RetSpc); //clear/init SID info
 
@@ -712,7 +713,7 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    strncat(StrSIDInfo, (char*)XferImage+0x56, 0x20);  //Released (32 chars max)
    strcat(StrSIDInfo, RetSpc); 
    
-
+   //** File basic syntax checks:
    if (memcmp(XferImage, "PSID", 4) != 0) 
    {
       if (memcmp(XferImage, "RSID", 4) != 0) 
@@ -745,6 +746,7 @@ FLASHMEM void ParseSIDHeader(const char *filename)
       XferImage[StreamOffsetAddr+1] = XferImage[0x08];
    }
    
+   //** Extract needed information:
    uint16_t LoadAddress = (XferImage[StreamOffsetAddr + 1] << 8) 
       | XferImage[StreamOffsetAddr]; //little endian, opposite of toU16
       
@@ -752,18 +754,20 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    uint16_t InitAddress = toU16(XferImage+0x0A);
    SendMsgPrintfln("SID Loc %04x:%04x, Play=%04x", LoadAddress, LoadAddress+XferSize, PlayAddress);
    
+   Printf_dbg("\nSongs: %d", toU16(XferImage+0x0E));
+   Printf_dbg("\nStart Song: %d", toU16(XferImage+0x10));
    Printf_dbg("\nInit: %04x", InitAddress);
    Printf_dbg("\nPlay: %04x", PlayAddress);
    Printf_dbg("\nTR Code: %02x00:%02xff", IO1[rwRegCodeStartPage], IO1[rwRegCodeLastPage]);
 
-   //check for conflict with IO1 space:   
+   //** check for conflict with IO1 space:   
    if (LoadAddress < 0xdf00 && LoadAddress+XferSize >= 0xde00)
    {
       SIDLoadError("IO1 mem conflict");
       return;
    }
 
-   //check for RAM conflict with TR code:   
+   //** check for RAM conflict with TR code:   
    if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
    {
       SIDLoadError("Mem conflict w/ TR app");
@@ -809,6 +813,7 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
       VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
       
+   //** Finish StrSIDInfo
    //"NTSC vid, 6"
    strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
    strcat(StrMachineInfo, " Vid, "); 
@@ -826,9 +831,11 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    IO1[rRegSIDInitLo] = XferImage[0x0B];
    IO1[rRegSIDPlayHi] = XferImage[0x0C];
    IO1[rRegSIDPlayLo] = XferImage[0x0D];
+   IO1[rRegSIDNumSongsZ] = abs(toU16(XferImage+0x0E)-1); //Make Zero based, range is 1-256
+   IO1[rwRegSIDSongNumZ] = abs(toU16(XferImage+0x10)-1); //Make Zero based, range is 1-256
    
    SendU16(GoodSIDToken);
-   IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last
+   IO1[rRegStrAvailable] = 0xff; //transfer start flag, set last. Indicates error if not set
 }
  
 void RedirectEmptyDriveDirMenu()
