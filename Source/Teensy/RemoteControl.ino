@@ -80,6 +80,23 @@ bool RemotePauseSID()
    return InterruptC64(ricmdSIDPause);
 }
 
+// Command: 
+// Set sub-song number of currently loaded SID
+//
+// Workflow:
+// Receive <-- SetSIDSongToken Token 0x6488 
+// Receive <-- Song number to set (1 byte, zero based, song 1 is 0) 
+// Send --> AckToken 0x64CC or FailToken 0x9B7F
+bool SetSIDSong()
+{  //assumes TR is not "busy" (Handler active)
+   if(!SerialAvailabeTimeout()) return false;
+   uint8_t NewSongNumZ = Serial.read();
+   
+   if(NewSongNumZ > IO1[rRegSIDNumSongsZ]) return false;
+   IO1[rwRegSIDSongNumZ] = NewSongNumZ;
+   return InterruptC64(ricmdSIDInit);
+}
+
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
 {  //assumes file exists & TR is not "busy" (Handler active)
    

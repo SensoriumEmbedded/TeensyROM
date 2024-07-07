@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-char strVersionNumber[] = "v0.5.16"; //*VERSION*
+char strVersionNumber[] = "v0.5.16+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -121,6 +121,7 @@ enum InternalEEPROMmap
 #define LaunchFileToken   0x6444
 #define PingToken         0x6455
 #define PauseSIDToken     0x6466
+#define SetSIDSongToken   0x6488
 #define DebugToken        0x6467
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB

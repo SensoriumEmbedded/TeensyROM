@@ -52,11 +52,13 @@
    rRegSIDPlayLo       = 25 ;// SID Play Info: Play Address Lo
    rRegSIDDefSpeedHi   = 26 ;// SID Play Info: CIA interrupt timer speed Hi
    rRegSIDDefSpeedLo   = 27 ;// SID Play Info: CIA interrupt timer speed Lo
-   wRegVid_TOD_Clks    = 28 ;// C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 29 ;// IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 30 ;// IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 31 ;// TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 32 ;// TR Code last page used in C64 RAM
+   rwRegSIDSongNumZ    = 28 ;// SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 29 ;// SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 30 ;// C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 31 ;// IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 32 ;// IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 33 ;// TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 34 ;// TR Code last page used in C64 RAM
 
    ; These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 ;// start of SID Regs, matching SID Reg order ($D400)
@@ -106,6 +108,7 @@
    ricmdAck1           = 1 ; Ack1 response from C64 IRQ routine
    ricmdLaunch         = 2 ; Launch app (set up before IRQ assert)
    ricmdSIDPause       = 3 ; SID pause/play
+   ricmdSIDInit        = 4 ; re-init current SID (sub song # change)
    
 ;enum RegSerialStringSelect // rwRegSerialString
    rsstItemName        = 0  ; Name of selected item

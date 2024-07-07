@@ -24,34 +24,26 @@ SIDLoadInit:
    ;SID is Prepared to transfer from TR RAM before calling
    
    jsr FastLoadFile ;load SID to C64 RAM
-   beq +  ;check for error
+   beq +  ;check for error, include not ready to send due to parse error
    lda #$ff      ;rpudSIDPauseMask  ;disable SID playback on error, all bits don't allow un-pause until reload
    sta smcSIDPauseStop+1
    rts
    
-   ;self-modifying init jump
+   ;set self-modifying init jump
 +  lda rRegSIDInitLo+IO1Port
    sta smcSIDInitAddr+1
    lda rRegSIDInitHi+IO1Port
    sta smcSIDInitAddr+2
    
-   ;self-modifying play jump
+   ;set self-modifying play jump
    lda rRegSIDPlayLo+IO1Port
    sta smcSIDPlayAddr+1
    lda rRegSIDPlayHi+IO1Port
    sta smcSIDPlayAddr+2
 
-   sei
-   lda #$35; Disable Kernal and BASIC ROMs
-   ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
-   sta $01
-   lda #$00  ;set to first song in SID
-smcSIDInitAddr
-   jsr $fffe ;Initialize music (self modified code)
-   lda #$37 ; Reset the Kernal and BASIC ROMs
-   sta $01
-   cli
+   jsr SIDSongInit
    
+   ;check play address
    lda rRegSIDPlayLo+IO1Port
    bne +
    lda rRegSIDPlayHi+IO1Port
@@ -63,6 +55,20 @@ smcSIDInitAddr
    rts
    
 +  jsr IRQEnable  ;start the IRQ wedge
+   rts
+
+SIDSongInit:
+   ;run SID Init routine
+   sei
+   lda #$35; Disable Kernal and BASIC ROMs
+   ;lda #$34; Disable IO, Kernal and BASIC ROMs (RAM only)
+   sta $01
+   lda rwRegSIDSongNumZ+IO1Port ;load acc with song number
+smcSIDInitAddr
+   jsr $fffe ;Initialize music (self modified code)
+   lda #$37 ; Reset the Kernal and BASIC ROMs
+   sta $01
+   cli
    rts
    
 ToggleSIDMusic:
@@ -235,12 +241,33 @@ ShowSIDInfoPage:
    ldy #>MsgSettingsMenu2SpaceRet
    jsr PrintString 
 
+PrintSongNum:
+   lda #NameColor
+   jsr SendChar
+   ;print the timer song num/num songs in decimal
+   ldx #16 ;row 
+   ldy #26 ;col
+   clc
+   jsr SetCursor  
+   ldx rwRegSIDSongNumZ+IO1Port 
+   inx ;from zero to one based
+   txa
+   jsr PrintIntByte
+   lda #'/'
+   jsr SendChar
+   ldx rRegSIDNumSongsZ+IO1Port
+   inx ;from zero to one based
+   txa
+   jsr PrintIntByte
+   lda #ChrSpace
+   jsr SendChar
+   jsr SendChar
+
 PrintSIDVars:
    lda #NameColor
    jsr SendChar
-
    ;print the timer interval in hex  
-   ldx #16 ;row 
+   ldx #17 ;row 
    ldy #30 ;col
    clc
    jsr SetCursor
@@ -255,23 +282,6 @@ WaitSIDInfoKey:
    jsr DisplayTime   
    jsr CheckForIRQGetIn    
    beq WaitSIDInfoKey
-
-   cmp #ChrF4  ;toggle music
-   bne +
-   jsr ToggleSIDMusic
-   jmp WaitSIDInfoKey  
-
-+  cmp #'b'  ;Toggle Border effect
-   bne +
-   lda smcBorderEffect+1
-   eor #1
-   sta smcBorderEffect+1
-   jmp WaitSIDInfoKey   
-
-+  cmp #'d'  ;Set SID speed to default
-   bne +
-   jsr SetSIDSpeedToDefault
-   jmp PrintSIDVars  
 
 +  cmp #ChrCRSRLeft  ;increase SID speed (small step)
    bne +
@@ -308,6 +318,45 @@ updateSpeedHi
    stx LclRegSIDSpeedHi
    stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    jmp PrintSIDVars  
+
++  cmp #'d'  ;Set SID speed to default
+   bne +
+   jsr SetSIDSpeedToDefault
+   jmp PrintSIDVars  
+
++  cmp #'+'  ;next song in SID
+   bne +
+   ldx rwRegSIDSongNumZ+IO1Port 
+   cpx rRegSIDNumSongsZ+IO1Port
+   bne ++
+   ldx #$ff  ;roll over
+++ inx
+   stx rwRegSIDSongNumZ+IO1Port
+   jsr SIDSongInit
+   jmp PrintSongNum ;Reprint song num/num songs 
+
++  cmp #'-'  ;prev song in SID
+   bne +
+   ldx rwRegSIDSongNumZ+IO1Port 
+   bne ++
+   ldx rRegSIDNumSongsZ+IO1Port ;roll under
+   inx
+++ dex
+   stx rwRegSIDSongNumZ+IO1Port
+   jsr SIDSongInit
+   jmp PrintSongNum ;Reprint song num/num songs 
+
++  cmp #ChrF4  ;toggle music
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitSIDInfoKey  
+
++  cmp #'b'  ;Toggle Border effect
+   bne +
+   lda smcBorderEffect+1
+   eor #1
+   sta smcBorderEffect+1
+   jmp WaitSIDInfoKey   
 
 +  cmp #'s'  ;Set current SID as default/background
    bne +
