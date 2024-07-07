@@ -1,4 +1,5 @@
 
+#define MaxCRTKB      867   //based on calc from minimal image
                             
 //EEPROM related:
 #define eepMagicNum         0xfeed6408 // 01: 6/22/23  net settings added 
@@ -32,3 +33,5 @@ enum InternalEEPROMmap
    eepAdMinBootInd    = 3463, // (1:uint8_t)    Indicates that Minimal boot should execute eepAdCrtBootName (!=0) or passthrough (=0)
    //Max size = 4284 (4k, emulated in flash)
 };
+
+

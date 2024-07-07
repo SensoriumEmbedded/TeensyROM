@@ -121,7 +121,7 @@ void HandleExecution()
             Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
             while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
             {
-               if (!ParseChipHeader(ptrChipOffset)) //sends error messages
+               if (!ParseChipHeader(ptrChipOffset, "")) //sends error messages
                {
                   FreeCrtChips();
                   IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
@@ -308,6 +308,8 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
 
    File myFile = sourceFS->open(FullFilePath, FILE_READ);
    
+   if (sourceFS != &SD) FullFilePath[0] = 0; //terminate if not SD
+   
    if (!myFile) 
    {
       SendMsgPrintfln("File Not Found");
@@ -315,6 +317,15 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    }
    
    MyMenuItem->Size = myFile.size();
+   if(MyMenuItem->Size > MaxCRTKB*1024)
+   {
+      SendMsgPrintfln("Not enough room"); 
+      SendMsgPrintfln("  Size: %luk, Max: %luk", MyMenuItem->Size, MaxCRTKB); 
+      myFile.close();
+      return false;         
+   }
+
+   
    uint32_t count=0;
    
    if (MyMenuItem->ItemType == rtFileCrt)
@@ -346,7 +357,7 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       while (myFile.available())
       {
          for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
-         if (!ParseChipHeader(lclBuf)) //sends error messages
+         if (!ParseChipHeader(lclBuf, FullFilePath)) //sends error messages
          {
             myFile.close();
             FreeCrtChips();

@@ -94,7 +94,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    return true;
 }
    
-bool ParseChipHeader(uint8_t* ChipHeader)   
+bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)   
 {
    static uint8_t *ptrRAM_ImageEnd = NULL;
    
@@ -128,9 +128,20 @@ bool ParseChipHeader(uint8_t* ChipHeader)
       while(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
       {
          if (DriveDirMenu == NULL)
-         {
-            SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
-            return false;         
+         {            
+            //SendMsgPrintfln("Too large for main image"); 
+            
+            if (FullFilePath[0] == 0)
+            {
+               SendMsgPrintfln("Must run this crt from SD"); 
+               return false;                        
+            }
+               
+            SendMsgPrintfln("Rebooting Teensy to Minimal"); 
+            EEPwriteStr(eepAdCrtBootName, FullFilePath);
+            EEPROM.write(eepAdMinBootInd, 1);
+            REBOOT;
+            
          }
          else
          {

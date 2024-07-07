@@ -31,9 +31,9 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 // #define Dbg_SerTimChg //Allow commands over serial that tweak timing parameters.
 // #define Dbg_SerLog    //Allow commands over serial that display log info
-//#define Dbg_SerMem    //Allow commands over serial that display memory info
+// #define Dbg_SerMem    //Allow commands over serial that display memory info
 // #define DbgSpecial    //Special case logging to BigBuf
-#define Dbg_TestMin    //Test minimal build by loading a CRT on start
+// #define Dbg_TestMin    //Test minimal build by loading a CRT on start
 
 //#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          5
