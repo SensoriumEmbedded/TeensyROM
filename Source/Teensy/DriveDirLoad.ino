@@ -320,7 +320,7 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    if(MyMenuItem->Size > MaxCRTKB*1024)
    {
       SendMsgPrintfln("Not enough room"); 
-      SendMsgPrintfln("  Size: %luk, Max: %luk", MyMenuItem->Size, MaxCRTKB); 
+      SendMsgPrintfln("  Size: %luk, Max: %luk", MyMenuItem->Size/1024, MaxCRTKB); 
       myFile.close();
       return false;         
    }

@@ -1,0 +1,18 @@
+
+*** How to make the Dual Boot hex file:
+   Prep: edit "Set Upper.bat" & "Set Original.bat" to point LocalPath to your AppData\Local path
+
+1. Run "Set Upper.bat" to set linker to build at upper Teensy memory
+2. Run Arduino and build main TeensyROM code to hex file, close Arduino
+    Be sure to select "Serial+MIDI" USB Type
+3. Run "Set Original.bat" to set linker to build at normal/base location
+4. Run Arduino and compile MinimalBoot code
+    Be sure to select "Serial" (only) USB Type
+5. Combine .hex files:
+   a. start with lower/minimal hex file
+   b. delete last 2 lines
+   c. copy paste in all of upper/main hex file
+   d. Change last 2 lines to this: (startup address and end of file indicator)
+   :040000056000100087   (start address = lower)
+   :00000001FF           (EOF)
+

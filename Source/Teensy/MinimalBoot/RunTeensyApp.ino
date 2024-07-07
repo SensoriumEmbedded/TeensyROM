@@ -27,17 +27,17 @@ FLASHMEM bool runApp(uint32_t offsetFromStart) {
  
   // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.
   uint32_t firstInstructionPtr = imageStartAddress + 0x1000 + sizeof(uint32_t);
-  Serial.printf("First instruction pointer is at address 0x%08X\r\n", firstInstructionPtr);
+  Serial.printf("First instruction ptr: 0x%08X\n", firstInstructionPtr);
   uint32_t firstInstructionAddr = *(uint32_t*)firstInstructionPtr;
 
   // very basic sanity check, code should start after the ivt but not too far into the image.
   if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) ) 
   {
-    Serial.printf("Address of first instruction %08X isn't sensible for location in flash. Image was probably incorrectly built\r\n", firstInstructionAddr);
+    Serial.printf("Address of first instruction %08X isn't sensible for location in flash. Image was probably incorrectly built\n", firstInstructionAddr);
     LoopForever();
     //return false;
   }
-  Serial.printf("Jumping to code at 0x%08X\r\n", firstInstructionAddr);
+  Serial.printf("Jumping to code at 0x%08X\n", firstInstructionAddr);
   delay(10); // give the serial port time to output so we see that message.
 
   pFunction Target_Code_Address = (pFunction) firstInstructionAddr;
