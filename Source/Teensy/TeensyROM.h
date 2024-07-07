@@ -17,6 +17,9 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+#include "MinimalBoot\Common\EEPROM_Defs.h"
+
 char strVersionNumber[] = "v0.5.16+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
@@ -33,11 +36,16 @@ char strVersionNumber[] = "v0.5.16+"; //*VERSION*
 // #define Dbg_SerMem    //Serial commands that display memory info
 // #define Dbg_SerASID   //Serial commands that test the ASID player
 
+
 #define nfcScanner     //nfc scanner libs/code included in build
 #define nfcStateEnabled       0
 #define nfcStateBitDisabled   1
 #define nfcStateBitPaused     2
-#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+
+#define eepBMTitleSize       75  //max chars in bookmark title
+#define eepBMURLSize        225  //Max Chars in bookmark URL path
+#define eepNumBookmarks       9  //Num Bookmarks saved
+
 #define BigBufSize          5
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
@@ -81,40 +89,6 @@ uint32_t* BigBuf = NULL;
 #define DefSIDSource        rmtTeensy  // Default should always be local (rmtTeensy)
 #define DefSIDPath          "/SID Cover Tunes" 
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
-                            
-//EEPROM related:
-#define eepMagicNum         0xfeed6407 // 01: 6/22/23  net settings added 
-                                       // 02: 9/07/23  Joy2 speed added
-                                       // 03: 11/3/23  Browser Bookmarks added
-                                       // 04: 11/4/23  Browser DL drive/path added
-                                       // 05: 12/27/23 inverted default SID enable bit
-                                       // 06: 3/13/24  Added eepAdDefaultSID
-                                       // 07: 6/3/24   Added eepAdCrtBootName
-#define eepBMTitleSize       75  //max chars in bookmark title
-#define eepBMURLSize        225  //Max Chars in bookmark URL path
-#define eepNumBookmarks       9  //Num Bookmarks saved
-
-enum InternalEEPROMmap
-{
-   eepAdMagicNum      =    0, // (4:uint32_t)   Indicated if internal EEPROM has been initialized
-   eepAdPwrUpDefaults =    4, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
-   eepAdTimezone      =    5, // (1:int8_t)     signed char for timezone: UTC +14/-12 
-   eepAdNextIOHndlr   =    6, // (1:uint8_t)    default IO handler to load upon TR exit
-   eepAdDHCPEnabled   =    7, // (1:uint8_t)    non-0=DHCP enabled, 0=DHCP disabled
-   eepAdMyMAC         =    8, // (6:uint8_t x6) default IO handler to load upon TR exit
-   eepAdMyIP          =   14, // (4:uint8_t x4) My IP address (static)
-   eepAdDNSIP         =   18, // (4:uint8_t x4) DNS IP address (static)
-   eepAdGtwyIP        =   22, // (4:uint8_t x4) Gtwy IP address (static)
-   eepAdMaskIP        =   26, // (4:uint8_t x4) Mask IP address (static)
-   eepAdDHCPTimeout   =   30, // (2:uint16_t)   DNS Timeout
-   eepAdDHCPRespTO    =   32, // (2:uint16_t)   DNS Response Timeout
-   eepAdDLPathSD_USB  =   34, // (1:uint8_t)    Download path is on SD or USB per Drive_SD/USB
-   eepAdDLPath        =   35, // (TxMsgMaxSize=128)  HTTP Download path
-   eepAdBookmarks     =  163, // (75+225)*9     Bookmark Titles and Full Paths
-   eepAdDefaultSID    = 2863, // (MaxPathLength=300) Path/filename of Default SID to play in background
-   eepAdCrtBootName   = 3163, // (MaxPathLength=300) Indicates boot tominimal code and .crt path to launch
-   //Max size = 4284 (4k, emulated in flash)
-};
 
 //synch with win app:
 //all commands must start with 0x64

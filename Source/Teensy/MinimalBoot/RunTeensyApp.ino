@@ -22,7 +22,8 @@ typedef  void (*pFunction)(void);
 FLASHMEM bool runApp(uint32_t offsetFromStart) {
   uint32_t imageStartAddress = FLASH_BASEADDRESS+offsetFromStart;
   if (!checkForValidImage(imageStartAddress))
-      return false;
+    LoopForever();
+    //return false;
  
   // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.
   uint32_t firstInstructionPtr = imageStartAddress + 0x1000 + sizeof(uint32_t);
@@ -30,9 +31,11 @@ FLASHMEM bool runApp(uint32_t offsetFromStart) {
   uint32_t firstInstructionAddr = *(uint32_t*)firstInstructionPtr;
 
   // very basic sanity check, code should start after the ivt but not too far into the image.
-  if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) ) {
+  if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) ) 
+  {
     Serial.printf("Address of first instruction %08X isn't sensible for location in flash. Image was probably incorrectly built\r\n", firstInstructionAddr);
-    return false;
+    LoopForever();
+    //return false;
   }
   Serial.printf("Jumping to code at 0x%08X\r\n", firstInstructionAddr);
   delay(10); // give the serial port time to output so we see that message.
@@ -40,12 +43,18 @@ FLASHMEM bool runApp(uint32_t offsetFromStart) {
   pFunction Target_Code_Address = (pFunction) firstInstructionAddr;
   disableCache();
   Target_Code_Address();
-  while(true) {
-    Serial.println("Shouldn't be here");
+  Serial.println("Shouldn't be here");
+  LoopForever();
+}
+
+void LoopForever()
+{
+  while(true) 
+  {
+    Serial.print(".");
     delay(1000);
   }
 }
-
 
 // disable and invalidate both caches. Disable MPU.
 // assembled from bits of core_cm7.h

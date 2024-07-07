@@ -79,17 +79,19 @@ void setup()
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
    EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+   EEPROM.write(eepAdMinBootInd, 1);
 #endif  
   
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runApp(UpperAddr); //jump to main app if EEP not initialized
-   if (EEPROM.read(eepAdCrtBootName) == 0) runApp(UpperAddr); //jump to main app if not booting a CRT
+   if (EEPROM.read(eepAdMinBootInd) == 0) runApp(UpperAddr); //jump to main app if not booting a CRT
+   
+   EEPROM.write(eepAdMinBootInd, 0); //clear the boot flag for next boot
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM
    Serial.printf("Sel CRT: %s\n", CrtBootNamePath);
-   EEPROM.write(eepAdCrtBootName, 0); //clear the boot flag for next boot
 
    //SetUpMainMenuROM();
    SetIRQDeassert;
@@ -137,7 +139,7 @@ void loop()
    if (BtnPressed)
    {
       runApp(UpperAddr); 
-      Serial.print("Button detected (minimal)\n"); 
+      //Serial.print("Button detected (minimal)\n"); 
    }
    
    if (doReset)
@@ -146,9 +148,9 @@ void loop()
       Serial.println("Resetting C64"); 
       Serial.flush();
       delay(50); 
-      while(ReadButton==0); //avoid self reset detection
+      //while(ReadButton==0); //avoid self reset detection
       doReset=false;
-      BtnPressed = false;
+      //BtnPressed = false;
       SetResetDeassert;
    }
   
