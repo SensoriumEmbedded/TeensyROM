@@ -42,21 +42,22 @@ struct stcIOHandlers
   void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
 };
 
-#include "IO_Handlers/IOH_None.c"
 #include "IO_Handlers/IOH_MIDI.c"
 #include "IO_Handlers/IOH_Debug.c"
 #include "IO_Handlers/IOH_TeensyROM.c" 
 #include "IO_Handlers/IOH_Swiftlink.c"
-#include "IO_Handlers/IOH_EpyxFastLoad.c"
-#include "IO_Handlers/IOH_MagicDesk.c"
-#include "IO_Handlers/IOH_Dinamic.c"
-#include "IO_Handlers/IOH_Ocean1.c"
-#include "IO_Handlers/IOH_FunPlay.c"
-#include "IO_Handlers/IOH_SuperGames.c"
-#include "IO_Handlers/IOH_C64GameSystem3.c"
-#include "IO_Handlers/IOH_EasyFlash.c"
-#include "IO_Handlers/IOH_ZaxxonSuper.c"
 #include "IO_Handlers/IOH_ASID.c"
+#include "MinimalBoot/Common/IOH_None.c"
+#include "MinimalBoot/Common/IOH_EpyxFastLoad.c"
+#include "MinimalBoot/Common/IOH_MagicDesk.c"
+#include "MinimalBoot/Common/IOH_Dinamic.c"
+#include "MinimalBoot/Common/IOH_Ocean1.c"
+#include "MinimalBoot/Common/IOH_FunPlay.c"
+#include "MinimalBoot/Common/IOH_SuperGames.c"
+#include "MinimalBoot/Common/IOH_C64GameSystem3.c"
+#include "MinimalBoot/Common/IOH_EasyFlash.c"
+#include "MinimalBoot/Common/IOH_ZaxxonSuper.c"
+
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
