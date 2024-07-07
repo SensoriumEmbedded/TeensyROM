@@ -50,9 +50,12 @@
             this.tbSource = new System.Windows.Forms.TextBox();
             this.btnTest = new System.Windows.Forms.Button();
             this.pnlCommButtons = new System.Windows.Forms.Panel();
-            this.btnLaunch = new System.Windows.Forms.Button();
             this.btnPauseSID = new System.Windows.Forms.Button();
+            this.btnLaunch = new System.Windows.Forms.Button();
+            this.btnSetSIDSong = new System.Windows.Forms.Button();
+            this.nudSongNum = new System.Windows.Forms.NumericUpDown();
             this.pnlCommButtons.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudSongNum)).BeginInit();
             this.SuspendLayout();
             // 
             // btnConnected
@@ -255,6 +258,8 @@
             // 
             // pnlCommButtons
             // 
+            this.pnlCommButtons.Controls.Add(this.nudSongNum);
+            this.pnlCommButtons.Controls.Add(this.btnSetSIDSong);
             this.pnlCommButtons.Controls.Add(this.btnPauseSID);
             this.pnlCommButtons.Controls.Add(this.btnLaunch);
             this.pnlCommButtons.Controls.Add(this.btnPing);
@@ -265,6 +270,17 @@
             this.pnlCommButtons.Name = "pnlCommButtons";
             this.pnlCommButtons.Size = new System.Drawing.Size(332, 79);
             this.pnlCommButtons.TabIndex = 24;
+            // 
+            // btnPauseSID
+            // 
+            this.btnPauseSID.Location = new System.Drawing.Point(231, 44);
+            this.btnPauseSID.Margin = new System.Windows.Forms.Padding(4);
+            this.btnPauseSID.Name = "btnPauseSID";
+            this.btnPauseSID.Size = new System.Drawing.Size(90, 28);
+            this.btnPauseSID.TabIndex = 16;
+            this.btnPauseSID.Text = "Pause SID";
+            this.btnPauseSID.UseVisualStyleBackColor = true;
+            this.btnPauseSID.Click += new System.EventHandler(this.btnPauseSID_Click);
             // 
             // btnLaunch
             // 
@@ -277,16 +293,38 @@
             this.btnLaunch.UseVisualStyleBackColor = true;
             this.btnLaunch.Click += new System.EventHandler(this.btnLaunch_Click);
             // 
-            // btnPauseSID
+            // btnSetSIDSong
             // 
-            this.btnPauseSID.Location = new System.Drawing.Point(231, 44);
-            this.btnPauseSID.Margin = new System.Windows.Forms.Padding(4);
-            this.btnPauseSID.Name = "btnPauseSID";
-            this.btnPauseSID.Size = new System.Drawing.Size(90, 28);
-            this.btnPauseSID.TabIndex = 16;
-            this.btnPauseSID.Text = "Pause SID";
-            this.btnPauseSID.UseVisualStyleBackColor = true;
-            this.btnPauseSID.Click += new System.EventHandler(this.btnPauseSID_Click);
+            this.btnSetSIDSong.Location = new System.Drawing.Point(9, 44);
+            this.btnSetSIDSong.Margin = new System.Windows.Forms.Padding(4);
+            this.btnSetSIDSong.Name = "btnSetSIDSong";
+            this.btnSetSIDSong.Size = new System.Drawing.Size(90, 28);
+            this.btnSetSIDSong.TabIndex = 17;
+            this.btnSetSIDSong.Text = "Set Song";
+            this.btnSetSIDSong.UseVisualStyleBackColor = true;
+            this.btnSetSIDSong.Click += new System.EventHandler(this.btnSetSIDSong_Click);
+            // 
+            // nudSongNum
+            // 
+            this.nudSongNum.Location = new System.Drawing.Point(107, 48);
+            this.nudSongNum.Maximum = new decimal(new int[] {
+            256,
+            0,
+            0,
+            0});
+            this.nudSongNum.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nudSongNum.Name = "nudSongNum";
+            this.nudSongNum.Size = new System.Drawing.Size(54, 22);
+            this.nudSongNum.TabIndex = 18;
+            this.nudSongNum.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
             // 
             // Form1
             // 
@@ -315,6 +353,7 @@
             this.Text = "TeensyROM Transfer v0.4";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.pnlCommButtons.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.nudSongNum)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -345,6 +384,8 @@
         private System.Windows.Forms.Panel pnlCommButtons;
         private System.Windows.Forms.Button btnLaunch;
         private System.Windows.Forms.Button btnPauseSID;
+        private System.Windows.Forms.NumericUpDown nudSongNum;
+        private System.Windows.Forms.Button btnSetSIDSong;
     }
 }
 

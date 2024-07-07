@@ -22,6 +22,7 @@ namespace Serial_Logger
         //synch with TeensyROM code:
         const UInt16 LaunchFileToken = 0x6444;
         const UInt16 PauseSIDToken   = 0x6466;
+        const UInt16 SetSIDSongToken = 0x6488;
         const UInt16 SendFileToken   = 0x64AA;
         const UInt16 AckToken        = 0x64CC;
         const UInt16 FailToken       = 0x9B7F;
@@ -339,6 +340,13 @@ namespace Serial_Logger
             SendIntBytes(PauseSIDToken, 2);
             if (GetAck()) WriteToOutput("Sent Pause SID", Color.DarkGreen);
             else WriteToOutput("Pause SID Failed!", Color.Red);
+        }
+        private void btnSetSIDSong_Click(object sender, EventArgs e)
+        {
+            SendIntBytes(SetSIDSongToken, 2);
+            SendIntBytes((UInt16)(nudSongNum.Value - 1), 1);
+            if (GetAck()) WriteToOutput("Sent SID Song Num", Color.DarkGreen);
+            else WriteToOutput("SID Song Num Failed!", Color.Red);
         }
 
         /********************************  Stand Alone Functions *****************************************/

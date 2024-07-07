@@ -451,6 +451,11 @@ smcIRQFlagged
    jsr ToggleSIDMusic
    jmp -
    
++  cmp #ricmdSIDInit
+   bne +
+   jsr SIDSongInit
+   jmp -
+   
 +  cmp #ricmdLaunch
    bne -    ;no command or false irq
 

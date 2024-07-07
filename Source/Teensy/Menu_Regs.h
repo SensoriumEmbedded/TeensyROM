@@ -110,6 +110,7 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
    ricmdAck1           = 1, // Ack1 response from C64 IRQ routine
    ricmdLaunch         = 2, // Launch app (set up before IRQ assert)
    ricmdSIDPause       = 3, // SID pause/play
+   ricmdSIDInit        = 4, // re-init current SID (sub song # change)
 };
 
 enum RegSerialStringSelect // rwRegSerialString
