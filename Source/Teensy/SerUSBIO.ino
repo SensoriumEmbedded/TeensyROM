@@ -98,7 +98,9 @@ FLASHMEM void ServiceSerial()
 // *** The rest of these cases are used for debug/testing only  
      
       case 'u':  //Reboot to minimal build
-         EEPROM.write(eepAdCrtBootName, 1);
+         //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
+         EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+         EEPROM.write(eepAdMinBootInd, 1);         
          REBOOT;
          break;
 
