@@ -1,5 +1,5 @@
 
-#define MaxCRTKB      867   //based on calc from minimal image
+#define MaxCRTKB      875   //based on calc from minimal image
 
 //synch with win app:
 //all commands must start with 0x64

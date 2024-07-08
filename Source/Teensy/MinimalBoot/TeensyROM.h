@@ -23,7 +23,6 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-// #define nfcScanner    //poll nfc scanner via serial device on USB Host port
 
 //less used:
 //#define Dbg_TestMin    //Test minimal build by loading a CRT on start
@@ -41,11 +40,7 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
-#ifdef nfcScanner
-   #define MaxRAM_ImageSize  152
-#else
-   #define MaxRAM_ImageSize  (184+116+20+64)  //normal max 320
-#endif
+#define MaxRAM_ImageSize  (184+208)  //184 is non-minimal image size
 
 #ifdef DbgMsgs_IO  //Debug msgs mode: reduced RAM_ImageSize
    #define Printf_dbg Serial.printf

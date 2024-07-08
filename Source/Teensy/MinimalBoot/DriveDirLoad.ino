@@ -78,7 +78,6 @@ void HandleExecution()
    
    if (CartLoaded)
    {
-      //void IOHandlerInitToNext()
       //called after cart loaded
 
       BigBufCount = 0;
