@@ -32,60 +32,22 @@ FLASHMEM void ServiceSerial()
          if (inVal == ResetC64Token) //Reset C64
          {
             Serial.println("Reset cmd received");
-            BtnPressed = true;
+            runMainTRApp(); 
             return;
          }
-         //else if (inVal == LaunchFileToken) //Launch File
-         //{
-         //   LaunchFile();
-         //   return;
-         //}
-         //
-         //if (CurrentIOHandler != IOH_TeensyROM)
-         //{
-            SendU16(FailToken);
-            Serial.print("Busy!\n");
-            return;
-         //}
-         //TeensyROM IO Handler is active...
-         
-         //switch (inVal)
-         //{
-         //   case PingToken:  //ping
-         //      Serial.printf("TeensyROM %s ready!\n", strVersionNumber);
-         //      break;
-         //   case SendFileToken: //file x-fer pc->TR
-         //   case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
-         //      PostFileCommand();
-         //      break;
-         //   case CopyFileToken:
-         //       CopyFileCommand();
-         //       break;
-         //   case DeleteFileToken:
-         //       DeleteFileCommand();
-         //       break;
-         //   case GetDirectoryToken:  // v2 directory listing from TR
-         //      GetDirectoryCommand();
-         //      break;
-         //   case PauseSIDToken: //Pause SID
-         //      if(RemotePauseSID()) SendU16(AckToken);
-         //      else SendU16(FailToken);
-         //      break;
-         //   case DebugToken: //'dg'Test/debug
-         //      //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
-         //      //PrintDebugLog();
-         //      break;
-         //   default:
-         //      Serial.printf("Unk cmd: 0x%04x\n", inVal); 
-         //      break;
-         //}
-         //break;
-      //case 'e': //Reset EEPROM to defaults
-      //   SetEEPDefaults();
-      //   Serial.println("Applied upon reboot");
-      //   break;
+         else if (inVal == LaunchFileToken) //Launch File
+         {
+            SendU16(RetryToken);
+            Serial.println("Launch cmd from min");
+            runMainTRApp();
+         }
+ 
+         SendU16(FailToken);
+         Serial.print("Busy!\n");
+         return;
+        
       case 'u': //Jump to upper image (full build)
-         runApp(UpperAddr);  
+         runMainTRApp();  
          break;
 
    // l, c

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-#include "MinimalBoot\Common\EEPROM_Defs.h"
+#include "MinimalBoot\Common\Common_Defs.h"
 
 char strVersionNumber[] = "v0.5.16++"; //*VERSION*
 
@@ -90,24 +90,6 @@ uint32_t* BigBuf = NULL;
 #define DefSIDPath          "/SID Cover Tunes" 
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
 
-//synch with win app:
-//all commands must start with 0x64
-#define LaunchFileToken   0x6444
-#define PingToken         0x6455
-#define PauseSIDToken     0x6466
-#define SetSIDSongToken   0x6488
-#define DebugToken        0x6467
-#define SendFileToken     0x64AA
-#define PostFileToken     0x64BB
-#define CopyFileToken     0x64FF
-#define GetFileToken      0x64B0
-#define DeleteFileToken   0x64CF
-#define AckToken          0x64CC
-#define GetDirectoryToken 0x64DD
-#define ResetC64Token     0x64EE
-#define FailToken         0x9B7F
-#define BadSIDToken       0x9B80
-#define GoodSIDToken      0x9B81
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;
    

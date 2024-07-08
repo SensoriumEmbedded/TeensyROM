@@ -17,25 +17,11 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//USBHost myusbHost;
-//USBHub hub1(myusbHost);
-//USBHub hub2(myusbHost);
-//MIDIDevice usbHostMIDI(myusbHost);
-//USBDrive myDrive(myusbHost);
-//USBFilesystem firstPartition(myusbHost);
-
-//EthernetUDP udp;
-//EthernetClient client;
-
 //from IOH_TeensyROM.c :
 uint8_t RegNextIOHndlr;
-//volatile uint8_t* IO1;  //io1 space/regs
 volatile uint8_t doReset = false;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
-//StructMenuItem *MenuSource;
-//uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
-//uint16_t NumItemsFull;  //Num Items in Current Menu
 
 
 //#define usbDevMIDI usbMIDI

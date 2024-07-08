@@ -461,7 +461,7 @@ FLASHMEM void PrintDebugLog()
 FLASHMEM void LaunchFile()
 {            
    //   App: LaunchFileToken 0x6444
-   //Teensy: AckToken 0x64CC
+   //Teensy: AckToken 0x64CC or RetryToken/abort from minimal
    //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
    //Teensy: AckToken 0x64CC
    //   C64: file Launches

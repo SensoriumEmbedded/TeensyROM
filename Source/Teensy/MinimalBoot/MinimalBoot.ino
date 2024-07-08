@@ -65,13 +65,14 @@ void setup()
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
    EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
    EEPROM.write(eepAdMinBootInd, 1);
 #endif  
   
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
-   if (MagNumRead != eepMagicNum) runApp(UpperAddr); //jump to main app if EEP not initialized
-   if (EEPROM.read(eepAdMinBootInd) == 0) runApp(UpperAddr); //jump to main app if not booting a CRT
+   if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized
+   if (EEPROM.read(eepAdMinBootInd) == 0) runMainTRApp(); //jump to main app if not booting a CRT
    
    EEPROM.write(eepAdMinBootInd, 0); //clear the boot flag for next boot
 
@@ -112,7 +113,7 @@ void setup()
    if (!doReset) 
    {
       Serial.print("CRT not loaded, Abort!\n");
-      runApp(UpperAddr); //didn't load right if not calling for reset
+      runMainTRApp(); //didn't load right if not calling for reset
    }
 } 
      
@@ -120,7 +121,7 @@ void loop()
 {
    if (BtnPressed)
    {
-      runApp(UpperAddr); 
+      runMainTRApp(); 
       //Serial.print("Button detected (minimal)\n"); 
    }
    

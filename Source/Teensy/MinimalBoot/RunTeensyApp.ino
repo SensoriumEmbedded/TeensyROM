@@ -9,8 +9,9 @@
 
 typedef  void (*pFunction)(void);
 
-FLASHMEM void runApp(uint32_t offsetFromStart) {
-  uint32_t imageStartAddress = FLASH_BASEADDRESS+offsetFromStart;
+FLASHMEM void runMainTRApp() 
+{
+  uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image
 
   // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord
   if ((*((uint32_t*)imageStartAddress) != 0x42464346) || (*((uint32_t*)(imageStartAddress+0x1000)) != 0x432000D1))

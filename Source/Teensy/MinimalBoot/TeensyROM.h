@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "Common\EEPROM_Defs.h"
+#include "Common\Common_Defs.h"
 
 char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 
@@ -26,6 +26,8 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 // #define nfcScanner    //poll nfc scanner via serial device on USB Host port
 
 //less used:
+//#define Dbg_TestMin    //Test minimal build by loading a CRT on start
+
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
@@ -33,7 +35,6 @@ char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
 // #define Dbg_SerLog    //Allow commands over serial that display log info
 // #define Dbg_SerMem    //Allow commands over serial that display memory info
 // #define DbgSpecial    //Special case logging to BigBuf
-// #define Dbg_TestMin    //Test minimal build by loading a CRT on start
 
 //#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #define BigBufSize          5
@@ -76,22 +77,6 @@ uint32_t* BigBuf = NULL;
 #define NTSCBusFreq         1022730
 #define PALBusFreq          985250
 #define UpperAddr           0x040000  //address of upper (main) TR image
-
-//synch with win app:
-//all commands must start with 0x64
-#define LaunchFileToken   0x6444
-#define PingToken         0x6455
-#define PauseSIDToken     0x6466
-#define DebugToken        0x6467
-#define SendFileToken     0x64AA
-#define PostFileToken     0x64BB
-#define CopyFileToken     0x64FF
-#define DeleteFileToken   0x64CF
-#define AckToken          0x64CC
-#define GetDirectoryToken 0x64DD
-#define ResetC64Token     0x64EE
-#define FailToken         0x9B7F
-#define BadSIDToken       0x9B80
 
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;
