@@ -5,37 +5,30 @@
 
 #include "core_cm7_min.h"  //stripped down version to get defines needed
 
-const uint32_t FLASH_BASEADDRESS = 0x60000000;
-
-bool checkForValidImage(uint32_t addressInFlash) {
-  uint32_t SPIFlashConfigMagicWord = *((uint32_t*)addressInFlash);
-  uint32_t VectorTableMagicWord = *((uint32_t*)(addressInFlash+0x1000));
-  if ((SPIFlashConfigMagicWord == 0x42464346) && (VectorTableMagicWord==0x432000D1))
-    return true;
- 
-  Serial.println("Invalid magic numbers, no flash image found");
-  return false;
-}
+#define  FLASH_BASEADDRESS    0x60000000
 
 typedef  void (*pFunction)(void);
 
-FLASHMEM bool runApp(uint32_t offsetFromStart) {
+FLASHMEM void runApp(uint32_t offsetFromStart) {
   uint32_t imageStartAddress = FLASH_BASEADDRESS+offsetFromStart;
-  if (!checkForValidImage(imageStartAddress))
-    LoopForever();
-    //return false;
- 
+
+  // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord
+  if ((*((uint32_t*)imageStartAddress) != 0x42464346) || (*((uint32_t*)(imageStartAddress+0x1000)) != 0x432000D1))
+  {
+     ErrorLoopForever("Invalid magic numbers, no flash image found");
+  }
+
   // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.
   uint32_t firstInstructionPtr = imageStartAddress + 0x1000 + sizeof(uint32_t);
   Serial.printf("First instruction ptr: 0x%08X\n", firstInstructionPtr);
   uint32_t firstInstructionAddr = *(uint32_t*)firstInstructionPtr;
 
   // very basic sanity check, code should start after the ivt but not too far into the image.
+  // Address of first instruction %08X isn't sensible for location in flash. Image was probably incorrectly built
   if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) ) 
   {
-    Serial.printf("Address of first instruction %08X isn't sensible for location in flash. Image was probably incorrectly built\n", firstInstructionAddr);
-    LoopForever();
-    //return false;
+    Serial.printf("%08X ", firstInstructionAddr);
+    ErrorLoopForever("Unexp first inst loc");
   }
   Serial.printf("Jumping to code at 0x%08X\n", firstInstructionAddr);
   delay(10); // give the serial port time to output so we see that message.
@@ -43,12 +36,14 @@ FLASHMEM bool runApp(uint32_t offsetFromStart) {
   pFunction Target_Code_Address = (pFunction) firstInstructionAddr;
   disableCache();
   Target_Code_Address();
-  Serial.println("Shouldn't be here");
-  LoopForever();
+  
+  ErrorLoopForever("Shouldn't be here");
 }
 
-void LoopForever()
+FLASHMEM void ErrorLoopForever(const char *Msg)
 {
+  Serial.print("\nError: ");
+  Serial.println(Msg);
   while(true) 
   {
     Serial.print(".");

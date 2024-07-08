@@ -17,20 +17,12 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//  TeensyROM: A C64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
-//  Copyright (c) 2023 Travis Smith <travis@sensoriumembedded.com> 
-
 
 #include <SD.h>
-//#include <USBHost_t36.h>
-//#include <SPI.h>
-//#include <NativeEthernet.h>
-//#include <NativeEthernetUdp.h>
 #include <EEPROM.h>
 #include "TeensyROM.h"
 #include "Menu_Regs.h"
 #include "DriveDirLoad.h"
-//#include "MainMenuItems.h"
 #include "IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
