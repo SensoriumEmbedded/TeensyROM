@@ -103,7 +103,7 @@ FLASHMEM void ServiceSerial()
    #ifdef Dbg_SerMem 
       case 'x': 
          { 
-            FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
+            //FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
             
             uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
             Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);

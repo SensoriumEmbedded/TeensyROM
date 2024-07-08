@@ -20,12 +20,10 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
-//char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
-//char StrMachineInfo[16]; //~5 extra
 
 void HandleExecution()
 {
-   StructMenuItem MenuSelCpy = MenuSource[0]; //local copy selected menu item to modify
+   StructMenuItem MenuSelCpy = DriveDirMenu; //local copy selected menu item to modify
    
    if(!LoadFile(&MenuSelCpy, &SD)) return;     
 
@@ -144,7 +142,6 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          return false;        
       }
       
-      //IO1[rwRegNextIOHndlr] is now assigned from crt!
       //process Chip Packets
       FreeCrtChips();  //clears any previous and resets NumCrtChips
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
@@ -155,8 +152,6 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          {
             myFile.close();
             FreeCrtChips();
-            //IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
-            //RedirectEmptyDriveDirMenu();
             return false;        
          }
          for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
@@ -168,8 +163,6 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       {
          myFile.close();
          FreeCrtChips();
-         //IO1[rwRegNextIOHndlr] = IOH_None;  //EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
-         //RedirectEmptyDriveDirMenu();
          return false;        
       }
    }
@@ -197,21 +190,6 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    SendMsgPrintfln("Done");
    myFile.close();
    return true;      
-}
-
-void InitDriveDirMenu() 
-{
-   
-   if (DriveDirMenu == NULL) 
-   {
-      DriveDirMenu = (StructMenuItem*)malloc(MaxMenuItems*sizeof(StructMenuItem));
-   }
-   else
-   {
-      //free/clear prev loaded directory
-      for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
-   }
-   NumDrvDirMenuItems = 0;
 }
  
 bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)   
@@ -283,7 +261,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
    CrtChips[NumCrtChips].ROMSize = toU16(ChipHeader+0x0E);
    
-   //chips in main buffer, then malloc in RAM2.  Drop Directory names if space needed?
+   //chips in main buffer, then malloc in RAM2.
    if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //init RAM1 Buffer pointer
 
    //First try RAM1:
@@ -295,17 +273,10 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    }
    else //then try RAM2
    {
-      while(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
+      if(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
       {
-         if (DriveDirMenu == NULL)
-         {
-            SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
-            return false;         
-         }
-         else
-         {
-            FreeDriveDirMenu(); //free/clear prev loaded directory to make space
-         }
+         SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
+         return false;         
       }
       Printf_dbg("2");
    }
@@ -313,17 +284,6 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    return true;
 }
  
-void FreeDriveDirMenu()
-{
-   //free/clear prev loaded directory
-   if(DriveDirMenu != NULL)
-   {
-      Printf_dbg("Dir info removed\n"); 
-      for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
-      free(DriveDirMenu); DriveDirMenu = NULL;
-   }
-}
-
 void FreeCrtChips()
 { //free chips allocated in RAM2 and reset NumCrtChips
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
@@ -331,15 +291,6 @@ void FreeCrtChips()
    NumCrtChips = 0;
 }
  
-//void RedirectEmptyDriveDirMenu()
-//{
-//   if((IO1[rWRegCurrMenuWAIT] == rmtSD || IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) && DriveDirMenu == NULL)
-//   {  //return to Teensy Menu instead of re-loading dir to save time
-//      IO1[rWRegCurrMenuWAIT] = rmtTeensy;
-//      MenuChange();
-//   }
-//}
-
 bool PathIsRoot()
 {
    return (strlen(DriveDirPath) == 1 && DriveDirPath[0] == '/');

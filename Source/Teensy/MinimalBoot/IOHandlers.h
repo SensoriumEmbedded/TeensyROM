@@ -33,7 +33,7 @@ uint8_t RegNextIOHndlr;
 volatile uint8_t doReset = false;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
-StructMenuItem *MenuSource;
+//StructMenuItem *MenuSource;
 //uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 //uint16_t NumItemsFull;  //Num Items in Current Menu
 

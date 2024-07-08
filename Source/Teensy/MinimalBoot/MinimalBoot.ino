@@ -29,8 +29,7 @@ uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
-StructMenuItem *DriveDirMenu = NULL;
-uint16_t NumDrvDirMenuItems = 0;
+StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
@@ -61,11 +60,6 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(Reset_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
-   
-   //myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-#ifdef nfcScanner
-   nfcInit(); //connect to nfc scanner
-#endif
   
 #ifdef Dbg_TestMin
    //write a game path to execute
@@ -86,23 +80,16 @@ void setup()
    Serial.printf("Sel CRT: %s\n", CrtBootNamePath);
 
    //SetUpMainMenuROM();
-   SetIRQDeassert;
-   SetNMIDeassert;
-   SetGameDeassert;
-   SetExROMAssert; //emulate 8k cart ROM
+   //SetGameDeassert;
+   //SetExROMAssert; //emulate 8k cart ROM
    LOROM_Image = NULL; //TeensyROMC64_bin;
    HIROM_Image = NULL;
    LOROM_Mask = HIROM_Mask = 0x1fff;
    EmulateVicCycles = false;
    FreeCrtChips();
    
-   //MenuChange(); //set up drive path, menu source/size
    strcpy(DriveDirPath, "/");
    SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-   //LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
-   MenuSource = DriveDirMenu; 
-   //IO1[rwRegCursorItemOnPg] = 0;
-
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    Serial.printf("\nTeensyROM %s is on-line\n", strVersionNumber);
@@ -120,10 +107,13 @@ void setup()
    Serial.printf(" %luk free for CRT\n", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
 #endif
 
-   //***todo: verify it's a .crt file, and present on SD drive
-   
+   // assuming it's a .crt file, and present on SD drive (verified in main image)
    LoadCRT(CrtBootNamePath);
-   
+   if (!doReset) 
+   {
+      Serial.print("CRT not loaded, Abort!\n");
+      runApp(UpperAddr); //didn't load right if not calling for reset
+   }
 } 
      
 void loop()
@@ -140,17 +130,11 @@ void loop()
       Serial.println("Resetting C64"); 
       Serial.flush();
       delay(50); 
-      //while(ReadButton==0); //avoid self reset detection
       doReset=false;
-      //BtnPressed = false;
       SetResetDeassert;
    }
   
    if (Serial.available()) ServiceSerial();
-   //myusbHost.Task();
-#ifdef nfcScanner
-   nfcCheck();
-#endif
    
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
@@ -182,15 +166,6 @@ void EEPreadStr(uint16_t addr, char* buf)
    } while (buf[CharNum++] !=0); //end on termination, but include it in buffer
 }
 
-//void SetEEPDefaults()
-//{
-//   Serial.println("--> Setting EEPROM to defaults");
-//   EEPROM.write(eepAdPwrUpDefaults, 0x90 /* | rpudSIDPauseMask  | rpudNetTimeMask */); //default med js speed, music on, eth time synch off
-//   EEPROM.write(eepAdTimezone, -14); //default to pacific time
-//   EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
-//   //SetEthEEPDefaults();
-//   EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
-//}
 
 void LoadCRT( const char *FileNamePath)
 {
@@ -212,27 +187,11 @@ void LoadCRT( const char *FileNamePath)
       *ptrFilename = 0; //terminate DriveDirPath
       ptrFilename++; //inc to point to filename
    }
-
-   // Set up DriveDirMenu to point to file to load
-   //    without doing LoadDirectory(&SD/&firstPartition);
-   InitDriveDirMenu();
-   //SetDriveDirMenuNameType(0, ptrFilename);
-   //void SetDriveDirMenuNameType(uint16_t ItemNum, const char *filename)
-   //malloc, copy file name and get item type from extension
-   DriveDirMenu[0].Name = (char*)malloc(strlen(ptrFilename)+1);
-   strcpy(DriveDirMenu[0].Name, ptrFilename);
    
-   DriveDirMenu[0].ItemType = rtFileCrt; //Assoc_Ext_ItemType(DriveDirMenu[0].Name);
-   
-   NumDrvDirMenuItems = 1;
-   MenuSource = DriveDirMenu; 
-
-   
+   DriveDirMenu.Name = ptrFilename;
+   DriveDirMenu.ItemType = rtFileCrt; //Assoc_Ext_ItemType(DriveDirMenu[0].Name);
+     
    HandleExecution();
-   if (!doReset)
-   {
-      
-   }
 }
 
 //from IOH_TeensyROM.c :
