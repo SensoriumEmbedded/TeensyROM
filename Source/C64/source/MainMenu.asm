@@ -27,7 +27,9 @@
 
    ;other RAM Registers
    ;$0334-033b is "free space"
-
+   PageIdentifyLoc    = C64ScreenRAM+40*25-1 ;bottom right corner, identifies current screen
+   PageIdentifyColor  = C64ColorRAM+40*25-1  ;to make it match background color
+   PILSIDScreen       = $f0
 
 ;******************************* Main Code Start ************************************   
 
@@ -454,6 +456,11 @@ smcIRQFlagged
 +  cmp #ricmdSIDInit
    bne +
    jsr SIDSongInit
+   ;reprint song # info if on SID page
+   lda #PILSIDScreen
+   cmp PageIdentifyLoc  
+   bne -
+   jsr PrintSongNum
    jmp -
    
 +  cmp #ricmdLaunch

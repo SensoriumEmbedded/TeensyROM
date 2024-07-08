@@ -241,27 +241,13 @@ ShowSIDInfoPage:
    ldy #>MsgSettingsMenu2SpaceRet
    jsr PrintString 
 
-PrintSongNum:
-   lda #NameColor
-   jsr SendChar
-   ;print the timer song num/num songs in decimal
-   ldx #16 ;row 
-   ldy #26 ;col
-   clc
-   jsr SetCursor  
-   ldx rwRegSIDSongNumZ+IO1Port 
-   inx ;from zero to one based
-   txa
-   jsr PrintIntByte
-   lda #'/'
-   jsr SendChar
-   ldx rRegSIDNumSongsZ+IO1Port
-   inx ;from zero to one based
-   txa
-   jsr PrintIntByte
-   lda #ChrSpace
-   jsr SendChar
-   jsr SendChar
+   ;page identifier for check from interrupt
+   lda #BackgndColor
+   sta PageIdentifyColor
+   lda #PILSIDScreen
+   sta PageIdentifyLoc  
+
+   jsr PrintSongNum
 
 PrintSIDVars:
    lda #NameColor
@@ -333,7 +319,8 @@ updateSpeedHi
 ++ inx
    stx rwRegSIDSongNumZ+IO1Port
    jsr SIDSongInit
-   jmp PrintSongNum ;Reprint song num/num songs 
+   jsr PrintSongNum ;Reprint song num/num songs 
+   jmp WaitSIDInfoKey  
 
 +  cmp #'-'  ;prev song in SID
    bne +
@@ -344,7 +331,8 @@ updateSpeedHi
 ++ dex
    stx rwRegSIDSongNumZ+IO1Port
    jsr SIDSongInit
-   jmp PrintSongNum ;Reprint song num/num songs 
+   jsr PrintSongNum ;Reprint song num/num songs 
+   jmp WaitSIDInfoKey  
 
 +  cmp #ChrF4  ;toggle music
    bne +
@@ -379,6 +367,29 @@ updateSpeedHi
    jmp WaitSIDInfoKey   
 ++ rts
 
+PrintSongNum:
+   lda #NameColor
+   jsr SendChar
+   ;print the timer song num/num songs in decimal
+   ldx #16 ;row 
+   ldy #26 ;col
+   clc
+   jsr SetCursor  
+   ldx rwRegSIDSongNumZ+IO1Port 
+   inx ;from zero to one based
+   txa
+   jsr PrintIntByte
+   lda #'/'
+   jsr SendChar
+   ldx rRegSIDNumSongsZ+IO1Port
+   inx ;from zero to one based
+   txa
+   jsr PrintIntByte
+   lda #ChrSpace
+   jsr SendChar
+   jsr SendChar
+   rts
+   
 FastLoadFile:   
    ;load file from Teensy to C64 RAM, same as PRGLoadStart...
    ;on return, zero flag clear if an error occured, set if OK
