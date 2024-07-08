@@ -231,6 +231,7 @@ void SetEEPDefaults()
    EEPROM.write(eepAdDefaultSID, DefSIDSource);  
    EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
+   EEPROM.write(eepAdCrtBootName, 0);
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }

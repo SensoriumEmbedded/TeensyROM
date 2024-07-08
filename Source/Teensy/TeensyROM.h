@@ -83,12 +83,13 @@ uint32_t* BigBuf = NULL;
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
                             
 //EEPROM related:
-#define eepMagicNum         0xfeed6406 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6407 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
                                        // 05: 12/27/23 inverted default SID enable bit
                                        // 06: 3/13/24  Added eepAdDefaultSID
+                                       // 07: 6/3/24   Added eepAdCrtBootName
 #define eepBMTitleSize       75  //max chars in bookmark title
 #define eepBMURLSize        225  //Max Chars in bookmark URL path
 #define eepNumBookmarks       9  //Num Bookmarks saved
@@ -111,6 +112,7 @@ enum InternalEEPROMmap
    eepAdDLPath        =   35, // (TxMsgMaxSize=128)  HTTP Download path
    eepAdBookmarks     =  163, // (75+225)*9     Bookmark Titles and Full Paths
    eepAdDefaultSID    = 2863, // (MaxPathLength=300) Path/filename of Default SID to play in background
+   eepAdCrtBootName   = 3163, // (MaxPathLength=300) Indicates boot tominimal code and .crt path to launch
    //Max size = 4284 (4k, emulated in flash)
 };
 
