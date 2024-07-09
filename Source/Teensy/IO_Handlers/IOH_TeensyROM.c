@@ -303,29 +303,29 @@ FLASHMEM uint8_t RAM2blocks()
 FLASHMEM void MakeBuildInfo()
 {
    //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
-   sprintf(SerialStringBuf, "       FW: %s, %s\r\n   Teensy: %luMHz  %.1fC", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+   sprintf(SerialStringBuf, "       FW: %s, %s\r\n   Teensy: %luMHz  %.1fC  %luk free\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), MaxCRTKB);
 }
 
-FLASHMEM void MakeBuildCPUInfoStr()
-{
-   FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
-   RedirectEmptyDriveDirMenu(); //OK since we're on the TR settings screen
-  
-   uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
-   //Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
-      
-   uint8_t NumChips = RAM2blocks();
-   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
-   NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
-   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
-  
-   CrtMax += NumChips*8;
-   char FreeStr[20];
-   sprintf(FreeStr, "  %luk free\r", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
-
-   MakeBuildInfo();
-   strcat(SerialStringBuf, FreeStr);
-}
+//FLASHMEM void MakeBuildCPUInfoStr()
+//{
+//   FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
+//   RedirectEmptyDriveDirMenu(); //OK since we're on the TR settings screen
+//  
+//   uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
+//   //Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
+//      
+//   uint8_t NumChips = RAM2blocks();
+//   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+//   NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
+//   //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+//  
+//   CrtMax += NumChips*8;
+//   char FreeStr[20];
+//   sprintf(FreeStr, "  %luk free\r", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
+//
+//   MakeBuildInfo();
+//   strcat(SerialStringBuf, FreeStr);
+//}
 
 void UpDirectory()
 {
@@ -590,7 +590,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &getNtpTime,          // rsGetTime    
    &IOHandlerInitToNext, // rsIOHWinit   
    &WriteEEPROM,         // rsWriteEEPROM
-   &MakeBuildCPUInfoStr, // rsMakeBuildCPUInfoStr
+   &MakeBuildInfo,       // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
    &SearchForLetter,     // rsSearchForLetter
    &LoadMainSIDforXfer,  // rsLoadSIDforXfer

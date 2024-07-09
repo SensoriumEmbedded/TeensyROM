@@ -173,7 +173,7 @@ enum RegCtlCommands
    rCtlStartSelItemWAIT     =  2,
    rCtlGetTimeWAIT          =  3,
    rCtlRunningPRG           =  4, // final signal before running prg, allows IO1 handler change
-   rCtlMakeInfoStrWAIT      =  5, // MakeBuildCPUInfoStr
+   rCtlMakeInfoStrWAIT      =  5, // MakeBuildCPUInfo
    rCtlUpDirectoryWAIT      =  6,
    rCtlLoadSIDWAIT          =  7, //load .sid file to RAM buffer and prep for x-fer
    rCtlNextPicture          =  8, 
