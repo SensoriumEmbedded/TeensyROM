@@ -1,6 +1,24 @@
 
 # FW Release Version history:
 
+### 0.6 Release 7/10/24
+* New feature: Dual boot w/ minimal image
+  * ***Increases max CRT file size from 626k to 875k (40% increase)***
+    * ~40 known games in this range, such as Briley Witch 
+  * Automatically launches minimal boot image when a file in this range is selected
+  * Return to main menu by pushing the button on the TeensyROM
+  * Build instructions created for full dual-boot hex file creation
+  * limitations
+    * Files of this size load from SD card only
+    * NFC disabled while loaded, push button to return/re-enable
+  * Thanks to @DigitalMan for the prompts on this!
+* SID sub-tune navigation capability
+  * +/- for next/prev on SID summary page
+    * Displays song # and # songs
+  * SID starts on sub-song identified in SID header
+  * Serial command for setting remotely
+  * Thanks to @hExx, @Avrilcadabra, and @DivertigO for the prompts!
+
 ### 0.5.16 sub-release 7/3/24
 * MIDI/ASID updates
   * Hosted MIDI Device changed to "BigBuffer" model
