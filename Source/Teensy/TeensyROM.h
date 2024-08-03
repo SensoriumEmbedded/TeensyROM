@@ -20,7 +20,7 @@
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #include "MinimalBoot\Common\Common_Defs.h"
 
-char strVersionNumber[] = "v0.6"; //*VERSION*
+char strVersionNumber[] = "v0.6.0+"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 //#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
