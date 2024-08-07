@@ -169,7 +169,7 @@ memNumSIDaddresses:
 
 
 MsgASIDPlayerMainDisplay:    
-   !tx NameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "       TeensyROM ASID Player 1.0        "
+   !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.1        "
    !tx ChrReturn, ChrYellow, "     ", ChrLtRed, "  ", ChrBlack, "*************************", ChrRvsOn, "XXXMute", ChrReturn
    !tx ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV" ;, "5678901"
    !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  

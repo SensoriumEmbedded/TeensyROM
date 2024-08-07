@@ -44,7 +44,8 @@
    
 	BasicStart = $0801
    code       = $080D ;2061
-
+   Charset    = $3000
+   
    *=BasicStart
    ;BASIC SYS header
    !byte $0b,$08,$01,$00,$9e  ; Line 1 SYS
@@ -61,6 +62,12 @@ ASIDInit:
    lda #BackgndColor
    sta BackgndColorReg
  
+   ;lda $d018
+   ;and #$f0
+   ;ora #$0c
+   lda #$1c  ;Point to custom char set at $3000
+   sta $d018
+
    jsr UpdateAllSIDAddress
    jsr SIDinit
 
@@ -403,11 +410,15 @@ ASIDIntFinished:
 
 
    !align $1f, 0 , 0  ;32 byte align to index within page.
-memNoSID: ;set "none" sid writes to here, don't add anything after this!
+memNoSID: ;set "none" sid writes to here
    !fill $20, $00	; reserve 32 bytes for "none" sid
 
+   *=Charset
+   !binary "bin\ASID-charset.bin"
 
-
+EOF:
+   !byte 0
+   
 
    
 
