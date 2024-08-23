@@ -36,6 +36,10 @@ char strVersionNumber[] = "v0.6.0+"; //*VERSION*
 // #define Dbg_SerMem    //Serial commands that display memory info
 // #define Dbg_SerASID   //Serial commands that test the ASID player
 
+//Debug HW signal usage. Recommend using only 1 at a time.
+//#define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
+//#define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
+
 
 #define nfcScanner     //nfc scanner libs/code included in build
 #define nfcStateEnabled       0

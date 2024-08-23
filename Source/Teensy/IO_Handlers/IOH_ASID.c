@@ -72,8 +72,12 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    #define Printf_dbg_SysExInfo {}
 #endif
 
+#ifdef DbgSignalASIDIRQ
+bool DbgState;
+#endif
+
 uint32_t NumPackets, TotalInituS, TimerIntervalUs = 0;
-bool QueueInitialized, DbgState, FrameTimerMode;
+bool QueueInitialized, FrameTimerMode;
 uint32_t QueueMaxThresh, QueueMinThresh; //Upper/lower queue size thresholds to adjust timinig.
 
 uint8_t ASIDidToReg[] = 
@@ -114,7 +118,7 @@ uint8_t ASIDidToReg[] =
 
 void InitTimedASIDQueue()
 {
-   Printf_dbg("Queue Init\n");
+   Printf_dbg("\nQueue Init\n");
    RxQueueHead = RxQueueTail = 0;
    ASIDPlaybackTimer.end();  // Stop the timer (if on)
    QueueInitialized = false;
@@ -145,9 +149,11 @@ void SetASIDIRQ()
    if(MIDIRxIRQEnabled)
    {
       SetIRQAssert;
-      
+
+   #ifdef DbgSignalASIDIRQ      
       if (DbgState = (!DbgState)) SetDebugAssert;
       else SetDebugDeassert;
+   #endif
    }
    else
    {
@@ -203,8 +209,10 @@ FASTRUN void SendTimedASID()
   
    //if (!TimerIntervalUs || !QueueInitialized) return;
   
+#ifdef DbgSignalASIDIRQ
    if (DbgState = (!DbgState)) SetDebugAssert;
    else SetDebugDeassert;
+#endif
    
    uint32_t LocalASIDRxQueueUsed = ASIDRxQueueUsed; 
    
