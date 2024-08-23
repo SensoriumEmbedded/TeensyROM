@@ -143,6 +143,8 @@ MuteColor
    rts
 
 
+memFrameTimer
+   !byte 0   ;0=Off, 1=On, default off
 memPausePlay
    !byte 0   ;0=currently streaming/not muted, 1=muted
 memTextCircQueueHead:
@@ -189,16 +191,19 @@ MsgASIDPlayerCommands1:
    !tx "   ?: This Help List", ChrReturn
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
-   !tx "   x: Exit"
-   !tx ChrReturn, "   1: First  SID address ", ChrRvsOn, "$"
+   !tx "   x: Exit", ChrReturn
+   !tx "   t: Frame Timer is ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands2:    
-   !tx ChrReturn, "   2: Second SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "   1: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands3:    
-   !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "   2: Second SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
+   !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
+   !tx 0
+MsgASIDPlayerCommands5:    
    !tx ChrReturn, ChrDrkGrey
    ;!tx ChrReturn, "Other information:"
    ;!tx ChrReturn, " * During playback, command response"
@@ -243,4 +248,12 @@ MsgASIDStop:
 
 MsgNone:
    !tx "None"
+   !tx 0
+   
+MsgOn:
+   !tx "On"
+   !tx 0
+   
+MsgOff:
+   !tx "Off"
    !tx 0

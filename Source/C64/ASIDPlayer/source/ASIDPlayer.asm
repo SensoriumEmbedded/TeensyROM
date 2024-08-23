@@ -13,6 +13,8 @@
    ASIDContIRQOn      = 0x01;   //enable ASID IRQ
    ASIDContIRQOff     = 0x02;   //disable ASID IRQ
    ASIDContExit       = 0x03;   //Disable IRQ, Send TR to main menu
+   ASIDContTimerOn    = 0x04;   //enable Frame Timer
+   ASIDContTimerOff   = 0x05;   //disable Frame Timer
                              
    ASIDAddrType_Skip  = 0x00;   // No data/skip
    ASIDAddrType_Char  = 0x20;   // Character data
@@ -95,26 +97,42 @@ ShowKeyboardCommands: ;including SID addresses
    lda #<MsgASIDPlayerCommands1
    ldy #>MsgASIDPlayerCommands1
    jsr PrintString 
-   ;sid2 addr:
+   ;timer on/off:
+   lda memFrameTimer
+   beq +
+   lda #<MsgOn
+   ldy #>MsgOn
+   jmp ++
++  lda #<MsgOff
+   ldy #>MsgOff
+++ jsr PrintString 
+   
+   lda #<MsgASIDPlayerCommands2
+   ldy #>MsgASIDPlayerCommands2
+   jsr PrintString 
+   ;sid1 addr:
    lda smcSID1address+2 ;high byte
    ldx smcSID1address+1 ;low byte
    jsr PrintSIDaddress
-   lda #<MsgASIDPlayerCommands2
-   ldy #>MsgASIDPlayerCommands2
+   
+   lda #<MsgASIDPlayerCommands3
+   ldy #>MsgASIDPlayerCommands3
    jsr PrintString 
    ;sid2 addr:
    lda smcSID2address+2 ;high byte
    ldx smcSID2address+1 ;low byte
    jsr PrintSIDaddress
-   lda #<MsgASIDPlayerCommands3
-   ldy #>MsgASIDPlayerCommands3
+   
+   lda #<MsgASIDPlayerCommands4
+   ldy #>MsgASIDPlayerCommands4
    jsr PrintString 
    ;sid3 addr:
    lda smcSID3address+2 ;high byte
    ldx smcSID3address+1 ;low byte
    jsr PrintSIDaddress
-   lda #<MsgASIDPlayerCommands4
-   ldy #>MsgASIDPlayerCommands4
+   
+   lda #<MsgASIDPlayerCommands5
+   ldy #>MsgASIDPlayerCommands5
    jsr PrintString 
    inc smcScreenFull+1 ;set screen full flag
    ;end of ShowKeyboardCommands, continue to main loop...
@@ -241,6 +259,18 @@ SetScreen
    bne +  
    jsr SIDinit
    jmp ASIDMainLoop
+
++  cmp #'t'  ;Frame Timer On/Off
+   bne +  
+   lda memFrameTimer
+   eor #$ff  ;toggle 00 or ff
+   sta memFrameTimer
+   bne ++
+   lda #ASIDContTimerOff
+   jmp +++ 
+++ lda #ASIDContTimerOn
++++sta ASIDContReg+IO1Port
+   jmp ShowKeyboardCommands
 
 +  cmp #'m'  ;mute toggle
    bne +  

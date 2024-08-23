@@ -47,6 +47,8 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDContIRQOn      = 0x01,   //enable ASID IRQ
    ASIDContIRQOff     = 0x02,   //disable ASID IRQ
    ASIDContExit       = 0x03,   //Disable IRQ, Send TR to main menu
+   ASIDContTimerOn    = 0x04,   //enable Frame Timer
+   ASIDContTimerOff   = 0x05,   //disable Frame Timer
    
    ASIDAddrType_Skip  = 0x00,   // No data/skip, also indicates End Of Frame
    ASIDAddrType_Char  = 0x20,   // Character data
@@ -112,7 +114,7 @@ uint8_t ASIDidToReg[] =
 
 void InitTimedASIDQueue()
 {
-   Printf_dbg("Timer Queue Init\n");
+   Printf_dbg("Queue Init\n");
    RxQueueHead = RxQueueTail = 0;
    ASIDPlaybackTimer.end();  // Stop the timer (if on)
    QueueInitialized = false;
@@ -331,25 +333,19 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
 
 void InitHndlr_ASID()  
 {
-   RxQueueHead = RxQueueTail = 0;
-
    Printf_dbg("ASID Queue Size: %d\n", ASIDQueueSize);
    
    nfcState |= nfcStateBitPaused; // Pause NFC for time critical routine
    NVIC_DISABLE_IRQ(IRQ_ENET); // disable ethernet interrupt during ASID
    NVIC_DISABLE_IRQ(IRQ_PIT);
 
+   FrameTimerMode = false; //initialize to off, synched with asm code default: memFrameTimer
+   InitTimedASIDQueue(); //stops timer, clears queue
+   
    // SetMIDIHandlersNULL(); is called prior to this, 
    //    all other MIDI messages ignored.
-   
-   // MIDI USB Host input handlers
    usbHostMIDI.setHandleSystemExclusive     (ASIDOnSystemExclusive);     // F0
-
-   // MIDI USB Device input handlers
    usbDevMIDI.setHandleSystemExclusive      (ASIDOnSystemExclusive);     // F0
-   
-   FrameTimerMode = false; //initialize to off
-   InitTimedASIDQueue();
 }
 
 void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
@@ -418,6 +414,19 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                BtnPressed = true;   //main menu
                Printf_dbg("ASIDContExit\n");
                break;
+            case ASIDContTimerOn:
+               FrameTimerMode = true;
+               InitTimedASIDQueue();
+               Printf_dbg("Timer On\n");
+               break;
+            case ASIDContTimerOff:
+               FrameTimerMode = false;
+               InitTimedASIDQueue();
+               Printf_dbg("Timer Off\n");
+               break;
+            default:
+               Printf_dbg("ASIDContReg= %02x ?", Data);
+               break;            
          }
       }
    }
