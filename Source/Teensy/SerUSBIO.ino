@@ -97,15 +97,19 @@ FLASHMEM void ServiceSerial()
          
 // *** The rest of these cases are used for debug/testing only  
      
-      case 'u':  //Reboot to minimal build
-         //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
-         EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
-         EEPROM.write(eepAdMinBootInd, 1);         
-         REBOOT;
-         break;
+      //case 'u':  //Reboot to minimal build
+      //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
+      //   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+      //   EEPROM.write(eepAdMinBootInd, 1);         
+      //   REBOOT;
+      //   break;
 
-   // a, b
+   // a, b, q
    #ifdef Dbg_SerASID
+      case 'q':   //display queue size, rate
+         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s, Interval: %d uS\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"), TimerIntervalUs);
+         Serial.printf(" Q Size: cur:%d min:%d max:%d\n", ASIDRxQueueUsed, QueueMinThresh, QueueMaxThresh);
+         break;
       case 'a': //ASID Packet load
       {
          uint8_t VolReg = 0;

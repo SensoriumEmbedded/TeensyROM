@@ -88,12 +88,14 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 //#define NumMIDIControls   16  //must be power of 2, may want to do this differently?
 //uint8_t MIDIControlVals[NumMIDIControls];
 
-volatile uint8_t rIORegMIDIStatus   = 0;
-volatile uint8_t MIDIRxIRQEnabled = false;
+#define MIDIRxBufSize    8192  //USB_MIDI_SYSEX_MAX //currently 290, defined in cores\teensy4\usb_midi.h
+
+volatile uint8_t  rIORegMIDIStatus   = 0;
+volatile uint8_t  MIDIRxIRQEnabled = false;
 volatile uint16_t MIDIRxBytesToSend = 0;
-volatile uint8_t MIDIRxBuf[USB_MIDI_SYSEX_MAX]; //currently 290, defined in cores\teensy4\usb_midi.h  
-volatile uint8_t MIDITxBytesReceived = 0;
-volatile uint8_t MIDITxBuf[3];
+volatile uint8_t  MIDIRxBuf[MIDIRxBufSize];
+volatile uint8_t  MIDITxBytesReceived = 0;
+volatile uint8_t  MIDITxBuf[3];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
 extern uint8_t nfcState;

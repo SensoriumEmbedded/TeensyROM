@@ -43,7 +43,7 @@ FASTRUN void isrPHI2()
       #endif
    }
    
-   SetDebugAssert;
+   //SetDebugAssert;
    
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
@@ -106,6 +106,6 @@ FASTRUN void isrPHI2()
    }
    
    //leave time enough time to re-trigger on rising edge!
-   SetDebugDeassert;    
+   //SetDebugDeassert;    
 }
 

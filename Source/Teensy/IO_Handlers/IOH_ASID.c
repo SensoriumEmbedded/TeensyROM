@@ -20,6 +20,8 @@
 
 //IO Handler for MIDI ASID SysEx streams
 
+IntervalTimer ASIDPlaybackTimer;
+
 void IO1Hndlr_ASID(uint8_t Address, bool R_Wn);  
 void PollingHndlr_ASID();                           
 void InitHndlr_ASID();                           
@@ -46,7 +48,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDContIRQOff     = 0x02,   //disable ASID IRQ
    ASIDContExit       = 0x03,   //Disable IRQ, Send TR to main menu
    
-   ASIDAddrType_Skip  = 0x00,   // No data/skip
+   ASIDAddrType_Skip  = 0x00,   // No data/skip, also indicates End Of Frame
    ASIDAddrType_Char  = 0x20,   // Character data
    ASIDAddrType_Start = 0x40,   // ASID Start message
    ASIDAddrType_Stop  = 0x60,   // ASID Stop message
@@ -59,7 +61,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
 };
 
-#define ASIDQueueSize   (USB_MIDI_SYSEX_MAX & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
+#define ASIDQueueSize   (MIDIRxBufSize & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
 #define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 
 #ifdef DbgMsgs_IO  //Debug msgs mode
@@ -67,6 +69,10 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #else //Normal mode
    #define Printf_dbg_SysExInfo {}
 #endif
+
+uint32_t NumPackets, TotalInituS, TimerIntervalUs = 0;
+bool QueueInitialized, DbgState, FrameTimerMode;
+uint32_t QueueMaxThresh, QueueMinThresh; //Upper/lower queue size thresholds to adjust timinig.
 
 uint8_t ASIDidToReg[] = 
 {
@@ -104,11 +110,22 @@ uint8_t ASIDidToReg[] =
    18,  // 27 <= secondary for reg 18
 };
 
+void InitTimedASIDQueue()
+{
+   Printf_dbg("Timer Queue Init\n");
+   RxQueueHead = RxQueueTail = 0;
+   ASIDPlaybackTimer.end();  // Stop the timer (if on)
+   QueueInitialized = false;
+   NumPackets = TotalInituS = 0;
+}
+
 void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
 {
   if (ASIDRxQueueUsed >= ASIDQueueSize-2)
   {
-     Printf_dbg("-->ASID queue overflow!\n");
+     Printf_dbg(">");
+     //Printf_dbg("-->ASID queue overflow!\n");
+     if (FrameTimerMode) InitTimedASIDQueue(); 
      return;
   }
   
@@ -120,10 +137,15 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
 }
 
 void SetASIDIRQ()
-{
+{   
+   if (FrameTimerMode) return;
+   
    if(MIDIRxIRQEnabled)
    {
       SetIRQAssert;
+      
+      if (DbgState = (!DbgState)) SetDebugAssert;
+      else SetDebugDeassert;
    }
    else
    {
@@ -152,8 +174,12 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
             uint8_t RegVal = data[11+NumRegs];
             if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
             AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal);
-            #ifdef DbgMsgs_IO  //Debug msgs mode for secondary for reg or higher access
-               if(maskNum*7+bitNum>24) Serial.printf("High Reg: %d(->%d) = %d\n", maskNum*7+bitNum, ASIDidToReg[maskNum*7+bitNum], RegVal);
+            #ifdef DbgMsgs_IO  //Debug msgs for secondary reg or higher access
+               //if(maskNum*7+bitNum>24)
+               //{
+               //   Printf_dbg_SysExInfo;
+               //   Serial.printf("High Reg: %d(->%d) = %d\n", maskNum*7+bitNum, ASIDidToReg[maskNum*7+bitNum], RegVal);
+               //}
             #endif  
             NumRegs++;
             //Printf_dbg("#%d: reg $%02x = $%02x\n", NumRegs, ASIDidToReg[maskNum*7+bitNum], RegVal);
@@ -164,11 +190,54 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
    {
       AddErrorToASIDRxQueue();
       Printf_dbg_SysExInfo;
-      Printf_dbg("-->More regs flagged than data available\n");    
+      Printf_dbg("-->More regs expected (%d) than provided (%d)\n", NumRegs, size-12);    
    }
-   SetASIDIRQ();   
+   SetASIDIRQ();  
+   if (FrameTimerMode) AddToASIDRxQueue(ASIDAddrType_Skip, 0); //mark End Of Frame
 }
 
+FASTRUN void SendTimedASID()
+{ //called by timer to send next ASID frame (activate IRQ)
+  
+   //if (!TimerIntervalUs || !QueueInitialized) return;
+  
+   if (DbgState = (!DbgState)) SetDebugAssert;
+   else SetDebugDeassert;
+   
+   uint32_t LocalASIDRxQueueUsed = ASIDRxQueueUsed; 
+   
+   if (MIDIRxIRQEnabled && LocalASIDRxQueueUsed > 1)
+   {
+      SetIRQAssert; //Trigger read by C64, start of frame
+   }
+   
+   if (LocalASIDRxQueueUsed == 0)
+   {
+      Printf_dbg("<");
+      InitTimedASIDQueue(); //re-buffer if queue empty
+      return;
+   }
+   
+   //adjust timer interval if based on queue size, if needed
+   if (LocalASIDRxQueueUsed < QueueMinThresh) 
+   {
+      TimerIntervalUs++; // increase to slow down playback 
+      QueueMinThresh = LocalASIDRxQueueUsed;
+      ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
+      //Printf_dbg("AQI inc: %duS, sz/*min:%d max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
+      Printf_dbg("-");
+   }
+   
+   if (LocalASIDRxQueueUsed > QueueMaxThresh) 
+   {
+      TimerIntervalUs--; // decrease to speed up playback 
+      QueueMaxThresh = LocalASIDRxQueueUsed;
+      ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
+      //Printf_dbg("AQI dec: %duS, sz/min:%d *max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
+      Printf_dbg("+");
+   }
+   
+}
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
 
@@ -192,18 +261,18 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    {
       case 0x4c: //start playing message
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
-         //Printf_dbg("Start playing\n");
+         Printf_dbg("Start playing\n");
          SetASIDIRQ();
          break;
       case 0x4d: //stop playback message
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
-         //Printf_dbg("Stop playback\n");
+         Printf_dbg("Stop playback\n");
          SetASIDIRQ();
          break;
       case 0x4f: //Display Characters
          //display characters
-         //data[size-1] = 0; //replace 0xf7 with term
-         //Printf_dbg("Display chars: \"%s\"\n", data+3);
+         data[size-1] = 0; //replace 0xf7 with term
+         Printf_dbg("Display chars: \"%s\"\n", data+3);
          for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
          {
             AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
@@ -212,6 +281,36 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          SetASIDIRQ();
          break;
       case 0x4e:  //SID1 reg data (primary)
+         if (FrameTimerMode && !QueueInitialized)
+         { //check packet receive rate during queue init
+            static uint32_t LastMicros;
+            uint32_t NewMicros = micros();
+            
+            if(NumPackets)  //skip first val to only update LastMicros
+            {
+               TotalInituS += (NewMicros - LastMicros);
+               //Printf_dbg("Pkt %d: %lu uS, avg: %lu uS\n", NumPackets, (NewMicros- LastMicros), TotalInituS/NumPackets);
+            }
+            LastMicros = NewMicros;
+   
+            //if buffer half full, start timer to kick off playback...
+            if (ASIDRxQueueUsed >= ASIDQueueSize/2) 
+            {
+               if (NumPackets) TimerIntervalUs = TotalInituS/NumPackets;
+               else 
+               {
+                  InitTimedASIDQueue();
+                  return;
+               }
+               Printf_dbg("Q Init Done, Timer: %lu uS\n", TimerIntervalUs);
+               QueueMaxThresh = ASIDRxQueueUsed + 65;
+               QueueMinThresh = ASIDRxQueueUsed - 65;
+               QueueInitialized = true;
+               ASIDPlaybackTimer.begin(SendTimedASID, TimerIntervalUs);  // Start the timer
+               ASIDPlaybackTimer.priority(250);  //low priority
+            }
+            NumPackets++;
+         }            
          DecodeSendSIDRegData(ASIDAddrType_SID1, data, size);
          break;
       case 0x50:  //SID2 reg data
@@ -248,6 +347,9 @@ void InitHndlr_ASID()
 
    // MIDI USB Device input handlers
    usbDevMIDI.setHandleSystemExclusive      (ASIDOnSystemExclusive);     // F0
+   
+   FrameTimerMode = false; //initialize to off
+   InitTimedASIDQueue();
 }
 
 void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
@@ -261,9 +363,9 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             {
                DataPortWriteWaitLog(MIDIRxBuf[RxQueueTail]); 
             }
-            else  //no data to send, send skip message (should not happen)
+            else  //no address to send, send error message (should not happen)
             {
-               DataPortWriteWaitLog(ASIDAddrType_Skip);
+               DataPortWriteWaitLog(ASIDAddrType_Error);
             }
             break;
          case ASIDDataReg:
@@ -277,7 +379,17 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
             {
                DataPortWriteWaitLog(0);
             }
+            
             if(ASIDRxQueueUsed == 0) SetIRQDeassert;  //remove IRQ if queue empty        
+            else
+            {
+               if (FrameTimerMode && MIDIRxBuf[RxQueueTail] == ASIDAddrType_Skip) //EOFrame
+               {
+                  SetIRQDeassert;  //remove IRQ if End Of Frame
+                  RxQueueTail+=2;  //Skip sending the EOF marker
+                  if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;                  
+               }
+            }
             break;
          //default:
             //leave other locations available for potential SID in IO1
@@ -313,10 +425,10 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_ASID()
 {
-   if(ASIDRxQueueUsed == 0) //read MIDI-in data in only if ready to send to C64 (buffer empty)
+   if(ASIDRxQueueUsed == 0 || FrameTimerMode) //read MIDI-in data in only if ready to send to C64 (buffer empty)
    {
       usbDevMIDI.read();
-      if(ASIDRxQueueUsed == 0) usbHostMIDI.read();   //dito, giving USB device priority 
+      if(ASIDRxQueueUsed == 0 || FrameTimerMode) usbHostMIDI.read();   //Currently no use case (Hosted ASID source) 
    }
 }
 
