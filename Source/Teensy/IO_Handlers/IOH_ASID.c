@@ -295,8 +295,8 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             }
             LastMicros = NewMicros;
    
-            //if buffer half full, start timer to kick off playback...
-            if (ASIDRxQueueUsed >= ASIDQueueSize/2) 
+            //if buffer half full or been >2 seconds, start timer to kick off playback...
+            if (ASIDRxQueueUsed >= ASIDQueueSize/2 || TotalInituS >= 2000000) 
             {
                if (NumPackets) TimerIntervalUs = TotalInituS/NumPackets;
                else 
