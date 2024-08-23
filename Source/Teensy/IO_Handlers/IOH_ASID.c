@@ -151,7 +151,8 @@ void SetASIDIRQ()
       SetIRQAssert;
 
    #ifdef DbgSignalASIDIRQ      
-      if (DbgState = (!DbgState)) SetDebugAssert;
+      DbgState = !DbgState;
+      if (DbgState) SetDebugAssert;
       else SetDebugDeassert;
    #endif
    }
@@ -210,7 +211,8 @@ FASTRUN void SendTimedASID()
    //if (!TimerIntervalUs || !QueueInitialized) return;
   
 #ifdef DbgSignalASIDIRQ
-   if (DbgState = (!DbgState)) SetDebugAssert;
+   DbgState = !DbgState;
+   if (DbgState) SetDebugAssert;
    else SetDebugDeassert;
 #endif
    
