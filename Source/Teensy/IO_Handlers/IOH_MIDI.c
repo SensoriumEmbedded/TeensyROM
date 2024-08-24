@@ -93,7 +93,7 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 volatile uint8_t  rIORegMIDIStatus   = 0;
 volatile uint8_t  MIDIRxIRQEnabled = false;
 volatile uint16_t MIDIRxBytesToSend = 0;
-volatile uint8_t  MIDIRxBuf[MIDIRxBufSize];
+volatile uint8_t  *MIDIRxBuf = NULL;
 volatile uint8_t  MIDITxBytesReceived = 0;
 volatile uint8_t  MIDITxBuf[3];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
@@ -249,6 +249,7 @@ void HWEOnRealTimeSystem(uint8_t realtimebyte)
 
 void MIDIinHndlrInit()
 {
+   if (MIDIRxBuf==NULL) MIDIRxBuf = (uint8_t*)malloc(MIDIRxBufSize);
    //for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
    
    // MIDI USB Host input handlers

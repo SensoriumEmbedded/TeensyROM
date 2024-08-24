@@ -63,7 +63,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
 };
 
-#define ASIDQueueSize   (MIDIRxBufSize & ~1)  // force to even number; currently 290, defined in cores\teensy4\usb_midi.h
+#define ASIDQueueSize   (MIDIRxBufSize & ~1)  // force to even number
 #define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 
 #ifdef DbgMsgs_IO  //Debug msgs mode
@@ -344,6 +344,8 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
 void InitHndlr_ASID()  
 {
    Printf_dbg("ASID Queue Size: %d\n", ASIDQueueSize);
+
+   if (MIDIRxBuf==NULL) MIDIRxBuf = (uint8_t*)malloc(MIDIRxBufSize);
    
    nfcState |= nfcStateBitPaused; // Pause NFC for time critical routine
    NVIC_DISABLE_IRQ(IRQ_ENET); // disable ethernet interrupt during ASID
