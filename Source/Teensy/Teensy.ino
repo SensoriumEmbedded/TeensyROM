@@ -187,7 +187,7 @@ void SetUpMainMenuROM()
    FreeCrtChips();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
-   free(MIDIRxBuf); MIDIRxBuf=NULL;
+   free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }
