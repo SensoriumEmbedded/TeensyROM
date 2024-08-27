@@ -88,7 +88,7 @@ stcIOHandlers IOHndlr_MIDI_NamesoftIRQ =
 //#define NumMIDIControls   16  //must be power of 2, may want to do this differently?
 //uint8_t MIDIControlVals[NumMIDIControls];
 
-#define MIDIRxBufSize    8192  //USB_MIDI_SYSEX_MAX //currently 290, defined in cores\teensy4\usb_midi.h
+#define MIDIRxBufSize    8192  // >= USB_MIDI_SYSEX_MAX (currently 290, defined in cores\teensy4\usb_midi.h)
 
 volatile uint8_t  rIORegMIDIStatus   = 0;
 volatile uint8_t  MIDIRxIRQEnabled = false;

@@ -73,12 +73,15 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #endif
 
 #ifdef DbgSignalASIDIRQ
-bool DbgState;
+bool DbgInputState;  //togles LED on SysEx arrival
+bool DbgOutputState; //togles debug signal on IRQ assert
 #endif
 
-uint32_t NumPackets, TotalInituS, TimerIntervalUs = 0;
+uint32_t ForceIntervalUs = 0;  // 0 to ignore and use timed val, 19950=PAL, 16715=NTSC
+
 bool QueueInitialized, FrameTimerMode;
 uint32_t QueueMaxThresh, QueueMinThresh; //Upper/lower queue size thresholds to adjust timinig.
+uint32_t NumPackets, TotalInituS, TimerIntervalUs = 0;
 
 uint8_t ASIDidToReg[] = 
 {
@@ -149,10 +152,9 @@ void SetASIDIRQ()
    if(MIDIRxIRQEnabled)
    {
       SetIRQAssert;
-
    #ifdef DbgSignalASIDIRQ      
-      DbgState = !DbgState;
-      if (DbgState) SetDebugAssert;
+      DbgOutputState = !DbgOutputState;
+      if (DbgOutputState) SetDebugAssert;
       else SetDebugDeassert;
    #endif
    }
@@ -210,24 +212,26 @@ FASTRUN void SendTimedASID()
   
    //if (!TimerIntervalUs || !QueueInitialized) return;
   
-#ifdef DbgSignalASIDIRQ
-   DbgState = !DbgState;
-   if (DbgState) SetDebugAssert;
-   else SetDebugDeassert;
-#endif
    
    uint32_t LocalASIDRxQueueUsed = ASIDRxQueueUsed; 
    
-   if (MIDIRxIRQEnabled && LocalASIDRxQueueUsed > 1)
-   {
-      SetIRQAssert; //Trigger read by C64, start of frame
-   }
-   
-   if (LocalASIDRxQueueUsed == 0)
+   if (LocalASIDRxQueueUsed < 2)
    {
       Printf_dbg("<");
+      //TimerIntervalUs+=5; // increase to slow down playback 
+      //ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
       InitTimedASIDQueue(); //re-buffer if queue empty
       return;
+   }
+   
+   if (MIDIRxIRQEnabled) // && LocalASIDRxQueueUsed > 1)
+   {
+      SetIRQAssert; //Trigger read by C64, start of frame
+   #ifdef DbgSignalASIDIRQ
+      DbgOutputState = !DbgOutputState;
+      if (DbgOutputState) SetDebugAssert;
+      else SetDebugDeassert;
+   #endif
    }
    
    //adjust timer interval if based on queue size, if needed
@@ -258,7 +262,12 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
 {
    //data already contains starting f0 and ending f7
    //Printf_dbg_SysExInfo;
-   
+   #ifdef DbgSignalASIDIRQ      
+      DbgInputState = !DbgInputState;
+      if (DbgInputState) SetLEDOn;
+      else SetLEDOff;
+   #endif
+
    // ASID decode based on:   http://paulus.kapsi.fi/asid_protocol.txt
    // originally by Elektron SIDStation
       
@@ -310,11 +319,15 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             {
                if (NumPackets) TimerIntervalUs = TotalInituS/NumPackets;
                else 
-               {
+               { // no frames timed
                   InitTimedASIDQueue();
                   return;
                }
-               Printf_dbg("Q Init Done, Timer: %lu uS\n", TimerIntervalUs);
+               
+               Printf_dbg("Q Init Done\n %d frames, avg: %lu uS ea\n", NumPackets, TimerIntervalUs);
+               if (ForceIntervalUs) TimerIntervalUs = ForceIntervalUs;
+               Printf_dbg(" Timer set: %lu uS\n", TimerIntervalUs);
+               
                QueueMaxThresh = ASIDRxQueueUsed + 65;
                QueueMinThresh = ASIDRxQueueUsed - 65;
                QueueInitialized = true;
