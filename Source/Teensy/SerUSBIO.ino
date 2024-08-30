@@ -430,10 +430,13 @@ FLASHMEM void PrintDebugLog()
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
       Serial.printf("#%04d ", Cnt);
-      if (BigBuf[Cnt] & DbgSpecialData)
+      
+      //if (BigBuf[Cnt] & DbgSpecialData)
+      if(1)
       {
+         Serial.printf("uS betw packets %lu\n", BigBuf[Cnt]);
          //BigBuf[Cnt] &= ~DbgSpecialData;
-         Serial.printf("DbgSpecialData %04x : %02x\n", BigBuf[Cnt] & 0xFFFF, (BigBuf[Cnt] >> 24));
+         //Serial.printf("DbgSpecialData %04x : %02x\n", BigBuf[Cnt] & 0xFFFF, (BigBuf[Cnt] >> 24));
             //code used previously, in-situ:
                //#ifdef DbgSpecial
                //   if (BigBuf != NULL){

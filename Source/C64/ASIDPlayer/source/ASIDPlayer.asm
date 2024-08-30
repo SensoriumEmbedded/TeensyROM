@@ -6,16 +6,23 @@
    !src "..\MainMenuCRT\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
 ;enum ASIDregsMatching  //synch with ASIDPlayer.asm
+   ;// registers:
    ASIDAddrReg        = 0xc2;   // Data type and SID Address Register (Read only)
    ASIDDataReg        = 0xc4;   // ASID data, increment queue Tail (Read only)
    ASIDContReg        = 0xc8;   // Control Reg (Write only)
-                            
-   ASIDContIRQOn      = 0x01;   //enable ASID IRQ
-   ASIDContIRQOff     = 0x02;   //disable ASID IRQ
-   ASIDContExit       = 0x03;   //Disable IRQ, Send TR to main menu
-   ASIDContTimerOn    = 0x04;   //enable Frame Timer
-   ASIDContTimerOff   = 0x05;   //disable Frame Timer
-                             
+   
+   ;// Control Reg Commands
+   ;// Timer controls match TblMsgTimerState, start at 0
+   ASIDContTimerOff   = 0x00;   //disable Frame Timer
+   ASIDContTimerOnAuto= 0x01;   //enable Frame Timer, auto seed time
+   ASIDContTimerOn50Hz= 0x02;   //enable Frame Timer, 50Hz seed time
+   NumTimerStates     = 0x03;   //Always last, number of states
+   ;// ...
+   ASIDContIRQOn      = 0x10;   //enable ASID IRQ
+   ASIDContIRQOff     = 0x11;   //disable ASID IRQ
+   ASIDContExit       = 0x12;   //Disable IRQ, Send TR to main menu
+   
+   ;// queue message types/masks
    ASIDAddrType_Skip  = 0x00;   // No data/skip
    ASIDAddrType_Char  = 0x20;   // Character data
    ASIDAddrType_Start = 0x40;   // ASID Start message
@@ -28,6 +35,7 @@
    ASIDAddrType_Mask  = 0xe0;   // Mask for Type
    ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
 ;end enum synch
+
 
    SpinIndSID3Write   = C64ScreenRAM+40*2+2 ;spin indicator: SID3 write
    SpinIndSID2Write   = C64ScreenRAM+40*2+3 ;spin indicator: SID2 write
@@ -97,15 +105,13 @@ ShowKeyboardCommands: ;including SID addresses
    lda #<MsgASIDPlayerCommands1
    ldy #>MsgASIDPlayerCommands1
    jsr PrintString 
-   ;timer on/off:
+   ;print timer state:
    lda memFrameTimer
-   beq +
-   lda #<MsgOn
-   ldy #>MsgOn
-   jmp ++
-+  lda #<MsgOff
-   ldy #>MsgOff
-++ jsr PrintString 
+   asl ;double it to point to word
+   tax
+   lda TblMsgTimerState,x
+   ldy TblMsgTimerState+1,x
+   jsr PrintString
    
    lda #<MsgASIDPlayerCommands2
    ldy #>MsgASIDPlayerCommands2
@@ -260,16 +266,15 @@ SetScreen
    jsr SIDinit
    jmp ASIDMainLoop
 
-+  cmp #'t'  ;Frame Timer On/Off
++  cmp #'t'  ;Frame Timer state
    bne +  
-   lda memFrameTimer
-   eor #$ff  ;toggle 00 or ff
-   sta memFrameTimer
+   ldx memFrameTimer
+   inx
+   cpx #NumTimerStates
    bne ++
-   lda #ASIDContTimerOff
-   jmp +++ 
-++ lda #ASIDContTimerOn
-+++sta ASIDContReg+IO1Port
+   ldx #$00 ;roll over
+++ stx memFrameTimer
+   stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
 
 +  cmp #'m'  ;mute toggle

@@ -40,16 +40,23 @@ stcIOHandlers IOHndlr_ASID =
 
 enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
+   // registers:
    ASIDAddrReg        = 0xc2,   // Data type and SID Address Register (Read only)
    ASIDDataReg        = 0xc4,   // ASID data, increment queue Tail (Read only)
    ASIDContReg        = 0xc8,   // Control Reg (Write only)
 
-   ASIDContIRQOn      = 0x01,   //enable ASID IRQ
-   ASIDContIRQOff     = 0x02,   //disable ASID IRQ
-   ASIDContExit       = 0x03,   //Disable IRQ, Send TR to main menu
-   ASIDContTimerOn    = 0x04,   //enable Frame Timer
-   ASIDContTimerOff   = 0x05,   //disable Frame Timer
+   // Control Reg Commands
+   // Timer controls match TblMsgTimerState, start at 0
+   ASIDContTimerOff   = 0x00,   //disable Frame Timer
+   ASIDContTimerOnAuto= 0x01,   //enable Frame Timer, auto seed time
+   ASIDContTimerOn50Hz= 0x02,   //enable Frame Timer, 50Hz seed time
+   NumTimerStates     = 0x03,   //Always last, number of states
+   // ...                   
+   ASIDContIRQOn      = 0x10,   //enable ASID IRQ
+   ASIDContIRQOff     = 0x11,   //disable ASID IRQ
+   ASIDContExit       = 0x12,   //Disable IRQ, Send TR to main menu
    
+   // queue message types/masks
    ASIDAddrType_Skip  = 0x00,   // No data/skip, also indicates End Of Frame
    ASIDAddrType_Char  = 0x20,   // Character data
    ASIDAddrType_Start = 0x40,   // ASID Start message
@@ -77,11 +84,9 @@ bool DbgInputState;  //togles LED on SysEx arrival
 bool DbgOutputState; //togles debug signal on IRQ assert
 #endif
 
-uint32_t ForceIntervalUs = 0;  // 0 to ignore and use timed val, 19950=PAL, 16715=NTSC
-
 bool QueueInitialized, FrameTimerMode;
 uint32_t QueueMaxThresh, QueueMinThresh; //Upper/lower queue size thresholds to adjust timinig.
-uint32_t NumPackets, TotalInituS, TimerIntervalUs = 0;
+uint32_t NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs = 0;
 
 uint8_t ASIDidToReg[] = 
 {
@@ -311,6 +316,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             {
                TotalInituS += (NewMicros - LastMicros);
                //Printf_dbg("Pkt %d: %lu uS, avg: %lu uS\n", NumPackets, (NewMicros- LastMicros), TotalInituS/NumPackets);
+               //BigBuf[BigBufCount++] = NewMicros - LastMicros;
             }
             LastMicros = NewMicros;
    
@@ -364,6 +370,7 @@ void InitHndlr_ASID()
    NVIC_DISABLE_IRQ(IRQ_ENET); // disable ethernet interrupt during ASID
    NVIC_DISABLE_IRQ(IRQ_PIT);
 
+   ForceIntervalUs = 0;  // 0 to ignore and use timed val, 19950=PAL, 16715=NTSC
    FrameTimerMode = false; //initialize to off, synched with asm code default: memFrameTimer
    InitTimedASIDQueue(); //stops timer, clears queue
    
@@ -424,6 +431,23 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
       {
          switch(Data)
          {
+            case ASIDContTimerOff:
+               FrameTimerMode = false;
+               InitTimedASIDQueue();
+               Printf_dbg("Timer Off\n");
+               break;
+            case ASIDContTimerOnAuto:
+               FrameTimerMode = true;
+               ForceIntervalUs = 0;
+               InitTimedASIDQueue();
+               Printf_dbg("Timer On-Auto\n");
+               break;
+            case ASIDContTimerOn50Hz:
+               FrameTimerMode = true;
+               ForceIntervalUs = 19950;
+               InitTimedASIDQueue();
+               Printf_dbg("Timer On-50Hz\n");
+               break;               
             case ASIDContIRQOn:
                MIDIRxIRQEnabled = true;
                RxQueueHead = RxQueueTail = 0;
@@ -438,16 +462,6 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                MIDIRxIRQEnabled = false;
                BtnPressed = true;   //main menu
                Printf_dbg("ASIDContExit\n");
-               break;
-            case ASIDContTimerOn:
-               FrameTimerMode = true;
-               InitTimedASIDQueue();
-               Printf_dbg("Timer On\n");
-               break;
-            case ASIDContTimerOff:
-               FrameTimerMode = false;
-               InitTimedASIDQueue();
-               Printf_dbg("Timer Off\n");
                break;
             default:
                Printf_dbg("ASIDContReg= %02x ?", Data);

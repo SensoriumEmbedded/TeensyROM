@@ -144,7 +144,7 @@ MuteColor
 
 
 memFrameTimer
-   !byte 0   ;0=Off, 1=On, default off
+   !byte ASIDContTimerOff   ;default to 0/off;  see ASIDregsMatching, ASIDContTimer* 
 memPausePlay
    !byte 0   ;0=currently streaming/not muted, 1=muted
 memTextCircQueueHead:
@@ -192,7 +192,7 @@ MsgASIDPlayerCommands1:
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
    !tx "   x: Exit", ChrReturn
-   !tx "   t: Frame Timer is ", ChrRvsOn
+   !tx "   t: Frame Timer (beta): ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands2:    
    !tx ChrReturn, "   1: First  SID address ", ChrRvsOn, "$"
@@ -249,11 +249,14 @@ MsgASIDStop:
 MsgNone:
    !tx "None"
    !tx 0
-   
-MsgOn:
-   !tx "On"
-   !tx 0
-   
+
+TblMsgTimerState: ;must match ASIDregsMatching, ASIDContTimer* order/qty
+   !word MsgOff
+   !word MsgOnAuto
+   !word MsgOn50Hz
 MsgOff:
-   !tx "Off"
-   !tx 0
+   !tx "Off", 0
+MsgOnAuto:
+   !tx "On-Auto", 0
+MsgOn50Hz:
+   !tx "On-50Hz", 0
