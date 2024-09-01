@@ -136,7 +136,7 @@ SetMuteIndicator:
    ;stream is not muted:
 ++ lda #PokeBlack
 MuteColor
-   ldx #4
+   ldx #6
 -  sta MuteColorStart,x
    dex
    bne -
@@ -172,8 +172,9 @@ memNumSIDaddresses:
 
 MsgASIDPlayerMainDisplay:    
    !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.1        "
-   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "*************************", ChrRvsOn, "XXXMute", ChrReturn
-   !tx ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV" ;, "5678901"
+   !tx ChrBlack, "                                  Mute "
+   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "*************************", ChrOrange, "       " 
+   !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV"
    !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  
    !tx ChrMedGrey, "     ?-Help"
    !tx ChrReturn, ChrPurple, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60

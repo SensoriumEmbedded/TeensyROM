@@ -41,9 +41,10 @@ stcIOHandlers IOHndlr_ASID =
 enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
    // registers:
-   ASIDAddrReg        = 0xc2,   // Data type and SID Address Register (Read only)
-   ASIDDataReg        = 0xc4,   // ASID data, increment queue Tail (Read only)
-   ASIDContReg        = 0xc8,   // Control Reg (Write only)
+   ASIDAddrReg        = 0xc2,   // (Read only)  Data type and SID Address Register 
+   ASIDDataReg        = 0xc4,   // (Read only)  ASID data, increment queue Tail 
+   ASIDQueueUsed      = 0xc8,   // (Read only)  Current Queue amount used
+   ASIDContReg        = 0xca,   // (Write only) Control Reg 
 
    // Control Reg Commands
    // Timer controls match TblMsgTimerState, start at 0
@@ -242,7 +243,7 @@ FASTRUN void SendTimedASID()
    //adjust timer interval if based on queue size, if needed
    if (LocalASIDRxQueueUsed < QueueMinThresh) 
    {
-      TimerIntervalUs++; // increase to slow down playback 
+      TimerIntervalUs += 2; // increase to slow down playback 
       QueueMinThresh = LocalASIDRxQueueUsed;
       ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
       //Printf_dbg("AQI inc: %duS, sz/*min:%d max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
@@ -251,7 +252,7 @@ FASTRUN void SendTimedASID()
    
    if (LocalASIDRxQueueUsed > QueueMaxThresh) 
    {
-      TimerIntervalUs--; // decrease to speed up playback 
+      TimerIntervalUs -= 2; // decrease to speed up playback 
       QueueMaxThresh = LocalASIDRxQueueUsed;
       ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
       //Printf_dbg("AQI dec: %duS, sz/min:%d *max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
@@ -418,6 +419,14 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                   if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;                  
                }
             }
+            break;
+         case ASIDQueueUsed:
+            DataPortWriteWaitLog(32*ASIDRxQueueUsed/ASIDQueueSize);
+            //{  //test bar graph display
+            //   static uint8_t num = 0;
+            //   DataPortWriteWaitLog(num++);
+            //   if(num==32) num=0;
+            //}
             break;
          //default:
             //leave other locations available for potential SID in IO1

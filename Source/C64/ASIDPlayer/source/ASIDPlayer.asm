@@ -7,9 +7,10 @@
 
 ;enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ;// registers:
-   ASIDAddrReg        = 0xc2;   // Data type and SID Address Register (Read only)
-   ASIDDataReg        = 0xc4;   // ASID data, increment queue Tail (Read only)
-   ASIDContReg        = 0xc8;   // Control Reg (Write only)
+   ASIDAddrReg        = 0xc2;   // (Read only)  Data type and SID Address Register 
+   ASIDDataReg        = 0xc4;   // (Read only)  ASID data, increment queue Tail 
+   ASIDQueueUsed      = 0xc8;   // (Read only)  Current Queue amount used
+   ASIDContReg        = 0xca;   // (Write only) Control Reg 
    
    ;// Control Reg Commands
    ;// Timer controls match TblMsgTimerState, start at 0
@@ -43,7 +44,8 @@
    SpinIndUnexpType   = C64ScreenRAM+40*2+5 ;spin indicator: error: Unexpected reg type or skip received
    SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
    SIDRegColorStart   = C64ColorRAM +40*2+7
-   MuteColorStart     = C64ColorRAM +40*2+34 ;start of "Mute" display
+   MuteColorStart     = C64ColorRAM +40*1+32 ;start of "Mute" display
+   QueueUsedIndicator = C64ScreenRAM+40*2+34 ;Queue used indicator
    
    RegFirstColor  = PokeWhite
    RegSecondColor = PokeDrkGrey
@@ -186,7 +188,7 @@ CheckForScreenFull
    
  
 RegIndicatorUpdate: 
-;SID reg color update: 25 SID registers updated once per 10th/sec
+;SID reg color & queue used update: 25 SID registers updated once per 10th/sec
    lda TODTenthSecBCD ;read 10ths releases latch
 smcLastUpd
    cmp #0
@@ -194,10 +196,41 @@ smcLastUpd
    sta smcLastUpd+1
    ;inc SpinIndUnexpType  ;temp to check update cycle
 
-   ldx #0
+;update Queue used indicator
+   lda ASIDQueueUsed+IO1Port  ;0-31 representing how full the queue is
+   tax
+   lsr
+   lsr
+   lsr
+   and #$03 ;shouldn't be needed, but just in case
+   sta smcFineIndic+1 ;acc now 0-3
+   
+   lda #$f0 ;empty
+   ldy #$03
+smcFineIndic
+   cpy #0
+   beq +
+   sta QueueUsedIndicator, y
+   dey
+   jmp smcFineIndic
+   
++  txa ;original value
+   and #$07  ;lower 3 bits only
+   ora #$f0  ;custom char bar graph start
+   sta QueueUsedIndicator, y
+
+   lda #$f8 ;full
+-  cpy #0
+   beq +
+   dey
+   sta QueueUsedIndicator, y
+   jmp -
+
+;update register indicator colors     
++  ldx #0
 regcolorupdate
    lda SIDRegColorStart,x
-   and #$0f   ;only 4 bits are valid
+   and #$0f   ;only lower 4 bits are valid for color read
    beq nextsidreg   ;skip reg if 0 (black) already
    
    cmp #RegFirstColor ;color set by interrupt
@@ -219,9 +252,10 @@ nextsidreg
 GetKeypress:
    jsr ScanKey ;needed since timer/raster interrupts are disabled
    jsr GetIn
-   beq ASIDMainLoop
+   bne + 
+   jmp ASIDMainLoop
    
-   cmp #'x'  ;Exit TR ASID player
++  cmp #'x'  ;Exit TR ASID player
    bne +  
    lda #ASIDContExit  ;turn off the interrupt and go back to main menu
    sta ASIDContReg+IO1Port
