@@ -73,6 +73,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 
 #define ASIDQueueSize   (MIDIRxBufSize & ~1)  // force to even number
 #define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
+#define FramesBetweenChecks 12  //frames between frame alignments check & timing adjust
 
 #ifdef DbgMsgs_IO  //Debug msgs mode
    #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
@@ -85,8 +86,14 @@ bool DbgInputState;  //togles LED on SysEx arrival
 bool DbgOutputState; //togles debug signal on IRQ assert
 #endif
 
+#ifdef Dbg_SerASID
+int32_t MaxB, MinB;
+uint32_t MaxT, MinT;
+uint32_t BufByteTarget;
+#endif
+
 bool QueueInitialized, FrameTimerMode;
-uint32_t QueueMaxThresh, QueueMinThresh; //Upper/lower queue size thresholds to adjust timinig.
+int32_t DeltaFrames;
 uint32_t NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs = 0;
 
 uint8_t ASIDidToReg[] = 
@@ -240,25 +247,47 @@ FASTRUN void SendTimedASID()
    #endif
    }
    
-   //adjust timer interval if based on queue size, if needed
-   if (LocalASIDRxQueueUsed < QueueMinThresh) 
+   //adjust timer interval if based on frame offset from stream, if needed
+   static uint16_t HystCount = 0;
+   
+   if (HystCount)
    {
-      TimerIntervalUs += 2; // increase to slow down playback 
-      QueueMinThresh = LocalASIDRxQueueUsed;
-      ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
-      //Printf_dbg("AQI inc: %duS, sz/*min:%d max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
-      Printf_dbg("-");
+      HystCount--;
+      return;
    }
    
-   if (LocalASIDRxQueueUsed > QueueMaxThresh) 
-   {
-      TimerIntervalUs -= 2; // decrease to speed up playback 
-      QueueMaxThresh = LocalASIDRxQueueUsed;
+   if (DeltaFrames)
+   {  //only adjust if off by 1 or more frames
+      TimerIntervalUs += DeltaFrames; //adjust timer by 1uS for each frame off of aligned 
+      HystCount = FramesBetweenChecks; //frames between frame alignments check & timing adjust
       ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
-      //Printf_dbg("AQI dec: %duS, sz/min:%d *max:%d\n", TimerIntervalUs, QueueMinThresh, QueueMaxThresh);
-      Printf_dbg("+");
-   }
-   
+      Printf_dbg("%+d", DeltaFrames);
+      
+#ifdef Dbg_SerASID
+      int32_t DeltaTarget = LocalASIDRxQueueUsed - BufByteTarget;
+      if (DeltaTarget>MaxB)
+      {
+         MaxB = DeltaTarget;
+         Serial.printf("\n*MaxB:%+d  ", MaxB);
+      }
+      if (DeltaTarget<MinB)
+      {
+         MinB = DeltaTarget;
+         Serial.printf("\n*MinB:%+d  ", MinB);
+      }
+      if (TimerIntervalUs>MaxT)
+      {
+         MaxT = TimerIntervalUs;
+         //Serial.printf("\n*MaxT:%lu uS", MaxT);
+      }
+      if (TimerIntervalUs<MinT)
+      {
+         MinT = TimerIntervalUs;
+         //Serial.printf("\n*MinT:%lu uS", MinT);
+      }
+#endif
+
+   }  
 }
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
@@ -308,6 +337,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          SetASIDIRQ();
          break;
       case 0x4e:  //SID1 reg data (primary)
+         DeltaFrames--;
          if (FrameTimerMode && !QueueInitialized)
          { //check packet receive rate during queue init
             static uint32_t LastMicros;
@@ -322,7 +352,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             LastMicros = NewMicros;
    
             //if buffer half full or been >2 seconds, start timer to kick off playback...
-            if (ASIDRxQueueUsed >= ASIDQueueSize/2 || TotalInituS >= 2000000) 
+            if (ASIDRxQueueUsed >= ASIDQueueSize/2 || TotalInituS >= 2500000) 
             {
                if (NumPackets) TimerIntervalUs = TotalInituS/NumPackets;
                else 
@@ -331,18 +361,22 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
                   return;
                }
                
-               Printf_dbg("Q Init Done\n %d frames, avg: %lu uS ea\n", NumPackets, TimerIntervalUs);
+               Printf_dbg("Q Init Done\n %d frames, %lu bytes, %lu bytes/frame, %lu uS total, %lu uS/frame\n", NumPackets, ASIDRxQueueUsed, ASIDRxQueueUsed/NumPackets, TotalInituS, TimerIntervalUs);
                if (ForceIntervalUs) TimerIntervalUs = ForceIntervalUs;
                Printf_dbg(" Timer set: %lu uS\n", TimerIntervalUs);
                
-               QueueMaxThresh = ASIDRxQueueUsed + 65;
-               QueueMinThresh = ASIDRxQueueUsed - 65;
+#ifdef Dbg_SerASID
+               BufByteTarget = ASIDRxQueueUsed;
+               MaxB = MinB = 0;
+               MaxT = MinT = TimerIntervalUs;
+#endif
+               DeltaFrames = 0;
                QueueInitialized = true;
                ASIDPlaybackTimer.begin(SendTimedASID, TimerIntervalUs);  // Start the timer
                ASIDPlaybackTimer.priority(250);  //low priority
             }
             NumPackets++;
-         }            
+         }
          DecodeSendSIDRegData(ASIDAddrType_SID1, data, size);
          break;
       case 0x50:  //SID2 reg data
@@ -416,7 +450,8 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                {
                   SetIRQDeassert;  //remove IRQ if End Of Frame
                   RxQueueTail+=2;  //Skip sending the EOF marker
-                  if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;                  
+                  if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;   
+                  DeltaFrames++;
                }
             }
             break;

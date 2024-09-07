@@ -104,11 +104,13 @@ FLASHMEM void ServiceSerial()
       //   REBOOT;
       //   break;
 
-   // a, b, q
+   // q, a, b
    #ifdef Dbg_SerASID
       case 'q':   //display queue size, rate
-         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s, Interval: %d uS\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"), TimerIntervalUs);
-         Serial.printf(" Q Size:%d cur:%d min:%d max:%d\n", ASIDQueueSize, ASIDRxQueueUsed, QueueMinThresh, QueueMaxThresh);
+         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s, Interval: %lu uS\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"), TimerIntervalUs);
+         Serial.printf(" Q Size:%lu, cur:%lu, Delta Bytes:%d, DeltaFrames:%d, FrmsBetChks:%d\n", ASIDQueueSize, ASIDRxQueueUsed, (ASIDRxQueueUsed - BufByteTarget), DeltaFrames, FramesBetweenChecks);
+         Serial.printf("MaxB:%+d, MinB:%+d, diff:%d bytes\n", MaxB, MinB, MaxB-MinB);
+         Serial.printf("MaxT:%lu, MinT:%lu, diff:%lu uS\n", MaxT, MinT, MaxT-MinT);
          break;
       case 'a': //ASID Packet load
       {
