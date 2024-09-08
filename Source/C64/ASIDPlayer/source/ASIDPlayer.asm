@@ -22,6 +22,14 @@
    ASIDContIRQOn      = 0x10;   //enable ASID IRQ
    ASIDContIRQOff     = 0x11;   //disable ASID IRQ
    ASIDContExit       = 0x12;   //Disable IRQ, Send TR to main menu
+   ;// ...
+   ASIDContBufSmall   = 0x20;   //Set buffer to size Small  
+   ASIDContBufMedium  = 0x21;   //Set buffer to size Medium 
+   ASIDContBufLarge   = 0x22;   //Set buffer to size Large  
+   ASIDContBufXLarge  = 0x23;   //Set buffer to size XLarge 
+   ASIDContBufXXLarge = 0x24;   //Set buffer to size XXLarge
+   ASIDContBufOverflow= 0x25;   //Overflow (num of) of buffer sizes
+   ASIDContBufMask    = 0x07;   //Mask to get zero based 
    
    ;// queue message types/masks
    ASIDAddrType_Skip  = 0x00;   // No data/skip
@@ -107,6 +115,30 @@ ShowKeyboardCommands: ;including SID addresses
    lda #<MsgASIDPlayerCommands1
    ldy #>MsgASIDPlayerCommands1
    jsr PrintString 
+   ;sid1 addr:
+   lda smcSID1address+2 ;high byte
+   ldx smcSID1address+1 ;low byte
+   jsr PrintSIDaddress
+   
+   lda #<MsgASIDPlayerCommands2
+   ldy #>MsgASIDPlayerCommands2
+   jsr PrintString 
+   ;sid2 addr:
+   lda smcSID2address+2 ;high byte
+   ldx smcSID2address+1 ;low byte
+   jsr PrintSIDaddress
+   
+   lda #<MsgASIDPlayerCommands3
+   ldy #>MsgASIDPlayerCommands3
+   jsr PrintString 
+   ;sid3 addr:
+   lda smcSID3address+2 ;high byte
+   ldx smcSID3address+1 ;low byte
+   jsr PrintSIDaddress
+   
+   lda #<MsgASIDPlayerCommands4
+   ldy #>MsgASIDPlayerCommands4
+   jsr PrintString 
    ;print timer state:
    lda memFrameTimer
    asl ;double it to point to word
@@ -115,33 +147,23 @@ ShowKeyboardCommands: ;including SID addresses
    ldy TblMsgTimerState+1,x
    jsr PrintString
    
-   lda #<MsgASIDPlayerCommands2
-   ldy #>MsgASIDPlayerCommands2
-   jsr PrintString 
-   ;sid1 addr:
-   lda smcSID1address+2 ;high byte
-   ldx smcSID1address+1 ;low byte
-   jsr PrintSIDaddress
-   
-   lda #<MsgASIDPlayerCommands3
-   ldy #>MsgASIDPlayerCommands3
-   jsr PrintString 
-   ;sid2 addr:
-   lda smcSID2address+2 ;high byte
-   ldx smcSID2address+1 ;low byte
-   jsr PrintSIDaddress
-   
-   lda #<MsgASIDPlayerCommands4
-   ldy #>MsgASIDPlayerCommands4
-   jsr PrintString 
-   ;sid3 addr:
-   lda smcSID3address+2 ;high byte
-   ldx smcSID3address+1 ;low byte
-   jsr PrintSIDaddress
-   
    lda #<MsgASIDPlayerCommands5
    ldy #>MsgASIDPlayerCommands5
-   jsr PrintString 
+   jsr PrintString    
+   ; print buffer size
+   lda memBufferSize
+   and #ASIDContBufMask ;turn to zero based
+   asl ;double it to point to word
+   tax
+   lda TblMsgBufferSize,x
+   ldy TblMsgBufferSize+1,x
+   jsr PrintString
+   
+   lda #<MsgASIDPlayerCommands6
+   ldy #>MsgASIDPlayerCommands6
+   jsr PrintString    
+   
+   
    inc smcScreenFull+1 ;set screen full flag
    ;end of ShowKeyboardCommands, continue to main loop...
    
@@ -308,6 +330,17 @@ SetScreen
    bne ++
    ldx #$00 ;roll over
 ++ stx memFrameTimer
+   stx ASIDContReg+IO1Port
+   jmp ShowKeyboardCommands
+
++  cmp #'b'  ;Change Buffer Size
+   bne +  
+   ldx memBufferSize
+   inx
+   cpx #ASIDContBufOverflow
+   bne ++
+   ldx #ASIDContBufSmall ;roll over to small
+++ stx memBufferSize
    stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
 

@@ -145,6 +145,8 @@ MuteColor
 
 memFrameTimer
    !byte ASIDContTimerOff   ;default to 0/off;  see ASIDregsMatching, ASIDContTimer* 
+memBufferSize
+   !byte ASIDContBufMedium  ;default to Medium Size;  see ASIDregsMatching, ASIDContBuf* 
 memPausePlay
    !byte 0   ;0=currently streaming/not muted, 1=muted
 memTextCircQueueHead:
@@ -193,22 +195,22 @@ MsgASIDPlayerCommands1:
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
    !tx "   x: Exit", ChrReturn
-   !tx "   t: Frame Timer (beta): ", ChrRvsOn
+   !tx "   1: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    
-   !tx ChrReturn, "   1: First  SID address ", ChrRvsOn, "$"
-   !tx 0
-MsgASIDPlayerCommands3:    
    !tx ChrReturn, "   2: Second SID address ", ChrRvsOn, "$"
    !tx 0
-MsgASIDPlayerCommands4:    
+MsgASIDPlayerCommands3:    
    !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
    !tx 0
+MsgASIDPlayerCommands4:    
+   !tx ChrReturn, "   t: Frame Timer (beta) ", ChrRvsOn
+   !tx 0
 MsgASIDPlayerCommands5:    
+   !tx ChrReturn, "      b: Buffer Size ", ChrRvsOn
+   !tx 0
+MsgASIDPlayerCommands6:    
    !tx ChrReturn, ChrDrkGrey
-   ;!tx ChrReturn, "Other information:"
-   ;!tx ChrReturn, " * During playback, command response"
-   ;!tx ChrReturn, "     may be slow"
    !tx ChrReturn, "  Recommend muting playback"
    !tx ChrReturn, "    when changing SID adresses"
    !tx 0
@@ -256,8 +258,25 @@ TblMsgTimerState: ;must match ASIDregsMatching, ASIDContTimer* order/qty
    !word MsgOnAuto
    !word MsgOn50Hz
 MsgOff:
-   !tx "Off", 0
+   !tx "Off", ChrDrkGrey, 0  ;so that buffer select is grey
 MsgOnAuto:
    !tx "On-Auto", 0
 MsgOn50Hz:
    !tx "On-50Hz", 0
+
+TblMsgBufferSize: ;must match ASIDregsMatching, ASIDContBuf* order/qty
+   !word MsgSmall
+   !word MsgMedium
+   !word MsgLarge
+   !word MsgXLarge
+   !word MsgXXLarge
+MsgSmall:
+   !tx "Small", 0
+MsgMedium:
+   !tx "Med", 0
+MsgLarge:
+   !tx "Lrg", 0
+MsgXLarge:
+   !tx "XLrg", 0
+MsgXXLarge:
+   !tx "XXLrg", 0
