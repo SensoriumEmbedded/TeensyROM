@@ -106,11 +106,12 @@ FLASHMEM void ServiceSerial()
 
    // q, a, b
    #ifdef Dbg_SerASID
-      case 'q':   //display queue size, rate
-         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s, Interval: %lu uS\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"), TimerIntervalUs);
-         Serial.printf(" Q Size:%lu, cur:%lu, Delta Bytes:%d, DeltaFrames:%d, FrmsBetChks:%d\n", ASIDQueueSize, ASIDRxQueueUsed, (ASIDRxQueueUsed - BufByteTarget), DeltaFrames, FramesBetweenChecks);
-         Serial.printf("MaxB:%+d, MinB:%+d, diff:%d bytes\n", MaxB, MinB, MaxB-MinB);
-         Serial.printf("MaxT:%lu, MinT:%lu, diff:%lu uS\n", MaxT, MinT, MaxT-MinT);
+      case 'q':   //display queue size, rate, etc
+         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"));
+         Serial.printf(" Config  : QSize:%lu, FrmsBetChks:%d\n", ASIDQueueSize, FramesBetweenChecks);
+         Serial.printf(" Current : QUsed:%lu, QInit: %lu, DeltaFrames:%d\n", ASIDRxQueueUsed, BufByteTarget, DeltaFrames);
+         Serial.printf(" QInitChg: Curr: %d, Max:%+d, Min:%+d, diff:%d bytes\n", (ASIDRxQueueUsed - BufByteTarget), MaxB, MinB, MaxB-MinB);
+         Serial.printf(" Interval: Curr: %lu, Max:%lu, Min:%lu, diff:%lu uS\n", TimerIntervalUs, MaxT, MinT, MaxT-MinT);
          break;
       case 'a': //ASID Packet load
       {

@@ -71,7 +71,6 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
 };
 
-#define ASIDQueueSize   (MIDIRxBufSize & ~1)  // force to even number
 #define ASIDRxQueueUsed ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 #define FramesBetweenChecks 12  //frames between frame alignments check & timing adjust
 
@@ -95,6 +94,7 @@ uint32_t BufByteTarget;
 bool QueueInitialized, FrameTimerMode;
 int32_t DeltaFrames;
 uint32_t NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs = 0;
+uint16_t ASIDQueueSize = (MIDIRxBufSize & ~1);  // force to even number
 
 uint8_t ASIDidToReg[] = 
 {
@@ -240,6 +240,7 @@ FASTRUN void SendTimedASID()
    if (MIDIRxIRQEnabled) // && LocalASIDRxQueueUsed > 1)
    {
       SetIRQAssert; //Trigger read by C64, start of frame
+      DeltaFrames++; // qualify as SID1 frame start?
    #ifdef DbgSignalASIDIRQ
       DbgOutputState = !DbgOutputState;
       if (DbgOutputState) SetDebugAssert;
@@ -337,7 +338,6 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          SetASIDIRQ();
          break;
       case 0x4e:  //SID1 reg data (primary)
-         DeltaFrames--;
          if (FrameTimerMode && !QueueInitialized)
          { //check packet receive rate during queue init
             static uint32_t LastMicros;
@@ -377,6 +377,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             }
             NumPackets++;
          }
+         DeltaFrames--;
          DecodeSendSIDRegData(ASIDAddrType_SID1, data, size);
          break;
       case 0x50:  //SID2 reg data
@@ -451,7 +452,7 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                   SetIRQDeassert;  //remove IRQ if End Of Frame
                   RxQueueTail+=2;  //Skip sending the EOF marker
                   if (RxQueueTail == ASIDQueueSize) RxQueueTail = 0;   
-                  DeltaFrames++;
+                  //DeltaFrames++;  //moved to start of packet send instead of here at end
                }
             }
             break;
