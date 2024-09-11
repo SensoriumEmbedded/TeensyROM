@@ -5,7 +5,6 @@
 
 #include "core_cm7_min.h"  //stripped down version to get defines needed
 
-#define  FLASH_BASEADDRESS    0x60000000
 
 typedef  void (*pFunction)(void);
 
@@ -31,6 +30,8 @@ FLASHMEM void runMainTRApp()
     Serial.printf("%08X ", firstInstructionAddr);
     ErrorLoopForever("Unexp first inst loc");
   }
+  
+  //checks have passed...
   Serial.printf("Jumping to code at 0x%08X\n", firstInstructionAddr);
   delay(10); // give the serial port time to output so we see that message.
 

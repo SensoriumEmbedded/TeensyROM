@@ -71,7 +71,6 @@ uint32_t* BigBuf = NULL;
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730
 #define PALBusFreq          985250
-#define UpperAddr           0x040000  //address of upper (main) TR image
 
 
 volatile uint32_t StartCycCnt, LastCycCnt=0;
