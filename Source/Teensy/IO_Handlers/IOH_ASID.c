@@ -41,47 +41,51 @@ stcIOHandlers IOHndlr_ASID =
 enum ASIDregsMatching  //synch with ASIDPlayer.asm
 {
    // registers:
-   ASIDAddrReg        = 0xc2,   // (Read only)  Data type and SID Address Register 
-   ASIDDataReg        = 0xc4,   // (Read only)  ASID data, increment queue Tail 
-   ASIDQueueUsed      = 0xc8,   // (Read only)  Current Queue amount used
-   ASIDContReg        = 0xca,   // (Write only) Control Reg 
+   ASIDAddrReg         = 0xc2,   // (Read only)  Data type and SID Address Register 
+   ASIDDataReg         = 0xc4,   // (Read only)  ASID data, increment queue Tail 
+   ASIDQueueUsed       = 0xc8,   // (Read only)  Current Queue amount used
+   ASIDContReg         = 0xca,   // (Write only) Control Reg 
 
    // Control Reg Commands
    // Timer controls match TblMsgTimerState, start at 0
-   ASIDContTimerOff   = 0x00,   //disable Frame Timer
-   ASIDContTimerOnAuto= 0x01,   //enable Frame Timer, auto seed time
-   ASIDContTimerOn50Hz= 0x02,   //enable Frame Timer, 50Hz seed time
-   NumTimerStates     = 0x03,   //Always last, number of states
-   // ...                   
-   ASIDContIRQOn      = 0x10,   //enable ASID IRQ
-   ASIDContIRQOff     = 0x11,   //disable ASID IRQ
-   ASIDContExit       = 0x12,   //Disable IRQ, Send TR to main menu
-   // ...
-   ASIDContBufSmall   = 0x20,   //Set buffer to size Small, always first
-   ASIDContBufMedium  = 0x21,   //Set buffer to size Medium 
-   ASIDContBufLarge   = 0x22,   //Set buffer to size Large  
-   ASIDContBufXLarge  = 0x23,   //Set buffer to size XLarge 
-   ASIDContBufXXLarge = 0x24,   //Set buffer to size XXLarge
-   ASIDContBufOverflow= 0x25,   //Overflow (num of) of buffer sizes
-   ASIDContBufMask    = 0x07,   //Mask to get zero based 
+   ASIDContTimerOff    = 0x00,   //disable Frame Timer
+   ASIDContTimerOnAuto = 0x01,   //enable Frame Timer, auto seed time
+   ASIDContTimerOn50Hz = 0x02,   //enable Frame Timer, 50Hz seed time
+   NumTimerStates      = 0x03,   //Always last, number of states
+   // ...                    
+   ASIDContIRQOn       = 0x10,   //enable ASID IRQ
+   ASIDContIRQOff      = 0x11,   //disable ASID IRQ
+   ASIDContExit        = 0x12,   //Disable IRQ, Send TR to main menu
+   // ...              
+   ASIDContBufTiny     = 0x20,   //Set buffer to size Tiny  
+   ASIDContBufSmall    = 0x21,   //Set buffer to size Small  
+   ASIDContBufMedium   = 0x22,   //Set buffer to size Medium 
+   ASIDContBufLarge    = 0x23,   //Set buffer to size Large  
+   ASIDContBufXLarge   = 0x24,   //Set buffer to size XLarge 
+   ASIDContBufXXLarge  = 0x25,   //Set buffer to size XXLarge
+   ASIDContBufFirstItem= ASIDContBufTiny,    //First seq item on list
+   ASIDContBufLastItem = ASIDContBufXXLarge, //Last seq item on list
+   ASIDContBufMask     = 0x07,   //Mask to get zero based item #
 
    // queue message types/masks
-   ASIDAddrType_Skip  = 0x00,   // No data/skip, also indicates End Of Frame
-   ASIDAddrType_Char  = 0x20,   // Character data
-   ASIDAddrType_Start = 0x40,   // ASID Start message
-   ASIDAddrType_Stop  = 0x60,   // ASID Stop message
-   ASIDAddrType_SID1  = 0x80,   // Lower 5 bits are SID1 reg address
-   ASIDAddrType_SID2  = 0xa0,   // Lower 5 bits are SID2 reg address 
-   ASIDAddrType_SID3  = 0xc0,   // Lower 5 bits are SID3 reg address
-   ASIDAddrType_Error = 0xe0,   // Error from parser
-   
-   ASIDAddrType_Mask  = 0xe0,   // Mask for Type
-   ASIDAddrAddr_Mask  = 0x1f,   // Mask for Address
-};
+   ASIDAddrType_Skip   = 0x00,   // No data/skip, also indicates End Of Frame
+   ASIDAddrType_Char   = 0x20,   // Character data
+   ASIDAddrType_Start  = 0x40,   // ASID Start message
+   ASIDAddrType_Stop   = 0x60,   // ASID Stop message
+   ASIDAddrType_SID1   = 0x80,   // Lower 5 bits are SID1 reg address
+   ASIDAddrType_SID2   = 0xa0,   // Lower 5 bits are SID2 reg address 
+   ASIDAddrType_SID3   = 0xc0,   // Lower 5 bits are SID3 reg address
+   ASIDAddrType_Error  = 0xe0,   // Error from parser
+                       
+   ASIDAddrType_Mask   = 0xe0,   // Mask for Type
+   ASIDAddrAddr_Mask   = 0x1f,   // Mask for Address
+}; //end enum synch
 
-#define RegValToBuffSize(X)  (1<<((X & ASIDContBufMask)+9)); //512, 1024, 2048, 4096, 8192; make sure MIDIRxBufSize is >= max (8192)         
+#define RegValToBuffSize(X)  (1<<((X & ASIDContBufMask)+8)); // 256, 512, 1024, 2048, 4096, 8192; make sure MIDIRxBufSize is >= max (8192)         
 #define ASIDRxQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
-#define FramesBetweenChecks  12  //frames between frame alignments check & timing adjust
+#define FramesBetweenChecks  12    //frames between frame alignments check & timing adjust
+#define SIDFreq50HzuS        19975 // 19950=50.13Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
+                                   //Splitting the difference for now, todo: standardize when DS updated!
 
 #ifdef DbgMsgs_IO  //Debug msgs mode
    #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
@@ -102,8 +106,7 @@ uint32_t BufByteTarget;
 
 bool QueueInitialized, FrameTimerMode;
 int32_t DeltaFrames;
-uint32_t NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs = 0;
-uint16_t ASIDQueueSize;
+uint32_t ASIDQueueSize, NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs;
 
 uint8_t ASIDidToReg[] = 
 {
@@ -154,8 +157,8 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
 {
   if (ASIDRxQueueUsed >= ASIDQueueSize-2)
   {
-     Printf_dbg(">");
-     //Printf_dbg("-->ASID queue overflow!\n");
+     //Printf_dbg(">");
+     Printf_dbg("\n**Queue Overflow\n");
      if (FrameTimerMode) InitTimedASIDQueue(); 
      return;
   }
@@ -233,15 +236,13 @@ FASTRUN void SendTimedASID()
 { //called by timer to send next ASID frame (activate IRQ)
   
    //if (!TimerIntervalUs || !QueueInitialized) return;
-  
    
    uint32_t LocalASIDRxQueueUsed = ASIDRxQueueUsed; 
    
    if (LocalASIDRxQueueUsed < 2)
    {
-      Printf_dbg("<");
-      //TimerIntervalUs+=5; // increase to slow down playback 
-      //ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
+      //Printf_dbg("<");
+      Printf_dbg("\n**Queue Underflow\n");
       InitTimedASIDQueue(); //re-buffer if queue empty
       return;
    }
@@ -271,9 +272,10 @@ FASTRUN void SendTimedASID()
       TimerIntervalUs += DeltaFrames; //adjust timer by 1uS for each frame off of aligned 
       HystCount = FramesBetweenChecks; //frames between frame alignments check & timing adjust
       ASIDPlaybackTimer.update(TimerIntervalUs);  //current interval is completed, then the next interval begins with this setting 
-      Printf_dbg("%+d", DeltaFrames);
       
 #ifdef Dbg_SerASID
+      Serial.printf("%+d", DeltaFrames);
+      
       int32_t DeltaTarget = LocalASIDRxQueueUsed - BufByteTarget;
       if (DeltaTarget>MaxB)
       {
@@ -360,8 +362,8 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
             }
             LastMicros = NewMicros;
    
-            //if buffer half full or been >2 seconds, start timer to kick off playback...
-            if (ASIDRxQueueUsed >= ASIDQueueSize/2 || TotalInituS >= 2500000) 
+            //if buffer 1/3 full or been >2 seconds, start timer to kick off playback...
+            if (ASIDRxQueueUsed >= ASIDQueueSize/3 || TotalInituS >= 2000000) 
             {
                if (NumPackets) TimerIntervalUs = TotalInituS/NumPackets;
                else 
@@ -499,7 +501,7 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                break;
             case ASIDContTimerOn50Hz:
                FrameTimerMode = true;
-               ForceIntervalUs = 19950;
+               ForceIntervalUs = SIDFreq50HzuS;
                InitTimedASIDQueue();
                Printf_dbg("Timer On-50Hz\n");
                break;               
@@ -518,7 +520,7 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                BtnPressed = true;   //main menu
                Printf_dbg("ASIDContExit\n");
                break;
-            case ASIDContBufSmall ... ASIDContBufXXLarge:
+            case ASIDContBufFirstItem ... ASIDContBufLastItem:
                ASIDQueueSize = RegValToBuffSize(Data); 
                InitTimedASIDQueue();
                Printf_dbg("Buf Size set to %d (%d bytes)\n", (Data & ASIDContBufMask), ASIDQueueSize);

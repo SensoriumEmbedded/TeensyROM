@@ -207,7 +207,7 @@ MsgASIDPlayerCommands4:
    !tx ChrReturn, "   t: Frame Timer (beta) ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands5:    
-   !tx ChrReturn, "      b: Buffer Size ", ChrRvsOn
+   !tx ChrReturn, "      b/B: Buffer Size ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands6:    
    !tx ChrReturn, ChrDrkGrey
@@ -265,11 +265,14 @@ MsgOn50Hz:
    !tx "On-50Hz", 0
 
 TblMsgBufferSize: ;must match ASIDregsMatching, ASIDContBuf* order/qty
+   !word MsgTiny
    !word MsgSmall
    !word MsgMedium
    !word MsgLarge
    !word MsgXLarge
    !word MsgXXLarge
+MsgTiny:
+   !tx "Tiny", 0
 MsgSmall:
    !tx "Small", 0
 MsgMedium:

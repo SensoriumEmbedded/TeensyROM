@@ -5,45 +5,47 @@
    !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "..\MainMenuCRT\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
-;enum ASIDregsMatching  //synch with ASIDPlayer.asm
+;enum ASIDregsMatching  //synch with IOH_ASID.c
    ;// registers:
-   ASIDAddrReg        = 0xc2;   // (Read only)  Data type and SID Address Register 
-   ASIDDataReg        = 0xc4;   // (Read only)  ASID data, increment queue Tail 
-   ASIDQueueUsed      = 0xc8;   // (Read only)  Current Queue amount used
-   ASIDContReg        = 0xca;   // (Write only) Control Reg 
+   ASIDAddrReg         = 0xc2;   // (Read only)  Data type and SID Address Register 
+   ASIDDataReg         = 0xc4;   // (Read only)  ASID data, increment queue Tail 
+   ASIDQueueUsed       = 0xc8;   // (Read only)  Current Queue amount used
+   ASIDContReg         = 0xca;   // (Write only) Control Reg 
    
    ;// Control Reg Commands
    ;// Timer controls match TblMsgTimerState, start at 0
-   ASIDContTimerOff   = 0x00;   //disable Frame Timer
-   ASIDContTimerOnAuto= 0x01;   //enable Frame Timer, auto seed time
-   ASIDContTimerOn50Hz= 0x02;   //enable Frame Timer, 50Hz seed time
-   NumTimerStates     = 0x03;   //Always last, number of states
-   ;// ...
-   ASIDContIRQOn      = 0x10;   //enable ASID IRQ
-   ASIDContIRQOff     = 0x11;   //disable ASID IRQ
-   ASIDContExit       = 0x12;   //Disable IRQ, Send TR to main menu
-   ;// ...
-   ASIDContBufSmall   = 0x20;   //Set buffer to size Small  
-   ASIDContBufMedium  = 0x21;   //Set buffer to size Medium 
-   ASIDContBufLarge   = 0x22;   //Set buffer to size Large  
-   ASIDContBufXLarge  = 0x23;   //Set buffer to size XLarge 
-   ASIDContBufXXLarge = 0x24;   //Set buffer to size XXLarge
-   ASIDContBufOverflow= 0x25;   //Overflow (num of) of buffer sizes
-   ASIDContBufMask    = 0x07;   //Mask to get zero based 
-   
+   ASIDContTimerOff    = 0x00;   //disable Frame Timer
+   ASIDContTimerOnAuto = 0x01;   //enable Frame Timer, auto seed time
+   ASIDContTimerOn50Hz = 0x02;   //enable Frame Timer, 50Hz seed time
+   NumTimerStates      = 0x03;   //Always last, number of states
+   ;// ...                    
+   ASIDContIRQOn       = 0x10;   //enable ASID IRQ
+   ASIDContIRQOff      = 0x11;   //disable ASID IRQ
+   ASIDContExit        = 0x12;   //Disable IRQ, Send TR to main menu
+   ;// ...              
+   ASIDContBufTiny     = 0x20;   //Set buffer to size Tiny  
+   ASIDContBufSmall    = 0x21;   //Set buffer to size Small  
+   ASIDContBufMedium   = 0x22;   //Set buffer to size Medium 
+   ASIDContBufLarge    = 0x23;   //Set buffer to size Large  
+   ASIDContBufXLarge   = 0x24;   //Set buffer to size XLarge 
+   ASIDContBufXXLarge  = 0x25;   //Set buffer to size XXLarge
+   ASIDContBufFirstItem= ASIDContBufTiny;    //First seq item on list
+   ASIDContBufLastItem = ASIDContBufXXLarge; //Last seq item on list
+   ASIDContBufMask     = 0x07;   //Mask to get zero based item #
+
    ;// queue message types/masks
-   ASIDAddrType_Skip  = 0x00;   // No data/skip
-   ASIDAddrType_Char  = 0x20;   // Character data
-   ASIDAddrType_Start = 0x40;   // ASID Start message
-   ASIDAddrType_Stop  = 0x60;   // ASID Stop message
-   ASIDAddrType_SID1  = 0x80;   // Lower 5 bits are SID1 reg address
-   ASIDAddrType_SID2  = 0xa0;   // Lower 5 bits are SID2 reg address 
-   ASIDAddrType_SID3  = 0xc0;   // Lower 5 bits are SID3 reg address
-   ASIDAddrType_Error = 0xe0;   // Error from parser
+   ASIDAddrType_Skip   = 0x00;   // No data/skip, also indicates End Of Frame
+   ASIDAddrType_Char   = 0x20;   // Character data
+   ASIDAddrType_Start  = 0x40;   // ASID Start message
+   ASIDAddrType_Stop   = 0x60;   // ASID Stop message
+   ASIDAddrType_SID1   = 0x80;   // Lower 5 bits are SID1 reg address
+   ASIDAddrType_SID2   = 0xa0;   // Lower 5 bits are SID2 reg address 
+   ASIDAddrType_SID3   = 0xc0;   // Lower 5 bits are SID3 reg address
+   ASIDAddrType_Error  = 0xe0;   // Error from parser
                             
-   ASIDAddrType_Mask  = 0xe0;   // Mask for Type
-   ASIDAddrAddr_Mask  = 0x1f;   // Mask for Address
-;end enum synch
+   ASIDAddrType_Mask   = 0xe0;   // Mask for Type
+   ASIDAddrAddr_Mask   = 0x1f;   // Mask for Address
+; //end enum synch
 
 
    SpinIndSID3Write   = C64ScreenRAM+40*2+2 ;spin indicator: SID3 write
@@ -333,14 +335,24 @@ SetScreen
    stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
 
-+  cmp #'b'  ;Change Buffer Size
++  cmp #'B'  ;Increase Buffer Size
    bne +  
    ldx memBufferSize
    inx
-   cpx #ASIDContBufOverflow
-   bne ++
-   ldx #ASIDContBufSmall ;roll over to small
-++ stx memBufferSize
+   cpx #ASIDContBufLastItem+1
+   bne UpdateBufferSize
+   ldx #ASIDContBufFirstItem ;roll over to first
+   jmp UpdateBufferSize
+
++  cmp #'b'  ;Decrease Buffer Size
+   bne +  
+   ldx memBufferSize
+   dex
+   cpx #ASIDContBufFirstItem-1
+   bne UpdateBufferSize
+   ldx #ASIDContBufLastItem ;roll over to last
+UpdateBufferSize  ;mem & control from x register
+   stx memBufferSize
    stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
 
