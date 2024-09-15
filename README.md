@@ -1,5 +1,5 @@
 # TeensyROM
-**ROM emulator, instant loader, MIDI Host/Device, Internet interface cartridge and *much more* for the Commodore 64 & 128, based on the Teensy 4.1**
+**ROM emulator, instant loader, MIDI Host/Device, ASID Player, Internet interface cartridge and *much more* for the Commodore 64 & 128, based on the Teensy 4.1**
 <br>*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
 **Recent Updates:** 
@@ -69,6 +69,7 @@ If you have thoughts/input on this project, questions, or would like to meet oth
   * **Usage Documents**
     * **[General Usage](docs/General_Usage.md)**
     * **[MIDI Usage](docs/MIDI_Usage.md)**
+    * **[ASID Player](docs/ASID%20Player.md)**
     * **[Ethernet Usage](docs/Ethernet_Usage.md)**
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
