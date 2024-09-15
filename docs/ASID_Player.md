@@ -65,6 +65,7 @@ The first step is to enable the re-timer on and select 50Hz or Auto timing of pl
 * "On-50Hz" is for most standard 1x speed SIDs, and can insure accurate starting speeds for SIDs of that type.
 * "On-Auto" measures the initial packets for the starting time constant. Timing can start slightly off if initial packets aren't received well-timed.
 * Eventually, the ASID protocol will include "recipe" information from the source to automatically configure this speed, but this capability is not yet available.
+    * For this reason, variable rate and per-note sids are not currently compatible with the frame timer feature.
 
 Once the Frame Timer is turned on, the buffer size can be selected with "b" (smaller) or "B" (larger). 
 * Larger buffers afford more space for speed corrections and reduce likelyhoo of audible glitches, but also add noticable buffer time between the source and the SID output. 
