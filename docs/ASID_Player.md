@@ -25,61 +25,60 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 ### C64 Keyboard commands
 |Key|Function|Description|
 |:--:|:--:|:--|
-|**v**|Clear Voices|Initialize/clear all voices on all SID chips|
-|**s**|Screen Toggle|Turn on/off C64 screen blanking, can help with audio noise reduction|
-|**m**|Mute Toggle|Clears all voices **and** mutes incomming stream. "Mute" displayed in upper right when active|
-|**?**|Help List|Displays keyboard commands list|
-|**d**|Indicator Decoder|Displays info about indicators at top of screen (see below)|
-|**c**|Clear Screen|Clears text from display, just leaves indicators|
-|**x**|Exit|Exit the application, back to the TeensyROM menu|
-|**1**|First  SID address|Changes address of the **primary* SID, typically $d400|
-|**2**|Second SID address|Changes address of SID #2 for multi-SID playback|
-|**3**|Third  SID address|Changes address of SID #3 for multi-SID playback|
-|**t**|Frame Timer (beta)|Turns On/Off the frame-retimer (see below)|
-|**b/B**|Buffer Size|Sets the size of the Frame Timer buffer, if used (see below)|
+|`v`|Clear Voices|Initialize/clear all voices on all SID chips|
+|`s`|Screen Toggle|Turn on/off C64 screen blanking, can help with audio noise reduction|
+|`m`|Mute Toggle|Clears all voices `and` mutes incomming stream. "Mute" displayed in upper right when active|
+|`?`|Help List|Displays keyboard commands list|
+|`d`|Indicator Decoder|Displays info about indicators at top of screen (see below)|
+|`c`|Clear Screen|Clears text from display, just leaves indicators|
+|`x`|Exit|Exit the application, back to the TeensyROM menu|
+|`1`|First  SID address|Changes address of the `primary* SID, typically $d400|
+|`2`|Second SID address|Changes address of SID #2 for multi-SID playback|
+|`3`|Third  SID address|Changes address of SID #3 for multi-SID playback|
+|`t`|Frame Timer (beta)|Turns On/Off the frame-retimer (see below)|
+|`b`/`B`|Buffer Size|Sets the size of the Frame Timer buffer, if used (see below)|
 
 ### Register indicators
 The top of the ASID Player screen displays real-time playback information. This information can be divided into three groups:
 * **Spinner indicators** update to the next PETSCII character each time an event takes place
-    * **3,2,1** These spinners update each time SID#1, 2, or 3 is written to
-    * **R,P** A single communication error was identified
-        * (R)Read error: Unexpected reg type or skip message received by C64 from Teensy
-        * (P)Packet error: Detected by Teensy, usually from ASID source: 
-            * More regs expected in ASID SysEx packet than provided
-            * SySex packet format incorrect
-            * Unexpected ASID msg type
-            * Data requested from C64 when queue is empty 
+    * `3`,`2`,`1` These spinners update each time SID#1, 2, or 3 is written to
+    * `R` Read error: Unexpected reg type or skip message received by C64 from Teensy
+    * `P` Packet error: Detected by Teensy, usually from ASID source: 
+        * More regs expected in ASID SysEx packet than provided
+        * SysEx packet format incorrect
+        * Unexpected ASID msg type
+        * Data requested from C64 when queue is empty 
 * **SID #1 Register Access "Lights"**
     * 25 indicators to represent an access to each SID(#1) register
     * Lights turn white on each register write, then turn grey if not accessed again withing 100mS, and turn off after another 100mS of non-access.
-    * Use the "d" command to see the decoder list of registers
+    * Use the `d` command to see the decoder list of registers
 * **Frame Timer buffer usage bar graph**
     * When the Frame Timer is enabled, indicates how full the buffer currently is.
-    * Too full or empty indicates over/underflow and may result in an audible anomoly.
+    * Too full or empty indicates over/underflow and may result in an audible anomaly.
 
 ### Frame timer (beta)
 Timing imperfections can be introduced by control PC workload, USB packetization, drivers, and other factors. This can be compensated for by re-timing the ouput to the C64/SID to a repeatably accurate cadence.
 
-The first step is to enable the re-timer on and select 50Hz or Auto timing of playback using the "t" command. 
-* "Off" (default) simply plays each ASID packet as soon as it arrives via USB/MIDI
-* "On-50Hz" is for most standard 1x speed SIDs, and can insure accurate starting speeds for SIDs of that type.
-* "On-Auto" measures the initial packets for the starting time constant. Timing can start slightly off if initial packets aren't received well-timed.
+The first step is to enable the re-timer on and select 50Hz or Auto timing of playback using the `t` command. 
+* `Off` (default) simply plays each ASID packet as soon as it arrives via USB/MIDI
+* `On-50Hz` is for most standard 1x speed SIDs, and can insure accurate starting speeds for SIDs of that type.
+* `On-Auto` measures the initial packets for the starting time constant. Timing can start slightly off if initial packets aren't received well-timed.
 * Eventually, the ASID protocol will include "recipe" information from the source to automatically configure this speed, but this capability is not yet available.
     * For this reason, variable rate and per-note sids are not currently compatible with the frame timer feature.
 
-Once the Frame Timer is turned on, the buffer size can be selected with "b" (smaller) or "B" (larger). 
+Once the Frame Timer is turned on, the buffer size can be selected with `b` (smaller) or `B` (larger). 
 * Larger buffers afford more space for speed corrections and reduce likelyhoo of audible glitches, but also add noticable buffer time between the source and the SID output. 
 * Smaller buffers are usefull for faster startup and synch with the source, but risk over/under runs for jittery sources
 * Here are some recommendations:
     |Usage|Timer|Buffer Size|
     |:--:|:--:|:--:|
-    |DeepSID 50Hz 1xSID|On-50Hz|Tiny-Medium|
-    |DeepSID 50Hz 1xSID|On-Auto|Small-Large|
-    |DeepSID 50Hz 2xSID|On-Auto|Medium-XLarge|
-    |DeepSID 50Hz 4xSID|On-Auto|Medium-XXLarge|
-    |SIDFactory II 50Hz 1x|On-50Hz|Tiny-Small|
-    |ASID XP 50Hz 1xSID|On-50Hz|Tiny-Small|
-    |ChipSynth C64|Off|Asynchronous data|
+    |DeepSID 50Hz 1xSID|`On-50Hz`|`Tiny`-`Medium`|
+    |DeepSID 50Hz 1xSID|`On-Auto`|`Small`-`Large`|
+    |DeepSID 50Hz 2xSID|`On-Auto`|`Medium`-`XLarge`|
+    |DeepSID 50Hz 4xSID|`On-Auto`|`Medium`-`XXLarge`|
+    |SIDFactory II 50Hz 1x|`On-50Hz`|`Tiny`-`Small`|
+    |ASID XP 50Hz 1xSID|`On-50Hz`|`Tiny`-`Small`|
+    |ChipSynth C64|`Off`|N/A (Asynchronous)|
 
 ## ASID Source setup info
 * **DeepSID** to stream .sid files from the internet to your C64
@@ -95,8 +94,8 @@ Once the Frame Timer is turned on, the buffer size can be selected with "b" (sma
     * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
     * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 * **SID Factory II** for cross-platform SID music editing/playing
-    * As of this writing, ASID support is only available via [this GitHub Branch]() and must be compiled. Let [me](mailto:travis@sensoriumembedded.com) or someone on the TR Discord know if you need help with this.
-        * Hoping this will be fully [released here](https://blog.chordian.net/sf2/) soon.
+    * As of this writing, ASID support is only available via [this GitHub Branch]() and must be compiled. Let [me](mailto:travis@sensoriumembedded.com) know if you need help with this.
+        * Hoping this will be fully released [here](https://blog.chordian.net/sf2/) soon.
     * Launch the SFII application
     * Press F1 on the splash page to select the TeensyROM, and Enter to continue
     * Press F10 once you're in the editor to load a song project
