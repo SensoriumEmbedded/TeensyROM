@@ -1,6 +1,28 @@
 
 # FW Release Version history:
 
+### 0.6.1 Release 9/16/24
+* ASID Player usage documentation created, [available here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md)
+* ASID player updates (v1.1)
+  * Added customized character set  to make indicators round, bargraph characters, and dot for zero value on spinners
+  * Beta feature added:  Frame timer to re-time ASID playback for timing improvement
+    * Usage documented in ASID Player doc linked above
+    * Commands added to enable/disable timer and set buffer size
+    * Micro timing adjustments of no more than 1uS per 12 frames to keep buffer primed but not overflowed
+    * Buffer fill level displayed on screen
+    * 50Hz 1x and Auto modes selectable
+      * In auto mode, the playback interval will be measured at beginning and used as a seed time for the rest of the playback.
+        * This method works fairly well, but is dependent on USB packet intervals which are occasionally a bit off (thus the need for the timer). 
+        * In the future, DeepSID (and perhaps others) will provide a "recipe" packet to specify the exact interval and eliminate the need to time the packets and improve seed accuracy.
+          * DeepSID uses Web MIDI, which appears to have the worst jitter. SID Factory II, ASIDXP, and SIDPlay are *much* better
+        * 1x and 2x speed SIDs (PAL or NTSC) play reliably, 4x usually has a couple small packet errors during the full song, but typically not audibly detectable.  
+        * Above 4x and other asynchronous formats don't do well with the frame timer. Leave it "off" for these
+      * 50Hz 1x mode works best for SIDs of that speed and seed the timer with an exact value regardless of timed value
+    * Thank you to @hExx, @Avrilcadabra, @tubesockor, @iZero, and @Slaygon for you testing/feedback/ideas around this feature!
+* MIDI2SID Freq calc corrected for PAL/NTSC 
+  * Based on system typed detected
+  * Thank you @Avrilcadabra for the prompt
+
 ### 0.6 Release 7/10/24
 * New feature: Dual boot w/ minimal image
   * ***Increases max CRT file size from 626k to 875k (40% increase)***

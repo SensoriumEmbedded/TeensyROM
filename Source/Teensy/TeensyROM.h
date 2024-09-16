@@ -20,26 +20,25 @@
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 #include "MinimalBoot\Common\Common_Defs.h"
 
-char strVersionNumber[] = "v0.6.0+"; //*VERSION*
+char strVersionNumber[] = "v0.6.1"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
-//#define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-
-//less used:
+// #define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
+// #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
+// #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
+// #define Dbg_SerMem    //Serial commands that display memory info
+// #define Dbg_SerASID   //Serial commands that test the ASID player + queue adjust info
+ 
+//logging:
+// #define Dbg_SerLog    //Serial commands that display log info
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
 // #define DbgSpecial    //Special case logging to BigBuf
-// #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
-// #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
-// #define Dbg_SerLog    //Serial commands that display log info
-// #define Dbg_SerMem    //Serial commands that display memory info
-// #define Dbg_SerASID   //Serial commands that test the ASID player
-
+ 
 //Debug HW signal usage. Recommend using only 1 at a time.
-//#define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
-//#define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
-
+// #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
+// #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
 
 #define nfcScanner     //nfc scanner libs/code included in build
 #define nfcStateEnabled       0

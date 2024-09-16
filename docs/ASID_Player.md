@@ -16,6 +16,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 
 ## USB/TeensyROM Setup
 * Connect USB cable from a MIDI Host/computer to the USB Type B Micro Device port on the Teensy module.
+ * Recommend direct connection between PC/Mac and TeensyROM, USB hubs can add additional timing jitter.
 * Power up C64/128 to the TeensyROM main menu.
 * Select "TeensyROM ASID Player", or press the number '4' for fast hotkey access.
 * Program starts ready to receive single SID ASID data
