@@ -652,8 +652,13 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
       return;
    }
    
+   // https://ilmilou.uk/NoteFreqCalcs
+   // 2^(1/12) = 1.059463094359
    float Frequency = 440*pow(1.059463094359,note-60);  
-   uint32_t RegVal = Frequency*16777216/NTSCBusFreq;
+   // https://codebase64.org/doku.php?id=base:how_to_calculate_your_own_sid_frequency_table
+   // 256^3 = 16777216
+   // IO1[wRegVid_TOD_Clks] & 1  //1=NTSC, 0=PAL
+   uint32_t RegVal = Frequency*16777216/((IO1[wRegVid_TOD_Clks] & 1) ? NTSCBusFreq : PALBusFreq);
    
    if (RegVal > 0xffff) 
    {
