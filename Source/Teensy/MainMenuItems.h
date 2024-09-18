@@ -37,6 +37,7 @@
 #include "ROMs/Robocop_2_EasyFlash.crt.h" 
 #include "ROMs/MIDI2SID.prg.h" 
 #include "ROMs/ASIDPlayer.prg.h" 
+#include "ROMs/TRCBC.prg.h"
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -114,8 +115,9 @@ StructMenuItem dirUtilities[] =
    rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
    rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
-   rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg               , sizeof(sam_prg) ,
+   rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
    rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
+   rtFilePrg  , IOH_None         , (char*)"Custom BASIC Commands"            , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
 };
 
 StructMenuItem dirMultimedia[] = 
