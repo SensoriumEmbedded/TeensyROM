@@ -4,7 +4,7 @@
 ### 0.6.1 Release 9/16/24
 * ASID Player usage documentation created, [available here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md)
 * ASID player updates (v1.1)
-  * Added customized character set  to make indicators round, bargraph characters, and dot for zero value on spinners
+  * Added customized character set  to make indicators round, bar graph characters, and dot for zero value on spinners
   * Beta feature added:  Frame timer to re-time ASID playback for timing improvement
     * Usage documented in ASID Player doc linked above
     * Commands added to enable/disable timer and set buffer size

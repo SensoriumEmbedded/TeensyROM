@@ -310,6 +310,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    //data already contains starting f0 and ending f7
    //Printf_dbg_SysExInfo;
    #ifdef DbgSignalASIDIRQ      
+      // Use *LED signal* to communicate SysEx Packet Receipt from host
       DbgInputState = !DbgInputState;
       if (DbgInputState) SetLEDOn;
       else SetLEDOff;
