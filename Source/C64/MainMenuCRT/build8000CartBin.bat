@@ -63,6 +63,7 @@ echo ***Compile Cart...
 if NOT %ERRORLEVEL% == 0 exit /b
 
 echo ***bin2header
+::Note: This header does *not* get PROGMEM type mod, needs to sit in RAM
 %bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
 
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
