@@ -21,6 +21,7 @@
     .label CHKCOM               = $aefd
     .label FACINX               = $b1aa
     .label ILLEGAL_QUANTITY     = $b248
+    .label FRESTR               = $b6a3
     .label GETBYTC              = $b79b
     .label GETADR               = $b7f7
     .label OVERR                = $b97e

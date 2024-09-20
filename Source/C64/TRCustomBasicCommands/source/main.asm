@@ -12,9 +12,9 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find the table of tokens below at NewTab
 .label CMDSTART = $cc
-.label CMDEND   = $db
+.label CMDEND   = $dc
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $de
+.label FUNEND   = $df
 
 .label PtrAddrLo   = $fb
 .label PtrAddrHi   = $fc
@@ -28,7 +28,7 @@
 
 .byte $0b,$08,$01,$00,$9e  // Line 1 SYS
 .text "2070" // Address for sys start in text
-//.byte $00,$11,$08,$02,$00,$a2  //Line 2 NEW
+.byte $00,$11,$08,$02,$00,$a2  //Line 2 NEW
 .byte $00,$00,$00
 
 
@@ -155,12 +155,14 @@ NewTab:
     .byte 'E' + $80
     .text "DI"          // $db
     .byte 'R' + $80
+    .text "TPU"         // $dc
+    .byte 'T' + $80
     // Functions start here
-    .text "WEE"         // $dc
+    .text "WEE"         // $dd
     .byte 'K' + $80
-    .text "SCRLO"       // $dd
+    .text "SCRLO"       // $de
     .byte 'C' + $80
-    .text "RE"          // $de
+    .text "RE"          // $df
     .byte 'U' + $80
     .byte 0
 
@@ -181,6 +183,7 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word MemLoadCmd - 1
     .word MemSaveCmd - 1
     .word DirectoryCmd - 1
+    .word TPutCmd - 1
 
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
@@ -481,8 +484,8 @@ ScreenCmd:
 
 SpriteDiskCommandCommon:
     pha
-    jsr $ad9e           // TODO: Add this to the basic.asm
-    jsr $b6a3           // TODO: Add this to the basic.asm
+    jsr basic.FRMEVL    // Evaluate the expression after the token
+    jsr basic.FRESTR    // Discard Temp string, get point to string and length
     sta r0L             // Filename length
     lda $22
     sta r1L             // Filename
@@ -588,6 +591,45 @@ MemSaveCmd:
     bcc !-- // LOOP
 !: // CLOSE
     jmp DiskClose
+
+/*
+
+    Send String out TeensyROM Serial USB Device Port
+
+    Example: TPUT "HELLO WORLD!" would write "HELLO WORLD!" out the USB Serial port
+
+*/
+TPutCmd:
+    //lda #$00
+    //jsr SpriteDiskCommandCommon
+    
+    //pha
+    jsr basic.FRMEVL    // Evaluate the expression after the token
+    jsr basic.FRESTR    // Discard Temp string, get point to string and length
+    
+    //acc=msg len, $22=Message L pointer, $23=Message H pointer
+    //acc now contains length
+    //lda $22 //low
+    //ldy $23 //high
+    //jsr basic.STROUT //not zero terminated!
+    
+    sta r0
+    ldy #0
+!:  cpy r0
+    beq !+
+    lda ($22),y
+    jsr kernal.VEC_CHROUT
+    iny
+    bne !-
+!:  rts
+    
+    //sta r0L             // Message length
+    //lda $22             // Message L pointer
+    //sta r1L
+    //lda $23             // Message H pointer
+    //sta r1H
+
+
 
 /*
 
