@@ -117,7 +117,6 @@ StructMenuItem dirUtilities[] =
    rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
    rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
    rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
-   rtFilePrg  , IOH_None         , (char*)"Custom BASIC Commands"            , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
 };
 
 StructMenuItem dirMultimedia[] = 
@@ -188,5 +187,6 @@ StructMenuItem TeensyROMMenu[] =
  /* 8 */ rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
  /* 9 */ rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
  /*10 */ rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
+ /*11 */ rtFilePrg  , IOH_None         , (char*)"BASIC w/ TR Custom Commands"      , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
 };
 

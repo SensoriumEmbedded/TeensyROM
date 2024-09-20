@@ -26,22 +26,54 @@
 *=$0801
 // BASIC SYS header
 
-.byte $0b,$08,$01,$00,$9e  // Line 1 SYS
-.text "2070" // Address for sys start in text
-.byte $00,$11,$08,$02,$00,$a2  //Line 2 NEW
-.byte $00,$00,$00
+.byte $0b,$08,$01,$00,$9e      // Line 1 SYS
+.text "2070"                   // Address for sys start in text
+.byte $00,$11,$08,$02,$00,$a2  //  Line 2 NEW
+.byte $00,$00,$00              // End of Program
 
 
 *=$0816  //2070
-// transfer code to upper memory (MainMemLoc) and execute it 
-// then return to BASIC
 
+   //jsr $A644 //new   
+
+   //set default screen/text colors
+   lda #$0e    //Lt Blue
+   sta vic.EXTCOL
+   lda #$06    //Blue
+   sta vic.BGCOL0
+   lda #$9a    //Lt Blue
+   jsr kernal.VEC_CHROUT
+
+   //coppied from BASIC ROM location $E422 to print startup message
+   lda $2b	        //get the start of memory low byte
+   ldy $2c	        //get the start of memory high byte 	 	 
+   jsr $a408        //check available memory, do out of memory error if no room
+   lda #$73	        //set "**** COMMODORE 64 BASIC V2 ****" pointer low byte
+   ldy #$e4	        //set "**** COMMODORE 64 BASIC V2 ****" pointer high byte
+   jsr basic.STROUT //print a null terminated string
+   lda $37	        //get the end of memory low byte
+   sec	           //set carry for subtract
+   sbc $2b	        //subtract the start of memory low byte
+   tax	           //copy the result to X
+   lda $38	        //get the end of memory high byte
+   sbc $2c	        //subtract the start of memory high byte
+   jsr $bdcd        //print XA as unsigned integer
+   lda #$60	        //set " BYTES FREE" pointer low byte pointer to 'BASIC BYTES FREE'
+   ldy #$e4	        //set " BYTES FREE" pointer high byte pointer to 'BASIC BYTES FREE'
+   jsr basic.STROUT //print a null terminated string
+
+   //add TR commands message
+   lda #<StartupText 
+   ldy #>StartupText
+   jsr basic.STROUT
+
+   // transfer code to upper memory (MainMemLoc)
    lda #>StartOfCode
    ldy #<StartOfCode   
    sta PtrAddrHi
    sty PtrAddrLo 
    ldx #>EndOfCode
-   
+
    lda #>MainMemLoc
    ldy #<MainMemLoc   
    sta Ptr2AddrHi
@@ -60,20 +92,14 @@
    cpx PtrAddrHi
    bne !loop-
 
-   jsr MainMemLoc
-   
-   lda #<StartupText 
-   ldy #>StartupText
-   jsr basic.STROUT
-   
-   //jsr $e394  //BASIC Cold Start
-   //jsr $A644 //new   
-   rts
+   // execute it to hook in new commands, then return to BASIC
+   jmp MainMemLoc   
+   //rts  //return to BASIC
 
 StartupText:
-.byte 147, 142, 13
-.text "CUSTOM BASIC COMMANDS LOADED."
-.byte 13, 0 
+.byte 142, 13
+.text "TR CUSTOM COMMANDS LOADED"
+.byte 0 
 
 
 StartOfCode:
@@ -606,12 +632,7 @@ TPutCmd:
     //pha
     jsr basic.FRMEVL    // Evaluate the expression after the token
     jsr basic.FRESTR    // Discard Temp string, get point to string and length
-    
     //acc=msg len, $22=Message L pointer, $23=Message H pointer
-    //acc now contains length
-    //lda $22 //low
-    //ldy $23 //high
-    //jsr basic.STROUT //not zero terminated!
     
     sta r0
     ldy #0
@@ -619,6 +640,7 @@ TPutCmd:
     beq !+
     lda ($22),y
     jsr kernal.VEC_CHROUT
+    //sta teensyrom.CHROUT //write to TR out port reg
     iny
     bne !-
 !:  rts

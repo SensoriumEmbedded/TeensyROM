@@ -22,7 +22,7 @@ set MainPrg=TRCBC.prg
 
 
 @echo ***Start...
-@echo ***Compile Main...
+@echo ***Compile Code...
 %JavaExe% -jar %KickAssemblerJar% -showmem %MainAsm% -o build\%MainPrg% -odir ..\build
 if NOT %ERRORLEVEL% == 0 exit /b
 
@@ -39,10 +39,10 @@ copy build\%MainPrg%.h %TRROMPath%\%MainPrg%.h
 @echo *** Verify "PROGMEM" before "static const unsigned char XXXXXXXXX_prg[] = {"
 @echo ************************************************************************************
 
-cmd.exe /c start /b notepad++.exe %TRROMPath%\%MainPrg%.h
+::cmd.exe /c start /b notepad++.exe %TRROMPath%\%MainPrg%.h
 
-pause
-::@exit /b
+::pause
+@exit /b
 
 echo ***Emulate...
 start "" %emulatorExe% -autostart build\%MainPrg%
