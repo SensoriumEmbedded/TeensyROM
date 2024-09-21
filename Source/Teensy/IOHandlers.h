@@ -45,6 +45,7 @@ struct stcIOHandlers
 #include "IO_Handlers/IOH_MIDI.c"
 #include "IO_Handlers/IOH_Debug.c"
 #include "IO_Handlers/IOH_TeensyROM.c" 
+#include "IO_Handlers/IOH_TR_BASIC.c" 
 #include "IO_Handlers/IOH_Swiftlink.c"
 #include "IO_Handlers/IOH_ASID.c"
 #include "MinimalBoot/Common/IOH_None.c"
@@ -80,5 +81,5 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_EasyFlash,          //IOH_EasyFlash,
    &IOHndlr_ZaxxonSuper,        //IOH_ZaxxonSuper,
    &IOHndlr_ASID,               //IOH_ASID,
-   
+   &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
 };

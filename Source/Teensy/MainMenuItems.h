@@ -187,6 +187,6 @@ StructMenuItem TeensyROMMenu[] =
  /* 8 */ rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
  /* 9 */ rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
  /*10 */ rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
- /*11 */ rtFilePrg  , IOH_None         , (char*)"BASIC w/ TR Custom Commands"      , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
+ /*11 */ rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC w/ Custom Commands +TR BAS ", (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
 };
 

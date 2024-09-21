@@ -241,6 +241,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_EasyFlash,
    IOH_ZaxxonSuper,
    IOH_ASID,
+   IOH_TR_BASIC,
    
    
    IOH_Num_Handlers       //always last

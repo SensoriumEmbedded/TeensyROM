@@ -16,12 +16,21 @@
 .label FUNSTART = CMDEND + $01
 .label FUNEND   = $df
 
-.label PtrAddrLo   = $fb
-.label PtrAddrHi   = $fc
-.label Ptr2AddrLo  = $fd
-.label Ptr2AddrHi  = $fe
-
 .label MainMemLoc  = $c000
+
+.label IO1Port  = $de00
+
+
+//enum TR_BASregsMatching  //synch with IOH_TR_BASIC.c
+//{
+   // registers:
+.label TR_BASDataReg         = $b4   // (Write only)  
+.label TR_BASContReg         = $ba   // (Write only) Control Reg 
+
+   // Control Reg Commands
+
+
+//}; //end enum synch
 
 *=$0801
 // BASIC SYS header
@@ -70,26 +79,26 @@
    // transfer code to upper memory (MainMemLoc)
    lda #>StartOfCode
    ldy #<StartOfCode   
-   sta PtrAddrHi
-   sty PtrAddrLo 
+   sta r0H   //r0 points to code to copy
+   sty r0L 
    ldx #>EndOfCode
 
    lda #>MainMemLoc
    ldy #<MainMemLoc   
-   sta Ptr2AddrHi
-   sty Ptr2AddrLo 
+   sta r1H   //r1 points to where to copy to
+   sty r1L 
 
-   // Copy from (PtrAddrLo/Hi) to (Ptr2AddrLo/Hi), x reg is last page to copy
+   // Copy from (r0 Lo/Hi) to (r1 Lo/Hi), x reg is last page to copy
    inx //last page+1, will copy ((EndOfCode-StartOfCode) | 0xFF) bytes
    ldy #0 //initialize
 !loop:
-   lda (PtrAddrLo), y 
-   sta (Ptr2AddrLo),y
+   lda (r0),y  //copy from 
+   sta (r1),y  //copy to
    iny
-   bne !loop-   
-   inc PtrAddrHi
-   inc Ptr2AddrHi
-   cpx PtrAddrHi
+   bne !loop-  //copy full page
+   inc r0H     //inc source page 
+   inc r1H     //inc dest page 
+   cpx r0H     //last page?
    bne !loop-
 
    // execute it to hook in new commands, then return to BASIC
@@ -639,8 +648,8 @@ TPutCmd:
 !:  cpy r0
     beq !+
     lda ($22),y
-    jsr kernal.VEC_CHROUT
-    //sta teensyrom.CHROUT //write to TR out port reg
+    //jsr kernal.VEC_CHROUT
+    sta TR_BASDataReg+IO1Port //write to TR out data reg
     iny
     bne !-
 !:  rts
