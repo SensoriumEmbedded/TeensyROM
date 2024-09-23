@@ -36,6 +36,11 @@ stcIOHandlers IOHndlr_TR_BASIC =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
+#define TgetQueueSize      256
+#define TgetQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+TgetQueueSize-RxQueueTail))
+
+uint8_t* TgetQueue = NULL;  //to hold incoming messages
+extern uint32_t RxQueueHead, RxQueueTail;
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -57,7 +62,11 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 
 void InitHndlr_TR_BASIC()
 {
+   if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
+   
+   RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
 
+   
 }   
 
 void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
@@ -67,14 +76,26 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
    {
       switch(Address)
       {
+         case TR_BASDataReg:
+            if(TgetQueueUsed)
+            {
+               DataPortWriteWaitLog(TgetQueue[RxQueueTail++]);  
+               if (RxQueueTail == TgetQueueSize) RxQueueTail = 0;
+            }
+            else  //no data to send, send 0
+            {
+               DataPortWriteWaitLog(0);
+            }
+            break;
+      
       //   case rRegStreamData:
       //      DataPortWriteWait(XferImage[StreamOffsetAddr]);
       //      //inc on read, check for end:
       //      if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
       //      break;
-         default: //used for all other IO1 reads
-            //DataPortWriteWaitLog(0); 
-            break;
+      //   default: //used for all other IO1 reads
+      //      //DataPortWriteWaitLog(0); 
+      //      break;
       }
    }
    else  // IO1 write
@@ -84,7 +105,7 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case TR_BASDataReg:
-            Serial.write(Data);
+            Serial.write(Data); //a bit risky doing this here, but seems fast enough in testing
             break;
       }
    } //write
@@ -92,7 +113,23 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_TR_BASIC()
 {
-
+   if (Serial.available())
+   {
+      uint8_t Cin = Serial.read();
+      if(TgetQueueUsed >= TgetQueueSize-1)
+      {
+         Printf_dbg("\n**Queue Full!\n");
+         //loose the char and return
+      }       
+      else
+      {
+         //add to queue:
+         Printf_dbg("H#%d= %d (%c)\n", RxQueueHead, Cin, Cin);
+         TgetQueue[RxQueueHead++] = Cin;
+         if (RxQueueHead == TgetQueueSize) RxQueueHead = 0;
+      }
+      
+   }
 }
    
 

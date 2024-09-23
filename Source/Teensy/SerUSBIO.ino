@@ -22,6 +22,9 @@ void getFreeITCM();
 
 FLASHMEM void ServiceSerial()
 {  //Serial.available() confirmed before calling
+
+   if (CurrentIOHandler == IOH_TR_BASIC) return; //special case, handler will take care of serial input
+   
    uint16_t inVal = Serial.read();
    switch (inVal)
    {

@@ -188,6 +188,8 @@ void SetUpMainMenuROM()
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
+   free(TgetQueue); TgetQueue=NULL;
+
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }
