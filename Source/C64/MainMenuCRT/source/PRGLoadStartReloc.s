@@ -84,10 +84,10 @@ PRGLoadStart:
    jmp $a7ae ;BASIC warm start/interpreter inner loop/next statement (Run)
    ;jmp (BasicWarmStartVect)  
    
+   ;we're in caps/graphics mode for these messsages, use all lower case:
 MsgRunning:
-   !tx ChrReturn, ChrReturn, "Running...", ChrReturn, 0
+   !tx ChrReturn, "running...", ChrReturn, 0
 MsgOverflow:
-   !tx ChrReturn, "Overflow!", ChrReturn, 0
+   !tx ChrReturn, "overflow!", ChrReturn, 0
    
-
 PRGLoadEnd = *

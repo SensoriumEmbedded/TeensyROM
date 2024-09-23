@@ -43,39 +43,6 @@
 
 *=$0816  //2070
 
-   //jsr $A644 //new   
-
-   //set default screen/text colors
-   lda #$0e    //Lt Blue
-   sta vic.EXTCOL
-   lda #$06    //Blue
-   sta vic.BGCOL0
-   lda #$9a    //Lt Blue
-   jsr kernal.VEC_CHROUT
-
-   //coppied from BASIC ROM location $E422 to print startup message
-   lda $2b	        //get the start of memory low byte
-   ldy $2c	        //get the start of memory high byte 	 	 
-   jsr $a408        //check available memory, do out of memory error if no room
-   lda #$73	        //set "**** COMMODORE 64 BASIC V2 ****" pointer low byte
-   ldy #$e4	        //set "**** COMMODORE 64 BASIC V2 ****" pointer high byte
-   jsr basic.STROUT //print a null terminated string
-   lda $37	        //get the end of memory low byte
-   sec	           //set carry for subtract
-   sbc $2b	        //subtract the start of memory low byte
-   tax	           //copy the result to X
-   lda $38	        //get the end of memory high byte
-   sbc $2c	        //subtract the start of memory high byte
-   jsr $bdcd        //print XA as unsigned integer
-   lda #$60	        //set " BYTES FREE" pointer low byte pointer to 'BASIC BYTES FREE'
-   ldy #$e4	        //set " BYTES FREE" pointer high byte pointer to 'BASIC BYTES FREE'
-   jsr basic.STROUT //print a null terminated string
-
-   //add TR commands message
-   lda #<StartupText 
-   ldy #>StartupText
-   jsr basic.STROUT
-
    // transfer code to upper memory (MainMemLoc)
    lda #>StartOfCode
    ldy #<StartOfCode   
@@ -101,12 +68,17 @@
    cpx r0H     //last page?
    bne !loop-
 
-   // execute it to hook in new commands, then return to BASIC
-   jmp MainMemLoc   
-   //rts  //return to BASIC
+   // execute it to hook in new commands:
+   jsr MainMemLoc   
+   //print TR commands message:
+   lda #<StartupText 
+   ldy #>StartupText
+   jsr basic.STROUT
+
+   rts  //return to BASIC (next line is "NEW")
 
 StartupText:
-.byte 142, 13
+.byte 145  //cursor up to overwrite "RUNNING..."
 .text "TR CUSTOM COMMANDS LOADED"
 .byte 0 
 
@@ -190,7 +162,7 @@ NewTab:
     .byte 'E' + $80
     .text "DI"          // $db
     .byte 'R' + $80
-    .text "TPU"         // $dc
+    .text "TPRIN"       // $dc
     .byte 'T' + $80
     // Functions start here
     .text "WEE"         // $dd

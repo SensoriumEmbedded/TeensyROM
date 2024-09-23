@@ -524,7 +524,7 @@ void SendMsgPrintf(const char *Fmt, ...)
 
 void SendMsgSerialStringBuf() 
 {  //SerialStringBuf already populated
-   Serial.printf("%s<--", SerialStringBuf);
+   Printf_dbg("%s<--", SerialStringBuf);
    Serial.flush();
    IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
    uint32_t beginWait = millis();

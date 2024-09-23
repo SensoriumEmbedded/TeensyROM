@@ -586,10 +586,52 @@ ListAndDone
    rts
 
 
-XferCopyRun:
-   ;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
-   ;192 byte limit, watch size of PRGLoadStart block!  check below
-   ;no going back now...
+XferCopyRun:   
+;Init and load PRG, no going back now...
+   
+; initialize mem/ints to be ready for PRG
+; https://codebase64.org/doku.php?id=base:kernalbasicinit
+   sei
+   cld
+   ldx #$ff
+   txs
+   jsr $ff84    ; IOINIT - Initialize I/O
+
+   ; Initialize SID registers (not done by Kernal reset routine):
+   ldx #$17
+   lda #$00
+-  sta $d400,x
+   dex
+   bpl -
+
+   ; RAMTAS (JSR $FF87) - Initialize System Constants
+   ; $FF87 is not actually called because it would do
+   ; a RAM-test which lasts a few seconds.
+   ; The following code does the same as RAMTAS but
+   ; without the RAM-test:
+   lda #$00
+   tay
+-  sta $0002,y
+   sta $0200,y
+   sta $0300,y
+   iny
+   bne -
+   ldx #$00
+   ldy #$a0
+   jsr $fd8c ;do remaining RAMTAS items
+   jsr $ff8a    ; RESTOR - Restore Kernal Vectors
+   jsr $ff81    ; CINT - Initialize screen editor
+   cli
+
+   ; basic initializations:
+   jsr $e453    ; Initialize Vectors
+   jsr $e3bf    ; Initialize BASIC RAM
+   jsr $e422    ; Output Power-Up Message
+   ldx #$fb
+   txs
+
+;copy PRGLoadStart code to tape buffer area in case this area gets overwritten
+;192 byte limit, watch size of PRGLoadStart block!  check below   
    lda #>PRGLoadStart
    ldy #<PRGLoadStart   
    sta PtrAddrHi
