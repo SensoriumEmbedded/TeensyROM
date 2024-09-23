@@ -635,6 +635,10 @@ TPrintCmd:
 
     Example: TGET A$ will read a char from the USB Serial port in to A$
 
+    Modified from BASIC GET Command
+      Does not accept GET#
+      Does not accept numeric argument (string only)
+      Reads from TR instead of keyboard
 */
 TGetCmd:
 
@@ -652,7 +656,7 @@ TGetCmd:
     ldy #$02     //.,ab94 a0 02        //set pointer high byte
     lda #$00     //.,ab96 a9 00        //clear A
     sta $0201    //.,ab98 8d 01 02     //ensure null terminator
-    lda #$40     //.,ab9b a9 40        //input mode = GET
+//    lda #$40     //.,ab9b a9 40        //input mode = GET
     //jsr PerfGET    //.,ab9d 20 0f ac     //perform the GET part of READ
     //ldx $13    //.,aba0 a6 13        //get current I/O channel
     //bne $abb7  //.,aba2 d0 13        //if not default channel go do channel close and return
@@ -662,7 +666,7 @@ TGetCmd:
 
                  //               *** perform GET
 //PerfGET:
-    sta $11      //.,ac0f 85 11      //set input mode flag, $00 = INPUT, $40 = GET, $98 = READ
+//    sta $11      //.,ac0f 85 11      //set input mode flag, $00 = INPUT, $40 = GET, $98 = READ
     stx $43      //.,ac11 86 43      //save READ pointer low byte
     sty $44      //.,ac13 84 44      //save READ pointer high byte
                  //                  //READ, GET or INPUT next variable from list
@@ -681,22 +685,22 @@ NextVar:
     jsr $0079    //.,ac2c 20 79 00   //scan memory
     bne NotNULL  //.,ac2f d0 20      //branch if not null
                  //                  //pointer was to null entry
-    bit $11      //.,ac31 24 11      //test input mode flag, $00 = INPUT, $40 = GET, $98 = READ
-    bvc NotGET   //.,ac33 50 0c      //branch if not GET
+//    bit $11      //.,ac31 24 11      //test input mode flag, $00 = INPUT, $40 = GET, $98 = READ
+//    bvc NotGET   //.,ac33 50 0c      //branch if not GET
                  //                  //else was GET
     jsr $e124    //.,ac35 20 24 e1   //get character from input device with error check
     sta $0200    //.,ac38 8d 00 02   //save to buffer
     ldx #$ff     //.,ac3b a2 ff      //set pointer low byte
     ldy #$01     //.,ac3d a0 01      //set pointer high byte
     bne SingleChar //.,ac3f d0 0c      //go interpret single character
-NotGET:
-    bmi ReadCmd  //.,ac41 30 75      //branch if READ
-                 //                  //else was INPUT
-    lda $13      //.,ac43 a5 13      //get current I/O channel
-    bne SkipQM   //.,ac45 d0 03      //skip "?" prompt if not default channel
-    jsr $ab45    //.,ac47 20 45 ab   //print "?"
-SkipQM:
-    jsr $abf9    //.,ac4a 20 f9 ab   //print "? " and get BASIC input
+//NotGET:
+//    bmi ReadCmd  //.,ac41 30 75      //branch if READ
+//                 //                  //else was INPUT
+//    lda $13      //.,ac43 a5 13      //get current I/O channel
+//    bne SkipQM   //.,ac45 d0 03      //skip "?" prompt if not default channel
+//    jsr $ab45    //.,ac47 20 45 ab   //print "?"
+//SkipQM:
+//    jsr $abf9    //.,ac4a 20 f9 ab   //print "? " and get BASIC input
 SingleChar:
     stx $7a      //.,ac4d 86 7a      //save BASIC execute pointer low byte
     sty $7b      //.,ac4f 84 7b      //save BASIC execute pointer high byte
@@ -706,27 +710,27 @@ NotNULL:
     bit $0d      //.,ac54 24 0d      //test data type flag, $FF = string, $00 = numeric
     bpl IsNumber //.,ac56 10 31      //branch if numeric
                  //                  //type is string
-    bit $11      //.,ac58 24 11      //test INPUT mode flag, $00 = INPUT, $40 = GET, $98 = READ
-    bvc InputOrRead //.,ac5a 50 09      //branch if not GET
+//    bit $11      //.,ac58 24 11      //test INPUT mode flag, $00 = INPUT, $40 = GET, $98 = READ
+//    bvc InputOrRead //.,ac5a 50 09      //branch if not GET
                  //                  //else do string GET
     inx          //.,ac5c e8         //clear X ??
     stx $7a      //.,ac5d 86 7a      //save BASIC execute pointer low byte
     lda #$00     //.,ac5f a9 00      //clear A
     sta $07      //.,ac61 85 07      //clear search character
-    beq Always   //.,ac63 f0 0c      //branch always
+//    beq Always   //.,ac63 f0 0c      //branch always
                  //                  //is string INPUT or string READ
-InputOrRead:
-    sta $07      //.,ac65 85 07      //save search character
-    cmp #$22     //.,ac67 c9 22      //compare with "
-    beq isQuote  //.,ac69 f0 07      //branch if quote
-                 //                  //string is not in quotes so ":", "," or $00 are the
-                 //                  //termination characters
-    lda #$3a     //.,ac6b a9 3a      //set ":"
-    sta $07      //.,ac6d 85 07      //set search character
-    lda #$2c     //.,ac6f a9 2c      //set ","
-Always:
+//InputOrRead:
+//    sta $07      //.,ac65 85 07      //save search character
+//    cmp #$22     //.,ac67 c9 22      //compare with "
+//    beq isQuote  //.,ac69 f0 07      //branch if quote
+//                 //                  //string is not in quotes so ":", "," or $00 are the
+//                 //                  //termination characters
+//    lda #$3a     //.,ac6b a9 3a      //set ":"
+//    sta $07      //.,ac6d 85 07      //set search character
+//    lda #$2c     //.,ac6f a9 2c      //set ","
+//Always:
     clc          //.,ac71 18         //clear carry for add
-isQuote:
+//isQuote:
     sta $08      //.,ac72 85 08      //set scan quotes flag
     lda $7a      //.,ac74 a5 7a      //get BASIC execute pointer low byte
     ldy $7b      //.,ac76 a4 7b      //get BASIC execute pointer high byte
@@ -774,7 +778,7 @@ ReadCmd:
     ldx #$0d     //.,acbf a2 0d      //else set error $0D, out of data error
     iny          //.,acc1 c8         //increment index to next line pointer high byte
     lda ($7a),y  //.,acc2 b1 7a      //get next line pointer high byte
-    //beq $ad32    //.,acc4 f0 6c      //branch if program end, eventually does error X
+    //beq $ad32  too far!  //.,acc4 f0 6c      //branch if program end, eventually does error X
     iny          //.,acc6 c8         //increment index
     lda ($7a),y  //.,acc7 b1 7a      //get next line # low byte
     sta $3f      //.,acc9 85 3f      //save current DATA line low byte
@@ -790,12 +794,12 @@ isColon:
     bne ReadCmd  //.,acda d0 dc      //loop if not DATA
     jmp NotNULL  //.,acdc 4c 51 ac   //continue evaluating READ
 ColOrEOL2:
-    lda $43      //.,acdf a5 43      //get READ pointer low byte
-    ldy $44      //.,ace1 a4 44      //get READ pointer high byte
-    ldx $11      //.,ace3 a6 11      //get INPUT mode flag, $00 = INPUT, $40 = GET, $98 = READ
-    bpl InputOrGet //.,ace5 10 03      //branch if INPUT or GET
-    jmp $a827    //.,ace7 4c 27 a8   //else set data pointer and exit
-InputOrGet:    
+//    lda $43      //.,acdf a5 43      //get READ pointer low byte
+//    ldy $44      //.,ace1 a4 44      //get READ pointer high byte
+//    ldx $11      //.,ace3 a6 11      //get INPUT mode flag, $00 = INPUT, $40 = GET, $98 = READ
+//    bpl InputOrGet //.,ace5 10 03      //branch if INPUT or GET
+//    jmp $a827    //.,ace7 4c 27 a8   //else set data pointer and exit
+//InputOrGet:    
     ldy #$00     //.,acea a0 00      //clear index
     lda ($43),y  //.,acec b1 43      //get READ byte
     beq EndOfGet //.,acee f0 0b      //exit if [EOL]
