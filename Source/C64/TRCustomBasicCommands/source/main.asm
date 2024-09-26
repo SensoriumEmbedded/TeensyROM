@@ -12,25 +12,35 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find the table of tokens below at NewTab
 .label CMDSTART = $cc
-.label CMDEND   = $dd
+.label CMDEND   = $df
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $e0
+.label FUNEND   = $e2
 
 .label MainMemLoc  = $c000
 
 .label IO1Port  = $de00
 
 
+
 //enum TR_BASregsMatching  //synch with IOH_TR_BASIC.c
 //{
    // registers:
-.label TR_BASDataReg         = $b4   // (Write only)  
-.label TR_BASContReg         = $ba   // (Write only) Control Reg 
+.label TR_BASDataReg         = $b2   // (R/W) for TPUT/TGET data  
+.label TR_BASContReg         = $b4   // (Write only) Control Reg 
+.label TR_BASStatReg         = $b6   // (Read only) Status Reg 
+.label TR_BASFileName        = $b8   // (Write only) File name transfer
 
-   // Control Reg Commands
+   // Control Reg Commands:
+.label TR_BASCont_SendFN     = $02   // Prep to send Filename from BAS to TR
 
+   // StatReg Values:
+.label TR_BASStat_NoUpdate   = $00   // No update, still processing
+.label TR_BASStat_Ready      = $55   // Ready to Transfer
+.label TR_BASStat_Error      = $aa   // File not found error
 
 //}; //end enum synch
+
+
 
 *=$0801
 // BASIC SYS header
@@ -69,7 +79,7 @@
    bne !loop-
 
    // execute it to hook in new commands:
-   jsr MainMemLoc   
+   jsr Init   
    //print TR commands message:
    lda #<StartupText 
    ldy #>StartupText
@@ -78,7 +88,7 @@
    rts  //return to BASIC (next line is "NEW")
 
 StartupText:
-.byte 145  //cursor up to overwrite "RUNNING..."
+.byte 145  //cursor up to overwrite "RUNNING... from TR"
 .text "TR CUSTOM COMMANDS LOADED"
 .byte 0 
 
@@ -166,12 +176,16 @@ NewTab:
     .byte 'T' + $80
     .text "TGE"         // $dd
     .byte 'T' + $80
+    .text "TLOA"         // $de
+    .byte 'D' + $80
+    .text "TSAV"         // $df
+    .byte 'E' + $80
     // Functions start here
-    .text "WEE"         // $de
+    .text "WEE"         // $e0
     .byte 'K' + $80
-    .text "SCRLO"       // $df
+    .text "SCRLO"       // $e1
     .byte 'C' + $80
-    .text "RE"          // $e0
+    .text "RE"          // $e2
     .byte 'U' + $80
     .byte 0
 
@@ -194,6 +208,8 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word DirectoryCmd - 1
     .word TPutCmd - 1
     .word TGetCmd - 1
+    .word TLoadCmd - 1
+    .word TSaveCmd - 1
     
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
@@ -348,7 +364,7 @@ ClearFAC:
 
     Clear the screen using PETSCII $93. Easy peasey.
 
-    Example: CLS
+    Example- CLS
 
 */
 ClsCmd:
@@ -359,7 +375,7 @@ ClsCmd:
 
     Set the border color
 
-    Example: BORDER 0. Sets the border color to black
+    Example- BORDER 0. Sets the border color to black
 
 */
 BorderCmd:
@@ -371,7 +387,7 @@ BorderCmd:
 
     Set the background color
 
-    Example: BACKGROUND 0. Sets the background color to black
+    Example- BACKGROUND 0. Sets the background color to black
 
 */
 BackgroundCmd:
@@ -383,7 +399,7 @@ BackgroundCmd:
 
     Execute a POKE but allow passing in a word for the address and the value.
 
-    Example: WOKE 250, 65535. Puts 255 in location 250 and 251.
+    Example- WOKE 250, 65535. Puts 255 in location 250 and 251.
 
 */
 WokeCmd:
@@ -410,7 +426,7 @@ WokeCmd:
 
     Select the VIC bank (0-3)
 
-    Example: BANK 0 would specify 0-16384 as the range of locations that the VIC sees
+    Example- BANK 0 would specify 0-16384 as the range of locations that the VIC sees
 
 */
 BankCmd:
@@ -453,7 +469,7 @@ CurrentBank:
 
     Set the screen location within the current VIC bank
 
-    Example: SCREEN 1 would set the screen location to offset $0400 of the current VIC bank.
+    Example- SCREEN 1 would set the screen location to offset $0400 of the current VIC bank.
     If in bank 0, this would be $0400 since bank 0 starts at $0000. This is also the default
     at startup.
 
@@ -548,7 +564,7 @@ DiskClose:
 
     Load bytes from disk directly into memory.
 
-    Example: MEMLOAD "SPRITES.SPR", 8, $2000 would load the file SPRITES.SPR from device 8 into memory at $2000
+    Example- MEMLOAD "SPRITES.SPR", 8, $2000 would load the file SPRITES.SPR from device 8 into memory at $2000
 
 */
 MemLoadCmd:
@@ -577,7 +593,7 @@ MemLoadCmd:
 
     Save memory to disk.
 
-    Example: MEMSAVE "@:SPRITES.SPR,P,W", 8, $2000, $2040 would save memory from $2000 - $2040 to the file SPRITES.SPR on device 8.
+    Example- MEMSAVE "@:SPRITES.SPR,P,W", 8, $2000, $2040 would save memory from $2000 - $2040 to the file SPRITES.SPR on device 8.
 
 */
 MemSaveCmd:
@@ -602,11 +618,13 @@ MemSaveCmd:
 !: // CLOSE
     jmp DiskClose
 
+
+
 /*
 
     Send String out TeensyROM Serial USB Device Port
 
-    Example: TPUT "HELLO WORLD!" will write "HELLO WORLD!" out the USB Serial port
+    Example- TPUT "HELLO WORLD!" will write "HELLO WORLD!" out the USB Serial port
 
 */
 TPutCmd:
@@ -633,7 +651,7 @@ TPutCmd:
 
     Get a char from TeensyROM Serial USB Device Port, return "" if none
 
-    Example: TGET A$ will read a char from the USB Serial port in to A$
+    Example- TGET A$ will read a char from the USB Serial port in to A$
 
     Modified from copy of BASIC GET Command
       Does not accept GET#
@@ -712,12 +730,80 @@ TGetCmd:
     jmp basic.ERROR                  //do error #X then warm start
 !:  rts          //.,acfb 60      
 
+
+
+/*
+
+    Utility: Send filename to be loaded/saved  to TR
+    assumes it is next, called from tload/tsave
+
+*/
+TFileNameXfer:
+    jsr basic.FRMEVL    // Evaluate the expression after the token
+    jsr basic.FRESTR    // Discard Temp string, get point to string and length
+    // acc=msg len
+    // $22=Message L pointer
+    // $23=Message H pointer
+
+    ldx #TR_BASCont_SendFN
+    stx TR_BASContReg+IO1Port  //tell TR there's a FN coming   
+    sta r0                     //store Filename length
+    ldy #0
+!:  cpy r0
+    beq !+                     //last char, exit
+    lda ($22),y
+    //jsr kernal.VEC_CHROUT
+    sta TR_BASFileName+IO1Port //write to TR filename reg
+    iny
+    bne !- //255 char limit
+!:  lda #$00
+    sta TR_BASFileName+IO1Port //terminate/end filename transfer
+    rts
+
+
+
+/*
+
+    Load a file from the TeensyROM
+
+    Example- TLOAD "COOL.PRG" will load this file into memory
+
+*/
+TLoadCmd:
+    jsr TFileNameXfer  //send filename to TR
+    
+    //check for file present & loaded in TR RAM
+    
+    
+    // load file into memory
+    
+    rts
+
+
+
+/*
+
+    Save a file to the TeensyROM
+
+    Example- TSAVE "COOL.PRG" will save this file to the TR SD card
+
+*/
+TSaveCmd:
+    jsr TFileNameXfer  //send filename to TR
+
+    // save from memory to file
+    
+    // Check for File saved
+    rts
+
+
+
 /*
 
     Perform a non-destructive directory listing.
     Pilfered from https://csdb.dk/forums/?roomid=11&topicid=17487
 
-    Example: DIR 8 would list the directory of device 8
+    Example- DIR 8 would list the directory of device 8
 
 */
 DirectoryCmd:
@@ -792,7 +878,7 @@ SpriteColorCmd:
 
     Set a sprite's X and Y position
 
-    Example: SPRPOS 0, 100, 100 would set sprite 0's X position to 100 and its Y position to 100
+    Example- SPRPOS 0, 100, 100 would set sprite 0's X position to 100 and its Y position to 100
     The x position can be 0-511.
 
 */
@@ -817,7 +903,7 @@ SpritePosCmd:
 
     Turn a sprite on or off and set its shape data location
 
-    Example: SPRSET 0, 1, $0d would turn sprite 0 on and set its shape data pointer to $0d in the current bank,
+    Example- SPRSET 0, 1, $0d would turn sprite 0 on and set its shape data pointer to $0d in the current bank,
     which by default would be location $340 (bank 0 starts at $0 + $40 * $0d)
 
 */
@@ -857,7 +943,7 @@ SpriteSetCmd:
 
     Execute a PEEK function but return a 16-bit word instead of an 8-bit byte.
 
-    Example: PRINT WEEK(250). Would return the 16-bit value in 250 & 251.
+    Example- PRINT WEEK(250). Would return the 16-bit value in 250 & 251.
 
 */
 WeekFun:
@@ -880,7 +966,7 @@ WeekFun:
 
     Return the start address of the current screen.
 
-    Example: PRINT SCRLOC(0). In the default C64 configuration, this would return 1024.
+    Example- PRINT SCRLOC(0). In the default C64 configuration, this would return 1024.
 
 */
 ScrLocFun:
@@ -912,7 +998,7 @@ ReuFun:
 
     Store data from the C64's memory into an REU
 
-    Example: STASH $400, $0, 1000, 0 would store the default screen to the REU at address $0, bank $0
+    Example- STASH $400, $0, 1000, 0 would store the default screen to the REU at address $0, bank $0
 
 */
 StashCmd:
@@ -925,7 +1011,7 @@ StashCmd:
 
     Retrieve data from the REU and store it in the C64's memory
 
-    Example: FETCH $400, $0, 1000, 0 would retrieve 1000 bytes from the REU starting at address $0, bank $0 and store it to the default screen
+    Example- FETCH $400, $0, 1000, 0 would retrieve 1000 bytes from the REU starting at address $0, bank $0 and store it to the default screen
 
 */
 FetchCmd:
@@ -938,7 +1024,7 @@ FetchCmd:
 
     Copy a block of memory.
 
-    Example: MEMCOPY $a000, $a000, $2000 would copy BASIC from ROM to RAM
+    Example- MEMCOPY $a000, $a000, $2000 would copy BASIC from ROM to RAM
 
 */
 MemCopyCmd:
@@ -957,7 +1043,7 @@ MemCopyCmd:
 
     Fill a block of memory with a character
 
-    Example: MEMFILL $0400, $03e8, $20 would fill the screen with space characters.
+    Example- MEMFILL $0400, $03e8, $20 would fill the screen with space characters.
 
 */
 MemFillCmd:
@@ -1265,6 +1351,8 @@ DiskError:
 ScreenLoc:
     .byte %00000000, %00010000, %00100000, %00110000, %01000000, %01010000, %01100000, %01110000
     .byte %10000000, %10010000, %10100000, %10110000, %11000000, %11010000, %11100000, %11110000
+
+MainMemLocEnd:
 
 } //.pseudopc
 EndOfCode:   

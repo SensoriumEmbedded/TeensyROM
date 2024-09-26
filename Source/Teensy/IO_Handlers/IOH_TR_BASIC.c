@@ -40,18 +40,31 @@ stcIOHandlers IOHndlr_TR_BASIC =
 #define TgetQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+TgetQueueSize-RxQueueTail))
 
 uint8_t* TgetQueue = NULL;  //to hold incoming messages
+uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
+uint16_t FNCount;
+uint8_t  TR_BASStatRegVal;
+
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
    // registers:
-   TR_BASDataReg         = 0xb4,   // (Write only)  
-   TR_BASContReg         = 0xba,   // (Write only) Control Reg 
+   TR_BASDataReg         = 0xb2,   // (R/W) for TPUT/TGET data  
+   TR_BASContReg         = 0xb4,   // (Write only) Control Reg 
+   TR_BASStatReg         = 0xb6,   // (Read only) Status Reg 
+   TR_BASFileName        = 0xb8,   // (Write only) File name transfer
 
-   // Control Reg Commands
-
+   // Control Reg Commands:
+   TR_BASCont_SendFN     = 0x02,   // Prep to send Filename from BAS to TR
+   
+   // StatReg Values:
+   TR_BASStat_NoUpdate   = 0x00,   // No update, still processing
+   TR_BASStat_Ready      = 0x55,   // Ready to Transfer
+   TR_BASStat_Error      = 0xaa,   // File not found error
 
 }; //end enum synch
+
+
 
 //__________________________________________________________________________________
 
@@ -63,10 +76,12 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 void InitHndlr_TR_BASIC()
 {
    if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
+   if (LSFileName == NULL) LSFileName = (uint8_t*)malloc(MaxPathLength);
    
    RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
 
-   
+   TR_BASStatRegVal = TR_BASStat_Error; //default to error
+
 }   
 
 void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
@@ -87,7 +102,10 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                DataPortWriteWaitLog(0);
             }
             break;
-      
+         case TR_BASStatReg:
+            DataPortWriteWaitLog(TR_BASStatRegVal);
+            break;
+            
       //   case rRegStreamData:
       //      DataPortWriteWait(XferImage[StreamOffsetAddr]);
       //      //inc on read, check for end:
@@ -107,6 +125,25 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
          case TR_BASDataReg:
             Serial.write(Data); //a bit risky doing this here, but seems fast enough in testing
             break;
+         case TR_BASContReg:
+            if (Data == TR_BASCont_SendFN)
+            {
+               FNCount = 0;
+            }
+            break;
+         case TR_BASFileName:
+            LSFileName[FNCount++] = Data;
+            if (Data == 0)
+            {
+               Printf_dbg("Received FN: %s\n", LSFileName);
+               
+               //for load, check that file exists & load into RAM
+               //for save, validate path(?)
+               //TR_BASStatRegVal = TR_BASStat_Error;               
+               //TR_BASStatRegVal = TR_BASStat_NoUpdate;
+               //TR_BASStatRegVal = TR_BASStat_Ready;
+            }
+            break;
       }
    } //write
 }
@@ -124,7 +161,7 @@ void PollingHndlr_TR_BASIC()
       else
       {
          //add to queue:
-         Printf_dbg("H#%d= %d (%c)\n", RxQueueHead, Cin, Cin);
+         Printf_dbg("#%d= %d (%c)\n", TgetQueueUsed, Cin, Cin);
          TgetQueue[RxQueueHead++] = Cin;
          if (RxQueueHead == TgetQueueSize) RxQueueHead = 0;
       }

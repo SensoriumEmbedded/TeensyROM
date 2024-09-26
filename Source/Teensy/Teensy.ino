@@ -189,6 +189,7 @@ void SetUpMainMenuROM()
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
    free(TgetQueue); TgetQueue=NULL;
+   free(LSFileName); LSFileName=NULL;
 
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
