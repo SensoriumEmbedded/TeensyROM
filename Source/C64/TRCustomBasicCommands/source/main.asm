@@ -162,7 +162,7 @@ NewTab:
     .byte 'E' + $80
     .text "DI"          // $db
     .byte 'R' + $80
-    .text "TPU"       // $dc
+    .text "TPU"         // $dc
     .byte 'T' + $80
     .text "TGE"         // $dd
     .byte 'T' + $80
@@ -635,25 +635,22 @@ TPutCmd:
 
     Example: TGET A$ will read a char from the USB Serial port in to A$
 
-    Modified from BASIC GET Command
+    Modified from copy of BASIC GET Command
       Does not accept GET#
       Does not accept numeric argument (string only)
+      Does not accept multiple arguments
       Reads from TR instead of keyboard
+      
 */
 TGetCmd:
-
-                 //                *** perform GET
-    jsr $b3a6    //.,ab7b 20 a6 b3     //check not Direct, back here if ok
-
-    ldx #$01     //.,ab92 a2 01        //set pointer low byte
-    ldy #$02     //.,ab94 a0 02        //set pointer high byte
-    lda #$00     //.,ab96 a9 00        //clear A
-    sta $0201    //.,ab98 8d 01 02     //ensure null terminator
-
+    jsr $b3a6    //.,ab7b 20 a6 b3   //check not Direct, back here if ok
+    ldx #$01     //.,ab92 a2 01      //set pointer low byte
+    ldy #$02     //.,ab94 a0 02      //set pointer high byte
+    lda #$00     //.,ab96 a9 00      //clear A
+    sta $0201    //.,ab98 8d 01 02   //ensure null terminator
     stx $43      //.,ac11 86 43      //save READ pointer low byte
     sty $44      //.,ac13 84 44      //save READ pointer high byte
                  //                  //READ, GET or INPUT next variable from list
-NextVar:                 
     jsr $b08b    //.,ac15 20 8b b0   //get variable address
     sta $49      //.,ac18 85 49      //save address low byte
     sty $4a      //.,ac1a 84 4a      //save address high byte
@@ -666,52 +663,42 @@ NextVar:
     stx $7a      //.,ac28 86 7a      //save as BASIC execute pointer low byte
     sty $7b      //.,ac2a 84 7b      //save as BASIC execute pointer high byte
     jsr $0079    //.,ac2c 20 79 00   //scan memory
-    bne NotNULL  //.,ac2f d0 20      //branch if not null
+    bne !+       //.,ac2f d0 20      //branch if not null
                  //                  //pointer was to null entry
-
-    lda TR_BASDataReg+IO1Port //read from TR in data reg
-    
+    lda TR_BASDataReg+IO1Port        //read from TR in data reg
     sta $0200    //.,ac38 8d 00 02   //save to buffer
     ldx #$ff     //.,ac3b a2 ff      //set pointer low byte
     ldy #$01     //.,ac3d a0 01      //set pointer high byte
-
     stx $7a      //.,ac4d 86 7a      //save BASIC execute pointer low byte
     sty $7b      //.,ac4f 84 7b      //save BASIC execute pointer high byte
-NotNULL:
-    jsr $0073    //.,ac51 20 73 00   //increment and scan memory, execute pointer now points to
+!:  jsr $0073    //.,ac51 20 73 00   //increment and scan memory, execute pointer now points to
                  //                  //start of next data or null terminator
-//    bit $0d      //.,ac54 24 0d      //test data type flag, $FF = string, $00 = numeric
-//    bpl IsNumber //.,ac56 10 31      //branch if numeric
-                 //                  //type is string
-                 //                  //else do string GET
-    inx          //.,ac5c e8         //clear X ??
+    bit $0d      //.,ac54 24 0d      //test data type flag, $FF = string, $00 = numeric
+    bmi !+       //.,ac56 10 31      //branch if string (not numeric)
+    jmp $ad99                        //type mismatch error
+                 //                  //type is string, do string GET
+!:  inx          //.,ac5c e8         //clear X ??
     stx $7a      //.,ac5d 86 7a      //save BASIC execute pointer low byte
     lda #$00     //.,ac5f a9 00      //clear A
     sta $07      //.,ac61 85 07      //clear search character
-
     clc          //.,ac71 18         //clear carry for add
-
     sta $08      //.,ac72 85 08      //set scan quotes flag
     lda $7a      //.,ac74 a5 7a      //get BASIC execute pointer low byte
     ldy $7b      //.,ac76 a4 7b      //get BASIC execute pointer high byte
     adc #$00     //.,ac78 69 00      //add to pointer low byte. this add increments the pointer
-                 //                  //if the mode is INPUT or READ and the data is a "..."
-                 //                  //string
-    bcc NoRoll   //.,ac7a 90 01      //branch if no rollover
+                 //                  //if the mode is INPUT or READ and the data is a "..." string
+    bcc !+       //.,ac7a 90 01      //branch if no rollover
     iny          //.,ac7c c8         //else increment pointer high byte
-NoRoll:
-    jsr $b48d    //.,ac7d 20 8d b4   //print string to utility pointer
+!:  jsr $b48d    //.,ac7d 20 8d b4   //print string to utility pointer
     jsr $b7e2    //.,ac80 20 e2 b7   //restore BASIC execute pointer from temp
     jsr $a9da    //.,ac83 20 da a9   //perform string LET
-
     jsr $0079    //.,ac91 20 79 00   //scan memory
-    beq ColOrEOL //.,ac94 f0 07      //branch if ":" or [EOL]
+    beq !+       //.,ac94 f0 07      //branch if ":" or [EOL]
     cmp #$2c     //.,ac96 c9 2c      //compare with ","
-    beq ColOrEOL //.,ac98 f0 03      //branch if ","
+    beq !+       //.,ac98 f0 03      //branch if ","
     jmp $ab4d    //.,ac9a 4c 4d ab   //else go do bad input routine
                  //                  //string terminated with ":", "," or $00
-ColOrEOL:
-    lda $7a      //.,ac9d a5 7a      //get BASIC execute pointer low byte
+!:  lda $7a      //.,ac9d a5 7a      //get BASIC execute pointer low byte
     ldy $7b      //.,ac9f a4 7b      //get BASIC execute pointer high byte
     sta $43      //.,aca1 85 43      //save READ pointer low byte
     sty $44      //.,aca3 84 44      //save READ pointer high byte
@@ -720,12 +707,10 @@ ColOrEOL:
     sta $7a      //.,aca9 85 7a      //restore BASIC execute pointer low byte
     sty $7b      //.,acab 84 7b      //restore BASIC execute pointer high byte
     jsr $0079    //.,acad 20 79 00   //scan memory
-    beq EndOfGet //.,acb0 f0 2d      //branch if ":" or [EOL]
-    jsr $aefd    //.,acb2 20 fd ae   //scan for ",", else do syntax error then warm start
-    jmp NextVar  //.,acb5 4c 15 ac   //go READ or INPUT next variable from list
-
-EndOfGet:
-    rts          //.,acfb 60      
+    beq !+       //.,acb0 f0 2d      //branch if ":" or [EOL]
+    ldx #$0b                         //error code $0B, syntax error
+    jmp basic.ERROR                  //do error #X then warm start
+!:  rts          //.,acfb 60      
 
 /*
 
