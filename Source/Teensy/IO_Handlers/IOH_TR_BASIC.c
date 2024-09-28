@@ -108,22 +108,39 @@ uint8_t ContRegAction_LoadPrep()
 { //load file into RAM, returns TR_BASStatRegVal                
    //check that file exists & load into RAM
    
-   //if (strlen(FilePath) == 1 && FilePath[0] == '/') sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
-   //else sprintf(FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
+   char* ptrLSFileName = (char*)LSFileName; //local pointer
       
-   Printf_dbg("Loading: %s\n", LSFileName);
+   Printf_dbg("Load: %s\n", ptrLSFileName);
 
-   FS *sourceFS = &firstPartition;
-   //if(LatestSIDLoaded[0] == rmtSD)
+   FS *sourceFS = &firstPartition; //default to USB
+   for(uint8_t num=0; num<3; num++) ptrLSFileName[num]=toupper(ptrLSFileName[num]);
+   if(memcmp(ptrLSFileName, "SD:", 3) == 0)
+   {
+      ptrLSFileName += 3;
+      sourceFS = &SD;
+      if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      {
+         Printf_dbg("SD Init Fail\n");
+         return BAS_ERROR_DEVICE_NOT_PRESENT;
+      }
+   }
+   else if(memcmp(ptrLSFileName, "USB:", 4) == 0)
+   {
+      ptrLSFileName += 4;      
+      //sourceFS = &firstPartition; //already default
+   }
+   //else if(memcmp(ptrLSFileName, "TR:", 3) == 0)
    //{
-   //   sourceFS = &SD;
-   //   if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-   //   {
-   //      Printf_dbg("SD Init Fail\n");
-   //   }
+   //   MenuSourceID = rmtTeensy;
+   //   ptrLSFileName += 3;      
    //}
+   else
+   {
+      Printf_dbg("SD:/USB: not found\n");
+      //default to USB if not specified
+   }
 
-   File myFile = sourceFS->open((char*)LSFileName, FILE_READ);
+   File myFile = sourceFS->open(ptrLSFileName, FILE_READ);
    
    //if (sourceFS != &SD) FullFilePath[0] = 0; //terminate if not SD
    
@@ -156,7 +173,6 @@ uint8_t ContRegAction_LoadPrep()
    if (count != XferSize)
    {
       Printf_dbg("Size Mismatch\n");
-      myFile.close();
       return BAS_ERROR_FILE_DATA;   
    }
    
