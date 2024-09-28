@@ -18,8 +18,8 @@
 
    // StatReg Values:
 .label TR_BASStat_Processing = $00   // No update, still processing
+       //Do not conflict with BASIC_Error_Codes (basic.ERROR_*)
 .label TR_BASStat_Ready      = $55   // Ready to Transfer
-.label TR_BASStat_FNFError   = $aa   // File not found error
 
 //}; //end enum synch
 
@@ -160,9 +160,7 @@ TLoadCmd:
    jsr WaitForTR
    cmp #TR_BASStat_Ready
    beq !+
-   //cmp #TR_BASStat_FNFError
-   //bne !+
-   ldx #basic.ERROR_FILE_NOT_FOUND    
+   tax //print error num & warm start
    jmp basic.ERROR
    
    // load file into C64 memory
@@ -270,14 +268,11 @@ SendFileName:
 WaitForTR:
    //inc $0400 //spinner @ top/left
    lda TR_BASStatReg+IO1Port
-   cmp #TR_BASStat_FNFError
-   beq !+
-   cmp #TR_BASStat_Ready
-   bne WaitForTR
-!: ldx #5 //require 1+5 consecutive reads of same TR_BASStat_FNFError/TR_BASStat_Ready to continue
+   cmp #TR_BASStat_Processing
+   beq WaitForTR
+   ldx #5 //require 1+5 consecutive reads of same (non-TR_BASStat_Processing) value to continue
 !: cmp TR_BASStatReg+IO1Port
    bne WaitForTR
    dex
    bne !-
-   //acc holds the result
-   rts
+   rts //acc holds the result code

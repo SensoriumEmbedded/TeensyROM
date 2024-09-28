@@ -63,11 +63,43 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    
    // StatReg Values:
    TR_BASStat_Processing = 0x00,   // No update, still processing
+   //Do not conflict with BASIC_Error_Codes (basic.ERROR_*)
    TR_BASStat_Ready      = 0x55,   // Ready to Transfer
-   TR_BASStat_FNFError   = 0xaa,   // File not found error
 
 }; //end enum synch
 
+enum BASIC_Error_Codes
+{
+   BAS_ERROR_TOO_MANY_FILES         = 0x01,
+   BAS_ERROR_FILE_OPEN              = 0x02,
+   BAS_ERROR_FILE_NOT_OPEN          = 0x03,
+   BAS_ERROR_FILE_NOT_FOUND         = 0x04,
+   BAS_ERROR_DEVICE_NOT_PRESENT     = 0x05,
+   BAS_ERROR_NOT_INPUT_FILE         = 0x06,
+   BAS_ERROR_NOT_OUTPUT_FILE        = 0x07,
+   BAS_ERROR_MISSING_FILENAME       = 0x08,
+   BAS_ERROR_ILLEGAL_DEVICE_NUM     = 0x09,
+   BAS_ERROR_NEXT_WITHOUT_FOR       = 0x0a,
+   BAS_ERROR_SYNTAX                 = 0x0b,
+   BAS_ERROR_RETURN_WITHOUT_GOSUB   = 0x0c,
+   BAS_ERROR_OUT_OF_DATA            = 0x0d,
+   BAS_ERROR_ILLEGAL_QUANTITY       = 0x0e,
+   BAS_ERROR_OVERFLOW               = 0x0f,
+   BAS_ERROR_OUT_OF_MEMORY          = 0x10,
+   BAS_ERROR_UNDEFD_STATEMENT       = 0x11,
+   BAS_ERROR_BAD_SUBSCRIPT          = 0x12,
+   BAS_ERROR_REDIMD_ARRAY           = 0x13,
+   BAS_ERROR_DIVISION_BY_ZERO       = 0x14,
+   BAS_ERROR_ILLEGAL_DIRECT         = 0x15,
+   BAS_ERROR_TYPE_MISMATCH          = 0x16,
+   BAS_ERROR_STRING_TOO_LONG        = 0x17,
+   BAS_ERROR_FILE_DATA              = 0x18,
+   BAS_ERROR_FORMULA_TOO_COMPLEX    = 0x19,
+   BAS_ERROR_CANT_CONTINUE          = 0x1a,
+   BAS_ERROR_UNDEFD_FUNCTION        = 0x1b,
+   BAS_ERROR_VERIFY                 = 0x1c,
+   BAS_ERROR_LOAD                   = 0x1d,
+}; //end BASIC_Error_Codes
 
 
 //__________________________________________________________________________________
@@ -98,14 +130,14 @@ uint8_t ContRegAction_LoadPrep()
    if (!myFile) 
    {
       Printf_dbg("File Not Found\n");
-      return TR_BASStat_FNFError;
+      return BAS_ERROR_FILE_NOT_FOUND;
    }
    
    if (myFile.isDirectory())
    {
       Printf_dbg("File is Dir\n"); 
       myFile.close();
-      return TR_BASStat_FNFError;    //change this!     
+      return BAS_ERROR_NOT_INPUT_FILE;   
    }
    
    XferSize = myFile.size();
@@ -114,24 +146,24 @@ uint8_t ContRegAction_LoadPrep()
    {
       Printf_dbg("File too large\n"); 
       myFile.close();
-      return TR_BASStat_FNFError;    //change this!     
+      return BAS_ERROR_OUT_OF_MEMORY;    
    }
 
    uint32_t count = 0;
    while (myFile.available() && count < XferSize) RAM_Image[count++]=myFile.read();
 
    myFile.close();
-   //if (count != XferSize)
-   //{
-   //   Printf_dbg("Size Mismatch\n");
-   //   myFile.close();
-   //   return TR_BASStat_FNFError;    //change this!  
-   //}
+   if (count != XferSize)
+   {
+      Printf_dbg("Size Mismatch\n");
+      myFile.close();
+      return BAS_ERROR_FILE_DATA;   
+   }
    
    StreamOffsetAddr = 0; //set to start of data
    TR_BASStrAvailableRegVal = 0xff;    // transfer available flag   
    Printf_dbg("Done\n");
-   return TR_BASStat_Ready;    
+   return TR_BASStat_Ready;   //TR RAM Load Sussceful, ready to x-fer to C64
 }
 
 //__________________________________________________________________________________
