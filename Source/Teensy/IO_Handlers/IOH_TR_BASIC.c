@@ -36,7 +36,7 @@ stcIOHandlers IOHndlr_TR_BASIC =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
-#define TgetQueueSize      256
+#define TgetQueueSize      4096
 #define TgetQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+TgetQueueSize-RxQueueTail))
 
 uint8_t* TgetQueue = NULL;  //to hold incoming messages
@@ -53,13 +53,14 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    TR_BASContReg         = 0xb4,   // (Write only) Control Reg 
    TR_BASStatReg         = 0xb6,   // (Read only) Status Reg 
    TR_BASFileNameReg     = 0xb8,   // (Write only) File name transfer
-   TR_BASStreamDataReg   = 0xba,   // (Read Only) File transfer stream data
+   TR_BASStreamDataReg   = 0xba,   // (R/W Only) File transfer stream data
    TR_BASStrAvailableReg = 0xbc,   // (Read Only) Signals stream data available
 
    // Control Reg Commands:
    TR_BASCont_None       = 0x00,   // No Action to be taken
    TR_BASCont_SendFN     = 0x02,   // Prep to send Filename from BAS to TR
    TR_BASCont_LoadPrep   = 0x04,   // Prep to load file from TR
+   TR_BASCont_SaveFinish = 0x06,   // Prep to save file to TR
    
    // StatReg Values:
    TR_BASStat_Processing = 0x00,   // No update, still processing
@@ -104,30 +105,31 @@ enum BASIC_Error_Codes
 
 //__________________________________________________________________________________
 
-uint8_t ContRegAction_LoadPrep()
-{ //load file into RAM, returns TR_BASStatRegVal                
-   //check that file exists & load into RAM
-   
-   char* ptrLSFileName = (char*)LSFileName; //local pointer
-      
-   Printf_dbg("Load: %s\n", ptrLSFileName);
+
+FS *FSfromFileName(char** ptrptrLSFileName)
+{  //returns file system type (default USB) and changes pointer to skip USB:/SD:
 
    FS *sourceFS = &firstPartition; //default to USB
+   char *ptrLSFileName = *ptrptrLSFileName;
+    
    for(uint8_t num=0; num<3; num++) ptrLSFileName[num]=toupper(ptrLSFileName[num]);
+   
    if(memcmp(ptrLSFileName, "SD:", 3) == 0)
    {
       ptrLSFileName += 3;
       sourceFS = &SD;
+      Printf_dbg("SD:*\n");
       if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
       {
          Printf_dbg("SD Init Fail\n");
-         return BAS_ERROR_DEVICE_NOT_PRESENT;
+         return NULL;   //return BAS_ERROR_DEVICE_NOT_PRESENT;
       }
    }
    else if(memcmp(ptrLSFileName, "USB:", 4) == 0)
    {
       ptrLSFileName += 4;      
       //sourceFS = &firstPartition; //already default
+      Printf_dbg("USB:*\n");
    }
    //else if(memcmp(ptrLSFileName, "TR:", 3) == 0)
    //{
@@ -136,14 +138,26 @@ uint8_t ContRegAction_LoadPrep()
    //}
    else
    {
-      Printf_dbg("SD:/USB: not found\n");
-      //default to USB if not specified
+      Printf_dbg("SD:/USB: not found, default USB\n"); //default to USB if not specified
    }
+   
+   *ptrptrLSFileName = ptrLSFileName; //update the pointer
+   return sourceFS;
+}
 
+
+uint8_t ContRegAction_LoadPrep()
+{ //load file into RAM, returns TR_BASStatRegVal                
+   //check that file exists & load into RAM_Image
+   
+   char* ptrLSFileName = (char*)LSFileName; //local pointer
+   FS *sourceFS = FSfromFileName(&ptrLSFileName);
+   
+   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
+
+   Printf_dbg("Load: %s\n", ptrLSFileName);
    File myFile = sourceFS->open(ptrLSFileName, FILE_READ);
-   
-   //if (sourceFS != &SD) FullFilePath[0] = 0; //terminate if not SD
-   
+      
    if (!myFile) 
    {
       Printf_dbg("File Not Found\n");
@@ -158,7 +172,7 @@ uint8_t ContRegAction_LoadPrep()
    }
    
    XferSize = myFile.size();
-   Printf_dbg("Size: 0x%08x bytes\n", XferSize);
+   Printf_dbg("Size: %d bytes\n", XferSize);
    if(XferSize > (0xc000-0x0801)) //fit in BASIC area but don't overwrite custom commands
    {
       Printf_dbg("File too large\n"); 
@@ -176,11 +190,49 @@ uint8_t ContRegAction_LoadPrep()
       return BAS_ERROR_FILE_DATA;   
    }
    
-   StreamOffsetAddr = 0; //set to start of data
+   if (RAM_Image[0] != 0x01 || RAM_Image[1] != 0x08)
+   {
+      Printf_dbg("Not BASIC start addr\n");
+      return BAS_ERROR_TYPE_MISMATCH;   //make this a custom message? 
+   }      
+   
    TR_BASStrAvailableRegVal = 0xff;    // transfer available flag   
    Printf_dbg("Done\n");
    return TR_BASStat_Ready;   //TR RAM Load Sussceful, ready to x-fer to C64
 }
+
+
+uint8_t ContRegAction_SaveFinish()
+{  //file was transfered to RAM_Image[], size=StreamOffsetAddr  
+   //save file from RAM, returns TR_BASStatRegVal                
+
+   char* ptrLSFileName = (char*)LSFileName; //local pointer
+   FS *sourceFS = FSfromFileName(&ptrLSFileName);
+   
+   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
+
+   Printf_dbg("Save: %s\nSize: %d bytes\n", ptrLSFileName, StreamOffsetAddr);
+   sourceFS->remove(ptrLSFileName); //del prev version to overwrite!
+   File myFile = sourceFS->open(ptrLSFileName, FILE_WRITE); //O_RDWR | O_CREAT <- doesn't reduce filesize if smaller 
+      
+   if (!myFile) 
+   {
+      Printf_dbg("Failed to open\n");
+      return BAS_ERROR_FILE_NOT_OPEN;
+   }
+
+   uint32_t BytesWritten = myFile.write(RAM_Image, StreamOffsetAddr);
+   myFile.close();
+   
+   if (BytesWritten != StreamOffsetAddr)
+   {
+      Printf_dbg("Not Fully Written\n");
+      return BAS_ERROR_OUT_OF_DATA; 
+   }
+
+   return TR_BASStat_Ready;   //Save Sussceful
+}
+
 
 //__________________________________________________________________________________
 
@@ -243,9 +295,12 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             {
                case TR_BASCont_SendFN: //file name being sent next
                   FNCount = 0;
+                  StreamOffsetAddr = 0; //initialize for file load/save
                   break;
+                  
                case TR_BASCont_LoadPrep: //load file into RAM 
-                  TR_BASContRegAction = Data;
+               case TR_BASCont_SaveFinish: //save file from RAM
+                  TR_BASContRegAction = Data; //pass it to process outside of interrupt
                   TR_BASStatRegVal = TR_BASStat_Processing; //initialize status
                   break;
             }
@@ -258,20 +313,32 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                Printf_dbg("Received FN: %s\n", LSFileName);
             }
             break;
+         case TR_BASStreamDataReg: //receive save data
+            RAM_Image[StreamOffsetAddr++] = Data;
+            break;
       }
    } //write
 }
 
 void PollingHndlr_TR_BASIC()
 {
-   if (TR_BASContRegAction == TR_BASCont_LoadPrep)
+   if (TR_BASContRegAction != TR_BASCont_None)
    {
-      TR_BASStatRegVal = ContRegAction_LoadPrep();
-      
+      switch(TR_BASContRegAction)
+      {
+         case TR_BASCont_LoadPrep:
+            TR_BASStatRegVal = ContRegAction_LoadPrep();
+            break;
+         case TR_BASCont_SaveFinish:
+            TR_BASStatRegVal = ContRegAction_SaveFinish();
+            break;
+         default:
+            Printf_dbg("Unexpected TR_BASContRegAction: %d\n", TR_BASContRegAction);
+      }
       TR_BASContRegAction = TR_BASCont_None;
    }
    
-   if (Serial.available())
+   while (Serial.available())
    {
       uint8_t Cin = Serial.read();
       if(TgetQueueUsed >= TgetQueueSize-1)

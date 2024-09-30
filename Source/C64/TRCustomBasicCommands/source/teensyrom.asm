@@ -15,6 +15,7 @@
 .label TR_BASCont_None       = $00   // No Action to be taken
 .label TR_BASCont_SendFN     = $02   // Prep to send Filename from BAS to TR
 .label TR_BASCont_LoadPrep   = $04   // Prep to load file from TR
+.label TR_BASCont_SaveFinish = $06   // Prep to save file to TR
 
    // StatReg Values:
 .label TR_BASStat_Processing = $00   // No update, still processing
@@ -158,10 +159,7 @@ TLoadCmd:
    ldx #TR_BASCont_LoadPrep
    stx TR_BASContReg+IO1Port   
    jsr WaitForTR
-   cmp #TR_BASStat_Ready
-   beq !+
-   tax //print error num & warm start
-   jmp basic.ERROR
+   //if it returns, there was no error
    
    // load file into C64 memory
 !: ldy #$49   //LOADING
@@ -221,13 +219,46 @@ TLoadCmd:
 
 */
 TSaveCmd:
-    jsr SendFileName  //send filename to TR
+   jsr SendFileName  //send filename to TR
 
-    // save from memory to file
-    
-    // Check for File saved
-    rts
+   // write from C64 memory to TR RAM
+   ldx #$08
+   lda #$01
+   
+   //store in zero page and send load address header bytes
+   sta r0L
+   sta TR_BASStreamDataReg+IO1Port
+   stx r0H
+   stx TR_BASStreamDataReg+IO1Port
 
+   //send payload and check for 3ea zeros (end)
+   ldy #0  //clear address offset
+   ldx #0  //clear zero counter
+!: //loop
+   lda (r0), y   
+   sta TR_BASStreamDataReg+IO1Port
+   beq !++ //zero count check
+   ldx #0  //clear zero counter
+!: //skip zero clear
+   iny
+   bne !-- //loop
+   inc r0H
+   bne !-- //loop
+   //Overflow to zero page
+   ldx #basic.ERROR_OVERFLOW
+   jmp basic.ERROR
+   
+!: //zero count check
+   inx
+   cpx #3
+   bne !-- //skip zero clear
+   
+   //write from TR RAM to file
+   ldx #TR_BASCont_SaveFinish
+   stx TR_BASContReg+IO1Port   
+   jsr WaitForTR
+   //if it returns, there was no error
+   rts
 
 
 
@@ -275,4 +306,9 @@ WaitForTR:
    bne WaitForTR
    dex
    bne !-
-   rts //acc holds the result code
+   //we have a validate result
+   cmp #TR_BASStat_Ready  //ready result?
+   beq !+
+   tax 
+   jmp basic.ERROR //print error num from x reg & warm start
+!: rts
