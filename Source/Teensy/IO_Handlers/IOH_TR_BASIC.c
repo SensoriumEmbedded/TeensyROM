@@ -59,8 +59,9 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    // Control Reg Commands:
    TR_BASCont_None       = 0x00,   // No Action to be taken
    TR_BASCont_SendFN     = 0x02,   // Prep to send Filename from BAS to TR
-   TR_BASCont_LoadPrep   = 0x04,   // Prep to load file from TR
-   TR_BASCont_SaveFinish = 0x06,   // Prep to save file to TR
+   TR_BASCont_LoadPrep   = 0x04,   // Prep to load file from TR RAM
+   TR_BASCont_SaveFinish = 0x06,   // Save file from TR RAM to SD/USB
+   TR_BASCont_DirPrep    = 0x08,   // Load Dir into TR RAM
    
    // StatReg Values:
    TR_BASStat_Processing = 0x00,   // No update, still processing
@@ -111,10 +112,12 @@ FS *FSfromFileName(char** ptrptrLSFileName)
 
    FS *sourceFS = &firstPartition; //default to USB
    char *ptrLSFileName = *ptrptrLSFileName;
-    
-   for(uint8_t num=0; num<3; num++) ptrLSFileName[num]=toupper(ptrLSFileName[num]);
+   char LSFileNameTmp[4];
    
-   if(memcmp(ptrLSFileName, "SD:", 3) == 0)
+   //copy first 4 chars as lower case:
+   for(uint8_t num=0; num<4; num++) LSFileNameTmp[num]=tolower(ptrLSFileName[num]);
+   
+   if(memcmp(LSFileNameTmp, "sd:", 3) == 0)
    {
       ptrLSFileName += 3;
       sourceFS = &SD;
@@ -125,7 +128,7 @@ FS *FSfromFileName(char** ptrptrLSFileName)
          return NULL;   //return BAS_ERROR_DEVICE_NOT_PRESENT;
       }
    }
-   else if(memcmp(ptrLSFileName, "USB:", 4) == 0)
+   else if(memcmp(LSFileNameTmp, "usb:", 4) == 0)
    {
       ptrLSFileName += 4;      
       //sourceFS = &firstPartition; //already default
@@ -143,6 +146,19 @@ FS *FSfromFileName(char** ptrptrLSFileName)
    
    *ptrptrLSFileName = ptrLSFileName; //update the pointer
    return sourceFS;
+}
+
+
+void AddToRAM_Image(const char *ToAdd)
+{  //and convert to petscii
+   uint32_t count = 0;
+   
+   while(1)
+   {
+      RAM_Image[XferSize] = ToPETSCII(ToAdd[count]);
+      if (ToAdd[count] == 0) return;
+      XferSize++; count++;
+   }
 }
 
 
@@ -234,6 +250,58 @@ uint8_t ContRegAction_SaveFinish()
 }
 
 
+uint8_t ContRegAction_DirPrep()
+{ //load dir into RAM, returns TR_BASStatRegVal                
+   //check that dir exists & load into RAM_Image
+   
+   char* ptrLSFileName = (char*)LSFileName; //local pointer
+   FS *sourceFS = FSfromFileName(&ptrLSFileName);
+   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
+
+   if (ptrLSFileName[0] == 0) sprintf(ptrLSFileName, "/");  // default to root if zero len
+   Printf_dbg("Dir: \"%s\"\n", ptrLSFileName);
+
+   File dir = sourceFS->open(ptrLSFileName);
+   
+   if (!dir) 
+   {
+      Printf_dbg("Dir Not Found\n");
+      return BAS_ERROR_FILE_NOT_FOUND;
+   }
+   
+   const char *filename;
+   XferSize = 0; //initialize RAM_Image size/count
+   AddToRAM_Image("Contents of: \"");
+   AddToRAM_Image(ptrLSFileName);
+   AddToRAM_Image("\"\r");
+   
+   while (File entry = dir.openNextFile()) 
+   {
+      filename = entry.name();
+      
+      if (entry.isDirectory()) AddToRAM_Image(" /");
+      else AddToRAM_Image("  ");
+      
+      AddToRAM_Image(filename);
+      AddToRAM_Image("\r");
+      
+      Printf_dbg("%s\n", filename);
+      
+      entry.close();
+      if (XferSize >= RAM_ImageSize-80)
+      {
+         AddToRAM_Image("*** Too many files!\r");         
+         break;
+      }
+   }
+   
+   dir.close();
+   TR_BASStrAvailableRegVal = 0xff;    // transfer available flag   Need this???????????
+   Printf_dbg("Done\n");
+   return TR_BASStat_Ready;   //Save Sussceful
+}
+
+
 //__________________________________________________________________________________
 
 void InitHndlr_TR_BASIC()
@@ -298,8 +366,10 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                   StreamOffsetAddr = 0; //initialize for file load/save
                   break;
                   
+               //these commandd require action outside of interrupt: 
                case TR_BASCont_LoadPrep: //load file into RAM 
                case TR_BASCont_SaveFinish: //save file from RAM
+               case TR_BASCont_DirPrep: // Load Dir into RAM
                   TR_BASContRegAction = Data; //pass it to process outside of interrupt
                   TR_BASStatRegVal = TR_BASStat_Processing; //initialize status
                   break;
@@ -307,10 +377,18 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             break;
             
          case TR_BASFileNameReg: //receive file name characters
+            //// PETSCII To Lcase ASSCII:
+            //Data &= 0x7f; //bit 7 is Cap in Graphics mode
+            //if (Data & 0x40) Data |= 0x20;  //conv to lower case
+            
+            // PETSCII To ASSCII:
+            if (Data & 0x80) Data &= 0x7f; //bit 7 is Cap in Graphics mode
+            else if (Data & 0x40) Data |= 0x20;  //conv to lower case
+         
             LSFileName[FNCount++] = Data;
             if (Data == 0)
             {
-               Printf_dbg("Received FN: %s\n", LSFileName);
+               Printf_dbg("Received FN: \"%s\"\n", LSFileName);
             }
             break;
          case TR_BASStreamDataReg: //receive save data
@@ -331,6 +409,9 @@ void PollingHndlr_TR_BASIC()
             break;
          case TR_BASCont_SaveFinish:
             TR_BASStatRegVal = ContRegAction_SaveFinish();
+            break;
+         case TR_BASCont_DirPrep:
+            TR_BASStatRegVal = ContRegAction_DirPrep();
             break;
          default:
             Printf_dbg("Unexpected TR_BASContRegAction: %d\n", TR_BASContRegAction);

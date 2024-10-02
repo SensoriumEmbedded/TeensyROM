@@ -15,7 +15,8 @@
 .label TR_BASCont_None       = $00   // No Action to be taken
 .label TR_BASCont_SendFN     = $02   // Prep to send Filename from BAS to TR
 .label TR_BASCont_LoadPrep   = $04   // Prep to load file from TR
-.label TR_BASCont_SaveFinish = $06   // Prep to save file to TR
+.label TR_BASCont_SaveFinish = $06   // Save file to TR
+.label TR_BASCont_DirPrep    = $08   // Load Dir into TR RAM
 
    // StatReg Values:
 .label TR_BASStat_Processing = $00   // No update, still processing
@@ -139,7 +140,7 @@ TGetCmd:
     sty $7b      //.,acab 84 7b      //restore BASIC execute pointer high byte
     jsr $0079    //.,acad 20 79 00   //scan memory
     beq !+       //.,acb0 f0 2d      //branch if ":" or [EOL]
-    ldx #$0b                         //error code $0B, syntax error
+    ldx #$0b                         //error code $0B, syntax error, unexpected stuff at end
     jmp basic.ERROR                  //do error #X then warm start
 !:  rts          //.,acfb 60      
 
@@ -172,7 +173,7 @@ TLoadCmd:
    
 !: lda TR_BASStrAvailableReg+IO1Port //are we done?
    beq !+   //exit the loop (zero flag set)
-   lda TR_BASStreamDataReg+IO1Port //read from rRegStreamData+IO1Port increments address & checks for end
+   lda TR_BASStreamDataReg+IO1Port //read from data reg, increments address & checks for end
    sta (r0), y 
    iny
    bne !-
@@ -260,6 +261,39 @@ TSaveCmd:
    //if it returns, there was no error
    rts
 
+/*
+
+    Display TR directory contents
+
+    Example- TDIR "USB:" will show the USB drive root contents
+
+*/
+TDirCmd:
+
+   jsr zp.CHRGOT    // scan memory
+   beq !+           // no path arg (":" or [EOL]) send 0 len filename
+   jsr SendFileName
+   jmp !++  //SKIP
+!: //send 0 len filename
+   ldx #TR_BASCont_SendFN
+   stx TR_BASContReg+IO1Port  //tell TR there's a FN coming   
+   lda #$00
+   sta TR_BASFileNameReg+IO1Port //terminate/end filename transfer
+
+!: //SKIP
+   //check for dir present & load into TR RAM
+   ldx #TR_BASCont_DirPrep
+   stx TR_BASContReg+IO1Port   
+   jsr WaitForTR
+   //if it returns, there was no error
+
+   //print dir from Teensy ram buf
+!: lda TR_BASStrAvailableReg+IO1Port //are we done?
+   beq !+   //exit the loop (zero flag set)
+   lda TR_BASStreamDataReg+IO1Port //read from data reg, increments address & checks for end
+   jsr kernal.VEC_CHROUT  //print it
+   jmp !-
+!: rts
 
 
 //  ************** Functions **************
