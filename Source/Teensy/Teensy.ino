@@ -108,6 +108,13 @@ void setup()
 
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
+   //wait for USB file system to init in case it's needed by startup SID or auto-launched
+   // ~7mS for direct connect, ~1000mS for connect via hub, 1500mS timeout
+   uint32_t StartMillis = millis();
+   while (!firstPartition && millis()-StartMillis < 1500) myusbHost.Task();
+   if(firstPartition) Printf_dbg("%dmS to init USB drive\n", millis()-StartMillis); 
+   else Printf_dbg("USB drive not found!\n"); 
+   
 } 
      
 void loop()
