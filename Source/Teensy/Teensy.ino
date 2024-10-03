@@ -60,7 +60,6 @@ void setup()
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
-   SetLEDOn;
    SetDebugDeassert;
    SetResetAssert; //assert reset until main loop()
   
@@ -109,11 +108,24 @@ void setup()
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
    //wait for USB file system to init in case it's needed by startup SID or auto-launched
-   // ~7mS for direct connect, ~1000mS for connect via hub, 1500mS timeout
+   // ~7mS for direct connect, ~1000mS for connect via hub, 1500mS timeout (drive not found)
    uint32_t StartMillis = millis();
    while (!firstPartition && millis()-StartMillis < 1500) myusbHost.Task();
    if(firstPartition) Printf_dbg("%dmS to init USB drive\n", millis()-StartMillis); 
    else Printf_dbg("USB drive not found!\n"); 
+
+
+   if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+   {
+      char AutoFileName[MaxPathLength];
+      EEPreadStr(eepAdAutolaunchName, AutoFileName);
+      char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
+      RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
+      
+      Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
+      RemoteLaunch(MenuSourceID, ptrAutoFileName);
+   }
+   SetLEDOn;
    
 } 
      
@@ -243,6 +255,7 @@ void SetEEPDefaults()
    EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
    EEPROM.write(eepAdMinBootInd, 0);
+   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }

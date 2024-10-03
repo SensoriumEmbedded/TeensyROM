@@ -235,6 +235,12 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
 
++  cmp #ChrShiftReturn ;set auto-launch
+   bne +
+   jsr DisplaySetAutoLaunch
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent    
+
 +  cmp #ChrLeftArrow ;Write NFC Tag
    bne +  
    jsr WriteNFCTag
@@ -1031,7 +1037,20 @@ WriteNFCTag:
    lda #rCtlNFCReEnableWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots
+   rts
+   
+DisplaySetAutoLaunch:
+   jsr PrintBanner
+   lda #<MsgSetAutoLaunch
+   ldy #>MsgSetAutoLaunch
+   jsr PrintString 
 
+   lda #rCtlSetAutoLaunchWAIT
+   ;rCtlWriteNFCTagCheckWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   
+   jsr AnyKeyMsgWait
    rts
    
 TblRowToMemLoc:

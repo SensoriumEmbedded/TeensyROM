@@ -86,6 +86,7 @@
    ChrRvsOff   = 146
    ChrClear    = 147
    ChrReturn   = 13
+   ChrShiftReturn= 141
    ChrSpace    = 32
    ChrCRSRUp   = 145
    ChrCRSRDn   = 17

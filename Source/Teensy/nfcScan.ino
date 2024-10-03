@@ -122,6 +122,38 @@ void nfcCheck()
    }
 }
 
+RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName)
+{  //returns file RegMenuTypes (default SD) and changes pointer to skip USB:/SD:
+
+   char *ptrFileName = *ptrptrFileName;
+   RegMenuTypes MenuSourceID = rmtSD;
+   
+   for(uint8_t num=0; num<3; num++) ptrFileName[num]=toupper(ptrFileName[num]);
+   
+   if(memcmp(ptrFileName, "SD:", 3) == 0)
+   {
+      ptrFileName += 3;
+   }
+   else if(memcmp(ptrFileName, "USB:", 4) == 0)
+   {
+      MenuSourceID = rmtUSBDrive;
+      ptrFileName += 4;      
+   }
+   else if(memcmp(ptrFileName, "TR:", 3) == 0)
+   {
+      MenuSourceID = rmtTeensy;
+      ptrFileName += 3;      
+   }
+   else
+   {
+      Printf_dbg("SD:/USB: not found\n");
+      //default to SD if not specified, allows display on c64
+   }
+   
+   *ptrptrFileName = ptrFileName; //update the pointer
+   return MenuSourceID;
+}
+
 bool nfcReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
@@ -214,28 +246,8 @@ bool nfcReadTagLaunch()
   
   
    Printf_dbg("Final Payload: %s\n\n", pDataStart);
-      
-   RegMenuTypes MenuSourceID = rmtSD;
-   for(uint8_t num=0; num<3; num++) pDataStart[num]=toupper(pDataStart[num]);
-   if(memcmp(pDataStart, "SD:", 3) == 0)
-   {
-      pDataStart += 3;
-   }
-   else if(memcmp(pDataStart, "USB:", 4) == 0)
-   {
-      MenuSourceID = rmtUSBDrive;
-      pDataStart += 4;      
-   }
-   else if(memcmp(pDataStart, "TR:", 3) == 0)
-   {
-      MenuSourceID = rmtTeensy;
-      pDataStart += 3;      
-   }
-   else
-   {
-      Printf_dbg("SD:/USB: not found\n");
-      //default to SD if not specified, allows display on c64
-   }
+   
+   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName((char**)&pDataStart);
 
    if(memcmp(pDataStart, "C64", 3) == 0 && MenuSourceID != rmtTeensy)
    { //could be used to specify system type for TapTo, only valid for SD/USB

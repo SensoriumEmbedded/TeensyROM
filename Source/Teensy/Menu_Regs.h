@@ -150,8 +150,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsWriteNFCTag        = 0x0c,
    rsNFCReEnable        = 0x0d,
    rsSetBackgroundSID   = 0x0e,
+   rsSetAutoLaunch      = 0x0f,
    
-   rsNumStatusTypes     = 0x0f,
+   rsNumStatusTypes     = 0x10,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -183,6 +184,7 @@ enum RegCtlCommands
    rCtlWriteNFCTagWAIT      = 12,
    rCtlNFCReEnableWAIT      = 13,
    rCtlSetBackgroundSIDWAIT = 14,
+   rCtlSetAutoLaunchWAIT    = 15,
 };
 
 enum regItemTypes //synch with TblItemType

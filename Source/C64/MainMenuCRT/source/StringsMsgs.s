@@ -49,6 +49,10 @@ MsgRemoveNFCTag:
    !tx ChrReturn, ChrReturn, OptionColor, "Remove tag from reader, then"
    !tx 0
 
+MsgSetAutoLaunch:
+   !tx ChrReturn, SourcesColor, "Set Power-up Auto Launch:", ChrReturn
+   !tx 0
+
 MsgSIDInfo1:
    !tx ChrReturn, SourcesColor, "SID Info Page:", ChrReturn, ChrReturn
    !tx " File Information for", NameColor  ;MenuMiscColor

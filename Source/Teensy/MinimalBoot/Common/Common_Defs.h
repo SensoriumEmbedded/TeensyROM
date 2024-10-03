@@ -26,7 +26,7 @@
 #define GoodSIDToken      0x9B81
 
 
-#define eepMagicNum         0xfeed6408 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6409 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -34,6 +34,7 @@
                                        // 06: 3/13/24  Added eepAdDefaultSID
                                        // 07: 6/3/24   Added eepAdCrtBootName (unreleased)
                                        // 08: 7/7/24   Separate Min Boot Indicator
+                                       // 09: 10/2/24  Autolaunch Indicator
                                        
 enum InternalEEPROMmap
 {
@@ -53,8 +54,11 @@ enum InternalEEPROMmap
    eepAdDLPath        =   35, // (TxMsgMaxSize=128)  HTTP Download path
    eepAdBookmarks     =  163, // (75+225)*9     Bookmark Titles and Full Paths
    eepAdDefaultSID    = 2863, // (MaxPathLength=300) Path/filename of Default SID to play in background
-   eepAdCrtBootName   = 3163, // (MaxPathLength=300) Indicates boot to minimal code and .crt path to launch
+   eepAdCrtBootName   = 3163, // (MaxPathLength=300) Boot to minimal .crt path to launch
    eepAdMinBootInd    = 3463, // (1:uint8_t)    Indicates that Minimal boot should execute eepAdCrtBootName (!=0) or passthrough (=0)
+   eepAdAutolaunchName= 3464, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
+
+   eepAdNext          = 3764, // Next address to be used
    //Max size = 4284 (4k, emulated in flash)
 };
 

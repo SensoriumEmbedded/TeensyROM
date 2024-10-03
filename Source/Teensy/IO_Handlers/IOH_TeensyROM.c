@@ -203,6 +203,7 @@ extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
 extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
+extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
@@ -491,6 +492,26 @@ FLASHMEM void NFCReEnable()
    nfcInit(); //this should pass, was enabled/initialized previously...
 }
 
+FLASHMEM void SetAutoLaunch()
+{
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+
+   char PathMsg[MaxPathLength];
+   GetCurrentFilePathName(PathMsg);
+   SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
+
+   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   {
+      SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
+      return;
+   }
+
+   SendMsgPrintfln("Auto Launch updated:\r  * Will take effect next power-up\r  * See Settings menu to disable\r");
+   
+   EEPwriteStr(eepAdAutolaunchName, PathMsg);  //set autolaunch in EEPROM:
+
+}
+
 FLASHMEM void SetBackgroundSID()
 {
    EEPwriteNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //write the source/path/name to EEPROM   
@@ -600,6 +621,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &WriteNFCTag,         // rsWriteNFCTag
    &NFCReEnable,         // rsNFCReEnable
    &SetBackgroundSID,    // rsSetBackgroundSID
+   &SetAutoLaunch,       // rsSetAutoLaunch
+   
 };
 
 
@@ -940,6 +963,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlSetBackgroundSIDWAIT:
                   IO1[rwRegStatus] = rsSetBackgroundSID; //work this in the main code
+                  break;
+               case rCtlSetAutoLaunchWAIT:
+                  IO1[rwRegStatus] = rsSetAutoLaunch; //work this in the main code
                   break;
             }
             break;
