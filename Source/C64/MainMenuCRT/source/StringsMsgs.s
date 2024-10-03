@@ -81,7 +81,10 @@ MsgHelpMenu:
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Up directory", ChrReturn
    !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Next entry starting with letter", ChrReturn
    !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Beginning of current dir", ChrReturn
-   !tx ChrReturn, ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Program NFC tag to highlighted", ChrReturn
+   !tx          OptionColor, ChrFillRight, ChrRvsOn, "Sh-Ret", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Set Auto-Launch to highlighted", ChrReturn
+   !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "1-4", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
+   !tx ChrReturn
    !tx SourcesColor, " Available here and on Main Menu:", ChrReturn
    !tx "   Source Select:   ", MenuMiscColor, "Other:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, SourcesColor,  "Teensy Mem"
@@ -95,7 +98,7 @@ MsgHelpMenu:
                
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Help      "
    !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Settings Menu", ChrReturn
-   !tx ChrReturn, ChrReturn
+   !tx ChrReturn
    !tx 0
 
 MsgNoHW:
