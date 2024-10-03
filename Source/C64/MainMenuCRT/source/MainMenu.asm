@@ -101,6 +101,13 @@ NoHW
    sta rwRegCodeStartPage+IO1Port
    lda #>MainCodeRAMEnd   ;read hi byte of End address
    sta rwRegCodeLastPage+IO1Port
+
+   ;set clock to midnight and start it by default
+   lda #0  
+   sta TODHoursBCD  ;stop TOD regs incrementing
+   sta TODMinBCD
+   sta TODSecBCD
+   sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    
    ;check for remote launch on reset
    lda rwRegIRQ_CMD+IO1Port
@@ -131,15 +138,8 @@ NoHW
    ;check default register for time update
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
-   beq +
-   jsr SynchEthernetTime
-   jmp HighlightCurrent
-   
-+  lda #0  ;set clock to midnight if not synching
-   sta TODHoursBCD  ;stop TOD regs incrementing
-   sta TODMinBCD
-   sta TODSecBCD
-   sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+   beq HighlightCurrent
+   jsr SynchEthernetTime   
 
    
    

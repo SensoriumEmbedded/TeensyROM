@@ -143,8 +143,9 @@
    rsNFCReEnable        = 0x0d  ;
    rsSetBackgroundSID   = 0x0e  ;
    rsSetAutoLaunch      = 0x0f  ;
+   rsClearAutoLaunch    = 0x10  ;
    
-   rsNumStatusTypes     = 0x10  ;
+   rsNumStatusTypes     = 0x11  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -172,6 +173,7 @@
    rCtlNFCReEnableWAIT      = 13
    rCtlSetBackgroundSIDWAIT = 14
    rCtlSetAutoLaunchWAIT    = 15
+   rCtlClearAutoLaunchWAIT  = 16
    
 ;enum regItemTypes //synch with TblItemType
    rtNone      = 0

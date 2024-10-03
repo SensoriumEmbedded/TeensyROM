@@ -129,13 +129,14 @@ MsgSettingsMenu1:
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, SourcesColor, "Synch Time via Ethernet", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, SourcesColor, "Pause/Play SID", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, SourcesColor, "Self Test", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, SourcesColor, "Help Menu", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, SourcesColor, "Disable Auto-Launch", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, SourcesColor, "Help Menu", ChrReturn
    ;!tx ChrReturn
 MsgSettingsMenu2SpaceRet:
    !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
 MsgSettingsMenu3:
-   !tx ChrReturn, ChrPurple   ;MenuMiscColor 
+   !tx ChrPurple   ;MenuMiscColor 
    !tx "      2024 by Travis S @ Sensorium"
    ;, ChrReturn
    ;!tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn

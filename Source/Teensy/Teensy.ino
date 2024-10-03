@@ -125,7 +125,8 @@ void setup()
       Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
       RemoteLaunch(MenuSourceID, ptrAutoFileName);
    }
-   SetLEDOn;
+   
+   SetLEDOn;  //done last as indicator of init completion
    
 } 
      

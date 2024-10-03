@@ -27,7 +27,7 @@ SettingsMenu:
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #20 ;row
+   ldx #21 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
@@ -265,7 +265,12 @@ UpdTimeZone
    jsr TestIO
    jmp WaitForSettingsKey  
    
-+  cmp #'l'  ;Help Menu
++  cmp #'l'  ;clear auto-launch
+   bne +
+   jsr ClearAutoLaunch
+   jmp WaitForSettingsKey  
+   
++  cmp #'m'  ;Help Menu
    bne +
    jmp HelpMenu  ;return from there  
    
@@ -323,4 +328,18 @@ CursorToTest:
    jsr SetCursor   
    rts
 
+ClearAutoLaunch:
+   lda #rCtlClearAutoLaunchWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
 
+   ;  Display "done" after "Clear Auto Launch"
+   ldx #17 ;row 
+   ldy #27 ;col
+   clc
+   jsr SetCursor   
+   lda #<MsgDone
+   ldy #>MsgDone
+   jsr PrintString 
+
+   rts

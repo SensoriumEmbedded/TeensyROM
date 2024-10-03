@@ -512,6 +512,11 @@ FLASHMEM void SetAutoLaunch()
 
 }
 
+FLASHMEM void ClearAutoLaunch()
+{
+   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+}
+
 FLASHMEM void SetBackgroundSID()
 {
    EEPwriteNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //write the source/path/name to EEPROM   
@@ -622,7 +627,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &NFCReEnable,         // rsNFCReEnable
    &SetBackgroundSID,    // rsSetBackgroundSID
    &SetAutoLaunch,       // rsSetAutoLaunch
-   
+   &ClearAutoLaunch,     // rsClearAutoLaunch
 };
 
 
@@ -967,6 +972,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlSetAutoLaunchWAIT:
                   IO1[rwRegStatus] = rsSetAutoLaunch; //work this in the main code
                   break;
+               case rCtlClearAutoLaunchWAIT:
+                  IO1[rwRegStatus] = rsClearAutoLaunch; //work this in the main code
+                  break;
+               
             }
             break;
       }
