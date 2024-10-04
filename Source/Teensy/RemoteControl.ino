@@ -103,7 +103,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
    RemoteLaunched = true;
    //Set selected drive
    IO1[rWRegCurrMenuWAIT] = MenuSourceID;
-   if (MenuSourceID == rmtSD) SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
    
    //set path & filename
    strcpy(DriveDirPath, FileNamePath);

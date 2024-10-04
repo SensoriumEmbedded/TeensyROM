@@ -205,6 +205,7 @@ extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
 extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
 extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem);
+extern bool SDFullInit();
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -548,7 +549,7 @@ FLASHMEM void LoadMainSIDforXfer()
       if(LatestSIDLoaded[0] == rmtSD)
       {
          sourceFS = &SD;
-         if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         if(!SDFullInit()) // SD.begin(BUILTIN_SDCARD); with retry if presence detected
          {
             Printf_dbg("SD Init Fail\n");
          }

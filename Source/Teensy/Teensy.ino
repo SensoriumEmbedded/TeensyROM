@@ -107,12 +107,14 @@ void setup()
 
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
+
    //wait for USB file system to init in case it's needed by startup SID or auto-launched
    // ~7mS for direct connect, ~1000mS for connect via hub, 1500mS timeout (drive not found)
    uint32_t StartMillis = millis();
    while (!firstPartition && millis()-StartMillis < 1500) myusbHost.Task();
    if(firstPartition) Printf_dbg("%dmS to init USB drive\n", millis()-StartMillis); 
    else Printf_dbg("USB drive not found!\n"); 
+   
 
    if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
    {
@@ -278,3 +280,33 @@ void SetNumItems(uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
+bool SDFullInit()
+{
+
+   // begin() takes 3 seconds for fail, 20-200mS for pass, 2 seconds for unpopulated
+   
+   uint8_t Count = 2; //Max number of begin attempts
+   uint32_t Startms = millis();
+   
+   Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
+   Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent());
+   
+   while (!SD.begin(BUILTIN_SDCARD)) 
+   {
+      Count--;
+      Printf_dbg("SD Init fail, %d tries left. Time: %lu mS\n", Count, millis()-Startms);
+      if (SD.mediaPresent() == 0)
+      {
+         Printf_dbg("SD Not Present, Fail!  took %lu mS\n", millis()-Startms);
+         return false;
+      }
+      if (Count == 0)
+      {
+         Printf_dbg("Out of tries, Fail!  took %lu mS\n", millis()-Startms);
+         return false;
+      }
+   }
+   
+   Printf_dbg("SD Init OK, took %lu mS, mediaPresent %d\n", millis()-Startms, SD.mediaPresent());
+   return true;
+}
