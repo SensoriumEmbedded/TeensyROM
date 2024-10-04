@@ -1,4 +1,6 @@
 
+//re-compile both minimal and full if anything changes here!
+
 #define MaxCRTKB      875   //based on calc from minimal image
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
@@ -62,4 +64,9 @@ enum InternalEEPROMmap
    //Max size = 4284 (4k, emulated in flash)
 };
 
-
+enum MinBootIndFlags
+{
+   MinBootInd_SkipMin          = 0,
+   MinBootInd_ExecuteMin       = 1,
+   MinBootInd_SkipMinNoAutoLd  = 2,
+};

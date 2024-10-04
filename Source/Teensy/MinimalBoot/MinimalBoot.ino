@@ -66,15 +66,15 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
    EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
-   EEPROM.write(eepAdMinBootInd, 1);
+   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
   
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized
-   if (EEPROM.read(eepAdMinBootInd) == 0) runMainTRApp(); //jump to main app if not booting a CRT
+   if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) runMainTRApp(); //jump to main app if not booting a CRT
    
-   EEPROM.write(eepAdMinBootInd, 0); //clear the boot flag for next boot
+   EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM

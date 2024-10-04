@@ -164,7 +164,7 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
 
             SendMsgPrintfln("Rebooting Teensy to Minimal"); 
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
-            EEPROM.write(eepAdMinBootInd, 1);
+            EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
             REBOOT;
             
          }

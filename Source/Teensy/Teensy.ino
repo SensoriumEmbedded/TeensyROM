@@ -255,7 +255,7 @@ void SetEEPDefaults()
    EEPROM.write(eepAdDefaultSID, DefSIDSource);  
    EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
-   EEPROM.write(eepAdMinBootInd, 0);
+   EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
    EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
