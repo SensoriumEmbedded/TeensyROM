@@ -8,6 +8,13 @@
 
 typedef  void (*pFunction)(void);
 
+FLASHMEM void runMainTRApp_FromMin()
+{  //flag as "FromMin" to indicate skip of autolaunch (if enabled)
+   EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
+   delay(10);  //let EEPROM write complete
+   runMainTRApp();
+}
+
 FLASHMEM void runMainTRApp() 
 {
   uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image

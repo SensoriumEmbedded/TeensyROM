@@ -68,13 +68,16 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
-  
+   
+   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin) runMainTRApp(); //jump to main app if not booting a CRT
+   
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized
-   if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) runMainTRApp(); //jump to main app if not booting a CRT
    
-   EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot
+   //we have a crt to load in minimal mode, procede....
+   
+   EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM
@@ -113,7 +116,7 @@ void setup()
    if (!doReset) 
    {
       Serial.print("CRT not loaded, Abort!\n");
-      runMainTRApp(); //didn't load right if not calling for reset
+      runMainTRApp_FromMin(); //didn't load right if not calling for reset
    }
 } 
      
@@ -121,7 +124,7 @@ void loop()
 {
    if (BtnPressed)
    {
-      runMainTRApp(); 
+      runMainTRApp_FromMin(); 
       //Serial.print("Button detected (minimal)\n"); 
    }
    

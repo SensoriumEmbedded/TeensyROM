@@ -114,16 +114,22 @@ void setup()
    if(firstPartition) Printf_dbg("%dmS to init USB drive\n", millis()-StartMillis); 
    else Printf_dbg("USB drive not found!\n"); 
 
-
-   if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+   if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
    {
-      char AutoFileName[MaxPathLength];
-      EEPreadStr(eepAdAutolaunchName, AutoFileName);
-      char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
-      RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
-      
-      Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
-      RemoteLaunch(MenuSourceID, ptrAutoFileName);
+      if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+      {
+         char AutoFileName[MaxPathLength];
+         EEPreadStr(eepAdAutolaunchName, AutoFileName);
+         char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
+         RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
+         
+         Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
+         RemoteLaunch(MenuSourceID, ptrAutoFileName);
+      }
+   }
+   else
+   {  //if it's not skip min (most likely MinBootInd_FromMin), set back to default for next time 
+      EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
    }
    
    SetLEDOn;  //done last as indicator of init completion

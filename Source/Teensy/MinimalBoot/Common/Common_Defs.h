@@ -66,7 +66,7 @@ enum InternalEEPROMmap
 
 enum MinBootIndFlags
 {
-   MinBootInd_SkipMin          = 0,
-   MinBootInd_ExecuteMin       = 1,
-   MinBootInd_SkipMinNoAutoLd  = 2,
+   MinBootInd_SkipMin    = 0,
+   MinBootInd_ExecuteMin = 1,
+   MinBootInd_FromMin    = 2,
 };

@@ -32,23 +32,23 @@ FLASHMEM void ServiceSerial()
          if (inVal == ResetC64Token) //Reset C64
          {
             Serial.println("Reset cmd received");
-            runMainTRApp(); 
+            runMainTRApp_FromMin(); 
             return;
          }
          else if (inVal == LaunchFileToken) //Launch File
          {
             SendU16(RetryToken);
             Serial.println("Launch cmd from min");
-            runMainTRApp();
+            runMainTRApp_FromMin();
          }
  
          SendU16(FailToken);
          Serial.print("Busy!\n");
          return;
         
-      case 'u': //Jump to upper image (full build)
-         runMainTRApp();  
-         break;
+      //case 'u': //Jump to upper image (full build)
+      //   runMainTRApp();  
+      //   break;
 
    // l, c
    #ifdef Dbg_SerLog 
