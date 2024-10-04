@@ -206,6 +206,7 @@ extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
 extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem);
 extern bool SDFullInit();
+extern bool USBFileSystemWait();
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -549,11 +550,9 @@ FLASHMEM void LoadMainSIDforXfer()
       if(LatestSIDLoaded[0] == rmtSD)
       {
          sourceFS = &SD;
-         if(!SDFullInit()) // SD.begin(BUILTIN_SDCARD); with retry if presence detected
-         {
-            Printf_dbg("SD Init Fail\n");
-         }
+         SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
       }
+      else USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
       
       MyMenuItem.Name = LatestSIDName;
       MyMenuItem.ItemType = rtFileSID;

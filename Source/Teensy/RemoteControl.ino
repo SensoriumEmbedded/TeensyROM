@@ -103,7 +103,10 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
    RemoteLaunched = true;
    //Set selected drive
    IO1[rWRegCurrMenuWAIT] = MenuSourceID;
+
    if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
+
+   if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
    
    //set path & filename
    strcpy(DriveDirPath, FileNamePath);
