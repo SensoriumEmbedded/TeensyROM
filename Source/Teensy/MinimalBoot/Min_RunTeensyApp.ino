@@ -3,7 +3,7 @@
 // This code provided by AndyA via the PJRC forum
 // https://forum.pjrc.com/index.php?threads/teensy-4-1-dual-boot-capability.74479/post-339451
 
-#include "core_cm7_min.h"  //stripped down version to get defines needed
+#include "Min_core_cm7.h"  //stripped down version to get defines needed
 
 
 typedef  void (*pFunction)(void);

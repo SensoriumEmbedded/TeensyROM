@@ -20,10 +20,10 @@
 
 #include <SD.h>
 #include <EEPROM.h>
-#include "TeensyROM.h"
-#include "Menu_Regs.h"
-#include "DriveDirLoad.h"
-#include "IOHandlers.h"
+#include "Min_TeensyROM.h"
+#include "Min_Menu_Regs.h"
+#include "Min_DriveDirLoad.h"
+#include "Min_IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
