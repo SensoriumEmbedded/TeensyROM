@@ -1,8 +1,8 @@
 
 # Custom BASIC Commands
 
-New/custom C64 BASIC Commands to communicate with and through your TeensyROM.  
-* See demo video [here.](***youtube address***)
+## Communicate with and through your TeensyROM from C64 BASIC  
+* See the brief demo video [available here.](https://youtu.be/5qShZjLOG5s)
 * Instantly load and Save BASIC programs to/from your TR
   ```
   TLOAD "MYPROG.PRG"
@@ -23,9 +23,7 @@ Implementation is built upon **[Custom Basic Commands](https://github.com/barryw
 
 To begin, select `BASIC w/ Custom Commands +TR BAS` from the main TR menu. (as of FW 0.6.2)
 
-<BR>
-
-Here are the TeensyROM specific commands available:
+## TeensyROM specific commands available:
 |Command|Description|
 |:--|:--|
 |`TSAVE <media><path><filename>`|Super fast Saves the current BASIC file to SD or USB on the TR|
@@ -34,9 +32,7 @@ Here are the TeensyROM specific commands available:
 |`TPUT <string out>`|Send the full contents of <string out> out the TR USB Serial port|
 |`TGET <string char in>`|Read a singe character from the TR USB Serial port into <string char in>|
 
-<BR>
-
-Command argument details:
+### Command argument details:
 |Argument|Description|Requirement|
 |:--|:--|:--|
 |`<media>`|Either `USB:` or `SD:` to specify media type|**optional**, USB is default|
@@ -45,7 +41,7 @@ Command argument details:
 
 <BR>
 
-**In addition, these capabilities are also available from the original implementation:**
+## Capabilities included from the original implementation:
 
 **BASIC will now accept integers as either HEX or binary, in addition to decimal.** 
 <BR>For example: `POKE $0400, $0a` or `POKE $d020, %00001111`. 
@@ -53,7 +49,10 @@ Command argument details:
 <BR>
 <BR>
 
-**Additional Commands**<BR>Note that some of these require additional HW such as an REU, or can conflict with memory space used by these commands themselves.
+### Additional Commands
+
+Note that some of these require additional HW such as an REU, or can conflict with memory space used by these commands themselves.
+
 |Command|Description|
 |:--|:--|
 |`BACKGROUND` |Sets the background color: Example: `BACKGROUND 2` would set it to red|
@@ -73,9 +72,7 @@ Command argument details:
 |`SPRCOLOR` |Set a sprite's color|
 |`DIR` |Display a disk directory listing. Example `DIR 8` would display the disk directory of a disk in device 8.|
 
-<br>
-
-**Additional functions**
+### Additional functions
 |Function|Description|
 |:--|:--|
 |`WEEK` |A version of the PEEK function which returns a 16-bit word instead of an 8-bit byte. Example: `PRINT WEEK($61)`|
