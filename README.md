@@ -1,23 +1,31 @@
-# TeensyROM
-**ROM emulator, instant loader, MIDI Host/Device, ASID Player, Internet interface cartridge and *much more* for the Commodore 64 & 128, based on the Teensy 4.1**
-<br>*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
+# TeensyROM Multi-capable Cartridge for C64/128
 
-**Recent Updates:** 
-* **TeensyROM cases are now available to order in the US & Canada via sMs Retro Electronics!**  There are several colors of high quality 3D prints available.  Visit their store **[here](https://ko-fi.com/smsretroelectronics)**. 
+***Connect your Commodore to the 21st century***
 
-* **The [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) is here!** [MetalHexx](https://github.com/MetalHexx)'s amazing app for controlling your TeensyROM/C64 from Windows enables lightning fast exploration of Games, Scene Demos, Music and Images in very large file collections. Coupled with remote launch capability, you will cover a lot of ground very quickly and discover great content faster than ever.  See all the details in the [TeensyROM UI Repo](https://github.com/MetalHexx/TeensyROM-UI).
+**Features include:**
+* **ROM emulator**: The perfect way to play CRT files, such as the highly recommend [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
+* **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
+* **MIDI USB Host & Device, ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to make your SID chip sing!
+* **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
+* **Remote Control** your C64 using 
+  * [NFC tags](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
+  * The feature rich [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and Cross-platform [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
+* Picture viewer, SID Player, Custom BASIC Commands, Autolaunch, *and more* 
+* Lots of games, utilities, pics, and music built-in: no external media required to get started!
+* [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 
+*Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
   
-**Fully assembled/tested units are available via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).**
+Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
+<BR>If you prefer, **Fully assembled/tested units** are available via my [Tindie shop](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).
 <BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
-<BR>If you'd prefer to make your own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 
-If you have thoughts/input on this project, questions, or would like to meet other TeensyROM users, please join us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U)
+Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, or for sale via [sMs Retro Electronics](https://ko-fi.com/smsretroelectronics)
 
-
+Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U) to meet other TeensyROM users, ask questions, provide thoughts/input/feedback, etc.
 
 ## Table of contents
-  * [TeensyROM Features](#teensyrom-features)
+  * [TeensyROM Feature details](#teensyrom-feature-details)
   * [Links to detailed documentation](#links-to-detailed-documentation)
   * [Demo Videos](#demo-videos)
   * [Hardware/PCB Design](#hardware-pcb-design)
@@ -32,9 +40,7 @@ If you have thoughts/input on this project, questions, or would like to meet oth
 |![TeensyROM pic1](media/case/case-front-corner.png)|![TeensyROM case](media/case/case-rear-corner.png)| 
 |:--:|:--:|
 
-
-  
-## TeensyROM Features
+## TeensyROM Feature Details
 ### Compatable with C64 and C128 machines/variants, NTSC and PAL supported
 ### **Super fast Loading (.PRG/P00) or ROM emulation (.CRT)** directly from:
   * USB thumb Drive
@@ -73,6 +79,7 @@ If you have thoughts/input on this project, questions, or would like to meet oth
     * **[Ethernet Usage](docs/Ethernet_Usage.md)**
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
+    * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
   * **SW Release notes/developnment**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Win App Release History](bin/WinApp/WinApp_Release_History.md)**
@@ -104,8 +111,9 @@ Component selection was done using parts large enough (SOIC and 0805s at the sma
 The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per the app, external cooling is not required for this speed.  However, in abundance of caution, a heatsink is specified in the BOM for this project.  In addition, the temperature can be read on the setup screen of the main TeensyROM app. The max spec is 95C, and there is a panic shutdown at 90C.  In my experience, even on a warm day running for hours with no heatsink, the temp doesn't excede 75C.
 
 ## Inspiration and Thank-Yous:
-* **Heather S**: Loving wife, continuous encourager
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) development
+* [**Heather S**](https://www.instagram.com/dalliancecreations/): Loving wife, continuous encourager, saintly patience
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
+* [**Avrilcadabra**](https://www.youtube.com/@avrilcadabra): Musician, experimenter, provider of ideas and feedback 
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
 * [**StatMat**](https://github.com/Stat-Mat): NFC Scanner idea, Fast boot code, OneLoad64 creation

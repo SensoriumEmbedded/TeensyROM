@@ -15,38 +15,38 @@
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/TR_Connections.png)
 
-## Main Menu Options/Navigation (as of FW v0.5.15)
+## Main Menu Options/Navigation (as of FW v0.6.2)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
-    * **CRSR or Joystick Up/Down:** Move cursor up/down the list of files on the currently selected source device
-    * **CRSR or Joystick Left/Right:** Page up/down the list of files
-    * **Return or Joystick Fire button:** Select/run the highlighted file or enter sub-directory
+    * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
+    * `CRSR or Joystick Left/Right` Page up/down the list of files
+    * `Return or Joystick Fire button` Select/run the highlighted file or enter sub-directory
   * Additional Keyboard commands:
-    * **Up Arrow:** Up 1 directory level
-    * **Home:** Move cursor to first item in directory
-    * **a-z:** Search current directory for first item beginning with letter pressed
-    * **1-4:** Hot Keys to launch the following:
-      * 1: Cynthcart
-      * 2: Station64
-      * 3: CCGMS
-      * 4: TeensyROM ASID Player
-    * **F1:** Display files stored in Teensy Memory via firmware
-    * **F3:** Display files on an attached SD card
-    * **F5:** Display files on an attached USB Drive
-    * **F7:** Show Help Menu
-    * **F2:** Exit to regular BASIC startup screen, TeensyROM deactivated
+    * `Up Arrow` Up 1 directory level
+    * `a-z` Search current directory for first item beginning with letter pressed
+    * `Home` Move cursor to first item in directory
+    * `Left Arrow` Write NFC Tag that will launch currently highlighted file
+    * `Shift-Return` Set Auto-Launch to currently highlighted file
+    * `1-4` Hot Keys to launch the following:
+      * `1` Cynthcart
+      * `2` Station64
+      * `3` CCGMS
+      * `4` TeensyROM ASID Player
+    * `F1` Display files stored in Teensy Memory via firmware
+    * `F3` Display files on an attached SD card
+    * `F5` Display files on an attached USB Drive
+    * `F7` Show Help Menu
+    * `F2` Exit to regular BASIC startup screen, TeensyROM deactivated
       * Re-activate TeensyROM by pressing button
-    * **F4:** Toggle background SID on/off
-    * **F6:** Show SID Informartion
-    * **F8:** Show Settings Menu
-    * **Space Bar:** 
-    * **Left Arrow:** Write NFC tag that will launch the highlighted file
+    * `F4` Toggle background SID on/off
+    * `F6` Show SID Informartion
+    * `F8` Show Settings Menu
   * Screen contents:
     * **File Source and dir path** is shown in the upper left corner
     * **Page number and number of pages** is shown in the lower right corner
     * **Current time** is shown in the upper right (if ethernet connected/synching).  Otherwise the time will start at midnight upon startup.
     * **File type** is to the right of each file/dir displayed. If "Unk" (unknown) then it is not a recognized/supported file type.
       * **'+'** in front of file type means it is pre-associated with Special IO emulation needed for function (MIDI, Swiftlink network) 
-    * **Quick Help** is displayed at the bottom of the screen, hit space for detail help screen.
+    * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
 ## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
@@ -78,27 +78,27 @@
     * ***.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
-## The Settings Menu (as of FW v0.5.12)
+## The Settings Menu (as of FW v0.6.2)
   * Keyboard commands available from the Settings Menu:
     * These commands modify settings stored in the Teensy, and are recalled on power-up
-      * **a/A:** Set local Time Zone for system/screen clock (applied next Ethernet time synch)
-      * **b/B:** Select Special IO to apply when launching a PRG/CRT (see below)
-      * **c/C:** Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
-      * **d:** Toggle auto Internet Time Synch on power-up
-      * **e:** Toggle auto background music on power-up
-      * **f:** Toggle NFC Reader enabled on power-up
-      * **g:** Toggle RW Ready timing delay (to improve Hi-ROM games on Reloaded MKII and C64c)
+      * `a/A` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
+      * `b/B` Select Special IO to apply when launching a PRG/CRT (see below)
+      * `c/C` Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
+      * `d` Toggle auto Internet Time Synch on power-up
+      * `e` Toggle auto background music on power-up
+      * `f` Toggle NFC Reader enabled on power-up
+      * `g` Toggle RW Ready timing delay (to improve Hi-ROM games on Reloaded MKII and C64c)
     * These commands only change settings for this session and execute immediately
-      * **h:** Reboot TeensyROM to execute updated power-up settings
-      * **i:** Perform Internet Time Synch
-      * **j:** Toggle background music on/off
-      * **k:** Execute Self-Test (takes ~4 seconds)
+      * `h` Reboot TeensyROM to execute updated power-up settings
+      * `i` Perform Internet Time Synch
+      * `j` Toggle background music on/off
+      * `k` Execute Self-Test (takes ~4 seconds)
         * Tests the TeensyROM ability to rapidly read from emulated ROM
         * Helpful in testing out HW and debug, but should not fail in normal use
         * The is not an exhaustive test, but may be expanded later
-      * **l:** Display Help menu
-      * **Space Bar:** Return to Main Menu
-      * **Return:** Screen refresh.  Handy for updating the temperature reading 
+      * `l` Display Help menu
+      * `Space Bar` Return to Main Menu
+      * `Return` Screen refresh.  Handy for updating the temperature reading 
   * Other information on the Settings screen
     * Build Date/Time
       * In addition to the FW version number, the date/time of the build is also logged.
@@ -119,7 +119,7 @@
   * How is it used/selected?
     * The easy method is to use the software supplied with the TeensyROM with a '+' sign in fron of the type.
       * These will automatically associate the needed IO to emulate Swiftlink Internet or the required MIDI interface.
-      * Currently this includes the following:
+      * This includes the following, for example:
         * **CCGMS Terminal** Pre-configured and associated with Swiftlink interface to [Ethernet connection](Ethernet_Usage.md)
         * **Cynthcart** Assiciated with the Datel MIDI interface to [USB MIDI Host/Device](MIDI_Usage.md)
         * **Station 64** Assiciated with the Passport MIDI interface [USB MIDI Host/Device](MIDI_Usage.md)
