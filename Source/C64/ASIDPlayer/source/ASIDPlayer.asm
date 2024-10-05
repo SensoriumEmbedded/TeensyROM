@@ -11,6 +11,7 @@
    ASIDDataReg         = 0xc4;   // (Read only)  ASID data, increment queue Tail 
    ASIDQueueUsed       = 0xc8;   // (Read only)  Current Queue amount used
    ASIDContReg         = 0xca;   // (Write only) Control Reg 
+   ASIDVoiceMuteReg    = 0xcc;   // (write only) bits 0-2 set voice muting
    
    ;// Control Reg Commands
    ;// Timer controls match TblMsgTimerState, start at 0
@@ -268,7 +269,7 @@ setcolor
    sta SIDRegColorStart,x
 nextsidreg
    inx  ;next register
-   cpx #25 ;25 registers 0-24
+   cpx #27 ;25 registers 0-24, plus show 2 more for bit bucket regs
    bne regcolorupdate
 
  
@@ -392,7 +393,7 @@ UpdateBufferSize  ;mem & control from x register
    inc smcScreenFull+1 ;set screen full flag
    jmp ASIDMainLoop
 
-+  cmp #'1'  ;1st SID address
++  cmp #ChrF1  ;1st SID address
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID1addrNum
@@ -404,7 +405,7 @@ UpdateBufferSize  ;mem & control from x register
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
-+  cmp #'2'  ;2nd SID address
++  cmp #ChrF2  ;2nd SID address
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID2addrNum
@@ -416,7 +417,7 @@ UpdateBufferSize  ;mem & control from x register
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
-+  cmp #'3'  ;3rd SID address
++  cmp #ChrF3  ;3rd SID address
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID3addrNum
@@ -427,6 +428,28 @@ UpdateBufferSize  ;mem & control from x register
 ++ stx memSID3addrNum
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
+
++  cmp #'1'  ;Voice #1 mute toggle
+   bne + 
+   lda memVoiceMuteState
+   eor #$01 ;toggle voice #1 (bit 0)
+   jmp WriteVoiceMute
+
++  cmp #'2'  ;Voice #2 mute toggle
+   bne + 
+   lda memVoiceMuteState
+   eor #$02 ;toggle voice #2 (bit 1)
+   jmp WriteVoiceMute
+
++  cmp #'3'  ;Voice #3 mute toggle
+   bne + 
+   lda memVoiceMuteState
+   eor #$04 ;toggle voice #3 (bit 2)
+WriteVoiceMute
+   sta ASIDVoiceMuteReg+IO1Port  ;set in TR
+   sta memVoiceMuteState ;save to mem
+   jmp ShowKeyboardCommands
+
 
 +  jmp ASIDMainLoop
 

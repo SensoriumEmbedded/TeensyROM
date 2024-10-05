@@ -154,6 +154,8 @@ memTextCircQueueHead:
 memTextCircQueueTail:
    !byte 0
    
+memVoiceMuteState:  ;bit0-2 high if voice # is muted
+   !byte 0
 memSID1addrNum:
    !byte 0
 memSID2addrNum:
@@ -173,11 +175,15 @@ memNumSIDaddresses:
 
 
 MsgASIDPlayerMainDisplay:    
-   !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.1        "
+   !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.2        "
    !tx ChrBlack, "                                  Mute "
-   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "*************************  ", ChrBrown, "  ", ChrOrange, "  " 
-   !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV"
-   !tx ChrReturn, ChrLtGreen, "       ", $ed, $60, $60, "1", $60, $60, $fd,  $ed, $60, $60, "2", $60, $60, $fd,  $ed, $60, $60, "3", $60, $60, $fd  
+   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "***************************", ChrBrown, "  ", ChrOrange, "  " 
+   !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV", ChrDrkGrey, "B"
+   !tx ChrReturn, "       "
+   !tx ChrLtGreen
+   !tx $ed, $60, $60, "1", $60, $60, $fd
+   !tx $ed, $60, $60, "2", $60, $60, $fd
+   !tx $ed, $60, $60, "3", $60, $60, $fd  
    !tx ChrMedGrey, "     ?-Help"
    !tx ChrReturn, ChrPurple, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
    !tx                       $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
@@ -190,18 +196,19 @@ MsgASIDPlayerCommands1:
    !tx ChrLtGrey
    !tx "   v: Clear Voices", ChrReturn
    !tx "   s: Screen Toggle", ChrReturn
-   !tx "   m: Mute Toggle", ChrReturn
+   !tx "   m: Mute All Toggle", ChrReturn
+   !tx "   1,2,3: Mute Voice # Toggle", ChrReturn
    !tx "   ?: This Help List", ChrReturn
    !tx "   d: Register/Indicator Decoder", ChrReturn
    !tx "   c: Clear Screen", ChrReturn
    !tx "   x: Exit", ChrReturn
-   !tx "   1: First  SID address ", ChrRvsOn, "$"
+   !tx "  F1: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    
-   !tx ChrReturn, "   2: Second SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "  F2: Second SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands3:    
-   !tx ChrReturn, "   3: Third  SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "  F3: Third  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
    !tx ChrReturn, "   t: Frame Timer (beta) ", ChrRvsOn
@@ -211,7 +218,7 @@ MsgASIDPlayerCommands5:
    !tx 0
 MsgASIDPlayerCommands6:    
    !tx ChrReturn, ChrDrkGrey
-   !tx ChrReturn, "  Recommend muting playback"
+   !tx ChrReturn, "  Recommend muting all playback"
    !tx ChrReturn, "    when changing SID adresses"
    !tx 0
    
@@ -237,6 +244,8 @@ MsgASIDPlayerDecoder:
    !tx "   Cf: Cutoff Frequency Lo/Hi", ChrReturn
    !tx "    R: Resonance", ChrReturn
    !tx "    V: Volume/Select", ChrReturn
+   !tx ChrDrkGrey
+   !tx "    B: Bit Bucket", ChrReturn
    !tx 0
    
 MsgASIDStart:    

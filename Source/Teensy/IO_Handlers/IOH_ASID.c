@@ -45,6 +45,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDDataReg         = 0xc4,   // (Read only)  ASID data, increment queue Tail 
    ASIDQueueUsed       = 0xc8,   // (Read only)  Current Queue amount used
    ASIDContReg         = 0xca,   // (Write only) Control Reg 
+   ASIDVoiceMuteReg    = 0xcc,   // (write only) bits 0-2 set voice muting
 
    // Control Reg Commands
    // Timer controls match TblMsgTimerState, start at 0
@@ -107,6 +108,7 @@ uint32_t BufByteTarget;
 bool QueueInitialized, FrameTimerMode;
 int32_t DeltaFrames;
 uint32_t ASIDQueueSize, NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs;
+uint8_t MutedVoiceFlags;
 
 uint8_t ASIDidToReg[] = 
 {
@@ -210,7 +212,8 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
             uint8_t RegVal = data[11+NumRegs];
             if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
             AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal);
-            #ifdef DbgMsgs_IO  //Debug msgs for secondary reg or higher access
+            #ifdef DbgMsgs_IO  
+               //// Debug msgs for secondary reg or higher access
                //if(maskNum*7+bitNum>24)
                //{
                //   Printf_dbg_SysExInfo;
@@ -418,6 +421,7 @@ void InitHndlr_ASID()
    NVIC_DISABLE_IRQ(IRQ_ENET); // disable ethernet interrupt during ASID
    NVIC_DISABLE_IRQ(IRQ_PIT);
 
+   MutedVoiceFlags = 0;
    ForceIntervalUs = 0;  // 0 to ignore and use timed val, 19950=PAL, 16715=NTSC
    FrameTimerMode = false; //initialize to off, synched with asm code default: memFrameTimer
    ASIDQueueSize = RegValToBuffSize(ASIDContBufMedium); //Initialize to match memBufferSize default
@@ -531,11 +535,45 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                break;            
          }
       }
-   }
+      else if (Address == ASIDVoiceMuteReg)
+      {
+         Printf_dbg("ASIDVoiceMuteReg = %02x\n", Data);
+         for(uint8_t bitnum=0; bitnum<3; bitnum++)
+         {
+            if (Data & (1<<bitnum))
+            { //voice is muted, write voice CR to garbage reg (cleared in main loop)
+               ASIDidToReg[22+bitnum]= 25; //point reg decoder for voice CR to a garbage reg (PotX read-only)
+            }
+            else
+            { //voice not muted, point to default reg
+               ASIDidToReg[22+bitnum]= 4+bitnum*7; //Correctly point reg decoder for voice CR 
+               // reg#, bit/index  ASIDidToReg defaults
+               //    4,   22
+               //   11,   23
+               //   18,   24
+            }
+            MutedVoiceFlags = Data; //update to flag main routine to write zeros to muted voice regs
+         }
+      }
+      
+   }  // IO1 write
 }
 
 void PollingHndlr_ASID()
 {
+   if(MutedVoiceFlags)
+   {
+      for(uint8_t bitnum=0; bitnum<3; bitnum++)
+      {
+         if (MutedVoiceFlags & (1<<bitnum))
+         { //voice is muted, clear it
+            AddToASIDRxQueue(ASIDAddrType_SID1 | (4+bitnum*7), 0); //add command to clear voice CR reg @4/11/18
+            SetASIDIRQ();
+         }
+      }
+      MutedVoiceFlags = 0;
+   }
+   
    if(ASIDRxQueueUsed == 0 || FrameTimerMode) //read MIDI-in data in only if ready to send to C64 (buffer empty)
    {
       usbDevMIDI.read();

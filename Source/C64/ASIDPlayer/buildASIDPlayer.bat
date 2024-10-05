@@ -51,7 +51,7 @@ copy %buildPath%\%MainBuild%.h %bin2headerROMPath%\%MainBuild%.h
 @echo *** Verify "PROGMEM" before "static const unsigned char XXXXXXXXX_prg[] = {"
 @echo ************************************************************************************
 
-cmd.exe /c start /b notepad++.exe %bin2headerROMPath%\%MainBuild%.h
+::cmd.exe /c start /b notepad++.exe %bin2headerROMPath%\%MainBuild%.h
 ::"C:\Program Files\Notepad++\notepad++.exe"
 
 ::pause
