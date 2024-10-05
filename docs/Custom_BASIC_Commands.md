@@ -1,7 +1,23 @@
 
 # Custom BASIC Commands
 
-This feature allows the use of Custom C64 BASIC Commands to communicate with your TeensyROM.  This enables load/saving BASIC programs to/from your TR, communication via USB serial to another computer/devive, and more!
+New/custom C64 BASIC Commands to communicate with and through your TeensyROM.  
+* See demo video [here.](***youtube address***)
+* Instantly load and Save BASIC programs to/from your TR
+  ```
+  TLOAD "MYPROG.PRG"
+  TSAVE "SD:MYDIR/TERM.PRG
+  TDIR
+  ```
+* Communicate via USB serial to/from another computer.
+  * Write BASIC programs that can receive/display externally provided data
+  * Send information or user input to another computer.
+  * Example simple terminal program:
+    ```
+    10 GET A$ : TPUT A$
+    20 TGET B$ : PRINT B$;
+    30 GOTO 10
+    ```
 
 Implementation is built upon **[Custom Basic Commands](https://github.com/barryw/CustomBasicCommands)** Copyright 2023 by [Barry Walker](https://github.com/barryw)
 
