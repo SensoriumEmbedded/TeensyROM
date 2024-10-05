@@ -2,26 +2,12 @@
 # Custom BASIC Commands
 
 ## Communicate with and through your TeensyROM from C64 BASIC  
-* See the brief demo video [available here.](https://youtu.be/5qShZjLOG5s)
-* Instantly load and Save BASIC programs to/from your TR
-  ```
-  TLOAD "MYPROG.PRG"
-  TSAVE "SD:MYDIR/TERM.PRG
-  TDIR
-  ```
-* Communicate via USB serial to/from another computer.
-  * Write BASIC programs that can receive/display externally provided data
-  * Send information or user input to another computer.
-  * Example simple terminal program:
-    ```
-    10 GET A$ : TPUT A$
-    20 TGET B$ : PRINT B$;
-    30 GOTO 10
-    ```
 
-Implementation is built upon **[Custom Basic Commands](https://github.com/barryw/CustomBasicCommands)** Copyright 2023 by [Barry Walker](https://github.com/barryw)
+Implementation built upon **[Custom Basic Commands](https://github.com/barryw/CustomBasicCommands)** Copyright 2023 by [Barry Walker](https://github.com/barryw)
+<BR>
+Thank you Barry for this well documented, robust framework!
 
-To begin, select `BASIC w/ Custom Commands +TR BAS` from the main TR menu. (as of FW 0.6.2)
+### To begin, select `BASIC w/ Custom Commands +TR BAS` from the main TR menu. (FW 0.6.2 or higher)
 
 ## TeensyROM specific commands available:
 |Command|Description|
@@ -39,7 +25,24 @@ To begin, select `BASIC w/ Custom Commands +TR BAS` from the main TR menu. (as o
 |`<path>` |Path to file from root|**optional**, root is default|
 |`<filename>`|Name of the program file|**required**, use `.prg` extension|
 
-<BR>
+
+## What can be done with these commands?
+* Instantly load and Save BASIC programs to/from your TR
+  ```
+  TLOAD "MYPROG.PRG"
+  TSAVE "SD:MYDIR/TERM.PRG
+  TDIR
+  ```
+* Communicate via USB serial to/from another computer.
+  * See this brief [**demo video**](https://youtu.be/5qShZjLOG5s)
+  * Write BASIC programs that can receive/display externally provided data
+  * Send information or user input to another computer.
+  * Example simple terminal program:
+    ```
+    10 GET A$ : TPUT A$
+    20 TGET B$ : PRINT B$;
+    30 GOTO 10
+    ```
 
 ## Capabilities included from the original implementation:
 
