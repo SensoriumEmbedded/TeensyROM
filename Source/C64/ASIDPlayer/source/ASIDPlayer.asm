@@ -56,7 +56,7 @@
    SpinIndPacketError = C64ScreenRAM+40*2+6 ;spin indicator: error from packet parser, see AddErrorToASIDRxQueue in IOH_ASID.c
    SIDRegColorStart   = C64ColorRAM +40*2+7
    MuteColorStart     = C64ColorRAM +40*1+32 ;start of "Mute" display
-   QueueUsedIndicator = C64ScreenRAM+40*2+34 ;Queue used indicator
+   QueueUsedIndicator = C64ScreenRAM+40*2+35 ;Queue used indicator
    
    RegFirstColor  = PokeWhite
    RegSecondColor = PokeDrkGrey
@@ -220,7 +220,7 @@ smcLastUpd
    sta smcLastUpd+1
    ;inc SpinIndUnexpType  ;temp to check update cycle
 
-;update Queue used indicator
+;update Queue used indicator/bar graph
    lda ASIDQueueUsed+IO1Port  ;0-31 representing how full the queue is
    tax
    lsr
@@ -229,7 +229,7 @@ smcLastUpd
    and #$03 ;shouldn't be needed, but just in case
    sta smcFineIndic+1 ;acc now 0-3
    
-   lda #$f0 ;empty
+   lda #$f0 ;empty character
    ldy #$03
 smcFineIndic
    cpy #0
@@ -243,7 +243,7 @@ smcFineIndic
    ora #$f0  ;custom char bar graph start
    sta QueueUsedIndicator, y
 
-   lda #$f8 ;full
+   lda #$f8 ;full character
 -  cpy #0
    beq +
    dey
@@ -392,7 +392,7 @@ UpdateBufferSize  ;mem & control from x register
    inc smcScreenFull+1 ;set screen full flag
    jmp ASIDMainLoop
 
-+  cmp #ChrF1  ;1st SID address
++  cmp #ChrF1  ;1st SID address inc
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID1addrNum
@@ -404,7 +404,18 @@ UpdateBufferSize  ;mem & control from x register
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
-+  cmp #ChrF2  ;2nd SID address
++  cmp #ChrF2  ;1st SID address dec
+   bne + 
+   ;decrement to previous table entry, or wrap around
+   ldx memSID1addrNum
+   bne ++
+   ldx memNumSIDaddresses
+++ dex
+   stx memSID1addrNum
+   jsr UpdateAllSIDAddress
+   jmp ShowKeyboardCommands
+
++  cmp #ChrF3  ;2nd SID address inc
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID2addrNum
@@ -416,7 +427,18 @@ UpdateBufferSize  ;mem & control from x register
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 
-+  cmp #ChrF3  ;3rd SID address
++  cmp #ChrF4  ;2nd SID address dec
+   bne + 
+   ;decrement to previous table entry, or wrap around
+   ldx memSID2addrNum
+   bne ++
+   ldx memNumSIDaddresses
+++ dex
+   stx memSID2addrNum
+   jsr UpdateAllSIDAddress
+   jmp ShowKeyboardCommands
+
++  cmp #ChrF5  ;3rd SID address inc
    bne + 
    ;increment to next table entry, or wrap around
    ldx memSID3addrNum
@@ -425,6 +447,17 @@ UpdateBufferSize  ;mem & control from x register
    bne ++
    ldx #0
 ++ stx memSID3addrNum
+   jsr UpdateAllSIDAddress
+   jmp ShowKeyboardCommands
+
++  cmp #ChrF6  ;3rd SID address dec
+   bne + 
+   ;decrement to previous table entry, or wrap around
+   ldx memSID3addrNum
+   bne ++
+   ldx memNumSIDaddresses
+++ dex
+   stx memSID3addrNum
    jsr UpdateAllSIDAddress
    jmp ShowKeyboardCommands
 

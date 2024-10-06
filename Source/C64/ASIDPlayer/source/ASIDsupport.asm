@@ -213,8 +213,8 @@ memNumSIDaddresses:
 MsgASIDPlayerMainDisplay1:    
    !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.2        "
    !tx ChrBlack, "                                  Mute "
-   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "***************************", ChrBrown, "  ", ChrOrange, "  " 
-   !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV", ChrDrkGrey, "B"
+   !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "****************************", ChrBrown, "  ", ChrOrange, "  " 
+   !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV", ChrDrkGrey, "BB"
    !tx ChrReturn, "       ", 0
 MsgASIDPlayerMainVoice1: ; first byte overwritten with correct color
    !tx ChrYellow, $ed, $60, $60, "1", $60, $60, $fd, 0
@@ -241,19 +241,19 @@ MsgASIDPlayerCommands1:
    !tx "     d: Register/Indicator Decoder", ChrReturn
    !tx "     c: Clear Screen", ChrReturn
    !tx "     x: Exit", ChrReturn
-   !tx "    F1: First  SID address ", ChrRvsOn, "$"
+   !tx " F1/F2: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    
-   !tx ChrReturn, "    F2: Second SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, " F3/F4: Second SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands3:    
-   !tx ChrReturn, "    F3: Third  SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, " F5/F6: Third  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
-   !tx ChrReturn, "     t: Frame Timer (beta) ", ChrRvsOn
+   !tx ChrReturn, "     t: Frame Timer ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands5:    
-   !tx ChrReturn, "   b/B: Buffer Size ", ChrRvsOn
+   !tx ChrReturn, "   B/b: Buffer Size ", ChrRvsOn
    !tx 0
 ;MsgASIDPlayerCommands6:    
 ;   !tx ChrReturn, ChrDrkGrey
