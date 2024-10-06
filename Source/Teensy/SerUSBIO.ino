@@ -100,10 +100,22 @@ FLASHMEM void ServiceSerial()
          
 // *** The rest of these cases are used for debug/testing only  
      
+      //case 'u':  //set up autolaunch
+      //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+      //   Serial.printf("Autolaunch disabled\n");
+      //   
+      //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
+      //   //Serial.printf("Autolaunch set\n");
+      //   
+      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg");
+      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg");
+      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ");
+      //   break;
+     
       //case 'u':  //Reboot to minimal build
       //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
       //   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
-      //   EEPROM.write(eepAdMinBootInd, 1);         
+      //   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);         
       //   REBOOT;
       //   break;
 

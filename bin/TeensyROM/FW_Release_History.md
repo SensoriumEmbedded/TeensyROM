@@ -1,6 +1,44 @@
 
 # FW Release Version history:
 
+### 0.6.2 Release 10/6/24
+* New feature: *Custom BASIC Commands*
+  * Communicate with/though your TeensyROM from new BASIC language commands
+  * TSAVE, TLOAD, TDIR, TPUT, TGET, plus many other commands available from C64 BASIC
+  * See [BASIC commands usage document](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/Custom_BASIC_Commands.md) for details
+  * Demo video available [here.](https://youtu.be/5qShZjLOG5s)
+  * Thank you to @hExx and @Avrilcadabra for the brainstorming!
+* New feature: *Selectable Auto-Launch on startup*
+  * Allows launch of any file/program on power-up
+    * Great for diagnostics execution and headless opperation
+  * Shift-Return sets Auto-Launch to currently highlighted file
+    * File can be from any source (SD/USB/TR)
+  * Disable from settings menu
+  * After auto-boot, menu button to return to main menu.
+  * Hold reset on power-up to skip (until LED comes on)
+  * Thank you to @misterfox and @Avricadabra for the recommendation!
+* ASID player improvements:
+  * New feature: *Individual voice muting (1/2/3)*
+    * Voice # group red when muted
+    * Allows user to hear individual voices to "disect" ASID input
+    * Thank you to @Avricadabra for the idea
+  * Bit bucket reg to send Ctl Reg of muted voices
+  * SID address up *or down* via function keys F1/F2, F3/F4, F5/F6
+* Documentation updates:
+  * Help screen: added left arrow, shift-ret, and 1-4
+  * ASID player [usage doc](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md)
+  * [BASIC commands usage document](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/Custom_BASIC_Commands.md)
+* Other fixes/improvements:
+  * Doing full BASIC init before PRG launch, cause some programs to launch incorrectly (Thanks to @Mad for identifying)
+  * File access on boot improvements:
+    * USBFileSystemWait to make sure USB is on line before accessing on boot
+    * SDFullInit retries SD.begin if media presence detected
+  * Start TOD clock earlier in startup seq in case of remote/auto launch
+  * Fix row number to print "Done" for Set main background SID
+  * No longer printing all screen messages to serial (unless Debug flag is set)
+  * ASM build batch files updated to add "PROGMEM" via custom bin2header.py
+  * Note: EEPROM setting will reset with this update
+
 ### 0.6.1 Release 9/16/24
 * ASID Player usage documentation created, [available here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md)
 * ASID player updates (v1.1)
