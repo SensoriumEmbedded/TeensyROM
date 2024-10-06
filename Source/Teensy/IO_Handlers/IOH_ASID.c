@@ -538,21 +538,26 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
       else if (Address == ASIDVoiceMuteReg)
       {
          Printf_dbg("ASIDVoiceMuteReg = %02x\n", Data);
+         MutedVoiceFlags = Data; //update to flag main routine to write zeros to muted voice regs
          for(uint8_t bitnum=0; bitnum<3; bitnum++)
          {
             if (Data & (1<<bitnum))
             { //voice is muted, write voice CR to garbage reg (cleared in main loop)
-               ASIDidToReg[22+bitnum]= 25; //point reg decoder for voice CR to a garbage reg (PotX read-only)
+               ASIDidToReg[22+bitnum]= 25; //point reg decoder for voice CR to bit-bucket reg (PotX read-only)
+               ASIDidToReg[25+bitnum]= 26; //point secondary reg decoder for voice CR to bit-bucket reg (PotX read-only)
             }
             else
             { //voice not muted, point to default reg
                ASIDidToReg[22+bitnum]= 4+bitnum*7; //Correctly point reg decoder for voice CR 
-               // reg#, bit/index  ASIDidToReg defaults
-               //    4,   22
-               //   11,   23
-               //   18,   24
+               ASIDidToReg[25+bitnum]= 4+bitnum*7; //Correctly point secondary reg decoder for voice CR 
             }
-            MutedVoiceFlags = Data; //update to flag main routine to write zeros to muted voice regs
+            // reg#, bit/index  ASIDidToReg defaults
+            //    4,   22
+            //   11,   23
+            //   18,   24
+            //    4,   25 <= secondary for reg 04
+            //   11,   26 <= secondary for reg 11
+            //   18,   27 <= secondary for reg 18
          }
       }
       

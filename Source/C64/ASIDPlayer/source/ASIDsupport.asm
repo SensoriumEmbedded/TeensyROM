@@ -119,9 +119,45 @@ UpdateAllSIDAddress:
    rts
 
 ClearASIDScreen:
-   lda #<MsgASIDPlayerMainDisplay
-   ldy #>MsgASIDPlayerMainDisplay
+   lda #<MsgASIDPlayerMainDisplay1
+   ldy #>MsgASIDPlayerMainDisplay1
    jsr PrintString 
+   
+   ldx #ChrLtGreen  ;default not muted
+   lda memVoiceMuteState
+   and #$01
+   beq +  ;not muted
+   ldx #ChrRed
++  stx MsgASIDPlayerMainVoice1
+   lda #<MsgASIDPlayerMainVoice1
+   ldy #>MsgASIDPlayerMainVoice1
+   jsr PrintString 
+   
+   ldx #ChrLtGreen  ;default not muted
+   lda memVoiceMuteState
+   and #$02
+   beq +  ;not muted
+   ldx #ChrRed
++  stx MsgASIDPlayerMainVoice2  
+   lda #<MsgASIDPlayerMainVoice2
+   ldy #>MsgASIDPlayerMainVoice2
+   jsr PrintString 
+   
+   ldx #ChrLtGreen  ;default not muted
+   lda memVoiceMuteState
+   and #$04
+   beq +  ;not muted
+   ldx #ChrRed
++  stx MsgASIDPlayerMainVoice3
+   lda #<MsgASIDPlayerMainVoice3
+   ldy #>MsgASIDPlayerMainVoice3
+   jsr PrintString 
+   
+   lda #<MsgASIDPlayerMainDisplay2
+   ldy #>MsgASIDPlayerMainDisplay2
+   jsr PrintString 
+   
+   
    lda #0
    sta smcScreenFull+1  ;clear screen full flag
    jsr SetMuteIndicator
@@ -174,16 +210,19 @@ memNumSIDaddresses:
    !byte 7 ;update to match list above!
 
 
-MsgASIDPlayerMainDisplay:    
+MsgASIDPlayerMainDisplay1:    
    !tx NameColor, ChrClear, ChrPurple             , ChrRvsOn, "       TeensyROM ASID Player 1.2        "
    !tx ChrBlack, "                                  Mute "
    !tx ChrReturn, ChrYellow, "  @@@", ChrLtRed, "@@", ChrBlack, "***************************", ChrBrown, "  ", ChrOrange, "  " 
    !tx ChrReturn, ChrYellow, "  321", ChrLtRed, "RP", ChrLtGreen, "FrPwWAS", ChrRvsOn, "FrPwWAS", ChrRvsOff, "FrPwWAS", ChrLtBlue, "CfRV", ChrDrkGrey, "B"
-   !tx ChrReturn, "       "
-   !tx ChrLtGreen
-   !tx $ed, $60, $60, "1", $60, $60, $fd
-   !tx $ed, $60, $60, "2", $60, $60, $fd
-   !tx $ed, $60, $60, "3", $60, $60, $fd  
+   !tx ChrReturn, "       ", 0
+MsgASIDPlayerMainVoice1: ; first byte overwritten with correct color
+   !tx ChrYellow, $ed, $60, $60, "1", $60, $60, $fd, 0
+MsgASIDPlayerMainVoice2: ; first byte overwritten with correct color
+   !tx ChrYellow, $ed, $60, $60, "2", $60, $60, $fd, 0
+MsgASIDPlayerMainVoice3: ; first byte overwritten with correct color
+   !tx ChrYellow, $ed, $60, $60, "3", $60, $60, $fd, 0
+MsgASIDPlayerMainDisplay2:
    !tx ChrMedGrey, "     ?-Help"
    !tx ChrReturn, ChrPurple, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
    !tx                       $60, $60, $60, $60, $60, $60, $60, $60, $60, $60,  $60, $60, $60, $60, $60, $60, $60, $60, $60, $60
@@ -194,33 +233,33 @@ MsgASIDPlayerCommands1:
    !tx ChrWhite
    !tx "Keyboard Commands:", ChrReturn
    !tx ChrLtGrey
-   !tx "   v: Clear Voices", ChrReturn
-   !tx "   s: Screen Toggle", ChrReturn
-   !tx "   m: Mute All Toggle", ChrReturn
-   !tx "   1,2,3: Mute Voice # Toggle", ChrReturn
-   !tx "   ?: This Help List", ChrReturn
-   !tx "   d: Register/Indicator Decoder", ChrReturn
-   !tx "   c: Clear Screen", ChrReturn
-   !tx "   x: Exit", ChrReturn
-   !tx "  F1: First  SID address ", ChrRvsOn, "$"
+   !tx "     v: Clear Voices", ChrReturn
+   !tx "     s: Screen Toggle", ChrReturn
+   !tx "     m: Mute All Toggle", ChrReturn
+   !tx " 1/2/3: Mute Voice # Toggle", ChrReturn
+   !tx "     ?: This Help List", ChrReturn
+   !tx "     d: Register/Indicator Decoder", ChrReturn
+   !tx "     c: Clear Screen", ChrReturn
+   !tx "     x: Exit", ChrReturn
+   !tx "    F1: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    
-   !tx ChrReturn, "  F2: Second SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "    F2: Second SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands3:    
-   !tx ChrReturn, "  F3: Third  SID address ", ChrRvsOn, "$"
+   !tx ChrReturn, "    F3: Third  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
-   !tx ChrReturn, "   t: Frame Timer (beta) ", ChrRvsOn
+   !tx ChrReturn, "     t: Frame Timer (beta) ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands5:    
-   !tx ChrReturn, "      b/B: Buffer Size ", ChrRvsOn
+   !tx ChrReturn, "   b/B: Buffer Size ", ChrRvsOn
    !tx 0
-MsgASIDPlayerCommands6:    
-   !tx ChrReturn, ChrDrkGrey
-   !tx ChrReturn, "  Recommend muting all playback"
-   !tx ChrReturn, "    when changing SID adresses"
-   !tx 0
+;MsgASIDPlayerCommands6:    
+;   !tx ChrReturn, ChrDrkGrey
+;   !tx ChrReturn, "  Recommend muting all playback"
+;   !tx ChrReturn, "    when changing SID adresses"
+;   !tx 0
    
 MsgASIDPlayerDecoder:    
    !tx ChrLtGrey

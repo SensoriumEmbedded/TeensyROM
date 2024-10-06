@@ -162,10 +162,9 @@ ShowKeyboardCommands: ;including SID addresses
    ldy TblMsgBufferSize+1,x
    jsr PrintString
    
-   lda #<MsgASIDPlayerCommands6
-   ldy #>MsgASIDPlayerCommands6
-   jsr PrintString    
-   
+   ;lda #<MsgASIDPlayerCommands6
+   ;ldy #>MsgASIDPlayerCommands6
+   ;jsr PrintString    
    
    inc smcScreenFull+1 ;set screen full flag
    ;end of ShowKeyboardCommands, continue to main loop...
