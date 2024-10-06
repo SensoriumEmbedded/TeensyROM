@@ -15,8 +15,8 @@ Thank you Barry for this well documented, robust framework!
 |`TSAVE <media><path><filename>`|Super fast Saves the current BASIC file to SD or USB on the TR|
 |`TLOAD <media><path><filename>`|Super fast Loads a BASIC file from SD or USB on the TR|
 |`TDIR <media><path>`|Display directory contents of TR media|
-|`TPUT <string out>`|Send the full contents of <string out> out the TR USB Serial port|
-|`TGET <string char in>`|Read a singe character from the TR USB Serial port into <string char in>|
+|`TPUT <string out>`|Send the full contents of `<string out>` out the TR USB Serial port|
+|`TGET <string char in>`|Read a singe character from the TR USB Serial port into `<string char in>`<BR>(for in-program use only)|
 
 ### Command argument details:
 |Argument|Description|Requirement|
@@ -36,7 +36,21 @@ Thank you Barry for this well documented, robust framework!
 * Communicate via USB serial to/from another computer.
   * See this brief [**demo video**](https://youtu.be/5qShZjLOG5s)
   * Write BASIC programs that can receive/display externally provided data
+    ```
+    10 B$ = ""
+    20 TGET A$ : B$ = B$ + A$
+    30 IF A$<>CHR$(13) THEN 20
+    40 PRINT "LINE RECEIVED: ";B$
+    50 GOTO 10
+    ```
   * Send information or user input to another computer.
+    ```
+    10 IF T$=TIME$ THEN 10 : REM LOOP UNTIL NEXT SECOND
+    20 T$=TIME$
+    30 TPUT LEFT$(T$,2)+":"+MID$(T$,3,2)+":"+RIGHT$(T$,2)
+    40 TPUT CHR$(10)+CHR$(13)
+    50 GOTO 10
+    ```  
   * Example simple terminal program:
     ```
     10 GET A$ : TPUT A$

@@ -21,22 +21,23 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 * Select "TeensyROM ASID Player", or press the number '4' for fast hotkey access.
 * Program starts ready to receive/play MIDI ASID data
 
-## TeensyROM ASID Player Usage/commands
+## TeensyROM ASID Player Usage/commands (FW 0.6.2 or higher)
 ### C64 Keyboard commands
 |Key|Function|Description|
 |:--:|:--:|:--|
 |`v`|Clear Voices|Initialize/clear all voices on all SID chips|
 |`s`|Screen Toggle|Turn on/off C64 screen blanking, can help with audio noise reduction|
-|`m`|Mute Toggle|Clears all voices `and` mutes incomming stream. "Mute" displayed in upper right when active|
+|`m`|Mute All Toggle|Clears all voices and mutes incomming stream. "Mute" displayed when active|
+|`1`/`2`/`3`|Voice # Toggle|Enable/Disable voice # 1/2/3 individually.<BR>Voice # group red when active, applies to all active SIDs
 |`?`|Help List|Displays keyboard commands list|
 |`d`|Indicator Decoder|Displays info about indicators at top of screen (see below)|
 |`c`|Clear Screen|Clears text from display, just leaves indicators|
 |`x`|Exit|Exit the application, back to the TeensyROM menu|
-|`1`|First  SID address|Changes address of the `primary* SID, typically $d400|
-|`2`|Second SID address|Changes address of SID #2 for multi-SID playback|
-|`3`|Third  SID address|Changes address of SID #3 for multi-SID playback|
+|`F1`/`F2`|First  SID address|Inc/Dec address of the *primary* SID, typically $d400|
+|`F3`/`F4`|Second SID address|Inc/Dec address of SID #2 for multi-SID playback|
+|`F5`/`F6`|Third  SID address|Inc/Dec address of SID #3 for multi-SID playback|
 |`t`|Frame Timer (beta)|Turns On/Off the frame-retimer (see below)|
-|`b`/`B`|Buffer Size|Sets the size of the Frame Timer buffer, if used (see below)|
+|`B`/`b`|Buffer Size|Inc/Dec the size of the Frame Timer buffer, if used (see below)|
 
 ### Register indicators
 The top of the ASID Player screen displays real-time playback information. This information can be divided into three groups:
