@@ -15,7 +15,12 @@
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
-  
+
+![TeensyROM pic1](media/v0.2c/v0.2c_angle.png)
+
+|![TeensyROM pic1](media/case/case-front-corner.png)|![TeensyROM case](media/case/case-rear-corner.png)| 
+|:--:|:--:|
+
 Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 <BR>If you prefer, **Fully assembled/tested units** are available via my [Tindie shop](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/).
 <BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
@@ -34,11 +39,6 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
   * [Pictures/screen captures](#pictures-screen-captures)
 
 <BR>
-
-![TeensyROM pic1](media/v0.2c/v0.2c_angle.png)
-
-|![TeensyROM pic1](media/case/case-front-corner.png)|![TeensyROM case](media/case/case-rear-corner.png)| 
-|:--:|:--:|
 
 ## TeensyROM Feature Details
 ### Compatable with C64 and C128 machines/variants, NTSC and PAL supported
