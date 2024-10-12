@@ -8,10 +8,11 @@
   * [Selecting and associating Special IO](#selecting-and-associating-special-io)
   * [Firmware updates](#firmware-updates)
 
-## TeensyROM connections and Restart button:
+## TeensyROM connections and Menu button:
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
   * Power on, the TeensyROM main menu should be displayed
-  * The Restart button can be pressed at any time to return to the TeensyROM main menu from another program
+  * The Menu button can be pressed at any time to return to the TeensyROM main menu from another program
+    * To set EEPROM setting back to default, hold down the menu buttong until the LED starts flashing (~10 seconds) and release.
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/TR_Connections.png)
 
@@ -97,7 +98,8 @@
         * Tests the TeensyROM ability to rapidly read from emulated ROM
         * Helpful in testing out HW and debug, but should not fail in normal use
         * The is not an exhaustive test, but may be expanded later
-      * `l` Display Help menu
+      * `l` Disable auto-launch feature.  Re-enable by selecting another program with `Shift-Return` (see above)
+      * `m` Display Help menu
       * `Space Bar` Return to Main Menu
       * `Return` Screen refresh.  Handy for updating the temperature reading 
   * Other information on the Settings screen
