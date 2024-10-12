@@ -66,6 +66,7 @@
         * Max file size is 875MB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
         * The [OneLoad Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games
+        * A compatibility issue exists when using the C128 to emulate "Ultimax" carts.  There aren't many of these carts (Deadtest, Jupiter Lander for example), screen garbage will be visible when using a C128 with these.
     * ***.SID files:**
       * Play SID file: ~90% of known SID files are supported
       * Adjusts playback speed based on machine and SID type (NTSC/PAL)
