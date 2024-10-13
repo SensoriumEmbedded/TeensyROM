@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-void getFreeITCM();
 
 FLASHMEM void ServiceSerial()
 {  //Serial.available() confirmed before calling
@@ -651,25 +650,25 @@ FLASHMEM void memInfo ()
 #endif
 }
 
-
-uint32_t *ptrFreeITCM;  // Set to Usable ITCM free RAM
-uint32_t  sizeofFreeITCM; // sizeof free RAM in uint32_t units.
-uint32_t  SizeLeft_etext;
-extern char _stext[], _etext[];
-
-FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
-  Serial.println("\ngetFreeITCM:");
-  SizeLeft_etext = (32 * 1024) - (((uint32_t)&_etext - (uint32_t)&_stext) % (32 * 1024));
-  sizeofFreeITCM = SizeLeft_etext - 4;
-  sizeofFreeITCM /= sizeof(ptrFreeITCM[0]);
-  ptrFreeITCM = (uint32_t *) ( (uint32_t)&_stext + (uint32_t)&_etext + 4 );
-  Serial.printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
-  Serial.printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
-  Serial.printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
-  //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
-  //uint32_t jj = 0;
-  //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
-  //Serial.printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
+FLASHMEM void  getFreeITCM() 
+{ // end of CODE ITCM, skip full 32 bits
+   uint32_t *ptrFreeITCM;  // Set to Usable ITCM free RAM
+   uint32_t  sizeofFreeITCM; // sizeof free RAM in uint32_t units.
+   uint32_t  SizeLeft_etext;
+   extern char _stext[], _etext[];
+   
+   Serial.println("\ngetFreeITCM:");
+   SizeLeft_etext = (32 * 1024) - (((uint32_t)&_etext - (uint32_t)&_stext) % (32 * 1024));
+   sizeofFreeITCM = SizeLeft_etext - 4;
+   sizeofFreeITCM /= sizeof(ptrFreeITCM[0]);
+   ptrFreeITCM = (uint32_t *) ( (uint32_t)&_stext + (uint32_t)&_etext + 4 );
+   Serial.printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
+   Serial.printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
+   Serial.printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
+   //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
+   //uint32_t jj = 0;
+   //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
+   //Serial.printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
 
