@@ -97,6 +97,10 @@ FLASHMEM void ServiceSerial()
          SetEEPDefaults();
          Serial.println("Applied upon reboot");
          break;
+      case 'v':
+         MakeBuildInfo();
+         Serial.printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
+         break;
          
 // *** The rest of these cases are used for debug/testing only  
      
@@ -196,12 +200,12 @@ FLASHMEM void ServiceSerial()
             if(DriveDirMenu != NULL) 
             {
                for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
-               Serial.printf("Filenames: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
+               Serial.printf("Filename chars: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
                   TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
                   MaxMenuItems*sizeof(StructMenuItem), MaxMenuItems*sizeof(StructMenuItem)/1024, (uint32_t)DriveDirMenu);
                TotalSize += MaxMenuItems*sizeof(StructMenuItem);
             }
-            Serial.printf("DriveDirMenu+Filenames: %lu (%luk)\n", 
+            Serial.printf("DriveDirMenu+Filename chars: %lu (%luk)\n", 
                TotalSize, TotalSize/1024);
             
             Serial.printf("RAM_Image: %lu (%luk) @ $%08x\n", 
@@ -209,6 +213,7 @@ FLASHMEM void ServiceSerial()
          
             TotalSize = 0;
             uint32_t TotalStructSize = sizeof(TeensyROMMenu);
+            uint32_t FileCount = 0;
             for(uint8_t ROMNum=0; ROMNum < sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]); ROMNum++)
             {
                if(TeensyROMMenu[ROMNum].ItemType == rtDirectory)
@@ -217,14 +222,14 @@ FLASHMEM void ServiceSerial()
                   TotalStructSize += TeensyROMMenu[ROMNum].Size;
                   for(uint8_t subROMNum=0; subROMNum < TeensyROMMenu[ROMNum].Size/sizeof(StructMenuItem); subROMNum++)
                   {
-                     if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize);
+                     if(subTROMMenu[subROMNum].ItemType != rtDirectory) AddAndCheckSource(subTROMMenu[subROMNum], &TotalSize, &FileCount);
                   }
                }
-               else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize);
+               else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize, &FileCount);
             }
             Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
                TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
-            Serial.printf("TeensyROMMenu/sub Items: %d (%dk) of Flash\n\n", TotalSize, TotalSize/1024);
+            Serial.printf("TeensyROMMenu/sub (%d) Items: %d (%dk) of Flash\n\n", FileCount, TotalSize, TotalSize/1024);
          }
          break;
       case 'x': 
@@ -384,8 +389,9 @@ FLASHMEM void ServiceSerial()
    }
 }
 
-FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize)
+FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize, uint32_t *FileCount)
 {
+   *FileCount += 1;
    *TotalSize += SourceMenu.Size;
    Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
    if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
@@ -660,10 +666,10 @@ FLASHMEM void  getFreeITCM() { // end of CODE ITCM, skip full 32 bits
   Serial.printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
   Serial.printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
   Serial.printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
-  for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
-  uint32_t jj = 0;
-  for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
-  Serial.printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
+  //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
+  //uint32_t jj = 0;
+  //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
+  //Serial.printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
 
