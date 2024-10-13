@@ -38,6 +38,7 @@
 #include "ROMs/MIDI2SID.prg.h" 
 #include "ROMs/ASIDPlayer.prg.h" 
 #include "ROMs/TRCBC.prg.h"
+#include "ROMs/destest_max.rom.h"
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -97,6 +98,7 @@ StructMenuItem dirTest_Diags[] =
    rtBin8kLo  , IOH_None         , (char*)"1541 Diagnostics"                 , (uint8_t*)a1541_Diagnostics_BIN      , sizeof(a1541_Diagnostics_BIN) ,
    rtBin8kLo  , IOH_None         , (char*)"586220(ast) C64 Diagnostics"      , (uint8_t*)a586220ast_Diagnostics_BIN , sizeof(a586220ast_Diagnostics_BIN) ,
    rtBin8kHi  , IOH_None         , (char*)"781220 C64 Dead Test"             , (uint8_t*)a781220_Dead_Test_BIN      , sizeof(a781220_Dead_Test_BIN) ,
+   rtBin8kHi  , IOH_None         , (char*)"DesTestMAX:  Desmond's RAM Test"  , (uint8_t*)destest_max_rom            , sizeof(destest_max_rom) ,
    rtFileCrt  , IOH_None         , (char*)"789010 C128 Diagnostics"          , (uint8_t*)C128_789010_crt            , sizeof(C128_789010_crt) ,
    rtFilePrg  , IOH_None         , (char*)"Game Controller Tester"           , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
    rtBin8kLo  , IOH_None         , (char*)"Joystick Tester"                  , (uint8_t*)Joystick_Tester_BIN        , sizeof(Joystick_Tester_BIN) ,
