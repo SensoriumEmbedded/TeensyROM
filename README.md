@@ -8,7 +8,7 @@
 * **MIDI USB Host & Device, ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to make your SID chip sing!
 * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
 * **Remote Control** your C64 using 
-  * [NFC tags](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
+  * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
   * The feature rich [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and Cross-platform [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
 * Picture viewer, SID Player, Custom BASIC Commands, Autolaunch, *and more* 
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!

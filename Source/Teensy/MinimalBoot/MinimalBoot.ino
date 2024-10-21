@@ -73,7 +73,7 @@ void setup()
    
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
-   if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized
+   if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
    
    //we have a crt to load in minimal mode, procede....
    

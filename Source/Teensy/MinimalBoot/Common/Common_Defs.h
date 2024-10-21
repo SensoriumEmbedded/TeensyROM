@@ -66,7 +66,7 @@ enum InternalEEPROMmap
 
 enum MinBootIndFlags
 {
-   MinBootInd_SkipMin    = 0,
-   MinBootInd_ExecuteMin = 1,
-   MinBootInd_FromMin    = 2,
+   MinBootInd_SkipMin    = 0, // skip minimal and go to main as normal first power up (and autolaunch, if enabled)
+   MinBootInd_ExecuteMin = 1, // minimal boot called from main, launch CRT in minimal
+   MinBootInd_FromMin    = 2, // Min returning to main menu, skip of autolaunch (if enabled)
 };
