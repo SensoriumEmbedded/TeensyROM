@@ -95,7 +95,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
     * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 * **SID Factory II** for cross-platform SID music editing/playing
-    * As of this writing, ASID support is only available via [this GitHub Branch]() and must be compiled. Let [me](mailto:travis@sensoriumembedded.com) know if you need help with this.
+    * As of this writing, ASID support is only available via [this GitHub Branch](https://github.com/Chordian/sidfactory2/tree/asid-support) and must be compiled. Let [me](mailto:travis@sensoriumembedded.com) know if you need help with this.
         * Hoping this will be fully released [here](https://blog.chordian.net/sf2/) soon.
     * Launch the SFII application
     * Press F1 on the splash page to select the TeensyROM, and Enter to continue
