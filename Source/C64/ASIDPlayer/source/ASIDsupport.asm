@@ -250,7 +250,7 @@ MsgASIDPlayerCommands3:
    !tx ChrReturn, " F5/F6: Third  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands4:    
-   !tx ChrReturn, "     t: Frame Timer ", ChrRvsOn
+   !tx ChrReturn, "   T/t: Frame Timer ", ChrRvsOn
    !tx 0
 MsgASIDPlayerCommands5:    
    !tx ChrReturn, "   B/b: Buffer Size ", ChrRvsOn

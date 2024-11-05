@@ -324,14 +324,24 @@ SetScreen
    jsr SIDinit
    jmp ASIDMainLoop
 
-+  cmp #'t'  ;Frame Timer state
++  cmp #'T'  ;Increase Frame Timer state
    bne +  
    ldx memFrameTimer
    inx
    cpx #NumTimerStates
-   bne ++
-   ldx #$00 ;roll over
-++ stx memFrameTimer
+   bne UpdateTimerState
+   ldx #$00 ;roll over to first
+   jmp UpdateTimerState
+   
++  cmp #'t'  ;Decrease Frame Timer state
+   bne +  
+   ldx memFrameTimer
+   dex
+   cpx #$ff ;rolled over backward
+   bne UpdateTimerState
+   ldx #NumTimerStates-1 ;roll over to last
+UpdateTimerState:
+   stx memFrameTimer
    stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
 
