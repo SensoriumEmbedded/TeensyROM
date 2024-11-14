@@ -21,6 +21,7 @@
 #include <SD.h>
 #include <EEPROM.h>
 #include "Min_TeensyROM.h"
+#include "Common/Common_Defs.h"
 #include "Min_Menu_Regs.h"
 #include "Min_DriveDirLoad.h"
 #include "Min_IOHandlers.h"
@@ -33,6 +34,8 @@ StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
+
+#include "Common/ISRs.c"
 
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
@@ -51,9 +54,15 @@ void setup()
    SetIRQDeassert;
    SetNMIDeassert;
    SetLEDOn;
-   SetDebugDeassert;
    SetResetAssert; //assert reset until main loop()
   
+#ifdef DbgFab0_3plus
+   pinMode(DotClk_Debug_PIN, OUTPUT);  //p28 is Debug output on fab 0.3+
+   SetDebugDeassert;
+#else
+   pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
+#endif
+
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
@@ -64,7 +73,7 @@ void setup()
 #ifdef Dbg_TestMin
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
-   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  

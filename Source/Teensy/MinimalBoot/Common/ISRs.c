@@ -50,6 +50,10 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
+   bool R_Wn = GP6_R_Wn(GPIO_6);  //read/write bit
+   
+   if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
+   else SetDataBufIn;
    
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
@@ -58,6 +62,7 @@ FASTRUN void isrPHI2()
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 
       if (IOHandler[CurrentIOHandler]->ROMLHndlr != NULL) IOHandler[CurrentIOHandler]->ROMLHndlr(Address);
+      //Printf_dbg("roml addr: %04x\n", Address); //useful for HW debug of address lines
    }  //ROML
    else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
    {
@@ -71,10 +76,10 @@ FASTRUN void isrPHI2()
          BigBuf[BigBufCount] = Address; //initialize w/ address
       #endif
 
-      if (IOHandler[CurrentIOHandler]->IO1Hndlr != NULL) IOHandler[CurrentIOHandler]->IO1Hndlr(Address, GP6_R_Wn(GPIO_6));
+      if (IOHandler[CurrentIOHandler]->IO1Hndlr != NULL) IOHandler[CurrentIOHandler]->IO1Hndlr(Address, R_Wn);
 
       #ifdef DbgIOTraceLog
-         if (GP6_R_Wn(GPIO_6)) BigBuf[BigBufCount] |= IOTLRead;
+         if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
          if (BigBufCount < BigBufSize) BigBufCount++;
       #endif
    }  //IO1
@@ -83,7 +88,7 @@ FASTRUN void isrPHI2()
    {
       Address &= 0xFF;
 
-      if (IOHandler[CurrentIOHandler]->IO2Hndlr != NULL) IOHandler[CurrentIOHandler]->IO2Hndlr(Address, GP6_R_Wn(GPIO_6));
+      if (IOHandler[CurrentIOHandler]->IO2Hndlr != NULL) IOHandler[CurrentIOHandler]->IO2Hndlr(Address, R_Wn);
    }
    
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
@@ -94,7 +99,8 @@ FASTRUN void isrPHI2()
       //phi2 has gone low..........................................................................
       
       StartCycCnt = ARM_DWT_CYCCNT;
-
+      
+      SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
       WaitUntil_nS(nS_VICStart);
       
       GPIO_6 = ReadGPIO6; //Address bus and R/*W 

@@ -28,6 +28,7 @@
 #include <NativeEthernetUdp.h>
 #include <EEPROM.h>
 #include "TeensyROM.h"
+#include "MinimalBoot/Common/Common_Defs.h"
 #include "Menu_Regs.h"
 #include "DriveDirLoad.h"
 #include "MainMenuItems.h"
@@ -44,6 +45,7 @@ uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 
+#include "MinimalBoot/Common/ISRs.c"
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 
@@ -60,8 +62,14 @@ void setup()
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
-   SetDebugDeassert;
    SetResetAssert; //assert reset until main loop()
+#ifdef DbgFab0_3plus
+   pinMode(DotClk_Debug_PIN, OUTPUT);  //p28 is Debug output on fab 0.3+
+   SetDebugDeassert;
+#else
+   pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
+#endif
+
   
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
