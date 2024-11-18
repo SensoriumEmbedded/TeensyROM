@@ -81,6 +81,7 @@ NoHW
    ;$3251 for 50Hz TOD clock and 985248.444(PAL) CPU/CIA clock    00
    ;$20c0 for 50Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   01
    ;convert from MSB timing to: bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
+   ldy #%10000000  ;use bit 7 of Y for 50/60Hz setting, set 1=50Hz TOD default
    cmp #$29
    bcs +  ;(>29)
    ldx #%00000001  ;50/NTSC
@@ -89,12 +90,20 @@ NoHW
    bcs +  ;(>51)
    ldx #%00000000  ;50/PAL
    jmp ++
-+  cmp #$78
++  ldy #%00000000  ;0=60Hz TOD
+   cmp #$78
    bcs +  ;(>78)
    ldx #%00000011  ;60/NTSC
    jmp ++
 +  ldx #%00000010  ;60/PAL
 ++ stx wRegVid_TOD_Clks+IO1Port   
+   ;set CIA1 50/60 Hz counter
+   sty smcTODbit+1
+   lda $dc0e
+   and #%01111111
+smcTODbit
+   ora #$00
+   sta $dc0e
 
    ;store this code page range for SID conflict detection
    lda #>MainCodeRAMStart   ;read hi byte of Start address
