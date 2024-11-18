@@ -1,6 +1,9 @@
 
 # TeensyROM USB MIDI Usage
 
+MIDI/ASID control options:
+![Control Options](/media/MIDI-ASID%20paths.png)
+
 ### Sending MIDI from a MIDI/USB controller such as a keyboard, drum pad, [Sax](https://www.akaipro.com/ewi-usb), or [M8 tracker/sequencer](https://dirtywave.com/) to your C64
   * Connect USB cable from a MIDI Keyboard/Controller device to the USB Type A Host port on the TeensyROM board.
   * Select MIDI device to emulate
