@@ -53,11 +53,11 @@
   * Files can be launched from any of the available sources, including any subdirectory
   * When a file is selected, load/run status is displayed on the screen.  Usually this will flash by too quickly to read, but in the case of an error, it will pause to provide additional information.
   * File types supported:
-    * ***.PRG and .P00 files:** 
+    * **.PRG and .P00 files:** 
       * Super fast-loads any PRG into C64/128 RAM and executes
         * Same result as LOAD"file",x,1 and RUN (but much faster)
       * Must be single PRG file, not multi-part
-    * ***.CRT files:**
+    * **.CRT files:**
       * Emulates/supports most popular cartridge types:
         * All 8khi, 8klo, 16k, and C128 "Generic" carts
         * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon
@@ -67,17 +67,19 @@
         * Max file size is 875MB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
         * The [OneLoad Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games
-        * A compatibility issue exists when using the C128 to emulate "Ultimax" carts.  There aren't many of these carts (Deadtest, Jupiter Lander for example), screen garbage will be visible when using a C128 with these.
-    * ***.SID files:**
+        * A compatibility issue exists when using the C128 to emulate "Ultimax" carts.  There aren't many of these carts(Deadtest, Jupiter Lander for example), screen garbage will be visible when using a C128 with these.
+    * **.SID files:**
       * Play SID file: ~90% of known SID files are supported
       * Adjusts playback speed based on machine and SID type (NTSC/PAL)
       * SID info screen contains SID header information and playback controls
-    * ***.KLA/KOA files:**
+    * **.KLA/KOA files:**
       * Displays Koala multi-color picture
       * Compatible with output from [Retropixels online](https://www.micheldebree.nl/retropixels/)
-    * ***.ART/AAS/HPI files:**
+    * **.ART/AAS/HPI/OCP/PIC files:**
       * Displays Art Studio Hi-Res picture
-    * ***.HEX files:**
+    * **.D64/.D71/.D81 files:**
+      * Single File load/exec only (no multi-file/writebacks)
+    * **.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
 ## The Settings Menu (as of FW v0.6.2)
