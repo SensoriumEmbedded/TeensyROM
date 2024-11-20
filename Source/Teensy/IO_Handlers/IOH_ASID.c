@@ -88,6 +88,17 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #define SIDFreq50HzuS        19975 // 19950=50.13Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
                                    //Splitting the difference for now, todo: standardize when DS updated!
 
+//ASID protocol packet types
+#define APT_StartPlaying     0x4c
+#define APT_StopPlayback     0x4d
+#define APT_DisplayChars     0x4f
+#define APT_SID1RegData      0x4e
+#define APT_SID2RegData      0x50
+#define APT_SID3RegData      0x51
+#define APT_WriteOrder       0x30 
+#define APT_ContFramerate    0x31
+#define APT_SIDTypes         0x32
+
 #ifdef DbgMsgs_IO  //Debug msgs mode
    #define Printf_dbg_SysExInfo {Serial.printf("\nSysEx: size=%d, data=", size); for(uint16_t Cnt=0; Cnt<size; Cnt++) Serial.printf(" $%02x", data[Cnt]);Serial.println();}
 #else //Normal mode
@@ -216,8 +227,8 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
                //// Debug msgs for secondary reg or higher access
                //if(maskNum*7+bitNum>24)
                //{
+               //   Serial.printf("High Reg: %d(->%d) = %d", maskNum*7+bitNum, ASIDidToReg[maskNum*7+bitNum], RegVal);
                //   Printf_dbg_SysExInfo;
-               //   Serial.printf("High Reg: %d(->%d) = %d\n", maskNum*7+bitNum, ASIDidToReg[maskNum*7+bitNum], RegVal);
                //}
             #endif  
             NumRegs++;
@@ -228,8 +239,8 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
    if(12+NumRegs > size)
    {
       AddErrorToASIDRxQueue();
+      Printf_dbg("-->More regs expected (%d) than provided (%d)", NumRegs, size-12);    
       Printf_dbg_SysExInfo;
-      Printf_dbg("-->More regs expected (%d) than provided (%d)\n", NumRegs, size-12);    
    }
    SetASIDIRQ();  
    if (FrameTimerMode) AddToASIDRxQueue(ASIDAddrType_Skip, 0); //mark End Of Frame
@@ -325,26 +336,27 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    if(data[0] != 0xf0 || data[1] != 0x2d || data[size-1] != 0xf7)
    {
       AddErrorToASIDRxQueue();
+      Printf_dbg("-->Invalid ASID/SysEx format");
       Printf_dbg_SysExInfo;
-      Printf_dbg("-->Invalid ASID/SysEx format\n");
       return;
    }
+   //appears to be a valid ASID packet.
+   
    switch(data[2])
-   {
-      case 0x4c: //start playing message
+   {      
+      case APT_StartPlaying: //start playing message
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
-         Printf_dbg("Start playing\n");
+         Printf_dbg("ATP Start playing\n");
          SetASIDIRQ();
          break;
-      case 0x4d: //stop playback message
+      case APT_StopPlayback: //stop playback message
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
-         Printf_dbg("Stop playback\n");
+         Printf_dbg("ATP Stop playback\n");
          SetASIDIRQ();
          break;
-      case 0x4f: //Display Characters
-         //display characters
+      case APT_DisplayChars: //Display Characters
          data[size-1] = 0; //replace 0xf7 with term
-         Printf_dbg("Display chars: \"%s\"\n", data+3);
+         Printf_dbg("ATP Display chars: \"%s\"\n", data+3);
          for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
          {
             AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
@@ -352,7 +364,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          AddToASIDRxQueue(ASIDAddrType_Char, 13);
          SetASIDIRQ();
          break;
-      case 0x4e:  //SID1 reg data (primary)
+      case APT_SID1RegData:  //SID1 reg data (primary)
          if (FrameTimerMode && !QueueInitialized)
          { //check packet receive rate during queue init
             static uint32_t LastMicros;
@@ -395,16 +407,32 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          DeltaFrames--;
          DecodeSendSIDRegData(ASIDAddrType_SID1, data, size);
          break;
-      case 0x50:  //SID2 reg data
+      case APT_SID2RegData:  //SID2 reg data
          DecodeSendSIDRegData(ASIDAddrType_SID2, data, size);
          break;
-      case 0x51:  //SID3 reg data
+      case APT_SID3RegData:  //SID3 reg data
          DecodeSendSIDRegData(ASIDAddrType_SID3, data, size);
-         break;
+         break;         
+      case APT_WriteOrder:   
+         Printf_dbg("APT_WriteOrder:");
+         Printf_dbg_SysExInfo;
+         for(uint16_t Cnt=0; Cnt<size-4; Cnt+=2)
+         {
+            Printf_dbg("reg %d  #%02d  %d cyc\n", Cnt/2, data[Cnt+3] & 0x3f, data[Cnt+4] + ((data[Cnt+3] & 0x40) ? 128:0) );
+         }
+         break;         
+      case APT_ContFramerate:
+         Printf_dbg("APT_ContFramerate:");
+         Printf_dbg_SysExInfo;
+         break;         
+      case APT_SIDTypes:     
+         Printf_dbg("APT_SIDTypes:");
+         Printf_dbg_SysExInfo;
+         break;         
       default:
          AddErrorToASIDRxQueue();
+         Printf_dbg("-->Unexp  ASID Packet Type: $%02x", data[2]);
          Printf_dbg_SysExInfo;
-         Printf_dbg("-->Unexpected ASID msg type: $%02x\n", data[2]);
    }
 }
 
