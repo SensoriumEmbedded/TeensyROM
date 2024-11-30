@@ -21,6 +21,6 @@
 
 ![case rear](../media/case/case-rear-corner.png)
 
-![case front](../media/case/case_front.jpg)
+![case front](../media/case/case_top.png)
 
-![case bottom](../media/case/case_bot.jpg)
+![case bottom](../media/case/case_bot.png)
