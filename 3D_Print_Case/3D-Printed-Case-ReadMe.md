@@ -13,14 +13,14 @@
   * Modified for TeensyROM form factor by [Stefan Wessels](https://github.com/StewBC)
   * Vented and minimalist top mods by [MetalHexx](https://github.com/MetalHexx)
 * Original [C64 Cartridge Case Standard](https://www.thingiverse.com/thing:3932024) by lutzbellmann
+* TeensyROM Exposed Case by OldSkull on [Printables](https://www.printables.com/model/1090478-teensyrom-exposed-case)
 
 3D print files are located here: [SensoriumEmbedded/TeensyROM/3D_Print_Case](/3D_Print_Case/)
-
-![case front](../media/case/case_front.jpg)
-
-![case bottom](../media/case/case_bot.jpg)
 
 ![case back](../media/case/case-front-corner.png)
 
 ![case rear](../media/case/case-rear-corner.png)
 
+![case front](../media/case/case_front.jpg)
+
+![case bottom](../media/case/case_bot.jpg)
