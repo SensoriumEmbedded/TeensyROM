@@ -54,6 +54,11 @@ FASTRUN void isrPHI2()
    
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
    else SetDataBufIn;
+
+   if (fBusSnoop != NULL)
+   {
+      if (fBusSnoop(Address, R_Wn)) return;
+   }
    
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 

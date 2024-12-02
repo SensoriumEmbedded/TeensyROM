@@ -72,8 +72,7 @@ enum MinBootIndFlags
 };
 
 
-//From TeensyROM.h:
-
+bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 
 #define BigBufSize          5
 uint16_t BigBufCount = 0;
