@@ -323,32 +323,47 @@ ReadKeyboard:
 
 +  cmp #'1'  ;Hot Key #1
    bne +
-   lda #7  ;set to Cynthcart
+   ldx #1  ;dir MIDI+ASID
+   lda #3  ;prog Cynthcart
    
 HotKeyLaunch:
    ;launch item # stored in acc from main TR menu   
    pha ;save program #
+   txa
+   pha ;save directory #
    lda #rmtTeensy     ;point to Teensy menu, but don't display it
    sta rWRegCurrMenuWAIT+IO1Port  
    jsr WaitForTRWaitMsg
-   pla
+   pla ;directory #
+   sta rwRegCursorItemOnPg+IO1Port 
+   jsr SelectItem  ;enter directory
+   pla ;program #
    sta rwRegCursorItemOnPg+IO1Port 
    jsr SelectItem  ;won't come back from this...
    jmp HighlightCurrent
 
 +  cmp #'2'  ;Hot Key #2
    bne +
-   lda #8  ;set to Station64
+   ldx #1  ;dir MIDI+ASID
+   lda #4  ;prog Station64
    jmp HotKeyLaunch
 
 +  cmp #'3'  ;Hot Key #3
    bne +
-   lda #6  ;set to CCGMS
+   ldx #6  ;dir Utilities
+   lda #1  ;prog CCGMS
    jmp HotKeyLaunch
 
 +  cmp #'4'  ;Hot Key #4
    bne +
-   lda #10  ;set to ASID Player
+   ldx #1  ;dir MIDI+ASID
+   lda #1  ;prog ASID Player
+   jmp HotKeyLaunch
+
++  cmp #'5'  ;Hot Key #5
+   bne +
+   ldx #0  ;dir Games
+   lda #6  ;prog Jupiter Lander
    jmp HotKeyLaunch
 
 
