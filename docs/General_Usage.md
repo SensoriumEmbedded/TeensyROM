@@ -1,14 +1,14 @@
 # General TeensyROM usage
 
 ## Table of contents
-  * [TeensyROM connections and Restart button](#teensyrom-connections-and-restart-button)
-  * [Main Menu Options](#main-menu-options)
-  * [Loading programs and emulating ROMs](#loading-programs-and-emulating-roms)
+  * [TeensyROM connections and Menu button](#teensyrom-connections-and-menu-button)
+  * [Main Menu Options/Navigation](#main-menu-options-navigation)
+  * [Loading files and emulating ROMs](#loading-files-and-emulating-roms)
   * [The Settings Menu](#the-settings-menu)
   * [Selecting and associating Special IO](#selecting-and-associating-special-io)
   * [Firmware updates](#firmware-updates)
 
-## TeensyROM connections and Menu button:
+## TeensyROM connections and Menu button
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
   * Power on, the TeensyROM main menu should be displayed
   * The Menu button can be pressed at any time to return to the TeensyROM main menu from another program
@@ -16,7 +16,8 @@
   * Additional external hardware connection points:
 * ![TeensyROM connections](/media/TR_Connections.png)
 
-## Main Menu Options/Navigation (as of FW v0.6.2)
+## Main Menu Options-Navigation
+  * (as of FW v0.6.2)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
     * `CRSR or Joystick Left/Right` Page up/down the list of files
@@ -82,7 +83,8 @@
     * **.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
-## The Settings Menu (as of FW v0.6.2)
+## The Settings Menu 
+  * (as of FW v0.6.2)
   * Keyboard commands available from the Settings Menu:
     * These commands modify settings stored in the Teensy, and are recalled on power-up
       * `a/A` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
