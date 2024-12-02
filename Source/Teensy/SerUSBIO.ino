@@ -394,7 +394,7 @@ FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize, 
    *TotalSize += SourceMenu.Size;
    Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
    if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
-      Serial.printf("%s is using RAM!!!\n", SourceMenu.Name);
+      Serial.printf("*--> %s is using RAM!!!\n", SourceMenu.Name);
 }
 
 FLASHMEM void GetDigits(uint8_t NumDigits, uint32_t *SetInt)

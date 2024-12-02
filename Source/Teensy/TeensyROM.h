@@ -19,7 +19,7 @@
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
-char strVersionNumber[] = "v0.6.2+"; //*VERSION*
+char strVersionNumber[] = "v0.6.3"; //*VERSION*
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO     //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
@@ -39,6 +39,8 @@ char strVersionNumber[] = "v0.6.2+"; //*VERSION*
 // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
 // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
+
+
 
 #define nfcScanner     //nfc scanner libs/code included in build
 #define nfcStateEnabled       0

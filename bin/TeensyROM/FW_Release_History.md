@@ -1,6 +1,26 @@
 
 # FW Release Version history:
 
+### 0.6.3 Release 12/2/24
+* ASID Player updates:
+  * Framework for new ASID packets: Reg Write Order/timing, Control/Framerate, and SID Types
+  * ASID Player Frame timer select T/t for up/down list
+* Bug Fix:  C64 Clock was running slow in 50Hz regions
+* Built-in file updates:
+  * Additions:
+    * DesTestMAX:  Desmond's RAM Test added to test/diag menu 
+      * with permission from Matt matt@factorofmatt.com
+    * SID-Wizard V1.92 + Sequential MIDI
+    * Jupiter Lander (Cracked version)
+  * Removed YYZ from menu, conflicts w/ TR app as of 0.6.2 (will be back)
+  * File re-arrangement, MIDI/ASID programs in sub-dir
+* Hot keys 1-5 updated to new path/locations
+* fBusSnoop hook in ISR for future bus snooping functions
+* Support for future PCB revision: Data buffer dir control via pin28, fixes UtiliMax on C128
+* Serial command updates:
+  * 'v' serial command for checking FW Ver, build date, temp, free mem
+  * 'f' cmd (debug) Shows number of menu files
+
 ### 0.6.2 Release 10/6/24
 * New feature: *Custom BASIC Commands*
   * Communicate with/though your TeensyROM from new BASIC language commands
@@ -29,7 +49,8 @@
   * ASID player [usage doc](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md)
   * [BASIC commands usage document](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/Custom_BASIC_Commands.md)
 * Other fixes/improvements:
-  * Doing full BASIC init before PRG launch, cause some programs to launch incorrectly (Thanks to @Mad for identifying)
+  * Doing full BASIC init before PRG launch
+    * Previous partial init caused some programs to launch incorrectly (Thanks to @Mad for identifying)
   * File access on boot improvements:
     * USBFileSystemWait to make sure USB is on line before accessing on boot
     * SDFullInit retries SD.begin if media presence detected
