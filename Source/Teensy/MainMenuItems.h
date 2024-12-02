@@ -3,6 +3,7 @@
 #include "ROMs/ccgms_2021_Swiftlink_DE_38400.prg.h"
 #include "ROMs/cynthcart_201.prg.h"
 #include "ROMs/sta64_v2_6.prg.h"
+#include "ROMs/sid_wizard_1.9.prg.h"
 #include "ROMs/Epyx_Fast_Load.crt.h"
 #include "ROMs/80columns.prg.h"
 #include "ROMs/hex_mon.prg.h"
@@ -14,6 +15,7 @@
 #include "ROMs/rom_chksum_137kernals.prg.h"
 #include "ROMs/C128_789010.crt.h"
 #include "ROMs/Jupiter_Lander.h" 
+#include "ROMs/jupiter_lander_crack.prg.h" 
 #include "ROMs/joust.prg.h"
 #include "ROMs/Terminator_2.crt.h" 
 #include "ROMs/Beach_Head_II.crt.h" 
@@ -83,6 +85,7 @@ StructMenuItem dirGames[] =
    rtFileCrt  , IOH_None         , (char*)"Gorf!"                            , (uint8_t*)C64618_Gorf_8000_crt       , sizeof(C64618_Gorf_8000_crt) ,
    rtFilePrg  , IOH_None         , (char*)"Joust!"                           , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
    rtBin8kHi  , IOH_None         , (char*)"Jupiter Lander"                   , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
+   rtFilePrg  , IOH_None         , (char*)"Jupiter Lander (Cracked)"         , (uint8_t*)jupiter_lander_crack_prg   , sizeof(jupiter_lander_crack_prg) ,  
    rtFilePrg  , IOH_None         , (char*)"Mario Brothers"                   , (uint8_t*)Mario_Bros_prg             , sizeof(Mario_Bros_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Minesweeper"                      , (uint8_t*)minesweeper_game_prg       , sizeof(minesweeper_game_prg) ,   
    rtFileCrt  , IOH_None         , (char*)"Ms. Pac-Man"                      , (uint8_t*)Ms__Pac_Man_crt            , sizeof(Ms__Pac_Man_crt) ,
@@ -176,19 +179,20 @@ StructMenuItem TeensyROMMenu[] =
 //DefSIDPath should be "/" or one of these names
 
 // Ref  regItemTypes, enumIOHandlers   
-//  #    ItemType   , IOHndlrAssoc     , Name                                      , *Code_Image                          , Size ,
+//  #    ItemType   , IOHndlrAssoc       , Name                                      , *Code_Image                          , Size ,
 
- /* 0 */ rtDirectory, IOH_None         , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
- /* 1 */ rtDirectory, IOH_None         , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
- /* 2 */ rtDirectory, IOH_None         , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
- /* 3 */ rtDirectory, IOH_None         , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
- /* 4 */ rtDirectory, IOH_None         , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
- /* 5 */ rtDirectory, IOH_None         , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
- /* 6 */ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
- /* 7 */ rtFilePrg  , IOH_MIDI_Datel   , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
- /* 8 */ rtFilePrg  , IOH_MIDI_Passport, (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
- /* 9 */ rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
- /*10 */ rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
- /*11 */ rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC w/ Custom Commands +TR BAS ", (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
+ /* 0 */ rtDirectory, IOH_None           , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
+ /* 1 */ rtDirectory, IOH_None           , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
+ /* 2 */ rtDirectory, IOH_None           , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
+ /* 3 */ rtDirectory, IOH_None           , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
+ /* 4 */ rtDirectory, IOH_None           , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
+ /* 5 */ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
+ /* 6 */ rtFilePrg  , IOH_Swiftlink      , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
+ /* 7 */ rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
+ /* 8 */ rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
+ /* 9 */ rtFilePrg  , IOH_TeensyROM      , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
+ /*10 */ rtFilePrg  , IOH_ASID           , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
+ /*11 */ rtFilePrg  , IOH_TR_BASIC       , (char*)"BASIC w/ Custom Commands +TR BAS ", (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
+ /*12 */ rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.92+Sequential MIDI ", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
 };
 
