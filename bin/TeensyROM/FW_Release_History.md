@@ -1,6 +1,11 @@
 
 # FW Release Version history:
 
+### 0.6.3_Mega65 special Release 12/4/24
+* Special FW release for Mega65 machines running the C64 Core
+  * Also fine for other machines, please communicate if any issues found
+  * [Located Here](Mega65/)
+
 ### 0.6.3 Release 12/2/24
 * ASID Player updates:
   * Framework for new ASID packets: Reg Write Order/timing, Control/Framerate, and SID Types
@@ -16,7 +21,7 @@
   * File re-arrangement, MIDI/ASID programs in sub-dir
 * Hot keys 1-5 updated to new path/locations
 * fBusSnoop hook in ISR for future bus snooping functions
-* Support for future PCB revision: Data buffer dir control via pin28, fixes UtiliMax on C128
+* Support for future PCB revision: Data buffer dir control via pin28, fixes UltiMax on C128
 * Serial command updates:
   * 'v' serial command for checking FW Ver, build date, temp, free mem
   * 'f' cmd (debug) Shows number of menu files
