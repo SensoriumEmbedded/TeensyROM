@@ -1,11 +1,12 @@
 
 //re-compile both minimal and full if anything changes here!
 
+// #define Mega65   //temporary support for Mega65
+
 #define MaxCRTKB      875   //based on calc from minimal image
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
-
 
 //synch with win app:
 //all commands must start with 0x64
@@ -190,9 +191,15 @@ const uint8_t OutputPins[] = {
 #define Def_nS_RWnReady_dly 135  //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
-#define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus
-                                 //       2/1/24 v0.5.10+: updated from 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
-                                 
+
+#ifdef Mega65
+  #define Def_nS_DataHold     375  //    On a C64 read, when to stop driving the data bus
+                                   //       12/3/24 v0.6.4+: 365 to 375 to accomodate Mega65 ROML read
+#else
+  #define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus
+                                   //       2/1/24 v0.5.10+: updated from 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
+#endif
+
                                  // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
                                  //    Hold time for VIC cycle is same as normal cyc (nS_DataHold)
