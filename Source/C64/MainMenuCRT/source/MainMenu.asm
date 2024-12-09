@@ -118,10 +118,24 @@ smcTODbit
    sta TODSecBCD
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    
+   ;check for cartridge signature in RAM (as written by some games ie "Hero")  Thanks Artur Rataj!
+   ;  This causes mis-starts to BASIC and meese up restore key operation
+   ;CharAutostartKey $8004 c3c2cd3830            !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key 
+   ldx #05  ;5 chars total 5:1
+-  lda CharAutostartKey-1,x
+   cmp $8004-1,x
+   bne +
+   dex
+   bne -
+   ; sig found, kill it!
+   ;inc BorderColorReg  ;indicate found
+   stx $8005  ;x==0 from above
+   
    ;check for remote launch on reset
-   lda rwRegIRQ_CMD+IO1Port
++  lda rwRegIRQ_CMD+IO1Port
    cmp #ricmdLaunch
    bne +
+   ;Remote launch requested!
    ;inc BorderColorReg
    lda #ricmdNone
    sta rwRegIRQ_CMD+IO1Port
@@ -1077,6 +1091,9 @@ DisplaySetAutoLaunch:
    jsr AnyKeyMsgWait
    rts
    
+CharAutostartKey:   
+   !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key: 5 chars
+
 TblRowToMemLoc:
    !word C64ScreenRAM+40*(3+ 0)-1
    !word C64ScreenRAM+40*(3+ 1)-1
