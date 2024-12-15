@@ -268,7 +268,7 @@ bool nfcReadTagLaunch()
    }
       
    //Printf_dbg("Launching...\n");
-   RemoteLaunch(MenuSourceID, (char*)pDataStart);
+   RemoteLaunch(MenuSourceID, (char*)pDataStart, false);
    return true;
 }
 

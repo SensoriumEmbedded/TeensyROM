@@ -48,9 +48,9 @@ FASTRUN void isrPHI2()
 #endif
    
    WaitUntil_nS(nS_RWnReady); 
-   uint32_t GPIO_6 = ReadGPIO6; //Address bus and (almost) R/*W are valid on Phi2 rising, Read now
+   uint32_t GPIO_6 = ReadGPIO6; //Address bus and  R/*W are (almost) valid on Phi2 rising, Read now
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
-   bool R_Wn = GP6_R_Wn(GPIO_6);  //read/write bit
+   bool R_Wn = GP6_R_Wn(GPIO_6);  //parse read/write bit
    
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
    else SetDataBufIn;
@@ -97,6 +97,7 @@ FASTRUN void isrPHI2()
    }
    
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
+
    
    if (EmulateVicCycles)
    {

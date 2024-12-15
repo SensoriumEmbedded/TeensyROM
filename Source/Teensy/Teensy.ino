@@ -128,7 +128,7 @@ void setup()
          RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
          
          Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
-         RemoteLaunch(MenuSourceID, ptrAutoFileName);
+         RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
       }
    }
    else

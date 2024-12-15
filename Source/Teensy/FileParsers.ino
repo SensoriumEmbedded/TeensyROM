@@ -23,7 +23,7 @@ StructCrtChip CrtChips[MAX_CRT_CHIPS];
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
 char* LatestSIDLoaded; // allocated to RAM2 via MaxPathLength
 char StrMachineInfo[16]; //~5 extra
-
+bool SendC64Msgs = true;
 
 void ParseP00File(StructMenuItem* MyMenuItem)   
 {  //update .ItemType(rtUnknown or rtFilePrg) & .Code_Image
@@ -525,10 +525,17 @@ void SendMsgPrintf(const char *Fmt, ...)
 void SendMsgSerialStringBuf() 
 {  //SerialStringBuf already populated
    Printf_dbg("%s<--", SerialStringBuf);
-   Serial.flush();
-   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
-   uint32_t beginWait = millis();
-   //wait up to 3 sec for C64 to read message:
-   while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
-   Serial.printf("\nTimeout!\n");
+   if(SendC64Msgs)
+   {
+      Serial.flush();
+      IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
+      uint32_t beginWait = millis();
+      //wait up to 3 sec for C64 to read message:
+      while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
+      Serial.printf("\nSout Timeout!\n"); 
+   }
+   else
+   {
+      Printf_dbg("X");  //Indicates *not* sent to C64
+   }
 }

@@ -110,9 +110,9 @@ FLASHMEM void ServiceSerial()
       //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
       //   //Serial.printf("Autolaunch set\n");
       //   
-      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg");
-      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg");
-      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ");
+      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
+      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
+      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ", false);
       //   break;
      
       //case 'u':  //Reboot to minimal build
@@ -504,7 +504,7 @@ FLASHMEM void LaunchFile()
    if (ReceiveFileName(&SD_nUSB, FileNamePath))
    {
       SendU16(AckToken);
-      RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath); //only SD and USB supported by UI
+      RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath, false); //only SD and USB supported by UI
    }
 }
 

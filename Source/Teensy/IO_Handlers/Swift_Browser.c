@@ -20,7 +20,7 @@
 
 // Swiftlink Browser Functions
 
-extern void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath);
+extern void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect);
 
 void SwiftTxBufToLcaseASSCII()
 {
@@ -1130,7 +1130,7 @@ FLASHMEM void BC_FollowHyperlink(char* CmdMsg)
          EEPreadStr(eepAdDLPath, FileNamePath); 
          CopyDecode(LinkBuff, LinkBuff); //overwrite
          strcat(FileNamePath, LinkBuff);
-         RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath); //only SD and USB supported by browser
+         RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath, false); //only SD and USB supported by browser
          return; //get back to main loop for reset execution
       }
 

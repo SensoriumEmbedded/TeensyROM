@@ -97,7 +97,7 @@ bool SetSIDSong()
    return InterruptC64(ricmdSIDInit);
 }
 
-void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
+void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
    RemoteLaunched = true;
@@ -177,16 +177,37 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath)
    }
    
    Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
-   
+
+   if (DoCartDirect)
+   {  //If a CRT, start and reset directly:
+      switch(MenuSource[SelItemFullIdx].ItemType)
+      {
+         case rtFileCrt:
+         case rtBin16k:
+         case rtBin8kHi:
+         case rtBin8kLo:
+         case rtBinC128:
+            Printf_dbg("Forced CRT launch\n"); 
+            SendC64Msgs = false;
+            HandleExecution();
+            SendC64Msgs = true;
+            if(doReset) return; //success, proceed to reset in main loop
+            
+            Printf_dbg("Unsuccesful\n"); 
+            //Try again via menu so that fail message is displayed on C64...
+            break;
+      }
+   }
+
    //Get the attention of the C64 via IRQ or reset:
    if(CurrentIOHandler == IOH_TeensyROM)
    {
-      Printf_dbg("Interrupt/launch"); 
+      Printf_dbg("Interrupt/launch\n"); 
       if(InterruptC64(ricmdLaunch)) return;
    }
 
    //force reset then launch
-   Printf_dbg("Reset/launch"); 
+   Printf_dbg("Reset/launch\n"); 
    IO1[rwRegIRQ_CMD] = ricmdLaunch;
    SetUpMainMenuROM(); //includes DoReset flag set
    
