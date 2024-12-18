@@ -96,9 +96,12 @@ FLASHMEM void ServiceSerial()
          SetEEPDefaults();
          Serial.println("Applied upon reboot");
          break;
-      case 'v':
+      case 'v': //version info
          MakeBuildInfo();
          Serial.printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
+         break;
+      case 'b': //bus analysis
+         BusAnalysis();
          break;
          
 // *** The rest of these cases are used for debug/testing only  
@@ -122,7 +125,7 @@ FLASHMEM void ServiceSerial()
       //   REBOOT;
       //   break;
 
-   // q, a, b
+   // q, a, i
    #ifdef Dbg_SerASID
       case 'q':   //display queue size, rate, etc
          Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"));
@@ -156,7 +159,7 @@ FLASHMEM void ServiceSerial()
          Serial.printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
       }
          break;
-      case 'b': //Send text via ASID
+      case 'i': //Send text via ASID
       {
          char CharsToSend[] = "This is a long character test, it just  keeps going for 3 continuous lines of   text.  Just when you think it's done...\r";
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
@@ -564,6 +567,7 @@ FLASHMEM bool SerialAvailabeTimeout()
    Serial.print("Timeout!\n");  
    return(false);
 }
+
 
 uint32_t RAM2BytesFree() 
 {
