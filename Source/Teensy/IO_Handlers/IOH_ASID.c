@@ -346,17 +346,17 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
    {      
       case APT_StartPlaying: //start playing message
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
-         Printf_dbg("ATP Start playing\n");
+         Printf_dbg("APT_StartPlaying\n");
          SetASIDIRQ();
          break;
       case APT_StopPlayback: //stop playback message
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
-         Printf_dbg("ATP Stop playback\n");
+         Printf_dbg("APT_StopPlayback\n");
          SetASIDIRQ();
          break;
       case APT_DisplayChars: //Display Characters
          data[size-1] = 0; //replace 0xf7 with term
-         Printf_dbg("ATP Display chars: \"%s\"\n", data+3);
+         Printf_dbg("APT_DisplayChars: \"%s\"\n", data+3);
          for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
          {
             AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
@@ -418,16 +418,25 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          Printf_dbg_SysExInfo;
          for(uint16_t Cnt=0; Cnt<size-4; Cnt+=2)
          {
-            Printf_dbg("reg %d  #%02d  %d cyc\n", Cnt/2, data[Cnt+3] & 0x3f, data[Cnt+4] + ((data[Cnt+3] & 0x40) ? 128:0) );
+            uint8_t Regnum = Cnt/2;
+            uint8_t IndexOrder = data[Cnt+3] & 0x3f;
+            uint8_t WaitCycles = ((data[Cnt+3] & 0x40)<<1) | data[Cnt+4];
+            Printf_dbg("   reg %02d  #%02d  %3d cyc\n", Regnum, IndexOrder, WaitCycles);
          }
          break;         
       case APT_ContFramerate:
          Printf_dbg("APT_ContFramerate:");
          Printf_dbg_SysExInfo;
+         Printf_dbg("   Buffering requested: %s\n", ((data[3]&1) ? "Yes":"No"));
+         Printf_dbg("   Expected Vid: %s\n", ((data[3]&2) ? "PAL":"NTSC"));
+         Printf_dbg("   Frame Delta (uS): %lu\n", (data[6]<<16)|(data[5]<<8)|(data[4]));
          break;         
       case APT_SIDTypes:     
          Printf_dbg("APT_SIDTypes:");
          Printf_dbg_SysExInfo;
+         Printf_dbg("   Index: %d (SID%d)\n", data[3], data[3]+1);
+         Printf_dbg("   Type: %d\n", ((data[4]&1) ? 8580:6581));
+         Printf_dbg("   Variant: %d\n", (data[4]>>1));
          break;         
       default:
          AddErrorToASIDRxQueue();
