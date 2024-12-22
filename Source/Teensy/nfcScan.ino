@@ -154,6 +154,17 @@ RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName)
    return MenuSourceID;
 }
 
+FS *FSfromSourceID(RegMenuTypes SourceID)
+{
+   if(SourceID == rmtSD) 
+   {
+      SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      return &SD;
+   }
+   else if(SourceID == rmtUSBDrive) return &firstPartition;    
+   else return NULL;
+}
+
 bool nfcReadTagLaunch()
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
@@ -246,27 +257,63 @@ bool nfcReadTagLaunch()
   
   
    Printf_dbg("Final Payload: %s\n\n", pDataStart);
-   
    RegMenuTypes MenuSourceID = RegMenuTypeFromFileName((char**)&pDataStart);
 
-   if(memcmp(pDataStart, "C64", 3) == 0 && MenuSourceID != rmtTeensy)
-   { //could be used to specify system type for TapTo, only valid for SD/USB
-      FS *sourceFS;
-      if(MenuSourceID == rmtSD) 
-      {
-         sourceFS = &SD;
-         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-      }
-      else sourceFS = &firstPartition;    
-
+   // "C64" could be used to specify system type for TapTo, only valid for SD/USB
+   if(memcmp(pDataStart, "C64", 3) == 0)
+   { 
       Printf_dbg("C64 found\n");
-      if (!sourceFS->exists((char*)pDataStart)) 
+      FS *sourceFS = FSfromSourceID(MenuSourceID);
+      
+      if (sourceFS != NULL)
       {
-         pDataStart+=3; //skip it if file not found with it present
-         Printf_dbg(" & removed\n");
+         if (!sourceFS->exists((char*)pDataStart)) //make sure there's not a file named "C64"
+         {
+            pDataStart+=3; //skip it if file not found with it present
+            Printf_dbg(" & removed\n");
+         }
       }
    }
+   
+   //check for & set up random launch
+   if(strcmp((char*)pDataStart+strlen((char*)pDataStart)-2, "/?")==0)
+   {  
+      Printf_dbg("Random requested\n");
+      SetRandomSeed();
+      FS *sourceFS = FSfromSourceID(MenuSourceID);
       
+      if (sourceFS != NULL)  //only valid for SD/USB
+      {
+         //load the full directory
+         pDataStart[strlen((char*)pDataStart)-1]=0; //remove the "?"
+         strcpy(DriveDirPath, (char*)pDataStart); //set up for LoadDirectory
+         LoadDirectory(sourceFS);
+         
+         Printf_dbg("%d files found\n", NumDrvDirMenuItems);
+         
+         //remove dirs and unknown file types
+         uint16_t LocalNumItems = 0;
+         StructMenuItem *LocalDirMenu[MaxMenuItems];
+
+         for(uint16_t FNum=0; FNum<NumDrvDirMenuItems; FNum++)
+         {
+            //Printf_dbg("%4d %2d %s\n", FNum, DriveDirMenu[FNum].ItemType, DriveDirMenu[FNum].Name);
+            if (DriveDirMenu[FNum].ItemType >= rtFilePrg && DriveDirMenu[FNum].ItemType != rtFileHex)
+            {
+               LocalDirMenu[LocalNumItems] = &DriveDirMenu[FNum];
+               Printf_dbg("%4d %2d %s\n", LocalNumItems, LocalDirMenu[LocalNumItems]->ItemType, LocalDirMenu[LocalNumItems]->Name);
+               LocalNumItems++;
+            }
+         }
+         if (LocalNumItems)  //if there are valid files
+         {
+            //pick a random one and append to path
+            strcat((char*)pDataStart, LocalDirMenu[random(0, LocalNumItems)]->Name);
+            Printf_dbg("Picked: %s\n", pDataStart);
+         } //else return false; //let it try to launch
+      }
+   }
+   
    //Printf_dbg("Launching...\n");
    RemoteLaunch(MenuSourceID, (char*)pDataStart, false);
    return true;
@@ -282,7 +329,7 @@ FLASHMEM void nfcWriteTag(const char* TxtMsg)
    {
       if (TryNum++ == 10) // 10 retries, doesn't help much if out of range or too close
       {
-         SendMsgPrintfln(" Couldn't verify tag");
+         SendMsgPrintfln(" Couldn't verify tag :(");
          return;
       }
    }

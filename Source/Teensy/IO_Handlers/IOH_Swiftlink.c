@@ -120,6 +120,7 @@ extern void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len);
 extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern void EEPreadStr(uint16_t addr, char* buf);
 extern void FreeDriveDirMenu();
+extern void SetRandomSeed();
 extern uint32_t RAM2BytesFree();
 
 uint8_t* RxQueue[RxQueueNumBlocks];  //circular queue to pipe data to the c64, divided into blocks for better malloc
@@ -290,7 +291,7 @@ FLASHMEM void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->port = 80;
    }
    strcpy(CurrPageTitle, "None");
-   randomSeed(ARM_DWT_CYCCNT);
+   SetRandomSeed();
    nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }
 

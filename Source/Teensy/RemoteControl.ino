@@ -139,7 +139,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
          MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, DriveDirPath);
          if(MenuNum<0)
          {
-            Printf_dbg("No TR Dir\n");
+            Printf_dbg("No TR Dir \"%s\"\n", DriveDirPath);
             //Somehow notify user?  
             return;
          }
@@ -152,7 +152,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, ptrFilename);
       if(MenuNum<0)
       {
-         Printf_dbg("No TR File\n");
+         Printf_dbg("No TR File \"%s\"\n", ptrFilename);
          //Somehow notify user?  
          return;
       }   

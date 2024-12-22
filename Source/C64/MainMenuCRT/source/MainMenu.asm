@@ -264,8 +264,16 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
-+  cmp #ChrLeftArrow ;Write NFC Tag
++  cmp #ChrLeftArrow ;Write NFC Tag to current file
    bne +  
+   lda #0  ;Normal File tag
+   jsr WriteNFCTag
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent 
+
++  cmp #ChrQuestionMark ;Write random NFC Tag to current dir
+   bne +  
+   lda #1  ;Random dir tag
    jsr WriteNFCTag
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
@@ -340,7 +348,7 @@ ReadKeyboard:
    ldx #1  ;dir MIDI+ASID
    lda #3  ;prog Cynthcart
    
-HotKeyLaunch:
+HotKeyLaunch
    ;launch item # stored in acc from main TR menu   
    pha ;save program #
    txa
@@ -1039,6 +1047,9 @@ TextScreenMemColor:
    rts
 
 WriteNFCTag:
+   ;write currently highlighted file (or random via dir) to NFC tag
+   ;acc set to indicate random dir before calling, save it in the scratch reg.
+   sta rwRegScratch+IO1Port
    jsr PrintBanner
    lda #<MsgWriteNFCTag
    ldy #>MsgWriteNFCTag

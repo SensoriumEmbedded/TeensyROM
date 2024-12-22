@@ -59,6 +59,7 @@
    rwRegIRQ_CMD        = 32 ;// IRQ Command from TeensyROM
    rwRegCodeStartPage  = 33 ;// TR Code Start page in C64 RAM
    rwRegCodeLastPage   = 34 ;// TR Code last page used in C64 RAM
+   rwRegScratch        = 35 ;// Bi-Directional Scratch Register
 
    ; These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 ;// start of SID Regs, matching SID Reg order ($D400)

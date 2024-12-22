@@ -410,7 +410,11 @@ void SearchForLetter()
 
 FLASHMEM void GetCurrentFilePathName(char* FilePathName)
 {
+   char *LclFilename = MenuSource[SelItemFullIdx].Name;
+   char Rand[] = "?";
    
+   if (IO1[rwRegScratch]) LclFilename = Rand; //random dir
+  
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy) 
    {
       //figure out what menu dir we're in
@@ -433,21 +437,21 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName)
          strcpy(DirName, TeensyROMMenu[DirNum].Name);
       }
       
-      sprintf(FilePathName, "TR:%s/%s", DirName, MenuSource[SelItemFullIdx].Name);
+      sprintf(FilePathName, "TR:%s/%s", DirName, LclFilename);
    }
    else
    {
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
       
-      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, MenuSource[SelItemFullIdx].Name);  // at root
-      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, MenuSource[SelItemFullIdx].Name);   
+      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, LclFilename);  // at root
+      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);   
    }
 }
 
 FLASHMEM void WriteNFCTagCheck()
 {
-
+   //IO1[rwRegScratch] 1=rand dir, 0=single file
    IO1[rRegLastHourBCD] = 0; //using this reg as scratch to communicate outcome
    
    if (nfcState != nfcStateEnabled)
@@ -458,7 +462,7 @@ FLASHMEM void WriteNFCTagCheck()
    
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
 
-   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   if (!IO1[rwRegScratch] && MenuSource[SelItemFullIdx].ItemType < rtFilePrg) //single file but not executable
    {
       SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -841,6 +845,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegCodeLastPage:
          case rwRegCursorItemOnPg:
          case rwRegSIDSongNumZ:
+         case rwRegScratch:
             IO1[Address]=Data;
             break;    
             

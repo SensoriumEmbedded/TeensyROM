@@ -332,3 +332,15 @@ bool USBFileSystemWait()
    Printf_dbg("USB drive not found!\n");  
    return false;
 }
+
+void SetRandomSeed()
+{
+   //Set the Random Seed once the first time it is called (set to cycle count)
+   static bool SetOnce = false;
+   
+   if (SetOnce) return;
+   
+   SetOnce = true;
+   Printf_dbg("Setting Random Seed\n");
+   randomSeed(ARM_DWT_CYCCNT);
+}
