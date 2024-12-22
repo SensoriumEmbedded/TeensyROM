@@ -1,5 +1,5 @@
 
-volatile uint32_t *BusBitCount;
+uint32_t *BusBitCount;
 volatile uint32_t BusSampleCount;
 
 #define BusSampleMaxSize   100000

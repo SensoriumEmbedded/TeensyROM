@@ -33,7 +33,7 @@ uint8_t CurrentIOHandler = IOH_None;
 StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
-bool RemoteLaunched = false; //last app was launched remotely
+//bool RemoteLaunched = false; //last app was launched remotely
 
 #include "Common/ISRs.c"
 
