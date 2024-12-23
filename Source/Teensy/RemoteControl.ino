@@ -100,6 +100,7 @@ bool SetSIDSong()
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
+   //Printf_dbg("Launching: SrcID%d DoCRT%d \"%s\"\n", MenuSourceID, DoCartDirect, FileNamePath);
    RemoteLaunched = true;
    //Set selected drive
    IO1[rWRegCurrMenuWAIT] = MenuSourceID;

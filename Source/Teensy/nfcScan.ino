@@ -278,40 +278,74 @@ bool nfcReadTagLaunch()
    //check for & set up random launch
    if(strcmp((char*)pDataStart+strlen((char*)pDataStart)-2, "/?")==0)
    {  
+      uint16_t LocalNumItems = 0;
+      StructMenuItem *LocalDirMenu;
+      
       Printf_dbg("Random requested\n");
       SetRandomSeed();
-      FS *sourceFS = FSfromSourceID(MenuSourceID);
       
-      if (sourceFS != NULL)  //only valid for SD/USB
-      {
-         //load the full directory
-         pDataStart[strlen((char*)pDataStart)-1]=0; //remove the "?"
-         strcpy(DriveDirPath, (char*)pDataStart); //set up for LoadDirectory
-         LoadDirectory(sourceFS);
-         
-         Printf_dbg("%d files found\n", NumDrvDirMenuItems);
-         
-         //remove dirs and unknown file types
-         uint16_t LocalNumItems = 0;
-         StructMenuItem *LocalDirMenu[MaxMenuItems];
+      pDataStart[strlen((char*)pDataStart)-1]=0; //remove the "?"
 
-         for(uint16_t FNum=0; FNum<NumDrvDirMenuItems; FNum++)
-         {
-            //Printf_dbg("%4d %2d %s\n", FNum, DriveDirMenu[FNum].ItemType, DriveDirMenu[FNum].Name);
-            if (DriveDirMenu[FNum].ItemType >= rtFilePrg && DriveDirMenu[FNum].ItemType != rtFileHex)
+      //point to or load the dir contents:
+      if(MenuSourceID == rmtTeensy)
+      {  //look up/point to TR dir struct
+         LocalDirMenu = TeensyROMMenu;  //default to root menu
+         LocalNumItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
+         
+         if(strcmp((char*)pDataStart, "//") !=0)
+         {  // not root, find dir menu
+            pDataStart[strlen((char*)pDataStart)-1]=0; //remove the "/"
+            int16_t MenuNum = FindTRMenuItem(LocalDirMenu, LocalNumItems, (char*)pDataStart);
+            pDataStart[strlen((char*)pDataStart)]='/'; //put the "/" back
+            if(MenuNum<0)
             {
-               LocalDirMenu[LocalNumItems] = &DriveDirMenu[FNum];
-               Printf_dbg("%4d %2d %s\n", LocalNumItems, LocalDirMenu[LocalNumItems]->ItemType, LocalDirMenu[LocalNumItems]->Name);
-               LocalNumItems++;
+               Printf_dbg("No TR Dir \"%s\"\n", pDataStart);
+               //Somehow notify user?  
+               //return; //leave at default (root) and probably fail trying to execute
             }
+            else
+            {
+               //point at sub-dir
+               LocalDirMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
+               LocalNumItems = TeensyROMMenu[MenuNum].Size/sizeof(StructMenuItem);
+            }
+            Printf_dbg("TR Dir Num = %d\n", MenuNum);
          }
-         if (LocalNumItems)  //if there are valid files
-         {
-            //pick a random one and append to path
-            strcat((char*)pDataStart, LocalDirMenu[random(0, LocalNumItems)]->Name);
-            Printf_dbg("Picked: %s\n", pDataStart);
-         } //else return false; //let it try to launch
       }
+      else
+      {  //it's SD or USB, read dir from media
+         FS *sourceFS = FSfromSourceID(MenuSourceID);
+      
+         if (sourceFS != NULL)  //only valid for SD/USB
+         {  //load the full directory
+            strcpy(DriveDirPath, (char*)pDataStart); //set up for LoadDirectory
+            LoadDirectory(sourceFS); //loads DriveDirMenu, NumDrvDirMenuItems
+            LocalDirMenu = DriveDirMenu;
+            LocalNumItems = NumDrvDirMenuItems;
+         }   
+      }
+
+      
+      //remove dirs and unknown file types
+      Printf_dbg("%d files found\n", LocalNumItems);
+      uint16_t CleanLocalNumItems = 0;
+      StructMenuItem *CleanLocalDirMenu[MaxMenuItems];
+
+      for(uint16_t FNum=0; FNum<LocalNumItems; FNum++)
+      {
+         //Printf_dbg("%4d %2d %s\n", FNum, LocalDirMenu[FNum].ItemType, LocalDirMenu[FNum].Name);
+         if (LocalDirMenu[FNum].ItemType >= rtFilePrg && LocalDirMenu[FNum].ItemType != rtFileHex)
+         {
+            CleanLocalDirMenu[CleanLocalNumItems] = &LocalDirMenu[FNum];
+            Printf_dbg("%4d %2d %s\n", CleanLocalNumItems, CleanLocalDirMenu[CleanLocalNumItems]->ItemType, CleanLocalDirMenu[CleanLocalNumItems]->Name);
+            CleanLocalNumItems++;
+         }
+      }
+      if (CleanLocalNumItems)  //if there are valid files
+      {  //pick a random one and append to path
+         strcat((char*)pDataStart, CleanLocalDirMenu[random(0, CleanLocalNumItems)]->Name);
+      }  //else return false; //let it try to launch, throw error
+      Printf_dbg("Picked: %s\n", pDataStart);
    }
    
    //Printf_dbg("Launching...\n");
