@@ -63,12 +63,14 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
       * **SD:path/filename** (SD card source)
       * **USB:path/filename** (USB drive source)
       * **TR:path/filename** (TeensyROM built-in source)
-    * Example: *SD:OneLoad v5/Donkey Kong Junior.crt*
+    * Example: **SD:OneLoad v5/Donkey Kong Junior.crt**
+    * **filename** can be replaced by **?** to indicate a random file from the directory
     * Character limit is 246 chars (171 for NTAG213)
 
 ### Programming tag directly with the TeensyROM
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
-  * Press the **Left Arrow** key to select it for tag writing.
+  * Press the `Left Arrow` key to select the file for tag writing.
+    * Alternately, press `?` to write an NFC Tag that will launch a random file from the currently selected Directory
   * Folow the on-screen instructions to load a tag and write to it.
   * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
 

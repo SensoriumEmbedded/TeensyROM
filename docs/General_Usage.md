@@ -27,6 +27,7 @@
     * `a-z` Search current directory for first item beginning with letter pressed
     * `Home` Move cursor to first item in directory
     * `Left Arrow` Write NFC Tag that will launch currently highlighted file
+    * `?` Write NFC Tag that will launch a random file from the currently selected Directory
     * `Shift-Return` Set Auto-Launch to currently highlighted file
     * `1-4` Hot Keys to launch the following:
       * `1` Cynthcart

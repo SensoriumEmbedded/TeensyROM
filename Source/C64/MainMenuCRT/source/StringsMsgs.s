@@ -81,11 +81,12 @@ MsgHelpMenu:
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Up directory", ChrReturn
    !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Next entry starting with letter", ChrReturn
    !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Beginning of current dir", ChrReturn
-   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Program NFC tag to highlighted", ChrReturn
-   !tx          OptionColor, ChrFillRight, ChrRvsOn, "Sh-Ret", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Set Auto-Launch to highlighted", ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
+   !tx          OptionColor, ChrFillRight, ChrRvsOn, "Sh-Ret", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
    !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "1-4", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
    !tx ChrReturn
-   !tx SourcesColor, " Available here and on Main Menu:", ChrReturn
+   !tx SourcesColor    ;, " Available here and on Main Menu:", ChrReturn
    !tx "   Source Select:   ", MenuMiscColor, "Other:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, SourcesColor,  "Teensy Mem"
    !tx   "  ", OptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Exit to BASIC", ChrReturn
