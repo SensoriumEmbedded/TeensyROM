@@ -444,7 +444,7 @@ void PollingHndlr_MIDI()
       
       Printf_dbg("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
       MIDITxBytesReceived = 0;
-      rIORegMIDIStatus |= MIDIStatusTxRdy | MIDIStatusIRQReq;
+      rIORegMIDIStatus |= MIDIStatusTxRdy;
    }
 }
 
