@@ -36,6 +36,10 @@ PN532_UHSU pn532uhsu(userial);
 PN532 nfc(pn532uhsu);
 
 #define MaxNfcConfRetries    20
+#define NFCReReadTimeout   1000  // mS since of no scan to re-accept same tag
+
+uint8_t  Lastuid[7];  // Buffer to store the last UID read
+uint32_t LastTagMillis = 0; //stores last good tag time for Lastuid timeout/allow retag
 
 FLASHMEM void nfcInit()
 {  
@@ -111,6 +115,7 @@ void nfcCheck()
    
    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) 
    {  //succesful read
+      LastTagMillis = millis();
       //Printf_dbg("*");
       if (uidLength == 7)
       { // We probably have a Mifare Ultralight card ...
@@ -119,6 +124,17 @@ void nfcCheck()
          //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
          if (nfcReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
       }
+   }
+   else
+   { //no card detected, check for timeout & clear Lastuid
+      if(LastTagMillis) //would only naturally be exactly zero for 1mS every 50 days after each power-up
+      {
+         if(millis()-LastTagMillis > NFCReReadTimeout)
+         {
+            LastTagMillis = 0; //Only timeout/clear once until next tag is scanned
+            memset(Lastuid, 0, sizeof Lastuid); //clear Lastuid, allow re-tag
+         }
+      }  
    }
 }
 
