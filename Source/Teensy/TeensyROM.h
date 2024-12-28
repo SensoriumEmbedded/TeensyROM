@@ -21,6 +21,12 @@
 
 char strVersionNumber[17] = "v0.6.3+2"; //*VERSION*
 
+#define DefSIDSource        rmtTeensy  // Default should always be local (rmtTeensy)
+#define DefSIDPath          "/SID Cover Tunes" 
+#define DefSIDName          "Sleep Dirt            Frank Zappa" 
+
+#define MaxRAM_ImageSize  (144)  //"626k Free"  How much RAM1 space can be used for CRT & Transfer buffer
+
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
@@ -42,27 +48,4 @@ char strVersionNumber[17] = "v0.6.3+2"; //*VERSION*
 //enabling this on a fab 0.2x PBC could cause damage to your C64!
 // fab 0.3 uses different debug signal and direct data buffer dir control
 // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 
-
-
-#define nfcScanner     //nfc scanner libs/code included in build
-#define nfcStateEnabled       0
-#define nfcStateBitDisabled   1
-#define nfcStateBitPaused     2
-
-#define eepBMTitleSize       75  //max chars in bookmark title
-#define eepBMURLSize        225  //Max Chars in bookmark URL path
-#define eepNumBookmarks       9  //Num Bookmarks saved
-
-#ifdef nfcScanner
-   #define MaxRAM_ImageSize  (184-40)  // ~18k added by host serial & nfc libs, crossed a 32k code boundry (22k more padding)
-   //"626k Free"
-#else
-   #define MaxRAM_ImageSize  184  //normal max 
-   //"666k Free"
-#endif
-
-#define DefSIDSource        rmtTeensy  // Default should always be local (rmtTeensy)
-#define DefSIDPath          "/SID Cover Tunes" 
-#define DefSIDName          "Sleep Dirt            Frank Zappa" 
-
 

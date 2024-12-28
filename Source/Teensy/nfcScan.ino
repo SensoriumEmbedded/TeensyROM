@@ -20,7 +20,6 @@
 //  TeensyROM: A C64 ROM emulator and loader/interface cartidge based on the Teensy 4.1
 //  Copyright (c) 2023 Travis Smith <travis@sensoriumembedded.com> 
 
-#ifdef nfcScanner
 
 #include <PN532.h>      //From: https://github.com/elechouse/PN532
 #include "PN532_UHSU.h" //Customized for USBSerial instead of HardwareSerial
@@ -423,4 +422,3 @@ FLASHMEM void nfcWriteTag(const char* TxtMsg)
    SendMsgPrintfln("Success!");
 }
 
-#endif

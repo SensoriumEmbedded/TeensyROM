@@ -83,9 +83,7 @@ FLASHMEM void ServiceSerial()
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
-               #ifdef nfcScanner
-                  nfcInit();
-               #endif
+               //nfcInit();
                break;
             default:
                Serial.printf("Unk cmd: 0x%04x\n", inVal); 

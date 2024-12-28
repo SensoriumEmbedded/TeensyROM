@@ -29,6 +29,9 @@ EthernetClient client;
 
 #define usbDevMIDI usbMIDI
 #define IOHNameLength 20  //limited by display location on C64
+#define nfcStateEnabled       0
+#define nfcStateBitDisabled   1
+#define nfcStateBitPaused     2
 
 struct stcIOHandlers
 {

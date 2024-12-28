@@ -40,23 +40,26 @@ stcIOHandlers IOHndlr_SwiftLink =
 };
 
 
-#define NumPageLinkBuffs   99
-#define NumPrevURLQueues   8
+#define NumPageLinkBuffs    99
+#define NumPrevURLQueues     8
 #define MaxURLHostSize     100
 #define MaxURLPathSize     300
 #define MaxTagSize         300
 #define TxMsgMaxSize       128    //DL path saved in EEPROM is tied to this
+#define eepBMTitleSize      75    //max chars in bookmark title
+#define eepBMURLSize       225    //Max Chars in bookmark URL path
+#define eepNumBookmarks      9    //Num Bookmarks saved
 #define BytesPerDot        (25*1024) //dot every 25k when downloading
-#define RxQueueNumBlocks   40 
+#define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
-#define C64CycBetweenRx    2300   //stops NMI from re-asserting too quickly.
+#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly.
                            // 2300 is lowest without CCGMS misses (chars missed in large buffs when lower)
                            // 3410 for 2400 baud Rx
                            // 6819 for 1200 baud Rx
 #define NMITimeoutuS       300    //if Rx data not read within this time, deassert NMI anyway
-#define Drive_USB          1
-#define Drive_SD           2
+#define Drive_USB            1
+#define Drive_SD             2
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)

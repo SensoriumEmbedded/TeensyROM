@@ -112,9 +112,7 @@ void setup()
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 
-#ifdef nfcScanner
    if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
-#endif
 
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
@@ -155,9 +153,7 @@ void loop()
          RemoteLaunched = false;
          Printf_dbg("Remote recovery\n"); 
       }   
-   #ifdef nfcScanner
       if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
-   #endif
       SetUpMainMenuROM(); //back to main menu
    }
    
@@ -192,10 +188,8 @@ void loop()
   
    if (Serial.available()) ServiceSerial();
    myusbHost.Task();
-#ifdef nfcScanner
    if (nfcState == nfcStateEnabled) nfcCheck();
-#endif
-   
+ 
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
 }
