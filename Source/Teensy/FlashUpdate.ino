@@ -53,7 +53,8 @@
 
 
 #define FLASH_RESERVE     (0x40000) // 256k reserved space at top of flash 
-#define FLASH_ID         "fw_t41_teensyrom_sensorium" // target ID to match
+#define FLASH_ID         "fw_t41_teensyrom_sensorium_v3" // target ID to match, must be a superset of previous
+#define FLASH_ID_ORIG    "fw_t41_teensyrom_sensorium" // target ID to match for old fab 0.2x FW
 
 #include <SD.h>
 #include "Flash/FXUtil.h"		// read_ascii_line(), hex file support
@@ -113,4 +114,26 @@ void DoFlashUpdate(FS *sourceFS, const char *FilePathName)
    
    //SendMsgPrintfln( "Rebooting  Teensy");  
    //REBOOT;
+}
+
+bool isFab2x()
+{
+   // Determines if this is a fab 0.2x PCB by reading the Dot_Clock input
+   //  (only connectedon fab 0.2, debug on fab 0.3)
+   
+   uint32_t Highs = 0, Lows = 0;
+   
+   pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
+   
+   uint32_t StartmS = millis();
+   while(millis()-StartmS<100)
+   {
+      if (ReadDotClkDebug) Highs++;
+      else Lows++;
+   }
+   
+   Printf_dbg("\nDotClk/Debug pin: %lu Highs, %lu Lows\n", Highs, Lows); 
+   //fab 0.3:  4121505 to 4153250 Highs, 0 Lows
+   //fab 0.2x: 2230311 to 2296610 Highs, 1990311-2052164 Lows
+   return(Highs>1000000 && Lows>1000000);
 }

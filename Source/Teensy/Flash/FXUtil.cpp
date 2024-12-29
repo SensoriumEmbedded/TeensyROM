@@ -114,15 +114,32 @@ void update_firmware( Stream *in, Stream *out,
   //#endif
 
   // check FLASH_ID in new code - abort if not found
-  SendMsgPrintfln("Verifying file is for TeensyROM ");
-  if (check_flash_id( buffer_addr, hex.max - hex.min )) {
+  SendMsgPrintfln("Verify file for TeensyROM: ");  //27 chars
+  if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID )) 
+  {
     //out->printf( "new code contains correct target ID %s\n", FLASH_ID );
     SendMsgOK();
   }
-  else {
+  else 
+  {
     //out->printf( "abort - new code missing string %s\n", FLASH_ID );
-    SendMsgFailed();
-    return;
+    if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID_ORIG ))
+    {
+       if (isFab2x())  //fab 0.2x boards can load older FLASH_ID_ORIG
+       {
+          SendMsgPrintf("Fab 0.2x OK");  //11 chars
+       }
+       else
+       {
+          SendMsgPrintfln("File is for Fab 0.2x TR only!");  
+          return;
+       }
+    }
+    else
+    {
+       SendMsgFailed();
+       return;
+    }
   }
   
   // get user input to write to flash or abort

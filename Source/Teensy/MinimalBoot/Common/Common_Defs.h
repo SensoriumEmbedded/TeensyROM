@@ -149,6 +149,7 @@ const uint8_t OutputPins[] = {
                             
 #define ReadGPIO8           (*(volatile uint32_t *)IMXRT_GPIO8_ADDRESS)
 #define ReadButton          (ReadGPIO8 & CORE_PIN31_BITMASK)
+#define ReadDotClkDebug     (ReadGPIO8 & CORE_PIN28_BITMASK)
                             
 #define ReadGPIO9           (*(volatile uint32_t *)IMXRT_GPIO9_ADDRESS)
 #define GP9_IO1n(r)         (r & CORE_PIN2_BITMASK)
@@ -189,15 +190,17 @@ const uint8_t OutputPins[] = {
                                  // Times from Phi2 rising (interrupt):
 #define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid.  
 #define Def_nS_RWnReady_dly 135  //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
+                                 //       12/14/24: C128 & C64C JL also needs this
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
 
 #ifdef Mega65
   #define Def_nS_DataHold     375  //    On a C64 read, when to stop driving the data bus
-                                   //       12/3/24 v0.6.4+: 365 to 375 to accomodate Mega65 ROML read
 #else
   #define Def_nS_DataHold     365  //    On a C64 read, when to stop driving the data bus
-                                   //       2/1/24 v0.5.10+: updated from 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
+                                   //       2/1/24   v0.5.10+:    From 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
+                                   //       12/3/24  v0.6.3+M65:  365 to 375 to accomodate Mega65 ROML read
+                                   //       12/12/24 v0.6.3+T390: Set to 390 for a Reloaded Mk2 using FW 20180227 from CryzleR/Frank.  V20231101 (latest) still fails below ~385  https://wiki.icomp.de/wiki/C64_reloaded_mk2#Firmware_updates
 #endif
 
                                  // Times from Phi2 falling:

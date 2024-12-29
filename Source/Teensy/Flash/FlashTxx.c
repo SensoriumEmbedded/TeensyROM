@@ -89,10 +89,10 @@ void firmware_buffer_free( uint32_t buffer_addr, uint32_t buffer_size )
 //******************************************************************************
 // search buffer for string FLASH_ID to verify code was built for correct TARGET
 //******************************************************************************
-int check_flash_id( uint32_t buffer, uint32_t size )
+int check_flash_id( uint32_t buffer, uint32_t size, const char *flash_id)
 {
-  for (uint32_t i = buffer; i < buffer + size - strlen(FLASH_ID); ++i) {
-    if (strncmp((char *)i, FLASH_ID, strlen(FLASH_ID)) == 0)
+  for (uint32_t i = buffer; i < buffer + size - strlen(flash_id); ++i) {
+    if (strncmp((char *)i, flash_id, strlen(flash_id)) == 0)
       return 1;
   }
   return 0;
