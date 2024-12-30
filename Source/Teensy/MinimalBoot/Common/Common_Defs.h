@@ -29,7 +29,7 @@
 #define GoodSIDToken      0x9B81
 
 
-#define eepMagicNum         0xfeed6409 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed640a // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -38,6 +38,7 @@
                                        // 07: 6/3/24   Added eepAdCrtBootName (unreleased)
                                        // 08: 7/7/24   Separate Min Boot Indicator
                                        // 09: 10/2/24  Autolaunch Indicator
+                                       // 0a: 12/29/24 RW Delay default to on
                                        
 enum InternalEEPROMmap
 {
