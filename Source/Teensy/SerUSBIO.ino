@@ -84,6 +84,7 @@ FLASHMEM void ServiceSerial()
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
                //nfcInit();
+               Printf_dbg("isFab2x: %d\n", isFab2x()); 
                break;
             default:
                Serial.printf("Unk cmd: 0x%04x\n", inVal); 
@@ -358,8 +359,11 @@ FLASHMEM void ServiceSerial()
             case 'h': //nS_DataHold change
                GetDigits(3, &nS_DataHold);
                break;
-            case 'v': //VIC timing change
+            case 'v': //nS_VICStart change
                GetDigits(3, &nS_VICStart);
+               break;
+            case 'i': //nS_VICDHold change
+               GetDigits(3, &nS_VICDHold);
                break;
             case 'd': //Set Defaults
                nS_MaxAdj    = Def_nS_MaxAdj; 
@@ -368,6 +372,7 @@ FLASHMEM void ServiceSerial()
                nS_DataSetup = Def_nS_DataSetup;  
                nS_DataHold  = Def_nS_DataHold;  
                nS_VICStart  = Def_nS_VICStart;  
+               nS_VICDHold  = Def_nS_VICDHold;
                Serial.printf("Defaults set\n");
                break;
             default:
@@ -381,6 +386,7 @@ FLASHMEM void ServiceSerial()
          Serial.printf("\tnS_DataSetup  %03d (ts###)\n", nS_DataSetup);
          Serial.printf("\t nS_DataHold  %03d (th###)\n", nS_DataHold);
          Serial.printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
+         Serial.printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
          Serial.printf("\tSet Defaults      (td)\n");
          Serial.printf("\tList current vals (t)\n-----\n");
          break;  

@@ -106,9 +106,7 @@ void setup()
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-#ifdef Mega65
-   strcat(strVersionNumber, "+M65"); 
-#endif
+
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
 

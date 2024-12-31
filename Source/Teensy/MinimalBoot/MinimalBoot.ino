@@ -73,7 +73,8 @@ void setup()
 #ifdef Dbg_TestMin
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
-   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt");
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt");
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/770k Where in USA is Carmen Sandiego [EasyFlash].crt");  //PAL only
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  

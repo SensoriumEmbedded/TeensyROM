@@ -9,6 +9,8 @@
 4. Run Arduino and compile MinimalBoot code
     Be sure to select "Serial" (only) USB Type
 5. Combine .hex files:
+   a. run CombineImages.bat and verify output: dates/build locations of each .hex file 
+     -or-
    a. start with lower/minimal hex file
    b. delete last 2 lines
    c. copy paste in all of upper/main hex file
