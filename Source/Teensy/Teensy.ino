@@ -116,15 +116,23 @@ void setup()
 
    if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
    {
-      if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+      if (ReadButton!=0) //skip autolaunch checks if button pressed
       {
-         char AutoFileName[MaxPathLength];
-         EEPreadStr(eepAdAutolaunchName, AutoFileName);
-         char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
-         RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
-         
-         Printf_dbg("Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
-         RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
+         uint32_t AutoStartmS = millis();
+         if(!CheckLaunchSDAuto()) //if nothing autolaunched from SD autolaunch file
+         {
+            if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+            {
+               char AutoFileName[MaxPathLength];
+               EEPreadStr(eepAdAutolaunchName, AutoFileName);
+               char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
+               RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
+               
+               Printf_dbg("EEP Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
+               RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
+            }
+         }
+         Printf_dbg("Autolaunch checks: %lumS\n", millis()-AutoStartmS);
       }
    }
    else
@@ -283,8 +291,8 @@ bool SDFullInit()
    uint32_t Startms = millis();
    
    Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
-   Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent());
-   
+   Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()
+    
    while (!SD.begin(BUILTIN_SDCARD)) 
    {
       Count--;
@@ -335,4 +343,68 @@ void SetRandomSeed()
    SetOnce = true;
    Printf_dbg("Setting Random Seed\n");
    randomSeed(ARM_DWT_CYCCNT);
+}
+
+bool CheckLaunchSDAuto()
+{         
+   //returns true only if file launched
+   
+   // SD not present: 0mS
+   // autolaunch.txt Not Found: 9-10mS
+   // Launch file name too short: 10mS
+   // Launch file attempted, not found: 39mS
+   // Autolaunch file found, launch set-up: 10mS
+   
+   // _SD_DAT3 = pin 46
+   pinMode(46, INPUT_PULLDOWN);
+   if (digitalReadFast(46))
+   {  //SD Presence detected, do full init and check for auotlaunch file    
+      Printf_dbg("SD Presence detected\n");
+      if (SDFullInit())
+      {
+         File AutoLaunchFile = SD.open("autolaunch.txt", FILE_READ);
+         if (!AutoLaunchFile) 
+         {
+            Printf_dbg("autolaunch.txt Not Found\n");
+            return false;
+         }
+         
+         char AutoFileName[MaxPathLength];
+         uint16_t CharNum = 0;
+         char NextChar = 1;
+         
+         while (NextChar)
+         {
+            if(AutoLaunchFile.available()) NextChar = AutoLaunchFile.read();
+            else NextChar = 0;
+            
+            if (NextChar=='\r' || NextChar=='\n' || CharNum == MaxPathLength-1) NextChar = 0;           
+            
+            AutoFileName[CharNum++]=NextChar;
+         }
+         AutoLaunchFile.close();
+         
+         Printf_dbg("SD First line: %d chars \"%s\"\n", CharNum, AutoFileName); 
+         
+         if (CharNum<6) 
+         {
+            Printf_dbg("Filename too short\n");
+            return false;
+         }
+
+         char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
+         RegMenuTypes SourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
+         
+         Printf_dbg("SD Autolaunch %d \"%s\"\n", SourceID, ptrAutoFileName); 
+         
+         //check if file exists????????????
+         
+         RemoteLaunch(SourceID, ptrAutoFileName, true); //do CRT directly 
+         return true;
+      }  //SD init
+      else Printf_dbg("SDFullInit fail\n");
+   }  //SD presence
+   else Printf_dbg("No SD detected\n");
+
+   return false;
 }

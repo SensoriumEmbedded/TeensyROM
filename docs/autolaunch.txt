@@ -1,0 +1,39 @@
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The only thing that matters in this file is the first line.
+If this file (autolaunch.txt) is saved in the root directory of an SD card and 
+placed in the TeensyROM, then the path/file indicated will be launched on
+power-up of the TeensyROM.  To exit the auto-launched program, press the menu button
+
+Feature available in FW 0.6.4 or higher
+
+File can be left in directory with the first line blank to disable.
+
+Format: <source>:/<path>/<filename>
+where <source> is SD, USB, or TR
+Should begin at the first character in the first line and end with CR or LF to terminate
+
+
+Examples:
+TR:/Test+Diags/DesTestMAX:  Desmond's RAM Test
+TR:/Test+Diags/781220 C64 Dead Test
+TR:/Test+Diags/586220(ast) C64 Diagnostics
+TR:/Test+Diags/789010 C128 Diagnostics
+TR:/Test+Diags/Game Controller Tester
+TR:/Test+Diags/Joystick Tester
+TR:/Test+Diags/Keyboard Tester
+TR:/Test+Diags/ROM Checksum read
+
+USB:/validation/FileSize/498k Duck Tales - Quest for Gold [EasyFlash].crt
+SD:/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt
+SD:/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt
+SD:/validation/FileSize/770k Where in USA is Carmen Sandiego [EasyFlash].crt
+
+TR:/Games/Joust!
+TR:/Games/Jupiter Lander
+TR:/Games/Mario Brothers
+TR:/Games/Minesweeper
+TR:/Games/Ms. Pac-Man
+ 
+                       
+
