@@ -140,11 +140,7 @@ MsgSettingsMenu2SpaceRet:
    !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, SourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
 MsgSettingsMenu3:
-   !tx ChrPurple   ;MenuMiscColor 
-   !tx "      2024 by Travis S @ Sensorium"
-   ;, ChrReturn
-   ;!tx NameColor, " TeensyROM is 100% Open Source HW & SW!", ChrReturn
-   ;!tx " github.com/SensoriumEmbedded/TeensyROM"
+   !tx ChrBlue," github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
 MsgFWVerify:

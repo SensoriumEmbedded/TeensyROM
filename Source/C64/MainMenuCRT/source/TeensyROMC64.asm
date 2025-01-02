@@ -136,7 +136,7 @@ MainCopyToRAM
 
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
-   !tx "     *** Sensorium Embedded 2024 ***    "  ;*VERSION*
+   !tx "     *** Sensorium Embedded 2025 ***    "  ;*VERSION*
    !tx ChrRvsOff, ChrBlack, 0 ;hide sid load msg
       
 MainCode = *

@@ -19,7 +19,7 @@
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
-char strVersionNumber[] = "v0.6.3+T4"; //*VERSION*
+char strVersionNumber[] = "v0.6.3+5"; //*VERSION*
 
 #define DefSIDSource        rmtTeensy  // Default should always be local (rmtTeensy)
 #define DefSIDPath          "/SID Cover Tunes" 
