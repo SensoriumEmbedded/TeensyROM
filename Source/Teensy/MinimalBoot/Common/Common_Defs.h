@@ -194,11 +194,11 @@ const uint8_t OutputPins[] = {
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
 #define Def_nS_DataHold     390  //    On a C64 read, when to stop driving the data bus
-                                 //       2/1/24   v0.5.10+:    From 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
-                                 //       12/3/24  v0.6.3+M65:  365 to 375 special build to accomodate Mega65 ROML read
+                                 //       02/01/24 v0.5.10+:    From 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
+                                 //       12/03/24 v0.6.3+M65:  365 to 375 special build to accomodate Mega65 ROML read
                                  //       12/12/24 v0.6.3+T390: Set to 390 special build for a Reloaded Mk2 using FW 20180227 from CryzleR/Frank.  V20231101 (latest) still fails below ~385  https://wiki.icomp.de/wiki/C64_reloaded_mk2#Firmware_updates
                                  //                             Also: Digitalman saw Mega65 improvements on Fiendish Freddy & Orbitz
-                                 //       12/31/24 v0.6.3+T4:   365 to 390 release build to accomodate all. Measurement show this is the max for staying within the Phi2 half cycle
+                                 //       12/31/24 v0.6.4:      365 to 390 release build to accomodate all. Measurement show this is the max for staying within the Phi2 half cycle
                                  
 // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
@@ -213,17 +213,22 @@ uint32_t nS_VICStart  = Def_nS_VICStart;
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
-{
+{  // for "normal" (non-VIC) C64 read cycles only
    DataBufEnable; 
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
-   WaitUntil_nS(nS_DataHold);  
+   
+   //WaitUntil_nS(nS_DataHold);  
+   uint32_t Cyc_DataHold = nSToCyc(nS_DataHold); //avoid calculating every time
+   while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DataHold)
+      if(!GP6_Phi2(ReadGPIO6)) break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
+   
    DataBufDisable;
 }
 
 __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
-{
+{  // for C64 VIC read cycles only
    DataBufEnable; 
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
@@ -233,13 +238,13 @@ __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
 }
 
 __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
-{
+{  // for "normal" (non-VIC) C64 read cycles only
    DataPortWriteWait(Data);
    TraceLogAddValidData(Data);
 }
 
 __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
-{
+{  // for "normal" (non-VIC) C64 write cycles
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
@@ -250,7 +255,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 }
 
 // reboot is the same for all ARM devices
-#define CPU_RESTART_ADDR	((uint32_t *)0xE000ED0C)
-#define CPU_RESTART_VAL		(0x5FA0004)
-#define REBOOT			(*CPU_RESTART_ADDR = CPU_RESTART_VAL)
+#define CPU_RESTART_ADDR   ((uint32_t *)0xE000ED0C)
+#define CPU_RESTART_VAL	   (0x5FA0004)
+#define REBOOT             (*CPU_RESTART_ADDR = CPU_RESTART_VAL)
 
