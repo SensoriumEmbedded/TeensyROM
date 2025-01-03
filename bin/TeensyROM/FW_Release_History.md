@@ -1,6 +1,54 @@
 
 # FW Release Version history:
 
+### 0.6.4 Release 1/3/25
+* NFC Loading System updates:
+  * NFC Random selection from a specified directory:
+    * "?" to write tag for random via currently selected directory (in TR, SD, or USB)
+    * Recommend using random with directories containing <100 items. Function must load full directory to pick one at random, so large directories will take longer to pick/launch from.  
+    * Thanks to @distressed74  @Avrilcadabra  @Makers Mashup  @AndyDavis @William Manganaro for the thoughts/feedback
+  * Can now re-scan/launch same NFC tag as previously scanned, if it is away from the reader for >1 full second
+    * Allowance to enable re-use of same "random" tag repeatedly
+* MIDI/ASID updates:
+  * Fix for SIDWizzard "Jam Mode" (tracker playback simultaneous w/ MIDI enabled/receiving)
+    * No longer setting StatusIRQReq bit on MIDI out msgs
+    * Thanks to @DivertigO for identifying/testing
+  * New ASID commands parsed and parameters/values displayed (but not yet applied)
+* Emulation/loading improvements:
+  * GMod2 .CRT support (Bank switching only)
+    * Thanks for the prompt @Mike351 and sorted CRT files @AmokPhaze101 
+  * Clear cart signature from $8004 of RAM if present (Thanks Artur Rataj for the info/recommendation)
+    * malicious setting written by some games (ie "Hero") that can stay resident and prevent restarts
+* Autolaunch improvements for diagnostic use:
+  * Autolaunch capability from SD file: /autolaunch.txt
+    * Example autolaunch.txt file with instructions added to /docs directory
+    * Takes priority over EEPROM set autolaunch, when enabled
+    * This is a means to enable diagnostics autolaunch *without* a functional C64
+  * Autolaunch now launches CRTs without booting to TR menu first
+    * Allows diagnostics booting *without* full C64 functionality.
+    * For example, can Autolaunch DesTestMax on a C64 with missing RAM chips!
+  * Thanks for the ideas/input Factor of Matt (https://factorofmatt.com/)
+* Bus Snoop (new feature):
+  * Serial 'b' command to snoop bus (Addr, Data, R/nW) to insure all bits toggle (Debug tool)
+    * Monitors 100,000 bus cycles and reads the Address & Data bus to log the state of each bit and sends a summary out the USB Serial port.  
+    * This will help identify "stuck bits" on the bus, a failure that won't allow any thing to run/display, and is hard to narrow down without an oscilloscope and a block of time.
+  * In the future, this feature can grow into a detailed bus analyzer with buffer/filters, or monitor the bus for SID writes to do visualizations and other SID logging/recording. Lots of possibilities...
+* HW Fab 0.3 preparation
+  * Disallow FW downgrade below this version for Fab 0.3 PCBs
+  * Determines HW Fab # based on Dot-Clk read routine
+* Timing/compatibility improvement:
+  * New timing param: nS_VICDHold (365nS Default), separated out from nS_DataHold (non-VIC cycle)
+  * nS_DataHold (non-vic hold) increased from 365 to 390nS
+    * To accommodate Mega65 and Reloaded Mk II by default without special FW needed
+    * Lots of validation testing done to ensure cross compatibility.  Thanks for all the help @DigitalMan
+  * RW Ready Delay on by default in EEPROM (this FW resets EEPROM to defaults)
+* Aesthetic/information only:
+  * Bottom of settings menu changed to git URL from Travis/Sensorium
+  * C64 Splash screen updated to 2025
+  * Deprecated old Form based Win App
+  * Removed #define nfcScanner (now permanent part of build)
+  * Doc/help screen updates for NFC random tag
+
 ### 0.6.3_Mega65 special Release 12/4/24
 * Special FW release for Mega65 machines running the C64 Core
   * Also fine for other machines, please communicate if any issues found
@@ -11,7 +59,7 @@
   * Framework for new ASID packets: Reg Write Order/timing, Control/Framerate, and SID Types
   * ASID Player Frame timer select T/t for up/down list
 * Bug Fix:  C64 Clock was running slow in 50Hz regions
-* Built-in file updates:
+* Built-in menu file updates:
   * Additions:
     * DesTestMAX:  Desmond's RAM Test added to test/diag menu 
       * with permission from Matt matt@factorofmatt.com

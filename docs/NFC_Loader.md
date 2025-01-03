@@ -71,6 +71,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
   * Press the `Left Arrow` key to select the file for tag writing.
     * Alternately, press `?` to write an NFC Tag that will launch a random file from the currently selected Directory
+    * Recommend using random with directories containing <100 items. Functiom must load full directory to pick one at random, so large directories will take longer to pick/launch from.  
   * Folow the on-screen instructions to load a tag and write to it.
   * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
 
@@ -93,7 +94,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 * A reboot is required for this to take effect.  Either select "Re-boot TeensyROM" from the menu, or power-cycle the C64.
 * This setting stays persistent when the unit is powered down again.
   * Recommend disabling this option when the reader isn't connected to prevent slow start-up.
-  * Not recommended for use while using Ethernet or MIDI applications due to increased latency.
+  * Automatically disabled while using Ethernet or MIDI applications due to increased latency.
 
 <br>
 
