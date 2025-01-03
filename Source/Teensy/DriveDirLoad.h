@@ -79,7 +79,7 @@
 #define Cart_RGCD                    57
 #define Cart_RRNetMK3                58
 #define Cart_EasyCalc                59
-#define Cart_GMod2                   60
+#define Cart_GMod2                   60  //Supported (no EEPROM)
 #define Cart_MAXBasic                61
 #define Cart_GMod3                   62
 #define Cart_ZIPPCODE48              63
@@ -148,6 +148,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
    (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
    (uint16_t)Cart_ZaxxonSuper     ,IOH_ZaxxonSuper,
+   (uint16_t)Cart_GMod2           ,IOH_GMod2,
    
 };
 
