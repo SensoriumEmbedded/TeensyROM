@@ -38,7 +38,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 * 3 types of NFC tags are currently supported:
   * NTAG215 (Recommended and [widely available](https://www.amazon.com/dp/B074M9J5L3))
   * NTAG213 (171 characters max)
-  * NTAG216 (Not yet tested)
+  * NTAG216
 * Note: Tags sometimes bundled with the reader electronics are typically not one of the supported types and will not work with this system.
 
 ### Card labels
