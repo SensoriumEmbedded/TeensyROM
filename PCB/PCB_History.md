@@ -1,6 +1,18 @@
 # PCB/Design History:
-## Firmware will work with all PCB versions 0.2 and higher, recommend always building with the latest
-### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/I2BzuXb5)**
+## Latest firmware will work with all PCB versions 0.2 and higher, recommend always building with the latest
+### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/klnNznNJ)**
+
+## **v0.3: Minor Update released Dec 11, 2024**
+  * Fix for screen noise when using UltiMax .crt files on C128 machines
+    * Data Buffer (U5) Dir controlled directly from Teensy instead of R/nW signal
+      * Previous "debug" signal used for this.
+      * Compatible with FW v0.6.4 and higher. 
+        * Future FW will continue to be compatible with all PCB versions.
+  * Removed (unused) Dot_Clock input to Teensy, now spare/debug signal to header
+  * C1 & C2 (22uF bulk caps) replaced with 1210 size SMT versions
+  * C9 added for Vhst (optional)
+
+![TeensyROM v0.3](../media/v0.3/v0.3_top.png)
 
 ## **v0.2c: Minor Update released Nov 1, 2023**
   * **No electrical changes from previous version**
