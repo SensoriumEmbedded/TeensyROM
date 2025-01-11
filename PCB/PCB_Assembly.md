@@ -2,7 +2,7 @@
 
 The TeensyROM was designed with hand assembly in mind. While surface mount packages are used, they are the larger types (SOIC IC packages and 0805 passives).  If you feel this is beyond your solder capabilities, assembled units are usually available at a fair price. If there are additional questions, feel free to [contact me](mailto:travis@sensoriumembedded.com).
 
-| ![Top View](../media/v0.2c/v0.2c_top.png) | ![Bot View](../media/v0.2c/v0.2c_Bot.png) |
+| ![Top View](../media/v0.3/v0.3_top.png) | ![Bot View](../media/v0.3/v0.3_Bot.png) |
 |--|--|
 
 - Tools/materials needed: 
@@ -13,8 +13,8 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - Small knife (ie Exacto)
   - Workspace with good lighting and magnification
   - Computer with USB and the [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
-  - Parts listed in the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM%20v0.2c%20BOM.xlsx)
-    - Including bare PCB [Link to latest design at OSH Park](https://oshpark.com/shared_projects/I2BzuXb5)
+  - Parts listed in the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.3/TeensyROM%20v0.3%20BOM.xlsx)
+    - Including bare PCB [Link to latest design at OSH Park](https://oshpark.com/shared_projects/klnNznNJ)
 
 ## Teensy prep: *Important: complete these in order shown!*  
 - These steps need to be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
@@ -32,7 +32,7 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 
 ## Assembly steps, in recommended order:
 ### TeensyROM Surface Mount Assembly
-- **BOM item # 1-6**
+- **BOM item # 1-6, 13**
 - Observe pin 1 marking/orientation on the 5ea ICs
 - Recommend tinning a single pad of each device and attaching first.
   - Once placement looks good with single pin, solder remaining pin(s)  
@@ -47,11 +47,9 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
 - Cut the protruding pins from the bottom so they don't interfere, scratch, or short.
 
 ### TeensyROM Through Hole Assembly
-- **BOM item # 11-15**
+- **BOM item # 11, 12, 14, 15**
 - **Observe propper polarity:**
   - LED: Square hole=short lead=flat side=Cathode
-  - THM capacitors: '+' mark on PCA opposite '-' mark on caps
-    - PCB v0.2c: Neg side has square pad
   
 ### Teensy Heatsink Assembly
 - **BOM item # 16**
