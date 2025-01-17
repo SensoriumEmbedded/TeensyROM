@@ -114,15 +114,17 @@ void nfcCheck()
    
    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) 
    {  //succesful read
-      LastTagMillis = millis();
       //Printf_dbg("*");
       if (uidLength == 7)
       { // We probably have a Mifare Ultralight card ...
-         if(memcmp(uid, Lastuid, 7) == 0) return;  //same as previous
-         //Printf_dbg(" %d dig UID: ", uidLength);
-         //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
-         if (nfcReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
+         if(memcmp(uid, Lastuid, 7) != 0) //not the same as previous
+         {
+            //Printf_dbg(" %d dig UID: ", uidLength);
+            //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
+            if (nfcReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
+         }
       }
+      LastTagMillis = millis(); //do this after launch in case it's "random" and takes >NFCReReadTimeout
    }
    else
    { //no card detected, check for timeout & clear Lastuid
