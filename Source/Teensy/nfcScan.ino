@@ -38,6 +38,7 @@ PN532 nfc(pn532uhsu);
 #define NFCReReadTimeout   1000  // mS since of no scan to re-accept same tag
 
 uint8_t  Lastuid[7];  // Buffer to store the last UID read
+uint8_t  LastuidLength = 7;
 uint32_t LastTagMillis = 0; //stores last good tag time for Lastuid timeout/allow retag
 
 FLASHMEM void nfcInit()
@@ -115,13 +116,17 @@ void nfcCheck()
    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) 
    {  //succesful read
       //Printf_dbg("*");
-      if (uidLength == 7)
-      { // We probably have a Mifare Ultralight card ...
-         if(memcmp(uid, Lastuid, 7) != 0) //not the same as previous
+      if (uidLength == 7 || uidLength == 4)
+      { // Mifare Ultralight (7) or Classic 1k(4)
+         if(uidLength!=LastuidLength || memcmp(uid, Lastuid, LastuidLength) != 0) //not the same as previous
          {
             //Printf_dbg(" %d dig UID: ", uidLength);
             //nfc.PrintHex(uid, uidLength);  //for (uint8_t i=0; i < uidLength; i++) Serial.print(" 0x");Serial.print(uid[i], HEX); 
-            if (nfcReadTagLaunch()) memcpy(Lastuid, uid, 7); //update previous
+            if (nfcReadTagLaunch(uid, uidLength)) 
+            {
+               LastuidLength=uidLength;
+               memcpy(Lastuid, uid, uidLength); //update previous
+            }
          }
       }
       LastTagMillis = millis(); //do this after launch in case it's "random" and takes >NFCReReadTimeout
@@ -182,15 +187,27 @@ FS *FSfromSourceID(RegMenuTypes SourceID)
    else return NULL;
 }
 
-bool nfcReadTagLaunch()
+bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
 {
    uint16_t PageNum = 4; // Start with the first general-purpose user page (#4)
    bool MoreData = true;
    uint8_t DataStart, messageLength, TagData[MaxPathLength];
    uint16_t CharNum = 0;
-   
+   uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
    while (MoreData)
    {
+      if(uidLength==4 && (PageNum%4)==0)  //Authentication only needed on classic/1K, on pg 4, 8, etc
+      {
+         if (!nfc.mifareclassic_AuthenticateBlock(uid, uidLength, PageNum, 0, keya))
+         {
+            Printf_dbg("Couldn't Authenticate pg %d\n", PageNum);
+            return false;
+         }   
+         else Printf_dbg("Authenticated pg %d\n", PageNum);
+      }
+      
+      
       if (!nfc.mifareclassic_ReadDataBlock (PageNum, TagData+CharNum)) //read 4 page block
       {
          Printf_dbg("Couldn't read pg %d\n", PageNum);
@@ -203,6 +220,11 @@ bool nfcReadTagLaunch()
          {
             messageLength = TagData[1];
             DataStart = 2;
+         }
+         else if (TagData[2] == 0x03) //mifare classic 1k
+         {
+            messageLength = TagData[3];
+            DataStart = 4;
          }
          else if (TagData[5] == 0x03) 
          {
@@ -221,7 +243,16 @@ bool nfcReadTagLaunch()
          if(TagData[CharNum] == 0xfe || CharNum >= DataStart+messageLength) MoreData = false;
          else CharNum++;
       }
-      PageNum+=4;
+
+      if(uidLength==7)
+      { //Ultralight
+         PageNum+=4;
+      }
+      else
+      { //classic/1K
+         PageNum++;
+         if((PageNum%4)==3)PageNum++; //skip key pages
+      }
    }
    TagData[CharNum] = 0; //terminate it
 
@@ -388,7 +419,7 @@ FLASHMEM void nfcWriteTag(const char* TxtMsg)
    if (TryNum) SendMsgPrintfln("Verify took %d retries", TryNum);
    Printf_dbg("Verify read took %d retries\nUID Length = %d\n", TryNum, uidLength);
    
-   if (uidLength != 7)
+   if (uidLength != 7 && uidLength != 4)
    {
       SendMsgPrintfln(" Unsupported tag type");
       return;
@@ -410,17 +441,50 @@ FLASHMEM void nfcWriteTag(const char* TxtMsg)
    //Printf_dbg("Writing tag\n");
    //for(uint16_t cnt=0; cnt<=messageLength; cnt++) Serial.printf("Chr %d: 0x%02x '%c'\n", cnt, TagData[cnt], TagData[cnt]);
 
-   for(uint16_t PageNum = 0; PageNum < messageLength/4+1; PageNum++)
-   {
-      Printf_dbg("Writing pg %d\n", PageNum+4);
-      //if (!nfc.mifareclassic_WriteDataBlock(4, TagData)) //only writes one page(?)
-      if (!nfc.mifareultralight_WritePage(PageNum+4, TagData+PageNum*4))
+   if (uidLength == 7)
+   {  //Ultralight
+      for(uint16_t PageNum = 0; PageNum < messageLength/4+1; PageNum++)
       {
-         //Printf_dbg("Failed!\n");
-         SendMsgPrintfln("Write Failed!");
-         return;
+         Printf_dbg("Writing pg %d\n", PageNum+4);
+         //if (!nfc.mifareclassic_WriteDataBlock(4, TagData)) //only writes one page(?)
+         if (!nfc.mifareultralight_WritePage(PageNum+4, TagData+PageNum*4))
+         {
+            //Printf_dbg("Failed!\n");
+            SendMsgPrintfln("Write Failed!");
+            return;
+         }
       }
    }
+   else
+   {  //Classic 1k
+      uint16_t PageNum = 4, CharsWritten = 0;
+      uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+      
+      while(CharsWritten<messageLength)
+      {
+         if(/*uidLength==4 &&*/ (PageNum%4)==0)  //Authentication only needed on classic/1K, on pg 4, 8, etc
+         {
+            if (!nfc.mifareclassic_AuthenticateBlock(uid, uidLength, PageNum, 0, keya))
+            {
+               SendMsgPrintfln("Couldn't Authenticate pg %d", PageNum);
+               return;
+            }   
+            else Printf_dbg("Authenticated pg %d\n", PageNum);
+         }
+            
+         if (!nfc.mifareclassic_WriteDataBlock(PageNum, TagData+CharsWritten))
+         {
+            SendMsgPrintfln("Write Failed!");
+            return;
+         }
+
+         PageNum++;
+         if((PageNum%4)==3)PageNum++; //skip key pages         
+         CharsWritten+=16;
+      }
+      
+   }
+   
    SendMsgPrintfln("Success!");
 }
 
