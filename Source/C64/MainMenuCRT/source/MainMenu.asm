@@ -696,6 +696,7 @@ XferCopyRun:
 -  lda (PtrAddrLo), y 
    sta (Ptr2AddrLo),y
    iny
+PrgLoaderSize
    cpy #PRGLoadEnd-PRGLoadStart  ;check length in build report here against PRGLoadStartReloc available
    bne -   
    jmp PRGLoadStartReloc     

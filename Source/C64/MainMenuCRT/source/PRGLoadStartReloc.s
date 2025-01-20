@@ -23,6 +23,7 @@
    ;rRegStrAvailable+IO1Port is zero when inactive/complete
    
    ;this code is relocated to PRGLoadStartReloc and run from there as loaded content 
+   ;  $033c-03fb Cassette IO buffer, 192 bytes.  Current size: 116 bytes (find PrgLoaderSize in build report)
    ;could overwrite all upper RAM.  Will not execute correctly from here (string pointers are offset)
 
 PRGLoadStart:
@@ -46,6 +47,14 @@ PRGLoadStart:
    ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
    jsr $ab1e   ;PrintString
    jmp (BasicWarmStartVect)
+   
+   ;we're in caps/graphics mode for these messsages, use all lower case:
+   ;placing these here instead of the end in case we want to erase them before running PRG
+MsgRunning:
+   !tx ChrReturn, "running...", ChrReturn, 0
+MsgOverflow:
+   !tx ChrReturn, "overflow!", ChrReturn, 0
+
    ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
 +  ldx PtrAddrHi
    tya
@@ -60,7 +69,6 @@ PRGLoadStart:
    
    lda #rCtlRunningPRG    ;let TR know we're done, change IO handler
    sta wRegControl+IO1Port  ;can't wait for it because handler is changing...
-   
    ;static delay instead of wait. 
    ; without this, race condition fails under following conditions:
    ;  PAL clock, NFC on (slowing down polling), start Cynthcart
@@ -81,13 +89,26 @@ PRGLoadStart:
    jsr $a659	;reset execution to start, clear variables and flush stack
    jsr $a533	;rebuild BASIC line chaining
    ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
+   
+   lda #$08  ;Set Current Device Number to 8 (floppy drive). 0=kbd, 1=tape
+   sta $ba   ;makes file browsers load from floppy by default, could adversely effect games that want to be loaded from tape
+  
+;   ; erasing the tracks of this code 
+;   ;   haven't seen this needed, but available just in case
+;
+;   lda #$00
+;   sta PtrAddrLo
+;   sta PtrAddrHi
+;   sta Ptr2AddrLo
+;   sta Ptr2AddrHi
+;   
+;   ldy #tohere - PRGLoadStart  ;erase from start of tape buff "tohere"
+;tohere  ;code from this point to PRGLoadEnd will remain...
+;-  dey
+;   sta PRGLoadStartReloc,y
+;   bne -
+
    jmp $a7ae ;BASIC warm start/interpreter inner loop/next statement (Run)
    ;jmp (BasicWarmStartVect)  
-   
-   ;we're in caps/graphics mode for these messsages, use all lower case:
-MsgRunning:
-   !tx ChrReturn, "running...", ChrReturn, 0
-MsgOverflow:
-   !tx ChrReturn, "overflow!", ChrReturn, 0
-   
+      
 PRGLoadEnd = *
