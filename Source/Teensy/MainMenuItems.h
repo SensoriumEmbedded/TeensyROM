@@ -42,6 +42,7 @@
 #include "ROMs/TRCBC.prg.h"
 #include "ROMs/destest_max.rom.h"
 #include "ROMs/empty.prg.h"
+#include "ROMs/JiffyFunctionKeys.prg.h"
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -115,17 +116,18 @@ StructMenuItem dirTest_Diags[] =
 StructMenuItem dirUtilities[] = 
 {
  /* 0 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
- /* 1 */ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
+ /**1**/ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
  /* 2 */ rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
  /* 3 */ rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
- /* 4 */ rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
- /* 5 */ rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
- /* 6 */ rtBin8kLo  , IOH_TeensyROM    , (char*)"TeensyROM Menu Cart+TeensyROM IOH", (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
- /* 7 */ rtFilePrg  , IOH_None         , (char*)"80 Columns"                       , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
- /* 8 */ rtFilePrg  , IOH_None         , (char*)"DualCopy"                         , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg) ,
- /* 9 */ rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
- /*10 */ rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
- /*11 */ rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
+ /* 4 */ rtFilePrg  , IOH_None         , (char*)"BASIC with JiffyDOS Fn keys setup", (uint8_t*)JiffyFunctionKeys_prg      , sizeof(JiffyFunctionKeys_prg) ,
+ /* 5 */ rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
+ /* 6 */ rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
+ /* 7 */ rtBin8kLo  , IOH_TeensyROM    , (char*)"TeensyROM Menu Cart+TeensyROM IOH", (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
+ /* 8 */ rtFilePrg  , IOH_None         , (char*)"80 Columns"                       , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
+ /* 9 */ rtFilePrg  , IOH_None         , (char*)"DualCopy"                         , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg) ,
+ /*10 */ rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
+ /*11 */ rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
+ /*12 */ rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
 };
 
 StructMenuItem dirMultimedia[] = 
