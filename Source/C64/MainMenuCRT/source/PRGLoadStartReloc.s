@@ -90,9 +90,22 @@ MsgOverflow:
    jsr $a533	;rebuild BASIC line chaining
    ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
    
-   lda #$08  ;Set Current Device Number to 8 (floppy drive). 0=kbd, 1=tape
+   ;determine if JiffyDOS is installed
+      ;.e477  20 20 20 20 20 4a 49 46  ;      jif
+      ;.e47f  46 59 44 4f 53 20 56 36  ; fydos v6
+   lda $e47c
+   cmp #$4a   ;j of "jiffydos"
+   bne +
+   ;JiffyDOS Specific:
+   ;jsr $e453	; init JiffyDOS command vectors
+   lda #$72	; Set up JiffyDOS function key vector
+   sta $b0	; to $f672
+   lda #$f6
+   sta $b1
+
++  lda #$08  ;Set Current Device Number to 8 (floppy drive). 0=kbd, 1=tape
    sta $ba   ;makes file browsers load from floppy by default, could adversely effect games that want to be loaded from tape
-  
+
 ;   ; erasing the tracks of this code 
 ;   ;   haven't seen this needed, but available just in case
 ;
