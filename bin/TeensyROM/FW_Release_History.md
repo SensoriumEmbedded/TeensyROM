@@ -1,6 +1,23 @@
 
 # FW Release Version history:
 
+### 0.6.5 Release 1/20/25
+* NFC Loading System updates:
+  * Support for **"Mifare Classic 1k"** NFC tags
+    * No pre-formatting required, usable as received.
+    * Tags of this type are often included with NFC reader module purchases
+    * As with "Ultralight" (NTAG213/215/216) tags, "Classic 1k" tags can be written from a phone or the TeensyROM itself
+  * Bug Fix: Reset tag re-use timer *after* launch in case random dir takes a long time
+    * Random tags occasionally caused repeated random load/run loop.
+    * Thanks @Falcon for the find/testing
+* Program (PRG) loader and BASIC filesystem
+  * Setting current device number to 8 so that file browsers will point at IEC for dir read, etc
+  * Load function key vector if JiffyDOS Kernal is present
+  * Main menu /Utilities directory updates/additions:
+    * "Exit to BASIC" for NFC taggable method to enter BASIC
+    * "TeensyROM Menu Cart..." for NFC taggable method to enter TR menu
+  * Thank you to @Boris Schneider-Johne for all the recommendations/support/testing on these items!
+  
 ### 0.6.4 Release 1/3/25
 * NFC Loading System updates:
   * NFC Random selection from a specified directory:

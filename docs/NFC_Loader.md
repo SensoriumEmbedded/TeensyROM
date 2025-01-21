@@ -35,11 +35,11 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
     * ![Discrete Modules](/media/NFC/Discrete_Top_Bot.webp)
 
 ### NFC Tag cards/media
-* 3 types of NFC tags are currently supported:
+* 4 types of NFC tags are currently supported:
   * NTAG215 (Recommended and [widely available](https://www.amazon.com/dp/B074M9J5L3))
   * NTAG213 (171 characters max)
   * NTAG216
-* Note: Tags sometimes bundled with the reader electronics are typically not one of the supported types and will not work with this system.
+  * Mifare Classic 1k (often bundled with reader electronics purchase)
 
 ### Card labels
 * Labels can be created using this [Zaparoo Label Generator](https://design.zaparoo.org/)
