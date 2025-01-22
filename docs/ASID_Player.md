@@ -11,7 +11,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |**[DeepSID](https://deepsid.chordian.net/)**|Web based|Access/stream any existing SID file, directly from the web|
 |**[ChipSynth C64](https://www.plogue.com/products/chipsynth-c64.html)**|Win/Mac|Turn your C64 into a programmable synth module|
 |**[SID Factory II](https://blog.chordian.net/sf2/)**|Win/Mac/Linux|Cross-platform SID music editor with ASID output ([beta branch](https://github.com/Chordian/sidfactory2/tree/asid-support))|
-|**[ASIDXP](https://www.elektron.se/us/download-support-sidstation)**|Win/Mac|Stream SID files directly from your local hard drive|
+|**[ASIDXP](https://elektron.se/support-downloads/sidstation#resources)**|Win/Mac|Stream SID files directly from your local hard drive|
 |**[SIDPlay](http://www.sidmusic.org/sidplay/mac/)**|Mac|Stream from your local hard drive with visualizations, etc|
 
 ## USB/TeensyROM Setup
