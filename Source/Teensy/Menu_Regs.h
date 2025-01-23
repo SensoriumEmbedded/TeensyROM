@@ -51,16 +51,18 @@ enum IO1_Registers  //offset from 0xDE00
    rRegSIDInitLo       = 23 , // SID Play Info: Init Address Lo
    rRegSIDPlayHi       = 24 , // SID Play Info: Play Address Hi
    rRegSIDPlayLo       = 25 , // SID Play Info: Play Address Lo
-   rRegSIDDefSpeedHi   = 26 , // SID Play Info: CIA interrupt timer speed Hi
-   rRegSIDDefSpeedLo   = 27 , // SID Play Info: CIA interrupt timer speed Lo
-   rwRegSIDSongNumZ    = 28 , // SID Play Info: Current Song Number (Zero Based)
-   rRegSIDNumSongsZ    = 29 , // SID Play Info: Number of Songs in SID (Zero Based)
-   wRegVid_TOD_Clks    = 30 , // C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 31 , // IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 32 , // IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 33 , // TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 34 , // TR Code last page used in C64 RAM
-   rwRegScratch        = 35 , // Bi-Directional Scratch Register
+   rRegSIDDefSpeedHi   = 26 , // SID Play Info: Default CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 27 , // SID Play Info: Default CIA interrupt timer speed Lo
+   rwRegSIDCurSpeedHi  = 28 , // SID Play Info: Current CIA interrupt timer speed Hi
+   rwRegSIDCurSpeedLo  = 29 , // SID Play Info: Current CIA interrupt timer speed Lo
+   rwRegSIDSongNumZ    = 30 , // SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 31 , // SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 32 , // C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 33 , // IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 34 , // IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 35 , // TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 36 , // TR Code last page used in C64 RAM
+   rwRegScratch        = 37 , // Bi-Directional Scratch Register
 
    // These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 , // start of SID Regs, matching SID Reg order ($D400)

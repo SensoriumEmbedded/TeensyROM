@@ -257,10 +257,10 @@ PrintSIDVars:
    ldy #30 ;col
    clc
    jsr SetCursor
-   lda LclRegSIDSpeedHi
+   lda rwRegSIDCurSpeedHi+IO1Port
    ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
-   lda LclRegSIDSpeedLo
+   lda rwRegSIDCurSpeedLo+IO1Port
    ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
    
@@ -271,9 +271,9 @@ WaitSIDInfoKey:
 
 +  cmp #ChrCRSRLeft  ;increase SID speed (small step)
    bne +
-   ldx LclRegSIDSpeedLo
+   ldx rwRegSIDCurSpeedLo+IO1Port
    dex   
-   stx LclRegSIDSpeedLo
+   stx rwRegSIDCurSpeedLo+IO1Port
    stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    cpx #$ff
    bne PrintSIDVars
@@ -281,9 +281,9 @@ WaitSIDInfoKey:
 
 +  cmp #ChrCRSRRight  ;decrease SID speed (small step)
    bne +
-   ldx LclRegSIDSpeedLo
+   ldx rwRegSIDCurSpeedLo+IO1Port
    inx
-   stx LclRegSIDSpeedLo
+   stx rwRegSIDCurSpeedLo+IO1Port
    stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    bne PrintSIDVars
    jmp incSIDSpeedHi   ;overflow
@@ -291,17 +291,17 @@ WaitSIDInfoKey:
 +  cmp #ChrCRSRUp  ;increase SID speed (big step)
    bne +
 decSIDSpeedHi
-   ldx LclRegSIDSpeedHi
+   ldx rwRegSIDCurSpeedHi+IO1Port
    dex   
    jmp updateSpeedHi  
 
 +  cmp #ChrCRSRDn  ;decrease SID speed (big step)
    bne +
 incSIDSpeedHi
-   ldx LclRegSIDSpeedHi
+   ldx rwRegSIDCurSpeedHi+IO1Port
    inx
 updateSpeedHi
-   stx LclRegSIDSpeedHi
+   stx rwRegSIDCurSpeedHi+IO1Port
    stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    jmp PrintSIDVars  
 
@@ -422,14 +422,10 @@ FastLoadFile:
 SetSIDSpeedToDefault:
    ;Set the timer interval to default
    lda rRegSIDDefSpeedLo+IO1Port
-   sta LclRegSIDSpeedLo     ; set local reg to default
+   sta rwRegSIDCurSpeedLo+IO1Port
    sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
    lda rRegSIDDefSpeedHi+IO1Port
-   sta LclRegSIDSpeedHi     ; set local reg to default
+   sta rwRegSIDCurSpeedHi+IO1Port
    sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    rts
    
-LclRegSIDSpeedHi:
-   !byte 0x40
-LclRegSIDSpeedLo:
-   !byte 0x40

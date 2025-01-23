@@ -845,6 +845,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegCodeLastPage:
          case rwRegCursorItemOnPg:
          case rwRegSIDSongNumZ:
+         case rwRegSIDCurSpeedHi:
+         case rwRegSIDCurSpeedLo:
          case rwRegScratch:
             IO1[Address]=Data;
             break;    
