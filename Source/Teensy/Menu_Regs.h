@@ -114,6 +114,7 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
    ricmdLaunch         = 2, // Launch app (set up before IRQ assert)
    ricmdSIDPause       = 3, // SID pause/play
    ricmdSIDInit        = 4, // re-init current SID (sub song # change)
+   ricmdSetSIDSpeed    = 5, // Apply CIA timer reg values (rRegSIDCurSpeedHi/Lo)
 };
 
 enum RegSerialStringSelect // rwRegSerialString

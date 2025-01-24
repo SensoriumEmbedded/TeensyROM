@@ -250,19 +250,7 @@ ShowSIDInfoPage:
    jsr PrintSongNum
 
 PrintSIDVars:
-   lda #NameColor
-   jsr SendChar
-   ;print the timer interval in hex  
-   ldx #17 ;row 
-   ldy #30 ;col
-   clc
-   jsr SetCursor
-   lda rwRegSIDCurSpeedHi+IO1Port
-   ;eor #$ff   ;make bigger numbers = faster
-   jsr PrintHexByte
-   lda rwRegSIDCurSpeedLo+IO1Port
-   ;eor #$ff   ;make bigger numbers = faster
-   jsr PrintHexByte
+   jsr PrintSIDSpeed
    
 WaitSIDInfoKey:
    jsr DisplayTime   
@@ -388,6 +376,22 @@ PrintSongNum:
    lda #ChrSpace
    jsr SendChar
    jsr SendChar
+   rts
+   
+PrintSIDSpeed:
+   lda #NameColor
+   jsr SendChar
+   ;print the timer interval in hex  
+   ldx #17 ;row 
+   ldy #30 ;col
+   clc
+   jsr SetCursor
+   lda rwRegSIDCurSpeedHi+IO1Port
+   ;eor #$ff   ;make bigger numbers = faster
+   jsr PrintHexByte
+   lda rwRegSIDCurSpeedLo+IO1Port
+   ;eor #$ff   ;make bigger numbers = faster
+   jsr PrintHexByte
    rts
    
 FastLoadFile:   
