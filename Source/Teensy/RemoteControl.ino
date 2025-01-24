@@ -97,6 +97,28 @@ bool SetSIDSong()
    return InterruptC64(ricmdSIDInit);
 }
 
+// Command: 
+// Set SID playback speed of currently loaded SID
+//
+// Workflow:
+// Receive <-- SetSIDSpeedToken Token 0x6499
+// Receive <-- playback rate of -100 to +100 percent of nominal (1 signed char)
+// Send --> AckToken 0x64CC or FailToken 0x9B7F
+bool SetSIDSpeed()
+{  //assumes TR is not "busy" (Handler active)
+   if(!SerialAvailabeTimeout()) return false;
+   int8_t PlaybackSpeedPct = Serial.read(); //number from -128 to 127   
+   int32_t SIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi]; //start with default value 
+   
+   SIDSpeed -= SIDSpeed*PlaybackSpeedPct/100;  //higher number=lower speed
+   if(SIDSpeed > 0xffff || SIDSpeed < 1) return false;
+   
+   Printf_dbg("SID Speed %+d%% to 0x%04x\n", PlaybackSpeedPct, SIDSpeed);
+   IO1[rwRegSIDCurSpeedLo] = SIDSpeed & 0xff;
+   IO1[rwRegSIDCurSpeedHi] = (SIDSpeed>>8) & 0xff;
+   return InterruptC64(ricmdSetSIDSpeed);
+}
+
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    

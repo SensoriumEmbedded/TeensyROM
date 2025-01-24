@@ -13,6 +13,7 @@
 #define PingToken         0x6455
 #define PauseSIDToken     0x6466
 #define SetSIDSongToken   0x6488
+#define SetSIDSpeedToken  0x6499
 #define DebugToken        0x6467
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB

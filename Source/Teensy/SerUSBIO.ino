@@ -76,6 +76,10 @@ FLASHMEM void ServiceSerial()
                if(RemotePauseSID()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
+            case SetSIDSpeedToken: //Set playback speed
+               if(SetSIDSpeed()) SendU16(AckToken);
+               else SendU16(FailToken);
+               break;
             case SetSIDSongToken: //Set sub-tune
                if(SetSIDSong()) SendU16(AckToken);
                else SendU16(FailToken);
