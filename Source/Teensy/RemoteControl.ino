@@ -75,7 +75,7 @@ bool DoC64IRQ()
    return true;
 }
 
-bool RemotePauseSID()
+FLASHMEM bool RemotePauseSID()
 {  //assumes TR is not "busy" (Handler active)
    return InterruptC64(ricmdSIDPause);
 }
@@ -87,7 +87,7 @@ bool RemotePauseSID()
 // Receive <-- SetSIDSongToken Token 0x6488 
 // Receive <-- Song number to set (1 byte, zero based, song 1 is 0) 
 // Send --> AckToken 0x64CC or FailToken 0x9B7F
-bool SetSIDSong()
+FLASHMEM bool SetSIDSong()
 {  //assumes TR is not "busy" (Handler active)
    if(!SerialAvailabeTimeout()) return false;
    uint8_t NewSongNumZ = Serial.read();
@@ -101,19 +101,23 @@ bool SetSIDSong()
 // Set SID playback speed of currently loaded SID
 //
 // Workflow:
-// Receive <-- SetSIDSpeedToken Token 0x6499
-// Receive <-- playback rate of -100 to +100 percent of nominal (1 signed char)
+// Receive <-- SIDSpeedLinToken  0x6499 -or- SIDSpeedLogToken  0x649A
+// Receive <-- playback rate (1 signed char)
+//                Linear Range is -68 to 128, argument represents speed change percent from nominal
+//                Logrithmic Range is -127 to 99 argument to percentage shown in "SID playback speed-log.txt"
 // Send --> AckToken 0x64CC or FailToken 0x9B7F
-bool SetSIDSpeed()
+FLASHMEM bool SetSIDSpeed(bool LogConv)
 {  //assumes TR is not "busy" (Handler active)
    if(!SerialAvailabeTimeout()) return false;
    int8_t PlaybackSpeedPct = Serial.read(); //number from -128 to 127   
    int32_t SIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi]; //start with default value 
    
-   SIDSpeed -= SIDSpeed*PlaybackSpeedPct/100;  //higher number=lower speed
+   if (LogConv) SIDSpeed -= SIDSpeed*PlaybackSpeedPct/100; 
+   else SIDSpeed = SIDSpeed*100/(PlaybackSpeedPct+100);
+   
+   Printf_dbg("SID Speed %+d: Reg val 0x%04x\n", PlaybackSpeedPct, SIDSpeed);
    if(SIDSpeed > 0xffff || SIDSpeed < 1) return false;
    
-   Printf_dbg("SID Speed %+d%% to 0x%04x\n", PlaybackSpeedPct, SIDSpeed);
    IO1[rwRegSIDCurSpeedLo] = SIDSpeed & 0xff;
    IO1[rwRegSIDCurSpeedHi] = (SIDSpeed>>8) & 0xff;
    return InterruptC64(ricmdSetSIDSpeed);

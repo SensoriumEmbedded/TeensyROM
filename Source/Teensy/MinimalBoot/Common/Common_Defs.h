@@ -11,10 +11,11 @@
 //all commands must start with 0x64
 #define LaunchFileToken   0x6444
 #define PingToken         0x6455
-#define PauseSIDToken     0x6466
+#define PauseSIDToken     0x6466  //df
 #define SetSIDSongToken   0x6488
-#define SetSIDSpeedToken  0x6499
-#define DebugToken        0x6467
+#define SIDSpeedLinToken  0x6499
+#define SIDSpeedLogToken  0x649A
+#define DebugToken        0x6467  //dg
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB
 #define CopyFileToken     0x64FF
