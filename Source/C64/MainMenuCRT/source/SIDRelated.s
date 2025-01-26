@@ -161,7 +161,34 @@ smcBorderEffect
    sta $01
 smcSIDPlayAddr
    jsr $fffe          ;Play the music, self modifying
-   lda #$37 ; Reset the Kernal and BASIC ROMs
+   
+   ;voice muting checks
+   ldx#$00
+smcVoicesMuted
+   lda#$00   ;direct modified reg, bits 2:0    default to none muted
+   
+   lsr
+   bcc +
+   stx $d400  ;mute voice 1
+   stx $d401
+   stx $d405
+   stx $d406
+   
++  lsr
+   bcc +
+   stx $d400+7  ;mute voice 2
+   stx $d401+7
+   stx $d405+7
+   stx $d406+7
+   
++  lsr
+   bcc +
+   stx $d400+14  ;mute voice 3
+   stx $d401+14
+   stx $d405+14
+   stx $d406+14
+   
++  lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
    lda #BorderColor
    sta BorderColorReg
@@ -297,6 +324,25 @@ updateSpeedHi
    bne +
    jsr SetSIDSpeedToDefault
    jmp PrintSIDVars  
+
++  cmp #'1'  ;Voice #1 mute toggle
+   bne +
+   lda #%00000001
+VoiceMuteTogle
+   eor smcVoicesMuted+1
+   sta smcVoicesMuted+1
+   ;jsr 
+   jmp WaitSIDInfoKey  
+
++  cmp #'2'  ;Voice #2 mute toggle
+   bne +
+   lda #%00000010
+   jmp VoiceMuteTogle
+
++  cmp #'3'  ;Voice #3 mute toggle
+   bne +
+   lda #%00000100
+   jmp VoiceMuteTogle
 
 +  cmp #'+'  ;next song in SID
    bne +
