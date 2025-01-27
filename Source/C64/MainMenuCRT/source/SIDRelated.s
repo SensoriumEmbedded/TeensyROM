@@ -41,6 +41,9 @@ SIDLoadInit:
    lda rRegSIDPlayHi+IO1Port
    sta smcSIDPlayAddr+2
 
+   lda #00  
+   sta smcVoicesMuted+1  ;un-mute all voices on new SID load
+
    jsr SIDSongInit
    
    ;check play address
