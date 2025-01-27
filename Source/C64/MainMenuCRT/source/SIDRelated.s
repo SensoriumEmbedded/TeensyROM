@@ -171,6 +171,7 @@ smcVoicesMuted
    bcc +
    stx $d400  ;mute voice 1
    stx $d401
+   ;stx $d404
    stx $d405
    stx $d406
    
@@ -178,6 +179,7 @@ smcVoicesMuted
    bcc +
    stx $d400+7  ;mute voice 2
    stx $d401+7
+   ;stx $d404+7
    stx $d405+7
    stx $d406+7
    
@@ -185,6 +187,7 @@ smcVoicesMuted
    bcc +
    stx $d400+14  ;mute voice 3
    stx $d401+14
+   ;stx $d404+14
    stx $d405+14
    stx $d406+14
    
@@ -275,6 +278,7 @@ ShowSIDInfoPage:
    sta PageIdentifyLoc  
 
    jsr PrintSongNum
+   jsr PrintVoiceMutes
 
 PrintSIDVars:
    jsr PrintSIDSpeed
@@ -331,7 +335,7 @@ updateSpeedHi
 VoiceMuteTogle
    eor smcVoicesMuted+1
    sta smcVoicesMuted+1
-   ;jsr 
+   jsr PrintVoiceMutes 
    jmp WaitSIDInfoKey  
 
 +  cmp #'2'  ;Voice #2 mute toggle
@@ -370,8 +374,10 @@ VoiceMuteTogle
 
 +  cmp #ChrF4  ;toggle music
    bne +
-   jsr ToggleSIDMusic
+-  jsr ToggleSIDMusic
    jmp WaitSIDInfoKey  
++  cmp #'p'  ;toggle music
+   beq -
 
 +  cmp #'b'  ;Toggle Border effect
    bne +
@@ -438,6 +444,24 @@ PrintSIDSpeed:
    lda rwRegSIDCurSpeedLo+IO1Port
    ;eor #$ff   ;make bigger numbers = faster
    jsr PrintHexByte
+   rts
+
+PrintVoiceMutes:
+   ldx #0   ;voice #
+   lda smcVoicesMuted+1 
+   
+-  ldy #PokeGreen ;non-mute/default
+   lsr
+   bcc +
+   ldy #PokeRed ;muted
++  sta smcCurVoicesMuted+1
+   tya
+   sta C64ColorRAM+40*20+30,x
+smcCurVoicesMuted
+   lda#00 ;recover voice status
+   inx
+   cpx#3
+   bne -
    rts
    
 FastLoadFile:   

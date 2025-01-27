@@ -66,10 +66,10 @@ MsgSIDInfo3:
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, SourcesColor, "Sub-Song Number: ", ChrReturn   
    !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Adjust Play Speed: ", NameColor,"0x", ChrReturn   
    !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "Default Play Speed", ChrReturn
-   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Toggle SID On/Off", ChrReturn
+   !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Play/Pause SID", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, SourcesColor, "Mute/Unmute Voice #: ", NameColor, ChrRvsOn,"123", ChrReturn
    !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, "Border Effect On/Off", ChrReturn
-   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, SourcesColor, "Set main background SID", ChrReturn, ChrReturn
-   ;!tx " direct to other menus?", ChrReturn
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, SourcesColor, "Set main background SID", ChrReturn
    !tx 0
    
 MsgHelpMenu:   
