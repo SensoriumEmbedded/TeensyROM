@@ -3,6 +3,7 @@
 ## Table of contents
   * [TeensyROM connections and Menu button](#teensyrom-connections-and-menu-button)
   * [Main Menu Options/Navigation](#main-menu-options-navigation)
+  * [SD Card (or USB Drive) Setup](#sd-card-or-usb-drive-setup)
   * [Loading files and emulating ROMs](#loading-files-and-emulating-roms)
   * [The Settings Menu](#the-settings-menu)
   * [Selecting and associating Special IO](#selecting-and-associating-special-io)
@@ -51,6 +52,13 @@
       * **'+'** in front of file type means it is pre-associated with Special IO emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
+## SD Card or USB Drive Setup
+  * Code is *not* stored on these external drives, so neither are required to start using your TeensyROM and all of its bundled programs.  However, here are some recommendations to extend your enjoyment.
+    * SD Cards are somewhat favored over USB drives as they have slightly faster access times.
+    * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games in a format (CRT) that's perfect for the TeensyROM
+    * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
+    * Recommend adding [this autolaunch.txt file](autolaunch.txt) in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
+
 ## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
   * When a file is selected, load/run status is displayed on the screen.  Usually this will flash by too quickly to read, but in the case of an error, it will pause to provide additional information.
@@ -68,7 +76,6 @@
       * Additional CRT support info
         * Max file size is 875MB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
-        * The [OneLoad Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. This issue only impacts UltiMax w/ C128 and is resolved in PCA rev 0.3.
     * **.SID files:**
       * Play SID file: ~90% of known SID files are supported
