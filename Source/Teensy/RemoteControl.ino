@@ -80,6 +80,7 @@ FLASHMEM bool RemotePauseSID()
    return InterruptC64(ricmdSIDPause);
 }
 
+
 // Command: 
 // Set sub-song number of currently loaded SID
 //
@@ -97,26 +98,39 @@ FLASHMEM bool SetSIDSong()
    return InterruptC64(ricmdSIDInit);
 }
 
+
 // Command: 
 // Set SID playback speed of currently loaded SID
 //
 // Workflow:
 // Receive <-- SIDSpeedLinToken  0x6499 -or- SIDSpeedLogToken  0x649A
-// Receive <-- playback rate (1 signed char)
-//                Linear Range is -68 to 128, argument represents speed change percent from nominal
-//                Logrithmic Range is -127 to 99 argument to percentage shown in "SID playback speed-log.txt"
+// Receive <-- playback rate (16 bit signed int as 2 bytes: hi, lo)
+//                Linear Range is -68(*256) to 128(*256), argument represents speed change percent from nominal
+//                Logrithmic Range is -127(*256) to 99(*256) argument to percentage shown in "SID playback speed-log.txt"
 // Send --> AckToken 0x64CC or FailToken 0x9B7F
+//
+// Example 1: 0x64, 0x99, 0xf0, 0x40 = Set to -15.75 via linear equation
+// Example 2: 0x64, 0x9a, 0x20, 0x40 = set to +32.25 via logarithmic equation
 FLASHMEM bool SetSIDSpeed(bool LogConv)
 {  //assumes TR is not "busy" (Handler active)
-   if(!SerialAvailabeTimeout()) return false;
-   int8_t PlaybackSpeedPct = Serial.read(); //number from -128 to 127   
+
+   uint32_t PlaybackSpeedIn;
+   if (!GetUInt(&PlaybackSpeedIn, 2)) return false;
+
+   float PlaybackSpeedPct = (int16_t)PlaybackSpeedIn; //number from -128*256 to 127*256   
+   PlaybackSpeedPct = PlaybackSpeedPct/256/100;
+   
    int32_t SIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi]; //start with default value 
    
-   if (LogConv) SIDSpeed -= SIDSpeed*PlaybackSpeedPct/100; 
-   else SIDSpeed = SIDSpeed*100/(PlaybackSpeedPct+100);
+   if (LogConv) SIDSpeed -= SIDSpeed*PlaybackSpeedPct; 
+   else SIDSpeed = SIDSpeed/(PlaybackSpeedPct+1);
    
-   Printf_dbg("SID Speed %+d: Reg val 0x%04x\n", PlaybackSpeedPct, SIDSpeed);
-   if(SIDSpeed > 0xffff || SIDSpeed < 1) return false;
+   Printf_dbg("SID Speed: %+0.2f\nReg val 0x%04x\n", PlaybackSpeedPct*100, SIDSpeed);
+   if(SIDSpeed > 0xffff || SIDSpeed < 1) 
+   {
+      Printf_dbg("Out of reg range (0001 to ffff)\n");
+      return false;
+   }
    
    IO1[rwRegSIDCurSpeedLo] = SIDSpeed & 0xff;
    IO1[rwRegSIDCurSpeedHi] = (SIDSpeed>>8) & 0xff;
