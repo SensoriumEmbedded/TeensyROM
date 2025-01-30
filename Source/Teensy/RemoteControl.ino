@@ -105,7 +105,7 @@ FLASHMEM bool SetSIDSong()
 // Workflow:
 // Receive <-- SIDSpeedLinToken  0x6499 -or- SIDSpeedLogToken  0x649A
 // Receive <-- playback rate (16 bit signed int as 2 bytes: hi, lo)
-//                Linear Range is -68(*256) to 128(*256), argument represents speed change percent from nominal
+//                Linear Range is -68(*256) to <128(*256), argument represents speed change percent from nominal
 //                Logrithmic Range is -127(*256) to 99(*256) argument to percentage shown in "SID playback speed-log.txt"
 // Send --> AckToken 0x64CC or FailToken 0x9B7F
 //
