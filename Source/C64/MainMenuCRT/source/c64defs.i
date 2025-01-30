@@ -20,19 +20,30 @@
 
    ;System Mem locations
    C64ScreenRAM       = $0400  ;$5c00  ; to screen memory
+   ;VIC-II:
+   Sprite0Xpos        = $d000 ;Sprite #0 X location 7:0
+   SpriteXMSB         = $d010 ;Sprite #0-7 X location bit 8 (MSB)
+   Sprite0Color       = $d027 ;Sprite #0 Color
    BorderColorReg     = $d020 
    BackgndColorReg    = $d021
+   ;SID:
    SIDLoc             = $d400
+   PadlXReg           = $d419 ;Paddle input X
+   PadlYReg           = $d41a ;Paddle input y
+   ;Color Ram:
    C64ColorRAM        = $d800  ; color memory (fixed)
-   IO1Port            = $de00
-   GamePort2          = $dc00
-   GamePort1          = $dc01   
+   ;CIA#1:
+   CIA1_RegA          = $dc00 ;CIA#1 Reg A
+   CIA1_RegB          = $dc01 ;CIA#1 Reg B
+   CIA1_DDRA          = $dc02 ;CIDDRA CIA#1 Data Direction Reg A
    TODHoursBCD        = $dc0b
    TODMinBCD          = $dc0a
    TODSecBCD          = $dc09
    TODTenthSecBCD     = $dc08
    CIA1TimerA_Lo      = $dc04
    CIA1TimerA_Hi      = $dc05
+   ;IO1:
+   IO1Port            = $de00
   
    ;Kernal routines:
    IRQDefault = $ea31

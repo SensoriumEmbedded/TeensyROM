@@ -173,8 +173,8 @@ HighlightCurrent:
 WaitForJSorKey:     
    jsr DisplayTime
    ;Check joystick first:
-   lda GamePort2  
-   ;and GamePort1  keyboard input scan interferes with this port
+   lda CIA1_RegA  
+   ;and CIA1_RegB  keyboard input scan interferes with this port
    lsr
    bcs +
    jsr CursorUp    ;js Up
