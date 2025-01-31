@@ -15,6 +15,7 @@
 #define SetSIDSongToken   0x6488
 #define SIDSpeedLinToken  0x6499
 #define SIDSpeedLogToken  0x649A
+#define SIDVoiceMuting    0x6433
 #define DebugToken        0x6467  //dg
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB

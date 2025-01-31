@@ -116,6 +116,7 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
    ricmdSIDPause       = 3, // SID pause/play
    ricmdSIDInit        = 4, // re-init current SID (sub song # change)
    ricmdSetSIDSpeed    = 5, // Apply CIA timer reg values (rRegSIDCurSpeedHi/Lo)
+   ricmdSIDVoiceMute   = 6, // Apply SID Voice Mute Settings
 };
 
 enum  RegSIDSpeedChanges  //wRegSIDSpeedChange

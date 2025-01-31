@@ -122,6 +122,31 @@ FLASHMEM bool RemoteSetSIDSpeed(bool LogConv)
    return InterruptC64(ricmdSetSIDSpeed);
 }
 
+
+// Command: 
+// Set individual SID voice muting
+//
+// Workflow:
+// Receive <-- SIDVoiceMuting   0x6433
+// Receive <-- voice mute info (1 byte)
+//                bit 0=  Voice 1  on=0, mute=1
+//                bit 1=  Voice 2  on=0, mute=1
+//                bit 2=  Voice 3  on=0, mute=1
+//             bits 7:3= Zero
+// Send --> AckToken 0x64CC or FailToken 0x9B7F
+FLASHMEM bool RemoteSetSIDVoiceMute()
+{  //assumes TR is not "busy" (Handler active)
+
+   uint32_t VoiceMuteInfo;
+   if (!GetUInt(&VoiceMuteInfo, 1)) return false;
+
+   if (VoiceMuteInfo > 0x07) return false;
+   
+   IO1[rwRegScratch]= VoiceMuteInfo; //use scratch reg to transfer mute info
+   return InterruptC64(ricmdSIDVoiceMute);
+}
+
+
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    

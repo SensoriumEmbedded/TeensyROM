@@ -524,7 +524,18 @@ smcIRQFlagged
    bne -
    jsr PrintSIDSpeed
    jmp -
-   
+
++  cmp #ricmdSIDVoiceMute
+   bne +
+   lda rwRegScratch+IO1Port 
+   sta smcVoicesMuted+1
+    ;reprint mute info if on SID page
+   lda #PILSIDScreen
+   cmp PageIdentifyLoc  
+   bne -
+   jsr PrintVoiceMutes 
+   jmp -
+
 +  cmp #ricmdLaunch
    bne -    ;no command or false irq
 

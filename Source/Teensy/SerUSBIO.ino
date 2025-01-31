@@ -85,6 +85,10 @@ FLASHMEM void ServiceSerial()
                if(SetSIDSong()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
+            case SIDVoiceMuting: //Set Individual Voice muting
+               if(RemoteSetSIDVoiceMute()) SendU16(AckToken);
+               else SendU16(FailToken);
+               break;
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
