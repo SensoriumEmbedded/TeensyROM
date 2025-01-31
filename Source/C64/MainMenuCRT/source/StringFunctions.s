@@ -20,6 +20,7 @@
 PrintSerialString:
    ;load Acc with RegSerialStringSelect # that will be serialized out 
    sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
+PrintSerialStringLoaded: ;message already selected
 -  lda rwRegSerialString+IO1Port
    beq +
    jsr SendChar

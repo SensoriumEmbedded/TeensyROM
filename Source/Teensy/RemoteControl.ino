@@ -111,29 +111,14 @@ FLASHMEM bool SetSIDSong()
 //
 // Example 1: 0x64, 0x99, 0xf0, 0x40 = Set to -15.75 via linear equation
 // Example 2: 0x64, 0x9a, 0x20, 0x40 = set to +32.25 via logarithmic equation
-FLASHMEM bool SetSIDSpeed(bool LogConv)
+FLASHMEM bool RemoteSetSIDSpeed(bool LogConv)
 {  //assumes TR is not "busy" (Handler active)
 
    uint32_t PlaybackSpeedIn;
    if (!GetUInt(&PlaybackSpeedIn, 2)) return false;
 
-   float PlaybackSpeedPct = (int16_t)PlaybackSpeedIn; //number from -128*256 to 127*256   
-   PlaybackSpeedPct = PlaybackSpeedPct/256/100;
-   
-   int32_t SIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi]; //start with default value 
-   
-   if (LogConv) SIDSpeed -= SIDSpeed*PlaybackSpeedPct; 
-   else SIDSpeed = SIDSpeed/(PlaybackSpeedPct+1);
-   
-   Printf_dbg("SID Speed: %+0.2f\nReg val 0x%04x\n", PlaybackSpeedPct*100, SIDSpeed);
-   if(SIDSpeed > 0xffff || SIDSpeed < 1) 
-   {
-      Printf_dbg("Out of reg range (0001 to ffff)\n");
-      return false;
-   }
-   
-   IO1[rwRegSIDCurSpeedLo] = SIDSpeed & 0xff;
-   IO1[rwRegSIDCurSpeedHi] = (SIDSpeed>>8) & 0xff;
+   if (!SetSIDSpeed(LogConv, (int16_t)PlaybackSpeedIn)) return false;
+     
    return InterruptC64(ricmdSetSIDSpeed);
 }
 

@@ -291,41 +291,33 @@ WaitSIDInfoKey:
    jsr CheckForIRQGetIn    
    beq WaitSIDInfoKey
 
-+  cmp #ChrCRSRLeft  ;increase SID speed (small step)
++  cmp #ChrCRSRLeft  ;decrease SID speed (small step)
    bne +
-   ldx rwRegSIDCurSpeedLo+IO1Port
-   dex   
-   stx rwRegSIDCurSpeedLo+IO1Port
-   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
-   cpx #$ff
-   bne PrintSIDVars
-   jmp decSIDSpeedHi   ;underflow
-
-+  cmp #ChrCRSRRight  ;decrease SID speed (small step)
+   lda #rsscDecMinor
+SendSpeedChangeUpdate
+   sta wRegSIDSpeedChange+IO1Port
+   jsr SetSidSpeedToCurrent
+   jmp PrintSIDVars
+   
++  cmp #ChrCRSRRight  ;increase SID speed (small step)
    bne +
-   ldx rwRegSIDCurSpeedLo+IO1Port
-   inx
-   stx rwRegSIDCurSpeedLo+IO1Port
-   stx CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
-   bne PrintSIDVars
-   jmp incSIDSpeedHi   ;overflow
+   lda #rsscIncMinor
+   jmp SendSpeedChangeUpdate
    
 +  cmp #ChrCRSRUp  ;increase SID speed (big step)
    bne +
-decSIDSpeedHi
-   ldx rwRegSIDCurSpeedHi+IO1Port
-   dex   
-   jmp updateSpeedHi  
+   lda #rsscIncMajor
+   jmp SendSpeedChangeUpdate
 
 +  cmp #ChrCRSRDn  ;decrease SID speed (big step)
    bne +
-incSIDSpeedHi
-   ldx rwRegSIDCurSpeedHi+IO1Port
-   inx
-updateSpeedHi
-   stx rwRegSIDCurSpeedHi+IO1Port
-   stx CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
-   jmp PrintSIDVars  
+   lda #rsscDecMajor
+   jmp SendSpeedChangeUpdate
+
++  cmp #'l'  ;Toggle Log/Lin speed control
+   bne +
+   lda #rsscToggleLogLin
+   jmp SendSpeedChangeUpdate
 
 +  cmp #'d'  ;Set SID speed to default
    bne +
@@ -414,7 +406,7 @@ PrintSongNum:
    lda #NameColor
    jsr SendChar
    ;print the timer song num/num songs in decimal
-   ldx #16 ;row 
+   ldx #15 ;row 
    ldy #26 ;col
    clc
    jsr SetCursor  
@@ -436,17 +428,38 @@ PrintSongNum:
 PrintSIDSpeed:
    lda #NameColor
    jsr SendChar
-   ;print the timer interval in hex  
-   ldx #17 ;row 
-   ldy #30 ;col
+   
+   
+   ;print the timer interval in percent 
+   ldx #16 ;row 
+   ldy #26 ;col
    clc
    jsr SetCursor
-   lda rwRegSIDCurSpeedHi+IO1Port
-   ;eor #$ff   ;make bigger numbers = faster
-   jsr PrintHexByte
-   lda rwRegSIDCurSpeedLo+IO1Port
-   ;eor #$ff   ;make bigger numbers = faster
-   jsr PrintHexByte
+   lda #rsstSIDSpeed
+   ;sta rwRegSerialString+IO1Port
+   ;nop; adds some delay in case float conversion can take more than full cycle(?)
+   jsr PrintSerialString ;Loaded
+   
+   ;!ifdef Debug {   
+   ;print the timer interval in hex  
+   ;ldx #16 ;row 
+   ;ldy #35 ;col
+   ;clc
+   ;jsr SetCursor
+   ;lda rwRegSIDCurSpeedHi+IO1Port
+   ;jsr PrintHexByte
+   ;lda rwRegSIDCurSpeedLo+IO1Port
+   ;jsr PrintHexByte
+   ;} 
+
+   ;print timer control type (lin/log)
+   ldx #17 ;row 
+   ldy #26 ;col
+   clc
+   jsr SetCursor
+   lda #rsstSIDSpeedCtlType
+   jsr PrintSerialString
+   
    rts
 
 PrintVoiceMutes:
@@ -498,11 +511,12 @@ FastLoadFile:
 
 SetSIDSpeedToDefault:
    ;Set the timer interval to default
-   lda rRegSIDDefSpeedLo+IO1Port
-   sta rwRegSIDCurSpeedLo+IO1Port
+   lda #rsscSetDefault
+   sta wRegSIDSpeedChange+IO1Port
+SetSidSpeedToCurrent:
+   lda rwRegSIDCurSpeedLo+IO1Port
    sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
-   lda rRegSIDDefSpeedHi+IO1Port
-   sta rwRegSIDCurSpeedHi+IO1Port
+   lda rwRegSIDCurSpeedHi+IO1Port
    sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
    rts
    

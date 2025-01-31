@@ -78,7 +78,7 @@ FLASHMEM void ServiceSerial()
                break;
             case SIDSpeedLinToken: //Set playback speed (Linear)
             case SIDSpeedLogToken: //Set playback speed (Logrithmic)
-               if(SetSIDSpeed(inVal==SIDSpeedLogToken)) SendU16(AckToken);
+               if(RemoteSetSIDSpeed(inVal==SIDSpeedLogToken)) SendU16(AckToken);
                else SendU16(FailToken);
                break;
             case SetSIDSongToken: //Set sub-tune

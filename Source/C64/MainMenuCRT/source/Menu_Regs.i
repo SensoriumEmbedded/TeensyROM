@@ -54,14 +54,15 @@
    rRegSIDDefSpeedLo   = 27 ;// SID Play Info: Default CIA interrupt timer speed Lo
    rwRegSIDCurSpeedHi  = 28 ;// SID Play Info: Current CIA interrupt timer speed Hi
    rwRegSIDCurSpeedLo  = 29 ;// SID Play Info: Current CIA interrupt timer speed Lo
-   rwRegSIDSongNumZ    = 30 ;// SID Play Info: Current Song Number (Zero Based)
-   rRegSIDNumSongsZ    = 31 ;// SID Play Info: Number of Songs in SID (Zero Based)
-   wRegVid_TOD_Clks    = 32 ;// C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 33 ;// IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 34 ;// IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 35 ;// TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 36 ;// TR Code last page used in C64 RAM
-   rwRegScratch        = 37 ;// Bi-Directional Scratch Register
+   wRegSIDSpeedChange  = 30 ;// SID Play Control: Change speed as indicated by RegSIDSpeedChanges
+   rwRegSIDSongNumZ    = 31 ;// SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 32 ;// SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 33 ;// C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 34 ;// IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 35 ;// IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 36 ;// TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 37 ;// TR Code last page used in C64 RAM
+   rwRegScratch        = 38 ;// Bi-Directional Scratch Register
 
    ; These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 ;// start of SID Regs, matching SID Reg order ($D400)
@@ -113,6 +114,14 @@
    ricmdSIDPause       = 3 ; SID pause/play
    ricmdSIDInit        = 4 ; re-init current SID (sub song # change)
    ricmdSetSIDSpeed    = 5 ; Apply CIA timer reg values (rRegSIDCurSpeedHi/Lo)
+
+;enum  RegSIDSpeedChanges  //wRegSIDSpeedChange
+   rsscIncMajor        = 1 ; inc major % units
+   rsscDecMajor        = 2 ; dec major % units
+   rsscIncMinor        = 3 ; inc minor % units
+   rsscDecMinor        = 4 ; dec minor % units
+   rsscSetDefault      = 5 ; Set Default Speed
+   rsscToggleLogLin    = 6 ; Toggle control type
   
 ;enum RegSerialStringSelect // rwRegSerialString
    rsstItemName        = 0  ; Name of selected item
@@ -122,6 +131,8 @@
    rsstShortDirPath    = 4  ; printable current path
    rsstSIDInfo         = 5  ; Info on last SID loaded
    rsstMachineInfo     = 6  ; Info on current machine vid/TOD clk (set when SID loaded)
+   rsstSIDSpeed        = 7  ; Current SID playback speed
+   rsstSIDSpeedCtlType = 8  ; Current SID Speed Control Type (Log/Lin)
    
 ;enum RegPowerUpDefaultMasks
    rpudSIDPauseMask    = 0x01 ; rwRegPwrUpDefaults bit 0, 1=SID music paused

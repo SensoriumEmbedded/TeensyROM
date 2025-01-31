@@ -58,13 +58,14 @@ MsgSIDInfo1:
    !tx " File Information for", NameColor  ;MenuMiscColor
    !tx 0
 MsgSIDInfo2:
-   !tx ChrReturn, ChrReturn, SourcesColor, " This Machine:", NameColor, ChrReturn, "  "
+   !tx ChrReturn, ChrReturn, SourcesColor, " This Machine: ", NameColor
    !tx 0
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
    !tx ChrReturn, SourcesColor, " Settings:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, SourcesColor, "Sub-Song Number: ", ChrReturn   
-   !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Adjust Play Speed: ", NameColor,"0x", ChrReturn   
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, SourcesColor, "Sub-Song Number:", ChrReturn   
+   !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, SourcesColor, "Adj Play Speed:", ChrReturn   
+   !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, SourcesColor, "Speed Ctrl Type:", ChrReturn   
    !tx "      ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, "Default Play Speed", ChrReturn
    !tx "   ", OptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, SourcesColor, "Play/Pause SID", ChrReturn
    !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, SourcesColor, "Mute/Unmute Voice #: ", NameColor, ChrRvsOn,"123", ChrReturn

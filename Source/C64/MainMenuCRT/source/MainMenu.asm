@@ -517,11 +517,8 @@ smcIRQFlagged
    
 +  cmp #ricmdSetSIDSpeed
    bne +
-   lda rwRegSIDCurSpeedLo+IO1Port
-   sta CIA1TimerA_Lo        ;Write to Set, Read gives countdown timer
-   lda rwRegSIDCurSpeedHi+IO1Port
-   sta CIA1TimerA_Hi        ;Write to Set, Read gives countdown timer
-   ;reprint speed info if on SID page
+   jsr SetSidSpeedToCurrent
+    ;reprint speed info if on SID page
    lda #PILSIDScreen
    cmp PageIdentifyLoc  
    bne -

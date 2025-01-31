@@ -36,6 +36,8 @@ stcIOHandlers IOHndlr_TeensyROM =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
+int16_t SidSpeedAdjust = 0;
+bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
@@ -346,6 +348,30 @@ void UpDirectory()
       IO1[rwRegCursorItemOnPg] = 0;
       IO1[rwRegPageNumber]     = 1;
    }
+}
+
+bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
+{  //called from IO handler, must be quick...
+   float PlaybackSpeedPct = PlaybackSpeedIn; //number from -128*256 to 127*256   
+   PlaybackSpeedPct = PlaybackSpeedPct/256/100;
+   
+   int32_t SIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi]; //start with default value 
+   
+   if (LogConv) SIDSpeed -= SIDSpeed*PlaybackSpeedPct; 
+   else SIDSpeed = SIDSpeed/(PlaybackSpeedPct+1);
+   
+   //Printf_dbg("SID Speed: %+0.2f\nReg val 0x%04x\n", PlaybackSpeedPct*100, SIDSpeed);
+   if(SIDSpeed > 0xffff || SIDSpeed < 1) 
+   {
+      //Printf_dbg("Out of reg range (0001 to ffff)\n");
+      return false;
+   }
+   
+   IO1[rwRegSIDCurSpeedLo] = SIDSpeed & 0xff;
+   IO1[rwRegSIDCurSpeedHi] = (SIDSpeed>>8) & 0xff;
+   SidSpeedAdjust = PlaybackSpeedIn; //update C64 side setting
+   SidLogConv = LogConv; //in case of remote change
+   return true;
 }
 
 void SetCursorToItemNum(uint16_t ItemNum)
@@ -883,6 +909,35 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[wRegSearchLetterWAIT] = Data;
             IO1[rwRegStatus] = rsSearchForLetter; //work this in the main code
             break;
+         case wRegSIDSpeedChange:
+            {
+               int16_t SidSpeedAdjustTemp = SidSpeedAdjust;
+               switch(Data)
+               {
+                  case rsscIncMajor:
+                     SidSpeedAdjustTemp+=2*256;  // 2%
+                     break;
+                  case rsscDecMajor:
+                     SidSpeedAdjustTemp-=2*256;
+                     break;
+                  case rsscIncMinor:
+                     SidSpeedAdjustTemp+=64;  // 0.25%
+                     break;
+                  case rsscDecMinor:
+                     SidSpeedAdjustTemp-=64;
+                     break;
+                  case rsscSetDefault:
+                     SidSpeedAdjustTemp=0;
+                     //SidLogConv = false; //def to linear
+                     break;
+                  case rsscToggleLogLin:
+                     SidSpeedAdjustTemp=0;
+                     SidLogConv = !SidLogConv;
+                     break;
+               }
+               SetSIDSpeed(SidLogConv, SidSpeedAdjustTemp); //regs & settings updated if pass
+            }
+            break;
          case rwRegSerialString: //Select/build(no waiting) string to set ptrSerialString and read out serially
             StringOffset = 0;
             switch(Data)
@@ -907,7 +962,19 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;      
                case rsstMachineInfo:
                   ptrSerialString = StrMachineInfo;
-                  break;      
+                  break;  
+               case rsstSIDSpeed:
+               {
+                  int32_t DefSIDSpeed = IO1[rRegSIDDefSpeedLo]+256*IO1[rRegSIDDefSpeedHi];
+                  int32_t CurSIDSpeed = IO1[rwRegSIDCurSpeedLo]+256*IO1[rwRegSIDCurSpeedHi];
+                  sprintf(SerialStringBuf, "%0.2f%%  ", (float)DefSIDSpeed/CurSIDSpeed*100);
+                  ptrSerialString = SerialStringBuf;       
+               }          
+                  break;
+               case rsstSIDSpeedCtlType:
+                  strcpy(SerialStringBuf, (SidLogConv ? "Log" : "Lin"));
+                  ptrSerialString = SerialStringBuf;               
+                  break;
                case rsstShortDirPath:
                   {
                      uint16_t Len = strlen(DriveDirPath);
