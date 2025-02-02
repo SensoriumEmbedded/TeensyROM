@@ -209,24 +209,25 @@ enum RegCtlCommands
 
 enum regItemTypes //synch with TblItemType
 {
-   rtNone      = 0,
-   rtUnknown   = 1,
-   rtDirectory = 2,
-   rtD64       = 3,
-   rtD71       = 4, 
-   rtD81       = 5, 
-   rtFilePrg   = 6,   //always first valid executable file type
-   rtFileCrt   = 7, 
-   rtFileHex   = 8, 
-   rtFileP00   = 9, 
-   rtFileSID   = 10,
-   rtFileKla   = 11,
-   rtFileArt   = 12, 
-   rtFileTxt   = 13, 
-   rtBin16k    = 14, 
-   rtBin8kHi   = 15, 
-   rtBin8kLo   = 16, 
-   rtBinC128   = 17, 
+   rtNone        = 0,
+   rtUnknown     = 1,
+   rtDirectory   = 2,
+   rtD64         = 3,
+   rtD71         = 4, 
+   rtD81         = 5, 
+   rtFilePrg     = 6,   //always first valid executable file type
+   rtFileCrt     = 7, 
+   rtFileHex     = 8, 
+   rtFileP00     = 9, 
+   rtFileSID     = 10,
+   rtFileKla     = 11,
+   rtFileArt     = 12, 
+   rtFileTxt     = 13, 
+   rtFilePETSCII = 14, 
+   rtBin16k      = 15, 
+   rtBin8kHi     = 16, 
+   rtBin8kLo     = 17, 
+   rtBinC128     = 18, 
 
    //127 max, bit 7 used to indicate assigned IOH to TR
 };

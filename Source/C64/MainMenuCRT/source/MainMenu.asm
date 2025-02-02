@@ -582,9 +582,11 @@ RunSelected:
    bne + 
    rts
 
-+  cmp #rtFileTxt  ;check for Text file selected
++  cmp #rtFilePETSCII  ;check for PETSCII file selected
+   beq ++
+   cmp #rtFileTxt  ;check for Text file selected
    bne +
-   jsr ViewTextFile
+++ jsr ViewTextFile
    jmp ListAndDone  
    
    ;any type except Text, None and sub-dir/Dxx, clear screen and stop interrupts
@@ -1132,12 +1134,17 @@ DisplaySetAutoLaunch:
 ViewTextFile:
 
    jsr PrintBanner  
-   jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
-   ;jsr AnyKeyMsgWait
-   
-   lda #NameColor ;(light green currently)
+   lda #NameColor ;(light green currently) Default for text files
    jsr SendChar
--- lda #ChrClear
+   jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
+
+   lda rRegStrAvailable+IO1Port ;Ready to read?
+   bne NewPage
+   jsr AnyKeyMsgWait
+   jmp EndReturn
+   
+NewPage
+   lda #ChrClear
    jsr SendChar
   
 -  lda rRegStrAvailable+IO1Port ;are we done?
@@ -1148,18 +1155,19 @@ ViewTextFile:
    cpx #24  ;on last line?
    bne -
    
-   ;end of page:
+   ;end of page or file:
 EOPWait
    jsr CheckForIRQGetIn    
    beq EOPWait
    cmp #ChrF1  ;f1 to abort
-   beq +
+   beq EndReturn
    ;check for other keys
    
    lda rRegStrAvailable+IO1Port ;are we done? (check at end of page in case same)
-   bne --   ;exit if at the end
-   
-+  rts
+   bne NewPage   ;more to read, print next page
+
+EndReturn   
+   rts
 
    
    

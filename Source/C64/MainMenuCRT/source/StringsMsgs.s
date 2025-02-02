@@ -183,21 +183,22 @@ MsgHasHandler:
    
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx NameColor, "   "  ; rtNone      = 0
-   !tx ChrDrkGrey,"Unk"  ; rtUnknown   = 1
-   !tx TypeColor, "Dir"  ; rtDirectory = 2 
-   !tx TypeColor, "D64"  ; rtD64       = 3
-   !tx TypeColor, "D71"  ; rtD71       = 4  
-   !tx TypeColor, "D81"  ; rtD81       = 5  
-   !tx TypeColor, "Prg"  ; rtFilePrg   = 6    //alway first valid executable file type
-   !tx TypeColor, "Crt"  ; rtFileCrt   = 7  
-   !tx TypeColor, "Hex"  ; rtFileHex   = 8  
-   !tx TypeColor, "P00"  ; rtFileP00   = 9  
-   !tx TypeColor, "SID"  ; rtFileSID   = 10 
-   !tx TypeColor, "Kla"  ; rtFileKla   = 11 
-   !tx TypeColor, "Art"  ; rtFileArt   = 12  
-   !tx TypeColor, "Txt"  ; rtFileTxt   = 13  
-   !tx TypeColor, "16k"  ; rtBin16k    = 14  
-   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 15  
-   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 16  
-   !tx TypeColor, "128"  ; rtBinC128   = 17 
+   !tx NameColor, "   "  ; rtNone        = 0
+   !tx ChrDrkGrey,"Unk"  ; rtUnknown     = 1
+   !tx TypeColor, "Dir"  ; rtDirectory   = 2 
+   !tx TypeColor, "D64"  ; rtD64         = 3
+   !tx TypeColor, "D71"  ; rtD71         = 4  
+   !tx TypeColor, "D81"  ; rtD81         = 5  
+   !tx TypeColor, "Prg"  ; rtFilePrg     = 6    //alway first valid executable file type
+   !tx TypeColor, "Crt"  ; rtFileCrt     = 7  
+   !tx TypeColor, "Hex"  ; rtFileHex     = 8  
+   !tx TypeColor, "P00"  ; rtFileP00     = 9  
+   !tx TypeColor, "SID"  ; rtFileSID     = 10 
+   !tx TypeColor, "Kla"  ; rtFileKla     = 11 
+   !tx TypeColor, "Art"  ; rtFileArt     = 12  
+   !tx TypeColor, "Txt"  ; rtFileTxt     = 13  
+   !tx TypeColor, "Seq"  ; rtFilePETSCII = 14  
+   !tx TypeColor, "16k"  ; rtBin16k      = 15  
+   !tx TypeColor, "8Hi"  ; rtBin8kHi     = 16  
+   !tx TypeColor, "8Lo"  ; rtBin8kLo     = 17  
+   !tx TypeColor, "128"  ; rtBinC128     = 18 

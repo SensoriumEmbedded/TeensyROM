@@ -21,6 +21,7 @@
 void HandleExecution()
 {
    StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
+   IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
    
    if (MenuSelCpy.ItemType == rtNone) //should no longer reach here
    {
@@ -160,7 +161,7 @@ void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for tranfer
    uint8_t CartLoaded = false;
-   
+
    switch(MenuSelCpy.ItemType)
    {
       case rtFileSID:
@@ -215,11 +216,12 @@ void HandleExecution()
          StreamOffsetAddr = 0; //set to start of data
          IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
          break;
+      case rtFilePETSCII:
       case rtFileTxt:
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
-         //Parse Text File?  PETSCII/ASCII?  Page breaks?
-         //if(!ParseARTHeader()) return;
+         //convert from ASCII to PETSCII if needed:
+         if (MenuSelCpy.ItemType==rtFileTxt) for(uint32_t Cnt=0; Cnt<XferSize; Cnt++) XferImage[Cnt]=ToPETSCII(XferImage[Cnt]);
          StreamOffsetAddr = 0; //set to start of data
          IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
          break;
@@ -325,19 +327,18 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    }
    
    MyMenuItem->Size = myFile.size();
-   if(MyMenuItem->Size > MaxCRTKB*1024)
-   {
-      SendMsgPrintfln("Not enough room"); 
-      SendMsgPrintfln("  Size: %luk, Max: %luk", MyMenuItem->Size/1024, MaxCRTKB); 
-      myFile.close();
-      return false;         
-   }
-
-   
    uint32_t count=0;
    
    if (MyMenuItem->ItemType == rtFileCrt)
    {  //load the CRT
+      if(MyMenuItem->Size > MaxCRTKB*1024)
+      {
+         SendMsgPrintfln("Not enough room"); 
+         SendMsgPrintfln("  Size: %luk, Max CRT: %luk", MyMenuItem->Size/1024, MaxCRTKB); 
+         myFile.close();
+         return false;         
+      }
+
       uint8_t lclBuf[CRT_MAIN_HDR_LEN];
       uint8_t EXROM;
       uint8_t GAME;
@@ -393,10 +394,11 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       if (MyMenuItem->Size > RAM_ImageSize)
       {
          SendMsgPrintfln("Non-CRT file too large");
+         SendMsgPrintfln("  Size: %luk, Max: %luk", MyMenuItem->Size/1024, RAM_ImageSize/1024); 
          myFile.close();
          return false;
       }
-      
+
       while (myFile.available() && count < MyMenuItem->Size) RAM_Image[count++]=myFile.read();
 
       myFile.close();
