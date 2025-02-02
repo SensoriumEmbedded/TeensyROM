@@ -27,6 +27,15 @@ enum enDxxFileNameBytes
    DxxFNB_Bytes =      20,
 };
 
+enum enDxxFileTypes
+{
+   DxxFT_DEL = 0, 
+   DxxFT_SEQ = 1, 
+   DxxFT_PRG = 2, 
+   DxxFT_USR = 3, 
+   DxxFT_REL = 4, 
+};
+
 FLASHMEM uint32_t D64Offset(uint8_t Track, uint8_t Sector)
 {
    if (Track<18) return (        ((Track- 1)*21+Sector)*256);
@@ -46,6 +55,23 @@ FLASHMEM uint32_t DxxOffset(uint8_t DiskType, uint8_t Track, uint8_t Sector)
    }
    
    return (((Track- 1)*40+Sector)*256);  // Defaulte to (DiskType == rtD81) 
+}
+
+FLASHMEM uint8_t ItemTypeFromDxxFileType(uint8_t FileType)
+{
+   uint8_t RetItemType = rtUnknown; //default to unknown
+   
+   switch(FileType & 0x0f) //check lower 4 bits
+   {
+      case DxxFT_PRG:
+         RetItemType = rtFilePrg;
+         break;
+      case DxxFT_SEQ:
+         RetItemType = rtFilePETSCII;
+         break;
+      //Display DEL, USR, and REL as text files?
+   }
+   return RetItemType;
 }
 
 FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType) 
@@ -127,11 +153,8 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
             DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_Track]    = FileTrack; //store start track in case we need to load later 
             DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_Sector]   = FileSect;  //store start sector
             DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_DiskType] = DiskType;  //store disk type
+            DriveDirMenu[NumDrvDirMenuItems].ItemType = ItemTypeFromDxxFileType(FileType);
             
-            if ((FileType & 0x0f) == 0x02) DriveDirMenu[NumDrvDirMenuItems].ItemType = rtFilePrg;
-            else DriveDirMenu[NumDrvDirMenuItems].ItemType = rtUnknown;
-            //Display DEL, SEQ, USR, and REL as text files?
-
             Printf_dbg("   Name:%s\n", DriveDirMenu[NumDrvDirMenuItems].Name);             
             SecOffset +=0x20;  //uint8_t rolls over to 0x00 at end of 256 byte sector
             NumDrvDirMenuItems++;
