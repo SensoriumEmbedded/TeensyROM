@@ -187,6 +187,8 @@ StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
    "art",  rtFileArt,
    "aas",  rtFileArt,
    "hpi",  rtFileArt,
+   "txt",  rtFileTxt,
+   "seq",  rtFileTxt,
    "d64",  rtD64,
    "d71",  rtD71,
    "d81",  rtD81,

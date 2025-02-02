@@ -215,6 +215,14 @@ void HandleExecution()
          StreamOffsetAddr = 0; //set to start of data
          IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
          break;
+      case rtFileTxt:
+         XferImage = MenuSelCpy.Code_Image;
+         XferSize = MenuSelCpy.Size;
+         //Parse Text File?  PETSCII/ASCII?  Page breaks?
+         //if(!ParseARTHeader()) return;
+         StreamOffsetAddr = 0; //set to start of data
+         IO1[rRegStrAvailable] = 0xff;    // transfer start flag, set last    
+         break;
       case rtBin16k:
          SetGameAssert;
          SetExROMAssert;

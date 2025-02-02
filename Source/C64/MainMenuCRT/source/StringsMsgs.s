@@ -196,7 +196,8 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx TypeColor, "SID"  ; rtFileSID   = 10 
    !tx TypeColor, "Kla"  ; rtFileKla   = 11 
    !tx TypeColor, "Art"  ; rtFileArt   = 12  
-   !tx TypeColor, "16k"  ; rtBin16k    = 13  
-   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 14  
-   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 15  
-   !tx TypeColor, "128"  ; rtBinC128   = 16 
+   !tx TypeColor, "Txt"  ; rtFileTxt   = 13  
+   !tx TypeColor, "16k"  ; rtBin16k    = 14  
+   !tx TypeColor, "8Hi"  ; rtBin8kHi   = 15  
+   !tx TypeColor, "8Lo"  ; rtBin8kLo   = 16  
+   !tx TypeColor, "128"  ; rtBinC128   = 17 

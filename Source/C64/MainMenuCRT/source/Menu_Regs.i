@@ -205,10 +205,11 @@
    rtFileSID   = 10 
    rtFileKla   = 11 
    rtFileArt   = 12  
-   rtBin16k    = 13  
-   rtBin8kHi   = 14  
-   rtBin8kLo   = 15  
-   rtBinC128   = 16 
+   rtFileTxt   = 13
+   rtBin16k    = 14  
+   rtBin8kHi   = 15  
+   rtBin8kLo   = 16  
+   rtBinC128   = 17 
 
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

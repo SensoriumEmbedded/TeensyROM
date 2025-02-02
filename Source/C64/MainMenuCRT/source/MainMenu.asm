@@ -581,8 +581,13 @@ RunSelected:
    cmp #rtNone ;do nothing for 'none' type
    bne + 
    rts
+
++  cmp #rtFileTxt  ;check for Text file selected
+   bne +
+   jsr ViewTextFile
+   jmp ListAndDone  
    
-   ;any type except None and sub-dir, clear screen and stop interrupts
+   ;any type except Text, None and sub-dir/Dxx, clear screen and stop interrupts
 +  pha ;store the type
    jsr IRQDisable  ;turn off interrupt (also stops SID playback, if on)
    jsr PrintBanner ;clear screen for messaging for remaining types:
@@ -1123,6 +1128,40 @@ DisplaySetAutoLaunch:
    
    jsr AnyKeyMsgWait
    rts
+
+ViewTextFile:
+
+   jsr PrintBanner  
+   jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
+   ;jsr AnyKeyMsgWait
+   
+   lda #NameColor ;(light green currently)
+   jsr SendChar
+-- lda #ChrClear
+   jsr SendChar
+  
+-  lda rRegStrAvailable+IO1Port ;are we done?
+   beq EOPWait   ;End of File
+   lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
+   jsr SendChar
+   ldx $d6  ;Cursor physical line number
+   cpx #24  ;on last line?
+   bne -
+   
+   ;end of page:
+EOPWait
+   jsr CheckForIRQGetIn    
+   beq EOPWait
+   cmp #ChrF1  ;f1 to abort
+   beq +
+   ;check for other keys
+   
+   lda rRegStrAvailable+IO1Port ;are we done? (check at end of page in case same)
+   bne --   ;exit if at the end
+   
++  rts
+
+   
    
 CharAutostartKey:   
    !byte $c3, $c2, $cd, $38, $30    ; CBM8O - Autostart key: 5 chars
