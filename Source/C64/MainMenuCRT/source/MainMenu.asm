@@ -1139,9 +1139,23 @@ ViewTextFile:
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
 
    lda rRegStrAvailable+IO1Port ;Ready to read?
-   bne NewPage
+   bne +
    jsr AnyKeyMsgWait
    jmp EndReturn
+   
+   ;pause with file info on screen
++  ldx #00
+   ldy #00
+-  dex
+   nop
+   nop
+   nop
+   nop
+   nop
+   bne -
+   dey
+   bne -
+   
    
 NewPage
    lda #ChrClear
@@ -1183,6 +1197,10 @@ EOPWait
    dec BorderColorReg  
    jmp EOPWait
    
++  cmp #'r'
+   bne +
+   jmp ViewTextFile
+   
 +  cmp #'-'
    bne +  
    lda #rCtlLastTextFile 
@@ -1194,15 +1212,17 @@ EOPWait
    lda #rCtlNextTextFile 
    jmp -
    
-   
-   ;any other key = next page or exit
-+  lda rRegStrAvailable+IO1Port ;are we done?
+   ;Space = next page/next file, any other key = next page/exit
++  ldx rRegStrAvailable+IO1Port ;are we done?
    bne NewPage   ;more to read, print next page
+   cmp #ChrSpace
+   bne EndReturn  ;not space and nothing to read, exit
+   lda #rCtlNextTextFile 
+   jmp -
 
 EndReturn   
    jmp TextScreenMemColor  ;return from there
    ;rts
-
    
    
 CharAutostartKey:   
