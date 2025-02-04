@@ -381,16 +381,15 @@ void SetCursorToItemNum(uint16_t ItemNum)
    IO1[rRegNumItemsOnPage] = (NumItemsFull > IO1[rwRegPageNumber]*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(IO1[rwRegPageNumber]-1)*MaxItemsPerPage);
 }
 
-FLASHMEM void NextPicture()
+FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 {
    SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
    uint16_t InitItemNum = SelItemFullIdx;
-   
    do
    {
       if (++SelItemFullIdx >= NumItemsFull) SelItemFullIdx = 0;
-      if (MenuSource[SelItemFullIdx].ItemType == rtFileKla ||
-          MenuSource[SelItemFullIdx].ItemType == rtFileArt)
+      if (MenuSource[SelItemFullIdx].ItemType == FileType1 ||
+          MenuSource[SelItemFullIdx].ItemType == FileType2)
       {
          SetCursorToItemNum(SelItemFullIdx);
          return;
@@ -398,7 +397,7 @@ FLASHMEM void NextPicture()
    } while (SelItemFullIdx != InitItemNum); //just 1 time through, but should stop on same initial one unless changed externally
 }
 
-FLASHMEM void LastPicture()
+FLASHMEM void LastFileType(uint8_t FileType1, uint8_t FileType2)
 {
    SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
    uint16_t InitItemNum = SelItemFullIdx;
@@ -408,13 +407,33 @@ FLASHMEM void LastPicture()
       if (SelItemFullIdx == 0) SelItemFullIdx = NumItemsFull-1;
       else SelItemFullIdx--;
       
-      if (MenuSource[SelItemFullIdx].ItemType == rtFileKla ||
-          MenuSource[SelItemFullIdx].ItemType == rtFileArt)
+      if (MenuSource[SelItemFullIdx].ItemType == FileType1 ||
+          MenuSource[SelItemFullIdx].ItemType == FileType2)
       {
          SetCursorToItemNum(SelItemFullIdx);
          return;
       }
    } while (SelItemFullIdx != InitItemNum); //just 1 time through, but should stop on same initial one unless changed externally   
+}
+
+FLASHMEM void NextTextFile()
+{
+   NextFileType(rtFileTxt, rtFilePETSCII);
+}
+
+FLASHMEM void LastTextFile()
+{
+   LastFileType(rtFileTxt, rtFilePETSCII);   
+}
+
+FLASHMEM void NextPicture()
+{
+   NextFileType(rtFileKla, rtFileArt);
+}
+
+FLASHMEM void LastPicture()
+{
+   LastFileType(rtFileKla, rtFileArt);
 }
 
 void SearchForLetter()
@@ -658,6 +677,9 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &SetBackgroundSID,    // rsSetBackgroundSID
    &SetAutoLaunch,       // rsSetAutoLaunch
    &ClearAutoLaunch,     // rsClearAutoLaunch
+   &NextTextFile,        // rsNextTextFile
+   &LastTextFile,        // rsLastTextFile
+
 };
 
 
@@ -1048,6 +1070,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlClearAutoLaunchWAIT:
                   IO1[rwRegStatus] = rsClearAutoLaunch; //work this in the main code
+                  break;
+               case rCtlNextTextFile:
+                  IO1[rwRegStatus] = rsNextTextFile; //work this in the main code
+                  break;
+               case rCtlLastTextFile:
+                  IO1[rwRegStatus] = rsLastTextFile; //work this in the main code
                   break;
                
             }

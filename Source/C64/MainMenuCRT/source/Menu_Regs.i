@@ -160,8 +160,10 @@
    rsSetBackgroundSID   = 0x0e  ;
    rsSetAutoLaunch      = 0x0f  ;
    rsClearAutoLaunch    = 0x10  ;
+   rsNextTextFile       = 0x11  ;
+   rsLastTextFile       = 0x12  ;
    
-   rsNumStatusTypes     = 0x11  ;
+   rsNumStatusTypes     = 0x13  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -190,6 +192,8 @@
    rCtlSetBackgroundSIDWAIT = 14
    rCtlSetAutoLaunchWAIT    = 15
    rCtlClearAutoLaunchWAIT  = 16
+   rCtlNextTextFile         = 17
+   rCtlLastTextFile         = 18
    
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0

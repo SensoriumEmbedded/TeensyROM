@@ -1067,7 +1067,7 @@ TextScreenMemColor:
    sta $d016 
    lda #$1b  
    sta $d011 
-   
+
    ;set screen and border colors back
    lda #BorderColor
    sta BorderColorReg
@@ -1159,15 +1159,49 @@ NewPage
 EOPWait
    jsr CheckForIRQGetIn    
    beq EOPWait
+   
    cmp #ChrF1  ;f1 to abort
    beq EndReturn
-   ;check for other keys
+
+   cmp #ChrCRSRUp
+   bne +
+   inc BackgndColorReg 
+   jmp EOPWait
    
-   lda rRegStrAvailable+IO1Port ;are we done? (check at end of page in case same)
++  cmp #ChrCRSRDn
+   bne +
+   dec BackgndColorReg 
+   jmp EOPWait
+   
++  cmp #ChrCRSRLeft
+   bne +
+   inc BorderColorReg  
+   jmp EOPWait
+   
++  cmp #ChrCRSRRight
+   bne +
+   dec BorderColorReg  
+   jmp EOPWait
+   
++  cmp #'-'
+   bne +  
+   lda #rCtlLastTextFile 
+-  sta wRegControl+IO1Port
+   jmp ViewTextFile
+   
++  cmp #'+'
+   bne +
+   lda #rCtlNextTextFile 
+   jmp -
+   
+   
+   ;any other key = next page or exit
++  lda rRegStrAvailable+IO1Port ;are we done?
    bne NewPage   ;more to read, print next page
 
 EndReturn   
-   rts
+   jmp TextScreenMemColor  ;return from there
+   ;rts
 
    
    
