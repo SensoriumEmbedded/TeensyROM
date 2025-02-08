@@ -1134,8 +1134,9 @@ DisplaySetAutoLaunch:
 ViewTextFile:
 
    jsr PrintBanner  
-   lda #NameColor ;(light green currently) Default for text files
+   lda #ChrYellow
    jsr SendChar
+   
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
 
    lda rRegStrAvailable+IO1Port ;Ready to read?
@@ -1143,41 +1144,77 @@ ViewTextFile:
    jsr AnyKeyMsgWait
    jmp EndReturn
    
-   ;pause with file info on screen
-+  ldx #00
-   ldy #00
--  dex
-   nop
-   nop
-   nop
-   nop
-   nop
-   bne -
-   dey
-   bne -
-   
+;   ;pause with file info on screen
+;+  ldx #00
+;   ldy #00
+;-  dex
+;   nop
+;   nop
+;   nop
+;   bne -
+;   dey
+;   bne -
+
++  lda #NameColor ;(light green currently) Default for text files
+   jsr SendChar   
    
 NewPage
    lda #ChrClear
    jsr SendChar
-  
--  lda rRegStrAvailable+IO1Port ;are we done?
+
+PrintLoop  
+   lda rRegStrAvailable+IO1Port ;are we done?
    beq EOPWait   ;End of File
+   ;sec
+   ;jsr SetCursor ;read current to load x (row) & y (col)
+   ldx $d6  ;X now contains Cursor physical line number
    lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
-   jsr SendChar
-   ldx $d6  ;Cursor physical line number
-   cpx #24  ;on last line?
-   bne -
-   
+
+;   ; Check for clear as EOP marker, if not on first line (0):
+;   cmp #ChrClear ;special case for clear character
+;   bne +
+;   cpx #0   ;still on First line?
+;   bne EOPWait ; If not, don't display it now, will clear on NewPage
+
+   ; last line checks for last col or return char (to include most of last line)
++  cpx #24  ;on last line?
+   bne +
+   ldy $d3 ;Cursor Colum on current line (0-79)
+   cpy #39
+   beq EOPWait ; dropping char(!)
+   cmp #ChrReturn  ;Check for return on the last line (Before sending it)
+   beq EOPWait ;  Don't display it/scroll, will clear on NewPage 
++  jsr SendChar
+   jmp PrintLoop
+
+;   ; optionally, just check for last line and don't print there   
+;+  jsr SendChar
+;   cpx #24  ;on last line?
+;   bne PrintLoop
+
    ;end of page or file:
 EOPWait
    jsr CheckForIRQGetIn    
    beq EOPWait
-   
+
+;key pressed...   
    cmp #ChrF1  ;f1 to abort
    beq EndReturn
 
-   cmp #ChrCRSRUp
++  cmp #ChrSpace ;next page, then next text file
+   bne +
+   ldx rRegStrAvailable+IO1Port ;are we done?
+   bne NewPage   ;more to read, print next page
+   lda #rCtlNextTextFile 
+   jmp LoadViewTxt
+   
++  cmp #ChrReturn ;next page, then exit
+   bne +
+   ldx rRegStrAvailable+IO1Port ;are we done?
+   bne NewPage   ;more to read, print next page
+   jmp EndReturn
+
++  cmp #ChrCRSRUp
    bne +
    inc BackgndColorReg 
    jmp EOPWait
@@ -1204,21 +1241,16 @@ EOPWait
 +  cmp #'-'
    bne +  
    lda #rCtlLastTextFile 
--  sta wRegControl+IO1Port
+LoadViewTxt
+   sta wRegControl+IO1Port
    jmp ViewTextFile
    
 +  cmp #'+'
    bne +
    lda #rCtlNextTextFile 
-   jmp -
-   
-   ;Space = next page/next file, any other key = next page/exit
-+  ldx rRegStrAvailable+IO1Port ;are we done?
-   bne NewPage   ;more to read, print next page
-   cmp #ChrSpace
-   bne EndReturn  ;not space and nothing to read, exit
-   lda #rCtlNextTextFile 
-   jmp -
+   jmp LoadViewTxt
+      
++  jmp EOPWait    ;all other keys ignored
 
 EndReturn   
    jmp TextScreenMemColor  ;return from there
