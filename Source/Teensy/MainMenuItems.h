@@ -45,6 +45,22 @@
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
+#include "Text_PETSCII/Text_Viewer_Instructions.seq.h"
+#include "Text_PETSCII/color_weave.seq.h"
+#include "Text_PETSCII/Cygnus_X_1_Book_I___The_Voyage.txt.h"
+#include "Text_PETSCII/do_not_panic.seq.h"
+#include "Text_PETSCII/electric_guitar.seq.h"
+#include "Text_PETSCII/inter.circuits.seq.h"
+#include "Text_PETSCII/irnmdn_aceshigh.seq.h"
+#include "Text_PETSCII/Jousters___c_g179.seq.h"
+#include "Text_PETSCII/living_color.1.seq.h"
+#include "Text_PETSCII/Small_Kindnesses.txt.h"
+#include "Text_PETSCII/Stripes__Shoeshine_Boy___13picturedisk_2.seq.h"
+#include "Text_PETSCII/tiger.cg.seq.h"
+#include "Text_PETSCII/Time_Travel__Shoeshine_Boy__11picturedisk_2.seq.h"
+#include "Text_PETSCII/Trains_II__Yoda______12picturedisk_6.seq.h"
+#include "Text_PETSCII/Wish_You_Were_Here.txt.h"
+
 #include "SIDs/Echoes.sid.h"
 #include "SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h"
 #include "SIDs/Aces_High.sid.h"
@@ -187,6 +203,26 @@ StructMenuItem dirMIDI_ASID[] =
 
 };
 
+StructMenuItem dirTEXT_PETSCII[] = 
+{
+   rtDirectory   , IOH_None      , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+   rtFilePETSCII , IOH_None      , (char*)"---Text Viewer Usage Document---" , (uint8_t*)Text_Viewer_Instructions_seq                   , sizeof(Text_Viewer_Instructions_seq) ,
+   rtFileTxt     , IOH_None      , (char*)"Wish You Were Here"               , (uint8_t*)Wish_You_Were_Here_txt                         , sizeof(Wish_You_Were_Here_txt) ,
+   rtFilePETSCII , IOH_None      , (char*)"Jousters"                         , (uint8_t*)Jousters___c_g179_seq                          , sizeof(Jousters___c_g179_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Color Weave"                      , (uint8_t*)color_weave_seq                                , sizeof(color_weave_seq) ,
+   rtFileTxt     , IOH_None      , (char*)"Cygnus X-1, Book I: The_Voyage"   , (uint8_t*)Cygnus_X_1_Book_I___The_Voyage_txt             , sizeof(Cygnus_X_1_Book_I___The_Voyage_txt) ,
+   rtFilePETSCII , IOH_None      , (char*)"Electric Guitar"                  , (uint8_t*)electric_guitar_seq                            , sizeof(electric_guitar_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Iron Maiden: Aces High"           , (uint8_t*)irnmdn_aceshigh_seq                            , sizeof(irnmdn_aceshigh_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Do Not Panic!"                    , (uint8_t*)do_not_panic_seq                               , sizeof(do_not_panic_seq) ,
+   rtFileTxt     , IOH_None      , (char*)"Small Kindnesses"                 , (uint8_t*)Small_Kindnesses_txt                           , sizeof(Small_Kindnesses_txt) ,
+   rtFilePETSCII , IOH_None      , (char*)"Inter Circuits"                   , (uint8_t*)inter_circuits_seq                             , sizeof(inter_circuits_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Living Color"                     , (uint8_t*)living_color_1_seq                             , sizeof(living_color_1_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Tiger"                            , (uint8_t*)tiger_cg_seq                                   , sizeof(tiger_cg_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Stripes by Shoeshine Boy"         , (uint8_t*)Stripes__Shoeshine_Boy___13picturedisk_2_seq   , sizeof(Stripes__Shoeshine_Boy___13picturedisk_2_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Time Travel by Shoeshine Boy"     , (uint8_t*)Time_Travel__Shoeshine_Boy__11picturedisk_2_seq, sizeof(Time_Travel__Shoeshine_Boy__11picturedisk_2_seq) ,
+   rtFilePETSCII , IOH_None      , (char*)"Trains II by Yoda"                , (uint8_t*)Trains_II__Yoda______12picturedisk_6_seq       , sizeof(Trains_II__Yoda______12picturedisk_6_seq) ,
+};
+
 //define this last:
 StructMenuItem TeensyROMMenu[] = 
 {
@@ -203,6 +239,7 @@ StructMenuItem TeensyROMMenu[] =
  /* 4 */ rtDirectory, IOH_None           , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
  /* 5 */ rtDirectory, IOH_None           , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
  /* 6 */ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
+ /* 7 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
 
 };
 
