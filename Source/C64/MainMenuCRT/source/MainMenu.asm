@@ -1132,7 +1132,6 @@ DisplaySetAutoLaunch:
    rts
 
 ViewTextFile:
-
    jsr PrintBanner  
    lda #ChrYellow
    jsr SendChar
@@ -1144,16 +1143,12 @@ ViewTextFile:
    jsr AnyKeyMsgWait
    jmp EndReturn
    
-;   ;pause with file info on screen
-;+  ldx #00
-;   ldy #00
-;-  dex
-;   nop
-;   nop
-;   nop
-;   bne -
-;   dey
-;   bne -
+smcPauseForTextInfo
++  lda #0
+   beq +
+   lda #0 ;reset to non-pause default
+   sta smcPauseForTextInfo+1
+   jsr AnyKeyMsgWait
 
 +  lda #NameColor ;(light green currently) Default for text files
    jsr SendChar   
@@ -1200,6 +1195,14 @@ EOPWait
 ;key pressed...   
    cmp #ChrF1  ;f1 to abort
    beq EndReturn
+   cmp #ChrStop  ;Stop to abort
+   beq EndReturn
+
++  cmp #ChrReturn ;next page, then exit
+   bne +
+   ldx rRegStrAvailable+IO1Port ;are we done?
+   bne NewPage   ;more to read, print next page
+   jmp EndReturn
 
 +  cmp #ChrSpace ;next page, then next text file
    bne +
@@ -1208,11 +1211,17 @@ EOPWait
    lda #rCtlNextTextFile 
    jmp LoadViewTxt
    
-+  cmp #ChrReturn ;next page, then exit
++  cmp #'+'
    bne +
-   ldx rRegStrAvailable+IO1Port ;are we done?
-   bne NewPage   ;more to read, print next page
-   jmp EndReturn
+   lda #rCtlNextTextFile 
+   jmp LoadViewTxt
+      
++  cmp #'-'
+   bne +  
+   lda #rCtlLastTextFile 
+LoadViewTxt
+   sta wRegControl+IO1Port
+   jmp ViewTextFile
 
 +  cmp #ChrCRSRUp
    bne +
@@ -1234,22 +1243,21 @@ EOPWait
    dec BorderColorReg  
    jmp EOPWait
    
-+  cmp #'r'
++  cmp #'r'  ;re-load
    bne +
    jmp ViewTextFile
-   
-+  cmp #'-'
-   bne +  
-   lda #rCtlLastTextFile 
-LoadViewTxt
-   sta wRegControl+IO1Port
-   jmp ViewTextFile
-   
-+  cmp #'+'
+
++  cmp #'i'  ;reload and pause to view info
    bne +
-   lda #rCtlNextTextFile 
-   jmp LoadViewTxt
-      
+   lda #1 ;flag to pause after load
+   sta smcPauseForTextInfo+1
+   jmp ViewTextFile
+
++  cmp #ChrF4  ;Toggle Music now
+   bne +
+   jsr ToggleSIDMusic
+   jmp EOPWait  
+    
 +  jmp EOPWait    ;all other keys ignored
 
 EndReturn   
