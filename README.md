@@ -102,7 +102,7 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
 
 ## Compatibility
 * TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as EVO64, Mega65 (r5 and higher), Ultimate 64, and Reloaded MKII
-* The early "prototype" version of breadbin (PCA 36298 w/ 5 pin video) has a known issue with the reset circuit that must be corrected to be compatible with the TeensyROM and other fastload cartridges. See [this post](https://www.lemon64.com/forum/viewtopic.php?t=74222) or [this video](https://youtu.be/agDFLPP9yIw?t=813) for instructions on how to correct this issue.
+* The early "prototype" version of breadbin (PCA 326298 w/ 5 pin video) has a known issue with the reset circuit that must be corrected to be compatible with the TeensyROM and other fastload cartridges. See [this post](https://www.lemon64.com/forum/viewtopic.php?t=74222) or [this video](https://youtu.be/agDFLPP9yIw?t=813) for instructions on how to correct this issue.
 
 ## Hardware-PCB Design
 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
