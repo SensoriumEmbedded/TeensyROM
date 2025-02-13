@@ -92,6 +92,7 @@ void setup()
    for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
+   IO1[rwRegPwrUpDefaults2]= EEPROM.read(eepAdPwrUpDefaults2);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
@@ -259,6 +260,7 @@ void SetEEPDefaults()
 {
    Serial.println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudRWReadyDly); //default med js speed, music on, eth time synch off, NFC off, RW delay on
+   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default 12 hour clock mode
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

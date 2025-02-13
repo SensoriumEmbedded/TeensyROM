@@ -43,27 +43,28 @@ enum IO1_Registers  //offset from 0xDE00
    rRegNumPages        = 15 , // Item sel/info: total number of pages
    rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
    rwRegPwrUpDefaults  = 17 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 18 , // EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 19 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegSerialString   = 20 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
-   wRegSearchLetterWAIT= 21 , // Put cursor on first menu item with letter written
-   rRegSIDInitHi       = 22 , // SID Play Info: Init address Hi
-   rRegSIDInitLo       = 23 , // SID Play Info: Init Address Lo
-   rRegSIDPlayHi       = 24 , // SID Play Info: Play Address Hi
-   rRegSIDPlayLo       = 25 , // SID Play Info: Play Address Lo
-   rRegSIDDefSpeedHi   = 26 , // SID Play Info: Default CIA interrupt timer speed Hi
-   rRegSIDDefSpeedLo   = 27 , // SID Play Info: Default CIA interrupt timer speed Lo
-   rwRegSIDCurSpeedHi  = 28 , // SID Play Info: Current CIA interrupt timer speed Hi
-   rwRegSIDCurSpeedLo  = 29 , // SID Play Info: Current CIA interrupt timer speed Lo
-   wRegSIDSpeedChange  = 30 , // SID Play Control: Change speed as indicated by RegSIDSpeedChanges
-   rwRegSIDSongNumZ    = 31 , // SID Play Info: Current Song Number (Zero Based)
-   rRegSIDNumSongsZ    = 32 , // SID Play Info: Number of Songs in SID (Zero Based)
-   wRegVid_TOD_Clks    = 33 , // C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 34 , // IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 35 , // IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 36 , // TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 37 , // TR Code last page used in C64 RAM
-   rwRegScratch        = 38 , // Bi-Directional Scratch Register
+   rwRegPwrUpDefaults2 = 18 , // EEPROM stored: power up default reg#2, see RegPowerUpDefaultMasks2
+   rwRegTimezone       = 19 , // EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 20 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegSerialString   = 21 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   wRegSearchLetterWAIT= 22 , // Put cursor on first menu item with letter written
+   rRegSIDInitHi       = 23 , // SID Play Info: Init address Hi
+   rRegSIDInitLo       = 24 , // SID Play Info: Init Address Lo
+   rRegSIDPlayHi       = 25 , // SID Play Info: Play Address Hi
+   rRegSIDPlayLo       = 26 , // SID Play Info: Play Address Lo
+   rRegSIDDefSpeedHi   = 27 , // SID Play Info: Default CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 28 , // SID Play Info: Default CIA interrupt timer speed Lo
+   rwRegSIDCurSpeedHi  = 29 , // SID Play Info: Current CIA interrupt timer speed Hi
+   rwRegSIDCurSpeedLo  = 30 , // SID Play Info: Current CIA interrupt timer speed Lo
+   wRegSIDSpeedChange  = 31 , // SID Play Control: Change speed as indicated by RegSIDSpeedChanges
+   rwRegSIDSongNumZ    = 32 , // SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 33 , // SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 34 , // C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 35 , // IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 36 , // IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 37 , // TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 38 , // TR Code last page used in C64 RAM
+   rwRegScratch        = 39 , // Bi-Directional Scratch Register
 
    // These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 , // start of SID Regs, matching SID Reg order ($D400)
@@ -144,11 +145,17 @@ enum RegSerialStringSelect // rwRegSerialString
 
 enum RegPowerUpDefaultMasks
 {  //eepAdPwrUpDefaults, rwRegPwrUpDefaults
-   rpudSIDPauseMask  = 0x01, // rwRegPwrUpDefaults bit 0, 1=SID music paused
-   rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit 1, 1=synch net time
-   rpudNFCEnabled    = 0x04, // rwRegPwrUpDefaults bit 2, 1=NFC Enabled
-   rpudRWReadyDly    = 0x08, // rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
-   rpudJoySpeedMask  = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+   rpudSIDPauseMask    = 0x01, // rwRegPwrUpDefaults bit 0, 1=SID music paused
+   rpudNetTimeMask     = 0x02, // rwRegPwrUpDefaults bit 1, 1=synch net time
+   rpudNFCEnabled      = 0x04, // rwRegPwrUpDefaults bit 2, 1=NFC Enabled
+   rpudRWReadyDly      = 0x08, // rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
+   rpudJoySpeedMask    = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+};
+
+enum RegPowerUpDefaultMasks2
+{  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
+   rpud2Clock12_24hr   = 0x01, // rwRegPwrUpDefaults2 bit 0, 1=24 hour clock displayed
+   //bits 7:1 currently unused
 };
 
 enum RegStatusTypes  //rwRegStatus, match StatusFunction order

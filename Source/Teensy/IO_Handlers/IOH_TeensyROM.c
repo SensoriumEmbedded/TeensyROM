@@ -45,7 +45,8 @@ char SerialStringBuf[MaxPathLength] = "err"; // used for message passing to C64,
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
-volatile uint8_t eepAddrToWrite, eepDataToWrite;
+volatile uint8_t eepDataToWrite;
+volatile uint16_t eepAddrToWrite;
 StructMenuItem *MenuSource;
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
@@ -924,6 +925,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegPwrUpDefaults:
             IO1[rwRegPwrUpDefaults]= Data;
             eepAddrToWrite = eepAdPwrUpDefaults;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
+         case rwRegPwrUpDefaults2:
+            IO1[rwRegPwrUpDefaults2]= Data;
+            eepAddrToWrite = eepAdPwrUpDefaults2;
             eepDataToWrite = Data;
             IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;

@@ -48,7 +48,8 @@ ShowSettings:
    ldy #20 ;col
    clc
    jsr SetCursor
-   lda smc24HourClockDisp+1 ;temp!  24(non-zero) vs 12(zero) hr display 
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2Clock12_24hr
    beq + ;branch if 12 hour
    lda #'2'
    jsr SendChar   
@@ -155,14 +156,13 @@ WaitForSettingsKey:
 
 +  cmp #'1'  ;12/24 hour clock
    bne +
-   lda smc24HourClockDisp+1 ;Temp! 24(non-zero) vs 12(zero) hr display 
-   beq ++
-   lda #0
-   jmp +++
-++ lda #1 
-+++sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   lda rwRegPwrUpDefaults2+IO1Port
+   eor #rpud2Clock12_24hr  
+   sta rwRegPwrUpDefaults2+IO1Port
+   and #rpud2Clock12_24hr  
+   sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   jsr WaitForTRWaitMsg
    jmp ShowSettings  
-
 
 +  cmp #'a'  ;Power-up Time Zone Increment
    bne +

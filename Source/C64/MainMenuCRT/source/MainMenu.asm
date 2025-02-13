@@ -117,6 +117,11 @@ smcTODbit
    sta TODMinBCD
    sta TODSecBCD
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
+
+   ;store default register for 12/24 hour time display locally
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2Clock12_24hr
+   sta smc24HourClockDisp+1  ;local copy of 12/24 hr
    
    ;check for cartridge signature in RAM (as written by some games ie "Hero")  Thanks Artur Rataj!
    ;  This causes mis-starts to BASIC and meese up restore key operation
