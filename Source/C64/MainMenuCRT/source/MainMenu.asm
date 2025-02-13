@@ -1256,7 +1256,7 @@ LoadViewTxt
 +  cmp #ChrF4  ;Toggle Music now
    bne +
    jsr ToggleSIDMusic
-   jmp EOPWait  
+   ;jmp EOPWait  
     
 +  jmp EOPWait    ;all other keys ignored
 

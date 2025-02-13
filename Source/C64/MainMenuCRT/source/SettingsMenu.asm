@@ -44,6 +44,21 @@ ShowSettings:
    lda #NameColor
    jsr SendChar
 
+   ldx #4  ;row 12/24 hour clock
+   ldy #20 ;col
+   clc
+   jsr SetCursor
+   lda smc24HourClockDisp+1 ;temp!  24(non-zero) vs 12(zero) hr display 
+   beq + ;branch if 12 hour
+   lda #'2'
+   jsr SendChar   
+   lda #'4'
+   jmp ++
++  lda #'1'
+   jsr SendChar
+   lda #'2'
+++ jsr SendChar   
+
    ldx #5 ;row Time Zone
    ldy #23 ;col
    clc
@@ -137,6 +152,17 @@ WaitForSettingsKey:
    jsr DisplayTime   
    jsr CheckForIRQGetIn
    beq WaitForSettingsKey
+
++  cmp #'1'  ;12/24 hour clock
+   bne +
+   lda smc24HourClockDisp+1 ;Temp! 24(non-zero) vs 12(zero) hr display 
+   beq ++
+   lda #0
+   jmp +++
+++ lda #1 
++++sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   jmp ShowSettings  
+
 
 +  cmp #'a'  ;Power-up Time Zone Increment
    bne +

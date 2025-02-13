@@ -121,10 +121,11 @@ MsgSettingsMenu1:
    !tx ChrReturn, SourcesColor, "Settings Menu:", ChrReturn
    !tx MenuMiscColor 
    !tx "   Power-On Defaults:", ChrReturn
-   !tx OptionColor, "    Key=next value, shift+key=previous", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, SourcesColor, "  Time Zone:", NameColor, " UTC", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, SourcesColor, " Special IO:", ChrReturn
-   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, SourcesColor, " Joy2 Speed:", ChrReturn
+;   !tx OptionColor, "    Key=next value, shift+key=previous", ChrReturn
+   !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, SourcesColor, "12/24hr clk:", NameColor, " 12", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, SourcesColor, "  Time Zone:", NameColor, " UTC", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, SourcesColor, " Special IO:", ChrReturn
+   !tx "  ", OptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, SourcesColor, " Joy2 Speed:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, SourcesColor, " Synch Time:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, SourcesColor, "   Play SID:", ChrReturn
    !tx "    ", OptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, SourcesColor, "NFC Enabled:", ChrReturn

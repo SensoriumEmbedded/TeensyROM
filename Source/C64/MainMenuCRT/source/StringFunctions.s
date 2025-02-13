@@ -69,12 +69,45 @@ DisplayTime:
    jsr SendChar
    lda TODHoursBCD ;latches time in regs (stops incrementing)
    tay ;save for re-use
+
+smc24HourClockDisp   
+   ldx #00 ; x reg holds 24(non-zero) vs 12(zero) hr display 
+   beq Print12Hours
+
+   ;print hours (24 hour format)
+   lda #ChrSpace ;two spaces if 24 hour mode
+   jsr SendChar
+   jsr SendChar
+   tya
+   cmp #$12  ;12am special case
+   bne +     
+   ;print 0
+   lda #$00
+   beq ++ ;always jump
++  cmp #$92  ;12pm special case
+   beq +     ;print as-is (without PM bit)
+   and #$80  ;check am/pm bit
+   beq +     ;print am hour as-is
+   ; pm, but not 12pm, add 12 in decimal mode
+   tya
+   and #$1f
+   sed
+   clc
+   adc #$12
+   cld
+   jmp ++
++  tya
+   and #$1f
+++ jsr PrintHexByte
+   jmp Print_mm_ss
+   
+Print12Hours ;print hours (12 hour format)
    and #$1f
    bne nz   ;if hours is 0, make it 12...
    tya
    ora #$12
    tay ;re-save for re-use
-nz tya
+nz tya     ;first digit is 1 or blank
    and #$10
    bne +
    lda #ChrSpace
@@ -84,6 +117,8 @@ nz tya
    tya
    and #$0f  ;ones of hours
    jsr PrintHexNibble
+
+Print_mm_ss   ;print :mm:ss  read 10ths
    lda #':'
    jsr SendChar
    lda TODMinBCD
@@ -96,6 +131,9 @@ nz tya
    ;jsr SendChar
    lda TODTenthSecBCD ;have to read 10ths to release latch
    ;jsr PrintHexNibble
+   cpx #00 ; x reg holds 24(non-zero) vs 12(zero) hr display 
+   bne +++
+   ;print am/pm if in 12 hour mode
    tya ;am/pm (pre latch release)
    and #$80
    bne +
@@ -105,7 +143,7 @@ nz tya
 ++ jsr SendChar
    lda #'m'
    jsr SendChar
-   rts
++++rts
 
 PrintIntByte: 
    ;Print acc as int, no padding
@@ -154,6 +192,7 @@ Ones
    
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)
+   ;trashes acc, X and Y unchanged
    pha
    lsr
    lsr
@@ -168,7 +207,7 @@ PrintHexByte:
    
 PrintHexNibble:   
    ;Print value stored in lower nible acc in hex
-   ;trashes acc
+   ;trashes acc, X and Y unchanged
    and #$0f
    cmp #$0a
    bpl l 
