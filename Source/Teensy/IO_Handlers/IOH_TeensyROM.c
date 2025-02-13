@@ -215,8 +215,14 @@ extern bool USBFileSystemWait();
 //#define ToPETSCII(x) (x==95 ? 32 : x>64 ? x^32 : x)
 #define ToPETSCII(x) ASCIItoPETSCII[(x) & 0x7f]
 
-void getNtpTime() 
+FLASHMEM void getNtpTime() 
 {
+   //IO1[rRegLastHourBCD] = 0x0; //91;   // 11pm
+   //IO1[rRegLastMinBCD]  = 0x59;      
+   //IO1[rRegLastSecBCD]  = 0x53;      
+   //Serial.printf("Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
+   //return;
+
    if (!EthernetInit()) 
    {
       IO1[rRegLastSecBCD]  = 0;      
