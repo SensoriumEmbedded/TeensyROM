@@ -188,6 +188,8 @@ M2SUpdateKeyInLoop:
    lda SIDVoicCont  ;waveform in upper nibble
    ora rRegSIDVoicCont1+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs 
+   ;lda rRegSIDSusRel1+IO1Port 
+   ;sta SIDLoc+rRegSIDSusRel1-StartSIDRegs 
    lda rRegSIDFreqHi1+IO1Port 
    sta SIDLoc+rRegSIDFreqHi1-StartSIDRegs 
    lda rRegSIDFreqLo1+IO1Port 
@@ -196,6 +198,8 @@ M2SUpdateKeyInLoop:
    lda SIDVoicCont  ;waveform in upper nibble
    ora rRegSIDVoicCont2+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont2-StartSIDRegs 
+   ;lda rRegSIDSusRel2+IO1Port 
+   ;sta SIDLoc+rRegSIDSusRel2-StartSIDRegs 
    lda rRegSIDFreqHi2+IO1Port 
    sta SIDLoc+rRegSIDFreqHi2-StartSIDRegs 
    lda rRegSIDFreqLo2+IO1Port 
@@ -204,6 +208,8 @@ M2SUpdateKeyInLoop:
    lda SIDVoicCont  ;waveform in upper nibble
    ora rRegSIDVoicCont3+IO1Port ;latch bit (0) from MIDI
    sta SIDLoc+rRegSIDVoicCont3-StartSIDRegs 
+   ;lda rRegSIDSusRel3+IO1Port 
+   ;sta SIDLoc+rRegSIDSusRel3-StartSIDRegs 
    lda rRegSIDFreqHi3+IO1Port 
    sta SIDLoc+rRegSIDFreqHi3-StartSIDRegs 
    lda rRegSIDFreqLo3+IO1Port 

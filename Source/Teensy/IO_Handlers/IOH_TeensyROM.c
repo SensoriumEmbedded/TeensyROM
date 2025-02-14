@@ -757,9 +757,12 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    
    Voice[VoiceNum].Available = false;
    Voice[VoiceNum].NoteNumUsing = note;
+   
    IO1[rRegSIDFreqLo1+VoiceNum*7] = RegVal;  //7 regs per voice
    IO1[rRegSIDFreqHi1+VoiceNum*7] = (RegVal>>8);
+   //IO1[rRegSIDSusRel1+VoiceNum*7] = (IO1[rRegSIDSusRel1+VoiceNum*7] & 0x0f) | ((velocity<<1) & 0xf0); //Set Sustain level (0-15) from velocity (0-127)
    IO1[rRegSIDVoicCont1+VoiceNum*7] |= 0x01; //start ADSR
+   
    IO1[rRegSIDStrStart+VoiceNum*4+0]=NoteName[note%12][0];
    IO1[rRegSIDStrStart+VoiceNum*4+1]=NoteName[note%12][1];
    IO1[rRegSIDStrStart+VoiceNum*4+2]='0'+note/12;
