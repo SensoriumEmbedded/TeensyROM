@@ -263,7 +263,7 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent 
 
-+  cmp #ChrShiftReturn ;set auto-launch
++  cmp #'A' ;set auto-launch
    bne +
    jsr DisplaySetAutoLaunch
    jsr ListMenuItems ; reprint menu

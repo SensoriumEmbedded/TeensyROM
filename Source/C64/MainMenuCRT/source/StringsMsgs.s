@@ -84,8 +84,8 @@ MsgHelpMenu:
    !tx    "  ", OptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Beginning of current dir", ChrReturn
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, MenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
    !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, MenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx          OptionColor, ChrFillRight, ChrRvsOn, "Sh-Ret", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
-   !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "1-4", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
+   !tx "     ", OptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
+   !tx   "   ", OptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, MenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
    !tx ChrReturn
    !tx SourcesColor    ;, " Available here and on Main Menu:", ChrReturn
    !tx "   Source Select:   ", MenuMiscColor, "Other:", ChrReturn
