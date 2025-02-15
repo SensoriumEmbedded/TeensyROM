@@ -77,6 +77,17 @@
    
    *=code  ; Start location for code
 
+;				!word BasicEnd						; BASIC pointer to next line
+;				!word Year							; BASIC line number
+;				!byte $9e							; BASIC token code for "SYS" command
+;				!byte (SysAddress/1000)+$30			; Calculate 1st digit of .run
+;				!byte ((SysAddress/100)%10)+$30		; Calculate 2nd digit of .run
+;				!byte ((SysAddress/10)%10)+$30		; Calculate 3rd digit of .run
+;				!byte SysAddress%10+$30				; Calculate 4th digit of .run
+;				!byte $00							; BASIC end of line marker
+;BasicEnd		!word $0000							; BASIC end of program
+;
+;SysAddress
 
 ASIDInit:
 ;screen setup:     
@@ -581,6 +592,8 @@ AddAccToCharQueue
 +  inc SpinIndUnexpType
    
 ASIDIntFinished:
+   ;check for int still set and loop back to Start
+   
    ;jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S IRQ HANDLER ROUTINE
    jmp $ea81  ;jump to the *end* of the interrupt (pull YXA from the stack and RTI)
 

@@ -1,6 +1,29 @@
 
 # FW Release Version history:
 
+### 0.6.6 Release 2/15/25
+* SID File Player updates
+  * Individual voice muting during SID file playback!
+    * Voice 1/2/3 mute status/control on SID Info page
+    * Thank you @Avrilcadabra for the idea, testing, **and implementation methodology** 
+  * Fine control and percentage based display for SID speed changes
+    * Log or Linear control options, display to 0.01%
+  * Capability to remote control individual SID voice muting and play speed.
+    * Thank you @hExx for the testing and forthcoming **TeensyROM UI implementation.**
+* New Feature: Text and PETSCII file viewer
+  * Directly open .TXT (ASCII) or .SEQ (PETSCII) files for viewing
+  * Navigate through pages/files, customize colors
+  * 15 sample text/PETSCII files added to new main menu sub-dir
+    * Includes text viewer Usage/instructions doc
+  * Thanks to @William Manganaro for the suggestion/testing
+* 24 hour clock display option
+  * 12/24 hour display selectable in Settings Menu
+  * Setting saved in EEPROM, stays persistent.
+    * Note: This FW will reset EEPROM to defaults 
+  * Thank you for the idea: @Lefty
+* Other updates
+  * Auto launch selection key changed from shift-return to 'A' (shift-a)
+
 ### 0.6.5 Release 1/20/25
 * NFC Loading System updates:
   * Support for **"Mifare Classic 1k"** NFC tags

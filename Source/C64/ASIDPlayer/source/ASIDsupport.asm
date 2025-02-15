@@ -52,6 +52,7 @@ smcPrintStringAddr
    
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)
+   ;trashes acc, X and Y unchanged
    pha
    lsr
    lsr
@@ -66,7 +67,7 @@ PrintHexByte:
    
 PrintHexNibble:   
    ;Print value stored in lower nible acc in hex
-   ;trashes acc
+   ;trashes acc, X and Y unchanged
    and #$0f
    cmp #$0a
    bpl l 

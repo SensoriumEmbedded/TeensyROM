@@ -18,7 +18,7 @@
 * ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options-Navigation
-  * (as of FW v0.6.2)
+  * (as of FW v0.6.6)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
     * `CRSR or Joystick Left/Right` Page up/down the list of files
@@ -29,12 +29,13 @@
     * `Home` Move cursor to first item in directory
     * `Left Arrow` Write NFC Tag that will launch currently highlighted file
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
-    * `Shift-Return` Set Auto-Launch to currently highlighted file
+    * `A` Set Auto-Launch to currently highlighted file
     * `1-4` Hot Keys to launch the following:
       * `1` Cynthcart
       * `2` Station64
       * `3` CCGMS
       * `4` TeensyROM ASID Player
+      * `5` Jupiter Lander CRT
     * `F1` Display files stored in Teensy Memory via firmware
     * `F3` Display files on an attached SD card
     * `F5` Display files on an attached USB Drive
@@ -57,8 +58,9 @@
     * SD Cards are somewhat favored over USB drives as they have slightly faster access times.
     * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games in a format (CRT) that's perfect for the TeensyROM
     * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
-    * Recommend adding [this autolaunch.txt file](autolaunch.txt) in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
-
+    * Recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
+    * 32GB SD cards typically give the fastest directory read times
+    
 ## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
   * When a file is selected, load/run status is displayed on the screen.  Usually this will flash by too quickly to read, but in the case of an error, it will pause to provide additional information.
@@ -70,7 +72,7 @@
     * **.CRT files:**
       * Emulates/supports most popular cartridge types:
         * All 8khi, 8klo, 16k, and C128 "Generic" carts
-        * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon
+        * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon, GMod2
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay
         * Swiftlink internet, MIDI (Passport, Datel, Sequential, & Namesoft)
       * Additional CRT support info
@@ -86,6 +88,13 @@
       * Compatible with output from [Retropixels online](https://www.micheldebree.nl/retropixels/)
     * **.ART/AAS/HPI/OCP/PIC files:**
       * Displays Art Studio Hi-Res picture
+    * **.TXT files:**
+      * Displays ASCII text in the TR text viewer
+      * See viewer usage/navigation doc via TR on your C64 in the /Text+PETSCII+Docs directory.
+    * **.SEQ files:**
+      * Displays PETSCII directly in the TR text viewer
+      * Compatible with SEQ output from [lvllvl.com](https://lvllvl.com/) and [petscii.krissz.hu](https://petscii.krissz.hu/)
+      * See viewer usage/navigation doc via TR on your C64
     * **.D64/.D71/.D81 files:**
       * Single File load/exec only (no multi-file/writebacks)
     * **.HEX files:**
@@ -95,6 +104,7 @@
   * (as of FW v0.6.2)
   * Keyboard commands available from the Settings Menu:
     * These commands modify settings stored in the Teensy, and are recalled on power-up
+      * `1` Toggle 12/24 hour clock display
       * `a/A` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
       * `b/B` Select Special IO to apply when launching a PRG/CRT (see below)
       * `c/C` Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
