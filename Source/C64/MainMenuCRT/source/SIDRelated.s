@@ -44,21 +44,20 @@ SIDLoadInit:
    lda #00  
    sta smcVoicesMuted+1  ;un-mute all voices on new SID load
 
-   jsr SIDSongInit
+   ;jsr SIDSongInit  ;now doing this after IRQEnable in case it changes timer itself (2x, 4x, etc)
    
    ;check play address
    lda rRegSIDPlayLo+IO1Port
    bne +
    lda rRegSIDPlayHi+IO1Port
-   bne +
-   ;play address is 0000: 
-   ;    Init will set up interrupt, don't enable it here
-   ;int won't catch IRQs, next SID will force reset
-   ;todo: Disable pause capability? Wedge our interrupt?
-   rts
-   
-+  jsr IRQEnable  ;start the IRQ wedge
-   rts
+   beq SIDSongInit   ;play address is 0000: 
+            ;    Init will set up interrupt, don't enable it here
+            ;int won't catch IRQs, next SID will force reset
+            ;todo: Disable pause capability? Wedge our interrupt?
++  jsr IRQEnable  ;start the IRQ wedge (play address is *not* 0000)
+;++ jsr SIDSongInit ;initialize after IRQ enable 
+;   rts   
+; just continue through and return after song init...
 
 SIDSongInit:
    ;run SID Init routine
