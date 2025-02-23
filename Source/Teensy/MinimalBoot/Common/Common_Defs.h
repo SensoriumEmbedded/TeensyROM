@@ -1,6 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
+char strVersionNumber[] = "v0.6.6+2"; //*VERSION*
 
 #define MaxCRTKB      875   //based on calc from minimal image
 

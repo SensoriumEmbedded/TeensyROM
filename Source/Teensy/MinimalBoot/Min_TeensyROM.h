@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-char strVersionNumber[] = "minimal v0.0.2"; //*VERSION*
-
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
 

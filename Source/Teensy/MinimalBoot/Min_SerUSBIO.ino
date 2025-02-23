@@ -45,6 +45,10 @@ FLASHMEM void ServiceSerial()
          SendU16(FailToken);
          Serial.print("Busy!\n");
          return;
+
+      case 'v': //version info
+         Serial.printf("\nTeensyROM minimal %s\n", strVersionNumber);
+         break;
         
       //case 'u': //Jump to upper image (full build)
       //   runMainTRApp();  

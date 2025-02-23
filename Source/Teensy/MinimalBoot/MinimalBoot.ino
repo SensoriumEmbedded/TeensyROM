@@ -106,7 +106,7 @@ void setup()
    SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
-   Serial.printf("\nTeensyROM %s is on-line\n", strVersionNumber);
+   Serial.printf("\nTeensyROM minimal %s is on-line\n", strVersionNumber);
    Serial.printf(" %luMHz  %.1fC\n FW: %s, %s\n", (F_CPU_ACTUAL/1000000), tempmonGetTemp(), __DATE__, __TIME__);
    
 #ifdef Dbg_TestMin
