@@ -68,7 +68,7 @@ The first step is to enable the re-timer on and select 50Hz or Auto timing of pl
     * For this reason, variable rate and per-note sids are not currently compatible with the frame timer feature.
 
 Once the Frame Timer is turned on, the buffer size can be selected with `b` (smaller) or `B` (larger). 
-* Larger buffers afford more space for speed corrections and reduce likelyhoo of audible glitches, but also add noticable buffer time between the source and the SID output. 
+* Larger buffers afford more space for speed corrections and reduce likelyhood of audible glitches, but also add noticable buffer time between the source and the SID output. 
 * Smaller buffers are usefull for faster startup and synch with the source, but risk over/under runs for jittery sources
 * Here are some recommendations:
     |Usage|Timer|Buffer Size|
@@ -86,17 +86,20 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * In your computer/phone browser, navigate to https://deepsid.chordian.net/
     * Select "ASID (MIDI)" from the drop-down in the upper left corner
     * Select "TeensyROM" from the "MIDI port for ASID" drop-down
-    * Select your SID from the vast library and play it
+    * Set the Frame Timer as desired per above, or leave it off
+    * Select your SID tune from the vast library and play it
     * The playback should be eminating from your C64/128!
 * **ChipSynth C64** to control your SID chip directly as a synthesizer
     * Go to https://www.plogue.com/products/chipsynth-c64.html and download/install/launch "chipsynth C64"
     * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and "TeensyROM" as the destination
     * There are many things you can do with this great program, purchasing will unlock the 10 minute limit per use.
     * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
+    * Be sure to leave the Frame timer **off** as ChipSynth does not send data in frames.
     * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 * **SID Factory II** for cross-platform SID music editing/playing
     * As of this writing, ASID support is only available via [this GitHub Branch](https://github.com/Chordian/sidfactory2/tree/asid-support) and must be compiled. Let [me](mailto:travis@sensoriumembedded.com) know if you need help with this.
         * Hoping this will be fully released [here](https://blog.chordian.net/sf2/) soon.
+    * Set the Frame Timer as desired per above, or leave it off
     * Launch the SFII application
     * Press F1 on the splash page to select the TeensyROM, and Enter to continue
     * Press F10 once you're in the editor to load a song project
