@@ -11,7 +11,7 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
   * Connect USB cable from a MIDI Keyboard/Controller device to the USB Type A Host port on the TeensyROM board.
     * Note: If your MIDI controller has a 5-pin DIN connector instead of USB, you can use an adapter such as [this link](https://www.amazon.ca/USB-OUT-MIDI-Cable-Converter/dp/B077X7R74Y?th=1).
   * Select MIDI device to emulate
-    * **Note: if using the ***built-in*** CynthCart, Station64, or MIDI2SID app**, the correct IO is already associated, **you can skip this step.**
+    * **Note: If using the ***built-in*** CynthCart, Station64, SID-Wizard, ASID Player, or MIDI2SID app**, the correct IO is already associated, **you can skip this step.**
     * Prior to running a MIDI program, go to the settings menu (F8) 
     * Under "Special IO:", select your preferred "MIDI:*" device by cycling through the options.
     * The following MIDI cartridges can be emulated/selected:
