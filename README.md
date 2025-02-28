@@ -5,12 +5,12 @@
 **Features include:**
 * **ROM emulator**: The perfect way to play CRT files, such as the highly recommend [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
 * **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
-* **MIDI USB Host & Device, ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to make your SID chip sing!
+* **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
 * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
 * **Remote Control** your C64 using 
   * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
   * The feature rich [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and Cross-platform [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
-* SID Player with voice muting and speed control 
+* SID File Player with voice muting and speed control 
 * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
