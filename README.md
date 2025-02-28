@@ -10,7 +10,8 @@
 * **Remote Control** your C64 using 
   * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
   * The feature rich [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and Cross-platform [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
-* Picture viewer, SID Player, Custom BASIC Commands, Autolaunch, *and more* 
+* SID Player with voice muting and speed control 
+* Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 
