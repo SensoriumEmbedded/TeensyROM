@@ -16,6 +16,8 @@ The TeensyROM was designed with hand assembly in mind. While surface mount packa
   - Parts listed in the [TeensyROM BOM](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.3/TeensyROM%20v0.3%20BOM.xlsx)
     - Including bare PCB [Link to latest design at OSH Park](https://oshpark.com/shared_projects/klnNznNJ)
 
+There's a great step by step assembly created by our friend Ken from "What's Ken Making", you can [find it here](https://www.youtube.com/watch?v=mjeFCk1kH3Y).
+
 ## Teensy prep: *Important: complete these in order shown!*  
 - These steps need to be done **before** assembling the TeensyROM and connecting to a C64/128 for the first time.
 - Load the initial firmware to be used into the Teensy 4.1 module. 
