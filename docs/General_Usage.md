@@ -76,7 +76,7 @@
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay
         * Swiftlink internet, MIDI (Passport, Datel, Sequential, & Namesoft)
       * Additional CRT support info
-        * Max file size is 875MB (impacts large EZF files), also no EasyFlash eapi support at this time
+        * Max file size is 875KB (impacts large EZF files), also no EasyFlash eapi support at this time
         * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. This issue only impacts UltiMax w/ C128 and is resolved in PCA rev 0.3.
     * **.SID files:**
