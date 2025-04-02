@@ -194,13 +194,13 @@ memTextCircQueueTail:
 memVoiceMuteState:  ;bit0-2 high if voice # is muted
    !byte 0
 memSID1addrNum:
-   !byte 0
+   !byte 0  ;typically 0/$d400/default SID
 memSID2addrNum:
-   !byte 1
+   !byte 5  ;was 1
 memSID3addrNum:
-   !byte 2
+   !byte 6  ;was 2
 memSIDaddrList:
-   !word $d400    ;Num 0
+   !word $d400    ;Num 0 (Default/internal SID)
    !word $d420    ;Num 1
    !word $d440    ;Num 2
    !word $d500    ;Num 3
