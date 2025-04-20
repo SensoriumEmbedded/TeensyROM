@@ -38,6 +38,8 @@ stcIOHandlers IOHndlr_TR_BASIC =
 
 #define TgetQueueSize      4096
 #define TgetQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+TgetQueueSize-RxQueueTail))
+#define MainMemLoc         0xc000  //see MainMemLoc in assy code, start of BASIC extension code
+#define MainMemLocEnd      0xd000  //see MainMemLocEnd in compiled symbols ($caf5 as of 4/20/25, adding buffer)
 
 uint8_t* TgetQueue = NULL;  //to hold incoming messages
 uint8_t* LSFileName = NULL;
@@ -189,7 +191,7 @@ uint8_t ContRegAction_LoadPrep()
    
    XferSize = myFile.size();
    Printf_dbg("Size: %d bytes\n", XferSize);
-   if(XferSize > (0xc000-0x0801)) //fit in BASIC area but don't overwrite custom commands
+   if(XferSize > 0xc000) //Max to fit below custom commands at $c000
    {
       Printf_dbg("File too large\n"); 
       myFile.close();
@@ -206,11 +208,14 @@ uint8_t ContRegAction_LoadPrep()
       return BAS_ERROR_FILE_DATA;   
    }
    
-   if (RAM_Image[0] != 0x01 || RAM_Image[1] != 0x08)
+   uint16_t PStart = (RAM_Image[1]<<8) | RAM_Image[0];
+   Printf_dbg("Addr: $%04x to $%04x\n", PStart, PStart+XferSize);
+   if (PStart < MainMemLocEnd && PStart+XferSize >= MainMemLoc)
    {
-      Printf_dbg("Not BASIC start addr\n");
-      return BAS_ERROR_TYPE_MISMATCH;   //make this a custom message? 
+      Printf_dbg("Conflict with ext code\n");
+      return BAS_ERROR_OUT_OF_MEMORY;  //make this a custom message? 
    }      
+   //if (RAM_Image[0] != 0x01 || RAM_Image[1] != 0x08)  //BAS_ERROR_TYPE_MISMATCH;   
    
    TR_BASStrAvailableRegVal = 0xff;    // transfer available flag   
    Printf_dbg("Done\n");
