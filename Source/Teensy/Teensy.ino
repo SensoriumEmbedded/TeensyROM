@@ -161,7 +161,7 @@ void loop()
          Printf_dbg("Remote recovery\n"); 
       }   
       if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
-      SetUpMainMenuROM(); //back to main menu
+      SetUpMainMenuROM(); //back to main menu, also sets doReset
    }
    
    if (doReset)
