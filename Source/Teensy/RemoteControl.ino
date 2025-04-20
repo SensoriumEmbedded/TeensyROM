@@ -227,7 +227,8 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       SelItemFullIdx = 0;  //  "Select" item
    }
    
-   Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
+   //Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
+   Serial.printf("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
 
    if (DoCartDirect)
    {  //If a CRT, start and reset directly:
