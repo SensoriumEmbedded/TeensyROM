@@ -312,14 +312,16 @@ FLASHMEM void GetDirectoryCommand()
 FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& fs)
 {
     File sourceFile = fs.open(sourcePath, FILE_READ);
+
     if (!sourceFile)
     {
         SendU16(FailToken);
         Serial.printf("Failed to open source file: %s\n", sourcePath);
         return false;
     }
-
+    fs.remove(destinationPath);
     File destinationFile = fs.open(destinationPath, FILE_WRITE);
+
     if (!destinationFile)
     {
         SendU16(FailToken);
@@ -327,14 +329,12 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
         sourceFile.close();
         return false;
     }
-
     while (sourceFile.available())
     {
         uint8_t buf[64];
         size_t len = sourceFile.read(buf, sizeof(buf));
         destinationFile.write(buf, len);
     }
-
     sourceFile.close();
     destinationFile.close();
 
@@ -343,7 +343,9 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
 
 
 // Command: 
-// Copies a command from one folder to the other in the USB/SD storage
+// Copies a command from one folder to the other in the USB/SD storage.
+// If the file with the same name already exists at the destination, 
+// it will be overwritten.
 //
 // Workflow:
 // Receive <-- Post File Token 0x64FF 
