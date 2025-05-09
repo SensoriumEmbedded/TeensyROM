@@ -47,8 +47,17 @@ FLASHMEM void AT_DT(char* CmdArg)
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
    
-   if (client.connect(CmdArg, Port)) AddToPETSCIIStrToRxQueueLN("Done");
-   else AddToPETSCIIStrToRxQueueLN("Failed!");
+   //assumes CD is not already asserted prior to connecting
+   if (client.connect(CmdArg, Port)) 
+   {
+      AddToPETSCIIStrToRxQueueLN("Done");
+      //SwiftRegStatus &= ~SwiftStatusDCD; //connected
+   }
+   else 
+   {
+      AddToPETSCIIStrToRxQueueLN("Failed!");
+      //SwiftRegStatus |= SwiftStatusDCD; //disconnected
+   }
 }
 
 FLASHMEM void AT_C(char* CmdArg)

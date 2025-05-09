@@ -70,13 +70,14 @@ stcIOHandlers IOHndlr_SwiftLink =
 
 //status reg flags
 #define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
-#define SwiftStatusDSR     0x40   // reflects state of DSR line
-#define SwiftStatusDCD     0x20   // reflects state of DCD line
+#define SwiftStatusDCD     0x40   // reflects state of DCD line
+#define SwiftStatusDSR     0x20   // reflects state of DSR line
 #define SwiftStatusTxEmpty 0x10   // high if xmit-data register is empty
 #define SwiftStatusRxFull  0x08   // high if receive-data register full
 #define SwiftStatusErrOver 0x04   // high if overrun error
 #define SwiftStatusErrFram 0x02   // high if framing error
 #define SwiftStatusErrPar  0x01   // high if parity error
+#define SwiftStatusDefault (SwiftStatusTxEmpty|SwiftStatusDCD)   // default/power-up/reset value
 
 //command reg flags
 #define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
@@ -251,7 +252,7 @@ FLASHMEM void SetEthEEPDefaults()
 FLASHMEM void InitHndlr_SwiftLink()
 {
    EthernetInit();
-   SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
+   SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    SwiftRegControl = 0;
    CycleCountdown=0;
@@ -363,9 +364,19 @@ void PollingHndlr_SwiftLink()
       }
       else
       {
-         AddToPETSCIIStrToRxQueue("\r\r\r*** ");
-         if (ConnectedToHost) AddToPETSCIIStrToRxQueueLN("connected to host");
-         else AddToPETSCIIStrToRxQueueLN("not connected");
+         //AddToPETSCIIStrToRxQueue("*** ");
+         if (ConnectedToHost) 
+         {
+            AddToPETSCIIStrToRxQueueLN("connected to host");
+            FlushRxQueue();
+            SwiftRegStatus &= ~SwiftStatusDCD; //indicate connected after message complete
+         }
+         else 
+         {
+            FlushRxQueue();
+            SwiftRegStatus |= SwiftStatusDCD; //indicate disconnected before sending message
+            AddToPETSCIIStrToRxQueueLN("not connected");
+         }
       }
    }
    
@@ -451,6 +462,9 @@ void PollingHndlr_SwiftLink()
    {
       PlusCount=0;
       ClearClientStop();
+
+      FlushRxQueue();
+      SwiftRegStatus |= SwiftStatusDCD; //indicate disconnected before sending message
       AddToPETSCIIStrToRxQueueLN("\r*click*");
    }
 

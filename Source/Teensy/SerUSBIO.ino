@@ -317,7 +317,7 @@ FLASHMEM void ServiceSerial()
          Serial.printf("Client stopped\n");
          break;
       case 'r': //reset status/NMI
-         SwiftRegStatus = SwiftStatusTxEmpty; //default reset state
+         SwiftRegStatus = SwiftStatusDefault;
          SwiftRegCommand = SwiftCmndDefault;
          SwiftRegControl = 0;
          RxQueueHead = RxQueueTail = 0;
