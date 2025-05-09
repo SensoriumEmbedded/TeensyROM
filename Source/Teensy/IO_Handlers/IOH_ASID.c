@@ -85,8 +85,9 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #define RegValToBuffSize(X)  (1<<((X & ASIDContBufMask)+8)); // 256, 512, 1024, 2048, 4096, 8192; make sure MIDIRxBufSize is >= max (8192)         
 #define ASIDRxQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 #define FramesBetweenChecks  12    //frames between frame alignments check & timing adjust
-#define SIDFreq50HzuS        19975 // 19950=50.13Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
+#define SIDFreq50HzuS        19975 // (PAL) 19950=50.13Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
                                    //Splitting the difference for now, todo: standardize when DS updated!
+#define SIDFreq60HzuS        16715 // (NTSC)
 
 //ASID protocol packet types
 #define APT_StartPlaying     0x4c
@@ -427,9 +428,33 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
       case APT_ContFramerate:
          Printf_dbg("APT_ContFramerate:");
          Printf_dbg_SysExInfo;
-         Printf_dbg("   Buffering requested: %s\n", ((data[3]&1) ? "Yes":"No"));
-         Printf_dbg("   Expected Vid: %s\n", ((data[3]&2) ? "PAL":"NTSC"));
-         Printf_dbg("   Frame Delta (uS): %lu\n", (data[6]<<16)|(data[5]<<8)|(data[4]));
+         //  data0: settings
+         Printf_dbg("   Expected Vid: %s\n", ((data[3]&1) ? "NTSC":"PAL")); //bit0: 0 = PAL, 1 = NTSC
+         Printf_dbg("   Speed Mult: %dx\n", ((data[3]&0x1E)>>1)+1); //bits4-1: speed, 1x to 16x
+         Printf_dbg("   Buffering requested: %s\n", ((data[3]&4) ? "Yes":"No")); //bit6: 1 = buffering requested by user
+         
+         ForceIntervalUs = (data[3]&1) ? SIDFreq60HzuS:SIDFreq50HzuS; //default to SID NTSC/PAL timing
+         Printf_dbg("   Frame Delta Default: %luuS\n", ForceIntervalUs);
+         //Use the speed from data0 in case:
+         //* No fancy timing system exists on the client
+         //* if framedelta is 0      
+         
+         if (size>=8)  // framedelta is optional argument
+         {
+            //  data1-3: framedelta uS, total 16 bits (lsb first), slowest time = 65535us = 15Hz
+            uint32_t TempUs = ((data[6]&3)<<14)|(data[5]<<7)|(data[4]);
+            Printf_dbg("   Frame Delta Sent: %luuS\n", TempUs);
+            if(TempUs) ForceIntervalUs = TempUs;
+         }
+         
+         //if ((data[3]&4) //bit6: 1 = buffering requested by user
+         {
+            //ForceIntervalUs = SIDFreq50HzuS;
+            Printf_dbg("   Timer Set: %luuS (%.2fHz)\n", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
+            //FrameTimerMode = true;
+            //InitTimedASIDQueue();
+         }
+         
          break;         
       case APT_SIDTypes:     
          Printf_dbg("APT_SIDTypes:");
