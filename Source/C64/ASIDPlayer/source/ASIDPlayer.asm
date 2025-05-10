@@ -196,14 +196,14 @@ smcScreenFull
 +  lda memTextCircQueue,y
    inc memTextCircQueueTail ;increment tail
 
-   cmp StartMsgToken
+   cmp #StartMsgToken
    bne +
    lda #<MsgASIDStart
    ldy #>MsgASIDStart
    jsr PrintString 
    jmp CheckForScreenFull
  
-+  cmp StopMsgToken
++  cmp #StopMsgToken
    bne +
    lda #<MsgASIDStop
    ldy #>MsgASIDStop
@@ -565,13 +565,13 @@ smcSID3address
 +  cmp #ASIDAddrType_Start ;Start Message
    bne + 
    jsr SIDinit
-   lda StartMsgToken
+   lda #StartMsgToken
    jmp AddAccToCharQueue
    
 +  cmp #ASIDAddrType_Stop ;Stop Message
    bne + 
    jsr SIDinit
-   lda StopMsgToken
+   lda #StopMsgToken
    jmp AddAccToCharQueue
    
 +  cmp #ASIDAddrType_Char  ;Sending Character, add to queue
