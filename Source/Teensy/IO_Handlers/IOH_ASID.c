@@ -177,11 +177,28 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
      return;
   }
   
+  //Printf_dbg("%02x %02x %c\n", Addr, Data, Data);
   MIDIRxBuf[RxQueueHead] = Addr;
   MIDIRxBuf[RxQueueHead+1] = Data;
   
   if (RxQueueHead == ASIDQueueSize-2) RxQueueHead = 0;
   else RxQueueHead +=2;
+}
+
+void FlushASIDRxQueue()
+{
+   uint32_t TimoutmS = 3000;
+   
+   while(ASIDRxQueueUsed) 
+   {
+      SetIRQAssert;
+      delay(1); 
+      if(--TimoutmS == 0)
+      {
+         Printf_dbg("Flush Timeout\n");
+         break;
+      }
+   }   
 }
 
 void SetASIDIRQ()
@@ -204,20 +221,6 @@ void SetASIDIRQ()
    }
 }
 
-void AddASCIIStringToASIDRxQueue(const char *ToSend)
-{
-   Printf_dbg("APT_DisplayChars: \"%s\"\n", ToSend);
-   uint8_t CharNum=0;
-   while(ToSend[CharNum])
-   {
-      AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(ToSend[CharNum]));
-      CharNum++;
-   }
-   AddToASIDRxQueue(ASIDAddrType_Char, 13); //add return char
-   SetASIDIRQ();
-}
-
-
 void PrintflnToASID(const char *Fmt, ...)
 {
    char ToSend[300];
@@ -226,10 +229,23 @@ void PrintflnToASID(const char *Fmt, ...)
    vsprintf(ToSend, Fmt, ap); 
    va_end(ap);
    
-   AddASCIIStringToASIDRxQueue(ToSend);
+   if (!MIDIRxIRQEnabled) return;
+   ASIDPlaybackTimer.end();  // Stop the timer (if on)
+
+   //Add ASCII String To ASID RxQueue:
+   Printf_dbg("  Disp: \"%s\"\n", ToSend);
+   uint8_t CharNum=0;
+   while(ToSend[CharNum])
+   {
+      AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(ToSend[CharNum]));
+      CharNum++;
+   }
+   
+   AddToASIDRxQueue(ASIDAddrType_Char, 13); //add return char
+
+   FlushASIDRxQueue();
+   if (FrameTimerMode) InitTimedASIDQueue(); 
 }
-
-
 
 void AddErrorToASIDRxQueue()
 {
@@ -270,7 +286,7 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
       Printf_dbg("-->More regs expected (%d) than provided (%d)", NumRegs, size-12);    
       Printf_dbg_SysExInfo;
    }
-   SetASIDIRQ();  
+   SetASIDIRQ();  //will skip if in FrameTimerMode
    if (FrameTimerMode) AddToASIDRxQueue(ASIDAddrType_Skip, 0); //mark End Of Frame
 }
 
@@ -384,7 +400,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          break;
       case APT_DisplayChars: //Display Characters
          data[size-1] = 0; //replace 0xf7 with term
-         AddASCIIStringToASIDRxQueue((char*)data+3);   
+         PrintflnToASID("%s", (char*)data+3);
          break;
       case APT_SID1RegData:  //SID1 reg data (primary)
          if (FrameTimerMode && !QueueInitialized)
@@ -434,26 +450,31 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          break;
       case APT_SID3RegData:  //SID3 reg data
          DecodeSendSIDRegData(ASIDAddrType_SID3, data, size);
-         break;         
+         break;   
+         
       case APT_WriteOrder:   
          Printf_dbg("APT_WriteOrder:");
          Printf_dbg_SysExInfo;
+
+         PrintflnToASID("Write Order set\r");
          for(uint16_t Cnt=0; Cnt<size-4; Cnt+=2)
          {
             uint8_t Regnum = Cnt/2;
             uint8_t IndexOrder = data[Cnt+3] & 0x3f;
             uint8_t WaitCycles = ((data[Cnt+3] & 0x40)<<1) | data[Cnt+4];
-            Printf_dbg("   reg %02d  #%02d  %3d cyc\n", Regnum, IndexOrder, WaitCycles);
+            Printf_dbg("   reg %02d  #%02d  %3d cyc\n", Regnum, IndexOrder, WaitCycles);        
+            //PrintfToASID("   r%02d #%02d", Regnum, IndexOrder);
          }
-         break;         
+         break;   
+         
       case APT_ContFramerate:
          Printf_dbg("APT_ContFramerate:");
          Printf_dbg_SysExInfo;
          //  data0: settings
-         Printf_dbg("   Expected Vid: %s\n", ((data[3]&0x01) ? "NTSC":"PAL"));   //bit0: 0 = PAL, 1 = NTSC
-         Printf_dbg("   Speed Mult: %dx\n", ((data[3]&0x1E)>>1)+1);              //bits4-1: speed, 1x to 16x
-                                                                                 //bit5: reserved, set to 0
-         Printf_dbg("   Buffer requested: %s\n", ((data[3]&0x40) ? "Yes":"No")); //bit6: 1 = buffering requested by user
+         //Printf_dbg("   Expected Vid: %s\n", ((data[3]&0x01) ? "NTSC":"PAL"));   //bit0: 0 = PAL, 1 = NTSC
+         //Printf_dbg("   Speed Mult: %dx\n", ((data[3]&0x1E)>>1)+1);              //bits4-1: speed, 1x to 16x
+         //                                                                        //bit5: reserved, set to 0
+         //Printf_dbg("   Buffer requested: %s\n", ((data[3]&0x40) ? "Yes":"No")); //bit6: 1 = buffering requested by user
          
          ForceIntervalUs = (data[3]&1) ? SIDFreq60HzuS:SIDFreq50HzuS; //default to SID NTSC/PAL timing
          Printf_dbg("   Frame Delta Default: %luuS\n", ForceIntervalUs);
@@ -470,25 +491,33 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          }
          
          // ForceIntervalUs is set above
-         Printf_dbg("   Timer Set: %luuS (%.2fHz)\n", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
+         //Printf_dbg("   Timer Set: %luuS (%.2fHz)\n", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
          FrameTimerMode = true; //force on with this packet received from host
             // eventually use this?  (data[3]&0x40) //bit6: 1 = buffering requested by user
          InitTimedASIDQueue();
          
-         //send text to queue after init:
          PrintflnToASID("Framerate info:");
-         PrintflnToASID("  Expected Vid: %s", ((data[3]&1) ? "NTSC":"PAL")); //bit0: 0 = PAL, 1 = NTSC
-         PrintflnToASID("  Speed Mult: %dx", ((data[3]&0x1E)>>1)+1); //bits4-1: speed, 1x to 16x
+         PrintflnToASID("  Expected Vid: %s", ((data[3]&1) ? "NTSC":"PAL"));            // d0 bit0: 0 = PAL, 1 = NTSC
+         PrintflnToASID("  Speed Mult: %dx", ((data[3]&0x1E)>>1)+1);                    // d0 bits4-1: speed, 1x to 16x
+         PrintflnToASID("  Buffer req: %s (forced on)", ((data[3]&0x40) ? "Yes":"No")); // d0 bit6: 1 = buffering requested by user
          PrintflnToASID("  Timer On/Set to %luuS (%.2fHz)\r", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
+         break;     
          
-         break;         
       case APT_SIDTypes:     
          Printf_dbg("APT_SIDTypes:");
          Printf_dbg_SysExInfo;
-         Printf_dbg("   Index: %d (SID%d)\n", data[3], data[3]+1);
-         Printf_dbg("   Type: %d\n", ((data[4]&1) ? 8580:6581));
-         Printf_dbg("   Variant: %d\n", (data[4]>>1));
-         break;         
+         //Printf_dbg("   Index: %d (SID%d)\n", data[3], data[3]+1);
+         //Printf_dbg("   Type: %d\n", ((data[4]&1) ? 8580:6581));
+         //Printf_dbg("   Variant: %d\n", (data[4]>>1));
+         // data0: chip index (0 = SID1, 1=SID2 etc)
+         // data1: chip type
+         //    bit 0 : 0 => 6581, 1 => 8580
+         //    bits 6 to 1 reserved for specific variants of the chips (if wanted, like R3, R4AR etc)
+         
+         PrintflnToASID("Exp SID Types:");
+         PrintflnToASID("  Index: %d (SID%d)\r  Type: %d\r  Variant: %d\r", data[3], data[3]+1, ((data[4]&1) ? 8580:6581), (data[4]>>1));
+         break;
+         
       default:
          AddErrorToASIDRxQueue();
          Printf_dbg("-->Unexp  ASID Packet Type: $%02x", data[2]);
