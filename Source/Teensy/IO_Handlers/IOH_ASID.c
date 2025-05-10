@@ -85,9 +85,9 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #define RegValToBuffSize(X)  (1<<((X & ASIDContBufMask)+8)); // 256, 512, 1024, 2048, 4096, 8192; make sure MIDIRxBufSize is >= max (8192)         
 #define ASIDRxQueueUsed      ((RxQueueHead>=RxQueueTail)?(RxQueueHead-RxQueueTail):(RxQueueHead+ASIDQueueSize-RxQueueTail))
 #define FramesBetweenChecks  12    //frames between frame alignments check & timing adjust
-#define SIDFreq50HzuS        19975 // (PAL) 19950=50.13Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
+#define SIDFreq50HzuS        19975 // (PAL) 19950=50.125Hz (SFII, real C64 HW),  20000=50.0Hz (DeepSID)
                                    //Splitting the difference for now, todo: standardize when DS updated!
-#define SIDFreq60HzuS        16715 // (NTSC)
+#define SIDFreq60HzuS        16715 // (NTSC) 16715=59.827Hz (real C64 HW)
 
 //ASID protocol packet types
 #define APT_StartPlaying     0x4c
@@ -159,7 +159,7 @@ uint8_t ASIDidToReg[] =
 };
 
 void InitTimedASIDQueue()
-{
+{  //Called from ISR, must be fast!
    Printf_dbg("\nQueue Init\n");
    RxQueueHead = RxQueueTail = 0;
    ASIDPlaybackTimer.end();  // Stop the timer (if on)
@@ -172,7 +172,7 @@ void AddToASIDRxQueue(uint8_t Addr, uint8_t Data)
   if (ASIDRxQueueUsed >= ASIDQueueSize-2)
   {
      //Printf_dbg(">");
-     Printf_dbg("\n**Queue Overflow\n");
+     Printf_dbg("\n**Queue Overflow**");
      if (FrameTimerMode) InitTimedASIDQueue(); 
      return;
   }
@@ -203,6 +203,33 @@ void SetASIDIRQ()
       RxQueueHead = RxQueueTail = 0;
    }
 }
+
+void AddASCIIStringToASIDRxQueue(const char *ToSend)
+{
+   Printf_dbg("APT_DisplayChars: \"%s\"\n", ToSend);
+   uint8_t CharNum=0;
+   while(ToSend[CharNum])
+   {
+      AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(ToSend[CharNum]));
+      CharNum++;
+   }
+   AddToASIDRxQueue(ASIDAddrType_Char, 13); //add return char
+   SetASIDIRQ();
+}
+
+
+void PrintflnToASID(const char *Fmt, ...)
+{
+   char ToSend[300];
+   va_list ap;
+   va_start(ap,Fmt);
+   vsprintf(ToSend, Fmt, ap); 
+   va_end(ap);
+   
+   AddASCIIStringToASIDRxQueue(ToSend);
+}
+
+
 
 void AddErrorToASIDRxQueue()
 {
@@ -257,7 +284,7 @@ FASTRUN void SendTimedASID()
    if (LocalASIDRxQueueUsed < 2)
    {
       //Printf_dbg("<");
-      Printf_dbg("\n**Queue Underflow\n");
+      Printf_dbg("\n**Queue Underflow**");
       InitTimedASIDQueue(); //re-buffer if queue empty
       return;
    }
@@ -357,13 +384,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          break;
       case APT_DisplayChars: //Display Characters
          data[size-1] = 0; //replace 0xf7 with term
-         Printf_dbg("APT_DisplayChars: \"%s\"\n", data+3);
-         for(uint8_t CharNum=3; CharNum < size-1 ; CharNum++)
-         {
-            AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(data[CharNum]));
-         }
-         AddToASIDRxQueue(ASIDAddrType_Char, 13);
-         SetASIDIRQ();
+         AddASCIIStringToASIDRxQueue((char*)data+3);   
          break;
       case APT_SID1RegData:  //SID1 reg data (primary)
          if (FrameTimerMode && !QueueInitialized)
@@ -429,9 +450,10 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          Printf_dbg("APT_ContFramerate:");
          Printf_dbg_SysExInfo;
          //  data0: settings
-         Printf_dbg("   Expected Vid: %s\n", ((data[3]&1) ? "NTSC":"PAL")); //bit0: 0 = PAL, 1 = NTSC
-         Printf_dbg("   Speed Mult: %dx\n", ((data[3]&0x1E)>>1)+1); //bits4-1: speed, 1x to 16x
-         Printf_dbg("   Buffering requested: %s\n", ((data[3]&4) ? "Yes":"No")); //bit6: 1 = buffering requested by user
+         Printf_dbg("   Expected Vid: %s\n", ((data[3]&0x01) ? "NTSC":"PAL"));   //bit0: 0 = PAL, 1 = NTSC
+         Printf_dbg("   Speed Mult: %dx\n", ((data[3]&0x1E)>>1)+1);              //bits4-1: speed, 1x to 16x
+                                                                                 //bit5: reserved, set to 0
+         Printf_dbg("   Buffer requested: %s\n", ((data[3]&0x40) ? "Yes":"No")); //bit6: 1 = buffering requested by user
          
          ForceIntervalUs = (data[3]&1) ? SIDFreq60HzuS:SIDFreq50HzuS; //default to SID NTSC/PAL timing
          Printf_dbg("   Frame Delta Default: %luuS\n", ForceIntervalUs);
@@ -443,17 +465,21 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          {
             //  data1-3: framedelta uS, total 16 bits (lsb first), slowest time = 65535us = 15Hz
             uint32_t TempUs = ((data[6]&3)<<14)|(data[5]<<7)|(data[4]);
-            Printf_dbg("   Frame Delta Sent: %luuS\n", TempUs);
-            if(TempUs) ForceIntervalUs = TempUs;
+            Printf_dbg("   Frame Delta Requested: %luuS\n", TempUs);
+            if(TempUs) ForceIntervalUs = TempUs;  //not 0
          }
          
-         //if ((data[3]&4) //bit6: 1 = buffering requested by user
-         {
-            //ForceIntervalUs = SIDFreq50HzuS;
-            Printf_dbg("   Timer Set: %luuS (%.2fHz)\n", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
-            //FrameTimerMode = true;
-            //InitTimedASIDQueue();
-         }
+         // ForceIntervalUs is set above
+         Printf_dbg("   Timer Set: %luuS (%.2fHz)\n", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
+         FrameTimerMode = true; //force on with this packet received from host
+            // eventually use this?  (data[3]&0x40) //bit6: 1 = buffering requested by user
+         InitTimedASIDQueue();
+         
+         //send text to queue after init:
+         PrintflnToASID("Framerate info:");
+         PrintflnToASID("  Expected Vid: %s", ((data[3]&1) ? "NTSC":"PAL")); //bit0: 0 = PAL, 1 = NTSC
+         PrintflnToASID("  Speed Mult: %dx", ((data[3]&0x1E)>>1)+1); //bits4-1: speed, 1x to 16x
+         PrintflnToASID("  Timer On/Set to %luuS (%.2fHz)\r", ForceIntervalUs, ((float)1000000/ForceIntervalUs));
          
          break;         
       case APT_SIDTypes:     

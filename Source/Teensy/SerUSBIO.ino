@@ -169,15 +169,13 @@ FLASHMEM void ServiceSerial()
          break;
       case 'i': //Send text via ASID
       {
-         char CharsToSend[] = "This is a long character test, it just  keeps going for 3 continuous lines of   text.  Just when you think it's done...\r";
          AddToASIDRxQueue(ASIDAddrType_Start, 0);
-         for(uint8_t CharNum=0; CharNum<strlen(CharsToSend); CharNum++)
-         {
-            AddToASIDRxQueue(ASIDAddrType_Char, ToPETSCII(CharsToSend[CharNum]));
-         }
+         //char CharsToSend[] = "This is a long character test, it just  keeps going for 3 continuous lines of   text.  Just when you think it's done...";
+         //AddASCIIStringToASIDRxQueue(CharsToSend);
+         PrintflnToASID("This is a long character test, it just  keeps going for 3 continuous lines of   text.  Just when you think it's done...");
          AddToASIDRxQueue(ASIDAddrType_Stop, 0);
-         Serial.printf("Sent via ASID: Start, \"%s\", Stop\n", CharsToSend);  
-         Serial.flush();
+         //Serial.printf("Sent via ASID: Start, \"%s\", Stop\n", CharsToSend);  
+         //Serial.flush();
          SetASIDIRQ();
       }
          break;
