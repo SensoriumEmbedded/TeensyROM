@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.6+2"; //*VERSION*
+char strVersionNumber[] = "v0.6.6+8"; //*VERSION*
 
 #define MaxCRTKB      875   //based on calc from minimal image
 
@@ -16,7 +16,9 @@ char strVersionNumber[] = "v0.6.6+2"; //*VERSION*
 #define SetSIDSongToken   0x6488
 #define SIDSpeedLinToken  0x6499
 #define SIDSpeedLogToken  0x649A
-#define SIDVoiceMuting    0x6433
+#define SIDVoiceMuteToken 0x6433
+#define C64PauseOnToken   0x6431  //d1
+#define C64PauseOffToken  0x6430  //d0
 #define DebugToken        0x6467  //dg
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB
@@ -78,6 +80,11 @@ enum MinBootIndFlags
    MinBootInd_FromMin    = 2, // Min returning to main menu, skip of autolaunch (if enabled)
 };
 
+#define DMA_S_Idle       0
+#define DMA_S_Waiting    1
+#define DMA_S_Active     2
+
+volatile uint8_t DMA_State = DMA_S_Idle;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 

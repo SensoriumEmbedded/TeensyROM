@@ -63,6 +63,15 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
+   if (DMA_State == DMA_S_Waiting)
+   { 
+      if(!GP9_BA(GPIO_9)) //assert DMA signal when VIC takes over bus (BA low)
+      {
+         SetDMAAssert;
+         DMA_State = DMA_S_Active;
+      }
+   }
+   
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 

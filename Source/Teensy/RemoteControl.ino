@@ -127,7 +127,7 @@ FLASHMEM bool RemoteSetSIDSpeed(bool LogConv)
 // Set individual SID voice muting
 //
 // Workflow:
-// Receive <-- SIDVoiceMuting   0x6433
+// Receive <-- SIDVoiceMuteToken   0x6433
 // Receive <-- voice mute info (1 byte)
 //                bit 0=  Voice 1  on=0, mute=1
 //                bit 1=  Voice 2  on=0, mute=1

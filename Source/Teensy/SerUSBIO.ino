@@ -42,7 +42,20 @@ FLASHMEM void ServiceSerial()
             LaunchFile();
             return;
          }
-         
+         else if (inVal == C64PauseOnToken) //pause C64 via DMA 
+         {
+            DMA_State = DMA_S_Waiting;
+            SendU16(AckToken);
+            return;
+         }
+         else if (inVal == C64PauseOffToken) //un-pause C64 DMA
+         {
+            DMA_State = DMA_S_Idle;
+            SetDMADeassert;
+            SendU16(AckToken);
+            return;
+         }
+            
          if (CurrentIOHandler != IOH_TeensyROM)
          {
             SendU16(FailToken);
@@ -61,14 +74,14 @@ FLASHMEM void ServiceSerial()
                PostFileCommand();
                break;
             case CopyFileToken:
-                CopyFileCommand();
-                break;
+               CopyFileCommand();
+               break;
             case DeleteFileToken:
-                DeleteFileCommand();
-                break;
+               DeleteFileCommand();
+               break;
             case GetFileToken:
-                GetFileCommand();
-                break;
+               GetFileCommand();
+               break;
             case GetDirectoryToken:  // v2 directory listing from TR
                GetDirectoryCommand();
                break;
@@ -85,7 +98,7 @@ FLASHMEM void ServiceSerial()
                if(SetSIDSong()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
-            case SIDVoiceMuting: //Set Individual Voice muting
+            case SIDVoiceMuteToken: //Set Individual Voice muting
                if(RemoteSetSIDVoiceMute()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
