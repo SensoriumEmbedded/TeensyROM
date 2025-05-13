@@ -242,6 +242,7 @@ MsgASIDPlayerCommands1:
    !tx "     d: Register/Indicator Decoder", ChrReturn
    !tx "     c: Clear Screen", ChrReturn
    !tx "     x: Exit", ChrReturn
+   !tx "     w: Stop Forced Reg Write Order", ChrReturn
    !tx " F1/F2: First  SID address ", ChrRvsOn, "$"
    !tx 0
 MsgASIDPlayerCommands2:    

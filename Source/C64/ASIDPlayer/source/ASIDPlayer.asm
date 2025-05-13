@@ -23,6 +23,7 @@
    ASIDContIRQOn       = 0x10;   //enable ASID IRQ
    ASIDContIRQOff      = 0x11;   //disable ASID IRQ
    ASIDContExit        = 0x12;   //Disable IRQ, Send TR to main menu
+   ASIDContDisWriteOrd = 0x13;   //Disable Forced Reg Write Order
    ;// ...              
    ASIDContBufTiny     = 0x20;   //Set buffer to size Tiny  
    ASIDContBufSmall    = 0x21;   //Set buffer to size Small  
@@ -376,6 +377,13 @@ UpdateBufferSize  ;mem & control from x register
    stx memBufferSize
    stx ASIDContReg+IO1Port
    jmp ShowKeyboardCommands
+
++  cmp #'w'  ;Disable Forced Reg Write Order
+   bne +  
+   lda #ASIDContDisWriteOrd  
+   sta ASIDContReg+IO1Port
+   jmp ShowKeyboardCommands
+   ;jmp ASIDMainLoop
 
 +  cmp #'m'  ;mute toggle
    bne +  

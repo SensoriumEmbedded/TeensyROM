@@ -57,6 +57,7 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
    ASIDContIRQOn       = 0x10,   //enable ASID IRQ
    ASIDContIRQOff      = 0x11,   //disable ASID IRQ
    ASIDContExit        = 0x12,   //Disable IRQ, Send TR to main menu
+   ASIDContDisWriteOrd = 0x13,   //Disable Forced Reg Write Order
    // ...              
    ASIDContBufTiny     = 0x20,   //Set buffer to size Tiny  
    ASIDContBufSmall    = 0x21,   //Set buffer to size Small  
@@ -121,6 +122,10 @@ bool QueueInitialized, FrameTimerMode;
 int32_t DeltaFrames;
 uint32_t ASIDQueueSize, NumPackets, TotalInituS, ForceIntervalUs, TimerIntervalUs;
 uint8_t MutedVoiceFlags;
+
+#define MaxNumRegisters   28 //Max registers in an ASID Sysex Packet
+int8_t RegisterOrder[MaxNumRegisters];  //index is reg order, value is sysex reg #
+bool ForcedRegOrder = false;
 
 uint8_t ASIDidToReg[] = 
 {
@@ -256,6 +261,8 @@ void AddErrorToASIDRxQueue()
 void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size) 
 {
    unsigned int NumRegs = 0; //number of regs to write
+   int8_t RegistersToWrite[MaxNumRegisters];  //index is ASID packet reg number, value is reg value to write
+   if(ForcedRegOrder) for(uint8_t Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegistersToWrite[Cnt]=-1; //clear the reg val array
    
    //Printf_dbg("SID$%02x reg data\n", SID_ID);
    for(uint8_t maskNum = 0; maskNum < 4; maskNum++)
@@ -266,7 +273,10 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
          { //reg is to be written
             uint8_t RegVal = data[11+NumRegs];
             if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
-            AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal);
+            
+            if(ForcedRegOrder) RegistersToWrite[maskNum*7+bitNum] = RegVal;
+            else AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal); //otherwise just add to queue
+            
             #ifdef DbgMsgs_IO  
                //// Debug msgs for secondary reg or higher access
                //if(maskNum*7+bitNum>24)
@@ -286,6 +296,16 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
       Printf_dbg("-->More regs expected (%d) than provided (%d)", NumRegs, size-12);    
       Printf_dbg_SysExInfo;
    }
+   
+   if(ForcedRegOrder) 
+   {
+      for(uint8_t Cnt=0; Cnt<MaxNumRegisters; Cnt++)
+      {
+         int8_t RegVal = RegistersToWrite[RegisterOrder[Cnt]];
+         if (RegVal != -1) AddToASIDRxQueue((SID_ID | ASIDidToReg[RegisterOrder[Cnt]]), RegVal);
+      }
+   }
+   
    SetASIDIRQ();  //will skip if in FrameTimerMode
    if (FrameTimerMode) AddToASIDRxQueue(ASIDAddrType_Skip, 0); //mark End Of Frame
 }
@@ -453,18 +473,35 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          break;   
          
       case APT_WriteOrder:   
+      {
+         uint16_t Cnt;
+         
          Printf_dbg("APT_WriteOrder:");
          Printf_dbg_SysExInfo;
+         
+         ForcedRegOrder = true;
+         for(Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegisterOrder[Cnt]=-1; //clear the order array
 
-         PrintflnToASID("Write Order set\r");
-         for(uint16_t Cnt=0; Cnt<size-4; Cnt+=2)
+         for(Cnt=0; Cnt<size-4; Cnt+=2)
          {
             uint8_t Regnum = Cnt/2;
             uint8_t IndexOrder = data[Cnt+3] & 0x3f;
             uint8_t WaitCycles = ((data[Cnt+3] & 0x40)<<1) | data[Cnt+4];
             Printf_dbg("   reg %02d  #%02d  %3d cyc\n", Regnum, IndexOrder, WaitCycles);        
             //PrintfToASID("   r%02d #%02d", Regnum, IndexOrder);
+            if (Regnum<MaxNumRegisters && IndexOrder<MaxNumRegisters) RegisterOrder[IndexOrder]=Regnum;
+            else ForcedRegOrder = false;
          }
+
+         Printf_dbg("\n  Updated order:\n");
+         for(Cnt=0; Cnt<MaxNumRegisters; Cnt++) 
+         {
+            Printf_dbg("   #%02d reg %02d\n", Cnt, RegisterOrder[Cnt]);  
+            if (RegisterOrder[Cnt] == -1) ForcedRegOrder = false; //make sure all regs/locations are filled
+         }
+         if (ForcedRegOrder) PrintflnToASID("Write Order set\r");
+         else PrintflnToASID("Write Order packet issue, not set!\r");
+      }
          break;   
          
       case APT_ContFramerate:
@@ -641,6 +678,10 @@ void IO1Hndlr_ASID(uint8_t Address, bool R_Wn)
                MIDIRxIRQEnabled = false;
                BtnPressed = true;   //main menu
                Printf_dbg("ASIDContExit\n");
+               break;
+            case ASIDContDisWriteOrd:
+               ForcedRegOrder = false;
+               Printf_dbg("Reg Write Order Disabled\n");
                break;
             case ASIDContBufFirstItem ... ASIDContBufLastItem:
                ASIDQueueSize = RegValToBuffSize(Data); 
