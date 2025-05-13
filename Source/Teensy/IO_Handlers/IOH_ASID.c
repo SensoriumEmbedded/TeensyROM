@@ -261,8 +261,8 @@ void AddErrorToASIDRxQueue()
 void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size) 
 {
    unsigned int NumRegs = 0; //number of regs to write
-   int8_t RegistersToWrite[MaxNumRegisters];  //index is ASID packet reg number, value is reg value to write
-   if(ForcedRegOrder) for(uint8_t Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegistersToWrite[Cnt]=-1; //clear the reg val array
+   int16_t RegisterValToWrite[MaxNumRegisters];  //index is ASID packet reg number, value is reg value to write  (0-255 or -1 to skip)
+   if(ForcedRegOrder) for(uint8_t Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegisterValToWrite[Cnt]=-1; //clear the reg val array
    
    //Printf_dbg("SID$%02x reg data\n", SID_ID);
    for(uint8_t maskNum = 0; maskNum < 4; maskNum++)
@@ -274,7 +274,7 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
             uint8_t RegVal = data[11+NumRegs];
             if(data[7+maskNum] & (1<<bitNum)) RegVal |= 0x80;
             
-            if(ForcedRegOrder) RegistersToWrite[maskNum*7+bitNum] = RegVal;
+            if(ForcedRegOrder) RegisterValToWrite[maskNum*7+bitNum] = RegVal;
             else AddToASIDRxQueue((SID_ID | ASIDidToReg[maskNum*7+bitNum]), RegVal); //otherwise just add to queue
             
             #ifdef DbgMsgs_IO  
@@ -299,10 +299,13 @@ void DecodeSendSIDRegData(uint8_t SID_ID, uint8_t *data, unsigned int size)
    
    if(ForcedRegOrder) 
    {
+      //Printf_dbg("\nPacket order for");
+      //Printf_dbg_SysExInfo;
       for(uint8_t Cnt=0; Cnt<MaxNumRegisters; Cnt++)
       {
-         int8_t RegVal = RegistersToWrite[RegisterOrder[Cnt]];
-         if (RegVal != -1) AddToASIDRxQueue((SID_ID | ASIDidToReg[RegisterOrder[Cnt]]), RegVal);
+         int16_t RegVal = RegisterValToWrite[RegisterOrder[Cnt]];
+         if (RegVal != -1) AddToASIDRxQueue((SID_ID | ASIDidToReg[RegisterOrder[Cnt]]), RegVal);         
+         //Printf_dbg("#%2d   ASID Reg %2d   SID Reg %2d   Val %3d\n", Cnt, RegisterOrder[Cnt], ASIDidToReg[RegisterOrder[Cnt]], RegVal);
       }
    }
    
