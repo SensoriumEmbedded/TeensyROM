@@ -276,31 +276,43 @@ FLASHMEM void GetDirectoryCommand()
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type value!");
+        Serial.println("Error receiving storage type value! (Error 1)");
         return;
     }
     if (!GetUInt(&skip, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving skip value!");
+        Serial.println("Error receiving skip value! (Error 2)");
         return;
     }
     if (!GetUInt(&take, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving take value!");
+        Serial.println("Error receiving take value! (Error 3)");
         return;
     }
     if (!GetPathParameter(path))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path value!");
+        Serial.println("Error receiving path value! (Error 4)");
         return;
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
 
     if (!sourceFS) return;
+
+    File dir = sourceFS->open(path);
+
+    if (!dir || !dir.isDirectory())
+    {
+        SendU16(FailToken);
+        Serial.printf("Directory not found or not a directory. (Error 5)");
+        return;
+    }
+    dir.close();
+
+    SendU16(AckToken);
 
     SendU16(StartDirectoryListToken);
 
