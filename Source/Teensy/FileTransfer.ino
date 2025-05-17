@@ -260,6 +260,7 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // Receive <-- List Directory Token 0x64DD 
 // Send --> AckToken 0x64CC
 // Receive <-- SD_nUSB(1), Destination Path(MaxNameLength, null terminator), sake(1), skip(1)
+// Send --> AckToken 0x64CC on successful check of directory existance, 0x9b7f on Fail
 // Send --> StartDirectoryListToken 0x5A5A or FailToken 0x9b7f
 // Send --> Write content as json
 // Send --> EndDirectoryListToken 0xA5A5,  0x9b7f on Fail
