@@ -343,7 +343,7 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
 
 
 // Command: 
-// Copies a command from one folder to the other in the USB/SD storage.
+// Copies a file from one folder to the other in the USB/SD storage.
 // If the file with the same name already exists at the destination, 
 // it will be overwritten.
 //
