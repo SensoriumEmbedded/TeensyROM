@@ -486,6 +486,7 @@ FLASHMEM uint32_t CalculateChecksum(File& file) {
 // Arduino reads the file from storage
 // Send --> File Length(4), Checksum(2)
 // Send --> File Data in chunks
+// Send --> AckToken 0x64CC on successful check of storage availability, 0x9b7f on Fail
 // Send --> AckToken 0x64CC on successful completion, 0x9b7f on Fail
 //
 // Notes: Once Get File Token is received, initial responses are 2 bytes in length. File data is sent in subsequent operations. Checksum is calculated for file validation.
@@ -498,28 +499,42 @@ FLASHMEM void GetFileCommand() {
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type!");
+        Serial.println("Error receiving storage type! (Error 1)");
         return;
     }
 
     if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path!");
+        Serial.println("Error receiving path! (Error 2)");
         return;
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
-    
-    if (!sourceFS) return;
+
+    if (sourceFS == nullptr || !sourceFS->exists("/")) 
+    {
+      SendU16(FailToken);
+      Serial.println("Storage device unavailable. (Error 3)");
+      return;
+    }
+
+    if (!sourceFS->exists(filePath)) 
+    {
+      SendU16(FailToken);
+      Serial.printf("File not found: [%s] (Error 4)\n", filePath);
+      return;
+    }
 
     File fileStream = sourceFS->open(filePath, FILE_READ);
     
-    if (!fileStream) {
+    if (!fileStream) 
+    {
         SendU16(FailToken);
-        Serial.printf("Failed to open file: %s\n", filePath);
+        Serial.printf("Failed to open file: %s (Error 5)", filePath);
         return;
     }
+     SendU16(AckToken);
 
     uint32_t fileLength = fileStream.size();
     SendU32(fileLength);
@@ -528,7 +543,8 @@ FLASHMEM void GetFileCommand() {
     SendU32(checksum);
     fileStream.seek(0);
 
-    if (!SendFileData(fileStream, fileLength)) {
+    if (!SendFileData(fileStream, fileLength)) 
+    {
         fileStream.close();
         return;
     }
