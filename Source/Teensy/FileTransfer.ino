@@ -305,10 +305,17 @@ FLASHMEM void GetDirectoryCommand()
 
     File dir = sourceFS->open(path);
 
-    if (!dir || !dir.isDirectory())
+    if (!dir)
     {
         SendU16(FailToken);
-        Serial.printf("Directory not found or not a directory. (Error 5)");
+        Serial.printf("Directory not found. (Error 5)");
+        return;
+    }
+    if (!dir.isDirectory())
+    {
+        SendU16(FailToken);
+        Serial.printf("Path is not a directory. (Error 6)");
+        dir.close();
         return;
     }
     dir.close();
