@@ -308,13 +308,13 @@ FLASHMEM void GetDirectoryCommand()
     if (!dir)
     {
         SendU16(FailToken);
-        Serial.printf("Directory not found. (Error 5)");
+        Serial.println("Directory not found. (Error 5)");
         return;
     }
     if (!dir.isDirectory())
     {
         SendU16(FailToken);
-        Serial.printf("Path is not a directory. (Error 6)");
+        Serial.println("Path is not a directory. (Error 6)");
         dir.close();
         return;
     }
@@ -542,7 +542,7 @@ FLASHMEM void GetFileCommand() {
     if (!sourceFS->exists(filePath)) 
     {
       SendU16(FailToken);
-      Serial.printf("File not found: [%s] (Error 4)\n", filePath);
+      Serial.println("File not found. (Error 4)");
       return;
     }
 
@@ -551,7 +551,7 @@ FLASHMEM void GetFileCommand() {
     if (!fileStream) 
     {
         SendU16(FailToken);
-        Serial.printf("Failed to open file: %s (Error 5)", filePath);
+        Serial.println("Failed to open file. (Error 5)");
         return;
     }
      SendU16(AckToken);
