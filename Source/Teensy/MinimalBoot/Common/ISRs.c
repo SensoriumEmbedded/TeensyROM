@@ -63,15 +63,6 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
-   if (DMA_State == DMA_S_Waiting)
-   { 
-      if(!GP9_BA(GPIO_9)) //assert DMA signal when VIC takes over bus (BA low)
-      {
-         SetDMAAssert;
-         DMA_State = DMA_S_Active;
-      }
-   }
-   
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 
@@ -108,24 +99,39 @@ FASTRUN void isrPHI2()
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
 
    
-   if (EmulateVicCycles)
+   if (EmulateVicCycles || DMA_State == DMA_S_StartDisable || DMA_State == DMA_S_StartActive)
    {
       while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
       //phi2 has gone low..........................................................................
       
       StartCycCnt = ARM_DWT_CYCCNT;
       
-      SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
-      WaitUntil_nS(nS_VICStart);
-      
-      GPIO_6 = ReadGPIO6; //Address bus and R/*W 
-      Address = GP6_Address(GPIO_6); //parse out address
-      GPIO_9 = ReadGPIO9; //Now read the derived signals
-      
-      if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+      // activate/disable DMA during low phase of Phi2
+      if (DMA_State == DMA_S_StartDisable)
       {
-         if (HIROM_Image!=NULL) DataPortWriteWaitVIC(HIROM_Image[Address & 0x1FFF]); //uses same hold time as normal cycle
-      } 
+         SetDMADeassert;
+         DMA_State = DMA_S_DisableReady;
+      }
+      else if (DMA_State == DMA_S_StartActive)
+      {
+         SetDMAAssert;
+         DMA_State = DMA_S_ActiveReady;
+      }
+            
+      if (EmulateVicCycles)
+      {
+         SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
+         WaitUntil_nS(nS_VICStart);
+         
+         GPIO_6 = ReadGPIO6; //Address bus and R/*W 
+         Address = GP6_Address(GPIO_6); //parse out address
+         GPIO_9 = ReadGPIO9; //Now read the derived signals
+         
+         if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+         {
+            if (HIROM_Image!=NULL) DataPortWriteWaitVIC(HIROM_Image[Address & 0x1FFF]); //uses nS_VICDHold hold time
+         } 
+      }
    }
    
    //leave time enough time to re-trigger on rising edge!

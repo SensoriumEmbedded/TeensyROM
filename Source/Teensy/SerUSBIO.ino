@@ -30,6 +30,7 @@ FLASHMEM void ServiceSerial()
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
          inVal = (inVal<<8) | Serial.read(); //READ NEXT BYTE
+         
          //only commands available when busy:
          if (inVal == ResetC64Token) //Reset C64
          {
@@ -44,14 +45,13 @@ FLASHMEM void ServiceSerial()
          }
          else if (inVal == C64PauseOnToken) //pause C64 via DMA 
          {
-            DMA_State = DMA_S_Waiting;
+            DMA_State = DMA_S_StartActive;
             SendU16(AckToken);
             return;
          }
          else if (inVal == C64PauseOffToken) //un-pause C64 DMA
          {
-            DMA_State = DMA_S_Idle;
-            SetDMADeassert;
+            DMA_State = DMA_S_StartDisable;
             SendU16(AckToken);
             return;
          }

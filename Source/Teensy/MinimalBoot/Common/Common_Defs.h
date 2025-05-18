@@ -80,11 +80,15 @@ enum MinBootIndFlags
    MinBootInd_FromMin    = 2, // Min returning to main menu, skip of autolaunch (if enabled)
 };
 
-#define DMA_S_Idle       0
-#define DMA_S_Waiting    1
-#define DMA_S_Active     2
+enum DMA_States  //used with DMA_State
+{
+   DMA_S_StartDisable,
+   DMA_S_DisableReady,
+   DMA_S_StartActive, 
+   DMA_S_ActiveReady, 
+};
 
-volatile uint8_t DMA_State = DMA_S_Idle;
+volatile uint8_t DMA_State = DMA_S_DisableReady;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 
