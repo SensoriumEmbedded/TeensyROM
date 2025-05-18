@@ -260,6 +260,7 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // Receive <-- List Directory Token 0x64DD 
 // Send --> AckToken 0x64CC
 // Receive <-- SD_nUSB(1), Destination Path(MaxNameLength, null terminator), sake(1), skip(1)
+// Send --> AckToken 0x64CC on successful check of directory existence, 0x9b7f on Fail
 // Send --> StartDirectoryListToken 0x5A5A or FailToken 0x9b7f
 // Send --> Write content as json
 // Send --> EndDirectoryListToken 0xA5A5,  0x9b7f on Fail
@@ -276,31 +277,50 @@ FLASHMEM void GetDirectoryCommand()
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type value!");
+        Serial.println("Error receiving storage type value! (Error 1)");
         return;
     }
     if (!GetUInt(&skip, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving skip value!");
+        Serial.println("Error receiving skip value! (Error 2)");
         return;
     }
     if (!GetUInt(&take, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving take value!");
+        Serial.println("Error receiving take value! (Error 3)");
         return;
     }
     if (!GetPathParameter(path))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path value!");
+        Serial.println("Error receiving path value! (Error 4)");
         return;
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
 
     if (!sourceFS) return;
+
+    File dir = sourceFS->open(path);
+
+    if (!dir)
+    {
+        SendU16(FailToken);
+        Serial.println("Directory not found. (Error 5)");
+        return;
+    }
+    if (!dir.isDirectory())
+    {
+        SendU16(FailToken);
+        Serial.println("Path is not a directory. (Error 6)");
+        dir.close();
+        return;
+    }
+    dir.close();
+
+    SendU16(AckToken);
 
     SendU16(StartDirectoryListToken);
 
@@ -343,7 +363,7 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
 
 
 // Command: 
-// Copies a command from one folder to the other in the USB/SD storage.
+// Copies a file from one folder to the other in the USB/SD storage.
 // If the file with the same name already exists at the destination, 
 // it will be overwritten.
 //
@@ -486,6 +506,7 @@ FLASHMEM uint32_t CalculateChecksum(File& file) {
 // Arduino reads the file from storage
 // Send --> File Length(4), Checksum(2)
 // Send --> File Data in chunks
+// Send --> AckToken 0x64CC on successful check of storage availability, 0x9b7f on Fail
 // Send --> AckToken 0x64CC on successful completion, 0x9b7f on Fail
 //
 // Notes: Once Get File Token is received, initial responses are 2 bytes in length. File data is sent in subsequent operations. Checksum is calculated for file validation.
@@ -498,28 +519,42 @@ FLASHMEM void GetFileCommand() {
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type!");
+        Serial.println("Error receiving storage type! (Error 1)");
         return;
     }
 
     if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path!");
+        Serial.println("Error receiving path! (Error 2)");
         return;
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
-    
-    if (!sourceFS) return;
+
+    if (sourceFS == nullptr || !sourceFS->exists("/")) 
+    {
+      SendU16(FailToken);
+      Serial.println("Storage device unavailable. (Error 3)");
+      return;
+    }
+
+    if (!sourceFS->exists(filePath)) 
+    {
+      SendU16(FailToken);
+      Serial.println("File not found. (Error 4)");
+      return;
+    }
 
     File fileStream = sourceFS->open(filePath, FILE_READ);
     
-    if (!fileStream) {
+    if (!fileStream) 
+    {
         SendU16(FailToken);
-        Serial.printf("Failed to open file: %s\n", filePath);
+        Serial.println("Failed to open file. (Error 5)");
         return;
     }
+     SendU16(AckToken);
 
     uint32_t fileLength = fileStream.size();
     SendU32(fileLength);
@@ -528,7 +563,8 @@ FLASHMEM void GetFileCommand() {
     SendU32(checksum);
     fileStream.seek(0);
 
-    if (!SendFileData(fileStream, fileLength)) {
+    if (!SendFileData(fileStream, fileLength)) 
+    {
         fileStream.close();
         return;
     }
