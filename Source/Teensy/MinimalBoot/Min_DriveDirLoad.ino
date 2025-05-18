@@ -146,6 +146,14 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
       while (myFile.available())
       {
+         if (NumCrtChips == MAX_CRT_CHIPS)
+         {
+            SendMsgPrintfln("More than %d CRT Chips found", MAX_CRT_CHIPS); 
+            myFile.close();
+            FreeCrtChips();
+            return false;        
+         }
+
          for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
          if (!ParseChipHeader(lclBuf)) //sends error messages
          {
@@ -153,7 +161,22 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
             FreeCrtChips();
             return false;        
          }
-         for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
+         // Special case for swap-out
+         // RAM1: 0x200XXXXX,  RAM2: 0x202XXXXX,  RAM"3" = SwapSeekAddrMask
+         if (CrtChips[NumCrtChips].ChipROM == (uint8_t*)SwapSeekAddrMask)
+         {
+            CrtChips[NumCrtChips].ChipROM = (uint8_t*)(SwapSeekAddrMask + myFile.position());   
+            //Printf_dbg("upd: %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
+            //don't load it now, skip past...
+            //myFile.seek()
+            for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) myFile.read();//just seek past it?
+         }
+         else
+         {
+            for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
+         }
+            
+         Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
          NumCrtChips++;
       }
       
@@ -260,7 +283,7 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
    CrtChips[NumCrtChips].ROMSize = toU16(ChipHeader+0x0E);
    
-   //chips in main buffer, then malloc in RAM2.
+   //chips in main buffer, then malloc in RAM2, then try to swap out on the fly!
    if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //init RAM1 Buffer pointer
 
    //First try RAM1:
@@ -274,19 +297,24 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    {
       if(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
       {
-         SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
-         return false;         
+         //No room in RAM2, Have to swap!
+         Printf_dbg("S");
+         //SendMsgPrintfln("Not enough room: %d", NumCrtChips); 
+         //return false;       
+       
+         CrtChips[NumCrtChips].ChipROM = (uint8_t*)SwapSeekAddrMask;
+         
       }
-      Printf_dbg("2");
+      else Printf_dbg("2");
    }
-   Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
+   //Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
    return true;
 }
  
 void FreeCrtChips()
 { //free chips allocated in RAM2 and reset NumCrtChips
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
-      if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
+      if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000 && (uint32_t)CrtChips[cnt].ChipROM < SwapSeekAddrMask) free(CrtChips[cnt].ChipROM);
    NumCrtChips = 0;
 }
  

@@ -74,8 +74,20 @@ void setup()
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt");
-   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/770k Where in USA is Carmen Sandiego [EasyFlash].crt");  //PAL only
-   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt"); //too large test
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/770k Where in USA is Carmen Sandiego [EasyFlash].crt");  //PAL only
+
+   //very large, causes swaps:
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/tools/Digi Player Demo (2012-06-17)(Onslaught)[EasyFlash 2012-06-17].crt");
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/tools/Multi Easy (2013-04-11)(Lord Crass)[EasyFlash].crt");
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/ezf 48Khz_hifi_Elvis_Costello_[EASYFLASH].crt");
+   //                                                                                                                                          //  Swaps?   performance
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A_Pig_Quest_1.02_ef.crt");                            //  some     no fails observed
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A Pig Quest +2 {EasyFlash}[EX].crt");             //not on SD!
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/a_pig_quest_v102_+9_[trex].crt");               //not on SD!
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/AlternativeFormats/EasyFlash/OneLoad64-Vol#5.crt"); 
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");                                   //   Lots!
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Maniac Mansion & Zak McKracken [EasyFlash].crt");
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    

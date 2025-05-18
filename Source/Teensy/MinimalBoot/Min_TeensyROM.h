@@ -33,6 +33,6 @@
 // #define DbgSpecial    //Special case logging to BigBuf
 // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 
-//#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-#define MaxRAM_ImageSize  (184+208)  //184 is non-minimal image size
+#define MinimumBuild     //Must be defined for minimal build forking in common files
+#define MaxRAM_ImageSize  (184+208-16)  //184 is non-minimal image size;  minus space for swap blocks (8k hi and lo)
 

@@ -157,6 +157,9 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 #define CRT_CHIP_HDR_LEN  0x10
 #define MAX_CRT_CHIPS     128
 
+#define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address
+
+
 struct StructCrtChip
 {
    uint8_t *ChipROM;
