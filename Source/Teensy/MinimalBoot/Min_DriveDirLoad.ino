@@ -168,8 +168,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
             CrtChips[NumCrtChips].ChipROM = (uint8_t*)(SwapSeekAddrMask + myFile.position());   
             //Printf_dbg("upd: %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
             //don't load it now, skip past...
-            //myFile.seek()
-            for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) myFile.read();//just seek past it?
+            myFile.seek(myFile.position() + CrtChips[NumCrtChips].ROMSize);
+            //for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) myFile.read();//just seek past it
          }
          else
          {
