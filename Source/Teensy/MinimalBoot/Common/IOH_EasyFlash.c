@@ -25,6 +25,7 @@ extern volatile uint8_t EmulateVicCycles;
 #ifdef MinimumBuild
    uint8_t HI_swap_Image[8192]; //Hi bank swap image
    uint8_t LO_swap_Image[8192]; //Lo bank swap image
+   uint32_t CurLOSwapOffset, CurHISwapOffset; //current chip offsets to check for same & not reload
    extern bool PathIsRoot();
    extern char DriveDirPath[];
    extern StructMenuItem DriveDirMenu;
@@ -52,6 +53,8 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
 {
    char FullFilePath[MaxNamePathLength];
 
+   //uint32_t Startms = millis();
+
    if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
       
@@ -64,11 +67,13 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
       Printf_dbg("File Not Found");
       return;
    }
+
+   //Printf_dbg("\n %lu mS Open ", millis()-Startms);
    
    myFile.seek(SeekTo);
    for (uint16_t count = 0; count < 8192; count++) ptrImage[count]=myFile.read();
    myFile.close();
-   
+   //Printf_dbg("\n %lu mS Load ", millis()-Startms);
 }
 #endif
 
@@ -85,6 +90,7 @@ void InitHndlr_EasyFlash()
    }
    
    memset(EZFlashRAM, 0, 256);
+   CurLOSwapOffset = CurHISwapOffset =0; //invalidate for first load
    
    //start with Bank 0:
    LOROM_Image = BankDecode[0][0];
@@ -110,17 +116,24 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
       {
          case 0x00:   // Register $DE00 – EasyFlash Bank (write-only)
             Data &= 0x3f;
-            //Printf_dbg("B:%03d %08x %08x ", Data, (uint32_t)BankDecode[Data][0], (uint32_t)BankDecode[Data][1]);
             LOROM_Image = BankDecode[Data][0];
             HIROM_Image = BankDecode[Data][1];
-            //Serial.flush();
+            
 #ifdef MinimumBuild
-            if (((uint32_t)LOROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask ||
-               ((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
+            //check if swapped bank is being selected, check for same or initiate swap
+            if (((uint32_t)LOROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
             {
-               DMA_State = DMA_S_StartActive;  //pause via DMA for swap
+               if ((uint32_t)LOROM_Image == CurLOSwapOffset) LOROM_Image = LO_swap_Image;
+               else DMA_State = DMA_S_StartActive;  //pause via DMA for swap
+            }
+            
+            if (((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
+            {
+               if ((uint32_t)HIROM_Image == CurHISwapOffset) HIROM_Image = HI_swap_Image;
+               else DMA_State = DMA_S_StartActive;  //pause via DMA for swap
             }
 #endif
+
             break;
          case 0x02:   // Register $DE02 – EasyFlash Control (write-only)
             if (Data & 0x80) SetLEDOn; //Status LED, 1 = on
@@ -159,23 +172,22 @@ void PollingHndlr_EasyFlash()
       uint32_t Startms = millis();
       //Printf_dbg("Swap H %08x   L %08x\n", (uint32_t)HIROM_Image, (uint32_t)LOROM_Image);
       
-      if (((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
-      {
-         LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, HI_swap_Image);
-         //Printf_dbg("Swap H %08x\n", (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
-         Printf_dbg("H");
-         HIROM_Image = HI_swap_Image;
-      }
-      
       if (((uint32_t)LOROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
       {
          LoadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, LO_swap_Image);
-         //Printf_dbg("Swap L %08x\n", (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
-         Printf_dbg("L");
+         Printf_dbg("L: %08x  ", (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
+         CurLOSwapOffset = (uint32_t)LOROM_Image;
          LOROM_Image = LO_swap_Image;
       }         
       
-      //Printf_dbg("Swap took %lu mS\n", millis()-Startms);
+      if (((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
+      {
+         LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, HI_swap_Image);
+         Printf_dbg("H: %08x  ", (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
+         CurHISwapOffset = (uint32_t)HIROM_Image;
+         HIROM_Image = HI_swap_Image;
+      }
+      
       Printf_dbg(" %lu mS swp\n", millis()-Startms);
       Serial.flush();
       DMA_State = DMA_S_StartDisable;
