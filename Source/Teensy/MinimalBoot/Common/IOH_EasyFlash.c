@@ -101,8 +101,10 @@ void InitHndlr_EasyFlash()
    
    memset(EZFlashRAM, 0, 256);
    
+#ifdef MinimumBuild
    //initialize/invalidate swap buffer 
    for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) {SwapBuffers[BuffNum].Offset=0;}
+#endif
    
    //start with Bank 0:
    LOROM_Image = BankDecode[0][0];
