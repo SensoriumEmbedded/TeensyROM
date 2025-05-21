@@ -21,16 +21,22 @@
 uint8_t *BankDecode[NumDecodeBanks][2];
 uint8_t EZFlashRAM[256];
 
-extern volatile uint8_t EmulateVicCycles;
 #ifdef MinimumBuild
-   uint8_t HI_swap_Image[8192]; //Hi bank swap image
-   uint8_t LO_swap_Image[8192]; //Lo bank swap image
-   uint32_t CurLOSwapOffset, CurHISwapOffset; //current chip offsets to check for same & not reload
+   struct stcSwapBuffers
+   {
+      uint8_t  Image[8192]; // 8k swap image
+      uint32_t Offset; // chip swap file offsets to check for same & not reload
+   };
+ 
+   stcSwapBuffers SwapBuffers[Num8kSwapBuffers];
+    
    extern bool PathIsRoot();
    extern char DriveDirPath[];
    extern StructMenuItem DriveDirMenu;
    extern File myFile;
 #endif
+
+extern volatile uint8_t EmulateVicCycles;
 
 void InitHndlr_EasyFlash();  
 void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn);  
@@ -82,6 +88,7 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
 
 void InitHndlr_EasyFlash()
 {
+    
    //initialize bank decode pointers
    for(uint8_t BankNum = 0; BankNum < NumDecodeBanks; BankNum++) {BankDecode[BankNum][0]=NULL;BankDecode[BankNum][1]=NULL;}
    for(uint8_t ChipNum = 0; ChipNum < NumCrtChips; ChipNum++)
@@ -93,7 +100,9 @@ void InitHndlr_EasyFlash()
    }
    
    memset(EZFlashRAM, 0, 256);
-   CurLOSwapOffset = CurHISwapOffset =0; //invalidate for first load
+   
+   //initialize/invalidate swap buffer 
+   for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) {SwapBuffers[BuffNum].Offset=0;}
    
    //start with Bank 0:
    LOROM_Image = BankDecode[0][0];
@@ -109,6 +118,22 @@ void InitHndlr_EasyFlash()
    EmulateVicCycles = false;
 }
 
+#ifdef MinimumBuild
+uint8_t* ImageCheckAssign(uint8_t* BankRequested)
+{
+   if (((uint32_t)BankRequested & SwapSeekAddrMask) == SwapSeekAddrMask) //requested bank is a swap bank
+   {
+      //check swap banks to see if it's already loaded
+      for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) 
+      {
+         if ((uint32_t)BankRequested == SwapBuffers[BuffNum].Offset) return SwapBuffers[BuffNum].Image; //it's a match!
+      }
+      DMA_State = DMA_S_StartActive;  //no match, pause via DMA for swap
+   }
+   return BankRequested;
+}
+#endif
+
 void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 {
    if (!R_Wn) //IO1 Write  -------------------------------------------------
@@ -119,22 +144,14 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
       {
          case 0x00:   // Register $DE00 – EasyFlash Bank (write-only)
             Data &= 0x3f;
-            LOROM_Image = BankDecode[Data][0];
-            HIROM_Image = BankDecode[Data][1];
             
 #ifdef MinimumBuild
             //check if swapped bank is being selected, check for same or initiate swap
-            if (((uint32_t)LOROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
-            {
-               if ((uint32_t)LOROM_Image == CurLOSwapOffset) LOROM_Image = LO_swap_Image;
-               else DMA_State = DMA_S_StartActive;  //pause via DMA for swap
-            }
-            
-            if (((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
-            {
-               if ((uint32_t)HIROM_Image == CurHISwapOffset) HIROM_Image = HI_swap_Image;
-               else DMA_State = DMA_S_StartActive;  //pause via DMA for swap
-            }
+            LOROM_Image = ImageCheckAssign(BankDecode[Data][0]);
+            HIROM_Image = ImageCheckAssign(BankDecode[Data][1]);
+#else
+            LOROM_Image = BankDecode[Data][0];
+            HIROM_Image = BankDecode[Data][1];
 #endif
 
             break;
@@ -173,22 +190,32 @@ void PollingHndlr_EasyFlash()
    {
       //DMA asserted (or soon to be), paused for bank swap from SD
       uint32_t Startms = millis();
-      //Printf_dbg("Swap H %08x   L %08x\n", (uint32_t)HIROM_Image, (uint32_t)LOROM_Image);
+      static uint8_t NextSwapBuffNum = 0; 
       
       if (((uint32_t)LOROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
       {
-         LoadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, LO_swap_Image);
-         Printf_dbg("L: %08x  ", (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
-         CurLOSwapOffset = (uint32_t)LOROM_Image;
-         LOROM_Image = LO_swap_Image;
+         //make sure NextSwapBuff isn't being used for high bank
+         if(HIROM_Image && HIROM_Image == SwapBuffers[NextSwapBuffNum].Image)
+            if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
+         
+         LoadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
+         Printf_dbg("L%d: %08x  ", NextSwapBuffNum, (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
+         SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)LOROM_Image;
+         LOROM_Image = SwapBuffers[NextSwapBuffNum].Image;
+         if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
       }         
       
       if (((uint32_t)HIROM_Image & SwapSeekAddrMask) == SwapSeekAddrMask)
       {
-         LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, HI_swap_Image);
-         Printf_dbg("H: %08x  ", (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
-         CurHISwapOffset = (uint32_t)HIROM_Image;
-         HIROM_Image = HI_swap_Image;
+         //make sure NextSwapBuff isn't being used for low bank
+         if(LOROM_Image && LOROM_Image == SwapBuffers[NextSwapBuffNum].Image)
+            if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
+         
+         LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
+         Printf_dbg("H%d: %08x  ", NextSwapBuffNum, (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
+         SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)HIROM_Image;
+         HIROM_Image = SwapBuffers[NextSwapBuffNum].Image;
+         if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
       }
       
       Printf_dbg(" %lu mS swp\n", millis()-Startms);

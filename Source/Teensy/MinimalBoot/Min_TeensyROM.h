@@ -20,10 +20,9 @@
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
-
-//less used:
 // #define Dbg_TestMin    //Test minimal build by loading a CRT on start
 
+//less used:
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
 // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
@@ -33,6 +32,8 @@
 // #define DbgSpecial    //Special case logging to BigBuf
 // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 
-#define MinimumBuild     //Must be defined for minimal build forking in common files
-#define MaxRAM_ImageSize  (184+208-16)  //184 is non-minimal image size;  minus space for swap blocks (8k hi and lo)
+#define MinimumBuild         //Must be defined for minimal build forking in common files
+#define Num8kSwapBuffers   8 //space for bank swapping upper blocks of large CRTs
+
+#define MaxRAM_ImageSize  (184+208-8*Num8kSwapBuffers)  //184 is non-minimal image size;  minus space for 8k swap blocks
 
