@@ -483,7 +483,8 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          Printf_dbg_SysExInfo;
          
          ForcedRegOrder = true;
-         for(Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegisterOrder[Cnt]=-1; //clear the order array
+         //memset(RegisterOrder, 255, MaxNumRegisters);
+         for(Cnt=0; Cnt<MaxNumRegisters; Cnt++) RegisterOrder[Cnt]= 255; //default to invalid value to be sure all are defined
 
          for(Cnt=0; Cnt<size-4; Cnt+=2)
          {
@@ -500,7 +501,7 @@ void ASIDOnSystemExclusive(uint8_t *data, unsigned int size)
          for(Cnt=0; Cnt<MaxNumRegisters; Cnt++) 
          {
             Printf_dbg("   #%02d reg %02d\n", Cnt, RegisterOrder[Cnt]);  
-            if (RegisterOrder[Cnt] == -1) ForcedRegOrder = false; //make sure all regs/locations are filled
+            if (RegisterOrder[Cnt] == 255) ForcedRegOrder = false; //make sure all regs/locations are filled
          }
          if (ForcedRegOrder) PrintflnToASID("Write Order set\r");
          else PrintflnToASID("Write Order packet issue, not set!\r");
