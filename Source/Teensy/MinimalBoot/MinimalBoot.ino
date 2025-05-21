@@ -76,19 +76,22 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/802k Briley Witch Chronicles 2 v1.0.3.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/770k Where in USA is Carmen Sandiego [EasyFlash].crt");  //PAL only
 
-   //very large, causes swaps:
+   //very large, for testing swaps:
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/tools/Digi Player Demo (2012-06-17)(Onslaught)[EasyFlash 2012-06-17].crt");
-   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/tools/Multi Easy (2013-04-11)(Lord Crass)[EasyFlash].crt");
-   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/ezf 48Khz_hifi_Elvis_Costello_[EASYFLASH].crt");
-   //                                                                                                                                          //  Swaps?   performance
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/tools/Multi Easy (2013-04-11)(Lord Crass)[EasyFlash].crt");                                                                                                                                       //  Swaps?   performance
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A_Pig_Quest_1.02_ef.crt");                            //  some     no fails observed
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A Pig Quest +2 {EasyFlash}[EX].crt");             //not on SD!
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/a_pig_quest_v102_+9_[trex].crt");               //not on SD!
-   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
+   EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/AlternativeFormats/EasyFlash/OneLoad64-Vol#5.crt"); 
-   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");                                   //   Lots!
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Maniac Mansion & Zak McKracken [EasyFlash].crt");
-   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
+
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/ezf 48Khz_hifi_Elvis_Costello_[EASYFLASH].crt");   //good test of all banks, *does not* click during swaps at the end
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/hf_audio_playback_01.crt"); //good test of all banks, clicks during swaps at the end
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");        //swaps quickly during play                            //   Lots!
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/svc64_update2.crt");  //SNK vs CAPCOM,  swaps quickly during play                                //   Lots!
+ 
+ EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    
    if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin) runMainTRApp(); //jump to main app if not booting a CRT
@@ -129,6 +132,7 @@ void setup()
    //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
    NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
    Serial.printf(" RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+   Serial.printf(" Swap Blks: %luK (%lu blks)\n", Num8kSwapBuffers*8, Num8kSwapBuffers);
    CrtMax += NumChips*8;
    Serial.printf(" %luk free for CRT\n", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
 #endif
