@@ -29,6 +29,7 @@ extern volatile uint8_t EmulateVicCycles;
    extern bool PathIsRoot();
    extern char DriveDirPath[];
    extern StructMenuItem DriveDirMenu;
+   extern File myFile;
 #endif
 
 void InitHndlr_EasyFlash();  
@@ -51,28 +52,30 @@ stcIOHandlers IOHndlr_EasyFlash =
 #ifdef MinimumBuild
 void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
 {
-   char FullFilePath[MaxNamePathLength];
-
-   //uint32_t Startms = millis();
-
-   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
-      
-   //Printf_dbg("Loading:\r\n%s", FullFilePath);
-
-   File myFile = SD.open(FullFilePath, FILE_READ);
-   
-   if (!myFile) 
+   if(!myFile)
    {
-      Printf_dbg("File Not Found");
-      return;
-   }
+      char FullFilePath[MaxNamePathLength];
 
+      //uint32_t Startms = millis();
+
+      if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
+      else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
+         
+      //Printf_dbg("Loading:\r\n%s", FullFilePath);
+
+      myFile = SD.open(FullFilePath, FILE_READ);
+      
+      if (!myFile) 
+      {
+         Printf_dbg("File Not Found");
+         return;
+      }
+   }
    //Printf_dbg("\n %lu mS Open ", millis()-Startms);
    
    myFile.seek(SeekTo);
    for (uint16_t count = 0; count < 8192; count++) ptrImage[count]=myFile.read();
-   myFile.close();
+   //myFile.close();
    //Printf_dbg("\n %lu mS Load ", millis()-Startms);
 }
 #endif

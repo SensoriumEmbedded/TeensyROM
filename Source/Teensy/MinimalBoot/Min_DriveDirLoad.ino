@@ -20,6 +20,7 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
+File myFile = NULL;
 
 void HandleExecution()
 {
@@ -102,13 +103,14 @@ void HandleExecution()
 bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS) 
 {
    char FullFilePath[MaxNamePathLength];
+   bool SwapBanksDetected = false;
 
    if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
-   File myFile = sourceFS->open(FullFilePath, FILE_READ);
+   myFile = sourceFS->open(FullFilePath, FILE_READ);
    
    if (!myFile) 
    {
@@ -170,6 +172,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
             //don't load it now, skip past...
             myFile.seek(myFile.position() + CrtChips[NumCrtChips].ROMSize);
             //for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) myFile.read();//just seek past it
+            SwapBanksDetected = true;  //flag to leave file open for swaps
          }
          else
          {
@@ -204,13 +207,12 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       if (count != MyMenuItem->Size)
       {
          SendMsgPrintfln("Size Mismatch");
-         myFile.close();
          return false;
       }
    }
    
    SendMsgPrintfln("Done");
-   myFile.close();
+   if (!SwapBanksDetected) myFile.close(); //don't close if there are swap banks.
    return true;      
 }
  
