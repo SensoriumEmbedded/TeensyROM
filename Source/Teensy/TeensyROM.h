@@ -23,7 +23,7 @@
 #define DefSIDPath          "/SID Cover Tunes" 
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
 
-#define MaxRAM_ImageSize  (144)  //"626k Free"  How much RAM1 space can be used for CRT & Transfer buffer
+#define MaxRAM_ImageSize  (144)  // RAM1 space (in kB) used for CRT & Transfer buffer
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
 // #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info

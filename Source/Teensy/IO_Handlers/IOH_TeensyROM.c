@@ -315,7 +315,7 @@ FLASHMEM uint8_t RAM2blocks()
 FLASHMEM void MakeBuildInfo()
 {
    //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
-   sprintf(SerialStringBuf, "       FW: %s, %s\r\n   Teensy: %luMHz  %.1fC  %dk free\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), MaxCRTKB);
+   sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
 //FLASHMEM void MakeBuildCPUInfoStr()

@@ -331,13 +331,15 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    
    if (MyMenuItem->ItemType == rtFileCrt)
    {  //load the CRT
-      if(MyMenuItem->Size > MaxCRTKB*1024)
-      {
-         SendMsgPrintfln("Not enough room"); 
-         SendMsgPrintfln("  Size: %luk, Max CRT: %luk", MyMenuItem->Size/1024, MaxCRTKB); 
-         myFile.close();
-         return false;         
-      }
+
+      // No longer enforcing this, swap out if too large:
+      //if(MyMenuItem->Size > MaxCRTKB*1024)
+      //{
+      //   SendMsgPrintfln("Not enough room"); 
+      //   SendMsgPrintfln("  Size: %luk, Max CRT: %luk", MyMenuItem->Size/1024, MaxCRTKB); 
+      //   myFile.close();
+      //   return false;         
+      //}
 
       uint8_t lclBuf[CRT_MAIN_HDR_LEN];
       uint8_t EXROM;
