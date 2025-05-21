@@ -103,7 +103,7 @@ void HandleExecution()
 bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS) 
 {
    char FullFilePath[MaxNamePathLength];
-   bool SwapBanksDetected = false;
+   uint32_t SwapBanksDetected = 0;
 
    if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
@@ -172,7 +172,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
             //don't load it now, skip past...
             myFile.seek(myFile.position() + CrtChips[NumCrtChips].ROMSize);
             //for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) myFile.read();//just seek past it
-            SwapBanksDetected = true;  //flag to leave file open for swaps
+            SwapBanksDetected++;  //count to leave file open for swaps
          }
          else
          {
@@ -211,8 +211,10 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       }
    }
    
+   if (SwapBanksDetected) SendMsgPrintfln("%d Banks Being Swapped", SwapBanksDetected);
+   else myFile.close(); // close if there are no swap banks.
+   
    SendMsgPrintfln("Done");
-   if (!SwapBanksDetected) myFile.close(); //don't close if there are swap banks.
    return true;      
 }
  
