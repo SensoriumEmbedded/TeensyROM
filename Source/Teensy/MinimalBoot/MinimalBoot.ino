@@ -82,9 +82,10 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A_Pig_Quest_1.02_ef.crt");                            //  some     no fails observed
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A Pig Quest +2 {EasyFlash}[EX].crt");             //not on SD!
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/a_pig_quest_v102_+9_[trex].crt");               //not on SD!
-   EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/AlternativeFormats/EasyFlash/OneLoad64-Vol#5.crt"); 
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Maniac Mansion & Zak McKracken [EasyFlash].crt");
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt");
 
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/ezf 48Khz_hifi_Elvis_Costello_[EASYFLASH].crt");   //good test of all banks, *does not* click during swaps at the end
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/hf_audio_playback_01.crt"); //good test of all banks, clicks during swaps at the end

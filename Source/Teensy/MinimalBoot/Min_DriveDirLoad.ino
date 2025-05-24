@@ -211,7 +211,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       }
    }
    
-   if (SwapBanksDetected) SendMsgPrintfln("%d Banks Being Swapped", SwapBanksDetected);
+   if (SwapBanksDetected) SendMsgPrintfln("%d Banks Flagged For Swapping", SwapBanksDetected);
    else myFile.close(); // close if there are no swap banks.
    
    SendMsgPrintfln("Done");
