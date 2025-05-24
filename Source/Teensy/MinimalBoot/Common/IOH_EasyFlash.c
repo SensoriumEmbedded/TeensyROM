@@ -17,6 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#define Printf_Swaps     Printf_dbg   //Serial.printf  //
 #define NumDecodeBanks   64
 uint8_t *BankDecode[NumDecodeBanks][2];
 uint8_t EZFlashRAM[256];
@@ -102,8 +103,26 @@ void InitHndlr_EasyFlash()
    memset(EZFlashRAM, 0, 256);
    
 #ifdef MinimumBuild
-   //initialize/invalidate swap buffer 
-   for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) {SwapBuffers[BuffNum].Offset=0;}
+   //initialize/invalidate swap buffer, pre-load first swappable chips
+   uint8_t ChipNum = 0;
+   for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) 
+   {
+      SwapBuffers[BuffNum].Offset=0; //default to zero/invalid
+      //find next chip marked as swappable
+      while (ChipNum < NumCrtChips)
+      {
+         if(((uint32_t)CrtChips[ChipNum].ChipROM & SwapSeekAddrMask) == SwapSeekAddrMask)
+         {
+            //pre-load and update
+            LoadBank((uint32_t)CrtChips[ChipNum].ChipROM & ~SwapSeekAddrMask, SwapBuffers[BuffNum].Image);
+            SwapBuffers[BuffNum].Offset = (uint32_t)CrtChips[ChipNum].ChipROM;   
+            Printf_Swaps("Pre%d: %08x\n", BuffNum, (uint32_t) SwapBuffers[BuffNum].Offset & ~SwapSeekAddrMask);
+            ChipNum++;
+            break;  //exit while
+         }
+         ChipNum++;
+      }
+   }
 #endif
    
    //start with Bank 0:
@@ -201,7 +220,7 @@ void PollingHndlr_EasyFlash()
             if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
          
          LoadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
-         Printf_dbg("L%d: %08x  ", NextSwapBuffNum, (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
+         Printf_Swaps("L%d: %08x  ", NextSwapBuffNum, (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
          SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)LOROM_Image;
          LOROM_Image = SwapBuffers[NextSwapBuffNum].Image;
          if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
@@ -214,13 +233,13 @@ void PollingHndlr_EasyFlash()
             if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
          
          LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
-         Printf_dbg("H%d: %08x  ", NextSwapBuffNum, (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
+         Printf_Swaps("H%d: %08x  ", NextSwapBuffNum, (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
          SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)HIROM_Image;
          HIROM_Image = SwapBuffers[NextSwapBuffNum].Image;
          if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
       }
       
-      Printf_dbg(" %lu mS swp\n", millis()-Startms);
+      Printf_Swaps(" %lu mS swp\n", millis()-Startms);
       Serial.flush();
       DMA_State = DMA_S_StartDisable;
    }
