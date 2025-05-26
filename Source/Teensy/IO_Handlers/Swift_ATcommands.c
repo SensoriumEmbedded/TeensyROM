@@ -34,6 +34,9 @@ FLASHMEM void AT_DT(char* CmdArg)
    char* Delim = strstr(CmdArg, ":");
 
 
+   SwiftRegStatus |= SwiftStatusDCD; //disconnected, in case CD is already asserted prior to ATDT
+   //ConnectedToHost = false;
+   
    if (Delim != NULL) //port defined, read it
    {
       Delim[0]=0; //terminate host name
@@ -46,17 +49,13 @@ FLASHMEM void AT_DT(char* CmdArg)
    AddToPETSCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
-   
-   //assumes CD is not already asserted prior to connecting
    if (client.connect(CmdArg, Port)) 
    {
       AddToPETSCIIStrToRxQueueLN("Done");
-      //SwiftRegStatus &= ~SwiftStatusDCD; //connected
    }
    else 
    {
       AddToPETSCIIStrToRxQueueLN("Failed!");
-      //SwiftRegStatus |= SwiftStatusDCD; //disconnected
    }
 }
 
