@@ -67,8 +67,8 @@ FLASHMEM enATResponseCodes CheckEthConn()
    }
    if (Ethernet.linkStatus() == LinkOFF) 
    {
-      AddToPETSCIIStrToRxQueueLN(" Cable is not connected");
-      return ATRC_NO_CARRIER;
+      AddToPETSCIIStrToRxQueueLN(" Cable not connected");
+      return ATRC_NO_DIALTONE;
    }
    return ATRC_OK;
 }
@@ -103,44 +103,6 @@ FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
-{  //ATDT<HostName>:<Port>   Connect telnet
-   uint16_t  Port = 6400; //default if not defined
-
-   SwiftRegStatus |= SwiftStatusDCD; //disconnected, in case CD is already asserted prior to ATDT(?)
-   //ConnectedToHost = false;
-   
-   while(*CmdArg=='\"') CmdArg++; //Remove leading quote(s)
-   
-   char* Delim = strstr(CmdArg, ":");
-   if (Delim != NULL) //port defined, read it
-   {
-      Delim[0]=0; //terminate host name
-      Port = atol(Delim+1);
-      //if (Port==0) AddToPETSCIIStrToRxQueueLN("invalid port #");
-   }
-
-   uint16_t cmdlen = strlen(CmdArg);
-   if (cmdlen) if (CmdArg[cmdlen-1]=='\"') CmdArg[cmdlen-1]=0; //Remove trailing quote
-   
-   char Buf[100];
-   sprintf(Buf, "Trying %s\r\non port %d...", CmdArg, Port);
-   AddToPETSCIIStrToRxQueueLN(Buf);
-   FlushRxQueue();
-   //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
-   
-   enATResponseCodes resp = CheckEthConn();
-   if (resp!=ATRC_OK) return resp;
-   
-   if (!client.connect(CmdArg, Port)) 
-   {
-      //AddToPETSCIIStrToRxQueueLN("Failed!");
-      return ATRC_NO_ANSWER;
-   }
-   //AddToPETSCIIStrToRxQueueLN("Done");
-   return ATRC_CONNECT;
-}
-
 FLASHMEM enATResponseCodes AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
    AddToPETSCIIStrToRxQueue("Connect Ethernet ");
@@ -152,7 +114,7 @@ FLASHMEM enATResponseCodes AT_C(char* CmdArg)
    {
       //AddToPETSCIIStrToRxQueueLN("Failed!");
       enATResponseCodes resp = CheckEthConn();
-      if(resp==ATRC_OK) resp = ATRC_ERROR;
+      if(resp==ATRC_OK) resp = ATRC_NO_DIALTONE;
       return resp;
    }
 
@@ -173,6 +135,48 @@ FLASHMEM enATResponseCodes AT_C(char* CmdArg)
    AddToPETSCIIStrToRxQueue(" Gateway IP: ");
    AddIPaddrToRxQueueLN(ip);
    return ATRC_OK;
+}
+
+FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
+{  //ATDT<HostName>:<Port>   Connect telnet
+   uint16_t  Port = 6400; //default if not defined
+
+   SwiftRegStatus |= SwiftStatusDCD; //disconnected, in case CD is already asserted prior to ATDT(?)
+   //ConnectedToHost = false;
+   
+   //initialize ethernet connection
+   enATResponseCodes resp = AT_C(NULL);
+   if (resp!=ATRC_OK) return resp;
+ 
+   while(*CmdArg=='\"') CmdArg++; //Remove leading quote(s)
+   
+   char* Delim = strstr(CmdArg, ":");
+   if (Delim != NULL) //port defined, read it
+   {
+      Delim[0]=0; //terminate host name
+      Port = atol(Delim+1);
+      //if (Port==0) AddToPETSCIIStrToRxQueueLN("invalid port #");
+   }
+
+   uint16_t cmdlen = strlen(CmdArg);
+   if (cmdlen) if (CmdArg[cmdlen-1]=='\"') CmdArg[cmdlen-1]=0; //Remove trailing quote
+   
+   char Buf[100];
+   sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);
+   AddToPETSCIIStrToRxQueueLN(Buf);
+   FlushRxQueue();
+   //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
+   
+   //resp = CheckEthConn();
+   //if (resp!=ATRC_OK) return resp;
+   
+   if (!client.connect(CmdArg, Port)) 
+   {
+      //AddToPETSCIIStrToRxQueueLN("Failed!");
+      return ATRC_NO_ANSWER;
+   }
+   //AddToPETSCIIStrToRxQueueLN("Done");
+   return ATRC_CONNECT;
 }
 
 FLASHMEM enATResponseCodes AT_S(char* CmdArg)

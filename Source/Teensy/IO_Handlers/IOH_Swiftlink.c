@@ -251,7 +251,7 @@ FLASHMEM void SetEthEEPDefaults()
 
 FLASHMEM void InitHndlr_SwiftLink()
 {
-   EthernetInit();
+   //EthernetInit();
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    SwiftRegControl = 0;
