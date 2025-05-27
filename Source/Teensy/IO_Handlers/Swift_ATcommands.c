@@ -354,9 +354,19 @@ FLASHMEM enATResponseCodes AT_Info(char* CmdArg)
    return ATRC_OK;
 }
 
+FLASHMEM enATResponseCodes AT_Echo(char* CmdArg)
+{ 
+   if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
+   {
+      AddInvalidFormatToRxQueueLN();
+      return ATRC_ERROR;
+   }
+   EchoOn = (CmdArg[0]=='1');
+   return ATRC_OK;
+}
+
 FLASHMEM enATResponseCodes ProcessATCommand()
 {
-
    char* CmdMsg = TxMsg; //local pointer for manipulation
    stcATCommand ATCommands[] =
    {
@@ -376,6 +386,7 @@ FLASHMEM enATResponseCodes ProcessATCommand()
       "?"         , &AT_HELP,
       "browse"    , &AT_BROWSE,
       "i"         , &AT_Info,
+      "e"         , &AT_Echo,
    };
       
       

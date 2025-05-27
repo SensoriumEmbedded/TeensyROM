@@ -136,7 +136,7 @@ char CurrPageTitle[eepBMTitleSize]; //keep current page title, could move to RAM
 uint8_t  PrevURLQueueNum;   //current/latest in the link history queue
 uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
 uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
-bool ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
+bool EchoOn, ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
 uint32_t PageCharsReceived;
 uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
@@ -262,6 +262,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    PlusCount=0;
    ConnectedToHost = false;
    BrowserMode = false;
+   EchoOn = true;
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
    PrintingHyperlink = false;
@@ -428,7 +429,7 @@ void PollingHndlr_SwiftLink()
          }
          else 
          {
-            AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
+            if (EchoOn) AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
             SwiftTxBufToLcaseASSCII();
          }
          Printf_dbg("%02x: %c\n", SwiftTxBuf);
