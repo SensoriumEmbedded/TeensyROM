@@ -136,7 +136,7 @@ char CurrPageTitle[eepBMTitleSize]; //keep current page title, could move to RAM
 uint8_t  PrevURLQueueNum;   //current/latest in the link history queue
 uint8_t  UsedPageLinkBuffs;   //how many PageLinkBuff elements have been Used
 uint32_t  RxQueueHead, RxQueueTail, TxMsgOffset;
-bool EchoOn, ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
+bool Verbose, EchoOn, ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlink;
 uint32_t PageCharsReceived;
 uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
@@ -263,6 +263,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    ConnectedToHost = false;
    BrowserMode = false;
    EchoOn = true;
+   Verbose = true;
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
    PrintingHyperlink = false;

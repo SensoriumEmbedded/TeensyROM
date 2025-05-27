@@ -55,7 +55,23 @@ FLASHMEM void SendATresponse(enATResponseCodes ResponseCode)
       "NO_ANSWER"   , // 8
    };
    
-   AddToPETSCIIStrToRxQueueLN(Verbose_RCs[ResponseCode]);
+   if (Verbose) AddToPETSCIIStrToRxQueueLN(Verbose_RCs[ResponseCode]);
+   else 
+   {
+      char buf[10];
+      sprintf(buf, "%d", ResponseCode);
+      AddToPETSCIIStrToRxQueueLN(buf);
+   }
+}
+
+FLASHMEM bool VerifySingleBinArg(const char* CmdArg)
+{
+   if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
+   {
+      AddInvalidFormatToRxQueueLN();
+      return false;
+   }
+   return true;
 }
 
 FLASHMEM enATResponseCodes CheckEthConn()
@@ -254,11 +270,8 @@ FLASHMEM enATResponseCodes AT_MAC(char* CmdArg)
 
 FLASHMEM enATResponseCodes AT_DHCP(char* CmdArg)
 {
-   if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
-   {
-      AddInvalidFormatToRxQueueLN();
-      return ATRC_ERROR;
-   }
+   if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
+
    EEPROM.write(eepAdDHCPEnabled, CmdArg[0]-'0');
    AddUpdatedToRxQueueLN();
    AddDHCPEnDisToRxQueueLN();
@@ -364,12 +377,17 @@ FLASHMEM enATResponseCodes AT_Info(char* CmdArg)
 
 FLASHMEM enATResponseCodes AT_Echo(char* CmdArg)
 { 
-   if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
-   {
-      AddInvalidFormatToRxQueueLN();
-      return ATRC_ERROR;
-   }
+   if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
+
    EchoOn = (CmdArg[0]=='1');
+   return ATRC_OK;
+}
+
+FLASHMEM enATResponseCodes AT_Verbose(char* CmdArg)
+{ 
+   if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
+
+   Verbose = (CmdArg[0]=='1');
    return ATRC_OK;
 }
 
@@ -395,6 +413,7 @@ FLASHMEM enATResponseCodes ProcessATCommand()
       "browse"    , &AT_BROWSE,
       "i"         , &AT_Info,
       "e"         , &AT_Echo,
+      "v"         , &AT_Verbose,
    };
       
       
