@@ -74,21 +74,6 @@ FLASHMEM bool VerifySingleBinArg(const char* CmdArg)
    return true;
 }
 
-FLASHMEM enATResponseCodes CheckEthConn()
-{
-   if (Ethernet.hardwareStatus() == EthernetNoHardware) 
-   {
-      AddToPETSCIIStrToRxQueueLN(" HW was not found");
-      return ATRC_NO_DIALTONE;
-   }
-   if (Ethernet.linkStatus() == LinkOFF) 
-   {
-      AddToPETSCIIStrToRxQueueLN(" Cable not connected");
-      return ATRC_NO_DIALTONE;
-   }
-   return ATRC_OK;
-}
-
 FLASHMEM enATResponseCodes StrToIPToEE(char* Arg, uint8_t EEPaddress)
 {  // Arg is an IP address string, decode it and write it to EEPROM at EEPaddress
    IPAddress ip;   
@@ -113,6 +98,7 @@ FLASHMEM enATResponseCodes StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
+   EthernetInit();
    SendBrowserCommandsImmediate();
    UnPausePage();
    BrowserMode = true;
@@ -129,9 +115,19 @@ FLASHMEM enATResponseCodes AT_C(char* CmdArg)
    if (!EthernetInit())
    {
       //AddToPETSCIIStrToRxQueueLN("Failed!");
-      enATResponseCodes resp = CheckEthConn();
-      if(resp==ATRC_OK) resp = ATRC_NO_DIALTONE;
-      return resp;
+      //Was CheckEthConn()...
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) 
+      {
+         AddToPETSCIIStrToRxQueueLN(" HW was not found");
+         //return ATRC_NO_DIALTONE;
+      }
+      else if (Ethernet.linkStatus() == LinkOFF) 
+      {
+         AddToPETSCIIStrToRxQueueLN(" Cable not connected");
+         //return ATRC_NO_DIALTONE;
+      }
+      
+      return ATRC_NO_DIALTONE;
    }
 
    //AddToPETSCIIStrToRxQueueLN("Done");
