@@ -365,18 +365,18 @@ void PollingHndlr_SwiftLink()
       }
       else
       {
-         //AddToPETSCIIStrToRxQueue("*** ");
          if (ConnectedToHost) 
-         {
-            AddToPETSCIIStrToRxQueueLN("connected to host");
+         {  //new connection
+            //AddToPETSCIIStrToRxQueueLN("connected to host");
             FlushRxQueue();
             SwiftRegStatus &= ~SwiftStatusDCD; //indicate connected after message complete
          }
          else 
-         {
+         {  //connection lost
             FlushRxQueue();
             SwiftRegStatus |= SwiftStatusDCD; //indicate disconnected before sending message
-            AddToPETSCIIStrToRxQueueLN("not connected");
+            //AddToPETSCIIStrToRxQueueLN("not connected");
+            SendATresponse(ATRC_NO_CARRIER); 
          }
       }
    }
@@ -466,7 +466,7 @@ void PollingHndlr_SwiftLink()
 
       FlushRxQueue();
       SwiftRegStatus |= SwiftStatusDCD; //indicate disconnected before sending message
-      AddToPETSCIIStrToRxQueueLN("\r*click*");
+      AddToPETSCIIStrToRxQueueLN("*aborted by user*");
    }
 
    if (PageCharsReceived < 880 || PrintingHyperlink) CheckSendRxQueue();

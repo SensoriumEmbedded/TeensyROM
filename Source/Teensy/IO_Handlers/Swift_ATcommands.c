@@ -106,18 +106,22 @@ FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
 FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
 {  //ATDT<HostName>:<Port>   Connect telnet
    uint16_t  Port = 6400; //default if not defined
-   char* Delim = strstr(CmdArg, ":");
 
-
-   SwiftRegStatus |= SwiftStatusDCD; //disconnected, in case CD is already asserted prior to ATDT
+   SwiftRegStatus |= SwiftStatusDCD; //disconnected, in case CD is already asserted prior to ATDT(?)
    //ConnectedToHost = false;
    
+   while(*CmdArg=='\"') CmdArg++; //Remove leading quote(s)
+   
+   char* Delim = strstr(CmdArg, ":");
    if (Delim != NULL) //port defined, read it
    {
       Delim[0]=0; //terminate host name
       Port = atol(Delim+1);
       //if (Port==0) AddToPETSCIIStrToRxQueueLN("invalid port #");
    }
+
+   uint16_t cmdlen = strlen(CmdArg);
+   if (cmdlen) if (CmdArg[cmdlen-1]=='\"') CmdArg[cmdlen-1]=0; //Remove trailing quote
    
    char Buf[100];
    sprintf(Buf, "Trying %s\r\non port %d...", CmdArg, Port);
@@ -134,7 +138,7 @@ FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
       return ATRC_NO_ANSWER;
    }
    //AddToPETSCIIStrToRxQueueLN("Done");
-   return ATRC_OK;
+   return ATRC_CONNECT;
 }
 
 FLASHMEM enATResponseCodes AT_C(char* CmdArg)
