@@ -51,7 +51,7 @@ enum InternalEEPROMmap
    eepAdTimezone      =    5, // (1:int8_t)     signed char for timezone: UTC +14/-12 
    eepAdNextIOHndlr   =    6, // (1:uint8_t)    default IO handler to load upon TR exit
    eepAdDHCPEnabled   =    7, // (1:uint8_t)    non-0=DHCP enabled, 0=DHCP disabled
-   eepAdMyMAC         =    8, // (6:uint8_t x6) default IO handler to load upon TR exit
+   eepAdMyMAC         =    8, // (6:uint8_t x6) My MAC address
    eepAdMyIP          =   14, // (4:uint8_t x4) My IP address (static)
    eepAdDNSIP         =   18, // (4:uint8_t x4) DNS IP address (static)
    eepAdGtwyIP        =   22, // (4:uint8_t x4) Gtwy IP address (static)
