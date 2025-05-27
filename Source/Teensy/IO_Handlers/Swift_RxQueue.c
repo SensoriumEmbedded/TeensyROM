@@ -231,21 +231,3 @@ bool inet_aton(const char* address, IPAddress& result)
 	return true;
 }
 
-
-FLASHMEM void StrToIPToEE(char* Arg, uint8_t EEPaddress)
-{  // Arg is an IP address string, decode it and write it to EEPROM at EEPaddress
-   IPAddress ip;   
-   
-   AddToPETSCIIStrToRxQueueLN(" IP Addr");
-   if (!inet_aton(Arg, ip)) 
-   {
-      AddInvalidFormatToRxQueueLN();
-      return;
-   }
-   
-   EEPROM.put(EEPaddress, (uint32_t)ip);
-   AddUpdatedToRxQueueLN();
-   AddToPETSCIIStrToRxQueue("to ");
-   AddIPaddrToRxQueueLN(ip);
-}
-

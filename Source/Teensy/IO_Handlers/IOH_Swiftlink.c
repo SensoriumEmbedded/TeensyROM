@@ -448,8 +448,8 @@ void PollingHndlr_SwiftLink()
             }
             else
             {
-               ProcessATCommand();
-               if (!BrowserMode) AddToPETSCIIStrToRxQueueLN("ok\r");
+               enATResponseCodes Resp = ProcessATCommand();
+               if (!BrowserMode) SendATresponse(Resp);
             }
             TxMsgOffset = 0;
          }
