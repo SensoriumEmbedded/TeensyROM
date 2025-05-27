@@ -347,6 +347,13 @@ FLASHMEM enATResponseCodes AT_HELP(char* CmdArg)
    return ATRC_OK;
 }
 
+FLASHMEM enATResponseCodes AT_Info(char* CmdArg)
+{ 
+   AddToPETSCIIStrToRxQueue("TeensyROM\rFirmware ");
+   AddToPETSCIIStrToRxQueueLN(strVersionNumber);
+   return ATRC_OK;
+}
+
 FLASHMEM enATResponseCodes ProcessATCommand()
 {
 
@@ -368,6 +375,7 @@ FLASHMEM enATResponseCodes ProcessATCommand()
       "+defaults" , &AT_DEFAULTS,
       "?"         , &AT_HELP,
       "browse"    , &AT_BROWSE,
+      "i"         , &AT_Info,
    };
       
       
