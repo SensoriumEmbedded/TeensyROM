@@ -68,10 +68,20 @@ FLASHMEM bool VerifySingleBinArg(const char* CmdArg)
 {
    if(CmdArg[1]!=0 || CmdArg[0]<'0' || CmdArg[0]>'1')
    {
-      AddInvalidFormatToRxQueueLN();
+      if (Verbose) AddInvalidFormatToRxQueueLN();
       return false;
    }
    return true;
+}
+
+void AddVerboseToPETSCIIStrToRxQueueLN(const char* s)
+{
+   if (Verbose) AddToPETSCIIStrToRxQueueLN(s);
+}
+
+void AddVerboseToPETSCIIStrToRxQueue(const char* s)
+{
+   if (Verbose) AddToPETSCIIStrToRxQueue(s);
 }
 
 FLASHMEM enATResponseCodes StrToIPToEE(char* Arg, uint8_t EEPaddress)
@@ -107,45 +117,48 @@ FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
 
 FLASHMEM enATResponseCodes AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
-   AddToPETSCIIStrToRxQueue("Connect Ethernet ");
-   if (EEPROM.read(eepAdDHCPEnabled)) AddToPETSCIIStrToRxQueueLN("via DHCP.");
-   else AddToPETSCIIStrToRxQueueLN("using Static IP.");
+   AddVerboseToPETSCIIStrToRxQueue("Connect Ethernet ");
+   if (EEPROM.read(eepAdDHCPEnabled)) AddVerboseToPETSCIIStrToRxQueueLN("via DHCP.");
+   else AddVerboseToPETSCIIStrToRxQueueLN("using Static IP.");
    FlushRxQueue();
    
    if (!EthernetInit())
    {
-      //AddToPETSCIIStrToRxQueueLN("Failed!");
       //Was CheckEthConn()...
       if (Ethernet.hardwareStatus() == EthernetNoHardware) 
       {
-         AddToPETSCIIStrToRxQueueLN(" HW was not found");
+         AddVerboseToPETSCIIStrToRxQueueLN(" HW was not found");
          //return ATRC_NO_DIALTONE;
       }
       else if (Ethernet.linkStatus() == LinkOFF) 
       {
-         AddToPETSCIIStrToRxQueueLN(" Cable not connected");
+         AddVerboseToPETSCIIStrToRxQueueLN(" Cable not connected");
          //return ATRC_NO_DIALTONE;
       }
       
       return ATRC_NO_DIALTONE;
    }
 
-   //AddToPETSCIIStrToRxQueueLN("Done");
-   byte mac[6]; 
-   Ethernet.MACAddress(mac);
-   AddMACToRxQueueLN(mac);
+   if (Verbose)
+   {
+      //AddToPETSCIIStrToRxQueueLN("Done");
+      byte mac[6]; 
+      Ethernet.MACAddress(mac); //read back mac address
+      AddMACToRxQueueLN(mac);
+      
+      uint32_t ip = Ethernet.localIP();
+      AddToPETSCIIStrToRxQueue(" Local IP: ");
+      AddIPaddrToRxQueueLN(ip);
+
+      ip = Ethernet.subnetMask();
+      AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
+      AddIPaddrToRxQueueLN(ip);
+
+      ip = Ethernet.gatewayIP();
+      AddToPETSCIIStrToRxQueue(" Gateway IP: ");
+      AddIPaddrToRxQueueLN(ip);
+   }
    
-   uint32_t ip = Ethernet.localIP();
-   AddToPETSCIIStrToRxQueue(" Local IP: ");
-   AddIPaddrToRxQueueLN(ip);
-
-   ip = Ethernet.subnetMask();
-   AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
-   AddIPaddrToRxQueueLN(ip);
-
-   ip = Ethernet.gatewayIP();
-   AddToPETSCIIStrToRxQueue(" Gateway IP: ");
-   AddIPaddrToRxQueueLN(ip);
    return ATRC_OK;
 }
 
@@ -175,19 +188,15 @@ FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
    
    char Buf[100];
    sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);
-   AddToPETSCIIStrToRxQueueLN(Buf);
+   AddVerboseToPETSCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
    //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
    
    //resp = CheckEthConn();
    //if (resp!=ATRC_OK) return resp;
    
-   if (!client.connect(CmdArg, Port)) 
-   {
-      //AddToPETSCIIStrToRxQueueLN("Failed!");
-      return ATRC_NO_ANSWER;
-   }
-   //AddToPETSCIIStrToRxQueueLN("Done");
+   if (!client.connect(CmdArg, Port)) return ATRC_NO_ANSWER;
+
    return ATRC_CONNECT;
 }
 
