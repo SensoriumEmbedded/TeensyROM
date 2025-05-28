@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-enum enATResponseCodes
+enum ATRespCode
 {  //http://www.messagestick.net/modem/Hayes_Ch1-2.html
    //match spec and Verbose_RCs below
    ATRC_OK          , // 0
@@ -37,13 +37,13 @@ enum enATResponseCodes
 struct stcATCommand
 {
   char Command[MaxATcmdLength];
-  enATResponseCodes (*Function)(char*); 
+  ATRespCode (*Function)(char*); 
 };
 
-FLASHMEM void SendATresponse(enATResponseCodes ResponseCode)
+FLASHMEM void SendATresponse(ATRespCode ResponseCode)
 { 
    const char Verbose_RCs[NumATResponseCodes][15] = 
-   {//match enATResponseCodes:
+   {//match ATRespCode:
       "OK"          , // 0
       "CONNECT"     , // 1
       "RING"        , // 2
@@ -84,7 +84,7 @@ void AddVerboseToPETSCIIStrToRxQueue(const char* s)
    if (Verbose) AddToPETSCIIStrToRxQueue(s);
 }
 
-FLASHMEM enATResponseCodes StrToIPToEE(char* Arg, uint8_t EEPaddress)
+FLASHMEM ATRespCode StrToIPToEE(char* Arg, uint8_t EEPaddress)
 {  // Arg is an IP address string, decode it and write it to EEPROM at EEPaddress
    IPAddress ip;   
    
@@ -106,7 +106,7 @@ FLASHMEM enATResponseCodes StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 // Swiftlink AT Commands
 
-FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
+FLASHMEM ATRespCode AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
    EthernetInit();
    SendBrowserCommandsImmediate();
@@ -115,7 +115,7 @@ FLASHMEM enATResponseCodes AT_BROWSE(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_C(char* CmdArg)
+FLASHMEM ATRespCode AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
    AddVerboseToPETSCIIStrToRxQueue("Connect Ethernet ");
    if (EEPROM.read(eepAdDHCPEnabled)) AddVerboseToPETSCIIStrToRxQueueLN("via DHCP.");
@@ -162,7 +162,7 @@ FLASHMEM enATResponseCodes AT_C(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
+FLASHMEM ATRespCode AT_DT(char* CmdArg)
 {  //ATDT<HostName>:<Port>   Connect telnet
    uint16_t  Port = 6400; //default if not defined
 
@@ -170,7 +170,7 @@ FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
    //ConnectedToHost = false;
    
    //initialize ethernet connection
-   enATResponseCodes resp = AT_C(NULL);
+   ATRespCode resp = AT_C(NULL);
    if (resp!=ATRC_OK) return resp;
  
    while(*CmdArg=='\"') CmdArg++; //Remove leading quote(s)
@@ -200,7 +200,7 @@ FLASHMEM enATResponseCodes AT_DT(char* CmdArg)
    return ATRC_CONNECT;
 }
 
-FLASHMEM enATResponseCodes AT_S(char* CmdArg)
+FLASHMEM ATRespCode AT_S(char* CmdArg)
 {
    uint32_t ip;
    uint8_t  mac[6];
@@ -236,7 +236,7 @@ FLASHMEM enATResponseCodes AT_S(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_RNDMAC(char* CmdArg)
+FLASHMEM ATRespCode AT_RNDMAC(char* CmdArg)
 {
    uint8_t mac[6];   
    
@@ -250,7 +250,7 @@ FLASHMEM enATResponseCodes AT_RNDMAC(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_MAC(char* CmdArg)
+FLASHMEM ATRespCode AT_MAC(char* CmdArg)
 {
    uint8_t octnum =1;
    uint8_t mac[6];   
@@ -273,7 +273,7 @@ FLASHMEM enATResponseCodes AT_MAC(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_DHCP(char* CmdArg)
+FLASHMEM ATRespCode AT_DHCP(char* CmdArg)
 {
    if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
 
@@ -283,7 +283,7 @@ FLASHMEM enATResponseCodes AT_DHCP(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_DHCPTIME(char* CmdArg)
+FLASHMEM ATRespCode AT_DHCPTIME(char* CmdArg)
 {
    uint16_t NewTime = atol(CmdArg);
    if(NewTime==0)
@@ -297,7 +297,7 @@ FLASHMEM enATResponseCodes AT_DHCPTIME(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_DHCPRESP(char* CmdArg)
+FLASHMEM ATRespCode AT_DHCPRESP(char* CmdArg)
 {
    uint16_t NewTime = atol(CmdArg);
    if(NewTime==0)
@@ -311,38 +311,38 @@ FLASHMEM enATResponseCodes AT_DHCPRESP(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_MYIP(char* CmdArg)
+FLASHMEM ATRespCode AT_MYIP(char* CmdArg)
 {
    AddToPETSCIIStrToRxQueue("My");
    return StrToIPToEE(CmdArg, eepAdMyIP);
 }
 
-FLASHMEM enATResponseCodes AT_DNSIP(char* CmdArg)
+FLASHMEM ATRespCode AT_DNSIP(char* CmdArg)
 {
    AddToPETSCIIStrToRxQueue("DNS");
    return StrToIPToEE(CmdArg, eepAdDNSIP);
 }
 
-FLASHMEM enATResponseCodes AT_GTWYIP(char* CmdArg)
+FLASHMEM ATRespCode AT_GTWYIP(char* CmdArg)
 {
    AddToPETSCIIStrToRxQueue("Gateway");
    return StrToIPToEE(CmdArg, eepAdGtwyIP);
 }
 
-FLASHMEM enATResponseCodes AT_MASKIP(char* CmdArg)
+FLASHMEM ATRespCode AT_MASKIP(char* CmdArg)
 {
    AddToPETSCIIStrToRxQueue("Subnet Mask");
    return StrToIPToEE(CmdArg, eepAdMaskIP);
 }
 
-FLASHMEM enATResponseCodes AT_DEFAULTS(char* CmdArg)
+FLASHMEM ATRespCode AT_DEFAULTS(char* CmdArg)
 {
    AddUpdatedToRxQueueLN();
    SetEthEEPDefaults();
    return AT_S(NULL);
 }
 
-FLASHMEM enATResponseCodes AT_HELP(char* CmdArg)
+FLASHMEM ATRespCode AT_HELP(char* CmdArg)
 {  //                      1234567890123456789012345678901234567890
    AddToPETSCIIStrToRxQueueLN("General AT Commands:");
    AddToPETSCIIStrToRxQueueLN(" AT?   This help menu");
@@ -373,14 +373,14 @@ FLASHMEM enATResponseCodes AT_HELP(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_Info(char* CmdArg)
+FLASHMEM ATRespCode AT_Info(char* CmdArg)
 { 
    AddToPETSCIIStrToRxQueue("TeensyROM\rFirmware ");
    AddToPETSCIIStrToRxQueueLN(strVersionNumber);
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_Echo(char* CmdArg)
+FLASHMEM ATRespCode AT_Echo(char* CmdArg)
 { 
    if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
 
@@ -388,7 +388,7 @@ FLASHMEM enATResponseCodes AT_Echo(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes AT_Verbose(char* CmdArg)
+FLASHMEM ATRespCode AT_Verbose(char* CmdArg)
 { 
    if(!VerifySingleBinArg(CmdArg)) return ATRC_ERROR;
 
@@ -396,7 +396,7 @@ FLASHMEM enATResponseCodes AT_Verbose(char* CmdArg)
    return ATRC_OK;
 }
 
-FLASHMEM enATResponseCodes ProcessATCommand()
+FLASHMEM ATRespCode ProcessATCommand()
 {
    char* CmdMsg = TxMsg; //local pointer for manipulation
    stcATCommand ATCommands[] =

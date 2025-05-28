@@ -450,7 +450,7 @@ void PollingHndlr_SwiftLink()
             }
             else
             {
-               enATResponseCodes Resp = ProcessATCommand();
+               ATRespCode Resp = ProcessATCommand();
                if (!BrowserMode) SendATresponse(Resp);
             }
             TxMsgOffset = 0;
