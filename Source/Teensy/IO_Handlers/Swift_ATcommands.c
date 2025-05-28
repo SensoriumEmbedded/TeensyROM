@@ -343,11 +343,12 @@ FLASHMEM ATRespCode AT_DEFAULTS(char* CmdArg)
 }
 
 FLASHMEM ATRespCode AT_HELP(char* CmdArg)
-{  //                      1234567890123456789012345678901234567890
+{  //                          1234567890123456789012345678901234567890
    AddToPETSCIIStrToRxQueueLN("General AT Commands:");
-   AddToPETSCIIStrToRxQueueLN(" AT?   This help menu");
-   AddToPETSCIIStrToRxQueueLN(" AT    Ping");
-   AddToPETSCIIStrToRxQueueLN(" ATC   Connect Ethernet, display info");
+   AddToPETSCIIStrToRxQueueLN(" AT   Ping      ATV<0:1> Verbose On/Off");
+   AddToPETSCIIStrToRxQueueLN(" AT?  This List  ATE<0:1> Echo On/Off");
+   AddToPETSCIIStrToRxQueueLN(" ATI  TR ID/versionInfo");
+   AddToPETSCIIStrToRxQueueLN(" ATC  Connect Ethernet, display info");
    AddToPETSCIIStrToRxQueueLN(" ATDT<HostName>:<Port>  Connect to host");
    AddToPETSCIIStrToRxQueueLN(" ATBROWSE  Enter Web Browser");
 
@@ -358,17 +359,17 @@ FLASHMEM ATRespCode AT_HELP(char* CmdArg)
    AddToPETSCIIStrToRxQueueLN(" AT+MAC=<XX:XX:XX:XX:XX:XX>  Set MAC");
    AddToPETSCIIStrToRxQueueLN(" AT+DHCP=<0:1>  DHCP On(1)/Off(0)");
 
-   AddToPETSCIIStrToRxQueueLN("DHCP mode only: ");
+   AddToPETSCIIStrToRxQueueLN("DHCP mode settings: ");
    AddToPETSCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  DHCP Timeout in mS");
    AddToPETSCIIStrToRxQueueLN(" AT+DHCPRESP=<D>  DHCP Response Timeout");
 
-   AddToPETSCIIStrToRxQueueLN("Static mode only: ");
+   AddToPETSCIIStrToRxQueueLN("Static mode settings: ");
    AddToPETSCIIStrToRxQueueLN(" AT+MYIP=<D.D.D.D>   Local IP address");
    AddToPETSCIIStrToRxQueueLN(" AT+DNSIP=<D.D.D.D>  DNS IP address");
    AddToPETSCIIStrToRxQueueLN(" AT+GTWYIP=<D.D.D.D> Gateway IP address");
    AddToPETSCIIStrToRxQueueLN(" AT+MASKIP=<D.D.D.D> Subnet Mask");
 
-   AddToPETSCIIStrToRxQueueLN("When in connected/on-line mode:");
+   AddToPETSCIIStrToRxQueueLN("When connected/on-line mode:");
    AddToPETSCIIStrToRxQueueLN(" +++   Disconnect from host");
    return ATRC_OK;
 }
