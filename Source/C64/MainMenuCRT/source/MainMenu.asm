@@ -430,7 +430,7 @@ ListMenuItems:
    
    ldx #1  ;row
    ldy #0  ;col
-   ;clc
+   clc
    jsr SetCursor
    lda #<MsgSource
    ldy #>MsgSource

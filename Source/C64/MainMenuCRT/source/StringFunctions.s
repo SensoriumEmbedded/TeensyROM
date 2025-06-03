@@ -18,7 +18,7 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 PrintSerialString:
-   ;load Acc with RegSerialStringSelect # that will be serialized out 
+   ;load Acc with RegSerialStringSelect # that will be serialized out from TR port
    sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
 PrintSerialStringLoaded: ;message already selected
 -  lda rwRegSerialString+IO1Port
@@ -29,19 +29,37 @@ PrintSerialStringLoaded: ;message already selected
  
 PrintString:
    ;replaces BASIC routine jsr $ab1e when unavailable
-   ;usage: lda #<MsgM2SPolyMenu,  ldy #>MsgM2SPolyMenu,  jsr PrintString 
+   ;prints from C64 RAM location:
+   ;   usage: lda #<MsgM2SPolyMenu,  ldy #>MsgM2SPolyMenu,  jsr PrintString 
    sta smcPrintStringAddr+1
    sty smcPrintStringAddr+2
    ldy #0
+   
+-  jsr GetNextChar
+   cmp #0
+   beq ++   ;zero terminates string
+   cmp #EscC
+   bne +
+   ; process special escape char
+   
+   jsr GetNextChar
+   tax
+   lda TblEscC, x
+   sta $0286  ;set text color
+   jmp -
+   
++  jsr SendChar
+   jmp -
+GetNextChar  ;load next char in to acc and and increment pointer (Y then smc)
 smcPrintStringAddr
--  lda $fffe, y
-   beq +
-   jsr SendChar
+   lda $fffe, y
    iny
-   bne -
+   bne ++
    inc smcPrintStringAddr+2
-   bne -
-+  rts
+   ;bne - No roll-over protection
+++ rts   
+
+
 
 PrintBanner:
    lda #<MsgBanner

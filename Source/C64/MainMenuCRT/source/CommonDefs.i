@@ -31,6 +31,19 @@
    TypeColor        = ChrBlue
    NameColor        = ChrLtGreen
 
+   EscC                = $01 ;Escape Token for text color ref, must be otherwise unused
+   ;Order matches TblEscC
+   EscBorderColor      = 0
+   EscBackgndColor     = 1
+   EscTimeColor        = 2
+   EscMenuMiscColor    = 3
+   EscAssignedIOHColor = 4
+   EscOptionColor      = 5
+   EscSourcesColor     = 6
+   EscTypeColor        = 7
+   EscNameColor        = 9
+
+
    ;Zero page RAM Registers. Some .SIDs use these, so make sure SID/Music is off 
    PtrAddrLo   = $fb
    PtrAddrHi   = $fc
