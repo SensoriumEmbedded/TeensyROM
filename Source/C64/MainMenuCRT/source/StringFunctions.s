@@ -83,8 +83,8 @@ DisplayTime:
    ldy #29  ;col
    clc
    jsr SetCursor
-   lda #TimeColor
-   jsr SendChar
+   lda TblEscC+EscTimeColor
+   sta $0286  ;set text color
    lda TODHoursBCD ;latches time in regs (stops incrementing)
    tay ;save for re-use
 

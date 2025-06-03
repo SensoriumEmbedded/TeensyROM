@@ -402,8 +402,8 @@ VoiceMuteTogle
 ++ rts
 
 PrintSongNum:
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    ;print the timer song num/num songs in decimal
    ldx #15 ;row 
    ldy #26 ;col
@@ -425,8 +425,8 @@ PrintSongNum:
    rts
    
 PrintSIDSpeed:
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    
    
    ;print the timer interval in percent 

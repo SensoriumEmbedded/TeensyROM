@@ -458,8 +458,8 @@ nextLine
    lda #ChrCRSRRight
    jsr SendChar
 ; print name
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    lda #rsstItemName
    jsr PrintSerialString
 ;align to col
@@ -598,8 +598,8 @@ RunSelected:
 +  pha ;store the type
    jsr IRQDisable  ;turn off interrupt (also stops SID playback, if on)
    jsr PrintBanner ;clear screen for messaging for remaining types:
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    
    pla ;restore the type
    cmp #rtFileHex  ;check for .hex file selected
@@ -1046,8 +1046,8 @@ CtlWaitReprint
    lda #$00    
    sta $d011   ;turn off the display   
    jsr PrintBanner ;clear screen for messaging
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    jsr WaitForTRDots
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
    and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
@@ -1155,8 +1155,8 @@ smcPauseForTextInfo
    sta smcPauseForTextInfo+1
    jsr AnyKeyMsgWait
 
-+  lda #NameColor ;(light green currently) Default for text files
-   jsr SendChar   
++  lda TblEscC+EscNameColor ;(light green currently) Default for text files
+   sta $0286  ;set text color   
    
 NewPage
    lda #ChrClear

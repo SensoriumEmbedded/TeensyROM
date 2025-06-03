@@ -31,8 +31,8 @@ SettingsMenu:
    ldy #0 ;col
    clc
    jsr SetCursor
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
    lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
    jsr PrintSerialString
    
@@ -41,8 +41,8 @@ SettingsMenu:
    jsr PrintString 
 
 ShowSettings:
-   lda #NameColor
-   jsr SendChar
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
 
    ldx #4  ;row 12/24 hour clock
    ldy #20 ;col

@@ -21,15 +21,16 @@
    ;symbols used by both crt/rom emulated at boot and main code running from C64 RAM
 
    ;color scheme:
+   ;remove these!!!
    BorderColor      = PokePurple
    BackgndColor     = PokeBlack
-   TimeColor        = ChrOrange
-   MenuMiscColor    = ChrGreen
+;   TimeColor        = ChrOrange
+;   MenuMiscColor    = ChrGreen
    AssignedIOHColor = ChrLtGrey
-   OptionColor      = ChrYellow
-   SourcesColor     = ChrLtBlue
+;   OptionColor      = ChrYellow
+;   SourcesColor     = ChrLtBlue
    TypeColor        = ChrBlue
-   NameColor        = ChrLtGreen
+;   NameColor        = ChrLtGreen
 
    EscC                = $01 ;Escape Token for text color ref, must be otherwise unused
    ;Order matches TblEscC
@@ -41,7 +42,7 @@
    EscOptionColor      = 5
    EscSourcesColor     = 6
    EscTypeColor        = 7
-   EscNameColor        = 9
+   EscNameColor        = 8
 
 
    ;Zero page RAM Registers. Some .SIDs use these, so make sure SID/Music is off 
