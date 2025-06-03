@@ -22,6 +22,7 @@
 
 #define MaxItemDispLength  35
 #define MaxItemsPerPage    19
+#define EscC             0x01  // Escape Token for text color ref, must be otherwise unused
 
 enum IO1_Registers  //offset from 0xDE00
 {
@@ -118,6 +119,18 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
    ricmdSIDInit        = 4, // re-init current SID (sub song # change)
    ricmdSetSIDSpeed    = 5, // Apply CIA timer reg values (rRegSIDCurSpeedHi/Lo)
    ricmdSIDVoiceMute   = 6, // Apply SID Voice Mute Settings
+};
+
+enum ColorRefOffsets       //Order matches TblEscC:
+{
+   EscBorderColor      = 0, // Screen Border
+   EscBackgndColor     = 1, // Screen Background
+   EscTimeColor        = 2, // Time Display
+   EscMenuMiscColor    = 3, // 
+   EscOptionColor      = 4, // 
+   EscSourcesColor     = 5, // 
+   EscTypeColor        = 6, // 
+   EscNameColor        = 7, //
 };
 
 enum  RegSIDSpeedChanges  //wRegSIDSpeedChange

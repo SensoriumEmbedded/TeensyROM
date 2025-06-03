@@ -181,7 +181,8 @@ MsgDone:
 MsgHasHandler:
    !tx ChrCRSRLeft, "+", 0
 
-TblEscC:  ;string escape token (EscC) next character cross-reference
+TblEscC:  ;order matches enum ColorRefOffsets
+          ;string escape token (EscC) next character cross-reference
    !byte PokeYellow  ;PokePurple    ;  EscBorderColor      = 0
    !byte PokeOrange  ;PokeBlack     ;  EscBackgndColor     = 1
    !byte PokeWhite   ;PokeOrange    ;  EscTimeColor        = 2
