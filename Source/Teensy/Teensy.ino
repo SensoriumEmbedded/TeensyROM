@@ -203,6 +203,7 @@ void loop()
 
 void SetUpMainMenuROM()
 {
+   SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
    SetGameDeassert;
