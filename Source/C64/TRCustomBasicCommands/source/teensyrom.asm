@@ -17,6 +17,7 @@
 .label TR_BASCont_LoadPrep   = $04   // Prep to load file from TR
 .label TR_BASCont_SaveFinish = $06   // Save file to TR
 .label TR_BASCont_DirPrep    = $08   // Load Dir into TR RAM
+.label TR_BASCont_DmaTest    = $0a   // Assert DMA for 100mS
 
    // StatReg Values:
 .label TR_BASStat_Processing = $00   // No update, still processing

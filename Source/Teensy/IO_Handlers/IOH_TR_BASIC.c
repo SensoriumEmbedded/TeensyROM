@@ -64,6 +64,7 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    TR_BASCont_LoadPrep   = 0x04,   // Prep to load file from TR RAM
    TR_BASCont_SaveFinish = 0x06,   // Save file from TR RAM to SD/USB
    TR_BASCont_DirPrep    = 0x08,   // Load Dir into TR RAM
+   TR_BASCont_DmaTest    = 0x0a,   // Assert DMA for 100mS
    
    // StatReg Values:
    TR_BASStat_Processing = 0x00,   // No update, still processing
@@ -306,6 +307,13 @@ uint8_t ContRegAction_DirPrep()
    return TR_BASStat_Ready;   //Save Sussceful
 }
 
+uint8_t ContRegAction_DmaTest()
+{  // Assert DMA for 100mS and release
+   Printf_dbg("DMA Trig\n");
+   delay(100);  //100
+   DMA_State = DMA_S_StartDisable;
+   return TR_BASStat_Ready;  
+}
 
 //__________________________________________________________________________________
 
@@ -372,9 +380,12 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                   break;
                   
                //these commandd require action outside of interrupt: 
-               case TR_BASCont_LoadPrep: //load file into RAM 
+               case TR_BASCont_DmaTest:    // Assert DMA for 100mS
+                  DMA_State = DMA_S_StartActive; //must start this write cycle
+                  // break keyword is not present, all the cases after the matching case are executed
+               case TR_BASCont_LoadPrep:   //load file into RAM 
                case TR_BASCont_SaveFinish: //save file from RAM
-               case TR_BASCont_DirPrep: // Load Dir into RAM
+               case TR_BASCont_DirPrep:    // Load Dir into RAM
                   TR_BASContRegAction = Data; //pass it to process outside of interrupt
                   TR_BASStatRegVal = TR_BASStat_Processing; //initialize status
                   break;
@@ -418,6 +429,9 @@ void PollingHndlr_TR_BASIC()
          case TR_BASCont_DirPrep:
             TR_BASStatRegVal = ContRegAction_DirPrep();
             break;
+         case TR_BASCont_DmaTest:
+            TR_BASStatRegVal = ContRegAction_DmaTest();
+            break;         
          default:
             Printf_dbg("Unexpected TR_BASContRegAction: %d\n", TR_BASContRegAction);
       }

@@ -109,11 +109,16 @@ FASTRUN void isrPHI2()
       // activate/disable DMA during low phase of Phi2
       if (DMA_State == DMA_S_StartDisable)
       {
-         SetDMADeassert;
-         DMA_State = DMA_S_DisableReady;
+         //if (GP9_BA(GPIO_9))
+         //{
+            //WaitUntil_nS(200);
+            SetDMADeassert;
+            DMA_State = DMA_S_DisableReady;
+         //}
       }
       else if (DMA_State == DMA_S_StartActive)
       {
+         //WaitUntil_nS(100); 
          SetDMAAssert;
          DMA_State = DMA_S_ActiveReady;
       }
