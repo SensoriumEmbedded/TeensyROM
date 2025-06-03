@@ -385,7 +385,7 @@ VoiceMuteTogle
    lda #rCtlSetBackgroundSIDWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg
-   ldx #21 ;row 
+   ldx #22 ;row 
    ldy #33 ;col
    clc
    jsr SetCursor      
