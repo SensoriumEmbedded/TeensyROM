@@ -2,6 +2,16 @@
 ;subroutines, tables, and strings
 ;mostly coppied from the TR main code
 
+;brought local, may integrate w/ TR custom colors later...
+   BorderColor    = PokePurple  
+   BackgndColor   = PokeBlack   
+   TimeColor      = ChrOrange  
+   MenuMiscColor  = ChrGreen   
+   OptionColor    = ChrYellow  
+   SourcesColor   = ChrLtBlue  
+   TypeColor      = ChrBlue    
+   NameColor      = ChrLtGreen 
+
 SIDVoicesOff:
    lda #BorderColor
    sta BorderColorReg   ;restore border in case we ended in mid region

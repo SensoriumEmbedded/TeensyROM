@@ -1,6 +1,16 @@
 
 ;subroutines, tables, and strings
 
+;brought local, may integrate w/ TR custom colors later...
+   BorderColor    = PokePurple  
+   BackgndColor   = PokeBlack   
+   TimeColor      = ChrOrange  
+   MenuMiscColor  = ChrGreen   
+   OptionColor    = ChrYellow  
+   SourcesColor   = ChrLtBlue  
+   TypeColor      = ChrBlue    
+   NameColor      = ChrLtGreen 
+
 ;SIDVoicesOff:
 ;   lda #0x00 ; turn 3 voices off
 ;   sta SIDLoc+$04 ; SIDVoicCont1
