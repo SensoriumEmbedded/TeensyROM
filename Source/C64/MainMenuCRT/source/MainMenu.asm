@@ -469,13 +469,15 @@ nextLine
    clc
    jsr SetCursor
 ; Assigned IO Handler? '+' if so
+   lda TblEscC+EscTypeColor
+   sta $0286  ;set text color
    lda rRegItemTypePlusIOH+IO1Port 
    and #$80  ;bit 7 indicates an assigned IOHandler, now we care!
    beq +
    lda #<MsgHasHandler
    ldy #>MsgHasHandler
    jsr PrintString
-; print type, incl color
+; print 4(3) char type
 +  ldx #<TblItemType
    ldy #>TblItemType
    lda rRegItemTypePlusIOH+IO1Port 
@@ -1074,9 +1076,9 @@ TextScreenMemColor:
    sta $d011 
 
    ;set screen and border colors back
-   lda #BorderColor
+   lda TblEscC+EscBorderColor
    sta BorderColorReg
-   lda #BackgndColor
+   lda TblEscC+EscBackgndColor
    sta BackgndColorReg
    rts
 

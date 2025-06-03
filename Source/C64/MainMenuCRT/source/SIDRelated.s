@@ -131,7 +131,7 @@ IRQDisable:
    ;continue...
 
 SIDVoicesOff:
-   lda #BorderColor
+   lda TblEscC+EscBorderColor
    sta BorderColorReg   ;restore border in case we ended in mid region
    lda #0x00 ; turn 3 voices off
    sta SIDLoc+rRegSIDVoicCont1-StartSIDRegs
@@ -195,7 +195,7 @@ smcVoicesMuted
    
 +  lda #$37 ; Reset the Kernal and BASIC ROMs
    sta $01
-   lda #BorderColor
+   lda TblEscC+EscBorderColor
    sta BorderColorReg
 ++ jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
 
@@ -274,7 +274,7 @@ ShowSIDInfoPage:
    jsr PrintString 
 
    ;page identifier for check from interrupt
-   lda #BackgndColor
+   lda TblEscC+EscBackgndColor
    sta PageIdentifyColor
    lda #PILSIDScreen
    sta PageIdentifyLoc  

@@ -90,9 +90,9 @@ Warmstart:
    
 ;******************************* Main Code Start ************************************   
    ;screen setup:     
-   lda #BorderColor
+   lda #PokePurple   ;EscBorderColor Set after TR launched
    sta BorderColorReg
-   lda #BackgndColor
+   lda #PokeBlack    ;EscBackgndColor Set after TR launched
    sta BackgndColorReg
 
    lda #<MsgCartBanner

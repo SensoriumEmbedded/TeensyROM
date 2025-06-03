@@ -179,37 +179,36 @@ MsgFail:
 MsgDone:
    !tx EscC,EscNameColor, "Done", 0
 MsgHasHandler:
-   !tx ChrCRSRLeft, AssignedIOHColor, "+", 0
+   !tx ChrCRSRLeft, "+", 0
 
 TblEscC:  ;string escape token (EscC) next character cross-reference
-   !byte PokePurple    ;  EscBorderColor      = 0
-   !byte PokeBlack     ;  EscBackgndColor     = 1
+   !byte PokeYellow  ;PokePurple    ;  EscBorderColor      = 0
+   !byte PokeOrange  ;PokeBlack     ;  EscBackgndColor     = 1
    !byte PokeWhite   ;PokeOrange    ;  EscTimeColor        = 2
-   !byte PokeMedGrey ;PokeGreen     ;  EscEscC,EscMenuMiscColor    = 3
-   !byte PokeLtGrey    ;  EscAssignedIOHColor = 4
-   !byte PokeRed     ;PokeYellow    ;  EscOptionColor      = 5
-   !byte PokeDrkGrey ;PokeLtBlue    ;  EscSourcesColor     = 6
-   !byte PokeBlue      ;  EscTypeColor        = 7
-   !byte PokeBrown   ;PokeLtGreen   ;  EscNameColor        = 8
+   !byte PokeMedGrey ;PokeGreen     ;  EscMenuMiscColor    = 3
+   !byte PokeRed     ;PokeYellow    ;  EscOptionColor      = 4
+   !byte PokeDrkGrey ;PokeLtBlue    ;  EscSourcesColor     = 5
+   !byte PokeLtGrey  ;PokeBlue      ;  EscTypeColor        = 6
+   !byte PokeBrown   ;PokeLtGreen   ;  EscNameColor        = 7
 
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
-   !tx TypeColor, "   "  ; rtNone        = 0
-   !tx ChrDrkGrey,"Unk"  ; rtUnknown     = 1
-   !tx TypeColor, "Dir"  ; rtDirectory   = 2 
-   !tx TypeColor, "D64"  ; rtD64         = 3
-   !tx TypeColor, "D71"  ; rtD71         = 4  
-   !tx TypeColor, "D81"  ; rtD81         = 5  
-   !tx TypeColor, "Prg"  ; rtFilePrg     = 6    //alway first valid executable file type
-   !tx TypeColor, "Crt"  ; rtFileCrt     = 7  
-   !tx TypeColor, "Hex"  ; rtFileHex     = 8  
-   !tx TypeColor, "P00"  ; rtFileP00     = 9  
-   !tx TypeColor, "SID"  ; rtFileSID     = 10 
-   !tx TypeColor, "Kla"  ; rtFileKla     = 11 
-   !tx TypeColor, "Art"  ; rtFileArt     = 12  
-   !tx TypeColor, "Txt"  ; rtFileTxt     = 13  
-   !tx TypeColor, "Seq"  ; rtFilePETSCII = 14  
-   !tx TypeColor, "16k"  ; rtBin16k      = 15  
-   !tx TypeColor, "8Hi"  ; rtBin8kHi     = 16  
-   !tx TypeColor, "8Lo"  ; rtBin8kLo     = 17  
-   !tx TypeColor, "128"  ; rtBinC128     = 18 
+   !tx 0, "   "  ; rtNone        = 0
+   !tx 0, "Unk"  ; rtUnknown     = 1
+   !tx 0, "Dir"  ; rtDirectory   = 2 
+   !tx 0, "D64"  ; rtD64         = 3
+   !tx 0, "D71"  ; rtD71         = 4  
+   !tx 0, "D81"  ; rtD81         = 5  
+   !tx 0, "Prg"  ; rtFilePrg     = 6    //alway first valid executable file type
+   !tx 0, "Crt"  ; rtFileCrt     = 7  
+   !tx 0, "Hex"  ; rtFileHex     = 8  
+   !tx 0, "P00"  ; rtFileP00     = 9  
+   !tx 0, "SID"  ; rtFileSID     = 10 
+   !tx 0, "Kla"  ; rtFileKla     = 11 
+   !tx 0, "Art"  ; rtFileArt     = 12  
+   !tx 0, "Txt"  ; rtFileTxt     = 13  
+   !tx 0, "Seq"  ; rtFilePETSCII = 14  
+   !tx 0, "16k"  ; rtBin16k      = 15  
+   !tx 0, "8Hi"  ; rtBin8kHi     = 16  
+   !tx 0, "8Lo"  ; rtBin8kLo     = 17  
+   !tx 0, "128"  ; rtBinC128     = 18 

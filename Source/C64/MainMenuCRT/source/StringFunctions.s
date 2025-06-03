@@ -249,11 +249,11 @@ PrintOnOff:
 ++ jsr PrintString 
    rts
 
-Print4CharTableHiNib
-   lsr
-   lsr
-   lsr
-   lsr ; move to lower nibble
+;Print4CharTableHiNib
+;   lsr
+;   lsr
+;   lsr
+;   lsr ; move to lower nibble
 Print4CharTable:   
 ;prints 4 chars from a table of continuous 4 char sets (no termination)
 ;X=table base lo, y=table base high, acc=index to item# (63 max)
