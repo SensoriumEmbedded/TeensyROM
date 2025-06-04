@@ -123,24 +123,23 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
 
 enum ColorRefOffsets       //Order matches TblEscC:
 {
-   EscBorderColor      = 0, //  PokePurple   Screen Border
-   EscBackgndColor     = 1, //  PokeBlack    Screen Background
-   EscTimeColor        = 2, //  PokeOrange   Time Display
-   EscMenuMiscColor    = 3, //  PokeGreen    
-   EscOptionColor      = 4, //  PokeYellow   
-   EscSourcesColor     = 5, //  PokeLtBlue   
-   EscTypeColor        = 6, //  PokeBlue     
-   EscNameColor        = 7, //  PokeLtGreen                    
+   EscBackgndColor     = 0, // Black   Screen Background
+   EscBorderColor      = 1, // Purple  Screen Border
+   EscTRBannerColor    = 2, // Purple  Top of screen banner color
+   EscTimeColor        = 3, // Orange  Time Display & Waiting msg
+   EscOptionColor      = 4, // Yellow  Input key option indication
+   EscSourcesColor     = 5, // LtBlue  General text/descriptions
+   EscNameColor        = 6, // LtGreen FIle names & other text
 };
 
-enum  RegSIDSpeedChanges  //wRegSIDSpeedChange
+enum  RegSIDSpeedChanges  // wRegSIDSpeedChange
 {
-   rsscIncMajor        = 1, //inc major % units
-   rsscDecMajor        = 2, //dec major % units
-   rsscIncMinor        = 3, //inc minor % units
-   rsscDecMinor        = 4, //dec minor % units
-   rsscSetDefault      = 5, //Set Default Speed
-   rsscToggleLogLin    = 6, //Toggle control type
+   rsscIncMajor        = 1, // inc major % units
+   rsscDecMajor        = 2, // dec major % units
+   rsscIncMinor        = 3, // inc minor % units
+   rsscDecMinor        = 4, // dec minor % units
+   rsscSetDefault      = 5, // Set Default Speed
+   rsscToggleLogLin    = 6, // Toggle control type
 };
 
 enum RegSerialStringSelect // rwRegSerialString

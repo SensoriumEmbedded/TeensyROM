@@ -21,7 +21,7 @@
 ; ******************************* Strings/Messages ******************************* 
 
 MsgBanner:  ;set color before clearing for char poke default  
-   !tx EscC,EscNameColor, ChrClear, ChrPurple, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
+   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
 MsgSource:    
    !tx EscC,EscSourcesColor, "Src: ", 0 
 MsgMainOptions1:
@@ -183,14 +183,13 @@ MsgHasHandler:
 
 TblEscC:  ;order matches enum ColorRefOffsets
           ;string escape token (EscC) next character cross-reference
-   !byte PokePurple    ;PokeYellow  ;  EscBorderColor      = 0
-   !byte PokeBlack     ;PokeOrange  ;  EscBackgndColor     = 1
-   !byte PokeOrange    ;PokeWhite   ;  EscTimeColor        = 2
-   !byte PokeGreen     ;PokeMedGrey ;  EscMenuMiscColor    = 3
-   !byte PokeYellow    ;PokeRed     ;  EscOptionColor      = 4
-   !byte PokeLtBlue    ;PokeDrkGrey ;  EscSourcesColor     = 5
-   !byte PokeBlue      ;PokeLtGrey  ;  EscTypeColor        = 6
-   !byte PokeLtGreen   ;PokeBrown   ;  EscNameColor        = 7
+   !byte PokeBlack     ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokePurple    ;EscBorderColor      = 1 ; Screen Border
+   !byte PokePurple    ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeOrange    ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeYellow    ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtBlue    ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtGreen   ;EscNameColor        = 6 ; FIle names & other text
 
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
