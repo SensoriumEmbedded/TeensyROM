@@ -31,7 +31,7 @@ SettingsMenu:
    ldy #0 ;col
    clc
    jsr SetCursor
-   lda TblEscC+EscNameColor
+   lda TblEscC+EscMenuMiscColor
    sta $0286  ;set text color
    lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
    jsr PrintSerialString

@@ -120,14 +120,14 @@
    ricmdSIDVoiceMute   = 6 ; Apply SID Voice Mute Settings
 
 ;enum ColorRefOffsets       //Order matches TblEscC:
-   EscBorderColor      = 0 ; Screen Border
-   EscBackgndColor     = 1 ; Screen Background
-   EscTimeColor        = 2 ; Time Display
-   EscMenuMiscColor    = 3 ; 
-   EscOptionColor      = 4 ; 
-   EscSourcesColor     = 5 ; 
-   EscTypeColor        = 6 ; 
-   EscNameColor        = 7 ;
+   EscBorderColor      = 0 ; PokePurple  Screen Border
+   EscBackgndColor     = 1 ; PokeBlack   Screen Background
+   EscTimeColor        = 2 ; PokeOrange  Time Display
+   EscMenuMiscColor    = 3 ; PokeGreen   
+   EscOptionColor      = 4 ; PokeYellow  
+   EscSourcesColor     = 5 ; PokeLtBlue  
+   EscTypeColor        = 6 ; PokeBlue    
+   EscNameColor        = 7 ; PokeLtGreen 
 
 ;enum  RegSIDSpeedChanges  //wRegSIDSpeedChange
    rsscIncMajor        = 1 ; inc major % units

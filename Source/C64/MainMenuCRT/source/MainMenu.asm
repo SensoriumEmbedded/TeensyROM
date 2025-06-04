@@ -1140,8 +1140,8 @@ DisplaySetAutoLaunch:
 
 ViewTextFile:
    jsr PrintBanner  
-   lda #ChrYellow
-   jsr SendChar
+   lda TblEscC+EscOptionColor
+   sta $0286  ;set text color
    
    jsr StartSelItem_WaitForTRDots ;Tell Teensy to check file and prep for xfer
 

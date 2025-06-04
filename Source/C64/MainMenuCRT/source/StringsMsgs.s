@@ -27,7 +27,7 @@ MsgSource:
 MsgMainOptions1:
    !tx ChrRvsOn, EscC,EscOptionColor, "F1", ChrRvsOff, EscC,EscSourcesColor,  " Teensy Mem  "
    !tx ChrRvsOn, EscC,EscOptionColor, "F5", ChrRvsOff, EscC,EscSourcesColor,  " USB Drive  "
-   !tx ChrLtRed, "Pg " 
+   !tx EscC,EscMenuMiscColor, "Pg " 
    !tx 0
 ;page x/y printed here
 MsgMainOptions2:
@@ -68,7 +68,7 @@ MsgSIDInfo3:
    !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
    !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Default Play Speed", ChrReturn
    !tx "   ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Play/Pause SID", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", EscC,EscNameColor, ChrRvsOn,"123", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", ChrRvsOn,"123", ChrReturn ;123 colors get set in PrintVoiceMutes 
    !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Border Effect On/Off", ChrReturn
    !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set main background SID", ChrReturn
    !tx 0
@@ -141,23 +141,23 @@ MsgSettingsMenu2SpaceRet:
    !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
 MsgSettingsMenu3:
-   !tx ChrBlue," github.com/SensoriumEmbedded/TeensyROM"
+   !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
 MsgFWVerify:
-   !tx ChrReturn, ChrReturn, ChrOrange, "Please Confirm:"
+   !tx ChrReturn, ChrReturn, EscC,EscOptionColor, "Please Confirm:"
    !tx ChrReturn, "Update TeensyROM FirmWare? y/n "
    !tx 0
 
 MsgFWInProgress:
-   !tx ChrLtRed, "Yes", ChrReturn, ChrReturn
+   !tx EscC,EscNameColor, "Yes", ChrReturn, ChrReturn
    !tx "Firmware update in progress!", ChrReturn
    !tx "It will take about 2 minutes to complete" ;, ChrReturn
    !tx "DO NOT TURN OFF POWER WHILE UPDATING!!!", ChrReturn, EscC,EscMenuMiscColor
    !tx 0
 
 MsgFWUpdateFailed:
-   !tx ChrLtRed, ChrReturn, "FW Update failed"
+   !tx EscC,EscOptionColor, ChrReturn, "FW Update failed"
    !tx 0
 
 MsgAnyKey:
@@ -175,7 +175,7 @@ MsgTesting:
 MsgPass:
    !tx "Passed ", 0
 MsgFail:
-   !tx ChrRed, "Failed ", 0
+   !tx "Failed ", 0
 MsgDone:
    !tx EscC,EscNameColor, "Done", 0
 MsgHasHandler:
@@ -183,14 +183,14 @@ MsgHasHandler:
 
 TblEscC:  ;order matches enum ColorRefOffsets
           ;string escape token (EscC) next character cross-reference
-   !byte PokeYellow  ;PokePurple    ;  EscBorderColor      = 0
-   !byte PokeOrange  ;PokeBlack     ;  EscBackgndColor     = 1
-   !byte PokeWhite   ;PokeOrange    ;  EscTimeColor        = 2
-   !byte PokeMedGrey ;PokeGreen     ;  EscMenuMiscColor    = 3
-   !byte PokeRed     ;PokeYellow    ;  EscOptionColor      = 4
-   !byte PokeDrkGrey ;PokeLtBlue    ;  EscSourcesColor     = 5
-   !byte PokeLtGrey  ;PokeBlue      ;  EscTypeColor        = 6
-   !byte PokeBrown   ;PokeLtGreen   ;  EscNameColor        = 7
+   !byte PokePurple    ;PokeYellow  ;  EscBorderColor      = 0
+   !byte PokeBlack     ;PokeOrange  ;  EscBackgndColor     = 1
+   !byte PokeOrange    ;PokeWhite   ;  EscTimeColor        = 2
+   !byte PokeGreen     ;PokeMedGrey ;  EscMenuMiscColor    = 3
+   !byte PokeYellow    ;PokeRed     ;  EscOptionColor      = 4
+   !byte PokeLtBlue    ;PokeDrkGrey ;  EscSourcesColor     = 5
+   !byte PokeBlue      ;PokeLtGrey  ;  EscTypeColor        = 6
+   !byte PokeLtGreen   ;PokeBrown   ;  EscNameColor        = 7
 
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term
