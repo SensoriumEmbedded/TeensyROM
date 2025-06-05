@@ -55,7 +55,15 @@ NoHW
 -  jmp -
 }
 
-+  lda #rCtlVanishROM ;Deassert Game & ExROM
+   ;copy colors from IO1 to local RAM
++  ldx #NumColorRefs
+-  lda rwRegColorRefStart-1+IO1Port, x ;zero based offset
+   sta TblEscC-1, x
+   dex
+   bne -
+   jsr ScreenColorOnly ;update screen colors now that we have them
+
+   lda #rCtlVanishROM ;Deassert Game & ExROM
    sta wRegControl+IO1Port
 
    ;Get video standard and TOD frequency
@@ -1074,8 +1082,8 @@ TextScreenMemColor:
    sta $d016 
    lda #$1b  
    sta $d011 
-
-   ;set screen and border colors back
+ScreenColorOnly:
+   ;set screen and border colors 
    lda TblEscC+EscBorderColor
    sta BorderColorReg
    lda TblEscC+EscBackgndColor

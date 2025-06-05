@@ -185,8 +185,8 @@ TblEscC:  ;order matches enum ColorRefOffsets
           ;string escape token (EscC) next character cross-reference
         ;Local Default     EEPROM default  Description
    !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
-   !byte PokeMedGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
-   !byte PokeMedGrey     ; PokePurple     ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeDrkGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeDrkGrey     ; PokePurple     ;EscTRBannerColor    = 2 ; Top of screen banner color
    !byte PokeWhite       ; PokeOrange     ;EscTimeColor        = 3 ; Time Display & Waiting msg
    !byte PokeLtGrey      ; PokeYellow     ;EscOptionColor      = 4 ; Input key option indication
    !byte PokeDrkGrey     ; PokeLtBlue     ;EscSourcesColor     = 5 ; General text/descriptions
