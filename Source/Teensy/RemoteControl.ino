@@ -80,6 +80,32 @@ FLASHMEM bool RemotePauseSID()
    return InterruptC64(ricmdSIDPause);
 }
 
+// Command: 
+// Set one of the colors in the TR UI 
+//    Color will be stored in EEPROM and IO space, TR menu will need to be reset to take visual effect
+//
+// Workflow:
+// Receive <-- SetColorToken Token 0x6422
+// Receive <-- Color reference to set (Range 0 to NumColorRefs-1) See enum ColorRefOffsets
+// Receive <-- Color to set (Range 0 to 15)  See enum PokeColors
+// Send --> AckToken 0x64CC or FailToken 0x9B7F
+FLASHMEM bool SetColorRef()
+{
+
+   if (!SerialAvailabeTimeout()) return false;
+   uint8_t ColRefNum = Serial.read();
+
+   if (!SerialAvailabeTimeout()) return false;
+   uint8_t ColorNum = Serial.read();
+   
+   if (ColRefNum >= NumColorRefs) return false;
+   if (ColorNum  > 15) return false;
+   
+   IO1[rwRegColorRefStart+ColRefNum]=ColorNum;
+   EEPROM.write(eepAdColorRefStart+ColRefNum , ColorNum);
+   
+   return true;
+}
 
 // Command: 
 // Set sub-song number of currently loaded SID

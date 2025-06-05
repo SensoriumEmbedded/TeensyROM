@@ -102,6 +102,10 @@ FLASHMEM void ServiceSerial()
                if(RemoteSetSIDVoiceMute()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
+            case SetColorToken: //Set a TR UI color value
+               if(SetColorRef()) SendU16(AckToken);
+               else SendU16(FailToken);
+               break;
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
