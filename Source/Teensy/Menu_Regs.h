@@ -66,7 +66,11 @@ enum IO1_Registers  //offset from 0xDE00
    rwRegCodeStartPage  = 37 , // TR Code Start page in C64 RAM
    rwRegCodeLastPage   = 38 , // TR Code last page used in C64 RAM
    rwRegScratch        = 39 , // Bi-Directional Scratch Register
+   rwRegColorRefStart  = 40 , // Color ref transfer eeprom<->C64, WAIT on Write
+                              //offsets defined in enum ColorRefOffsets
+   //NextReg = rwRegColorRefStart+NumColorRefs,
 
+  
    // These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 , // start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0, 
@@ -130,6 +134,7 @@ enum ColorRefOffsets       //Order matches TblEscC:
    EscOptionColor      = 4, // Yellow  Input key option indication
    EscSourcesColor     = 5, // LtBlue  General text/descriptions
    EscNameColor        = 6, // LtGreen FIle names & other text
+   NumColorRefs        = 7, // Number of color references
 };
 
 enum  RegSIDSpeedChanges  // wRegSIDSpeedChange

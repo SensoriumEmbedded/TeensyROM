@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.6+10"; //*VERSION*
+char strVersionNumber[] = "v0.6.6+13"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -32,18 +32,18 @@ char strVersionNumber[] = "v0.6.6+10"; //*VERSION*
 #define GoodSIDToken      0x9B81
 
 
-#define eepMagicNum         0xfeed640b // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed640c // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
                                        // 05: 12/27/23 inverted default SID enable bit
                                        // 06: 3/13/24  Added eepAdDefaultSID
-                                       // 07: 6/3/24   Added eepAdCrtBootName (unreleased)
+                                       // 07: 6/3/24   Added eepAdCrtBootName
                                        // 08: 7/7/24   Separate Min Boot Indicator
                                        // 09: 10/2/24  Autolaunch Indicator
                                        // 0a: 12/29/24 RW Delay default to on
                                        // 0b: 2/13/25  12 hour clock mode by default
-                                       
+                                       // 0c: 6/5/25   added eepAdColorRefStart
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -66,8 +66,9 @@ enum InternalEEPROMmap
    eepAdMinBootInd    = 3463, // (1:uint8_t)    Indicates that Minimal boot should execute eepAdCrtBootName (!=0) or passthrough (=0)
    eepAdAutolaunchName= 3464, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
    eepAdPwrUpDefaults2= 3764, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
+   eepAdColorRefStart = 3765, // (NumColorRefs=7)  UI color references, see ColorRefOffsets
 
-   eepAdNext          = 3765, // Next address to be used
+   //eepAdNext        = 3765+NumColorRefs, // Next address to be used
    //Max size = 4284 (4k, emulated in flash)
 };
 
@@ -274,3 +275,23 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 #define CPU_RESTART_VAL	   (0x5FA0004)
 #define REBOOT             (*CPU_RESTART_ADDR = CPU_RESTART_VAL)
 
+//C64 specific:
+enum PokeColors
+{
+   PokeBlack   = 0 ,
+   PokeWhite   = 1 ,
+   PokeRed     = 2 ,
+   PokeCyan    = 3 ,
+   PokePurple  = 4 ,
+   PokeGreen   = 5 ,
+   PokeBlue    = 6 ,
+   PokeYellow  = 7 ,
+   PokeOrange  = 8 ,
+   PokeBrown   = 9 ,
+   PokeLtRed   = 10,
+   PokeDrkGrey = 11,
+   PokeMedGrey = 12,
+   PokeLtGreen = 13,
+   PokeLtBlue  = 14,
+   PokeLtGrey  = 15,
+};

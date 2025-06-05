@@ -183,13 +183,14 @@ MsgHasHandler:
 
 TblEscC:  ;order matches enum ColorRefOffsets
           ;string escape token (EscC) next character cross-reference
-   !byte PokeBlack     ;EscBackgndColor     = 0 ; Screen Background
-   !byte PokePurple    ;EscBorderColor      = 1 ; Screen Border
-   !byte PokePurple    ;EscTRBannerColor    = 2 ; Top of screen banner color
-   !byte PokeOrange    ;EscTimeColor        = 3 ; Time Display & Waiting msg
-   !byte PokeYellow    ;EscOptionColor      = 4 ; Input key option indication
-   !byte PokeLtBlue    ;EscSourcesColor     = 5 ; General text/descriptions
-   !byte PokeLtGreen   ;EscNameColor        = 6 ; FIle names & other text
+        ;Local Default     EEPROM default  Description
+   !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokeMedGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeMedGrey     ; PokePurple     ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeWhite       ; PokeOrange     ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeLtGrey      ; PokeYellow     ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeDrkGrey     ; PokeLtBlue     ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names & other text
 
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term

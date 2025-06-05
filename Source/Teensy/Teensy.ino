@@ -89,11 +89,12 @@ void setup()
    IO1[rWRegCurrMenuWAIT] = rmtTeensy;
    IO1[rRegPresence1]     = 0x55;   
    IO1[rRegPresence2]     = 0xAA;   
-   for (uint16_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
+   for (uint8_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm] = 0;   
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegPwrUpDefaults2]= EEPROM.read(eepAdPwrUpDefaults2);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
+   for (uint8_t reg=0; reg<NumColorRefs; reg++) IO1[rwRegColorRefStart+reg]=EEPROM.read(eepAdColorRefStart+reg); 
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
    MenuChange(); //set up drive path, menu source/size
@@ -270,6 +271,14 @@ void SetEEPDefaults()
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
    EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+   //default color scheme:
+   EEPROM.write(eepAdColorRefStart+EscBackgndColor , PokeBlack  ); 
+   EEPROM.write(eepAdColorRefStart+EscBorderColor  , PokePurple ); 
+   EEPROM.write(eepAdColorRefStart+EscTRBannerColor, PokePurple ); 
+   EEPROM.write(eepAdColorRefStart+EscTimeColor    , PokeOrange ); 
+   EEPROM.write(eepAdColorRefStart+EscOptionColor  , PokeYellow ); 
+   EEPROM.write(eepAdColorRefStart+EscSourcesColor , PokeLtBlue ); 
+   EEPROM.write(eepAdColorRefStart+EscNameColor    , PokeLtGreen); 
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }

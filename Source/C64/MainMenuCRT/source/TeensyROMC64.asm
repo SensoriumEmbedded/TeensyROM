@@ -90,23 +90,14 @@ Warmstart:
    
 ;******************************* Main Code Start ************************************   
    ;screen setup:     
-   lda #PokePurple   ;EscBorderColor Set after TR launched
+   lda #PokeDrkGrey  ;EscBorderColor Set after TR launched
    sta BorderColorReg
    lda #PokeBlack    ;EscBackgndColor Set after TR launched
    sta BackgndColorReg
 
    lda #<MsgCartBanner
    ldy #>MsgCartBanner
-   jsr $ab1e   ;PrintString; can use basic since this is an 8k cart
-;   ;jsr PrintString  
-;   sta PtrAddrLo
-;   sty PtrAddrHi
-;   ldy #0
-;-  lda (PtrAddrLo), y
-;   beq MainCopyToRAM
-;   jsr SendChar
-;   iny
-;   bne -
+   jsr $ab1e   ;can use basic since this is an 8k cart
       
 MainCopyToRAM
    lda #>MainCode
@@ -135,7 +126,7 @@ MainCopyToRAM
    jmp MainCodeRAMStart
 
 MsgCartBanner:    
-   !tx ChrClear, ChrToLower, ChrPurple, ChrRvsOn
+   !tx ChrClear, ChrToLower, ChrDrkGrey, ChrRvsOn
    !tx "     *** Sensorium Embedded 2025 ***    "  ;*VERSION*
    !tx ChrRvsOff, ChrBlack, 0 ;hide sid load msg
       
