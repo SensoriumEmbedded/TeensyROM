@@ -32,12 +32,11 @@ ColorConfigMenu:
    jsr PrintString 
 
    ;copy current colors to local temp storage
-   ldx #NumColorRefs
--  lda TblEscC-1, x ;zero based offset
-   sta TempTblEscC-1, x
-   dex
-   bne -
+   ldx #<TblEscC
+   ldy #>TblEscC
+   jsr CopyColorsToLclTemp
 
+PrintAllColorRef:
    ;print all the current color names from temp buffer:
    ldx #NumColorRefs
 -  jsr PrintColorRef
@@ -49,7 +48,7 @@ WaitColorMenuKey:
    jsr CheckForIRQGetIn    
    beq WaitColorMenuKey
 
-+  cmp #'1'  
++  cmp #'1' ;increment color parameter number 
    bmi +   ;skip if below '1'
    cmp #'1'+NumColorRefs
    bpl +   ;skip if above NumColorRefs
@@ -66,7 +65,7 @@ SavePrintColorUpdate
    jsr PrintColorRef   
    jmp WaitColorMenuKey  
 
-+  cmp #'!'  
++  cmp #'!' ;decrement color parameter number 
    bmi +   ;skip if below '!' (shift 1)
    cmp #'!'+NumColorRefs
    bpl +   ;skip if above NumColorRefs
@@ -76,6 +75,34 @@ SavePrintColorUpdate
    ldy TempTblEscC, x
    dey
    jmp SavePrintColorUpdate
+
++  cmp #'a' ;TR default color preset
+   bne + 
+   ldx #<Preset_TRDef_TblEscC
+   ldy #>Preset_TRDef_TblEscC
+   jsr CopyColorsToLclTemp
+   jmp PrintAllColorRef
+
++  cmp #'b' ;Black & White color preset
+   bne + 
+   ldx #<Preset_BnW_TblEscC
+   ldy #>Preset_BnW_TblEscC
+   jsr CopyColorsToLclTemp
+   jmp PrintAllColorRef
+
++  cmp #'c' ;C64 color preset
+   bne + 
+   ldx #<Preset_C64_TblEscC
+   ldy #>Preset_C64_TblEscC
+   jsr CopyColorsToLclTemp
+   jmp PrintAllColorRef
+
++  cmp #'d' ;C128 color preset
+   bne + 
+   ldx #<Preset_C128_TblEscC
+   ldy #>Preset_C128_TblEscC
+   jsr CopyColorsToLclTemp
+   jmp PrintAllColorRef
 
 +  cmp #ChrReturn  ;Apply Settings
    bne +
@@ -115,7 +142,7 @@ PrintColorRef:
    clc
    adc #4 ;color start row
    tax    ;row #
-   ldy #3 ;col #
+   ldy #4 ;col #
    ;clc
    jsr SetCursor
    lda #ChrRvsOn
@@ -139,9 +166,26 @@ PrintColorRef:
    lda #ChrRvsOff
    jsr SendChar
    rts
+
+CopyColorsToLclTemp:   
+   ;coppies color ref table to local temp table
+   ;X=table base lo, y=table base high
+   ;ldx #<Preset_TRDef_TblEscC
+   ;ldy #>Preset_TRDef_TblEscC
+   stx smcColorTableAddress+1
+   sty smcColorTableAddress+2
+   ldx #NumColorRefs
+-  dex
+smcColorTableAddress
+   lda $fff0, x ;zero based offset
+   sta TempTblEscC, x
+   cpx #0
+   bne -
+   rts
    
 TempTblEscC:  ;order matches enum ColorRefOffsets
-          ;Temporary local storage for string escape token (EscC) next character cross-reference
+        ;Temporary local storage for string escape token (EscC) next character cross-reference
+        ;Only used in color config screen
         ;Local Default     EEPROM default  Description
    !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
    !byte PokeDrkGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
@@ -155,21 +199,20 @@ MsgColorMenu:
    !tx ChrReturn, EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
    !tx EscC,EscNameColor,  "Set individual colors:", EscC,EscOptionColor, " (norm or Shift)", ChrReturn
 
-
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Background", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Border", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Time Display & Waiting msg", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Input key option indication", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "General text/descriptions", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "File names & headings", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Background", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrQuote, ChrQuote, ChrCRSRLeft, ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Border", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3#", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4$", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Time Display & Waiting msg", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5%", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Input key option indicator", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6&", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "General text/descriptions", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7'", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "File names & headings", ChrReturn
    !tx ChrReturn
 
-   !tx EscC,EscNameColor,  " Presets:", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "CGA Inspired", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sunshine", ChrReturn
+   !tx EscC,EscNameColor,  " Select presets:", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default   "
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C64 Mono", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C128 Mono", ChrReturn
    !tx ChrReturn
    
    !tx EscC,EscNameColor,  " General:", ChrReturn
@@ -195,7 +238,47 @@ TblColorNames:
    !tx "Lt Green"  ; = 13,
    !tx "Lt Blue "  ; = 14,
    !tx "Lt Grey "  ; = 15,
+
+
+Preset_TRDef_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;TR Defaults
+   !byte PokeBlack       ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokePurple      ;EscBorderColor      = 1 ; Screen Border
+   !byte PokePurple      ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeOrange      ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeYellow      ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtBlue      ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtGreen     ;EscNameColor        = 6 ; FIle names and information
    
- 
+Preset_BnW_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;Black & White
+   !byte PokeBlack       ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokeDrkGrey     ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeDrkGrey     ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeWhite       ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeLtGrey      ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeDrkGrey     ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeMedGrey     ;EscNameColor        = 6 ; FIle names and information
+
+Preset_C64_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;C64 colors
+   !byte PokeBlue        ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokeLtBlue      ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeLtBlue      ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeLtBlue      ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeLtBlue      ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtBlue      ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtBlue      ;EscNameColor        = 6 ; FIle names and information
+
+Preset_C128_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;C128 colors
+   !byte PokeDrkGrey     ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokeLtGreen     ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeLtGreen     ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeLtGreen     ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeLtGreen     ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtGreen     ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtGreen     ;EscNameColor        = 6 ; FIle names and information
+
 
    
