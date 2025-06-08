@@ -277,6 +277,12 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
++  cmp #'C' ;Configure Colors
+   bne +
+   jsr ColorConfigMenu
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent    
+
 +  cmp #ChrLeftArrow ;Write NFC Tag to current file
    bne +  
    lda #0  ;Normal File tag
@@ -1313,6 +1319,6 @@ TblRowToMemLoc:
    !src "source\SIDRelated.s"
    !src "source\StringFunctions.s"
    !src "source\StringsMsgs.s"
-
+   !src "source\ColorConfig.s"
 MainCodeRAMEnd = *
    !byte 0

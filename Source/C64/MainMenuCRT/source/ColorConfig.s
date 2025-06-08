@@ -1,0 +1,201 @@
+; MIT License
+; 
+; Copyright (c) 2025 Travis Smith
+; 
+; Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
+; and associated documentation files (the "Software"), to deal in the Software without 
+; restriction, including without limitation the rights to use, copy, modify, merge, publish, 
+; distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom 
+; the Software is furnished to do so, subject to the following conditions:
+; 
+; The above copyright notice and this permission notice shall be included in all copies or 
+; substantial portions of the Software.
+; 
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
+; BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+; This color util is ~900 bytes long, could make it a stand-alone app
+
+
+ColorConfigMenu:
+   jsr PrintBanner
+   lda #<MsgColorMenu
+   ldy #>MsgColorMenu
+   jsr PrintString 
+
+   lda #<MsgSettingsMenu2SpaceRet
+   ldy #>MsgSettingsMenu2SpaceRet
+   jsr PrintString 
+
+   ;copy current colors to local temp storage
+   ldx #NumColorRefs
+-  lda TblEscC-1, x ;zero based offset
+   sta TempTblEscC-1, x
+   dex
+   bne -
+
+   ;print all the current color names from temp buffer:
+   ldx #NumColorRefs
+-  jsr PrintColorRef
+   dex
+   bne -
+
+WaitColorMenuKey:
+   jsr DisplayTime   
+   jsr CheckForIRQGetIn    
+   beq WaitColorMenuKey
+
++  cmp #'1'  
+   bmi +   ;skip if below '1'
+   cmp #'1'+NumColorRefs
+   bpl +   ;skip if above NumColorRefs
+   sec       ;set to subtract without carry
+   sbc #'1'   ;make zero based
+   tax
+   ldy TempTblEscC, x
+   iny
+SavePrintColorUpdate
+   tya
+   and #$0f ;15 colors max
+   sta TempTblEscC, x
+   inx ; make 1 based
+   jsr PrintColorRef   
+   jmp WaitColorMenuKey  
+
++  cmp #'!'  
+   bmi +   ;skip if below '!' (shift 1)
+   cmp #'!'+NumColorRefs
+   bpl +   ;skip if above NumColorRefs
+   sec       ;set to subtract without carry
+   sbc #'!'   ;make zero based
+   tax
+   ldy TempTblEscC, x
+   dey
+   jmp SavePrintColorUpdate
+
++  cmp #ChrReturn  ;Apply Settings
+   bne +
+   ;copy local temp storage to current colors 
+   ldx #NumColorRefs
+-  txa
+   pha
+   lda TempTblEscC-1, x ;zero based offset
+   sta TblEscC-1, x
+   sta rwRegColorRefStart-1+IO1Port, x ;zero based offset
+   jsr WaitForTRWaitMsg  ;must wait for rwRegColorRefStart writes
+   pla 
+   tax
+   dex
+   bne -
+   jsr ScreenColorOnly ;update screen colors
+   jmp ColorConfigMenu ;reprint screen
+
++  cmp #ChrF4  ;toggle music
+   bne +
+   jsr ToggleSIDMusic
+   jmp WaitColorMenuKey  
+
++  cmp #ChrF1     ;back to Main Menu
+   beq +
+   cmp #ChrSpace  ;back to Main Menu
+   beq +
+   jmp WaitColorMenuKey   
++  rts
+
+PrintColorRef:
+   ;print temp color ref from X register (1 based) in correct location
+   ;X register not disturbed!
+   ;set cursor position:
+   txa
+   pha
+   clc
+   adc #4 ;color start row
+   tax    ;row #
+   ldy #3 ;col #
+   ;clc
+   jsr SetCursor
+   lda #ChrRvsOn
+   jsr SendChar
+   pla
+
+   tax
+   lda TempTblEscC-1, x ;read the color, conv to zero based offset
+   sta $0286  ;set text color    
+   ;print color string from TblColorNames
+   asl
+   asl
+   asl  ;mult by 8
+   tay
+-  lda TblColorNames, y 
+   jsr SendChar
+   iny
+   tya
+   and #7
+   bne -
+   lda #ChrRvsOff
+   jsr SendChar
+   rts
+   
+TempTblEscC:  ;order matches enum ColorRefOffsets
+          ;Temporary local storage for string escape token (EscC) next character cross-reference
+        ;Local Default     EEPROM default  Description
+   !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokeDrkGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeDrkGrey     ; PokePurple     ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeWhite       ; PokeOrange     ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeLtGrey      ; PokeYellow     ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeDrkGrey     ; PokeLtBlue     ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names and information
+   
+MsgColorMenu:
+   !tx ChrReturn, EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
+   !tx EscC,EscNameColor,  "Set individual colors:", EscC,EscOptionColor, " (norm or Shift)", ChrReturn
+
+
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Background", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Border", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Time Display & Waiting msg", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Input key option indication", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "General text/descriptions", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "File names & headings", ChrReturn
+   !tx ChrReturn
+
+   !tx EscC,EscNameColor,  " Presets:", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "CGA Inspired", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sunshine", ChrReturn
+   !tx ChrReturn
+   
+   !tx EscC,EscNameColor,  " General:", ChrReturn
+   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Apply Selected Colors", ChrReturn
+   !tx ChrReturn
+   !tx 0
+   
+TblColorNames:
+   ;8 characters each, no termination
+   !tx " Black  "  ; = 0 ,
+   !tx " White  "  ; = 1 ,
+   !tx "  Red   "  ; = 2 ,
+   !tx "  Cyan  "  ; = 3 ,
+   !tx " Purple "  ; = 4 ,
+   !tx " Green  "  ; = 5 ,
+   !tx "  Blue  "  ; = 6 ,
+   !tx " Yellow "  ; = 7 ,
+   !tx " Orange "  ; = 8 ,
+   !tx " Brown  "  ; = 9 ,
+   !tx " Lt Red "  ; = 10,
+   !tx "Drk Grey"  ; = 11,
+   !tx "Med Grey"  ; = 12,
+   !tx "Lt Green"  ; = 13,
+   !tx "Lt Blue "  ; = 14,
+   !tx "Lt Grey "  ; = 15,
+   
+ 
+
+   
