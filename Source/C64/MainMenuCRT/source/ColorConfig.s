@@ -135,7 +135,9 @@ SavePrintColorUpdate
 
 PrintColorRef:
    ;print temp color ref from X register (1 based) in correct location
-   ;X register not disturbed!
+   ; X register (not disturbed) color ref # to print
+   ; A and Y are trashed
+
    ;set cursor position:
    txa
    pha
@@ -143,15 +145,27 @@ PrintColorRef:
    adc #4 ;color start row
    tax    ;row #
    ldy #4 ;col #
-   ;clc
+   ;clc  ;should be clear from adc
    jsr SetCursor
-   lda #ChrRvsOn
-   jsr SendChar
-   pla
-
+   pla 
    tax
-   lda TempTblEscC-1, x ;read the color, conv to zero based offset
-   sta $0286  ;set text color    
+   
+   ;set text color/reverse
+   ;ldx smcSavedColorRefNum+1 ;restore color ref num
+   ldy TempTblEscC-1, x ;read the color, conv to zero based offset
+   cpy TblEscC+EscBackgndColor ;compare color chosen to current background color   
+   bne +
+   ;color=background: offset print color, leave RVS off
+   tya
+   dey ;matches background offset char color by 1
+   jmp ++
+   ;color!=background:  print actual color, RVS on
++  lda #ChrRvsOn
+   jsr SendChar
+   tya
+   
+;a: color num, y: text color
+++ sty $0286  ;set text color    
    ;print color string from TblColorNames
    asl
    asl
