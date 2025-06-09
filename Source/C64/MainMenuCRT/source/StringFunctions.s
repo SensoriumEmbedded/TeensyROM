@@ -43,6 +43,9 @@ PrintString:
    ; process special escape char
    
    jsr GetNextChar
+   ; check for other special functions
+   
+   ; assume it's a color reference:
    tax
    lda TblEscC, x
    sta $0286  ;set text color
@@ -249,26 +252,3 @@ PrintOnOff:
 ++ jsr PrintString 
    rts
 
-;Print4CharTableHiNib
-;   lsr
-;   lsr
-;   lsr
-;   lsr ; move to lower nibble
-Print4CharTable:   
-;prints 4 chars from a table of continuous 4 char sets (no termination)
-;X=table base lo, y=table base high, acc=index to item# (63 max)
-;   and #0xfc 
-   stx smc4CharTableAddr+1
-   sty smc4CharTableAddr+2
-   asl
-   asl  ;mult by 4
-   tay
-smc4CharTableAddr
--  lda $fffe,y
-   jsr SendChar   ;type (4 chars)
-   iny
-   tya
-   and #3
-   bne -
-   rts
-   

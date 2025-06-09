@@ -492,12 +492,20 @@ nextLine
    ldy #>MsgHasHandler
    jsr PrintString
 ; print 4(3) char type
-+  ldx #<TblItemType
-   ldy #>TblItemType
-   lda rRegItemTypePlusIOH+IO1Port 
++  lda rRegItemTypePlusIOH+IO1Port 
    and #$7f  ;bit 7 indicates an assigned IOHandler, don't care
-   jsr Print4CharTable
-   
+;prints 4 chars from a table of continuous 4 char sets (no termination)
+;acc=index to item# (63 max)
+   asl
+   asl  ;mult by 4
+   tay
+-  lda TblItemType,y
+   jsr SendChar   ;type (4 chars)
+   iny
+   tya
+   and #3
+   bne -
+ 
 ;line is done printing, check for next...
 MenuLineDone
    inc rwRegSelItemOnPage+IO1Port
