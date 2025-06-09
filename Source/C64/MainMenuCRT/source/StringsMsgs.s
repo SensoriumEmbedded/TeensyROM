@@ -21,7 +21,7 @@
 ; ******************************* Strings/Messages ******************************* 
 
 MsgBanner:  ;set color before clearing for char poke default  
-   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, "             TeensyROM ", 0
+   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+12, "TeensyROM ", 0
 MsgSource:    
    !tx EscC,EscSourcesColor, "Src: ", 0 
 MsgMainOptions1:
@@ -32,7 +32,7 @@ MsgMainOptions1:
 ;page x/y printed here
 MsgMainOptions2:
    !tx ChrReturn
-   !tx ChrRvsOn, EscC,EscOptionColor, "F3", ChrRvsOff, EscC,EscSourcesColor,  " SD Card     "
+   !tx ChrRvsOn, EscC,EscOptionColor, "F3", ChrRvsOff, EscC,EscSourcesColor,  " SD Card", EscC,EscArgSpaces+5
    !tx ChrRvsOn, EscC,EscOptionColor, "F7", ChrRvsOff, EscC,EscMenuMiscColor,  " Help"
    !tx 0
 
@@ -63,43 +63,43 @@ MsgSIDInfo2:
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
    !tx ChrReturn, EscC,EscSourcesColor, " Settings:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sub-Song Number:", ChrReturn   
-   !tx "   ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Adj Play Speed:", ChrReturn   
-   !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
-   !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Default Play Speed", ChrReturn
-   !tx "   ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Play/Pause SID", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", ChrRvsOn,"123", ChrReturn ;123 colors get set in PrintVoiceMutes 
-   !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Border Effect On/Off", ChrReturn
-   !tx "      ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set main background SID", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sub-Song Number:", ChrReturn   
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Adj Play Speed:", ChrReturn   
+   !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
+   !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Default Play Speed", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Play/Pause SID", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", ChrRvsOn,"123", ChrReturn ;123 colors get set in PrintVoiceMutes 
+   !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Border Effect On/Off", ChrReturn
+   !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set main background SID", ChrReturn
    !tx 0
    
 MsgHelpMenu:   
    !tx ChrReturn, EscC,EscSourcesColor, "Help Menu:", ChrReturn
    !tx ChrReturn, " Main Menu Navigation:", ChrReturn
-   !tx    "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Cursor up/dn", ChrReturn
-   !tx    "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Page up/dn", ChrReturn
-   !tx "     ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Select file or dir", ChrReturn, ChrReturn
-   !tx "     ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Up directory", ChrReturn
-   !tx   "   ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Next entry starting with letter", ChrReturn
-   !tx    "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Beginning of current dir", ChrReturn
-   !tx "     ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
-   !tx "     ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx "     ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
-   !tx   "   ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Cursor up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Page up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Select file or dir", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Up directory", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Next entry starting with letter", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Beginning of current dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
    !tx ChrReturn
    !tx EscC,EscSourcesColor    ;, " Available here and on Main Menu:", ChrReturn
-   !tx "   Source Select:   ", EscC,EscMenuMiscColor, "Other:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
-   !tx   "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Exit to BASIC", ChrReturn
+   !tx EscC,EscArgSpaces+3, "Source Select:", EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Other:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Exit to BASIC", ChrReturn
                
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "SD Card   "
-   !tx   "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID on/off", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "SD Card"
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID on/off", ChrReturn
                
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "USB Drive "
-   !tx   "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID Information", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "USB Drive"
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID Information", ChrReturn
                
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Help      "
-   !tx   "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Settings Menu", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Help"
+   !tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Settings Menu", ChrReturn
    !tx ChrReturn
    !tx 0
 
@@ -120,25 +120,25 @@ MsgMenuUSBDrive:
 MsgSettingsMenu1:
    !tx ChrReturn, EscC,EscSourcesColor, "Settings Menu:", ChrReturn
    !tx EscC,EscMenuMiscColor 
-   !tx "   Power-On Defaults:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "12/24hr clk:", EscC,EscNameColor, " 12", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Special IO:", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Joy2 Speed:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Synch Time:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "   Play SID:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "NFC Enabled:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RW Read Dly:", ChrReturn
-   !tx EscC,EscMenuMiscColor, "   Immediate:", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Re-boot TeensyROM", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch Time via Ethernet", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Pause/Play SID", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Self Test", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Disable Auto-Launch", ChrReturn
-   !tx "    ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help Menu", ChrReturn
+   !tx EscC,EscArgSpaces+3, "Power-On Defaults:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "12/24hr clk:", EscC,EscNameColor, " 12", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Special IO:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Joy2 Speed:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Synch Time:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "   Play SID:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "NFC Enabled:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RW Read Dly:", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Immediate:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Re-boot TeensyROM", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch Time via Ethernet", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Pause/Play SID", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Self Test", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Disable Auto-Launch", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help Menu", ChrReturn
    ;!tx ChrReturn
 MsgSettingsMenu2SpaceRet:
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Back to Main menu", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
 MsgSettingsMenu3:
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
@@ -182,7 +182,7 @@ MsgHasHandler:
    !tx ChrCRSRLeft, "+", 0
 
 TblEscC:  ;order matches enum ColorRefOffsets
-          ;string escape token (EscC) next character cross-reference
+          ;Main local storage for string escape token (EscC) next character cross-reference
         ;Local Default     EEPROM default  Description
    !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
    !byte PokeDrkGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
@@ -190,7 +190,7 @@ TblEscC:  ;order matches enum ColorRefOffsets
    !byte PokeWhite       ; PokeOrange     ;EscTimeColor        = 3 ; Time Display & Waiting msg
    !byte PokeLtGrey      ; PokeYellow     ;EscOptionColor      = 4 ; Input key option indication
    !byte PokeDrkGrey     ; PokeLtBlue     ;EscSourcesColor     = 5 ; General text/descriptions
-   !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names & other text
+   !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names and information
 
 TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    ;4 bytes each, no term

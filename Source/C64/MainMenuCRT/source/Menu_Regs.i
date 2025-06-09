@@ -22,7 +22,6 @@
 
    MaxItemDispLength = 35
    MaxItemsPerPage   = 19
-   EscC              = $01 ;Escape Token for text color ref, must be otherwise unused
 
 
    ;enum IO1_Registers  //offset from 0xDE00

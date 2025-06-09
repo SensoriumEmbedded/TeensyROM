@@ -22,7 +22,7 @@
 
 #define MaxItemDispLength  35
 #define MaxItemsPerPage    19
-#define EscC             0x01  // Escape Token for text color ref, must be otherwise unused
+
 
 enum IO1_Registers  //offset from 0xDE00
 {

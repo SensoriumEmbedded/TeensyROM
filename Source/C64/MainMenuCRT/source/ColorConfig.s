@@ -211,26 +211,27 @@ TempTblEscC:  ;order matches enum ColorRefOffsets
    
 MsgColorMenu:
    !tx ChrReturn, EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
-   !tx EscC,EscNameColor,  "Set individual colors:", EscC,EscOptionColor, " (norm or Shift)", ChrReturn
+   !tx EscC,EscNameColor,  "Set individual colors:", EscC,EscOptionColor, " (up/down)", ChrReturn
 
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Background", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrQuote, ChrQuote, ChrCRSRLeft, ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Screen Border", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3#", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4$", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Time Display & Waiting msg", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5%", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "Input key option indicator", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6&", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "General text/descriptions", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7'", ChrRvsOff, ChrFillLeft, "         ", EscC,EscSourcesColor, "File names & headings", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Background", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrQuote, ChrQuote, ChrCRSRLeft, ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Border", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3#", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4$", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Time Display & Waiting msg", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5%", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Input key option indicator", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6&", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "General text/descriptions", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7'", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "File names & headings", ChrReturn
    !tx ChrReturn
 
    !tx EscC,EscNameColor,  " Select presets:", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default   "
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C64 Mono", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C128 Mono", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default"
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C64 Mono", ChrReturn
+   
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C128 Mono", ChrReturn
    !tx ChrReturn
    
    !tx EscC,EscNameColor,  " General:", ChrReturn
-   !tx "  ", EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Apply Selected Colors", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Apply Selected Colors", ChrReturn
    !tx ChrReturn
    !tx 0
    

@@ -17,6 +17,12 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+   EscC              = $01 ;Escape Token for text color ref or spaces, must be otherwise unused
+   EscArgMask        = $c0 ;top 2 bits identify EscCharArg Type
+   EscArgSpaces      = $80 ;indicates number of spaces in lower 6 bits
+   EscArgColorRef    = $00 ;Alwys 0 (default): indicates color ref # in lower 6 bits
+
+
 PrintSerialString:
    ;load Acc with RegSerialStringSelect # that will be serialized out from TR port
    sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
@@ -33,27 +39,40 @@ PrintString:
    ;   usage: lda #<MsgM2SPolyMenu,  ldy #>MsgM2SPolyMenu,  jsr PrintString 
    sta smcPrintStringAddr+1
    sty smcPrintStringAddr+2
-   ldy #0
-   
--  jsr GetNextChar
+   ldy #0  ;Y will point to current offset throughout
+
+ProcessNextChar  
+   jsr GetNextChar
    cmp #0
    beq ++   ;zero terminates string
    cmp #EscC
-   bne +
+   beq +
+   jsr SendChar ;normal char, send it
+   jmp ProcessNextChar 
+
    ; process special escape char
-   
-   jsr GetNextChar
-   ; check for other special functions
-   
-   ; assume it's a color reference:
++  jsr GetNextChar  ;Esc char argument
+   ; check for special function type
+   tax ;preserve value
+   and #EscArgMask
+   cmp #EscArgSpaces
+   bne +
+   ;print spaces
+   txa
+   and #($ff-EscArgMask)  ;strip arg type
    tax
-   lda TblEscC, x
+   lda #' '
+-  jsr SendChar
+   dex
+   bne -
+   jmp ProcessNextChar
+   ; assume it's a color reference: 
++  lda TblEscC, x
    sta $0286  ;set text color
-   jmp -
-   
-+  jsr SendChar
-   jmp -
+   jmp ProcessNextChar
+
 GetNextChar  ;load next char in to acc and and increment pointer (Y then smc)
+;y hold offset pointer, preserve throughout PrintString and GetNextChar
 smcPrintStringAddr
    lda $fffe, y
    iny
@@ -61,8 +80,6 @@ smcPrintStringAddr
    inc smcPrintStringAddr+2
    ;bne - No roll-over protection
 ++ rts   
-
-
 
 PrintBanner:
    lda #<MsgBanner
