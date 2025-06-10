@@ -22,7 +22,7 @@
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
-
+   !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
 
 ;********************************   Cartridge begin   ********************************   
 
@@ -98,8 +98,31 @@ Warmstart:
    lda #<MsgCartBanner
    ldy #>MsgCartBanner
    jsr $ab1e   ;can use basic since this is an 8k cart
+
+!ifdef DbgVerbose {
+;check for HW:
+   lda #<MsgIO1Read
+   ldy #>MsgIO1Read
+   jsr $ab1e  
+
+   lda rRegPresence1+IO1Port
+   cmp #$55
+   bne NoHW
+   lda rRegPresence2+IO1Port
+   cmp #$AA
+   beq +
+NoHW
+   lda #<MsgFail
+   ldy #>MsgFail
+   jsr $ab1e  
+-  jmp -  ;stop here
+
++  lda #<MsgOK
+   ldy #>MsgOK
+   jsr $ab1e  
+}
       
-MainCopyToRAM
+; Copy Main Code To RAM and execute
    lda #>MainCode
    ldy #<MainCode   
    sta PtrAddrHi
@@ -127,8 +150,18 @@ MainCopyToRAM
 
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrDrkGrey, ChrRvsOn
-   !tx "     *** Sensorium Embedded 2025 ***    "  ;*VERSION*
-   !tx ChrRvsOff, ChrBlack, 0 ;hide sid load msg
+   ;    1234567890123456789012345678901234567890
+   !tx "         TeensyROM by Sensorium         "
+   !tx ChrReturn, ChrReturn, 0
+
+!ifdef DbgVerbose {
+MsgIO1Read:
+   !tx "IO1R ", 0
+MsgOK:
+   !tx "OK", ChrReturn, 0
+MsgFail:
+   !tx "Fail!", 0
+}
       
 MainCode = *
    !binary "build\MainMenu.bin"

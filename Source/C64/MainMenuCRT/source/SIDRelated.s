@@ -439,7 +439,7 @@ PrintSIDSpeed:
    ;nop; adds some delay in case float conversion can take more than full cycle(?)
    jsr PrintSerialString ;Loaded
    
-   ;!ifdef Debug {   
+   ;!ifdef DbgVerbose {   
    ;print the timer interval in hex  
    ;ldx #16 ;row 
    ;ldy #35 ;col

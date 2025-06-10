@@ -103,9 +103,6 @@ MsgHelpMenu:
    !tx ChrReturn
    !tx 0
 
-MsgNoHW:
-   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow, "TeensyROM hardware not detected!!!", ChrReturn, 0
-
 TblMsgMenuName: ;must match enum RegMenuTypes order/qty
    !word MsgMenuSD
    !word MsgMenuTeensy
@@ -180,6 +177,17 @@ MsgDone:
    !tx EscC,EscNameColor, "Done", 0
 MsgHasHandler:
    !tx ChrCRSRLeft, "+", 0
+
+!ifdef DbgVerbose {
+MsgMain:
+   !tx "Main OK", ChrReturn, 0
+MsgClkChecks:
+   !tx "Clocks OK", ChrReturn, 0
+MsgRemLaunch:
+   !tx "Remote Launch", ChrReturn, 0
+MsgSIDLoad:
+   !tx "SID Load", ChrReturn, 0
+}
 
 TblEscC:  ;order matches enum ColorRefOffsets
           ;Main local storage for string escape token (EscC) next character cross-reference

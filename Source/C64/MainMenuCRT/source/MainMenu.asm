@@ -19,7 +19,6 @@
 
 
 ; ********************************   Symbols   ********************************   
-   ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
    !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
@@ -36,32 +35,20 @@
 * = MainCodeRAMStart
 Start:
 
-;screen setup:     
-   jsr TextScreenMemColor
-  
-!ifndef Debug {
-;check for HW:
-   lda rRegPresence1+IO1Port
-   cmp #$55
-   bne NoHW
-   lda rRegPresence2+IO1Port
-   cmp #$AA
-   beq +
-NoHW
-   lda #<MsgNoHW
-   ldy #>MsgNoHW
+!ifdef DbgVerbose {
+   lda #<MsgMain
+   ldy #>MsgMain
    jsr PrintString  
-   ;jmp (BasicWarmStartVect)
--  jmp -
 }
 
+;screen setup:     
    ;copy colors from IO1 to local RAM
 +  ldx #NumColorRefs
 -  lda rwRegColorRefStart-1+IO1Port, x ;zero based offset
    sta TblEscC-1, x
    dex
    bne -
-   jsr ScreenColorOnly ;update screen colors now that we have them
+   jsr TextScreenMemColor ;update screen colors now that we have them
 
    lda #rCtlVanishROM ;Deassert Game & ExROM
    sta wRegControl+IO1Port
@@ -113,6 +100,12 @@ smcTODbit
    ora #$00
    sta $dc0e
 
+!ifdef DbgVerbose {
+   lda #<MsgClkChecks
+   ldy #>MsgClkChecks
+   jsr PrintString  
+}
+   
    ;store this code page range for SID conflict detection
    lda #>MainCodeRAMStart   ;read hi byte of Start address
    sta rwRegCodeStartPage+IO1Port
@@ -149,6 +142,12 @@ smcTODbit
    cmp #ricmdLaunch
    bne +
    ;Remote launch requested!
+!ifdef DbgVerbose {
+   lda #<MsgRemLaunch
+   ldy #>MsgRemLaunch
+   jsr PrintString  
+}
+
    ;inc BorderColorReg
    lda #ricmdNone
    sta rwRegIRQ_CMD+IO1Port
@@ -159,7 +158,14 @@ smcTODbit
    jmp ++
    
    ;load SID to TR RAM
-+  lda #rCtlLoadSIDWAIT ; sends SID Parse messages
++  
+!ifdef DbgVerbose {
+   lda #<MsgSIDLoad
+   ldy #>MsgSIDLoad
+   jsr PrintString  
+}
+
+   lda #rCtlLoadSIDWAIT ; sends SID Parse messages
    sta wRegControl+IO1Port
    jsr WaitForTRDots
 
@@ -169,8 +175,9 @@ smcTODbit
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudSIDPauseMask
    sta smcSIDPauseStop+1  ;set default SID playback
-
-++ jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
+   
+++ ;jsr AnyKeyMsgWait ;debug for looking at load messages
+   jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
    ;check default register for time update
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
@@ -788,7 +795,6 @@ WaitForTRWaitMsg:  ;Print Waiting message in upper right and waits
    jsr PrintString
    ldy #$ff ;don't print dots
 WaitForTRMain   ;Main wait loop
-   ;!ifndef Debug {   ;} 
    inc C64ScreenRAM+40*2-2 ;spinner @ top-1, right-1
    cpy #$ff
    beq +    ;skip dot printing if wait message selected
