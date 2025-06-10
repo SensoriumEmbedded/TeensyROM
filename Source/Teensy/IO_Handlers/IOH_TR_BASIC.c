@@ -324,6 +324,7 @@ void InitHndlr_TR_BASIC()
    
    RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
  
+   TR_BASStatRegVal = TR_BASStat_Ready;
    TR_BASContRegAction = TR_BASCont_None; //default to no action
 }   
 
