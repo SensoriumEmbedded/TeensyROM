@@ -19,6 +19,7 @@
 
 enum ATRespCode
 {  //http://www.messagestick.net/modem/Hayes_Ch1-2.html
+   //http://www.messagestick.net/modem/hayes_modem.html
    //match spec and Verbose_RCs below
    ATRC_OK          , // 0
    ATRC_CONNECT     , // 1
@@ -43,19 +44,25 @@ struct stcATCommand
 FLASHMEM void SendATresponse(ATRespCode ResponseCode)
 { 
    const char Verbose_RCs[NumATResponseCodes][15] = 
-   {//match ATRespCode:
+   {//match enum ATRespCode
+    //sent in ASCII
       "OK"          , // 0
       "CONNECT"     , // 1
       "RING"        , // 2
-      "NO_CARRIER"  , // 3
+      "NO CARRIER"  , // 3
       "ERROR"       , // 4
-      "CONNECT_1200", // 5
-      "NO_DIALTONE" , // 6
+      "CONNECT 1200", // 5
+      "NO DIALTONE" , // 6
       "BUSY"        , // 7
-      "NO_ANSWER"   , // 8
+      "NO ANSWER"   , // 8
    };
    
-   if (Verbose) AddToPETSCIIStrToRxQueueLN(Verbose_RCs[ResponseCode]);
+   if (Verbose) 
+   {
+      // Send as upper case ASCII (which is the same as lower case PETSCII)
+      AddRawStrToRxQueue(Verbose_RCs[ResponseCode]);
+      AddRawCharToRxQueue('\r');
+   }
    else 
    {
       char buf[10];
@@ -397,6 +404,23 @@ FLASHMEM ATRespCode AT_Verbose(char* CmdArg)
    return ATRC_OK;
 }
 
+FLASHMEM ATRespCode AT_ZSoftReset(char* CmdArg)
+{ 
+   //ignoring argument, would require profile support
+   Verbose = true;
+   EchoOn = true;
+   return ATRC_OK;
+}
+
+FLASHMEM ATRespCode AT_Hook(char* CmdArg)
+{ 
+   //ignoring argument, supposed to be able to use this after +++ returns to command mode
+   //but TR implementation of +++ drops connection at some time
+   //using this dummy to return OK instead of error
+   return ATRC_OK;
+}
+
+
 FLASHMEM ATRespCode ProcessATCommand()
 {
    char* CmdMsg = TxMsg; //local pointer for manipulation
@@ -420,6 +444,8 @@ FLASHMEM ATRespCode ProcessATCommand()
       "i"         , &AT_Info,
       "e"         , &AT_Echo,
       "v"         , &AT_Verbose,
+      "z"         , &AT_ZSoftReset,
+      "h"         , &AT_Hook,
    };
       
       
