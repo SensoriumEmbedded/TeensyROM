@@ -118,9 +118,12 @@ FASTRUN void isrPHI2()
       }
       else if (DMA_State == DMA_S_StartActive)
       {
-         //WaitUntil_nS(100); 
-         SetDMAAssert;
-         DMA_State = DMA_S_ActiveReady;
+         //WaitUntil_nS(250); 
+         //if (!GP9_BA(ReadGPIO9)) 
+         //{ 
+            SetDMAAssert;
+            DMA_State = DMA_S_ActiveReady;
+         //}
       }
             
       if (EmulateVicCycles)
