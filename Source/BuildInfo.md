@@ -21,7 +21,7 @@
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
      * Alternately, you can generate a .hex file and put it on a SD/USB drive
        * See FW update section of the [General Usage doc](/docs/General_Usage.md)
-   * Note: To do a full build including the minimal image for large CRT files, see [this doc](Teensy/tools/_Dual Boot Build.txt).
+   * Note: To do a full build including the minimal image for large CRT files, see [this doc](Teensy/tools/_Dual%20Boot%20Build.txt).
    
 ### Latest Support tool/lib versions as of v0.6.7 on 6/14/2025
    * Arduino IDE 2.3.2
