@@ -26,7 +26,7 @@ uint8_t PullFromRxQueue()
    uint8_t c = RxQueue[RxQueueTail/RxQueueBlockSize][RxQueueTail%RxQueueBlockSize];
    RxQueueTail++;  
    if (RxQueueTail == RxQueueSize) RxQueueTail = 0;
-   //Printf_dbg("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
+   //Printf_dbg_sw("Pull H=%d T=%d Char=%c\n", RxQueueHead, RxQueueTail, c);
    return c;
 }
 
@@ -43,7 +43,7 @@ bool ReadyToSendRx()
 
 bool CheckRxNMITimeout()
 {
-   //Check for Rx NMI timeout: Doesn't happen unless a lot of serial printing enabled (ie DbgMsgs_IO) causing missed reg reads
+   //Check for Rx NMI timeout: Doesn't happen unless a lot of serial printing enabled (ie DbgMsgs_SW) causing missed reg reads
    if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutuS))
    {
      Serial.println("Rx NMI Timeout!");
@@ -70,7 +70,7 @@ void CheckSendRxQueue()
    if (RxQueueUsed > 0 && ReadyToSendRx())
    {
       uint8_t ToSend = PullFromRxQueue();
-      //Printf_dbg("RxBuf=%02x: %c\n", ToSend, ToSend); //not recommended
+      //Printf_dbg_sw("RxBuf=%02x: %c\n", ToSend, ToSend); //not recommended
       
       if (BrowserMode)
       {  //browser data is stored in ASCII to preserve tag info, convert rest to PETSCII before sending
@@ -111,7 +111,7 @@ void AddRawCharToRxQueue(uint8_t c)
 {
   if (RxQueueUsed >= RxQueueSize-1)
   {
-     Printf_dbg("RxOvf! ");
+     Printf_dbg_sw("RxOvf! ");
      //RxQueueHead = RxQueueTail = 0;
      ////just in case...
      //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
@@ -135,7 +135,7 @@ void AddToPETSCIIStrToRxQueue(const char* s)
 {
    uint8_t CharNum = 0;
    
-   //Printf_dbg("AStrToRx(Len=%d): %s\n", strlen(s), s);
+   //Printf_dbg_sw("AStrToRx(Len=%d): %s\n", strlen(s), s);
    while(s[CharNum] != 0) AddRawCharToRxQueue(ToPETSCII(s[CharNum++]));
 }
 

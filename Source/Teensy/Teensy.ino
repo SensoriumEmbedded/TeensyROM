@@ -111,7 +111,8 @@ void setup()
 
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
-   Printf_dbg("Debug messages enabled!\n\n");
+   Printf_dbg("Debug messages enabled!\n");
+   Printf_dbg_sw("Swiftlink debug messages enabled!\n");
 
    if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
 

@@ -197,7 +197,7 @@ FLASHMEM ATRespCode AT_DT(char* CmdArg)
    sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);
    AddVerboseToPETSCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
-   //Printf_dbg("Host name: %s  Port: %d\n", CmdArg, Port);
+   //Printf_dbg_sw("Host name: %s  Port: %d\n", CmdArg, Port);
    
    //resp = CheckEthConn();
    //if (resp!=ATRC_OK) return resp;
@@ -472,7 +472,7 @@ FLASHMEM ATRespCode ProcessATCommand()
       Num++;
    }
    
-   Printf_dbg("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
+   Printf_dbg_sw("Unk Msg: %s CmdMsg: %s\n", TxMsg, CmdMsg);
    AddToPETSCIIStrToRxQueue("unknown command: ");
    AddToPETSCIIStrToRxQueueLN(TxMsg);
    return ATRC_ERROR;

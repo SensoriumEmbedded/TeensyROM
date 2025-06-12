@@ -272,7 +272,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    // RAM2 usage as of 11/7/23:
    //    Queues/link buffs (below): 320k+128+29k+5.5k= ~355k total
    //    RAM2 free w/ ethernet loaded & drive menu cleared: 392k (though will show less if fragmented)
-   Printf_dbg("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+   Printf_dbg_sw("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
  
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) 
    {
@@ -383,7 +383,7 @@ void PollingHndlr_SwiftLink()
    }
    
    //if client data available, add to Rx Queue
-   #ifdef DbgMsgs_IO
+   #ifdef DbgMsgs_SW
       if(client.available())
       {
          uint16_t Cnt = 0;
@@ -405,7 +405,7 @@ void PollingHndlr_SwiftLink()
    {
       if (client.connected() && !BrowserMode) //send Tx data to host
       {
-         //Printf_dbg("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
+         //Printf_dbg_sw("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
          client.print((char)SwiftTxBuf);  //send it
          if(SwiftTxBuf=='+')
          {
@@ -420,7 +420,7 @@ void PollingHndlr_SwiftLink()
       }
       else  //off-line/at commands or BrowserMode..................................
       {         
-         Printf_dbg("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
+         Printf_dbg_sw("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
          
          if(BrowserMode)
          {
@@ -433,7 +433,7 @@ void PollingHndlr_SwiftLink()
             if (EchoOn) AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
             SwiftTxBufToLcaseASSCII();
          }
-         Printf_dbg("%02x: %c\n", SwiftTxBuf);
+         Printf_dbg_sw("%02x: %c\n", SwiftTxBuf);
          
          if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
          else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
@@ -442,7 +442,7 @@ void PollingHndlr_SwiftLink()
          {
             SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
             TxMsg[TxMsgOffset-1] = 0; //terminate it
-            Printf_dbg("TxMsg: %s\n", TxMsg);
+            Printf_dbg_sw("TxMsg: %s\n", TxMsg);
             if(BrowserMode) 
             {
                ProcessBrowserCommand();

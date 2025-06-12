@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.6+13"; //*VERSION*
+char strVersionNumber[] = "v0.6.6+16"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -96,14 +96,18 @@ bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, r
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
+#ifdef DbgMsgs_SW  //Swiftlink debug msgs
+   #define Printf_dbg_sw Serial.printf
+#else
+   __attribute__((always_inline)) inline void Printf_dbg_sw(...) {};
+#endif
+
 #ifdef DbgMsgs_IO  //Debug msgs mode: reduced RAM_ImageSize
    #define Printf_dbg Serial.printf
    #define RAM_ImageSize       ((MaxRAM_ImageSize-24)*1024)
-  
 #else //Normal mode: maximize RAM_ImageSize
    __attribute__((always_inline)) inline void Printf_dbg(...) {};
    #define RAM_ImageSize       (MaxRAM_ImageSize*1024)
- 
 #endif
 
 #define IOTLRead            0x10000

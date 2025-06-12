@@ -26,7 +26,8 @@
 #define MaxRAM_ImageSize  (144)  // RAM1 space (in kB) used for CRT & Transfer buffer
 
 //Build options: enable debug messaging at your own risk, can cause emulation interference/fails
-// #define DbgMsgs_IO    //Serial out messages (Printf_dbg): Swift, MIDI (mostly out), CRT Chip info
+// #define DbgMsgs_IO   //All other Serial out messages (Printf_dbg)
+// #define DbgMsgs_SW   //Swiftlink Serial out messages (Printf_dbg_sw)
 // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 // #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
 // #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.

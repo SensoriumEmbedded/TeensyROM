@@ -54,7 +54,7 @@ void SendASCIIErrorStrImmediate(const char* CharsToSend)
    SendASCIIStrImmediate(CharsToSend);
    SendPETSCIICharImmediate(PETSCIIreturn);
    SendPETSCIICharImmediate(PETSCIIwhite);
-   Printf_dbg("*Err: %s\n", CharsToSend);
+   Printf_dbg_sw("*Err: %s\n", CharsToSend);
 }
 
 FLASHMEM void SendCommandSummaryImmediate(bool Paused)
@@ -209,7 +209,7 @@ FLASHMEM void CopyDecode(const char *FromEncoded, char *ToDecoded)
    uint16_t OrigCharNum = 0;
    uint8_t NextChar;
    
-   Printf_dbg("Dec From: %s\n", FromEncoded);
+   Printf_dbg_sw("Dec From: %s\n", FromEncoded);
    while(FromEncoded[OrigCharNum])
    {
       if(CheckAndDecode(FromEncoded+OrigCharNum, &NextChar)) OrigCharNum+=3;
@@ -218,7 +218,7 @@ FLASHMEM void CopyDecode(const char *FromEncoded, char *ToDecoded)
       ToDecoded[NewCharNum++] = NextChar;
    }
    ToDecoded[NewCharNum] = 0;
-   Printf_dbg("To: %s\n", ToDecoded);
+   Printf_dbg_sw("To: %s\n", ToDecoded);
 }
 
 FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
@@ -226,7 +226,7 @@ FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
    uint16_t EncCharNum = 0;
    char HexChar[] = "0123456789abcdef";
    
-   Printf_dbg("Enc From: %s\n", FromRaw);
+   Printf_dbg_sw("Enc From: %s\n", FromRaw);
    //encode special chars:
    //https://www.eso.org/~ndelmott/url_encode.html
    for(uint16_t RawCharNum=0; RawCharNum <= strlen(FromRaw); RawCharNum++) //include terminator
@@ -247,7 +247,7 @@ FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
          ToEncoded[EncCharNum++] = HexChar[NextChar & 0x0f];
       }
    }
-   Printf_dbg("To: %s\n", ToEncoded);
+   Printf_dbg_sw("To: %s\n", ToEncoded);
 }
 
 void DumpQueueUnPausePage()
@@ -292,7 +292,7 @@ void ParseEntityReference()
    else if(strcmp(EntRef, "nbsp")==0) SendPETSCIICharImmediate(' '); //unbold
    
    //there are MANY more...
-   else Printf_dbg("Unk ER: &%s;\n", EntRef);  
+   else Printf_dbg_sw("Unk ER: &%s;\n", EntRef);  
    
 }
 
@@ -353,7 +353,7 @@ void ParseHTMLTag()
          else CurrPageTitle[CharNum++] = InChar;
       }
       CurrPageTitle[CharNum]=0;
-      Printf_dbg("Title: %s\n", CurrPageTitle);
+      Printf_dbg_sw("Title: %s\n", CurrPageTitle);
    }
    
    else if(strcmp(TagBuf, "li")==0) //list item
@@ -386,7 +386,7 @@ void ParseHTMLTag()
       
       ptrCharNum += 6; //skip href= and openning quote
             
-      //Printf_dbg("LinkTag: %s\n", ptrCharNum);
+      //Printf_dbg_sw("LinkTag: %s\n", ptrCharNum);
       SendPETSCIICharImmediate(PETSCIIpurple); 
       SendPETSCIICharImmediate(PETSCIIrvsOn); 
       if (UsedPageLinkBuffs < NumPageLinkBuffs)
@@ -400,7 +400,7 @@ void ParseHTMLTag()
          }
          strcpy(PageLinkBuff[UsedPageLinkBuffs], ptrCharNum);
          
-         Printf_dbg("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
+         Printf_dbg_sw("Link #%d: %s\n", UsedPageLinkBuffs+1, PageLinkBuff[UsedPageLinkBuffs]);
          UsedPageLinkBuffs++;
          
          if (UsedPageLinkBuffs > 9) SendPETSCIICharImmediate('0' + UsedPageLinkBuffs/10);
@@ -422,12 +422,12 @@ void ParseHTMLTag()
    
    else if(strcmp(TagBuf, "html")==0) //Start of HTML
    {
-   #ifndef DbgMsgs_IO  //don't clear the screen when debug enabled
+   #ifndef DbgMsgs_SW  //don't clear the screen when debug enabled
       SendPETSCIICharImmediate(PETSCIIclearScreen);
    #endif
       UnPausePage();
    }
-   //else Printf_dbg("Unk Tag: <%s>\n", TagBuf);  //There can be a lot of these...
+   //else Printf_dbg_sw("Unk Tag: <%s>\n", TagBuf);  //There can be a lot of these...
    
 } 
 
@@ -501,11 +501,11 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
       *ptrPostPath=0; //terminate URLParse.path there
    }
 
-   Printf_dbg("\nOrig = \"%s\"\nParsed:\n", URL);
-   Printf_dbg(" serv = \"%s\"\n", URLParse.host);
-   Printf_dbg(" port = %d\n", URLParse.port);
-   Printf_dbg(" path = \"%s\"\n", URLParse.path);
-   Printf_dbg(" post = \"%s\"\n", URLParse.postpath);
+   Printf_dbg_sw("\nOrig = \"%s\"\nParsed:\n", URL);
+   Printf_dbg_sw(" serv = \"%s\"\n", URLParse.host);
+   Printf_dbg_sw(" port = %d\n", URLParse.port);
+   Printf_dbg_sw(" path = \"%s\"\n", URLParse.path);
+   Printf_dbg_sw(" post = \"%s\"\n", URLParse.postpath);
 } 
 
 bool ReadClientLine(char* linebuf, uint16_t MaxLen)
@@ -562,7 +562,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
    IPAddress HostIP;
    char buf[20];
    
-   Printf_dbg("Connect: \"%s:%d%s%s\"\n", DestURL->host, DestURL->port, DestURL->path, DestURL->postpath);
+   Printf_dbg_sw("Connect: \"%s:%d%s%s\"\n", DestURL->host, DestURL->port, DestURL->path, DestURL->postpath);
    
    SendPETSCIICharImmediate(PETSCIIpurple);
    SendASCIIStrImmediate("\rConnecting to:\r");
@@ -597,7 +597,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       SendPETSCIICharImmediate(PETSCIIbrown);  // header info color
       while(ReadClientLine(inbuf, MaxBuf)==true)
       {
-         //Printf_dbg(inbuf);  //causes lost data
+         //Printf_dbg_sw(inbuf);  //causes lost data
          if (ShowHeader) 
          {
             if (strstr(inbuf, "HTTP/1.1 200") != NULL) ShowHeader = false;
@@ -747,7 +747,7 @@ FLASHMEM void DownloadFile(stcURLParse *DestURL)
          if (ChunkSize > MaxChunkSize) ChunkSize = MaxChunkSize;
          client.read(DataChunk, ChunkSize);
          dataFile.write(DataChunk, ChunkSize);
-         Printf_dbg("Chunk: %d\n", ChunkSize);
+         Printf_dbg_sw("Chunk: %d\n", ChunkSize);
          if (ChunkSize > Length)
          {
             dataFile.close();
@@ -793,15 +793,15 @@ bool isURLFiltered(const stcURLParse *URL)
 FLASHMEM bool DLExtension(const char * Filename)
 {
    char * Extension = strrchr(Filename, '.');
-   Printf_dbg("*--Ext: ");
+   Printf_dbg_sw("*--Ext: ");
    if (Extension != NULL)
    {
       Extension++; //skip the '.'
-      Printf_dbg("%s\n", Extension);
+      Printf_dbg_sw("%s\n", Extension);
    }
    else 
    {
-      Printf_dbg("none\n");
+      Printf_dbg_sw("none\n");
       return false;
    }
       
@@ -918,11 +918,11 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
          
          AddRawStrToRxQueue("<a href=\"");
          EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,bufURL); //URL
-         Printf_dbg("BM#%d- %s", BMNum, bufURL);
+         Printf_dbg_sw("BM#%d- %s", BMNum, bufURL);
          AddRawStrToRxQueue(bufURL);
          AddRawStrToRxQueue("\">");
          EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),bufTitle); //Title
-         Printf_dbg("- %s\n", bufTitle);
+         Printf_dbg_sw("- %s\n", bufTitle);
          AddRawStrToRxQueue(bufTitle);         
          AddRawStrToRxQueue("</a>");
          if (*CmdMsg == 'u')
@@ -1185,7 +1185,7 @@ FLASHMEM void ProcessBrowserCommand()
       if (PrevURLQueueNum == 0) PrevURLQueueNum = NumPrevURLQueues - 1; //wrap around bottom
 	   else  PrevURLQueueNum--;
       
-      Printf_dbg("PrevURL# %d\n", PrevURLQueueNum);
+      Printf_dbg_sw("PrevURL# %d\n", PrevURLQueueNum);
       WebConnect(PrevURLQueue[PrevURLQueueNum]); //not updating PrevURLQueue
    }
    
@@ -1199,7 +1199,7 @@ FLASHMEM void ProcessBrowserCommand()
       CmdMsg++; //past the 'r'
       if (!ValidModifier(*CmdMsg)) return; 
       
-      Printf_dbg("CurrURL# %d\n", PrevURLQueueNum);
+      Printf_dbg_sw("CurrURL# %d\n", PrevURLQueueNum);
       ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg); //no Add To PrevURLQueue
    }
    
