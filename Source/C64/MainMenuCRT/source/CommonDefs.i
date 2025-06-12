@@ -20,7 +20,8 @@
 
    ;symbols used by both crt/rom emulated at boot and main code running from C64 RAM
 
-   ;!set DbgVerbose = 1 ;if defined, adds startup messages & does IO1 check
+   ;!set DbgVerbose = 1   ;if defined, adds startup messages & does IO1 check
+   ;!set DbgForceNTSC = 1 ;if defined, skips sensing NTSC vs PAL and chooses NTSC/60
 
    ;Zero page RAM Registers. Some .SIDs use these, so make sure SID/Music is off 
    PtrAddrLo   = $fb

@@ -54,6 +54,7 @@ Start:
    sta wRegControl+IO1Port
 
    ;Get video standard and TOD frequency
+!ifndef DbgForceNTSC {
    ; https://codebase64.org/doku.php?id=base:efficient_tod_initialisation
    ; Detecting TOD frequency by Silver Dream ! / Thorgal / W.F.M.H.
    sei             ; accounting for NMIs is not needed when
@@ -88,6 +89,7 @@ Start:
 +  ldy #%00000000  ;0=60Hz TOD
    cmp #$78
    bcs +  ;(>78)
+}
    ldx #%00000011  ;60/NTSC
    jmp ++
 +  ldx #%00000010  ;60/PAL
