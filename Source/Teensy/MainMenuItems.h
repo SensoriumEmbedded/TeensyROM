@@ -43,6 +43,7 @@
 #include "ROMs/destest_max.rom.h"
 #include "ROMs/empty.prg.h"
 #include "ROMs/DMACheck.prg.h"
+#include "ROMs/cia_tod.prg.h"
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -127,7 +128,8 @@ StructMenuItem dirTest_Diags[] =
    rtFilePrg  , IOH_None         , (char*)"ROM Checksum read"                , (uint8_t*)rom_chksum_137kernals_prg  , sizeof(rom_chksum_137kernals_prg) ,
    rtBin8kLo  , IOH_None         , (char*)"SID Tester"                       , (uint8_t*)SID_Tester_BIN             , sizeof(SID_Tester_BIN) ,
    rtFilePrg  , IOH_None         , (char*)"SID checker+finder"               , (uint8_t*)SID_check_prg              , sizeof(SID_check_prg) ,
-   rtFilePrg  , IOH_TR_BASIC     , (char*)"DMA Pause Check (beta)"           , (uint8_t*)DMACheck_prg               , sizeof(DMACheck_prg) ,
+   rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check"        , (uint8_t*)cia_tod_prg                , sizeof(cia_tod_prg) ,
+   rtFilePrg  , IOH_TR_BASIC     , (char*)"DMA Pause Check (beta)"           , (uint8_t*)DMACheck_prg               , sizeof(DMACheck_prg) , 
 };
 
 StructMenuItem dirUtilities[] = 
