@@ -151,7 +151,7 @@ NoHW
 MsgCartBanner:    
    !tx ChrClear, ChrToLower, ChrDrkGrey, ChrRvsOn
    ;    1234567890123456789012345678901234567890
-   !tx "         TeensyROM by Sensorium         "
+   !tx "         Sensorium Embedded 2025        "
    !tx ChrReturn, ChrReturn, 0
 
 !ifdef DbgVerbose {

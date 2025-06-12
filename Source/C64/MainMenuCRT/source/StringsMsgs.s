@@ -75,7 +75,7 @@ MsgSIDInfo3:
    
 MsgHelpMenu:   
    !tx ChrReturn, EscC,EscSourcesColor, "Help Menu:", ChrReturn
-   !tx ChrReturn, " Main Menu Navigation:", ChrReturn
+   !tx " Main Menu Controls:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Cursor up/dn", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Page up/dn", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Select file or dir", ChrReturn, ChrReturn
@@ -85,6 +85,7 @@ MsgHelpMenu:
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "C", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Color Settings Page", ChrReturn
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
    !tx ChrReturn
    !tx EscC,EscSourcesColor    ;, " Available here and on Main Menu:", ChrReturn
