@@ -209,7 +209,7 @@ MsgColorMenu:
 
    !tx EscC,EscNameColor,  " Presets:", ChrReturn
    !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default"
-   !tx EscC,EscArgSpaces+2+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C128 Mono"
+   !tx EscC,EscArgSpaces+2+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "CGA"
    !tx ChrReturn
    
    !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
@@ -249,7 +249,7 @@ TblPresets:
    !word Preset_TRDef_TblEscC    ;'a'
    !word Preset_BnW_TblEscC      ;'b'
    !word Preset_C64_TblEscC      ;'c'
-   !word Preset_C128_TblEscC     ;'d'
+   !word Preset_CGA_TblEscC      ;'d'
    !word Preset_Blues_TblEscC    ;'e'
    !word Preset_Rainbow_TblEscC  ;'f'
    
@@ -283,15 +283,15 @@ Preset_C64_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
    !byte PokeLtBlue      ;EscSourcesColor     = 5 ; General text/descriptions
    !byte PokeLtBlue      ;EscNameColor        = 6 ; FIle names and information
 
-Preset_C128_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
-;C128 colors
-   !byte PokeDrkGrey     ;EscBackgndColor     = 0 ; Screen Background
-   !byte PokeLtGreen     ;EscBorderColor      = 1 ; Screen Border
-   !byte PokeLtGreen     ;EscTRBannerColor    = 2 ; Top of screen banner color
-   !byte PokeLtGreen     ;EscTimeColor        = 3 ; Time Display & Waiting msg
-   !byte PokeLtGreen     ;EscOptionColor      = 4 ; Input key option indication
-   !byte PokeLtGreen     ;EscSourcesColor     = 5 ; General text/descriptions
-   !byte PokeLtGreen     ;EscNameColor        = 6 ; FIle names and information
+Preset_CGA_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;CGA colors
+   !byte PokeBlack       ;EscBackgndColor     = 0 ; Screen Background
+   !byte PokePurple      ;EscBorderColor      = 1 ; Screen Border
+   !byte PokeCyan        ;EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeLtGrey      ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeCyan        ;EscOptionColor      = 4 ; Input key option indication
+   !byte PokeCyan        ;EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeWhite       ;EscNameColor        = 6 ; FIle names and information
 
 Preset_Blues_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
 ;Custom blues & green on black
@@ -312,4 +312,14 @@ Preset_Rainbow_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
    !byte PokeBlue        ;EscOptionColor      = 4 ; Input key option indication
    !byte PokeRed         ;EscSourcesColor     = 5 ; General text/descriptions
    !byte PokePurple      ;EscNameColor        = 6 ; FIle names and information
+
+;Preset_C128_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
+;;C128 colors
+;   !byte PokeDrkGrey     ;EscBackgndColor     = 0 ; Screen Background
+;   !byte PokeLtGreen     ;EscBorderColor      = 1 ; Screen Border
+;   !byte PokeLtGreen     ;EscTRBannerColor    = 2 ; Top of screen banner color
+;   !byte PokeLtGreen     ;EscTimeColor        = 3 ; Time Display & Waiting msg
+;   !byte PokeLtGreen     ;EscOptionColor      = 4 ; Input key option indication
+;   !byte PokeLtGreen     ;EscSourcesColor     = 5 ; General text/descriptions
+;   !byte PokeLtGreen     ;EscNameColor        = 6 ; FIle names and information
 
