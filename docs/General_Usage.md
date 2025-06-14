@@ -13,9 +13,8 @@
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
   * Power on, the TeensyROM main menu should be displayed
   * The Menu button can be pressed at any time to return to the TeensyROM main menu from another program
-    * To set EEPROM setting back to default, hold down the menu buttong until the LED starts flashing (~10 seconds) and release.
   * Additional external hardware connection points:
-* ![TeensyROM connections](/media/TR_Connections.png)
+    * ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options-Navigation
   * (as of FW v0.6.6)
@@ -25,11 +24,12 @@
     * `Return or Joystick Fire button` Select/run the highlighted file or enter sub-directory
   * Additional Keyboard commands:
     * `Up Arrow` Up 1 directory level
-    * `a-z` Search current directory for first item beginning with letter pressed
+    * `a-z` (lower case) Search current directory for first item beginning with letter pressed
     * `Home` Move cursor to first item in directory
     * `Left Arrow` Write NFC Tag that will launch currently highlighted file
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
-    * `A` Set Auto-Launch to currently highlighted file
+    * `A` (upper case) Set Auto-Launch to currently highlighted file
+    * `C` (upper case) Enter Color Settings Page
     * `1-4` Hot Keys to launch the following:
       * `1` Cynthcart
       * `2` Station64
@@ -76,9 +76,17 @@
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay
         * Swiftlink internet, MIDI (Passport, Datel, Sequential, & Namesoft)
       * Additional CRT support info
-        * Max file size is 875KB (impacts large EZF files), also no EasyFlash eapi support at this time
-        * If your favorite game isn't yet supported (though most are at this point), [send me a note](mailto:travis@sensoriumembedded.com) and I'll look at prioritizing it.
-        * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. This issue only impacts UltiMax w/ C128 and is resolved in PCA rev 0.3.
+        * Files larger than 850KB will automatically employ a bank-swap scheme 
+          * These files must be run from an SD Card (not USB Stick)
+          * Feature Beta Released in FW v0.6.7:
+            * Uses "old school" REU type of DMA assertion for fast pausing and no additional CPU execution
+              * This method will not work on some systems (Most C128s and a low percentage of NTSC systems)
+              * DMA Pause check utility included in Test+Diags dir to test specific system DMA reliability
+            * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
+          * See full CRT implementation details [here](CRT_Implementation.md).
+        * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. 
+          * This issue only impacts UltiMax CRTs on C128s and is resolved in PCA rev 0.3
+        * EasyFlash EAPI not currently supported
     * **.SID files:**
       * Play SID file: ~90% of known SID files are supported
       * Adjusts playback speed based on machine and SID type (NTSC/PAL)
@@ -133,7 +141,6 @@
       * External cooling is not required for this speed. However, in abundance of caution, a heatsink is specified in the BOM for this project.
       * The max spec is 95C, and there is an automatic shutdown at 90C.
       * Even in extended use, I've never seen the internal temperature exceded 75C.
-    * Free RAM space available for large .CRT files
 
 ## Selecting and associating Special IO
   * What is it?
@@ -153,6 +160,14 @@
       * The setting stays in memory and will be re-loaded for any app until changed
     * If a selected CRT file is associated with different Special IO (ie Epyx, EZFlash etc), that Special IO will be loaded instead
 
+## Resetting EEPROM Contents
+  * To set *all* EEPROM values back to default settings:
+    * With C64 off, press and hold down menu button on the TeensyROM
+    * Power up the C64 (nothing will be displayed)
+    * Keep TR menu button pressed for ~10 sec, until the LED starts blinking
+    * Release the TR Menu button and wait for the TR menu to be displayed
+    * TR EEPROM settings are now reset to default   
+
 ## Firmware updates
   There are multiple ways to update the TeensyROM firmware, choose one of the following:
 
@@ -161,8 +176,8 @@
     * Older versions will have to use one of the other methods one time to update
   * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from here](/bin/TeensyROM)
   * Copy the file to a USB Thumb drive or SD card
-    * This can be done via the traditional method of moving the card to a capable computer
-    * or over USB using the provided C64Transfer Windows app
+    * This can be done by the traditional method of moving the card to a capable computer
+    * Or directly via USB using the **[TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)** or Cross-platform **[Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)**
   * In the TeensyROM USB or SD Menu, select the Firmware  .hex file
   * A new screen will open and ask you to confirm that you want to update
     * Check that the file name shown is correct

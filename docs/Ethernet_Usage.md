@@ -51,10 +51,15 @@
 | Command | Description |
 |--|--|
 |AT | Ping  |
-|AT? | Quick help list of AT commands  |
-|ATC | Connect Ethernet using saved parameters and/or display connection info|
 |ATDT\<HostName>:\<Port> | Connect to host and enter On-line mode|
-|ATBROWSE | Start the TeensyROM Web Browser ([Documented here](Browser_Usage.md))
+|ATI | TeensROM ID & Firmware Version |
+|AT? | Quick help list of AT commands |
+|ATC | Connect Ethernet using saved parameters and/or display connection info|
+|ATBROWSE | Start the TeensyROM Web Browser ([Documented here](Browser_Usage.md))|
+|ATE=\<0:1> | Echo On(1)/Off(0)
+|ATV=\<0:1> | Verbose On(1)/Off(0)
+|ATZ |Soft reset: restores echo and verbose mode, regardless of argument|
+|ATH |Hook: dummy function to return OK, +++ command already disconnects|
 
 ### Commands that modify the saved parameters
 **Use ATC to apply these settings to current Ethernet connection.**
@@ -78,6 +83,23 @@
 | Command | Description |
 |--|--|
 |+++ | Disconnect from host and re-enter AT/command mode
+
+### AT Response codes
+* All AT commands use standard response codes when complete
+  * Key word or Number depending on Verbose setting
+    * Key words sent as upper case ASCII (aka lower case PETSCII)
+  * Followed by a single carriage return
+| Verbose Response | Non-Verbose | Indicates |
+|--|--|--|
+|OK          |0|Setting successful/complete                            |
+|CONNECT     |1|Succesful server connection (ATDT)                     |
+|RING        |2|unused                                                 |
+|NO_CARRIER  |3|Connection Dropped (after CD de-assert)                |
+|ERROR       |4|Syntax or formatting errors                            |
+|CONNECT_1200|5|unused                                                 |
+|NO_DIALTONE |6|No cable, DHCP or local host ethernet init fail (ATDT) |
+|BUSY        |7|unused                                                 |
+|NO_ANSWER   |8|No response from remote server (ATDT)                  |
 
 ## TeensyROM/C64/128 internet Time Synch
 The TeensyROM main menu/application can synch the C64/128 system time with the internet for display in the TeensyROM menu and use in other applications.
