@@ -62,7 +62,7 @@ MsgSIDInfo2:
    !tx 0
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
-   !tx ChrReturn, EscC,EscSourcesColor, " Settings:", ChrReturn
+   !tx ChrReturn, EscC,EscNameColor, " Settings:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sub-Song Number:", ChrReturn   
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Adj Play Speed:", ChrReturn   
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
@@ -77,32 +77,32 @@ Msg123:
    
 MsgHelpMenu:   
    !tx ChrReturn, EscC,EscSourcesColor, "Help Menu:", ChrReturn
-   !tx " Main Menu Controls:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Cursor up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Page up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Select file or dir", ChrReturn, ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Up directory", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Next entry starting with letter", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Beginning of current dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor,    "Write NFC tag: Highlighted File", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Set Auto-Launch to Highlighted", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "C", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Color Settings Page", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Hot Keys (see gen usage doc)", ChrReturn
+   !tx EscC,EscNameColor, " Main Menu Controls:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Page up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Select file or dir", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Up directory", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,    "Write NFC tag: Highlighted File", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set Auto-Launch to Highlighted", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Color Settings Page", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Keys (see gen usage doc)", ChrReturn
    !tx ChrReturn
-   !tx EscC,EscSourcesColor    ;, " Available here and on Main Menu:", ChrReturn
-   !tx EscC,EscArgSpaces+3, "Source Select:", EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Other:", ChrReturn
+   !tx EscC,EscNameColor
+   !tx EscC,EscArgSpaces+3, "Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Exit to BASIC", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
                
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "SD Card"
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID on/off", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID on/off", ChrReturn
                
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "USB Drive"
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "SID Information", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID Information", ChrReturn
                
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Help"
-   !tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscMenuMiscColor, "Settings Menu", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help"
+   !tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Settings Menu", ChrReturn
    !tx ChrReturn
    !tx 0
 
