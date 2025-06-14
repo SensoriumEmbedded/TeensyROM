@@ -19,32 +19,35 @@
 
 #include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
-#define DefSIDSource        rmtTeensy  // Default should always be local (rmtTeensy)
+#define DefSIDSource        rmtTeensy  // Default, should always be local (rmtTeensy)
 #define DefSIDPath          "/SID Cover Tunes" 
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
 
 #define MaxRAM_ImageSize  (144)  // RAM1 space (in kB) used for CRT & Transfer buffer
 
-//Build options: enable debug messaging at your own risk, can cause emulation interference/fails
-// #define DbgMsgs_IO   //All other Serial out messages (Printf_dbg)
-// #define DbgMsgs_SW   //Swiftlink Serial out messages (Printf_dbg_sw)
-// #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
-// #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
-// #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
-// #define Dbg_SerMem    //Serial commands that display memory info
-// #define Dbg_SerASID   //Serial commands that test the ASID player + queue adjust info
+//Build options: 
+//Debug messaging: enable at your own risk, can cause emulation interference/fails
+  // #define DbgMsgs_IO    //All other Serial out messages (Printf_dbg)
+  // #define DbgMsgs_SW    //Swiftlink Serial out messages (Printf_dbg_sw)
+  // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
+
+//Special use serial commands:
+  // #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
+  // #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
+  // #define Dbg_SerMem    //Serial commands that display memory info
+  // #define Dbg_SerASID   //Serial commands that test the ASID player + queue adjust info
  
 //logging:
-// #define Dbg_SerLog    //Serial commands that display log info
-// #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
-// #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
-// #define DbgSpecial    //Special case logging to BigBuf
+  // #define Dbg_SerLog    //Serial commands that display log info
+  // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
+  // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
+  // #define DbgSpecial    //Special case logging to BigBuf
  
-//Debug HW signal usage. Recommend using only 1 at a time.
-// #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
-// #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
+//Debug HW signal enables: Recommend using only 1 at a time.
+  // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
+  // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
 
-//enabling this on a fab 0.2x PBC could cause damage to your C64!
-// fab 0.3 uses different debug signal and direct data buffer dir control
-// #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 
+//fab 0.3 uses different debug signal and direct data buffer dir control
+// enabling this on a fab 0.2x PBC could cause damage to your C64!
+  // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 
 
