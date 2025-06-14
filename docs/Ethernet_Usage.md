@@ -89,6 +89,7 @@
   * Key word or Number depending on Verbose setting
     * Key words sent as upper case ASCII (aka lower case PETSCII)
   * Followed by a single carriage return
+  
 | Verbose Response | Non-Verbose | Indicates |
 |--|--|--|
 |OK          |0|Setting successful/complete                            |

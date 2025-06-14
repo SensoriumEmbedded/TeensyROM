@@ -25,7 +25,7 @@
       * Written in BASIC with test hooks in TR BASIC commands IO Handler
   * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
   * File sizes of <850KB continue to work as they do today, all served directly out of RAM.
-  * See full CRT implementation details [here](CRT_Implementation.md).
+  * See full CRT implementation details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/CRT_Implementation.md).
   * Thank yous:
     * @Boris Schneider-Johne for the general idea behind this capability, very much apreciate the brainstorming!
     * @DigitalMan, @Hexx, @William Manganaro, and @JTHonn for the testing and feedback!
