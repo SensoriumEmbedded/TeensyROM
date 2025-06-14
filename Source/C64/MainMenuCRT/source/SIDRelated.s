@@ -464,16 +464,14 @@ PrintSIDSpeed:
 PrintVoiceMutes:
    ldx #0   ;voice #
    lda smcVoicesMuted+1 
-   
--  ldy #PokeGreen ;non-mute/default
+-  ldy Msg123,x  ;num 1-3 (poke=chr for nums), non-mute/default
    lsr
    bcc +
-   ldy #PokeRed ;muted
-+  sta smcCurVoicesMuted+1
+   ldy #$d8 ;Reverse-X, muted
++  pha
    tya
-   sta C64ColorRAM+40*20+30,x
-smcCurVoicesMuted
-   lda#00 ;recover voice status
+   sta C64ScreenRAM+40*20+30,x
+   pla
    inx
    cpx#3
    bne -

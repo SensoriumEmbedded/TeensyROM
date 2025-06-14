@@ -68,7 +68,9 @@ MsgSIDInfo3:
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Default Play Speed", ChrReturn
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "p/F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Play/Pause SID", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", ChrRvsOn,"123", ChrReturn ;123 colors get set in PrintVoiceMutes 
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1/2/3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Mute/Unmute Voice #: ", EscC,EscNameColor
+Msg123:
+   !tx "123", ChrReturn ;updated in PrintVoiceMutes 
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Border Effect On/Off", ChrReturn
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set main background SID", ChrReturn
    !tx 0
