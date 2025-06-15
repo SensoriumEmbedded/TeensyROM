@@ -22,7 +22,7 @@
    * Uses the DMA signal to halt the CPU for ~3mS during an un-cached bank swap.
      * No actual DMA (bus masterring) takes place
    * Swaps are fast and typically only take place during "scene changes" in games.
-     * Should be imperceptable to user experience.
+     * Should be imperceptible to user experience.
  * 8ea 8K bank RAM cache with lookup to re-use already cached banks without pausing
  * Uses "old school" REU type of DMA assertion for fast pausing and no additional CPU execution
    * Not reliable on some systems (Most C128s and a low percentage of NTSC systems)
@@ -32,5 +32,5 @@
      * ![DMA Check Pass](/media/Screen%20captures/DMA_Check_Pass.png)
  * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
  * File sizes of <850KB continue to work as they do today, all served directly out of RAM.
- * Thank you @Boris Schneider-Johne for the general idea behind this capability, very much apreciate the brainstorming!
+ * Thank you @Boris Schneider-Johne for the general idea behind this capability, very much appreciate the brainstorming!
 

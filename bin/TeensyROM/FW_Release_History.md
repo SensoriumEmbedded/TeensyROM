@@ -8,16 +8,16 @@
     * 'C' (capital C) from any Directory Menu to enter page
     * Choose any of the 16 available colors for 7 different color parameters.
     * 6 presets available, or create your own scheme
-  * Color scheme saved in TR EEPROM for recolection after power down/reboot
+  * Color scheme saved in TR EEPROM for recollection  after power down/reboot
   * Some general color consolidation/standardization so all are customizable
 * Very Large CRT file support: (Beta)
   * Example files in this category "A Pig Quest", "Eye of the Beholder" and "SNK vs Capcom"
   * CRT Files >850Kb employ a bank swapping from SD card (only) mechanism
     * First 850Kb stored in TR RAM as usual, remainder are marked for swapping
     * Uses the DMA signal to halt the CPU for ~3mS during an un-cached bank swap.
-      * No actual DMA (bus masterring) takes place
+      * No actual DMA (bus mastering) takes place
     * Swaps are fast and typically only take place during "scene changes" in games.
-      * Should be imperceptable to user experience.
+      * Should be imperceptible to user experience.
   * 8ea 8K bank RAM cache with lookup to re-use already cached banks without pausing
   * Uses "old school" REU type of DMA assertion for fast pausing and no additional CPU execution
     * Not reliable on some systems (Most C128s and a low percentage of NTSC systems)
@@ -27,7 +27,7 @@
   * File sizes of <850KB continue to work as they do today, all served directly out of RAM.
   * See full CRT implementation details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/CRT_Implementation.md).
   * Thank yous:
-    * @Boris Schneider-Johne for the general idea behind this capability, very much apreciate the brainstorming!
+    * @Boris Schneider-Johne for the general idea behind this capability, very much appreciate the brainstorming!
     * @DigitalMan, @Hexx, @William Manganaro, and @JTHonn for the testing and feedback!
 * ASID Player: (rev to 1.3)
   * New ASID packet types decoding/application:
@@ -70,7 +70,7 @@
         * Key words sent as upper case ASCII (aka lower case PETSCII)
       * Followed by a single carriage return
   * Hardware handshaking
-    * Status reguister DCD (Carrier Detect) bit now readable for connect status
+    * Status register DCD (Carrier Detect) bit now readable for connect status
 * SID Player:
   * Fix: Correctly initialize timer for multi-speed (2x/4x/6x/8x) SIDs
     * Thank you @DivertigO for the find and testing
