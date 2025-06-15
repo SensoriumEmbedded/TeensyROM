@@ -30,6 +30,7 @@
      * Written in BASIC with test hooks in TR BASIC commands IO Handler
      * If the check passes, the resulting screen will look like this:
      * ![DMA Check Pass](/media/Screen%20captures/DMA_Check_Pass.png)
+     * If the check fails ("CHECK PASSED" not displayed), recomend trying once or twice more. Consistent fails indicate games of this size won't run reliably on this C64. They may load fine initially, but could fail any time later in the game.
  * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
  * File sizes of <850KB continue to work as they do today, all served directly out of RAM.
  * Thank you @Boris Schneider-Johne for the general idea behind this capability, very much appreciate the brainstorming!
