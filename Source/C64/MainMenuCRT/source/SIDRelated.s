@@ -94,7 +94,7 @@ IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
 
    jsr SetSIDSpeedToDefault
 
-   ; HOOK INTERRUPT ROUTINE (NORMALLY POINTS TO $EA31)
+   ; HOOK INTERRUPT ROUTINE 
    lda #<IRQwedge 
    sta $0314
    lda #>IRQwedge
@@ -113,10 +113,10 @@ IRQEnable:  ;insert IRQ wedge to catch CIA Timer for SID or TR generated IRQ
 
 IRQDisable:
    sei
-   lda #<IRQDefault
-   ldx #>IRQDefault
-   sta $314   ;CINV, HW IRQ Int Lo
-   stx $315   ;CINV, HW IRQ Int Hi
+   lda smcIRQDefault+1
+   ldx smcIRQDefault+2
+   sta $0314   ;CINV, HW IRQ Int Lo  65  31
+   stx $0315   ;CINV, HW IRQ Int Hi  FA  EA
 
    lda #%10000001 
    sta $dc0d  ;CIA int ctl
@@ -148,11 +148,11 @@ IRQwedge:
    lda #ricmdAck1   
    sta smcIRQFlagged+1  ;local flag for action in main code
    sta wRegIRQ_ACK+IO1Port  ;send ack 1 to TR
-   jmp IRQDefault
+   jmp jmpIRQDefault
    
 smcSIDPauseStop
 +  lda #rpudSIDPauseMask  ;default to disabled
-   bne ++                 ;any bits set skips playback
+   bne jmpIRQDefault                 ;any bits set skips playback
 
 smcBorderEffect
    lda #0  ;default to disabled
@@ -197,7 +197,9 @@ smcVoicesMuted
    sta $01
    lda TblEscC+EscBorderColor
    sta BorderColorReg
-++ jmp IRQDefault    ; EXIT THROUGH THE KERNAL'S 60HZ(?) IRQ HANDLER ROUTINE
+jmpIRQDefault
+smcIRQDefault
+   jmp $ea31    ; EXIT THROUGH THE KERNAL'S 50-60HZ IRQ HANDLER ROUTINE
 
 ;SIDMusicOn:  ;Start SID player Raster based interrupt
 ;   lda #$7f    ;disable all ints
@@ -214,8 +216,8 @@ smcVoicesMuted
 ;   sta $d011   ;VIC ctl reg fine scrolling/control
 ;   lda #<irqRastSID
 ;   ldx #>irqRastSID
-;   sta $314    ;CINV, HW IRQ Int Lo
-;   stx $315    ;CINV, HW IRQ Int Hi
+;   sta $0314    ;CINV, HW IRQ Int Lo
+;   stx $0315    ;CINV, HW IRQ Int Hi
 ;   cli
 ;   rts
 
@@ -232,8 +234,8 @@ smcVoicesMuted
 ;   sta $01
 ;   lda #<irqRast2
 ;   ldx #>irqRast2
-;   sta $314    ;CINV, HW IRQ Int Lo
-;   stx $315    ;CINV, HW IRQ Int Hi
+;   sta $0314    ;CINV, HW IRQ Int Lo
+;   stx $0315    ;CINV, HW IRQ Int Hi
 ;   lda #234    ;loweer part of screen
 ;   sta $d012   ;raster scan line compare reg
 ;   jmp IRQDefault
@@ -243,8 +245,8 @@ smcVoicesMuted
 ;   dec BorderColorReg ;tweak it back
 ;   lda #<irqRastSID
 ;   ldx #>irqRastSID
-;   sta $314    ;CINV, HW IRQ Int Lo
-;   stx $315    ;CINV, HW IRQ Int Hi
+;   sta $0314    ;CINV, HW IRQ Int Lo
+;   stx $0315    ;CINV, HW IRQ Int Hi
 ;   lda #74    ;upper part of screen
 ;   sta $d012   ;raster scan line compare reg
 ;   jmp IRQDefault

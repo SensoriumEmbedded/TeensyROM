@@ -139,8 +139,33 @@ smcTODbit
    ;inc BorderColorReg  ;indicate found
    stx $8005  ;x==0 from above
    
++  
+   ;store IRQ vector for wedge continuation and IRQ restoration
+   ;(Points to $EA31 for C64, $FA65 for C128)
+!ifdef DbgVerbose {
+   lda #<MsgIRQ
+   ldy #>MsgIRQ
+   jsr PrintString  
+}
+
+   lda $0315   
+   sta smcIRQDefault+2
+   
+!ifdef DbgVerbose {
+   jsr PrintHexByte
+}
+
+   lda $0314   
+   sta smcIRQDefault+1
+   
+!ifdef DbgVerbose {
+   jsr PrintHexByte
+   lda #ChrReturn
+   jsr SendChar
+}
+
    ;check for remote launch on reset
-+  lda rwRegIRQ_CMD+IO1Port
+   lda rwRegIRQ_CMD+IO1Port
    cmp #ricmdLaunch
    bne +
    ;Remote launch requested!
@@ -178,7 +203,22 @@ smcTODbit
    and #rpudSIDPauseMask
    sta smcSIDPauseStop+1  ;set default SID playback
    
-++ ;jsr AnyKeyMsgWait ;debug for looking at load messages
+!ifdef DbgVerbose {
+   lda #<MsgThisMachine
+   ldy #>MsgThisMachine
+   jsr PrintString 
+   lda #rsstMachineInfo
+   jsr PrintSerialString
+   lda #<Msg0TOD
+   ldy #>Msg0TOD
+   jsr PrintString 
+}
+   
+++ 
+!ifdef DbgInitWait {
+   jsr AnyKeyMsgWait ;debug for looking at load messages
+}
+
    jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
    ;check default register for time update
    lda rwRegPwrUpDefaults+IO1Port
@@ -246,7 +286,14 @@ JSDelay:
 ReadKeyboard:
    jsr CheckForIRQGetIn
    beq WaitForJSorKey
-
+   
+   ;inc BorderColorReg ;update border on key press
+   ;pha
+   ;jsr PrintHexByte
+   ;lda #ChrSpace
+   ;jsr SendChar
+   ;pla
+   
 +  cmp #ChrReturn
    bne +
    jsr SelectItem
@@ -377,7 +424,7 @@ ReadKeyboard:
    lda #3  ;prog Cynthcart
    
 HotKeyLaunch
-   ;launch item # stored in acc from main TR menu   
+   ;launch from main TR menu: sub-dir # stored in X,  item # stored in acc   
    pha ;save program #
    txa
    pha ;save directory #

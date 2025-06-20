@@ -46,7 +46,6 @@
    IO1Port            = $de00
   
    ;Kernal routines:
-   IRQDefault = $ea31
    SendChar   = $ffd2
    ScanKey    = $ff9f ;SCNKEY
    GetIn      = $ffe4 ;GETIN

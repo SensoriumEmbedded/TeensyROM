@@ -190,6 +190,12 @@ MsgRemLaunch:
    !tx "Remote Launch", ChrReturn, 0
 MsgSIDLoad:
    !tx "SID Load", ChrReturn, 0
+MsgIRQ:   
+   !tx "IRQ: $", 0
+MsgThisMachine:
+   !tx ChrReturn, "This Machine: ", 0
+Msg0TOD:
+   !tx "0Hz TOD", ChrReturn, 0
 }
 
 TblEscC:  ;order matches enum ColorRefOffsets
