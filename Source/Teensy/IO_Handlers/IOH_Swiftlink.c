@@ -53,10 +53,6 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
-#define C64CycBetweenRx   2300   //stops NMI from re-asserting too quickly.
-                           // 2300 is lowest without CCGMS misses (chars missed in large buffs when lower)
-                           // 3410 for 2400 baud Rx
-                           // 6819 for 1200 baud Rx
 #define NMITimeoutuS       300    //if Rx data not read within this time, deassert NMI anyway
 #define Drive_USB            1
 #define Drive_SD             2
@@ -82,6 +78,22 @@ stcIOHandlers IOHndlr_SwiftLink =
 //command reg flags
 #define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
 #define SwiftCmndDefault   0xE0   // Default command reg state
+
+//Control Reg baud rate settings
+enum enBaudRates
+{
+   Baud_300 = 5,
+   Baud_600    ,
+   Baud_1200   ,
+   Baud_2400   ,
+   Baud_3600   ,
+   Baud_4800   ,
+   Baud_7200   ,
+   Baud_9600   ,
+   Baud_14400  ,
+   Baud_19200  ,
+   Baud_38400  ,
+};
 
 //PETSCII Colors/Special Symbols
 #define PETSCIIpurple      0x9c
@@ -142,7 +154,7 @@ uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
 volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
 uint8_t PlusCount;
-uint32_t LastTxMillis = millis();
+uint32_t C64CycBetweenRx, LastTxMillis = millis();
 
 
 // Browser mode: Buffer saved in ASCII from host, converted before sending out
@@ -158,6 +170,32 @@ void UnPausePage();
 #include "Swift_RxQueue.c"
 #include "Swift_ATcommands.c"
 #include "Swift_Browser.c"
+
+void SetBaud(enBaudRates BaudNum)
+{
+   uint16_t ActualBaud[] =
+   { //order matches enBaudRates-Baud_300
+        300, // Baud_300  (5)
+        600, // Baud_600  
+       1200, // Baud_1200 
+       2400, // Baud_2400 
+       3600, // Baud_3600 
+       4800, // Baud_4800 
+       7200, // Baud_7200 
+       9600, // Baud_9600 
+      14400, // Baud_14400
+      19200, // Baud_19200
+      38400, // Baud_38400 (15)
+   };
+   
+   //stops NMI from re-asserting too quickly.
+   //basing cycle count off of PAL, NTSC will be ~3.8% faster
+   C64CycBetweenRx = 985250*8/ActualBaud[BaudNum-Baud_300];
+                           // 2300 is lowest without CCGMS misses (chars missed in large buffs when lower)
+                           // 3410 for 2400 baud Rx
+                           // 6819 for 1200 baud Rx
+   Printf_dbg_sw("baud: %d, %d Cycles\n", ActualBaud[BaudNum-Baud_300], C64CycBetweenRx); 
+}
 
 void FreeSwiftlinkBuffs()
 {
@@ -267,6 +305,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
    PrintingHyperlink = false;
+   SetBaud(Baud_2400);
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
    // RAM2 usage as of 11/7/23:
@@ -342,7 +381,10 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftControl:
             SwiftRegControl = Data;
-            //Could confirm setting 8N1 & acceptable baud?
+            //Could confirm setting 8N1?
+            //Printf_dbg_sw("CtrlW: $%02x\n", SwiftRegControl);            
+            Data &= 0x0f;
+            if (Data >= Baud_300) SetBaud(Data);
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
@@ -386,6 +428,7 @@ void PollingHndlr_SwiftLink()
    #ifdef DbgMsgs_SW
       if(client.available())
       {
+         uint32_t StartMicros = micros();
          uint16_t Cnt = 0;
          //Serial.printf("RxIn %d+", RxQueueUsed);
          while (client.available())
@@ -393,7 +436,14 @@ void PollingHndlr_SwiftLink()
             AddRawCharToRxQueue(client.read());
             Cnt++;
          }
-         //Serial.printf("%d=%d\n", Cnt, RxQueueUsed);
+         
+         //toggle LED after each new packet received
+         static bool LEDstate = true;
+         if (LEDstate = !LEDstate) SetLEDOff;
+         else SetLEDOn;
+         
+         StartMicros = micros() - StartMicros;
+         Serial.printf("Rx %d in %duS\n", Cnt, StartMicros);
          if (RxQueueUsed>3000) Serial.printf("Lrg RxQueue add: %d  total: %d\n", Cnt, RxQueueUsed);
       }
    #else
@@ -406,7 +456,9 @@ void PollingHndlr_SwiftLink()
       if (client.connected() && !BrowserMode) //send Tx data to host
       {
          //Printf_dbg_sw("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
-         client.print((char)SwiftTxBuf);  //send it
+         //client.print((char)SwiftTxBuf);  //send it
+         client.write(SwiftTxBuf);
+         //client.flush(); //adds ~100mS!
          if(SwiftTxBuf=='+')
          {
             if(millis()-LastTxMillis>1000 || PlusCount!=0) //Must be preceded by at least 1 second of no characters
@@ -416,11 +468,19 @@ void PollingHndlr_SwiftLink()
          }
          else PlusCount=0;
          
+   #ifdef DbgMsgs_SW
+         //toggle Debug Signal after every 2 bytes sent
+         static uint8_t DBGstate = 0;
+         if (++DBGstate==4) DBGstate=0;  // 0-3
+         if (DBGstate & 2) SetDebugDeassert;
+         else SetDebugAssert;
+   #endif
+
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
       }
       else  //off-line/at commands or BrowserMode..................................
       {         
-         Printf_dbg_sw("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
+         //Printf_dbg_sw("echo %02x: %c -> ", SwiftTxBuf, SwiftTxBuf);
          
          if(BrowserMode)
          {
@@ -433,7 +493,7 @@ void PollingHndlr_SwiftLink()
             if (EchoOn) AddRawCharToRxQueue(SwiftTxBuf); //echo it at end of buffer
             SwiftTxBufToLcaseASSCII();
          }
-         Printf_dbg_sw("%02x: %c\n", SwiftTxBuf);
+         //Printf_dbg_sw("%02x: %c\n", SwiftTxBuf);
          
          if (TxMsgOffset && (SwiftTxBuf==0x08 || SwiftTxBuf==0x14)) TxMsgOffset--; //Backspace in ascii  or  Delete in PETSCII
          else TxMsg[TxMsgOffset++] = SwiftTxBuf; //otherwise store it
