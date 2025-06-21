@@ -172,7 +172,7 @@ void UnPausePage();
 #include "Swift_Browser.c"
 
 void SetBaud(enBaudRates BaudNum)
-{
+{  //called from Phi IRQ, be quick
    uint16_t ActualBaud[] =
    { //order matches enBaudRates-Baud_300
         300, // Baud_300  (5)
@@ -350,7 +350,6 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
       {
          case IORegSwiftData:   
             DataPortWriteWaitLog(SwiftRxBuf);
-            CycleCountdown = C64CycBetweenRx;
             SetNMIDeassert;
             SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
             break;

@@ -60,6 +60,7 @@ void SendRxByte(uint8_t ToSend)
    
    SwiftRxBuf = ToSend;
    SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
+   CycleCountdown = C64CycBetweenRx;
    SetNMIAssert;
    NMIassertMicros = micros();
 }
