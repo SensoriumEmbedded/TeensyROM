@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.7"; //*VERSION*
+char strVersionNumber[] = "v0.6.7+7"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000

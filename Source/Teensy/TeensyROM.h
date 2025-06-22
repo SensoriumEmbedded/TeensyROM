@@ -44,6 +44,7 @@
   // #define DbgSpecial    //Special case logging to BigBuf
  
 //Debug HW signal enables: Recommend using only 1 at a time.
+  // DbgMsgs_SW (above) includes LED/DBG signal control
   // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
   // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
 

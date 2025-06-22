@@ -311,6 +311,8 @@ FLASHMEM void InitHndlr_SwiftLink()
    // RAM2 usage as of 11/7/23:
    //    Queues/link buffs (below): 320k+128+29k+5.5k= ~355k total
    //    RAM2 free w/ ethernet loaded & drive menu cleared: 392k (though will show less if fragmented)
+   //    RAM2 free w/ ethernet loaded & drive menu cleared:  396K  44k after buff malloc
+
    Printf_dbg_sw("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
  
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) 
@@ -326,6 +328,9 @@ FLASHMEM void InitHndlr_SwiftLink()
       PageLinkBuff[cnt] = (char*)malloc(MaxTagSize);
       if(PageLinkBuff[cnt] == NULL) Serial.println("OOM PageLinkBuff");
    }
+   
+   Printf_dbg_sw("RAM2 post-SW malloc: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) 
    {
       PrevURLQueue[cnt] = (stcURLParse*)malloc(sizeof(stcURLParse));
@@ -383,7 +388,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             //Could confirm setting 8N1?
             //Printf_dbg_sw("CtrlW: $%02x\n", SwiftRegControl);            
             Data &= 0x0f;
-            if (Data >= Baud_300) SetBaud(Data);
+            if (Data >= Baud_300) SetBaud((enBaudRates)Data);
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
@@ -438,7 +443,7 @@ void PollingHndlr_SwiftLink()
          
          //toggle LED after each new packet received
          static bool LEDstate = true;
-         if (LEDstate = !LEDstate) SetLEDOff;
+         if ( (LEDstate = !LEDstate) ) SetLEDOff;
          else SetLEDOn;
          
          StartMicros = micros() - StartMicros;
@@ -471,8 +476,8 @@ void PollingHndlr_SwiftLink()
          //toggle Debug Signal after every 2 bytes sent
          static uint8_t DBGstate = 0;
          if (++DBGstate==4) DBGstate=0;  // 0-3
-         if (DBGstate & 2) SetDebugDeassert;
-         else SetDebugAssert;
+         if (DBGstate & 2) {SetDebugDeassert;}
+         else {SetDebugAssert;}
    #endif
 
          SwiftRegStatus |= SwiftStatusTxEmpty; //Ready for more
