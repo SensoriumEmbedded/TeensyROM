@@ -29,7 +29,7 @@ void CycleHndlr_SwiftLink();
 
 stcIOHandlers IOHndlr_SwiftLink =
 {
-  "SwiftLink/Modem",        //Name of handler
+  "Swift-Turbo/Modem",        //Name of handler (IOHNameLength max)
   &InitHndlr_SwiftLink,     //Called once at handler startup
   &IO1Hndlr_SwiftLink,      //IO1 R/W handler
   NULL,                     //IO2 R/W handler
@@ -63,6 +63,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define IORegSwiftStatus   0x01   // Swift Emulation Status Reg
 #define IORegSwiftCommand  0x02   // Swift Emulation Command Reg
 #define IORegSwiftControl  0x03   // Swift Emulation Control Reg
+#define IORegEnhancedSpeed 0x07   // Turbo232 Enhanced-Speed Reg
 
 //status reg flags
 #define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
@@ -82,17 +83,25 @@ stcIOHandlers IOHndlr_SwiftLink =
 //Control Reg baud rate settings
 enum enBaudRates
 {
-   Baud_300 = 5,
-   Baud_600    ,
-   Baud_1200   ,
-   Baud_2400   ,
-   Baud_3600   ,
-   Baud_4800   ,
-   Baud_7200   ,
-   Baud_9600   ,
-   Baud_14400  ,
-   Baud_19200  ,
-   Baud_38400  ,
+   Baud_Enhanced = 0,
+   Baud_100         ,
+   Baud_150         ,
+   Baud_219         ,
+   Baud_269         ,
+   Baud_300         , 
+   Baud_600         ,
+   Baud_1200        ,
+   Baud_2400        ,
+   Baud_3600        ,
+   Baud_4800        ,
+   Baud_7200        ,
+   Baud_9600        ,
+   Baud_14400       ,
+   Baud_19200       ,
+   Baud_38400       , //15
+   Baud_57600       ,
+   Baud_115200      ,
+   Baud_230400      ,
 };
 
 //PETSCII Colors/Special Symbols
@@ -152,7 +161,7 @@ bool Verbose, EchoOn, ConnectedToHost, BrowserMode, PagePaused, PrintingHyperlin
 uint32_t PageCharsReceived;
 uint32_t NMIassertMicros;
 volatile uint8_t SwiftTxBuf, SwiftRxBuf;
-volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl;
+volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl, TurboRegEnhancedSpeed;
 uint8_t PlusCount;
 uint32_t C64CycBetweenRx, LastTxMillis = millis();
 
@@ -171,30 +180,80 @@ void UnPausePage();
 #include "Swift_ATcommands.c"
 #include "Swift_Browser.c"
 
-void SetBaud(enBaudRates BaudNum)
+void SetBaud(uint8_t BaudNum)
 {  //called from Phi IRQ, be quick
-   uint16_t ActualBaud[] =
-   { //order matches enBaudRates-Baud_300
-        300, // Baud_300  (5)
-        600, // Baud_600  
-       1200, // Baud_1200 
-       2400, // Baud_2400 
-       3600, // Baud_3600 
-       4800, // Baud_4800 
-       7200, // Baud_7200 
-       9600, // Baud_9600 
-      14400, // Baud_14400
-      19200, // Baud_19200
-      38400, // Baud_38400 (15)
+   const uint32_t ActualBaud[] =
+   { //order matches enBaudRates
+        2400, // (not used) Baud_Enhanced = 0 
+         100, // Baud_100
+         150, // Baud_150
+         219, // Baud_219
+         269, // Baud_269
+         300, // Baud_300 
+         600, // Baud_600
+        1200, // Baud_1200 
+        2400, // Baud_2400 
+        3600, // Baud_3600 
+        4800, // Baud_4800 
+        7200, // Baud_7200 
+        9600, // Baud_9600 
+       14400, // Baud_14400
+       19200, // Baud_19200
+       38400, // Baud_38400 (15)
+       57600, // Baud_57600  Turbo232 Enhanced
+      115200, // Baud_115200 Turbo232 Enhanced
+      230400, // Baud_230400 Turbo232 Enhanced
    };
+
+   // https://rr.pokefinder.org/wiki/Turbo232_Swiftlink_Registers.txt
+   // https://csbruce.com/cbm/ftp/reference/swiftlink.txt
+   //
+   // IORegSwiftControl($DE03)  SwiftRegControl:
+   // +----------+---------------------------------------------------+
+   // | Bit  7   |   Stop Bits: 1 = 2, 0 = 1 or 1.5                  |
+   // | Bit  6-5 |   Words: 00 = 8 Bit       10 = 6 Bit              |
+   // |          |          01 = 7 Bit       11 = 5 Bit              |
+   // | Bit  4   |   Baud Rate Generator: 1 = Internal, 0 = External |
+   // | Bits 3-0 |                                                   |
+   // | Baud Rate|      0000 = Enhanced ($DE07)  1000 =  2400 baud   |
+   // |          |      0001 =   100 bd          1001 =  3600 baud   |
+   // |          |      0010 =   150 bd          1010 =  4800 baud   |
+   // |          |      0011 =   219 bd          1011 =  7200 baud   |
+   // |          |      0100 =   269 bd          1100 =  9600 baud   |
+   // |          |      0101 =   300 bd          1101 = 14400 baud   |
+   // |          |      0110 =   600 bd          1110 = 19200 baud   |
+   // |          |      0111 =  1200 bd          1111 = 38400 baud   |
+   // +----------+---------------------------------------------------+
+   //
+   // IORegEnhancedSpeed($DE07)  TurboRegEnhancedSpeed:
+   // +----------+---------------------------------------------------+
+   // | Bit  7-3 |   Unused                                          |
+   // | Bit  2   |   Mode Bit (read only): 1 = Bits 0-3 of $DE03 are |
+   // |          |   cleared and enhaced speed is enabled            |
+   // | Bits 1-0 |   Enhanced Baud Rate (read only if Mode Bit = 0): |
+   // |          |              00 = 230400 Bd       10 = 57600 Bd   |
+   // |          |              01 = 115200 Bd                       |
+   // |          |              11 = reserved for future expansions  |
+   // +----------+---------------------------------------------------+
    
-   //stops NMI from re-asserting too quickly.
+   //Printf_dbg_sw("BaudNum: $%02x, Cont: $%02x, Enh: $%02x\n", BaudNum, SwiftRegControl, TurboRegEnhancedSpeed);
+   
+   if (BaudNum == Baud_Enhanced) // 0: Enhanced Speed Enabled
+   {
+      uint8_t EnhBaudNum = (TurboRegEnhancedSpeed & 3);
+      if (EnhBaudNum == 3)
+      {
+         Printf_dbg_sw("reserved baud, not set\n");
+         return;
+      }
+      BaudNum = Baud_230400 - EnhBaudNum; //point to enhanced speed
+   }
+
+   //Sets the rate of NMI assertion on Rx  TR->C64
    //basing cycle count off of PAL, NTSC will be ~3.8% faster
-   C64CycBetweenRx = 985250*8/ActualBaud[BaudNum-Baud_300];
-                           // 2300 is lowest without CCGMS misses (chars missed in large buffs when lower)
-                           // 3410 for 2400 baud Rx
-                           // 6819 for 1200 baud Rx
-   Printf_dbg_sw("baud: %d, %d Cycles\n", ActualBaud[BaudNum-Baud_300], C64CycBetweenRx); 
+   // 2300 cyc (3557bps) is lowest without CCGMS misses (chars missed in large buffs when lower)
+   C64CycBetweenRx = 985250*8/ActualBaud[BaudNum];
+   Printf_dbg_sw("baud set: %dbps, %d Cycles\n", ActualBaud[BaudNum], C64CycBetweenRx); 
 }
 
 void FreeSwiftlinkBuffs()
@@ -292,7 +351,9 @@ FLASHMEM void InitHndlr_SwiftLink()
    //EthernetInit();
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
-   SwiftRegControl = 0;
+   TurboRegEnhancedSpeed = 3; //default to reserved/not set
+   SwiftRegControl = Baud_2400;
+   SetBaud(Baud_2400);
    CycleCountdown=0;
    PlusCount=0;
    PrevURLQueueNum = 0;
@@ -305,7 +366,6 @@ FLASHMEM void InitHndlr_SwiftLink()
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
    PrintingHyperlink = false;
-   SetBaud(Baud_2400);
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
    // RAM2 usage as of 11/7/23:
@@ -313,7 +373,7 @@ FLASHMEM void InitHndlr_SwiftLink()
    //    RAM2 free w/ ethernet loaded & drive menu cleared: 392k (though will show less if fragmented)
    //    RAM2 free w/ ethernet loaded & drive menu cleared:  396K  44k after buff malloc
 
-   Printf_dbg_sw("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+   Printf_dbg_sw("RAM2 Bytes Free: %lu (%luK)\n", RAM2BytesFree(), RAM2BytesFree()/1024);
  
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) 
    {
@@ -329,7 +389,7 @@ FLASHMEM void InitHndlr_SwiftLink()
       if(PageLinkBuff[cnt] == NULL) Serial.println("OOM PageLinkBuff");
    }
    
-   Printf_dbg_sw("RAM2 post-SW malloc: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+   Printf_dbg_sw("RAM2 post-SW malloc: %lu (%luK)\n", RAM2BytesFree(), RAM2BytesFree()/1024);
 
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) 
    {
@@ -367,6 +427,10 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
          case IORegSwiftControl:
             DataPortWriteWaitLog(SwiftRegControl);
             break;
+         case IORegEnhancedSpeed:
+            TurboRegEnhancedSpeed = (TurboRegEnhancedSpeed & 0xfb) | ((SwiftRegControl & 0x0f)==0 ? 4:0); //bit 2: Read only
+            DataPortWriteWaitLog(TurboRegEnhancedSpeed);
+            break;
       }
    }
    else  // IO1 write    -------------------------------------------------
@@ -383,17 +447,20 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             //Write to status reg is a programmed reset
             SwiftRegCommand = SwiftCmndDefault;
             break;
-         case IORegSwiftControl:
-            SwiftRegControl = Data;
-            //Could confirm setting 8N1?
-            //Printf_dbg_sw("CtrlW: $%02x\n", SwiftRegControl);            
-            Data &= 0x0f;
-            if (Data >= Baud_300) SetBaud((enBaudRates)Data);
-            break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
             //check for Tx/Rx IRQs enabled?
             //handshake line updates?
+            break;
+         case IORegSwiftControl:
+            SwiftRegControl = Data;
+            //Confirm setting 8N1?
+            SetBaud(SwiftRegControl & 0x0f);
+            break;
+         case IORegEnhancedSpeed:  // Turbo232 Enhanced-Speed Reg
+            TurboRegEnhancedSpeed = Data;     
+            Printf_dbg_sw("EnhW: ");            
+            SetBaud(SwiftRegControl & 0x0f);
             break;
       }
       TraceLogAddValidData(Data);
