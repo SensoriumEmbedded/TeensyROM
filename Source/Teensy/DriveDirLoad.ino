@@ -536,13 +536,14 @@ uint8_t Assoc_Ext_ItemType(char * FileName)
    uint32_t Length = strlen(FileName);
    
    if (Length < 4) return rtUnknown;
-
-   char* Extension = FileName + Length - 4;
-   if (Extension[0] != '.') return rtUnknown;
    
-   Extension++; //skip '.'
+   char* Extension = strrchr( FileName, '.'); //find last dot
+   // Must have dot, allow 2-4 char extension only, incl dot
+   if (Extension == NULL || Extension > FileName + Length - 2 || Extension < FileName + Length -4) return rtUnknown; 
+      
+   Extension++; //skip dot
    //convert to lower case:
-   for(uint8_t cnt=0; cnt<3; cnt++) if(Extension[cnt]>='A' && Extension[cnt]<='Z') Extension[cnt]+=32;
+   for(char* cnt=Extension; cnt<=FileName + Length; cnt++) if(*cnt>='A' && *cnt<='Z') *cnt+=32;
    
    uint8_t Num = 0;
    
