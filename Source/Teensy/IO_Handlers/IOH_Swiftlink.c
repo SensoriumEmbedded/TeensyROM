@@ -214,6 +214,7 @@ void SetBaud(uint8_t BaudNum)
    // | Bit  6-5 |   Words: 00 = 8 Bit       10 = 6 Bit              |
    // |          |          01 = 7 Bit       11 = 5 Bit              |
    // | Bit  4   |   Baud Rate Generator: 1 = Internal, 0 = External |
+   // |   * Bits 7-4 ignored                                         |
    // | Bits 3-0 |                                                   |
    // | Baud Rate|      0000 = Enhanced ($DE07)  1000 =  2400 baud   |
    // |          |      0001 =   100 bd          1001 =  3600 baud   |

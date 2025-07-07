@@ -96,7 +96,7 @@
       * Compatible with output from [Retropixels online](https://www.micheldebree.nl/retropixels/)
     * **.ART/AAS/HPI/OCP/PIC files:**
       * Displays Art Studio Hi-Res picture
-    * **.TXT files:**
+    * **.TXT/NFO/MD files:**
       * Displays ASCII text in the TR text viewer
       * See viewer usage/navigation doc via TR on your C64 in the /Text+PETSCII+Docs directory.
     * **.SEQ files:**
