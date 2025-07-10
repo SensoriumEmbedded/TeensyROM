@@ -22,7 +22,7 @@ FLASHMEM void runMainTRApp()
   // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord
   if ((*((uint32_t*)imageStartAddress) != 0x42464346) || (*((uint32_t*)(imageStartAddress+0x1000)) != 0x432000D1))
   {
-     ErrorLoopForever("Invalid magic numbers, no flash image found");
+     ErrorLoopForever("Invalid magic numbers, main flash image not found");
   }
 
   // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.

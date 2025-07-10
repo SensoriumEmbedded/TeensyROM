@@ -90,7 +90,9 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/ezf 48Khz_hifi_Elvis_Costello_[EASYFLASH].crt");   //good test of all banks, *does not* click during swaps at the end
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/hf_audio_playback_01.crt"); //good test of all banks, clicks during swaps at the end
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");        //swaps quickly during play                            //   Lots!
-   EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/svc64_update2.crt");  //SNK vs CAPCOM,  swaps quickly during play                                //   Lots!
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/svc64_update2.crt");  //SNK vs CAPCOM,  swaps quickly during play                                //   Lots!
+   //EEPwriteStr(eepAdCrtBootName, "/svc64_md2.crt");  
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/svc64_md2.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
  
  EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
@@ -128,14 +130,14 @@ void setup()
 #ifdef Dbg_TestMin
    //calc/show free RAM space for CRT:
    uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
-   Serial.printf(" RAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);   
+   Serial.printf(" RAM1    Buffer: %luK (%lu blks)\n", CrtMax, CrtMax/8);   
+   Serial.printf(" RAM1 Swap Blks: %luK (%lu blks)\n", Num8kSwapBuffers*8, Num8kSwapBuffers);
    uint8_t NumChips = RAM2blocks();
    //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
    NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
-   Serial.printf(" RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
-   Serial.printf(" Swap Blks: %luK (%lu blks)\n", Num8kSwapBuffers*8, Num8kSwapBuffers);
-   CrtMax += NumChips*8;
-   Serial.printf(" %luk free for CRT\n", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
+   Serial.printf(" RAM2      Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+   CrtMax += NumChips*8+Num8kSwapBuffers*8;
+   Serial.printf(" %luk max RAM for CRT w/o swaps\n", (uint32_t)(CrtMax*1.004));  //larger File size due to header info.
 #endif
 
    // assuming it's a .crt file, and present on SD drive (verified in main image)

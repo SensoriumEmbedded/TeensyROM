@@ -98,6 +98,7 @@
 #define Cart_TurtleGraphicsII        76
 #define Cart_FreezeFrameMK2          77
 #define Cart_Partner64               78
+#define Cart_MagicDesk2              79
 
 // IO handlers only
 #define Cart_DigiMax               -100 
@@ -148,10 +149,8 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
    (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
    (uint16_t)Cart_ZaxxonSuper     ,IOH_ZaxxonSuper,
-   
+   (uint16_t)Cart_MagicDesk2      ,IOH_MagicDesk2,
 };
-
-#define StrSIDInfoSize    (5*40+5) // max 5 *full* lines + 1 blank line
 
 #define CRT_MAIN_HDR_LEN  0x40
 #define CRT_CHIP_HDR_LEN  0x10

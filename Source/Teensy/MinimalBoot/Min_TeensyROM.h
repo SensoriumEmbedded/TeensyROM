@@ -33,7 +33,7 @@
 // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 
 #define MinimumBuild         //Must be defined for minimal build forking in common files
-#define Num8kSwapBuffers   8 //space for bank swapping upper blocks of large CRTs
+#define Num8kSwapBuffers   12 //space for bank swapping upper blocks of large CRTs, must be even number for 16k banks
 
 #define MaxRAM_ImageSize  (184+208-8*Num8kSwapBuffers)  //184 is non-minimal image size;  minus space for 8k swap blocks
 
