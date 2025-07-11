@@ -5,9 +5,8 @@
 
 Implementation built upon **[Custom Basic Commands](https://github.com/barryw/CustomBasicCommands)** Copyright 2023 by [Barry Walker](https://github.com/barryw)
 <BR>
-Thank you Barry for this well documented, robust framework!
 
-### To begin, select `BASIC w/ Custom Commands +TR BAS` from the main TR menu. (FW 0.6.2 or higher)
+### To begin, select `BASIC with TeensyROM Commands` from the TR's Utilities directory. (FW 0.6.2 or higher)
 
 ## TeensyROM specific commands available:
 |Command|Description|
