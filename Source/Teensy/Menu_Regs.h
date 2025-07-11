@@ -295,6 +295,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_ASID,
    IOH_TR_BASIC,
    IOH_GMod2,
+   IOH_MagicDesk2,
    
    
    IOH_Num_Handlers       //always last

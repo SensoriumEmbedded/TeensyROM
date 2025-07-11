@@ -62,6 +62,7 @@ struct stcIOHandlers
 #include "MinimalBoot/Common/IOH_EasyFlash.c"
 #include "MinimalBoot/Common/IOH_ZaxxonSuper.c"
 #include "IO_Handlers/IOH_GMod2.c"
+#include "MinimalBoot/Common/IOH_MagicDesk2.c"
 
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
@@ -87,4 +88,5 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_ASID,               //IOH_ASID,
    &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
    &IOHndlr_GMod2,              //IOH_GMod2,
+   &IOHndlr_MagicDesk2,         //IOH_MagicDesk2,
 };

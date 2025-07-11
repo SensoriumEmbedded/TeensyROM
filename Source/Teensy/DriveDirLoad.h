@@ -98,6 +98,7 @@
 #define Cart_TurtleGraphicsII        76
 #define Cart_FreezeFrameMK2          77
 #define Cart_Partner64               78
+#define Cart_MagicDesk2              79  //Supported
 
 // IO handlers only
 #define Cart_DigiMax               -100 
@@ -115,7 +116,7 @@
 #define Cart_MIDI_Maplin           -112
 #define Cart_DS12C887RTC           -113
 #define Cart_TFE                   -116
-#define Cart_Turbo232              -117
+#define Cart_Turbo232              -117  //Supported
 #define Cart_SwiftLink             -118  //Supported
 #define Cart_ACIA                  -119
 #define Cart_Plus60K               -120
@@ -139,6 +140,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
    (uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
    (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
+   (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
    (uint16_t)Cart_EpyxFastload,    IOH_EpyxFastLoad,
    (uint16_t)Cart_MagicDesk,       IOH_MagicDesk,
    (uint16_t)Cart_Dinamic,         IOH_Dinamic,
@@ -149,7 +151,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
    (uint16_t)Cart_ZaxxonSuper     ,IOH_ZaxxonSuper,
    (uint16_t)Cart_GMod2           ,IOH_GMod2,
-   
+   (uint16_t)Cart_MagicDesk2      ,IOH_MagicDesk2,
 };
 
 #define StrSIDInfoSize    (5*40+5) // max 5 *full* lines + 1 blank line
