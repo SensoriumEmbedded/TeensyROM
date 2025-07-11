@@ -1,13 +1,9 @@
 
-set LocalPath=C:\Users\trav\AppData\Local
+call .\BootLinkerFiles\SetPathDelCache.bat
 
-:: delete temp local cache:
-rmdir /s /q "%LocalPath%\Temp\arduino\cores"
-rmdir /s /q "%LocalPath%\Temp\arduino\sketches"
+copy BootLinkerFiles\bootdata.c.upper "%LocalT4CorePath%\bootdata.c"
 
-copy BootLinkerFiles\bootdata.c.upper "%LocalPath%\Arduino15\packages\teensy\hardware\avr\1.59.0\cores\teensy4\bootdata.c"
-
-copy BootLinkerFiles\imxrt1062_t41.ld.upper "%LocalPath%\Arduino15\packages\teensy\hardware\avr\1.59.0\cores\teensy4\imxrt1062_t41.ld"
+copy BootLinkerFiles\imxrt1062_t41.ld.upper "%LocalT4CorePath%\imxrt1062_t41.ld"
 
 @echo _
 @echo Set up for *Upper* compile to Flash
