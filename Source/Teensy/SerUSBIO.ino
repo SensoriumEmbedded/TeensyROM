@@ -401,13 +401,23 @@ FLASHMEM void ServiceSerial()
                break;
             case 'd': //Set Defaults
                nS_MaxAdj    = Def_nS_MaxAdj; 
-               nS_RWnReady  = Def_nS_RWnReady;  
                nS_PLAprop   = Def_nS_PLAprop;  
                nS_DataSetup = Def_nS_DataSetup;  
                nS_DataHold  = Def_nS_DataHold;  
                nS_VICStart  = Def_nS_VICStart;  
                nS_VICDHold  = Def_nS_VICDHold;
                Serial.printf("Defaults set\n");
+               Serial.printf(" EEP RW_Ready delay: ");
+               if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) 
+               {
+                  nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
+                  Serial.printf("On\n");
+               }
+               else
+               {
+                  nS_RWnReady  = Def_nS_RWnReady;  
+                  Serial.printf("Off\n");
+               }
                break;
             default:
                Serial.printf("No changes\n");
