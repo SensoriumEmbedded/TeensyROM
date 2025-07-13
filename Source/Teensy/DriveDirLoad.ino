@@ -279,7 +279,7 @@ void HandleExecution()
    if (CartLoaded)
    {
       doReset=true;
-      IOHandlerInitToNext();
+      IOHandlerSelectInit();
    }
 
 }

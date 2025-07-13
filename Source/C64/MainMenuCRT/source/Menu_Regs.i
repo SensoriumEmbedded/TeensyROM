@@ -169,7 +169,7 @@
    rsChangeMenu         = 0x00  ;
    rsStartItem          = 0x01  ;
    rsGetTime            = 0x02  ;
-   rsIOHWinit           = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
+   rsIOHWSelInit        = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
    rsWriteEEPROM        = 0x04  ;
    rsMakeBuildCPUInfoStr= 0x05  ;
    rsUpDirectory        = 0x06  ;
@@ -185,8 +185,9 @@
    rsClearAutoLaunch    = 0x10  ;
    rsNextTextFile       = 0x11  ;
    rsLastTextFile       = 0x12  ;
+   rsIOHWNextInit       = 0x13  ;
    
-   rsNumStatusTypes     = 0x13  ;
+   rsNumStatusTypes     = 0x14  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished

@@ -17,19 +17,20 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+void IOHandlerNextInit()
+{
+   Printf_dbg("Default IO Handler\n");
+   IOHandlerInit(IO1[rwRegNextIOHndlr]);
+}
 
-void IOHandlerInitToNext()
-{ //called after cart loaded, PRG x-fer finished, or exit to basic (rsIOHWinit)
+void IOHandlerSelectInit()
+{ //called after cart loaded, PRG x-fer finished, or exit to basic (rsIOHWSelInit)
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
       Printf_dbg("IO Handler set by Teensy Menu\n");
       IOHandlerInit(MenuSource[SelItemFullIdx].IOHndlrAssoc); 
    }
-   else
-   {
-      Printf_dbg("Default IO Handler\n");
-      IOHandlerInit(IO1[rwRegNextIOHndlr]);
-   }
+   else IOHandlerNextInit();
 }
 
 void IOHandlerInit(uint8_t NewIOHandler)

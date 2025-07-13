@@ -192,7 +192,8 @@ extern bool PathIsRoot();
 extern void LoadDirectory(FS *sourceFS);
 extern void FreeDriveDirMenu();
 extern void RedirectEmptyDriveDirMenu();
-extern void IOHandlerInitToNext();
+extern void IOHandlerSelectInit();
+extern void IOHandlerNextInit();
 extern void ParseSIDHeader(const char *filename);
 extern stcIOHandlers* IOHandler[];
 extern char DriveDirPath[];
@@ -670,7 +671,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MenuChange,          // rsChangeMenu 
    &HandleExecution,     // rsStartItem  
    &getNtpTime,          // rsGetTime    
-   &IOHandlerInitToNext, // rsIOHWinit   
+   &IOHandlerSelectInit, // rsIOHWSelInit   
    &WriteEEPROM,         // rsWriteEEPROM
    &MakeBuildInfo,       // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
@@ -686,6 +687,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ClearAutoLaunch,     // rsClearAutoLaunch
    &NextTextFile,        // rsNextTextFile
    &LastTextFile,        // rsLastTextFile
+   &IOHandlerNextInit    // rsIOHWNextInit
 
 };
 
@@ -1046,7 +1048,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlBasicReset:  
                   //SetLEDOff;
                   doReset=true;
-                  IO1[rwRegStatus] = rsIOHWinit; //Support IO handlers at reset
+                  IO1[rwRegStatus] = rsIOHWNextInit; //Support IO handler at reset
                   break;
                case rCtlStartSelItemWAIT:
                   IO1[rwRegStatus] = rsStartItem; //work this in the main code
@@ -1055,7 +1057,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   IO1[rwRegStatus] = rsGetTime;   //work this in the main code
                   break;
                case rCtlRunningPRG:
-                  IO1[rwRegStatus] = rsIOHWinit; //Support IO handlers in PRG
+                  IO1[rwRegStatus] = rsIOHWSelInit; //Support IO handlers in PRG
                   break;
                case rCtlMakeInfoStrWAIT:
                   IO1[rwRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code
