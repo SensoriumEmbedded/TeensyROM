@@ -158,6 +158,7 @@
     * Special IO can also be selected in the settings menu
       * This setting will be applied at the time of launching any program or generic cartridge
       * The setting stays in memory and will be re-loaded for any app until changed
+      * Recommend disabling NFC if Special IO is selected to avoid interference.
     * If a selected CRT file is associated with different Special IO (ie Epyx, EZFlash etc), that Special IO will be loaded instead
 
 ## Resetting EEPROM Contents
