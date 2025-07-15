@@ -29,7 +29,7 @@ void CycleHndlr_SwiftLink();
 
 stcIOHandlers IOHndlr_SwiftLink =
 {
-  "Swift-Turbo/Modem",        //Name of handler (IOHNameLength max)
+  "Swift-Turbo/Modem",      //Name of handler (IOHNameLength max)
   &InitHndlr_SwiftLink,     //Called once at handler startup
   &IO1Hndlr_SwiftLink,      //IO1 R/W handler
   NULL,                     //IO2 R/W handler
@@ -77,8 +77,11 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define SwiftStatusDefault (SwiftStatusTxEmpty|SwiftStatusDCD)   // default/power-up/reset value
 
 //command reg flags
-#define SwiftCmndRxIRQEn   0x02   // low if Rx IRQ enabled
-#define SwiftCmndDefault   0xE0   // Default command reg state
+#define SwiftCmndRxIRQEn   0b00000010 // low if Rx IRQ enabled
+#define SwiftCmndRTSTx     0b00001100 // RTS and Transmitter Ctl
+#define SwiftCmndRTSRMask  0b00001110 //mask bits to check in ReadyToSendRx
+#define SwiftCmndRTSRMatch 0b00001000 //masked ReadyToSendRx matching
+#define SwiftCmndDefault   0b11100000 // Default command reg state
 
 //Control Reg baud rate settings
 enum enBaudRates

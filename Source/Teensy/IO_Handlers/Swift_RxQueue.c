@@ -36,7 +36,7 @@ bool ReadyToSendRx()
    //  and IRQ not set, 
    //  and enough time has passed
    //  then C64 is ready to receive...
-   return ((SwiftRegCommand & SwiftCmndRxIRQEn) == 0 && \
+   return ((SwiftRegCommand & SwiftCmndRTSRMask) == SwiftCmndRTSRMatch && \
       (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
       CycleCountdown == 0);
 }
