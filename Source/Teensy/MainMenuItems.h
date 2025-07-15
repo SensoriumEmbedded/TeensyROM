@@ -1,6 +1,6 @@
 
 //add PROGMEM to declaration of all main menu binaries:
-#include "ROMs/ccgms_2021_Swiftlink_DE_2400.prg.h"
+#include "ROMs/ccgms_2021_Swiftlink_DE_38400.prg.h"
 #include "ROMs/cynthcart_201.prg.h"
 #include "ROMs/sta64_v2_6.prg.h"
 #include "ROMs/sid_wizard_1.9.prg.h"
@@ -136,7 +136,7 @@ StructMenuItem dirTest_Diags[] =
 StructMenuItem dirUtilities[] = 
 {
  /* 0 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
- /**1**/ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_2400_prg, sizeof(ccgms_2021_Swift_DE_2400_prg) ,
+ /**1**/ rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
  /* 2 */ rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
  /* 3 */ rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) ,
  /* 4 */ rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
