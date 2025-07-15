@@ -240,5 +240,6 @@
    rtBin8kLo     = 17  
    rtBinC128     = 18 
 
+   IOH_None      = 0  ;only part of enumIOHandlers used...
    
 ;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End Teensy matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

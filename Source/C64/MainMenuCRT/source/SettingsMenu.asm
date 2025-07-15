@@ -256,7 +256,15 @@ UpdTimeZone
    eor #rpudNFCEnabled  
    sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
-   jmp ShowSettings  
+   ;disable Special IO if enabling NFC:
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNFCEnabled
+   beq ++ ;skip if disabling
+   ldx #IOH_None 
+   stx rwRegNextIOHndlr+IO1Port
+   jsr WaitForTRWaitMsg
+
+++ jmp ShowSettings  
 
 +  cmp #'g'  ;RW Ready Delay
    bne +

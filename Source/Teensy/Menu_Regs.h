@@ -275,7 +275,7 @@ struct StructMenuItem
 
 enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
 {
-   IOH_None,
+   IOH_None,   //always 0
    IOH_Swiftlink,
    IOH_MIDI_Datel,      
    IOH_MIDI_Sequential, 
