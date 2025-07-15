@@ -91,6 +91,7 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 * Power up your C64/TeensyROM
 * In the TeensyROM Main Menu, select **F8** to go to the Settings Menu
 * Select the letter next to "NFC Enabled" to set to "On"
+  * Recommend also setting "Special IO" to "None" to avoid interference.
 * A reboot is required for this to take effect.  Either select "Re-boot TeensyROM" from the menu, or power-cycle the C64.
 * This setting stays persistent when the unit is powered down again.
   * Recommend disabling this option when the reader isn't connected to prevent slow start-up.
