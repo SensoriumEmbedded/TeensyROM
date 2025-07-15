@@ -19,7 +19,7 @@ BasicEnd
 SysAddress
    jmp Init
    
-   !src "source\SSTDefs.asm"
+   !src "source\C64Defs.asm"
    !src "source\SSTSupport.asm"
 
 Init:
@@ -34,8 +34,8 @@ Init:
    jsr PrintString 
    
    jsr sw_setup ;clears RX queue, sets def (2400) baud rate, Sets up Rx NMI vectors, turns on interrupts
-   ;lda #SW_Baud_3600
-   ;jsr sw_setbaud
+   lda #SW_Baud_38400
+   jsr sw_setbaud
    ;jsr sw_enable
  
 MainLoop:
@@ -72,7 +72,11 @@ MsgATDTRetroBBS:
    !tx "atdt bbs.retrocampus.com:6510", ChrReturn, 0
 
 MsgSimpleSwiftlinkTerminal:    
-   !tx  ChrToLower, ChrYellow, ChrClear, ChrReturn, "Simple Swiftlink Terminal Ready.", ChrReturn, 0
+   !tx ChrToLower, ChrYellow, ChrClear, ChrReturn
+   !tx "Simple Swiftlink Terminal", ChrReturn
+   !tx "  F1- Connect to Retro Campus", ChrReturn
+   !tx "  F2- Exit", ChrReturn
+   !tx ChrReturn, 0
 
 EOF:
    !byte 0

@@ -79,6 +79,7 @@ sw_setup:
    lda #0
    sta rtail
    sta rhead
+   sta rused
 
    cli
    rts
@@ -129,11 +130,23 @@ smcStringAddr
 sw_CharIn:
    ldx rhead
    cpx rtail
-   beq +      ; skip (empty buffer)
+   beq ++ ; skip (empty buffer)
    lda ribuf,x
    inc rhead
-   rts
-+  lda #0
+	dec rused
+   
+   ;could use a "paused" flag to skip this if not paused...
+	ldx rused	; check buffer usage
+	cpx #50		; against restart limit
+	bpl +		; skip if larger than 50 (no change)
+   tax
+   lda sw_cmd
+   and #%11111101 ; re-enable receive interrupt
+   sta sw_cmd
+   txa   
+   
++  rts
+++ lda #0
    rts
 
 ;----------------------------------------------------------------------
@@ -145,31 +158,23 @@ nmisw:
    tya
    pha
    lda sw_stat
-   and #%00001000 ; mask out all but receive interrupt reg
-   bne +    ; get outta here if interrupts are disabled (disk access etc)
-   sec      ; set carry upon return
-   bcs recch1
-+  lda sw_cmd
+   and #%10000000 ; mask out all but "Swiftlink caused interrupt" bit
+   beq +    ; get outta here if not from Swiftlink (disk access etc)
+   lda sw_cmd
    ora #%00000010 ; disable receive interrupts
    sta sw_cmd
-   lda sw_data
+   lda sw_data ;read a byte from Rx
    ldx rtail
-   sta ribuf,x
+   sta ribuf,x ;store it in buffer
    inc rtail
-;  inc rfree
-;  lda rfree
-;  cmp #200 ; check byte count against tolerance
-;  bcc +    ; is it over the top?
-;  ldx #stopsw
-;  stx paused  ; x=1 for stop, by the way
-;  jsr flow
-;+
+   inc rused
+   lda rused
+   cmp #200 ; check byte count against tolerance
+   bpl +    ; If full, leave Rx Int off (could set paused flag here)
    lda sw_cmd
    and #%11111101 ; re-enable receive interrupt
    sta sw_cmd
-   clc
-recch1
-   pla
++  pla
    tay
    pla
    tax
@@ -190,6 +195,8 @@ swwait:  ;waits for transmit ready, uses acc only
 rhead:
    !byte 0
 rtail:
+   !byte 0
+rused:
    !byte 0
 
    ;!align $ff, 0 , 0  ;could page align Rx queue to reduce index times.
