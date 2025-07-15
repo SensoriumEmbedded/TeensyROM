@@ -1,6 +1,7 @@
 
 //add PROGMEM to declaration of all main menu binaries:
 #include "ROMs/ccgms_2021_Swiftlink_DE_38400.prg.h"
+#include "ROMs/SST.prg.h"
 #include "ROMs/cynthcart_201.prg.h"
 #include "ROMs/sta64_v2_6.prg.h"
 #include "ROMs/sid_wizard_1.9.prg.h"
@@ -148,6 +149,7 @@ StructMenuItem dirUtilities[] =
  /*10 */ rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
  /*11 */ rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
  /*12 */ rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
+ /*13 */ rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
 };
 
 StructMenuItem dirMultimedia[] = 

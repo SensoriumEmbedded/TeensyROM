@@ -75,7 +75,9 @@ MsgSimpleSwiftlinkTerminal:
    !tx ChrToLower, ChrYellow, ChrClear, ChrReturn
    !tx "Simple Swiftlink Terminal", ChrReturn
    !tx "  F1- Connect to Retro Campus", ChrReturn
-   !tx "  F2- Exit", ChrReturn
+   !tx "  F2- Exit", ChrReturn, ChrReturn
+   !tx "AT Command mode ready", ChrReturn
+   !tx "  AT? for a list of commands", ChrReturn
    !tx ChrReturn, 0
 
 EOF:
