@@ -53,7 +53,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
-#define NMITimeoutuS       300    //if Rx data not read within this time, deassert NMI anyway
+#define NMITimeoutuS      7000    //if Rx data reg not read within this time from NMI assert, deassert NMI anyway.  7000uS is just under 1200 baud to read data reg
 #define Drive_USB            1
 #define Drive_SD             2
 
@@ -352,7 +352,7 @@ FLASHMEM void SetEthEEPDefaults()
 
 FLASHMEM void InitHndlr_SwiftLink()
 {
-   ClearClientStop();  /clear receive buffer and drop any current client connection   
+   ClearClientStop();  //clear receive buffer and drop any current client connection   
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    TurboRegEnhancedSpeed = 3; //default to reserved/not set
