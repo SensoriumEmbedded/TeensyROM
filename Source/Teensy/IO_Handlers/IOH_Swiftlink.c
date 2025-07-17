@@ -352,7 +352,7 @@ FLASHMEM void SetEthEEPDefaults()
 
 FLASHMEM void InitHndlr_SwiftLink()
 {
-   //EthernetInit();
+   ClearClientStop();  /clear receive buffer and drop any current client connection   
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    TurboRegEnhancedSpeed = 3; //default to reserved/not set
