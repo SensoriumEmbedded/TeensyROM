@@ -8,11 +8,14 @@
 
 
 ; calls from outside code:
-;  sw_setup
-;  sw_enable
-;  sw_disable
-;  sw_getxfer
-;  sw_dropdtr
+;  sw_setup: Clears RX queue, sets def (2400) baud rate, Sets up Rx NMI vectors, turns on interrupts
+;  sw_disable: Disable Rx NMI interrupts
+;  sw_enable: Enable Rx NMI interrupts
+;  sw_setbaud: Set Rx baud rate based on baud rate constant (below) stored in acc
+;  sw_CharOut: Tx single char stored in acc
+;  sw_StrOut: Send zero terminated char string stored in RAM (acc/Y pointer) to SwiftLink
+;  sw_CharIn: Read a character from the Swiftlink receive queue to acc, or 0 if empty
+
 
 ;----------------------------------------------------------------------
 ; baud rate constants
