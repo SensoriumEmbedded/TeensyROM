@@ -66,14 +66,14 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define IORegEnhancedSpeed 0x07   // Turbo232 Enhanced-Speed Reg
 
 //status reg flags
-#define SwiftStatusIRQ     0x80   // high if ACIA caused interrupt;
-#define SwiftStatusDCD     0x40   // reflects state of DCD line
-#define SwiftStatusDSR     0x20   // reflects state of DSR line
-#define SwiftStatusTxEmpty 0x10   // high if xmit-data register is empty
-#define SwiftStatusRxFull  0x08   // high if receive-data register full
-#define SwiftStatusErrOver 0x04   // high if overrun error
-#define SwiftStatusErrFram 0x02   // high if framing error
-#define SwiftStatusErrPar  0x01   // high if parity error
+#define SwiftStatusIRQ     0b10000000  // high if ACIA caused interrupt;
+#define SwiftStatusDCD     0b01000000  // reflects state of DCD line
+#define SwiftStatusDSR     0b00100000  // reflects state of DSR line
+#define SwiftStatusTxEmpty 0b00010000  // high if xmit-data register is empty
+#define SwiftStatusRxFull  0b00001000  // high if receive-data register full/loaded
+#define SwiftStatusErrOver 0b00000100  // high if overrun error
+#define SwiftStatusErrFram 0b00000010  // high if framing error
+#define SwiftStatusErrPar  0b00000001  // high if parity error
 #define SwiftStatusDefault (SwiftStatusTxEmpty|SwiftStatusDCD)   // default/power-up/reset value
 
 //command reg flags
@@ -347,11 +347,9 @@ FLASHMEM void SetEthEEPDefaults()
    }
 }
 
-
-//_____________________________________Handlers_____________________________________________________
-
-FLASHMEM void InitHndlr_SwiftLink()
+void ResetSwiftLink()
 {
+   //Called from IO handler, be quick!
    ClearClientStop();  //clear receive buffer and drop any current client connection   
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
@@ -369,7 +367,14 @@ FLASHMEM void InitHndlr_SwiftLink()
    Verbose = true;
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
-   PrintingHyperlink = false;
+   PrintingHyperlink = false;   
+}
+
+//_____________________________________Handlers_____________________________________________________
+
+FLASHMEM void InitHndlr_SwiftLink()
+{
+   ResetSwiftLink();
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
    // RAM2 usage as of 11/7/23:
@@ -449,7 +454,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftStatus:  
             //Write to status reg is a programmed reset
-            SwiftRegCommand = SwiftCmndDefault;
+            ResetSwiftLink();
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
