@@ -451,7 +451,7 @@ FLASHMEM ATRespCode ProcessATCommand()
       
    if (strstr(CmdMsg, "at")!=CmdMsg)
    {
-      AddToPETSCIIStrToRxQueueLN("AT not found");
+      //AddToPETSCIIStrToRxQueueLN("AT not found");
       return ATRC_ERROR;
    }
    CmdMsg+=2; //move past the AT
