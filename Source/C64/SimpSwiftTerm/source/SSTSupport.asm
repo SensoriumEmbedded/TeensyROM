@@ -8,7 +8,7 @@
 
 
 ; calls from outside code:
-;  sw_setup: Clears RX queue, sets def (2400) baud rate, Sets up Rx NMI vectors, turns on interrupts
+;  sw_setup: Clears RX queue, sets def (2400) baud rate, Sets up Rx NMI vectors
 ;  sw_disable: Disable Rx NMI interrupts
 ;  sw_enable: Enable Rx NMI interrupts
 ;  sw_setbaud: Set Rx baud rate based on baud rate constant (below) stored in acc
@@ -66,13 +66,16 @@ sw_enable:
 
 ;----------------------------------------------------------------------
 sw_setup:
-   sei
-   lda #%00001001 ; set defaults, enable receive interrupt
+   lda#0
+   sta sw_stat ; write to status to reset chip
+
+   lda #%00001011 ; set defaults, disable receive interrupt
    sta sw_cmd
    
    lda #SW_Baud_2400
    jsr sw_setbaud ;sets sw_ctrl reg and default baud rate
 
+   sei
    lda #<nmisw
    ldx #>nmisw
    sta $0318 ; NMINV
@@ -89,6 +92,7 @@ sw_setup:
 
 ;----------------------------------------------------------------------
 ; set baud rate based on baud rate constant stored in acc
+; modified acc, but not x/y
 sw_setbaud:
    cmp #SW_Baud_38400+1 
    bmi + ;skip if <= base sw max of 38400
@@ -136,15 +140,18 @@ sw_CharIn:
    beq ++ ; skip (empty buffer)
    lda ribuf,x
    inc rhead
-	dec rused
+   dec rused
    
    ;could use a "paused" flag to skip this if not paused...
-	ldx rused	; check buffer usage
-	cpx #50		; against restart limit
-	bpl +		; skip if larger than 50 (no change)
-   tax
+   ldx rused   ; check buffer usage
+   cpx #50     ; against restart limit
+   bpl +       ; skip if larger than 50 (no change)
+   
+   ; buff is low enough, turn on flow control
+   tax ;store the read value
    lda sw_cmd
-   and #%11111101 ; re-enable receive interrupt
+   and #%11110011 
+	ora #%00001000
    sta sw_cmd
    txa   
    
@@ -162,7 +169,7 @@ nmisw:
    pha
    lda sw_stat
    and #%10000000 ; mask out all but "Swiftlink caused interrupt" bit
-   beq +    ; get outta here if not from Swiftlink (disk access etc)
+   beq ++    ; exit if not from Swiftlink (disk access etc)
    lda sw_cmd
    ora #%00000010 ; disable receive interrupts
    sta sw_cmd
@@ -173,11 +180,16 @@ nmisw:
    inc rused
    lda rused
    cmp #200 ; check byte count against tolerance
-   bpl +    ; If full, leave Rx Int off (could set paused flag here)
+   bmi +    
+   ; buff is full, turn off flow control
    lda sw_cmd
-   and #%11111101 ; re-enable receive interrupt
+   and #%11110011 ; 
    sta sw_cmd
-+  pla
+   ; re-enable receive interrupt
++  lda sw_cmd
+   and #%11111101 
+   sta sw_cmd
+++ pla
    tay
    pla
    tax
@@ -190,7 +202,7 @@ swwait:  ;waits for transmit ready, uses acc only
    ora #%00001000 ; enable transmitter
    sta sw_cmd
    lda sw_stat
-   and #%00110000
+   and #%00010000 ;Tx empty = high
    beq swwait
    rts
 
@@ -204,4 +216,4 @@ rused:
 
    ;!align $ff, 0 , 0  ;could page align Rx queue to reduce index times.
 ribuf:
-   !fill 256, $00	; reserve 256 bytes for circular Rx queue
+   !fill 256, $00 ; reserve 256 bytes for circular Rx queue
