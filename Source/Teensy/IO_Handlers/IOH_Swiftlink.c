@@ -65,7 +65,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define IORegSwiftControl  0x03   // Swift Emulation Control Reg
 #define IORegEnhancedSpeed 0x07   // Turbo232 Enhanced-Speed Reg
 
-//status reg flags
+//status reg flags (SwiftRegStatus)
 #define SwiftStatusIRQ     0b10000000  // high if ACIA caused interrupt;
 #define SwiftStatusDCD     0b01000000  // reflects state of DCD line
 #define SwiftStatusDSR     0b00100000  // reflects state of DSR line
@@ -76,14 +76,13 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define SwiftStatusErrPar  0b00000001  // high if parity error
 #define SwiftStatusDefault (SwiftStatusTxEmpty|SwiftStatusDCD)   // default/power-up/reset value
 
-//command reg flags
-#define SwiftCmndRxIRQEn   0b00000010 // low if Rx IRQ enabled
-#define SwiftCmndRTSTx     0b00001100 // RTS and Transmitter Ctl
-#define SwiftCmndRTSRMask  0b00001110 //mask bits to check in ReadyToSendRx
-#define SwiftCmndRTSRMatch 0b00001000 //masked ReadyToSendRx matching
+//command reg flags (SwiftRegCommand)
+#define SwiftCmndRxIRQDis  0b00000010 // low to enable Rx IRQ, high to disable
+#define SwiftCmndRTSTxMask 0b00001100 // RTS and Transmitter Ctl Mask
+#define SwiftCmndRTSTxRdy  0b00001000 // RTS and Transmitter Ctl Ready/enabled
 #define SwiftCmndDefault   0b11100000 // Default command reg state
 
-//Control Reg baud rate settings
+//Control Reg baud rate settings (set via SwiftRegControl)
 enum enBaudRates
 {
    Baud_Enhanced = 0,
@@ -350,7 +349,8 @@ FLASHMEM void SetEthEEPDefaults()
 void ResetSwiftLink()
 {
    //Called from IO handler, be quick!
-   ClearClientStop();  //clear receive buffer and drop any current client connection   
+   
+   if(client.connected()) ClearClientStop();  //clear receive buffer and drop any current client connection   
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    TurboRegEnhancedSpeed = 3; //default to reserved/not set
@@ -425,7 +425,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
          case IORegSwiftData:   
             DataPortWriteWaitLog(SwiftRxBuf);
             SetNMIDeassert;
-            SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+            SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, IRQ de-asserted
             break;
          case IORegSwiftStatus:  
             DataPortWriteWaitLog(SwiftRegStatus);
@@ -458,8 +458,6 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
-            //check for Tx/Rx IRQs enabled?
-            //handshake line updates?
             break;
          case IORegSwiftControl:
             SwiftRegControl = Data;
@@ -468,7 +466,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegEnhancedSpeed:  // Turbo232 Enhanced-Speed Reg
             TurboRegEnhancedSpeed = Data;     
-            Printf_dbg_sw("EnhW: ");            
+            Printf_dbg_sw("EnhW:(%02x) ", TurboRegEnhancedSpeed);            
             SetBaud(SwiftRegControl & 0x0f);
             break;
       }

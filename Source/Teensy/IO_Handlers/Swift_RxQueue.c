@@ -32,11 +32,12 @@ uint8_t PullFromRxQueue()
 
 bool ReadyToSendRx()
 {
-   //  if IRQ enabled, 
+   //not checking for IRQ enabled here
+   //  if RTS activated (flow control), 
    //  and IRQ not set, 
    //  and enough time has passed
    //  then C64 is ready to receive...
-   return ((SwiftRegCommand & SwiftCmndRTSRMask) == SwiftCmndRTSRMatch && \
+   return ((SwiftRegCommand & SwiftCmndRTSTxMask) == SwiftCmndRTSTxRdy && \
       (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0 && \
       CycleCountdown == 0);
 }
@@ -47,7 +48,7 @@ bool CheckRxNMITimeout()
    if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutuS))
    {
      Serial.println("Rx NMI Timeout!");
-     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
+     SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //drop byte andclear IRQ
      SetNMIDeassert;
      return false;
    }
@@ -59,10 +60,17 @@ void SendRxByte(uint8_t ToSend)
    //assumes ReadyToSendRx() is true before calling
    
    SwiftRxBuf = ToSend;
-   SwiftRegStatus |= SwiftStatusRxFull | SwiftStatusIRQ;
+   SwiftRegStatus |= SwiftStatusRxFull;
    CycleCountdown = C64CycBetweenRx;
-   SetNMIAssert;
-   NMIassertMicros = micros();
+   //Printf_dbg_sw("Rx: %c\n", SwiftRxBuf);
+   
+   if ((SwiftRegCommand & SwiftCmndRxIRQDis) == 0) 
+   {  //irq enabled, set it
+      //Printf_dbg_sw(" +NMI\n");
+      SwiftRegStatus |= SwiftStatusIRQ;
+      SetNMIAssert;
+      NMIassertMicros = micros();
+   }
 }
 
 void CheckSendRxQueue()
@@ -113,11 +121,7 @@ void AddRawCharToRxQueue(uint8_t c)
   if (RxQueueUsed >= RxQueueSize-1)
   {
      Printf_dbg_sw("RxOvf! ");
-     //RxQueueHead = RxQueueTail = 0;
-     ////just in case...
-     //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
-     //SetNMIDeassert;
-     return;
+     return; //dropping byte...
   }
   
   RxQueue[RxQueueHead/RxQueueBlockSize][RxQueueHead%RxQueueBlockSize] = c;

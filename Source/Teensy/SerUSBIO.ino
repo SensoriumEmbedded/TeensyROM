@@ -363,12 +363,19 @@ FLASHMEM void ServiceSerial()
          Serial.printf("  Rx Queue Used: %d\n", RxQueueUsed); 
          
          Serial.printf("  RxIRQ is"); 
-         if((SwiftRegCommand & SwiftCmndRxIRQEn) != 0) Serial.printf(" Not"); 
+         if((SwiftRegCommand & SwiftCmndRxIRQDis) != 0) Serial.printf(" Not"); 
          Serial.printf(" enabled\n"); 
          
          Serial.printf("  RxIRQ is");
-         if((SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == 0) Serial.printf(" Not"); 
+         if((SwiftRegStatus & SwiftStatusIRQ) == 0) Serial.printf(" Not"); 
          Serial.printf(" set\n");
+         
+         Serial.printf("  Command Reg: %02x\n", SwiftRegCommand);
+         Serial.printf("  Control Reg: %02x\n", SwiftRegControl);
+         Serial.printf("   Status Reg: %02x\n", SwiftRegStatus);
+         Serial.printf("Enh Speed Reg: %02x\n", TurboRegEnhancedSpeed);
+         Serial.printf("     RxOutBuf: %02x\n", SwiftRxBuf);
+         
          break;
    #endif
    
