@@ -46,6 +46,7 @@
 #include "ROMs/DMACheck.prg.h"
 #include "ROMs/cia_tod.prg.h"
 #include "ROMs/Load8Run.prg.h"
+#include "ROMs/retromate_teensyrom.prg.h"
 //#include "ROMs/ember_head.prg.h"
 //#include "ROMs/disp_fract.prg.h"
 
@@ -99,21 +100,22 @@
 
 StructMenuItem dirGames[] = 
 {
- /*  0 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
- /*  1 */ rtFileCrt  , IOH_None         , (char*)"Beach Head II         256k MC"    , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
- /*  2 */ rtBin16k   , IOH_None         , (char*)"Dig Dug"                          , (uint8_t*)Dig_Dug_bin                , sizeof(Dig_Dug_bin) ,      
- /*  3 */ rtBin16k   , IOH_None         , (char*)"Donkey Kong"                      , (uint8_t*)Donkey_Kong_BIN            , sizeof(Donkey_Kong_BIN) ,      
- /*  4 */ rtFileCrt  , IOH_None         , (char*)"Gorf!"                            , (uint8_t*)C64618_Gorf_8000_crt       , sizeof(C64618_Gorf_8000_crt) ,
- /*  5 */ rtFilePrg  , IOH_None         , (char*)"Joust!"                           , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
- /*  6 */ rtBin8kHi  , IOH_None         , (char*)"Jupiter Lander"                   , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
- /*  7 */ rtFilePrg  , IOH_None         , (char*)"Jupiter Lander (Cracked)"         , (uint8_t*)jupiter_lander_crack_prg   , sizeof(jupiter_lander_crack_prg) ,  
- /*  8 */ rtFilePrg  , IOH_None         , (char*)"Mario Brothers"                   , (uint8_t*)Mario_Bros_prg             , sizeof(Mario_Bros_prg) ,
- /*  9 */ rtFilePrg  , IOH_None         , (char*)"Minesweeper"                      , (uint8_t*)minesweeper_game_prg       , sizeof(minesweeper_game_prg) ,   
- /* 10 */ rtFileCrt  , IOH_None         , (char*)"Ms. Pac-Man"                      , (uint8_t*)Ms__Pac_Man_crt            , sizeof(Ms__Pac_Man_crt) ,
- /* 11 */ rtFileCrt  , IOH_None         , (char*)"Robocop 2             224k EZF"   , (uint8_t*)Robocop_2_EasyFlash_crt    , sizeof(Robocop_2_EasyFlash_crt) ,
- /* 12 */ rtFilePrg  , IOH_None         , (char*)"Super Mario Brothers   48k PRG"   , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
- /* 13 */ rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
- /* 14 */ rtFilePrg  , IOH_None         , (char*)"Tetris"                           , (uint8_t*)Tetris_prg                 , sizeof(Tetris_prg) ,
+ /* 0 */ rtFilePrg  , IOH_Swiftlink    , (char*)"Retromate Internet Chess+SwiftLnk", (uint8_t*)retromate_teensyrom_prg    , sizeof(retromate_teensyrom_prg) ,
+ /* 1 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+ /* 2 */ rtFileCrt  , IOH_None         , (char*)"Beach Head II         256k MC"    , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
+ /* 3 */ rtBin16k   , IOH_None         , (char*)"Dig Dug"                          , (uint8_t*)Dig_Dug_bin                , sizeof(Dig_Dug_bin) ,      
+ /* 4 */ rtBin16k   , IOH_None         , (char*)"Donkey Kong"                      , (uint8_t*)Donkey_Kong_BIN            , sizeof(Donkey_Kong_BIN) ,      
+ /* 5 */ rtFileCrt  , IOH_None         , (char*)"Gorf!"                            , (uint8_t*)C64618_Gorf_8000_crt       , sizeof(C64618_Gorf_8000_crt) ,
+ /* 6 */ rtFilePrg  , IOH_None         , (char*)"Joust!"                           , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
+ /**7**/ rtBin8kHi  , IOH_None         , (char*)"Jupiter Lander"                   , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
+ /* 8 */ rtFilePrg  , IOH_None         , (char*)"Jupiter Lander (Cracked)"         , (uint8_t*)jupiter_lander_crack_prg   , sizeof(jupiter_lander_crack_prg) ,  
+ /* 9 */ rtFilePrg  , IOH_None         , (char*)"Mario Brothers"                   , (uint8_t*)Mario_Bros_prg             , sizeof(Mario_Bros_prg) ,
+ /*10 */ rtFilePrg  , IOH_None         , (char*)"Minesweeper"                      , (uint8_t*)minesweeper_game_prg       , sizeof(minesweeper_game_prg) ,   
+ /*11 */ rtFileCrt  , IOH_None         , (char*)"Ms. Pac-Man"                      , (uint8_t*)Ms__Pac_Man_crt            , sizeof(Ms__Pac_Man_crt) ,
+ /*12 */ rtFileCrt  , IOH_None         , (char*)"Robocop 2             224k EZF"   , (uint8_t*)Robocop_2_EasyFlash_crt    , sizeof(Robocop_2_EasyFlash_crt) ,
+ /*13 */ rtFilePrg  , IOH_None         , (char*)"Super Mario Brothers   48k PRG"   , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
+ /*14 */ rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
+ /*15 */ rtFilePrg  , IOH_None         , (char*)"Tetris"                           , (uint8_t*)Tetris_prg                 , sizeof(Tetris_prg) ,
 };
 
 StructMenuItem dirTest_Diags[] = 

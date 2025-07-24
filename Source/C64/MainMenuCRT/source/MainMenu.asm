@@ -460,7 +460,7 @@ HotKeyLaunch
 +  cmp #'5'  ;Hot Key #5
    bne +
    ldx #0  ;dir Games
-   lda #6  ;prog Jupiter Lander
+   lda #7  ;prog Jupiter Lander
    jmp HotKeyLaunch
 
 
