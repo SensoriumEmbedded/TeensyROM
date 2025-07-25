@@ -459,6 +459,7 @@ void LoadDirectory(FS *sourceFS)
    
    while (File entry = dir.openNextFile()) 
    {
+      //uint8_t hidey = entry.isHidden(); //check for hidden files? not in library
       filename = entry.name();
       if (entry.isDirectory())
       {
