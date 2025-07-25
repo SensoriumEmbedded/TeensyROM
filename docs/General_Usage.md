@@ -74,16 +74,15 @@
       * Emulates/supports most popular cartridge types:
         * All 8khi, 8klo, 16k, and C128 "Generic" carts
         * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon, GMod2
-        * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay
-        * Swiftlink internet, MIDI (Passport, Datel, Sequential, & Namesoft)
+        * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay, Magic Desk 2
+        * Ethernet (Swiftlink/Turbo-232), MIDI (Passport, Datel, Sequential, & Namesoft)
       * Additional CRT support info
         * Files larger than 850KB will automatically employ a bank-swap scheme 
           * These files must be run from an SD Card (not USB Stick)
-          * Feature Beta Released in FW v0.6.7:
-            * Uses "old school" REU type of DMA assertion for fast pausing and no additional CPU execution
-              * This method will not work on some systems (Most C128s and a low percentage of NTSC systems)
-              * DMA Pause check utility included in Test+Diags dir to test specific system DMA reliability
-            * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
+          * Uses "old school" REU type of DMA assertion for fast pausing and no additional CPU execution
+            * This method will not work on some systems (Most C128s and a low percentage of NTSC systems)
+            * DMA Pause check utility included in Test+Diags dir to test specific system DMA reliability
+          * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
           * See full CRT implementation details [here](CRT_Implementation.md).
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. 
           * This issue only impacts UltiMax CRTs on C128s and is resolved in PCA rev 0.3

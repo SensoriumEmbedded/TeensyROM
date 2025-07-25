@@ -1,6 +1,58 @@
 
 # FW Release Version history:
 
+### 0.6.8 Release 2025/07/25
+* Swiftlink/Turbo-232 speed & compatibility improvements
+  * New baud rate control implementation
+    * Swiftlink baud rate control supports up to 38Kbps
+    * New Turbo-232 register added to allow speeds up to 230Kbps!
+  * Supported and tested with [**C64OS**](https://c64os.com/c64os/) 
+    * [v1.08 beta now available](https://www.c64os.com/c64os/beta)
+    * Thank you to @Greg Nacu for all your guidance/support/feedback!
+  * Simple Swiftlink Terminal (SST) addition
+    * Stripped down Swift/Turbo interface to demonstrate high speed polling or interrupt based receiving
+    * Not feature rich, but very fast.  Try a connection using polling at 230k baud.  :)
+    * [Source code included](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/Source/C64/SimpSwiftTerm/source) for developer reference and incorporation into other C64 apps.
+  * Other improvements
+    * Flow Control: RTS and Transmitter Ctl via Command Reg
+    * Polling mode and interrupt Improvements
+      * Polling allow fast data receiving without the overhead & timing requirements of an interrupt/handler
+    * Proper "chip reset" on write to status reg
+    * Fix: clear receive buffer and drop any current client connection on Swift/Turbo startup
+      * Issue  introduced in FW 0.6.7, Thank you @Stefan
+    * NMI Timeout increased from 300->7000uS for slow NMI handlers
+    * Non-AT command just returns "error" instead of "AT not found"
+    * Special IO name changed to "Swift-Turbo/Modem"
+    * Turbo232 CRT type detection
+    * Debug build options to force baud, spy registers, etc via USB Serial
+* TR Main Menu additions
+  * Retromate Internet Chess (Games dir)
+    * Play Chess on-line against bots or other players
+    * Written for the TeensyROM utilizing the high speed polling Turbo-232 interface
+    * Thank you @Stefan Wessels for your incredible contribution!
+      * Email: swessels@email.com
+      * Source on GitHub: https://github.com/StewBC/retromate
+  * 2SID version of SID Wizard and SW User Manual (MIDI_ASID dir)
+    * Thank you to Hermit for these great programs and for allowing this inclusion in the TR!
+    * Also @Voynich for the suggestion
+  * Super Simple Terminal (Utilities dir)
+    * See description above  
+  * LOAD"*",8,1 and RUN  (Utilities dir)
+    * Handy for quick run/load from IEC drive/emulator, if connected
+    * Can choose this for autolaunch to immediately launch into floppy based program on system power-up.
+* File type support additions
+  * Magic Desk 2  .CRT support
+    * Uses DMA pause feature for large (2MB) file size
+    * Comparatively new CRT format, [documented here.](https://github.com/crystalct/MagicDesk2)
+    * Required for ["SNK vs CAPCOM - Stronger Edition"](https://www.youtube.com/watch?v=dNT9yBsi1Dk)
+  * .NFO and .MD files now viewable as text 
+    * Thank you @hExx for the recommendation.
+* Other fixes
+  * Auto-Set Special IO to None when enabling NFC in settings menu to avoid conflict/slowdown
+  * Exit to BASIC (F2) didn't always include "Special IO" selected handler, fixed
+  * Check for for 1-3 character extensions, not just 3
+  * Teensyduino environment updated to 1.60b4
+    
 ### 0.6.7 Release 2025/06/14
 * Note: EEPROM settings will be reset with this FW version (color settings added)
 * TeensyROM UI Customizable color scheme
