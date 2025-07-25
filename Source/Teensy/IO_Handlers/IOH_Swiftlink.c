@@ -254,7 +254,6 @@ void SetBaud(uint8_t BaudNum)
 
    //Sets the rate of NMI assertion on Rx  TR->C64
    //basing cycle count off of PAL, NTSC will be ~3.8% faster
-   // 2300 cyc (3557bps) is lowest without CCGMS misses (chars missed in large buffs when lower)
    C64CycBetweenRx = 985250*8/ActualBaud[BaudNum];
    Printf_dbg_sw("baud set: %dbps, %d Cycles\n", ActualBaud[BaudNum], C64CycBetweenRx); 
 }
@@ -458,6 +457,22 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
+            //check if change requires asserting an interrupt:
+            //if ((SwiftRegStatus & SwiftStatusRxFull) && \       //There's an Rx byte waiting
+            //    (SwiftRegStatus & SwiftStatusIRQ) == 0 && \     // IRQ(NMI) not currently asserted
+            //    (SwiftRegCommand & SwiftCmndRxIRQDis) == 0 && \ // IRQ is enabled
+            //    (SwiftRegCommand & SwiftCmndRTSTxMask) == SwiftCmndRTSTxRdy ) //RTS (flow control) is ready
+            //combined:
+            //  If there's an Rx byte waiting & IRQ(NMI) not currently asserted &
+            //     IRQ is enabled & RTS (flow control) is ready
+            if ( (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == SwiftStatusRxFull && \  
+                (SwiftRegCommand & (SwiftCmndRxIRQDis | SwiftCmndRTSTxMask)) == SwiftCmndRTSTxRdy ) 
+            {  
+               CycleCountdown = C64CycBetweenRx;
+               SwiftRegStatus |= SwiftStatusIRQ;
+               SetNMIAssert;
+               NMIassertMicros = micros();
+            }
             break;
          case IORegSwiftControl:
             SwiftRegControl = Data;
