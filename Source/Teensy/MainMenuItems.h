@@ -5,6 +5,8 @@
 #include "ROMs/cynthcart_201.prg.h"
 #include "ROMs/sta64_v2_6.prg.h"
 #include "ROMs/sid_wizard_1.9.prg.h"
+#include "ROMs/SID_Wizard_2SID.prg.h"
+#include "ROMs/SW_1.9_UserManual.prg.h"
 #include "ROMs/Epyx_Fast_Load.crt.h"
 #include "ROMs/80columns.prg.h"
 #include "ROMs/hex_mon.prg.h"
@@ -100,8 +102,8 @@
 
 StructMenuItem dirGames[] = 
 {
- /* 0 */ rtFilePrg  , IOH_Swiftlink    , (char*)"Retromate Internet Chess+SwiftLnk", (uint8_t*)retromate_teensyrom_prg    , sizeof(retromate_teensyrom_prg) ,
- /* 1 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+ /* 0 */ rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+ /* 1 */ rtFilePrg  , IOH_Swiftlink    , (char*)"Retromate Internet Chess+SwiftLnk", (uint8_t*)retromate_teensyrom_prg    , sizeof(retromate_teensyrom_prg) ,
  /* 2 */ rtFileCrt  , IOH_None         , (char*)"Beach Head II         256k MC"    , (uint8_t*)Beach_Head_II_crt          , sizeof(Beach_Head_II_crt) ,
  /* 3 */ rtBin16k   , IOH_None         , (char*)"Dig Dug"                          , (uint8_t*)Dig_Dug_bin                , sizeof(Dig_Dug_bin) ,      
  /* 4 */ rtBin16k   , IOH_None         , (char*)"Donkey Kong"                      , (uint8_t*)Donkey_Kong_BIN            , sizeof(Donkey_Kong_BIN) ,      
@@ -205,12 +207,13 @@ StructMenuItem dirPic_Files[] =
 StructMenuItem dirMIDI_ASID[] = 
 {
  /* 0 */ rtDirectory, IOH_None           , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
- /* 1 */ rtFilePrg  , IOH_ASID           , (char*)"TeensyROM ASID Player   +TR ASID ", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
- /* 2 */ rtFilePrg  , IOH_TeensyROM      , (char*)"MIDI2SID         +TeensyROM MIDI ", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
- /* 3 */ rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1      +Datel MIDI ", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
- /* 4 */ rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6     +Passport MIDI ", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
- /* 5 */ rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.92+Sequential MIDI ", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
-
+ /* 1 */ rtFilePrg  , IOH_ASID           , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
+ /* 2 */ rtFilePrg  , IOH_TeensyROM      , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
+ /* 3 */ rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1       +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
+ /* 4 */ rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6      +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
+ /* 5 */ rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.92        +Seq MIDI", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
+ /* 6 */ rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard_2SID V1.92   +Seq MIDI", (uint8_t*)SID_Wizard_2SID_prg        , sizeof(SID_Wizard_2SID_prg) ,
+ /* 7 */ rtFilePrg  , IOH_None           , (char*)"SID-Wizard User Manual V1.92"     , (uint8_t*)SW_1_9_UserManual_prg      , sizeof(SW_1_9_UserManual_prg) ,
 };
 
 StructMenuItem dirTEXT_PETSCII[] = 
