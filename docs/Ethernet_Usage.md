@@ -6,12 +6,12 @@
 ## Using a Terminal program to connect to the internet
   ### Yes, bulletin board and other telnet based services are still out there and popular!
   * Here are just a few:
-    * [Oasis BBS:](https://theoasisbbs.com/) oasisbbs.hopto.org
-    * 8-Bit Playground: 8bit.hoyvision.com    
-    * 13th Floor BBS: 13th.hoyvision.com
+    * [Oasis BBS:](https://theoasisbbs.com/) oasisbbs.hopto.org:6400
+    * Retro Campus BBS: bbs.retrocampus.com:6510 (no login required)
+    * 8-Bit Playground: 8bit.hoyvision.com:6502
 
   ### TeensyROM Setup
-  * Select "Swiftlink/Modem" Special IO HW from the settings menu prior to running a terminal program.
+  * Select "Swif-Turbo/Modem" Special IO HW from the settings menu prior to running a terminal program.
     * Note: if you use the included CCGMS Terminal program, this association is automatic and this step can be skipped.
   * The default TeensyROM Ethernet settings are as follows:
     * DHCP enabled
@@ -20,7 +20,8 @@
     * Customized settings are stored in the TeensyROM for later use, even when power is removed.
 
   ### Most C64/128 terminal programs can be used with the TeensyROM
-  * Configure them to use a SwiftLink cartridge at address $DExx at 38400 baud
+  * Configure to use a SwiftLink or Turbo-232 cartridge at address $DExx
+  * Swiftlink baud rates up to 38.4K and Turbo-232 up to 230.4K are supported
     
   ### **CCGMS Terminal usage**
   * CCGMS is a popular C64/128 Terminal program that is bundled into your TeensyROM Firmware
@@ -101,6 +102,12 @@
 |NO_DIALTONE |6|No cable, DHCP or local host ethernet init fail (ATDT) |
 |BUSY        |7|unused                                                 |
 |NO_ANSWER   |8|No response from remote server (ATDT)                  |
+
+## Developers
+* The Simple Swiftlink Terminal (included in FW) is provided as an example of a high speed terminal interface.
+* Not feature rich, but very fast.  Try a connection using polling at 230k baud.  :)
+* [Source code included](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/Source/C64/SimpSwiftTerm/source) for developer reference.
+* Can be re-used to enable on-line connectivity via C64 apps
 
 ## TeensyROM/C64/128 internet Time Synch
 The TeensyROM main menu/application can synch the C64/128 system time with the internet for display in the TeensyROM menu and use in other applications.
