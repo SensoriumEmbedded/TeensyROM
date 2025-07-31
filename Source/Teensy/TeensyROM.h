@@ -26,6 +26,8 @@
 #define MaxRAM_ImageSize  (144)  // RAM1 space (in kB) used for CRT & Transfer buffer
 
 //Build options: 
+  // #define USBHostSerialCommands    //Allows commands from usb hosted serial device
+
 //Debug messaging: enable at your own risk, can cause emulation interference/fails
   // #define DbgMsgs_IO    //All other Serial out messages (Printf_dbg)
   // #define DbgMsgs_SW    //Swiftlink Serial out messages (Printf_dbg_sw)

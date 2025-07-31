@@ -44,6 +44,7 @@ char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
+Stream *CmdChannel  = &Serial; 
 
 #include "MinimalBoot/Common/ISRs.c"
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
@@ -70,7 +71,6 @@ void setup()
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
 #endif
 
-  
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
@@ -79,6 +79,10 @@ void setup()
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
+#ifdef USBHostSerialCommands
+   USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);
+   //USBHostSerial.printf("USB Host Serial\n");
+#endif
  
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
@@ -152,7 +156,7 @@ void loop()
 {
    if (BtnPressed)
    {
-      Serial.print("Button detected\n"); 
+      CmdChannel->print("Button detected\n"); 
       SetLEDOn;
       BtnPressed=false;
       IO1[rwRegIRQ_CMD] = ricmdNone; //just to be sure, should already be 0/none
@@ -170,8 +174,8 @@ void loop()
    if (doReset)
    {
       SetResetAssert; 
-      Serial.println("Resetting C64"); 
-      Serial.flush();
+      CmdChannel->println("Resetting C64"); 
+      CmdChannel->flush();
       delay(50); 
       uint32_t NextInterval = 10000, beginWait = millis();
       bool LEDState = true, DefEEPReboot = false;
@@ -196,10 +200,14 @@ void loop()
       SetResetDeassert;
    }
   
-   if (Serial.available()) ServiceSerial();
+   if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
    if (nfcState == nfcStateEnabled) nfcCheck();
- 
+   
+#ifdef USBHostSerialCommands
+   if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
+#endif   
+
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
 }
@@ -262,7 +270,7 @@ void EEPreadStr(uint16_t addr, char* buf)
 
 void SetEEPDefaults()
 {
-   Serial.println("--> Setting EEPROM to defaults");
+   CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudRWReadyDly); //default med js speed, music on, eth time synch off, NFC off, RW delay on
    EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default 12 hour clock mode
    EEPROM.write(eepAdTimezone, -14); //default to pacific time

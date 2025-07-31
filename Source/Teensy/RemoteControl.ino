@@ -93,10 +93,10 @@ FLASHMEM bool SetColorRef()
 {
 
    if (!SerialAvailabeTimeout()) return false;
-   uint8_t ColRefNum = Serial.read();
+   uint8_t ColRefNum = CmdChannel->read();
 
    if (!SerialAvailabeTimeout()) return false;
-   uint8_t ColorNum = Serial.read();
+   uint8_t ColorNum = CmdChannel->read();
    
    if (ColRefNum >= NumColorRefs) return false;
    if (ColorNum  > 15) return false;
@@ -117,7 +117,7 @@ FLASHMEM bool SetColorRef()
 FLASHMEM bool SetSIDSong()
 {  //assumes TR is not "busy" (Handler active)
    if(!SerialAvailabeTimeout()) return false;
-   uint8_t NewSongNumZ = Serial.read();
+   uint8_t NewSongNumZ = CmdChannel->read();
    
    if(NewSongNumZ > IO1[rRegSIDNumSongsZ]) return false;
    IO1[rwRegSIDSongNumZ] = NewSongNumZ;

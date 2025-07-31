@@ -57,22 +57,24 @@
    };
 #endif
 
-FLASHMEM void ServiceSerial()
-{  //Serial.available() confirmed before calling
+
+FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
+{  //ThisCmdChannel->available() confirmed before calling
+   CmdChannel = ThisCmdChannel;
 
    if (CurrentIOHandler == IOH_TR_BASIC) return; //special case, handler will take care of serial input
    
-   uint16_t inVal = Serial.read();
+   uint16_t inVal = CmdChannel->read();
    switch (inVal)
    {
       case 0x64: //'d' command from app
          if(!SerialAvailabeTimeout()) return;
-         inVal = (inVal<<8) | Serial.read(); //READ NEXT BYTE
+         inVal = (inVal<<8) | CmdChannel->read(); //READ NEXT BYTE
          
          //only commands available when busy:
          if (inVal == ResetC64Token) //Reset C64
          {
-            Serial.println("Reset cmd received");  //UI looks for this string, do not change.
+            CmdChannel->println("Reset cmd received");  //UI looks for this string, do not change.
             BtnPressed = true;
             return;
          }
@@ -97,7 +99,7 @@ FLASHMEM void ServiceSerial()
          if (CurrentIOHandler != IOH_TeensyROM)
          {
             SendU16(FailToken);
-            Serial.print("Busy!\n");
+            CmdChannel->print("Busy!\n");
             return;
          }
          //TeensyROM IO Handler is active...
@@ -105,7 +107,7 @@ FLASHMEM void ServiceSerial()
          switch (inVal)
          {
             case PingToken:  //ping
-               Serial.printf("TeensyROM %s ready!\n", strVersionNumber);
+               CmdChannel->printf("TeensyROM %s ready!\n", strVersionNumber);
                break;
             case SendFileToken: //file x-fer pc->TR
             case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
@@ -145,23 +147,25 @@ FLASHMEM void ServiceSerial()
                else SendU16(FailToken);
                break;
             case DebugToken: //'dg'Test/debug
-               //for (int a=0; a<256; a++) Serial.printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
+               //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
                //nfcInit();
-               Printf_dbg("isFab2x: %d\n", isFab2x()); 
+               //Printf_dbg("isFab2x: %d\n", isFab2x()); 
+               USBHostSerial.print("USB Host Serial\n");
+               Serial.print("Sent:USB Host Serial\n");
                break;
             default:
-               Serial.printf("Unk cmd: 0x%04x\n", inVal); 
+               CmdChannel->printf("Unk cmd: 0x%04x\n", inVal); 
                break;
          }
          break;
       case 'e': //Reset EEPROM to defaults
          SetEEPDefaults();
-         Serial.println("Applied upon reboot");
+         CmdChannel->println("Applied upon reboot");
          break;
       case 'v': //version info
          MakeBuildInfo();
-         Serial.printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
+         CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
          break;
       case 'b': //bus analysis
          BusAnalysis();
@@ -171,10 +175,10 @@ FLASHMEM void ServiceSerial()
      
       //case 'u':  //set up autolaunch
       //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
-      //   Serial.printf("Autolaunch disabled\n");
+      //   CmdChannel->printf("Autolaunch disabled\n");
       //   
       //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
-      //   //Serial.printf("Autolaunch set\n");
+      //   //CmdChannel->printf("Autolaunch set\n");
       //   
       //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
       //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
@@ -191,11 +195,11 @@ FLASHMEM void ServiceSerial()
    // q, a, i
    #ifdef Dbg_SerASID
       case 'q':   //display queue size, rate, etc
-         Serial.printf("\nASID Timer: Ena: %s, Qinitd: %s\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"));
-         Serial.printf(" Config  : QSize:%lu, FrmsBetChks:%d\n", ASIDQueueSize, FramesBetweenChecks);
-         Serial.printf(" Current : QUsed:%lu, QInit: %lu, DeltaFrames:%d\n", ASIDRxQueueUsed, BufByteTarget, DeltaFrames);
-         Serial.printf(" QInitChg: Curr: %d, Max:%+d, Min:%+d, diff:%d bytes\n", (ASIDRxQueueUsed - BufByteTarget), MaxB, MinB, MaxB-MinB);
-         Serial.printf(" Interval: Curr: %lu, Max:%lu, Min:%lu, diff:%lu uS\n", TimerIntervalUs, MaxT, MinT, MaxT-MinT);
+         CmdChannel->printf("\nASID Timer: Ena: %s, Qinitd: %s\n", (FrameTimerMode ? "true" : "false"), (QueueInitialized ? "true" : "false"));
+         CmdChannel->printf(" Config  : QSize:%lu, FrmsBetChks:%d\n", ASIDQueueSize, FramesBetweenChecks);
+         CmdChannel->printf(" Current : QUsed:%lu, QInit: %lu, DeltaFrames:%d\n", ASIDRxQueueUsed, BufByteTarget, DeltaFrames);
+         CmdChannel->printf(" QInitChg: Curr: %d, Max:%+d, Min:%+d, diff:%d bytes\n", (ASIDRxQueueUsed - BufByteTarget), MaxB, MinB, MaxB-MinB);
+         CmdChannel->printf(" Interval: Curr: %lu, Max:%lu, Min:%lu, diff:%lu uS\n", TimerIntervalUs, MaxT, MinT, MaxT-MinT);
          break;
       case 'a': //ASID Packet load
       {
@@ -215,11 +219,11 @@ FLASHMEM void ServiceSerial()
             StartMicros = micros() - StartMicros;
             if(StartMicros>MaxMicros) MaxMicros=StartMicros;
             if(StartMicros<MinMicros) MinMicros=StartMicros;
-            Serial.printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
-            Serial.flush();
+            CmdChannel->printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
+            CmdChannel->flush();
             delay(10); //allow scope time to re-arm
          }
-         Serial.printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
+         CmdChannel->printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
       }
          break;
       case 'i': //Send text via ASID
@@ -239,7 +243,7 @@ FLASHMEM void ServiceSerial()
          break;
       case 'c': //Clear Debug Log buffer
          BigBufCount = 0;
-         Serial.println("Buffer Reset");
+         CmdChannel->println("Buffer Reset");
          break;       
    #endif
          
@@ -248,26 +252,26 @@ FLASHMEM void ServiceSerial()
       case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
          {
             MakeBuildInfo();
-            Serial.println("\n***** Build & Mem info *****");
-            Serial.println(SerialStringBuf);
-            Serial.printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
+            CmdChannel->println("\n***** Build & Mem info *****");
+            CmdChannel->println(SerialStringBuf);
+            CmdChannel->printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
             memInfo();
             getFreeITCM();
  
-            Serial.printf("\nMem usage:\n");
+            CmdChannel->printf("\nMem usage:\n");
             uint32_t TotalSize = 0;
             if(DriveDirMenu != NULL) 
             {
                for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) TotalSize += strlen(DriveDirMenu[Num].Name)+1;
-               Serial.printf("Filename chars: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
+               CmdChannel->printf("Filename chars: %lu (%luk) @ $%08x\nDriveDirMenu: %lu (%luk) @ $%08x\n", 
                   TotalSize, TotalSize/1024, (uint32_t)DriveDirMenu[0].Name,
                   MaxMenuItems*sizeof(StructMenuItem), MaxMenuItems*sizeof(StructMenuItem)/1024, (uint32_t)DriveDirMenu);
                TotalSize += MaxMenuItems*sizeof(StructMenuItem);
             }
-            Serial.printf("DriveDirMenu+Filename chars: %lu (%luk)\n", 
+            CmdChannel->printf("DriveDirMenu+Filename chars: %lu (%luk)\n", 
                TotalSize, TotalSize/1024);
             
-            Serial.printf("RAM_Image: %lu (%luk) @ $%08x\n", 
+            CmdChannel->printf("RAM_Image: %lu (%luk) @ $%08x\n", 
                sizeof(RAM_Image), sizeof(RAM_Image)/1024, (uint32_t)RAM_Image);
          
             TotalSize = 0;
@@ -286,9 +290,9 @@ FLASHMEM void ServiceSerial()
                }
                else AddAndCheckSource(TeensyROMMenu[ROMNum], &TotalSize, &FileCount);
             }
-            Serial.printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
+            CmdChannel->printf("TeensyROMMenu/sub struct: %lu (%luk) @ $%08x\n", 
                TotalStructSize, TotalStructSize/1024, (uint32_t)TeensyROMMenu);
-            Serial.printf("TeensyROMMenu/sub (%d) Items: %d (%dk) of Flash\n\n", FileCount, TotalSize, TotalSize/1024);
+            CmdChannel->printf("TeensyROMMenu/sub (%d) Items: %d (%dk) of Flash\n\n", FileCount, TotalSize, TotalSize/1024);
          }
          break;
       case 'x': 
@@ -296,18 +300,18 @@ FLASHMEM void ServiceSerial()
             FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
             
             uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
-            Serial.printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
+            CmdChannel->printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
             
             //uint32_t RAM2Free = (RAM2BytesFree() & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
-            //Serial.printf("RAM2 Free: %luK (%lu blks)\n", RAM2Free, RAM2Free/8);
+            //CmdChannel->printf("RAM2 Free: %luK (%lu blks)\n", RAM2Free, RAM2Free/8);
             
             uint8_t NumChips = RAM2blocks();
-            //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+            //CmdChannel->printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
             NumChips = RAM2blocks()-1; //do it again, sometimes get one more, minus one to match reality, not clear why
-            Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
+            CmdChannel->printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
            
             CrtMax += NumChips*8;
-            Serial.printf("  CRT Max: %luK (%lu blks) ~%luK file\n", CrtMax, CrtMax/8, (uint32_t)(CrtMax*1.004));
+            CmdChannel->printf("  CRT Max: %luK (%lu blks) ~%luK file\n", CrtMax, CrtMax/8, (uint32_t)(CrtMax*1.004));
             //larger File size due to header info.
          }
          break;
@@ -329,20 +333,20 @@ FLASHMEM void ServiceSerial()
             {
                if(!SerialAvailabeTimeout())
                {
-                  Serial.printf("6 digits required\n");
+                  CmdChannel->printf("6 digits required\n");
                   return;
                }
-               uint32_t ByteIn = Serial.read();
+               uint32_t ByteIn = CmdChannel->read();
                if(ByteIn<'0' || ByteIn>'9')
                {
-                  Serial.printf("numbers only\n");
+                  CmdChannel->printf("numbers only\n");
                   return;
                }
                NewBaud += ((ByteIn-'0') * pow(10,ByteNum));
             }
             C64CycBetweenRx = 985250*8/NewBaud;
-            Serial.printf("Manual baud set: %lubps, %lu Cycles\n", NewBaud, C64CycBetweenRx);
-            //Serial.printf("CycToBaud: %lubps\n", (985250*8/C64CycBetweenRx));
+            CmdChannel->printf("Manual baud set: %lubps, %lu Cycles\n", NewBaud, C64CycBetweenRx);
+            //CmdChannel->printf("CycToBaud: %lubps\n", (985250*8/C64CycBetweenRx));
          }
          break;
       case 'k': //kill/reset status/NMI
@@ -352,29 +356,29 @@ FLASHMEM void ServiceSerial()
          RxQueueHead = RxQueueTail = 0;
          //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, ready to receive more
          SetNMIDeassert;
-         Serial.printf("Swiftlink Reset\n"); 
+         CmdChannel->printf("Swiftlink Reset\n"); 
          break;
       case 's': //status            
-         Serial.printf("Swiftlink status:\n"); 
-         Serial.printf("  client is");
-         if (!client.connected()) Serial.printf(" Not");
-         Serial.printf(" connected\n");
+         CmdChannel->printf("Swiftlink status:\n"); 
+         CmdChannel->printf("  client is");
+         if (!client.connected()) CmdChannel->printf(" Not");
+         CmdChannel->printf(" connected\n");
          
-         Serial.printf("  Rx Queue Used: %d\n", RxQueueUsed); 
+         CmdChannel->printf("  Rx Queue Used: %d\n", RxQueueUsed); 
          
-         Serial.printf("  RxIRQ is"); 
-         if((SwiftRegCommand & SwiftCmndRxIRQDis) != 0) Serial.printf(" Not"); 
-         Serial.printf(" enabled\n"); 
+         CmdChannel->printf("  RxIRQ is"); 
+         if((SwiftRegCommand & SwiftCmndRxIRQDis) != 0) CmdChannel->printf(" Not"); 
+         CmdChannel->printf(" enabled\n"); 
          
-         Serial.printf("  RxIRQ is");
-         if((SwiftRegStatus & SwiftStatusIRQ) == 0) Serial.printf(" Not"); 
-         Serial.printf(" set\n");
+         CmdChannel->printf("  RxIRQ is");
+         if((SwiftRegStatus & SwiftStatusIRQ) == 0) CmdChannel->printf(" Not"); 
+         CmdChannel->printf(" set\n");
          
-         Serial.printf("  Command Reg: %02x\n", SwiftRegCommand);
-         Serial.printf("  Control Reg: %02x\n", SwiftRegControl);
-         Serial.printf("   Status Reg: %02x\n", SwiftRegStatus);
-         Serial.printf("Enh Speed Reg: %02x\n", TurboRegEnhancedSpeed);
-         Serial.printf("     RxOutBuf: %02x\n", SwiftRxBuf);
+         CmdChannel->printf("  Command Reg: %02x\n", SwiftRegCommand);
+         CmdChannel->printf("  Control Reg: %02x\n", SwiftRegControl);
+         CmdChannel->printf("   Status Reg: %02x\n", SwiftRegStatus);
+         CmdChannel->printf("Enh Speed Reg: %02x\n", TurboRegEnhancedSpeed);
+         CmdChannel->printf("     RxOutBuf: %02x\n", SwiftRxBuf);
          
          break;
    #endif
@@ -382,8 +386,8 @@ FLASHMEM void ServiceSerial()
    // t...
    #ifdef Dbg_SerTimChg
       case 't': //timing commands, 2 letters and 3-4 numbers
-         Serial.printf("-----\n");
-         switch (Serial.read())
+         CmdChannel->printf("-----\n");
+         switch (CmdChannel->read())
          {
             case 'm': //nS_MaxAdj change
                GetDigits(4, &nS_MaxAdj);
@@ -413,33 +417,33 @@ FLASHMEM void ServiceSerial()
                nS_DataHold  = Def_nS_DataHold;  
                nS_VICStart  = Def_nS_VICStart;  
                nS_VICDHold  = Def_nS_VICDHold;
-               Serial.printf("Defaults set\n");
-               Serial.printf(" EEP RW_Ready delay: ");
+               CmdChannel->printf("Defaults set\n");
+               CmdChannel->printf(" EEP RW_Ready delay: ");
                if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) 
                {
                   nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
-                  Serial.printf("On\n");
+                  CmdChannel->printf("On\n");
                }
                else
                {
                   nS_RWnReady  = Def_nS_RWnReady;  
-                  Serial.printf("Off\n");
+                  CmdChannel->printf("Off\n");
                }
                break;
             default:
-               Serial.printf("No changes\n");
+               CmdChannel->printf("No changes\n");
                break;
          }
-         Serial.printf("Current:    Variable  Val (Command)\n");
-         Serial.printf("\t   nS_MaxAdj %04d (tm####)\n", nS_MaxAdj);
-         Serial.printf("\t nS_RWnReady  %03d (tr###)\n", nS_RWnReady);
-         Serial.printf("\t  nS_PLAprop  %03d (tp###)\n", nS_PLAprop);
-         Serial.printf("\tnS_DataSetup  %03d (ts###)\n", nS_DataSetup);
-         Serial.printf("\t nS_DataHold  %03d (th###)\n", nS_DataHold);
-         Serial.printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
-         Serial.printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
-         Serial.printf("\tSet Defaults      (td)\n");
-         Serial.printf("\tList current vals (t)\n-----\n");
+         CmdChannel->printf("Current:    Variable  Val (Command)\n");
+         CmdChannel->printf("\t   nS_MaxAdj %04d (tm####)\n", nS_MaxAdj);
+         CmdChannel->printf("\t nS_RWnReady  %03d (tr###)\n", nS_RWnReady);
+         CmdChannel->printf("\t  nS_PLAprop  %03d (tp###)\n", nS_PLAprop);
+         CmdChannel->printf("\tnS_DataSetup  %03d (ts###)\n", nS_DataSetup);
+         CmdChannel->printf("\t nS_DataHold  %03d (th###)\n", nS_DataHold);
+         CmdChannel->printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
+         CmdChannel->printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
+         CmdChannel->printf("\tSet Defaults      (td)\n");
+         CmdChannel->printf("\tList current vals (t)\n-----\n");
          break;  
    #endif
    
@@ -452,7 +456,7 @@ FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize, 
    *TotalSize += SourceMenu.Size;
    Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
    if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
-      Serial.printf("*--> %s is using RAM!!!\n", SourceMenu.Name);
+      CmdChannel->printf("*--> %s is using RAM!!!\n", SourceMenu.Name);
 }
 
 FLASHMEM void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
@@ -461,16 +465,16 @@ FLASHMEM void GetDigits(uint8_t NumDigits, uint32_t *SetInt)
    
    for(uint8_t DigNum=0; DigNum<NumDigits; DigNum++)
    {
-      if(!Serial.available())
+      if(!CmdChannel->available())
       {
-         Serial.println("\nNot enough Digits!\n");
+         CmdChannel->println("\nNot enough Digits!\n");
          return;
       }
-      inStr[DigNum] = Serial.read(); 
+      inStr[DigNum] = CmdChannel->read(); 
    }
    inStr[NumDigits]=0;
    *SetInt = atol(inStr);
-   Serial.printf("\nVal Set to: %d\n\n", *SetInt);
+   CmdChannel->printf("\nVal Set to: %d\n\n", *SetInt);
 }
 
 FLASHMEM void PrintDebugLog()
@@ -478,29 +482,29 @@ FLASHMEM void PrintDebugLog()
    bool LogDatavalid = false;
    
    #ifdef DbgIOTraceLog
-      Serial.println("DbgIOTraceLog enabled");
+      CmdChannel->println("DbgIOTraceLog enabled");
       LogDatavalid = true;
    #endif
       
    #ifdef DbgCycAdjLog
-      Serial.println("DbgCycAdjLog enabled");
+      CmdChannel->println("DbgCycAdjLog enabled");
       LogDatavalid = true;
    #endif
       
    #ifdef DbgSpecial
-      Serial.println("DbgSpecial enabled");
+      CmdChannel->println("DbgSpecial enabled");
       LogDatavalid = true;
    #endif
       
    if (CurrentIOHandler == IOH_Debug)
    {
-      Serial.println("Debug IO Handler enabled");
+      CmdChannel->println("Debug IO Handler enabled");
       LogDatavalid = true;
    }               
    
    if (!LogDatavalid)
    {
-      Serial.println("No logging enabled");
+      CmdChannel->println("No logging enabled");
       return;
    }
    
@@ -510,14 +514,14 @@ FLASHMEM void PrintDebugLog()
    
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
-      Serial.printf("#%04d ", Cnt);
+      CmdChannel->printf("#%04d ", Cnt);
       
       if (BigBuf[Cnt] & DbgSpecialData)
       //if(1)
       {
-         Serial.printf("DbgSpecialData: uS betw packets %lu\n", BigBuf[Cnt]);
+         CmdChannel->printf("DbgSpecialData: uS betw packets %lu\n", BigBuf[Cnt]);
          //BigBuf[Cnt] &= ~DbgSpecialData;
-         //Serial.printf("DbgSpecialData %04x : %02x\n", BigBuf[Cnt] & 0xFFFF, (BigBuf[Cnt] >> 24));
+         //CmdChannel->printf("DbgSpecialData %04x : %02x\n", BigBuf[Cnt] & 0xFFFF, (BigBuf[Cnt] >> 24));
             //code used previously, in-situ:
                //#ifdef DbgSpecial
                //   if (BigBuf != NULL){
@@ -529,20 +533,20 @@ FLASHMEM void PrintDebugLog()
       else if (BigBuf[Cnt] & AdjustedCycleTiming)
       {
          BigBuf[Cnt] &= ~AdjustedCycleTiming;
-         Serial.printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
+         CmdChannel->printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
       else
       {
-         Serial.printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
+         CmdChannel->printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
 
-         if (BigBuf[Cnt] & IOTLDataValid) Serial.printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
-         else Serial.printf("n/a\n");
+         if (BigBuf[Cnt] & IOTLDataValid) CmdChannel->printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
+         else CmdChannel->printf("n/a\n");
       }
    }
    
-   if (BigBufCount == 0) Serial.println("Buffer empty");
-   if (BufferFull) Serial.println("Buffer was full");
-   Serial.println("Buffer Reset");
+   if (BigBufCount == 0) CmdChannel->println("Buffer empty");
+   if (BufferFull) CmdChannel->println("Buffer was full");
+   CmdChannel->println("Buffer Reset");
    BigBufCount = 0;
 }
 
@@ -574,12 +578,12 @@ FLASHMEM bool ReceiveFileName(uint32_t *SD_nUSB, char *FileNamePath)
    while (1) 
    {
       if(!SerialAvailabeTimeout()) return false;
-      FileNamePath[CharNum] = Serial.read();
+      FileNamePath[CharNum] = CmdChannel->read();
       if (FileNamePath[CharNum]==0) return true;
       if (++CharNum == MaxNamePathLength)
       {
          SendU16(FailToken);
-         Serial.print("Path too long!\n");  
+         CmdChannel->print("Path too long!\n");  
          return false;
       }
    }
@@ -591,7 +595,7 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
    for(int8_t ByteNum=NumBytes-1; ByteNum>=0; ByteNum--)
    {
       if(!SerialAvailabeTimeout()) return false;
-      uint32_t ByteIn = Serial.read();
+      uint32_t ByteIn = CmdChannel->read();
       *InVal += (ByteIn << (ByteNum*8));
    }
    return true;
@@ -599,27 +603,27 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
 
 FLASHMEM void SendU16(uint16_t SendVal)
 {
-   Serial.write((uint8_t)(SendVal & 0xff));
-   Serial.write((uint8_t)((SendVal >> 8) & 0xff));
+   CmdChannel->write((uint8_t)(SendVal & 0xff));
+   CmdChannel->write((uint8_t)((SendVal >> 8) & 0xff));
 }
 
 FLASHMEM void SendU32(uint32_t SendVal)
 {
-    Serial.write((uint8_t)(SendVal & 0xff));
-    Serial.write((uint8_t)((SendVal >> 8) & 0xff));
-    Serial.write((uint8_t)((SendVal >> 16) & 0xff));
-    Serial.write((uint8_t)((SendVal >> 24) & 0xff));
+    CmdChannel->write((uint8_t)(SendVal & 0xff));
+    CmdChannel->write((uint8_t)((SendVal >> 8) & 0xff));
+    CmdChannel->write((uint8_t)((SendVal >> 16) & 0xff));
+    CmdChannel->write((uint8_t)((SendVal >> 24) & 0xff));
 }
    
 FLASHMEM bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
    
-   while(!Serial.available() && (millis() - StartTOMillis) < SerialTimoutMillis); // timeout loop
-   if (Serial.available()) return(true);
+   while(!CmdChannel->available() && (millis() - StartTOMillis) < SerialTimoutMillis); // timeout loop
+   if (CmdChannel->available()) return(true);
    
    SendU16(FailToken);
-   Serial.print("Timeout!\n");  
+   CmdChannel->print("Timeout!\n");  
    return(false);
 }
 
@@ -661,51 +665,51 @@ FLASHMEM void memInfo ()
 
   auto sp = (char*) __builtin_frame_address(0);
 
-  Serial.printf("MemInfo:\n");
-  Serial.printf("_stext        %08x\n",      _stext);
-  Serial.printf("_etext        %08x +%db\n", _etext, _etext - _stext);
-  Serial.printf("_sdata        %08x\n",      _sdata);
-  Serial.printf("_edata        %08x +%db\n", _edata, _edata - _sdata);
-  Serial.printf("_sbss         %08x\n",      _sbss);
-  Serial.printf("_ebss         %08x +%db\n", _ebss, _ebss - _sbss);
-  Serial.printf("curr stack    %08x +%db\n", sp, sp - _ebss);
-  Serial.printf("_estack       %08x +%db\n", _estack, _estack - sp);
-  Serial.printf("_heap_start   %08x\n",      _heap_start);
-  Serial.printf("__brkval      %08x +%db\n", __brkval, __brkval - _heap_start);
-  Serial.printf("_heap_end     %08x +%db\n", _heap_end, _heap_end - __brkval);
+  CmdChannel->printf("MemInfo:\n");
+  CmdChannel->printf("_stext        %08x\n",      _stext);
+  CmdChannel->printf("_etext        %08x +%db\n", _etext, _etext - _stext);
+  CmdChannel->printf("_sdata        %08x\n",      _sdata);
+  CmdChannel->printf("_edata        %08x +%db\n", _edata, _edata - _sdata);
+  CmdChannel->printf("_sbss         %08x\n",      _sbss);
+  CmdChannel->printf("_ebss         %08x +%db\n", _ebss, _ebss - _sbss);
+  CmdChannel->printf("curr stack    %08x +%db\n", sp, sp - _ebss);
+  CmdChannel->printf("_estack       %08x +%db\n", _estack, _estack - sp);
+  CmdChannel->printf("_heap_start   %08x\n",      _heap_start);
+  CmdChannel->printf("__brkval      %08x +%db\n", __brkval, __brkval - _heap_start);
+  CmdChannel->printf("_heap_end     %08x +%db\n", _heap_end, _heap_end - __brkval);
   
 #if ARDUINO_TEENSY41
   extern char _extram_start[], _extram_end[], *__brkval;
-  Serial.printf("_extram_start %08x\n",      _extram_start);
-  Serial.printf("_extram_end   %08x +%db\n", _extram_end,
+  CmdChannel->printf("_extram_start %08x\n",      _extram_start);
+  CmdChannel->printf("_extram_end   %08x +%db\n", _extram_end,
          _extram_end - _extram_start);
 #endif
-  Serial.printf("\n");
+  CmdChannel->printf("\n");
 
-  Serial.printf("<ITCM>  %08x .. %08x\n",
+  CmdChannel->printf("<ITCM>  %08x .. %08x\n",
          _stext, _stext + ((int) _itcm_block_count << 15) - 1);
-  Serial.printf("<DTCM>  %08x .. %08x\n",
+  CmdChannel->printf("<DTCM>  %08x .. %08x\n",
          _sdata, _estack - 1);
-  Serial.printf("<RAM>   %08x .. %08x\n",
+  CmdChannel->printf("<RAM>   %08x .. %08x\n",
          RAM_BASE, RAM_BASE + RAM_SIZE - 1);
-  Serial.printf("<FLASH> %08x .. %08x\n",
+  CmdChannel->printf("<FLASH> %08x .. %08x\n",
          FLASH_BASE, FLASH_BASE + FLASH_SIZE - 1);
 #if ARDUINO_TEENSY41
   if (external_psram_size > 0)
-    Serial.printf("<PSRAM> %08x .. %08x\n",
+    CmdChannel->printf("<PSRAM> %08x .. %08x\n",
            _extram_start, _extram_start + (external_psram_size << 20) - 1);
 #endif
-  Serial.printf("\n");
+  CmdChannel->printf("\n");
 
   auto stack = sp - _ebss;
-  Serial.printf("avail STACK (RAM1) %8d b %5d kb\n", stack, stack >> 10);
+  CmdChannel->printf("avail STACK (RAM1) %8d b %5d kb\n", stack, stack >> 10);
 
   auto heap = _heap_end - __brkval;
-  Serial.printf("avail HEAP  (RAM2) %8d b %5d kb\n", heap, heap >> 10);
+  CmdChannel->printf("avail HEAP  (RAM2) %8d b %5d kb\n", heap, heap >> 10);
 
 #if ARDUINO_TEENSY41
   auto psram = _extram_start + (external_psram_size << 20) - _extram_end;
-  Serial.printf("avail PSRAM (ext)  %8d b %5d kb\n", psram, psram >> 10);
+  CmdChannel->printf("avail PSRAM (ext)  %8d b %5d kb\n", psram, psram >> 10);
 #endif
 }
 
@@ -716,18 +720,18 @@ FLASHMEM void  getFreeITCM()
    uint32_t  SizeLeft_etext;
    extern char _stext[], _etext[];
    
-   Serial.println("\ngetFreeITCM:");
+   CmdChannel->println("\ngetFreeITCM:");
    SizeLeft_etext = (32 * 1024) - (((uint32_t)&_etext - (uint32_t)&_stext) % (32 * 1024));
    sizeofFreeITCM = SizeLeft_etext - 4;
    sizeofFreeITCM /= sizeof(ptrFreeITCM[0]);
    ptrFreeITCM = (uint32_t *) ( (uint32_t)&_stext + (uint32_t)&_etext + 4 );
-   Serial.printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
-   Serial.printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
-   Serial.printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
+   CmdChannel->printf( "Size of Free ITCM in Bytes = %u\n", sizeofFreeITCM * sizeof(ptrFreeITCM[0]) );
+   CmdChannel->printf( "Start of Free ITCM = %u [%X] \n", ptrFreeITCM, ptrFreeITCM);
+   CmdChannel->printf( "End of Free ITCM = %u [%X] \n", ptrFreeITCM + sizeofFreeITCM, ptrFreeITCM + sizeofFreeITCM);
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) ptrFreeITCM[ii] = 1;
    //uint32_t jj = 0;
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
-   //Serial.printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
+   //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
 
