@@ -10,10 +10,10 @@ FLASHMEM bool GetPathParameter(char FileNamePath[])
         if (!SerialAvailabeTimeout())
         {
             SendU16(FailToken);
-            Serial.print("Timed out getting path param!\n");
+            CmdChannel->print("Timed out getting path param!\n");
             return false;
         }
-        currentChar = Serial.read();
+        currentChar = CmdChannel->read();
 
         if (currentChar == 0) break;
 
@@ -26,7 +26,7 @@ FLASHMEM bool GetPathParameter(char FileNamePath[])
     if (CharNum == MaxNamePathLength)
     {
         SendU16(FailToken);
-        Serial.print("Path too long!\n");
+        CmdChannel->print("Path too long!\n");
         return false;
     }
     return true;
@@ -39,7 +39,7 @@ FLASHMEM FS* GetStorageDevice(uint32_t storageType)
     if (!SD.begin(BUILTIN_SDCARD))
     {
         SendU16(FailToken);
-        Serial.printf("Specified storage device was not found: %u\n", storageType);
+        CmdChannel->printf("Specified storage device was not found: %u\n", storageType);
         return nullptr;
     }
     return &SD;
@@ -50,7 +50,7 @@ FLASHMEM bool GetFileStream(uint32_t SD_nUSB, char FileNamePath[], FS* sourceFS,
     if (sourceFS->exists(FileNamePath))
     {
         SendU16(FailToken);
-        Serial.printf("File already exists.\n");
+        CmdChannel->printf("File already exists.\n");
         return false;
     }
     file = sourceFS->open(FileNamePath, FILE_WRITE);
@@ -66,7 +66,7 @@ FLASHMEM bool GetFileStream(uint32_t SD_nUSB, char FileNamePath[], FS* sourceFS,
     if (!file)
     {
         SendU16(FailToken);
-        Serial.printf("Could not open for write: %s:%s\n", (SD_nUSB ? "SD" : "USB"), FileNamePath);
+        CmdChannel->printf("Could not open for write: %s:%s\n", (SD_nUSB ? "SD" : "USB"), FileNamePath);
         return false;
     }
     return true;
@@ -112,11 +112,11 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
         if (!SerialAvailabeTimeout())
         {
             SendU16(FailToken);
-            Serial.printf("Rec %lu of %lu bytes\n", bytenum, len);
+            CmdChannel->printf("Rec %lu of %lu bytes\n", bytenum, len);
             file.close();
             return false;
         }
-        file.write(byteIn = Serial.read());
+        file.write(byteIn = CmdChannel->read());
         checksum -= byteIn;
         bytenum++;
     }  
@@ -126,7 +126,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
     if (checksum != 0)
     {
         SendU16(FailToken);
-        Serial.printf("CS Failed! RCS:%lu\n", checksum);        
+        CmdChannel->printf("CS Failed! RCS:%lu\n", checksum);        
         return false;
     }
     return true;
@@ -155,21 +155,21 @@ FLASHMEM void PostFileCommand()
     if (!GetUInt(&fileLength, 4))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving file length value!");
+        CmdChannel->println("Error receiving file length value!");
         return;
     }
 
     if (!GetUInt(&checksum, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving checksum value!");
+        CmdChannel->println("Error receiving checksum value!");
         return;
     }
 
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type value!");
+        CmdChannel->println("Error receiving storage type value!");
         return;
     }
 
@@ -182,7 +182,7 @@ FLASHMEM void PostFileCommand()
     if (!EnsureDirectory(FileNamePath, *sourceFS))
     {
         SendU16(FailToken);
-        Serial.printf("Failed to ensure directory for: %s\n", FileNamePath);
+        CmdChannel->printf("Failed to ensure directory for: %s\n", FileNamePath);
         return;
     }
 
@@ -218,25 +218,25 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 
             if (directoryItem.isDirectory())
             {
-                Serial.print(F("[Dir]{\"Name\":\""));
-                Serial.print(itemName);
-                Serial.print(F("\",\"Path\":\""));
-                Serial.print(directoryPath);
-                Serial.print('/');
-                Serial.print(itemName);
-                Serial.print(F("\"}[/Dir]"));
+                CmdChannel->print(F("[Dir]{\"Name\":\""));
+                CmdChannel->print(itemName);
+                CmdChannel->print(F("\",\"Path\":\""));
+                CmdChannel->print(directoryPath);
+                CmdChannel->print('/');
+                CmdChannel->print(itemName);
+                CmdChannel->print(F("\"}[/Dir]"));
             }
             else
             {
-                Serial.print(F("[File]{\"Name\":\""));
-                Serial.print(itemName);
-                Serial.print(F("\",\"Size\":"));
-                Serial.print(directoryItem.size());
-                Serial.print(F(",\"Path\":\""));
-                Serial.print(directoryPath);
-                Serial.print('/');
-                Serial.print(itemName);
-                Serial.print(F("\"}[/File]"));
+                CmdChannel->print(F("[File]{\"Name\":\""));
+                CmdChannel->print(itemName);
+                CmdChannel->print(F("\",\"Size\":"));
+                CmdChannel->print(directoryItem.size());
+                CmdChannel->print(F(",\"Path\":\""));
+                CmdChannel->print(directoryPath);
+                CmdChannel->print('/');
+                CmdChannel->print(itemName);
+                CmdChannel->print(F("\"}[/File]"));
             }
         }
         directoryItem.close();
@@ -277,25 +277,25 @@ FLASHMEM void GetDirectoryCommand()
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type value! (Error 1)");
+        CmdChannel->println("Error receiving storage type value! (Error 1)");
         return;
     }
     if (!GetUInt(&skip, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving skip value! (Error 2)");
+        CmdChannel->println("Error receiving skip value! (Error 2)");
         return;
     }
     if (!GetUInt(&take, 2))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving take value! (Error 3)");
+        CmdChannel->println("Error receiving take value! (Error 3)");
         return;
     }
     if (!GetPathParameter(path))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path value! (Error 4)");
+        CmdChannel->println("Error receiving path value! (Error 4)");
         return;
     }
 
@@ -308,13 +308,13 @@ FLASHMEM void GetDirectoryCommand()
     if (!dir)
     {
         SendU16(FailToken);
-        Serial.println("Directory not found. (Error 5)");
+        CmdChannel->println("Directory not found. (Error 5)");
         return;
     }
     if (!dir.isDirectory())
     {
         SendU16(FailToken);
-        Serial.println("Path is not a directory. (Error 6)");
+        CmdChannel->println("Path is not a directory. (Error 6)");
         dir.close();
         return;
     }
@@ -336,7 +336,7 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
     if (!sourceFile)
     {
         SendU16(FailToken);
-        Serial.printf("Failed to open source file: %s\n", sourcePath);
+        CmdChannel->printf("Failed to open source file: %s\n", sourcePath);
         return false;
     }
     fs.remove(destinationPath);
@@ -345,7 +345,7 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
     if (!destinationFile)
     {
         SendU16(FailToken);
-        Serial.printf("Failed to open destination file: %s\n", destinationPath);
+        CmdChannel->printf("Failed to open destination file: %s\n", destinationPath);
         sourceFile.close();
         return false;
     }
@@ -385,7 +385,7 @@ FLASHMEM void CopyFileCommand()
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type value!");
+        CmdChannel->println("Error receiving storage type value!");
         return;
     }
 
@@ -400,7 +400,7 @@ FLASHMEM void CopyFileCommand()
     if (!EnsureDirectory(destinationPath, *sourceFS))
     {
         SendU16(FailToken);
-        Serial.printf("Failed to ensure directory for: %s\n", destinationPath);
+        CmdChannel->printf("Failed to ensure directory for: %s\n", destinationPath);
         return;
     }
 
@@ -414,7 +414,7 @@ FLASHMEM void DeleteFile(const char* filePath, FS& fileSystem)
     if (!fileSystem.exists(filePath))
     {
         SendU16(FailToken);
-        Serial.printf("File not found: %s\n", filePath);
+        CmdChannel->printf("File not found: %s\n", filePath);
         return;
     }
 
@@ -426,7 +426,7 @@ FLASHMEM void DeleteFile(const char* filePath, FS& fileSystem)
     else
     {
         SendU16(FailToken);
-        Serial.printf("Failed to delete file: %s\n", filePath);
+        CmdChannel->printf("Failed to delete file: %s\n", filePath);
         return;
     }
 }
@@ -451,14 +451,14 @@ FLASHMEM void DeleteFileCommand()
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type!");
+        CmdChannel->println("Error receiving storage type!");
         return;
     }
 
     if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path!");
+        CmdChannel->println("Error receiving path!");
         return;
     }
 
@@ -466,7 +466,7 @@ FLASHMEM void DeleteFileCommand()
     if (!sourceFS)
     {
         SendU16(FailToken);
-        Serial.println("Error getting storage device!");
+        CmdChannel->println("Error getting storage device!");
     }
 
     DeleteFile(filePath, *sourceFS);
@@ -475,12 +475,12 @@ FLASHMEM void DeleteFileCommand()
 FLASHMEM bool SendFileData(File& file, uint32_t len) {
     uint32_t bytenum = 0;
     while (bytenum < len) {
-        if (Serial.availableForWrite()) {
-            Serial.write(file.read());
+        if (CmdChannel->availableForWrite()) {
+            CmdChannel->write(file.read());
             bytenum++;
         } else {
             SendU16(FailToken);
-            Serial.printf("Send %lu of %lu bytes\n", bytenum, len);
+            CmdChannel->printf("Send %lu of %lu bytes\n", bytenum, len);
             return false;
         }
     }
@@ -519,14 +519,14 @@ FLASHMEM void GetFileCommand() {
     if (!GetUInt(&storageType, 1))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving storage type! (Error 1)");
+        CmdChannel->println("Error receiving storage type! (Error 1)");
         return;
     }
 
     if (!GetPathParameter(filePath))
     {
         SendU16(FailToken);
-        Serial.println("Error receiving path! (Error 2)");
+        CmdChannel->println("Error receiving path! (Error 2)");
         return;
     }
 
@@ -535,14 +535,14 @@ FLASHMEM void GetFileCommand() {
     if (sourceFS == nullptr || !sourceFS->exists("/")) 
     {
       SendU16(FailToken);
-      Serial.println("Storage device unavailable. (Error 3)");
+      CmdChannel->println("Storage device unavailable. (Error 3)");
       return;
     }
 
     if (!sourceFS->exists(filePath)) 
     {
       SendU16(FailToken);
-      Serial.println("File not found. (Error 4)");
+      CmdChannel->println("File not found. (Error 4)");
       return;
     }
 
@@ -551,7 +551,7 @@ FLASHMEM void GetFileCommand() {
     if (!fileStream) 
     {
         SendU16(FailToken);
-        Serial.println("Failed to open file. (Error 5)");
+        CmdChannel->println("Failed to open file. (Error 5)");
         return;
     }
      SendU16(AckToken);

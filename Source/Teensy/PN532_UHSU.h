@@ -7,13 +7,14 @@
 #include "USBHost_t36.h"
 
 
-#define PN532_HSU_READ_TIMEOUT						(1000)
+#define PN532_HSU_READ_TIMEOUT     (1000)
 
-#define SeriaType USBSerial //USBSerial  //USBSerial_BigBuffer  HardwareSerial
+#define HostSerialType USBSerial    //USBSerial  //USBSerial_BigBuffer  //HardwareSerial
+//match USBHostSerial(myusbHost ... declaration
 
 class PN532_UHSU : public PN532Interface {
 public:
-    PN532_UHSU(SeriaType &serial);
+    PN532_UHSU(HostSerialType &serial);
     
     void begin();
     void wakeup();
@@ -21,7 +22,7 @@ public:
     int16_t readResponse(uint8_t buf[], uint8_t len, uint16_t timeout);
     
 private:
-    SeriaType* _serial;
+    HostSerialType* _serial;
     uint8_t command;
     
     int8_t readAckFrame();
