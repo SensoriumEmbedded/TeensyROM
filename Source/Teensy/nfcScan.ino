@@ -24,14 +24,7 @@
 #include <PN532.h>      //From: https://github.com/elechouse/PN532
 #include "PN532_UHSU.h" //Customized for USBSerial instead of HardwareSerial
  
-USBHIDParser hid1(myusbHost);
-USBHIDParser hid2(myusbHost);
-USBHIDParser hid3(myusbHost);  //need all 3?
-
-USBSerial userial(myusbHost);  // works only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
-//USBSerial_BigBuffer userial(myusbHost, 1); // Handles anything up to 512 bytes
-//USBSerial_BigBuffer userial(myusbHost); // Handles up to 512 but by default only for those > 64 bytes
-PN532_UHSU pn532uhsu(userial);
+PN532_UHSU pn532uhsu(USBHostSerial);
 PN532 nfc(pn532uhsu);
 
 #define MaxNfcConfRetries    20

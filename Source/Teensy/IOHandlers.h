@@ -17,12 +17,24 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 USBHost myusbHost;
 USBHub hub1(myusbHost);
 USBHub hub2(myusbHost);
 MIDIDevice_BigBuffer usbHostMIDI(myusbHost);
 USBDrive myDrive(myusbHost);
 USBFilesystem firstPartition(myusbHost);
+
+USBHIDParser hid1(myusbHost);
+USBHIDParser hid2(myusbHost);
+USBHIDParser hid3(myusbHost);  //need all 3?
+
+USBSerial USBHostSerial(myusbHost);   //update HostSerialType to match, defined in PN532_UHSU.h
+//USBSerial           USBHostSerial(myusbHost);    // works only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
+//USBSerial_BigBuffer USBHostSerial(myusbHost, 1); // Handles anything up to 512 bytes
+//    doesn't seem to change operation, but uses an extra 3,456 bytes of RAM1
+//USBSerial_BigBuffer USBHostSerial(myusbHost);    // Handles up to 512 but by default only for those > 64 bytes.  
+//    doesnt seem to work, at least not for CH340 comm
 
 EthernetUDP udp;
 EthernetClient client;
