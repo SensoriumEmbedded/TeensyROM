@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+1"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -82,10 +82,13 @@ enum MinBootIndFlags
 
 enum DMA_States  //used with DMA_State
 {
+   DMA_S_DisableReady,  //Disabled/default state
+   DMA_S_ActiveReady,   //DMA asserted state
+   
+   DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    DMA_S_StartDisable,
-   DMA_S_DisableReady,
-   DMA_S_StartActive, 
-   DMA_S_ActiveReady, 
+   DMA_S_StartActive,      //activate immediately
+   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
 };
 
 volatile uint8_t DMA_State = DMA_S_DisableReady;

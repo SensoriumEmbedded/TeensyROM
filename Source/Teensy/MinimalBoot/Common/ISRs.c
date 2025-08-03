@@ -107,25 +107,31 @@ FASTRUN void isrPHI2()
       StartCycCnt = ARM_DWT_CYCCNT;
       
       // activate/disable DMA during low phase of Phi2
-      if (DMA_State == DMA_S_StartDisable)
+      if (DMA_State > DMA_S_BeginStartStates)
       {
-         //if (GP9_BA(GPIO_9))
-         //{
-            //WaitUntil_nS(200);
-            SetDMADeassert;
-            DMA_State = DMA_S_DisableReady;
-         //}
+         switch (DMA_State)
+         {
+            case DMA_S_StartDisable:
+               //WaitUntil_nS(200);
+               SetDMADeassert;
+               DMA_State = DMA_S_DisableReady;
+               break;
+            case DMA_S_StartActive:
+               //WaitUntil_nS(250); 
+               SetDMAAssert;
+               DMA_State = DMA_S_ActiveReady;
+               break;
+            case DMA_S_Start_BA_Active:
+               //WaitUntil_nS(250); 
+               if (!GP9_BA(ReadGPIO9))  // bus not available, bad line
+               { 
+                  SetDMAAssert;
+                  DMA_State = DMA_S_ActiveReady;
+               }
+               break;
+         }
       }
-      else if (DMA_State == DMA_S_StartActive)
-      {
-         //WaitUntil_nS(250); 
-         //if (!GP9_BA(ReadGPIO9)) 
-         //{ 
-            SetDMAAssert;
-            DMA_State = DMA_S_ActiveReady;
-         //}
-      }
-            
+      
       if (EmulateVicCycles)
       {
          SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
