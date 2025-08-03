@@ -83,9 +83,10 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             LaunchFile();
             return;
          }
-         else if (inVal == C64PauseOnToken) //pause C64 via DMA 
+         else if (inVal == C64PauseOnToken) //pause C64 via DMA, during next bad line
          {
             DMA_State = DMA_S_StartActive;
+            // DMA_State = DMA_S_Start_BA_Active; //doesn't work with U64? scope it...
             SendU16(AckToken);
             return;
          }
@@ -554,26 +555,34 @@ FLASHMEM void LaunchFile()
 {            
    //   App: LaunchFileToken 0x6444
    //Teensy: AckToken 0x64CC or RetryToken/abort from minimal
-   //   App: Send SD_nUSB(1), DestPath/Name(up to MaxNamePathLength, null term)
+   //   App: Send DriveType(1), DestPath/Name(up to MaxNamePathLength, null term)
+   //        DriveTypes: (RegMenuTypes)
+   //           USBDrive  = 0
+   //           SD        = 1
+   //           Teensy    = 2
    //Teensy: AckToken 0x64CC
    //   C64: file Launches
 
    //Launch file token has been received
    SendU16(AckToken);
-
-   uint32_t SD_nUSB;
+   RegMenuTypes DriveType;
    char FileNamePath[MaxNamePathLength];
-   if (ReceiveFileName(&SD_nUSB, FileNamePath))
+   
+   if (ReceiveFileName(&DriveType, FileNamePath))
    {
       SendU16(AckToken);
-      RemoteLaunch(SD_nUSB == 0 ? rmtUSBDrive : rmtSD, FileNamePath, false); //only SD and USB supported by UI
+      RemoteLaunch(DriveType, FileNamePath, false); //only SD and USB supported by UI
    }
 }
 
-FLASHMEM bool ReceiveFileName(uint32_t *SD_nUSB, char *FileNamePath)
+FLASHMEM bool ReceiveFileName(RegMenuTypes* DriveType, char *FileNamePath)
 {
-   if (!GetUInt(SD_nUSB, 1)) return false;
- 
+   uint32_t RecDrive;
+   if (!GetUInt(&RecDrive, 1)) return false;
+   
+   if (RecDrive != rmtUSBDrive && RecDrive != rmtSD && RecDrive != rmtTeensy) return false;
+   *DriveType = (RegMenuTypes)RecDrive;
+
    uint16_t CharNum=0;
    while (1) 
    {

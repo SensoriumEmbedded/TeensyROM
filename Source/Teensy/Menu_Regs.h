@@ -208,9 +208,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
 
 enum RegMenuTypes //must match TblMsgMenuName order/qty
 {
-   rmtSD        = 0,
-   rmtTeensy    = 1,
-   rmtUSBDrive  = 2,
+   rmtUSBDrive  = 0,
+   rmtSD        = 1,
+   rmtTeensy    = 2,
 };
 
 enum RegCtlCommands

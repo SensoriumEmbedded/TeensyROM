@@ -107,15 +107,15 @@ MsgHelpMenu:
    !tx 0
 
 TblMsgMenuName: ;must match enum RegMenuTypes order/qty
+   !word MsgMenuUSBDrive
    !word MsgMenuSD
    !word MsgMenuTeensy
-   !word MsgMenuUSBDrive
+MsgMenuUSBDrive:
+   !tx "USB Drive", 0
 MsgMenuSD:
    !tx "SD Card", 0
 MsgMenuTeensy:
    !tx "Teensy Mem", 0
-MsgMenuUSBDrive:
-   !tx "USB Drive", 0
 
 MsgSettingsMenu1:
    !tx ChrReturn, EscC,EscSourcesColor, "Settings Menu:", ChrReturn
