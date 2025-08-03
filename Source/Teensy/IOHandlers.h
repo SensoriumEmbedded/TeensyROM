@@ -30,11 +30,13 @@ USBHIDParser hid2(myusbHost);
 USBHIDParser hid3(myusbHost);  //need all 3?
 
 USBSerial USBHostSerial(myusbHost);   //update HostSerialType to match, defined in PN532_UHSU.h
-//USBSerial           USBHostSerial(myusbHost);    // works only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
+//USBSerial           USBHostSerial(myusbHost);    // only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
+//    Works with CH340(NFC), T3.2, Lolin D32 Pro,  *not* T4
 //USBSerial_BigBuffer USBHostSerial(myusbHost, 1); // Handles anything up to 512 bytes
-//    doesn't seem to change operation, but uses an extra 3,456 bytes of RAM1
+//    Needed for T4, also works with others,  uses an extra 3,456 bytes of RAM1
+//    *Crashes* NFC, addr2line points to  libraries/PN532/PN532.cpp:line 543
 //USBSerial_BigBuffer USBHostSerial(myusbHost);    // Handles up to 512 but by default only for those > 64 bytes.  
-//    doesnt seem to work, at least not for CH340 comm
+//    doesnt work for most, "by default only for those > 64 bytes"
 
 EthernetUDP udp;
 EthernetClient client;
