@@ -465,7 +465,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             //combined:
             //  If there's an Rx byte waiting & IRQ(NMI) not currently asserted &
             //     IRQ is enabled & RTS (flow control) is ready
-            if ( (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == SwiftStatusRxFull && \  
+            if ( (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == SwiftStatusRxFull && \
                 (SwiftRegCommand & (SwiftCmndRxIRQDis | SwiftCmndRTSTxMask)) == SwiftCmndRTSTxRdy ) 
             {  
                CycleCountdown = C64CycBetweenRx;
