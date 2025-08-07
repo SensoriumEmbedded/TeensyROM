@@ -48,10 +48,10 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
     * ![TapTo_Label_Designer](/media/NFC/TapTo_Label_Designer.webp)
 
 ### Reader enclosure-case
-* These 3D printable case designs by [Bedroom Ninja](https://www.printables.com/@bedroom_ninj_1665215) fit the theme perfectly!
-  * [TapTo NFC-Engine](https://www.printables.com/model/737533-tapto-nfc-engine)
+* These 3D printable case designs by [Bedroom Ninja](https://makerworld.com/en/@RetroDojo) fit the theme perfectly!
+  * [TapTo NFC-Engine](https://makerworld.com/en/models/1542524-nfc-engine-v2#profileId-1619125)
     * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
-  * [TapTo NFC-1541](https://www.printables.com/model/791580-tapto-nfc-1541)
+  * [TapTo NFC-1541](https://makerworld.com/en/models/1670375-nfc-1541-v2#profileId-1768362)
     * ![NFC-1541](/media/NFC/NFC_1541.jpg)
 * Since electronics modules vary in size, unique internal mounting methods may be needed. Tape or glue have been known to work. :)
 
@@ -98,5 +98,6 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
   * Automatically disabled while using Ethernet or MIDI applications due to increased latency.
 
 <br>
+
 
 [Back to main ReadMe](/README.md)
