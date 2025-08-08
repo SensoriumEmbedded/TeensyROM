@@ -77,10 +77,10 @@
 #include "SIDs/Popcorn.sid.h"
 #include "SIDs/Switch_625.sid.h"
 #include "SIDs/Tom_Sawyer.sid.h"
-#include "SIDs/YYZ.sid.h"
 #include "SIDs/Wish_You_Were_Here.sid.h"
 #include "SIDs/Odisey_2001_AD.sid.h"
 #include "SIDs/When_Im_64.sid.h"
+//#include "SIDs/YYZ.sid.h"
 
 #include "Pics/Ex_Pie2.art.h"
 #include "Pics/HA_Bluejay.kla.h"
