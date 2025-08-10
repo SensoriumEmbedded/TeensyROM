@@ -455,7 +455,8 @@ FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize, 
 {
    *FileCount += 1;
    *TotalSize += SourceMenu.Size;
-   Printf_dbg(" $%08x %7d %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.Name);
+   Printf_dbg(" Addr: $%08x  Size:%7d  Type:%3d  %s\n", (uint32_t)SourceMenu.Code_Image, SourceMenu.Size, SourceMenu.ItemType, SourceMenu.Name);
+
    if (((uint32_t)SourceMenu.Code_Image & 0xF0000000) == 0x20000000)
       CmdChannel->printf("*--> %s is using RAM!!!\n", SourceMenu.Name);
 }
@@ -580,7 +581,7 @@ FLASHMEM bool ReceiveFileName(RegMenuTypes* DriveType, char *FileNamePath)
    uint32_t RecDrive;
    if (!GetUInt(&RecDrive, 1)) return false;
    
-   if (RecDrive != rmtUSBDrive && RecDrive != rmtSD && RecDrive != rmtTeensy) return false;
+   if (RecDrive >= rmtNumTypes) return false;
    *DriveType = (RegMenuTypes)RecDrive;
 
    uint16_t CharNum=0;

@@ -206,11 +206,13 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
 
 };
 
-enum RegMenuTypes //must match TblMsgMenuName order/qty
+enum RegMenuTypes //must match TblMsgMenuName order/qty, also used by UI/serial for DriveType
 {
    rmtUSBDrive  = 0,
    rmtSD        = 1,
    rmtTeensy    = 2,
+   
+   rmtNumTypes  = 3
 };
 
 enum RegCtlCommands

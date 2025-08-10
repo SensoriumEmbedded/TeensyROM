@@ -193,10 +193,12 @@
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
    rsContinue           = 0xc3  ;//64->FW (Wr) Tells the FW to continue with update
 
-;enum RegMenuTypes //must match TblMsgMenuName order/qty
+;enum RegMenuTypes //must match TblMsgMenuName order/qty, also used by UI/serial for DriveType
    rmtUSBDrive  = 0
    rmtSD        = 1
    rmtTeensy    = 2
+   
+   rmtNumTypes  = 3
     
 ;enum RegCtlCommands
    rCtlVanishROM            =  0
