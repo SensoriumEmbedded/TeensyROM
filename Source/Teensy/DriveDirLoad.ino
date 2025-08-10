@@ -31,7 +31,7 @@ void HandleExecution()
    if (MenuSelCpy.ItemType == rtUnknown)
    {
       SendMsgPrintfln("%s\r\nUnknown File Type", MenuSelCpy.Name);
-      MenuSelCpy.ItemType = rtFilePrg; // assume PRG on unknown file type
+      MenuSelCpy.ItemType = rtFilePrg; // assume PRG on unknown file type, attempt to launch
       //return;
    }
    

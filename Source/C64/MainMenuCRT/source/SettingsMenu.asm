@@ -136,8 +136,8 @@ ShowSettings:
    ldy #20 ;col
    clc
    jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNFCEnabled  
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2NFCEnabled  
    jsr PrintOnOff
    
    ldx #11 ;row RW Ready Delay
@@ -252,13 +252,13 @@ UpdTimeZone
 
 +  cmp #'f'  ;NFC Enabled toggle
    bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudNFCEnabled  
-   sta rwRegPwrUpDefaults+IO1Port
+   lda rwRegPwrUpDefaults2+IO1Port
+   eor #rpud2NFCEnabled  
+   sta rwRegPwrUpDefaults2+IO1Port
    jsr WaitForTRWaitMsg
    ;disable Special IO if enabling NFC:
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNFCEnabled
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2NFCEnabled
    beq ++ ;skip if disabling
    ldx #IOH_None 
    stx rwRegNextIOHndlr+IO1Port

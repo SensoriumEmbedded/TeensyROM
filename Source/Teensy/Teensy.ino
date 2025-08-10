@@ -80,8 +80,10 @@ void setup()
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
 #ifdef USBHostSerialCommands
-   USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);
+   uint32_t AutoStartmS = millis();
+   USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);//takes 200mS typical, 5 seconds if usb serial device not present!
    //USBHostSerial.printf("USB Host Serial\n");
+   Serial.printf("USBHostSerial.begin: %lumS\n", millis()-AutoStartmS);
 #endif
  
    uint32_t MagNumRead;
@@ -118,7 +120,7 @@ void setup()
    Printf_dbg("Debug messages enabled!\n");
    Printf_dbg_sw("Swiftlink debug messages enabled!\n");
 
-   if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
+   if (IO1[rwRegPwrUpDefaults2] & rpud2NFCEnabled) nfcInit(); //connect to nfc scanner
 
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
@@ -167,7 +169,7 @@ void loop()
          RemoteLaunched = false;
          Printf_dbg("Remote recovery\n"); 
       }   
-      if (IO1[rwRegPwrUpDefaults] & rpudNFCEnabled) nfcInit(); //connect to nfc scanner
+      if (IO1[rwRegPwrUpDefaults2] & rpud2NFCEnabled) nfcInit(); //connect to nfc scanner
       SetUpMainMenuROM(); //back to main menu, also sets doReset
    }
    
@@ -271,8 +273,8 @@ void EEPreadStr(uint16_t addr, char* buf)
 void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
-   EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudRWReadyDly); //default med js speed, music on, eth time synch off, NFC off, RW delay on
-   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default 12 hour clock mode
+   EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudRWReadyDly); //default med js speed (9/15), music on, eth time synch off, RW delay on
+   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default 12 hour clock mode, NFC off, Serial ctl off
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
