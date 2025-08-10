@@ -197,6 +197,50 @@ FLASHMEM void PostFileCommand()
     SendU16(AckToken);
 }
 
+FLASHMEM void SendDirInfo(const char *itemName, const char *directoryPath)
+{
+    CmdChannel->print(F("[Dir]{\"Name\":\""));
+    CmdChannel->print(itemName);
+    CmdChannel->print(F("\",\"Path\":\""));
+    CmdChannel->print(directoryPath);
+    CmdChannel->print('/');
+    CmdChannel->print(itemName);
+    CmdChannel->print(F("\"}[/Dir]"));
+}
+
+FLASHMEM void SendFileInfo(const char *itemName, const char *directoryPath, uint32_t size)
+{
+    CmdChannel->print(F("[File]{\"Name\":\""));
+    CmdChannel->print(itemName);
+    CmdChannel->print(F("\",\"Size\":"));
+    CmdChannel->print(size);
+    CmdChannel->print(F(",\"Path\":\""));
+    CmdChannel->print(directoryPath);
+    CmdChannel->print('/');
+    CmdChannel->print(itemName);
+    CmdChannel->print(F("\"}[/File]"));
+}
+
+FLASHMEM void SendTRDirectory(const char *dirName, StructMenuItem *TROMMenu, uint16_t numItems)
+{
+   //Assumes path will be max 1 dir deep
+   for(uint16_t itemNum=0; itemNum < numItems; itemNum++)
+   {
+      if(TROMMenu[itemNum].ItemType == rtDirectory)
+      {
+         if(strcmp(TROMMenu[itemNum].Name, UpDirString)!=0) // Skip Up Dir entries
+         {
+            SendDirInfo(TROMMenu[itemNum].Name, dirName);
+            SendTRDirectory(TROMMenu[itemNum].Name, (StructMenuItem*)TROMMenu[itemNum].Code_Image, TROMMenu[itemNum].Size/sizeof(StructMenuItem));
+         }
+      }
+      else
+      {
+         SendFileInfo(TROMMenu[itemNum].Name, dirName, TROMMenu[itemNum].Size);  //TROMMenu[itemNum].ItemType
+      }
+   }
+}
+
 FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPath, int skip, int take)
 {
     File directory = fileStream.open(directoryPath);
@@ -216,27 +260,13 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
         {
             pageCount++;
 
-            if (directoryItem.isDirectory())
+            if (directoryItem.isDirectory()) 
             {
-                CmdChannel->print(F("[Dir]{\"Name\":\""));
-                CmdChannel->print(itemName);
-                CmdChannel->print(F("\",\"Path\":\""));
-                CmdChannel->print(directoryPath);
-                CmdChannel->print('/');
-                CmdChannel->print(itemName);
-                CmdChannel->print(F("\"}[/Dir]"));
+               SendDirInfo(itemName, directoryPath);
             }
-            else
+            else 
             {
-                CmdChannel->print(F("[File]{\"Name\":\""));
-                CmdChannel->print(itemName);
-                CmdChannel->print(F("\",\"Size\":"));
-                CmdChannel->print(directoryItem.size());
-                CmdChannel->print(F(",\"Path\":\""));
-                CmdChannel->print(directoryPath);
-                CmdChannel->print('/');
-                CmdChannel->print(itemName);
-                CmdChannel->print(F("\"}[/File]"));
+               SendFileInfo(itemName, directoryPath, directoryItem.size());
             }
         }
         directoryItem.close();
@@ -259,7 +289,11 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // Workflow:
 // Receive <-- List Directory Token 0x64DD 
 // Send --> AckToken 0x64CC
-// Receive <-- SD_nUSB(1), Destination Path(MaxNameLength, null terminator), sake(1), skip(1)
+// Receive <-- DriveType(1), Destination Path(MaxNameLength, null terminator), sake(1), skip(1)
+//        DriveTypes: (RegMenuTypes)
+//           USBDrive  = 0
+//           SD        = 1
+//           Teensy    = 2
 // Send --> AckToken 0x64CC on successful check of directory existence, 0x9b7f on Fail
 // Send --> StartDirectoryListToken 0x5A5A or FailToken 0x9b7f
 // Send --> Write content as json
@@ -280,6 +314,12 @@ FLASHMEM void GetDirectoryCommand()
         CmdChannel->println("Error receiving storage type value! (Error 1)");
         return;
     }
+    if (storageType >= rmtNumTypes)
+    {
+        SendU16(FailToken);
+        CmdChannel->println("Invalid storage type value! (Error 1.5)");
+        return;
+    }
     if (!GetUInt(&skip, 2))
     {
         SendU16(FailToken);
@@ -297,6 +337,17 @@ FLASHMEM void GetDirectoryCommand()
         SendU16(FailToken);
         CmdChannel->println("Error receiving path value! (Error 4)");
         return;
+    }
+
+    if (storageType == rmtTeensy)
+    {
+       SendU16(AckToken);//Ack the Destination Path (path), regardless; also ignores skip & take
+       SendU16(StartDirectoryListToken);
+       
+       SendTRDirectory("", TeensyROMMenu, sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
+       
+       SendU16(EndDirectoryListToken);
+       return;
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
