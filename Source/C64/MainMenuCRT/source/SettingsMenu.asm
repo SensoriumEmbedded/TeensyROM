@@ -17,6 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+SetValColumn = 21   ;Column for power on defaults settings
    
 SettingsMenu:
    jsr PrintBanner 
@@ -45,7 +46,7 @@ ShowSettings:
    sta $0286  ;set text color
 
    ldx #4  ;row 12/24 hour clock
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults2+IO1Port
@@ -61,7 +62,7 @@ ShowSettings:
 ++ jsr SendChar   
 
    ldx #5 ;row Time Zone
-   ldy #23 ;col
+   ldy #SetValColumn+3 ;col
    clc
    jsr SetCursor
    ldx #'+'
@@ -95,14 +96,14 @@ ShowSettings:
    jsr SendChar
 
    ldx #6  ;row Special IO
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
    ldx #7  ;row Joy 2 Speed
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -116,7 +117,7 @@ ShowSettings:
    jsr SendChar
 
    ldx #8 ;row Synch Time
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -124,7 +125,7 @@ ShowSettings:
    jsr PrintOnOff
 
    ldx #9 ;row Music State
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -132,16 +133,20 @@ ShowSettings:
    eor #rpudSIDPauseMask  
    jsr PrintOnOff
    
-   ldx #10 ;row NFC Enabled
-   ldy #20 ;col
+   ldx #10 ;row Host Serial Control
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
+
    lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2NFCEnabled  
-   jsr PrintOnOff
+   and #rpud2HostSerCtlMask  ;already shifted to be 2x the value 0-2
+   tax
+   lda TblMsgHostSerCtl,x
+   ldy TblMsgHostSerCtl+1,x
+   jsr PrintString
    
    ldx #11 ;row RW Ready Delay
-   ldy #20 ;col
+   ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
@@ -250,21 +255,38 @@ UpdTimeZone
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'f'  ;NFC Enabled toggle
++  cmp #'f'  ;Choose Serial control device
    bne +
-   lda rwRegPwrUpDefaults2+IO1Port
-   eor #rpud2NFCEnabled  
-   sta rwRegPwrUpDefaults2+IO1Port
-   jsr WaitForTRWaitMsg
-   ;disable Special IO if enabling NFC:
+   
    lda rwRegPwrUpDefaults2+IO1Port
    and #rpud2NFCEnabled
-   beq ++ ;skip if disabling
+   beq ++ ;skip if not NFC
+   ;disable Special IO if enabling NFC:
    ldx #IOH_None 
    stx rwRegNextIOHndlr+IO1Port
    jsr WaitForTRWaitMsg
+   ldx #rpud2TRContEnabled ;TRCont is next
+   jmp Updrpud2
 
-++ jmp ShowSettings  
+++ lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2TRContEnabled
+   beq ++ ;skip if not TR Control interface
+   ldx #0 ;none is next
+   jmp Updrpud2
+
+++ ;not NFC or TRCont, currently none
+   ldx #rpud2NFCEnabled ;NFC is next
+
+Updrpud2
+   stx smcNewscd+1;x reg contains new serial control device
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2HostSerCtlMaskInv ;preserve the other bits
+smcNewscd
+   ora #0
+   sta rwRegPwrUpDefaults2+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
 
 +  cmp #'g'  ;RW Ready Delay
    bne +

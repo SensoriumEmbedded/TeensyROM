@@ -171,9 +171,13 @@ enum RegPowerUpDefaultMasks
 
 enum RegPowerUpDefaultMasks2
 {  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
-   rpud2Clock12_24hr   = 0x01, // rwRegPwrUpDefaults2 bit 0, 1=24 hour clock displayed
-   rpud2NFCEnabled     = 0x02, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
-   //bits 3:2 for future hosted serial devices
+   rpud2Clock12_24hr      = 0b00000001, // rwRegPwrUpDefaults2 bit 0, 1=24 hour clock displayed
+
+   rpud2HostSerCtlMask    = 0b00000110, // mask of all host serial control devices
+   rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
+   rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
+   rpud2TRContEnabled     = 0b00000100, // rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
+   //bits 3 for future hosted serial device
    //bits 7:4 unused
 };
 
