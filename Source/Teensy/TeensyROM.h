@@ -48,7 +48,8 @@
   // DbgMsgs_SW (above) includes LED/DBG signal control
   // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
   // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
-
+  // #define DbgLEDSignalPolling //togles LED each pass through main loop()
+   
 //fab 0.3 uses different debug signal and direct data buffer dir control
 // enabling this on a fab 0.2x PBC could cause damage to your C64!
   // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 

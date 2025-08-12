@@ -203,8 +203,15 @@ void loop()
       SetResetDeassert;
    }
   
+#ifdef DbgLEDSignalPolling
+   static bool LEDLoopState = false;
+   if (LEDLoopState = !LEDLoopState) SetLEDOn;
+   else SetLEDOff;
+#endif
+
    if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
+   
    if (nfcState == nfcStateEnabled) nfcCheck();
    
    if (IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled)
