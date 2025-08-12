@@ -79,12 +79,6 @@ void setup()
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-#ifdef USBHostSerialCommands
-   uint32_t AutoStartmS = millis();
-   USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);//takes 200mS typical, 5 seconds if usb serial device not present!
-   //USBHostSerial.printf("USB Host Serial\n");
-   Serial.printf("USBHostSerial.begin: %lumS\n", millis()-AutoStartmS);
-#endif
  
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
@@ -122,6 +116,13 @@ void setup()
 
    if (IO1[rwRegPwrUpDefaults2] & rpud2NFCEnabled) nfcInit(); //connect to nfc scanner
 
+   if (IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled) //connect to TR Control device
+   {  //takes 200mS typical, 5 seconds if usb serial device not present!
+      USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);
+      Serial.println("USB Host Control Enabled");
+      //USBHostSerial.printf("USB Host Serial Control Ready\n");
+   }
+   
    if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
 
    if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
@@ -206,9 +207,8 @@ void loop()
    myusbHost.Task();
    if (nfcState == nfcStateEnabled) nfcCheck();
    
-#ifdef USBHostSerialCommands
-   if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
-#endif   
+   if (IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled)
+      if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
