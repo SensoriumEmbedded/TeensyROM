@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+1"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+4"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -16,8 +16,8 @@ char strVersionNumber[] = "v0.6.8+1"; //*VERSION*
 #define SIDSpeedLinToken  0x6499
 #define SIDSpeedLogToken  0x649A
 #define SIDVoiceMuteToken 0x6433
-#define C64PauseOnToken   0x6431  //d1
-#define C64PauseOffToken  0x6430  //d0
+#define C64PauseOnToken   0x6431  // C64 Paused
+#define C64PauseOffToken  0x6430  // C64 Unpaused
 #define DebugToken        0x6467  //dg
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB

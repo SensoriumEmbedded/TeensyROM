@@ -45,6 +45,7 @@ bool ReadyToSendRx()
 bool CheckRxNMITimeout()
 {
    //Check for Rx NMI timeout: Doesn't happen unless a lot of serial printing enabled (ie DbgMsgs_SW) causing missed reg reads
+#ifdef DbgMsgs_SW
    if ((SwiftRegStatus & SwiftStatusIRQ)  && (micros() - NMIassertMicros > NMITimeoutuS))
    {
      Serial.println("Rx NMI Timeout!");
@@ -52,6 +53,7 @@ bool CheckRxNMITimeout()
      SetNMIDeassert;
      return false;
    }
+#endif
    return true;
 }
 

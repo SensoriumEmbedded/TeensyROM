@@ -53,7 +53,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
 #define RxQueueSize        (RxQueueNumBlocks*RxQueueBlockSize) 
-#define NMITimeoutuS      7000    //if Rx data reg not read within this time from NMI assert, deassert NMI anyway.  7000uS is just under 1200 baud to read data reg
+#define NMITimeoutuS      7000    //DbgMsgs_SW only: if Rx data reg not read within this time from NMI assert, deassert NMI anyway.  7000uS is just under 1200 baud to read status reg
 #define Drive_USB            1
 #define Drive_SD             2
 
@@ -80,6 +80,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define SwiftCmndRxIRQDis  0b00000010 // low to enable Rx IRQ, high to disable
 #define SwiftCmndRTSTxMask 0b00001100 // RTS and Transmitter Ctl Mask
 #define SwiftCmndRTSTxRdy  0b00001000 // RTS and Transmitter Ctl Ready/enabled
+#define SwiftCmndRTSTxIRQ  0b00000100 // Transmitter IRQ enabled
 #define SwiftCmndDefault   0b11100000 // Default command reg state
 
 //Control Reg baud rate settings (set via SwiftRegControl)
@@ -423,11 +424,14 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
       {
          case IORegSwiftData:   
             DataPortWriteWaitLog(SwiftRxBuf);
-            SetNMIDeassert;
-            SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, IRQ de-asserted
+            //SetNMIDeassert;
+            //SwiftRegStatus &= ~(SwiftStatusRxFull | SwiftStatusIRQ); //no longer full, IRQ de-asserted
+            SwiftRegStatus &= ~SwiftStatusRxFull; //no longer full
             break;
          case IORegSwiftStatus:  
             DataPortWriteWaitLog(SwiftRegStatus);
+            SetNMIDeassert;
+            SwiftRegStatus &= ~SwiftStatusIRQ; // IRQ de-asserted
             break;
          case IORegSwiftCommand:  
             DataPortWriteWaitLog(SwiftRegCommand);
@@ -613,6 +617,18 @@ void PollingHndlr_SwiftLink()
       LastTxMillis = millis();
    }
    
+   //if Tx IRQ enabled, Tx Ready, & IRQ not currently asserted
+   if ((SwiftRegCommand & SwiftCmndRTSTxMask) == SwiftCmndRTSTxIRQ && \
+       (SwiftRegStatus & SwiftStatusTxEmpty) && \
+       (SwiftRegStatus & SwiftStatusIRQ) == 0)
+   {  //set tx irq
+      //Printf_dbg_sw(" +TxNMI\n");
+      CycleCountdown = C64CycBetweenRx;
+      SwiftRegStatus |= SwiftStatusIRQ;
+      SetNMIAssert;
+      NMIassertMicros = micros();
+   }
+
    if(PlusCount==3 && millis()-LastTxMillis>1000) //Must be followed by one second of no characters
    {
       PlusCount=0;
