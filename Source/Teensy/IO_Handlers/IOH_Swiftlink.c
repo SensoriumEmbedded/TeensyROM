@@ -349,17 +349,25 @@ FLASHMEM void SetEthEEPDefaults()
 void ResetSwiftLink()
 {
    //Called from IO handler, be quick!
-   
-   if(client.connected()) ClearClientStop();  //clear receive buffer and drop any current client connection   
+   //Reset Swiftlink only, not "modem"
+
    SwiftRegStatus = SwiftStatusDefault;
    SwiftRegCommand = SwiftCmndDefault;
    TurboRegEnhancedSpeed = 3; //default to reserved/not set
    SwiftRegControl = Baud_2400;
    SetBaud(Baud_2400);
    CycleCountdown=0;
-   PlusCount=0;
-   PrevURLQueueNum = 0;
    NMIassertMicros = 0;
+}
+
+//_____________________________________Handlers_____________________________________________________
+
+FLASHMEM void InitHndlr_SwiftLink()
+{
+   ResetSwiftLink();
+   
+   if(client.connected()) ClearClientStop();  //clear receive buffer and drop any current client connection   
+   PrevURLQueueNum = 0;
    PlusCount=0;
    ConnectedToHost = false;
    BrowserMode = false;
@@ -368,13 +376,7 @@ void ResetSwiftLink()
    DumpQueueUnPausePage(); // UsedPageLinkBuffs = 0; PageCharsReceived = 0; PagePaused = false; RxQueueHead = RxQueueTail =0
    TxMsgOffset =0;
    PrintingHyperlink = false;   
-}
-
-//_____________________________________Handlers_____________________________________________________
-
-FLASHMEM void InitHndlr_SwiftLink()
-{
-   ResetSwiftLink();
+   PlusCount=0;
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
    // RAM2 usage as of 11/7/23:
@@ -454,6 +456,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             //add to input buffer
             SwiftTxBuf=Data;
             SwiftRegStatus &= ~SwiftStatusTxEmpty; //Flag full until Tx processed
+            CycleCountdown = C64CycBetweenRx;
             break;
          case IORegSwiftStatus:  
             //Write to status reg is a programmed reset
@@ -620,7 +623,8 @@ void PollingHndlr_SwiftLink()
    //if Tx IRQ enabled, Tx Ready, & IRQ not currently asserted
    if ((SwiftRegCommand & SwiftCmndRTSTxMask) == SwiftCmndRTSTxIRQ && \
        (SwiftRegStatus & SwiftStatusTxEmpty) && \
-       (SwiftRegStatus & SwiftStatusIRQ) == 0)
+       (SwiftRegStatus & SwiftStatusIRQ) == 0 && \
+       CycleCountdown == 0)
    {  //set tx irq
       //Printf_dbg_sw(" +TxNMI\n");
       CycleCountdown = C64CycBetweenRx;
