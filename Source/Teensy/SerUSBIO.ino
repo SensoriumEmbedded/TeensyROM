@@ -548,7 +548,7 @@ FLASHMEM void PrintDebugLog()
    
    if (BigBufCount == 0) CmdChannel->println("Buffer empty");
    if (BufferFull) CmdChannel->println("Buffer was full");
-   CmdChannel->println("Buffer Reset");
+   CmdChannel->printf("Buffer Reset (Size: %d)\n", BigBufSize);
    BigBufCount = 0;
 }
 

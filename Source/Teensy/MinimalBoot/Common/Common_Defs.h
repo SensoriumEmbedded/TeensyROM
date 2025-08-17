@@ -95,7 +95,11 @@ volatile uint8_t DMA_State = DMA_S_DisableReady;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 
-#define BigBufSize          5
+#ifdef Dbg_SerLog 
+   #define BigBufSize          1000
+#else
+   #define BigBufSize          1
+#endif
 uint16_t BigBufCount = 0;
 uint32_t* BigBuf = NULL;
 
