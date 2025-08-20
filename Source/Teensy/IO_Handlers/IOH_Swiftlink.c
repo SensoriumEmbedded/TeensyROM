@@ -456,7 +456,6 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             //add to input buffer
             SwiftTxBuf=Data;
             SwiftRegStatus &= ~SwiftStatusTxEmpty; //Flag full until Tx processed
-            CycleCountdown = C64CycBetweenRx; //Delay re-trigger of NMI for Tx?
             break;
          case IORegSwiftStatus:  
             //Write to status reg is a programmed reset
@@ -464,7 +463,6 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             break;
          case IORegSwiftCommand:  
             SwiftRegCommand = Data;
-            CycleCountdown = C64CycBetweenRx; //Delay re-trigger of NMI for Tx?
             //check if change requires asserting an interrupt:
             //if ((SwiftRegStatus & SwiftStatusRxFull) && \       //There's an Rx byte waiting
             //    (SwiftRegStatus & SwiftStatusIRQ) == 0 && \     // IRQ(NMI) not currently asserted
@@ -476,7 +474,7 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
             if ( (SwiftRegStatus & (SwiftStatusRxFull | SwiftStatusIRQ)) == SwiftStatusRxFull && \
                 (SwiftRegCommand & (SwiftCmndRxIRQDis | SwiftCmndRTSTxMask)) == SwiftCmndRTSTxRdy ) 
             {  
-               //CycleCountdown = C64CycBetweenRx;  //done above
+               CycleCountdown = C64CycBetweenRx;
                SwiftRegStatus |= SwiftStatusIRQ;
                SetNMIAssert;
                NMIassertMicros = micros();
@@ -624,8 +622,7 @@ void PollingHndlr_SwiftLink()
    //if Tx IRQ enabled, Tx Ready, & IRQ not currently asserted
    if ((SwiftRegCommand & SwiftCmndRTSTxMask) == SwiftCmndRTSTxIRQ && \
        (SwiftRegStatus & SwiftStatusTxEmpty) && \
-       (SwiftRegStatus & SwiftStatusIRQ) == 0 && \
-       CycleCountdown == 0)
+       (SwiftRegStatus & SwiftStatusIRQ) == 0 ) // && CycleCountdown == 0) //concern for re-trigger pulse width...
    {  //set tx irq
       //Printf_dbg_sw(" +TxNMI\n");
       CycleCountdown = C64CycBetweenRx;
