@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+6+"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+8"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -25,7 +25,8 @@ char strVersionNumber[] = "v0.6.8+6+"; //*VERSION*
 #define GetFileToken      0x64B0
 #define DeleteFileToken   0x64CF
 #define AckToken          0x64CC
-#define GetDirectoryToken 0x64DD
+#define GetDirectoryToken 0x64DD  // regular JSON format, to be deprecated
+#define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F

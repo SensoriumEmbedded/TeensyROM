@@ -123,8 +123,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case GetFileToken:
                GetFileCommand();
                break;
-            case GetDirectoryToken:  // v2 directory listing from TR
-               GetDirectoryCommand();
+            case GetDirectoryToken:  // JSON directory listing (to be deprecated)
+            case GetDirNDJSONToken:  // NDJSON directory listing from TR
+               GetDirectoryCommand(inVal==GetDirNDJSONToken);
                break;
             case PauseSIDToken: //Pause SID
                if(RemotePauseSID()) SendU16(AckToken);
@@ -659,11 +660,11 @@ FLASHMEM void memInfo ()
   constexpr auto RAM_SIZE   = 512 << 10;
   constexpr auto FLASH_BASE = 0x6000'0000;
   
-#if ARDUINO_TEENSY40
-  constexpr auto FLASH_SIZE = 2 << 20;
-#elif ARDUINO_TEENSY41
-  //constexpr auto FLASH_SIZE = 8 << 20;
-#endif
+//#if ARDUINO_TEENSY40
+//  constexpr auto FLASH_SIZE = 2 << 20;
+//#elif ARDUINO_TEENSY41
+//  constexpr auto FLASH_SIZE = 8 << 20;
+//#endif
 
   // note: these values are defined by the linker, they are not valid memory
   // locations in all cases - by defining them as arrays, the C++ compiler

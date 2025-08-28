@@ -1,4 +1,5 @@
 
+bool NDJSONformat;
 
 FLASHMEM bool GetPathParameter(char FileNamePath[])
 {
@@ -199,26 +200,46 @@ FLASHMEM void PostFileCommand()
 
 FLASHMEM void SendDirInfo(const char *itemName, const char *directoryPath)
 {
-    CmdChannel->print(F("[Dir]{\"Name\":\""));
-    CmdChannel->print(itemName);
-    CmdChannel->print(F("\",\"Path\":\""));
-    CmdChannel->print(directoryPath);
-    CmdChannel->print('/');
-    CmdChannel->print(itemName);
-    CmdChannel->print(F("\"}[/Dir]"));
+    if (NDJSONformat)
+    {
+       CmdChannel->print(F("{\"type\":\"dir\",\"name\":\""));
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\"}\r\n"));
+    }
+    else
+    {
+       CmdChannel->print(F("[Dir]{\"Name\":\""));
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\",\"Path\":\""));
+       CmdChannel->print(directoryPath);
+       CmdChannel->print('/');
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\"}[/Dir]"));
+    }
 }
 
 FLASHMEM void SendFileInfo(const char *itemName, const char *directoryPath, uint32_t size)
 {
-    CmdChannel->print(F("[File]{\"Name\":\""));
-    CmdChannel->print(itemName);
-    CmdChannel->print(F("\",\"Size\":"));
-    CmdChannel->print(size);
-    CmdChannel->print(F(",\"Path\":\""));
-    CmdChannel->print(directoryPath);
-    CmdChannel->print('/');
-    CmdChannel->print(itemName);
-    CmdChannel->print(F("\"}[/File]"));
+    if (NDJSONformat)
+    {
+       CmdChannel->print(F("{\"type\":\"file\",\"name\":\""));
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\",\"size\":"));
+       CmdChannel->print(size);
+       CmdChannel->print(F("}\r\n"));
+    }
+    else
+    {
+       CmdChannel->print(F("[File]{\"Name\":\""));
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\",\"Size\":"));
+       CmdChannel->print(size);
+       CmdChannel->print(F(",\"Path\":\""));
+       CmdChannel->print(directoryPath);
+       CmdChannel->print('/');
+       CmdChannel->print(itemName);
+       CmdChannel->print(F("\"}[/File]"));
+    }
 }
 
 FLASHMEM void SendTRDirectory(const char *dirName, StructMenuItem *TROMMenu, uint16_t numItems)
@@ -298,11 +319,12 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // Send --> StartDirectoryListToken 0x5A5A or FailToken 0x9b7f
 // Send --> Write content as json
 // Send --> EndDirectoryListToken 0xA5A5,  0x9b7f on Fail
-FLASHMEM void GetDirectoryCommand()
+FLASHMEM void GetDirectoryCommand(bool SetNDJSONformat)
 {
     const uint16_t StartDirectoryListToken = 0x5A5A;
     const uint16_t EndDirectoryListToken = 0xA5A5;
-
+    NDJSONformat = SetNDJSONformat;
+    
     SendU16(AckToken);
 
     uint32_t storageType, skip, take;
