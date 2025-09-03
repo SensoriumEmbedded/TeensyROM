@@ -329,7 +329,27 @@ ReadKeyboard:
 
 +  cmp #'A' ;set auto-launch
    bne +
-   jsr DisplaySetAutoLaunch
+   jsr PrintBanner
+   lda #<MsgSetAutoLaunch
+   ldy #>MsgSetAutoLaunch
+   jsr PrintString
+   lda #rCtlSetAutoLaunchWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   jsr AnyKeyMsgWait   
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent    
+
++  cmp #'M' ;Mount Dxx file
+   bne +
+   jsr PrintBanner
+   lda #<MsgMountDxxFile
+   ldy #>MsgMountDxxFile
+   jsr PrintString
+   lda #rCtlMountDxxFileWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   jsr AnyKeyMsgWait   
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
@@ -1199,20 +1219,6 @@ WriteNFCTag:
    lda #rCtlNFCReEnableWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots
-   rts
-   
-DisplaySetAutoLaunch:
-   jsr PrintBanner
-   lda #<MsgSetAutoLaunch
-   ldy #>MsgSetAutoLaunch
-   jsr PrintString 
-
-   lda #rCtlSetAutoLaunchWAIT
-   ;rCtlWriteNFCTagCheckWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots
-   
-   jsr AnyKeyMsgWait
    rts
 
 ViewTextFile:

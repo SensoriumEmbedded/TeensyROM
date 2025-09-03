@@ -53,6 +53,10 @@ MsgSetAutoLaunch:
    !tx ChrReturn, EscC,EscSourcesColor, "Set Power-up Auto Launch:", ChrReturn
    !tx 0
 
+MsgMountDxxFile:
+   !tx ChrReturn, EscC,EscSourcesColor, "Mount Dxx File:", ChrReturn
+   !tx 0
+
 MsgSIDInfo1:
    !tx ChrReturn, EscC,EscSourcesColor, "SID Info Page:", ChrReturn, ChrReturn
    !tx " File Information for", EscC,EscNameColor  ;EscC,EscMenuMiscColor
