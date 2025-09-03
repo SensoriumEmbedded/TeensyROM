@@ -211,6 +211,7 @@ extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem);
 extern bool SDFullInit();
 extern bool USBFileSystemWait();
+extern void MountDxxFile();
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -556,6 +557,7 @@ FLASHMEM void SetAutoLaunch()
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
 
    char PathMsg[MaxPathLength];
+   IO1[rwRegScratch] = 0;
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
@@ -687,7 +689,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ClearAutoLaunch,     // rsClearAutoLaunch
    &NextTextFile,        // rsNextTextFile
    &LastTextFile,        // rsLastTextFile
-   &IOHandlerNextInit    // rsIOHWNextInit
+   &IOHandlerNextInit,   // rsIOHWNextInit
+   &MountDxxFile,        // rsMountDxxFile
 
 };
 
@@ -1101,7 +1104,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlLastTextFile:
                   IO1[rwRegStatus] = rsLastTextFile; //work this in the main code
                   break;
-               
+               case rCtlMountDxxFileWAIT:
+                  IO1[rwRegStatus] = rsMountDxxFile; //work this in the main code
+                  break;
             }
             break;
       }
