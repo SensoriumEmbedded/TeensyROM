@@ -340,19 +340,6 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
-+  cmp #'M' ;Mount Dxx file
-   bne +
-   jsr PrintBanner
-   lda #<MsgMountDxxFile
-   ldy #>MsgMountDxxFile
-   jsr PrintString
-   lda #rCtlMountDxxFileWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots
-   jsr AnyKeyMsgWait   
-   jsr ListMenuItems ; reprint menu
-   jmp HighlightCurrent    
-
 +  cmp #'C' ;Configure Colors
    bne +
    jsr ColorConfigMenu
@@ -438,6 +425,26 @@ ReadKeyboard:
    jsr ListMenuItems
    jmp HighlightCurrent  
 
++  cmp #'M' ;Mount Dxx file
+   bne +
+   jsr PrintBanner
+   lda #<MsgMountDxxFile
+   ldy #>MsgMountDxxFile
+   jsr PrintString
+   lda #rCtlMountDxxFileWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   lda rwRegScratch+IO1Port
+   beq ++
+-  jsr CheckForIRQGetIn
+   beq -
+   jsr SendChar
+   cmp #'y'
+   beq Load8Run
+++ jsr AnyKeyMsgWait   
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent    
+
 +  cmp #'1'  ;Hot Key #1
    bne +
    ldx #1  ;dir MIDI+ASID
@@ -482,6 +489,13 @@ HotKeyLaunch
    ldx #0  ;dir Games
    lda #7  ;prog Jupiter Lander
    jmp HotKeyLaunch
+
++  cmp #'6'  ;Hot Key #6
+   bne +
+Load8Run:
+  ldx #6  ;dir Utilities
+  lda #3  ;prog LOAD"*",8,1 and RUN
+  jmp HotKeyLaunch
 
 
 +  jmp WaitForJSorKey

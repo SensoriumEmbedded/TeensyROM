@@ -50,7 +50,7 @@ FLASHMEM void MountDxxFile()
    
    //get/print path+filename
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
-   IO1[rwRegScratch] = 0;
+   IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
    GetCurrentFilePathName(DxxPathFilename);
    SendMsgPrintfln("%s\r", DxxPathFilename);
    
@@ -142,7 +142,6 @@ FLASHMEM void MountDxxFile()
    SendMsgPrintfln("Mounting as dev #8...");
    USBHostSerial.printf("mount 8 \"%s\"\r\n", MenuSource[SelItemFullIdx].Name);
    FlushUSBHostRx();   
-   SendMsgPrintfln(" Done\r");
-   //option to launch?
-
+   SendMsgPrintfln(" Finished\rLOAD\"*\",8,1 and RUN? (y/n) ");
+   IO1[rwRegScratch] = 1; //Success indicator, prompt for load/run
 }
