@@ -1,38 +1,60 @@
 
-//extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);
-//extern FS *FSfromSourceID(RegMenuTypes SourceID);
+#include <CRC32.h>
 
-FLASHMEM bool HostSerialAvailabeTimeout()
+#define MeatloafBaud      2000000   // 115200 460800 2000000
+#define ChunkSize              64   //bytes to send in chunk before ack
+#define ChunkAckChar          '+'   //char sent to ack chunk
+
+FLASHMEM bool HostSerialAvailabeTimeout(uint32_t TimeoutmS)
 {
    uint32_t StartTOMillis = millis();
    
-   while(!USBHostSerial.available() && (millis() - StartTOMillis) < 50); // timeout loop
+   while(!USBHostSerial.available() && (millis() - StartTOMillis) < TimeoutmS); // timeout loop
    
    return (USBHostSerial.available());
 }
 
 FLASHMEM void FlushUSBHostRx()
 {
-   Serial.printf("\n*/--");
-   while(HostSerialAvailabeTimeout()) 
+   //make this debug print only?
+   
+   Printf_dbg("\n*/--");
+   while(HostSerialAvailabeTimeout(50)) //50mS timeout for flush
    {
-      //char inval = USBHostSerial.read();
-      //Serial.printf("%c (%d) ", inval, inval);
-      Serial.print((char)USBHostSerial.read());
+      char inval = USBHostSerial.read();
+      Printf_dbg("%c", inval);
    }
-   Serial.printf("--/*\n");
+   Printf_dbg("--/*\n");
 }  
+
+FLASHMEM bool WaitCheckresponse(const char *Name, const char CheckChar)
+{
+   //wait for response.
+   if (!HostSerialAvailabeTimeout(1000)) //Wait up to 1 sec
+   {
+      SendMsgPrintfln("%s not received\r", Name);
+      return false;
+   }
+   char Respchar = USBHostSerial.read();
+   if (Respchar != CheckChar)
+   {
+      SendMsgPrintfln("Unexpected %s: `%c`\r", Name, Respchar);
+      return false;
+   }
+   return true;
+}
 
 FLASHMEM void MountDxxFile()
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
-
    char DxxPathFilename[MaxPathLength];
+   
+   //get/print path+filename
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
    IO1[rwRegScratch] = 0;
    GetCurrentFilePathName(DxxPathFilename);
    SendMsgPrintfln("%s\r", DxxPathFilename);
    
-   //check for Dxx file
+   //check for Dxx file type
    if (MenuSource[SelItemFullIdx].ItemType != rtD64 &&
        MenuSource[SelItemFullIdx].ItemType != rtD71 &&
        MenuSource[SelItemFullIdx].ItemType != rtD81)
@@ -42,25 +64,29 @@ FLASHMEM void MountDxxFile()
    }
    
    //check for Meatloaf enabled
+   //need to separate Meatloaf from TR Control?
    //if ((IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled) == 0)
    //{
    //   SendMsgPrintfln("TRCont/Meatloaf not enabled\r");
    //   return;
    //}
    
-   //ping meatloaf
-   SendMsgPrintfln("Pinging Meatloaf.\r");
-   USBHostSerial.begin(2000000, USBHOST_SERIAL_8N1); // 115200 460800 2000000
+   //connect/ping meatloaf:
+   SendMsgPrintfln("Connecting to Meatloaf");
+   USBHostSerial.begin(MeatloafBaud, USBHOST_SERIAL_8N1);
    FlushUSBHostRx();
-   USBHostSerial.printf("ls\r\n");
-   FlushUSBHostRx();
+   USBHostSerial.printf("Z\r\n");  // Should echo it back (then unrecognized command)
+   if (!WaitCheckresponse("Ping", 'Z')) 
+   {   
+      SendMsgPrintfln(" Reset ML and retry");
+      return;      
+   }
    
-   SendMsgPrintfln("Transferring...");
+   //open file
+   SendMsgPrintfln("File check");
    char *ptrPathFileName = DxxPathFilename; //pointer to move past SD/USB/TR:
    RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrPathFileName);
    FS *sourceFS = FSfromSourceID(MenuSourceID);
-   
-   
    File DxxFile = sourceFS->open(ptrPathFileName, FILE_READ);
    if (!DxxFile) 
    {
@@ -69,44 +95,54 @@ FLASHMEM void MountDxxFile()
    }   
    
    uint32_t FileSize = DxxFile.size(); 
-   uint32_t FileCRC32 = 0;
-   uint8_t buffer[256];
+   uint8_t buffer[ChunkSize];
    int bytesRead;
-   //char * LastSlash = strrchr(ptrPathFileName, '/');
-   //if (LastSlash != NULL) ptrPathFileName = LastSlash+1; //make filename only.
-   
-   FlushUSBHostRx();
+   CRC32 crc;
    
    //calc crc32
    while ((bytesRead = DxxFile.read(buffer, sizeof(buffer))) > 0)
    {
-      for (uint16_t bytenum = 0; bytenum < bytesRead; bytenum++) ;
-         // buffer[bytenum];
+      for (uint16_t bytenum = 0; bytenum < bytesRead; bytenum++) crc.update(buffer[bytenum]);
    }
-   DxxFile.seek(0);
-
-   Printf_dbg("Sending Dxx: %s (%lu bytes, %lu crc32)\n", MenuSource[SelItemFullIdx].Name, FileSize, FileCRC32);
+   DxxFile.seek(0); //back to start
    
+   uint32_t FileCRC32 = crc.finalize();
+   uint32_t StartmS = millis();
+   
+   Printf_dbg("\nSending Dxx: %s (%lu bytes, %08x crc32)\n", MenuSource[SelItemFullIdx].Name, FileSize, FileCRC32);
+   SendMsgPrintfln("Transferring %lu Bytes", FileSize);
    USBHostSerial.printf("rx \"%s\"\r\n", MenuSource[SelItemFullIdx].Name);
-   USBHostSerial.printf("%lu %lu\r\n", FileSize, FileCRC32);
+   FlushUSBHostRx(); //required for some reason(?), min delay length?
+   USBHostSerial.printf("%lu %08x\r\n", FileSize, FileCRC32);  
+   //FlushUSBHostRx();  //size/crc is not echoed...
 
-   FlushUSBHostRx();
-
-   // Send in buffer size chunks
-   while ((bytesRead = DxxFile.read(buffer, sizeof(buffer))) > 0)
+   // Send in chunks, wait for ack between them
+   while ((bytesRead = DxxFile.read(buffer, ChunkSize)) > 0)
    {
-      for (uint16_t bytenum = 0; bytenum < bytesRead; bytenum++) 
-         USBHostSerial.printf("%c", buffer[bytenum]);
+      for (uint16_t bytenum = 0; bytenum < bytesRead; bytenum++) USBHostSerial.print((char)buffer[bytenum]);  
+      //wait for ack char after every chunk
+      //Printf_dbg("bytes sent: %d\n",bytesRead);
+      if (!WaitCheckresponse("Ack", ChunkAckChar))
+      {
+         DxxFile.close();
+         return;      
+      }      
+      //Printf_dbg("Ack\n");
    }
-
    DxxFile.close();   
    USBHostSerial.printf("\r\n");
+   //wait for pass/fail response.
+   if (!WaitCheckresponse("Conf", '0'))
+   {
+      DxxFile.close();
+      return;      
+   }
+   SendMsgPrintfln("Complete in %lu mS", millis()-StartmS );
+   
+   SendMsgPrintfln("Mounting as dev #8...");
+   USBHostSerial.printf("mount 8 \"%s\"\r\n", MenuSource[SelItemFullIdx].Name);
+   FlushUSBHostRx();   
+   SendMsgPrintfln(" Done\r");
+   //option to launch?
 
-   FlushUSBHostRx();
-   
-   SendMsgPrintfln("Mounting...");
-   
-   
-   SendMsgPrintfln("  Complete.\roption to launch?\r");
-   
 }
