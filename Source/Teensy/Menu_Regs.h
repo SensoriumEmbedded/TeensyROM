@@ -162,11 +162,11 @@ enum RegSerialStringSelect // rwRegSerialString
 
 enum RegPowerUpDefaultMasks
 {  //eepAdPwrUpDefaults, rwRegPwrUpDefaults
-   rpudSIDPauseMask    = 0x01, // rwRegPwrUpDefaults bit 0, 1=SID music paused
-   rpudNetTimeMask     = 0x02, // rwRegPwrUpDefaults bit 1, 1=synch net time
-   //bit 2 unused      = 0x04  // Was rpudNFCEnabled
-   rpudRWReadyDly      = 0x08, // rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
-   rpudJoySpeedMask    = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+   rpudSIDPauseMask    = 0b00000001, // rwRegPwrUpDefaults bit 0, 1=SID music paused
+   rpudNetTimeMask     = 0b00000010, // rwRegPwrUpDefaults bit 1, 1=synch net time
+   rpudShowExtension   = 0b00000100, // rwRegPwrUpDefaults bit 2, 1=show file extensions
+   rpudRWReadyDly      = 0b00001000, // rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
+   rpudJoySpeedMask    = 0b11110000, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 
 enum RegPowerUpDefaultMasks2
@@ -177,8 +177,8 @@ enum RegPowerUpDefaultMasks2
    rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
    rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
    rpud2TRContEnabled     = 0b00000100, // rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
-   //bits 3 for future hosted serial device
-   //bits 7:4 unused
+   //bits 4:3 for future hosted serial devices
+   //bits 7:5 unused
 };
 
 enum RegStatusTypes  //rwRegStatus, match StatusFunction order
@@ -250,7 +250,7 @@ enum regItemTypes //synch with TblItemType
 {
    rtNone        = 0,
    rtUnknown     = 1,
-   rtDirectory   = 2,
+   rtDirectory   = 2,  //file extensions hideable higher than this
    rtD64         = 3,
    rtD71         = 4, 
    rtD81         = 5, 

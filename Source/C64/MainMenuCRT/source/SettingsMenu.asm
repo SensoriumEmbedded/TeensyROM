@@ -17,7 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-SetValColumn = 21   ;Column for power on defaults settings
+SetValColumn = 22   ;Column for power on defaults settings
    
 SettingsMenu:
    jsr PrintBanner 
@@ -145,12 +145,12 @@ ShowSettings:
    ldy TblMsgHostSerCtl+1,x
    jsr PrintString
    
-   ldx #11 ;row RW Ready Delay
+   ldx #11 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
-   and #rpudRWReadyDly  
+   and #rpudShowExtension  
    jsr PrintOnOff
    
 
@@ -288,10 +288,10 @@ smcNewscd
    jmp ShowSettings  
 
 
-+  cmp #'g'  ;RW Ready Delay
++  cmp #'g'  ;Show File Extensions
    bne +
    lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudRWReadyDly
+   eor #rpudShowExtension
    sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  

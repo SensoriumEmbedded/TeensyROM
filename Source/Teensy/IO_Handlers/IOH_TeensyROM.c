@@ -993,7 +993,14 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             {
                case rsstItemName:
                   memcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength);
-                  SerialStringBuf[MaxItemDispLength-1] = 0;
+                  SerialStringBuf[MaxItemDispLength-1] = 0; //Trim to length, if needed
+                  if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
+                      MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
+                      IO1[rWRegCurrMenuWAIT] != rmtTeensy) 
+                  { // if not show ext, not dir or unknown, not a TR Menu: terminate before extension
+                     char *pDot = strrchr(SerialStringBuf, '.'); //find last dot
+                     if (pDot != NULL) *pDot = 0; //terminate there 
+                  }
                   ptrSerialString = SerialStringBuf;
                   break;
                case rsstNextIOHndlrName:
