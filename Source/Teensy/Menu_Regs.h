@@ -165,14 +165,13 @@ enum RegPowerUpDefaultMasks
    rpudSIDPauseMask    = 0b00000001, // rwRegPwrUpDefaults bit 0, 1=SID music paused
    rpudNetTimeMask     = 0b00000010, // rwRegPwrUpDefaults bit 1, 1=synch net time
    rpudShowExtension   = 0b00000100, // rwRegPwrUpDefaults bit 2, 1=show file extensions
-   rpudRWReadyDly      = 0b00001000, // rwRegPwrUpDefaults bit 3, 1=RW Ready Detection delayed
+   rpudClock12_24hr    = 0b00001000, // rwRegPwrUpDefaults bit 3, 1=24 hour clock displayed
    rpudJoySpeedMask    = 0b11110000, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 
 enum RegPowerUpDefaultMasks2
 {  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
-   rpud2Clock12_24hr      = 0b00000001, // rwRegPwrUpDefaults2 bit 0, 1=24 hour clock displayed
-
+   //bit 0 unused
    rpud2HostSerCtlMask    = 0b00000110, // mask of all host serial control devices
    rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
    rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled

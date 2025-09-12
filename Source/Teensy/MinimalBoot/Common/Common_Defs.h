@@ -34,7 +34,7 @@ char strVersionNumber[] = "v0.6.8+8"; //*VERSION*
 #define GoodSIDToken      0x9B81
 
 
-#define eepMagicNum         0xfeed640c // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed640d // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -46,6 +46,8 @@ char strVersionNumber[] = "v0.6.8+8"; //*VERSION*
                                        // 0a: 12/29/24 RW Delay default to on
                                        // 0b: 2/13/25  12 hour clock mode by default
                                        // 0c: 6/5/25   added eepAdColorRefStart
+                                       // 0d: 9/12/25  Power up defaults: added file ext, removed, RW Read delay, moved 12/24 hr clk
+
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization

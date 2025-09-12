@@ -49,8 +49,8 @@ ShowSettings:
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
-   lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2Clock12_24hr
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudClock12_24hr
    beq + ;branch if 12 hour
    lda #'2'
    jsr SendChar   
@@ -161,10 +161,10 @@ WaitForSettingsKey:
 
 +  cmp #'1'  ;12/24 hour clock
    bne +
-   lda rwRegPwrUpDefaults2+IO1Port
-   eor #rpud2Clock12_24hr  
-   sta rwRegPwrUpDefaults2+IO1Port
-   and #rpud2Clock12_24hr  
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudClock12_24hr  
+   sta rwRegPwrUpDefaults+IO1Port
+   and #rpudClock12_24hr  
    sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
