@@ -153,8 +153,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                //PrintDebugLog();
                //nfcInit();
                //Printf_dbg("isFab2x: %d\n", isFab2x()); 
-               USBHostSerial.print("USB Host Serial\n");
-               Serial.print("Sent:USB Host Serial\n");
+               //USBHostSerial.print("USB Host Serial\n");
+               //Serial.print("Sent:USB Host Serial\n");
                break;
             default:
                CmdChannel->printf("Unk cmd: 0x%04x\n", inVal); 
@@ -174,7 +174,18 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
          
 // *** The rest of these cases are used for debug/testing only  
-     
+      //case 'u':  //Pass through USB serial host/device
+      //   if(CmdChannel == &Serial) //only start from device port
+      //   {
+      //      USBHostSerial.begin(MeatloafBaud, USBHOST_SERIAL_8N1); // 115200 460800 2000000
+      //      while(!BtnPressed)  //menu button to exit
+      //      {
+      //         if (Serial.available()) USBHostSerial.print((char)Serial.read());
+      //         if (USBHostSerial.available()) Serial.print((char)USBHostSerial.read());
+      //      }
+      //   }
+      //   break;
+            
       //case 'u':  //set up autolaunch
       //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
       //   CmdChannel->printf("Autolaunch disabled\n");
@@ -419,18 +430,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_DataHold  = Def_nS_DataHold;  
                nS_VICStart  = Def_nS_VICStart;  
                nS_VICDHold  = Def_nS_VICDHold;
+               nS_RWnReady  = Def_nS_RWnReady;
                CmdChannel->printf("Defaults set\n");
-               CmdChannel->printf(" EEP RW_Ready delay: ");
-               if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) 
-               {
-                  nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
-                  CmdChannel->printf("On\n");
-               }
-               else
-               {
-                  nS_RWnReady  = Def_nS_RWnReady;  
-                  CmdChannel->printf("Off\n");
-               }
                break;
             default:
                CmdChannel->printf("No changes\n");

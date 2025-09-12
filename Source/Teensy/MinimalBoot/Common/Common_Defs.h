@@ -217,9 +217,10 @@ const uint8_t OutputPins[] = {
 #define Def_nS_MaxAdj      1030  //    above this nS since last int causes adjustment, formerly 993 for NTSC only
 
 // Times from Phi2 rising (interrupt start):
-#define Def_nS_RWnReady      95  //    Phi2 rise to RWn valid.  
-#define Def_nS_RWnReady_dly 135  //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
+#define Def_nS_RWnReady     135  //    Phi2 rise to RWn valid.  
+                                 //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
                                  //       12/14/24: C128 & C64C JL also needs this
+                                 //       9/12/25: Removing non-delay (95nS) option in settings, set to 135nS (delayed)
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
 #define Def_nS_DataHold     390  //    On a C64 read, when to stop driving the data bus

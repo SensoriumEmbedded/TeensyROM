@@ -54,7 +54,7 @@ void setup()
 {
    set_arm_clock(816000000);  //slight overclocking, no cooling required
    
-   Serial.begin(115200);
+   Serial.begin(115200); // baud rate doesn't matter here, uses USB layer only (no HW serial bus)
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
@@ -118,13 +118,11 @@ void setup()
 
    if (IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled) //connect to TR Control device
    {  //takes 200mS typical, 5 seconds if usb serial device not present!
-      USBHostSerial.begin(115200, USBHOST_SERIAL_8N1);
+      USBHostSerial.begin(115200, USBHOST_SERIAL_8N1); // 115200 460800 2000000
       Serial.println("USB Host Control Enabled");
       //USBHostSerial.printf("USB Host Serial Control Ready\n");
    }
    
-   if (IO1[rwRegPwrUpDefaults] & rpudRWReadyDly) nS_RWnReady = Def_nS_RWnReady_dly; //delay RW read timing
-
    if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
    {
       if (ReadButton!=0) //skip autolaunch checks if button pressed
@@ -280,7 +278,7 @@ void EEPreadStr(uint16_t addr, char* buf)
 void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
-   EEPROM.write(eepAdPwrUpDefaults, 0x90 | rpudRWReadyDly); //default med js speed (9/15), music on, eth time synch off, RW delay on
+   EEPROM.write(eepAdPwrUpDefaults, 0x90); //default med js speed (9/15), music on, eth time synch off
    EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default 12 hour clock mode, NFC off, Serial ctl off
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
