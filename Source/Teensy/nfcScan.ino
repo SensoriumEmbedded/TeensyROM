@@ -31,8 +31,9 @@ PN532 nfc(pn532uhsu);
 #define NFCReReadTimeout   1000  // mS since of no scan to re-accept same tag
 
 uint8_t  Lastuid[7];  // Buffer to store the last UID read
-uint8_t  LastuidLength = 7;
-uint32_t LastTagMillis = 0; //stores last good tag time for Lastuid timeout/allow retag
+uint8_t  LastuidLength  = 7;
+uint32_t LastTagMillis  = 0; //stores last good tag time for Lastuid timeout
+bool     AllowTagRescan = false; //same card rescan only allowed for random cards
 
 FLASHMEM void nfcInit()
 {  
@@ -126,12 +127,12 @@ void nfcCheck()
    }
    else
    { //no card detected, check for timeout & clear Lastuid
-      if(LastTagMillis) //would only naturally be exactly zero for 1mS every 50 days after each power-up
+      if(AllowTagRescan)
       {
          if(millis()-LastTagMillis > NFCReReadTimeout)
          {
-            LastTagMillis = 0; //Only timeout/clear once until next tag is scanned
-            memset(Lastuid, 0, sizeof Lastuid); //clear Lastuid, allow re-tag
+            memset(Lastuid, 0, sizeof Lastuid); //clear Lastuid to allow re-tag
+            AllowTagRescan = false; //Only timeout/clear once until next tag is scanned
          }
       }  
    }
@@ -323,6 +324,7 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
       StructMenuItem *LocalDirMenu;
       
       Printf_dbg("Random requested\n");
+      AllowTagRescan = true; //allow rescan of random tags.
       SetRandomSeed();
       
       pDataStart[strlen((char*)pDataStart)-1]=0; //remove the "?"
@@ -387,6 +389,10 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
          strcat((char*)pDataStart, CleanLocalDirMenu[random(0, CleanLocalNumItems)]->Name);
       }  //else return false; //let it try to launch, throw error
       Printf_dbg("Picked: %s\n", pDataStart);
+   }
+   else 
+   {
+      AllowTagRescan = false; //don't allow rescan of non-random tags.
    }
    
    //Printf_dbg("Launching...\n");
