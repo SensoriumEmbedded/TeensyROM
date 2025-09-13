@@ -63,7 +63,7 @@ FLASHMEM void MountDxxFile()
       return;
    }
    
-   //check for Meatloaf enabled
+   //check for Meatloaf enabled in TR setup
    //need to separate Meatloaf from TR Control?
    //if ((IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled) == 0)
    //{
@@ -81,6 +81,10 @@ FLASHMEM void MountDxxFile()
       SendMsgPrintfln(" Reset ML and retry");
       return;      
    }
+   
+   //change to cache dir on ML SD card
+   USBHostSerial.printf("cd /sd/\r\n"); 
+   FlushUSBHostRx();
    
    //open file
    SendMsgPrintfln("File check");
@@ -121,7 +125,7 @@ FLASHMEM void MountDxxFile()
    {
       for (uint16_t bytenum = 0; bytenum < bytesRead; bytenum++) USBHostSerial.print((char)buffer[bytenum]);  
       //wait for ack char after every chunk
-      //Printf_dbg("bytes sent: %d\n",bytesRead);
+      Printf_dbg("bytes sent: %d\n",bytesRead);
       if (!WaitCheckresponse("Ack", ChunkAckChar))
       {
          DxxFile.close();
@@ -142,6 +146,6 @@ FLASHMEM void MountDxxFile()
    SendMsgPrintfln("Mounting as dev #8...");
    USBHostSerial.printf("mount 8 \"%s\"\r\n", MenuSource[SelItemFullIdx].Name);
    FlushUSBHostRx();   
-   SendMsgPrintfln(" Finished\rLOAD\"*\",8,1 and RUN? (y/n) ");
+   SendMsgPrintfln(" Finished\r\rLOAD\"*\",8,1 and RUN? (y/n) ");
    IO1[rwRegScratch] = 1; //Success indicator, prompt for load/run
 }
