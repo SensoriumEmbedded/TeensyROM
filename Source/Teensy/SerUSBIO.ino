@@ -85,8 +85,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          }
          else if (inVal == C64PauseOnToken) //pause C64 via DMA, during next bad line
          {
-            DMA_State = DMA_S_StartActive;
-            // DMA_State = DMA_S_Start_BA_Active; //doesn't work with U64? scope it...
+            //DMA_State = DMA_S_StartActive;
+            DMA_State = DMA_S_Start_BA_Active; //Apply DMA When BA is low (bad line).  Doesn't work?
             SendU16(AckToken);
             return;
          }

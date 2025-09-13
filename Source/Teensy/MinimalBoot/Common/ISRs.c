@@ -46,7 +46,8 @@ FASTRUN void isrPHI2()
 #ifdef DbgSignalIsrPHI2
    SetDebugAssert;
 #endif
-   
+   //if (DMA_State == DMA_S_ActiveReady) return;
+
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and  R/*W are (almost) valid on Phi2 rising, Read now
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
@@ -99,9 +100,9 @@ FASTRUN void isrPHI2()
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
 
    
-   if (EmulateVicCycles || DMA_State == DMA_S_StartDisable || DMA_State == DMA_S_StartActive)
+   if (EmulateVicCycles || DMA_State > DMA_S_BeginStartStates)
    {
-      while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling   
+      while(GP6_Phi2(ReadGPIO6)); //Re-align to phi2 falling, if needed
       //phi2 has gone low..........................................................................
       
       StartCycCnt = ARM_DWT_CYCCNT;
@@ -117,18 +118,20 @@ FASTRUN void isrPHI2()
                DMA_State = DMA_S_DisableReady;
                break;
             case DMA_S_StartActive:
-               //WaitUntil_nS(250); 
+               WaitUntil_nS(200); 
                SetDMAAssert;
                DMA_State = DMA_S_ActiveReady;
-               break;
+               return;
+               //break;
             case DMA_S_Start_BA_Active:
-               //WaitUntil_nS(250); 
-               if (!GP9_BA(ReadGPIO9))  // bus not available, bad line
+               if (!GP9_BA(ReadGPIO9)) // bus not available, bad line
                { 
+                  WaitUntil_nS(200); 
                   SetDMAAssert;
                   DMA_State = DMA_S_ActiveReady;
+                  return;
                }
-               break;
+               //break;
          }
       }
       
