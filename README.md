@@ -19,14 +19,14 @@
 
 ![TeensyROM pic1](media/v0.3/v0.3_angle.png)
 
-|![TeensyROM pic1](media/case/case-front-corner.png)|![TeensyROM case](media/case/case-rear-corner.png)| 
+|![TeensyROM pic1](media/case/lp-case-front-corner.png)|![TeensyROM case](media/case/case-front-corner.png)| 
 |:--:|:--:|
 
 Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 <BR>If you prefer, **Fully assembled/tested units** are available via my [Tindie shop](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) (prefered) and [eBay](https://www.ebay.com/usr/travster1).
 <BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
 
-Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, for sale with a new unit (Tindie/eBay links above), or direct from [sMs Retro Electronics](https://ko-fi.com/smsretroelectronics)
+Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, for sale with a new unit (Tindie/eBay links above), or direct from [0ldSKull](https://www.tindie.com/stores/0ldskull/)
 
 Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U) to meet other TeensyROM users, ask questions, provide thoughts/input/feedback, etc.
 
@@ -121,7 +121,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
 ## Pictures-screen captures:
-|![TeensyROM pic1](media/v0.3/v0.3_top.png)|![TeensyROM pic1](media/v0.2b/v0.2b_insitu_MIDI.jpg)|
+|![TeensyROM pic1](media/v0.3/v0.3_top.png)|![TeensyROM pic1](media/case/lp-case_connected.png)|
 |:--:|:--:|
 |![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|
 |![TeensyROM pic1](media/Screen%20captures/Settings%20Menu.png)|![TeensyROM help](media/Screen%20captures/Help%20Menu.png)|
