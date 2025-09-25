@@ -245,7 +245,8 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    {
       // Set up DriveDirMenu to point to file to load
       //    without doing LoadDirectory(&SD/&firstPartition);
-      SetDriveDirMenuNameType(0, ptrFilename);
+      Printf_dbg("Dir Setup\n");
+      SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
       MenuSource = DriveDirMenu; 
       SetNumItems(1); //sets # of menu items

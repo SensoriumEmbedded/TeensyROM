@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+9"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+10"; //*VERSION*
 
 #define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -134,7 +134,7 @@ uint32_t* BigBuf = NULL;
 #define MaxItemNameLength   100
 #define MaxPathLength       300
 #define MaxNamePathLength   (MaxPathLength+MaxItemNameLength+2)
-#define MaxMenuItems        3000  //(Max Pages * MaxItemsPerPage) = 255 * 16 = 4080 max to keep page # 8-bit
+#define MaxMenuItems        4000  //(Max Pages * MaxItemsPerPage) = 255 * 19 = 4845 max to keep page # 8-bit
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"
 #define NTSCBusFreq         1022730

@@ -189,8 +189,11 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
    uint16_t CharNum = 0;
    uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
+
    while (MoreData)
    {
+      Printf_dbg("Tag page %d\n", PageNum);
+      
       if(uidLength==4 && (PageNum%4)==0)  //Authentication only needed on classic/1K, on pg 4, 8, etc
       {
          if (!nfc.mifareclassic_AuthenticateBlock(uid, uidLength, PageNum, 0, keya))

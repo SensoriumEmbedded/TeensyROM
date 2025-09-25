@@ -23,7 +23,11 @@
 #define DefSIDPath          "/SID Cover Tunes" 
 #define DefSIDName          "Sleep Dirt            Frank Zappa" 
 
-#define MaxRAM_ImageSize  (144)  // RAM1 space (in kB) used for CRT & Transfer buffer
+#define MaxRAM_ImageSize  (128)  // RAM1 space (in kB) used for CRT & Transfer buffer
+// Test case: Random(?) NFC tag with large directory, crash when tapped
+//    20000 free got further, but still crashes.  Less always crashes
+//    *Need >24000 RAM1 free for local
+// 9/25/2025(v6.8+) reduced 16k from 144 to 128, now 36476 free (from 20k)
 
 //Build options: 
 
