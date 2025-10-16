@@ -75,7 +75,7 @@ struct stcIOHandlers
 #include "MinimalBoot/Common/IOH_C64GameSystem3.c"
 #include "MinimalBoot/Common/IOH_EasyFlash.c"
 #include "MinimalBoot/Common/IOH_ZaxxonSuper.c"
-#include "IO_Handlers/IOH_GMod2.c"
+#include "MinimalBoot/Common/IOH_GMod2.c"
 #include "MinimalBoot/Common/IOH_MagicDesk2.c"
 
 

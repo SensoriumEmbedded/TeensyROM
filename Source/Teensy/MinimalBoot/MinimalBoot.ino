@@ -23,7 +23,7 @@
 #include "Min_TeensyROM.h"
 #include "Common/Common_Defs.h"
 #include "Min_Menu_Regs.h"
-#include "Min_DriveDirLoad.h"
+#include "Common/DriveDirLoad.h"
 #include "Min_IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer

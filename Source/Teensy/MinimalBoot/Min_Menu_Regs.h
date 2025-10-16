@@ -204,7 +204,7 @@ struct StructMenuItem
   uint32_t Size;                //4
 };
 
-enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
+enum enumIOHandlers //Synch order/qty with IOHandler[] (Min_IOHandlers.h)
 {
    IOH_None,
    //IOH_Swiftlink,
@@ -224,6 +224,7 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_C64GameSystem3,
    IOH_EasyFlash,
    IOH_ZaxxonSuper,
+   IOH_GMod2,
    IOH_MagicDesk2,
    
    IOH_Num_Handlers       //always last

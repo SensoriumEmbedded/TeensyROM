@@ -51,7 +51,7 @@
 #define Cart_FinalCartridgePlus      29
 #define Cart_ActionReplay4           30
 #define Cart_Stardos                 31
-#define Cart_EasyFlash               32  //Supported (file size limit and no EAPI support)
+#define Cart_EasyFlash               32  //Supported (no EAPI support)
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
 #define Cart_ActionReplay3           35
@@ -79,7 +79,7 @@
 #define Cart_RGCD                    57
 #define Cart_RRNetMK3                58
 #define Cart_EasyCalc                59
-#define Cart_GMod2                   60
+#define Cart_GMod2                   60  //Supported (no EEPROM)
 #define Cart_MAXBasic                61
 #define Cart_GMod3                   62
 #define Cart_ZIPPCODE48              63
@@ -110,15 +110,15 @@
 #define Cart_REU                   -105 
 #define Cart_SFX_Sound_Expander    -106 
 #define Cart_SFX_Sound_Sampler     -107 
-#define Cart_MIDI_Passport         -108  //Not Supported, Minimal
-#define Cart_MIDI_Datel            -109  //Not Supported, Minimal
-#define Cart_MIDI_Sequential       -110  //Not Supported, Minimal
-#define Cart_MIDI_Namesoft         -111  //Not Supported, Minimal
-#define Cart_MIDI_Maplin           -112                
-#define Cart_DS12C887RTC           -113                
-#define Cart_TFE                   -116                
-#define Cart_Turbo232              -117                
-#define Cart_SwiftLink             -118  //Not Supported, Minimal
+#define Cart_MIDI_Passport         -108  //Supported
+#define Cart_MIDI_Datel            -109  //Supported
+#define Cart_MIDI_Sequential       -110  //Supported
+#define Cart_MIDI_Namesoft         -111  //Supported
+#define Cart_MIDI_Maplin           -112
+#define Cart_DS12C887RTC           -113
+#define Cart_TFE                   -116
+#define Cart_Turbo232              -117  //Supported
+#define Cart_SwiftLink             -118  //Supported
 #define Cart_ACIA                  -119
 #define Cart_Plus60K               -120
 #define Cart_Plus256K              -121
@@ -136,11 +136,16 @@ struct StructHWID_IOH_Assoc
 StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 {
            //HWID                  IOH
-   //(uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
-   //(uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
-   //(uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
-   //(uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
-   //(uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
+#ifndef MinimumBuild
+   //only supported in full build:
+   (uint16_t)Cart_MIDI_Datel,      IOH_MIDI_Datel,
+   (uint16_t)Cart_MIDI_Sequential, IOH_MIDI_Sequential,
+   (uint16_t)Cart_MIDI_Passport,   IOH_MIDI_Passport,
+   (uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
+   (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
+   (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
+#endif
+
    (uint16_t)Cart_EpyxFastload,    IOH_EpyxFastLoad,
    (uint16_t)Cart_MagicDesk,       IOH_MagicDesk,
    (uint16_t)Cart_Dinamic,         IOH_Dinamic,
@@ -150,15 +155,18 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_C64GameSystem3  ,IOH_C64GameSystem3,
    (uint16_t)Cart_EasyFlash       ,IOH_EasyFlash,
    (uint16_t)Cart_ZaxxonSuper     ,IOH_ZaxxonSuper,
+   (uint16_t)Cart_GMod2           ,IOH_GMod2,
    (uint16_t)Cart_MagicDesk2      ,IOH_MagicDesk2,
    (uint16_t)Cart_MagicDesk2b     ,IOH_MagicDesk2,
 };
+
+#define StrSIDInfoSize    (5*40+5) // max 5 *full* lines + 1 blank line
 
 #define CRT_MAIN_HDR_LEN  0x40
 #define CRT_CHIP_HDR_LEN  0x10
 #define MAX_CRT_CHIPS     128
 
-#define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address
+#define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
 
 
 struct StructCrtChip
@@ -169,3 +177,36 @@ struct StructCrtChip
    uint16_t BankNum;
 };
 
+#ifndef MinimumBuild
+   //only needed in full build:
+   struct StructExt_ItemType_Assoc
+   { 
+      char    Extension[4];
+      uint8_t ItemType;
+   };
+
+   StructExt_ItemType_Assoc Ext_ItemType_Assoc[]=
+   { //Update Win UI if this changes
+     //Ext ,  ItemType
+      "prg",  rtFilePrg,
+      "crt",  rtFileCrt,
+      "hex",  rtFileHex,
+      "p00",  rtFileP00,
+      "sid",  rtFileSID,
+      "kla",  rtFileKla,
+      "koa",  rtFileKla,
+      "ocp",  rtFileArt,
+      "pic",  rtFileArt,
+      "art",  rtFileArt,
+      "aas",  rtFileArt,
+      "hpi",  rtFileArt,
+      "txt",  rtFileTxt,
+      "nfo",  rtFileTxt,
+      "md",   rtFileTxt,
+      "seq",  rtFilePETSCII,
+      "d64",  rtD64,
+      "d71",  rtD71,
+      "d81",  rtD81,
+      //"c64",  rtFilePrg,  //makefile output, not always prg...
+};
+#endif
