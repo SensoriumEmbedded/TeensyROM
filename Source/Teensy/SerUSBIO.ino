@@ -155,6 +155,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                //Printf_dbg("isFab2x: %d\n", isFab2x()); 
                //USBHostSerial.print("USB Host Serial\n");
                //Serial.print("Sent:USB Host Serial\n");
+               //EEPROM.write(eepAdDHCPEnabled, 0); //DHCP disabled
+               //EEPROM.put(eepAdMyIP, (uint32_t)IPAddress(192,168,1,222));
+               //CmdChannel->printf("Static IP updated\n"); 
                break;
             default:
                CmdChannel->printf("Unk cmd: 0x%04x\n", inVal); 
@@ -574,7 +577,7 @@ FLASHMEM void LaunchFile()
    if (ReceiveFileName(&DriveType, FileNamePath))
    {
       SendU16(AckToken);
-      RemoteLaunch(DriveType, FileNamePath, false); //only SD and USB supported by UI
+      RemoteLaunch(DriveType, FileNamePath, false);
    }
 }
 

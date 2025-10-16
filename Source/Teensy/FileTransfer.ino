@@ -307,11 +307,11 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 // List Directory Contents on TeensyROM given a take and skip value
 // to faciliate batch processing.
 //
-// Workflow:
-// Receive <-- List Directory Token 0x64DD 
+// Workflow: (TR POV)
+// Receive <-- List Directory Token 0x64DD/0x64DE
 // Send --> AckToken 0x64CC
-// Receive <-- DriveType(1), Destination Path(MaxNameLength, null terminator), sake(1), skip(1)
-//        DriveTypes: (RegMenuTypes)
+// Receive <-- Storage Type(1), skip(2), take(2), Destination Path(MaxNameLength, null terminator)
+//        Storage Types: (RegMenuTypes)
 //           USBDrive  = 0
 //           SD        = 1
 //           Teensy    = 2
@@ -508,7 +508,7 @@ FLASHMEM void DeleteFile(const char* filePath, FS& fileSystem)
 // Delete a file from the specified storage device on TeensyROM.
 //
 // Workflow:
-// Receive <-- Delete File Token (e.g., 0x64EE) 
+// Receive <-- DeleteFileToken (0x64CF) 
 // Send --> AckToken 0x64CC
 // Receive <-- SD_nUSB(1), File Path(MaxNameLength, null terminator)
 // Send --> 0x64CC on Pass, 0x9b7f on Fail 
