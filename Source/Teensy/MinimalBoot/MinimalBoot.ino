@@ -22,7 +22,7 @@
 #include <EEPROM.h>
 #include "Min_TeensyROM.h"
 #include "Common/Common_Defs.h"
-#include "Min_Menu_Regs.h"
+#include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
 #include "Min_IOHandlers.h"
 

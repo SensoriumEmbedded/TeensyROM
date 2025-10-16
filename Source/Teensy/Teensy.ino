@@ -29,7 +29,7 @@
 #include <EEPROM.h>
 #include "TeensyROM.h"
 #include "MinimalBoot/Common/Common_Defs.h"
-#include "Menu_Regs.h"
+#include "MinimalBoot/Common/Menu_Regs.h"
 #include "MinimalBoot/Common/DriveDirLoad.h"
 #include "MainMenuItems.h"
 #include "IOHandlers.h"

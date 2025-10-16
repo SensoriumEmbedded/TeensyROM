@@ -23,6 +23,7 @@
 #define MaxItemDispLength  35
 #define MaxItemsPerPage    19
 
+
 enum IO1_Registers  //offset from 0xDE00
 {
    //skipping 0: Used by many others and accessed on reset
@@ -43,22 +44,33 @@ enum IO1_Registers  //offset from 0xDE00
    rRegNumPages        = 15 , // Item sel/info: total number of pages
    rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
    rwRegPwrUpDefaults  = 17 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegTimezone       = 18 , // EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 19 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegSerialString   = 20 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
-   wRegSearchLetterWAIT= 21 , // Put cursor on first menu item with letter written
-   rRegSIDInitHi       = 22 , // SID Play Info: Init address Hi
-   rRegSIDInitLo       = 23 , // SID Play Info: Init Address Lo
-   rRegSIDPlayHi       = 24 , // SID Play Info: Play Address Hi
-   rRegSIDPlayLo       = 25 , // SID Play Info: Play Address Lo
-   rRegSIDDefSpeedHi   = 26 , // SID Play Info: CIA interrupt timer speed Hi
-   rRegSIDDefSpeedLo   = 27 , // SID Play Info: CIA interrupt timer speed Lo
-   wRegVid_TOD_Clks    = 28 , // C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 29 , // IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 30 , // IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 31 , // TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 32 , // TR Code last page used in C64 RAM
+   rwRegPwrUpDefaults2 = 18 , // EEPROM stored: power up default reg#2, see RegPowerUpDefaultMasks2
+   rwRegTimezone       = 19 , // EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 20 , // EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegSerialString   = 21 , // Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   wRegSearchLetterWAIT= 22 , // Put cursor on first menu item with letter written
+   rRegSIDInitHi       = 23 , // SID Play Info: Init address Hi
+   rRegSIDInitLo       = 24 , // SID Play Info: Init Address Lo
+   rRegSIDPlayHi       = 25 , // SID Play Info: Play Address Hi
+   rRegSIDPlayLo       = 26 , // SID Play Info: Play Address Lo
+   rRegSIDDefSpeedHi   = 27 , // SID Play Info: Default CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 28 , // SID Play Info: Default CIA interrupt timer speed Lo
+   rwRegSIDCurSpeedHi  = 29 , // SID Play Info: Current CIA interrupt timer speed Hi
+   rwRegSIDCurSpeedLo  = 30 , // SID Play Info: Current CIA interrupt timer speed Lo
+   wRegSIDSpeedChange  = 31 , // SID Play Control: Change speed as indicated by RegSIDSpeedChanges
+   rwRegSIDSongNumZ    = 32 , // SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 33 , // SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 34 , // C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 35 , // IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 36 , // IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 37 , // TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 38 , // TR Code last page used in C64 RAM
+   rwRegScratch        = 39 , // Bi-Directional Scratch Register
+   rwRegColorRefStart  = 40 , // Color ref transfer eeprom<->C64, WAIT on Write
+                              //offsets defined in enum ColorRefOffsets
+   //NextReg = rwRegColorRefStart+NumColorRefs,
 
+  
    // These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 , // start of SID Regs, matching SID Reg order ($D400)
    rRegSIDFreqLo1      = StartSIDRegs +  0, 
@@ -108,6 +120,31 @@ enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
    ricmdAck1           = 1, // Ack1 response from C64 IRQ routine
    ricmdLaunch         = 2, // Launch app (set up before IRQ assert)
    ricmdSIDPause       = 3, // SID pause/play
+   ricmdSIDInit        = 4, // re-init current SID (sub song # change)
+   ricmdSetSIDSpeed    = 5, // Apply CIA timer reg values (rRegSIDCurSpeedHi/Lo)
+   ricmdSIDVoiceMute   = 6, // Apply SID Voice Mute Settings
+};
+
+enum ColorRefOffsets       //Order matches TblEscC:
+{
+   EscBackgndColor     = 0, // Black   Screen Background
+   EscBorderColor      = 1, // Purple  Screen Border
+   EscTRBannerColor    = 2, // Purple  Top of screen banner color
+   EscTimeColor        = 3, // Orange  Time Display & Waiting msg
+   EscOptionColor      = 4, // Yellow  Input key option indication
+   EscSourcesColor     = 5, // LtBlue  General text/descriptions
+   EscNameColor        = 6, // LtGreen FIle names & other text
+   NumColorRefs        = 7, // Number of color references
+};
+
+enum  RegSIDSpeedChanges  // wRegSIDSpeedChange
+{
+   rsscIncMajor        = 1, // inc major % units
+   rsscDecMajor        = 2, // dec major % units
+   rsscIncMinor        = 3, // inc minor % units
+   rsscDecMinor        = 4, // dec minor % units
+   rsscSetDefault      = 5, // Set Default Speed
+   rsscToggleLogLin    = 6, // Toggle control type
 };
 
 enum RegSerialStringSelect // rwRegSerialString
@@ -119,13 +156,28 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstShortDirPath    = 4,  // printable current path
    rsstSIDInfo         = 5,  // Info on last SID loaded
    rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
+   rsstSIDSpeed        = 7,  // Current SID playback speed
+   rsstSIDSpeedCtlType = 8,  // Current SID Speed Control Type (Log/Lin)
 };
 
 enum RegPowerUpDefaultMasks
-{
-   rpudSIDPauseMask  = 0x01, // rwRegPwrUpDefaults bit  1=SID music paused
-   rpudNetTimeMask   = 0x02, // rwRegPwrUpDefaults bit  1=synch net time
-   rpudJoySpeedMask  = 0xf0, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+{  //eepAdPwrUpDefaults, rwRegPwrUpDefaults
+   rpudSIDPauseMask    = 0b00000001, // rwRegPwrUpDefaults bit 0, 1=SID music paused
+   rpudNetTimeMask     = 0b00000010, // rwRegPwrUpDefaults bit 1, 1=synch net time
+   rpudShowExtension   = 0b00000100, // rwRegPwrUpDefaults bit 2, 1=show file extensions
+   rpudClock12_24hr    = 0b00001000, // rwRegPwrUpDefaults bit 3, 1=24 hour clock displayed
+   rpudJoySpeedMask    = 0b11110000, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
+};
+
+enum RegPowerUpDefaultMasks2
+{  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
+   //bit 0 unused
+   rpud2HostSerCtlMask    = 0b00000110, // mask of all host serial control devices
+   rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
+   rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
+   rpud2TRContEnabled     = 0b00000100, // rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
+   //bits 4:3 for future hosted serial devices
+   //bits 7:5 unused
 };
 
 enum RegStatusTypes  //rwRegStatus, match StatusFunction order
@@ -133,7 +185,7 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsChangeMenu         = 0x00,
    rsStartItem          = 0x01,
    rsGetTime            = 0x02,
-   rsIOHWinit           = 0x03, //C64 code is executing transfered PRG, change IO1 handler
+   rsIOHWSelInit        = 0x03, //C64 code is executing transfered PRG, change IO1 handler
    rsWriteEEPROM        = 0x04,
    rsMakeBuildCPUInfoStr= 0x05,
    rsUpDirectory        = 0x06,
@@ -141,8 +193,18 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsLoadSIDforXfer     = 0x08,
    rsNextPicture        = 0x09,
    rsLastPicture        = 0x0a,
+   rsWriteNFCTagCheck   = 0x0b,
+   rsWriteNFCTag        = 0x0c,
+   rsNFCReEnable        = 0x0d,
+   rsSetBackgroundSID   = 0x0e,
+   rsSetAutoLaunch      = 0x0f,
+   rsClearAutoLaunch    = 0x10,
+   rsNextTextFile       = 0x11,
+   rsLastTextFile       = 0x12,
+   rsIOHWNextInit       = 0x13,
+   rsMountDxxFile       = 0x14,
    
-   rsNumStatusTypes     = 0x0b,
+   rsNumStatusTypes     = 0x15,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -150,44 +212,60 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
 
 };
 
-enum RegMenuTypes //must match TblMsgMenuName order/qty
+enum RegMenuTypes //must match TblMsgMenuName order/qty, also used by UI/serial for DriveType
 {
-   rmtSD        = 0,
-   rmtTeensy    = 1,
-   rmtUSBDrive  = 2,
+   rmtUSBDrive  = 0,
+   rmtSD        = 1,
+   rmtTeensy    = 2,
+   
+   rmtNumTypes  = 3
 };
 
 enum RegCtlCommands
 {
-   rCtlVanishROM          = 0,
-   rCtlBasicReset         = 1,
-   rCtlStartSelItemWAIT   = 2,
-   rCtlGetTimeWAIT        = 3,
-   rCtlRunningPRG         = 4, // final signal before running prg, allows IO1 handler change
-   rCtlMakeInfoStrWAIT    = 5, // MakeBuildCPUInfoStr
-   rCtlUpDirectoryWAIT    = 6,
-   rCtlLoadSIDWAIT        = 7, //load .sid file to RAM buffer and prep for x-fer
-   rCtlNextPicture        = 8, 
-   rCtlLastPicture        = 9, 
+   rCtlVanishROM            =  0,
+   rCtlBasicReset           =  1,
+   rCtlStartSelItemWAIT     =  2,
+   rCtlGetTimeWAIT          =  3,
+   rCtlRunningPRG           =  4, // final signal before running prg, allows IO1 handler change
+   rCtlMakeInfoStrWAIT      =  5, // MakeBuildCPUInfo
+   rCtlUpDirectoryWAIT      =  6,
+   rCtlLoadSIDWAIT          =  7, //load .sid file to RAM buffer and prep for x-fer
+   rCtlNextPicture          =  8, 
+   rCtlLastPicture          =  9, 
+   rCtlRebootTeensyROM      = 10, 
+   rCtlWriteNFCTagCheckWAIT = 11,
+   rCtlWriteNFCTagWAIT      = 12,
+   rCtlNFCReEnableWAIT      = 13,
+   rCtlSetBackgroundSIDWAIT = 14,
+   rCtlSetAutoLaunchWAIT    = 15,
+   rCtlClearAutoLaunchWAIT  = 16,
+   rCtlNextTextFile         = 17,
+   rCtlLastTextFile         = 18,
+   rCtlMountDxxFileWAIT     = 19,
 };
 
 enum regItemTypes //synch with TblItemType
 {
-   rtNone      = 0,
-   rtUnknown   = 1,
-   rtBin16k    = 2,
-   rtBin8kHi   = 3,
-   rtBin8kLo   = 4,
-   rtBinC128   = 5,
-   rtDirectory = 6,
-   //file extension matching:
-   rtFilePrg   = 7,
-   rtFileCrt   = 8,
-   rtFileHex   = 9,
-   rtFileP00   = 10,
-   rtFileSID   = 11,
-   rtFileKla   = 12,
-   rtFileArt   = 13,
+   rtNone        = 0,
+   rtUnknown     = 1,
+   rtDirectory   = 2,  //file extensions hideable higher than this
+   rtD64         = 3,
+   rtD71         = 4, 
+   rtD81         = 5, 
+   rtFilePrg     = 6,   //always first valid executable file type
+   rtFileCrt     = 7, 
+   rtFileHex     = 8, 
+   rtFileP00     = 9, 
+   rtFileSID     = 10,
+   rtFileKla     = 11,
+   rtFileArt     = 12, 
+   rtFileTxt     = 13, 
+   rtFilePETSCII = 14, 
+   rtBin16k      = 15, 
+   rtBin8kHi     = 16, 
+   rtBin8kLo     = 17, 
+   rtBinC128     = 18, 
 
    //127 max, bit 7 used to indicate assigned IOH to TR
 };
@@ -204,17 +282,22 @@ struct StructMenuItem
   uint32_t Size;                //4
 };
 
-enum enumIOHandlers //Synch order/qty with IOHandler[] (Min_IOHandlers.h)
+enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
 {
-   IOH_None,
-   //IOH_Swiftlink,
-   //IOH_MIDI_Datel,      
-   //IOH_MIDI_Sequential, 
-   //IOH_MIDI_Passport,   
-   //IOH_MIDI_NamesoftIRQ,
-   //IOH_Debug, //last manually selectable, see LastSelectableIOH
+   IOH_None,   //always 0
+#ifndef MinimumBuild
+   // only supported in full build:
+   IOH_Swiftlink,
+   IOH_MIDI_Datel,      
+   IOH_MIDI_Sequential, 
+   IOH_MIDI_Passport,   
+   IOH_MIDI_NamesoftIRQ,
+   IOH_Debug, //last manually selectable, see LastSelectableIOH
    
-   //IOH_TeensyROM, 
+   IOH_TeensyROM, 
+   IOH_ASID,
+   IOH_TR_BASIC,
+#endif
    IOH_EpyxFastLoad,
    IOH_MagicDesk,
    IOH_Dinamic,
@@ -227,7 +310,8 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (Min_IOHandlers.h)
    IOH_GMod2,
    IOH_MagicDesk2,
    
+   
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_None     //127 max
+#define LastSelectableIOH  IOH_Debug     //127 max

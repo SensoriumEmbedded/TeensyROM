@@ -90,6 +90,8 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
                                 
    &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
+   &IOHndlr_ASID,               //IOH_ASID,
+   &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
    &IOHndlr_Dinamic,            //IOH_Dinamic,
@@ -99,8 +101,6 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_C64GameSystem3,     //IOH_C64GameSystem3,
    &IOHndlr_EasyFlash,          //IOH_EasyFlash,
    &IOHndlr_ZaxxonSuper,        //IOH_ZaxxonSuper,
-   &IOHndlr_ASID,               //IOH_ASID,
-   &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
    &IOHndlr_GMod2,              //IOH_GMod2,
    &IOHndlr_MagicDesk2,         //IOH_MagicDesk2,
 };
