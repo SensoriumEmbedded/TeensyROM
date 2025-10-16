@@ -26,6 +26,7 @@ void ServiceTCP(EthernetClient &tcpclient)
    CmdChannel  = &Serial; //restore to serial stream
    
    //delay(10);
+   tcpclient.flush();
    tcpclient.stop();
    Printf_dbg("Client disconnected\n");
 }
