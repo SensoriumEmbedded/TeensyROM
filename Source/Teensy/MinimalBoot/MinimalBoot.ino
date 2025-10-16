@@ -92,7 +92,8 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");        //swaps quickly during play                            //   Lots!
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/svc64_update2.crt");  //SNK vs CAPCOM,  swaps quickly during play                                //   Lots!
    //EEPwriteStr(eepAdCrtBootName, "/svc64_md2.crt");  
-   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/svc64_md2.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
+   //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/svc64_md2.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
+   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/SNKvsCap/svc64_stronger.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
  
  EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
