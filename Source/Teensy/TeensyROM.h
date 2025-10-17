@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
+#include "TRMenuFiles/ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
 #define DefSIDSource        rmtTeensy  // Default, should always be local (rmtTeensy)
 #define DefSIDPath          "/SID Cover Tunes" 
