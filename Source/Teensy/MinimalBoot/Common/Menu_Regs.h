@@ -314,4 +314,4 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_Debug     //127 max
+#define LastSelectableIOH  IOH_Debug     //127 max.  Used in IOH_TeensyROM.c for Special IO display/select

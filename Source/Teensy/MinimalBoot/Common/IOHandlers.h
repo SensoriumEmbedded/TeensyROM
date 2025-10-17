@@ -17,35 +17,45 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifdef MinimumBuild
+   //from IOH_TeensyROM.c :
+   uint8_t RegNextIOHndlr;
+   volatile uint8_t doReset = false;
+   const unsigned char *HIROM_Image = NULL;
+   const unsigned char *LOROM_Image = NULL;
 
-USBHost myusbHost;
-USBHub hub1(myusbHost);
-USBHub hub2(myusbHost);
-MIDIDevice_BigBuffer usbHostMIDI(myusbHost);
-USBDrive myDrive(myusbHost);
-USBFilesystem firstPartition(myusbHost);
+#else
+   //Only in full build
+   USBHost myusbHost;
+   USBHub hub1(myusbHost);
+   USBHub hub2(myusbHost);
+   MIDIDevice_BigBuffer usbHostMIDI(myusbHost);
+   USBDrive myDrive(myusbHost);
+   USBFilesystem firstPartition(myusbHost);
 
-USBHIDParser hid1(myusbHost);
-USBHIDParser hid2(myusbHost);
-USBHIDParser hid3(myusbHost);  //need all 3?
+   USBHIDParser hid1(myusbHost);
+   USBHIDParser hid2(myusbHost);
+   USBHIDParser hid3(myusbHost);  //need all 3?
 
-USBSerial USBHostSerial(myusbHost);   //update HostSerialType to match, defined in PN532_UHSU.h
-//USBSerial           USBHostSerial(myusbHost);    // only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
-//    Works with CH340(NFC), T3.2, Lolin D32 Pro,  *not* T4
-//USBSerial_BigBuffer USBHostSerial(myusbHost, 1); // Handles anything up to 512 bytes
-//    Needed for T4, also works with others,  uses an extra 3,456 bytes of RAM1
-//    *Crashes* NFC, addr2line points to  libraries/PN532/PN532.cpp:line 543
-//USBSerial_BigBuffer USBHostSerial(myusbHost);    // Handles up to 512 but by default only for those > 64 bytes.  
-//    doesnt work for most, "by default only for those > 64 bytes"
+   USBSerial USBHostSerial(myusbHost);   //update HostSerialType to match, defined in PN532_UHSU.h
+   //USBSerial           USBHostSerial(myusbHost);    // only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
+   //    Works with CH340(NFC), T3.2, Lolin D32 Pro,  *not* T4
+   //USBSerial_BigBuffer USBHostSerial(myusbHost, 1); // Handles anything up to 512 bytes
+   //    Needed for T4, also works with others,  uses an extra 3,456 bytes of RAM1
+   //    *Crashes* NFC, addr2line points to  libraries/PN532/PN532.cpp:line 543
+   //USBSerial_BigBuffer USBHostSerial(myusbHost);    // Handles up to 512 but by default only for those > 64 bytes.  
+   //    doesnt work for most, "by default only for those > 64 bytes"
 
-EthernetUDP udp;
-EthernetClient client;
+   EthernetUDP udp;
+   EthernetClient client;
 
-#define usbDevMIDI usbMIDI
+   #define usbDevMIDI usbMIDI
+   #define nfcStateEnabled       0
+   #define nfcStateBitDisabled   1
+   #define nfcStateBitPaused     2
+#endif
+
 #define IOHNameLength 20  //limited by display location on C64
-#define nfcStateEnabled       0
-#define nfcStateBitDisabled   1
-#define nfcStateBitPaused     2
 
 struct stcIOHandlers
 {
@@ -59,29 +69,32 @@ struct stcIOHandlers
   void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
 };
 
-#include "IO_Handlers/IOH_MIDI.c"
-#include "IO_Handlers/IOH_Debug.c"
-#include "IO_Handlers/IOH_TeensyROM.c" 
-#include "IO_Handlers/IOH_TR_BASIC.c" 
-#include "IO_Handlers/IOH_Swiftlink.c"
-#include "IO_Handlers/IOH_ASID.c"
-#include "MinimalBoot/Common/IOH_None.c"
-#include "MinimalBoot/Common/IOH_EpyxFastLoad.c"
-#include "MinimalBoot/Common/IOH_MagicDesk.c"
-#include "MinimalBoot/Common/IOH_Dinamic.c"
-#include "MinimalBoot/Common/IOH_Ocean1.c"
-#include "MinimalBoot/Common/IOH_FunPlay.c"
-#include "MinimalBoot/Common/IOH_SuperGames.c"
-#include "MinimalBoot/Common/IOH_C64GameSystem3.c"
-#include "MinimalBoot/Common/IOH_EasyFlash.c"
-#include "MinimalBoot/Common/IOH_ZaxxonSuper.c"
-#include "MinimalBoot/Common/IOH_GMod2.c"
-#include "MinimalBoot/Common/IOH_MagicDesk2.c"
+#ifndef MinimumBuild
+   #include "IO_Handlers/IOH_MIDI.c"
+   #include "IO_Handlers/IOH_Debug.c"
+   #include "IO_Handlers/IOH_TeensyROM.c" 
+   #include "IO_Handlers/IOH_TR_BASIC.c" 
+   #include "IO_Handlers/IOH_Swiftlink.c"
+   #include "IO_Handlers/IOH_ASID.c"
+#endif
+   #include "IO_Handlers/IOH_None.c"
+   #include "IO_Handlers/IOH_EpyxFastLoad.c"
+   #include "IO_Handlers/IOH_MagicDesk.c"
+   #include "IO_Handlers/IOH_Dinamic.c"
+   #include "IO_Handlers/IOH_Ocean1.c"
+   #include "IO_Handlers/IOH_FunPlay.c"
+   #include "IO_Handlers/IOH_SuperGames.c"
+   #include "IO_Handlers/IOH_C64GameSystem3.c"
+   #include "IO_Handlers/IOH_EasyFlash.c"
+   #include "IO_Handlers/IOH_ZaxxonSuper.c"
+   #include "IO_Handlers/IOH_GMod2.c"
+   #include "IO_Handlers/IOH_MagicDesk2.c"
 
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
    &IOHndlr_None,               //IOH_None,
+#ifndef MinimumBuild
    &IOHndlr_SwiftLink,          //IOH_Swiftlink,
    &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
    &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
@@ -92,6 +105,7 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
    &IOHndlr_ASID,               //IOH_ASID,
    &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
+#endif
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
    &IOHndlr_Dinamic,            //IOH_Dinamic,
