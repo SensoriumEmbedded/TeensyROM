@@ -176,8 +176,9 @@ enum RegPowerUpDefaultMasks2
    rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
    rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
    rpud2TRContEnabled     = 0b00000100, // rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
+   rpud2TRTCPListen       = 0b10000000, // rwRegPwrUpDefaults2 bit 7, 1=TCP Listen Enabled
    //bits 4:3 for future hosted serial devices
-   //bits 7:5 unused
+   //bits 6:5 unused
 };
 
 enum RegStatusTypes  //rwRegStatus, match StatusFunction order

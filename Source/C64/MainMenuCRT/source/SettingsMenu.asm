@@ -153,6 +153,14 @@ ShowSettings:
    and #rpudShowExtension  
    jsr PrintOnOff
    
+   ldx #12 ;row TCP Listen 
+   ldy #SetValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2TRTCPListen  
+   jsr PrintOnOff
+   
 
 WaitForSettingsKey:     
    jsr DisplayTime   
@@ -287,7 +295,6 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-
 +  cmp #'g'  ;Show File Extensions
    bne +
    lda rwRegPwrUpDefaults+IO1Port
@@ -296,7 +303,15 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'h'  ;Reboot TeensyROM
++  cmp #'h'  ;Toggle TCP Listener
+   bne +
+   lda rwRegPwrUpDefaults2+IO1Port
+   eor #rpud2TRTCPListen  
+   sta rwRegPwrUpDefaults2+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'i'  ;Reboot TeensyROM
    bne +
    lda #$00    
    sta $d011   ;turn off the display   
@@ -305,17 +320,12 @@ smcNewscd
    ;no need to wait, TR/C64 will be rebooting...
    jmp WaitForSettingsKey  
 
-+  cmp #'i'  ;Synch Time now
++  cmp #'j'  ;Synch Time now
    bne +
    jsr SynchEthernetTime
    ;jmp SettingsMenu ;force to reprint all in case ram reduced  
    jmp WaitForSettingsKey
    
-+  cmp #'j'  ;Toggle Music now
-   bne +
-   jsr ToggleSIDMusic
-   jmp WaitForSettingsKey  
-
 +  cmp #'k'  ;Test IO
    bne +
    jsr TestIO
