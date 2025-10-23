@@ -33,10 +33,14 @@ uint8_t CurrentIOHandler = IOH_None;
 StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
-//bool RemoteLaunched = false; //last app was launched remotely
+Stream *CmdChannel  = &Serial; 
+
+#ifdef FeatTCPListen
+   #include <NativeEthernet.h>
+   EthernetServer tcpServer(80); // Listen on port 80
+#endif
 
 #include "Common/ISRs.c"
-
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 
@@ -95,7 +99,7 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/svc64_md2.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
    EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/SNKvsCap/svc64_stronger.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
  
- EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
+   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    
    if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin) runMainTRApp(); //jump to main app if not booting a CRT
@@ -107,6 +111,10 @@ void setup()
    //we have a crt to load in minimal mode, procede....
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
+
+#ifdef FeatTCPListen
+   EthernetInit(); //Set to listen for TCP packets.  Dynamically allocates ~100k of RAM2
+#endif
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM
@@ -172,7 +180,12 @@ void loop()
       SetResetDeassert;
    }
   
-   if (Serial.available()) ServiceSerial();
+   if (Serial.available()) ServiceSerial(&Serial);
+   
+#ifdef FeatTCPListen
+   EthernetClient tcpclient = tcpServer.available(); // Listen for incoming clients
+   if (tcpclient) ServiceTCP(tcpclient);
+#endif
    
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
