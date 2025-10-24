@@ -47,7 +47,7 @@ uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom 
 Stream *CmdChannel  = &Serial; 
 
 #ifdef FeatTCPListen
-EthernetServer tcpServer(80); // Listen on port 80
+   EthernetServer tcpServer(80); // Listen on port 80
 #endif
 
 #include "MinimalBoot/Common/ISRs.c"
@@ -84,10 +84,6 @@ void setup()
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
    
-#ifdef FeatTCPListen
-   EthernetInit(); //Set to listen for TCP packets
-#endif
-
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) SetEEPDefaults();
@@ -116,6 +112,13 @@ void setup()
    StrSIDInfo = (char*)calloc(StrSIDInfoSize, sizeof(char)); //SID header info storage
    LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
+
+#ifdef FeatTCPListen
+   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) 
+   { //Init Ethernet to to listen for TCP packets
+      if (!EthernetInit()) IO1[rwRegPwrUpDefaults2] &= ~rpud2TRTCPListen; //turn off if failed init
+   }
+#endif
 
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
@@ -224,8 +227,11 @@ void loop()
       if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
 #ifdef FeatTCPListen
-   EthernetClient tcpclient = tcpServer.available(); // Listen for incoming clients
-   if (tcpclient) ServiceTCP(tcpclient);
+   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) 
+   { //Listen for TCP packets
+      EthernetClient tcpclient = tcpServer.available();
+      if (tcpclient) ServiceTCP(tcpclient);
+   }
 #endif
  
    //handler specific polling items:

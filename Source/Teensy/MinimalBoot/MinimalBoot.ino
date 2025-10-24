@@ -38,6 +38,7 @@ Stream *CmdChannel  = &Serial;
 #ifdef FeatTCPListen
    #include <NativeEthernet.h>
    EthernetServer tcpServer(80); // Listen on port 80
+   bool TCPListen = false;
 #endif
 
 #include "Common/ISRs.c"
@@ -113,7 +114,10 @@ void setup()
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 
 #ifdef FeatTCPListen
-   EthernetInit(); //Set to listen for TCP packets.  Dynamically allocates ~100k of RAM2
+   if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
+   { //Init Ethernet to to listen for TCP packets  Dynamically allocates ~100k of RAM2
+      TCPListen = EthernetInit(); //turn off if failed init
+   }
 #endif
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
@@ -183,8 +187,11 @@ void loop()
    if (Serial.available()) ServiceSerial(&Serial);
    
 #ifdef FeatTCPListen
-   EthernetClient tcpclient = tcpServer.available(); // Listen for incoming clients
-   if (tcpclient) ServiceTCP(tcpclient);
+   if (TCPListen)
+   {
+      EthernetClient tcpclient = tcpServer.available(); // Listen for incoming clients
+      if (tcpclient) ServiceTCP(tcpclient);
+   }
 #endif
    
    //handler specific polling items:
