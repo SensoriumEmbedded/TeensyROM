@@ -32,7 +32,7 @@
 //Build options: 
 
 //Feature enables
-  // #define FeatTCPListen //Enable TCP Listen port for remote commands
+   #define FeatTCPListen //Enable TCP Listen capability for remote commands
 
 //Debug messaging: enable at your own risk, can cause emulation interference/fails
   // #define DbgMsgs_IO    //All other Serial out messages (Printf_dbg)
