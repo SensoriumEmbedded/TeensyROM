@@ -1,9 +1,9 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+14"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+16"; //*VERSION*
 
-#define UpperAddr           0x040000  //address of upper (main) TR image, from FLASH_BASEADDRESS
+#define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
 
 //synch with win app:

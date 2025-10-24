@@ -10,7 +10,7 @@ extern unsigned long _flashimagelen;
 
 __attribute__ ((section(".bootdata"), used))
 const uint32_t BootData[3] = {
-	0x60040000,
+	0x60060000,
 	(uint32_t)&_flashimagelen,
 	0
 };
