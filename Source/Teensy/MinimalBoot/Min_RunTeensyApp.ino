@@ -12,6 +12,13 @@ FLASHMEM void runMainTRApp_FromMin()
 {  //flag as "FromMin" to indicate skip of autolaunch (if enabled)
    EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
    delay(10);  //let EEPROM write complete
+   
+#ifdef FeatTCPListen
+   //if ethernet is initialized, runMainTRApp crashes.
+   //EEPROM is set up to bypass, just takes a little longer to pass through minimal again
+   if (TCPListen) REBOOT;
+#endif
+   
    runMainTRApp();
 }
 
