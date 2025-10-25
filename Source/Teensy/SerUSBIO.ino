@@ -96,7 +96,15 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             SendU16(AckToken);
             return;
          }
-            
+         else if (inVal == VersionInfoToken) //Version Info
+         {
+            MakeBuildInfo();
+            SendU16(AckToken);
+            CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
+            return;
+         }
+         
+         
          if (CurrentIOHandler != IOH_TeensyROM)
          {
             SendU16(FailToken);
@@ -167,10 +175,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       case 'e': //Reset EEPROM to defaults
          SetEEPDefaults();
          CmdChannel->println("Applied upon reboot");
-         break;
-      case 'v': //version info
-         MakeBuildInfo();
-         CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
          break;
       case 'b': //bus analysis
          BusAnalysis();

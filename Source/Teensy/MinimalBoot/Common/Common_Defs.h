@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+16"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+17"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -19,6 +19,7 @@ char strVersionNumber[] = "v0.6.8+16"; //*VERSION*
 #define C64PauseOnToken   0x6431  // C64 Paused
 #define C64PauseOffToken  0x6430  // C64 Unpaused
 #define DebugToken        0x6467  //dg
+#define VersionInfoToken  0x6476  //dv
 #define SendFileToken     0x64AA
 #define PostFileToken     0x64BB
 #define CopyFileToken     0x64FF

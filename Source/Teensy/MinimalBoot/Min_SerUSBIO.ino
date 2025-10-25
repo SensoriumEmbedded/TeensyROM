@@ -36,20 +36,23 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             runMainTRApp_FromMin(); 
             return;
          }
-         else if (inVal == LaunchFileToken) //Launch File
+         else if (inVal == VersionInfoToken) //Version Info
          {
-            SendU16(RetryToken);
-            CmdChannel->println("Launch cmd from min");
-            runMainTRApp_FromMin();
+            SendU16(AckToken);
+            CmdChannel->printf("\nTeensyROM minimal %s\n\n", strVersionNumber);
+            return;
          }
+         //else if (inVal == LaunchFileToken) //Launch File
+         //{
+         //   SendU16(RetryToken);
+         //   CmdChannel->println("Launch cmd from min");
+         //   runMainTRApp_FromMin();
+         //}
 
          SendU16(FailToken);
          CmdChannel->print("Busy!\n");
          return;
 
-      case 'v': //version info
-         CmdChannel->printf("\nTeensyROM minimal %s\n", strVersionNumber);
-         break;
         
       //case 'u': //Jump to upper image (full build)
       //   EEPROM.write(eepAdDHCPEnabled, 0); //DHCP disabled
