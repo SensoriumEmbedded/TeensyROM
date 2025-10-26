@@ -13,17 +13,18 @@ FLASHMEM void runMainTRApp_FromMin()
    EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
    delay(10);  //let EEPROM write complete
    
-#ifdef FeatTCPListen
-   //if ethernet is initialized, runMainTRApp crashes.
-   //EEPROM is set up to bypass, just takes a little longer to pass through minimal again
-   if (TCPListen) REBOOT;
-#endif
-   
    runMainTRApp();
 }
 
 FLASHMEM void runMainTRApp() 
 {
+   
+#ifdef FeatTCPListen
+   //if ethernet is initialized, jump to main crashes.
+   //EEPROM is set up to bypass, just takes a little longer to pass through minimal again
+   if (TCPListen) REBOOT;
+#endif
+
   uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image
 
   // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord

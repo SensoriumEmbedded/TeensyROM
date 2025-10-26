@@ -42,12 +42,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             CmdChannel->printf("\nTeensyROM minimal %s\n\n", strVersionNumber);
             return;
          }
-         //else if (inVal == LaunchFileToken) //Launch File
-         //{
-         //   SendU16(RetryToken);
-         //   CmdChannel->println("Launch cmd from min");
-         //   runMainTRApp_FromMin();
-         //}
+         else if (inVal == LaunchFileToken) //Launch File
+         {
+            LaunchFile();
+            return;
+         }
 
          SendU16(FailToken);
          CmdChannel->print("Busy!\n");
@@ -234,6 +233,78 @@ FLASHMEM void PrintDebugLog()
    if (BufferFull) CmdChannel->println("Buffer was full");
    CmdChannel->println("Buffer Reset");
    BigBufCount = 0;
+}
+
+FLASHMEM void LaunchFile()
+{            
+   //   App: LaunchFileToken 0x6444
+   //Teensy: AckToken 0x64CC or RetryToken/abort from minimal
+   //   App: Send DriveType(1), DestPath/Name(up to MaxNamePathLength, null term)
+   //        DriveTypes: (RegMenuTypes)
+   //           USBDrive  = 0
+   //           SD        = 1
+   //           Teensy    = 2
+   //Teensy: AckToken 0x64CC
+   //   C64: file Launches
+
+   //Launch file token has been received
+   SendU16(AckToken);
+   RegMenuTypes DriveType;
+   char FileNamePath[MaxNamePathLength];
+   
+   if (ReceiveFileName(&DriveType, FileNamePath))
+   {
+      SendU16(AckToken);
+      //RemoteLaunch(DriveType, FileNamePath, false);
+      //Since we're in minimal, save the info to EEPROM and switch to full app for launch.
+      const char DriveNames[rmtNumTypes][6] =   //match RegMenuTypes
+      {
+         "USB:",
+         "SD:",
+         "TR:",
+      };
+      EEPwriteStr(eepAdCrtBootName, DriveNames[DriveType]);
+      EEPwriteStr(eepAdCrtBootName+strlen(DriveNames[DriveType]), FileNamePath);
+      EEPROM.write(eepAdMinBootInd, MinBootInd_LaunchFull);
+      delay(10);  //let EEPROM write complete
+      runMainTRApp();
+
+   }
+}
+
+FLASHMEM bool ReceiveFileName(RegMenuTypes* DriveType, char *FileNamePath)
+{
+   uint32_t RecDrive;
+   if (!GetUInt(&RecDrive, 1)) return false;
+   
+   if (RecDrive >= rmtNumTypes) return false;
+   *DriveType = (RegMenuTypes)RecDrive;
+
+   uint16_t CharNum=0;
+   while (1) 
+   {
+      if(!SerialAvailabeTimeout()) return false;
+      FileNamePath[CharNum] = CmdChannel->read();
+      if (FileNamePath[CharNum]==0) return true;
+      if (++CharNum == MaxNamePathLength)
+      {
+         SendU16(FailToken);
+         CmdChannel->print("Path too long!\n");  
+         return false;
+      }
+   }
+}
+
+FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
+{  //Get NumBytes (4 max) raw bytes to construct InVal
+   *InVal=0;
+   for(int8_t ByteNum=NumBytes-1; ByteNum>=0; ByteNum--)
+   {
+      if(!SerialAvailabeTimeout()) return false;
+      uint32_t ByteIn = CmdChannel->read();
+      *InVal += (ByteIn << (ByteNum*8));
+   }
+   return true;
 }
 
 FLASHMEM void SendU16(uint16_t SendVal)

@@ -134,30 +134,32 @@ void setup()
       //USBHostSerial.printf("USB Host Serial Control Ready\n");
    }
    
-   if (EEPROM.read(eepAdMinBootInd) == MinBootInd_SkipMin) //normal first power up
+   
+   switch (EEPROM.read(eepAdMinBootInd))
    {
-      if (ReadButton!=0) //skip autolaunch checks if button pressed
-      {
-         uint32_t AutoStartmS = millis();
-         if(!CheckLaunchSDAuto()) //if nothing autolaunched from SD autolaunch file
+      case MinBootInd_SkipMin: //normal first power up
+         if (ReadButton!=0) //skip autolaunch checks if button pressed
          {
-            if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+            uint32_t AutoStartmS = millis();
+            if(!CheckLaunchSDAuto()) //if nothing autolaunched from SD autolaunch file
             {
-               char AutoFileName[MaxPathLength];
-               EEPreadStr(eepAdAutolaunchName, AutoFileName);
-               char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
-               RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
-               
-               Printf_dbg("EEP Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
-               RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
+               if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
+               {
+                  EEPRemoteLaunch(eepAdAutolaunchName);
+               }
             }
+            Printf_dbg("Autolaunch checks: %lumS\n", millis()-AutoStartmS);
          }
-         Printf_dbg("Autolaunch checks: %lumS\n", millis()-AutoStartmS);
-      }
-   }
-   else
-   {  //if it's not skip min (most likely MinBootInd_FromMin), set back to default for next time 
-      EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
+         break;
+         
+      case MinBootInd_LaunchFull: // Launch command received in minimal, launch it from full
+         EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
+         EEPRemoteLaunch(eepAdCrtBootName);
+         break;
+         
+      default:  //ignore anything else (most likely MinBootInd_FromMin), set back to default for next time 
+         EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
+         break;
    }
    
    SetLEDOn;  //done last as indicator of init completion

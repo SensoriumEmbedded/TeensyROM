@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+17"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+18"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -68,7 +68,7 @@ enum InternalEEPROMmap
    eepAdBookmarks     =  163, // (75+225)*9     Bookmark Titles and Full Paths
    eepAdDefaultSID    = 2863, // (MaxPathLength=300) Path/filename of Default SID to play in background
    eepAdCrtBootName   = 3163, // (MaxPathLength=300) Boot to minimal .crt path to launch
-   eepAdMinBootInd    = 3463, // (1:uint8_t)    Indicates that Minimal boot should execute eepAdCrtBootName (!=0) or passthrough (=0)
+   eepAdMinBootInd    = 3463, // (1:uint8_t)    Minimal/full boot indicator, see MinBootIndFlags
    eepAdAutolaunchName= 3464, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
    eepAdPwrUpDefaults2= 3764, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
    eepAdColorRefStart = 3765, // (NumColorRefs=7)  UI color references, see ColorRefOffsets
@@ -82,6 +82,7 @@ enum MinBootIndFlags
    MinBootInd_SkipMin    = 0, // skip minimal and go to main as normal first power up (and autolaunch, if enabled)
    MinBootInd_ExecuteMin = 1, // minimal boot called from main, launch CRT in minimal
    MinBootInd_FromMin    = 2, // Min returning to main menu, skip of autolaunch (if enabled)
+   MinBootInd_LaunchFull = 3, // Launch command received in minimal, launch it from full
 };
 
 enum DMA_States  //used with DMA_State

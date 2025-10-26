@@ -172,7 +172,16 @@ FLASHMEM bool RemoteSetSIDVoiceMute()
    return InterruptC64(ricmdSIDVoiceMute);
 }
 
-
+void EEPRemoteLaunch(uint16_t eepAdNameToLaunch)
+{
+   char AutoFileName[MaxPathLength];
+   EEPreadStr(eepAdNameToLaunch, AutoFileName);
+   char * ptrAutoFileName = AutoFileName; //pointer to move past SD/USB/TR:
+   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrAutoFileName);
+   Printf_dbg("EEP Autolaunch %d \"%s\"\n", MenuSourceID, ptrAutoFileName); 
+   RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
+}
+               
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
