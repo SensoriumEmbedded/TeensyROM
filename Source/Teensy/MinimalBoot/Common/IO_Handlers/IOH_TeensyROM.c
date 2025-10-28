@@ -212,6 +212,7 @@ extern bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuI
 extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern void MountDxxFile();
+extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -552,6 +553,38 @@ FLASHMEM void NFCReEnable()
    nfcInit(); //this should pass, was enabled/initialized previously...
 }
 
+FLASHMEM void HotKeySetLaunch()
+{
+   uint8_t HotKeyNumSL = IO1[rwRegScratch];  //zero based HK num + bit 7 high = set HK, low = launch
+   
+   if (HotKeyNumSL & 0x80)
+   {
+      //set 
+      char PathFilename[MaxPathLength];
+      
+      HotKeyNumSL &= 0x7f;  // strip SL bit
+      //get/print path+filename
+      SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+      IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
+      GetCurrentFilePathName(PathFilename);
+      SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
+
+      if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+      {
+         SendMsgPrintfln("Invalid File Type (%d)\r\rHot Key *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
+         return;
+      }
+   
+      EEPwriteStr(eepAdAutolaunchName, PathFilename);  //set autolaunch in EEPROM:
+      SendMsgPrintfln("Hot Key updated\r");    
+   }
+   else 
+   {
+      //launch, no messaging/not waiting...
+      EEPRemoteLaunch(eepAdAutolaunchName);
+   }
+}
+
 FLASHMEM void SetAutoLaunch()
 {
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
@@ -691,7 +724,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &LastTextFile,        // rsLastTextFile
    &IOHandlerNextInit,   // rsIOHWNextInit
    &MountDxxFile,        // rsMountDxxFile
-
+   &HotKeySetLaunch,     // rsHotKeySetLaunch
 };
 
 
@@ -1113,6 +1146,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlMountDxxFileWAIT:
                   IO1[rwRegStatus] = rsMountDxxFile; //work this in the main code
+                  break;
+               case rCtlHotKeySetLaunch:
+                  IO1[rwRegStatus] = rsHotKeySetLaunch; //work this in the main code
                   break;
             }
             break;

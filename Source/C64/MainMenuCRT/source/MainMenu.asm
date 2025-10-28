@@ -445,12 +445,9 @@ ReadKeyboard:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
-+  cmp #'1'  ;Hot Key #1
-   bne +
-   ldx #1  ;dir MIDI+ASID
-   lda #3  ;prog Cynthcart
-   
-HotKeyLaunch
+Load8Run:
+   ldx #6  ;dir Utilities
+   lda #3  ;prog LOAD"*",8,1 and RUN
    ;launch from main TR menu: sub-dir # stored in X,  item # stored in acc   
    pha ;save program #
    txa
@@ -466,40 +463,38 @@ HotKeyLaunch
    jsr SelectItem  ;won't come back from this...
    jmp HighlightCurrent
 
-+  cmp #'2'  ;Hot Key #2
-   bne +
-   ldx #1  ;dir MIDI+ASID
-   lda #4  ;prog Station64
-   jmp HotKeyLaunch
-
-+  cmp #'3'  ;Hot Key #3
-   bne +
-   ldx #6  ;dir Utilities
-   lda #1  ;prog CCGMS
-   jmp HotKeyLaunch
-
-+  cmp #'4'  ;Hot Key #4
-   bne +
-   ldx #1  ;dir MIDI+ASID
-   lda #1  ;prog ASID Player
-   jmp HotKeyLaunch
-
-+  cmp #'5'  ;Hot Key #5
-   bne +
-   ldx #0  ;dir Games
-   lda #7  ;prog Jupiter Lander
-   jmp HotKeyLaunch
-
-+  cmp #'6'  ;Hot Key #6
-   bne +
-Load8Run:
-  ldx #6  ;dir Utilities
-  lda #3  ;prog LOAD"*",8,1 and RUN
-  jmp HotKeyLaunch
-
-
++  cmp #'1' ;Launch Hot Key 
+   bmi +   ;skip if below '1'
+   cmp #'1'+NumHotKeys
+   bpl +   ;skip if above NumHotKeys
+   sec       ;set to subtract without carry
+   sbc #'1'   ;make zero based
+   sta rwRegScratch+IO1Port ; Scratch = HK num (zero based) + bit 7 low = launch
+   lda #rCtlHotKeySetLaunch
+   sta wRegControl+IO1Port
+   jmp WaitForJSorKey  
+   ;don't wait for launch or launch IRQ will be blocked.
+   
++  cmp #'!' ;Set Hot Key 
+   bmi +   ;skip if below '!'
+   cmp #'!'+NumHotKeys
+   bpl +   ;skip if above NumHotKeys
+   sec       ;set to subtract without carry
+   sbc #'!'   ;make zero based
+   ora #$80   ;set HK
+   sta rwRegScratch+IO1Port ; Scratch = HK num (zero based) + bit 7 high = set HK
+   jsr PrintBanner   
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   lda #rCtlHotKeySetLaunch
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   jsr AnyKeyMsgWait   
+   jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent    
+   
+   
 +  jmp WaitForJSorKey
-
    
 ; ******************************* Subroutines ******************************* 
 

@@ -22,7 +22,7 @@
 
 #define MaxItemDispLength  35
 #define MaxItemsPerPage    19
-
+#define NumHotKeys          5
 
 enum IO1_Registers  //offset from 0xDE00
 {
@@ -204,8 +204,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsLastTextFile       = 0x12,
    rsIOHWNextInit       = 0x13,
    rsMountDxxFile       = 0x14,
+   rsHotKeySetLaunch    = 0x15,
    
-   rsNumStatusTypes     = 0x15,
+   rsNumStatusTypes     = 0x16,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -244,6 +245,7 @@ enum RegCtlCommands
    rCtlNextTextFile         = 17,
    rCtlLastTextFile         = 18,
    rCtlMountDxxFileWAIT     = 19,
+   rCtlHotKeySetLaunch      = 20,
 };
 
 enum regItemTypes //synch with TblItemType
