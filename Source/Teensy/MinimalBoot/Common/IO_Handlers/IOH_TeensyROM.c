@@ -575,13 +575,13 @@ FLASHMEM void HotKeySetLaunch()
          return;
       }
    
-      EEPwriteStr(eepAdAutolaunchName, PathFilename);  //set autolaunch in EEPROM:
+      EEPwriteStr(eepAdHotKeyPaths+HotKeyNumSL*MaxPathLength, PathFilename);  //set autolaunch in EEPROM:
       SendMsgPrintfln("Hot Key updated\r");    
    }
    else 
    {
       //launch, no messaging/not waiting...
-      EEPRemoteLaunch(eepAdAutolaunchName);
+      EEPRemoteLaunch(eepAdHotKeyPaths+HotKeyNumSL*MaxPathLength);
    }
 }
 

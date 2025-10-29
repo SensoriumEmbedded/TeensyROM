@@ -317,6 +317,13 @@ void SetEEPDefaults()
    EEPROM.write(eepAdColorRefStart+EscOptionColor  , PokeYellow ); 
    EEPROM.write(eepAdColorRefStart+EscSourcesColor , PokeLtBlue ); 
    EEPROM.write(eepAdColorRefStart+EscNameColor    , PokeLtGreen); 
+   //hot key defaults:
+   EEPwriteStr(eepAdHotKeyPaths+0*MaxPathLength, "TR:/MIDI + ASID/Cynthcart 2.0.1       +Datel MIDI"); 
+   EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/MIDI + ASID/Station64 2.6      +Passport MIDI"); 
+   EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 
+   EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
+   EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
+   
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }

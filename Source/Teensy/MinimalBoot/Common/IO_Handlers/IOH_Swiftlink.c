@@ -48,7 +48,7 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define TxMsgMaxSize       128    //DL path saved in EEPROM is tied to this
 #define eepBMTitleSize      75    //max chars in bookmark title
 #define eepBMURLSize       225    //Max Chars in bookmark URL path
-#define eepNumBookmarks      9    //Num Bookmarks saved
+#define eepNumBookmarks      5    //Num Bookmarks saved
 #define BytesPerDot        (25*1024) //dot every 25k when downloading
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
@@ -330,13 +330,9 @@ FLASHMEM void SetEthEEPDefaults()
    {
       "TinyWeb64 @ Sensorium",              "http://sensoriumembedded.com/tinyweb64/",
       "Digitalman TeensyROM Demo",          "http://digitalman.azurewebsites.net/",
-      "68k.news Headlines from the Future", "http://68k.news/",
-      "CNN Lite (filtered)",                "http://www.frogfind.com/read.php?a=http://lite.cnn.com/",
       "CBC Lite News (filtered)",           "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
       "textfiles.com",                      "http://textfiles.com/directory.html",
-      "Hyperlinked Text (filtered)",        "http://www.frogfind.com/read.php?a=http://sjmulder.nl/en/textonly.html",
       "legiblenews.com (filtered)",         "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
-      "text-only news sites (filtered)",    "http://www.frogfind.com/read.php?a=http://greycoder.com/a-list-of-text-only-new-sites",
    };
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)

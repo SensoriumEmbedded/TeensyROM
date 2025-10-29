@@ -936,7 +936,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       AddRawStrToRxQueue("<eoftag>");
    }
    
-   else if(*CmdMsg >= '1' && *CmdMsg <= '9')
+   else if(*CmdMsg >= '1' && *CmdMsg < '1'+eepNumBookmarks)
    {  //jump to bookmark #
       stcURLParse URL;
       char buf[eepBMURLSize];
@@ -950,7 +950,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       AddToPrevURLQueue(&URL);
    }
    
-   else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
+   else if(*CmdMsg == 's' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) < '1'+eepNumBookmarks)
    {  //set bookmark # to current page
 
       //re-encode to maximize eeprom usage, but could be too long...
@@ -984,7 +984,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       AddRawStrToRxQueue(strURL);
       AddRawStrToRxQueue("<eoftag>");
    }
-   else if(*CmdMsg == 'r' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) <= '9')
+   else if(*CmdMsg == 'r' && *(CmdMsg+1) >= '1' && *(CmdMsg+1) < '1'+eepNumBookmarks)
    {  //rename bookmark # to argument
       CmdMsg++; //past the 'r'
       char cBMNum = *CmdMsg;
@@ -1110,12 +1110,12 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
 }
 
 FLASHMEM void BC_FollowHyperlink(char* CmdMsg) 
-{  // *CmdMsg >= '0' && *CmdMsg <= '9'
+{  // *CmdMsg >= '0' && *CmdMsg < '1'+eepNumBookmarks
    uint8_t CmdMsgVal = atoi(CmdMsg);
    
    if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
    {
-      while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
+      while (*CmdMsg >='0' && *CmdMsg < '1'+eepNumBookmarks) CmdMsg++;  //move pointer past numbers
       if (!ValidModifier(*CmdMsg)) return; 
       
       //we have a valid modifier and link # to follow...
@@ -1203,7 +1203,7 @@ FLASHMEM void ProcessBrowserCommand()
       ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg); //no Add To PrevURLQueue
    }
    
-   else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
+   else if(*CmdMsg >= '0' && *CmdMsg < '1'+eepNumBookmarks) //Hyperlink #
    {
       BC_FollowHyperlink(CmdMsg);
    }
