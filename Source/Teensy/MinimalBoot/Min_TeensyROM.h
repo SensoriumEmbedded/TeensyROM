@@ -33,7 +33,12 @@
   // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 
 #define MinimumBuild         //Must be defined for minimal build to identify in common files
-#define Num8kSwapBuffers  12 //space for bank swapping upper blocks of large CRTs, must be even number for 16k banks
+#define Num8kSwapBuffers  16 //space for bank swapping upper blocks of large CRTs
+                             //  Must be even number for 16k banks
+                             //  Have seen SNKvsCAP (stronger) use 14 within a scene
+                             //  Used by EZFlash and MagicDesk2 only
+                             //     Leave space (with Eth Listen on) for other cart types up to 512k that don't use it 
+                             //      (5_OceanType1 , 15_GameSystem3, 60_GMod2)
 
 #ifdef FeatTCPListen
    #define EthernetDeduction   96  
