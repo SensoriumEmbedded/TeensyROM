@@ -113,12 +113,13 @@ FASTRUN void isrPHI2()
          switch (DMA_State)
          {
             case DMA_S_StartDisable:
-               //WaitUntil_nS(200);
+               WaitUntil_nS(nS_DMAAssert);
                SetDMADeassert;
                DMA_State = DMA_S_DisableReady;
-               break;
+               return;
+               //break;
             case DMA_S_StartActive:
-               WaitUntil_nS(200); 
+               WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
                DMA_State = DMA_S_ActiveReady;
                return;
@@ -126,7 +127,7 @@ FASTRUN void isrPHI2()
             case DMA_S_Start_BA_Active:
                if (!GP9_BA(ReadGPIO9)) // bus not available, bad line
                { 
-                  WaitUntil_nS(200); 
+                  WaitUntil_nS(nS_DMAAssert); 
                   SetDMAAssert;
                   DMA_State = DMA_S_ActiveReady;
                   return;

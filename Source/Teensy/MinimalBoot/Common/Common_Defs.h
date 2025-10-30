@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+18"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+19"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -239,6 +239,7 @@ const uint8_t OutputPins[] = {
 // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
+#define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
 
 uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
@@ -247,6 +248,7 @@ uint32_t nS_DataSetup = Def_nS_DataSetup;
 uint32_t nS_DataHold  = Def_nS_DataHold;  
 uint32_t nS_VICStart  = Def_nS_VICStart;  
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
+uint32_t nS_DMAAssert = Def_nS_DMAAssert;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
