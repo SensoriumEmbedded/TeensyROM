@@ -20,7 +20,6 @@
 #include "TRMenuFiles/ROMs/Jupiter_Lander.h" 
 #include "TRMenuFiles/ROMs/jupiter_lander_crack.prg.h" 
 #include "TRMenuFiles/ROMs/joust.prg.h"
-#include "TRMenuFiles/ROMs/Terminator_2.crt.h" 
 #include "TRMenuFiles/ROMs/Beach_Head_II.crt.h" 
 #include "TRMenuFiles/ROMs/Joystick_Tester.h" 
 #include "TRMenuFiles/ROMs/Keyboard_Tester.h" 
@@ -49,8 +48,10 @@
 #include "TRMenuFiles/ROMs/cia_tod.prg.h"
 #include "TRMenuFiles/ROMs/Load8Run.prg.h"
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
-//#include "TRMenuFiles/ROMs/ember_head.prg.h"
-//#include "TRMenuFiles/ROMs/disp_fract.prg.h"
+//#include "TRMenuFiles/ROMs/Terminator_2.crt.h" //can require minimal build if Ethernet, etc enabled
+//#include "TRMenuFiles/ROMs/ember_head.prg.h"   //now /Pics/T_Ember_Head.kla
+//#include "TRMenuFiles/ROMs/disp_fract.prg.h"   //now /Pics/T_BlackHole.kla
+//#include "TRMenuFiles/SIDs/YYZ.sid.h"          //mem conflict with TR app
 
 #include "TRMenuFiles/Text_PETSCII/Text_Viewer_Instructions.seq.h"
 #include "TRMenuFiles/Text_PETSCII/color_weave.seq.h"
@@ -80,7 +81,6 @@
 #include "TRMenuFiles/SIDs/Wish_You_Were_Here.sid.h"
 #include "TRMenuFiles/SIDs/Odisey_2001_AD.sid.h"
 #include "TRMenuFiles/SIDs/When_Im_64.sid.h"
-//#include "TRMenuFiles/SIDs/YYZ.sid.h"
 
 #include "TRMenuFiles/Pics/Ex_Pie2.art.h"
 #include "TRMenuFiles/Pics/HA_Bluejay.kla.h"
@@ -116,7 +116,7 @@ StructMenuItem dirGames[] =
     rtFileCrt  , IOH_None         , (char*)"Ms. Pac-Man"                      , (uint8_t*)Ms__Pac_Man_crt            , sizeof(Ms__Pac_Man_crt) ,
     rtFileCrt  , IOH_None         , (char*)"Robocop 2             224k EZF"   , (uint8_t*)Robocop_2_EasyFlash_crt    , sizeof(Robocop_2_EasyFlash_crt) ,
     rtFilePrg  , IOH_None         , (char*)"Super Mario Brothers   48k PRG"   , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
-    rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
+//    rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
     rtFilePrg  , IOH_None         , (char*)"Tetris"                           , (uint8_t*)Tetris_prg                 , sizeof(Tetris_prg) ,
 };
 
