@@ -58,6 +58,7 @@ void setup()
 {
    set_arm_clock(816000000);  //slight overclocking, no cooling required
    
+   SetLEDOff;  //On from minimal build, off for this setup completion
    Serial.begin(115200); // baud rate doesn't matter here, uses USB layer only (no HW serial bus)
    if (CrashReport) Serial.print(CrashReport);
 
@@ -114,9 +115,10 @@ void setup()
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
 
 #ifdef FeatTCPListen
-   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) 
+   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) //skip if button pressed
    { //Init Ethernet to to listen for TCP packets
-      if (!EthernetInit()) IO1[rwRegPwrUpDefaults2] &= ~rpud2TRTCPListen; //turn off if failed init
+      //skip if button held down, order of *or* operation enforced
+      if (ReadButton==0 || !EthernetInit()) IO1[rwRegPwrUpDefaults2] &= ~rpud2TRTCPListen; //turn off if failed init
    }
 #endif
 
@@ -299,8 +301,8 @@ void EEPreadStr(uint16_t addr, char* buf)
 void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
-   EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), 
-   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: NFC & Serial TRCont off
+   EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
+   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
    EEPROM.write(eepAdTimezone, -14); //default to pacific time
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

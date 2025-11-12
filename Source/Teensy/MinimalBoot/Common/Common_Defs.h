@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.6.8+19"; //*VERSION*
+char strVersionNumber[] = "v0.6.8+21"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -35,7 +35,7 @@ char strVersionNumber[] = "v0.6.8+19"; //*VERSION*
 #define GoodSIDToken      0x9B81
 
 
-#define eepMagicNum         0xfeed640e // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed640f // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -49,11 +49,12 @@ char strVersionNumber[] = "v0.6.8+19"; //*VERSION*
                                        // 0c: 6/5/25   added eepAdColorRefStart
                                        // 0d: 9/12/25  Power up defaults: added file ext, removed, RW Read delay, moved 12/24 hr clk
                                        // 0e: 10/28/25 Hot key paths, Bookmark reduction
+                                       // 0f: 11/12/25 Clear beta testers
                                        
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
-   eepAdPwrUpDefaults =    4, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
+   eepAdPwrUpDefaults =    4, // (1:uint8_t)    power up default reg, see bit mask defs RegPowerUpDefaultMasks
    eepAdTimezone      =    5, // (1:int8_t)     signed char for timezone: UTC +14/-12 
    eepAdNextIOHndlr   =    6, // (1:uint8_t)    default IO handler to load upon TR exit
    eepAdDHCPEnabled   =    7, // (1:uint8_t)    non-0=DHCP enabled, 0=DHCP disabled
@@ -71,7 +72,7 @@ enum InternalEEPROMmap
    eepAdCrtBootName   = 1963, // (MaxPathLength=300) Boot to minimal .crt path to launch
    eepAdMinBootInd    = 2263, // (1:uint8_t)    Minimal/full boot indicator, see MinBootIndFlags
    eepAdAutolaunchName= 2264, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
-   eepAdPwrUpDefaults2= 2564, // (1:uint8_t)    power up default reg, see bit mask defs rpudSIDPauseMask, rpudNetTimeMask
+   eepAdPwrUpDefaults2= 2564, // (1:uint8_t)    power up default reg, see bit mask defs RegPowerUpDefaultMasks2
    eepAdColorRefStart = 2565, // (NumColorRefs=7)  UI color references, see ColorRefOffsets
    eepAdHotKeyPaths   = 2572, // (MaxPathLength=300)*NumHotKeys (5)  Default Hot Key settings
 

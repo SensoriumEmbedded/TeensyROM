@@ -41,13 +41,20 @@
                              //      (5_OceanType1 , 15_GameSystem3, 60_GMod2)
 
 #ifdef FeatTCPListen
-   #define EthernetDeduction   96  
+   #define EthernetDeduction   104  
    //Ethernet takes this from RAM1 and another ~96k from RAM2 (when initialized/enabled), plus uses more local variables (see below)
    // Total: ~200k of RAM needed to support Ethernet, 100k if disabled
+
+   // Test case: USB monitor *not* connected (passes when connected) crashes on startup, before full image handoff
+   //   RAM1: variables:344292, code:136168, padding:27672   free for local variables:16156 <--not enough, crash
+   //   RAM1: variables:340196, code:136168, padding:27672   free for local variables:20252 <--Fails intermittently?
+   //   RAM1: variables:336100, code:136424, padding:27416   free for local variables:24348 <--Reliable
+   //    *Need >24000 RAM1 free for local
+
 #else
    #define EthernetDeduction    0
 #endif
 
-#define MaxRAM_ImageSize  (184+208-8*Num8kSwapBuffers-EthernetDeduction)  //184 is non-minimal image size;  minus space for 8k swap blocks
+#define MaxRAM_ImageSize  (392-8*Num8kSwapBuffers-EthernetDeduction)  // base minus space for 8k swap blocks and ethernet needs
    // need to leave ~15k of RAM1 "free for local variables" w/ Ethernet,  OK w/ <7k free w/o it
 

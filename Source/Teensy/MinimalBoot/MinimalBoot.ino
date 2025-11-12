@@ -103,7 +103,7 @@ void setup()
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    
-   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin) runMainTRApp(); //jump to main app if not booting a CRT
+   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin || ReadButton==0) runMainTRApp(); //jump to main app if not booting a CRT
    
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);

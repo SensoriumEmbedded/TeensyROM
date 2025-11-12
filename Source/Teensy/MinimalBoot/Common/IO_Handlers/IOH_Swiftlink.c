@@ -304,6 +304,8 @@ FLASHMEM bool EthernetInit()
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
+      //this blocks if cable not connected!
+      // https://forum.pjrc.com/index.php?threads/non-blocking-ethernet-begin-with-cable-disconnected-static-ip.65653/
       Ethernet.begin(mac, ip, dns, gateway, subnetmask);
    }
    
@@ -321,7 +323,7 @@ FLASHMEM void SetEthEEPDefaults()
    EEPROM.put(eepAdDNSIP      , (uint32_t)IPAddress(192,168,1,1));
    EEPROM.put(eepAdGtwyIP     , (uint32_t)IPAddress(192,168,1,1));
    EEPROM.put(eepAdMaskIP     , (uint32_t)IPAddress(255,255,255,0));
-   EEPROM.put(eepAdDHCPTimeout, (uint16_t)9000);
+   EEPROM.put(eepAdDHCPTimeout, (uint16_t)15000);
    EEPROM.put(eepAdDHCPRespTO , (uint16_t)4000);  
    EEPROM.write(eepAdDLPathSD_USB, Drive_SD); //default to root of SD card
    EEPwriteStr(eepAdDLPath, "/"); 
