@@ -52,6 +52,7 @@ uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
 uint8_t *XferImage = NULL; //pointer to image being transfered to C64 
 uint32_t XferSize = 0;  //size of image being transfered to C64
+bool NetListenEnable = false;
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -224,6 +225,11 @@ void SendStrPrintfln(const char *Msg)
    SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
 }
 
+FLASHMEM void NetListenInit()
+{  //called on main menuy start when rpud2TRTCPListen
+   NetListenEnable = EthernetInit(SendStrPrintfln);
+}
+
 FLASHMEM void getNtpTime() 
 {
    //called from TR menu with messaging
@@ -242,6 +248,9 @@ FLASHMEM void getNtpTime()
       return;
    }
    
+   IPAddress ip = Ethernet.localIP();
+   SendMsgPrintfln("My IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+
    unsigned int localPort = 8888;       // local port to listen for UDP packets
    const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
 
@@ -732,6 +741,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &IOHandlerNextInit,   // rsIOHWNextInit
    &MountDxxFile,        // rsMountDxxFile
    &HotKeySetLaunch,     // rsHotKeySetLaunch
+   &NetListenInit,       // rsNetListenInit
 };
 
 
@@ -1156,6 +1166,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlHotKeySetLaunch:
                   IO1[rwRegStatus] = rsHotKeySetLaunch; //work this in the main code
+                  break;
+               case rCtlNetListenInitWAIT:
+                  IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
                   break;
             }
             break;

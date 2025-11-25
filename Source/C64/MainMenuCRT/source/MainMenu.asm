@@ -221,15 +221,22 @@ smcTODbit
    and #rpudNetTimeMask
    beq +
    jsr SynchEthernetTime   
-   ;jmp ++
 +
    
    ;check for listener enabled and init ethernet
-   
-   
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2TRTCPListen
+   beq +
+   lda #rCtlNetListenInitWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots 
+ 
++
 !ifdef DbgInitWait {
    jsr AnyKeyMsgWait ;debug for looking at load messages
 }
+
+   ;Display main menu and enter JS/key wait loop
    jsr ListMenuItems
    
 HighlightCurrent:   

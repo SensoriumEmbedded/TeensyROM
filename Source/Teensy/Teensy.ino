@@ -114,14 +114,6 @@ void setup()
    LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
 
-#ifdef FeatTCPListen
-   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) //skip if button pressed
-   { //Init Ethernet to to listen for TCP packets
-      //skip if button held down, order of *or* operation enforced
-      if (ReadButton==0 || !EthernetInit()) IO1[rwRegPwrUpDefaults2] &= ~rpud2TRTCPListen; //turn off if failed init
-   }
-#endif
-
    MakeBuildInfo();
    Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
    Printf_dbg("Debug messages enabled!\n");
@@ -231,7 +223,7 @@ void loop()
       if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
 #ifdef FeatTCPListen
-   if (IO1[rwRegPwrUpDefaults2] & rpud2TRTCPListen) 
+   if (NetListenEnable) 
    { //Listen for TCP packets
       EthernetClient tcpclient = tcpServer.available();
       if (tcpclient) ServiceTCP(tcpclient);
