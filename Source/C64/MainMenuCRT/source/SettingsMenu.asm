@@ -322,9 +322,10 @@ smcNewscd
 
 +  cmp #'j'  ;Synch Time now
    bne +
+   jsr PrintBanner
    jsr SynchEthernetTime
-   ;jmp SettingsMenu ;force to reprint all in case ram reduced  
-   jmp WaitForSettingsKey
+   jsr AnyKeyMsgWait ;debug for looking at messages  <------------------------------------------
+   jmp SettingsMenu ;force to reprint all 
    
 +  cmp #'k'  ;Test IO
    bne +

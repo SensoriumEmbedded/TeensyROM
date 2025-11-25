@@ -20,9 +20,9 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "source\c64defs.i"  ;C64 colors, mem loctions, etc.
-   !src "source\CommonDefs.i" ;Common between crt loader and main code in RAM
-   !src "source\Menu_Regs.i"  ;IO space registers matching Teensy code
+   !src "source/c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "source/CommonDefs.i" ;Common between crt loader and main code in RAM
+   !src "source/Menu_Regs.i"  ;IO space registers matching Teensy code
 
    ;other RAM Registers
    ;$0334-033b is "free space"
@@ -215,18 +215,22 @@ smcTODbit
 }
    
 ++ 
+
+   ;check default register for time update, includes Ethernet init
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNetTimeMask
+   beq +
+   jsr SynchEthernetTime   
+   ;jmp ++
++
+   
+   ;check for listener enabled and init ethernet
+   
+   
 !ifdef DbgInitWait {
    jsr AnyKeyMsgWait ;debug for looking at load messages
 }
-
-   jsr ListMenuItems ;stay in current TR defined device/dir/cursor pos
-   ;check default register for time update
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNetTimeMask
-   beq HighlightCurrent
-   jsr SynchEthernetTime   
-
-   
+   jsr ListMenuItems
    
 HighlightCurrent:   
    lda rwRegCursorItemOnPg+IO1Port 
@@ -905,7 +909,7 @@ WaitForTRMain   ;Main wait loop
 SynchEthernetTime:
    lda #rCtlGetTimeWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg 
+   jsr WaitForTRDots 
    lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
    lda rRegLastMinBCD+IO1Port
@@ -1392,11 +1396,11 @@ TblRowToMemLoc:
    ; check MaxItemsPerPage
    
    
-   !src "source\SettingsMenu.asm"
-   !src "source\PRGLoadStartReloc.s"
-   !src "source\SIDRelated.s"
-   !src "source\StringFunctions.s"
-   !src "source\StringsMsgs.s"
-   !src "source\ColorConfig.s"
+   !src "source/SettingsMenu.asm"
+   !src "source/PRGLoadStartReloc.s"
+   !src "source/SIDRelated.s"
+   !src "source/StringFunctions.s"
+   !src "source/StringsMsgs.s"
+   !src "source/ColorConfig.s"
 MainCodeRAMEnd = *
    !byte 0

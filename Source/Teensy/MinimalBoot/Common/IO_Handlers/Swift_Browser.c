@@ -48,6 +48,12 @@ void SendASCIIStrImmediate(const char* CharsToSend)
       SendPETSCIICharImmediate(ToPETSCII(CharsToSend[CharNum]));
 }
 
+void SendASCIIStrImmediateLN(const char* CharsToSend)
+{
+   SendASCIIStrImmediate("\r\n");
+   SendASCIIStrImmediate(CharsToSend);
+}
+
 void SendASCIIErrorStrImmediate(const char* CharsToSend)
 {
    SendPETSCIICharImmediate(PETSCIIpink);

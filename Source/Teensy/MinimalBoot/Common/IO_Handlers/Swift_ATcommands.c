@@ -115,34 +115,24 @@ FLASHMEM ATRespCode StrToIPToEE(char* Arg, uint8_t EEPaddress)
 
 FLASHMEM ATRespCode AT_BROWSE(char* CmdArg)
 {  //ATBROWSE   Enter Browser mode
-   EthernetInit();
+   EthernetInit(SendASCIIStrImmediateLN);
    SendBrowserCommandsImmediate();
    UnPausePage();
    BrowserMode = true;
    return ATRC_OK;
 }
 
+void AddVerboseToPETSCIIStrToRxQueueLNFlush(const char *Msg)
+{  //for EthernetInit callback, including flush
+   AddVerboseToPETSCIIStrToRxQueueLN(Msg);
+   FlushRxQueue();
+}
+
 FLASHMEM ATRespCode AT_C(char* CmdArg)
 {  //ATC: Connect Ethernet
-   AddVerboseToPETSCIIStrToRxQueue("Connect Ethernet ");
-   if (EEPROM.read(eepAdDHCPEnabled)) AddVerboseToPETSCIIStrToRxQueueLN("via DHCP.");
-   else AddVerboseToPETSCIIStrToRxQueueLN("using Static IP.");
-   FlushRxQueue();
    
-   if (!EthernetInit())
+   if (!EthernetInit(AddVerboseToPETSCIIStrToRxQueueLNFlush))
    {
-      //Was CheckEthConn()...
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) 
-      {
-         AddVerboseToPETSCIIStrToRxQueueLN(" HW was not found");
-         //return ATRC_NO_DIALTONE;
-      }
-      else if (Ethernet.linkStatus() == LinkOFF) 
-      {
-         AddVerboseToPETSCIIStrToRxQueueLN(" Cable not connected");
-         //return ATRC_NO_DIALTONE;
-      }
-      
       return ATRC_NO_DIALTONE;
    }
 

@@ -185,7 +185,7 @@ uint8_t ASCIItoPETSCII[128]=
  /* 127 '' */   95, // delete            ->   left arrow
 };
 
-extern bool EthernetInit();
+extern bool EthernetInit(void (*MsgOut)(const char *));
 extern void MenuChange();
 extern void HandleExecution();
 extern bool PathIsRoot();
@@ -219,15 +219,22 @@ extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
 //#define ToPETSCII(x) (x==95 ? 32 : x>64 ? x^32 : x)
 #define ToPETSCII(x) ASCIItoPETSCII[(x) & 0x7f]
 
+void SendStrPrintfln(const char *Msg)
+{
+   SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
+}
+
 FLASHMEM void getNtpTime() 
 {
+   //called from TR menu with messaging
+   
    //IO1[rRegLastHourBCD] = 0x0; //91;   // 11pm
    //IO1[rRegLastMinBCD]  = 0x59;      
    //IO1[rRegLastSecBCD]  = 0x53;      
-   //Serial.printf("Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
+   //SendMsgPrintfln"Time: %02x:%02x:%02x %sm", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
    //return;
 
-   if (!EthernetInit()) 
+   if (!EthernetInit(SendStrPrintfln)) 
    {
       IO1[rRegLastSecBCD]  = 0;      
       IO1[rRegLastMinBCD]  = 0;      
@@ -243,7 +250,7 @@ FLASHMEM void getNtpTime()
    const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
    byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
    
-   Serial.printf("Updating time from: %s\n", timeServer);
+   SendMsgPrintfln("Updating time from: %s", timeServer);
    while (udp.parsePacket() > 0) ; // discard any previously received packets
    
    // send an NTP request to the time server at the given address
@@ -277,7 +284,7 @@ FLASHMEM void getNtpTime()
          secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
          secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
          secsSince1900 |= (unsigned long)packetBuffer[43];
-         Serial.printf("Received NTP Response in %d mS\n", (millis() - beginWait));
+         SendMsgPrintfln("Received NTP Response in %d mS", (millis() - beginWait));
 
          //since we don't need the date, leaving out TimeLib.h all together
          IO1[rRegLastSecBCD] = DecToBCD(secsSince1900 % 60);
@@ -287,11 +294,11 @@ FLASHMEM void getNtpTime()
          if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
          else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
    
-         Serial.printf("Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
+         SendMsgPrintfln("Time: %02x:%02x:%02x %sm", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
          return;
       }
    }
-   Serial.println("NTP Response timeout!");
+   SendMsgPrintfln("NTP Response timeout!");
 }
 
 void WriteEEPROM()
