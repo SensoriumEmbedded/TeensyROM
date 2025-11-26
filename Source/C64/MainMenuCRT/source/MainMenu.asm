@@ -340,7 +340,7 @@ ReadKeyboard:
 
 +  cmp #'A' ;set auto-launch
    bne +
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgSetAutoLaunch
    ldy #>MsgSetAutoLaunch
    jsr PrintString
@@ -438,7 +438,7 @@ ReadKeyboard:
 
 +  cmp #'M' ;Mount Dxx file
    bne +
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgMountDxxFile
    ldy #>MsgMountDxxFile
    jsr PrintString
@@ -494,7 +494,7 @@ Load8Run:
    sbc #'!'   ;make zero based
    ora #$80   ;set HK
    sta rwRegScratch+IO1Port ; Scratch = HK num (zero based) + bit 7 high = set HK
-   jsr PrintBanner   
+   jsr PrintBanner ;SourcesColor  
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
    lda #rCtlHotKeySetLaunch
@@ -517,7 +517,7 @@ ListMenuItemsChangeInit:  ;changing menu source.  Prep: Load acc with menu to ch
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTRWaitMsg
 ListMenuItems:
-   jsr PrintBanner 
+   jsr PrintBanner ;OptionColor
    
    ldx #23 ;row
    ldy #0  ;col
@@ -717,7 +717,7 @@ RunSelected:
    ;any type except Text, None and sub-dir/Dxx, clear screen and stop interrupts
 +  pha ;store the type
    jsr IRQDisable  ;turn off interrupt (also stops SID playback, if on)
-   jsr PrintBanner ;clear screen for messaging for remaining types:
+   jsr PrintBanner ;NameColor ;clear screen for messaging for remaining types:
    lda TblEscC+EscNameColor
    sta $0286  ;set text color
    
@@ -1016,7 +1016,7 @@ smcInverseRowDest
    rts
 
 HelpMenu:
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgHelpMenu
    ldy #>MsgHelpMenu
    jsr PrintString 
@@ -1164,7 +1164,7 @@ CtlWaitReprint
    sta wRegControl+IO1Port
    lda #$00    
    sta $d011   ;turn off the display   
-   jsr PrintBanner ;clear screen for messaging
+   jsr PrintBanner ;NameColor  ;clear screen for messaging
    lda TblEscC+EscNameColor
    sta $0286  ;set text color
    jsr WaitForTRDots
@@ -1203,7 +1203,7 @@ WriteNFCTag:
    ;write currently highlighted file (or random via dir) to NFC tag
    ;acc set to indicate random dir before calling, save it in the scratch reg.
    sta rwRegScratch+IO1Port
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgWriteNFCTag
    ldy #>MsgWriteNFCTag
    jsr PrintString 
@@ -1242,7 +1242,7 @@ WriteNFCTag:
    rts
 
 ViewTextFile:
-   jsr PrintBanner  
+   jsr PrintBanner ;OptionColor
    lda TblEscC+EscOptionColor
    sta $0286  ;set text color
    

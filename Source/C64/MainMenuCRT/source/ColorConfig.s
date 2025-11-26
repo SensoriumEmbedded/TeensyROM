@@ -22,7 +22,7 @@
 
 
 ColorConfigMenu:
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgColorMenu
    ldy #>MsgColorMenu
    jsr PrintString 

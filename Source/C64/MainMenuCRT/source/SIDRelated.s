@@ -252,7 +252,7 @@ smcIRQDefault
 ;   jmp IRQDefault
 
 ShowSIDInfoPage:
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    lda #<MsgSIDInfo1
    ldy #>MsgSIDInfo1
    jsr PrintString 

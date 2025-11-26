@@ -20,7 +20,7 @@
 SetValColumn = 22   ;Column for power on defaults settings
    
 SettingsMenu:
-   jsr PrintBanner 
+   jsr PrintBanner ;SourcesColor
    lda #<MsgSettingsMenu1
    ldy #>MsgSettingsMenu1
    jsr PrintString 
@@ -322,7 +322,7 @@ smcNewscd
 
 +  cmp #'j'  ;Synch Time now
    bne +
-   jsr PrintBanner
+   jsr PrintBanner ;SourcesColor
    jsr SynchEthernetTime
    jsr AnyKeyMsgWait ;debug for looking at messages  <------------------------------------------
    jmp SettingsMenu ;force to reprint all 
