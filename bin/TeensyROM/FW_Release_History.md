@@ -5,9 +5,9 @@
 * Note: EEPROM Settings will reset with this FW update
 * New Remote Command/Control Options:
   * All remote commands now available via these interfaces (in addition to USB Device port)
-    * Ethernet (TCP) Listenner Interface
+    * Ethernet (TCP) Listener Interface
       * Supported by updated [TR Win App](https://github.com/SensoriumEmbedded/TRWinApp)
-      * TCP Listenning option in settings
+      * TCP Listening option in settings
       * Implemented in full and minimal builds
     * USB-A Host port communication
       * Supported by new [TRControl](https://github.com/SensoriumEmbedded/TeensyROMControl) library
@@ -23,7 +23,7 @@
 * Programmable Hot Keys 1-5, set with !-% when target is highlighted
   * Defaults same as previously hard coded
   * !-% (shift 1-5) to set hot key to to highlighted file on TR, SD, or USB
-  * Hot key paths stored in EEPROM for persistance
+  * Hot key paths stored in EEPROM for persistence
   * Thanks for the prompt @the1Domo @mrc333777 @Richard @William Manganaro @Niclas @Divertigo @Avrilcadabra
 * Swiftlink improvements for q-link compatibility:
   * Tx interrupt capability 
@@ -36,8 +36,8 @@
   * Shows regardless for unknown types and directories
   * Thank you! @parkamonster
 * If selected filetype is unknown assume it's a PRG and attempt to launch (@idolpx)
-* Ethernet Init and Time sych verbosity improvements
-  * Displays info to screen from settings menu (time synch), on startup (if synch/listenner enabled), or from terminal ATC.
+* Ethernet Init and Time synch verbosity improvements
+  * Displays info to screen from settings menu (time synch), on startup (if synch/listener enabled), or from terminal ATC.
 * RW Read Delay option removed, using 135nS for all (has been default)
 * DMA pause unique timing for system pause (During !BA) vs large CRT bank switching (immediate after IOW)
 * Increased max files per dir from 3000 to 4000
