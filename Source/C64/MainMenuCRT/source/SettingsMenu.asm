@@ -17,7 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-SetValColumn = 22   ;Column for power on defaults settings
+SetValColumn = 29   ;Column for power on defaults settings
    
 SettingsMenu:
    jsr PrintBanner ;SourcesColor
@@ -45,23 +45,28 @@ ShowSettings:
    lda TblEscC+EscNameColor
    sta $0286  ;set text color
 
-   ldx #4  ;row 12/24 hour clock
+   ldx #4  ;row Special IO
+   ldy #SetValColumn-10 ;col
+   clc
+   jsr SetCursor
+   lda #rsstNextIOHndlrName
+   jsr PrintSerialString
+  
+   ldx #5  ;row Joy 2 Speed
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
-   and #rpudClock12_24hr
-   beq + ;branch if 12 hour
-   lda #'2'
-   jsr SendChar   
-   lda #'4'
-   jmp ++
-+  lda #'1'
+   ;and #rpudJoySpeedMask ;no need, upper 4 bits
+   lsr
+   lsr
+   lsr
+   lsr
+   jsr PrintIntByte
+   lda #' '
    jsr SendChar
-   lda #'2'
-++ jsr SendChar   
 
-   ldx #5 ;row Time Zone
+   ldx #6 ;row Time Zone
    ldy #SetValColumn+3 ;col
    clc
    jsr SetCursor
@@ -83,7 +88,6 @@ ShowSettings:
    ror  ;divide by two, carry bit holds half hour
    php  ;save carry bit on stack
    jsr PrintIntByte
-   
    plp
    bcc++
    lda #'.'
@@ -94,27 +98,22 @@ ShowSettings:
    jsr SendChar
    lda #' '
    jsr SendChar
-
-   ldx #6  ;row Special IO
-   ldy #SetValColumn ;col
-   clc
-   jsr SetCursor
-   lda #rsstNextIOHndlrName
-   jsr PrintSerialString
   
-   ldx #7  ;row Joy 2 Speed
+   ldx #7  ;row 12/24 hour clock
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
-   ;and #rpudJoySpeedMask ;no need, upper 4 bits
-   lsr
-   lsr
-   lsr
-   lsr
-   jsr PrintIntByte
-   lda #' '
+   and #rpudClock12_24hr
+   beq + ;branch if 12 hour
+   lda #'2'
+   jsr SendChar   
+   lda #'4'
+   jmp ++
++  lda #'1'
    jsr SendChar
+   lda #'2'
+++ jsr SendChar
 
    ldx #8 ;row Synch Time
    ldy #SetValColumn ;col
@@ -133,25 +132,24 @@ ShowSettings:
    eor #rpudSIDPauseMask  
    jsr PrintOnOff
    
-   ldx #10 ;row Host Serial Control
-   ldy #SetValColumn ;col
-   clc
-   jsr SetCursor
-
-   lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2HostSerCtlMask  ;already shifted to be 2x the value 0-2
-   tax
-   lda TblMsgHostSerCtl,x
-   ldy TblMsgHostSerCtl+1,x
-   jsr PrintString
-   
-   ldx #11 ;row Show Extension
+   ldx #10 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudShowExtension  
    jsr PrintOnOff
+   
+   ldx #11 ;row Host Serial Control
+   ldy #SetValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2HostSerCtlMask  ;already shifted to be 2x the value 0-2
+   tax
+   lda TblMsgHostSerCtl,x
+   ldy TblMsgHostSerCtl+1,x
+   jsr PrintString
    
    ldx #12 ;row TCP Listen 
    ldy #SetValColumn ;col
@@ -167,17 +165,43 @@ WaitForSettingsKey:
    jsr CheckForIRQGetIn
    beq WaitForSettingsKey
 
-+  cmp #'1'  ;12/24 hour clock
++  cmp #'a'  ;Special IO Increment
    bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudClock12_24hr  
-   sta rwRegPwrUpDefaults+IO1Port
-   and #rpudClock12_24hr  
-   sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
+   ldx rwRegNextIOHndlr+IO1Port
+   inx
+   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'a'  ;Power-up Time Zone Increment
++  cmp #'A'  ;Special IO Decrement
+   bne +
+   ;dec rwRegNextIOHndlr+IO1Port ;dec causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
+   ldx rwRegNextIOHndlr+IO1Port
+   dex
+   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over underflow
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'b'  ;Joystick 2 Speed Increment
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   clc
+   adc #$10
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'B'  ;Joystick 2 Speed Decrement
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   sec       ;set to subtract without carry
+   sbc #$10   
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'c'  ;Power-up Time Zone Increment
    bne +
    ldx rwRegTimezone+IO1Port
    inx
@@ -187,7 +211,7 @@ WaitForSettingsKey:
    ldx #-24
    jmp UpdTimeZone
 
-+  cmp #'A'  ;Power-up Time Zone Decrement
++  cmp #'C'  ;Power-up Time Zone Decrement
    bne +
    ldx rwRegTimezone+IO1Port
    dex
@@ -196,42 +220,6 @@ WaitForSettingsKey:
    ldx #28
 UpdTimeZone
    stx rwRegTimezone+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #'b'  ;Special IO Increment
-   bne +
-   ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
-   ldx rwRegNextIOHndlr+IO1Port
-   inx
-   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over overflow
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #'B'  ;Special IO Decrement
-   bne +
-   ;dec rwRegNextIOHndlr+IO1Port ;dec causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
-   ldx rwRegNextIOHndlr+IO1Port
-   dex
-   stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over underflow
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #'c'  ;Joystick 2 Speed Increment
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   clc
-   adc #$10
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #'C'  ;Joystick 2 Speed Decrement
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   sec       ;set to subtract without carry
-   sbc #$10   
-   sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
@@ -247,7 +235,18 @@ UpdTimeZone
 ;--------------------Shift/non-shift mean the same from here on...---------------------
 +  and #$7f  ;Force to lower case
 
-   cmp #'d'  ;Power-up Synch Time toggle
++  cmp #'d'  ;12/24 hour clock
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudClock12_24hr  
+   sta rwRegPwrUpDefaults+IO1Port
+   and #rpudClock12_24hr  
+   sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
+
++  cmp #'e'  ;Power-up Synch Time toggle
    bne +
    lda rwRegPwrUpDefaults+IO1Port
    eor #rpudNetTimeMask  
@@ -255,43 +254,11 @@ UpdTimeZone
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'e'  ;Power-up Music State toggle
++  cmp #'f'  ;Power-up Music State toggle
    bne +
    lda rwRegPwrUpDefaults+IO1Port
    eor #rpudSIDPauseMask  
    sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowSettings  
-
-+  cmp #'f'  ;Choose Serial control device
-   bne +
-   
-   lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2NFCEnabled
-   beq ++ ;skip if not NFC
-   ;disable Special IO if enabling NFC:
-   ldx #IOH_None 
-   stx rwRegNextIOHndlr+IO1Port
-   jsr WaitForTRWaitMsg
-   ldx #rpud2TRContEnabled ;TRCont is next
-   jmp Updrpud2
-
-++ lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2TRContEnabled
-   beq ++ ;skip if not TR Control interface
-   ldx #0 ;none is next
-   jmp Updrpud2
-
-++ ;not NFC or TRCont, currently none
-   ldx #rpud2NFCEnabled ;NFC is next
-
-Updrpud2
-   stx smcNewscd+1;x reg contains new serial control device
-   lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2HostSerCtlMaskInv ;preserve the other bits
-smcNewscd
-   ora #0
-   sta rwRegPwrUpDefaults2+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
@@ -303,7 +270,35 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'h'  ;Toggle TCP Listener
++  cmp #'h'  ;Choose Serial control device
+   bne +
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2NFCEnabled
+   beq ++ ;skip if not NFC
+   ;disable Special IO if enabling NFC:
+   ldx #IOH_None 
+   stx rwRegNextIOHndlr+IO1Port
+   jsr WaitForTRWaitMsg
+   ldx #rpud2TRContEnabled ;TRCont is next
+   jmp Updrpud2
+++ lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2TRContEnabled
+   beq ++ ;skip if not TR Control interface
+   ldx #0 ;none is next
+   jmp Updrpud2
+++ ;not NFC or TRCont, currently none
+   ldx #rpud2NFCEnabled ;NFC is next
+Updrpud2
+   stx smcNewscd+1;x reg contains new serial control device
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2HostSerCtlMaskInv ;preserve the other bits
+smcNewscd
+   ora #0
+   sta rwRegPwrUpDefaults2+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowSettings  
+
++  cmp #'i'  ;Toggle TCP Listener
    bne +
    lda rwRegPwrUpDefaults2+IO1Port
    eor #rpud2TRTCPListen  
@@ -311,7 +306,7 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-+  cmp #'i'  ;Reboot TeensyROM
++  cmp #'j'  ;Reboot TeensyROM
    bne +
    lda #$00    
    sta $d011   ;turn off the display   
@@ -320,24 +315,34 @@ smcNewscd
    ;no need to wait, TR/C64 will be rebooting...
    jmp WaitForSettingsKey  
 
-+  cmp #'j'  ;Synch Time now
++  cmp #'k'  ;Synch Time now
    bne +
    jsr PrintBanner ;SourcesColor
    jsr SynchEthernetTime
    jsr AnyKeyMsgWait ;debug for looking at messages  <------------------------------------------
    jmp SettingsMenu ;force to reprint all 
    
-+  cmp #'k'  ;Test IO
++  cmp #'l'  ;Test IO
    bne +
    jsr TestIO
    jmp WaitForSettingsKey  
    
-+  cmp #'l'  ;clear auto-launch
++  cmp #'m'  ;clear auto-launch
    bne +
-   jsr ClearAutoLaunch
+   lda #rCtlClearAutoLaunchWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
+   ;  Display "done" after "Clear Auto Launch"
+   ldx #17 ;row 
+   ldy #27 ;col
+   clc
+   jsr SetCursor   
+   lda #<MsgDone
+   ldy #>MsgDone
+   jsr PrintString 
    jmp WaitForSettingsKey  
    
-+  cmp #'m'  ;Help Menu
++  cmp #'n'  ;Help Menu
    bne +
    jmp HelpMenu  ;return from there  
    
@@ -390,23 +395,8 @@ smcTestIOCnt
 
 CursorToTest:
    ldx #16 ;row 
-   ldy #18 ;col
+   ldy #22 ;col
    clc
    jsr SetCursor   
    rts
 
-ClearAutoLaunch:
-   lda #rCtlClearAutoLaunchWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg   ;moves cursor to upper right
-
-   ;  Display "done" after "Clear Auto Launch"
-   ldx #17 ;row 
-   ldy #27 ;col
-   clc
-   jsr SetCursor   
-   lda #<MsgDone
-   ldy #>MsgDone
-   jsr PrintString 
-
-   rts
