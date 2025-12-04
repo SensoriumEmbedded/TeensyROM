@@ -85,13 +85,13 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
   * Here's a [demo video](https://youtu.be/YwQviLwWHYM?t=663) for tag writing via cell phone. It's made for a different system, but the tag writing process is the same.
 
 ## TeensyROM Software setup
-* Be sure your TeensyROM is using Firmware version 0.5.12 or later for NFC reader support
+* Be sure your TeensyROM is using Firmware version 0.7 or later for the latest NFC features
   * See update instructions [here](General_Usage.md#firmware-updates) if update is needed.
 * Connect your NFC reader to the USB Host port of the TeensyROM.
   * Alternately, a powered USB hub can by used.  This allows the NFC reader, USB Thumb drive, and MIDI device(s) to be connected simultaneously.
 * Power up your C64/TeensyROM
 * In the TeensyROM Main Menu, select **F8** to go to the Settings Menu
-* Select the letter next to "NFC Enabled" to set to "On"
+* Select the letter next to "Host Serial Device" to set to "NFC"
   * Recommend also setting "Special IO" to "None" to avoid interference.
 * A reboot is required for this to take effect.  Either select "Re-boot TeensyROM" from the menu, or power-cycle the C64.
 * This setting stays persistent when the unit is powered down again.

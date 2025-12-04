@@ -30,12 +30,9 @@
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
     * `A` (upper case) Set Auto-Launch to currently highlighted file
     * `C` (upper case) Enter Color Settings Page
-    * `1-4` Hot Keys to launch the following:
-      * `1` Cynthcart
-      * `2` Station64
-      * `3` CCGMS
-      * `4` TeensyROM ASID Player
-      * `5` Jupiter Lander CRT
+    * `1-5` Programmable Hot Keys to immediately launch a specified file
+      * Defaults: `1` Cynthcart, `2` Station64, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
+    * `!-%` (Shift `1-5`) Set corresponding Hot Key to currently highlighted file
     * `F1` Display files stored in Teensy Memory via firmware
     * `F3` Display files on an attached SD card
     * `F5` Display files on an attached USB Drive
@@ -109,27 +106,29 @@
       * Used for TeensyROM firmware updates (see below)
 
 ## The Settings Menu 
-  * (as of FW v0.6.2)
+  * (as of FW v0.7)
   * Keyboard commands available from the Settings Menu:
     * These commands modify settings stored in the Teensy, and are recalled on power-up
-      * `1` Toggle 12/24 hour clock display
-      * `a/A` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
-      * `b/B` Select Special IO to apply when launching a PRG/CRT (see below)
-      * `c/C` Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
-      * `d` Toggle auto Internet Time Synch on power-up
-      * `e` Toggle auto background music on power-up
-      * `f` Toggle NFC Reader enabled on power-up
-      * `g` Toggle RW Ready timing delay (to improve Hi-ROM games on Reloaded MKII and C64c)
+      * `a/A` Select Special IO to apply when launching a PRG/CRT (see below)
+      * `b/B` Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
+      * `c/C` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
+      * `d` 12/24 hour clock display
+      * `e` Internet Time Synch on power-up
+      * `f` Background SID music start on power-up
+      * `g` Show file extensions of known file types
+      * `h` Select Serial device connected to USB Host Port ([NFC Reader](docs/NFC_Loader.md), [TR Control device](https://github.com/SensoriumEmbedded/TeensyROMControl), or None).
+        * Will init identified device on power-up.
+      * `i` Ethernet TCP Listenner capability
     * These commands only change settings for this session and execute immediately
-      * `h` Reboot TeensyROM to execute updated power-up settings
-      * `i` Perform Internet Time Synch
-      * `j` Toggle background music on/off
-      * `k` Execute Self-Test (takes ~4 seconds)
-        * Tests the TeensyROM ability to rapidly read from emulated ROM
+      * `j` Reboot TeensyROM to execute updated power-up settings
+      * `k` Perform Internet Time Synch now
+        * Also displays local IP address
+      * `l` Execute Self-Test (takes ~4 seconds)
+        * Tests the TeensyROM ability to rapidly read from emulated IO Space
         * Helpful in testing out HW and debug, but should not fail in normal use
         * The is not an exhaustive test, but may be expanded later
-      * `l` Disable auto-launch feature.  Re-enable by selecting another program with `Shift-Return` (see above)
-      * `m` Display Help menu
+      * `m` Disable auto-launch feature.  Re-enable by selecting another program with `Shift-Return` (see above)
+      * `n` Display Help menu
       * `Space Bar` Return to Main Menu
       * `Return` Screen refresh.  Handy for updating the temperature reading 
   * Other information on the Settings screen
