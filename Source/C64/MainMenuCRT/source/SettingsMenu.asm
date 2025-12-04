@@ -318,8 +318,10 @@ smcNewscd
 +  cmp #'k'  ;Synch Time now
    bne +
    jsr PrintBanner ;SourcesColor
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
    jsr SynchEthernetTime
-   jsr AnyKeyMsgWait ;debug for looking at messages  <------------------------------------------
+   jsr AnyKeyMsgWait ; For looking at messages/IP address
    jmp SettingsMenu ;force to reprint all 
    
 +  cmp #'l'  ;Test IO
