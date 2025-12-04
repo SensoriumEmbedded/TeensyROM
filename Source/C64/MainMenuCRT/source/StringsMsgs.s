@@ -84,7 +84,7 @@ MsgHelpMenu:
    !tx EscC,EscNameColor, " Main Menu Controls:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Page up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Select file or dir", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Select file or dir", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Up directory", ChrReturn
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
@@ -92,7 +92,8 @@ MsgHelpMenu:
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set Auto-Launch to Highlighted", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Color Settings Page", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Keys (see gen usage doc)", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Key: Launch", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "!-%", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Key: Set to Highlighted", ChrReturn
    !tx ChrReturn
    !tx EscC,EscNameColor
    !tx EscC,EscArgSpaces+3, "Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
