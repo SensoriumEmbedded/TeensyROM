@@ -129,10 +129,12 @@ smc24HourClockDisp
    ; pm, but not 12pm, add 12 in decimal mode
    tya
    and #$1f
-   sed
    clc
-   adc #$12
-   cld
+   sei ;disable ints for decimal mode
+   sed ;set decimal mode
+   adc #$12  ;add 12 in BCD
+   cld ;exit decimal mode
+   cli ;ints back on
    jmp ++
 +  tya
    and #$1f
