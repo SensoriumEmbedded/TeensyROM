@@ -35,6 +35,9 @@
 * = MainCodeRAMStart
 Start:
 
+   lda #$00
+   sta $dd08       ; in case TOD wasn't running, and to get ahead of upcoming TOD check for zero...
+
 !ifdef DbgVerbose {
    lda #<MsgMain
    ldy #>MsgMain
@@ -43,7 +46,7 @@ Start:
 
 ;screen setup:     
    ;copy colors from IO1 to local RAM
-+  ldx #NumColorRefs
+   ldx #NumColorRefs
 -  lda rwRegColorRefStart-1+IO1Port, x ;zero based offset
    sta TblEscC-1, x
    dex
@@ -54,10 +57,50 @@ Start:
    sta wRegControl+IO1Port
 
    ;Get video standard and TOD frequency
-!ifndef DbgForceNTSC {
+!ifdef DbgVerbose {
+   lda #<MsgClkChecks
+   ldy #>MsgClkChecks
+   jsr PrintString  
+}
+   ;Check to make sure the TOD clock is working:
+   sei             
+   lda #$00
+   tax
+   tay
+;   sta $dd08       ; already set to zero earlier
+-  cmp $dd08       ; poll TO2TEN for change
+   bne TODPass
+   inx
+   bne -
+   iny
+   bne -
+   ;fail TOD check:
+!ifdef DbgVerbose {
+   lda #<MsgFail
+   ldy #>MsgFail
+   jsr PrintString 
+   ;jsr AnyKeyMsgWait
+}
+   jmp set60NTSC
+   
+TODPass
+!ifdef DbgVerbose {
+   txa
+   pha
+   tya
+   pha
+   lda #<MsgPass
+   ldy #>MsgPass
+   jsr PrintString 
+   pla
+   jsr PrintHexByte
+   pla
+   jsr PrintHexByte
+}
+   
    ; https://codebase64.org/doku.php?id=base:efficient_tod_initialisation
    ; Detecting TOD frequency by Silver Dream ! / Thorgal / W.F.M.H.
-   sei             ; accounting for NMIs is not needed when
+   ;sei             ; accounting for NMIs is not needed when
    lda #$00        ; used as part of application initialisation
    sta $dd08       ; TO2TEN start TOD - in case it wasn't running
 -  cmp $dd08       ; TO2TEN wait until tenths
@@ -71,7 +114,6 @@ Start:
 -  cmp $dd08       ; poll TO2TEN for change
    beq -
    lda $dd05       ; TI2AHI expect (approximate) $7f4a $70a6 $3251 $20c0
-   cli
    ;$7f4a for 60Hz TOD clock and 985248.444(PAL) CPU/CIA clock    10
    ;$70a6 for 60Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   11
    ;$3251 for 50Hz TOD clock and 985248.444(PAL) CPU/CIA clock    00
@@ -89,7 +131,7 @@ Start:
 +  ldy #%00000000  ;0=60Hz TOD
    cmp #$78
    bcs +  ;(>78)
-}
+set60NTSC
    ldx #%00000011  ;60/NTSC
    jmp ++
 +  ldx #%00000010  ;60/PAL
@@ -101,12 +143,7 @@ Start:
 smcTODbit
    ora #$00
    sta $dc0e
-
-!ifdef DbgVerbose {
-   lda #<MsgClkChecks
-   ldy #>MsgClkChecks
-   jsr PrintString  
-}
+   cli
    
    ;store this code page range for SID conflict detection
    lda #>MainCodeRAMStart   ;read hi byte of Start address

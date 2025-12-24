@@ -22,7 +22,6 @@
 
    ;!set DbgVerbose = 1   ;if defined, adds startup messages & does IO1 check
    ;!set DbgInitWait = 1  ;if defined, Prompts and waits for any key with startup info showing
-   ;!set DbgForceNTSC = 1 ;if defined, skips sensing NTSC vs PAL and chooses NTSC/60
 
    ;Zero page RAM Registers. Some .SIDs use these, so make sure SID/Music is off 
    PtrAddrLo   = $fb

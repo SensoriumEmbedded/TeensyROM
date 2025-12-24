@@ -202,13 +202,13 @@ MsgHasHandler:
 MsgMain:
    !tx "Main OK", ChrReturn, 0
 MsgClkChecks:
-   !tx "Clocks OK", ChrReturn, 0
+   !tx "TOD Clock ", 0
 MsgRemLaunch:
    !tx "Remote Launch", ChrReturn, 0
 MsgSIDLoad:
    !tx "SID Load", ChrReturn, 0
 MsgIRQ:   
-   !tx "IRQ: $", 0
+   !tx ChrReturn, "IRQ: $", 0
 MsgThisMachine:
    !tx ChrReturn, "This Machine: ", 0
 Msg0TOD:
