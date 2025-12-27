@@ -46,6 +46,7 @@
 #include "TRMenuFiles/ROMs/empty.prg.h"
 #include "TRMenuFiles/ROMs/DMACheck.prg.h"
 #include "TRMenuFiles/ROMs/cia_tod.prg.h"
+#include "TRMenuFiles/ROMs/TODCheck.prg.h"
 #include "TRMenuFiles/ROMs/Load8Run.prg.h"
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
 //#include "TRMenuFiles/ROMs/Terminator_2.crt.h" //can require minimal build if Ethernet, etc enabled
@@ -135,6 +136,7 @@ StructMenuItem dirTest_Diags[] =
    rtBin8kLo  , IOH_None         , (char*)"SID Tester"                       , (uint8_t*)SID_Tester_BIN             , sizeof(SID_Tester_BIN) ,
    rtFilePrg  , IOH_None         , (char*)"SID checker+finder"               , (uint8_t*)SID_check_prg              , sizeof(SID_check_prg) ,
    rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check"        , (uint8_t*)cia_tod_prg                , sizeof(cia_tod_prg) ,
+   rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(assy)"  , (uint8_t*)TODCheck_prg                , sizeof(cia_tod_prg) ,
    rtFilePrg  , IOH_TR_BASIC     , (char*)"DMA Pause Check"                  , (uint8_t*)DMACheck_prg               , sizeof(DMACheck_prg) , 
 };
 
