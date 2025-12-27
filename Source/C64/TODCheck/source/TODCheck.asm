@@ -32,12 +32,44 @@ Init:
    ldy #>MsgTODClockChecker
    jsr PrintString 
 
-Start:   
+Start: 
+   ;jsr Pause
+   ldx #$dc ;CIA1
+   jsr CheckCIAx
+   sec
+   jsr SetCursor ;read current to load row to x
+   ldy #20 ;col
+   clc
+   jsr SetCursor
+   
+   ;jsr Pause
+   ldx #$dd ;CIA2
+   jsr CheckCIAx
+   lda #ChrReturn
+   jsr SendChar
+   
+   jmp Start
+
+;Pause:
+;   ldx #$00
+;   ldy #$40
+;-  dex
+;   bne -
+;   dey
+;   bne -
+;   rts
+   
+CheckCIAx:
+   ;CIA page stored in X reg
+   stx smcCIAPage1+2
+   stx smcCIAPage2+2
    sei             
    lda #$00
    tax
    tay
+smcCIAPage1
    sta $dd08       ; TO2TEN start TOD - in case it wasn't running
+smcCIAPage2
 -  cmp $dd08       ; poll TO2TEN for change
    bne changed
    inx
@@ -54,15 +86,16 @@ changed:
    pha
    tya
    pha
-   and #$f0
-   bne pass
+   and #$fc
+   ;cmp #$00
+   bne pass ;has to be at least 0x0300
    lda #<MsgFailFast
    ldy #>MsgFailFast
-   jmp printtimer
+   jmp printcounter
 pass:
    lda #<MsgPass
    ldy #>MsgPass
-printtimer:
+printcounter:
    jsr PrintString 
    pla
    jsr PrintHexByte
@@ -70,7 +103,7 @@ printtimer:
    jsr PrintHexByte
 finish:
    cli
-   jmp Start
+   rts
    
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)
@@ -102,23 +135,21 @@ PrintHexNibble:
    rts   
    
 MsgTODClockChecker:    
-   !tx ChrReturn, ChrReturn, ChrToLower
-   !tx "CIA TOD Clock Checker", ChrReturn
+   !tx ChrReturn, ChrReturn, ChrToLower, ChrYellow
+   !tx "    CIA TOD Clock Checker", ChrReturn
+   !tx "CIA1 test           CIA2 test", ChrReturn
    !tx 0
 
 MsgPass:
-   !tx ChrReturn
-   !tx "Pass: $"
+   !tx ChrLtGreen, "Pass: $"
    !tx 0
    
 MsgFailSlow:
-   !tx ChrReturn
-   !tx "Fail too slow: $ffff"
+   !tx ChrLtRed, "Fail slow: $ffff"
    !tx 0
 
 MsgFailFast:
-   !tx ChrReturn
-   !tx "Fail too fast: $"
+   !tx ChrLtRed, "Fail fast: $"
    !tx 0
 
 EOF:
