@@ -32,6 +32,13 @@
   // #define DbgSpecial    //Special case logging to BigBuf
   // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! (uses different debug signal)
 
+// Use debug signal line to sense RESET on C64. Use this if you want to trigger
+// an external reset and TeensyROM will boot into the menu again. This requires
+// a hardware modification. On 0.2.x PCBs the trace from dot_clk to U4 needs to
+// be cut and a jumper wire from RESET to the right pin on U4. 0.3.x PCBs require
+// more changes, because this line is configured as output.
+  // #define DbgSignalSenseReset
+
 #define MinimumBuild         //Must be defined for minimal build to identify in common files
 #define Num8kSwapBuffers  16 //space for bank swapping upper blocks of large CRTs
                              //  Must be even number for 16k banks
