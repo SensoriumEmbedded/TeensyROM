@@ -63,8 +63,16 @@ void setup()
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
+#ifdef DataBufAlwaysEnabled
+   SetDataBufIn;
+   SetDataPortDirIn; //default to input (for C64 Write)
+   DataBufEnable; //buffer always enabled
+#else
    DataBufDisable; //buffer disabled
+   //SetDataPortDir  done in ISR based on R/W signal
    SetDataPortDirOut; //default to output (for C64 Read)
+#endif
+   
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;

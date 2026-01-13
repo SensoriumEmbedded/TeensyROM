@@ -60,4 +60,4 @@
 //fab 0.3 uses different debug signal and direct data buffer dir control
 // enabling this on a fab 0.2x PBC could cause damage to your C64!
   // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 
-
+  // #define DataBufAlwaysEnabled //Only for fab 0.3 or higher PCB, eliminates need for data buf enable/disable

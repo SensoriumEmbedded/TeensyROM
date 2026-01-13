@@ -53,8 +53,10 @@ FASTRUN void isrPHI2()
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
    bool R_Wn = GP6_R_Wn(GPIO_6);  //parse read/write bit
    
+#ifndef DataBufAlwaysEnabled
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
    else SetDataBufIn;
+#endif
 
    if (fBusSnoop != NULL)
    {
@@ -138,7 +140,9 @@ FASTRUN void isrPHI2()
       
       if (EmulateVicCycles)
       {
+#ifndef DataBufAlwaysEnabled
          SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
+#endif
          WaitUntil_nS(nS_VICStart);
          
          GPIO_6 = ReadGPIO6; //Address bus and R/*W 

@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7"; //*VERSION*
+char strVersionNumber[] = "v0.7.0+4"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -253,7 +253,13 @@ uint32_t nS_DMAAssert = Def_nS_DMAAssert;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
+#ifdef DataBufAlwaysEnabled
+   SetDataBufOut; //buffer out first
+   SetDataPortDirOut; //then set data ports to outputs
+#else
    DataBufEnable; 
+#endif
+
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
@@ -263,17 +269,34 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DataHold)
       if(!GP6_Phi2(ReadGPIO6)) break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
    
+#ifdef DataBufAlwaysEnabled
+   SetDataPortDirIn; //set data ports back to inputs/default
+   SetDataBufIn;     //then set buffer dir to input
+#else
    DataBufDisable;
+#endif
 }
 
 __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
 {  // for C64 VIC read cycles only
+#ifdef DataBufAlwaysEnabled
+   SetDataBufOut; //buffer out first
+   SetDataPortDirOut; //then set data ports to outputs
+#else
    DataBufEnable; 
+#endif
+
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN7_PORTSET = RegBits;
    CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_VICDHold);  
+
+#ifdef DataBufAlwaysEnabled
+   SetDataPortDirIn; //set data ports back to inputs/default
+   SetDataBufIn;     //then set buffer dir to input
+#else
    DataBufDisable;
+#endif
 }
 
 __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
@@ -284,12 +307,16 @@ __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
 
 __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 {  // for "normal" (non-VIC) C64 write cycles
+#ifndef DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
+#endif
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
    uint32_t DataIn = ReadGPIO7;
+#ifndef DataBufAlwaysEnabled
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
+#endif
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
 
