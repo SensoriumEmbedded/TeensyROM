@@ -117,7 +117,7 @@ FLASHMEM void MountDxxFile()
    SendMsgPrintfln("Transferring %lu Bytes", FileSize);
    USBHostSerial.printf("rx \"%s\"\r\n", MenuSource[SelItemFullIdx].Name);
    FlushUSBHostRx(); //required for some reason(?), min delay length?
-   USBHostSerial.printf("%lu %08x\r\n", FileSize, FileCRC32);  
+   USBHostSerial.printf("%lu %08x\n", FileSize, FileCRC32);  //crc expects \n immediately following
    //FlushUSBHostRx();  //size/crc is not echoed...
 
    // Send in chunks, wait for ack between them
