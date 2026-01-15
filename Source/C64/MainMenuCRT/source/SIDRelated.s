@@ -171,11 +171,12 @@ smcVoicesMuted
    
    lsr
    bcc +
-   stx $d400  ;mute voice 1
-   stx $d401
-   ;stx $d404
-   stx $d405
-   stx $d406
+   ;mute voice 1:
+   stx $d400  ; Freq Lo
+   stx $d401  ; Freq Hi
+   ;stx $d404 ; Control (not needed)
+   stx $d405  ; attack/Decay
+   stx $d406  ; Sustain/Release
    
 +  lsr
    bcc +

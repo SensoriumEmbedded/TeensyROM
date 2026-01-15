@@ -77,11 +77,17 @@ void setup()
    SetIRQDeassert;
    SetNMIDeassert;
    SetResetAssert; //assert reset until main loop()
+
+#ifdef DbgSignalSenseReset
+   pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //use Dot_Clk input as reset sense input
+   attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
+#else
 #ifdef DbgFab0_3plus
    pinMode(DotClk_Debug_PIN, OUTPUT);  //p28 is Debug output on fab 0.3+
    SetDebugDeassert;
 #else
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
+#endif
 #endif
 
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
@@ -189,6 +195,9 @@ void loop()
    
    if (doReset)
    {
+#ifdef DbgSignalSenseReset
+      detachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN) );
+#endif
       SetResetAssert; 
       CmdChannel->println("Resetting C64"); 
       CmdChannel->flush();
@@ -214,6 +223,10 @@ void loop()
       doReset=false;
       BtnPressed = false;
       SetResetDeassert;
+#ifdef DbgSignalSenseReset
+      delay(50); 
+      attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
+#endif
    }
   
 #ifdef DbgLEDSignalPolling

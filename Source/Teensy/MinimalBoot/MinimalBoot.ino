@@ -60,14 +60,18 @@ void setup()
    SetNMIDeassert;
    SetLEDOn;
    SetResetAssert; //assert reset until main loop()
-  
+
+#ifdef DbgSignalSenseReset
+   pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //use Dot_Clk input as reset sense input
+#else
 #ifdef DbgFab0_3plus
    pinMode(DotClk_Debug_PIN, OUTPUT);  //p28 is Debug output on fab 0.3+
    SetDebugDeassert;
 #else
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
 #endif
-
+#endif
+  
    for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
    pinMode(Reset_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
@@ -182,6 +186,9 @@ void loop()
       delay(50); 
       doReset=false;
       SetResetDeassert;
+#ifdef DbgSignalSenseReset
+      attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
+#endif
    }
   
    if (Serial.available()) ServiceSerial(&Serial);
