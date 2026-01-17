@@ -17,6 +17,9 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifdef FullDMACapable
+   extern void DMATransfer();
+#endif
 
 FASTRUN void isrButton()
 {
@@ -46,7 +49,14 @@ FASTRUN void isrPHI2()
 #ifdef DbgSignalIsrPHI2
    SetDebugAssert;
 #endif
-   //if (DMA_State == DMA_S_ActiveReady) return;
+
+#ifdef FullDMACapable
+   if (DMA_State == DMA_S_TransferReady) // && GP9_BA(ReadGPIO9))
+   {
+      DMATransfer();
+      return;
+   }
+#endif
 
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and  R/*W are (almost) valid on Phi2 rising, Read now
@@ -120,6 +130,15 @@ FASTRUN void isrPHI2()
                DMA_State = DMA_S_DisableReady;
                return;
                //break;
+            case DMA_S_StartTransfer:
+               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
+               { 
+                  WaitUntil_nS(nS_DMAAssert); 
+                  SetDMAAssert;
+                  DMA_State = DMA_S_TransferReady;
+                  return;
+               }
+               break;               
             case DMA_S_StartActive:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
@@ -127,14 +146,14 @@ FASTRUN void isrPHI2()
                return;
                //break;
             case DMA_S_Start_BA_Active:
-               if (!GP9_BA(ReadGPIO9)) // bus not available, bad line
+               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
                { 
                   WaitUntil_nS(nS_DMAAssert); 
                   SetDMAAssert;
                   DMA_State = DMA_S_ActiveReady;
                   return;
                }
-               //break;
+               break;
          }
       }
       

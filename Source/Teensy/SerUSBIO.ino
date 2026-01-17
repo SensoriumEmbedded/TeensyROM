@@ -181,9 +181,21 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
          
 // *** The rest of these cases are used for debug/testing only  
+
+#ifdef FullDMACapable
+      case 'u':  //Perform DMA transaction
+         while(!BtnPressed)  //menu button to exit
+         {
+            PerformDMA();
+            delay(1000);
+         }
+         break;
+#endif
+      
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
       //   {
+      //      Serial.println("USB Host/Dev pass-through, menu button to exit");
       //      USBHostSerial.begin(MeatloafBaud, USBHOST_SERIAL_8N1); // 115200 460800 2000000
       //      while(!BtnPressed)  //menu button to exit
       //      {

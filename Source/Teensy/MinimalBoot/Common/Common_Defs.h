@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7.0+4"; //*VERSION*
+char strVersionNumber[] = "v0.7.0+5"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -92,9 +92,12 @@ enum DMA_States  //used with DMA_State
 {
    DMA_S_DisableReady,  //Disabled/default state
    DMA_S_ActiveReady,   //DMA asserted state
+   DMA_S_TransferReady, //DMA asserted, ready for transfer
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
-   DMA_S_StartDisable,
+   
+   DMA_S_StartDisable,     //deactivate/end DMA
+   DMA_S_StartTransfer,    //activate for transfer
    DMA_S_StartActive,      //activate immediately
    DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
 };
@@ -160,7 +163,10 @@ const uint8_t InputPins[] = {
 const uint8_t OutputPins[] = {
    35, 9, 32,   // DataCEn, ExROM, Game
    30, 25, 24,  // DMA, NMI, IRQ
-   34, 33, 6,    // LED, debug(0.2)/RnW(0.3), Reset_Out_PIN,
+   34, 33, 6,   // LED, debug(0.2)/RnW(0.3), Reset_Out_PIN,
+#ifdef FullDMACapable
+   54,      //AddrBufDirControl
+#endif
    };
 
 #ifdef DbgFab0_3plus
@@ -214,7 +220,16 @@ const uint8_t OutputPins[] = {
 #define SetLEDOff           CORE_PIN34_PORTCLEAR = CORE_PIN34_BITMASK 
 #define SetDataBufOut       CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDataBufIn        CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
-                            
+
+#ifdef FullDMACapable
+   #define SetAddrBufsOut      CORE_PIN54_PORTSET = CORE_PIN54_BITMASK
+   #define SetAddrBufsIn       CORE_PIN54_PORTCLEAR = CORE_PIN54_BITMASK 
+
+   #define GP6_AddrMask        0xFFFF0000  // bits 16-31 contain address bus, in order       
+   #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
+   #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
+#endif                            
+
 #define CycTonS(N)          (N*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
 #define nSToCyc(N)          (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 
@@ -261,8 +276,8 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 #endif
 
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
-   CORE_PIN7_PORTSET = RegBits;
-   CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
+   CORE_PIN10_PORTSET = RegBits;
+   CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
    
    //WaitUntil_nS(nS_DataHold);  
    uint32_t Cyc_DataHold = nSToCyc(nS_DataHold); //avoid calculating every time
@@ -287,8 +302,8 @@ __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
 #endif
 
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
-   CORE_PIN7_PORTSET = RegBits;
-   CORE_PIN7_PORTCLEAR = ~RegBits & GP7_DataMask;
+   CORE_PIN10_PORTSET = RegBits;
+   CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_VICDHold);  
 
 #ifdef DataBufAlwaysEnabled

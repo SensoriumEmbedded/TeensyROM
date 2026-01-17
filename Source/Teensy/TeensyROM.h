@@ -61,6 +61,7 @@
 // enabling this on a fab 0.2x PBC could cause damage to your C64!
   // #define DbgFab0_3plus     //Only for fab 0.3 or higher PCB! 
   // #define DataBufAlwaysEnabled //Only for fab 0.3 or higher PCB, eliminates need for data buf enable/disable
+  // #define FullDMACapable  //Only for special HW mods to allow full DMA R/W
 
 // Use debug signal line to sense RESET on C64. Use this if you want to trigger
 // an external reset and TeensyROM will boot into the menu again. This requires

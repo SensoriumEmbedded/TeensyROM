@@ -63,13 +63,17 @@ void setup()
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
+#ifdef FullDMACapable
+   SetAddrPortDirIn;
+   SetAddrBufsIn;   //default to reading data (normal use)
+#endif
 #ifdef DataBufAlwaysEnabled
-   SetDataBufIn;
    SetDataPortDirIn; //default to input (for C64 Write)
+   SetDataBufIn;
    DataBufEnable; //buffer always enabled
 #else
    DataBufDisable; //buffer disabled
-   //SetDataPortDir  done in ISR based on R/W signal
+   //SetDataBufOut  done in ISR based on R/W signal
    SetDataPortDirOut; //default to output (for C64 Read)
 #endif
    
