@@ -1116,12 +1116,12 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
 }
 
 FLASHMEM void BC_FollowHyperlink(char* CmdMsg) 
-{  // *CmdMsg >= '0' && *CmdMsg < '1'+eepNumBookmarks
+{  // *CmdMsg >= '0' && *CmdMsg <= '9'
    uint8_t CmdMsgVal = atoi(CmdMsg);
    
    if (CmdMsgVal > 0 && CmdMsgVal <= UsedPageLinkBuffs)
    {
-      while (*CmdMsg >='0' && *CmdMsg < '1'+eepNumBookmarks) CmdMsg++;  //move pointer past numbers
+      while (*CmdMsg >='0' && *CmdMsg <='9') CmdMsg++;  //move pointer past numbers
       if (!ValidModifier(*CmdMsg)) return; 
       
       //we have a valid modifier and link # to follow...
@@ -1209,7 +1209,7 @@ FLASHMEM void ProcessBrowserCommand()
       ModWebConnect(PrevURLQueue[PrevURLQueueNum], *CmdMsg); //no Add To PrevURLQueue
    }
    
-   else if(*CmdMsg >= '0' && *CmdMsg < '1'+eepNumBookmarks) //Hyperlink #
+   else if(*CmdMsg >= '0' && *CmdMsg <= '9') //Hyperlink #
    {
       BC_FollowHyperlink(CmdMsg);
    }
