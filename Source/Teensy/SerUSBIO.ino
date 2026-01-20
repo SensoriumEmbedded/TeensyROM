@@ -103,7 +103,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
             return;
          }
-         else if (inVal == MinimalCheckToken) //Check if running MinimalBoot (0 = TeensyROM, 1 = MinimalBoot)
+         else if (inVal == MinimalCheckToken) //Check if running MinimalBoot (0 = TeensyROM, 1 = Minimal)
          {
             SendU16(0);
             return;
