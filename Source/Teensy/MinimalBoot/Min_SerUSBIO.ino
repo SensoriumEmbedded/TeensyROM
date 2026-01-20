@@ -47,7 +47,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             LaunchFile();
             return;
          }
-
+         else if (inVal == MinimalCheckToken) //Check if running MinimalBoot (0 = Full, 1 = Minimal)
+         {
+            SendU16(1);
+            return;
+         }
          SendU16(FailToken);
          CmdChannel->print("Busy!\n");
          return;
