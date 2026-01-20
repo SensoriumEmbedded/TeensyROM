@@ -45,9 +45,10 @@ uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 Stream *CmdChannel  = &Serial; 
+EthernetClient tcpClient;
 
 #ifdef FeatTCPListen
-   EthernetServer tcpServer(80); // Listen on port 80
+   EthernetServer tcpServer(2112); // Listen on port 2112
 #endif
 
 #include "MinimalBoot/Common/ISRs.c"
@@ -249,11 +250,21 @@ void loop()
       if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
 #ifdef FeatTCPListen
-   if (NetListenEnable) 
-   { //Listen for TCP packets
-      EthernetClient tcpclient = tcpServer.available();
-      if (tcpclient) ServiceTCP(tcpclient);
+   if (NetListenEnable)
+   {
+      if(!tcpClient)
+      {
+        tcpClient = tcpServer.available();
+
+        if(tcpClient)
+        {
+          IPAddress ip = tcpClient.remoteIP();
+          Printf_dbg("New TCP Client, IP: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
+        }
+      }
+      if (tcpClient) ServiceTCP(tcpClient);
    }
+
 #endif
  
    //handler specific polling items:

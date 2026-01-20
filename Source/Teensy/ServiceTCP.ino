@@ -2,34 +2,25 @@
 #ifdef FeatTCPListen
 
 
-#define WaitForTCPDataStartmS   500
+#define WaitForTCPDataStartmS   1
 
-void ServiceTCP(EthernetClient &tcpclient)
+void ServiceTCP(EthernetClient &tcpClient)
 {
-   IPAddress ip = tcpclient.remoteIP();
-   Printf_dbg("New Client, IP: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);   
-
-   uint32_t StartTOMillis = millis();
-   while(tcpclient.connected() && !tcpclient.available())
+   if (!tcpClient.connected())
    {
-      if ((millis() - StartTOMillis) > WaitForTCPDataStartmS)
-      {
-         tcpclient.stop();
-         Printf_dbg("Client Data Timeout!\n");
-         return;
-      }
+      Printf_dbg("TCP Client disconnected\n");
+      tcpClient.stop();
+      return;
    }
+   int bytesAvailable = tcpClient.available();
 
-   Printf_dbg("  Data available in %lu mS\n", millis() - StartTOMillis);
+   if(bytesAvailable == 0) return;
 
-   ServiceSerial(&tcpclient);
-   CmdChannel  = &Serial; //restore to serial stream
-   
-   //delay(10);
-   tcpclient.flush();
-   tcpclient.stop();
-   Printf_dbg("Client disconnected\n");
+   if(bytesAvailable > 0)
+   {
+      Printf_dbg("\nTCP Data available: %d bytes, processing ServiceSerial\n", bytesAvailable);
+      ServiceSerial(&tcpClient);
+   }
 }
-   
-   
+
 #endif
