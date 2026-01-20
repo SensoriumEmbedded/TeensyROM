@@ -547,16 +547,52 @@ FLASHMEM void DeleteFileCommand()
 
 FLASHMEM bool SendFileData(File& file, uint32_t len) {
     uint32_t bytenum = 0;
+    Printf_dbg_sw("[SendFileData] Starting - Total bytes: %lu\n", len);
+
+    uint8_t chunk[64];
+
     while (bytenum < len) {
-        if (CmdChannel->availableForWrite()) {
-            CmdChannel->write(file.read());
-            bytenum++;
-        } else {
-            SendU16(FailToken);
-            CmdChannel->printf("Send %lu of %lu bytes\n", bytenum, len);
-            return false;
+        uint32_t bytesToRead = sizeof(chunk);
+        if (bytenum + bytesToRead > len) {
+            bytesToRead = len - bytenum;
+        }
+        uint32_t bytesRead = file.read(chunk, bytesToRead);
+        
+        if (bytesRead == 0) break;  // EOF or read error
+
+        uint32_t offset = 0;
+        uint32_t lastProgressTime = millis();
+
+        // Write with backpressure handling
+        while (offset < bytesRead) {
+            int available = CmdChannel->availableForWrite();
+
+            if (available > 0) {
+                uint32_t toWrite = min((uint32_t)available, bytesRead - offset);
+                CmdChannel->write(chunk + offset, toWrite);
+                offset += toWrite;
+                lastProgressTime = millis();
+            } else {
+                yield();
+
+                if (millis() - lastProgressTime > 2000) {
+                    Printf_dbg_sw("[SendFileData] Timeout - no progress for 2s at %lu/%lu\n", 
+                                  bytenum + offset, len);
+                    return false;
+                }
+            }
+        }
+        bytenum += bytesRead;
+
+        if (bytenum % 500 == 0) {
+            Printf_dbg_sw("[SendFileData] Progress: %lu/%lu bytes\n", bytenum, len);
         }
     }
+
+    Printf_dbg_sw("[SendFileData] Complete - Sent %lu bytes\n", bytenum);
+    Printf_dbg_sw("[SendFileData] Flushing output...\n");
+    CmdChannel->flush();
+    Printf_dbg_sw("[SendFileData] Flush complete\n");
     return true;
 }
 
