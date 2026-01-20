@@ -33,7 +33,7 @@ char strVersionNumber[] = "v0.7.0+5"; //*VERSION*
 #define FailToken         0x9B7F
 #define BadSIDToken       0x9B80
 #define GoodSIDToken      0x9B81
-#define MinimalCheckToken 0x64E0  // Returns 0 for TeensyROM, 1 for MinimalBoot
+#define MinimalCheckToken 0x64E0  // Check if running MinimalBoot (0 = Full, 1 = Minimal)
 
 
 #define eepMagicNum         0xfeed640f // 01: 6/22/23  net settings added 
