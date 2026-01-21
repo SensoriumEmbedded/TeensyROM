@@ -33,11 +33,12 @@ uint8_t CurrentIOHandler = IOH_None;
 StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
-Stream *CmdChannel  = &Serial; 
+Stream *CmdChannel  = &Serial;
 
 #ifdef FeatTCPListen
    #include <NativeEthernet.h>
-   EthernetServer tcpServer(80); // Listen on port 80
+   EthernetServer tcpServer(2112); // We will assume control on port 2112
+   EthernetClient tcpClient; 
    bool TCPListen = false;
 #endif
 
@@ -196,8 +197,17 @@ void loop()
 #ifdef FeatTCPListen
    if (TCPListen)
    {
-      EthernetClient tcpclient = tcpServer.available(); // Listen for incoming clients
-      if (tcpclient) ServiceTCP(tcpclient);
+      if(!tcpClient)
+      {
+        tcpClient = tcpServer.available();
+
+        if(tcpClient)
+        {
+          IPAddress ip = tcpClient.remoteIP();
+          Printf_dbg("New TCP Client, IP: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
+        }
+      }
+      if (tcpClient) ServiceTCP(tcpClient);
    }
 #endif
    
