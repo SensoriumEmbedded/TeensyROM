@@ -59,9 +59,14 @@ function Copy-LinkerFiles {
 }
 
 function Remove-ArduinoCache {
+    # Arduino cache can be in two locations depending on system configuration
     $TempPath = "$LocalAppData\Temp\arduino"
     if (Test-Path $TempPath\cores) { Remove-Item -Recurse -Force $TempPath\cores -ErrorAction SilentlyContinue }
     if (Test-Path $TempPath\sketches) { Remove-Item -Recurse -Force $TempPath\sketches -ErrorAction SilentlyContinue }
+    
+    $AltPath = "$LocalAppData\arduino"
+    if (Test-Path $AltPath\cores) { Remove-Item -Recurse -Force $AltPath\cores -ErrorAction SilentlyContinue }
+    if (Test-Path $AltPath\sketches) { Remove-Item -Recurse -Force $AltPath\sketches -ErrorAction SilentlyContinue }
 }
 
 function Invoke-ArduinoBuild {
