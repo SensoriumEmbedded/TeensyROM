@@ -1,9 +1,6 @@
 
 #ifdef FeatTCPListen
 
-
-#define WaitForTCPDataStartmS   1
-
 void ServiceTCP(EthernetClient &tcpClient)
 {
    if (!tcpClient.connected())

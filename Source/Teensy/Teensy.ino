@@ -48,7 +48,7 @@ Stream *CmdChannel  = &Serial;
 EthernetClient tcpClient;
 
 #ifdef FeatTCPListen
-   EthernetServer tcpServer(2112); // Listen on port 2112
+   EthernetServer tcpServer(2112); // We will assume control on port 2112
 #endif
 
 #include "MinimalBoot/Common/ISRs.c"
