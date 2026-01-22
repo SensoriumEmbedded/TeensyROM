@@ -2,9 +2,12 @@
 
 #ifdef FullDMACapable
 
+
+volatile uint8_t DataVal = 0x55;
+bool DMA_RnW = false;
+
 #define C64Address    0x00FE
 
-volatile uint8_t DataVal;
 __attribute__((always_inline)) inline uint8_t DataPortWaitDMARead()
 {  // for "normal" (non-VIC) C64 write cycles
 #ifndef DataBufAlwaysEnabled
@@ -26,7 +29,7 @@ FLASHMEM void PerformDMA()
 
    while (DMA_State != DMA_S_DisableReady) delay(1);  //block until finished
    
-   Serial.printf("DMA read from $%04x : $%02x = %d\n", C64Address, DataVal, DataVal);
+   Serial.printf("DMA R/W addr $%04x : $%02x = %d\n", C64Address, DataVal, DataVal);
 }
 
 void DMATransfer()
@@ -49,26 +52,28 @@ void DMATransfer()
    //phi2 has gone high..........................................................................
    StartCycCnt = ARM_DWT_CYCCNT;
 
-
-   
    SetAddrBufsOut;   //set address buffers to output
-   SetAddrPortDirOut;//set address ports to output
-   
-   //set address port value
+   SetAddrPortDirOut;//set address ports to output   
+   //set address port value:
    CORE_PIN19_PORTSET = RegAddrBits;
    CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
 
-   //drive R/*W signal out, no drive is a read (pulled up)
-   
-   //eventually have a pointer/counter for data to be sent/received
-   //wait for data, read it
-   //DataVal = DataPortWaitRead();
-   DataVal = DataPortWaitDMARead();
-   
-   //R/*W signal to input
+   //eventually need a pointer/counter for data to be sent/received
+   if (DMA_RnW)
+   {  //Read Cycle: 
+      //leave R/*W tri-stated (Pulled Up, Read)
+      //DataVal = DataPortWaitRead();
+      DataVal = DataPortWaitDMARead(); //wait for data, read it
+   }
+   else
+   {  //Write Cycle:
+      SetRWOutWrite;
+      DataPortWriteWait(DataVal);
+      SetRWOutHighZ;   //drive R/*W signal out, no drive is a read (pulled up)
+   }
+
    SetAddrPortDirIn;//set address ports to input
    SetAddrBufsIn;   //set address buffers to input
-   
    DMA_State = DMA_S_StartDisable;
 }
 

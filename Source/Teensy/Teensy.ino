@@ -66,6 +66,7 @@ void setup()
 #ifdef FullDMACapable
    SetAddrPortDirIn;
    SetAddrBufsIn;   //default to reading data (normal use)
+   SetRWOutHighZ;   //Don't drive R/*W
 #endif
 #ifdef DataBufAlwaysEnabled
    SetDataPortDirIn; //default to input (for C64 Write)

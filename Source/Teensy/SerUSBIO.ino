@@ -184,10 +184,10 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
 
 #ifdef FullDMACapable
       case 'u':  //Perform DMA transaction
-         while(!BtnPressed)  //menu button to exit
+         //while(!BtnPressed)  //menu button to exit
          {
             PerformDMA();
-            delay(1000);
+            //delay(1000);
          }
          break;
 #endif

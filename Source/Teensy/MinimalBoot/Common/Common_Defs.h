@@ -166,6 +166,7 @@ const uint8_t OutputPins[] = {
    34, 33, 6,   // LED, debug(0.2)/RnW(0.3), Reset_Out_PIN,
 #ifdef FullDMACapable
    54,      //AddrBufDirControl
+   49,      //R/*W Drive Output
 #endif
    };
 
@@ -224,6 +225,8 @@ const uint8_t OutputPins[] = {
 #ifdef FullDMACapable
    #define SetAddrBufsOut      CORE_PIN54_PORTSET = CORE_PIN54_BITMASK
    #define SetAddrBufsIn       CORE_PIN54_PORTCLEAR = CORE_PIN54_BITMASK 
+   #define SetRWOutWrite       CORE_PIN49_PORTSET = CORE_PIN49_BITMASK
+   #define SetRWOutHighZ       CORE_PIN49_PORTCLEAR = CORE_PIN49_BITMASK 
 
    #define GP6_AddrMask        0xFFFF0000  // bits 16-31 contain address bus, in order       
    #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
