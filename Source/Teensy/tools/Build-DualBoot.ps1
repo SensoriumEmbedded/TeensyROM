@@ -83,9 +83,28 @@ function Invoke-ArduinoBuild {
         if (Test-Path $LocalCli) {
             $ArduinoCli = Get-Command $LocalCli
         } else {
-            Write-Host "  Downloading arduino-cli..." -ForegroundColor Cyan
+            # Version pinned for supply-chain security - update intentionally through review
+            $ArduinoCliVersion = "1.4.1"
+            $ExpectedSHA256 = "44f506a29d134cb294898d5f729aea85e5498f5d81ff5fc63c549087c45a20a3"
+            
+            Write-Host "  Downloading arduino-cli v$ArduinoCliVersion..." -ForegroundColor Cyan
             $ZipPath = Join-Path $ScriptPath "arduino-cli.zip"
-            Invoke-WebRequest -Uri "https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_Windows_64bit.zip" -OutFile $ZipPath
+            $DownloadUrl = "https://github.com/arduino/arduino-cli/releases/download/v$ArduinoCliVersion/arduino-cli_${ArduinoCliVersion}_Windows_64bit.zip"
+            
+            Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
+            
+            # Verify SHA256 checksum for security
+            Write-Host "  Verifying checksum..." -ForegroundColor Cyan
+            $ActualHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+            if ($ActualHash -ne $ExpectedSHA256) {
+                Remove-Item $ZipPath -ErrorAction SilentlyContinue
+                Write-Host "  ERROR: SHA256 checksum mismatch!" -ForegroundColor Red
+                Write-Host "  Expected: $ExpectedSHA256" -ForegroundColor Red
+                Write-Host "  Actual:   $ActualHash" -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "  Checksum verified" -ForegroundColor Green
+            
             Expand-Archive -Path $ZipPath -DestinationPath $ScriptPath -Force
             Remove-Item $ZipPath
             $ArduinoCli = Get-Command $LocalCli
