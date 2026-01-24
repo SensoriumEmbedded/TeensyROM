@@ -47,7 +47,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             LaunchFile();
             return;
          }
-
+         else if (inVal == FWCheckToken) //Check firmware type
+         {
+            SendU16(FWMinimalToken);
+            return;
+         }
          SendU16(FailToken);
          CmdChannel->print("Busy!\n");
          return;

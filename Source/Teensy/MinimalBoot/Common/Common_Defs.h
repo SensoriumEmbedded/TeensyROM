@@ -33,6 +33,9 @@ char strVersionNumber[] = "v0.7.0+5"; //*VERSION*
 #define FailToken         0x9B7F
 #define BadSIDToken       0x9B80
 #define GoodSIDToken      0x9B81
+#define FWCheckToken      0x64E0  // Check firmware type
+#define FWMinimalToken    0x64E1  // Minimal firmware response
+#define FWFullToken       0x64E2  // Full firmware response
 
 
 #define eepMagicNum         0xfeed640f // 01: 6/22/23  net settings added 

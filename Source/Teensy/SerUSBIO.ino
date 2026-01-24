@@ -103,6 +103,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
             return;
          }
+         else if (inVal == FWCheckToken) //Check firmware type
+         {
+            SendU16(FWFullToken);
+            return;
+         }
          
          
          if (CurrentIOHandler != IOH_TeensyROM)
