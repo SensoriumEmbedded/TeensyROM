@@ -161,9 +161,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                if(SetColorRef()) SendU16(AckToken);
                else SendU16(FailToken);
                break;
-            case FWCheckToken: //Check firmware type
-               SendU16(FWFullToken);
-               break;
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
                //PrintDebugLog();
