@@ -560,7 +560,14 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
         }
         uint32_t bytesRead = file.read(chunk, bytesToRead);
         
-        if (bytesRead == 0) break;  // EOF or read error
+        if (bytesRead == 0) 
+        {
+            // Treat premature EOF or read error as a failure if len has not been reached
+            Printf_dbg("[SendFileData] Error: read returned 0 at %lu/%lu bytes\n", bytenum, len);
+            SendU16(FailToken);
+            CmdChannel->print("SendFileData: File read error\n");
+            return false;
+        }
 
         uint32_t offset = 0;
         uint32_t lastProgressTime = millis();
@@ -581,6 +588,8 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
             {
                 Printf_dbg("[SendFileData] Timeout - no progress for 2s at %lu/%lu\n", 
                                   bytenum + offset, len);
+                SendU16(FailToken);
+                CmdChannel->print("SendFileData timeout: no progress for 2s\n");
                 return false;
             }
         }
