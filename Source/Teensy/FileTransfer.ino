@@ -588,7 +588,7 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
         if (bytenum % 500 == 0) 
         {
-            Printf_dbg_sw("[SendFileData] Progress: %lu/%lu bytes\n", bytenum, len);
+            Printf_dbg("[SendFileData] Progress: %lu/%lu bytes\n", bytenum, len);
         }
     }
 
