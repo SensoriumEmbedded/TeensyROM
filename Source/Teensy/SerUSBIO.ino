@@ -103,9 +103,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
             return;
          }
-         else if (inVal == MinimalCheckToken) //Check if running MinimalBoot (0 = TeensyROM, 1 = Minimal)
+         else if (inVal == FWCheckToken) //Check firmware type
          {
-            SendU16(0);
+            SendU16(FWFullToken);
             return;
          }
          
@@ -160,6 +160,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case SetColorToken: //Set a TR UI color value
                if(SetColorRef()) SendU16(AckToken);
                else SendU16(FailToken);
+               break;
+            case FWCheckToken: //Check firmware type
+               SendU16(FWFullToken);
                break;
             case DebugToken: //'dg'Test/debug
                //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);

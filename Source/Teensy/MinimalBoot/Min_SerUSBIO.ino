@@ -47,9 +47,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             LaunchFile();
             return;
          }
-         else if (inVal == MinimalCheckToken) //Check if running MinimalBoot (0 = Full, 1 = Minimal)
+         else if (inVal == FWCheckToken) //Check firmware type
          {
-            SendU16(1);
+            SendU16(FWMinimalToken);
             return;
          }
          SendU16(FailToken);
