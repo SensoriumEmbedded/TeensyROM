@@ -45,10 +45,10 @@ uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 Stream *CmdChannel  = &Serial; 
-EthernetClient tcpClient;
 
 #ifdef FeatTCPListen
    EthernetServer tcpServer(2112); // We will assume control on port 2112
+   EthernetClient tcpClient;
 #endif
 
 #include "MinimalBoot/Common/ISRs.c"
