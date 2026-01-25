@@ -23,6 +23,17 @@ Take full control of SID music playback with interactive features:
 - **Speed Control**: Adjust playback speed in real-time to slow down or speed up music
 - Perfect for learning, remixing, or just having fun with classic tunes
 
+## NFC Card Launching
+
+Transform your C64 into a tap-and-play gaming console with physical NFC cards. Perfect for gaming parties, showcasing your collection, or simply enjoying the tactile experience of physical media in the modern age:
+
+- **Instant Game Launch**: Simply tap an NFC card to instantly load and launch any game, demo, SID file, or application
+- **Build Your Physical Collection**: Create a tangible library of your favorite C64 software with custom-labeled NFC cards
+- **Program Your Own Cards**: Write any file path directly to NFC tags using TeensyROM's built-in programming feature
+- **Random Mode Support**: Create surprise cards that launch random titles from your collection for endless variety
+- **Affordable Hardware**: Works with readily-available PN532-based USB NFC readers found worldwide
+- **Universal Tag Support**: Compatible with NTAG and Mifare Classic NFC tags available from any retailer
+
 ## Remote Control Capabilities
 
 Manage your C64 and TeensyROM from modern devices with multiple connection options:
