@@ -39,7 +39,6 @@ Manage your C64 and TeensyROM from modern devices with multiple connection optio
 Display custom artwork and graphics on your C64:
 
 - Direct launching of PETSCII and high-definition image formats
-- Support for numerous additional file formats
 - Convert your own images using the [RetroPixels](https://www.micheldebree.nl/retropixels/) website
 
 ## Auto-Launch Capabilities
@@ -49,20 +48,12 @@ Streamline your workflow with customizable startup and quick-access features:
 - Configure automatic startup to your preferred application
 - Program custom hotkeys for instant access to specific programs
 
-## Diagnostic Support
-
-Comprehensive hardware debugging tools:
-
-- Integrated diagnostic cartridge functionality
-- Serial connection monitoring for Address/Data/Control line activity
-- Essential tools for hardware troubleshooting and repair
-
 ## Web Browsing
 
 Explore the internet from your C64 with optimized web access:
 
 - Built-in support for browsing retro-compatible websites directly on your C64
-- Check out [FrogFind](http://frogfind.de/) for vintage computer-ready web content
+- Check out [FrogFind](http://www.frogfind.de/) for vintage computer-ready web content
 
 ---
 
