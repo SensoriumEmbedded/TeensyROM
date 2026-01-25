@@ -66,5 +66,5 @@ Explore the internet from your C64 with optimized web access:
 
 ---
 
-[← Back to main README](/README.md)
+[Back to main ReadMe](/README.md)
 
