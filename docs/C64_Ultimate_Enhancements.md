@@ -5,7 +5,7 @@ Even the feature-rich C64 Ultimate benefits from TeensyROM's enhanced capabiliti
 ## MIDI Support
 
 Connect a MIDI controller for an engaging musical experience—no musical background required. Whether you're casually exploring sounds with friends and family or diving into serious music production, TeensyROM makes it accessible and fun.  For professional music makers, TeensyROM stands out as a premier cartridge solution. 
->_"TeensyROM lets you make your C64 sing through a modern DAW or stream chiptunes directly from external sources. It's an incredible piece of modern tech and a must-have for anyone serious about C64 music making. It's especially great for live performance, but just as useful in a studio setup...I can confidently say there’s nothing else on the market that’s as capable or as easy to use" **-LukHash**_
+>_"TeensyROM lets you make your C64 sing through a modern DAW or stream chiptunes directly from external sources. It's especially great for live performance, but just as useful in a studio setup. I can confidently say there’s nothing else on the market that’s as capable or as easy to use" **-LukHash**_
 
 ## ASID MIDI Support
 
