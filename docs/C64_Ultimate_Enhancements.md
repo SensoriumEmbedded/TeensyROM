@@ -7,6 +7,8 @@ Even the feature-rich C64 Ultimate benefits from TeensyROM's enhanced capabiliti
 Connect a MIDI controller for an engaging musical experience—no musical background required. Whether you're casually exploring sounds with friends and family or diving into serious music production, TeensyROM makes it accessible and fun.  For professional music makers, TeensyROM stands out as a premier cartridge solution. 
 >_"TeensyROM lets you make your C64 sing through a modern DAW or stream chiptunes directly from external sources. It's especially great for live performance, but just as useful in a studio setup. I can confidently say there’s nothing else on the market that’s as capable or as easy to use" **-LukHash**_
 
+For more information: [MIDI Usage Guide](/docs/MIDI_Usage.md)
+
 ## ASID MIDI Support
 
 Much like the hardware synthesizer TherapSID, TeensyROM implements the ASID protocol enabling real-time SID control from external applications:
@@ -14,6 +16,7 @@ Much like the hardware synthesizer TherapSID, TeensyROM implements the ASID prot
 - Stream SID tunes from [DeepSID](https://deepsid.chordian.net/) with multi-SID support
 - Control the SID chip as a synthesizer using [ChipSynth C64](https://plogue.com/products/chipsynth-c64.html) from Plogue.
 
+For more information: [ASID Player Guide](/docs/ASID_Player.md)
 
 ## SID Player Features
 
@@ -33,6 +36,8 @@ Transform your C64 into a tap-and-play gaming console with physical NFC cards. P
 - **Random Mode Support**: Create surprise cards that launch random titles from your collection for endless variety
 - **Affordable Hardware**: Works with readily-available PN532-based USB NFC readers found worldwide
 - **Universal Tag Support**: Compatible with NTAG and Mifare Classic NFC tags available from any retailer
+
+For more information: [NFC Loader Guide](/docs/NFC_Loader.md)
 
 ## Modern UI Control
 
@@ -72,12 +77,16 @@ Streamline your workflow with customizable startup and quick-access features:
 - Configure automatic startup to your preferred application
 - Program custom hotkeys for instant access to specific programs
 
+For more information: [autolaunch.txt](/docs/autolaunch.txt)
+
 ## Web Browsing
 
 Explore the internet from your C64 with optimized web access:
 
 - Built-in support for browsing retro-compatible websites directly on your C64
 - Check out [FrogFind](http://www.frogfind.de/) for vintage computer-ready web content
+
+For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
 ---
 
