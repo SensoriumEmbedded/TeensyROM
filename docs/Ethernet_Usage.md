@@ -103,6 +103,21 @@
 |BUSY        |7|unused                                                 |
 |NO_ANSWER   |8|No response from remote server (ATDT)                  |
 
+## External App Control via TCP
+You can control the TeensyROM via TCP at port 2112 from the various available external applications or even your own custom app.
+### Enable the TCP Listener
+* Press 'f8' to go to the TeensyROM Settings Menu 
+* Press 'i' to enable the TCP Listener
+* Turn the C64/128 off and on to engage the TCP Listener
+
+### Applications Supporting TCP
+* [TR Transfer/Control App](https://github.com/SensoriumEmbedded/TRWinApp) - Great for testing and exploring the various TCP/Serial command capabilities on Windows.
+* [TeensyROM Web Apps](https://github.com/MetalHexx/TeensyROM-Web) - A media player style UI app with advanced usage of the TCP/Serial command capabilities. Available on Mac, Linux and Windows.
+  * The project extends the TCP support with a simple REST-style HTTP API making it easier to build your own TeensyROM apps without programming low-level TCP/Serial code and managing TeensyROM FW state.
+
+>_**Performance Tip**: <br>
+Set a static IP address to speed up the network connection process. When launching extra large .crt files, the TeensyROM switches between the Full and Miminal Boot firmware modes.  During this mode switch, DHCP is used to reassign the IP address which can slow down the process.  Use the [AT commands](#at-commands) to set an IP and disable DHCP.  Check your router documentation in case you need to do some additional configuration to retain the same IP._
+
 ## Developers
 * The Simple Swiftlink Terminal (included in FW) is provided as an example of a high speed terminal interface.
 * Not feature rich, but very fast.  Try a connection using polling at 230k baud.  :)
