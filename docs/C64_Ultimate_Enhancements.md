@@ -1,32 +1,70 @@
-
 # Commodore C64 Ultimate Enhancements
-Even the feature rich C64U benefits from the TeensyROM capabilities.  Here's a list of features it brings to the C64U table...
 
-- **MIDI Support:**
-  - Connect a MIDI controller, even if you're not a musician.  Sounds awesome and fun to noodle with and show kids or friends.
-  - Or if you're into serious music making, it's hands down the best cart out there for it. 
-    - Per LukHash: "TeensyROM lets you make your C64 sing through a modern DAW or stream chiptunes directly from external sources. It’s an incredible piece of modern tech and a must-have for anyone serious about C64 music making. It’s especially great for live performance, but just as useful in a studio setup."
-- **ASID MIDI Support:**
-  - You can stream SID tunes from the super dope https://deepsid.chordian.net/ web site with multi-sid support.
-  - ChipSynth64 from Plogue is another fun music software you can use to control it with a keyboard.  
-- **Remote control Capabilities:**
-  - @hExx has an incredible suite of apps to supercharge exploring and launching your files from a modern computer using TeensyROM and an Ethernet or USB connection.  
-    - Check out the latest here: https://github.com/MetalHexx/TeensyROM-Web
-  - There is also a library to allow control of your C64/TR from any microcontroller with a USB interface.
-- **SID Voice Muting / Speed Control:**
-  - With the built in SID player, its pretty fun to interact and alter the music on the fly
-- **Built-in Image Launchers:**
-  - You get the ability to directly launch PETSCII and various higher definition image formats along with a ton of other file formats.
-  - Convert your own pictures on this website:  https://www.micheldebree.nl/retropixels/
-- **Autolaunch Capabilities:**
-  - If you have a unique use case, you can auto-start up the C64 to whatever app you want
-  - Programmable hot-keys to immediately jump to the program of your choosing.
-- **Disagnostic Support:**
-  - For the hardware fixers/debuggers out there, it's likve every diag cart in one.
-  - Or use a serial connection to instantly check all the Address/Data/Control lines for movement
-- **Web Browsing:**
-  - Unique support for browsing the web to visit retro-friendly websites
+Even the feature-rich C64 Ultimate benefits from TeensyROM's enhanced capabilities. Here's what TeensyROM brings to the table:
 
-<br>
+## MIDI Support
 
-[Back to main ReadMe](/README.md)
+Connect a MIDI controller for an engaging musical experience—no musical background required. Whether you're casually exploring sounds with friends and family or diving into serious music production, TeensyROM makes it accessible and fun.  For professional music makers, TeensyROM stands out as a premier cartridge solution. 
+>_"TeensyROM lets you make your C64 sing through a modern DAW or stream chiptunes directly from external sources. It's an incredible piece of modern tech and a must-have for anyone serious about C64 music making. It's especially great for live performance, but just as useful in a studio setup...I can confidently say there’s nothing else on the market that’s as capable or as easy to use" **-LukHash**_
+
+## ASID MIDI Support
+
+TeensyROM implements the ASID protocol, compatible with hardware like the TherapSID, enabling real-time SID control from external applications:
+
+- Stream SID tunes from [DeepSID](https://deepsid.chordian.net/) with multi-SID support
+- Control SID chip as a synthesizer using [ChipSynth C64](https://plogue.com/products/chipsynth-c64.html) from Plogue.
+
+
+## SID Player Features
+
+Take full control of SID music playback with interactive features:
+
+- **Voice Muting**: Toggle individual SID voices on/off to isolate instruments and explore song composition
+- **Speed Control**: Adjust playback speed in real-time to slow down or speed up music
+- Perfect for learning, remixing, or just having fun with classic tunes
+
+## Remote Control Capabilities
+
+Manage your C64 and TeensyROM from modern devices with multiple connection options:
+
+- **Web Interface:** 
+  - @hExx's suite of applications enables file exploration and launching from a modern computer via WiFi / Ethernet or USB connection
+  - Latest version: [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)
+
+- **Microcontroller Library:** 
+  - Control your C64/TeensyROM from any microcontroller with USB interface support
+
+## Image Launcher Support
+
+Display custom artwork and graphics on your C64:
+
+- Direct launching of PETSCII and high-definition image formats
+- Support for numerous additional file formats
+- Convert your own images using the [RetroPixels](https://www.micheldebree.nl/retropixels/) website
+
+## Auto-Launch Capabilities
+
+Streamline your workflow with customizable startup and quick-access features:
+
+- Configure automatic startup to your preferred application
+- Program custom hotkeys for instant access to specific programs
+
+## Diagnostic Support
+
+Comprehensive hardware debugging tools:
+
+- Integrated diagnostic cartridge functionality
+- Serial connection monitoring for Address/Data/Control line activity
+- Essential tools for hardware troubleshooting and repair
+
+## Web Browsing
+
+Explore the internet from your C64 with optimized web access:
+
+- Built-in support for browsing retro-compatible websites directly on your C64
+- Check out [FrogFind](http://frogfind.de/) for vintage computer-ready web content
+
+---
+
+[← Back to main README](/README.md)
+
