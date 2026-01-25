@@ -157,6 +157,9 @@ volatile uint32_t StartCycCnt, LastCycCnt=0;
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN    31 
 #define DotClk_Debug_PIN    28 
+#ifdef BiDirReset
+   #define BiDir_Reset_PIN  52
+#endif
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,   // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
@@ -207,8 +210,14 @@ const uint8_t OutputPins[] = {
 #define DataBufDisable      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
 #define DataBufEnable       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
                             
-#define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
-#define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
+#ifdef BiDirReset
+   #define SetResetAssert      CORE_PIN52_PORTCLEAR = CORE_PIN52_BITMASK; CORE_PIN52_DDRREG |= CORE_PIN52_BITMASK   //output, active low
+   #define SetResetInput       CORE_PIN52_DDRREG &= ~CORE_PIN52_BITMASK  //set as input
+#else
+   #define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
+   #define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
+#endif
+
 #define SetExROMAssert      CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
 #define SetExROMDeassert    CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
 #define SetGameAssert       CORE_PIN32_PORTCLEAR = CORE_PIN32_BITMASK //active low

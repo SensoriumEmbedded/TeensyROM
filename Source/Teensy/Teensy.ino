@@ -82,6 +82,10 @@ void setup()
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
+#ifdef BiDirReset
+   pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   CORE_PIN6_PORTSET = CORE_PIN6_BITMASK; //TEMPORARY: deassert the old driver output
+#endif   
    SetResetAssert; //assert reset until main loop()
 
 #ifdef DbgSignalSenseReset
@@ -228,7 +232,13 @@ void loop()
       }
       doReset=false;
       BtnPressed = false;
+#ifdef BiDirReset
+      SetResetInput;
+      //delay(10);
+#else      
       SetResetDeassert;
+#endif      
+
 #ifdef DbgSignalSenseReset
       delay(50); 
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
