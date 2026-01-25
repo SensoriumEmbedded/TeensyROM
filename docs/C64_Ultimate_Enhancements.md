@@ -12,7 +12,7 @@ Connect a MIDI controller for an engaging musical experience—no musical backgr
 TeensyROM implements the ASID protocol, compatible with hardware like the TherapSID, enabling real-time SID control from external applications:
 
 - Stream SID tunes from [DeepSID](https://deepsid.chordian.net/) with multi-SID support
-- Control SID chip as a synthesizer using [ChipSynth C64](https://plogue.com/products/chipsynth-c64.html) from Plogue.
+- Control the SID chip as a synthesizer using [ChipSynth C64](https://plogue.com/products/chipsynth-c64.html) from Plogue.
 
 
 ## SID Player Features
