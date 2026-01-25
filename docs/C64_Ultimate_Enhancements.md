@@ -34,16 +34,32 @@ Transform your C64 into a tap-and-play gaming console with physical NFC cards. P
 - **Affordable Hardware**: Works with readily-available PN532-based USB NFC readers found worldwide
 - **Universal Tag Support**: Compatible with NTAG and Mifare Classic NFC tags available from any retailer
 
-## Remote Control Capabilities
+## Modern UI Control
 
-Manage your C64 and TeensyROM from modern devices with multiple connection options:
+TeensyROM apps feature a mashup of modern and retro. By leveraging modern computing power and memory, they unlock instant search, indexing, and random selection across massive file collections—capabilities impossible on vintage hardware alone:
 
-- **Web Interface:** 
-  - @hExx's suite of applications enables file exploration and launching from a modern computer via WiFi / Ethernet or USB connection
-  - Latest version: [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)
+- **Modern Web Interfaces**: Browse and launch your entire game and media library from any computer via WiFi, Ethernet, or USB
+- **Live Video Integration**: Watch your C64 gameplay with authentic CRT emulation effects including scanlines, bloom, and phosphor simulation (Web only)
+- **Complete Media Management**: Search, filter, transfer files, create playlists, track favorites and play history across all storage devices
+- **Advanced Playback Control**: Shuffle mode, auto-play, progress tracking, and support for multi-device DJ setups
+- **Cross-Platform Support**: Apps available for Windows, macOS, and Linux
+- **Featured Apps**:
+  - [Web UI / HTTP API](https://github.com/MetalHexx/TeensyROM-Web) **New App!** (Cross-platform) 
+  - [CLI App](https://github.com/MetalHexx/TeensyROM-CLI) (Cross-platform)
+  - [Desktop App](https://github.com/MetalHexx/TeensyROM-UI) (Windows Only)
+  - [TR Transfer/Control App](https://github.com/SensoriumEmbedded/TRWinApp) (Windows Only)
 
-- **Microcontroller Library:** 
-  - Control your C64/TeensyROM from any microcontroller with USB interface support
+## Serial / TCP API
+
+TeensyROM exposes a comprehensive token-based command protocol over USB Serial or TCP/Ethernet connections, enabling developers to build custom integrations and automation tools:
+
+- **Microcontroller Integration**: Control TeensyROM directly from other microcontrollers via USB serial interface
+- **File Operations**: Upload, download, copy, delete, and directory listing capabilities across SD and USB storage
+- **Playback Control**: Remote file launching, SID player control (pause, speed, voice muting, sub-tune selection)
+- **Device Management**: System commands including reset, ping, version info, firmware checks, and DMA control
+- **Settings Control**: Runtime configuration of UI colors and system preferences
+- **Binary Protocol**: Efficient token-based communication with acknowledgment/failure responses for reliable command execution
+
 
 ## Image Launcher Support
 
