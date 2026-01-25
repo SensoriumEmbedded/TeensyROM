@@ -116,7 +116,7 @@ You can control the TeensyROM via TCP at port 2112 from the various available ex
   * The project extends the TCP support with a simple REST-style HTTP API making it easier to build your own TeensyROM apps without programming low-level TCP/Serial code and managing TeensyROM FW state.
 
 >_**Performance Tip**: <br>
-Set a static IP address to speed up the network connection process. When launching extra large .crt files, the TeensyROM switches between the Full and Miminal Boot firmware modes.  During this mode switch, DHCP is used to reassign the IP address which can slow down the process.  Use the [AT commands](#at-commands) to set an IP and disable DHCP.  Check your router documentation in case you need to do some additional configuration to retain the same IP._
+Set a static IP address to speed up the network connection process. When launching extra large .crt files, the TeensyROM switches between the Full and Minimal Boot firmware modes.  During this mode switch, DHCP is used to reassign the IP address which can slow down the process.  Use the [AT commands](#at-commands) to set an IP and disable DHCP.  Check your router documentation in case you need to do some additional configuration to retain the same IP._
 
 ## Developers
 * The Simple Swiftlink Terminal (included in FW) is provided as an example of a high speed terminal interface.
