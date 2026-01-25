@@ -39,8 +39,8 @@ Transform your C64 into a tap-and-play gaming console with physical NFC cards. P
 TeensyROM apps feature a mashup of modern and retro. By leveraging modern computing power and memory, they unlock instant search, indexing, and random selection across massive file collections—capabilities impossible on vintage hardware alone:
 
 - **Modern Web Interfaces**: Browse and launch your entire game and media library from any computer via WiFi, Ethernet, or USB
-- **Live Video Integration**: Watch your C64 gameplay with authentic CRT emulation effects including scanlines, bloom, and phosphor simulation (Web only)
-- **Complete Media Management**: Search, filter, transfer files, create playlists, track favorites and play history across all storage devices
+- **Live Video Integration**: Watch your C64 gameplay with large array of authentic CRT emulation effects (Web only)
+- **Complete Media Management**: Search, filter, transfer files, create playlists and track favorites across all storage devices
 - **Advanced Playback Control**: Shuffle mode, auto-play, progress tracking, and support for multi-device DJ setups
 - **Cross-Platform Support**: Apps available for Windows, macOS, and Linux
 - **Featured Apps**:
@@ -51,15 +51,12 @@ TeensyROM apps feature a mashup of modern and retro. By leveraging modern comput
 
 ## Serial / TCP API
 
-TeensyROM exposes a comprehensive token-based command protocol over USB Serial or TCP/Ethernet connections, enabling developers to build custom integrations and automation tools:
+TeensyROM exposes a comprehensive command protocol over USB Serial or TCP/Ethernet connections, enabling developers to build custom integrations and automation tools:
 
 - **Microcontroller Integration**: Control TeensyROM directly from other microcontrollers via USB serial interface
 - **File Operations**: Upload, download, copy, delete, and directory listing capabilities across SD and USB storage
 - **Playback Control**: Remote file launching, SID player control (pause, speed, voice muting, sub-tune selection)
 - **Device Management**: System commands including reset, ping, version info, firmware checks, and DMA control
-- **Settings Control**: Runtime configuration of UI colors and system preferences
-- **Binary Protocol**: Efficient token-based communication with acknowledgment/failure responses for reliable command execution
-
 
 ## Image Launcher Support
 
