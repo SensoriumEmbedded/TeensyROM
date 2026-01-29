@@ -422,9 +422,10 @@ FLASHMEM bool CopyFile(const char* sourcePath, const char* destinationPath, FS& 
         sourceFile.close();
         return false;
     }
+    
+    uint8_t buf[4096];
     while (sourceFile.available())
     {
-        uint8_t buf[4096];
         size_t len = sourceFile.read(buf, sizeof(buf));
         destinationFile.write(buf, len);
     }
