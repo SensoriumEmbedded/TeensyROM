@@ -30,9 +30,11 @@
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
     * `A` (upper case) Set Auto-Launch to currently highlighted file
     * `C` (upper case) Enter Color Settings Page
+    * `M` (upper case) Transfer/Mount/Launch highlighted .Dxx file via atttached [Meatloaf](https://github.com/idolpx/meatloaf) device
+      * Requires Meatloaf using latest FW connected to the TR USB Host port.
     * `1-5` Programmable Hot Keys to immediately launch a specified file
       * Defaults: `1` Cynthcart, `2` Station64, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
-    * `!-%` (Shift `1-5`) Set corresponding Hot Key to currently highlighted file
+    * `!-%` (Shift `1-5`) Set corresponding Hot Key to currently highlighted file (on any media source)
     * `F1` Display files stored in Teensy Memory via firmware
     * `F3` Display files on an attached SD card
     * `F5` Display files on an attached USB Drive

@@ -1,6 +1,40 @@
 
 # FW Release Version history:
 
+### 0.7.1 Release 2026/02/02
+* **Support for Persistent TCP Connections via remote control listenner by @hExx**
+  * Updates for TCP/Ethernet use with the [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web) application
+  * Improves performance for time sensitive operations like SID speed changes, and avoids race conditions. 
+  * Listen port moved to 2112 (We will assume control)
+  * Move EthernetClient declaration inside FeatTCPListen conditional
+  * Increase buffer size in CopyFile function for improved file copy efficiency
+  * Handle read errors in SendFileData function with appropriate logging and failure response
+  * Rewrite SendFileData to work reliably on both Serial and Ethernet.
+    * Updated to handle TCP backpressure gracefully, now uses chunked writes and progress-based timeout (2s) 
+  * MinimalCheckToken to return the FW mode that is currently loaded
+  * All changes applied to Minimal Boot FW as well as main
+  * External App Control via TCP section added to [Ethernet Docs](docs/Ethernet_Usage.md)
+  * **All these items contributed by @hExx, thank you so much!**
+* **Now checks at main menu launch for TOD clock functionality, force NTSC/60 if it fails.**
+  * Avoids bootup "hang" on C64/128 systems where TOD clock is no working correctly
+    * Have seen failures due to issues with 9vac source, blown fuse, TTL conversion circuit, and CIAs themselves.  Feature is used for time display, but not by many other programs.
+  * New Assy language CIA1/2 TOD Clock Check added to /Test+Diags directory of Teensy Mem
+* **Meatloaf transfer/Mount/Launch feature**
+  * With a single key press ('M'): transfer, mount, and launch a Dxx file on a [Meatloaf](https://github.com/idolpx/meatloaf) device attached to the USB host port of the TeensyROM.
+  * Dedicated TeensyROM screen to show status.
+* **Reuse dot_clk input as externel reset input on rev 0.2x TR PCBs**
+  * See instructions to cut trace and add jumer wire then build with DbgSignalSenseReset in TeensyROM.h and Min_TeensyROM.h
+  * Allows TeensyROM to get back into menu when an external reset is fired via the C64
+  * **Contributed by @niclashoyer, thank you!**
+* **New Tool: Dual Boot Compile/Combine PowerShell script by @hExx**
+  * Compile full dual boot TeensyROM FW .hex file with a single script.
+  * See full documentation [here](/Source/Teensy/tools/Build-DualBoot.md).
+* **Bug fixes:**
+  * Number of hyperlinks per web browser page was artificially limited to 9 in v0.7.
+    * Thanks for the catch @DigitalMan
+  * Menu clock in 24 hour mode can mess up background SID playback in the second half of the day.
+  * Auto launch set could've been impacted by random NFC tag
+
 ### 0.7 Release 2025/12/04
 * Note: EEPROM Settings will reset with this FW update
 * New Remote Command/Control Options:

@@ -14,6 +14,7 @@
 * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
+* **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
