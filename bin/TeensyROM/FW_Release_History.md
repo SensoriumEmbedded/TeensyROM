@@ -13,7 +13,7 @@
     * Updated to handle TCP backpressure gracefully, now uses chunked writes and progress-based timeout (2s) 
   * MinimalCheckToken to return the FW mode that is currently loaded
   * All changes applied to Minimal Boot FW as well as main
-  * External App Control via TCP section added to [Ethernet Docs](docs/Ethernet_Usage.md)
+  * External App Control via TCP section added to [Ethernet Docs](/docs/Ethernet_Usage.md)
   * **All these items contributed by @hExx, thank you so much!**
 * **Now checks at main menu launch for TOD clock functionality, force NTSC/60 if it fails.**
   * Avoids bootup "hang" on C64/128 systems where TOD clock is no working correctly
