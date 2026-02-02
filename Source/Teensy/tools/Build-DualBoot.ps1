@@ -194,3 +194,8 @@ if (-not $SkipCombine) {
 Write-Host "`n=== BUILD COMPLETE ===" -ForegroundColor Green
 Write-Host "Output: $FinalOutput" -ForegroundColor White
 Write-Host "Flash this to your Teensy 4.1" -ForegroundColor Yellow
+
+# Pause for any key so the console stays open
+Write-Host ""
+Write-Host "Press any key to continue . . ." -ForegroundColor Yellow
+[void][System.Console]::ReadKey($true)
