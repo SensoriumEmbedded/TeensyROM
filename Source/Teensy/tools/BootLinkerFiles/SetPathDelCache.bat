@@ -6,3 +6,6 @@ set LocalT4CorePath=%LocalPath%\Arduino15\packages\teensy\hardware\avr\0.60.1\co
 :: delete temp local cache:
 rmdir /s /q "%LocalPath%\Temp\arduino\cores"
 rmdir /s /q "%LocalPath%\Temp\arduino\sketches"
+
+rmdir /s /q "%LocalPath%\arduino\cores"
+rmdir /s /q "%LocalPath%\arduino\sketches"
