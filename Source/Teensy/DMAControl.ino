@@ -69,7 +69,8 @@ void DMATransfer()
    {  //Write Cycle:
       SetRWOutWrite;
       DataPortWriteWait(DataVal);
-      SetRWOutHighZ;   //drive R/*W signal out, no drive is a read (pulled up)
+      SetRWInput; //set R/*W back to input
+      //SetRWOutHighZ;   //drive R/*W signal out, no drive is a read (pulled up)
    }
 
    SetAddrPortDirIn;//set address ports to input

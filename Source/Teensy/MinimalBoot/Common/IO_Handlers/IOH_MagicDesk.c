@@ -51,7 +51,11 @@ void IO1Hndlr_MagicDesk(uint8_t Address, bool R_Wn)
    else  // IO1 write    -------------------------------------------------
    {
       BankReg = DataPortWaitRead(); 
-      if (BankReg & 0x80) SetExROMDeassert; //turn off cart
+      if (BankReg & 0x80) 
+      {
+         SetExROMDeassert; //turn off cart
+         Printf_dbg("MD Off!\n");
+      }
       else SetExROMAssert;
       
       TraceLogAddValidData(BankReg);
