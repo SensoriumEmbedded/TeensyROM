@@ -2,3 +2,6 @@
 build/*
 LICENSE.txt
 arduino-cli.exe
+6- teensy.exe - Shortcut.lnk
+BootLinkerFiles/SetPathDelCache Repo.bat
+BootLinkerFiles/SetPathDelCache LOCAL.bat
