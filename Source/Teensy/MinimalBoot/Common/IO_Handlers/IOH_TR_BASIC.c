@@ -382,7 +382,13 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                   
                //these commandd require action outside of interrupt: 
                case TR_BASCont_DmaTest:    // Assert DMA for 100mS
-                  DMA_State = DMA_S_StartActive; //must start this write cycle
+                  DMA_State = DMA_S_StartActive; //start DMA on VIC Phase of this cycle
+
+                  //DMA_State = DMA_S_Start_BA_Active; //Apply DMA When BA is low (bad line)
+
+                  //SetDMAAssert; //start immediately (during Phi2 Low)
+                  //DMA_State = DMA_S_ActiveReady;
+
                   // break keyword is not present, all the cases after the matching case are executed
                case TR_BASCont_LoadPrep:   //load file into RAM 
                case TR_BASCont_SaveFinish: //save file from RAM
