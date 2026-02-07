@@ -61,7 +61,7 @@ void DMATransfer()
    //eventually need a pointer/counter for data to be sent/received
    if (DMA_RnW)
    {  //Read Cycle: 
-      //leave R/*W tri-stated (Pulled Up, Read)
+      //leave R/*W as input (Pulled Up, Read)
       //DataVal = DataPortWaitRead();
       DataVal = DataPortWaitDMARead(); //wait for data, read it
    }
@@ -70,7 +70,6 @@ void DMATransfer()
       SetRWOutWrite;
       DataPortWriteWait(DataVal);
       SetRWInput; //set R/*W back to input
-      //SetRWOutHighZ;   //drive R/*W signal out, no drive is a read (pulled up)
    }
 
    SetAddrPortDirIn;//set address ports to input

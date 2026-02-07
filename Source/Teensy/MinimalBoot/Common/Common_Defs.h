@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7.1"; //*VERSION*
+char strVersionNumber[] = "v0.7.1+1"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -157,9 +157,6 @@ volatile uint32_t StartCycCnt, LastCycCnt=0;
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN    31 
 #define DotClk_Debug_PIN    28 
-#ifdef BiDirReset
-   #define BiDir_Reset_PIN  52
-#endif
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,   // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
@@ -210,13 +207,8 @@ const uint8_t OutputPins[] = {
 #define DataBufDisable      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
 #define DataBufEnable       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
                             
-#ifdef BiDirReset
-   #define SetResetAssert      CORE_PIN52_PORTCLEAR = CORE_PIN52_BITMASK; CORE_PIN52_DDRREG |= CORE_PIN52_BITMASK   //output, active low
-   #define SetResetInput       CORE_PIN52_DDRREG &= ~CORE_PIN52_BITMASK  //set as input
-#else
-   #define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
-   #define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
-#endif
+#define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
+#define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
 
 #define SetExROMAssert      CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
 #define SetExROMDeassert    CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
@@ -237,8 +229,8 @@ const uint8_t OutputPins[] = {
 #ifdef FullDMACapable
    #define SetAddrBufsOut      CORE_PIN54_PORTSET = CORE_PIN54_BITMASK
    #define SetAddrBufsIn       CORE_PIN54_PORTCLEAR = CORE_PIN54_BITMASK 
-   #define SetRWOutWrite       CORE_PIN49_PORTSET = CORE_PIN49_BITMASK
-   #define SetRWOutHighZ       CORE_PIN49_PORTCLEAR = CORE_PIN49_BITMASK 
+   #define SetRWOutWrite       CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK; CORE_PIN0_DDRREG |= CORE_PIN0_BITMASK   //output, low=write
+   #define SetRWInput          CORE_PIN0_DDRREG &= ~CORE_PIN0_BITMASK   //set as input
 
    #define GP6_AddrMask        0xFFFF0000  // bits 16-31 contain address bus, in order       
    #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
