@@ -6,7 +6,7 @@
 #include "TRMenuFiles/ROMs/sta64_v2_6.prg.h"
 #include "TRMenuFiles/ROMs/sid_wizard_1.9.prg.h"
 #include "TRMenuFiles/ROMs/SID_Wizard_2SID.prg.h"
-#include "TRMenuFiles/ROMs/SW_1.9_UserManual.prg.h"
+#include "TRMenuFiles/ROMs/sw_1.9_manual.prg.h"
 #include "TRMenuFiles/ROMs/Epyx_Fast_Load.crt.h"
 #include "TRMenuFiles/ROMs/80columns.prg.h"
 #include "TRMenuFiles/ROMs/hex_mon.prg.h"
@@ -147,6 +147,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
 /*3*/rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
+     rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TR Command IO access"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
      rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
      rtBin8kLo  , IOH_TeensyROM    , (char*)"TeensyROM Menu Cart+TeensyROM IOH", (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
@@ -213,9 +214,9 @@ StructMenuItem dirMIDI_ASID[] =
     rtFilePrg  , IOH_TeensyROM      , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
 /**/rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1       +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
 /**/rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6      +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
-    rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.92        +Seq MIDI", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
-    rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard_2SID V1.92   +Seq MIDI", (uint8_t*)SID_Wizard_2SID_prg        , sizeof(SID_Wizard_2SID_prg) ,
-    rtFilePrg  , IOH_None           , (char*)"SID-Wizard User Manual V1.92"     , (uint8_t*)SW_1_9_UserManual_prg      , sizeof(SW_1_9_UserManual_prg) ,
+    rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.94        +Seq MIDI", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
+    rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard_2SID V1.94   +Seq MIDI", (uint8_t*)sid_wizard_2sid_prg        , sizeof(sid_wizard_2sid_prg) ,
+    rtFilePrg  , IOH_None           , (char*)"SID-Wizard User Manual V1.94"     , (uint8_t*)sw_1_9_manual_prg          , sizeof(sw_1_9_manual_prg) ,
 };
 
 StructMenuItem dirTEXT_PETSCII[] = 
