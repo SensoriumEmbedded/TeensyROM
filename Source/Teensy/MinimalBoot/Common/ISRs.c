@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifdef Fab04_FullDMACapable
-   extern void DMATransfer();
+   extern void DMATransferISR();
 #endif
 #ifdef Fab04_SpecialButton
 void isrSpecial()
@@ -59,7 +59,7 @@ FASTRUN void isrPHI2()
 #ifdef Fab04_FullDMACapable
    if (DMA_State == DMA_S_TransferReady) // && GP9_BA(ReadGPIO9))
    {
-      DMATransfer();
+      DMATransferISR();
       return;
    }
 #endif

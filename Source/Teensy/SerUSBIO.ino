@@ -188,11 +188,45 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
 // *** The rest of these cases are used for debug/testing only  
 
 #ifdef Fab04_FullDMACapable
-      case 'u':  //Perform DMA transaction
+      case 'u':  //Perform DMA Write
          //while(!BtnPressed)  //menu button to exit
          {
-            PerformDMA();
-            //delay(1000);
+            const uint32_t DMAAddr = 0x0c00;
+            const uint32_t DMALength = 0xa000-0x0c00;
+            uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+            
+            //init buffer and Write
+            for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ByteNum & 0xff;
+            PerformDMA(false, DMAAddr, DMABuf, DMALength);  
+            Serial.printf("DMA Write addr $%04x:$%04x (len: $%04x)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+         }
+         break;
+      case 'v':  //Perform DMA Read
+         //while(!BtnPressed)  //menu button to exit
+         {
+            const uint32_t DMAAddr = 0x0c00;
+            const uint32_t DMALength = 0xa000-0x0c00;
+            uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+            bool AllPass = true;
+            //Read:
+            PerformDMA(true, DMAAddr, DMABuf, DMALength); 
+            Serial.printf("DMA Read addr $%04x:$%04x (len: $%04x)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+            for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
+            {
+               //Printf_dbg("  read addr $%04x = $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum]); //Small buff: List individual
+               
+               //if ((ByteNum % 16) == 0) Printf_dbg("\n%04x:", DMAAddr+ByteNum); //large buff: list in rows of 16
+               //Printf_dbg(" %02x", DMABuf[ByteNum]);
+               
+               //compare to expected:
+               if (DMABuf[ByteNum] != (ByteNum & 0xff)) 
+               {
+                  Serial.printf("  Miscomp: %04x=%02x, exp %02x\n", DMAAddr+ByteNum, DMABuf[ByteNum], ByteNum & 0xff);
+                  AllPass = false;
+               }
+            }
+            if (AllPass) Serial.println("  All Passed!");
+            //Serial.println();
          }
          break;
 #endif
