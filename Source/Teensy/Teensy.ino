@@ -64,11 +64,11 @@ void setup()
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
    SetAddrPortDirIn;
    SetAddrBufsIn;   //default to reading address (normal use)
 #endif
-#ifdef DataBufAlwaysEnabled
+#ifdef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //default to input (for C64 Write)
    SetDataBufIn;
    //DataBufEnable; //buffer always enabled via HW
@@ -81,13 +81,13 @@ void setup()
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
-#ifdef BiDirReset
+#ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
 #endif   
    SetResetAssert; //assert reset until main loop()
 
-#ifdef SpecialButton
+#ifdef Fab04_SpecialButton
    pinMode(Special_Btn_In_PIN, INPUT_PULLUP);
    attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, FALLING );
 #else
@@ -234,7 +234,7 @@ void loop()
          SetEEPDefaults();
          REBOOT;
       }
-#ifdef BiDirReset
+#ifdef Fab04_BiDirReset
       SetResetInput;
       delay(50);  //debounce
 #else      

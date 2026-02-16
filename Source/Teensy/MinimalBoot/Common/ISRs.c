@@ -17,10 +17,10 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
    extern void DMATransfer();
 #endif
-#ifdef SpecialButton
+#ifdef Fab04_SpecialButton
 void isrSpecial()
 {
    Serial.println("SpecButtonPress");
@@ -56,7 +56,7 @@ FASTRUN void isrPHI2()
    SetDebugAssert;
 #endif
 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
    if (DMA_State == DMA_S_TransferReady) // && GP9_BA(ReadGPIO9))
    {
       DMATransfer();
@@ -69,7 +69,7 @@ FASTRUN void isrPHI2()
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
    bool R_Wn = GP6_R_Wn(GPIO_6);  //parse read/write bit
    
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
    else SetDataBufIn;
 #endif
@@ -165,7 +165,7 @@ FASTRUN void isrPHI2()
       
       if (EmulateVicCycles)
       {
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
          SetDataBufOut;  //only read allowed in vic cycle, set data buf to output
 #endif
          WaitUntil_nS(nS_VICStart);

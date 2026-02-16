@@ -156,9 +156,9 @@ volatile uint32_t StartCycCnt, LastCycCnt=0;
    
 #define PHI2_PIN            1  
 #define Menu_Btn_In_PIN    31 
-#define Special_Btn_In_PIN 28  //Used in v0.4+ only (SpecialButton)
+#define Special_Btn_In_PIN 28  //Used in v0.4+ only (Fab04_SpecialButton)
 #define DotClk_Debug_PIN   28 
-#ifdef BiDirReset
+#ifdef Fab04_BiDirReset
    #define BiDir_Reset_PIN  6
 #endif
 const uint8_t InputPins[] = {
@@ -171,7 +171,7 @@ const uint8_t OutputPins[] = {
    35, 9, 32,   // DataCEn(0.2/3)/AddrBufDirControl(0.4), ExROM, Game
    30, 25, 24,  // DMA, NMI, IRQ
    34, 33,      // LED, debug(0.2)/RnW(0.3)
-#ifndef BiDirReset
+#ifndef Fab04_BiDirReset
    6,   //Reset_Out_PIN,
 #endif
    };
@@ -207,7 +207,7 @@ const uint8_t OutputPins[] = {
 #define GP9_ROMH(r)         (r & CORE_PIN5_BITMASK)
 #define GP9_BA(r)           (r & CORE_PIN29_BITMASK)
              
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
    #define SetAddrBufsOut      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
    #define SetAddrBufsIn       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
 #else             
@@ -215,7 +215,7 @@ const uint8_t OutputPins[] = {
    #define DataBufEnable       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
 #endif
                            
-#ifdef BiDirReset
+#ifdef Fab04_BiDirReset
    #define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; CORE_PIN6_DDRREG |= CORE_PIN6_BITMASK   //output, active low
    #define SetResetInput       CORE_PIN6_DDRREG &= ~CORE_PIN6_BITMASK  //set as input
 #else
@@ -239,7 +239,7 @@ const uint8_t OutputPins[] = {
 #define SetDataBufOut       CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
 #define SetDataBufIn        CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
    #define SetRWOutWrite       CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK; CORE_PIN0_DDRREG |= CORE_PIN0_BITMASK   //output, low=write
    #define SetRWInput          CORE_PIN0_DDRREG &= ~CORE_PIN0_BITMASK   //set as input
 
@@ -286,7 +286,7 @@ uint32_t nS_DMAAssert = Def_nS_DMAAssert;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
-#ifdef DataBufAlwaysEnabled
+#ifdef Fab04_DataBufAlwaysEnabled
    SetDataBufOut; //buffer out first
    SetDataPortDirOut; //then set data ports to outputs
 #else
@@ -302,7 +302,7 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DataHold)
       if(!GP6_Phi2(ReadGPIO6)) break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
    
-#ifdef DataBufAlwaysEnabled
+#ifdef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports back to inputs/default
    SetDataBufIn;     //then set buffer dir to input
 #else
@@ -312,7 +312,7 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 
 __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
 {  // for C64 VIC read cycles only
-#ifdef DataBufAlwaysEnabled
+#ifdef Fab04_DataBufAlwaysEnabled
    SetDataBufOut; //buffer out first
    SetDataPortDirOut; //then set data ports to outputs
 #else
@@ -324,7 +324,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitVIC(uint8_t Data)
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
    WaitUntil_nS(nS_VICDHold);  
 
-#ifdef DataBufAlwaysEnabled
+#ifdef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports back to inputs/default
    SetDataBufIn;     //then set buffer dir to input
 #else
@@ -340,13 +340,13 @@ __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
 
 __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 {  // for "normal" (non-VIC) C64 write cycles
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
 #endif
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
    uint32_t DataIn = ReadGPIO7;
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
 #endif

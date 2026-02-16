@@ -187,7 +187,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          
 // *** The rest of these cases are used for debug/testing only  
 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
       case 'u':  //Perform DMA transaction
          //while(!BtnPressed)  //menu button to exit
          {

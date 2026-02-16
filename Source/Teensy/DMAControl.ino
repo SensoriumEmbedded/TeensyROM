@@ -1,6 +1,6 @@
 
 
-#ifdef FullDMACapable
+#ifdef Fab04_FullDMACapable
 
 
 volatile uint8_t DataVal = 0x55;
@@ -10,13 +10,13 @@ bool DMA_RnW = false; //true=read, false=write
 
 __attribute__((always_inline)) inline uint8_t DataPortWaitDMARead()
 {  // for "normal" (non-VIC) C64 write cycles
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
    DataBufEnable; //enable external buffer
 #endif
    WaitUntil_nS(320);  //nS_DataSetup=220  //EXPERIMENTATION NEEDED: takes a little longer in DMA
    uint32_t DataIn = ReadGPIO7;
-#ifndef DataBufAlwaysEnabled
+#ifndef Fab04_DataBufAlwaysEnabled
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
 #endif
