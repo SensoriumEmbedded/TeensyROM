@@ -20,6 +20,12 @@
 #ifdef FullDMACapable
    extern void DMATransfer();
 #endif
+#ifdef SpecialButton
+void isrSpecial()
+{
+   Serial.println("SpecButtonPress");
+}
+#endif
 
 FASTRUN void isrButton()
 {

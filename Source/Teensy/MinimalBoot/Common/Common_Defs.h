@@ -155,15 +155,16 @@ uint32_t* BigBuf = NULL;
 volatile uint32_t StartCycCnt, LastCycCnt=0;
    
 #define PHI2_PIN            1  
-#define Reset_Btn_In_PIN    31 
-#define DotClk_Debug_PIN    28 
+#define Menu_Btn_In_PIN    31 
+#define Special_Btn_In_PIN 28  //Used in v0.4+ only (SpecialButton)
+#define DotClk_Debug_PIN   28 
 #ifdef BiDirReset
    #define BiDir_Reset_PIN  6
 #endif
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,   // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
-   29, Reset_Btn_In_PIN,  // BA, Reset button
+   29, Menu_Btn_In_PIN,  // BA, Reset button
    };
 
 const uint8_t OutputPins[] = {

@@ -64,6 +64,7 @@
   // #define DataBufAlwaysEnabled //eliminates need for data buf enable/disable
   // #define FullDMACapable       //allow full DMA R/W (Addr dir/output control, R/*W bi-dir)
   // #define BiDirReset           //allow bi-directional Reset interface
+  // #define SpecialButton        //Allow use of "Special" button for freeze, etc
 
 // Use debug signal line to sense RESET on C64. Use this if you want to trigger
 // an external reset and TeensyROM will boot into the menu again. This requires

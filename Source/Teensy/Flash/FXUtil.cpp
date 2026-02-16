@@ -164,7 +164,7 @@ void update_firmware( Stream *in, Stream *out,
   // move new program from buffer to flash, free buffer, and reboot
   //will run out of RAM to copy flash, disable interrupts
   
-  detachInterrupt(digitalPinToInterrupt(Reset_Btn_In_PIN));
+  detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
   NVIC_DISABLE_IRQ(IRQ_ENET); 
   NVIC_DISABLE_IRQ(IRQ_PIT);
