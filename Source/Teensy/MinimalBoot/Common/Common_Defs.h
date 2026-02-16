@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7.1+1"; //*VERSION*
+char strVersionNumber[] = "v0.7.1+2"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -157,6 +157,9 @@ volatile uint32_t StartCycCnt, LastCycCnt=0;
 #define PHI2_PIN            1  
 #define Reset_Btn_In_PIN    31 
 #define DotClk_Debug_PIN    28 
+#ifdef BiDirReset
+   #define BiDir_Reset_PIN  6
+#endif
 const uint8_t InputPins[] = {
    19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27,  //address bus
    2, 3, 4, 5, PHI2_PIN, 0,   // IO1n, IO2n, ROML, ROMH, PHI2_PIN, R_Wn
@@ -164,12 +167,11 @@ const uint8_t InputPins[] = {
    };
 
 const uint8_t OutputPins[] = {
-   35, 9, 32,   // DataCEn, ExROM, Game
+   35, 9, 32,   // DataCEn(0.2/3)/AddrBufDirControl(0.4), ExROM, Game
    30, 25, 24,  // DMA, NMI, IRQ
-   34, 33, 6,   // LED, debug(0.2)/RnW(0.3), Reset_Out_PIN,
-#ifdef FullDMACapable
-   54,      //AddrBufDirControl
-   49,      //R/*W Drive Output
+   34, 33,      // LED, debug(0.2)/RnW(0.3)
+#ifndef BiDirReset
+   6,   //Reset_Out_PIN,
 #endif
    };
 
@@ -203,12 +205,22 @@ const uint8_t OutputPins[] = {
 #define GP9_ROML(r)         (r & CORE_PIN4_BITMASK)
 #define GP9_ROMH(r)         (r & CORE_PIN5_BITMASK)
 #define GP9_BA(r)           (r & CORE_PIN29_BITMASK)
-                            
-#define DataBufDisable      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
-#define DataBufEnable       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
-                            
-#define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
-#define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
+             
+#ifdef FullDMACapable
+   #define SetAddrBufsOut      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
+   #define SetAddrBufsIn       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
+#else             
+   #define DataBufDisable      CORE_PIN35_PORTSET = CORE_PIN35_BITMASK
+   #define DataBufEnable       CORE_PIN35_PORTCLEAR = CORE_PIN35_BITMASK
+#endif
+                           
+#ifdef BiDirReset
+   #define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK; CORE_PIN6_DDRREG |= CORE_PIN6_BITMASK   //output, active low
+   #define SetResetInput       CORE_PIN6_DDRREG &= ~CORE_PIN6_BITMASK  //set as input
+#else
+   #define SetResetAssert      CORE_PIN6_PORTCLEAR = CORE_PIN6_BITMASK  //active low
+   #define SetResetDeassert    CORE_PIN6_PORTSET = CORE_PIN6_BITMASK
+#endif
 
 #define SetExROMAssert      CORE_PIN9_PORTCLEAR = CORE_PIN9_BITMASK  //active low
 #define SetExROMDeassert    CORE_PIN9_PORTSET = CORE_PIN9_BITMASK
@@ -227,8 +239,6 @@ const uint8_t OutputPins[] = {
 #define SetDataBufIn        CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
 
 #ifdef FullDMACapable
-   #define SetAddrBufsOut      CORE_PIN54_PORTSET = CORE_PIN54_BITMASK
-   #define SetAddrBufsIn       CORE_PIN54_PORTCLEAR = CORE_PIN54_BITMASK 
    #define SetRWOutWrite       CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK; CORE_PIN0_DDRREG |= CORE_PIN0_BITMASK   //output, low=write
    #define SetRWInput          CORE_PIN0_DDRREG &= ~CORE_PIN0_BITMASK   //set as input
 

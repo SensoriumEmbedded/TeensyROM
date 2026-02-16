@@ -66,22 +66,25 @@ void setup()
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
 #ifdef FullDMACapable
    SetAddrPortDirIn;
-   SetAddrBufsIn;   //default to reading data (normal use)
-   //SetRWOutHighZ;   //Don't drive R/*W
+   SetAddrBufsIn;   //default to reading address (normal use)
 #endif
 #ifdef DataBufAlwaysEnabled
    SetDataPortDirIn; //default to input (for C64 Write)
    SetDataBufIn;
-   DataBufEnable; //buffer always enabled
+   //DataBufEnable; //buffer always enabled via HW
 #else
    DataBufDisable; //buffer disabled
-   //SetDataBufOut  done in ISR based on R/W signal
+   //SetDataBufOut  done in ISR based on R/W signal state
    SetDataPortDirOut; //default to output (for C64 Read)
 #endif
    
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
+#ifdef BiDirReset
+   pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
+#endif   
    SetResetAssert; //assert reset until main loop()
 
 #ifdef DbgSignalSenseReset
@@ -226,9 +229,14 @@ void loop()
          SetEEPDefaults();
          REBOOT;
       }
+#ifdef BiDirReset
+      SetResetInput;
+      delay(50);  //debounce
+#else      
+      SetResetDeassert;
+#endif      
       doReset=false;
       BtnPressed = false;
-      SetResetDeassert;
 
 #ifdef DbgSignalSenseReset
       delay(50); 

@@ -4,7 +4,7 @@
 
 
 volatile uint8_t DataVal = 0x55;
-bool DMA_RnW = false;
+bool DMA_RnW = false; //true=read, false=write
 
 #define C64Address    0x00FE
 
