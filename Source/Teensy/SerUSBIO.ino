@@ -197,8 +197,10 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             
             //init buffer and Write
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ByteNum & 0xff;
+            uint32_t StartTime = micros();  
             PerformDMA(false, DMAAddr, DMABuf, DMALength);  
-            Serial.printf("DMA Write addr $%04x:$%04x (len: $%04x)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+            StartTime = micros() - StartTime;  
+            Serial.printf("DMA Write addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
          }
          break;
       case 'v':  //Perform DMA Read
@@ -207,10 +209,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             const uint32_t DMAAddr = 0x0c00;
             const uint32_t DMALength = 0xa000-0x0c00;
             uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
-            bool AllPass = true;
-            //Read:
+            uint32_t NumFail = 0;
+            uint32_t StartTime = micros();  
             PerformDMA(true, DMAAddr, DMABuf, DMALength); 
-            Serial.printf("DMA Read addr $%04x:$%04x (len: $%04x)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+            StartTime = micros() - StartTime;  
+            Serial.printf("DMA Read addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
             {
                //Printf_dbg("  read addr $%04x = $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum]); //Small buff: List individual
@@ -221,12 +224,42 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                //compare to expected:
                if (DMABuf[ByteNum] != (ByteNum & 0xff)) 
                {
-                  Serial.printf("  Miscomp: %04x=%02x, exp %02x\n", DMAAddr+ByteNum, DMABuf[ByteNum], ByteNum & 0xff);
-                  AllPass = false;
+                  Serial.printf("  Miscomp: $%04x=$%02x, exp $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum], ByteNum & 0xff);
+                  NumFail++;
                }
             }
-            if (AllPass) Serial.println("  All Passed!");
-            //Serial.println();
+            if (NumFail) Serial.printf("  %lu miscompares\n", NumFail);
+            else Serial.println("  All Passed!");
+         }
+         break;
+      case 'w':  //Perform DMA page r/w check
+         //while(!BtnPressed)  //menu button to exit
+         {
+            const uint32_t BlockSize = 0x1000;
+            uint8_t DMABuf, InvVal, ReadBack;
+            
+            Serial.printf("\nMem R/W check, $%04x (%dk) block size\n", BlockSize, BlockSize/1024);
+            
+            //POKE1,52  to disable BASIC, Kernal, and IO/Char banks and expose all RAM
+            //  Can't do it from here as the CPU doesn't read external
+            //DMABuf = 0x34; 
+            //PerformDMA(false, 1, &DMABuf, 1); //CPU Bank Select
+            //delay(10);
+            
+            for(uint32_t Address = 0; Address < 0xFFFF; Address+=BlockSize)
+            {
+               
+               PerformDMA(true, Address, &DMABuf, 1);  //Read val
+               InvVal = ~DMABuf;
+               PerformDMA(false, Address, &InvVal, 1); //Write the inverse
+               PerformDMA(true, Address, &ReadBack, 1);  //Read back
+               PerformDMA(false, Address, &DMABuf, 1); //Re-Write original to preserve
+               
+               //compare/print
+               Serial.printf("$%04x: ", Address);
+               if (ReadBack != InvVal) Serial.printf("Read Only\n");
+               else Serial.printf("R/W\n");
+             }
          }
          break;
 #endif
