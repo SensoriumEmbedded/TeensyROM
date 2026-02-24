@@ -189,8 +189,8 @@ void setup()
          break;
    }
    
+   BtnPressed = !ReadButton; //set to current state, could have false triggered from Reset signal on Fab04_
    SetLEDOn;  //done last as indicator of init completion
-   
 } 
      
 void loop()
