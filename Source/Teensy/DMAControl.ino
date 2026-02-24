@@ -8,19 +8,28 @@ bool DMA_RnW;
 uint32_t DMA_Length,DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
 
-__attribute__((always_inline)) inline uint8_t DataPortWaitDMARead()
+//These assume Fab04_DataBufAlwaysEnabled
+__attribute__((always_inline)) inline uint8_t DataPortWaitReadDMA()
 {  // for "normal" (non-VIC) C64 write cycles
-#ifndef Fab04_DataBufAlwaysEnabled
-   SetDataPortDirIn; //set data ports to inputs         //data port set to read previously
-   DataBufEnable; //enable external buffer
-#endif
-   WaitUntil_nS(320);  //nS_DataSetup=220  //EXPERIMENTATION NEEDED: takes a little longer in DMA
+   WaitUntil_nS(370);  //nS_DataSetup=220  //takes a little longer for read data DMA
    uint32_t DataIn = ReadGPIO7;
-#ifndef Fab04_DataBufAlwaysEnabled
-   DataBufDisable;
-   SetDataPortDirOut; //set data ports to outputs (default)
-#endif
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+}
+
+__attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
+{  // for "normal" (non-VIC) C64 read cycles only
+   SetDataBufOut; //buffer out first
+   SetDataPortDirOut; //then set data ports to outputs
+
+   uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
+   CORE_PIN10_PORTSET = RegBits;
+   CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
+   
+   WaitUntil_nS(430);  // nS_DataHold = 390 (err), 470 OK, 430 OK(?)
+   //not checking Phi2 state due to tight timing and early in cycle call can cause early exit
+
+   SetDataPortDirIn; //set data ports back to inputs/default
+   SetDataBufIn;     //then set buffer dir to input
 }
 
 FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length)
@@ -44,46 +53,50 @@ void DMATransferISR()
    
    if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
 
-   uint32_t RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
-
-   //EXPERIMENTATION NEEDED:
-   //Works as written: 43mS to read/write $0400:$9fff (in PAL, len: $9c00=39,936) = 1.077uS/byte
-   //Find a better way to do this? address needs to be latched early in cycle
-   //   Call this during VIC cycle?  BA transitions high ~100nS into it.  Could catch and wait there.
-   //   Work without wait if we skip the first cycle after BA?
-   //   or a way to pull in?
-   
+   //skip one cycle, re-align to edge and in cade first after BA
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
-   //phi2 has gone low..........................................................................
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
-   //phi2 has gone high..........................................................................
-   StartCycCnt = ARM_DWT_CYCCNT;
-
-   SetAddrBufsOut;   //set address buffers to output
-   SetAddrPortDirOut;//set address ports to output   
-   //set address port value:
-   CORE_PIN19_PORTSET = RegAddrBits;
-   CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
-
-   //eventually need a pointer/counter for data to be sent/received
-   if (DMA_RnW)
-   {  //Read Cycle: 
-      //leave R/*W as input (Pulled Up, Read)
-      DMA_Buffer[DMA_Count] = DataPortWaitDMARead(); //wait for data, read it.  Different timing from DataPortWaitRead()
-   }
-   else
-   {  //Write Cycle:
-      SetRWOutWrite;
-      DataPortWriteWait(DMA_Buffer[DMA_Count]);
-      SetRWInput; //set R/*W back to input
-   }
-
-   SetAddrPortDirIn;//set address ports to input
-   SetAddrBufsIn;   //set address buffers to input
    
-   DMA_Count++;
-   
-   if (DMA_Count == DMA_Length) DMA_State = DMA_S_StartDisable;
+   while (DMA_Count != DMA_Length)
+   {
+      while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
+      //phi2 has gone low..........................................................................     
+      StartCycCnt = ARM_DWT_CYCCNT;
+      
+      uint32_t RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
+      WaitUntil_nS(200);  //BA transitions high ~100nS in
+      if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
+      
+      CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
+      CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
+          
+      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
+      WaitUntil_nS(400);  //use timer instead to get just ahead of the transition.     
+      //phi2 has gone high..........................................................................      
+      StartCycCnt = ARM_DWT_CYCCNT;
+            
+      if (DMA_RnW)
+      {  //Read Cycle: 
+         //leave R/*W as input (Pulled Up, Read)
+         SetAddrBufsOut;   //set address buffers to output
+         SetAddrPortDirOut;//set address ports to output   
+         DMA_Buffer[DMA_Count] = DataPortWaitReadDMA(); //wait for data, read it.  Different timing from DataPortWaitRead()
+      }
+      else
+      {  //Write Cycle:
+         SetRWOutWrite;    // <---- set this first/quickly!
+         SetAddrBufsOut;   //set address buffers to output
+         SetAddrPortDirOut;//set address ports to output 
+         DataPortWriteWaitDMA(DMA_Buffer[DMA_Count]);
+         SetRWInput; //set R/*W back to input
+      }
+
+      SetAddrPortDirIn;//set address ports to input
+      SetAddrBufsIn;   //set address buffers to input
+      
+      DMA_Count++;
+   }
+   DMA_State = DMA_S_StartDisable;
 }
 
 #endif
