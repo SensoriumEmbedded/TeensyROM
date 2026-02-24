@@ -189,18 +189,18 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
 
 #ifdef Fab04_FullDMACapable
       case 'u':  //Perform DMA Write
-         //while(!BtnPressed)  //menu button to exit
          {
             const uint32_t DMAAddr = 0x0c00;
             const uint32_t DMALength = 0xa000-0x0c00;
             uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
-            
+            bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to clear mem instead of lower addr byte
+          
             //init buffer and Write
-            for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ByteNum & 0xff;
+            for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
             uint32_t StartTime = micros();  
             PerformDMA(false, DMAAddr, DMABuf, DMALength);  
             StartTime = micros() - StartTime;  
-            Serial.printf("DMA Write addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+            Serial.printf("DMA Write (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
          }
          break;
       case 'v':  //Perform DMA Read
@@ -210,10 +210,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             const uint32_t DMALength = 0xa000-0x0c00;
             uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
             uint32_t NumFail = 0;
+            bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to comp mem to 0 instead of lower addr byte
+
             uint32_t StartTime = micros();  
             PerformDMA(true, DMAAddr, DMABuf, DMALength); 
             StartTime = micros() - StartTime;  
-            Serial.printf("DMA Read addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+            Serial.printf("DMA Read  (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
             {
                //Printf_dbg("  read addr $%04x = $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum]); //Small buff: List individual
@@ -222,9 +224,10 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                //Printf_dbg(" %02x", DMABuf[ByteNum]);
                
                //compare to expected:
-               if (DMABuf[ByteNum] != (ByteNum & 0xff)) 
+               uint8_t Expected = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
+               if (DMABuf[ByteNum] != Expected) 
                {
-                  Serial.printf("  Miscomp: $%04x=$%02x, exp $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum], ByteNum & 0xff);
+                  Serial.printf("  Miscomp: $%04x=$%02x, exp $%02x\n", DMAAddr+ByteNum, DMABuf[ByteNum], Expected);
                   NumFail++;
                }
             }
@@ -242,9 +245,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             
             //POKE1,52  to disable BASIC, Kernal, and IO/Char banks and expose all RAM
             //  Can't do it from here as the CPU doesn't read external
-            //DMABuf = 0x34; 
-            //PerformDMA(false, 1, &DMABuf, 1); //CPU Bank Select
-            //delay(10);
+            //  Boot to Utilmax to disable ROMs?
             
             for(uint32_t Address = 0; Address < 0xFFFF; Address+=BlockSize)
             {
