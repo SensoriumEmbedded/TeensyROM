@@ -131,7 +131,7 @@ FASTRUN void isrPHI2()
          switch (DMA_State)
          {
             case DMA_S_StartDisable:
-               WaitUntil_nS(nS_DMAAssert);
+               //WaitUntil_nS(nS_DMAAssert);  //Have seen corruption with this in place
                SetDMADeassert;
                DMA_State = DMA_S_DisableReady;
                return;
