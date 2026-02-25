@@ -57,7 +57,7 @@
   // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
   // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
   // #define DbgLEDSignalPolling //togles LED each pass through main loop()
-   
+
 //fab 0.3 uses different debug signal and direct data buffer dir control
 // enabling this on a fab 0.2x PBC could cause damage to your C64!
   // #define DbgFab0_3plus     //Only for fab 0.3 PCB! 
@@ -67,6 +67,7 @@
    #define Fab04_FullDMACapable       //allow full DMA R/W (Addr dir/output control, R/*W bi-dir)
    #define Fab04_BiDirReset           //allow bi-directional Reset interface
    #define Fab04_SpecialButton        //Allow use of "Special" button for freeze, etc
+   #define Fab04_REU                  //include REU  Special IO
 #endif
 
 // Use debug signal line to sense RESET on C64. Use this if you want to trigger

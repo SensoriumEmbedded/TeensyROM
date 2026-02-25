@@ -297,6 +297,9 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_MIDI_Sequential, 
    IOH_MIDI_Passport,   
    IOH_MIDI_NamesoftIRQ,
+#ifdef Fab04_REU
+   IOH_REU,
+#endif   
    IOH_Debug, //last manually selectable, see LastSelectableIOH
    
    IOH_TeensyROM, 
