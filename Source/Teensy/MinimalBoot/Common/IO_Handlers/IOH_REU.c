@@ -17,6 +17,11 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+//REU debug msgs
+   #define Printf_dbg_reu Serial.printf
+   //__attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
+
+
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn);  
 void PollingHndlr_REU();                           
 void InitHndlr_REU();                           
@@ -33,23 +38,40 @@ stcIOHandlers IOHndlr_REU =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
+extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool CloseDMA);
+extern void CloseDMA();
+
+
 enum enumREUregs
 {
    // REU registers:
    REUReg_Status = 0,
    REUReg_Command,
-   REUReg_C64StartAddrLSB,
-   REUReg_C64StartAddrMSB,
-   REUReg_REUStartAddrLSB,
-   REUReg_REUStartAddrMoreSB,
-   REUReg_REUStartAddrMostSB,
-   REUReg_TransLengthLSB,
-   REUReg_TransLengthMSB,
+   REUReg_C64StartAddrLo,
+   REUReg_C64StartAddrHi,
+   REUReg_REUStartAddrLo,
+   REUReg_REUStartAddrMed,
+   REUReg_REUStartAddrHi,
+   REUReg_TransLengthLo,
+   REUReg_TransLengthHi,
    REUReg_InterruptMask,
    REUReg_AddressControl,
 
    REUReg_NumRegs,
 };
+
+#define REUReg_Status_IntPend    0b10000000
+#define REUReg_Status_Complete   0b01000000
+#define REUReg_Status_Fault      0b00100000
+
+#define REUReg_Command_Execute   0b10000000
+#define REUReg_Command_Load      0b00100000
+#define REUReg_Command_FF00      0b00010000
+#define REUReg_Command_TypeMask  0b00000011
+#define REUReg_Command_TypeC2R   0b00000000
+#define REUReg_Command_TypeR2C   0b00000001
+#define REUReg_Command_TypeSwp   0b00000010
+#define REUReg_Command_TypeVer   0b00000011
 
 //______________________________________________________________________________________________
 
@@ -93,14 +115,78 @@ uint8_t REURegs[REUReg_NumRegs];
 //         11=fix both addresses
 //      5-0   unused (1 upon reading)
    
+FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
+{
+   if (Address == 0xff00 && !R_Wn) 
+   { //Trigger REU start NOW
+      DMA_State = DMA_S_StartActive;   //activate immediately
+      fBusSnoop = NULL;
+   }
+   return false;  //continue cycle processing to start DMA
+}
 
+FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
+{
+   
+   //if(!myFile)
+   //{
+      //char FullFilePath[MaxNamePathLength];
+
+      uint32_t StartuS = micros();
+
+      //if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
+      //else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
+         
+      //Printf_dbg_reu("Loading:\r\n%s", FullFilePath);
+
+      File myFile = SD.open("/temp.reu", FILE_WRITE);
+      
+      if (!myFile) 
+      {
+         Printf_dbg_reu(" File Not Found\n");
+         return;
+      }
+      Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
+   //}
+   
+   myFile.seek(REUAddr);
+   //for (uint16_t count = 0; count < REULength; count++) REUBuf[count]=myFile.read();
+   myFile.write(REUBuf, REULength);
+   
+   myFile.close();
+   Printf_dbg_reu(" %luuS Open+Write+Close\n", micros()-StartuS);
+
+   
+}
+
+FLASHMEM void ReadFromREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
+{
+   uint32_t StartuS = micros();
+
+   File myFile = SD.open("/temp.reu", FILE_READ);
+   
+   if (!myFile) 
+   {
+      Printf_dbg_reu(" File Not Found\n");
+      return;
+   }
+   Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
+   
+   myFile.seek(REUAddr);
+   //for (uint16_t count = 0; count < REULength; count++) REUBuf[count]=myFile.read();
+   myFile.read(REUBuf, REULength);
+   
+   myFile.close();
+   Printf_dbg_reu(" %luuS Open+Read+Close\n", micros()-StartuS);
+}
 
 //______________________________________________________________________________________________
 
 FLASHMEM void InitHndlr_REU()
 {
-   Serial.println("Hello from REU!");
+   Printf_dbg_reu("Hello from REU!\n");
 
+   fBusSnoop = NULL;
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
@@ -112,23 +198,37 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 //      BigBuf[BigBufCount] = Address; //initialize w/ address 
 //   #endif
    Address &= 0x1f; //only 5 register adress lines, regs are ghosted over $DFxx 8x
-   if (R_Wn) //High (IO1 Read)
+   if (R_Wn) //High (IO2 Read)
    {
-      if (Address<REUReg_NumRegs) DataPortWriteWaitLog(REURegs[Address]);  
+      if (Address < REUReg_NumRegs) DataPortWriteWait(REURegs[Address]);  
+      
       if (Address == REUReg_Status) REURegs[REUReg_Status] &= 0x1f; //clear bits 7:5
-         
+
       //DataPortWriteWaitLog(0); //respond to all reads
       //BigBuf[BigBufCount] |= (0<<8) | IOTLDataValid;
-      //Serial.printf("Rd $de%02x\n", Address);
+      //Printf_dbg_reu("Rd $de%02x\n", Address);
    }
-   else  // IO1 write
+   else  // IO2 write
    {
-      if (Address<REUReg_NumRegs) REURegs[Address] = DataPortWaitRead();  
+      if (Address < REUReg_NumRegs) REURegs[Address] = DataPortWaitRead();  
 
-
+      if (Address == REUReg_Command)
+      {
+         if (REURegs[Address] & REUReg_Command_Execute)
+         {
+            if (REURegs[Address] & REUReg_Command_FF00)
+            { //Trigger REU start NOW
+               DMA_State = DMA_S_StartActive;      //activate immediately
+            }
+            else
+            { //delay trigger for FF00 Write
+               fBusSnoop = &REU_FF00_W_Check; 
+            }
+         }
+      }
 
       //BigBuf[BigBufCount] |= (DataPortWaitRead()<<8) | IOTLDataValid;
-      //Serial.printf("wr $de%02x:$%02x\n", Address, Data);
+      //SPrintf_dbg_reu("wr $de%02x:$%02x\n", Address, Data);
    }
 //   #ifndef DbgIOTraceLog
 //      if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
@@ -136,8 +236,79 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 //   #endif
 }
 
-void PollingHndlr_REU()
+FLASHMEM void PollingHndlr_REU()
 {
+   if (DMA_State != DMA_S_ActiveReady) return;
 
+   //DMA asserted, Do REU transfer
+   uint32_t StartTime = micros();  
+   uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
+   uint32_t REUAddr = REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi];
+   uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
+   uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
+   
+   Printf_dbg_reu("Execute REU x-fer type %d for %d bytes\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, REULength);
+   Printf_dbg_reu(" addr C64: $%04x  REU: $%06x\n", C64Addr, REUAddr);
+
+   switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
+   {
+      case REUReg_Command_TypeC2R:
+         PerformDMA(true, C64Addr, REUBuf, REULength, false); //read into buffer
+         WriteToREU(REUAddr, REUBuf, REULength);
+         break;
+      case REUReg_Command_TypeR2C:
+         ReadFromREU(REUAddr, REUBuf, REULength);
+         PerformDMA(false, C64Addr, REUBuf, REULength, false); //write to C64
+         break;
+      case REUReg_Command_TypeSwp:
+         //read both and swap
+         
+         break;
+      case REUReg_Command_TypeVer:
+      {  //read both and verify
+         uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
+         uint32_t ByteNum = 0;
+         PerformDMA(true, C64Addr, C64Buf, REULength, false); //read C64 into buffer
+         ReadFromREU(REUAddr, REUBuf, REULength); //read REU into buffer
+         
+         while (ByteNum < REULength)
+         {
+            if(REUBuf[ByteNum] != C64Buf[ByteNum]) 
+            {
+               REURegs[REUReg_Status] |= REUReg_Status_Fault;
+               Printf_dbg_reu(" --Miscompare!-- at $%04x\n", ByteNum);
+               //todo: update address regs with current/miscompare address(?)
+               break;
+            }
+            ByteNum++;
+         }
+         //if (ByteNum == REULength) Printf_dbg_reu(" Pass\n");
+         //else Printf_dbg_reu(" Fail\n");
+         free(C64Buf);
+      }
+         break;
+   }
+   
+   free(REUBuf);
+   
+   
+   
+   
+// Process Interrupt Mask Register
+
+
+
+// Process Address Control Register
+   
+   
+   
+   
+   REURegs[REUReg_Status] |= REUReg_Status_Complete;   
+   
+   StartTime = micros() - StartTime;  
+   Printf_dbg_reu(" REU xfer took %luuS\n", StartTime);
+   Serial.flush();
+   
+   CloseDMA();  //release DMA last so no cycles have passed on the 6510
 }
 

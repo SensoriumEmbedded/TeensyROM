@@ -5,7 +5,7 @@
 
 volatile uint8_t DataVal = 0x55;
 bool DMA_RnW;
-uint32_t DMA_Length,DMA_Count, DMA_StartAddr;
+uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
 
 //These assume Fab04_DataBufAlwaysEnabled
@@ -32,7 +32,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
-FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length)
+FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool CloseDMAatEnd)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
@@ -42,9 +42,18 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_Length = Length;
    
    DMA_State = DMA_S_StartTransfer;
-   while (DMA_State != DMA_S_DisableReady) delay(1);  //block main loop until finished
-   
-   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x)\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, DMA_Count);
+   while (DMA_State != DMA_S_TransferComplete) delayMicroseconds(2);  //block until finished
+
+   if (CloseDMAatEnd) CloseDMA();
+   else delayMicroseconds(2); //wait a couple cycles before restart
+
+   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x)\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length);
+}
+
+FLASHMEM void CloseDMA()
+{
+   DMA_State = DMA_S_StartDisable;
+   while (DMA_State != DMA_S_DisableReady ) delayMicroseconds(2);  //block main loop until finished
 }
 
 void DMATransferISR()
@@ -96,7 +105,7 @@ void DMATransferISR()
       
       DMA_Count++;
    }
-   DMA_State = DMA_S_StartDisable;
+   DMA_State = DMA_S_TransferComplete;
 }
 
 #endif

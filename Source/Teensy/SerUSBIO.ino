@@ -198,12 +198,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             //init buffer and Write
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
             uint32_t StartTime = micros();  
-            PerformDMA(false, DMAAddr, DMABuf, DMALength);  
+            PerformDMA(false, DMAAddr, DMABuf, DMALength, true);  
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Write (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
          }
          break;
-      case 'v':  //Perform DMA Read
+      case 'v':  //Perform DMA Read/compare
          //while(!BtnPressed)  //menu button to exit
          {
             const uint32_t DMAAddr = 0x0c00;
@@ -213,7 +213,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to comp mem to 0 instead of lower addr byte
 
             uint32_t StartTime = micros();  
-            PerformDMA(true, DMAAddr, DMABuf, DMALength); 
+            PerformDMA(true, DMAAddr, DMABuf, DMALength, true); 
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Read  (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
@@ -250,11 +250,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             for(uint32_t Address = 0; Address < 0xFFFF; Address+=BlockSize)
             {
                
-               PerformDMA(true, Address, &DMABuf, 1);  //Read val
+               PerformDMA(true, Address, &DMABuf, 1, false);  //Read val
                InvVal = ~DMABuf;
-               PerformDMA(false, Address, &InvVal, 1); //Write the inverse
-               PerformDMA(true, Address, &ReadBack, 1);  //Read back
-               PerformDMA(false, Address, &DMABuf, 1); //Re-Write original to preserve
+               PerformDMA(false, Address, &InvVal, 1, false); //Write the inverse
+               PerformDMA(true, Address, &ReadBack, 1, false);  //Read back
+               PerformDMA(false, Address, &DMABuf, 1, true); //Re-Write original to preserve
                
                //compare/print
                Serial.printf("$%04x: ", Address);

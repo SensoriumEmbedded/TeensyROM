@@ -1,7 +1,7 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7.1+2"; //*VERSION*
+char strVersionNumber[] = "v0.7.1+3"; //*VERSION*
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
@@ -38,7 +38,7 @@ char strVersionNumber[] = "v0.7.1+2"; //*VERSION*
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed640f // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6410 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -53,7 +53,7 @@ char strVersionNumber[] = "v0.7.1+2"; //*VERSION*
                                        // 0d: 9/12/25  Power up defaults: added file ext, removed, RW Read delay, moved 12/24 hr clk
                                        // 0e: 10/28/25 Hot key paths, Bookmark reduction
                                        // 0f: 11/12/25 Clear beta testers
-                                       
+                                       // 10: 2/24/26  REU added to IO Handlers list
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -93,14 +93,15 @@ enum MinBootIndFlags
 
 enum DMA_States  //used with DMA_State
 {
-   DMA_S_DisableReady,  //Disabled/default state
-   DMA_S_ActiveReady,   //DMA asserted state
-   DMA_S_TransferReady, //DMA asserted, ready for transfer
+   DMA_S_DisableReady,     //Disabled/default state
+   DMA_S_ActiveReady,      //DMA asserted state
+   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  ->DMA_S_TransferComplete
+   DMA_S_TransferComplete, //DMA asserted, transfer complete
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
    DMA_S_StartDisable,     //deactivate/end DMA
-   DMA_S_StartTransfer,    //activate for transfer
+   DMA_S_StartTransfer,    //activate DMA for transfer next bad line read, ->DMA_S_TransferReady
    DMA_S_StartActive,      //activate immediately
    DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
 };
