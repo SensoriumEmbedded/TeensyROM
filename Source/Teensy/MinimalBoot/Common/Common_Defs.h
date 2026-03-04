@@ -94,7 +94,7 @@ enum MinBootIndFlags
 enum DMA_States  //used with DMA_State
 {
    DMA_S_DisableReady,     //Disabled/default state
-   DMA_S_ActiveReady,      //DMA asserted state
+   DMA_S_ActiveReady,      //DMA asserted state, ready for action
    DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  ->DMA_S_TransferComplete
    DMA_S_TransferComplete, //DMA asserted, transfer complete
    
@@ -102,7 +102,7 @@ enum DMA_States  //used with DMA_State
    
    DMA_S_StartDisable,     //deactivate/end DMA
    DMA_S_StartTransfer,    //activate DMA for transfer next bad line read, ->DMA_S_TransferReady
-   DMA_S_StartActive,      //activate immediately
+   DMA_S_StartActive,      //activate immediately, ->DMA_S_ActiveReady
    DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
 };
 

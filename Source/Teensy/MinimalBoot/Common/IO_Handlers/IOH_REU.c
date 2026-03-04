@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //REU debug msgs
-   #define Printf_dbg_reu Serial.printf
-   //__attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
+#define Printf_dbg_reu Serial.printf
+//__attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
 
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn);  
@@ -41,6 +41,7 @@ stcIOHandlers IOHndlr_REU =
 extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool CloseDMA);
 extern void CloseDMA();
 
+//ref: https://codebase64.net/doku.php?id=base:reu_registers
 
 enum enumREUregs
 {
@@ -65,7 +66,7 @@ enum enumREUregs
 #define REUReg_Status_Fault      0b00100000
 
 #define REUReg_Command_Execute   0b10000000
-#define REUReg_Command_Load      0b00100000
+#define REUReg_Command_AutoLoad  0b00100000
 #define REUReg_Command_FF00      0b00010000
 #define REUReg_Command_TypeMask  0b00000011
 #define REUReg_Command_TypeC2R   0b00000000
@@ -73,47 +74,21 @@ enum enumREUregs
 #define REUReg_Command_TypeSwp   0b00000010
 #define REUReg_Command_TypeVer   0b00000011
 
+#define REUReg_IntMask_Enable    0b10000000
+#define REUReg_IntMask_EndOfBlk  0b01000000
+#define REUReg_IntMask_VerifErr  0b00100000
+
+#define REUReg_AddrCont_Mask     0b11000000
+#define REUReg_AddrCont_IncBoth  0b00000000
+#define REUReg_AddrCont_FixREU   0b01000000
+#define REUReg_AddrCont_FixC64   0b10000000
+#define REUReg_AddrCont_FixBoth  0b11000000
+
+
 //______________________________________________________________________________________________
 
 uint8_t REURegs[REUReg_NumRegs];
 
-//From: https://codebase64.net/doku.php?id=base:reu_registers
-//  Adr Bit Function
-//   0     Status register - read only
-//      7     Interrupt Pending (1=interrupt waiting to be serviced)
-//      6     End of Block (1=transfer complete)
-//      5     Fault (1=block verify error)
-//      4     Size (tells if a jumper is cut in the REU)
-//      3-0   Version number (0 on the REU I tested)
-//      Note: Bits 7-5 are cleared when this register is read.
-//   1     Command Register
-//      7     Execute (1=initiate transfer per current config)
-//      6     reserved (returns 0 upon reading)
-//      5     Load (1=enable AUTOLOAD option)
-//      4     FF00 (1=disable FF00 decode)
-//      3-2   reserved (0 upon reading)
-//      1-0   Transfer type: 00=C64-&gt;REU
-//               01=REU-&gt;C64
-//               10=swap
-//               11=verify
-//   2  7-0   C64 start address (LSB)
-//   3  7-0   C64 start address (MSB)
-//   4  7-0   REU start address (LSB)
-//   5  7-0   REU start address (More SB)
-//   6  2-0   REU start address (most significant bits)
-//   7  7-0   Transfer length (LSB) ($0000=64 kB)
-//   8  7-0   Transfer length (MSB)
-//   9     Interrupt Mask Register
-//      7  Interrupt enable (1=interrupts enabled)
-//      6  End of Block mask (1=interrupt on end of block)
-//      5  Verify error (1=interrupt on verify error)
-//      4-0   unused (1 upon reading)
-//   A  7-6   Address Control Register
-//         00=increment both addresses
-//         01=fix expansion address
-//         10=fix C64 address
-//         11=fix both addresses
-//      5-0   unused (1 upon reading)
    
 FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
 {
@@ -150,6 +125,7 @@ FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
    //}
    
    myFile.seek(REUAddr);
+   //todo: check for rollover
    //for (uint16_t count = 0; count < REULength; count++) REUBuf[count]=myFile.read();
    myFile.write(REUBuf, REULength);
    
@@ -194,31 +170,38 @@ FLASHMEM void InitHndlr_REU()
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 {
-//   #ifndef DbgIOTraceLog
-//      BigBuf[BigBufCount] = Address; //initialize w/ address 
-//   #endif
+   #ifdef DbgIOTraceLog
+      BigBuf[BigBufCount] = Address; //initialize w/ address 
+   #endif
    Address &= 0x1f; //only 5 register adress lines, regs are ghosted over $DFxx 8x
    if (R_Wn) //High (IO2 Read)
    {
-      if (Address < REUReg_NumRegs) DataPortWriteWait(REURegs[Address]);  
+      if (Address < REUReg_NumRegs) DataPortWriteWaitLog(REURegs[Address]);  
       
-      if (Address == REUReg_Status) REURegs[REUReg_Status] &= 0x1f; //clear bits 7:5
-
-      //DataPortWriteWaitLog(0); //respond to all reads
-      //BigBuf[BigBufCount] |= (0<<8) | IOTLDataValid;
-      //Printf_dbg_reu("Rd $de%02x\n", Address);
+      if (Address == REUReg_Status) 
+      {
+         REURegs[REUReg_Status] &= 0x1f; //clear bits 7:5
+         SetIRQDeassert;
+      }
    }
    else  // IO2 write
    {
-      if (Address < REUReg_NumRegs) REURegs[Address] = DataPortWaitRead();  
-
+      if (Address < REUReg_NumRegs && Address != REUReg_Status) 
+      {
+         REURegs[Address] = DataPortWaitRead();  
+   #ifdef DbgIOTraceLog
+         BigBuf[BigBufCount] |= (REURegs[Address]<<8) | IOTLDataValid;
+   #endif
+      }
+      
       if (Address == REUReg_Command)
       {
          if (REURegs[Address] & REUReg_Command_Execute)
          {
-            if (REURegs[Address] & REUReg_Command_FF00)
+            if (REURegs[Address] & REUReg_Command_FF00) //1=disable FF00 decode
             { //Trigger REU start NOW
                DMA_State = DMA_S_StartActive;      //activate immediately
+               fBusSnoop = NULL; //in case it was activated then turned off before trigger
             }
             else
             { //delay trigger for FF00 Write
@@ -230,10 +213,10 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
       //BigBuf[BigBufCount] |= (DataPortWaitRead()<<8) | IOTLDataValid;
       //SPrintf_dbg_reu("wr $de%02x:$%02x\n", Address, Data);
    }
-//   #ifndef DbgIOTraceLog
-//      if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-//      if (BigBufCount < BigBufSize) BigBufCount++;
-//   #endif
+   #ifdef DbgIOTraceLog
+      if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
+      if (BigBufCount < BigBufSize) BigBufCount++;
+   #endif
 }
 
 FLASHMEM void PollingHndlr_REU()
@@ -247,8 +230,13 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    
-   Printf_dbg_reu("Execute REU x-fer type %d for %d bytes\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, REULength);
-   Printf_dbg_reu(" addr C64: $%04x  REU: $%06x\n", C64Addr, REUAddr);
+   if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
+   
+   Printf_dbg_reu("Execute REU x-fer\n");
+   Printf_dbg_reu(" Reg start: Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
+      REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
+      REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
+      REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
 
    switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
    {
@@ -275,8 +263,14 @@ FLASHMEM void PollingHndlr_REU()
          {
             if(REUBuf[ByteNum] != C64Buf[ByteNum]) 
             {
-               REURegs[REUReg_Status] |= REUReg_Status_Fault;
                Printf_dbg_reu(" --Miscompare!-- at $%04x\n", ByteNum);
+               REURegs[REUReg_Status] |= REUReg_Status_Fault;
+               if ((REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
+                   (REURegs[REUReg_InterruptMask] & REUReg_IntMask_VerifErr))
+               {
+                  REURegs[REUReg_Status] |= REUReg_Status_IntPend;
+                  SetIRQAssert;
+               }
                //todo: update address regs with current/miscompare address(?)
                break;
             }
@@ -289,24 +283,51 @@ FLASHMEM void PollingHndlr_REU()
          break;
    }
    
+   Printf_dbg_reu(" Type %d  Len: $%04x ", REURegs[REUReg_Command] & REUReg_Command_TypeMask, REULength);
+   Printf_dbg_reu(" C64: $%04x  REU: $%06x  data[0]: $%02x\n", C64Addr, REUAddr, REUBuf[0]);
+
    free(REUBuf);
-   
-   
-   
-   
+      
 // Process Interrupt Mask Register
-
-
+   if ((REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
+       (REURegs[REUReg_InterruptMask] & REUReg_IntMask_EndOfBlk))
+   {
+      REURegs[REUReg_Status] |= REUReg_Status_IntPend;
+      SetIRQAssert;
+   }
 
 // Process Address Control Register
+   if ((REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
+   {  //autoload disabled
+      //if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU) == 0)
+      {
+         REUAddr += REULength;
+         REURegs[REUReg_REUStartAddrLo]  =      REUAddr  & 0xff;
+         REURegs[REUReg_REUStartAddrMed] =  (REUAddr>>8) & 0xff;
+         REURegs[REUReg_REUStartAddrHi]  = (REUAddr>>16) & 0xff;
+      }
+      
+      //if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64) == 0)
+      {
+         C64Addr += REULength;
+         REURegs[REUReg_C64StartAddrLo]  =      C64Addr & 0xff;
+         REURegs[REUReg_C64StartAddrHi]  = (C64Addr>>8) & 0xff;
+      }
+      REURegs[REUReg_TransLengthHi] = 0;
+      REURegs[REUReg_TransLengthLo] = 1;
+   }
    
-   
-   
-   
-   REURegs[REUReg_Status] |= REUReg_Status_Complete;   
+   REURegs[REUReg_Command] &= ~REUReg_Command_Execute;  //clear execution bit
+   REURegs[REUReg_Status] |= REUReg_Status_Complete;   //flag complete
    
    StartTime = micros() - StartTime;  
+
+   Printf_dbg_reu(" Reg end:   Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
+      REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
+      REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
+      REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
    Printf_dbg_reu(" REU xfer took %luuS\n", StartTime);
+
    Serial.flush();
    
    CloseDMA();  //release DMA last so no cycles have passed on the 6510
