@@ -106,16 +106,18 @@ extern uint8_t nfcState;
 
 void SetMidiIRQ()
 {
+   rIORegMIDIStatus |= MIDIStatusRxFull;
+   
    if(MIDIRxIRQEnabled)
    {
-      rIORegMIDIStatus |= MIDIStatusRxFull | MIDIStatusIRQReq; 
+      rIORegMIDIStatus |= MIDIStatusIRQReq; //   | MIDIStatusRxFull
       SetIRQAssert;
    }
-   else
-   {
-      MIDIRxBytesToSend = 0;
-      if ((MIDIRxBuf[0] & 0xf0) != 0xf0) Printf_dbg("IRQ off\n"); //don't print on real-time inputs (there are lots)
-   }
+   //else
+   //{
+   //   MIDIRxBytesToSend = 0;
+   //   if ((MIDIRxBuf[0] & 0xf0) != 0xf0) Printf_dbg("IRQ off\n"); //don't print on real-time inputs (there are lots)
+   //}
 }
 
 void HWEOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)  
