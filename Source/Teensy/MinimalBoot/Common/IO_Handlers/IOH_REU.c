@@ -21,6 +21,8 @@
 #define Printf_dbg_reu Serial.printf
 //__attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
 
+#define REU_Size       0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+#define REU_Sise_Mask  (REU_Size-1)  // 17 to 24 bit addr bus size
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn);  
 void PollingHndlr_REU();                           
@@ -232,7 +234,7 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t StartTime = micros();  
    uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
    if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
-   uint32_t REUAddr = REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi];
+   uint32_t REUAddr = REU_Sise_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    
