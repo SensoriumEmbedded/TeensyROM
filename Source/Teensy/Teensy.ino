@@ -311,7 +311,9 @@ void SetUpMainMenuROM()
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
    free(TgetQueue); TgetQueue=NULL;
    free(LSFileName); LSFileName=NULL;
-
+#ifdef Fab04_REU
+   if (REUFile) REUFile.close();
+#endif
    IOHandlerInit(IOH_TeensyROM);   
    doReset = true;
 }

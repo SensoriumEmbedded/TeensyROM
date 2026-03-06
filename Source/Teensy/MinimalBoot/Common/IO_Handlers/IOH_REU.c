@@ -108,13 +108,14 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    
    uint32_t StartuS = micros();
 
-   REUFile = SD.open("/temp.reu", O_RDWR | O_CREAT);
+   //REUFile = SD.open("/temp.reu", FILE_WRITE);  //already open
    if (!REUFile)
    {
       Printf_dbg_reu("Couldn't access REU temp file\n");
       return;
    }
-   
+   REUFile.flush();  //flush through any writes from previous access
+
    Printf_dbg_reu(" %luuS Check,", micros()-StartuS);
    
    REUFile.seek(REUAddr);
@@ -134,8 +135,8 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
       else REUFile.write(REUBuf, REULength);
    }
    
-   //REUFile.flush();
-   REUFile.close();
+   //REUFile.flush();  //flush through any writes.  Don't wait here for this, flush at start of next cycle
+   //REUFile.close();  //leave open 
    Printf_dbg_reu(" %luuS Check+R/W\n", micros()-StartuS);
 }
 
@@ -152,23 +153,25 @@ FLASHMEM void InitHndlr_REU()
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
    
    uint32_t StartmS = millis();
-   REUFile = SD.open("/temp.reu", O_RDWR | O_CREAT);
+   REUFile = SD.open("/temp.reu", FILE_WRITE);
    if (!REUFile)
    {
       Printf_dbg_reu("Couldn't open/create REU temp file\n");
-      return;
    }
-   //check for temp file size, make it REU_Size if less
-   uint32_t REUFileSize = REUFile.size();
-   Printf_dbg_reu("REU file size: $%08x", REUFileSize);
-   while (REUFileSize < REU_Size) 
+   else
    {
-      REUFile.write(0); //fill with zeros to REU size
-      REUFileSize++;
+      //check for temp file size, make it REU_Size if less
+      uint32_t REUFileSize = REUFile.size();
+      Printf_dbg_reu("REU file size: $%08x", REUFileSize);
+      while (REUFileSize < REU_Size) 
+      {
+         REUFile.write(0); //fill with zeros to REU size
+         REUFileSize++;
+      }
+      REUFile.flush();  //flush through writes
+      //REUFile.close();  //leave open 
+      Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
    }
-   REUFile.flush();
-   REUFile.close();
-   Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
 }
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
