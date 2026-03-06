@@ -230,11 +230,11 @@ FLASHMEM void PollingHndlr_REU()
    //DMA asserted, Do REU transfer
    uint32_t StartTime = micros();  
    uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
+   if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
    uint32_t REUAddr = REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi];
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    
-   if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
    
    Printf_dbg_reu("Execute REU x-fer\n");
    Printf_dbg_reu(" Reg start: Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
@@ -253,9 +253,18 @@ FLASHMEM void PollingHndlr_REU()
          PerformDMA(false, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //write to C64
          break;
       case REUReg_Command_TypeSwp:
-         //read both and swap
+      {  //read both and swap
+         uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
+         PerformDMA(true, C64Addr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read C64 into C64Buf 
+         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //read REU into REUBuf 
          
+         PerformDMA(false, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //write REUBuf into C64
+         WriteToREU(REUAddr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //write C64Buf REU into REU
+
+         free(C64Buf);
+      }
          break;
+         
       case REUReg_Command_TypeVer:
       {  //read both and verify
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
@@ -280,8 +289,6 @@ FLASHMEM void PollingHndlr_REU()
             }
             ByteNum++;
          }
-         //if (ByteNum == REULength) Printf_dbg_reu(" Pass\n");
-         //else Printf_dbg_reu(" Fail\n");
          free(C64Buf);
       }
          break;
