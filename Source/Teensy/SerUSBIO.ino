@@ -198,7 +198,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             //init buffer and Write
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
             uint32_t StartTime = micros();  
-            PerformDMA(false, DMAAddr, DMABuf, DMALength, true);  
+            PerformDMA(false, DMAAddr, DMABuf, DMALength, false);
+            CloseDMA();
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Write (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
          }
@@ -213,7 +214,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to comp mem to 0 instead of lower addr byte
 
             uint32_t StartTime = micros();  
-            PerformDMA(true, DMAAddr, DMABuf, DMALength, true); 
+            PerformDMA(true, DMAAddr, DMABuf, DMALength, false); 
+            CloseDMA();
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Read  (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
@@ -254,7 +256,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                InvVal = ~DMABuf;
                PerformDMA(false, Address, &InvVal, 1, false); //Write the inverse
                PerformDMA(true, Address, &ReadBack, 1, false);  //Read back
-               PerformDMA(false, Address, &DMABuf, 1, true); //Re-Write original to preserve
+               PerformDMA(false, Address, &DMABuf, 1, false); //Re-Write original to preserve
+               CloseDMA();
                
                //compare/print
                Serial.printf("$%04x: ", Address);

@@ -4,7 +4,7 @@
 
 
 volatile uint8_t DataVal = 0x55;
-bool DMA_RnW;
+bool DMA_RnW, DMA_FixC64Addr;
 uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
 
@@ -32,7 +32,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
-FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool CloseDMAatEnd)
+FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
@@ -40,12 +40,12 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_StartAddr = StartAddr;
    DMA_Buffer = Buffer;
    DMA_Length = Length;
+   DMA_FixC64Addr = FixC64Addr;
    
    DMA_State = DMA_S_StartTransfer;
    while (DMA_State != DMA_S_TransferComplete) delayMicroseconds(2);  //block until finished
 
-   if (CloseDMAatEnd) CloseDMA();
-   else delayMicroseconds(2); //wait a couple cycles before restart
+   delayMicroseconds(2); //wait a couple cycles in case of restart
 
    Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x)\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length);
 }
@@ -61,6 +61,7 @@ void DMATransferISR()
    // called from Phi2 isr when (DMA_State == DMA_S_TransferReady)
    
    if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
+   uint32_t RegAddrBits;
 
    //skip one cycle, re-align to edge and in cade first after BA
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
@@ -72,7 +73,9 @@ void DMATransferISR()
       //phi2 has gone low..........................................................................     
       StartCycCnt = ARM_DWT_CYCCNT;
       
-      uint32_t RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
+      if (DMA_FixC64Addr) RegAddrBits = (DMA_StartAddr << 16);
+      else RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
+   
       WaitUntil_nS(200);  //BA transitions high ~100nS in
       if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
       

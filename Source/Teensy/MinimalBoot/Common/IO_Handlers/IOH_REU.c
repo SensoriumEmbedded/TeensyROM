@@ -38,7 +38,7 @@ stcIOHandlers IOHndlr_REU =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
-extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool CloseDMA);
+extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr);
 extern void CloseDMA();
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
@@ -100,7 +100,7 @@ FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
    return false;  //continue cycle processing to start DMA
 }
 
-FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
+FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
    
    //if(!myFile)
@@ -124,10 +124,10 @@ FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
       Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
    //}
    
-   myFile.seek(REUAddr);
    //todo: check for rollover
-   //for (uint16_t count = 0; count < REULength; count++) REUBuf[count]=myFile.read();
-   myFile.write(REUBuf, REULength);
+   myFile.seek(REUAddr);
+   if (FixREUAddr) myFile.write(REUBuf+REULength-1, 1);  //just write last byte to first buffer location
+   else myFile.write(REUBuf, REULength);
    
    myFile.close();
    Printf_dbg_reu(" %luuS Open+Write+Close\n", micros()-StartuS);
@@ -135,7 +135,7 @@ FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
    
 }
 
-FLASHMEM void ReadFromREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
+FLASHMEM void ReadFromREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
    uint32_t StartuS = micros();
 
@@ -149,9 +149,13 @@ FLASHMEM void ReadFromREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength)
    Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
    
    myFile.seek(REUAddr);
-   //for (uint16_t count = 0; count < REULength; count++) REUBuf[count]=myFile.read();
-   myFile.read(REUBuf, REULength);
-   
+   if (FixREUAddr) 
+   {
+      myFile.read(REUBuf, 1);  //just read from first location
+      for (uint16_t count = 1; count < REULength; count++) REUBuf[count]=REUBuf[0]; //and copy to the rest
+   }
+   else myFile.read(REUBuf, REULength);
+
    myFile.close();
    Printf_dbg_reu(" %luuS Open+Read+Close\n", micros()-StartuS);
 }
@@ -241,12 +245,12 @@ FLASHMEM void PollingHndlr_REU()
    switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
    {
       case REUReg_Command_TypeC2R:
-         PerformDMA(true, C64Addr, REUBuf, REULength, false); //read into buffer
-         WriteToREU(REUAddr, REUBuf, REULength);
+         PerformDMA(true, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read into buffer
+         WriteToREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU);
          break;
       case REUReg_Command_TypeR2C:
-         ReadFromREU(REUAddr, REUBuf, REULength);
-         PerformDMA(false, C64Addr, REUBuf, REULength, false); //write to C64
+         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU);
+         PerformDMA(false, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //write to C64
          break;
       case REUReg_Command_TypeSwp:
          //read both and swap
@@ -256,8 +260,8 @@ FLASHMEM void PollingHndlr_REU()
       {  //read both and verify
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          uint32_t ByteNum = 0;
-         PerformDMA(true, C64Addr, C64Buf, REULength, false); //read C64 into buffer
-         ReadFromREU(REUAddr, REUBuf, REULength); //read REU into buffer
+         PerformDMA(true, C64Addr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read C64 into buffer
+         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //read REU into buffer
          
          while (ByteNum < REULength)
          {
@@ -299,20 +303,21 @@ FLASHMEM void PollingHndlr_REU()
 // Process Address Control Register
    if ((REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
    {  //autoload disabled
-      //if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU) == 0)
-      {
+      if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU) == 0)
+      {  //not fixed address, show final count
          REUAddr += REULength;
          REURegs[REUReg_REUStartAddrLo]  =      REUAddr  & 0xff;
          REURegs[REUReg_REUStartAddrMed] =  (REUAddr>>8) & 0xff;
          REURegs[REUReg_REUStartAddrHi]  = (REUAddr>>16) & 0xff;
       }
       
-      //if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64) == 0)
-      {
+      if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64) == 0)
+      {  //not fixed address, show final count
          C64Addr += REULength;
          REURegs[REUReg_C64StartAddrLo]  =      C64Addr & 0xff;
          REURegs[REUReg_C64StartAddrHi]  = (C64Addr>>8) & 0xff;
       }
+         
       REURegs[REUReg_TransLengthHi] = 0;
       REURegs[REUReg_TransLengthLo] = 1;
    }
