@@ -17,12 +17,17 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//REU debug msgs
-#define Printf_dbg_reu Serial.printf
-//__attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
 
+//#define DbgMsgs_REU    //enable REU debug msgs
 #define REU_Size       0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+
+
 #define REU_Sise_Mask  (REU_Size-1)  // 17 to 24 bit addr bus size
+#ifdef DbgMsgs_REU
+   #define Printf_dbg_reu Serial.printf
+#else
+   __attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
+#endif
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn);  
 void PollingHndlr_REU();                           
@@ -263,8 +268,8 @@ FLASHMEM void PollingHndlr_REU()
          PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
          
-         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
          ReadWriteREU(false, REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
+         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
 
          free(C64Buf);
       }
@@ -289,8 +294,8 @@ FLASHMEM void PollingHndlr_REU()
                   REURegs[REUReg_Status] |= REUReg_Status_IntPend;
                   SetIRQAssert;
                }
-               //todo: update address regs with current/miscompare address(?)
-               //=ByteNum
+               //todo: update address regs with current/miscompare address(ByteNum)
+               //  small conflict with Process Address Control Register below...
                break;
             }
             ByteNum++;
