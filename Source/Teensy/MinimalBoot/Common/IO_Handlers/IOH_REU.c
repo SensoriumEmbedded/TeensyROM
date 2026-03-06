@@ -90,6 +90,7 @@ enum enumREUregs
 //______________________________________________________________________________________________
 
 uint8_t REURegs[REUReg_NumRegs];
+File REUFile = NULL;
 
    
 FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
@@ -102,65 +103,42 @@ FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
    return false;  //continue cycle processing to start DMA
 }
 
-FLASHMEM void WriteToREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
+FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
    
-   //if(!myFile)
-   //{
-      //char FullFilePath[MaxNamePathLength];
-
-      uint32_t StartuS = micros();
-
-      //if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
-      //else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
-         
-      //Printf_dbg_reu("Loading:\r\n%s", FullFilePath);
-
-      File myFile = SD.open("/temp.reu", FILE_WRITE);
-      
-      if (!myFile) 
-      {
-         Printf_dbg_reu(" File Not Found\n");
-         return;
-      }
-      Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
-   //}
-   
-   //todo: check for rollover
-   myFile.seek(REUAddr);
-   if (FixREUAddr) myFile.write(REUBuf+REULength-1, 1);  //just write last byte to first buffer location
-   else myFile.write(REUBuf, REULength);
-   
-   myFile.close();
-   Printf_dbg_reu(" %luuS Open+Write+Close\n", micros()-StartuS);
-
-   
-}
-
-FLASHMEM void ReadFromREU(uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
-{
    uint32_t StartuS = micros();
 
-   File myFile = SD.open("/temp.reu", FILE_READ);
-   
-   if (!myFile) 
+   REUFile = SD.open("/temp.reu", O_RDWR | O_CREAT);
+   if (!REUFile)
    {
-      Printf_dbg_reu(" File Not Found\n");
+      Printf_dbg_reu("Couldn't access REU temp file\n");
       return;
    }
-   Printf_dbg_reu(" %luuS Open,", micros()-StartuS);
    
-   myFile.seek(REUAddr);
-   if (FixREUAddr) 
-   {
-      myFile.read(REUBuf, 1);  //just read from first location
-      for (uint16_t count = 1; count < REULength; count++) REUBuf[count]=REUBuf[0]; //and copy to the rest
+   Printf_dbg_reu(" %luuS Check,", micros()-StartuS);
+   
+   REUFile.seek(REUAddr);
+   
+   if (RnW)
+   {  //read file
+      if (FixREUAddr) 
+      {
+         REUFile.read(REUBuf, 1);  //just read from first location
+         for (uint16_t count = 1; count < REULength; count++) REUBuf[count]=REUBuf[0]; //and copy to the rest
+      }
+      else REUFile.read(REUBuf, REULength);
    }
-   else myFile.read(REUBuf, REULength);
-
-   myFile.close();
-   Printf_dbg_reu(" %luuS Open+Read+Close\n", micros()-StartuS);
+   else
+   {  //write file
+      if (FixREUAddr) REUFile.write(REUBuf+REULength-1, 1);  //just write last byte to first buffer location
+      else REUFile.write(REUBuf, REULength);
+   }
+   
+   //REUFile.flush();
+   REUFile.close();
+   Printf_dbg_reu(" %luuS Check+R/W\n", micros()-StartuS);
 }
+
 
 //______________________________________________________________________________________________
 
@@ -172,6 +150,25 @@ FLASHMEM void InitHndlr_REU()
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
+   
+   uint32_t StartmS = millis();
+   REUFile = SD.open("/temp.reu", O_RDWR | O_CREAT);
+   if (!REUFile)
+   {
+      Printf_dbg_reu("Couldn't open/create REU temp file\n");
+      return;
+   }
+   //check for temp file size, make it REU_Size if less
+   uint32_t REUFileSize = REUFile.size();
+   Printf_dbg_reu("REU file size: $%08x", REUFileSize);
+   while (REUFileSize < REU_Size) 
+   {
+      REUFile.write(0); //fill with zeros to REU size
+      REUFileSize++;
+   }
+   REUFile.flush();
+   REUFile.close();
+   Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
 }
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
@@ -234,9 +231,9 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t StartTime = micros();  
    uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
    if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
+   uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    uint32_t REUAddr = REU_Sise_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
-   uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    
    bool FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
    bool FixREUAddr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU;
@@ -251,20 +248,20 @@ FLASHMEM void PollingHndlr_REU()
    {
       case REUReg_Command_TypeC2R:
          PerformDMA(true, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
-         WriteToREU(REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
+         ReadWriteREU(false, REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
          break;
       case REUReg_Command_TypeR2C:
-         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr);      //read REU into buffer
+         ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr);      //read REU into buffer
          PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
          break;
       case REUReg_Command_TypeSwp:
       {  //read both and swap
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
-         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
+         ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
          
          PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
-         WriteToREU(REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
+         ReadWriteREU(false, REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
 
          free(C64Buf);
       }
@@ -275,7 +272,7 @@ FLASHMEM void PollingHndlr_REU()
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          uint32_t ByteNum = 0;
          PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
-         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf
+         ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf
          
          while (ByteNum < REULength)
          {  //Compare the two buffers
