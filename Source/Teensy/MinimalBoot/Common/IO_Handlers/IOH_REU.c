@@ -223,11 +223,12 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
    #endif
 }
 
+
 FLASHMEM void PollingHndlr_REU()
 {
    if (DMA_State != DMA_S_ActiveReady) return;
 
-   //DMA asserted, Do REU transfer
+//DMA asserted, Do REU transfer
    uint32_t StartTime = micros();  
    uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
    if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
@@ -235,6 +236,8 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
    
+   bool FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
+   bool FixREUAddr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU;
    
    Printf_dbg_reu("Execute REU x-fer\n");
    Printf_dbg_reu(" Reg start: Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
@@ -245,21 +248,21 @@ FLASHMEM void PollingHndlr_REU()
    switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
    {
       case REUReg_Command_TypeC2R:
-         PerformDMA(true, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read into buffer
-         WriteToREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU);
+         PerformDMA(true, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
+         WriteToREU(REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
          break;
       case REUReg_Command_TypeR2C:
-         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU);
-         PerformDMA(false, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //write to C64
+         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr);      //read REU into buffer
+         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
          break;
       case REUReg_Command_TypeSwp:
       {  //read both and swap
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
-         PerformDMA(true, C64Addr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read C64 into C64Buf 
-         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //read REU into REUBuf 
+         PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
+         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
          
-         PerformDMA(false, C64Addr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //write REUBuf into C64
-         WriteToREU(REUAddr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //write C64Buf REU into REU
+         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
+         WriteToREU(REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
 
          free(C64Buf);
       }
@@ -269,11 +272,11 @@ FLASHMEM void PollingHndlr_REU()
       {  //read both and verify
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          uint32_t ByteNum = 0;
-         PerformDMA(true, C64Addr, C64Buf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64); //read C64 into buffer
-         ReadFromREU(REUAddr, REUBuf, REULength, REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU); //read REU into buffer
+         PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
+         ReadFromREU(REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf
          
          while (ByteNum < REULength)
-         {
+         {  //Compare the two buffers
             if(REUBuf[ByteNum] != C64Buf[ByteNum]) 
             {
                Printf_dbg_reu(" --Miscompare!-- at $%04x\n", ByteNum);
@@ -285,6 +288,7 @@ FLASHMEM void PollingHndlr_REU()
                   SetIRQAssert;
                }
                //todo: update address regs with current/miscompare address(?)
+               //=ByteNum
                break;
             }
             ByteNum++;
@@ -294,6 +298,7 @@ FLASHMEM void PollingHndlr_REU()
          break;
    }
    
+// REU Execution complete
    Printf_dbg_reu(" Type %d  Len: $%04x ", REURegs[REUReg_Command] & REUReg_Command_TypeMask, REULength);
    Printf_dbg_reu(" C64: $%04x  REU: $%06x  data[0]: $%02x\n", C64Addr, REUAddr, REUBuf[0]);
 
@@ -310,7 +315,7 @@ FLASHMEM void PollingHndlr_REU()
 // Process Address Control Register
    if ((REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
    {  //autoload disabled
-      if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU) == 0)
+      if (!FixREUAddr)
       {  //not fixed address, show final count
          REUAddr += REULength;
          REURegs[REUReg_REUStartAddrLo]  =      REUAddr  & 0xff;
@@ -318,7 +323,7 @@ FLASHMEM void PollingHndlr_REU()
          REURegs[REUReg_REUStartAddrHi]  = (REUAddr>>16) & 0xff;
       }
       
-      if ((REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64) == 0)
+      if (!FixC64Addr)
       {  //not fixed address, show final count
          C64Addr += REULength;
          REURegs[REUReg_C64StartAddrLo]  =      C64Addr & 0xff;
