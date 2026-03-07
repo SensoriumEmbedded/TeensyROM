@@ -18,11 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//#define DbgMsgs_REU    //enable REU debug msgs
-#define REU_Size       0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+//#define DbgMsgs_REU        //enable REU debug msgs
+#define REU_Size           0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+#define REU_Temp_FileName  "/temp.reu"
 
 
-#define REU_Sise_Mask  (REU_Size-1)  // 17 to 24 bit addr bus size
+#define REU_Sise_Mask      (REU_Size-1)  // 17 to 24 bit addr bus size
 #ifdef DbgMsgs_REU
    #define Printf_dbg_reu Serial.printf
 #else
@@ -113,7 +114,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    
    uint32_t StartuS = micros();
 
-   //REUFile = SD.open("/temp.reu", FILE_WRITE);  //already open
+   //REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);  //already open
    if (!REUFile)
    {
       Printf_dbg_reu("Couldn't access REU temp file\n");
@@ -121,7 +122,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    }
    REUFile.flush();  //flush through any writes from previous access
 
-   Printf_dbg_reu(" %luuS Check,", micros()-StartuS);
+   Printf_dbg_reu(" %luuS Check/Flush,", micros()-StartuS);
    
    REUFile.seek(REUAddr);
    
@@ -158,7 +159,7 @@ FLASHMEM void InitHndlr_REU()
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
    
    uint32_t StartmS = millis();
-   REUFile = SD.open("/temp.reu", FILE_WRITE);
+   REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);
    if (!REUFile)
    {
       Printf_dbg_reu("Couldn't open/create REU temp file\n");
