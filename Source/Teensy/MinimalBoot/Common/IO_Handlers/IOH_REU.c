@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//#define DbgMsgs_REU        //enable REU debug msgs
+#define DbgMsgs_REU        //enable REU debug msgs
+#define USE_PSRAM          //use external PSRAM chip instead of SD
 #define REU_Size           0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
 #define REU_Temp_FileName  "/temp.reu"
 
@@ -97,7 +98,8 @@ enum enumREUregs
 
 uint8_t REURegs[REUReg_NumRegs];
 File REUFile = NULL;
-
+extern "C" uint8_t external_psram_size;
+uint8_t *pPSRAM = (uint8_t *)(0x70000000);
    
 FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
 {
@@ -109,9 +111,32 @@ FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
    return false;  //continue cycle processing to start DMA
 }
 
+#ifdef USE_PSRAM
 FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
+   uint32_t StartuS = micros();
+      
+   //arm_dcache_flush((void *)pPSRAM, REU_Size);
+   if (RnW)
+   {  //read PSRAM
+      if (FixREUAddr) 
+      {
+         REUBuf[0] = pPSRAM[REUAddr]; // read first location...
+         for (uint16_t count = 1; count < REULength; count++) REUBuf[count]=REUBuf[0]; // and copy to the rest
+      }
+      else for(uint32_t cnt = 0; cnt<REULength; cnt++) REUBuf[cnt]=pPSRAM[REUAddr+cnt];
+   }
+   else
+   {  //write PSRAM
+      if (FixREUAddr) pPSRAM[REUAddr]=REUBuf[REULength-1];  //memcpy(pPSRAM, REUBuf+REULength-1, 1); //just write last byte to first buffer location
+      else for(uint32_t cnt = 0; cnt<REULength; cnt++) pPSRAM[REUAddr+cnt]=REUBuf[cnt];
+   }
    
+   Printf_dbg_reu(" %luuS PSRAM R/W\n", micros()-StartuS);
+}
+#else
+FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
+{
    uint32_t StartuS = micros();
 
    //REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);  //already open
@@ -145,7 +170,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    //REUFile.close();  //leave open 
    Printf_dbg_reu(" %luuS Check+R/W\n", micros()-StartuS);
 }
-
+#endif
 
 //______________________________________________________________________________________________
 
@@ -158,6 +183,19 @@ FLASHMEM void InitHndlr_REU()
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
    
+#ifdef USE_PSRAM
+   uint8_t size = external_psram_size;
+   Serial.printf("PSRAM Memory: %dMB\n", size);
+   if (size == 0) return;
+   const float clocks[4] = {396.0f, 720.0f, 664.62f, 528.0f};
+   const float frequency = clocks[(CCM_CBCMR >> 8) & 3] / (float)(((CCM_CBCMR >> 29) & 7) + 1);
+   Serial.printf(" CCM_CBCMR=%08X (%.1f MHz)\n", CCM_CBCMR, frequency);
+   //memory_end = (uint32_t *)(0x70000000 + size * 1048576);
+   //pPSRAM = (uint8_t *)(0x70000000);
+   //if (!pPSRAM) pPSRAM = (uint8_t*)extmem_malloc(REU_Size);
+   if (!pPSRAM) Serial.println(" PSRAM not allocated!");
+   else Serial.printf(" PSRAM loc: $%08x\n", pPSRAM);
+#else
    uint32_t StartmS = millis();
    REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);
    if (!REUFile)
@@ -178,6 +216,7 @@ FLASHMEM void InitHndlr_REU()
       //REUFile.close();  //leave open 
       Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
    }
+#endif
 }
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
