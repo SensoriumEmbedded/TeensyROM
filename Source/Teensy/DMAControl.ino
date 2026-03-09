@@ -43,9 +43,9 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_FixC64Addr = FixC64Addr;
    
    DMA_State = DMA_S_StartTransfer;
-   while (DMA_State != DMA_S_TransferComplete) delayMicroseconds(2);  //block until finished
+   while (DMA_State != DMA_S_TransferComplete); //delayMicroseconds(1);  //block until finished
 
-   delayMicroseconds(2); //wait a couple cycles in case of restart
+   delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
    Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x)\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length);
 }
@@ -53,7 +53,7 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
 FLASHMEM void CloseDMA()
 {
    DMA_State = DMA_S_StartDisable;
-   while (DMA_State != DMA_S_DisableReady ) delayMicroseconds(2);  //block main loop until finished
+   while (DMA_State != DMA_S_DisableReady ); //delayMicroseconds(1);  //block main loop until finished
 }
 
 void DMATransferISR()
@@ -63,7 +63,11 @@ void DMATransferISR()
    if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
    uint32_t RegAddrBits;
 
-   //skip one cycle, re-align to edge and in cade first after BA
+   //skip cycles, re-align to edge and in case first after BA
+   while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
+   while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
+   while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
+   while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
    

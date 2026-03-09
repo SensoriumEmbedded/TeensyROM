@@ -137,13 +137,11 @@ FASTRUN void isrPHI2()
                return;
                //break;
             case DMA_S_StartTransfer:
-               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
-               { 
-                  WaitUntil_nS(nS_DMAAssert); 
-                  SetDMAAssert;
-                  DMA_State = DMA_S_TransferReady;
-                  return;
-               }
+               //start immediately, could add separate state to start during bad line read
+               WaitUntil_nS(nS_DMAAssert); 
+               SetDMAAssert;
+               DMA_State = DMA_S_TransferReady;
+               return;
                break;               
             case DMA_S_StartActive:
                WaitUntil_nS(nS_DMAAssert); 
