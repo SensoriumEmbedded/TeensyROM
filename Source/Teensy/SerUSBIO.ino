@@ -253,20 +253,56 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             {
                
                PerformDMA(true, Address, &DMABuf, 1, false);  //Read val
+               delay(1);
                InvVal = ~DMABuf;
                PerformDMA(false, Address, &InvVal, 1, false); //Write the inverse
+               delay(1);
                PerformDMA(true, Address, &ReadBack, 1, false);  //Read back
+               delay(1);
                PerformDMA(false, Address, &DMABuf, 1, false); //Re-Write original to preserve
-               CloseDMA();
+               delay(1);
                
                //compare/print
+               //Serial.printf("R $%02x  WI $%02x  RI $%02x  ", DMABuf, InvVal, ReadBack);
                Serial.printf("$%04x: ", Address);
                if (ReadBack != InvVal) Serial.printf("Read Only\n");
                else Serial.printf("R/W\n");
+               Serial.flush();
              }
+             CloseDMA();
+         }
+         break;
+      case 'y':  //Load REU PSRAM from file
+         {  //   example: y/reu/nuvies/speed.reu
+            char Filename[100];
+            uint32_t CharNum = 0;
+
+            while (SerialAvailabeTimeout())
+            {
+               Filename[CharNum++] = CmdChannel->read();
+            }
+            Filename[CharNum] = 0;
+            
+            uint32_t StartmS = millis();
+            Serial.printf("Load PSRAM/REU with: %s\n", Filename);
+            File LoadFile = SD.open(Filename, FILE_READ);
+            if (!LoadFile)
+            {
+               Serial.println("File not found");
+               return;
+            }
+            
+            CharNum = 0;
+            while (LoadFile.available())
+            {
+               pPSRAM[CharNum++] = LoadFile.read();
+            }
+            Serial.printf("Wrote %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
+            LoadFile.close();
          }
          break;
 #endif
+
       
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
