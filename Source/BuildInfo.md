@@ -23,9 +23,9 @@
        * See FW update section of the [General Usage doc](/docs/General_Usage.md)
    * Note: To do a full build including the minimal image for large CRT files, see [**this doc**](Teensy/tools/_Dual%20Boot%20Build.txt).
    
-### Latest Support tool/lib versions as of v0.7 on 2025/12/04
-   * Arduino IDE 2.3.6
-   * Teensyduino 1.59.0 (updated to 0.60.1) 
+### Latest Support tool/lib versions as of v0.7.1+ on 2026/03/08
+   * Arduino IDE 2.3.7
+   * Teensyduino 1.60.0
    * Included libraries
      * SD at version 2.0.0
      * SdFat at version 2.1.2
