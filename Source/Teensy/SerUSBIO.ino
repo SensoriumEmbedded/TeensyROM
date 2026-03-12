@@ -557,6 +557,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case 'a': //nS_DMAAssert change
                GetDigits(3, &nS_DMAAssert);
                break;
+            case 'e': //nS_DMASetup change
+               GetDigits(3, &nS_DMASetup);
+               break;
             case 'd': //Set Defaults
                nS_MaxAdj    = Def_nS_MaxAdj; 
                nS_PLAprop   = Def_nS_PLAprop;  
@@ -566,6 +569,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_VICDHold  = Def_nS_VICDHold;
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
+               nS_DMASetup  = Def_nS_DMASetup;
                CmdChannel->printf("Defaults set\n");
                break;
             default:
@@ -581,6 +585,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          CmdChannel->printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
          CmdChannel->printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
          CmdChannel->printf("\t nS_DMAAssert %03d (ta###)\n", nS_DMAAssert);
+         CmdChannel->printf("\t nS_DMASetup  %03d (te###)\n", nS_DMASetup);
 
          CmdChannel->printf("\tSet Defaults      (td)\n");
          CmdChannel->printf("\tList current vals (t)\n-----\n");

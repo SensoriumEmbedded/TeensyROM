@@ -11,7 +11,8 @@ uint8_t *DMA_Buffer;
 //These assume Fab04_DataBufAlwaysEnabled
 __attribute__((always_inline)) inline uint8_t DataPortWaitReadDMA()
 {  // for "normal" (non-VIC) C64 write cycles
-   WaitUntil_nS(370);  //nS_DataSetup=220  //takes a little longer for read data DMA
+   WaitUntil_nS(390);  // nS_DataSetup=220  //takes a little longer for read data DMA
+      //too soon = bad reads 
    uint32_t DataIn = ReadGPIO7;
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
@@ -56,6 +57,50 @@ FLASHMEM void CloseDMA()
    while (DMA_State != DMA_S_DisableReady ); //delayMicroseconds(1);  //block main loop until finished
 }
 
+//__attribute__((always_inline)) inline bool DMAByte()
+bool DMAByte()
+{  //verifies Bus Available and sends/receives a byte to/from DMA_Buffer[DMA_Count] and increments count
+   //assumes we're in the VIC cycle somewhere and StartCycCnt has been updated
+   uint32_t RegAddrBits;
+
+   if (DMA_FixC64Addr) RegAddrBits = (DMA_StartAddr << 16);
+   else RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
+   
+   WaitUntil_nS(200);  //BA transitions high ~100nS in
+   if (!GP9_BA(ReadGPIO9)) return false;  // bus not available, skip until it is
+   
+   CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
+   CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
+       
+   //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
+   WaitUntil_nS(nS_DMASetup);  //use timer instead to get just ahead of the transition.   
+   //phi2 is about to go high..........................................................................      
+   StartCycCnt = ARM_DWT_CYCCNT;
+         
+   if (DMA_RnW)
+   {  //Read Cycle: 
+      //leave R/*W as input (Pulled Up, Read)
+      SetAddrBufsOut;   //set address buffers to output
+      SetAddrPortDirOut;//set address ports to output   
+      DMA_Buffer[DMA_Count] = DataPortWaitReadDMA(); //wait for data, read it.  Different timing from DataPortWaitRead()
+   }
+   else
+   {  //Write Cycle:
+      SetRWOutWrite;    // <---- set this first/quickly!
+      SetAddrBufsOut;   //set address buffers to output
+      SetAddrPortDirOut;//set address ports to output 
+      DataPortWriteWaitDMA(DMA_Buffer[DMA_Count]);
+      SetRWInput; //set R/*W back to input
+   }
+   
+   SetAddrPortDirIn;//set address ports to input
+   SetAddrBufsIn;   //set address buffers to input
+   
+   DMA_Count++;
+
+   return true;
+}
+
 void DMATransferISR()
 {
    // called from Phi2 isr when (DMA_State == DMA_S_TransferReady)
@@ -77,40 +122,7 @@ void DMATransferISR()
       //phi2 has gone low..........................................................................     
       StartCycCnt = ARM_DWT_CYCCNT;
       
-      if (DMA_FixC64Addr) RegAddrBits = (DMA_StartAddr << 16);
-      else RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
-   
-      WaitUntil_nS(200);  //BA transitions high ~100nS in
-      if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
-      
-      CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
-      CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
-          
-      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
-      WaitUntil_nS(400);  //use timer instead to get just ahead of the transition.     
-      //phi2 has gone high..........................................................................      
-      StartCycCnt = ARM_DWT_CYCCNT;
-            
-      if (DMA_RnW)
-      {  //Read Cycle: 
-         //leave R/*W as input (Pulled Up, Read)
-         SetAddrBufsOut;   //set address buffers to output
-         SetAddrPortDirOut;//set address ports to output   
-         DMA_Buffer[DMA_Count] = DataPortWaitReadDMA(); //wait for data, read it.  Different timing from DataPortWaitRead()
-      }
-      else
-      {  //Write Cycle:
-         SetRWOutWrite;    // <---- set this first/quickly!
-         SetAddrBufsOut;   //set address buffers to output
-         SetAddrPortDirOut;//set address ports to output 
-         DataPortWriteWaitDMA(DMA_Buffer[DMA_Count]);
-         SetRWInput; //set R/*W back to input
-      }
-
-      SetAddrPortDirIn;//set address ports to input
-      SetAddrBufsIn;   //set address buffers to input
-      
-      DMA_Count++;
+      if (!DMAByte()) return;
    }
    DMA_State = DMA_S_TransferComplete;
 }
