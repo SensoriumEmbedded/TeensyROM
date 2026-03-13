@@ -283,7 +283,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             }
             Filename[CharNum] = 0;
             
-            uint32_t StartmS = millis();
             Serial.printf("Load PSRAM/REU with: %s\n", Filename);
             File LoadFile = SD.open(Filename, FILE_READ);
             if (!LoadFile)
@@ -292,6 +291,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                return;
             }
             
+            uint32_t StartmS = millis();
             CharNum = 0;
             while (LoadFile.available())
             {
@@ -299,6 +299,17 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             }
             Serial.printf("Wrote %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
             LoadFile.close();
+            
+            //LoadFile = SD.open(Filename, FILE_READ);
+            ////LoadFile.seek(0);
+            //StartmS = millis();
+            //CharNum = 0;
+            //while (LoadFile.available())
+            //{
+            //   if (pPSRAM[CharNum++] != LoadFile.read()) Serial.printf("Mismatch!\n");
+            //}
+            //Serial.printf("Verified %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
+            //LoadFile.close();
          }
          break;
 #endif

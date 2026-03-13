@@ -3,7 +3,6 @@
 #ifdef Fab04_FullDMACapable
 
 
-volatile uint8_t DataVal = 0x55;
 bool DMA_RnW, DMA_FixC64Addr;
 uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
@@ -58,8 +57,8 @@ FLASHMEM void CloseDMA()
 }
 
 //__attribute__((always_inline)) inline bool DMAByte()
-bool DMAByte()
-{  //verifies Bus Available and sends/receives a byte to/from DMA_Buffer[DMA_Count] and increments count
+bool DMAByte(uint8_t *Data)
+{  //verifies Bus Available and sends/receives a byte to/from DMA_Buffer[DMA_Count]
    //assumes we're in the VIC cycle somewhere and StartCycCnt has been updated
    uint32_t RegAddrBits;
 
@@ -82,22 +81,20 @@ bool DMAByte()
       //leave R/*W as input (Pulled Up, Read)
       SetAddrBufsOut;   //set address buffers to output
       SetAddrPortDirOut;//set address ports to output   
-      DMA_Buffer[DMA_Count] = DataPortWaitReadDMA(); //wait for data, read it.  Different timing from DataPortWaitRead()
+      *Data = DataPortWaitReadDMA(); //wait for data, read it.  Different timing from DataPortWaitRead()
    }
    else
    {  //Write Cycle:
       SetRWOutWrite;    // <---- set this first/quickly!
       SetAddrBufsOut;   //set address buffers to output
       SetAddrPortDirOut;//set address ports to output 
-      DataPortWriteWaitDMA(DMA_Buffer[DMA_Count]);
+      DataPortWriteWaitDMA(*Data);
       SetRWInput; //set R/*W back to input
    }
    
    SetAddrPortDirIn;//set address ports to input
    SetAddrBufsIn;   //set address buffers to input
    
-   DMA_Count++;
-
    return true;
 }
 
@@ -106,7 +103,6 @@ void DMATransferISR()
    // called from Phi2 isr when (DMA_State == DMA_S_TransferReady)
    
    if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
-   uint32_t RegAddrBits;
 
    //skip cycles, re-align to edge and in case first after BA
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling
@@ -122,7 +118,9 @@ void DMATransferISR()
       //phi2 has gone low..........................................................................     
       StartCycCnt = ARM_DWT_CYCCNT;
       
-      if (!DMAByte()) return;
+      if (!DMAByte(&DMA_Buffer[DMA_Count])) return;
+
+      DMA_Count++;
    }
    DMA_State = DMA_S_TransferComplete;
 }

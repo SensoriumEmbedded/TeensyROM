@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-#define DbgMsgs_REU        //enable REU debug msgs
+//#define DbgMsgs_REU        //enable REU debug msgs 
+//#define Direct_REU           //use DirectREU Method
 #define USE_PSRAM          //use external PSRAM chip instead of SD
 #define REU_Size           0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
 #define REU_Temp_FileName  "/temp.reu"
@@ -51,6 +52,11 @@ extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t L
 extern void CloseDMA();
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
+//tests:
+//   REU Checker 1.0:      General check/integrity
+//   CMD 1750/XL REU Test: All protocol checks
+//   Sonic:                Speed test
+//   NUVIES:               Faster speed test
 
 enum enumREUregs
 {
@@ -97,18 +103,196 @@ enum enumREUregs
 //______________________________________________________________________________________________
 
 uint8_t REURegs[REUReg_NumRegs];
-File REUFile = NULL;
 extern "C" uint8_t external_psram_size;
 uint8_t *pPSRAM = (uint8_t *)(0x70000000);
+
+#ifdef Direct_REU
+
+#define ModREUAddr       (FixREUAddr ? REU_StartAddr : REU_StartAddr+DMA_Count)
+
+extern bool DMA_RnW, DMA_FixC64Addr;
+extern uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
+extern bool DMAByte(uint8_t *Data);
+
+void DMAByte_BASkip(uint8_t *Data1)
+{
+   while (!DMAByte(Data1))
+   {  //skip cycle if bus not available
+      //while (!GP9_BA(ReadGPIO9));  // bus not available, wait until it is
+      ////re-align to clock
+      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+      //while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+      //while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+      while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+      while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+      StartCycCnt = ARM_DWT_CYCCNT;
+   }
+}
+
+void DirectREU()
+{  //sent here directly from *within the ISR* to incorporate DMA and (PS)RAM REU transfers
+   // Either from REU_FF00_W_Check or REUReg_Command_Execute
+
+   uint32_t StartTime = micros();  
+
+   uint8_t Data1, Data2;
+   uint32_t REU_StartAddr = REU_Sise_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
+   DMA_Length = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
+   if (DMA_Length == 0) DMA_Length = 0x10000;  //full 64k if set to zero
+   DMA_Count = 0;
+   DMA_StartAddr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
+   
+   DMA_FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
+   bool FixREUAddr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU;
+   
+   //Assert DMA in following VIC phase (IO write just occured)
+   while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+   StartCycCnt = ARM_DWT_CYCCNT;
+   WaitUntil_nS(nS_DMAAssert); 
+   SetDMAAssert;
+   
+   Printf_dbg_reu("Execute REU x-fer\n");
+   Printf_dbg_reu(" Reg start: Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
+      REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
+      REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
+      REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
+   
+   //wait for 6510 to give up the bus
+   while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+   while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+
+   //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <move this inside loop?????
+
+   while(DMA_Count < DMA_Length)
+   {
+      //align to falling edge:
+      while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <move this out of loop?????
+      while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+      StartCycCnt = ARM_DWT_CYCCNT;
+   
+      switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
+      {
+         case REUReg_Command_TypeC2R:
+            //read C64 in x-fer phase, then write to REU in VIC
+            DMA_RnW = true; //true=read, false=write
+            DMAByte_BASkip(&Data1);
+            pPSRAM[ModREUAddr] = Data1;
+            break;
+         case REUReg_Command_TypeR2C:
+            //read from REU in VIC, then write C64 in x-fer phase 
+            Data1 = pPSRAM[ModREUAddr];
+            DMA_RnW = false; //true=read, false=write
+            DMAByte_BASkip(&Data1);
+            break;
+         case REUReg_Command_TypeSwp:
+            //read both and swap
+            DMA_RnW = true; //true=read, false=write
+            DMAByte_BASkip(&Data2); //read C64 into Data2
+            Data1 = pPSRAM[ModREUAddr]; //read REU into Data1
+            
+            //clock/part 2:
+            //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <Needed?????
+            while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+            StartCycCnt = ARM_DWT_CYCCNT;
+
+            DMA_RnW = false; //true=read, false=write
+            DMAByte_BASkip(&Data1);  //write Data1 to C64
+            pPSRAM[ModREUAddr] = Data2; //write Data2 to REU
+            break;
+            
+         case REUReg_Command_TypeVer:
+            //read both and verify
+            DMA_RnW = true; //true=read, false=write
+            DMAByte_BASkip(&Data2); //read C64 into Data2
+            Data1 = pPSRAM[ModREUAddr]; //read REU into Data1
+
+            if(Data1 != Data2) 
+            {
+               Printf_dbg_reu(" --Miscompare!-- C64 $%04x=$%02x  REU $%06x=$%02x\n", DMA_StartAddr+DMA_Count, Data2, REU_StartAddr+DMA_Count, Data1);
+               REURegs[REUReg_Status] |= REUReg_Status_Fault;
+               if ((REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
+                   (REURegs[REUReg_InterruptMask] & REUReg_IntMask_VerifErr))
+               {
+                  REURegs[REUReg_Status] |= REUReg_Status_IntPend;
+                  SetIRQAssert;
+               }
+               //todo: update address regs with current/miscompare address(DMA_Count)
+               //  small conflict with Process Address Control Register below...
+               break; //meant to break out of while loop, but...
+            }
+            break;
+      }
+      DMA_Count++;
+   }
+   
+  
+// REU Execution complete
+   Printf_dbg_reu(" Type %d  Len: $%04x ", REURegs[REUReg_Command] & REUReg_Command_TypeMask, DMA_Length);
+   Printf_dbg_reu(" C64: $%04x  REU: $%06x  data1: $%02x\n", DMA_StartAddr, REU_StartAddr, Data1);
+      
+// Process Interrupt Mask Register
+   if ((REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
+       (REURegs[REUReg_InterruptMask] & REUReg_IntMask_EndOfBlk))
+   {
+      REURegs[REUReg_Status] |= REUReg_Status_IntPend;
+      SetIRQAssert;
+   }
+
+// Process Address Control Register
+   if ((REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
+   {  //autoload disabled
+      if (!FixREUAddr)
+      {  //not fixed address, show final count
+         REU_StartAddr += DMA_Length;
+         REURegs[REUReg_REUStartAddrLo]  =      REU_StartAddr  & 0xff;
+         REURegs[REUReg_REUStartAddrMed] =  (REU_StartAddr>>8) & 0xff;
+         REURegs[REUReg_REUStartAddrHi]  = (REU_StartAddr>>16) & 0xff;
+      }
+      
+      if (!DMA_FixC64Addr)
+      {  //not fixed address, show final count
+         DMA_StartAddr += DMA_Length;
+         REURegs[REUReg_C64StartAddrLo]  =      DMA_StartAddr & 0xff;
+         REURegs[REUReg_C64StartAddrHi]  = (DMA_StartAddr>>8) & 0xff;
+      }
+         
+      REURegs[REUReg_TransLengthHi] = 0;
+      REURegs[REUReg_TransLengthLo] = 1;
+   }
+   
+   REURegs[REUReg_Command] &= ~REUReg_Command_Execute;  //clear execution bit
+   REURegs[REUReg_Status] |= REUReg_Status_Complete;   //flag complete
+   
+   StartTime = micros() - StartTime;  
+   Printf_dbg_reu(" Reg end:   Stat:$%02x Cmd:$%02x C64:$%02x%02x REU:$%02x%02x%02x Len:$%02x%02x IntM:$%02x AddC:$%02x\n",
+      REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
+      REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
+      REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
+   Printf_dbg_reu(" Type %d REU xfer took %luuS\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime);
+   Serial.flush();
+   
+   while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+   while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+   //StartCycCnt = ARM_DWT_CYCCNT;
+   SetDMADeassert;
+}
+#endif
+
    
 FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
 {
    if (Address == 0xff00 && !R_Wn) 
    { //Trigger REU start NOW
-      DMA_State = DMA_S_StartActive;   //activate immediately
       fBusSnoop = NULL;
+#ifdef Direct_REU
+      DirectREU();
+      return true; //skip the rest of the cycle, DMA occured
+#else
+      DMA_State = DMA_S_StartActive;   //activate immediately
+#endif
    }
-   return false;  //continue cycle processing to start DMA
+   return false;  //continue cycle
 }
 
 #ifdef USE_PSRAM
@@ -135,6 +319,9 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    Printf_dbg_reu(" %luuS PSRAM R/W\n", micros()-StartuS);
 }
 #else
+
+File REUFile = NULL;
+
 FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
    uint32_t StartuS = micros();
@@ -171,6 +358,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    Printf_dbg_reu(" %luuS Check+R/W\n", micros()-StartuS);
 }
 #endif
+
 
 //______________________________________________________________________________________________
 
@@ -251,8 +439,12 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
          {
             if (REURegs[Address] & REUReg_Command_FF00) //1=disable FF00 decode
             { //Trigger REU start NOW
-               DMA_State = DMA_S_StartActive;      //activate immediately
                fBusSnoop = NULL; //in case it was activated then turned off before trigger
+#ifdef Direct_REU
+               DirectREU();
+#else
+               DMA_State = DMA_S_StartActive;   //activate immediately
+#endif
             }
             else
             { //delay trigger for FF00 Write
@@ -262,7 +454,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
       }
 
       //BigBuf[BigBufCount] |= (DataPortWaitRead()<<8) | IOTLDataValid;
-      //SPrintf_dbg_reu("wr $de%02x:$%02x\n", Address, Data);
+      //Printf_dbg_reu("reuwr $de%02x:$%02x\n", Address, REURegs[Address]);
    }
    #ifdef DbgIOTraceLog
       if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
