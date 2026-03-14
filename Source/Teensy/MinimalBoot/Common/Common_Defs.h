@@ -1,7 +1,12 @@
 
 //re-compile both minimal and full if anything changes here!
 
-char strVersionNumber[] = "v0.7.1+4"; //*VERSION*
+#define TRVersion              "0.7.1.4"    //*VERSION*
+#ifdef Fab04_Features
+   char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
+#else
+   char strVersionNumber[] = "TeensyROM v" TRVersion;
+#endif
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000

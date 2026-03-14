@@ -21,7 +21,7 @@
 ; ******************************* Strings/Messages ******************************* 
 
 MsgBanner:  ;set color before clearing for char poke default  
-   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+12, "TeensyROM ", 0
+   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+11, 0
 MsgSource:    
    !tx EscC,EscSourcesColor, "Src: ", 0 
 MsgMainOptions1:

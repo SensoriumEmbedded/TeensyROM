@@ -373,7 +373,6 @@ FLASHMEM ATRespCode AT_HELP(char* CmdArg)
 
 FLASHMEM ATRespCode AT_Info(char* CmdArg)
 { 
-   AddToPETSCIIStrToRxQueue("TeensyROM\rFirmware ");
    AddToPETSCIIStrToRxQueueLN(strVersionNumber);
    return ATRC_OK;
 }

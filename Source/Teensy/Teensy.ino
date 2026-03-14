@@ -143,7 +143,7 @@ void setup()
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
 
    MakeBuildInfo();
-   Serial.printf("\n%s\nTeensyROM %s is on-line\n", SerialStringBuf, strVersionNumber);
+   Serial.printf("\n%s\n%s is on-line\n", SerialStringBuf, strVersionNumber);
 #ifdef Fab04_Features
    Serial.printf("  for Fab 0.4 PCB\n");
 #else

@@ -100,7 +100,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          {
             MakeBuildInfo();
             SendU16(AckToken);
-            CmdChannel->printf("\nTeensyROM %s\n%s\n", strVersionNumber, SerialStringBuf);
+            CmdChannel->printf("\n%s\n%s\n", strVersionNumber, SerialStringBuf);
             return;
          }
          else if (inVal == FWCheckToken) //Check firmware type
@@ -121,7 +121,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          switch (inVal)
          {
             case PingToken:  //ping
-               CmdChannel->printf("TeensyROM %s ready!\n", strVersionNumber);
+               CmdChannel->printf("%s ready!\n", strVersionNumber);
                break;
             case SendFileToken: //file x-fer pc->TR
             case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
