@@ -114,7 +114,11 @@ void update_firmware( Stream *in, Stream *out,
   //#endif
 
   // check FLASH_ID in new code - abort if not found
+#ifdef Fab04_Features
+  SendMsgPrintfln("Verify file for TeensyROM+: ");  //27 chars
+#else
   SendMsgPrintfln("Verify file for TeensyROM: ");  //27 chars
+#endif
   if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID )) 
   {
     //out->printf( "new code contains correct target ID %s\n", FLASH_ID );
@@ -123,6 +127,7 @@ void update_firmware( Stream *in, Stream *out,
   else 
   {
     //out->printf( "abort - new code missing string %s\n", FLASH_ID );
+#ifndef Fab04_Features
     if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID_ORIG ))
     {
        if (isFab2x())  //fab 0.2x boards can load older FLASH_ID_ORIG
@@ -136,6 +141,7 @@ void update_firmware( Stream *in, Stream *out,
        }
     }
     else
+#endif
     {
        SendMsgFailed();
        return;

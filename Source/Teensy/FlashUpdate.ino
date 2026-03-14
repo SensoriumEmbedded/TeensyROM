@@ -53,8 +53,12 @@
 
 
 #define FLASH_RESERVE     (0x40000) // 256k reserved space at top of flash 
-#define FLASH_ID         "fw_t41_teensyrom_sensorium_v3" // target ID to match, must be a superset of previous
-#define FLASH_ID_ORIG    "fw_t41_teensyrom_sensorium" // target ID to match for old fab 0.2x FW
+#ifdef Fab04_Features
+   #define FLASH_ID         "fw_t41_teensyromplus_sensorium" // target ID to match, must be a unique to previous   
+#else
+   #define FLASH_ID         "fw_t41_teensyrom_sensorium_v3" // target ID to match, must be a superset of previous #define FLASH_ID         "fw_t41_teensyrom_sensorium_v3" // target ID to match, must be a superset of previous
+   #define FLASH_ID_ORIG    "fw_t41_teensyrom_sensorium" // target ID to match for old fab 0.2x FW
+#endif
 
 #include <SD.h>
 #include "Flash/FXUtil.h"		// read_ascii_line(), hex file support
