@@ -25,7 +25,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.1.4"    //*VERSION*
+#define TRVersion              "0.7.1.5"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -306,10 +306,9 @@ const uint8_t OutputPins[] = {
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 #define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
-#define Def_nS_DMASetup     380  //    delay from Phi2 falling to RW/Addr setup (just before rising edge)
+#define Def_nS_DMASetup     400  //    delay from Phi2 falling to RW/Addr setup (just before rising edge)
                                  //       too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
-                                 //       PAL: 385: OK, but slight screen glitch, 390 no glitch, but occasional write error
-                                 //       NTSC: 380
+                                 //       PAL: 400,      NTSC: 380?  400 seems to work as well
 
 uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
