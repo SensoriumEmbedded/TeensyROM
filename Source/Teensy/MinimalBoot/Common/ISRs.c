@@ -17,13 +17,35 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+bool isFrozen = false;
+
 #ifdef Fab04_FullDMACapable
    extern void DMATransferISR();
 #endif
 #ifdef Fab04_SpecialButton
+
 void isrSpecial()
 {
-   Serial.println("SpecButtonPress");
+   static uint32_t LastSpecialButtonmS = 0;
+   
+   if ((millis() - LastSpecialButtonmS) < 100)
+   {
+      //Serial.println("debounce");
+      return;
+   }
+   
+   LastSpecialButtonmS = millis();
+   if ((isFrozen = !isFrozen))
+   {
+      DMA_State = DMA_S_StartFreeze; 
+      //led will flash on/off
+   }
+   else 
+   {
+      DMA_State = DMA_S_StartDisable;
+      SetLEDOn;
+   }
+   Printf_dbg("SpecButtonPress");
 }
 #endif
 
@@ -151,6 +173,15 @@ FASTRUN void isrPHI2()
                DMA_State = DMA_S_ActiveReady;
                return;
                //break;
+            case DMA_S_StartFreeze:
+               if (R_Wn) // start during any read
+               { 
+                  WaitUntil_nS(nS_DMAAssert); 
+                  SetDMAAssert;
+                  DMA_State = DMA_S_FreezeReady;
+                  return;
+               }
+               break;
             case DMA_S_Start_BA_Active:
                if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
                { 

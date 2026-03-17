@@ -85,14 +85,16 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          }
          else if (inVal == C64PauseOnToken) //pause C64 via DMA, during next bad line
          {
-            //DMA_State = DMA_S_StartActive;
-            DMA_State = DMA_S_Start_BA_Active; //Apply DMA When BA is low (bad line).  Doesn't work?
+            DMA_State = DMA_S_StartFreeze; 
+            isFrozen = true;  //led will flash on/off
             SendU16(AckToken);
             return;
          }
          else if (inVal == C64PauseOffToken) //un-pause C64 DMA
          {
             DMA_State = DMA_S_StartDisable;
+            isFrozen = false;
+            SetLEDOn;
             SendU16(AckToken);
             return;
          }

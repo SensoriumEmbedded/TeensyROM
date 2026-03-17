@@ -260,10 +260,23 @@ void loop()
   
 #ifdef DbgLEDSignalPolling
    static bool LEDLoopState = false;
-   if (LEDLoopState = !LEDLoopState) SetLEDOn;
+   if ((LEDLoopState = !LEDLoopState)) SetLEDOn;
    else SetLEDOff;
 #endif
-
+   if (isFrozen)
+   {
+      static uint32_t FrozenFlashmS = millis();
+      static bool FrozenLEDState = true;
+ 
+      if(millis()-FrozenFlashmS > 100)
+      {
+         FrozenFlashmS = millis();
+         if ((FrozenLEDState = !FrozenLEDState)) SetLEDOn;
+         else SetLEDOff;
+      }
+      
+   }
+   
    if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
    
@@ -318,7 +331,9 @@ void SetUpMainMenuROM()
 #ifdef Fab04_REU
    if (REUFile) REUFile.close();
 #endif
-   IOHandlerInit(IOH_TeensyROM);   
+   IOHandlerInit(IOH_TeensyROM);  
+   SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
+   isFrozen = false;
    doReset = true;
 }
 
