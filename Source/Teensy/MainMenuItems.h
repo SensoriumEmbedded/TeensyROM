@@ -1,6 +1,7 @@
 
 //add PROGMEM to declaration of all main menu binaries:
 #include "TRMenuFiles/ROMs/ccgms_2021_Swiftlink_DE_38400.prg.h"
+//#include "TRMenuFiles/ROMs/v1541wrap.prg.h"
 #include "TRMenuFiles/ROMs/SST.prg.h"
 #include "TRMenuFiles/ROMs/cynthcart_201.prg.h"
 #include "TRMenuFiles/ROMs/sta64_v2_6.prg.h"
@@ -110,7 +111,7 @@ StructMenuItem dirGames[] =
     rtBin16k   , IOH_None         , (char*)"Donkey Kong"                      , (uint8_t*)Donkey_Kong_BIN            , sizeof(Donkey_Kong_BIN) ,      
     rtFileCrt  , IOH_None         , (char*)"Gorf!"                            , (uint8_t*)C64618_Gorf_8000_crt       , sizeof(C64618_Gorf_8000_crt) ,
     rtFilePrg  , IOH_None         , (char*)"Joust!"                           , (uint8_t*)joust_prg                  , sizeof(joust_prg) ,
-/**/rtBin8kHi  , IOH_None         , (char*)"Jupiter Lander"                   , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
+    rtBin8kHi  , IOH_None         , (char*)"Jupiter Lander"                   , (uint8_t*)Jupiter_Lander_BIN         , sizeof(Jupiter_Lander_BIN) ,  
     rtFilePrg  , IOH_None         , (char*)"Jupiter Lander (Cracked)"         , (uint8_t*)jupiter_lander_crack_prg   , sizeof(jupiter_lander_crack_prg) ,  
     rtFilePrg  , IOH_None         , (char*)"Mario Brothers"                   , (uint8_t*)Mario_Bros_prg             , sizeof(Mario_Bros_prg) ,
     rtFilePrg  , IOH_None         , (char*)"Minesweeper"                      , (uint8_t*)minesweeper_game_prg       , sizeof(minesweeper_game_prg) ,   
@@ -145,7 +146,7 @@ StructMenuItem dirUtilities[] =
      rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
      rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
      rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
-/*3*/rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) ,
+/*3*/rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) , //used by location, see Load8Run:
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TR Command IO access"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
@@ -157,6 +158,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
+//     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 
 StructMenuItem dirMultimedia[] = 
@@ -179,7 +181,7 @@ StructMenuItem dirSID_Files[] =
     rtFileSID  , IOH_None         , (char*)"Echoes                Pink Floyd" , (uint8_t*)Echoes_sid                 , sizeof(Echoes_sid) ,
     rtFileSID  , IOH_None         , (char*)"Wish You Were Here    Pink Floyd" , (uint8_t*)Wish_You_Were_Here_sid     , sizeof(Wish_You_Were_Here_sid) ,
     rtFileSID  , IOH_None         , (char*)"Another Brick In The Wall"        , (uint8_t*)Pink_Floyd_sid             , sizeof(Pink_Floyd_sid) ,
-/**/rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
+    rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
     rtFileSID  , IOH_None         , (char*)"Tom Sawyer            Rush"       , (uint8_t*)Tom_Sawyer_sid             , sizeof(Tom_Sawyer_sid) ,
 //    rtFileSID  , IOH_None         , (char*)"YYZ                   Rush"       , (uint8_t*)YYZ_sid                    , sizeof(YYZ_sid) ,                  //  C64 mem conflict as of 0.6.2
     rtFileSID  , IOH_None         , (char*)"Aces High             Iron Maiden", (uint8_t*)Aces_High_sid              , sizeof(Aces_High_sid) ,
@@ -210,10 +212,10 @@ StructMenuItem dirPic_Files[] =
 StructMenuItem dirMIDI_ASID[] = 
 {
     rtDirectory, IOH_None           , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
-/**/rtFilePrg  , IOH_ASID           , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
+    rtFilePrg  , IOH_ASID           , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
     rtFilePrg  , IOH_TeensyROM      , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
-/**/rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1       +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
-/**/rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6      +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
+    rtFilePrg  , IOH_MIDI_Datel     , (char*)"Cynthcart 2.0.1       +Datel MIDI", (uint8_t*)cynthcart_201_prg          , sizeof(cynthcart_201_prg) ,    
+    rtFilePrg  , IOH_MIDI_Passport  , (char*)"Station64 2.6      +Passport MIDI", (uint8_t*)sta64_v2_6_prg             , sizeof(sta64_v2_6_prg) ,
     rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard V1.94        +Seq MIDI", (uint8_t*)sid_wizard_1_9_prg         , sizeof(sid_wizard_1_9_prg) ,
     rtFilePrg  , IOH_MIDI_Sequential, (char*)"SID-Wizard_2SID V1.94   +Seq MIDI", (uint8_t*)sid_wizard_2sid_prg        , sizeof(sid_wizard_2sid_prg) ,
     rtFilePrg  , IOH_None           , (char*)"SID-Wizard User Manual V1.94"     , (uint8_t*)sw_1_9_manual_prg          , sizeof(sw_1_9_manual_prg) ,
