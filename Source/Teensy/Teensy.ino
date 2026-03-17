@@ -33,6 +33,7 @@
 #include "MinimalBoot/Common/DriveDirLoad.h"
 #include "MainMenuItems.h"
 #include "MinimalBoot/Common/IOHandlers.h"
+#include <TimeLib.h>
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -116,7 +117,8 @@ void setup()
    
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-   
+   setSyncProvider(getTeensy3Time);
+
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) SetEEPDefaults();
@@ -328,9 +330,9 @@ void SetUpMainMenuROM()
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
    free(TgetQueue); TgetQueue=NULL;
    free(LSFileName); LSFileName=NULL;
-#ifdef Fab04_REU
-   if (REUFile) REUFile.close();
-#endif
+//#ifdef Fab04_REU
+//   if (REUFile) REUFile.close();
+//#endif
    IOHandlerInit(IOH_TeensyROM);  
    SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
    isFrozen = false;
@@ -535,4 +537,9 @@ bool CheckLaunchSDAuto()
    else Printf_dbg("No SD detected\n");
 
    return false;
+}
+
+time_t getTeensy3Time()
+{
+  return Teensy3Clock.get();
 }
