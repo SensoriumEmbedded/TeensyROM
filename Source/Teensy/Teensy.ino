@@ -81,6 +81,7 @@ void setup()
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
+   
 #ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
@@ -110,6 +111,9 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(Menu_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
+   
+   //end of IO init: mostly identical to MinimalBoot.ino setup()
+   
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
    

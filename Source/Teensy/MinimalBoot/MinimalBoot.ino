@@ -50,26 +50,49 @@ void setup()
 {
    set_arm_clock(816000000);  //slight overclocking, no cooling required
    
+   SetLEDOn;  //On for minimal build, off for main init, then on at end of main init
    Serial.begin(115200);
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
+#ifdef Fab04_FullDMACapable
+   SetAddrPortDirIn;
+   SetAddrBufsIn;   //default to reading address (normal use)
+#endif
+#ifdef Fab04_DataBufAlwaysEnabled
+   SetDataPortDirIn; //default to input (for C64 Write)
+   SetDataBufIn;
+   //DataBufEnable; //buffer always enabled via HW
+#else
    DataBufDisable; //buffer disabled
+   //SetDataBufOut  done in ISR based on R/W signal state
    SetDataPortDirOut; //default to output (for C64 Read)
+#endif
+   
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
-   SetLEDOn;
+   
+#ifdef Fab04_BiDirReset
+   pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
+#endif   
    SetResetAssert; //assert reset until main loop()
 
+#ifdef Fab04_SpecialButton
+   pinMode(Special_Btn_In_PIN, INPUT_PULLUP);
+   attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, FALLING );
+#else
 #ifdef DbgSignalSenseReset
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //use Dot_Clk input as reset sense input
+   //?  attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
 #else
 #ifdef DbgFab0_3plus
    pinMode(DotClk_Debug_PIN, OUTPUT);  //p28 is Debug output on fab 0.3+
    SetDebugDeassert;
 #else
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //p28 is Dot_Clk input (unused) on fab 0.2x
+#endif
 #endif
 #endif
   
@@ -79,6 +102,9 @@ void setup()
    attachInterrupt( digitalPinToInterrupt(Menu_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
+  
+   //end of IO init: mostly identical to Teensy.ino setup()
+   
   
 #ifdef Dbg_TestMin
    //write a game path to execute
@@ -165,6 +191,7 @@ void setup()
       Serial.print("CRT not loaded, Abort!\n");
       runMainTRApp_FromMin(); //didn't load right if not calling for reset
    }
+   BtnPressed = !ReadButton; //set to current state, could have false triggered from Reset signal on Fab04_
 } 
      
 void loop()
@@ -185,8 +212,16 @@ void loop()
       Serial.println("Resetting C64"); 
       Serial.flush();
       delay(50); 
-      doReset=false;
+      
+#ifdef Fab04_BiDirReset
+      SetResetInput;
+      delay(50);  //debounce
+#else      
       SetResetDeassert;
+#endif      
+      doReset=false;
+      BtnPressed = false;
+
 #ifdef DbgSignalSenseReset
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
 #endif

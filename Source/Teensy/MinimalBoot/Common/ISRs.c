@@ -59,8 +59,10 @@ FASTRUN void isrPHI2()
 #ifdef Fab04_FullDMACapable
    if (DMA_State == DMA_S_TransferReady) // && GP9_BA(ReadGPIO9))
    {
+#ifndef MinimumBuild  //temporary exclusion of minimal mode DMAs
       DMATransferISR();
       return;
+#endif
    }
 #endif
 

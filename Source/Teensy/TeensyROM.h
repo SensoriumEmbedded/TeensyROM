@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "TRMenuFiles/ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
-#include "MinimalBoot/Common/Fab04FeatureCtl.h"  //determines if build is for Fab0.2/0.3 or Fab0.4+
 
 #define DefSIDSource        rmtTeensy  // Default, should always be local (rmtTeensy)
 #define DefSIDPath          "/SID Cover Tunes" 
@@ -58,22 +57,4 @@
   // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
   // #define DbgLEDSignalPolling //togles LED each pass through main loop()
 
-//fab 0.3 uses different debug signal and direct data buffer dir control
-// enabling this on a fab 0.2x PBC could cause damage to your C64!
-  // #define DbgFab0_3plus     //Only for fab 0.3 PCB! 
-//fab 0.4 adds bi-dir data buffers, R/W Signal, Reset Signal and Special Button
-#ifdef Fab04_Features   //see Fab04FeatureCtl.h
-   #define Fab04_DataBufAlwaysEnabled //eliminates need for data buf enable/disable
-   #define Fab04_FullDMACapable       //allow full DMA R/W (Addr dir/output control, R/*W bi-dir)
-   #define Fab04_BiDirReset           //allow bi-directional Reset interface
-   #define Fab04_SpecialButton        //Allow use of "Special" button for freeze, etc
-   #define Fab04_REU                  //include REU  Special IO
-#endif
-
-// Use debug signal line to sense RESET on C64. Use this if you want to trigger
-// an external reset and TeensyROM will boot into the menu again. This requires
-// a hardware modification. On 0.2.x PCBs the trace from dot_clk to U4 needs to
-// be cut and a jumper wire from RESET to the right pin on U4. 0.3.x PCBs require
-// more changes, because this line is configured as output.
-  // #define DbgSignalSenseReset
 
