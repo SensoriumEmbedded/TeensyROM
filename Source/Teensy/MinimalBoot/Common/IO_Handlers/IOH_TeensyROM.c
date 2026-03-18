@@ -951,7 +951,6 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegSelItemOnPage:
             SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
          case rwRegStatus:
-         case wRegVid_TOD_Clks:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
          case rwRegCodeStartPage:
@@ -964,6 +963,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[Address]=Data;
             break;    
             
+         case wRegVid_TOD_Clks:
+            IO1[Address]=Data;
+            nS_DMASetup  = ((Data & 1) ? Def_nS_DMASetupNTSC : Def_nS_DMASetupPAL);
+            break;
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);

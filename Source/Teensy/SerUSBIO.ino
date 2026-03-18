@@ -582,7 +582,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_VICDHold  = Def_nS_VICDHold;
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
-               nS_DMASetup  = Def_nS_DMASetup;
+               nS_DMASetup  = Def_nS_DMASetupPAL;
                CmdChannel->printf("Defaults set\n");
                break;
             default:
