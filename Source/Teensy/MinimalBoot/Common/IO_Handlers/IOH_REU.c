@@ -19,7 +19,7 @@
 
 
 //#define DbgMsgs_REU        //enable REU debug msgs 
-//#define Direct_REU           //use DirectREU Method
+//#define Direct_REU         //use DirectREU Method (via PSRAM) instead of buffer
 #define USE_PSRAM          //use external PSRAM chip instead of SD
 #define REU_Size           0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
 #define REU_Temp_FileName  "/temp.reu"
@@ -118,14 +118,10 @@ void DMAByte_BASkip(uint8_t *Data1)
 {
    while (!DMAByte(Data1))
    {  //skip cycle if bus not available
-      //while (!GP9_BA(ReadGPIO9));  // bus not available, wait until it is
-      ////re-align to clock
-      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
-      //while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
-      //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
-      //while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
-      while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
-      while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+      //re-align to clock
+      //while (!GP9_BA(ReadGPIO9)); // bus not available, wait until it is
+       while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+      while(GP6_Phi2(ReadGPIO6));   //Find phi2 falling (start VIC phase)
       StartCycCnt = ARM_DWT_CYCCNT;
    }
 }
@@ -145,6 +141,8 @@ void DirectREU()
    
    DMA_FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
    bool FixREUAddr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU;
+   bool ErrOut = false;
+   uint32_t MisCount = 0;
    
    //Assert DMA in following VIC phase (IO write just occured)
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
@@ -164,7 +162,7 @@ void DirectREU()
 
    //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <move this inside loop?????
 
-   while(DMA_Count < DMA_Length)
+   while(DMA_Count < DMA_Length && !ErrOut)
    {
       //align to falling edge:
       while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <move this out of loop?????
@@ -182,6 +180,16 @@ void DirectREU()
          case REUReg_Command_TypeR2C:
             //read from REU in VIC, then write C64 in x-fer phase 
             Data1 = pPSRAM[ModREUAddr];
+            
+            if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup-20)) // nS_DMASetup
+            {  //missed completing read within VIC cycle, wait for next one.
+               //Printf_dbg_reu("Miss!\n");
+               MisCount++;
+               while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase, in case it's not there yet)
+               while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
+               StartCycCnt = ARM_DWT_CYCCNT;
+            }
+            
             DMA_RnW = false; //true=read, false=write
             DMAByte_BASkip(&Data1);
             break;
@@ -219,7 +227,7 @@ void DirectREU()
                }
                //todo: update address regs with current/miscompare address(DMA_Count)
                //  small conflict with Process Address Control Register below...
-               break; //meant to break out of while loop, but...
+               ErrOut = true; //break out of while loop...
             }
             break;
       }
@@ -269,7 +277,7 @@ void DirectREU()
       REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
       REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
       REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
-   Printf_dbg_reu(" Type %d REU xfer took %luuS\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime);
+   Printf_dbg_reu(" Type %d REU xfer took %luuS, MisCount=%lu\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime, MisCount);
    Serial.flush();
    
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
@@ -295,6 +303,7 @@ FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
    return false;  //continue cycle
 }
 
+#ifndef Direct_REU
 #ifdef USE_PSRAM
 FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t REULength, bool FixREUAddr)
 {
@@ -358,6 +367,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    Printf_dbg_reu(" %luuS Check+R/W\n", micros()-StartuS);
 }
 #endif
+#endif
 
 
 //______________________________________________________________________________________________
@@ -370,7 +380,10 @@ FLASHMEM void InitHndlr_REU()
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
-   
+
+#ifdef Direct_REU
+   Serial.println("Direct REU mode");
+#endif   
 #ifdef USE_PSRAM
    uint8_t size = external_psram_size;
    Serial.printf("PSRAM Memory: %dMB\n", size);
@@ -465,6 +478,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 
 FLASHMEM void PollingHndlr_REU()
 {
+#ifndef Direct_REU
    if (DMA_State != DMA_S_ActiveReady) return;
 
 //DMA asserted, Do REU transfer
@@ -587,5 +601,6 @@ FLASHMEM void PollingHndlr_REU()
    Serial.flush();
    
    CloseDMA();  //release DMA last so no cycles have passed on the 6510
+#endif
 }
 
