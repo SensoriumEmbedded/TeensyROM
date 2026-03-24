@@ -230,84 +230,101 @@ FLASHMEM void NetListenInit()
    NetListenEnable = EthernetInit(SendStrPrintfln);
 }
 
-FLASHMEM void getNtpTime() 
+FLASHMEM void SetRTCfromNet() 
 {
-   //called from TR menu with messaging
+   //called from TR Startup or settings with messaging
    
-   //IO1[rRegLastHourBCD] = 0x0; //91;   // 11pm
-   //IO1[rRegLastMinBCD]  = 0x59;      
-   //IO1[rRegLastSecBCD]  = 0x53;      
-   //SendMsgPrintfln"Time: %02x:%02x:%02x %sm", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
-   //return;
-
-   if (!EthernetInit(SendStrPrintfln)) 
+   if (EthernetInit(SendStrPrintfln)) 
    {
-      IO1[rRegLastSecBCD]  = 0;      
-      IO1[rRegLastMinBCD]  = 0;      
-      IO1[rRegLastHourBCD] = 0;      
-      return;
-   }
-   
-   IPAddress ip = Ethernet.localIP();
-   SendMsgPrintfln("My IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+      IPAddress ip = Ethernet.localIP();
+      SendMsgPrintfln("My IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-   unsigned int localPort = 8888;       // local port to listen for UDP packets
-   const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
+      unsigned int localPort = 8888;       // local port to listen for UDP packets
+      const char timeServer[] = "us.pool.ntp.org"; // time.nist.gov     NTP server
 
-   udp.begin(localPort);
-   
-   const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
-   byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
-   
-   SendMsgPrintfln("Updating time from: %s", timeServer);
-   while (udp.parsePacket() > 0) ; // discard any previously received packets
-   
-   // send an NTP request to the time server at the given address
-   // set all bytes in the buffer to 0
-   memset(packetBuffer, 0, NTP_PACKET_SIZE);
-   // Initialize values needed to form NTP request
-   packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-   packetBuffer[1] = 0;     // Stratum, or type of clock
-   packetBuffer[2] = 6;     // Polling Interval
-   packetBuffer[3] = 0xEC;  // Peer Clock Precision
-   // 8 bytes of zero for Root Delay & Root Dispersion
-   packetBuffer[12]  = 49;
-   packetBuffer[13]  = 0x4E;
-   packetBuffer[14]  = 49;
-   packetBuffer[15]  = 52;
-   // all NTP fields have been given values, now send a packet requesting a timestamp:
-   udp.beginPacket(timeServer, 123); // NTP requests are to port 123
-   udp.write(packetBuffer, NTP_PACKET_SIZE);
-   udp.endPacket();
+      udp.begin(localPort);
+      
+      const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
+      byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
+      
+      SendMsgPrintfln("Updating time from: %s", timeServer);
+      while (udp.parsePacket() > 0) ; // discard any previously received packets
+      
+      // send an NTP request to the time server at the given address
+      // set all bytes in the buffer to 0
+      memset(packetBuffer, 0, NTP_PACKET_SIZE);
+      // Initialize values needed to form NTP request
+      packetBuffer[0] = 0b11100011;   // LI, Version, Mode
+      packetBuffer[1] = 0;     // Stratum, or type of clock
+      packetBuffer[2] = 6;     // Polling Interval
+      packetBuffer[3] = 0xEC;  // Peer Clock Precision
+      // 8 bytes of zero for Root Delay & Root Dispersion
+      packetBuffer[12]  = 49;
+      packetBuffer[13]  = 0x4E;
+      packetBuffer[14]  = 49;
+      packetBuffer[15]  = 52;
+      // all NTP fields have been given values, now send a packet requesting a timestamp:
+      udp.beginPacket(timeServer, 123); // NTP requests are to port 123
+      udp.write(packetBuffer, NTP_PACKET_SIZE);
+      udp.endPacket();
 
-   uint32_t beginWait = millis();
-   while (millis() - beginWait < 1500) 
-   {
-      int size = udp.parsePacket();
-      if (size >= NTP_PACKET_SIZE) 
+      uint32_t beginWait = millis();
+      while (millis() - beginWait < 1500) 
       {
-         udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
-         uint32_t secsSince1900;
-         // convert four bytes starting at location 40 to a long integer
-         secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
-         secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-         secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
-         secsSince1900 |= (unsigned long)packetBuffer[43];
-         SendMsgPrintfln("Received NTP Response in %d mS", (millis() - beginWait));
+         int size = udp.parsePacket();
+         if (size >= NTP_PACKET_SIZE) 
+         {
+            udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+            uint32_t secsSince1900;
+            // convert four bytes starting at location 40 to a long integer
+            secsSince1900 =  (unsigned long)packetBuffer[40] << 24;
+            secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+            secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+            secsSince1900 |= (unsigned long)packetBuffer[43];
+            SendMsgPrintfln("Received NTP Response in %d mS", (millis() - beginWait));
 
-         //since we don't need the date, leaving out TimeLib.h all together
-         IO1[rRegLastSecBCD] = DecToBCD(secsSince1900 % 60);
-         secsSince1900 = secsSince1900/60 + 30*(int8_t)IO1[rwRegTimezone]; //to  minutes, offset timezone (30 min increments)
-         IO1[rRegLastMinBCD] = DecToBCD(secsSince1900 % 60);
-         secsSince1900 = (secsSince1900/60) % 24; //to hours
-         if (secsSince1900 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1900-12); //change to 0 based 12 hour and add pm flag
-         else IO1[rRegLastHourBCD] =DecToBCD(secsSince1900); //default to AM (bit 7 == 0)
-   
-         SendMsgPrintfln("Time: %02x:%02x:%02x %sm", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
-         return;
+            //time_t t = secsSince1900 - 2208988800UL + (int8_t)IO1[rwRegTimezone] * SECS_PER_HOUR/2; //timezone in 30 min increments
+            time_t t = secsSince1900 - 2208988800UL; //sec since 1970, leave RTC at UTC for now, adjust when C64 asks for time
+            Teensy3Clock.set(t); // set the RTC
+            
+            //setTime(t); //set/update the local time system (Not used)
+            tmElements_t tm;  // time elements
+            breakTime(t, tm); // break seconds down to elements
+            SendMsgPrintfln("RTC Set to %d/%02d/%02d at %d:%02d:%02d UTC",tmYearToCalendar(tm.Year),tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
+
+            return;
+         }
       }
+      SendMsgPrintfln("NTP Response timeout!");
    }
-   SendMsgPrintfln("NTP Response timeout!");
+   SendMsgPrintfln("RTC not updated");
+}
+
+FLASHMEM void C64TODfromRTC()
+{  //Get RTC time and update IO1 regs using CIA TOD Reg format
+
+   //method #1, many constants used elsewhere...
+   //uint32_t secsSince1970 = (uint32_t)Teensy3Clock.get(); //read the RTC time
+   //IO1[rRegLastSecBCD] = DecToBCD(secsSince1970 % 60);
+   //secsSince1970 = secsSince1970/60 + 30*(int8_t)IO1[rwRegTimezone]; //to  minutes, offset timezone (30 min increments)
+   //IO1[rRegLastMinBCD] = DecToBCD(secsSince1970 % 60);
+   //secsSince1970 = (secsSince1970/60) % 24; //to hours
+   //if (secsSince1970 >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(secsSince1970-12); //change to 0 based 12 hour and add pm flag
+   //else IO1[rRegLastHourBCD] =DecToBCD(secsSince1970); //default to AM (bit 7 == 0)
+
+   //better, uses existing code...
+   int8_t tz = (int8_t)IO1[rwRegTimezone]; //time zone to signed
+   time_t t = Teensy3Clock.get() + (int16_t)tz*30*60; //read the RTC time, offset timezone (sign extended, 30 min increments)
+   tmElements_t tm;  // time elements
+   breakTime(t, tm); // break seconds down to elements
+   IO1[rRegLastSecBCD] = DecToBCD(tm.Second);
+   IO1[rRegLastMinBCD] = DecToBCD(tm.Minute);
+   if (tm.Hour >= 12) IO1[rRegLastHourBCD] = 0x80 | DecToBCD(tm.Hour-12); //change to 0 based 12 hour and add pm flag
+   else IO1[rRegLastHourBCD] =DecToBCD(tm.Hour); //default to AM (bit 7 == 0)
+   //Serial.printf("RTC read %d/%02d/%02d at %d:%02d:%02d (local)\n",tmYearToCalendar(tm.Year),tm.Month,tm.Day,tm.Hour,tm.Minute,tm.Second);
+
+   //SendMsgPrintfln (not here in case of tz change)      
+   Printf_dbg ("TOD Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
 }
 
 void WriteEEPROM()
@@ -721,7 +738,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu 
    &HandleExecution,     // rsStartItem  
-   &getNtpTime,          // rsGetTime    
+   &SetRTCfromNet,       // rsSetRTCfromNet  
+   &C64TODfromRTC,       // rsC64TODfromRTC
    &IOHandlerSelectInit, // rsIOHWSelInit   
    &WriteEEPROM,         // rsWriteEEPROM
    &MakeBuildInfo,       // rsMakeBuildCPUInfoStr
@@ -1116,8 +1134,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlStartSelItemWAIT:
                   IO1[rwRegStatus] = rsStartItem; //work this in the main code
                   break;
-               case rCtlGetTimeWAIT:
-                  IO1[rwRegStatus] = rsGetTime;   //work this in the main code
+               case rCtlSetRTCfromNetWAIT:
+                  IO1[rwRegStatus] = rsSetRTCfromNet;   //work this in the main code
+                  break;
+               case rCtlC64TODfromRTCWAIT:
+                  IO1[rwRegStatus] = rsC64TODfromRTC;
                   break;
                case rCtlRunningPRG:
                   IO1[rwRegStatus] = rsIOHWSelInit; //Support IO handlers in PRG

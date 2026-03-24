@@ -221,6 +221,7 @@ WaitForSettingsKey:
 UpdTimeZone
    stx rwRegTimezone+IO1Port
    jsr WaitForTRWaitMsg
+   jsr SetC64TODfromRTC  ;update/resynch time with RTC to include updated time zone
    jmp ShowSettings  
 
 +  cmp #ChrF1  ;Exit (special for IRQ remote start return)
@@ -320,7 +321,8 @@ smcNewscd
    jsr PrintBanner ;SourcesColor
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
-   jsr SynchEthernetTime
+   jsr SetRTCfromEthernet
+   jsr SetC64TODfromRTC
    jsr AnyKeyMsgWait ; For looking at messages/IP address
    jmp SettingsMenu ;force to reprint all 
    

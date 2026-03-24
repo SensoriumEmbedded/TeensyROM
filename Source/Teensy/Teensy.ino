@@ -27,13 +27,13 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 #include <EEPROM.h>
+#include <TimeLib.h>
 #include "TeensyROM.h"
 #include "MinimalBoot/Common/Common_Defs.h"
 #include "MinimalBoot/Common/Menu_Regs.h"
 #include "MinimalBoot/Common/DriveDirLoad.h"
 #include "MainMenuItems.h"
 #include "MinimalBoot/Common/IOHandlers.h"
-#include <TimeLib.h>
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 

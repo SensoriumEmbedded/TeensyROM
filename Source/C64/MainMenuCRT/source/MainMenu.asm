@@ -253,12 +253,14 @@ smcTODbit
    
 ++ 
 
-   ;check default register for time update, includes Ethernet init
+   ;check default register for RTC time update from net, includes Ethernet init
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudNetTimeMask
    beq +
-   jsr SynchEthernetTime   
-+
+   jsr SetRTCfromEthernet
+   
+   ;always read current TOD from Teensy RTC, battery backed or not...
++  jsr SetC64TODfromRTC
    
    ;check for listener enabled and init ethernet
    lda rwRegPwrUpDefaults2+IO1Port
@@ -950,10 +952,19 @@ WaitForTRMain   ;Main wait loop
    jmp WaitForTRMain
 +  rts
 
-SynchEthernetTime:
-   lda #rCtlGetTimeWAIT
+SetRTCfromEthernet:
+   ; Synchs the Teensy RTC with time acquired from Ethernet
+   lda #rCtlSetRTCfromNetWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
+   rts
+   
+SetC64TODfromRTC:
+   ;Sets the C64 TOD clock from the Teensy RTC (with timezone offset)
+   lda #rCtlC64TODfromRTCWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots 
+   
    lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
    lda rRegLastMinBCD+IO1Port

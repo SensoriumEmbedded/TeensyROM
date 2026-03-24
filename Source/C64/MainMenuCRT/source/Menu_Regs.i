@@ -157,7 +157,7 @@
    
 ;enum RegPowerUpDefaultMasks
    rpudSIDPauseMask    = 0b00000001 ; rwRegPwrUpDefaults bit 0, 1=SID music paused
-   rpudNetTimeMask     = 0b00000010 ; rwRegPwrUpDefaults bit 1, 1=synch net time
+   rpudNetTimeMask     = 0b00000010 ; rwRegPwrUpDefaults bit 1, 1=synch RTC to net time
    rpudShowExtension   = 0b00000100 ; rwRegPwrUpDefaults bit 2, 1=show file extensions
    rpudClock12_24hr    = 0b00001000 ; rwRegPwrUpDefaults bit 3, 1=24 hour clock displayed
    rpudJoySpeedMask    = 0b11110000 ; rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
@@ -175,29 +175,30 @@
 ;enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsChangeMenu         = 0x00  ;
    rsStartItem          = 0x01  ;
-   rsGetTime            = 0x02  ;
-   rsIOHWSelInit        = 0x03  ;C64 code is executing transfered PRG, change IO1 handler
-   rsWriteEEPROM        = 0x04  ;
-   rsMakeBuildCPUInfoStr= 0x05  ;
-   rsUpDirectory        = 0x06  ;
-   rsSearchForLetter    = 0x07  ;
-   rsLoadSIDforXfer     = 0x08  ;
-   rsNextPicture        = 0x09  ;
-   rsLastPicture        = 0x0a  ;
-   rsWriteNFCTagCheck   = 0x0b  ;
-   rsWriteNFCTag        = 0x0c  ;
-   rsNFCReEnable        = 0x0d  ;
-   rsSetBackgroundSID   = 0x0e  ;
-   rsSetAutoLaunch      = 0x0f  ;
-   rsClearAutoLaunch    = 0x10  ;
-   rsNextTextFile       = 0x11  ;
-   rsLastTextFile       = 0x12  ;
-   rsIOHWNextInit       = 0x13  ;
-   rsMountDxxFile       = 0x14  ;
-   rsHotKeySetLaunch    = 0x15  ;
-   rsNetListenInit      = 0x16  ;
+   rsSetRTCfromNet      = 0x02  ;
+   rsC64TODfromRTC      = 0x03  ;
+   rsIOHWSelInit        = 0x04  ;C64 code is executing transfered PRG, change IO1 handler
+   rsWriteEEPROM        = 0x05  ;
+   rsMakeBuildCPUInfoStr= 0x06  ;
+   rsUpDirectory        = 0x07  ;
+   rsSearchForLetter    = 0x08  ;
+   rsLoadSIDforXfer     = 0x09  ;
+   rsNextPicture        = 0x0a  ;
+   rsLastPicture        = 0x0b  ;
+   rsWriteNFCTagCheck   = 0x0c  ;
+   rsWriteNFCTag        = 0x0d  ;
+   rsNFCReEnable        = 0x0e  ;
+   rsSetBackgroundSID   = 0x0f  ;
+   rsSetAutoLaunch      = 0x10  ;
+   rsClearAutoLaunch    = 0x11  ;
+   rsNextTextFile       = 0x12  ;
+   rsLastTextFile       = 0x13  ;
+   rsIOHWNextInit       = 0x14  ;
+   rsMountDxxFile       = 0x15  ;
+   rsHotKeySetLaunch    = 0x16  ;
+   rsNetListenInit      = 0x17  ;
    
-   rsNumStatusTypes     = 0x17  ;
+   rsNumStatusTypes     = 0x18  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -214,25 +215,26 @@
    rCtlVanishROM            =  0
    rCtlBasicReset           =  1
    rCtlStartSelItemWAIT     =  2
-   rCtlGetTimeWAIT          =  3
-   rCtlRunningPRG           =  4 ; final signal before running prg, allows IO1 handler change
-   rCtlMakeInfoStrWAIT      =  5 ; MakeBuildCPUInfoStr
-   rCtlUpDirectoryWAIT      =  6
-   rCtlLoadSIDWAIT          =  7 ;load .sid file to RAM buffer and prep for x-fer
-   rCtlNextPicture          =  8 
-   rCtlLastPicture          =  9 
-   rCtlRebootTeensyROM      = 10 
-   rCtlWriteNFCTagCheckWAIT = 11
-   rCtlWriteNFCTagWAIT      = 12
-   rCtlNFCReEnableWAIT      = 13
-   rCtlSetBackgroundSIDWAIT = 14
-   rCtlSetAutoLaunchWAIT    = 15
-   rCtlClearAutoLaunchWAIT  = 16
-   rCtlNextTextFile         = 17
-   rCtlLastTextFile         = 18
-   rCtlMountDxxFileWAIT     = 19
-   rCtlHotKeySetLaunch      = 20
-   rCtlNetListenInitWAIT    = 21
+   rCtlSetRTCfromNetWAIT    =  3 ; Synchs the Teensy RTC with time acquired from Ethernet
+   rCtlC64TODfromRTCWAIT    =  4 ; Sets the IO1 TOD regs with the current RTC Time
+   rCtlRunningPRG           =  5 ; final signal before running prg, allows IO1 handler change
+   rCtlMakeInfoStrWAIT      =  6 ; MakeBuildCPUInfoStr
+   rCtlUpDirectoryWAIT      =  7
+   rCtlLoadSIDWAIT          =  8 ;load .sid file to RAM buffer and prep for x-fer
+   rCtlNextPicture          =  9 
+   rCtlLastPicture          = 10 
+   rCtlRebootTeensyROM      = 11 
+   rCtlWriteNFCTagCheckWAIT = 12
+   rCtlWriteNFCTagWAIT      = 13
+   rCtlNFCReEnableWAIT      = 14
+   rCtlSetBackgroundSIDWAIT = 15
+   rCtlSetAutoLaunchWAIT    = 16
+   rCtlClearAutoLaunchWAIT  = 17
+   rCtlNextTextFile         = 18
+   rCtlLastTextFile         = 19
+   rCtlMountDxxFileWAIT     = 20
+   rCtlHotKeySetLaunch      = 21
+   rCtlNetListenInitWAIT    = 22
    
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0
