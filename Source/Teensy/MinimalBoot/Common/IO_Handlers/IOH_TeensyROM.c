@@ -269,7 +269,7 @@ FLASHMEM void SetRTCfromNet()
       udp.endPacket();
 
       uint32_t beginWait = millis();
-      while (millis() - beginWait < 1500) 
+      while (millis() - beginWait < 2500) 
       {
          int size = udp.parsePacket();
          if (size >= NTP_PACKET_SIZE) 
