@@ -130,14 +130,14 @@ MsgSettingsMenu1:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Local Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "    12/24 hour clock:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Synch Time via net:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "   Synch RTC via net:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "   Play selected SID:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   " Enable TCP Listener:", ChrReturn
    !tx EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Immediate:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Re-boot TeensyROM", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch Time via Ethernet", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch RTC via Ethernet", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Disable Auto-Launch", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "n", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help Menu", ChrReturn

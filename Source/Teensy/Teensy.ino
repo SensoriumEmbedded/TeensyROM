@@ -117,7 +117,6 @@ void setup()
    
    
    myusbHost.begin(); // Start USBHost_t36, HUB(s) and USB devices.
-   setSyncProvider(getTeensy3Time);
 
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
@@ -330,9 +329,6 @@ void SetUpMainMenuROM()
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
    free(TgetQueue); TgetQueue=NULL;
    free(LSFileName); LSFileName=NULL;
-//#ifdef Fab04_REU
-//   if (REUFile) REUFile.close();
-//#endif
    IOHandlerInit(IOH_TeensyROM);  
    SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
    isFrozen = false;
@@ -539,7 +535,3 @@ bool CheckLaunchSDAuto()
    return false;
 }
 
-time_t getTeensy3Time()
-{
-  return Teensy3Clock.get();
-}
