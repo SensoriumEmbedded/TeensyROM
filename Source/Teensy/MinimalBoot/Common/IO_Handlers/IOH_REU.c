@@ -19,13 +19,31 @@
 
 
 //#define DbgMsgs_REU        //enable REU debug msgs 
-//#define Direct_REU         //use DirectREU Method (via PSRAM) instead of buffer
-#define USE_PSRAM          //use external PSRAM chip instead of SD
-#define REU_Size           0x01000000   // 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
-#define REU_Temp_FileName  "/temp.reu"
+#define Direct_REU         //use DirectREU Method instead of buffer
+                           
+//choose one for REU swap buffer;  direct: PSRAM/RAM12 only, Indirect: SD/PSRAM only
+#define USE_RAM12          //use RAM1/2 space
+//#define USE_PSRAM          //use external PSRAM chip(s)
+//#define USE_SD             //use SD card`
+
+#define REU_Size           0x00080000   // 512k  Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
 
 
-#define REU_Sise_Mask      (REU_Size-1)  // 17 to 24 bit addr bus size
+
+#ifdef USE_RAM12
+   #define REU_RAM_Bank_Size   0x2000
+   #define REU_RAM_READ(a,d)   d=CrtChips[a/REU_RAM_Bank_Size].ChipROM[a%REU_RAM_Bank_Size]
+   #define REU_RAM_WRITE(a,d)  CrtChips[a/REU_RAM_Bank_Size].ChipROM[a%REU_RAM_Bank_Size]=d
+#elif defined(USE_PSRAM)
+   uint8_t *pPSRAM = (uint8_t *)(0x70000000);
+   extern "C" uint8_t external_psram_size;
+   #define REU_RAM_READ(a,d)   d=pPSRAM[a]
+   #define REU_RAM_WRITE(a,d)  pPSRAM[a]=d
+#elif defined(USE_SD)
+   #define REU_Temp_FileName  "/temp.reu"
+#endif
+
+#define REU_Size_Mask      (REU_Size-1)  // 17 to 24 bit addr bus size
 #ifdef DbgMsgs_REU
    #define Printf_dbg_reu Serial.printf
 #else
@@ -103,16 +121,18 @@ enum enumREUregs
 //______________________________________________________________________________________________
 
 uint8_t REURegs[REUReg_NumRegs];
-extern "C" uint8_t external_psram_size;
-uint8_t *pPSRAM = (uint8_t *)(0x70000000);
 
 #ifdef Direct_REU
-
-#define ModREUAddr       (FixREUAddr ? REU_StartAddr : REU_StartAddr+DMA_Count)
 
 extern bool DMA_RnW, DMA_FixC64Addr;
 extern uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 extern bool DMAByte(uint8_t *Data);
+
+extern void FreeCrtChips();
+extern void FreeDriveDirMenu();
+extern uint8_t RAM_Image[];
+extern StructCrtChip CrtChips[];
+extern uint8_t NumCrtChips;
 
 void DMAByte_BASkip(uint8_t *Data1)
 {
@@ -120,7 +140,7 @@ void DMAByte_BASkip(uint8_t *Data1)
    {  //skip cycle if bus not available
       //re-align to clock
       //while (!GP9_BA(ReadGPIO9)); // bus not available, wait until it is
-       while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+      while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
       while(GP6_Phi2(ReadGPIO6));   //Find phi2 falling (start VIC phase)
       StartCycCnt = ARM_DWT_CYCCNT;
    }
@@ -133,7 +153,7 @@ void DirectREU()
    uint32_t StartTime = micros();  
 
    uint8_t Data1, Data2;
-   uint32_t REU_StartAddr = REU_Sise_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
+   uint32_t REU_StartAddr = REU_Size_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
    DMA_Length = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
    if (DMA_Length == 0) DMA_Length = 0x10000;  //full 64k if set to zero
    DMA_Count = 0;
@@ -164,6 +184,8 @@ void DirectREU()
 
    while(DMA_Count < DMA_Length && !ErrOut)
    {
+      uint32_t ModREUAddr = (FixREUAddr ? REU_StartAddr : REU_StartAddr+DMA_Count);
+
       //align to falling edge:
       while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <move this out of loop?????
       while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
@@ -175,12 +197,13 @@ void DirectREU()
             //read C64 in x-fer phase, then write to REU in VIC
             DMA_RnW = true; //true=read, false=write
             DMAByte_BASkip(&Data1);
-            pPSRAM[ModREUAddr] = Data1;
+            REU_RAM_WRITE(ModREUAddr, Data1);
             break;
          case REUReg_Command_TypeR2C:
             //read from REU in VIC, then write C64 in x-fer phase 
-            Data1 = pPSRAM[ModREUAddr];
-            
+            REU_RAM_READ(ModREUAddr, Data1); //read REU into Data1
+#ifdef USE_PSRAM       
+            //Look for slow PSRAM read and give an extra clock if needed
             if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup-20)) // nS_DMASetup
             {  //missed completing read within VIC cycle, wait for next one.
                //Printf_dbg_reu("Miss!\n");
@@ -189,7 +212,7 @@ void DirectREU()
                while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
                StartCycCnt = ARM_DWT_CYCCNT;
             }
-            
+#endif
             DMA_RnW = false; //true=read, false=write
             DMAByte_BASkip(&Data1);
             break;
@@ -197,7 +220,7 @@ void DirectREU()
             //read both and swap
             DMA_RnW = true; //true=read, false=write
             DMAByte_BASkip(&Data2); //read C64 into Data2
-            Data1 = pPSRAM[ModREUAddr]; //read REU into Data1
+            REU_RAM_READ(ModREUAddr, Data1); //read REU into Data1
             
             //clock/part 2:
             //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)  <Needed?????
@@ -206,14 +229,14 @@ void DirectREU()
 
             DMA_RnW = false; //true=read, false=write
             DMAByte_BASkip(&Data1);  //write Data1 to C64
-            pPSRAM[ModREUAddr] = Data2; //write Data2 to REU
+            REU_RAM_WRITE(ModREUAddr, Data2); //write Data2 to REU
             break;
             
          case REUReg_Command_TypeVer:
             //read both and verify
             DMA_RnW = true; //true=read, false=write
             DMAByte_BASkip(&Data2); //read C64 into Data2
-            Data1 = pPSRAM[ModREUAddr]; //read REU into Data1
+            REU_RAM_READ(ModREUAddr, Data1); //read REU into Data1
 
             if(Data1 != Data2) 
             {
@@ -277,7 +300,7 @@ void DirectREU()
       REURegs[REUReg_Status], REURegs[REUReg_Command], REURegs[REUReg_C64StartAddrHi], REURegs[REUReg_C64StartAddrLo], 
       REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
       REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
-   Printf_dbg_reu(" Type %d REU xfer took %luuS, MisCount=%lu\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime, MisCount);
+   Printf_dbg_reu(" Type %d REU xfer took %luuS, Miss Count=%lu\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime, MisCount);
    Serial.flush();
    
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
@@ -327,7 +350,7 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
    
    Printf_dbg_reu(" %luuS PSRAM R/W\n", micros()-StartuS);
 }
-#else
+#elif defined(USE_SD)
 
 File REUFile = NULL;
 
@@ -374,29 +397,75 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
 
 FLASHMEM void InitHndlr_REU()
 {
-   Printf_dbg_reu("Hello from REU!\n");
-
    fBusSnoop = NULL;
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
 
 #ifdef Direct_REU
-   Serial.println("Direct REU mode");
+   Printf_dbg_reu("Direct REU mode\n");
+#else
+   Printf_dbg_reu("Indirect REU mode\n");
 #endif   
-#ifdef USE_PSRAM
+
+#ifdef USE_RAM12
+
+   //Allocate full REU size in Ram 1 and 2
+   FreeCrtChips(); //re-using CrtChips for this, free mem allocated in RAM2 and reset NumCrtChips
+   FreeDriveDirMenu(); //free/clear prev loaded directory to make space
+
+   uint8_t *pRAM_Image = RAM_Image;
+
+   Serial.printf("%dk REU, (%d banks x %d bytes)\n", REU_Size/1024, REU_Size/REU_RAM_Bank_Size, REU_RAM_Bank_Size);
+   //First use RAM_Image from RAM1:
+   while ((uint32_t)pRAM_Image - (uint32_t)RAM_Image + REU_RAM_Bank_Size <= RAM_ImageSize)
+   {
+      CrtChips[NumCrtChips].ChipROM = pRAM_Image;
+      pRAM_Image += REU_RAM_Bank_Size;
+      NumCrtChips++;
+   }
+   Printf_dbg_reu("Used %lu/%lu Bytes of RAM1 Image\n", (uint32_t)pRAM_Image-(uint32_t)RAM_Image, RAM_ImageSize);
+
+   //allocate the rest from RAM2
+   while(NumCrtChips < REU_Size/REU_RAM_Bank_Size)
+   {
+      if (NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(REU_RAM_Bank_Size)))
+      {
+         Serial.printf("alloc err bank %d!\n", NumCrtChips);
+         return;
+      }
+      NumCrtChips++;
+   }
+   Printf_dbg_reu("Used %lu bytes from RAM2, %luK bytes REU total\n", REU_Size+(uint32_t)RAM_Image-(uint32_t)pRAM_Image, REU_Size/1024);
+
+#elif defined(USE_PSRAM)
+
+   //higher clock speed and shorter CS setup/hold do help, but still not enough for NUVIEs w/ sound
+
+   //ref: https://forum.pjrc.com/index.php?threads/faster-way-to-read-a-single-byte-from-flash-or-ext-psram.73428/
+   //set sclk to 132 Mhz: (default CCM_CBCMR=95AE8304 (105.6 MHz))
+   //CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
+   //CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+   //   | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
+   //CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+   
+   //FlexSPI setup:
+   //FLEXSPI2_INTEN = 0;
+   //FLEXSPI2_FLSHA1CR0 = 0x2000; // 8 MByte    
+   //default: TCSH=3, TCSS=3 (CS Setup/Hold)
+   //FLEXSPI2_FLSHA1CR1 = FLEXSPI_FLSHCR1_CSINTERVAL(2)
+   //   | FLEXSPI_FLSHCR1_TCSH(0) | FLEXSPI_FLSHCR1_TCSS(0);
+   //FLEXSPI2_FLSHA1CR2 = FLEXSPI_FLSHCR2_AWRSEQID(6) | FLEXSPI_FLSHCR2_AWRSEQNUM(0)
+   //        | FLEXSPI_FLSHCR2_ARDSEQID(5) | FLEXSPI_FLSHCR2_ARDSEQNUM(0);
+
    uint8_t size = external_psram_size;
    Serial.printf("PSRAM Memory: %dMB\n", size);
    if (size == 0) return;
    const float clocks[4] = {396.0f, 720.0f, 664.62f, 528.0f};
    const float frequency = clocks[(CCM_CBCMR >> 8) & 3] / (float)(((CCM_CBCMR >> 29) & 7) + 1);
    Serial.printf(" CCM_CBCMR=%08X (%.1f MHz)\n", CCM_CBCMR, frequency);
-   //memory_end = (uint32_t *)(0x70000000 + size * 1048576);
-   //pPSRAM = (uint8_t *)(0x70000000);
-   //if (!pPSRAM) pPSRAM = (uint8_t*)extmem_malloc(REU_Size);
-   if (!pPSRAM) Serial.println(" PSRAM not allocated!");
-   else Serial.printf(" PSRAM loc: $%08x\n", pPSRAM);
-#else
+   Serial.printf(" PSRAM loc: $%08x\n", pPSRAM);
+#elif defined(USE_SD)
    uint32_t StartmS = millis();
    REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);
    if (!REUFile)
@@ -479,6 +548,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 FLASHMEM void PollingHndlr_REU()
 {
 #ifndef Direct_REU
+   //buffer/indirect implementation:
    if (DMA_State != DMA_S_ActiveReady) return;
 
 //DMA asserted, Do REU transfer
@@ -486,7 +556,7 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t REULength = REURegs[REUReg_TransLengthLo] + 256*REURegs[REUReg_TransLengthHi];
    if (REULength == 0) REULength = 0x10000;  //full 64k if set to zero
    uint8_t *REUBuf = (uint8_t*)malloc(REULength); //allocate space
-   uint32_t REUAddr = REU_Sise_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
+   uint32_t REUAddr = REU_Size_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    
    bool FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
