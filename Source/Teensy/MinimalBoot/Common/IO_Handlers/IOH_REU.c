@@ -20,7 +20,7 @@
 
 //#define DbgMsgs_REU        //enable REU debug msgs 
 #define Direct_REU         //use DirectREU Method instead of buffer
-                           
+
 //choose one for REU swap buffer;  direct: PSRAM/RAM12 only, Indirect: SD/PSRAM only
 #define USE_RAM12          //use RAM1/2 space
 //#define USE_PSRAM          //use external PSRAM chip(s)
@@ -133,6 +133,7 @@ extern void FreeDriveDirMenu();
 extern uint8_t RAM_Image[];
 extern StructCrtChip CrtChips[];
 extern uint8_t NumCrtChips;
+extern StructMenuItem *DriveDirMenu;
 
 void DMAByte_BASkip(uint8_t *Data1)
 {
@@ -304,14 +305,15 @@ void DirectREU()
    Serial.flush();
    
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
+   LastCycCnt = ARM_DWT_CYCCNT; //   Ready for next active cycle
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
-   //StartCycCnt = ARM_DWT_CYCCNT;
+   //StartCycCnt = ARM_DWT_CYCCNT; //back to IRQ control
    SetDMADeassert;
 }
 #endif
 
    
-FASTRUN bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
+bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
 {
    if (Address == 0xff00 && !R_Wn) 
    { //Trigger REU start NOW
@@ -412,7 +414,6 @@ FLASHMEM void InitHndlr_REU()
 
    //Allocate full REU size in Ram 1 and 2
    FreeCrtChips(); //re-using CrtChips for this, free mem allocated in RAM2 and reset NumCrtChips
-   FreeDriveDirMenu(); //free/clear prev loaded directory to make space
 
    uint8_t *pRAM_Image = RAM_Image;
 
@@ -431,8 +432,17 @@ FLASHMEM void InitHndlr_REU()
    {
       if (NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(REU_RAM_Bank_Size)))
       {
-         Serial.printf("alloc err bank %d!\n", NumCrtChips);
-         return;
+         if (DriveDirMenu == NULL)
+         {
+            FreeDriveDirMenu(); //free/clear prev loaded directory to make space
+            Serial.println("Menu Clear");
+            NumCrtChips--;
+         }
+         else
+         {
+            Serial.printf("alloc err bank %d!\n", NumCrtChips);
+            return;
+         }
       }
       NumCrtChips++;
    }

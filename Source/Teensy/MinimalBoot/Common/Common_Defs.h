@@ -25,7 +25,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.1.5"    //*VERSION*
+#define TRVersion              "0.7.1.6T"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -133,7 +133,7 @@ enum DMA_States  //used with DMA_State
    DMA_S_StartDisable,     //deactivate/end DMA
    DMA_S_StartTransfer,    //activate DMA for transfer next bad line read, ->DMA_S_TransferReady
    DMA_S_StartActive,      //activate immediately, ->DMA_S_ActiveReady
-   DMA_S_StartFreeze      ,//activate for freeze mode
+   DMA_S_StartFreeze,      //activate for freeze mode
    DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
 };
 
@@ -306,8 +306,8 @@ const uint8_t OutputPins[] = {
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 #define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
-#define Def_nS_DMASetupPAL  400  //    delay from Phi2 falling to RW/Addr setup (just before rising edge)
-#define Def_nS_DMASetupNTSC 380  //       too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
+#define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
+#define Def_nS_DMASetupNTSC 440  //380 too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
 
 uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
@@ -317,7 +317,7 @@ uint32_t nS_DataHold  = Def_nS_DataHold;
 uint32_t nS_VICStart  = Def_nS_VICStart;  
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
-uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, will get set up by main menu
+uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
