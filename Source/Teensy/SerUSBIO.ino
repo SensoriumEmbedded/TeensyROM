@@ -187,9 +187,42 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          BusAnalysis();
          break;
          
-// *** The rest of these cases are used for debug/testing only  
+      //case 'u':  //Pass through USB serial host/device
+      //   if(CmdChannel == &Serial) //only start from device port
+      //   {
+      //      Serial.println("USB Host/Dev pass-through, menu button to exit");
+      //      USBHostSerial.begin(MeatloafBaud, USBHOST_SERIAL_8N1); // 115200 460800 2000000
+      //      while(!BtnPressed)  //menu button to exit
+      //      {
+      //         if (Serial.available()) USBHostSerial.print((char)Serial.read());
+      //         if (USBHostSerial.available()) Serial.print((char)USBHostSerial.read());
+      //      }
+      //   }
+      //   break;
+            
+      //case 'u':  //set up autolaunch
+      //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+      //   CmdChannel->printf("Autolaunch disabled\n");
+      //   
+      //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
+      //   //CmdChannel->printf("Autolaunch set\n");
+      //   
+      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
+      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
+      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ", false);
+      //   break;
+     
+      //case 'u':  //Reboot to minimal build
+      //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
+      //   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
+      //   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);         
+      //   REBOOT;
+      //   break;
 
-#ifdef Fab04_FullDMACapable
+// *** The rest of these cases are used for debug/testing only  
+   // u,v,w,y
+   #ifdef Dbg_SerDMA
+   #ifdef Fab04_FullDMACapable
       case 'u':  //Perform DMA Write
          {
             const uint32_t DMAAddr = 0x0c00;
@@ -274,6 +307,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
              CloseDMA();
          }
          break;
+   #ifdef USE_PSRAM
       case 'y':  //Load REU PSRAM from file
          {  //   example: y/reu/nuvies/speed.reu
             char Filename[100];
@@ -314,40 +348,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             //LoadFile.close();
          }
          break;
-#endif
-
-      
-      //case 'u':  //Pass through USB serial host/device
-      //   if(CmdChannel == &Serial) //only start from device port
-      //   {
-      //      Serial.println("USB Host/Dev pass-through, menu button to exit");
-      //      USBHostSerial.begin(MeatloafBaud, USBHOST_SERIAL_8N1); // 115200 460800 2000000
-      //      while(!BtnPressed)  //menu button to exit
-      //      {
-      //         if (Serial.available()) USBHostSerial.print((char)Serial.read());
-      //         if (USBHostSerial.available()) Serial.print((char)USBHostSerial.read());
-      //      }
-      //   }
-      //   break;
-            
-      //case 'u':  //set up autolaunch
-      //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
-      //   CmdChannel->printf("Autolaunch disabled\n");
-      //   
-      //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
-      //   //CmdChannel->printf("Autolaunch set\n");
-      //   
-      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
-      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
-      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ", false);
-      //   break;
-     
-      //case 'u':  //Reboot to minimal build
-      //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
-      //   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
-      //   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);         
-      //   REBOOT;
-      //   break;
+   #endif
+   #endif
+   #endif
 
    // q, a, i
    #ifdef Dbg_SerASID
