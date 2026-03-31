@@ -50,6 +50,10 @@
 #include "TRMenuFiles/ROMs/TODCheck.prg.h"
 #include "TRMenuFiles/ROMs/Load8Run.prg.h"
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
+#ifdef Fab04_REU
+   #include "TRMenuFiles/ROMs/reutest.prg.h"
+   #include "TRMenuFiles/ROMs/reu_checker_v1.0.prg.h"
+#endif
 //#include "TRMenuFiles/ROMs/Terminator_2.crt.h" //can require minimal build if Ethernet, etc enabled
 //#include "TRMenuFiles/ROMs/ember_head.prg.h"   //now /Pics/T_Ember_Head.kla
 //#include "TRMenuFiles/ROMs/disp_fract.prg.h"   //now /Pics/T_BlackHole.kla
@@ -139,6 +143,10 @@ StructMenuItem dirTest_Diags[] =
    rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(BASIC)" , (uint8_t*)cia_tod_prg                , sizeof(cia_tod_prg) ,
    rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(assy)"  , (uint8_t*)TODCheck_prg                , sizeof(cia_tod_prg) ,
    rtFilePrg  , IOH_TR_BASIC     , (char*)"DMA Pause Check"                  , (uint8_t*)DMACheck_prg               , sizeof(DMACheck_prg) , 
+#ifdef Fab04_REU
+   rtFilePrg  , IOH_REU          , (char*)"CMD 1750/1750XL REU Test    +REU" , (uint8_t*)reutest_prg                , sizeof(reutest_prg) , 
+   rtFilePrg  , IOH_REU          , (char*)"REU-Checker v1.0            +REU" , (uint8_t*)reu_checker_v1_0_prg       , sizeof(reu_checker_v1_0_prg) , 
+#endif
 };
 
 StructMenuItem dirUtilities[] = 
