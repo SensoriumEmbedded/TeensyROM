@@ -88,6 +88,16 @@
 #include "TRMenuFiles/SIDs/Odisey_2001_AD.sid.h"
 #include "TRMenuFiles/SIDs/When_Im_64.sid.h"
 
+#include "TRMenuFiles/SIDs/Av_Still_Time.sid.h"
+#include "TRMenuFiles/SIDs/Av_Twilight_Destruction.sid.h"
+#include "TRMenuFiles/SIDs/Div_Death_Is_no_Evil.sid.h"
+#include "TRMenuFiles/SIDs/Div_Harvest.sid.h"
+#include "TRMenuFiles/SIDs/Div_KarmaDoor_SickSteveWhore.sid.h"
+#include "TRMenuFiles/SIDs/LH_Alpha.sid.h"
+#include "TRMenuFiles/SIDs/LH_Bootloader.sid.h"
+#include "TRMenuFiles/SIDs/ts_Debut_and_Credit.sid.h"
+//#include "TRMenuFiles/SIDs/Div_Sometimes_Low_key_O__m.sid.h"
+
 #include "TRMenuFiles/Pics/Ex_Pie2.art.h"
 #include "TRMenuFiles/Pics/HA_Bluejay.kla.h"
 #include "TRMenuFiles/Pics/HA_Hummingbird.kla.h"
@@ -122,8 +132,8 @@ StructMenuItem dirGames[] =
     rtFileCrt  , IOH_None         , (char*)"Ms. Pac-Man"                      , (uint8_t*)Ms__Pac_Man_crt            , sizeof(Ms__Pac_Man_crt) ,
     rtFileCrt  , IOH_None         , (char*)"Robocop 2             224k EZF"   , (uint8_t*)Robocop_2_EasyFlash_crt    , sizeof(Robocop_2_EasyFlash_crt) ,
     rtFilePrg  , IOH_None         , (char*)"Super Mario Brothers   48k PRG"   , (uint8_t*)super_m_bros_64_prg        , sizeof(super_m_bros_64_prg) ,  
-//    rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
     rtFilePrg  , IOH_None         , (char*)"Tetris"                           , (uint8_t*)Tetris_prg                 , sizeof(Tetris_prg) ,
+//    rtFileCrt  , IOH_None         , (char*)"Terminator 2 +MM+IM   512k Ocean" , (uint8_t*)Terminator_2_crt           , sizeof(Terminator_2_crt) ,
 };
 
 StructMenuItem dirTest_Diags[] = 
@@ -178,8 +188,22 @@ StructMenuItem dirMultimedia[] =
 //   rtFilePrg  , IOH_None         , (char*)"Ember Head"                       , (uint8_t*)ember_head_prg             , sizeof(ember_head_prg) ,
 };
 
-StructMenuItem dirSID_Files[] = 
-{  //DefSIDName should match one of these
+StructMenuItem dirFeatured_SIDs[] = 
+{  //DefSIDName should match one of these or dirSID_Covers
+    rtDirectory, IOH_None         , (char*)UpDirString                                   , NULL, 0 , //one dir level max, up Dir is always root
+    rtFileSID  , IOH_None         , (char*)"Avrilcadabra:Still Time"          , (uint8_t*)Av_Still_Time_sid               , sizeof(Av_Still_Time_sid) ,
+    rtFileSID  , IOH_None         , (char*)"Avrilcadabra:Twilight Destruction", (uint8_t*)Av_Twilight_Destruction_sid     , sizeof(Av_Twilight_Destruction_sid) ,
+    rtFileSID  , IOH_None         , (char*)"DivertigO:   KarmaDoor"           , (uint8_t*)Div_KarmaDoor_SickSteveWhore_sid, sizeof(Div_KarmaDoor_SickSteveWhore_sid) ,
+    rtFileSID  , IOH_None         , (char*)"DivertigO:   Death Is No Evil"    , (uint8_t*)Div_Death_Is_no_Evil_sid        , sizeof(Div_Death_Is_no_Evil_sid) ,
+    rtFileSID  , IOH_None         , (char*)"DivertigO:   Harvest"             , (uint8_t*)Div_Harvest_sid                 , sizeof(Div_Harvest_sid) ,
+    rtFileSID  , IOH_None         , (char*)"LukHash:     Alpha"               , (uint8_t*)LH_Alpha_sid                    , sizeof(LH_Alpha_sid) ,
+    rtFileSID  , IOH_None         , (char*)"LukHash:     Bootloader"          , (uint8_t*)LH_Bootloader_sid               , sizeof(LH_Bootloader_sid) ,
+    rtFileSID  , IOH_None         , (char*)"tubesockor:  Debut and Credit"    , (uint8_t*)ts_Debut_and_Credit_sid         , sizeof(ts_Debut_and_Credit_sid) ,
+//    rtFileSID  , IOH_None         , (char*)"DivertigO Sometimes_Low_key", (uint8_t*)Div_Sometimes_Low_key_O__m_sid  , sizeof(Div_Sometimes_Low_key_O__m_sid) ,
+};
+
+StructMenuItem dirSID_Covers[] = 
+{  //DefSIDName should match one of these or dirSID_Friends
     rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
     rtFileSID  , IOH_None         , (char*)"Also sprach Zarathustra   Strauss", (uint8_t*)Odisey_2001_AD_sid         , sizeof(Odisey_2001_AD_sid) ,
     rtFileSID  , IOH_None         , (char*)"Medley                Various"    , (uint8_t*)Medley_sid                 , sizeof(Medley_sid) ,
@@ -191,9 +215,9 @@ StructMenuItem dirSID_Files[] =
     rtFileSID  , IOH_None         , (char*)"Another Brick In The Wall"        , (uint8_t*)Pink_Floyd_sid             , sizeof(Pink_Floyd_sid) ,
     rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
     rtFileSID  , IOH_None         , (char*)"Tom Sawyer            Rush"       , (uint8_t*)Tom_Sawyer_sid             , sizeof(Tom_Sawyer_sid) ,
-//    rtFileSID  , IOH_None         , (char*)"YYZ                   Rush"       , (uint8_t*)YYZ_sid                    , sizeof(YYZ_sid) ,                  //  C64 mem conflict as of 0.6.2
     rtFileSID  , IOH_None         , (char*)"Aces High             Iron Maiden", (uint8_t*)Aces_High_sid              , sizeof(Aces_High_sid) ,
     rtFileSID  , IOH_None         , (char*)"Switch 625            Def Leppard", (uint8_t*)Switch_625_sid             , sizeof(Switch_625_sid) ,
+//    rtFileSID  , IOH_None         , (char*)"YYZ                   Rush"       , (uint8_t*)YYZ_sid                    , sizeof(YYZ_sid) ,                  //  C64 mem conflict as of 0.6.2
 };
 
 StructMenuItem dirPic_Files[] = 
@@ -259,12 +283,13 @@ StructMenuItem TeensyROMMenu[] =
 
  /* 0 */ rtDirectory, IOH_None           , (char*)"/Games"                           , (uint8_t*)dirGames                   , sizeof(dirGames) ,
  /* 1 */ rtDirectory, IOH_None           , (char*)"/MIDI + ASID"                     , (uint8_t*)dirMIDI_ASID               , sizeof(dirMIDI_ASID) ,
- /* 2 */ rtDirectory, IOH_None           , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Files               , sizeof(dirSID_Files) ,
- /* 3 */ rtDirectory, IOH_None           , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
- /* 4 */ rtDirectory, IOH_None           , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
- /* 5 */ rtDirectory, IOH_None           , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
- /* 6 */ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
- /* 7 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
+ /* 2 */ rtDirectory, IOH_None           , (char*)"/Featured SIDs"                   , (uint8_t*)dirFeatured_SIDs           , sizeof(dirFeatured_SIDs) ,
+ /* 3 */ rtDirectory, IOH_None           , (char*)"/SID Cover Tunes"                 , (uint8_t*)dirSID_Covers              , sizeof(dirSID_Covers) ,
+ /* 4 */ rtDirectory, IOH_None           , (char*)"/Pictures"                        , (uint8_t*)dirPic_Files               , sizeof(dirPic_Files) ,
+ /* 5 */ rtDirectory, IOH_None           , (char*)"/Multimedia"                      , (uint8_t*)dirMultimedia              , sizeof(dirMultimedia) ,
+ /* 6 */ rtDirectory, IOH_None           , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
+ /**7**/ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
+ /* 8 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
 
 };
 
