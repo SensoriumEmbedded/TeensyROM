@@ -20,8 +20,8 @@
 #include "TRMenuFiles/ROMs/TeensyROMC64.h" //TeensyROM Menu cart, stored in RAM
 
 #define DefSIDSource        rmtTeensy  // Default, should always be local (rmtTeensy)
-#define DefSIDPath          "/SID Cover Tunes" 
-#define DefSIDName          "Sleep Dirt            Frank Zappa" 
+#define DefSIDPath          "/Featured SIDs" 
+#define DefSIDName          "DivertigO:   Death Is No Evil" 
 
 #define MaxRAM_ImageSize  (128)  // RAM1 space (in kB) used for CRT & Transfer buffer
 // Test case: Random(?) NFC tag with large directory, crash when tapped

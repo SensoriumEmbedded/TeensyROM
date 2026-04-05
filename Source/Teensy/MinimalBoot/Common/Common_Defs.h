@@ -25,7 +25,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.1.6T"    //*VERSION*
+#define TRVersion              "0.7.1.7"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -67,7 +67,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6410 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6411 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -83,6 +83,7 @@
                                        // 0e: 10/28/25 Hot key paths, Bookmark reduction
                                        // 0f: 11/12/25 Clear beta testers
                                        // 10: 2/24/26  REU added to IO Handlers list
+                                       // 11: 4/5/26   New Default SID
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
