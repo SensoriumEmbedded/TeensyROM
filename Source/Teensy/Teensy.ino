@@ -379,7 +379,7 @@ void SetEEPDefaults()
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
    EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
-   EEPROM.write(eepAdTimezone, -14); //default to pacific time
+   EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
    EEPROM.write(eepAdDefaultSID, DefSIDSource);  
