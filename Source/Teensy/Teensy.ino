@@ -397,7 +397,11 @@ void SetEEPDefaults()
    EEPROM.write(eepAdColorRefStart+EscNameColor    , PokeLtGreen); 
    //hot key defaults:
    EEPwriteStr(eepAdHotKeyPaths+0*MaxPathLength, "TR:/MIDI + ASID/Cynthcart 2.0.1       +Datel MIDI"); 
+#ifdef Fab04_REU
+   EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/Test+Diags/REU-Checker v1.0            +REU"); 
+#else
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/MIDI + ASID/Station64 2.6      +Passport MIDI"); 
+#endif
    EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
