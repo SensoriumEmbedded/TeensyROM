@@ -496,7 +496,7 @@ ReadKeyboard:
    jmp HighlightCurrent    
 
 Load8Run:
-   ldx #6  ;dir Utilities
+   ldx #7  ;dir Utilities
    lda #3  ;prog LOAD"*",8,1 and RUN
    ;launch from main TR menu: sub-dir # stored in X,  item # stored in acc   
    pha ;save program #
