@@ -86,7 +86,16 @@ void setup()
 #ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
+#else
+   SetResetDeassert; //added for C128 startup isse on TR
 #endif   
+   //For intermittent C128 startup issue: 
+   //  *Game needs to be high (and assumingly ExROM low) before reset asserts. 
+   //  Reset assertion forces both ExRom/Game low (from C64/128)
+   SetExROMAssert; //emulate 8k cart ROM
+   SetGameDeassert;
+   delay(100);
+   
    SetResetAssert; //assert reset until main loop()
 
 #ifdef Fab04_SpecialButton
