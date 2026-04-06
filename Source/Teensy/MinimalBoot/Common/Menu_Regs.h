@@ -291,6 +291,7 @@ struct StructMenuItem
 
 enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
 {
+//manually selectable:
    IOH_None,   //always 0
 #ifndef MinimumBuild
    // only supported in full build:
@@ -303,11 +304,17 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_REU,
 #endif   
    IOH_Debug, //last manually selectable, see LastSelectableIOH
+
+//*not* manually selectable, see LastSelectableIOH
    
    IOH_TeensyROM, 
+#ifdef Fab04_Freezers
+   IOH_SuperSnapshotV5,
+#endif
    IOH_ASID,
    IOH_TR_BASIC,
-#endif
+#endif  //full build only above here
+
    IOH_EpyxFastLoad,
    IOH_MagicDesk,
    IOH_Dinamic,

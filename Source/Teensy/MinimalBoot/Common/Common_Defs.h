@@ -11,6 +11,7 @@
    #define Fab04_BiDirReset           //allow bi-directional Reset interface
    #define Fab04_SpecialButton        //Allow use of "Special" button for freeze, etc
    #define Fab04_REU                  //include REU  Special IO
+   #define Fab04_Freezers             //include Freezer cart support
 #endif
 
 //fab 0.3 uses different debug signal and direct data buffer dir control

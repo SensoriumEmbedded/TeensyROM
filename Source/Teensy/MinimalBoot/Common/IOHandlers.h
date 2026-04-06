@@ -75,6 +75,9 @@ struct stcIOHandlers
 #ifdef Fab04_REU
    #include "IO_Handlers/IOH_REU.c"
 #endif   
+#ifdef Fab04_Freezers
+   #include "IO_Handlers/IOH_SuperSnapshotV5.c"
+#endif
    #include "IO_Handlers/IOH_TeensyROM.c" 
    #include "IO_Handlers/IOH_TR_BASIC.c" 
    #include "IO_Handlers/IOH_Swiftlink.c"
@@ -96,8 +99,10 @@ struct stcIOHandlers
 
 stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 {
+//manually selectable:
    &IOHndlr_None,               //IOH_None,
 #ifndef MinimumBuild
+   // only supported in full build:
    &IOHndlr_SwiftLink,          //IOH_Swiftlink,
    &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
    &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
@@ -106,12 +111,18 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
 #ifdef Fab04_REU
    &IOHndlr_REU,                //IOH_REU,
 #endif   
-   &IOHndlr_Debug,              //IOH_Debug, //last manually selectable, see LastSelectableIOH
+   &IOHndlr_Debug,              //IOH_Debug, 
+   
+//*not* manually selectable, see LastSelectableIOH
                                 
    &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
+#ifdef Fab04_Freezers
+   &IOHndlr_SuperSnapshotV5,    //IOH_SuperSnapshotV5
+#endif
    &IOHndlr_ASID,               //IOH_ASID,
    &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
-#endif
+#endif  //full build only above here
+
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
    &IOHndlr_MagicDesk,          //IOH_MagicDesk,
    &IOHndlr_Dinamic,            //IOH_Dinamic,

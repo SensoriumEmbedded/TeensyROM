@@ -39,7 +39,7 @@
 #define Cart_Dinamic                 17  //Supported
 #define Cart_ZaxxonSuper             18  //Supported
 #define Cart_MagicDesk               19  //Supported
-#define Cart_SuperSnapshotV5         20
+#define Cart_SuperSnapshotV5         20  //Supported on v0.4
 #define Cart_Comal80                 21
 #define Cart_StructuredBASIC         22
 #define Cart_Ross                    23
@@ -107,7 +107,7 @@
 #define Cart_GeoRAM                -102 
 #define Cart_ISEPIC                -103 
 #define Cart_RAMcart               -104 
-#define Cart_REU                   -105 
+#define Cart_REU                   -105  //Supported on v0.4, not associated
 #define Cart_SFX_Sound_Expander    -106 
 #define Cart_SFX_Sound_Sampler     -107 
 #define Cart_MIDI_Passport         -108  //Supported
@@ -119,7 +119,7 @@
 #define Cart_TFE                   -116
 #define Cart_Turbo232              -117  //Supported
 #define Cart_SwiftLink             -118  //Supported
-#define Cart_ACIA                  -119
+#define Cart_ACIA                  -119  //Supported?, not associated
 #define Cart_Plus60K               -120
 #define Cart_Plus256K              -121
 #define Cart_C64_256K              -122
@@ -144,6 +144,9 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_MIDI_Namesoft,   IOH_MIDI_NamesoftIRQ,
    (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
    (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
+#ifdef Fab04_Freezers
+   (uint16_t)Cart_SuperSnapshotV5, IOH_SuperSnapshotV5,
+#endif
 #endif
 
    (uint16_t)Cart_EpyxFastload,    IOH_EpyxFastLoad,
