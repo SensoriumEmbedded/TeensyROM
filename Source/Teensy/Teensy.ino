@@ -28,6 +28,7 @@
 #include <NativeEthernetUdp.h>
 #include <EEPROM.h>
 #include <TimeLib.h>
+#include <Bounce.h>
 #include "TeensyROM.h"
 #include "MinimalBoot/Common/Common_Defs.h"
 #include "MinimalBoot/Common/Menu_Regs.h"
@@ -46,6 +47,12 @@ uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 Stream *CmdChannel  = &Serial; 
+bool isFrozen = false;
+void (*fSpecialBtnChange)(bool Up_nDn);    //Pointer to function called when Special Button Changes
+
+#ifdef Fab04_SpecialButton
+   Bounce SpecialBtnBounce = Bounce(Special_Btn_In_PIN, 35); //35mS debounce time
+#endif
 
 #ifdef FeatTCPListen
    EthernetServer tcpServer(2112); // We will assume control on port 2112
@@ -100,7 +107,7 @@ void setup()
 
 #ifdef Fab04_SpecialButton
    pinMode(Special_Btn_In_PIN, INPUT_PULLUP);
-   attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, FALLING );
+   //attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, CHANGE );
 #else
 #ifdef DbgSignalSenseReset
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //use Dot_Clk input as reset sense input
@@ -273,11 +280,19 @@ void loop()
    if ((LEDLoopState = !LEDLoopState)) SetLEDOn;
    else SetLEDOff;
 #endif
+
+#ifdef Fab04_SpecialButton
+   if (SpecialBtnBounce.update())
+   {  //Special button Change (rise or fall)
+      fSpecialBtnChange(SpecialBtnBounce.read());
+   }
+#endif
+
    if (isFrozen)
    {
       static uint32_t FrozenFlashmS = millis();
       static bool FrozenLEDState = true;
- 
+   
       if(millis()-FrozenFlashmS > 100)
       {
          FrozenFlashmS = millis();
@@ -340,6 +355,7 @@ void SetUpMainMenuROM()
    free(LSFileName); LSFileName=NULL;
    IOHandlerInit(IOH_TeensyROM);  
    SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
+   fSpecialBtnChange = &SpecialBtn_Pause;    //Pointer to function called when Special Button Changes
    isFrozen = false;
    doReset = true;
 }
@@ -546,5 +562,23 @@ bool CheckLaunchSDAuto()
    else Printf_dbg("No SD detected\n");
 
    return false;
+}
+
+void SpecialBtn_Pause(bool Up_nDn)
+{
+   if (!Up_nDn) //button pressed down
+   {
+      if ((isFrozen = !isFrozen))
+      {
+         DMA_State = DMA_S_StartFreeze; 
+         //led will flash on/off
+      }
+      else 
+      {
+         DMA_State = DMA_S_StartDisable;
+         SetLEDOn;
+      }
+      Printf_dbg("SpecButtonPress");
+   }
 }
 

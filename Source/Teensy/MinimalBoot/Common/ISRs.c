@@ -17,36 +17,9 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-bool isFrozen = false;
 
 #ifdef Fab04_FullDMACapable
    extern void DMATransferISR();
-#endif
-#ifdef Fab04_SpecialButton
-
-void isrSpecial()
-{
-   static uint32_t LastSpecialButtonmS = 0;
-   
-   if ((millis() - LastSpecialButtonmS) < 100)
-   {
-      //Serial.println("debounce");
-      return;
-   }
-   
-   LastSpecialButtonmS = millis();
-   if ((isFrozen = !isFrozen))
-   {
-      DMA_State = DMA_S_StartFreeze; 
-      //led will flash on/off
-   }
-   else 
-   {
-      DMA_State = DMA_S_StartDisable;
-      SetLEDOn;
-   }
-   Printf_dbg("SpecButtonPress");
-}
 #endif
 
 FASTRUN void isrButton()

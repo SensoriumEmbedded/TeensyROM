@@ -81,7 +81,7 @@ void setup()
 
 #ifdef Fab04_SpecialButton
    pinMode(Special_Btn_In_PIN, INPUT_PULLUP);
-   attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, FALLING );
+   //attachInterrupt( digitalPinToInterrupt(Special_Btn_In_PIN), isrSpecial, CHANGE );
 #else
 #ifdef DbgSignalSenseReset
    pinMode(DotClk_Debug_PIN, INPUT_PULLUP);  //use Dot_Clk input as reset sense input
