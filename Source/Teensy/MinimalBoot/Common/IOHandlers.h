@@ -63,8 +63,8 @@ struct stcIOHandlers
   void (*InitHndlr)();                             //Called once at handler startup
   void (*IO1Hndlr)(uint8_t Address, bool R_Wn);    //IO1 R/W handler
   void (*IO2Hndlr)(uint8_t Address, bool R_Wn);    //IO2 R/W handler
-  void (*ROMLHndlr)(uint32_t Address);             //ROML Read handler, in addition to any ROM data sent
-  void (*ROMHHndlr)(uint32_t Address);             //ROMH Read handler, in addition to any ROM data sent
+  void (*ROMLHndlr)(uint32_t Address, bool R_Wn);  //ROML Read handler, in addition to any ROM data sent
+  void (*ROMHHndlr)(uint32_t Address, bool R_Wn);  //ROMH Read handler, in addition to any ROM data sent
   void (*PollingHndlr)();                          //Polled in main routine
   void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
 };
@@ -75,10 +75,10 @@ struct stcIOHandlers
 #ifdef Fab04_REU
    #include "IO_Handlers/IOH_REU.c"
 #endif   
+   #include "IO_Handlers/IOH_TeensyROM.c" 
 #ifdef Fab04_Freezers
    #include "IO_Handlers/IOH_SuperSnapshotV5.c"
 #endif
-   #include "IO_Handlers/IOH_TeensyROM.c" 
    #include "IO_Handlers/IOH_TR_BASIC.c" 
    #include "IO_Handlers/IOH_Swiftlink.c"
    #include "IO_Handlers/IOH_ASID.c"

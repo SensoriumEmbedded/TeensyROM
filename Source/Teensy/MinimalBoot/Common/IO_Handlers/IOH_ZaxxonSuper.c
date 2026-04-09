@@ -20,7 +20,7 @@
 extern uint16_t LOROM_Mask;
 
 void InitHndlr_ZaxxonSuper();                           
-void ROMLHndlr_ZaxxonSuper(uint32_t Address);  
+void ROMLHndlr_ZaxxonSuper(uint32_t Address, bool R_Wn);  
 
 stcIOHandlers IOHndlr_ZaxxonSuper =
 {
@@ -42,7 +42,7 @@ void InitHndlr_ZaxxonSuper()
    HIROM_Image = CrtChips[1].ChipROM;
 }
 
-void ROMLHndlr_ZaxxonSuper(uint32_t Address)
+void ROMLHndlr_ZaxxonSuper(uint32_t Address, bool R_Wn)
 {
    HIROM_Image = CrtChips[(Address & 0x1000) ? 2 : 1].ChipROM;
 }

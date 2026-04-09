@@ -20,7 +20,7 @@
 void InitHndlr_EpyxFastLoad();                           
 void IO1Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn);  
 void IO2Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn);  
-void ROMLHndlr_EpyxFastLoad(uint32_t Address);           
+void ROMLHndlr_EpyxFastLoad(uint32_t Address, bool R_Wn);           
 void CycleHndlr_EpyxFastLoad();                          
 
 stcIOHandlers IOHndlr_EpyxFastLoad =
@@ -57,7 +57,7 @@ void IO2Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn)
    if (R_Wn) DataPortWriteWait(LOROM_Image[Address | 0x1F00]); 
 }
 
-void ROMLHndlr_EpyxFastLoad(uint32_t Address)
+void ROMLHndlr_EpyxFastLoad(uint32_t Address, bool R_Wn)
 {
    EpyxFastLoadCycleReset;
 }

@@ -79,16 +79,16 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
    
-   if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, read only
+   if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 
-      if (IOHandler[CurrentIOHandler]->ROMLHndlr != NULL) IOHandler[CurrentIOHandler]->ROMLHndlr(Address);
+      if (IOHandler[CurrentIOHandler]->ROMLHndlr != NULL) IOHandler[CurrentIOHandler]->ROMLHndlr(Address, R_Wn);
       //Printf_dbg("roml addr: %04x\n", Address); //useful for HW debug of address lines
    }  //ROML
-   else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, read only
+   else if (!GP9_ROMH(GPIO_9)) //ROMH: A000-BFFF or E000-FFFF address space, *usually* read only
    {
       if (HIROM_Image!=NULL) DataPortWriteWait(HIROM_Image[Address & HIROM_Mask]); 
-      if (IOHandler[CurrentIOHandler]->ROMHHndlr != NULL) IOHandler[CurrentIOHandler]->ROMHHndlr(Address);
+      if (IOHandler[CurrentIOHandler]->ROMHHndlr != NULL) IOHandler[CurrentIOHandler]->ROMHHndlr(Address, R_Wn);
    }  //ROMH
    else if (!GP9_IO1n(GPIO_9)) //IO1: DExx address space
    {
