@@ -21,7 +21,7 @@ void InitHndlr_EpyxFastLoad();
 void IO1Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn);  
 void IO2Hndlr_EpyxFastLoad(uint8_t Address, bool R_Wn);  
 void ROMLHndlr_EpyxFastLoad(uint32_t Address, bool R_Wn);           
-void CycleHndlr_EpyxFastLoad();                          
+void CycleHndlr_EpyxFastLoad(bool R_Wn);                          
 
 stcIOHandlers IOHndlr_EpyxFastLoad =
 {
@@ -62,7 +62,7 @@ void ROMLHndlr_EpyxFastLoad(uint32_t Address, bool R_Wn)
    EpyxFastLoadCycleReset;
 }
 
-void CycleHndlr_EpyxFastLoad()
+void CycleHndlr_EpyxFastLoad(bool R_Wn)
 {
    if (CycleCountdown)
    {

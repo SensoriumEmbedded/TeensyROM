@@ -112,7 +112,7 @@ FASTRUN void isrPHI2()
       if (IOHandler[CurrentIOHandler]->IO2Hndlr != NULL) IOHandler[CurrentIOHandler]->IO2Hndlr(Address, R_Wn);
    }
    
-   if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr();
+   if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr(R_Wn);
 
    
    if (EmulateVicCycles || DMA_State > DMA_S_BeginStartStates)

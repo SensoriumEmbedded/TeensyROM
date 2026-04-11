@@ -66,7 +66,7 @@ struct stcIOHandlers
   void (*ROMLHndlr)(uint32_t Address, bool R_Wn);  //ROML Read handler, in addition to any ROM data sent
   void (*ROMHHndlr)(uint32_t Address, bool R_Wn);  //ROMH Read handler, in addition to any ROM data sent
   void (*PollingHndlr)();                          //Polled in main routine
-  void (*CycleHndlr)();                            //called at the end of EVERY c64 cycle
+  void (*CycleHndlr)(bool R_Wn);                   //called at the end of EVERY c64 cycle
 };
 
 #ifndef MinimumBuild

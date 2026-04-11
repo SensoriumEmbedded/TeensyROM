@@ -25,7 +25,7 @@
 void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn);  
 void PollingHndlr_SwiftLink();                           
 void InitHndlr_SwiftLink();                           
-void CycleHndlr_SwiftLink();                           
+void CycleHndlr_SwiftLink(bool R_Wn);                           
 
 stcIOHandlers IOHndlr_SwiftLink =
 {
@@ -663,7 +663,7 @@ void PollingHndlr_SwiftLink()
    }
 }
 
-void CycleHndlr_SwiftLink()
+void CycleHndlr_SwiftLink(bool R_Wn)
 {
    if (CycleCountdown) CycleCountdown--;
 }
