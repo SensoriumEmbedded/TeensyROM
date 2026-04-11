@@ -74,7 +74,18 @@ CPU Vector Hijack: When the C64 CPU acknowledges the
 */
 
 //releasing the button allows the line to return to a logic HIGH
-
+   if(Up_nDn) 
+   {
+      SetIRQAssert;
+      SetNMIAssert;
+      
+      //need to wait for the 3 write for this:
+      SetLEDOn;
+      SetGameAssert;
+      SetExROMDeassert;
+      lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
+      HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+   }
 }
 
 //__________________________________________________________________________________
@@ -84,6 +95,7 @@ void InitHndlr_SuperSnapshotV5()
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5;
    
    SSv5_RAM_Buf = (uint8_t*)malloc(32*1024); //32k RAM
+   //memset(SSv5_RAM_Buf, 0xaa, 32*1024); //no need
    //if(SSv5_RAM_Buf == NULL)
    //{
    //   Serial.println("SS5 OOM");
@@ -93,12 +105,13 @@ void InitHndlr_SuperSnapshotV5()
    // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
    LOROM_Image = NULL; 
-   lcl_LOROM_Image = CrtChips[0].ChipROM;
-   HIROM_Image = lcl_LOROM_Image+0x2000;  //8k above, 16k total per chip
-
+   
    //force rtBin8kHi:
    SetGameAssert;
    SetExROMDeassert;
+   lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
+   HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+   
    Printf_dbg("SSv5, 8kHi mode forced");
 }   
 
@@ -139,10 +152,11 @@ void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
       //release freeze, !GAME    GAME (0: low, 1: high)
       if (ControlReg & SSv5_CR_RELEASE) 
       {
-         SetGameDeassert;
-         //SetNMIDeassert;
+         SetGameDeassert;  //8kLo or Off
+         SetNMIDeassert;
+         SetIRQDeassert;
       }
-      else SetGameAssert;
+      else SetGameAssert; //rtBin8kHi or rtBin16k
 
       //ROM enable   !rom enable (0: enabled, 1: disabled), Disables the cart
       if (ControlReg & SSv5_CR_ROMEN) 
@@ -165,7 +179,9 @@ void ROMLHndlr_SuperSnapshotV5(uint32_t Address, bool R_Wn)
       else
       {
          //if (!(ControlReg & SSv5_CR_RAMEN)) //we have to be pointing at "RAM" for ROML to be active
+         //SetDebugAssert;
          lcl_LOROM_Image[Address & 0x1fff] = DataPortWaitRead();
+         //SetDebugDeassert;
       }
    }
 }
