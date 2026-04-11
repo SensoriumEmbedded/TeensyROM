@@ -40,6 +40,7 @@ extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called whe
 extern uint16_t LOROM_Mask;
 extern uint8_t* TgetQueue;
 uint8_t *lcl_LOROM_Image;
+uint8_t BankNum;
 
 #define SSv5_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
 
@@ -57,6 +58,43 @@ uint8_t *lcl_LOROM_Image;
 
 //__________________________________________________________________________________
 
+
+void ProcessControlReg(uint8_t ControlReg)
+{
+   //set RAM/ROM bank:
+   BankNum = ((ControlReg & SSv5_CR_RBANK0) >> 2) | ((ControlReg & (SSv5_CR_RBANK2 | SSv5_CR_RBANK1)) >> 3);
+   lcl_LOROM_Image = CrtChips[BankNum].ChipROM;  //default to ROM, may update below.
+   HIROM_Image = lcl_LOROM_Image + 0x2000; //ROM only, 8k above, 16k total per chip
+
+   //RAM enable, EXROM   !ram enable (0: enabled, 1: disabled), !EXROM (0: high, 1: low)
+   if (ControlReg & SSv5_CR_RAMEN) 
+   {
+      //disable RAM, use lcl_LOROM_Image already set
+      SetExROMAssert;  //rtBin16k or 8kLo
+   }
+   else 
+   {
+      //Set lcl_LOROM_Image to enable RAM, Set RAM bank
+      lcl_LOROM_Image = SSv5_RAM_Buf + (BankNum & 3) * 0x2000;
+      SetExROMDeassert;  //rtBin8kHi or None
+   }
+   
+   //release freeze, !GAME    GAME (0: low, 1: high)
+   if (ControlReg & SSv5_CR_RELEASE) 
+   {
+      SetGameDeassert;  //8kLo or Off
+      SetNMIDeassert;
+      SetIRQDeassert;
+   }
+   else SetGameAssert; //rtBin8kHi or rtBin16k
+
+   //ROM enable   !rom enable (0: enabled, 1: disabled), Disables the cart
+   if (ControlReg & SSv5_CR_ROMEN) 
+   {
+      lcl_LOROM_Image = HIROM_Image = NULL;
+      SetLEDOff;
+   }   
+}
 
 void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
 {
@@ -80,11 +118,12 @@ CPU Vector Hijack: When the C64 CPU acknowledges the
       SetNMIAssert;
       
       //need to wait for the 3 write for this:
+      ProcessControlReg(0);
       SetLEDOn;
-      SetGameAssert;
-      SetExROMDeassert;
-      lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
-      HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+      //SetGameAssert;
+      //SetExROMDeassert;
+      //lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
+      //HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
    }
 }
 
@@ -106,19 +145,18 @@ void InitHndlr_SuperSnapshotV5()
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
    LOROM_Image = NULL; 
    
-   //force rtBin8kHi:
-   SetGameAssert;
-   SetExROMDeassert;
-   lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
-   HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+   ProcessControlReg(0);
+   ////force rtBin8kHi:
+   //SetGameAssert;
+   //SetExROMDeassert;
+   //lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
+   //HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
    
    Printf_dbg("SSv5, 8kHi mode forced");
 }   
 
 void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
 {
-   static uint8_t BankNum=0;
-
    if (lcl_LOROM_Image == NULL) return;  //skip if disabled
    
    if (R_Wn) //High (IO1 Read)
@@ -130,41 +168,8 @@ void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
    {  //The control Register is the full I/O-1 range when writing
       uint8_t ControlReg = DataPortWaitRead(); 
       TraceLogAddValidData(ControlReg);
-
-      //set ROM bank:
-      BankNum = ((ControlReg & SSv5_CR_RBANK0) >> 2) | ((ControlReg & (SSv5_CR_RBANK2 | SSv5_CR_RBANK1)) >> 3);
-      lcl_LOROM_Image = CrtChips[BankNum].ChipROM;  //default to ROM, may update below.
-      HIROM_Image = lcl_LOROM_Image + 0x2000; //ROM only, 8k above, 16k total per chip
-
-      //RAM enable, EXROM   !ram enable (0: enabled, 1: disabled), !EXROM (0: high, 1: low)
-      if (ControlReg & SSv5_CR_RAMEN) 
-      {
-         //disable RAM, use lcl_LOROM_Image already set
-         SetExROMAssert;  //rtBin16k or 8kLo
-      }
-      else 
-      {
-         //Set lcl_LOROM_Image to enable RAM, Set RAM bank
-         lcl_LOROM_Image = SSv5_RAM_Buf + (BankNum & 3) * 0x2000;
-         SetExROMDeassert;  //rtBin8kHi or None
-      }
       
-      //release freeze, !GAME    GAME (0: low, 1: high)
-      if (ControlReg & SSv5_CR_RELEASE) 
-      {
-         SetGameDeassert;  //8kLo or Off
-         SetNMIDeassert;
-         SetIRQDeassert;
-      }
-      else SetGameAssert; //rtBin8kHi or rtBin16k
-
-      //ROM enable   !rom enable (0: enabled, 1: disabled), Disables the cart
-      if (ControlReg & SSv5_CR_ROMEN) 
-      {
-         lcl_LOROM_Image = HIROM_Image = NULL;
-         SetLEDOff;
-      }
-      
+      ProcessControlReg(ControlReg);      
   } //write
 }
 
