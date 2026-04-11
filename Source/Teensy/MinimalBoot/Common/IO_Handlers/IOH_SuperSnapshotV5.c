@@ -23,6 +23,7 @@
 void InitHndlr_SuperSnapshotV5();                           
 void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn);  
 void ROMLHndlr_SuperSnapshotV5(uint32_t Address, bool R_Wn);
+void CycleHndlr_SuperSnapshotV5(bool R_Wn);
 
 stcIOHandlers IOHndlr_SuperSnapshotV5 =
 {
@@ -33,12 +34,13 @@ stcIOHandlers IOHndlr_SuperSnapshotV5 =
   &ROMLHndlr_SuperSnapshotV5, //ROML Read handler, in addition to any ROM data sent
   NULL,                       //ROMH Read handler, in addition to any ROM data sent
   NULL,                       //Polled in main routine
-  NULL,                       //called at the end of EVERY c64 cycle
+  CycleHndlr_SuperSnapshotV5, //called at the end of EVERY c64 cycle
 };
 
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 extern uint16_t LOROM_Mask;
 extern uint8_t* TgetQueue;
+extern volatile uint32_t CycleCountdown;
 uint8_t *lcl_LOROM_Image;
 uint8_t BankNum;
 
@@ -66,7 +68,7 @@ void ProcessControlReg(uint8_t ControlReg)
    lcl_LOROM_Image = CrtChips[BankNum].ChipROM;  //default to ROM, may update below.
    HIROM_Image = lcl_LOROM_Image + 0x2000; //ROM only, 8k above, 16k total per chip
 
-   //RAM enable, EXROM   !ram enable (0: enabled, 1: disabled), !EXROM (0: high, 1: low)
+   //Bit 1: RAM enable, EXROM   !ram enable (0: enabled, 1: disabled), !EXROM (0: high, 1: low)
    if (ControlReg & SSv5_CR_RAMEN) 
    {
       //disable RAM, use lcl_LOROM_Image already set
@@ -79,19 +81,20 @@ void ProcessControlReg(uint8_t ControlReg)
       SetExROMDeassert;  //rtBin8kHi or None
    }
    
-   //release freeze, !GAME    GAME (0: low, 1: high)
+   //Bit 0: release freeze, !GAME    GAME (0: low, 1: high)
    if (ControlReg & SSv5_CR_RELEASE) 
    {
-      SetGameDeassert;  //8kLo or Off
+      SetGameDeassert;  //8kLo or None
       SetNMIDeassert;
       SetIRQDeassert;
    }
    else SetGameAssert; //rtBin8kHi or rtBin16k
 
-   //ROM enable   !rom enable (0: enabled, 1: disabled), Disables the cart
+   //Bit 3: ROM enable   !rom enable (0: enabled, 1: disabled), Disables the cart
    if (ControlReg & SSv5_CR_ROMEN) 
    {
-      lcl_LOROM_Image = HIROM_Image = NULL;
+      lcl_LOROM_Image = NULL;
+      HIROM_Image = NULL;
       SetLEDOff;
    }   
 }
@@ -100,30 +103,14 @@ void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
 {
    Serial.printf("SpecialBtn_SuperSnapshotV5: %d\n", Up_nDn);
 
-//AI bullshit???
-
-/*
-NMI Assertion
-
-Immediate Banking Change: The firmware instantly updates the virtual $DF01 register. At the signal level, it sets GAME = 0 and EXROM = 0 (Ultimax Mode).
-ROM Mapping: The Teensy maps the SSv5 ROM bank (usually the first 8KB or 16KB of the .CRT file) to the $E000-$FFFF range.
-CPU Vector Hijack: When the C64 CPU acknowledges the 
-, it looks at $FFFA/$FFFB. Because the Teensy is now mapping the SSv5 ROM into that space, the CPU jumps to the cartridge’s freezer entry point instead of the C64's internal routine. 
-*/
-
-//releasing the button allows the line to return to a logic HIGH
    if(Up_nDn) 
-   {
-      SetIRQAssert;
+   {  //on button release
       SetNMIAssert;
-      
-      //need to wait for the 3 write for this:
-      ProcessControlReg(0);
+      SetIRQAssert;
       SetLEDOn;
-      //SetGameAssert;
-      //SetExROMDeassert;
-      //lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
-      //HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+      
+      CycleCountdown = 3; //Wait for 6510 to push info to stack
+      //need to wait 3 write cycles before ProcessControlReg(0);
    }
 }
 
@@ -145,14 +132,11 @@ void InitHndlr_SuperSnapshotV5()
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
    LOROM_Image = NULL; 
    
-   ProcessControlReg(0);
-   ////force rtBin8kHi:
-   //SetGameAssert;
-   //SetExROMDeassert;
-   //lcl_LOROM_Image = SSv5_RAM_Buf; //RAM Bank 0
-   //HIROM_Image = CrtChips[0].ChipROM+0x2000;  //8k above, 16k total per chip
+   CycleCountdown = 0;
    
-   Printf_dbg("SSv5, 8kHi mode forced");
+   ProcessControlReg(0);
+   
+   Printf_dbg("SSv5, 8kHi mode");
 }   
 
 void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
@@ -190,3 +174,14 @@ void ROMLHndlr_SuperSnapshotV5(uint32_t Address, bool R_Wn)
       }
    }
 }
+
+void CycleHndlr_SuperSnapshotV5(bool R_Wn)
+{
+   if (CycleCountdown)
+   {
+      if (R_Wn) CycleCountdown = 3; //require 3 writes *in a row*
+      else if(--CycleCountdown == 0) ProcessControlReg(0);
+      
+   }
+}
+
