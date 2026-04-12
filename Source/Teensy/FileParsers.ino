@@ -418,9 +418,18 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
    //check configuration
+   
+#ifdef Fab04_Freezers
+   if (IO1[rwRegNextIOHndlr] == IOH_SuperSnapshotV5)
+   {  //EXROM==1 && GAME==1, Addr==$8000, Size==$4000
+      MyMenuItem->ItemType = rtBin8kLo; //set in IOH_SuperSnapshotV5, using Lo here to not enable VIC cycle
+      SendMsgPrintfln("SSv5 config");
+      return true;
+   }      
+#endif
       
    if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
-   //Usually GAME ==1 and EXROM==0
+   //Usually  EXROM==0 snd GAME ==1
    //Centiped calls for GAME low but doesn't use 16k
    //Epyx Fastload sets EXROM & GAME high in crt
    {
@@ -429,7 +438,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
       return true;
    }      
 
-   if(                                     CrtChips[0].ROMSize == 0x2000 && EXROM==1 && GAME==0)
+   if(                                 CrtChips[0].ROMSize == 0x2000 && EXROM==1 && GAME==0)
    {
       MyMenuItem->ItemType = rtBin8kHi;
       SendMsgPrintfln(" 8kHi/Ultimax config");
