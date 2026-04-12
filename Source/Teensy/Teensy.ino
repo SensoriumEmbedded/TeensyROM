@@ -390,7 +390,7 @@ void EEPreadStr(uint16_t addr, char* buf)
    } while (buf[CharNum++] !=0); //end on termination, but include it in buffer
 }
 
-void SetEEPDefaults()
+FLASHMEM void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
@@ -422,6 +422,9 @@ void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
    
+   //future use:
+   for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)
+      EEPROM.write(eepAdUnused+EEPByteNum, 0);
    
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }

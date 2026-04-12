@@ -27,7 +27,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.1.7"    //*VERSION*
+#define TRVersion              "0.7.1.8"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -69,7 +69,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6411 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6412 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -85,7 +85,7 @@
                                        // 0e: 10/28/25 Hot key paths, Bookmark reduction
                                        // 0f: 11/12/25 Clear beta testers
                                        // 10: 2/24/26  REU added to IO Handlers list
-                                       // 11: 4/5/26   New Default SID
+                                       // 12: 4/12/26  New Default SID, unused/future space init to 0
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -107,12 +107,14 @@ enum InternalEEPROMmap
    eepAdCrtBootName   = 1963, // (MaxPathLength=300) Boot to minimal .crt path to launch
    eepAdMinBootInd    = 2263, // (1:uint8_t)    Minimal/full boot indicator, see MinBootIndFlags
    eepAdAutolaunchName= 2264, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
-   eepAdPwrUpDefaults2= 2564, // (1:uint8_t)    power up default reg, see bit mask defs RegPowerUpDefaultMasks2
+   eepAdPwrUpDefaults2= 2564, // (1:uint8_t)    power up default reg2, see bit mask defs RegPowerUpDefaultMasks2
    eepAdColorRefStart = 2565, // (NumColorRefs=7)  UI color references, see ColorRefOffsets
    eepAdHotKeyPaths   = 2572, // (MaxPathLength=300)*NumHotKeys (5)  Default Hot Key settings
+   eepAdUnused        = 4072, // (eepAdUnusedSize)  Reserved for future use, initialized to 0
 
-   //eepAdNext        = 2572+1500=4072, // Next address to be used
-   //Max size = 4284 (4k, emulated in flash)
+   eepAdUnusedSize    = 200
+   //eepAdNext        = 4072 + eepAdUnusedSize = 4272, // Next address to be used
+   //Max size = 4284 (emulated in flash)
 };
 
 enum MinBootIndFlags
