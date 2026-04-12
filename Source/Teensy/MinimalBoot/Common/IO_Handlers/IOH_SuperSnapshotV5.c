@@ -45,6 +45,8 @@ uint8_t *lcl_LOROM_Image;
 uint8_t BankNum;
 
 #define SSv5_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
+#define CycCntFreeze 255   //trigger to freeze next read, must be higher than CycCntNumWr
+#define CycCntNumWr  3     //number of writes in a row to wait for 6510 stack pushes
 
 //ref: https://vice-emu.sourceforge.io/vice_17.html#SEC466
 //     https://rr.pokefinder.org/wiki/Super_Snapshot
@@ -101,16 +103,9 @@ void ProcessControlReg(uint8_t ControlReg)
 
 void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
 {
-   Serial.printf("SpecialBtn_SuperSnapshotV5: %d\n", Up_nDn);
-
    if(Up_nDn) 
    {  //on button release
-      SetNMIAssert;
-      SetIRQAssert;
-      SetLEDOn;
-      
-      CycleCountdown = 3; //Wait for 6510 to push info to stack
-      //need to wait 3 write cycles before ProcessControlReg(0);
+     CycleCountdown = CycCntFreeze; //Trigger NMI next read
    }
 }
 
@@ -120,8 +115,7 @@ void InitHndlr_SuperSnapshotV5()
 {
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5;
    
-   SSv5_RAM_Buf = (uint8_t*)malloc(32*1024); //32k RAM
-   //memset(SSv5_RAM_Buf, 0xaa, 32*1024); //no need
+   SSv5_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k RAM
    //if(SSv5_RAM_Buf == NULL)
    //{
    //   Serial.println("SS5 OOM");
@@ -135,6 +129,11 @@ void InitHndlr_SuperSnapshotV5()
    CycleCountdown = 0;
    
    ProcessControlReg(0);
+   //BankNum = 0;
+   //lcl_LOROM_Image = SSv5_RAM_Buf;
+   //HIROM_Image = CrtChips[0].ChipROM + 0x2000; //ROM only, 8k above, 16k total per chip
+   //SetExROMDeassert;  //rtBin8kHi or None
+   //SetGameAssert; //rtBin8kHi or rtBin16k
    
    Printf_dbg("SSv5, 8kHi mode");
 }   
@@ -151,9 +150,8 @@ void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
    else  // IO1 write
    {  //The control Register is the full I/O-1 range when writing
       uint8_t ControlReg = DataPortWaitRead(); 
-      TraceLogAddValidData(ControlReg);
-      
       ProcessControlReg(ControlReg);      
+      TraceLogAddValidData(ControlReg);
   } //write
 }
 
@@ -179,9 +177,29 @@ void CycleHndlr_SuperSnapshotV5(bool R_Wn)
 {
    if (CycleCountdown)
    {
-      if (R_Wn) CycleCountdown = 3; //require 3 writes *in a row*
-      else if(--CycleCountdown == 0) ProcessControlReg(0);
+      if (CycleCountdown == CycCntFreeze)
+      {
+         if (R_Wn) 
+         {
+            //assert NMI during read cycle
+            SetNMIAssert;
+            SetIRQAssert;
+            SetLEDOn;
+            //CycleCountdown = CycCntNumWr;  //will happen below
+         }
+         else return;
+      }
       
+      if (R_Wn) CycleCountdown = CycCntNumWr; //require 3 writes *in a row*
+      else if(--CycleCountdown == 0) 
+      {
+         ProcessControlReg(0);
+         //BankNum = 0;
+         //lcl_LOROM_Image = SSv5_RAM_Buf;
+         //HIROM_Image = CrtChips[0].ChipROM + 0x2000; //ROM only, 8k above, 16k total per chip
+         //SetExROMDeassert;  //rtBin8kHi or None
+         //SetGameAssert; //rtBin8kHi or rtBin16k
+      }
    }
 }
 
