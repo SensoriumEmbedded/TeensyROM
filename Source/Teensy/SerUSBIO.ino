@@ -187,6 +187,22 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          BusAnalysis();
          break;
          
+      //case 'u':  //dump Super Snapshot v5 RAM
+      //   if (SSv5_RAM_Buf==NULL)
+      //   {
+      //      Serial.printf("No init!");
+      //   }
+      //   else 
+      //   {
+      //      SetDebugAssert;
+      //      for (uint32_t count=0; count<32*1024; count++)
+      //      {
+      //         if(count % 16 == 0) Serial.printf("\n %04x: ", count);
+      //         Serial.printf(" %02x", SSv5_RAM_Buf[count]);
+      //      }
+      //      SetDebugDeassert;
+      //   }
+      
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
       //   {
