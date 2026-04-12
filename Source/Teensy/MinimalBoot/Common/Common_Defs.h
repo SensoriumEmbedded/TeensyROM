@@ -12,6 +12,7 @@
    #define Fab04_SpecialButton        //Allow use of "Special" button for freeze, etc
    #define Fab04_REU                  //include REU  Special IO
    #define Fab04_Freezers             //include Freezer cart support
+  // #define Fab04_DebugSignals         //For debug only
 #endif
 
 //fab 0.3 uses different debug signal and direct data buffer dir control
@@ -208,16 +209,24 @@ const uint8_t OutputPins[] = {
 #ifndef Fab04_BiDirReset
    6,   //Reset_Out_PIN,
 #endif
+#ifdef Fab04_DebugSignals
+   52,  //Debug pin on bottom pads
+#endif
    };
 
-#ifdef DbgFab0_3plus
-   #define SetDebugAssert      CORE_PIN28_PORTSET = CORE_PIN28_BITMASK
-   #define SetDebugDeassert    CORE_PIN28_PORTCLEAR = CORE_PIN28_BITMASK 
-#else  //fab 0.2x
-   //debug on pin 33, but could be blue-wired to drive DataBufIn/Out as on fab 0.3
-   //   let it be driven as SetDataBufIn/Out for blue-wired 0.2x boards
-   #define SetDebugAssert      {} //CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
-   #define SetDebugDeassert    {} //CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
+#ifdef Fab04_DebugSignals
+   #define SetDebugAssert      CORE_PIN52_PORTSET = CORE_PIN52_BITMASK
+   #define SetDebugDeassert    CORE_PIN52_PORTCLEAR = CORE_PIN52_BITMASK 
+#else
+   #ifdef DbgFab0_3plus
+      #define SetDebugAssert      CORE_PIN28_PORTSET = CORE_PIN28_BITMASK
+      #define SetDebugDeassert    CORE_PIN28_PORTCLEAR = CORE_PIN28_BITMASK 
+   #else  //fab 0.2x
+      //debug on pin 33, but could be blue-wired to drive DataBufIn/Out as on fab 0.3
+      //   let it be driven as SetDataBufIn/Out for blue-wired 0.2x boards
+      #define SetDebugAssert      {} //CORE_PIN33_PORTSET = CORE_PIN33_BITMASK
+      #define SetDebugDeassert    {} //CORE_PIN33_PORTCLEAR = CORE_PIN33_BITMASK 
+   #endif
 #endif
 
 #define ReadGPIO6           (*(volatile uint32_t *)IMXRT_GPIO6_ADDRESS)
