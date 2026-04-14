@@ -2,12 +2,29 @@
 <#
 .SYNOPSIS
     Automated Dual-Boot Hex File Builder for TeensyROM
+
+.PARAMETER Fab04_Features
+    When specified, adds -DFab04_Features to the compiler flags for both builds.
+    Use in source with: #ifdef Fab04_Features ... #endif
+
+    IMPLEMENTATION NOTE: Teensy's platform.txt does not expose {compiler.cpp.extra_flags}
+    in its compile recipes, so the standard arduino-cli --build-property approach is
+    silently ignored. The workaround (per the PJRC forum) is to:
+      1. Query the existing build.flags.defs value via --show-properties
+      2. Append the extra -D flag to that value
+      3. Pass the combined string back via --build-property "build.flags.defs=..."
+    Teensy's platform.txt does use {build.flags.defs} in its recipes, so this works.
+
+.EXAMPLE
+    .\Build-DualBoot.ps1                   # standard build
+    .\Build-DualBoot.ps1 -Fab04_Features   # build with Fab04_Features defined
 #>
 
 param(
     [switch]$SkipTeensyBuild = $false,
     [switch]$SkipMinimalBuild = $false,
-    [switch]$SkipCombine = $false
+    [switch]$SkipCombine = $false,
+    [switch]$Fab04_Features
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +44,12 @@ if (-not (Test-Path $ArduinoBasePath)) {
 
 Write-Host "=== TeensyROM Dual-Boot Build ===" -ForegroundColor Cyan
 Write-Host "Arduino: $ArduinoBasePath" -ForegroundColor Gray
+
+if ($Fab04_Features) {
+    Write-Host "Fab04_Features: ENABLED  (for TeensyROM+ Fab0.4)" -ForegroundColor Cyan
+} else {
+    Write-Host "Fab04_Features: DISABLED  (for TeensyROM Fab0.2/0.3)" -ForegroundColor Cyan
+}
 
 # Find Teensy hardware version
 $TeensyPath = Get-ChildItem "$ArduinoBasePath\packages\teensy\hardware\avr" -Directory -ErrorAction SilentlyContinue |
@@ -70,7 +93,11 @@ function Remove-ArduinoCache {
 }
 
 function Invoke-ArduinoBuild {
-    param([string]$InoPath, [string]$Fqbn)
+    param(
+        [string]$InoPath,
+        [string]$Fqbn,
+        [switch]$WithFab04Features
+    )
 
     Write-Host "  Building: $InoPath" -ForegroundColor Gray
 
@@ -114,9 +141,37 @@ function Invoke-ArduinoBuild {
 
     Write-Host "  Using arduino-cli with FQBN: $Fqbn" -ForegroundColor Cyan
 
-    # Determine output directory from the .ino path
     $InoDir = Split-Path $InoPath
-    & $ArduinoCli.Path compile --fqbn $Fqbn --build-path $InoDir\build $InoPath
+
+    if ($WithFab04Features) {
+        # Teensy's platform.txt does not include {compiler.cpp.extra_flags} in its
+        # compile recipes, so --build-property compiler.cpp.extra_flags=... is ignored.
+        # The workaround is to piggyback on build.flags.defs, which Teensy's platform.txt
+        # *does* use in its recipes:
+        #   1. Retrieve the current build.flags.defs value via --show-properties
+        #   2. Append -DFab04_Features to it
+        #   3. Pass the combined value back as --build-property "build.flags.defs=..."
+        Write-Host "  Querying build.flags.defs for Fab04_Features injection..." -ForegroundColor Gray
+
+        $existingFlagsDefs = & $ArduinoCli.Path compile --fqbn $Fqbn --build-path $InoDir\build `
+            --show-properties $InoPath |
+            Where-Object { $_ -match '^build\.flags\.defs=' } |
+            Select-Object -First 1
+
+        if (-not $existingFlagsDefs) {
+            Write-Host "  ERROR: Could not retrieve build.flags.defs from --show-properties" -ForegroundColor Red
+            exit 1
+        }
+
+        $allFlags = "$existingFlagsDefs -DFab04_Features"
+        Write-Host "  Injecting: $allFlags" -ForegroundColor Cyan
+
+        & $ArduinoCli.Path compile --fqbn $Fqbn --build-path $InoDir\build `
+            --build-property $allFlags `
+            $InoPath
+    } else {
+        & $ArduinoCli.Path compile --fqbn $Fqbn --build-path $InoDir\build $InoPath
+    }
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  ERROR: Build failed" -ForegroundColor Red
@@ -167,7 +222,7 @@ if (-not $SkipTeensyBuild) {
         Remove-Item -Recurse -Force $TeensyBuildDir -ErrorAction SilentlyContinue
     }
 
-    Invoke-ArduinoBuild -InoPath $TeensyInoPath -Fqbn "teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us"
+    Invoke-ArduinoBuild -InoPath $TeensyInoPath -Fqbn "teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us" -WithFab04Features:$Fab04_Features
     Test-HexFile -Path $TeensyHexOutput -Name "TeensyROM"
 }
 
@@ -182,7 +237,7 @@ if (-not $SkipMinimalBuild) {
         Remove-Item -Recurse -Force $MinimalBuildDir -ErrorAction SilentlyContinue
     }
 
-    Invoke-ArduinoBuild -InoPath $MinimalBootInoPath -Fqbn "teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us"
+    Invoke-ArduinoBuild -InoPath $MinimalBootInoPath -Fqbn "teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us" -WithFab04Features:$Fab04_Features
     Test-HexFile -Path $MinimalHexOutput -Name "MinimalBoot"
 }
 
