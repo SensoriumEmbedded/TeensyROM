@@ -90,6 +90,7 @@
 
 #include "TRMenuFiles/SIDs/Av_Still_Time.sid.h"
 #include "TRMenuFiles/SIDs/Av_Twilight_Destruction.sid.h"
+#include "TRMenuFiles/SIDs/Av_Endless_Sands.sid.h"
 #include "TRMenuFiles/SIDs/Div_Death_Is_no_Evil.sid.h"
 #include "TRMenuFiles/SIDs/Div_Harvest.sid.h"
 #include "TRMenuFiles/SIDs/Div_KarmaDoor_SickSteveWhore.sid.h"
@@ -193,6 +194,7 @@ StructMenuItem dirFeatured_SIDs[] =
     rtDirectory, IOH_None         , (char*)UpDirString                                   , NULL, 0 , //one dir level max, up Dir is always root
     rtFileSID  , IOH_None         , (char*)"Avrilcadabra:Still Time"          , (uint8_t*)Av_Still_Time_sid               , sizeof(Av_Still_Time_sid) ,
     rtFileSID  , IOH_None         , (char*)"Avrilcadabra:Twilight Destruction", (uint8_t*)Av_Twilight_Destruction_sid     , sizeof(Av_Twilight_Destruction_sid) ,
+    rtFileSID  , IOH_None         , (char*)"Avrilcadabra:Endless Sands"       , (uint8_t*)Av_Endless_Sands_sid            , sizeof(Av_Endless_Sands_sid) ,
     rtFileSID  , IOH_None         , (char*)"DivertigO:   KarmaDoor"           , (uint8_t*)Div_KarmaDoor_SickSteveWhore_sid, sizeof(Div_KarmaDoor_SickSteveWhore_sid) ,
     rtFileSID  , IOH_None         , (char*)"DivertigO:   Death Is No Evil"    , (uint8_t*)Div_Death_Is_no_Evil_sid        , sizeof(Div_Death_Is_no_Evil_sid) ,
     rtFileSID  , IOH_None         , (char*)"DivertigO:   Harvest"             , (uint8_t*)Div_Harvest_sid                 , sizeof(Div_Harvest_sid) ,
