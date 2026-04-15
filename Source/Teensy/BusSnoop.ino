@@ -9,7 +9,7 @@ volatile uint32_t BusSampleCount;
 FLASHMEM void BusAnalysis()
 {
    Serial.printf("\nTaking max %d samples in %dmS\n", BusSampleMaxSize, BusSampleTimeoutmS);
-#ifndef DbgFab0_3plus
+#if !defined(DbgFab0_3plus) && !defined(Fab04_DataBufAlwaysEnabled)
    Serial.printf("Snooping data bus on C64 writes only (Fab 0.2x)\n", BusSampleMaxSize, BusSampleTimeoutmS);
 #endif
    
@@ -40,7 +40,7 @@ FLASHMEM void BusAnalysis()
 bool BusCount(uint16_t Address, bool R_Wn)
 {
 
-#ifdef DbgFab0_3plus
+#if defined(DbgFab0_3plus) || defined(Fab04_DataBufAlwaysEnabled)
    //can snoop C64 Read or Write Data with fab 0.3+
    SetDataBufIn; //force data buffer to input, regardless of R/W
    {
