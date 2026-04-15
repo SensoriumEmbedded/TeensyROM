@@ -1,6 +1,6 @@
 # TeensyROM Dual-Boot Build Script
 
-Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex`) containing both MinimalBoot and TeensyROM images.
+Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex` and/or `TeensyROM+_full.hex`) containing both MinimalBoot and TeensyROM images.
 
 ## Prerequisites
 
@@ -14,12 +14,12 @@ Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex`) conta
    - Version is pinned for supply-chain security
    - SHA256 checksum is verified before use
    - Update version intentionally through pull request review
-2. **Builds TeensyROM** (upper memory, USB: Serial+MIDI)
+2. **Builds TeensyROM Main** (upper memory, USB: Serial+MIDI)
 3. **Builds MinimalBoot** (lower memory, USB: Serial)
 4. **Combines** both into single hex file
 
 ## Default Usage
-Builds both images and combines them.
+Builds both images for TeensyROM and combines them.
 
 ```powershell
 .\Build-DualBoot.ps1
@@ -27,7 +27,7 @@ Builds both images and combines them.
 ## Parameters
 
 ```powershell
-.\Build-DualBoot.ps1 [-SkipTeensyBuild] [-SkipMinimalBuild] [-SkipCombine]
+.\Build-DualBoot.ps1 [-SkipTeensyBuild] [-SkipMinimalBuild] [-SkipCombine] [-Fab04_Features]
 ```
 
 | Parameter | Purpose |
@@ -35,10 +35,11 @@ Builds both images and combines them.
 | `-SkipTeensyBuild` | Skip TeensyROM build |
 | `-SkipMinimalBuild` | Skip MinimalBoot build |
 | `-SkipCombine` | Skip combining hex files |
+| `-Fab04_Features` | Build for Fab0.4 (TeensyROM+) |
 
 ## Output
 
-**Final firmware:** `tools\build\TeensyROM_full.hex`
+**Final firmware:** `tools\build\TeensyROM_full.hex` and/or `tools\build\TeensyROM+_full.hex`
 
 **Intermediate files:**
 - `build\Teensy.ino.hex` - TeensyROM image
@@ -49,7 +50,7 @@ Builds both images and combines them.
 The script does **NOT** flash automatically. Use Teensy Loader:
 
 1. Open Teensy Loader
-2. Drag `TeensyROM_full.hex` onto it
+2. Drag `TeensyROM_full.hex` or `TeensyROM+_full.hex` onto it
 3. Press button on Teensy 4.1
 
 ## Security
