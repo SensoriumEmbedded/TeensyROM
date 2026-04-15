@@ -42,13 +42,13 @@ if (-not (Test-Path $ArduinoBasePath)) {
     exit 1
 }
 
-Write-Host "=== TeensyROM Dual-Boot Build ===" -ForegroundColor Cyan
+Write-Host "=== TeensyROM/TR+ Dual-Boot Build ===" -ForegroundColor Cyan
 Write-Host "Arduino: $ArduinoBasePath" -ForegroundColor Gray
 
 if ($Fab04_Features) {
-    Write-Host "Fab04_Features: ENABLED  (for TeensyROM+ Fab0.4)" -ForegroundColor Cyan
+    Write-Host "Fab04_Features: ENABLED  (for TeensyROM+ Fab0.4)" -ForegroundColor Yellow
 } else {
-    Write-Host "Fab04_Features: DISABLED  (for TeensyROM Fab0.2/0.3)" -ForegroundColor Cyan
+    Write-Host "Fab04_Features: DISABLED  (for TeensyROM Fab0.2/0.3)" -ForegroundColor Yellow
 }
 
 # Find Teensy hardware version
@@ -72,7 +72,11 @@ $HexCombinePath = Join-Path $ScriptPath "HexCombineUtil\HexCombine.exe"
 
 $TeensyHexOutput = Join-Path $ScriptPath "..\build\Teensy.ino.hex"
 $MinimalHexOutput = Join-Path $ScriptPath "..\MinimalBoot\build\MinimalBoot.ino.hex"
-$FinalOutput = Join-Path $BuildPath "TeensyROM_full.hex"
+if ($Fab04_Features) {
+    $FinalOutput = Join-Path $BuildPath "TeensyROM+_full.hex"
+} else {
+    $FinalOutput = Join-Path $BuildPath "TeensyROM_full.hex"
+}
 
 # Helper Functions
 function Copy-LinkerFiles {
@@ -248,9 +252,4 @@ if (-not $SkipCombine) {
 
 Write-Host "`n=== BUILD COMPLETE ===" -ForegroundColor Green
 Write-Host "Output: $FinalOutput" -ForegroundColor White
-Write-Host "Flash this to your Teensy 4.1" -ForegroundColor Yellow
 
-# Pause for any key so the console stays open
-Write-Host ""
-Write-Host "Press any key to continue . . ." -ForegroundColor Yellow
-[void][System.Console]::ReadKey($true)
