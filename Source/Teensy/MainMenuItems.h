@@ -96,6 +96,7 @@
 #include "TRMenuFiles/SIDs/Div_KarmaDoor_SickSteveWhore.sid.h"
 #include "TRMenuFiles/SIDs/LH_Alpha.sid.h"
 #include "TRMenuFiles/SIDs/LH_Bootloader.sid.h"
+#include "TRMenuFiles/SIDs/LH_Raster_Bar.sid.h"
 #include "TRMenuFiles/SIDs/ts_Debut_and_Credit.sid.h"
 //#include "TRMenuFiles/SIDs/Div_Sometimes_Low_key_O__m.sid.h"
 
@@ -200,6 +201,7 @@ StructMenuItem dirFeatured_SIDs[] =
     rtFileSID  , IOH_None         , (char*)"DivertigO:   Harvest"             , (uint8_t*)Div_Harvest_sid                 , sizeof(Div_Harvest_sid) ,
     rtFileSID  , IOH_None         , (char*)"LukHash:     Alpha"               , (uint8_t*)LH_Alpha_sid                    , sizeof(LH_Alpha_sid) ,
     rtFileSID  , IOH_None         , (char*)"LukHash:     Bootloader"          , (uint8_t*)LH_Bootloader_sid               , sizeof(LH_Bootloader_sid) ,
+    rtFileSID  , IOH_None         , (char*)"LukHash:     Raster Bar"          , (uint8_t*)LH_Raster_Bar_sid               , sizeof(LH_Raster_Bar_sid) ,
     rtFileSID  , IOH_None         , (char*)"tubesockor:  Debut and Credit"    , (uint8_t*)ts_Debut_and_Credit_sid         , sizeof(ts_Debut_and_Credit_sid) ,
 //    rtFileSID  , IOH_None         , (char*)"DivertigO Sometimes_Low_key", (uint8_t*)Div_Sometimes_Low_key_O__m_sid  , sizeof(Div_Sometimes_Low_key_O__m_sid) ,
 };
