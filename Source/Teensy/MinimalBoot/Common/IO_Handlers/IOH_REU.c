@@ -68,6 +68,7 @@ stcIOHandlers IOHndlr_REU =
 
 extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr);
 extern void CloseDMA();
+//extern uint8_t RAM2blocks();
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
 //tests:
@@ -429,6 +430,8 @@ FLASHMEM void InitHndlr_REU()
 #ifdef USE_RAM12
    //Allocate full REU size in Ram 1 and 2
    FreeCrtChips(); //re-using CrtChips for this, free mem allocated in RAM2 and reset NumCrtChips
+   FreeDriveDirMenu(); //free/clear prev loaded directory to make space. Doing it regardless to preserve continuity
+   //Serial.printf("RAM2#x- %d\n", RAM2blocks());
 
    uint8_t *pRAM_Image = RAM_Image;
 
@@ -447,17 +450,11 @@ FLASHMEM void InitHndlr_REU()
    {
       if (NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(REU_RAM_Bank_Size)))
       {
-         if (DriveDirMenu == NULL)
-         {
-            FreeDriveDirMenu(); //free/clear prev loaded directory to make space
-            Serial.println("Menu Clear");
-            NumCrtChips--;
-         }
-         else
-         {
-            Serial.printf("alloc err bank %d!\n", NumCrtChips);
-            return;
-         }
+         //if (DriveDirMenu == NULL) //doing this here fragments RAM2
+         Serial.printf("alloc err bank %d!\n", NumCrtChips);
+         //Serial.flush(); //doesn't flush Tx before reboot?
+         delay(250);
+         REBOOT; //no better way to fail...
       }
       NumCrtChips++;
    }
