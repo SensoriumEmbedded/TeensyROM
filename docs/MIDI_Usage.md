@@ -49,6 +49,9 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
       * Remember that there are only 3 voices in the SID, so complex midi files with more simultaneous notes/voices won't sound right.
     * The playback should be eminating from your C64/128!
 
+### MIDI Source setup
+  * As with the original MIDI devices that the TeensyROM emulates, all MIDI tokens/packets recieved are passed through to the C64 and the software running there. That software (ie Cynthcart or Station 64) can be sensitive to the type and density of commands received and potentially overflow their buffer/interrupt handler and crash.   It may be necessary in these cases to filter out unnecessary data from the stream, such as indicated with the Cakewalk "Zero Controllers" example above.  Most sources/DAWs have the capability to filter out this extra/unused information.
+
 <br>
 
 [Back to main ReadMe](/README.md)
