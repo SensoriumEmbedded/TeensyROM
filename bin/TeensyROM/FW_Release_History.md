@@ -1,7 +1,56 @@
 
 # FW Release Version history:
 
-### 0.7.1 Release 2026/02/02
+## Dual FW releases moving forward
+The TR+ (PCB v0.4) has architectural differences that warrant a different binary build than the original TR (PCB v0.2–0.3).  
+The original TR will continue to be supported, with separate .hex file releases.
+
+ * "+" in TR+ FW name, banner/title and serial boot-up messaging
+ * Distinct FW file names
+   * TR (PCB v0.2–0.3) example: **TeensyROM_0.7.2_full.hex**
+   * TR+ (PCB v0.4) example: **TeensyROM+_0.7.2_full.hex**
+ * Safeguards in place to prevent loading FW on the wrong HW version via the normal menu-based TR FW update method.
+   * If loading via the Teensy Loader program, take care to load only the correct version for your hardware.
+   
+## FW 0.7.2 Release 2026/04/20
+
+### Updates for both TR and TR+
+ * Note that EEPROM settings will be reset to defaults with this FW update.
+   * Extra EEPROM space is now reserved for future use to reduce forced EEPROM resets later
+ * New "Featured SIDs" directory and menu background SID
+   * Be sure to check out these great tunes!
+   * Thank you to @Avrilcadabra, @DivertigO, LukHash, and @tubesockor for your support and permission.
+ * MIDI support for polling mode (with IRQ disabled)
+ * Updated bundled SID-Wizard/SID-Wizard_2SID/SID-Wizard User Manual from V1.92 to V1.94
+ * "BASIC with TR Command IO access" menu item for low-level access to TeensyROM IO Commands
+ * C128 cold boot improvement (thanks for the ID/testing @Jamie!)
+ * Updated to TeensyDuino 1.60.0
+ * **Real Time Clock (RTC)** addition
+   * Utilizes Teensy's RTC for all C64 time syncs   
+   * CR1225 battery holder on back of TR+ for persistent time memory
+   * A battery can be added to Fab 0.2/0.3 TR to enable this capability
+     * **Instructions comming soon!**
+   * "Sync time with Ethernet" operations changed to "Sync RTC...".
+     * C64 Time always synced to RTC on menu start
+     * Ethernet sync is no longer needed after one sync with a battery installed
+   * Default time zone changed to UTC+0 (GMT)
+   * NTP Packet timeout increased from 1.5 to 2.5 seconds
+ 
+### Updates for TR+ only
+ * **External Reset detect:** If reset is done externally (ie C64U reset button, WOPR button, any other custom/external reset button) you'll see the same action as when pressing the TR menu button. 
+ * **New "Alt" button** 
+   * Super Snapshot V5 CRT support (PAL or NTSC versions).
+   * When not used by SSv5, it performs freeze/unfreeze when pressed, LED will flash when frozen. 
+ * **512K REU implementation** initially for C64 only
+   * Enable "REU" as the "Special IO" in settings menu to engage before running programs requiring it.
+   * REU-Checker v1.0 & CMD 1750/1750XL REU Test added to TR Mem Test+Diags Menu
+   * Hot Key #2 changed from Station64 to REU-Checker v1.0
+ * Single #define for all Fab 0.4 features (Fab04_Features) in new file (Fab04FeatureCtl.h)
+   * Build scripts also updated to build both TR and TR+ without editing Fab04FeatureCtl.h
+     * Previous TR only .bat and .sh scripts deprecated, PowerShell scripts cover all
+ * Bus Snoop updated to count data bus reads and writes
+
+## 0.7.1 Release 2026/02/02
 * **Support for Persistent TCP Connections via remote control listenner by @hExx**
   * Updates for TCP/Ethernet use with the [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web) application
   * Improves performance for time sensitive operations like SID speed changes, and avoids race conditions. 
@@ -35,7 +84,7 @@
   * Menu clock in 24 hour mode can mess up background SID playback in the second half of the day.
   * Auto launch set could've been impacted by random NFC tag
 
-### 0.7 Release 2025/12/04
+## 0.7 Release 2025/12/04
 * Note: EEPROM Settings will reset with this FW update
 * New Remote Command/Control Options:
   * All remote commands now available via these interfaces (in addition to USB Device port)
@@ -164,7 +213,7 @@
       * Parameters printed to screen, Frame rate applied to buffer/timer.
     * Expected SID types: Chip index & chip type printed to screen
     * Thank you @tubesockor for the new packet specification, SFII builds, and general guidance/reviews!
-      * Tested with SID Factory II advance build, supporting release coming soon.
+      * Tested with SID Factory II advance build, supporting release comming soon.
   * 2nd/3rd SID address defaults from $d420/$d440 to $df00/None (for commonality with Cynthcart 2nd SID address)
   * Fix: Start/Stop Message Tokens used incorrect addressing
 * Serial/Remote interface:
@@ -711,3 +760,4 @@
 ## 0.1: 2023/02/09
    
 ## Initial commit: 2023/01/11/23
+

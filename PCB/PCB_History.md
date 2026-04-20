@@ -8,6 +8,7 @@
       * Previous "debug" signal used for this.
       * Compatible with FW v0.6.4 and higher. 
         * Future FW will continue to be compatible with all PCB versions.
+      * See [this document](PCB_Assembly.md) for information on upgrading a v0.2x PCB to v0.3
   * Removed (unused) Dot_Clock input to Teensy, now spare/debug signal to header
   * C1 & C2 (22uF bulk caps) replaced with 1210 size SMT versions
   * C9 added for Vhst (optional)
