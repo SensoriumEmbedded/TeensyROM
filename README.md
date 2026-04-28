@@ -88,6 +88,7 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
     * **[Software Build Instructions](Source/BuildInfo.md)**
   * **Hardware & PCB Related**
     * **[3D printed case files/document](3D_Print_Case/3D-Printed-Case-ReadMe.md)**
+    * **[RTC Battery Addition for v0.2/0.3 PCBs](docs/RTC_Battery_Addition.md)**
     * **[TeensyROM Assembly Instructions](PCB/PCB_Assembly.md)**
     * **[PCB Design History](PCB/PCB_History.md)**
     * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM%20v0.2c%20BOM.xlsx)**
