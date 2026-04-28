@@ -24,6 +24,8 @@ The TeensyROM+ (v0.4) has a built-in battery holder for a CR1225 coin cell, but 
     * Re-assemble the case, taking care not to pinch the wires.  I found there is clearance for one wire on each side of the SD card openning
     ![alt text](../media/RTC_batt/RTC_batt_Final.jpg)
 
+    * Install the battery into the holder, observing correct polarity.
+      * If the holder has a switch, be sure it is set to "on"
     * Power on your C64/TeensyROM and connect an Ethernet cable to synch the time.
     * Go to the settings menu (F8) and Synch RTC Via Ethernet (K) to set the RTC time
     * Adjust the time zone to your area using C/c
