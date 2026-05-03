@@ -12,7 +12,8 @@
    #define Fab04_SpecialButton        //Allow use of "Special" button for freeze, etc
    #define Fab04_REU                  //include REU  Special IO
    #define Fab04_Freezers             //include Freezer cart support
-  // #define Fab04_DebugSignals         //For debug only
+   #define Fab04_KernalReplace        //include Kernal Replacement support
+   #define Fab04_DebugSignals         //For debug only
 #endif
 
 //fab 0.3 uses different debug signal and direct data buffer dir control
@@ -27,7 +28,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.2"    //*VERSION*
+#define TRVersion              "0.7.2.1"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
