@@ -295,24 +295,27 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_None,   //always 0
 #ifndef MinimumBuild
    // only supported in full build:
-   IOH_Swiftlink,
-   IOH_MIDI_Datel,      
-   IOH_MIDI_Sequential, 
-   IOH_MIDI_Passport,   
-   IOH_MIDI_NamesoftIRQ,
-#ifdef Fab04_REU
-   IOH_REU,
-#endif   
-   IOH_Debug, //last manually selectable, see LastSelectableIOH
+      IOH_Swiftlink,
+      IOH_MIDI_Datel,      
+      IOH_MIDI_Sequential, 
+      IOH_MIDI_Passport,   
+      IOH_MIDI_NamesoftIRQ,
+   #ifdef Fab04_REU
+      IOH_REU,
+   #endif 
+   #ifdef Fab04_KernalReplace
+      IOH_KernalReplace,
+   #endif  
+      IOH_Debug, //last manually selectable, see LastSelectableIOH
 
-//*not* manually selectable, see LastSelectableIOH
-   
-   IOH_TeensyROM, 
-#ifdef Fab04_Freezers
-   IOH_SuperSnapshotV5,
-#endif
-   IOH_ASID,
-   IOH_TR_BASIC,
+   //*not* manually selectable, see LastSelectableIOH
+      
+      IOH_TeensyROM, 
+   #ifdef Fab04_Freezers
+      IOH_SuperSnapshotV5,
+   #endif
+      IOH_ASID,
+      IOH_TR_BASIC,
 #endif  //full build only above here
 
    IOH_EpyxFastLoad,

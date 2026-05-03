@@ -70,18 +70,21 @@ struct stcIOHandlers
 };
 
 #ifndef MinimumBuild
-   #include "IO_Handlers/IOH_MIDI.c"
-   #include "IO_Handlers/IOH_Debug.c"
-#ifdef Fab04_REU
-   #include "IO_Handlers/IOH_REU.c"
-#endif   
-   #include "IO_Handlers/IOH_TeensyROM.c" 
-#ifdef Fab04_Freezers
-   #include "IO_Handlers/IOH_SuperSnapshotV5.c"
-#endif
-   #include "IO_Handlers/IOH_TR_BASIC.c" 
-   #include "IO_Handlers/IOH_Swiftlink.c"
-   #include "IO_Handlers/IOH_ASID.c"
+      #include "IO_Handlers/IOH_MIDI.c"
+      #include "IO_Handlers/IOH_Debug.c"
+   #ifdef Fab04_REU
+      #include "IO_Handlers/IOH_REU.c"
+   #endif 
+   #ifdef Fab04_KernalReplace
+      #include "IO_Handlers/IOH_KernalReplace.c"
+   #endif    
+      #include "IO_Handlers/IOH_TeensyROM.c" 
+   #ifdef Fab04_Freezers
+      #include "IO_Handlers/IOH_SuperSnapshotV5.c"
+   #endif
+      #include "IO_Handlers/IOH_TR_BASIC.c" 
+      #include "IO_Handlers/IOH_Swiftlink.c"
+      #include "IO_Handlers/IOH_ASID.c"
 #endif
    #include "IO_Handlers/IOH_None.c"
    #include "IO_Handlers/IOH_EpyxFastLoad.c"
@@ -103,24 +106,27 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_None,               //IOH_None,
 #ifndef MinimumBuild
    // only supported in full build:
-   &IOHndlr_SwiftLink,          //IOH_Swiftlink,
-   &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
-   &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
-   &IOHndlr_MIDI_Passport,      //IOH_MIDI_Passport,   
-   &IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
-#ifdef Fab04_REU
-   &IOHndlr_REU,                //IOH_REU,
-#endif   
-   &IOHndlr_Debug,              //IOH_Debug, 
-   
-//*not* manually selectable, see LastSelectableIOH
-                                
-   &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
-#ifdef Fab04_Freezers
-   &IOHndlr_SuperSnapshotV5,    //IOH_SuperSnapshotV5
-#endif
-   &IOHndlr_ASID,               //IOH_ASID,
-   &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
+      &IOHndlr_SwiftLink,          //IOH_Swiftlink,
+      &IOHndlr_MIDI_Datel,         //IOH_MIDI_Datel,      
+      &IOHndlr_MIDI_Sequential,    //IOH_MIDI_Sequential, 
+      &IOHndlr_MIDI_Passport,      //IOH_MIDI_Passport,   
+      &IOHndlr_MIDI_NamesoftIRQ,   //IOH_MIDI_NamesoftIRQ,
+   #ifdef Fab04_REU
+      &IOHndlr_REU,                //IOH_REU,
+   #endif  
+   #ifdef Fab04_KernalReplace
+      &IOHndlr_KernalReplace,      //IOH_KernalReplace,
+   #endif  
+      &IOHndlr_Debug,              //IOH_Debug, 
+      
+   //*not* manually selectable, see LastSelectableIOH
+                                   
+      &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
+   #ifdef Fab04_Freezers
+      &IOHndlr_SuperSnapshotV5,    //IOH_SuperSnapshotV5
+   #endif
+      &IOHndlr_ASID,               //IOH_ASID,
+      &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
 #endif  //full build only above here
 
    &IOHndlr_EpyxFastLoad,       //IOH_EpyxFastLoad,
