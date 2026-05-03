@@ -24,10 +24,10 @@
 |:--:|:--:|
 
 Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
-<BR>Kits as well as **Fully assembled/tested units** are available via my [Tindie shop](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/). I also sell on [eBay](https://www.ebay.com/usr/travis_sensorium).
-<BR><a href="https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/"><img src="media/Other/tindie-mediums.png" alt="Tindie Logo Link" width="150" height="78"></a>
+<BR>**Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom).  I also sell on [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) and [eBay](https://www.ebay.com/usr/travis_sensorium).
+<BR><a href="https://lectronz.com/products/teensyrom"><img src="media/Other/i-sell-on-lectronz-large.png" alt="Lectronz Logo Link" width="150" height="78"></a>
 
-Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, for sale with a new unit (Tindie/eBay links above), or direct from [0ldSKull](https://www.tindie.com/stores/0ldskull/)
+Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, for sale with a new unit (See links links above), or direct from [0ldSKull](https://www.0ldskull-retro.com/)
 
 Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U) to meet other TeensyROM users, ask questions, provide thoughts/input/feedback, etc.
 
