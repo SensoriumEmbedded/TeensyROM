@@ -10,7 +10,7 @@ FLASHMEM void BusAnalysis()
 {
    Serial.printf("\nTaking max %d samples in %dmS\n", BusSampleMaxSize, BusSampleTimeoutmS);
 #if !defined(DbgFab0_3plus) && !defined(Fab04_DataBufAlwaysEnabled)
-   Serial.printf("Snooping data bus on C64 writes only (Fab 0.2x)\n", BusSampleMaxSize, BusSampleTimeoutmS);
+   Serial.printf("Snooping data bus on C64 writes only (Fab 0.2x)\n");
 #endif
    
    BusBitCount = (uint32_t*)calloc(NumBusBits*2, sizeof(uint32_t));

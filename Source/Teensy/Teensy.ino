@@ -334,6 +334,7 @@ void loop()
 
 void SetUpMainMenuROM()
 {
+   fBusSnoop = NULL;
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;

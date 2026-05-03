@@ -56,7 +56,7 @@ void InitHndlr_REU();
 
 stcIOHandlers IOHndlr_REU =
 {
-  "REU",               //Name of handler
+  "512KB REU",         //Name of handler
   &InitHndlr_REU,      //Called once at handler startup
   NULL,                //IO1 R/W handler
   &IO2Hndlr_REU,       //IO2 R/W handler
@@ -460,6 +460,38 @@ FLASHMEM void InitHndlr_REU()
    }
    Printf_dbg_reu("Used %lu bytes from RAM2, %luK bytes REU total\n", REU_Size+(uint32_t)RAM_Image-(uint32_t)pRAM_Image, REU_Size/1024);
 
+   
+   //pre-load REU here:
+   
+   // char Filename[]="/reu/Test PRGs/gillham test/ship512.reu";
+   // 
+   // Serial.printf("Loading REU: %s\n", Filename);
+   // File LoadFile = SD.open(Filename, FILE_READ);
+   // if (!LoadFile)
+   // {
+   //    Serial.println("Not found!");
+   //    return;
+   // }
+   // 
+   // if (LoadFile.size() > REU_Size)
+   // {
+   //    Serial.println("Too large!");
+   //    return;
+   // }
+   // 
+   // uint32_t StartmS = millis();
+   // uint32_t CharNum = 0;
+   // while (LoadFile.available())
+   // {
+   //    REU_RAM_WRITE(CharNum, LoadFile.read());
+   //    CharNum++;
+   // }
+   // Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
+   // LoadFile.close();
+   
+   
+   
+   
 #elif defined(USE_PSRAM)
    //higher clock speed and shorter CS setup/hold do help, but still not enough for NUVIEs w/ sound
 
