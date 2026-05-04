@@ -18,19 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+   // Prevents actual writes to data bus for HIRAM sense tuning and 
+   //  performs HIRAM check every time to drive Debug signal (enable KERNAL_DEBUG_SIG_CONT).
+   //  Scope ROMH and Debug to detect incorrect detections
+// #define KERNAL_MONITOR_ONLY   
+   
+   // Drives debug signal for trigger: falling edge/low=ROM, rising edge/high=RAM:
+// #define KERNAL_DEBUG_SIG_CONT
 
 void InitHndlr_KernalReplace();                           
 
 stcIOHandlers IOHndlr_KernalReplace =
 {
-  "Kernal Replace",    //Name of handler (IOHNameLength max)
-  &InitHndlr_KernalReplace,      //Called once at handler startup
-  NULL,                //IO1 R/W handler
-  NULL,                //IO2 R/W handler
-  NULL,                //ROML Read handler, in addition to any ROM data sent
-  NULL,                //ROMH Read handler, in addition to any ROM data sent
-  NULL,                //Polled in main routine
-  NULL,                //called at the end of EVERY c64 cycle
+  "Kernal Replace",         //Name of handler (IOHNameLength max)
+  &InitHndlr_KernalReplace, //Called once at handler startup
+  NULL,                     //IO1 R/W handler
+  NULL,                     //IO2 R/W handler
+  NULL,                     //ROML Read handler, in addition to any ROM data sent
+  NULL,                     //ROMH Read handler, in addition to any ROM data sent
+  NULL,                     //Polled in main routine
+  NULL,                     //called at the end of EVERY c64 cycle
 };
 
 #define KernalBin MIDIRxBuf
@@ -71,7 +78,9 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
    
    SetGameAssert;
    
+#ifndef KERNAL_MONITOR_ONLY
    if (HIRAM_State == HIRAM_State_Unknown) 
+#endif
    {  //determine if it's reading RAM or KERNAL w/ Skoe method
       SetExROMAssert;
       SetAddrBufsOut;   //set address buffers to output
@@ -81,7 +90,8 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
       //Measured ~30nS via o-scope
       // Cyc=nS*.816       nS=Cyc/.816       uint32_t cycles = nSToCyc(nS);
       uint32_t begin = ARM_DWT_CYCCNT;
-      while (ARM_DWT_CYCCNT - begin < 13) ; // 10 fails (occasional misdetect of ram on rom cycle) 11 passes
+      //while (ARM_DWT_CYCCNT - begin < 13) ; //C64/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
+      while (ARM_DWT_CYCCNT - begin < 21) ; //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       
       HIRAM_State = (GP9_ROMH(ReadGPIO9)==0 ? HIRAM_State_ROM : HIRAM_State_RAM); //read ROMH to determine if it's a Kernal or RAM access
       
@@ -92,6 +102,7 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
    
    if (HIRAM_State == HIRAM_State_ROM) 
    {
+#ifndef KERNAL_MONITOR_ONLY
       //Drive Data bus:
       SetDataBufOut; //buffer out first
       SetDataPortDirOut; //then set data ports to outputs
@@ -103,12 +114,14 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 
       SetDataPortDirIn; //set data ports back to inputs/default
       SetDataBufIn;     //then set buffer dir to input
-      
+#endif
+#ifdef KERNAL_DEBUG_SIG_CONT
       SetDebugDeassert; // falling edge/low=ROM
    }
    else 
    {
       SetDebugAssert;  //rising edge/high=RAM
+#endif
    }
    SetGameDeassert;
     
@@ -157,6 +170,5 @@ FLASHMEM void InitHndlr_KernalReplace()
    HIRAM_State = HIRAM_State_Unknown;
    fBusSnoop = &KernalCheck; 
 
-   doReset = true;
 }
 
