@@ -594,6 +594,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case 'e': //nS_DMASetup change
                GetDigits(3, &nS_DMASetup);
                break;
+            case 'k': //Cyc_KernProp change
+               GetDigits(2, &Cyc_KernProp);
+               break;
             case 'd': //Set Defaults
                nS_MaxAdj    = Def_nS_MaxAdj; 
                nS_PLAprop   = Def_nS_PLAprop;  
@@ -604,6 +607,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
                nS_DMASetup  = Def_nS_DMASetupPAL;
+               Cyc_KernProp = Def_Cyc_KernProp;
                CmdChannel->printf("Defaults set\n");
                break;
             default:
@@ -611,15 +615,16 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                break;
          }
          CmdChannel->printf("Current:    Variable  Val (Command)\n");
-         CmdChannel->printf("\t   nS_MaxAdj %04d (tm####)\n", nS_MaxAdj);
+         CmdChannel->printf("\t nS_MaxAdj   %04d (tm####)\n", nS_MaxAdj);
          CmdChannel->printf("\t nS_RWnReady  %03d (tr###)\n", nS_RWnReady);
-         CmdChannel->printf("\t  nS_PLAprop  %03d (tp###)\n", nS_PLAprop);
-         CmdChannel->printf("\tnS_DataSetup  %03d (ts###)\n", nS_DataSetup);
+         CmdChannel->printf("\t nS_PLAprop   %03d (tp###)\n", nS_PLAprop);
+         CmdChannel->printf("\t nS_DataSetup %03d (ts###)\n", nS_DataSetup);
          CmdChannel->printf("\t nS_DataHold  %03d (th###)\n", nS_DataHold);
          CmdChannel->printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
          CmdChannel->printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
          CmdChannel->printf("\t nS_DMAAssert %03d (ta###)\n", nS_DMAAssert);
          CmdChannel->printf("\t nS_DMASetup  %03d (te###)\n", nS_DMASetup);
+         CmdChannel->printf("\t Cyc_KernProp  %02d (tk##)\n", Cyc_KernProp);
 
          CmdChannel->printf("\tSet Defaults      (td)\n");
          CmdChannel->printf("\tList current vals (t)\n-----\n");

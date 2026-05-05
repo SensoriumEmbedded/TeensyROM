@@ -90,8 +90,7 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
       //Measured ~30nS via o-scope
       // Cyc=nS*.816       nS=Cyc/.816       uint32_t cycles = nSToCyc(nS);
       uint32_t begin = ARM_DWT_CYCCNT;
-      //while (ARM_DWT_CYCCNT - begin < 13) ; //C64/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
-      while (ARM_DWT_CYCCNT - begin < 21) ; //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
+      while (ARM_DWT_CYCCNT - begin < Cyc_KernProp);
       
       HIRAM_State = (GP9_ROMH(ReadGPIO9)==0 ? HIRAM_State_ROM : HIRAM_State_RAM); //read ROMH to determine if it's a Kernal or RAM access
       
@@ -134,7 +133,7 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 FLASHMEM void InitHndlr_KernalReplace()
 {
 
-   if (KernalBin != NULL) free(KernalBin);
+   if (KernalBin != NULL) free((void*)KernalBin);
    KernalBin = (uint8_t*)malloc(8192);
    //KernalBin = RAM_Image;
    

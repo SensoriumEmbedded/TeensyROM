@@ -28,7 +28,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.2.1"    //*VERSION*
+#define TRVersion              "0.7.2.2"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -323,6 +323,12 @@ const uint8_t OutputPins[] = {
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
 #define Def_nS_DMASetupNTSC 440  //380 too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
 
+//Other critical Timing
+#define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
+      //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
+      //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
+      //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
+
 uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  
@@ -332,6 +338,7 @@ uint32_t nS_VICStart  = Def_nS_VICStart;
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
 uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+uint32_t Cyc_KernProp = Def_Cyc_KernProp;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
