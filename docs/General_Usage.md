@@ -53,13 +53,19 @@
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
 ## SD Card or USB Drive Setup
-  * No TR code is stored on these external drives, so neither are required to start using your TeensyROM and all of its bundled programs.  However, here are some recommendations to extend your enjoyment.
+  * General info/configuration
+    * No TR code is stored on these external drives, so they not are required to start using your TeensyROM and all of its FW bundled programs.
     * SD Cards are somewhat favored over USB drives as they have slightly faster access times.
-    * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a great/free source for thousands of CRT files/games in a format (CRT) that's perfect for the TeensyROM
-    * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
-    * Recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
-    * 32GB SD cards typically give the fastest directory read times
+      * 32GB SD cards typically give the fastest directory read times
+    * We've seen some issues with USB (or SD) drives with non-standard partitioning of the drive, especially manufacturer default partitions.  
+      * If you have issues reading drive contents via the TR, try deleting the existing partition(s) (either via the 'diskman' Disk Management gui or using 'diskpart' and 'clean' via command line) then re-partition. After that, re-format in either FAT32 or FAT16 and load files.
     * Mac users: Before removing the SD card from your Mac, recommend running the `dot_clean` command on the top-level directory of the volume, e.g. `dot_clean -m /Volumes/TEENSYSD`. This will remove all macOS-specific meta files from the SD card and reduce clutter.
+  * Recommended Files/Games/SIDs
+    * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a wonderful (and free) source for thousands of files/games in CRT format, which is perfect for the TeensyROM
+    * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
+    * There's a great collection of Single Load Demos [located here](http://sensoriumembedded.com/tinyweb64/Demos/).
+    * Recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
+
     
 ## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
