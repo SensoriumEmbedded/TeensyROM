@@ -53,6 +53,10 @@ MsgSetAutoLaunch:
    !tx ChrReturn, EscC,EscSourcesColor, "Set Power-up Auto Launch:", ChrReturn
    !tx 0
 
+MsgSetKernalBin:
+   !tx ChrReturn, EscC,EscSourcesColor, "Set KERNAL Replace Binary:", ChrReturn
+   !tx 0
+
 MsgMountDxxFile:
    !tx ChrReturn, EscC,EscSourcesColor, "Mount Dxx File:", ChrReturn
    !tx 0

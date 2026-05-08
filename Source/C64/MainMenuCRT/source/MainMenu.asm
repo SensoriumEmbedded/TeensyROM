@@ -384,6 +384,7 @@ ReadKeyboard:
    ldy #>MsgSetAutoLaunch
    jsr PrintString
    lda #rCtlSetAutoLaunchWAIT
+CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
    sta wRegControl+IO1Port
    jsr WaitForTRDots
    jsr AnyKeyMsgWait   
@@ -475,6 +476,15 @@ ReadKeyboard:
    jsr ListMenuItems
    jmp HighlightCurrent  
 
++  cmp #'K' ;Select Kernal File
+   bne +
+   jsr PrintBanner ;SourcesColor
+   lda #<MsgSetKernalBin
+   ldy #>MsgSetKernalBin
+   jsr PrintString
+   lda #rCtlSetKERNALBinWAIT
+   jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
+
 +  cmp #'M' ;Mount Dxx file
    bne +
    jsr PrintBanner ;SourcesColor
@@ -537,12 +547,8 @@ Load8Run:
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
    lda #rCtlHotKeySetLaunch
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots
-   jsr AnyKeyMsgWait   
-   jsr ListMenuItems ; reprint menu
-   jmp HighlightCurrent    
-   
+   jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
+ 
    
 +  jmp WaitForJSorKey
    

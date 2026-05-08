@@ -422,6 +422,7 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
+   EEPROM.write(eepAdKERNALBinName, 0); //No Kernal Selection
    
    //future use:
    for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)

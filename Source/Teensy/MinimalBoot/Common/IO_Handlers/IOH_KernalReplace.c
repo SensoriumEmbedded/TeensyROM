@@ -129,6 +129,11 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 
 //______________________________________________________________________________________________
 
+extern void EEPreadStr(uint16_t addr, char* buf);
+extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);
+extern bool SDFullInit();
+extern bool USBFileSystemWait();
+extern FS *FSfromSourceID(RegMenuTypes SourceID);
 
 FLASHMEM void InitHndlr_KernalReplace()
 {
@@ -138,10 +143,18 @@ FLASHMEM void InitHndlr_KernalReplace()
    //KernalBin = RAM_Image;
    
    //load kernal image into RAM:
-   char Filename[]="/Kernal.bin";
-
+   char Filename[MaxPathLength];
+   EEPreadStr(eepAdKERNALBinName, Filename);
+   char *ptrFileName = Filename; //pointer to move past SD/USB/TR:
    Serial.printf("Loading Kernal: %s\n", Filename);
-   File LoadFile = SD.open(Filename, FILE_READ);
+   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrFileName);
+
+   if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
+   if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
+   //rmtTeensy not allowed, no kernal files in Teensy Mem
+   
+   FS *sourceFS = FSfromSourceID(MenuSourceID);
+   File LoadFile = sourceFS->open(ptrFileName, FILE_READ);
    if (!LoadFile)
    {
       Serial.println("Not found!");

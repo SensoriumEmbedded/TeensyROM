@@ -112,8 +112,9 @@ enum InternalEEPROMmap
    eepAdPwrUpDefaults2= 2432, // (1:uint8_t)    power up default reg2, see bit mask defs RegPowerUpDefaultMasks2
    eepAdColorRefStart = 2433, // (7:NumColorRefs)  UI color references, see ColorRefOffsets
    eepAdHotKeyPaths   = 2440, // (256*5:MaxPathLength*NumHotKeys)  Default Hot Key settings
+   eepAdKERNALBinName = 3720, // (256:MaxPathLength) Kernal binary file/path
    
-   eepAdNext          = 3720, // Next address to be used
+   eepAdNext          = 3976, // Next address to be used
    eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
    eepAdUnusedSize    = (4284-eepAdUnused),
    //Max size = 4284 (emulated in flash)

@@ -618,6 +618,45 @@ FLASHMEM void HotKeySetLaunch()
    }
 }
 
+FLASHMEM void SetKERNALBin()
+{
+#ifdef Fab04_KernalReplace
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+
+   char PathMsg[MaxPathLength];
+   IO1[rwRegScratch] = 0;
+   GetCurrentFilePathName(PathMsg);
+   SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
+
+   //check for source=teensy (not supported)
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy) 
+   {
+      SendMsgPrintfln("Select file from SD or USB only\r");
+      return;
+   }
+   
+   if (MenuSource[SelItemFullIdx].ItemType == rtDirectory)
+   {
+      SendMsgPrintfln("Invalid File Type\r");
+      return;
+   }      
+   
+   //.Size isn't populated for SD/USB
+   //if (MenuSource[SelItemFullIdx].Size != 8192) 
+   //{
+   //   SendMsgPrintfln("Wrong Size (%lu), expecting 8192 Bytes\r", MenuSource[SelItemFullIdx].Size);
+   //   return;
+   //}
+
+   SendMsgPrintfln("KERNAL Binary selection updated:\r  * Enable via Settings menu/Special IO\r");
+   
+   EEPwriteStr(eepAdKERNALBinName, PathMsg);  //set Kernal path in EEPROM
+   
+#else
+   SendMsgPrintfln("KERNAL replacement capability\r  only available on TeensyROM+\r");
+#endif
+}
+
 FLASHMEM void SetAutoLaunch()
 {
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
@@ -760,6 +799,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MountDxxFile,        // rsMountDxxFile
    &HotKeySetLaunch,     // rsHotKeySetLaunch
    &NetListenInit,       // rsNetListenInit
+   &SetKERNALBin,        // rsSetKERNALBin
 };
 
 
@@ -1172,6 +1212,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlSetBackgroundSIDWAIT:
                   IO1[rwRegStatus] = rsSetBackgroundSID; //work this in the main code
+                  break;
+               case rCtlSetKERNALBinWAIT:
+                  IO1[rwRegStatus] = rsSetKERNALBin; //work this in the main code
                   break;
                case rCtlSetAutoLaunchWAIT:
                   IO1[rwRegStatus] = rsSetAutoLaunch; //work this in the main code
