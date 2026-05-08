@@ -70,7 +70,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6412 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6413 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -87,6 +87,7 @@
                                        // 0f: 11/12/25 Clear beta testers
                                        // 10: 2/24/26  REU added to IO Handlers list
                                        // 12: 4/12/26  New Default SID, unused/future space init to 0
+                                       // 13: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -102,19 +103,19 @@ enum InternalEEPROMmap
    eepAdDHCPTimeout   =   30, // (2:uint16_t)   DNS Timeout
    eepAdDHCPRespTO    =   32, // (2:uint16_t)   DNS Response Timeout
    eepAdDLPathSD_USB  =   34, // (1:uint8_t)    Download path is on SD or USB per Drive_SD/USB
-   eepAdDLPath        =   35, // (TxMsgMaxSize=128)  HTTP Download path
-   eepAdBookmarks     =  163, // (MaxPathLength=300)*eepNumBookmarks (5)    Bookmark Titles and Full Paths
-   eepAdDefaultSID    = 1663, // (MaxPathLength=300) Path/filename of Default SID to play in background
-   eepAdCrtBootName   = 1963, // (MaxPathLength=300) Boot to minimal .crt path to launch
-   eepAdMinBootInd    = 2263, // (1:uint8_t)    Minimal/full boot indicator, see MinBootIndFlags
-   eepAdAutolaunchName= 2264, // (MaxPathLength=300) Autolaunch path to launch or zero length for off
-   eepAdPwrUpDefaults2= 2564, // (1:uint8_t)    power up default reg2, see bit mask defs RegPowerUpDefaultMasks2
-   eepAdColorRefStart = 2565, // (NumColorRefs=7)  UI color references, see ColorRefOffsets
-   eepAdHotKeyPaths   = 2572, // (MaxPathLength=300)*NumHotKeys (5)  Default Hot Key settings
-   eepAdUnused        = 4072, // (eepAdUnusedSize)  Reserved for future use, initialized to 0
-
-   eepAdUnusedSize    = 200
-   //eepAdNext        = 4072 + eepAdUnusedSize = 4272, // Next address to be used
+   eepAdDLPath        =   35, // (128:TxMsgMaxSize)  HTTP Download path
+   eepAdBookmarks     =  163, // ((75+225)*5:(eepBMTitleSize+eepBMURLSize)*eepNumBookmarks)    Bookmark Titles and Full Paths
+   eepAdDefaultSID    = 1663, // (256:MaxPathLength) Path/filename of Default SID to play in background
+   eepAdCrtBootName   = 1919, // (256:MaxPathLength) Boot to minimal .crt path to launch
+   eepAdMinBootInd    = 2175, // (1:uint8_t)    Minimal/full boot indicator, see MinBootIndFlags
+   eepAdAutolaunchName= 2176, // (256:MaxPathLength) Autolaunch path to launch or zero length for off
+   eepAdPwrUpDefaults2= 2432, // (1:uint8_t)    power up default reg2, see bit mask defs RegPowerUpDefaultMasks2
+   eepAdColorRefStart = 2433, // (7:NumColorRefs)  UI color references, see ColorRefOffsets
+   eepAdHotKeyPaths   = 2440, // (256*5:MaxPathLength*NumHotKeys)  Default Hot Key settings
+   
+   eepAdNext          = 3720, // Next address to be used
+   eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
+   eepAdUnusedSize    = (4284-eepAdUnused),
    //Max size = 4284 (emulated in flash)
 };
 
@@ -181,7 +182,7 @@ uint32_t* BigBuf = NULL;
 #endif
 
 #define MaxItemNameLength   100
-#define MaxPathLength       300
+#define MaxPathLength       256
 #define MaxNamePathLength   (MaxPathLength+MaxItemNameLength+2)
 #define MaxMenuItems        4000  //(Max Pages * MaxItemsPerPage) = 255 * 19 = 4845 max to keep page # 8-bit
 #define SerialTimoutMillis  500
