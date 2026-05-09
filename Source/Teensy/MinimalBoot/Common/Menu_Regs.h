@@ -208,8 +208,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsHotKeySetLaunch    = 0x16,
    rsNetListenInit      = 0x17,
    rsSetKERNALBin       = 0x18,
+   rsKERNALPreStart     = 0x19,
    
-   rsNumStatusTypes     = 0x19,
+   rsNumStatusTypes     = 0x1a,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -252,6 +253,7 @@ enum RegCtlCommands
    rCtlHotKeySetLaunch      = 21,
    rCtlNetListenInitWAIT    = 22,
    rCtlSetKERNALBinWAIT     = 23,
+   rCtlKERNALPreStartWAIT   = 24,
 };
 
 enum regItemTypes //synch with TblItemType

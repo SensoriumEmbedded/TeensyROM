@@ -839,6 +839,12 @@ ListAndDone
 XferCopyRun:   
 ;Init and load PRG, no going back now...
    
+;Check for Kernal Replace Special IO and start it now
+   lda #rCtlKERNALPreStartWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
+
+   
 ; initialize mem/ints to be ready for PRG
 ; https://codebase64.org/doku.php?id=base:kernalbasicinit
    sei

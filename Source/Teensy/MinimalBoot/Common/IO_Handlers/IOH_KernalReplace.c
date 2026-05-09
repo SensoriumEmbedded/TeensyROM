@@ -26,12 +26,11 @@
    // Drives debug signal for trigger: falling edge/low=ROM, rising edge/high=RAM:
 // #define KERNAL_DEBUG_SIG_CONT
 
-void InitHndlr_KernalReplace();                           
 
 stcIOHandlers IOHndlr_KernalReplace =
 {
   "Kernal Replace",         //Name of handler (IOHNameLength max)
-  &InitHndlr_KernalReplace, //Called once at handler startup
+  NULL,                     //Called once at handler startup
   NULL,                     //IO1 R/W handler
   NULL,                     //IO2 R/W handler
   NULL,                     //ROML Read handler, in addition to any ROM data sent
@@ -135,7 +134,7 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
 
-FLASHMEM void InitHndlr_KernalReplace()
+FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, manual only
 {
 
    if (KernalBin != NULL) free((void*)KernalBin);

@@ -618,6 +618,32 @@ FLASHMEM void HotKeySetLaunch()
    }
 }
 
+FLASHMEM void KERNALPreStart()
+{
+   //called before BASIC init and program load/launch
+#ifdef Fab04_KernalReplace
+
+   //If kernal replace is selected for Special IO
+   //   and not overridden by Teensy Menu:
+   Serial.println("Hi from KERNALPreStart");
+   
+   //Which IO Handler will be started?
+   uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
+   {
+      Serial.println("IO Handler set by Teensy Menu\n");
+      NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc; 
+   }
+   
+   if (NextIOHndlr == IOH_KernalReplace)
+   {   
+      InitHndlr_KernalReplace(); //separate function so it doesn't get called twice
+      Serial.println("Bye from KERNALPreStart");
+   }
+
+#endif
+}
+
 FLASHMEM void SetKERNALBin()
 {
 #ifdef Fab04_KernalReplace
@@ -800,6 +826,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &HotKeySetLaunch,     // rsHotKeySetLaunch
    &NetListenInit,       // rsNetListenInit
    &SetKERNALBin,        // rsSetKERNALBin
+   &KERNALPreStart,      // rsKERNALPreStart
 };
 
 
@@ -1176,6 +1203,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlSetRTCfromNetWAIT:
                   IO1[rwRegStatus] = rsSetRTCfromNet;   //work this in the main code
+                  break;
+               case rCtlKERNALPreStartWAIT:
+                  IO1[rwRegStatus] = rsKERNALPreStart;   //work this in the main code
                   break;
                case rCtlC64TODfromRTCWAIT:
                   IO1[rwRegStatus] = rsC64TODfromRTC;
