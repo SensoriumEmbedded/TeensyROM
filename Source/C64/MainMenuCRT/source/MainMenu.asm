@@ -437,9 +437,13 @@ CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
-   lda #rCtlBasicReset ;reset to BASIC
-   sta wRegControl+IO1Port
--  jmp -  ;should be resetting to BASIC
+;   lda #rCtlBasicReset ;reset to BASIC
+;   sta wRegControl+IO1Port
+ExitToBASIC:
+   ldx #7  ;dir Utilities
+   lda #2  ;prog Exit to BASIC
+   jmp DirectRunFromTeensyMenu
+;-  jmp -  ;should be resetting to BASIC
 
 +  cmp #ChrF3  ;SD Card Menu
    bne +
@@ -508,6 +512,7 @@ CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
 Load8Run:
    ldx #7  ;dir Utilities
    lda #3  ;prog LOAD"*",8,1 and RUN
+DirectRunFromTeensyMenu:
    ;launch from main TR menu: sub-dir # stored in X,  item # stored in acc   
    pha ;save program #
    txa
@@ -1097,9 +1102,10 @@ WaitHelpMenuKey:
 
 +  cmp #ChrF2  ;Exit to BASIC
    bne +
-   lda #rCtlBasicReset ;reset to BASIC
-   sta wRegControl+IO1Port
--  jmp -  ;should be resetting to BASIC
+   jmp ExitToBASIC
+;   lda #rCtlBasicReset ;reset to BASIC
+;   sta wRegControl+IO1Port
+;-  jmp -  ;should be resetting to BASIC
 
 +  cmp #ChrF3  ;SD Card Menu
    bne +

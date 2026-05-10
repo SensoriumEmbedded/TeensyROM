@@ -203,7 +203,7 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsClearAutoLaunch    = 0x11,
    rsNextTextFile       = 0x12,
    rsLastTextFile       = 0x13,
-   rsIOHWNextInit       = 0x14,
+   rsIOHWNextInit       = 0x14, //no longer used
    rsMountDxxFile       = 0x15,
    rsHotKeySetLaunch    = 0x16,
    rsNetListenInit      = 0x17,
@@ -230,7 +230,7 @@ enum RegMenuTypes //must match TblMsgMenuName order/qty, also used by UI/serial 
 enum RegCtlCommands
 {
    rCtlVanishROM            =  0,
-   rCtlBasicReset           =  1,
+   rCtlBasicReset           =  1, // No longer Used!
    rCtlStartSelItemWAIT     =  2,
    rCtlSetRTCfromNetWAIT    =  3, // Synchs the Teensy RTC with time acquired from Ethernet
    rCtlC64TODfromRTCWAIT    =  4, // Sets the IO1 TOD regs with the current RTC Time

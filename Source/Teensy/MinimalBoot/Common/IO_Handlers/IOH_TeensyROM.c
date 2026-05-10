@@ -830,7 +830,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ClearAutoLaunch,     // rsClearAutoLaunch
    &NextTextFile,        // rsNextTextFile
    &LastTextFile,        // rsLastTextFile
-   &IOHandlerNextInit,   // rsIOHWNextInit
+   &IOHandlerNextInit,   // rsIOHWNextInit, no longer used...
    &MountDxxFile,        // rsMountDxxFile
    &HotKeySetLaunch,     // rsHotKeySetLaunch
    &NetListenInit,       // rsNetListenInit
@@ -1202,11 +1202,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   LOROM_Image = NULL;
                   HIROM_Image = NULL;  
                   break;
-               case rCtlBasicReset:  
-                  //SetLEDOff;
-                  doReset=true;
-                  IO1[rwRegStatus] = rsIOHWNextInit; //Support IO handler at reset
-                  break;
+// No longer Used:
+//               case rCtlBasicReset:  
+//                  //SetLEDOff;
+//                  doReset=true;
+//                  IO1[rwRegStatus] = rsIOHWNextInit; //Support IO handler at reset
+//                  break;
                case rCtlStartSelItemWAIT:
                   IO1[rwRegStatus] = rsStartItem; //work this in the main code
                   break;
