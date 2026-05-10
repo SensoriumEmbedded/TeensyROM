@@ -71,10 +71,11 @@ FASTRUN void isrPHI2()
    else SetDataBufIn;
 #endif
 
-   if (fBusSnoop != NULL)
-   {
-      if (fBusSnoop(Address, R_Wn)) return;
-   }
+   if (fBusSnoop != NULL) if (fBusSnoop(Address, R_Wn)) return;
+   
+#ifdef Fab04_GlobalKernalReplace
+   if (fKernRepl != NULL) if (fKernRepl(Address, R_Wn)) return;
+#endif
    
    WaitUntil_nS(nS_PLAprop); 
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 

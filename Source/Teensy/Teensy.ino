@@ -335,6 +335,9 @@ void loop()
 void SetUpMainMenuROM()
 {
    fBusSnoop = NULL;
+#ifdef Fab04_GlobalKernalReplace
+   fKernRepl = NULL;
+#endif
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;

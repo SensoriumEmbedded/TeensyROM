@@ -623,24 +623,33 @@ FLASHMEM void KERNALPreStart()
    //called before BASIC init and program load/launch
 #ifdef Fab04_KernalReplace
 
+#ifdef Fab04_GlobalKernalReplace
+   //check if enabled?
+   InitHndlr_KernalReplace(); //separate function so it doesn't get called twice
+#else
+   
    //If kernal replace is selected for Special IO
    //   and not overridden by Teensy Menu:
-   Serial.println("Hi from KERNALPreStart");
-   
+   //Serial.println("Hi from KERNALPreStart");
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
-      Serial.println("IO Handler set by Teensy Menu\n");
+      //Serial.println("IO Handler set by Teensy Menu\n");
       NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc; 
    }
    
    if (NextIOHndlr == IOH_KernalReplace)
    {   
       InitHndlr_KernalReplace(); //separate function so it doesn't get called twice
-      Serial.println("Bye from KERNALPreStart");
+      //Serial.println("Bye from KERNALPreStart");
    }
-
+   //else 
+   //{
+   //   Serial.printf("Kernal replace not enabled (%d)\n", NextIOHndlr);
+   //   delay(250);
+   //}
+#endif
 #endif
 }
 

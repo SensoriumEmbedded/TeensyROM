@@ -13,6 +13,7 @@
    #define Fab04_REU                  //include REU  Special IO
    #define Fab04_Freezers             //include Freezer cart support
    #define Fab04_KernalReplace        //include Kernal Replacement support
+   //#define Fab04_GlobalKernalReplace  //force kernal enable on all PRG launches, regardless of Special IO settings
    #define Fab04_DebugSignals         //For debug only
 #endif
 

@@ -39,7 +39,11 @@ stcIOHandlers IOHndlr_KernalReplace =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
-#define KernalBin MIDIRxBuf
+#ifdef Fab04_GlobalKernalReplace
+	uint8_t *KernalBin = NULL; //use unique global pointer
+#else
+	#define KernalBin MIDIRxBuf //use Special IO resource
+#endif
 
 uint8_t HIRAM_State;
 
@@ -57,9 +61,9 @@ extern volatile uint8_t doReset;
 FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 {
    //monitor port $0001 for changes
-   if ((Address & 0xfffe) == 0  && !R_Wn) HIRAM_State = HIRAM_State_Unknown;  //write to addr 0 or 1 causes re-evaluation of HIRAM
+   if (!R_Wn && (Address & 0xfffe) == 0) HIRAM_State = HIRAM_State_Unknown;  //write to addr 0 or 1 causes re-evaluation of HIRAM
 
-   if( (Address & 0xe000) != 0xe000 || !R_Wn || !GP9_BA(ReadGPIO9)) return false;  //continue with cycle processing
+   if (!R_Wn || (Address & 0xe000) != 0xe000 || !GP9_BA(ReadGPIO9)) return false;  //continue with cycle processing
 
    // CPU read access from address $E000..$FFFF
    
@@ -134,13 +138,21 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
 
+#ifdef Fab04_GlobalKernalReplace
+	bool (*fKernRepl)(uint16_t Address, bool R_Wn) = NULL;    //return true to skip out of phi2 isr
+#endif
+
 FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, manual only
 {
-
+#ifdef Fab04_GlobalKernalReplace
+   fKernRepl = NULL;  //default, make sure off during loading
+   if (KernalBin == NULL) KernalBin = (uint8_t*)malloc(8192);
+#else
    if (KernalBin != NULL) free((void*)KernalBin);
    KernalBin = (uint8_t*)malloc(8192);
    //KernalBin = RAM_Image;
-   
+#endif
+
    //load kernal image into RAM:
    char Filename[MaxPathLength];
    EEPreadStr(eepAdKERNALBinName, Filename);
@@ -179,7 +191,10 @@ FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, man
    
    //hook kernal checks:
    HIRAM_State = HIRAM_State_Unknown;
+#ifdef Fab04_GlobalKernalReplace
+   fKernRepl = &KernalCheck; 
+#else
    fBusSnoop = &KernalCheck; 
-
+#endif
 }
 
