@@ -35,7 +35,7 @@
 | R[m] | Re-load current page<br>Common modifiers (see below). |
 | U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host[:port][/path]<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |
 | #[m] | Follow link shown on current screen<br>Common modifiers (see below). |
-| B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmark names with links<br>&ensp;&ensp;U : List Bookmark namess w/ links, also show URL<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;S# : Set Current page as bookmark #<br>&ensp;&ensp;R# [Name] : Rename bookmark # to [Name] |
+| B[x] | Bookmark Read/Jump/Set<br>[x] modifiers:<br>&ensp;&ensp;(none) : List Bookmark names with links<br>&ensp;&ensp;U : List Bookmark names w/ links, also show URL<br>&ensp;&ensp;#  :  Jump to bookmark #<br>&ensp;&ensp;S# : Set Current page as bookmark #<br>&ensp;&ensp;R# [Name] : Rename bookmark # to [Name] |
 | DS [d]:[p] | Set download path, in this format:<br>[drive]:[path/directory] <br>Where drive is "usb" or "sd"  |
 | D  | Show Download Path Directory Contents<br>Select link # to launch directly |
 | X | Exit Browser mode |

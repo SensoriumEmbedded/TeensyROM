@@ -69,7 +69,7 @@
 |AT+S | Display stored Ethernet settings|
 |AT+DEFAULTS | Set defaults for all parameters
 |AT+RNDMAC | MAC address to random value
-|AT+MAC=\<XX:XX:XX:XX:XX:XX>  | MAC address to provided (hexidecimal) value
+|AT+MAC=\<XX:XX:XX:XX:XX:XX>  | MAC address to provided (hexadecimal) value
 |AT+DHCP=\<0:1> | DHCP On(1)/Off(0)
 |**For DHCP mode only:**|  |
 |AT+DHCPTIME=\<D> |  DHCP Timeout in mS (0-65535)
@@ -94,7 +94,7 @@
 | Verbose Response | Non-Verbose | Indicates |
 |--|--|--|
 |OK          |0|Setting successful/complete                            |
-|CONNECT     |1|Succesful server connection (ATDT)                     |
+|CONNECT     |1|Successful server connection (ATDT)                    |
 |RING        |2|unused                                                 |
 |NO_CARRIER  |3|Connection Dropped (after CD de-assert)                |
 |ERROR       |4|Syntax or formatting errors                            |

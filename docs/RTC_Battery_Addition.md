@@ -13,15 +13,15 @@ The TeensyROM+ (v0.4) has a built-in battery holder for a CR1225 coin cell, but 
 * **Update steps:**
   * [Update the TR FW](/bin/TeensyROM) to v0.7.2 (or higher) to enable RTC functionality.  Be sure to grab the "TeensyROM" (not TR+) version of the FW.
   * **Plan your battery placement**
-    * The battery/holder I chose won't fit inside the low-profile case.  The best wire routing I could find was via the sides of the micro-SD port openning.
-    * The wires need to be routed through the planned openning **before** solderring to the Teensy module.
+    * The battery/holder I chose won't fit inside the low-profile case.  The best wire routing I could find was via the sides of the micro-SD port opening.
+    * The wires need to be routed through the planned opening **before** solderring to the Teensy module.
     ![RTC_Batt_Assy](../media/RTC_batt/RTC_batt_Assy.jpg)
 
     * Solder the Battery connector leads to the Vbat(+) and GND(-) connections shown below.  
       * **Be sure to observe correct polarity, and don't short to the SD cage or other pins.**
     ![alt text](../media/RTC_batt/RTC_batt_Connections.png)
 
-    * Re-assemble the case, taking care not to pinch the wires.  I found there is clearance for one wire on each side of the SD card openning
+    * Re-assemble the case, taking care not to pinch the wires.  I found there is clearance for one wire on each side of the SD card opening
     ![alt text](../media/RTC_batt/RTC_batt_Final.jpg)
 
     * Install the battery into the holder, observing correct polarity.

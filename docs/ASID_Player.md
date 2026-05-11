@@ -1,6 +1,6 @@
 
 # TeensyROM ASID Player
-The ASID Player allows you to stream SID sound information real-time from a modern computer/phone directly to the SID chip of your C64/128, turning it into a modular synthesizer device. The ASID player is highly optomized for the TeensyROM and allows fast updates and smooth streaming of SID music/sounds.
+The ASID Player allows you to stream SID sound information real-time from a modern computer/phone directly to the SID chip of your C64/128, turning it into a modular synthesizer device. The ASID player is highly optimized for the TeensyROM and allows fast updates and smooth streaming of SID music/sounds.
 
 ![ASID Player](/media/Screen%20captures/ASID%20Player.png)
 
@@ -27,7 +27,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |:--:|:--:|:--|
 |`v`|Clear Voices|Initialize/clear all voices on all SID chips|
 |`s`|Screen Toggle|Turn on/off C64 screen blanking, can help with audio noise reduction|
-|`m`|Mute All Toggle|Clears all voices and mutes incomming stream. "Mute" displayed when active|
+|`m`|Mute All Toggle|Clears all voices and mutes incoming stream. "Mute" displayed when active|
 |`1`/`2`/`3`|Voice # Toggle|Enable/Disable voice # 1/2/3 individually.<BR>Voice # group red when active, applies to all active SIDs
 |`?`|Help List|Displays keyboard commands list|
 |`d`|Indicator Decoder|Displays info about indicators at top of screen (see below)|
@@ -58,7 +58,7 @@ The top of the ASID Player screen displays real-time playback information. This 
     * Too full or empty indicates over/underflow and may result in an audible anomaly.
 
 ### Frame timer (beta)
-Timing imperfections can be introduced by control PC workload, USB packetization, drivers, and other factors. This can be compensated for by re-timing the ouput to the C64/SID to a repeatably accurate cadence.
+Timing imperfections can be introduced by control PC workload, USB packetization, drivers, and other factors. This can be compensated for by re-timing the output to the C64/SID to a repeatably accurate cadence.
 
 The first step is to enable the re-timer on and select 50Hz or Auto timing of playback using the `t` command. 
 * `Off` (default) simply plays each ASID packet as soon as it arrives via USB/MIDI
@@ -68,8 +68,8 @@ The first step is to enable the re-timer on and select 50Hz or Auto timing of pl
     * For this reason, variable rate and per-note sids are not currently compatible with the frame timer feature.
 
 Once the Frame Timer is turned on, the buffer size can be selected with `b` (smaller) or `B` (larger). 
-* Larger buffers afford more space for speed corrections and reduce likelyhood of audible glitches, but also add noticable buffer time between the source and the SID output. 
-* Smaller buffers are usefull for faster startup and synch with the source, but risk over/under runs for jittery sources
+* Larger buffers afford more space for speed corrections and reduce likelihood of audible glitches, but also add noticeable buffer time between the source and the SID output. 
+* Smaller buffers are useful for faster startup and synch with the source, but risk over/under runs for jittery sources
 * Here are some recommendations:
     |Usage|Timer|Buffer Size|
     |:--:|:--:|:--:|

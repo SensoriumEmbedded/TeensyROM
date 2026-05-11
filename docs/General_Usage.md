@@ -30,7 +30,7 @@
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
     * `A` (upper case) Set Auto-Launch to currently highlighted file
     * `C` (upper case) Enter Color Settings Page
-    * `M` (upper case) Transfer/Mount/Launch highlighted .Dxx file via atttached [Meatloaf](https://github.com/idolpx/meatloaf) device
+    * `M` (upper case) Transfer/Mount/Launch highlighted .Dxx file via attached [Meatloaf](https://github.com/idolpx/meatloaf) device
       * Requires Meatloaf using latest FW connected to the TR USB Host port.
     * `1-5` Programmable Hot Keys to immediately launch a specified file
       * Defaults: `1` Cynthcart, `2` Station64, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
@@ -47,7 +47,7 @@
   * Screen contents:
     * **File Source and dir path** is shown in the upper left corner
     * **Page number and number of pages** is shown in the lower right corner
-    * **Current time** is shown in the upper right (if ethernet connected/synching).  Otherwise the time will start at midnight upon startup.
+    * **Current time** is shown in the upper right (if ethernet connected/syncing).  Otherwise the time will start at midnight upon startup.
     * **File type** is to the right of each file/dir displayed. If "Unk" (unknown) then it is not a recognized/supported file type.
       * **'+'** in front of file type means it is pre-associated with Special IO emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
@@ -126,7 +126,7 @@
       * `g` Show file extensions of known file types
       * `h` Select Serial device connected to USB Host Port ([NFC Reader](docs/NFC_Loader.md), [TR Control device](https://github.com/SensoriumEmbedded/TeensyROMControl), or None).
         * Will init identified device on power-up.
-      * `i` Ethernet TCP Listenner capability
+      * `i` Ethernet TCP Listener capability
     * These commands only change settings for this session and execute immediately
       * `j` Reboot TeensyROM to execute updated power-up settings
       * `k` Perform Internet Time Synch now
@@ -144,10 +144,10 @@
       * In addition to the FW version number, the date/time of the build is also logged.
       * This is helpful for tracking custom builds & sub-releases
     * Teensy Frequency and Temperature
-      * As mentioned in the main Readme, the Teensy is slightly overclocked to 816MHz in this aplication
+      * As mentioned in the main Readme, the Teensy is slightly overclocked to 816MHz in this application
       * External cooling is not required for this speed. However, in abundance of caution, a heatsink is specified in the BOM for this project.
       * The max spec is 95C, and there is an automatic shutdown at 90C.
-      * Even in extended use, I've never seen the internal temperature exceded 75C.
+      * Even in extended use, I've never seen the internal temperature exceeded 75C.
 
 ## Selecting and associating Special IO
   * What is it?
@@ -156,12 +156,12 @@
     * Examples of these are Swiftlink/Modem, and MIDI interfaces
     * This HW uses the IO1 ($DE00) address space and interrupts to pass information to/from the program running on the C64/128.
   * How is it used/selected?
-    * The easy method is to use the software supplied with the TeensyROM with a '+' sign in fron of the type.
+    * The easy method is to use the software supplied with the TeensyROM with a '+' sign in front of the type.
       * These will automatically associate the needed IO to emulate Swiftlink Internet or the required MIDI interface.
       * This includes the following, for example:
         * **CCGMS Terminal** Pre-configured and associated with Swiftlink interface to [Ethernet connection](Ethernet_Usage.md)
-        * **Cynthcart** Assiciated with the Datel MIDI interface to [USB MIDI Host/Device](MIDI_Usage.md)
-        * **Station 64** Assiciated with the Passport MIDI interface [USB MIDI Host/Device](MIDI_Usage.md)
+        * **Cynthcart** Associated with the Datel MIDI interface to [USB MIDI Host/Device](MIDI_Usage.md)
+        * **Station 64** Associated with the Passport MIDI interface [USB MIDI Host/Device](MIDI_Usage.md)
     * Special IO can also be selected in the settings menu
       * This setting will be applied at the time of launching any program or generic cartridge
       * The setting stays in memory and will be re-loaded for any app until changed
@@ -192,8 +192,8 @@
     * 'y' to confirm/continue, 'n' to abort
     * The update process takes about 2 minutes and goes through several stages.
     * ***Important*** You must leave your C64/128 powered up during the update
-      * *Interrupting this process could render your TeensyROM unuseable*
-    * When the update completes succesfully, your computer will reset and the new version of TeensyROM will be shown
+      * *Interrupting this process could render your TeensyROM unusable*
+    * When the update completes successfully, your computer will reset and the new version of TeensyROM will be shown
     * If there are any problems, take note of any messages shown before pressing any key to return to the main menu.
 
 ### **Directly using TeensyROM via Ethernet connection**
