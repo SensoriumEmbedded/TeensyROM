@@ -167,7 +167,7 @@ int8_t PN532_UHSU::readAckFrame()
     @brief receive data .
     @param buf --> return value buffer.
            len --> length expect to receive.
-           timeout --> time of reveiving
+           timeout --> time of receiving
     @retval number of received bytes, 0 means no data received.
 */
 int8_t PN532_UHSU::receive(uint8_t *buf, int len, uint16_t timeout)

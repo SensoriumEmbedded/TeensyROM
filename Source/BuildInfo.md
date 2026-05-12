@@ -1,7 +1,7 @@
 
 # TeensyROM software/firmware build instructions
 
-## Main TeensyROM C/C++ aplication
+## Main TeensyROM C/C++ application
 ### Software tools & lib needed
   * [Arduino IDE 2.x](https://www.arduino.cc/en/software)
   * [Teenyduino app](https://www.pjrc.com/teensy/td_download.html)

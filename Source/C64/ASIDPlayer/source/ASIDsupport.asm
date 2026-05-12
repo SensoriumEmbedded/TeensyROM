@@ -270,7 +270,7 @@ MsgASIDPlayerCommands5:
 ;MsgASIDPlayerCommands6:    
 ;   !tx ChrReturn, ChrDrkGrey
 ;   !tx ChrReturn, "  Recommend muting all playback"
-;   !tx ChrReturn, "    when changing SID adresses"
+;   !tx ChrReturn, "    when changing SID addresses"
 ;   !tx 0
    
 MsgASIDPlayerDecoder:    

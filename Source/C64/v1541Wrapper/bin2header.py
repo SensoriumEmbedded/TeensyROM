@@ -126,7 +126,7 @@ def printUsage():
 			+ "\n\t\t\t\t  Default: {}".format(getOpt("length", True)[1])
 			+ "\n\t-p, --pack\t\tStored data type bit length (8/16/32)."
 			+ "\n\t\t\t\t  Default: {}".format(getOpt("pack", True)[1])
-			+ "\n\t-e, --swap\t\tSet endianess to big endian for 16 & 32 bit data types."
+			+ "\n\t-e, --swap\t\tSet endianness to big endian for 16 & 32 bit data types."
 			+ "\n\t    --stdvector\t\tAdditionally store data in std::vector for C++."
 			+ "\n\t    --eol\t\tSet end of line character (cr/lf/crlf)."
 			+ "\n\t\t\t\t  Default: {}".format(getOpt("eol", True)[1]))
@@ -207,7 +207,7 @@ def setOpt(key, value):
 
 ## Checks if an argument uses a short ID.
 #
-#  Does not differenciate between '-a' & '-abcd'.
+#  Does not differentiate between '-a' & '-abcd'.
 #
 #  @tparam str a
 #      String to be checked.
@@ -320,7 +320,7 @@ def trimLeadingCWD(path):
 #  @tparam str path
 #      Path to be normalized.
 #  @treturn str
-#      Path formatted with native directory/node delimeters.
+#      Path formatted with native directory/node delimiters.
 def normalizePath(path):
 	if path.strip(" \r\n\t") == "":
 		# replace empty path with relative cwd

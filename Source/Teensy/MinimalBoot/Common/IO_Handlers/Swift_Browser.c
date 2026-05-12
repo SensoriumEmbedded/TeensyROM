@@ -351,7 +351,7 @@ void ParseHTMLTag()
       while (RxQueueUsed > 0 && CharNum < eepBMTitleSize-1)
       {
          uint8_t InChar = PullFromRxQueue();
-         if(InChar == '<') //found the end of title, asumes Title tag has no embedded tags
+         if(InChar == '<') //found the end of title, assumes Title tag has no embedded tags
          {
             while (RxQueueUsed > 0 && InChar != '>') InChar = PullFromRxQueue();
             break;
@@ -390,7 +390,7 @@ void ParseHTMLTag()
       char * ptrCharNum = strstr(TagBuf, "href=");
       if (ptrCharNum == NULL) return; //not really a link?
       
-      ptrCharNum += 6; //skip href= and openning quote
+      ptrCharNum += 6; //skip href= and opening quote
             
       //Printf_dbg_sw("LinkTag: %s\n", ptrCharNum);
       SendPETSCIICharImmediate(PETSCIIpurple); 
@@ -863,14 +863,14 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
             strcat(URL.postpath, DestURL->path);
             strcat(URL.postpath, DestURL->postpath);
             //write back filtered URL in case it's pointing to a history queue item (ie 'rf' command) 
-            //  so link patchs will be relative to correct server
+            //  so link paths will be relative to correct server
             memcpy(DestURL, &URL, sizeof(stcURLParse)); 
             
             WebConnect(&URL);
          }
          break;
          
-      case 'r': //Raw, no filterring
+      case 'r': //Raw, no filtering
          if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
          else
          {  //strip off frogfind
@@ -886,7 +886,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
                ParseURL(ptrURL, URL);
                
                //write back unfiltered URL in case it's pointing to a history queue item (ie 'rr' command) 
-               //  so link patchs will be relative to correct server
+               //  so link paths will be relative to correct server
                memcpy(DestURL, &URL, sizeof(stcURLParse)); 
                   
                WebConnect(&URL);  
@@ -894,7 +894,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          }
          break;
       default:   
-         WebConnect(DestURL); //no mod, default to reader, prev defined filterring
+         WebConnect(DestURL); //no mod, default to reader, prev defined filtering
          break;
    }
 }
@@ -1085,7 +1085,7 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
       }
       
       AddRawStrToRxQueue(FileNamePath);
-      AddRawStrToRxQueue("<br> (ds to change)</b><br>Select Link to Lauch<br>");
+      AddRawStrToRxQueue("<br> (ds to change)</b><br>Select Link to Launch<br>");
 
       File dir = sourceFS->open(FileNamePath);
       while (File entry = dir.openNextFile()) 
@@ -1155,7 +1155,7 @@ FLASHMEM void BC_FollowHyperlink(char* CmdMsg)
          if(URL.path[0] != '/') //if not root ref, add previous path to beginning
          {  
             char temp[MaxURLPathSize];
-            strcpy(temp, URL.path); //store the path temprarily
+            strcpy(temp, URL.path); //store the path temporarily
             strcpy(URL.path, PrevURLQueue[PrevURLQueueNum]->path); 
             char * ptrLastSlash = strrchr(URL.path, '/'); // find last slash
             if (ptrLastSlash != NULL) *(ptrLastSlash+1) = 0; //terminate after last slash

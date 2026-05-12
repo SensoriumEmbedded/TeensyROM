@@ -50,8 +50,8 @@ volatile uint16_t eepAddrToWrite;
 StructMenuItem *MenuSource;
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
-uint8_t *XferImage = NULL; //pointer to image being transfered to C64 
-uint32_t XferSize = 0;  //size of image being transfered to C64
+uint8_t *XferImage = NULL; //pointer to image being transferred to C64 
+uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
 uint8_t ASCIItoPETSCII[128]=
 {
@@ -560,7 +560,7 @@ FLASHMEM void WriteNFCTagCheck()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
    
-   nfcState |= nfcStateBitDisabled; //keep if from trigerring if re-using prev programmed tag
+   nfcState |= nfcStateBitDisabled; //keep if from triggering if re-using prev programmed tag
    IO1[rRegLastHourBCD] = 0xff; //checks look good!
 }
 

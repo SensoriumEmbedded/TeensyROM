@@ -28,18 +28,18 @@
 
 
 #ifdef USE_RAM12
-   #define REU_Size           0x00080000   // 512k  Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+   #define REU_Size           0x00080000   // 512k  Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundaries
    #define REU_RAM_Bank_Size   0x2000
    #define REU_RAM_READ(a,d)   d=CrtChips[a/REU_RAM_Bank_Size].ChipROM[a%REU_RAM_Bank_Size]
    #define REU_RAM_WRITE(a,d)  CrtChips[a/REU_RAM_Bank_Size].ChipROM[a%REU_RAM_Bank_Size]=d
 #elif defined(USE_PSRAM)
-   #define REU_Size           0x01000000   // 16M   Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+   #define REU_Size           0x01000000   // 16M   Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundaries
    uint8_t *pPSRAM = (uint8_t *)(0x70000000);
    extern "C" uint8_t external_psram_size;
    #define REU_RAM_READ(a,d)   d=pPSRAM[a]
    #define REU_RAM_WRITE(a,d)  pPSRAM[a]=d
 #elif defined(USE_SD)
-   #define REU_Size           0x01000000   // 16M   Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundries
+   #define REU_Size           0x01000000   // 16M   Range: 128k (0x00020000) to 16M (0x01000000) on 2^X boundaries
    #define REU_Temp_FileName  "/temp.reu"
 #endif
 
@@ -166,7 +166,7 @@ void DirectREU()
    bool ErrOut = false;
    //uint32_t MisCount = 0;
    
-   //Assert DMA in following VIC phase (IO write just occured)
+   //Assert DMA in following VIC phase (IO write just occurred)
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
    StartCycCnt = ARM_DWT_CYCCNT;
    WaitUntil_nS(nS_DMAAssert); 
@@ -336,7 +336,7 @@ bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
       fBusSnoop = NULL;
 #ifdef Direct_REU
       DirectREU();
-      return true; //skip the rest of the cycle, DMA occured
+      return true; //skip the rest of the cycle, DMA occurred
 #else
       DMA_State = DMA_S_StartActive;   //activate immediately
 #endif
@@ -548,7 +548,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
    #ifdef DbgIOTraceLog
       BigBuf[BigBufCount] = Address; //initialize w/ address 
    #endif
-   Address &= 0x1f; //only 5 register adress lines, regs are ghosted over $DFxx 8x
+   Address &= 0x1f; //only 5 register address lines, regs are ghosted over $DFxx 8x
    if (R_Wn) //High (IO2 Read)
    {
       if (Address < REUReg_NumRegs) DataPortWriteWaitLog(REURegs[Address]);  

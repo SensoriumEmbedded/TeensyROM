@@ -140,7 +140,7 @@ void setup()
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
    
-   //we have a crt to load in minimal mode, procede....
+   //we have a crt to load in minimal mode, proceed....
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 

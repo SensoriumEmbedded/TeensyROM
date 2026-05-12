@@ -87,7 +87,7 @@ FLASHMEM bool nfcConfigCheck()
    
    nfc.SAMConfig(); // configure board to read RFID tags
 
-   //aliexpress module can init in a weird state: reads too fast, never succesfully
+   //aliexpress module can init in a weird state: reads too fast, never successfully
    uint32_t beginWait = millis();
    nfcCheck();
    beginWait = millis() - beginWait;
@@ -108,7 +108,7 @@ void nfcCheck()
    uint8_t uidLength;   // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
    
    if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) 
-   {  //succesful read
+   {  //successful read
       //Printf_dbg("*");
       if (uidLength == 7 || uidLength == 4)
       { // Mifare Ultralight (7) or Classic 1k(4)

@@ -238,7 +238,7 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx 0, "D64"  ; rtD64         = 3
    !tx 0, "D71"  ; rtD71         = 4  
    !tx 0, "D81"  ; rtD81         = 5  
-   !tx 0, "Prg"  ; rtFilePrg     = 6    //alway first valid executable file type
+   !tx 0, "Prg"  ; rtFilePrg     = 6    //always first valid executable file type
    !tx 0, "Crt"  ; rtFileCrt     = 7  
    !tx 0, "Hex"  ; rtFileHex     = 8  
    !tx 0, "P00"  ; rtFileP00     = 9  

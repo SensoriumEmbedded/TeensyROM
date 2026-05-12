@@ -94,7 +94,7 @@ void setup()
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
 #else
-   SetResetDeassert; //added for C128 startup isse on TR
+   SetResetDeassert; //added for C128 startup issue on TR
 #endif   
    //For intermittent C128 startup issue: 
    //  *Game needs to be high (and assumingly ExROM low) before reset asserts. 

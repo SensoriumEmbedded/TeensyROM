@@ -48,7 +48,7 @@ PRGLoadStart:
    jsr $ab1e   ;PrintString
    jmp (BasicWarmStartVect)
    
-   ;we're in caps/graphics mode for these messsages, use all lower case:
+   ;we're in caps/graphics mode for these messages, use all lower case:
    ;placing these here instead of the end in case we want to erase them before running PRG
 MsgRunning:
    !tx ChrReturn, "running...", ChrReturn, 0

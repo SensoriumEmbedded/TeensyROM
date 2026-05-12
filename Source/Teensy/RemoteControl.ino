@@ -281,7 +281,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
             SendC64Msgs = true;
             if(doReset) return; //success, proceed to reset in main loop
             
-            Printf_dbg("Unsuccesful\n"); 
+            Printf_dbg("Unsuccessful\n"); 
             //Try again via menu so that fail message is displayed on C64...
             break;
       }

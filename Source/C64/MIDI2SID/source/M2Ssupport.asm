@@ -1,6 +1,6 @@
 
 ;subroutines, tables, and strings
-;mostly coppied from the TR main code
+;mostly copied from the TR main code
 
 ;brought local, may integrate w/ TR custom colors later...
    BorderColor    = PokePurple  

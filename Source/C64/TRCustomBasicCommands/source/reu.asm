@@ -81,17 +81,17 @@ REUFetch:
 // ---------------------------------------------------------------------------------------------------------------------
 // Overview : Detection of REC and RAM-Type : 0 = 1700 (64Kbx1) or 16 = 1764/50 or bigger(256Kbx1).
 //            Write to Registers 2-5 and compare.
-//            Write 33 banks with "messy datas".
+//            Write 33 banks with "messy data".
 //            Fetch bank, inc bank-counter (banks $1500) if own dummy-bytes not found.
 //            Stash bank, write own dummy bytes for later comparing and fetch next bank.
 //            Skip bankcheck if dummy byte-chain found. Detection is finished.
 //            Read available banks, evaluate and drop some text on the screen.
 // ---------------------------------------------------------------------------------------------------------------------
-// 21. Januar 2005 M. Sachse (cbmhardware/People of Liberty)
+// 21. January 2005 M. Sachse (cbmhardware/People of Liberty)
 //
 // E-Mail : info(at)cbmhardware.de
 //
-// 22. Januar 2005 : Bugfix, add ram-type detection 1764, Vice and C64 compatibility, messy code reworked;
+// 22. January 2005 : Bugfix, add ram-type detection 1764, Vice and C64 compatibility, messy code reworked;
 //
 // ------------------------------------------------------------------------------------------------------------------
 // GPL

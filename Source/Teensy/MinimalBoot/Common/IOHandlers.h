@@ -44,7 +44,7 @@
    //    Needed for T4, also works with others,  uses an extra 3,456 bytes of RAM1
    //    *Crashes* NFC, addr2line points to  libraries/PN532/PN532.cpp:line 543
    //USBSerial_BigBuffer USBHostSerial(myusbHost);    // Handles up to 512 but by default only for those > 64 bytes.  
-   //    doesnt work for most, "by default only for those > 64 bytes"
+   //    doesn't work for most, "by default only for those > 64 bytes"
 
    EthernetUDP udp;
    EthernetClient client;

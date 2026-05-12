@@ -20,7 +20,7 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "source/c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "source/c64defs.i"  ;C64 colors, mem locations, etc.
    !src "source/CommonDefs.i" ;Common between crt loader and main code in RAM
    !src "source/Menu_Regs.i"  ;IO space registers matching Teensy code
 
@@ -1168,7 +1168,7 @@ LoadViewKoala:
    sta smcSIDPauseStop+1
    
    jsr FastLoadFile ;check for error and load file to C64 RAM
-   bne rets  ;zero flag clear if an error occured, jump to rts from 
+   bne rets  ;zero flag clear if an error occurred, jump to rts from 
 
 smcPicBackgroundSource
    lda KLABackground
@@ -1294,7 +1294,7 @@ WriteNFCTag:
    sta wRegControl+IO1Port
    jsr WaitForTRDots
    
-   ;Error may have occured, but   
+   ;Error may have occurred, but   
    ;Wait for tag removal either way
 +  lda #<MsgRemoveNFCTag
    ldy #>MsgRemoveNFCTag
@@ -1350,7 +1350,7 @@ PrintLoop
    ; last line checks for last col or return char (to include most of last line)
 +  cpx #24  ;on last line?
    bne +
-   ldy $d3 ;Cursor Colum on current line (0-79)
+   ldy $d3 ;Cursor Column on current line (0-79)
    cpy #39
    beq EOPWait ; dropping char(!)
    cmp #ChrReturn  ;Check for return on the last line (Before sending it)

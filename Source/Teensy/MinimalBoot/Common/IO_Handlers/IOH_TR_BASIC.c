@@ -225,7 +225,7 @@ uint8_t ContRegAction_LoadPrep()
 
 
 uint8_t ContRegAction_SaveFinish()
-{  //file was transfered to RAM_Image[], size=StreamOffsetAddr  
+{  //file was transferred to RAM_Image[], size=StreamOffsetAddr  
    //save file from RAM, returns TR_BASStatRegVal                
 
    char* ptrLSFileName = (char*)LSFileName; //local pointer
@@ -400,11 +400,11 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             break;
             
          case TR_BASFileNameReg: //receive file name characters
-            //// PETSCII To Lcase ASSCII:
+            //// PETSCII To Lcase ASCII:
             //Data &= 0x7f; //bit 7 is Cap in Graphics mode
             //if (Data & 0x40) Data |= 0x20;  //conv to lower case
             
-            // PETSCII To ASSCII:
+            // PETSCII To ASCII:
             if (Data & 0x80) Data &= 0x7f; //bit 7 is Cap in Graphics mode
             else if (Data & 0x40) Data |= 0x20;  //conv to lower case
          

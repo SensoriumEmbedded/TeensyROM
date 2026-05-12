@@ -234,7 +234,7 @@ void SetBaud(uint8_t BaudNum)
    // +----------+---------------------------------------------------+
    // | Bit  7-3 |   Unused                                          |
    // | Bit  2   |   Mode Bit (read only): 1 = Bits 0-3 of $DE03 are |
-   // |          |   cleared and enhaced speed is enabled            |
+   // |          |   cleared and enhanced speed is enabled            |
    // | Bits 1-0 |   Enhanced Baud Rate (read only if Mode Bit = 0): |
    // |          |              00 = 230400 Bd       10 = 57600 Bd   |
    // |          |              01 = 115200 Bd                       |

@@ -241,7 +241,7 @@ int process_hex_record( hex_info_t *hex )
 }
 
 //******************************************************************************
-// Intel Hex record foramt:
+// Intel Hex record format:
 //
 // Start code:  one character, ASCII colon ':'.
 // Byte count:  two hex digits, number of bytes (hex digit pairs) in data field.
@@ -269,7 +269,7 @@ int process_hex_record( hex_info_t *hex )
 
 /* parses a line of intel hex code, stores the data in bytes[] */
 /* and the beginning address in addr, and returns a 1 if the */
-/* line was valid, or a 0 if an error occured.  The variable */
+/* line was valid, or a 0 if an error occurred.  The variable */
 /* num gets the number of bytes that were stored into bytes[] */
 
 #include <stdio.h>		// sscanf(), etc.

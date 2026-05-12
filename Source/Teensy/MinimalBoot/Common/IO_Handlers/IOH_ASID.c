@@ -108,8 +108,8 @@ enum ASIDregsMatching  //synch with ASIDPlayer.asm
 #endif
 
 #ifdef DbgSignalASIDIRQ
-bool DbgInputState;  //togles LED on SysEx arrival
-bool DbgOutputState; //togles debug signal on IRQ assert
+bool DbgInputState;  //toggles LED on SysEx arrival
+bool DbgOutputState; //toggles debug signal on IRQ assert
 #endif
 
 #ifdef Dbg_SerASID

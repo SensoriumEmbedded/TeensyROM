@@ -313,11 +313,11 @@ const uint8_t OutputPins[] = {
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
 #define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
 #define Def_nS_DataHold     390  //    On a C64 read, when to stop driving the data bus
-                                 //       02/01/24 v0.5.10+:    From 350 to 365 to accomodate prg load on NTSC Reloaded MKII (via alterationx10)
-                                 //       12/03/24 v0.6.3+M65:  365 to 375 special build to accomodate Mega65 ROML read
+                                 //       02/01/24 v0.5.10+:    From 350 to 365 to accommodate prg load on NTSC Reloaded MKII (via alterationx10)
+                                 //       12/03/24 v0.6.3+M65:  365 to 375 special build to accommodate Mega65 ROML read
                                  //       12/12/24 v0.6.3+T390: Set to 390 special build for a Reloaded Mk2 using FW 20180227 from CryzleR/Frank.  V20231101 (latest) still fails below ~385  https://wiki.icomp.de/wiki/C64_reloaded_mk2#Firmware_updates
                                  //                             Also: Digitalman saw Mega65 improvements on Fiendish Freddy & Orbitz
-                                 //       12/31/24 v0.6.4:      365 to 390 release build to accomodate all. Measurement show this is the max for staying within the Phi2 half cycle
+                                 //       12/31/24 v0.6.4:      365 to 390 release build to accommodate all. Measurement show this is the max for staying within the Phi2 half cycle
                                  
 // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace

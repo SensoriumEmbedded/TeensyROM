@@ -305,7 +305,7 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 
 // Command: 
 // List Directory Contents on TeensyROM given a take and skip value
-// to faciliate batch processing.
+// to facilitate batch processing.
 //
 // Workflow: (TR POV)
 // Receive <-- List Directory Token 0x64DD/0x64DE

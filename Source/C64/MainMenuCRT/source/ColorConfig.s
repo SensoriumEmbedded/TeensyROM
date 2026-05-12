@@ -167,7 +167,7 @@ PrintColorRef:
    rts
 
 CopyColorsToLclTemp:   
-   ;coppies color ref table to local temp table
+   ;copies color ref table to local temp table
    ;a=table base lo, y=table base high
    ;lda #<Preset_TRDef_TblEscC
    ;ldy #>Preset_TRDef_TblEscC
