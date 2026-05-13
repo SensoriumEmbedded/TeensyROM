@@ -31,7 +31,7 @@ void HandleExecution()
    MenuSelCpy.Code_Image = RAM_Image;
 
    //has to be distilled down to one of these by this point, only ones supported so far.
-   //Emulate ROM or prep for tranfer
+   //Emulate ROM or prep for transfer
    uint8_t CartLoaded = false;
    
    switch(MenuSelCpy.ItemType)

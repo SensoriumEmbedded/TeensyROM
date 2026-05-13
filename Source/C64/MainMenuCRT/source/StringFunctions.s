@@ -20,7 +20,7 @@
    EscC              = $01 ;Escape Token for text color ref or spaces, must be otherwise unused
    EscArgMask        = $c0 ;top 2 bits identify EscCharArg Type
    EscArgSpaces      = $80 ;indicates number of spaces in lower 6 bits
-   EscArgColorRef    = $00 ;Alwys 0 (default): indicates color ref # in lower 6 bits
+   EscArgColorRef    = $00 ;Always 0 (default): indicates color ref # in lower 6 bits
 
 
 PrintSerialString:

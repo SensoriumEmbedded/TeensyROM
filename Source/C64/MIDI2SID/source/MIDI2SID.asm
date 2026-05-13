@@ -3,7 +3,7 @@
 ; ********************************   Symbols   ********************************   
    ;!set Debug = 1 ;if defined, skips HW checks/waits 
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem locations, etc.
    !src "..\MainMenuCRT\source\CommonDefs.i" ;Common between crt loader and main code in RAM
    !src "..\MainMenuCRT\source\Menu_Regs.i"  ;IO space registers matching Teensy code
 
@@ -89,7 +89,7 @@ NoHW
    sta SIDLoc+rRegSIDSusRel2-StartSIDRegs
    sta SIDLoc+rRegSIDSusRel3-StartSIDRegs
    
-M2SDispUpdate:  ;upadte all M2S status display values
+M2SDispUpdate:  ;update all M2S status display values
    lda #NameColor
    jsr SendChar
    ldx # 5 ;row  Triangle
@@ -266,7 +266,7 @@ M2SUpdateKeyInLoop:
 +  cmp #'n'  ;Noise
    bne +
    lda #0x80 
-   ;eor SIDVoicCont  ;doesnt play nice with others
+   ;eor SIDVoicCont  ;doesn't play nice with others
    sta SIDVoicCont
    jmp M2SDispUpdate
 

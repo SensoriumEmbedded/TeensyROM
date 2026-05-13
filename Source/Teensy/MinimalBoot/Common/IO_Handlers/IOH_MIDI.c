@@ -149,7 +149,7 @@ void HWEOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
 
 void HWEOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 {
-   //did this to accomodate relative mode, but turns out it's not so widely used...
+   //did this to accommodate relative mode, but turns out it's not so widely used...
       //if (value==64) return; //sends ref first, always 64 so just assume it
       //control &= (NumMIDIControls-1);
       //

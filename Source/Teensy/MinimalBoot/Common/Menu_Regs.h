@@ -187,7 +187,7 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsStartItem          = 0x01,
    rsSetRTCfromNet      = 0x02,
    rsC64TODfromRTC      = 0x03,
-   rsIOHWSelInit        = 0x04, //C64 code is executing transfered PRG, change IO1 handler
+   rsIOHWSelInit        = 0x04, //C64 code is executing transferred PRG, change IO1 handler
    rsWriteEEPROM        = 0x05,
    rsMakeBuildCPUInfoStr= 0x06,
    rsUpDirectory        = 0x07,

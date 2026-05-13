@@ -54,8 +54,8 @@
  
 //Debug HW signal enables: Recommend using only 1 at a time.
   // DbgMsgs_SW (above) includes LED/DBG signal control
-  // #define DbgSignalASIDIRQ  //state togles on each IRQ triggered to C64 (timed or untimed)
+  // #define DbgSignalASIDIRQ  //state toggles on each IRQ triggered to C64 (timed or untimed)
   // #define DbgSignalIsrPHI2  //high at start of Phi2 ISR, low when exits
-  // #define DbgLEDSignalPolling //togles LED each pass through main loop()
+  // #define DbgLEDSignalPolling //toggles LED each pass through main loop()
 
 

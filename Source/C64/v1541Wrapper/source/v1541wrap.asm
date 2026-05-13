@@ -58,7 +58,7 @@ SysAddress
    cpx r0H     ;last page?
    bne -
 
-   ; execute code where coppied to:
+   ; execute code where copied to:
 smcEcecuteLocation
    jmp 0000   
 

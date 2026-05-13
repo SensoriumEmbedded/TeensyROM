@@ -482,7 +482,7 @@ PrintVoiceMutes:
    
 FastLoadFile:   
    ;load file from Teensy to C64 RAM, same as PRGLoadStart...
-   ;on return, zero flag clear if an error occured, set if OK
+   ;on return, zero flag clear if an error occurred, set if OK
    
    lda rRegStrAvailable+IO1Port 
    beq +   ;Make sure ready to x-fer

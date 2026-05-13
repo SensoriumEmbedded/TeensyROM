@@ -2,7 +2,7 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem locations, etc.
    !src "..\MainMenuCRT\source\CommonDefs.i" ;Common between crt loader and main code in RAM
 
 ;enum ASIDregsMatching  //synch with IOH_ASID.c
@@ -193,7 +193,7 @@ smcScreenFull
    beq +  
    jsr ClearASIDScreen
    ldy memTextCircQueueTail ;reload tail into Y
-   ;print next character from queueu
+   ;print next character from queue
 +  lda memTextCircQueue,y
    inc memTextCircQueueTail ;increment tail
 

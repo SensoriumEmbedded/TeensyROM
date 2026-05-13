@@ -20,7 +20,7 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "source/c64defs.i"  ;C64 colors, mem loctions, etc.
+   !src "source/c64defs.i"  ;C64 colors, mem locations, etc.
    !src "source/CommonDefs.i" ;Common between crt loader and main code in RAM
    !src "source/Menu_Regs.i"  ;IO space registers matching Teensy code
 
