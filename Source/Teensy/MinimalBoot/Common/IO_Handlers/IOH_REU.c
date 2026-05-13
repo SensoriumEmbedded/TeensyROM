@@ -68,6 +68,7 @@ stcIOHandlers IOHndlr_REU =
 
 extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr);
 extern void CloseDMA();
+extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 //extern uint8_t RAM2blocks();
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
@@ -411,6 +412,79 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
 #endif
 #endif  // !Direct_REU
 
+FLASHMEM void SpecialBtn_REU(bool Up_nDn)
+{
+   if(Up_nDn) 
+   {  //on button release, save REU contents
+
+      //Create filename based on current. reu000.reu becomes reu001.reu, etc
+      char Filename[]="/reu/test.reu"; //current filename
+      char Extension[20];
+     
+      char *pDot = strrchr(Filename, '.'); //find last dot
+      if (pDot == NULL) pDot = Filename + strlen(Filename); //if no extension, set to end of filename 
+      strcpy(Extension, pDot); //copy extension
+      *pDot = 0; //terminate at dot/extension
+      
+      bool IsNum = true; //are last 3digits of filename all numbers?
+      if (strlen(Filename)>=3)
+      {
+         for(char *charloc=pDot-3; charloc<pDot; charloc++)
+         {  
+            if (*charloc<'0' || *charloc>'9') IsNum = false;
+            //Serial.printf("%08x: %c %02x\n", (uint32_t)charloc, *charloc, *charloc);
+         }
+      }
+      else IsNum = false;
+      
+      
+      uint16_t NewNum = 0;
+      if (IsNum)
+      {  //find current number and then terminate it
+         NewNum = atoi(pDot-3);
+         *(pDot-3) = 0; //terminate number
+      }
+      
+      //now see if the file exists, or itterate until it doesn't
+      char NewFilename[MaxPathLength];
+
+      do sprintf(NewFilename, "%s%03d%s", Filename, NewNum++, Extension);
+      while (SD.exists(NewFilename));
+      
+      Serial.printf("Saving REU: %s\n", NewFilename);
+      File SaveFile = SD.open(NewFilename, FILE_WRITE);
+      if (!SaveFile)
+      {
+         Serial.println("Unable to open!");
+         return;
+      }
+            
+      //uint32_t StartmS = millis();
+      uint8_t NextByte;
+      
+      for (uint32_t CharNum=0; CharNum<REU_Size; CharNum++)
+      {
+         REU_RAM_READ(CharNum, NextByte);
+         SaveFile.write(NextByte);
+      }
+      //Serial.printf("Saved %lu KBytes in %lumS\n", REU_Size/1024, millis()-StartmS);
+      Serial.printf("Saved %luKBytes\n", REU_Size/1024);
+      SaveFile.close();
+      
+      //Flash LED to ack save
+      uint32_t LastmS = millis();
+      bool LEDState = true;
+      
+      for (uint32_t FlashCount=0; FlashCount<20; FlashCount++)
+      {
+         while(millis()-LastmS < 75);
+         LastmS = millis();
+         if ((LEDState = !LEDState)) SetLEDOn;
+         else SetLEDOff;
+      }     
+   }
+}
+
 
 //______________________________________________________________________________________________
 
@@ -541,7 +615,11 @@ FLASHMEM void InitHndlr_REU()
       Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
    }
 #endif
+
+   fSpecialBtnChange = &SpecialBtn_REU;
+ 
 }  //InitHndlr_REU
+
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 {
