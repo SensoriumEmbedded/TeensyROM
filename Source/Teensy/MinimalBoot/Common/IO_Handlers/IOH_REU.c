@@ -69,6 +69,11 @@ stcIOHandlers IOHndlr_REU =
 extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr);
 extern void CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
+extern void EEPreadStr(uint16_t addr, char* buf);
+extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);
+extern bool SDFullInit();
+extern bool USBFileSystemWait();
+extern FS *FSfromSourceID(RegMenuTypes SourceID);
 //extern uint8_t RAM2blocks();
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
@@ -418,16 +423,25 @@ FLASHMEM void SpecialBtn_REU(bool Up_nDn)
    {  //on button release, save REU contents
 
       //Create filename based on current. reu000.reu becomes reu001.reu, etc
-      char Filename[]="/reu/test.reu"; //current filename
+      char Filename[MaxPathLength];
+      EEPreadStr(eepAdREUFilename, Filename);
+      char *ptrFileName = Filename; //pointer to move past SD/USB/TR:
+      RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrFileName);
+
+      if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
+      if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
+      //rmtTeensy not allowed, no reu files in Teensy Mem
+      
+      FS *sourceFS = FSfromSourceID(MenuSourceID);
+
       char Extension[20];
-     
-      char *pDot = strrchr(Filename, '.'); //find last dot
-      if (pDot == NULL) pDot = Filename + strlen(Filename); //if no extension, set to end of filename 
+      char *pDot = strrchr(ptrFileName, '.'); //find last dot
+      if (pDot == NULL) pDot = ptrFileName + strlen(ptrFileName); //if no extension, set to end of filename 
       strcpy(Extension, pDot); //copy extension
       *pDot = 0; //terminate at dot/extension
       
       bool IsNum = true; //are last 3digits of filename all numbers?
-      if (strlen(Filename)>=3)
+      if (strlen(ptrFileName)>=3)
       {
          for(char *charloc=pDot-3; charloc<pDot; charloc++)
          {  
@@ -448,11 +462,11 @@ FLASHMEM void SpecialBtn_REU(bool Up_nDn)
       //now see if the file exists, or itterate until it doesn't
       char NewFilename[MaxPathLength];
 
-      do sprintf(NewFilename, "%s%03d%s", Filename, NewNum++, Extension);
-      while (SD.exists(NewFilename));
+      do sprintf(NewFilename, "%s%03d%s", ptrFileName, NewNum++, Extension);
+      while (sourceFS->exists(NewFilename));
       
       Serial.printf("Saving REU: %s\n", NewFilename);
-      File SaveFile = SD.open(NewFilename, FILE_WRITE);
+      File SaveFile = sourceFS->open(NewFilename, FILE_WRITE);
       if (!SaveFile)
       {
          Serial.println("Unable to open!");

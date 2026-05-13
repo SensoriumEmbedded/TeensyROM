@@ -71,7 +71,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6413 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6414 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -88,7 +88,7 @@
                                        // 0f: 11/12/25 Clear beta testers
                                        // 10: 2/24/26  REU added to IO Handlers list
                                        // 12: 4/12/26  New Default SID, unused/future space init to 0
-                                       // 13: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
+                                       // 14: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -114,8 +114,9 @@ enum InternalEEPROMmap
    eepAdColorRefStart = 2433, // (7:NumColorRefs)  UI color references, see ColorRefOffsets
    eepAdHotKeyPaths   = 2440, // (256*5:MaxPathLength*NumHotKeys)  Default Hot Key settings
    eepAdKERNALBinName = 3720, // (256:MaxPathLength) Kernal binary file/path
+   eepAdREUFilename   = 3976, // (256:MaxPathLength) REU file/path
    
-   eepAdNext          = 3976, // Next address to be used
+   eepAdNext          = 4232, // Next address to be used
    eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
    eepAdUnusedSize    = (4284-eepAdUnused),
    //Max size = 4284 (emulated in flash)

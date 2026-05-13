@@ -653,9 +653,14 @@ FLASHMEM void KERNALPreStart()
 #endif
 }
 
-FLASHMEM void SetKERNALBin()
+FLASHMEM void TRPlusOnlyMsg()
 {
-#ifdef Fab04_KernalReplace
+   SendMsgPrintfln("\rThis feature is only\r  available on TeensyROM+\r");
+}
+
+FLASHMEM void SetREUFile()
+{
+   SendMsgPrintfln("Set REU File to preload\r  and/or uniquely save\r");
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
 
    char PathMsg[MaxPathLength];
@@ -663,6 +668,48 @@ FLASHMEM void SetKERNALBin()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
+#ifdef Fab04_REU 
+   //check for source=teensy (not supported)
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy) 
+   {
+      SendMsgPrintfln("Select file from SD or USB only\r");
+      return;
+   }
+   
+   if (MenuSource[SelItemFullIdx].ItemType == rtDirectory)
+   {
+      SendMsgPrintfln("Invalid File Type\r");
+      return;
+   }      
+   
+   //.Size isn't populated for SD/USB
+   //if (MenuSource[SelItemFullIdx].Size != 8192) 
+   //{
+   //   SendMsgPrintfln("Wrong Size (%lu), expecting 8192 Bytes\r", MenuSource[SelItemFullIdx].Size);
+   //   return;
+   //}
+
+   SendMsgPrintfln("REU File selection updated.\r");
+   
+   EEPwriteStr(eepAdREUFilename, PathMsg);  //set REU path/file in EEPROM
+   
+#else
+   TRPlusOnlyMsg();
+#endif
+}
+
+FLASHMEM void SetKERNALBin()
+{
+   SendMsgPrintfln("Set KERNAL Replace Binary\r");
+
+   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+
+   char PathMsg[MaxPathLength];
+   IO1[rwRegScratch] = 0;
+   GetCurrentFilePathName(PathMsg);
+   SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
+
+#ifdef Fab04_KernalReplace
    //check for source=teensy (not supported)
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy) 
    {
@@ -688,7 +735,7 @@ FLASHMEM void SetKERNALBin()
    EEPwriteStr(eepAdKERNALBinName, PathMsg);  //set Kernal path in EEPROM
    
 #else
-   SendMsgPrintfln("KERNAL replacement capability\r  only available on TeensyROM+\r");
+   TRPlusOnlyMsg();
 #endif
 }
 
@@ -836,6 +883,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &NetListenInit,       // rsNetListenInit
    &SetKERNALBin,        // rsSetKERNALBin
    &KERNALPreStart,      // rsKERNALPreStart
+   &SetREUFile,          // rsSetREUFile
 };
 
 
@@ -1255,6 +1303,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlSetKERNALBinWAIT:
                   IO1[rwRegStatus] = rsSetKERNALBin; //work this in the main code
+                  break;
+               case rCtlSetREUFileWAIT:
+                  IO1[rwRegStatus] = rsSetREUFile; //work this in the main code
                   break;
                case rCtlSetAutoLaunchWAIT:
                   IO1[rwRegStatus] = rsSetAutoLaunch; //work this in the main code

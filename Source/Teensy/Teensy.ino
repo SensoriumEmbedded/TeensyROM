@@ -426,6 +426,7 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
    EEPROM.write(eepAdKERNALBinName, 0); //No Kernal Selection
+   EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name
    
    //future use:
    for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)

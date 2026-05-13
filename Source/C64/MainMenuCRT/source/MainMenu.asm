@@ -483,10 +483,18 @@ ExitToBASIC:
 +  cmp #'K' ;Select Kernal File
    bne +
    jsr PrintBanner ;SourcesColor
-   lda #<MsgSetKernalBin
-   ldy #>MsgSetKernalBin
-   jsr PrintString
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
    lda #rCtlSetKERNALBinWAIT
+   jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
+
++  cmp #'R' ;Select REU File
+   bne +
+   jsr PrintBanner ;SourcesColor
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   ;header message moved to SetREUFile()
+   lda #rCtlSetREUFileWAIT
    jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
 
 +  cmp #'M' ;Mount Dxx file
