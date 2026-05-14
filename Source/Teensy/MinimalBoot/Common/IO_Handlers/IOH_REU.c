@@ -549,35 +549,42 @@ FLASHMEM void InitHndlr_REU()
    Printf_dbg_reu("Used %lu bytes from RAM2, %luK bytes REU total\n", REU_Size+(uint32_t)RAM_Image-(uint32_t)pRAM_Image, REU_Size/1024);
 
    
-   //pre-load REU here:
+   //pre-load REU into RAM here:
+   char Filename[MaxPathLength];
+   EEPreadStr(eepAdREUFilename, Filename);
+   char *ptrFileName = Filename; //pointer to move past SD/USB/TR:
+   Serial.printf("Loading REU: %s\n", Filename);
+   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrFileName);
+
+   if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
+   if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
+   //rmtTeensy not allowed, no kernal files in Teensy Mem
    
-   // char Filename[]="/reu/Test PRGs/gillham test/ship512.reu";
-   // 
-   // Serial.printf("Loading REU: %s\n", Filename);
-   // File LoadFile = SD.open(Filename, FILE_READ);
-   // if (!LoadFile)
-   // {
-   //    Serial.println("Not found!");
-   //    return;
-   // }
-   // 
-   // if (LoadFile.size() > REU_Size)
-   // {
-   //    Serial.println("Too large!");
-   //    return;
-   // }
-   // 
-   // uint32_t StartmS = millis();
-   // uint32_t CharNum = 0;
-   // while (LoadFile.available())
-   // {
-   //    REU_RAM_WRITE(CharNum, LoadFile.read());
-   //    CharNum++;
-   // }
-   // Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
-   // LoadFile.close();
+   FS *sourceFS = FSfromSourceID(MenuSourceID);
+   File LoadFile = sourceFS->open(ptrFileName, FILE_READ);
+   if (!LoadFile)
+   {
+      Serial.println("Not found!");
+      return;
+   }
    
-   
+   if (LoadFile.size() > REU_Size)
+   {
+      Serial.println("Too Large!");
+      return;
+   }
+
+   //uint32_t StartmS = millis();
+   uint32_t CharNum = 0;
+   while (LoadFile.available())
+   {
+       REU_RAM_WRITE(CharNum, LoadFile.read());
+       CharNum++;
+   }
+   //Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
+   Serial.printf("Read %lu Bytes into REU\n", CharNum);
+   LoadFile.close();
+   //delay(250);
    
    
 #elif defined(USE_PSRAM)
