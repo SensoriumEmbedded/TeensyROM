@@ -262,6 +262,7 @@
    rtBin8kHi     = 16  
    rtBin8kLo     = 17  
    rtBinC128     = 18 
+   rtFileREU     = 19
 
    IOH_None      = 0  ;only part of enumIOHandlers used...
    

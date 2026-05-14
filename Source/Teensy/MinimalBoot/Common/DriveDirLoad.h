@@ -210,6 +210,7 @@ struct StructCrtChip
       "d64",  rtD64,
       "d71",  rtD71,
       "d81",  rtD81,
+      "reu",  rtFileREU,
       //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
 #endif

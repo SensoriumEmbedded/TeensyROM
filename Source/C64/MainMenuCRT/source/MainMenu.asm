@@ -490,6 +490,7 @@ ExitToBASIC:
 
 +  cmp #'R' ;Select REU File
    bne +
+REUPreLoadSelect:
    jsr PrintBanner ;SourcesColor
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
@@ -764,6 +765,12 @@ RunSelected:
    cmp #rtNone ;do nothing for 'none' type
    bne + 
    rts
+
++  cmp #rtFileREU ;REU pre-load file selected
+   bne + 
+   pla
+   pla ; pop the jsr return address
+   jmp REUPreLoadSelect
 
 +  cmp #rtFilePETSCII  ;check for PETSCII file selected
    beq ++
