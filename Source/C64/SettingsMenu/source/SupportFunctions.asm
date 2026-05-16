@@ -6,7 +6,14 @@ ScreenColorOnly:
    sta BackgndColorReg
    rts
 
-SetC64TODfromRTC:
+SetRTCfromEthernet:
+   ; Synchs the Teensy RTC with time acquired from Ethernet
+   lda #rCtlSetRTCfromNetWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
+   rts
+ 
+ SetC64TODfromRTC:
    ;Sets the C64 TOD clock from the Teensy RTC (with timezone offset)
    lda #rCtlC64TODfromRTCWAIT
    sta wRegControl+IO1Port

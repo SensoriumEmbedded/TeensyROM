@@ -174,9 +174,9 @@ MsgMenuExitSelection:
 ;   !tx EscC,EscOptionColor, ChrReturn, "FW Update failed"
 ;   !tx 0
 ;
-;MsgAnyKey:
-;   !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
-;   !tx 0
+MsgAnyKey:
+   !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
+   !tx 0
 ;
 ;
 ;TblMsgHostSerCtl: ;must match RegPowerUpDefaultMasks2 bits
@@ -190,20 +190,12 @@ MsgMenuExitSelection:
 ;MsgHostSerCtlController:
 ;   !tx "TRCont", 0
 ;
-;MsgOn:
-;   !tx "On ", 0
-;MsgOff:
-;   !tx "Off", 0
+MsgOn:
+   !tx "On ", 0
+MsgOff:
+   !tx "Off", 0
 MsgWaiting:
    !tx EscC,EscTimeColor, " Waiting:", 0
-;MsgTesting:
-;   !tx EscC,EscNameColor, "Testing", 0
-;MsgPass:
-;   !tx "Passed ", 0
-;MsgFail:
-;   !tx "Failed ", 0
-;MsgDone:
-;   !tx EscC,EscNameColor, "Done", 0
 ;MsgHasHandler:
 ;   !tx ChrCRSRLeft, "+", 0
 ;

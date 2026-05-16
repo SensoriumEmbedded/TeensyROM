@@ -257,16 +257,23 @@ l  clc
    adc #'a'-$0a
 pr jsr SendChar
    rts
-;
-;PrintOnOff:
-;   ;Print "On" or "Off" based on Zero flag
-;   ;uses A and Y regs
-;   bne +
-;   lda #<MsgOff
-;   ldy #>MsgOff
-;   jmp ++
-;+  lda #<MsgOn
-;   ldy #>MsgOn
-;++ jsr PrintString 
-;   rts
 
+PrintOnOff:
+   ;Print "On" or "Off" based on Zero flag
+   ;uses A and Y regs
+   bne +
+   lda #<MsgOff
+   ldy #>MsgOff
+   jmp ++
++  lda #<MsgOn
+   ldy #>MsgOn
+++ jsr PrintString 
+   rts
+
+AnyKeyMsgWait:
+   lda #<MsgAnyKey  ;wait for any key to continue 
+   ldy #>MsgAnyKey
+   jsr PrintString 
+-  jsr GetIn    
+   beq -
+   rts
