@@ -50,6 +50,7 @@
 #include "TRMenuFiles/ROMs/TODCheck.prg.h"
 #include "TRMenuFiles/ROMs/Load8Run.prg.h"
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
+#include "TRMenuFiles/ROMs/SettingsMenu.prg.h"
 #ifdef Fab04_REU
    #include "TRMenuFiles/ROMs/reutest.prg.h"
    #include "TRMenuFiles/ROMs/reu_checker_v1.0.prg.h"
@@ -178,6 +179,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
+     rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM Settings Menu"          , (uint8_t*)SettingsMenu_prg           , sizeof(SettingsMenu_prg) ,
 //     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 
