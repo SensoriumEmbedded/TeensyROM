@@ -147,9 +147,11 @@ MsgBanner:  ;set color before clearing for char poke default
 ;   !tx 0 
 
 MsgMenuPageSelections:
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous Menu", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscNameColor,  "Settings page X of Y", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
+   !tx 0 
+
+MsgMenuExitSelection:
+   !tx ")", ChrReturn, EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
    !tx 0 
 
 ;MsgSettingsMenu3:

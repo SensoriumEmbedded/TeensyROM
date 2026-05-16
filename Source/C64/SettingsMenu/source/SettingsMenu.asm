@@ -52,20 +52,17 @@ SysAddress:
    ;always read current TOD from Teensy RTC, battery backed or not...
    jsr SetC64TODfromRTC
 
-   
-   
-   
-   jsr ColorConfigMenu
-   
+   jmp PageUpdate  ;jump to default page
 
-
-   
-   rts
-
-   !src "source/ColorConfig.asm"
+   !src "source/SupportFunctions.asm"
    !src "source/StringFunctions.asm"
    !src "source/StringMsgs.asm"
-   !src "source/SupportFunctions.asm"
+   ;settings pages:
+   !src "source/ColorConfig.asm"
+   !src "source/MIDISettings.asm"
+   !src "source/EthernetSettings.asm"
+   !src "source/GeneralSettings.asm"
+   
 EndOfCode:
    !byte $00 ;byte to mark end address in build report
 

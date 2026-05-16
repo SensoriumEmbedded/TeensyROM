@@ -20,12 +20,11 @@
 
 
 ColorConfigMenu:
-   jsr PrintBanner
+   jsr CommonInit ;print banner and common keys/page#
+
    lda #<MsgColorMenu
    ldy #>MsgColorMenu
    jsr PrintString 
-
-   jsr PrintMenuPageSelections
 
    ;copy current colors to local temp storage
    lda #<TblEscC
@@ -183,7 +182,7 @@ TempTblEscC:  ;order matches enum ColorRefOffsets
    !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names and information
    
 MsgColorMenu:
-   !tx ChrReturn, EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
    !tx EscC,EscNameColor,  "Individual colors:", EscC,EscOptionColor, " (up/down)", ChrReturn
 
    !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Background", ChrReturn

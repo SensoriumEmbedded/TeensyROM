@@ -72,25 +72,88 @@ CheckCommonKeys:
    cmp #ChrCRSRRight  ;Next Page
    bne +
    ;inc...
-   jmp PageUpdate
+   inc bPageNum
+   lda bPageNum
+   cmp bTotalPages
+   bne PopPageUpdate
+   lda #0
+   sta bPageNum
+   jmp PopPageUpdate
 
 +  cmp #ChrCRSRLeft  ;Previous Page
    bne +
    ;dec...
-   jmp PageUpdate
+   lda bPageNum
+   bne ++
+   lda bTotalPages
+   sta bPageNum
+++ dec bPageNum
+   jmp PopPageUpdate
 
 +  cmp #ChrSpace  ;Reboot TeensyROM
    bne +
-   lda #$00    
-   sta $d011   ;turn off the display   
+   lda #139  ; 155 default inuus bit 4
+   sta $d011   ;blank the display   
    lda #rCtlRebootTeensyROM 
    sta wRegControl+IO1Port
    ;no need to wait, TR/C64 will be rebooting...
 +  rts 
 
-
-PageUpdate:
+PopPageUpdate:
    pla
    pla ; pop the jsr return address
+PageUpdate:   
    ;jump to indexed settings page
-   jmp ColorConfigMenu
+   lda bPageNum
+   asl   ;mult by 2
+   tax
+   lda tblSettingsPages,x
+   sta smcJmpPage+1
+   lda tblSettingsPages+1,x
+   sta smcJmpPage+2
+smcJmpPage
+   jmp $0000 ;updated above
+
+CommonInit:
+   ;do common init stuff
+   jsr PrintBanner
+
+   ldx #22 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   lda #<MsgMenuPageSelections
+   ldy #>MsgMenuPageSelections
+   jsr PrintString 
+   
+   ; print page #/# info
+   ldx bPageNum  ;current page num
+   inx ;make 1 based
+   txa
+   jsr PrintIntByte
+   lda #'/'
+   jsr SendChar   
+   lda bTotalPages  ;num of pages
+   jsr PrintIntByte  
+   
+   lda #<MsgMenuExitSelection
+   ldy #>MsgMenuExitSelection
+   jsr PrintString
+   ldx #2 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   rts
+
+bPageNum:  ;current page num/default
+   !byte 0
+   
+bTotalPages: ;num pf pages in tblSettingsPages
+   !byte 4
+   
+tblSettingsPages:
+   !word GeneralSettings
+   !word ColorConfigMenu   
+   !word MIDIMenu
+   !word EthernetMenu
+
