@@ -325,8 +325,8 @@ const uint8_t OutputPins[] = {
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 #define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
-#define Def_nS_DMASetupNTSC 440  //380 too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
-
+#define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
+                                 //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
