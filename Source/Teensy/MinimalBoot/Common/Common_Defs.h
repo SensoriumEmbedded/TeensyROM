@@ -62,6 +62,7 @@
 #define GetDirectoryToken 0x64DD  // regular JSON format, to be deprecated
 #define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
+#define WriteC64MemToken  0x64FB
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
 #define BadSIDToken       0x9B80

@@ -98,6 +98,13 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             SendU16(AckToken);
             return;
          }
+#ifdef Fab04_FullDMACapable
+         else if (inVal == WriteC64MemToken) //Write to C64 mem via DMA
+         {
+            WriteC64MemCommand();
+            return;
+         }
+#endif
          else if (inVal == VersionInfoToken) //Version Info
          {
             MakeBuildInfo();
@@ -926,4 +933,57 @@ FLASHMEM void  getFreeITCM()
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
+
+#ifdef Fab04_FullDMACapable
+// Command: 
+// Write sequential C64 memory segment with supplied data
+// 
+// Workflow:
+// Receive <-- WriteC64MemToken (0x64FB)
+// Receive <-- C64 address (Hi,Low)
+// Receive <-- Data Length (Hi,Low)
+// Receive <-- Data Bytes (Data Length)
+// TR+ Performs DMA Write
+// Send --> AckToken 0x64CC on successful completion, 0x9b7f on Fail
+FLASHMEM void WriteC64MemCommand() 
+{
+   uint32_t DMAAddr, DMALength;
+   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+
+   if (!GetUInt(&DMAAddr, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving address!");
+       return;
+   }
+
+   if (!GetUInt(&DMALength, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving length!");
+       return;
+   }
+
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   {
+      if(!SerialAvailabeTimeout())
+      {
+         SendU16(FailToken);
+         CmdChannel->println("Error receiving data!");
+         return;
+      }
+      DMABuf[ByteNum] = CmdChannel->read();
+   }
+   
+   //uint32_t StartTime = micros();  
+   PerformDMA(false, DMAAddr, DMABuf, DMALength, false);
+   CloseDMA();
+   //StartTime = micros() - StartTime;  
+   SendU16(AckToken);
+   
+   //CmdChannel->printf
+   //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+   //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+}
+#endif
 
