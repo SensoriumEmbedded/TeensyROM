@@ -51,10 +51,11 @@ bPageNum:  ;current page num/default
    !byte 0
    
 bTotalPages: ;num of pages in tblSettingsPages
-   !byte 5
+   !byte 6
    
 tblSettingsPages:
    !word HelpMenu
+   !word HelpMenu2
    !word GeneralSettings
    !word ColorConfigMenu   
    !word MIDIMenu
@@ -69,6 +70,7 @@ tblSettingsPages:
    !src "source/EthernetSettings.asm"
    !src "source/GeneralSettings.asm"
    !src "source/HelpInfo.asm"
+   !src "source/HelpInfo2.asm"
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report
