@@ -241,6 +241,7 @@
    rCtlSetKERNALBinWAIT     = 23
    rCtlKERNALPreStartWAIT   = 24
    rCtlSetREUFileWAIT       = 25
+   rCtlReturnToMainMenu     = 26
    
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0

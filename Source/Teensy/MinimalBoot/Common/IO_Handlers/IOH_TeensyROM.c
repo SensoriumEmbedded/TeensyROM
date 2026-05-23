@@ -214,6 +214,7 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern void MountDxxFile();
 extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
+extern volatile uint8_t BtnPressed;
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -1294,6 +1295,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNFCReEnableWAIT:
                   IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
+                  break;
+               case rCtlReturnToMainMenu:
+                  BtnPressed = true;
                   break;
                case rCtlRebootTeensyROM:
                   REBOOT;
