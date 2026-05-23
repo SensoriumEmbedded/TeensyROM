@@ -81,11 +81,14 @@ smcPrintStringAddr
 ++ rts   
 
 PrintBanner:
-   lda #<MsgBanner
-   ldy #>MsgBanner
+   lda #<MsgBanner1
+   ldy #>MsgBanner1
    jsr PrintString 
    lda #rsstVersionNum
    jsr PrintSerialString
+   lda #<MsgBanner2
+   ldy #>MsgBanner2
+   jsr PrintString 
    sec
    jsr SetCursor ;read column into y reg
    lda #ChrSpace ;spaces to the end of the line

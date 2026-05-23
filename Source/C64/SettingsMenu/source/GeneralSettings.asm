@@ -300,14 +300,14 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowSettings  
 
-;+  cmp #'j'  ;Reboot TeensyROM
-;   bne +
-;   lda #$00    
-;   sta $d011   ;turn off the display   
-;   lda #rCtlRebootTeensyROM 
-;   sta wRegControl+IO1Port
-;   ;no need to wait, TR/C64 will be rebooting...
-;   jmp WaitGeneralSettingsKey  
++  cmp #'j'  ;Reboot TeensyROM
+   bne +
+   lda #$00    
+   sta $d011   ;turn off the display   
+   lda #rCtlRebootTeensyROM 
+   sta wRegControl+IO1Port
+   ;no need to wait, TR/C64 will be rebooting...
+   jmp WaitGeneralSettingsKey  
 
 +  cmp #'k'  ;Synch Time now
    bne +
@@ -392,7 +392,7 @@ CursorToTest:
 
 
 MsgSettingsMenu1:
-   !tx EscC,EscSourcesColor, "Settings Menu:", ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: General ", ChrReturn
    !tx EscC,EscMenuMiscColor 
    !tx EscC,EscArgSpaces+3, "Power-On Defaults:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
@@ -404,7 +404,8 @@ MsgSettingsMenu1:
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   " Enable TCP Listener:", ChrReturn
-   !tx ChrReturn
+   ;!tx EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Immediate:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Re-boot TeensyROM", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch RTC via Ethernet", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Disable Auto-Launch", ChrReturn

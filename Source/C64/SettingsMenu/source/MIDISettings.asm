@@ -45,7 +45,7 @@ WaitMIDIMenuKey:
    jmp WaitMIDIMenuKey   
    
 MsgMIDIMenu:
-   !tx EscC,EscSourcesColor,  "MIDI Settings Page:", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: MIDI Filters ", ChrReturn, ChrReturn
    !tx EscC,EscNameColor,  "Some settings:", EscC,EscOptionColor, " (up/down)", ChrReturn
    !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "hello", ChrReturn
    !tx 0 

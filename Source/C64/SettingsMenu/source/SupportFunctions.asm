@@ -101,9 +101,9 @@ CheckCommonKeys:
    bne +
    lda #139  ; 155 default inuus bit 4
    sta $d011   ;blank the display   
-   lda #rCtlRebootTeensyROM 
+   lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
-   ;no need to wait, TR/C64 will be rebooting...
+   ;no need to wait, C64 will be reset...
 +  rts 
 
 PopPageUpdate:
@@ -152,15 +152,5 @@ CommonInit:
    jsr SetCursor
    rts
 
-bPageNum:  ;current page num/default
-   !byte 0
-   
-bTotalPages: ;num pf pages in tblSettingsPages
-   !byte 4
-   
-tblSettingsPages:
-   !word GeneralSettings
-   !word ColorConfigMenu   
-   !word MIDIMenu
-   !word EthernetMenu
+
 

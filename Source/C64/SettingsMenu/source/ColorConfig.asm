@@ -182,7 +182,7 @@ TempTblEscC:  ;order matches enum ColorRefOffsets
    !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names and information
    
 MsgColorMenu:
-   !tx EscC,EscSourcesColor,  "Color Settings Page:", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Menu Colors ", ChrReturn, ChrReturn
    !tx EscC,EscNameColor,  "Individual colors:", EscC,EscOptionColor, " (up/down)", ChrReturn
 
    !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Background", ChrReturn
