@@ -37,13 +37,6 @@ SysAddress:
    
    jsr ScreenColorOnly ;update screen colors now that we have them
 
-   ;set clock to midnight and start it by default
-   ;lda #0  
-   ;sta TODHoursBCD  ;stop TOD regs incrementing
-   ;sta TODMinBCD
-   ;sta TODSecBCD
-   ;sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
-
    ;store default register for 12/24 hour time display locally
    lda rwRegPwrUpDefaults+IO1Port
    and #rpudClock12_24hr
@@ -54,6 +47,19 @@ SysAddress:
 
    jmp PageUpdate  ;jump to default page
 
+bPageNum:  ;current page num/default
+   !byte 0
+   
+bTotalPages: ;num of pages in tblSettingsPages
+   !byte 5
+   
+tblSettingsPages:
+   !word HelpMenu
+   !word GeneralSettings
+   !word ColorConfigMenu   
+   !word MIDIMenu
+   !word EthernetMenu
+   
    !src "source/SupportFunctions.asm"
    !src "source/StringFunctions.asm"
    !src "source/StringMsgs.asm"
@@ -62,6 +68,7 @@ SysAddress:
    !src "source/MIDISettings.asm"
    !src "source/EthernetSettings.asm"
    !src "source/GeneralSettings.asm"
+   !src "source/HelpInfo.asm"
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report

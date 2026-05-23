@@ -97,13 +97,13 @@ CheckCommonKeys:
 ++ dec bPageNum
    jmp PopPageUpdate
 
-+  cmp #ChrSpace  ;Reboot TeensyROM
++  cmp #ChrSpace  ;Back to TeensyROM menu
    bne +
-   lda #139  ; 155 default inuus bit 4
-   sta $d011   ;blank the display   
+   ;lda #139  ; 155 default inuus bit 4
+   ;sta $d011   ;blank the display   
    lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
-   ;no need to wait, C64 will be reset...
+   ;C64 will be reset...
 +  rts 
 
 PopPageUpdate:

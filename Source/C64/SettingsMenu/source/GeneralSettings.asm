@@ -167,6 +167,8 @@ WaitGeneralSettingsKey:
    jsr GetIn
    beq WaitGeneralSettingsKey
 
+   jsr CheckCommonKeys ;won't return if page changed or exit, check before modifying
+
 +  cmp #'a'  ;Special IO Increment
    bne +
    ;inc rwRegNextIOHndlr+IO1Port ;inc causes Rd(old),Wr(old),Wr(new)   sequential writes=bad for waiting function
@@ -343,8 +345,7 @@ smcNewscd
    bne +
    jmp GeneralSettings  
 
-+  jsr CheckCommonKeys ;won't return if page changed or exit
-   jmp WaitGeneralSettingsKey   
++  jmp WaitGeneralSettingsKey   
 
 TestIO:
    jsr CursorToTest    
