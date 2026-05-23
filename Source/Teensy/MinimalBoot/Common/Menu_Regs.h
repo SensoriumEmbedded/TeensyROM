@@ -210,8 +210,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsSetKERNALBin       = 0x18,
    rsKERNALPreStart     = 0x19,
    rsSetREUFile         = 0x1a,
+   rsMakeFilenameStr    = 0x1b,
    
-   rsNumStatusTypes     = 0x1b,
+   rsNumStatusTypes     = 0x1c,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -257,6 +258,9 @@ enum RegCtlCommands
    rCtlKERNALPreStartWAIT   = 24,
    rCtlSetREUFileWAIT       = 25,
    rCtlReturnToMainMenu     = 26, 
+   rCtlMakeKernalStrWAIT    = 27, // Uses MakeFilenameStr
+   rCtlMakeREUStrWAIT       = 28, // Uses MakeFilenameStr
+
 };
 
 enum regItemTypes //synch with TblItemType

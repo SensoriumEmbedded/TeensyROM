@@ -355,6 +355,43 @@ FLASHMEM void MakeBuildInfo()
    sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
+FLASHMEM void MakeFilenameStr()
+{
+   //Get filename from EEPROM (selected in IO1[wRegControl] = rCtlMakeKernalStrWAIT)
+   
+   switch (IO1[wRegControl])
+   {
+      case rCtlMakeKernalStrWAIT:
+         EEPreadStr(eepAdKERNALBinName, SerialStringBuf);
+         break;
+      case rCtlMakeREUStrWAIT:
+         EEPreadStr(eepAdREUFilename, SerialStringBuf);
+         break;
+         //eepAdHotKeyPaths
+      default: 
+         *SerialStringBuf = 0; //default blank
+         break;
+   }
+   //Create printable filename for C64 display in SerialStringBuf
+   uint16_t Length = strlen(SerialStringBuf);
+   if (Length>78)
+   {  //limit to 2 lines
+      uint16_t CharNum=4;
+      for (; CharNum<7; CharNum++) SerialStringBuf[CharNum] = '.'; //add ... after source media
+      uint16_t StartChar = Length+7-78; 
+      //CharNum == 7
+      while (StartChar<=Length) //include the term
+      {
+         SerialStringBuf[CharNum++] = SerialStringBuf[StartChar++];
+      } 
+   }
+   //Serial.printf("\nx%sx\n", SerialStringBuf);
+   //set print buffer for PrintSerialString and reset counter
+   ptrSerialString = SerialStringBuf;
+   StringOffset = 0;
+}
+
+
 //FLASHMEM void MakeBuildCPUInfoStr()
 //{
 //   FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
@@ -885,6 +922,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &SetKERNALBin,        // rsSetKERNALBin
    &KERNALPreStart,      // rsKERNALPreStart
    &SetREUFile,          // rsSetREUFile
+   &MakeFilenameStr      // rsMakeFilenameStr
 };
 
 
@@ -1331,6 +1369,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNetListenInitWAIT:
                   IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
+                  break;
+               case rCtlMakeKernalStrWAIT:
+               case rCtlMakeREUStrWAIT:
+                  IO1[wRegControl] = Data; //preserve for later use
+                  IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
                   break;
             }
             break;

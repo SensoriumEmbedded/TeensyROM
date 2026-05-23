@@ -200,8 +200,9 @@
    rsSetKERNALBin       = 0x18  ;
    rsKERNALPreStart     = 0x19  ;
    rsSetREUFile         = 0x1a  ;
+   rsMakeFilenameStr    = 0x1b  ;
    
-   rsNumStatusTypes     = 0x1b  ;
+   rsNumStatusTypes     = 0x1c  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -223,7 +224,7 @@
    rCtlRunningPRG           =  5 ; final signal before running prg, allows IO1 handler change
    rCtlMakeInfoStrWAIT      =  6 ; MakeBuildCPUInfoStr
    rCtlUpDirectoryWAIT      =  7
-   rCtlLoadSIDWAIT          =  8 ;load .sid file to RAM buffer and prep for x-fer
+   rCtlLoadSIDWAIT          =  8 ; load .sid file to RAM buffer and prep for x-fer
    rCtlNextPicture          =  9 
    rCtlLastPicture          = 10 
    rCtlRebootTeensyROM      = 11 
@@ -242,7 +243,9 @@
    rCtlKERNALPreStartWAIT   = 24
    rCtlSetREUFileWAIT       = 25
    rCtlReturnToMainMenu     = 26
-   
+   rCtlMakeKernalStrWAIT    = 27 ; Uses MakeFilenameStr
+   rCtlMakeREUStrWAIT       = 28 ; Uses MakeFilenameStr
+
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0
    rtUnknown     = 1
