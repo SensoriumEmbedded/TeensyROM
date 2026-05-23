@@ -51,11 +51,12 @@ bPageNum:  ;current page num/default
    !byte 0
    
 bTotalPages: ;num of pages in tblSettingsPages
-   !byte 6
+   !byte 7
    
 tblSettingsPages:
    !word HelpMenu
    !word HelpMenu2
+   !word TRSettings
    !word GeneralSettings
    !word ColorConfigMenu   
    !word MIDIMenu
@@ -69,6 +70,7 @@ tblSettingsPages:
    !src "source/MIDISettings.asm"
    !src "source/EthernetSettings.asm"
    !src "source/GeneralSettings.asm"
+   !src "source/TRSettings.asm"
    !src "source/HelpInfo.asm"
    !src "source/HelpInfo2.asm"
    
