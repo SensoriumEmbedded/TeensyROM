@@ -393,7 +393,7 @@ CursorToTest:
 
 
 MsgSettingsMenu1:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: General ", ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " ORIGINAL General Settings ", ChrReturn
    !tx EscC,EscMenuMiscColor 
    !tx EscC,EscArgSpaces+3, "Power-On Defaults:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn

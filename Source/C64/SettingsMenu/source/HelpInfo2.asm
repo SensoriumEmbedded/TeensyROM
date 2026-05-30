@@ -29,7 +29,7 @@ HelpMenu2:
 jmp WaitHelpMenuKey ;same as other help screen, just waiting for common keys  
    
 MsgHelpMenu2:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: File Select Help ", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Alt File Select ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Highlighted File Alt Functions:", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,    "Write NFC tag: Highlighted File", ChrReturn

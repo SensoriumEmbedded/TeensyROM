@@ -30,7 +30,7 @@ TRSettings:
    lda #rCtlMakeKernalStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #6 ;row
+   ldx #7 ;row
    ldy #2 ;col
    clc
    jsr SetCursor
@@ -42,7 +42,7 @@ TRSettings:
    lda #rCtlMakeREUStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #9 ;row
+   ldx #10 ;row
    ldy #2 ;col
    clc
    jsr SetCursor
@@ -75,13 +75,17 @@ WaitTRSettingsKey:
 MsgTRSettings:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: TeensyROM General ", ChrReturn, ChrReturn
    
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
+   !tx EscC,EscNameColor,  " Special Emulation Selections:", ChrReturn
+    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
 
-   !tx EscC,EscSourcesColor,  " Kernal replace file:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  " REU Pre-load file:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  Kernal replace file:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  REU Pre-load file:", ChrReturn, ChrReturn, ChrReturn
 
-   !tx EscC,EscNameColor,  " User Interface:", ChrReturn
+   !tx ChrReturn, EscC,EscNameColor,  " User Interface/other:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
-
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn
+   
    !tx 0 

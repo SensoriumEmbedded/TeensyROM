@@ -101,11 +101,14 @@ CheckCommonKeys:
 
 +  cmp #ChrSpace  ;Back to TeensyROM menu
    bne +
-   ;lda #139  ; 155 default inuus bit 4
+   ;lda #139  ; 155 default minus bit 4
    ;sta $d011   ;blank the display   
    lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
    ;C64 will be reset...
+   pla
+   pla ; pop the jsr return address to return to BASIC
+   
 +  rts 
 
 PopPageUpdate:
@@ -127,10 +130,18 @@ CommonInit:
    ;do common init stuff
    jsr PrintBanner
 
-   ldx #22 ;row
+   ldx #21 ;row
    ldy #0 ;col
-   clc
    jsr SetCursor
+   lda TblEscC+EscTRBannerColor
+   sta $0286  ;set text color   
+   ;draw line
+   lda #192
+   ldx #40
+-  jsr SendChar
+   dex
+   bne -
+   clc
    lda #<MsgMenuPageSelections
    ldy #>MsgMenuPageSelections
    jsr PrintString 

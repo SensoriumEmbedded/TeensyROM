@@ -54,28 +54,32 @@ bPageNum:  ;current page num/default
    !byte 0
    
 bTotalPages: ;num of pages in tblSettingsPages
-   !byte 7
+   !byte 8
    
 tblSettingsPages:
+   ;!word GeneralSettings
    !word HelpMenu
    !word HelpMenu2
    !word TRSettings
-   !word GeneralSettings
+   !word StartupOptionsMenu
+   !word TimeRTCMenu
    !word ColorConfigMenu   
-   !word MIDIMenu
    !word EthernetMenu
+   !word MIDIMenu
    
    !src "source/SupportFunctions.asm"
    !src "source/StringFunctions.asm"
    !src "source/StringMsgs.asm"
    ;settings pages:
+   ;!src "source/GeneralSettings.asm" ;Original Settings page, now distributed
+   !src "source/HelpInfo.asm"
+   !src "source/HelpInfo2.asm"
+   !src "source/TRSettings.asm"
+   !src "source/StartupOptions.asm"
    !src "source/ColorConfig.asm"
    !src "source/MIDISettings.asm"
    !src "source/EthernetSettings.asm"
-   !src "source/GeneralSettings.asm"
-   !src "source/TRSettings.asm"
-   !src "source/HelpInfo.asm"
-   !src "source/HelpInfo2.asm"
+   !src "source/TimeRTCSettings.asm"
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report

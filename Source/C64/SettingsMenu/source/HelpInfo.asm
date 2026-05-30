@@ -45,7 +45,7 @@ WaitHelpMenuKey:
    jmp WaitHelpMenuKey   
    
 MsgHelpMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: Source/Nav Help ", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Source/Navigation ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
