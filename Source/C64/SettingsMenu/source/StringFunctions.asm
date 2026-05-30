@@ -27,10 +27,12 @@ PrintSerialString:
    ;load Acc with RegSerialStringSelect # that will be serialized out from TR port
    sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
 PrintSerialStringLoaded: ;message already selected
+!ifndef DbgOffline {
 -  lda rwRegSerialString+IO1Port
    beq +
    jsr SendChar
    jmp -
+}
 +  rts
  
 PrintString:

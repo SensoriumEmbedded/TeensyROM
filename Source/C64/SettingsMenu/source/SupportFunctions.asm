@@ -13,7 +13,7 @@ SetRTCfromEthernet:
    jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
    rts
  
- SetC64TODfromRTC:
+SetC64TODfromRTC:
    ;Sets the C64 TOD clock from the Teensy RTC (with timezone offset)
    lda #rCtlC64TODfromRTCWAIT
    sta wRegControl+IO1Port
@@ -45,6 +45,7 @@ WaitForTRWaitMsg:  ;Print Waiting message in upper right and waits
    jsr PrintString
    ldy #$ff ;don't print dots
 WaitForTRMain   ;Main wait loop
+!ifndef DbgOffline {
    inc C64ScreenRAM+40*2-2 ;spinner @ top-1, right-1
    cpy #$ff
    beq +    ;skip dot printing if wait message selected
@@ -72,6 +73,7 @@ WaitForTRMain   ;Main wait loop
    lda #rsContinue    ;tell fw we're done reading msg, continue
    sta rwRegStatus+IO1Port
    jmp WaitForTRMain
+}
 +  rts
 
 CheckCommonKeys:

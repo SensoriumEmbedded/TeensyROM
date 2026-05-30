@@ -234,13 +234,13 @@ TblColorNames:
 TblEscC:  ;order matches enum ColorRefOffsets
         ;Main local storage for string escape token (EscC) next character cross-reference
         ;Local Default     EEPROM default  Description
-   !byte PokeBlack       ; PokeBlack      ;EscBackgndColor     = 0 ; Screen Background
-   !byte PokeDrkGrey     ; PokePurple     ;EscBorderColor      = 1 ; Screen Border
-   !byte PokeDrkGrey     ; PokePurple     ;EscTRBannerColor    = 2 ; Top of screen banner color
-   !byte PokeWhite       ; PokeOrange     ;EscTimeColor        = 3 ; Time Display & Waiting msg
-   !byte PokeLtGrey      ; PokeYellow     ;EscOptionColor      = 4 ; Input key option indication
-   !byte PokeDrkGrey     ; PokeLtBlue     ;EscSourcesColor     = 5 ; General text/descriptions
-   !byte PokeMedGrey     ; PokeLtGreen    ;EscNameColor        = 6 ; FIle names and information
+   !byte PokeBlack      ;PokeBlack       ; EscBackgndColor     = 0 ; Screen Background
+   !byte PokePurple     ;PokeDrkGrey     ; EscBorderColor      = 1 ; Screen Border
+   !byte PokePurple     ;PokeDrkGrey     ; EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeOrange     ;PokeWhite       ; EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeYellow     ;PokeLtGrey      ; EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtBlue     ;PokeDrkGrey     ; EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtGreen    ;PokeMedGrey     ; EscNameColor        = 6 ; FIle names and information
 
 NumPresetColors = 6
 TblPresets:
