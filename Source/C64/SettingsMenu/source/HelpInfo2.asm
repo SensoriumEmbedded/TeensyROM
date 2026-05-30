@@ -32,14 +32,14 @@ MsgHelpMenu2:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Alt File Select ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Highlighted File Alt Functions:", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,    "Write NFC tag: Highlighted File", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,           "Hot Key: Launch", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "!-%", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,           "Hot Key: File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,             "Auto-Launch File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "M", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,             "Meatloaf Mount/Launch Dxx", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "K", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,             "Kernal Replace File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "R", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,             "REU Pre-load File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrLeftArrow,    EscC,EscSourcesColor, " Write NFC tag: Highlighted File", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrQuestionMark, EscC,EscSourcesColor, " Write NFC tag: Random in Dir", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "1-5",           EscC,EscSourcesColor, " Hot Key: Launch", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "!-%",           EscC,EscSourcesColor, " Hot Key: File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",             EscC,EscSourcesColor, " Auto-Launch File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "M",             EscC,EscSourcesColor, " Meatloaf Mount/Launch Dxx", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "K",             EscC,EscSourcesColor, " Kernal Replace File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "R",             EscC,EscSourcesColor, " REU Pre-load File Select", ChrReturn
    !tx ChrReturn, ChrReturn
    !tx EscC,EscNameColor, " For additional help, see:", ChrReturn
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"

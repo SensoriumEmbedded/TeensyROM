@@ -48,21 +48,21 @@ MsgHelpMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Source/Navigation ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "SD Card"
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID on/off", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "USB Drive"
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID Information", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7/F8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help/Settings", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F1 ",    EscC,EscSourcesColor,  "Teensy Mem"
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "F2 ",    EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F3 ",    EscC,EscSourcesColor,  "SD Card"
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "F4 ",    EscC,EscSourcesColor, "SID on/off", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F5 ",    EscC,EscSourcesColor,  "USB Drive"
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "F6 ",    EscC,EscSourcesColor, "SID Information", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F7/F8 ", EscC,EscSourcesColor, "Help/Settings", ChrReturn
    ;!tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Settings Menu"
    !tx ChrReturn
    !tx EscC,EscNameColor, " Directory Menu Navigation:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Page up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Select file or dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Up directory", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 U/D ", EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 L/R ", EscC,EscSourcesColor, "Page up/dn", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "Return/Fire ", EscC,EscSourcesColor, "Select file or dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrUpArrow,    EscC,EscSourcesColor, " Up directory", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "a-z ",         EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "Home ",        EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
    !tx ChrReturn
    !tx 0
