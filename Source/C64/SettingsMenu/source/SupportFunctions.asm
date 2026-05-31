@@ -101,8 +101,6 @@ CheckCommonKeys:
 
 +  cmp #ChrSpace  ;Back to TeensyROM menu
    bne +
-   ;lda #139  ; 155 default minus bit 4
-   ;sta $d011   ;blank the display   
    lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
    ;C64 will be reset...
