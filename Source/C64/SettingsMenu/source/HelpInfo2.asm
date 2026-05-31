@@ -32,15 +32,18 @@ MsgHelpMenu2:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Alt File Select ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Highlighted File Alt Functions:", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrLeftArrow,    EscC,EscSourcesColor, " Write NFC tag: Highlighted File", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrQuestionMark, EscC,EscSourcesColor, " Write NFC tag: Random in Dir", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "1-5",           EscC,EscSourcesColor, " Hot Key: Launch", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "!-%",           EscC,EscSourcesColor, " Hot Key: File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",             EscC,EscSourcesColor, " Auto-Launch File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "M",             EscC,EscSourcesColor, " Meatloaf Mount/Launch Dxx", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "K",             EscC,EscSourcesColor, " Kernal Replace File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "R",             EscC,EscSourcesColor, " REU Pre-load File Select", ChrReturn
-   !tx ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "1-5",           EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Hot Key: Launch", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "!-%",           EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Hot Key: File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",             EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Auto-Launch: File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrLeftArrow,    EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Highlighted File", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrQuestionMark, EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "M",             EscC,EscNameColor, " *", EscC,EscSourcesColor, "Meatloaf: Mount/Launch Dxx", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "K",             EscC,EscNameColor, " +", EscC,EscSourcesColor, "Kernal Replace: File Select", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "R",             EscC,EscNameColor, " +", EscC,EscSourcesColor, "REU Pre-load/save: File Select", ChrReturn
+   !tx ChrReturn
+   !tx EscC,EscNameColor, "   *:", EscC,EscSourcesColor, " External HW Required", ChrReturn
+   !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Required", ChrReturn
+   !tx ChrReturn
    !tx EscC,EscNameColor, " For additional help, see:", ChrReturn
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0

@@ -60,7 +60,7 @@ MsgHelpMenu:
    !tx EscC,EscNameColor, " Directory Menu Navigation:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 U/D ", EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 L/R ", EscC,EscSourcesColor, "Page up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "Return/Fire ", EscC,EscSourcesColor, "Select file or dir", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "Return/Fire ", EscC,EscSourcesColor, "Select file or dir", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrUpArrow,    EscC,EscSourcesColor, " Up directory", ChrReturn
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "a-z ",         EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "Home ",        EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
