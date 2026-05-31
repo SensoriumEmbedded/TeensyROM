@@ -419,14 +419,17 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+0*MaxPathLength, "TR:/MIDI + ASID/Cynthcart 2.0.1       +Datel MIDI"); 
 #ifdef Fab04_REU
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/Test+Diags/REU-Checker v1.0            +REU"); 
+   EEPROM.write(eepAdKERNALBinName, 0); //No default Kernal Selection
+   EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name needed for saving
 #else
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/MIDI + ASID/Station64 2.6      +Passport MIDI"); 
+   EEPROM.write(eepAdKERNALBinName, "TR+ Only"); 
+   EEPwriteStr(eepAdREUFilename, "TR+ Only"); 
 #endif
    EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
-   EEPROM.write(eepAdKERNALBinName, 0); //No Kernal Selection
-   EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name
+   
    
    //future use:
    for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)
