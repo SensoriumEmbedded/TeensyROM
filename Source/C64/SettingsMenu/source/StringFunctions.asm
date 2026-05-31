@@ -282,3 +282,21 @@ AnyKeyMsgWait:
 -  jsr GetIn    
    beq -
    rts
+
+PrintFileName:
+   ; Acc contains rCtlMake*StrWAIT (ie rCtlMakeKernalStrWAIT)
+   ; X and Y are row, col to print it at
+   stx smcRow+1
+   sty smcCol+1
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
+smcRow
+   ldx #7 ;row
+smcCol
+   ldy #2 ;col
+   clc
+   jsr SetCursor
+   lda TblEscC+EscMenuMiscColor
+   sta $0286  ;set text color
+   jsr PrintSerialStringLoaded
+   rts

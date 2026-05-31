@@ -169,7 +169,7 @@ enum RegPowerUpDefaultMasks
    rpudJoySpeedMask    = 0b11110000, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 
-enum RegPowerUpDefaultMasks2
+enum RegPowerUpDefaultMasks2  //SerCtl bits match TblMsgHostSerCtl
 {  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
    //bit 0 unused
    rpud2HostSerCtlMask    = 0b00000110, // mask of all host serial control devices
