@@ -70,13 +70,13 @@ ShowStartupOptionsSettings:
    and #rpud2TRTCPListen  
    jsr PrintOnOff
 
-   ldx #14 ;Auto-Launch Enabled 
+   ldx #15 ;Auto-Launch Enabled 
    ldy #StartupValColumn ;col
    clc
    jsr SetCursor
-   ;lda rwRegPwrUpDefaults2+IO1Port
-   ;and #rpud2TRTCPListen  
-   ;jsr PrintOnOff
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2TRAutoLaunch  
+   jsr PrintOnOff
 
    
 WaitStartupOptionsMenuKey:
@@ -110,10 +110,10 @@ WaitStartupOptionsMenuKey:
    
 +  cmp #'d'  ;Toggle Auto-Launch Enable
    bne +
-   ;lda rwRegPwrUpDefaults2+IO1Port
-   ;eor #rpud2TRTCPListen  
-   ;sta rwRegPwrUpDefaults2+IO1Port
-   ;jsr WaitForTRWaitMsg
+   lda rwRegPwrUpDefaults2+IO1Port
+   eor #rpud2TRAutoLaunch  
+   sta rwRegPwrUpDefaults2+IO1Port
+   jsr WaitForTRWaitMsg
    jmp ShowStartupOptionsSettings  
    
    

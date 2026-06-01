@@ -191,8 +191,8 @@ void setup()
             uint32_t AutoStartmS = millis();
             if(!CheckLaunchSDAuto()) //if nothing autolaunched from SD autolaunch file
             {
-               if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
-               {
+               if ((EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRAutoLaunch) && (ReadButton!=0)) 
+               { //If autolaunch enabled & button not pressed
                   EEPRemoteLaunch(eepAdAutolaunchName);
                }
             }
@@ -398,7 +398,7 @@ FLASHMEM void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
-   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
+   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: TCP Listen Off, Auto-Launch Off, NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
    EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
@@ -406,7 +406,7 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
-   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+   EEPwriteStr(eepAdAutolaunchName, "TR:/Test+Diags/DesTestMAX:  Desmond's RAM Test"); //default auto Launch file
    //default color scheme:
    EEPROM.write(eepAdColorRefStart+EscBackgndColor , PokeBlack  ); 
    EEPROM.write(eepAdColorRefStart+EscBorderColor  , PokePurple ); 

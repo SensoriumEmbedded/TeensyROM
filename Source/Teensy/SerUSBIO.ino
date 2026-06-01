@@ -224,18 +224,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       //      }
       //   }
       //   break;
-            
-      //case 'u':  //set up autolaunch
-      //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
-      //   CmdChannel->printf("Autolaunch disabled\n");
-      //   
-      //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
-      //   //CmdChannel->printf("Autolaunch set\n");
-      //   
-      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
-      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
-      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ", false);
-      //   break;
      
       //case 'u':  //Reboot to minimal build
       //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");

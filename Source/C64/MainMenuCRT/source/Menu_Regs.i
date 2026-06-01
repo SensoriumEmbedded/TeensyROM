@@ -168,9 +168,10 @@
    rpud2HostSerCtlMaskInv = 0b11111001 ; Inverted mask of all host serial control devices
    rpud2NFCEnabled        = 0b00000010 ; rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
    rpud2TRContEnabled     = 0b00000100 ; rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
+   rpud2TRAutoLaunch      = 0b01000000 ; rwRegPwrUpDefaults2 bit 6, 1=Auto-Launch Enabled
    rpud2TRTCPListen       = 0b10000000 ; rwRegPwrUpDefaults2 bit 7, 1=TCP Listen Enabled
-   ;bits 4:3 for future hosted serial devices (ie Meatloaf)
-   ;bits 6:5 unused
+   ;bits 4:3 for future hosted serial devices(?)
+   ;bit 5 unused
 
 ;enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsChangeMenu         = 0x00  ;
@@ -190,7 +191,7 @@
    rsNFCReEnable        = 0x0e  ;
    rsSetBackgroundSID   = 0x0f  ;
    rsSetAutoLaunch      = 0x10  ;
-   rsClearAutoLaunch    = 0x11  ;
+   rsClearAutoLaunch    = 0x11  ; no longer used
    rsNextTextFile       = 0x12  ;
    rsLastTextFile       = 0x13  ;
    rsIOHWNextInit       = 0x14  ; no longer used

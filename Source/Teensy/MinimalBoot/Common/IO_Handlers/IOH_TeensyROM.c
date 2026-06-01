@@ -41,7 +41,7 @@ bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
-char SerialStringBuf[MaxPathLength] = "err"; // used for message passing to C64, up to full path length
+char SerialStringBuf[MaxPathLength+6] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
@@ -813,15 +813,16 @@ FLASHMEM void SetAutoLaunch()
       return;
    }
 
-   SendMsgPrintfln("Auto Launch updated:\r  * Will take effect next power-up\r  * See Settings menu to disable\r");
+   SendMsgPrintfln("Auto Launch file updated\r  * Currently %sabled\r  * See Settings menu to enable/disable\r", ((EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRAutoLaunch) ? "En":"Dis"));
    
-   EEPwriteStr(eepAdAutolaunchName, PathMsg);  //set autolaunch in EEPROM:
+   EEPwriteStr(eepAdAutolaunchName, PathMsg);  //set autolaunch filename in EEPROM:
 
 }
 
 FLASHMEM void ClearAutoLaunch()
-{
-   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+{  //no longer used (old settings menu)
+   uint newval = EEPROM.read(eepAdPwrUpDefaults2) & ~rpud2TRAutoLaunch;  //disable auto Launch
+   EEPROM.write(eepAdPwrUpDefaults2, newval); 
 }
 
 FLASHMEM void SetBackgroundSID()
