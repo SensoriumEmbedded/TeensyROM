@@ -234,6 +234,7 @@ TblColorNames:
 TblEscC:  ;order matches enum ColorRefOffsets
         ;Main local storage for string escape token (EscC) next character cross-reference
         ;Local Default     EEPROM default  Description
+        ;EscMenuMiscColor = EscNameColor  in Menu_Regs.i
    !byte PokeBlack      ;PokeBlack       ; EscBackgndColor     = 0 ; Screen Background
    !byte PokePurple     ;PokeDrkGrey     ; EscBorderColor      = 1 ; Screen Border
    !byte PokePurple     ;PokeDrkGrey     ; EscTRBannerColor    = 2 ; Top of screen banner color

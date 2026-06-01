@@ -416,8 +416,8 @@ MsgSettingsMenu3:
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
 
-MsgDone:
-   !tx EscC,EscNameColor, "Done", 0
+;MsgDone:
+;   !tx EscC,EscNameColor, "Done", 0
 
 MsgTesting:
    !tx EscC,EscNameColor, "Testing", 0

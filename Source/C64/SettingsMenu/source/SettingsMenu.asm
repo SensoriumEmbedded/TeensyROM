@@ -6,13 +6,6 @@
 
    ;!set DbgOffline = 1   ;if defined, skips all waits/dependancies on TR HW
 
-   ;r0   = $fb
-   ;r0L  = $fb
-   ;r0H  = $fc
-   ;r1   = $fd
-   ;r1L  = $fd
-   ;r1H  = $fe
-
 
    * = $0801    ;BasicStart
 
