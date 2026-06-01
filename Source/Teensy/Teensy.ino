@@ -423,7 +423,7 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name needed for saving
 #else
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/MIDI + ASID/Station64 2.6      +Passport MIDI"); 
-   EEPROM.write(eepAdKERNALBinName, "TR+ Only"); 
+   EEPwriteStr(eepAdKERNALBinName, "TR+ Only"); 
    EEPwriteStr(eepAdREUFilename, "TR+ Only"); 
 #endif
    EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 

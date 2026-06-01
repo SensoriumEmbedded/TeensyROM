@@ -243,8 +243,14 @@
    rCtlKERNALPreStartWAIT   = 24
    rCtlSetREUFileWAIT       = 25
    rCtlReturnToMainMenu     = 26
-   rCtlMakeKernalStrWAIT    = 27 ; Uses MakeFilenameStr
-   rCtlMakeREUStrWAIT       = 28 ; Uses MakeFilenameStr
+   
+   rCtlMakeStrWAIT_First    = 27 ; FIRST of a linear series that uses MakeFilenameStr
+      rCtlMakeKernalStrWAIT    = 27 ; Uses MakeFilenameStr
+      rCtlMakeREUStrWAIT       = 28 ; Uses MakeFilenameStr
+      rCtlMakeSIDStrWAIT       = 29 ; Uses MakeFilenameStr
+      rCtlMakeAutoLStrWAIT     = 30 ; Uses MakeFilenameStr
+   rCtlMakeStrWAIT_Last     = 30 ; LAST of a linear series that uses MakeFilenameStr
+
 
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0

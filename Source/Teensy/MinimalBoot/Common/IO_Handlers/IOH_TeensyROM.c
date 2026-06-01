@@ -215,6 +215,7 @@ extern bool USBFileSystemWait();
 extern void MountDxxFile();
 extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
 extern volatile uint8_t BtnPressed;
+extern void EEPreadStr(uint16_t addr, char* buf);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -367,15 +368,32 @@ FLASHMEM void MakeFilenameStr()
       case rCtlMakeREUStrWAIT:
          EEPreadStr(eepAdREUFilename, SerialStringBuf);
          break;
-         //eepAdHotKeyPaths
+      case rCtlMakeSIDStrWAIT:
+      {
+         char SIDSourcePathName[MaxPathLength];
+         EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
+         char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
+
+         sprintf(SerialStringBuf, "%s:/%s/%s", 
+            (SIDSourcePathName[0] == rmtUSBDrive ? "USB" : (SIDSourcePathName[0] == rmtSD ? "SD" : "TR")),
+            SIDSourcePathName+1, SIDName);
+      }
+         break;
+      case rCtlMakeAutoLStrWAIT:
+         EEPreadStr(eepAdAutolaunchName, SerialStringBuf);      
+         break;
+      //case rCtlMakeHK1StrWAIT:
+      //   EEPreadStr(eepAdHotKeyPaths + , SerialStringBuf);      
+      //   break;
       default: 
-         *SerialStringBuf = 0; //default blank
+         //*SerialStringBuf = 0; //default blank
+         strcpy(SerialStringBuf, "Error"); 
          break;
    }
    //Create printable filename for C64 display in SerialStringBuf
    uint16_t Length = strlen(SerialStringBuf);
    if (Length>78)
-   {  //limit to 2 lines
+   {  //limit to 2 lines, keep first 4 chars "SD:/", "...", final 71 chars
       uint16_t CharNum=4;
       for (; CharNum<7; CharNum++) SerialStringBuf[CharNum] = '.'; //add ... after source media
       uint16_t StartChar = Length+7-78; 
@@ -385,6 +403,9 @@ FLASHMEM void MakeFilenameStr()
          SerialStringBuf[CharNum++] = SerialStringBuf[StartChar++];
       } 
    }
+   
+   if (Length == 0) strcpy(SerialStringBuf, "<none selected>");
+
    //Serial.printf("\nx%sx\n", SerialStringBuf);
    //set print buffer for PrintSerialString and reset counter
    ptrSerialString = SerialStringBuf;
@@ -1370,8 +1391,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlNetListenInitWAIT:
                   IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
                   break;
-               case rCtlMakeKernalStrWAIT:
-               case rCtlMakeREUStrWAIT:
+               case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
                   break;
