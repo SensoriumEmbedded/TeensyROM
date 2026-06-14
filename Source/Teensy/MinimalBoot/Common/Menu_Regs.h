@@ -212,8 +212,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsKERNALPreStart     = 0x19,
    rsSetREUFile         = 0x1a,
    rsMakeFilenameStr    = 0x1b,
+   rsRTCAdjust          = 0x1c,
    
-   rsNumStatusTypes     = 0x1c,
+   rsNumStatusTypes     = 0x1d,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -266,6 +267,15 @@ enum RegCtlCommands
       rCtlMakeSIDStrWAIT       = 29, // Uses MakeFilenameStr
       rCtlMakeAutoLStrWAIT     = 30, // Uses MakeFilenameStr
    rCtlMakeStrWAIT_Last     = 30, // LAST of a linear series that uses MakeFilenameStr
+
+   rCtlRTCAdjWAIT_First     = 31, // FIRST of a linear series that uses RTCAdjust
+      rCtlRTCAdj_Hrs_Up_WAIT   = 31, // Uses RTCAdjust
+      rCtlRTCAdj_Hrs_Dn_WAIT   = 32, // Uses RTCAdjust
+      rCtlRTCAdj_Min_Up_WAIT   = 33, // Uses RTCAdjust
+      rCtlRTCAdj_Min_Dn_WAIT   = 34, // Uses RTCAdjust
+      rCtlRTCAdj_Sec_Up_WAIT   = 35, // Uses RTCAdjust
+      rCtlRTCAdj_Sec_Dn_WAIT   = 36, // Uses RTCAdjust
+   rCtlRTCAdjWAIT_Last      = 36, // LAST of a linear series that uses RTCAdjust
 
 };
 

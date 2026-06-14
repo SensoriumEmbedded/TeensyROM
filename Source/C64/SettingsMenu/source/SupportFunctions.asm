@@ -18,6 +18,7 @@ SetC64TODfromRTC:
    lda #rCtlC64TODfromRTCWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots 
+SetC64TODfromRTC_Preloaded:
    lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
    lda rRegLastMinBCD+IO1Port

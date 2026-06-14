@@ -128,6 +128,40 @@ UpdTimeZone
    jsr AnyKeyMsgWait ; For looking at messages/IP address
    jmp TimeRTCMenu ;force to reprint all 
    
++  cmp #'D'  ;RTC Hours Increment
+   bne +
+   lda #rCtlRTCAdj_Hrs_Up_WAIT
+DoRTCAdjust
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   
+   jsr SetC64TODfromRTC_Preloaded ;rsRTCAdjust also loads time regs   
+   jmp WaitTimeRTCMenuKey  
+
++  cmp #'d'  ;RTC Hours Decrement
+   bne +
+   lda #rCtlRTCAdj_Hrs_Dn_WAIT
+   jmp DoRTCAdjust
+
++  cmp #'E'  ;RTC Min Increment
+   bne +
+   lda #rCtlRTCAdj_Min_Up_WAIT
+   jmp DoRTCAdjust
+
++  cmp #'e'  ;RTC Min Decrement
+   bne +
+   lda #rCtlRTCAdj_Min_Dn_WAIT
+   jmp DoRTCAdjust
+
++  cmp #'F'  ;RTC Sec Increment
+   bne +
+   lda #rCtlRTCAdj_Sec_Up_WAIT
+   jmp DoRTCAdjust
+
++  cmp #'f'  ;RTC Sec Decrement
+   bne +
+   lda #rCtlRTCAdj_Sec_Dn_WAIT
+   jmp DoRTCAdjust
+
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitTimeRTCMenuKey   
@@ -140,7 +174,7 @@ MsgTimeRTCMenu:
    
    !tx ChrReturn, EscC,EscNameColor,  " RTC Adjustment:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Synch RTC via Ethernet now", ChrReturn   
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Hours U/D", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e/E", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Minutes U/D", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f/F", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Seconds U/D", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Hours   Down/Up", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e/E", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Minutes Down/Up", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f/F", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Seconds Down/Up", ChrReturn
    !tx 0 

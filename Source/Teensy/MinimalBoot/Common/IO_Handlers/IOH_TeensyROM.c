@@ -329,6 +329,39 @@ FLASHMEM void C64TODfromRTC()
    Printf_dbg ("TOD Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
 }
 
+FLASHMEM void RTCAdjust()
+{
+   //Adjust RTC up/down manually
+     
+   time_t adj = 0; //default to no adjustment
+   
+   switch (IO1[wRegControl])
+   {
+      case rCtlRTCAdj_Hrs_Up_WAIT:
+         adj = SECS_PER_HOUR;
+         break;
+      case rCtlRTCAdj_Hrs_Dn_WAIT:
+         adj = -SECS_PER_HOUR;
+         break;
+      case rCtlRTCAdj_Min_Up_WAIT:
+         adj = SECS_PER_MIN;
+         break;
+      case rCtlRTCAdj_Min_Dn_WAIT:
+         adj = -SECS_PER_MIN;
+         break;
+      case rCtlRTCAdj_Sec_Up_WAIT:
+         adj = 1;
+         break;
+      case rCtlRTCAdj_Sec_Dn_WAIT:
+         adj = -1;
+         break;
+   }
+   
+   time_t t = Teensy3Clock.get() + adj; //read the RTC time, add adjustment
+   Teensy3Clock.set(t); // set the RTC
+   C64TODfromRTC(); //also update IO1 current time regs
+}
+
 void WriteEEPROM()
 {
    Printf_dbg("Wrote $%02x to EEP addr %d\n", eepDataToWrite, eepAddrToWrite);
@@ -945,7 +978,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &SetKERNALBin,        // rsSetKERNALBin
    &KERNALPreStart,      // rsKERNALPreStart
    &SetREUFile,          // rsSetREUFile
-   &MakeFilenameStr      // rsMakeFilenameStr
+   &MakeFilenameStr,     // rsMakeFilenameStr
+   &RTCAdjust,           // rsRTCAdjust
 };
 
 
@@ -1396,6 +1430,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
+                  break;
+               case rCtlRTCAdjWAIT_First...rCtlRTCAdjWAIT_Last:
+                  IO1[wRegControl] = Data; //preserve for later use
+                  IO1[rwRegStatus] = rsRTCAdjust; //work this in the main code
                   break;
             }
             break;

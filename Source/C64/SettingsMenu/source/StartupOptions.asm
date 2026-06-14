@@ -129,7 +129,7 @@ MsgStartupOptionsMenu:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
    !tx EscC,EscSourcesColor,  "  TCP IP:Port:", EscC,EscMenuMiscColor," ???.???.???.???:2112", ChrReturn, ChrReturn
-   !tx EscC,EscNameColor,  " On TeensyROM Startup:", ChrReturn
+   !tx EscC,EscNameColor,  " On TeensyROM Boot/Power-up:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Auto-Launch Enable:", ChrReturn
    !tx EscC,EscSourcesColor,  "  Auto-Launch file:", ChrReturn, ChrReturn, ChrReturn
    !tx 0 
