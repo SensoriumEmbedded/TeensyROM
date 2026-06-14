@@ -47,7 +47,7 @@ bPageNum:  ;current page num/default
    !byte 0
    
 bTotalPages: ;num of pages in tblSettingsPages
-   !byte 8
+   !byte 9
    
 tblSettingsPages:
    ;!word GeneralSettings
@@ -57,8 +57,9 @@ tblSettingsPages:
    !word StartupOptionsMenu
    !word TimeRTCMenu
    !word ColorConfigMenu   
-   !word EthernetMenu
    !word MIDIMenu
+   !word EthernetMenu
+   !word InfoHotKeyMenu
    
    !src "source/SupportFunctions.asm"
    !src "source/StringFunctions.asm"
@@ -73,6 +74,7 @@ tblSettingsPages:
    !src "source/MIDISettings.asm"
    !src "source/EthernetSettings.asm"
    !src "source/TimeRTCSettings.asm"
+   !src "source/Pg_InfoHotKey.asm"
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report
