@@ -298,5 +298,9 @@ smcCol
    jsr SetCursor
    lda TblEscC+EscMenuMiscColor
    sta $0286  ;set text color
+   lda #ChrQuote
+   jsr SendChar
    jsr PrintSerialStringLoaded
+   lda #ChrQuote
+   jsr SendChar
    rts

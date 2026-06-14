@@ -391,12 +391,13 @@ FLASHMEM void MakeFilenameStr()
          break;
    }
    //Create printable filename for C64 display in SerialStringBuf
+   const uint16_t MaxLength = 76; //  allow for indent and quotes
    uint16_t Length = strlen(SerialStringBuf);
-   if (Length>78)
+   if (Length>MaxLength)
    {  //limit to 2 lines, keep first 4 chars "SD:/", "...", final 71 chars
       uint16_t CharNum=4;
       for (; CharNum<7; CharNum++) SerialStringBuf[CharNum] = '.'; //add ... after source media
-      uint16_t StartChar = Length+7-78; 
+      uint16_t StartChar = Length+7-MaxLength; 
       //CharNum == 7
       while (StartChar<=Length) //include the term
       {
