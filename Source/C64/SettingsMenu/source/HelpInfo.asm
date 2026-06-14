@@ -30,16 +30,6 @@ WaitHelpMenuKey:
    jsr DisplayTime   
    jsr GetIn    
    beq WaitHelpMenuKey
-
-;+  cmp #'1' ;increment color parameter number 
-;   bmi +   ;skip if below '1'
-;   cmp #'1'+NumColorRefs
-;   bpl +   ;skip if above NumColorRefs
-;   sec       ;set to subtract without carry
-;   sbc #'1'   ;make zero based
-;   tax
-;   ldy TempTblEscC, x
-;   iny
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitHelpMenuKey   
@@ -48,15 +38,17 @@ MsgHelpMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Source/Navigation ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F1 ",    EscC,EscSourcesColor,  "Teensy Mem"
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "F2 ",    EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F3 ",    EscC,EscSourcesColor,  "SD Card"
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "F4 ",    EscC,EscSourcesColor, "SID on/off", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F5 ",    EscC,EscSourcesColor,  "USB Drive"
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "F6 ",    EscC,EscSourcesColor, "SID Information", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F7/F8 ", EscC,EscSourcesColor, "Help/Settings", ChrReturn
-   ;!tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Settings Menu"
-   !tx ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F1 ", EscC,EscSourcesColor, "Teensy Mem"
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "F2 ", EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F3 ", EscC,EscSourcesColor, "SD Card"
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "F4 ", EscC,EscSourcesColor, "SID on/off", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F5 ", EscC,EscSourcesColor, "USB Drive"
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "F6 ", EscC,EscSourcesColor, "SID Information", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F7 ", EscC,EscSourcesColor, "Help"
+   !tx EscC,EscArgSpaces+8, EscC,EscOptionColor, "F8 ", EscC,EscSourcesColor, "Settings Menu", ChrReturn, ChrReturn
+
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "12345 ", EscC,EscSourcesColor, "Hot Key Launch", ChrReturn, ChrReturn
+
    !tx EscC,EscNameColor, " Directory Menu Navigation:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 U/D ", EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 L/R ", EscC,EscSourcesColor, "Page up/dn", ChrReturn

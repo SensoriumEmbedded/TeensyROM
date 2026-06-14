@@ -32,9 +32,8 @@ MsgHelpMenu2:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Help: Main Menu Alt File Select ", ChrReturn, ChrReturn
 
    !tx EscC,EscNameColor, " Highlighted File Alt Functions:", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "1-5",           EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Hot Key: Launch", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, "!-%",           EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Hot Key: File Select", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",             EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Auto-Launch: File Select", ChrReturn
+   !tx EscC,EscOptionColor, " !\"#$%",           EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Hot Key 1-5: File Select/Set", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",             EscC,EscNameColor, "  ", EscC,EscSourcesColor, "Auto-Launch: File Select/Set", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrLeftArrow,    EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Highlighted File", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrQuestionMark, EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "M",             EscC,EscNameColor, " *", EscC,EscSourcesColor, "Meatloaf: Mount/Launch Dxx", ChrReturn
@@ -42,7 +41,7 @@ MsgHelpMenu2:
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "R",             EscC,EscNameColor, " +", EscC,EscSourcesColor, "REU Pre-load/save: File Select", ChrReturn
    !tx ChrReturn
    !tx EscC,EscNameColor, "   *:", EscC,EscSourcesColor, " External HW Required", ChrReturn
-   !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Required", ChrReturn
+   !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Only", ChrReturn
    !tx ChrReturn
    !tx EscC,EscNameColor, " For additional help, see:", ChrReturn
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"

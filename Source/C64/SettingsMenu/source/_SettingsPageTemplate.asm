@@ -25,8 +25,12 @@ EthernetMenu:
    lda #<MsgEthernetMenu
    ldy #>MsgEthernetMenu
    jsr PrintString 
+
+ShowEthernetSettings:
+   ;update dynamic settings
    
 WaitEthernetMenuKey:
+   ;main wait loop
    jsr DisplayTime   
    jsr GetIn    
    beq WaitEthernetMenuKey
