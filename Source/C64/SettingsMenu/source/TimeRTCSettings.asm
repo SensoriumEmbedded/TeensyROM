@@ -25,21 +25,109 @@ TimeRTCMenu:
    lda #<MsgTimeRTCMenu
    ldy #>MsgTimeRTCMenu
    jsr PrintString 
+
+ShowTimeRTCSettings:
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
+
+   ldx #5  ;row 12/24 hour clock
+   ldy #25 ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudClock12_24hr
+   beq + ;branch if 12 hour
+   lda #'2'
+   jsr SendChar   
+   lda #'4'
+   jmp ++
++  lda #'1'
+   jsr SendChar
+   lda #'2'
+++ jsr SendChar
+
+   ldx #6 ;row Time Zone
+   ldy #28 ;col
+   clc
+   jsr SetCursor
+   ldx #'+'
+   ldy rwRegTimezone+IO1Port
+   tya
+   and #$80
+   beq +
+   ;neg number
+   tya
+   eor#$ff  ;1's comp
+   tay
+   iny ;2's comp
+   ldx #'-' 
+   ;x=sign char, y=abs val
++  txa
+   jsr SendChar
+   tya
+   ror  ;divide by two, carry bit holds half hour
+   php  ;save carry bit on stack
+   jsr PrintIntByte
+   plp
+   bcc++
+   lda #'.'
+   jsr SendChar   
+   lda #'5'
+   jsr SendChar   
+++ lda #' '
+   jsr SendChar
+   lda #' '
+   jsr SendChar
+  
    
 WaitTimeRTCMenuKey:
    jsr DisplayTime   
    jsr GetIn    
    beq WaitTimeRTCMenuKey
 
-;+  cmp #'1' ;increment color parameter number 
-;   bmi +   ;skip if below '1'
-;   cmp #'1'+NumColorRefs
-;   bpl +   ;skip if above NumColorRefs
-;   sec       ;set to subtract without carry
-;   sbc #'1'   ;make zero based
-;   tax
-;   ldy TempTblEscC, x
-;   iny
++  cmp #'a'  ;12/24 hour clock
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudClock12_24hr  
+   sta rwRegPwrUpDefaults+IO1Port
+   and #rpudClock12_24hr  
+   sta smc24HourClockDisp+1 ;24(non-zero) vs 12(zero) hr display 
+   jsr WaitForTRWaitMsg
+   jmp ShowTimeRTCSettings  
+
++  cmp #'b'  ;Power-up Time Zone Increment
+   bne +
+   ldx rwRegTimezone+IO1Port
+   inx
+   ;tz range is -12 to +14 from UTC (x2)
+   cpx #29
+   bne UpdTimeZone
+   ldx #-24
+   jmp UpdTimeZone
+
++  cmp #'B'  ;Power-up Time Zone Decrement
+   bne +
+   ldx rwRegTimezone+IO1Port
+   dex
+   cpx #-25
+   bne UpdTimeZone
+   ldx #28
+UpdTimeZone
+   stx rwRegTimezone+IO1Port
+   jsr WaitForTRWaitMsg
+   jsr SetC64TODfromRTC  ;update/resynch time with RTC to include updated time zone
+   jmp ShowTimeRTCSettings  
+
++  cmp #'c'  ;Synch Time now
+   bne +
+   jsr PrintBanner ;SourcesColor
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   jsr SetRTCfromEthernet
+   jsr SetC64TODfromRTC
+   jsr AnyKeyMsgWait ; For looking at messages/IP address
+   jmp TimeRTCMenu ;force to reprint all 
+   
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitTimeRTCMenuKey   
