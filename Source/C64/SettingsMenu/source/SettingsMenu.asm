@@ -63,17 +63,16 @@ tblSettingsPages:
    
    !src "source/SupportFunctions.asm"
    !src "source/StringFunctions.asm"
-   !src "source/StringMsgs.asm"
+   
    ;settings pages:
-   ;!src "source/GeneralSettings.asm" ;Original Settings page, now distributed
-   !src "source/HelpInfo.asm"
-   !src "source/HelpInfo2.asm"
-   !src "source/TRSettings.asm"
-   !src "source/StartupOptions.asm"
-   !src "source/ColorConfig.asm"
-   !src "source/MIDISettings.asm"
-   !src "source/EthernetSettings.asm"
-   !src "source/TimeRTCSettings.asm"
+   !src "source/Pg_HelpInfo.asm"
+   !src "source/Pg_HelpInfo2.asm"
+   !src "source/Pg_TRSettings.asm"
+   !src "source/Pg_StartupOptions.asm"
+   !src "source/Pg_ColorConfig.asm"
+   !src "source/Pg_MIDISettings.asm"
+   !src "source/Pg_EthernetSettings.asm"
+   !src "source/Pg_TimeRTCSettings.asm"
    !src "source/Pg_InfoHotKey.asm"
    
 EndOfCode:
