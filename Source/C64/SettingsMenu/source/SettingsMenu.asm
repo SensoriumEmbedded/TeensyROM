@@ -1,7 +1,6 @@
 
    !convtab pet   ;key in and text out conv to PetSCII throughout
    !src "../MainMenuCRT/source/c64defs.i"  ;C64 colors, mem locations, etc.
-   ;!src "../MainMenuCRT/source/CommonDefs.i" ;Common between crt loader and main code in RAM
    !src "../MainMenuCRT/source/Menu_Regs.i"  ;IO space registers matching Teensy code
 
    ;!set DbgOffline = 1   ;if defined, skips all waits/dependancies on TR HW
@@ -19,6 +18,9 @@
    !byte $00                       ; BASIC end of line marker
 BasicEnd    
    !word $0000                     ; BASIC end of program
+
+   !src "source/SupportFunctions.asm"
+   !src "source/StringFunctions.asm"
 
 SysAddress:
 
@@ -60,10 +62,7 @@ tblSettingsPages:
    !word MIDIMenu
    !word EthernetMenu
    !word InfoHotKeyMenu
-   
-   !src "source/SupportFunctions.asm"
-   !src "source/StringFunctions.asm"
-   
+      
    ;settings pages:
    !src "source/Pg_HelpInfo.asm"
    !src "source/Pg_HelpInfo2.asm"

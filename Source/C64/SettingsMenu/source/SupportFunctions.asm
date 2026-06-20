@@ -100,9 +100,11 @@ CheckCommonKeys:
 ++ dec bPageNum
    jmp PopPageUpdate
 
-+  cmp #ChrSpace  ;Back to TeensyROM menu
++  cmp #ChrF1  ;Back to TeensyROM menu
+   beq ++
+   cmp #ChrSpace  ;Back to TeensyROM menu
    bne +
-   lda #rCtlReturnToMainMenu 
+++ lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
    ;C64 will be reset...
    pla
@@ -169,7 +171,7 @@ MsgMenuPageSelections:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
    !tx 0 
 MsgMenuExitSelection:
-   !tx ")", ChrReturn, EscC,EscArgSpaces+7, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
+   !tx ")", ChrReturn, EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space/F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
    !tx 0 
 MsgWaiting:
    !tx EscC,EscTimeColor, " Waiting:", 0

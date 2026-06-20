@@ -262,20 +262,25 @@ enum RegCtlCommands
    rCtlReturnToMainMenu     = 26, 
    
    rCtlMakeStrWAIT_First    = 27, // FIRST of a linear series that uses MakeFilenameStr
-      rCtlMakeKernalStrWAIT    = 27, // Uses MakeFilenameStr
-      rCtlMakeREUStrWAIT       = 28, // Uses MakeFilenameStr
-      rCtlMakeSIDStrWAIT       = 29, // Uses MakeFilenameStr
-      rCtlMakeAutoLStrWAIT     = 30, // Uses MakeFilenameStr
-   rCtlMakeStrWAIT_Last     = 30, // LAST of a linear series that uses MakeFilenameStr
+      rCtlMakeKernalStrWAIT    = 27, 
+      rCtlMakeREUStrWAIT       = 28, 
+      rCtlMakeSIDStrWAIT       = 29, 
+      rCtlMakeAutoLStrWAIT     = 30, 
+      rCtlMakeHotKey1WAIT      = 31, 
+      rCtlMakeHotKey2WAIT      = 32, 
+      rCtlMakeHotKey3WAIT      = 33, 
+      rCtlMakeHotKey4WAIT      = 34, 
+      rCtlMakeHotKey5WAIT      = 35, 
+   rCtlMakeStrWAIT_Last     = 35, // LAST of a linear series that uses MakeFilenameStr
 
-   rCtlRTCAdjWAIT_First     = 31, // FIRST of a linear series that uses RTCAdjust
-      rCtlRTCAdj_Hrs_Up_WAIT   = 31, // Uses RTCAdjust
-      rCtlRTCAdj_Hrs_Dn_WAIT   = 32, // Uses RTCAdjust
-      rCtlRTCAdj_Min_Up_WAIT   = 33, // Uses RTCAdjust
-      rCtlRTCAdj_Min_Dn_WAIT   = 34, // Uses RTCAdjust
-      rCtlRTCAdj_Sec_Up_WAIT   = 35, // Uses RTCAdjust
-      rCtlRTCAdj_Sec_Dn_WAIT   = 36, // Uses RTCAdjust
-   rCtlRTCAdjWAIT_Last      = 36, // LAST of a linear series that uses RTCAdjust
+   rCtlRTCAdjWAIT_First     = 36, // FIRST of a linear series that uses RTCAdjust
+      rCtlRTCAdj_Hrs_Up_WAIT   = 36, 
+      rCtlRTCAdj_Hrs_Dn_WAIT   = 37, 
+      rCtlRTCAdj_Min_Up_WAIT   = 38, 
+      rCtlRTCAdj_Min_Dn_WAIT   = 39, 
+      rCtlRTCAdj_Sec_Up_WAIT   = 40, 
+      rCtlRTCAdj_Sec_Dn_WAIT   = 41, 
+   rCtlRTCAdjWAIT_Last      = 41, // LAST of a linear series that uses RTCAdjust
 
 };
 

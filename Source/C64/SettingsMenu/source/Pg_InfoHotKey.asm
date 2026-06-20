@@ -18,6 +18,7 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+!set HKStartRow = 4
 
 InfoHotKeyMenu:
    jsr CommonInit ;print banner and common keys/page#
@@ -26,35 +27,35 @@ InfoHotKeyMenu:
    ldy #>MsgInfoHotKeyMenu
    jsr PrintString 
 
-   lda #rCtlMakeKernalStrWAIT
-   ldx #5 ;row
+   lda #rCtlMakeHotKey1WAIT
+   ldx #HKStartRow ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeKernalStrWAIT
-   ldx #8 ;row
+   lda #rCtlMakeHotKey2WAIT
+   ldx #HKStartRow+3 ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeKernalStrWAIT
-   ldx #11 ;row
+   lda #rCtlMakeHotKey3WAIT
+   ldx #HKStartRow+6 ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeKernalStrWAIT
-   ldx #14 ;row
+   lda #rCtlMakeHotKey4WAIT
+   ldx #HKStartRow+9 ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeKernalStrWAIT
-   ldx #17 ;row
+   lda #rCtlMakeHotKey5WAIT
+   ldx #HKStartRow+12 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #19 ;row
+   ldx #18 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
@@ -62,6 +63,15 @@ InfoHotKeyMenu:
    sta $0286  ;set text color
    lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
    jsr PrintSerialString
+
+   lda #<MsgMachInfo1
+   ldy #>MsgMachInfo1
+   jsr PrintString 
+   lda #rsstMachineInfo
+   jsr PrintSerialString
+   lda #<MsgMachInfo2
+   ldy #>MsgMachInfo2
+   jsr PrintString 
 
 ShowInfoHotKeySettings:
    ;update dynamic settings
@@ -72,28 +82,24 @@ WaitInfoHotKeyMenuKey:
    jsr GetIn    
    beq WaitInfoHotKeyMenuKey
 
-;+  cmp #'1' ;increment color parameter number 
-;   bmi +   ;skip if below '1'
-;   cmp #'1'+NumColorRefs
-;   bpl +   ;skip if above NumColorRefs
-;   sec       ;set to subtract without carry
-;   sbc #'1'   ;make zero based
-;   tax
-;   ldy TempTblEscC, x
-;   iny
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitInfoHotKeyMenuKey   
    
 MsgInfoHotKeyMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKey/General", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKey/General", ChrReturn
    ;!tx EscC,EscNameColor,  "HotKey file assignments:", ChrReturn
    
-   !tx EscC,EscSourcesColor,  "  Hot Key #1:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  Hot Key #2:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  Hot Key #3:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  Hot Key #4:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  Hot Key #5:", ChrReturn, ChrReturn, ChrReturn
-   
-   ;!tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
+   !tx EscC,EscSourcesColor,  "Hot Key #1:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "Hot Key #2:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "Hot Key #3:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "Hot Key #4:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "Hot Key #5:", ChrReturn, ChrReturn, ChrReturn
    !tx 0 
+
+MsgMachInfo1:
+   !tx EscC,EscSourcesColor, "  C64/128 Info: ", EscC,EscNameColor
+   !tx 0
+MsgMachInfo2:
+   !tx "0Hz TOD"
+   !tx 0

@@ -415,9 +415,9 @@ FLASHMEM void MakeFilenameStr()
       case rCtlMakeAutoLStrWAIT:
          EEPreadStr(eepAdAutolaunchName, SerialStringBuf);      
          break;
-      //case rCtlMakeHK1StrWAIT:
-      //   EEPreadStr(eepAdHotKeyPaths + , SerialStringBuf);      
-      //   break;
+      case rCtlMakeHotKey1WAIT...rCtlMakeHotKey5WAIT:
+         EEPreadStr(eepAdHotKeyPaths + (IO1[wRegControl]-rCtlMakeHotKey1WAIT)*MaxPathLength , SerialStringBuf);      
+         break;
       default: 
          //*SerialStringBuf = 0; //default blank
          strcpy(SerialStringBuf, "Error"); 
