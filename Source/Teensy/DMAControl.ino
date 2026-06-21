@@ -42,7 +42,7 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_Length = Length;
    DMA_FixC64Addr = FixC64Addr;
    
-   DMA_State = DMA_S_StartTransfer;
+   DMA_State = DMA_S_Start_BA_Transfer;
    while (DMA_State != DMA_S_TransferComplete); //delayMicroseconds(1);  //block until finished
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start

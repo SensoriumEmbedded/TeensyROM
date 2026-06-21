@@ -136,16 +136,16 @@ enum DMA_States  //used with DMA_State
    DMA_S_DisableReady,     //Disabled/default state
    DMA_S_ActiveReady,      //DMA asserted state, ready for action
    DMA_S_FreezeReady,      //DMA asserted state, frozen
-   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  ->DMA_S_TransferComplete
+   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  -> DMA_S_TransferComplete
    DMA_S_TransferComplete, //DMA asserted, transfer complete
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
-   DMA_S_StartDisable,     //deactivate/end DMA
-   DMA_S_StartTransfer,    //activate DMA for transfer next bad line read, ->DMA_S_TransferReady
-   DMA_S_StartActive,      //activate immediately, ->DMA_S_ActiveReady
-   DMA_S_StartFreeze,      //activate for freeze mode
-   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
+   DMA_S_StartDisable,     //deactivate/end DMA                               -> DMA_S_DisableReady
+   DMA_S_Start_BA_Transfer,//activate DMA for transfer on next bad line read, -> DMA_S_TransferReady
+   DMA_S_StartActive,      //activate immediately,                            -> DMA_S_ActiveReady
+   DMA_S_Start_BA_Freeze,  //activate for freeze mode on next bad line read,  -> DMA_S_FreezeReady
+   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)     -> DMA_S_ActiveReady
 };
 
 volatile uint8_t DMA_State = DMA_S_DisableReady;

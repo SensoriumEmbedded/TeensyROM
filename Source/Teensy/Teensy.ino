@@ -582,7 +582,7 @@ void SpecialBtn_Pause(bool Up_nDn)
    {
       if ((isFrozen = !isFrozen))
       {
-         DMA_State = DMA_S_StartFreeze; 
+         DMA_State = DMA_S_Start_BA_Freeze; 
          //led will flash on/off
       }
       else 

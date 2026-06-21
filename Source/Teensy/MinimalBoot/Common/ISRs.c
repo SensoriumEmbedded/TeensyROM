@@ -134,12 +134,14 @@ FASTRUN void isrPHI2()
                DMA_State = DMA_S_DisableReady;
                return;
                //break;
-            case DMA_S_StartTransfer:
-               //start immediately, could add separate state to start during bad line read
-               WaitUntil_nS(nS_DMAAssert); 
-               SetDMAAssert;
-               DMA_State = DMA_S_TransferReady;
-               return;
+            case DMA_S_Start_BA_Transfer:
+               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
+               { 
+                  WaitUntil_nS(nS_DMAAssert); 
+                  SetDMAAssert;
+                  DMA_State = DMA_S_TransferReady;
+                  return;
+               } 
                break;               
             case DMA_S_StartActive:
                WaitUntil_nS(nS_DMAAssert); 
@@ -147,8 +149,9 @@ FASTRUN void isrPHI2()
                DMA_State = DMA_S_ActiveReady;
                return;
                //break;
-            case DMA_S_StartFreeze:
-               if (R_Wn) // start during any read
+            case DMA_S_Start_BA_Freeze:
+               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
+               //if (R_Wn) // start during any read
                { 
                   WaitUntil_nS(nS_DMAAssert); 
                   SetDMAAssert;
