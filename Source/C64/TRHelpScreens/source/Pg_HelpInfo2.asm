@@ -31,7 +31,7 @@ jmp WaitHelpMenuKey ;same as other help screen, just waiting for common keys
 MsgHelpMenu2:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Directory Alt File Select ", ChrReturn, ChrReturn
 
-   !tx EscC,EscNameColor, " Highlighted File Select Options:", ChrReturn
+   !tx EscC,EscTimeColor, " Highlighted File Select Options:", ChrReturn
    !tx                      EscC,EscOptionColor, " <Ret>",                                EscC,EscSourcesColor, "  Launch file/enter dir", ChrReturn
    !tx                      EscC,EscOptionColor, " !\"#$%",                                EscC,EscSourcesColor, "  Set as Hot Key 1-5", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",                                      EscC,EscSourcesColor, "  Set as Auto-Launch", ChrReturn
@@ -44,6 +44,6 @@ MsgHelpMenu2:
    !tx EscC,EscNameColor, "   *:", EscC,EscSourcesColor, " External HW Required", ChrReturn
    !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Only", ChrReturn
    !tx ChrReturn
-   !tx EscC,EscNameColor, " For additional help, see:", ChrReturn
+   !tx EscC,EscTimeColor, " For additional help, see:", ChrReturn
    !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0

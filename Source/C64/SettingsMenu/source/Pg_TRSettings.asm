@@ -233,13 +233,13 @@ MsgFail:
 MsgTRSettings:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: TeensyROM General ", ChrReturn, ChrReturn
    
-   !tx EscC,EscNameColor,  " Special Emulation Selections:", ChrReturn
+   !tx EscC,EscTimeColor,  " Special Emulation Selections:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
 
    !tx EscC,EscSourcesColor,  "  Kernal replace file:", ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscSourcesColor,  "  REU Pre-load/save file:", ChrReturn, ChrReturn, ChrReturn
 
-   !tx ChrReturn, EscC,EscNameColor,  " User Interface/other:", ChrReturn
+   !tx ChrReturn, EscC,EscTimeColor,  " User Interface/other:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn

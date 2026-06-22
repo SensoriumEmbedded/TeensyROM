@@ -37,7 +37,7 @@ WaitHelpMenuKey:
 MsgHelpMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Directory Menu Source/Navigation ", ChrReturn, ChrReturn
 
-   !tx EscC,EscNameColor, " Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
+   !tx EscC,EscTimeColor, " Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F1 ", EscC,EscSourcesColor, "Teensy Mem"
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "F2 ", EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "F3 ", EscC,EscSourcesColor, "SD Card"
@@ -49,7 +49,7 @@ MsgHelpMenu:
 
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "12345 ", EscC,EscSourcesColor, "Hot Key Launch", ChrReturn, ChrReturn
 
-   !tx EscC,EscNameColor, " Source Navigation:", ChrReturn
+   !tx EscC,EscTimeColor, " Source Navigation:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 U/D ", EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, "CRSR/Joy2 L/R ", EscC,EscSourcesColor, "Page up/dn", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, "Return/Fire ", EscC,EscSourcesColor, "Launch file/enter dir", ChrReturn

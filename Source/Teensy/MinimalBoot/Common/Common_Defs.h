@@ -73,7 +73,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6414 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6415 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -91,6 +91,7 @@
                                        // 10: 2/24/26  REU added to IO Handlers list
                                        // 12: 4/12/26  New Default SID, unused/future space init to 0
                                        // 14: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
+                                       // 15: 6/22/26  Def time color Orange->LtRed
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization

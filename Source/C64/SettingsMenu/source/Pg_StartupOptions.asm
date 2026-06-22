@@ -123,13 +123,13 @@ WaitStartupOptionsMenuKey:
 MsgStartupOptionsMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Startup Options ", ChrReturn, ChrReturn
 
-   !tx EscC,EscNameColor,  " On Main Menu Startup:", ChrReturn
+   !tx EscC,EscTimeColor,  " On Main Menu Startup:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Play selected SID:", ChrReturn
    !tx EscC,EscSourcesColor,  "  SID file:", ChrReturn, ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
    !tx EscC,EscSourcesColor,  "  TCP IP:Port:", EscC,EscMenuMiscColor," ???.???.???.???:2112", ChrReturn, ChrReturn
-   !tx EscC,EscNameColor,  " On TeensyROM Boot/Power-up:", ChrReturn
+   !tx EscC,EscTimeColor,  " On TeensyROM Boot/Power-up:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Auto-Launch Enable:", ChrReturn
    !tx EscC,EscSourcesColor,  "  Auto-Launch file:", ChrReturn, ChrReturn, ChrReturn
    !tx 0 

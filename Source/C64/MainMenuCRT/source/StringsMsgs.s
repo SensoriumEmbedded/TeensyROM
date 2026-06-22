@@ -59,14 +59,14 @@ MsgMountDxxFile:
 
 MsgSIDInfo1:
    !tx ChrReturn, EscC,EscSourcesColor, "SID Info Page:", ChrReturn, ChrReturn
-   !tx " File Information for", EscC,EscNameColor  ;EscC,EscMenuMiscColor
+   !tx EscC,EscTimeColor, " File Information for", EscC,EscNameColor  
    !tx 0
 MsgSIDInfo2:
-   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, " This Machine: ", EscC,EscNameColor
+   !tx ChrReturn, ChrReturn, EscC,EscTimeColor, " This Machine: ", EscC,EscNameColor
    !tx 0
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
-   !tx ChrReturn, EscC,EscNameColor, " Settings:", ChrReturn
+   !tx ChrReturn, EscC,EscTimeColor, " Settings:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sub-Song Number:", ChrReturn   
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Adj Play Speed:", ChrReturn   
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   

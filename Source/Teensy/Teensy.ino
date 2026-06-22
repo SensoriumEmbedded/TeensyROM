@@ -411,7 +411,7 @@ FLASHMEM void SetEEPDefaults()
    EEPROM.write(eepAdColorRefStart+EscBackgndColor , PokeBlack  ); 
    EEPROM.write(eepAdColorRefStart+EscBorderColor  , PokePurple ); 
    EEPROM.write(eepAdColorRefStart+EscTRBannerColor, PokePurple ); 
-   EEPROM.write(eepAdColorRefStart+EscTimeColor    , PokeOrange ); 
+   EEPROM.write(eepAdColorRefStart+EscTimeColor    , PokeLtRed  ); 
    EEPROM.write(eepAdColorRefStart+EscOptionColor  , PokeYellow ); 
    EEPROM.write(eepAdColorRefStart+EscSourcesColor , PokeLtBlue ); 
    EEPROM.write(eepAdColorRefStart+EscNameColor    , PokeLtGreen); 
