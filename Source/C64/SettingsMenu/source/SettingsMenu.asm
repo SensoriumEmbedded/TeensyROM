@@ -49,12 +49,10 @@ bPageNum:  ;current page num/default
    !byte 0
    
 bTotalPages: ;num of pages in tblSettingsPages
-   !byte 9
+   !byte 7
    
 tblSettingsPages:
    ;!word GeneralSettings
-   !word HelpMenu
-   !word HelpMenu2
    !word TRSettings
    !word StartupOptionsMenu
    !word TimeRTCMenu
@@ -64,8 +62,6 @@ tblSettingsPages:
    !word InfoHotKeyMenu
       
    ;settings pages:
-   !src "source/Pg_HelpInfo.asm"
-   !src "source/Pg_HelpInfo2.asm"
    !src "source/Pg_TRSettings.asm"
    !src "source/Pg_StartupOptions.asm"
    !src "source/Pg_ColorConfig.asm"

@@ -101,5 +101,8 @@ MsgMachInfo1:
    !tx EscC,EscSourcesColor, "  C64/128 Info: ", EscC,EscNameColor
    !tx 0
 MsgMachInfo2:
-   !tx "0Hz TOD"
+   !tx "0Hz TOD", ChrReturn
+   ;!tx EscC,EscNameColor, " For additional details, see:", ChrReturn
+   ;!tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
+ 

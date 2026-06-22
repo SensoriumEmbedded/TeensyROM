@@ -310,7 +310,7 @@ MsgBanner1:  ;set color before clearing for char poke default
    !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+7, 0
 MsgBanner2:  
    !tx " Settings", 0
- MsgAnyKey:
+MsgAnyKey:
    !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
    !tx 0
 MsgOn:
