@@ -104,6 +104,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             WriteC64MemCommand();
             return;
          }
+         else if (inVal == ReadC64MemToken) //Write to C64 mem via DMA
+         {
+            ReadC64MemCommand();
+            return;
+         }
 #endif
          else if (inVal == VersionInfoToken) //Version Info
          {
@@ -972,6 +977,52 @@ FLASHMEM void WriteC64MemCommand()
    //CmdChannel->printf
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+}
+
+// Command: 
+// read sequential C64 memory segment and send to host
+// 
+// Workflow:
+// Receive <-- ReadC64MemToken (0x64FD)
+// Receive <-- C64 address (Hi,Low)
+// Receive <-- Data Length (Hi,Low)
+// TR+ Performs DMA Read
+// Send --> AckToken 0x64CC on successful Read, 0x9b7f on Fail
+// Send --> Data Bytes (Data Length)
+FLASHMEM void ReadC64MemCommand() 
+{
+   uint32_t DMAAddr, DMALength;
+   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+
+   if (!GetUInt(&DMAAddr, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving address!");
+       return;
+   }
+
+   if (!GetUInt(&DMALength, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving length!");
+       return;
+   }
+   
+   //uint32_t StartTime = micros();  
+   PerformDMA(true, DMAAddr, DMABuf, DMALength, false);
+   CloseDMA();
+
+   //StartTime = micros() - StartTime;  
+   SendU16(AckToken);
+   
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   {
+      CmdChannel->write(DMABuf[ByteNum]);
+   }
+   
+   //CmdChannel->printf
+   //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+   //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
 }
 #endif
 
