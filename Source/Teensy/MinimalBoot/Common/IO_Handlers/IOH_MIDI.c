@@ -99,7 +99,7 @@ volatile uint8_t  MIDITxBuf[3];
 uint8_t wIORegAddrMIDIControl, rIORegAddrMIDIStatus, wIORegAddrMIDITransmit, rIORegAddrMIDIReceive;
 
 extern uint8_t nfcState;
-
+extern volatile uint8_t* IO1;  //io1 space/regs
 
 //MIDI input handlers for HW Emulation _________________________________________________________________________
 //Only called if MIDIRxBytesToSend==0 (No data waiting)
@@ -249,46 +249,83 @@ void HWEOnRealTimeSystem(uint8_t realtimebyte)
 
 //____________________________________________________________________________________________________
 
-void MIDIinHndlrInit()
+FLASHMEM void MIDIinHndlrInit()
 {
    if (MIDIRxBuf==NULL) MIDIRxBuf = (uint8_t*)malloc(MIDIRxBufSize);
    //for (uint8_t ContNum=0; ContNum < NumMIDIControls;) MIDIControlVals[ContNum++]=63;
    
-   // MIDI USB Host input handlers
-   usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
-   usbHostMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
-   usbHostMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
-   usbHostMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
-   usbHostMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
-   usbHostMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
-   usbHostMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
-   usbHostMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
-   usbHostMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
-   usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
-   usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
-   usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
-   usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
-
-   // MIDI USB Device input handlers
-   usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
-   usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
-   usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
-   usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //was disabled as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
-   usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //was disabled as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
-   usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
-   usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex //was disabled as apps like cakewalk write pitch to 0 on stop and crash cynthcart
-   usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
-   usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
-   usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
-   usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
-   usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
-   usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
-   // not catching F0, F4, F5, F7 (end of SysEx), and FD         
+   // connect MIDI USB Host & Device input handlers, if enabled
+   //   not catching F4, F5, F7 (end of SysEx), and FD         
+   //reg1:
+   if(IO1[rwRegMIDISettings] & rMIDISetNoteOffOnEn)
+   {
+      usbHostMIDI.setHandleNoteOff             (HWEOnNoteOff);             // 8x
+      usbHostMIDI.setHandleNoteOn              (HWEOnNoteOn);              // 9x
+      usbDevMIDI.setHandleNoteOff              (HWEOnNoteOff);             // 8x
+      usbDevMIDI.setHandleNoteOn               (HWEOnNoteOn);              // 9x
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetAfterTouchPolyEn)
+   {
+      usbHostMIDI.setHandleAfterTouchPoly      (HWEOnAfterTouchPoly);      // Ax
+      usbDevMIDI.setHandleAfterTouchPoly       (HWEOnAfterTouchPoly);      // Ax
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetControlChangeEn)
+   {
+      usbHostMIDI.setHandleControlChange       (HWEOnControlChange);       // Bx
+      usbDevMIDI.setHandleControlChange        (HWEOnControlChange);       // Bx //was disabled as apps like cakewalk write controls to 0 on stop, mess up cynthcart settings 
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetProgramChangeEn)
+   {
+      usbHostMIDI.setHandleProgramChange       (HWEOnProgramChange);       // Cx
+      usbDevMIDI.setHandleProgramChange        (HWEOnProgramChange);       // Cx //was disabled as apps like cakewalk write programs on start/stop, mess up Sta64 settings 
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetAfterTouchEn)
+   {
+      usbHostMIDI.setHandleAfterTouch          (HWEOnAfterTouch);          // Dx
+      usbDevMIDI.setHandleAfterTouch           (HWEOnAfterTouch);          // Dx
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetPitchChangeEn)
+   {
+      usbHostMIDI.setHandlePitchChange         (HWEOnPitchChange);         // Ex
+      usbDevMIDI.setHandlePitchChange          (HWEOnPitchChange);         // Ex //was disabled as apps like cakewalk write pitch to 0 on stop and crash cynthcart
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetSystemExclusiveEn)
+   {
+      usbHostMIDI.setHandleSystemExclusive     (HWEOnSystemExclusive);     // F0
+      usbDevMIDI.setHandleSystemExclusive      (HWEOnSystemExclusive);     // F0
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetTimeCodeQuarterFrameEn)
+   {
+      usbHostMIDI.setHandleTimeCodeQuarterFrame(HWEOnTimeCodeQuarterFrame);// F1
+      usbDevMIDI.setHandleTimeCodeQuarterFrame (HWEOnTimeCodeQuarterFrame);// F1
+   }
+   //reg2:
+   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   {
+      usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
+      usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
+   }
+   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   {
+      usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
+      usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
+   }
+   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   {
+      usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
+      usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
+   }
+   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   {
+      usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
+      usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
+   }
+      
    
    nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }   
    
-void InitHndlr_MIDI_Datel()  
+FLASHMEM void InitHndlr_MIDI_Datel()  
 {
    wIORegAddrMIDIControl  = 4;
    rIORegAddrMIDIStatus   = 6;
@@ -297,7 +334,7 @@ void InitHndlr_MIDI_Datel()
    MIDIinHndlrInit();
 }
    
-void InitHndlr_MIDI_Sequential()                         
+FLASHMEM void InitHndlr_MIDI_Sequential()                         
 {
    wIORegAddrMIDIControl  = 0;
    rIORegAddrMIDIStatus   = 2;
@@ -306,7 +343,7 @@ void InitHndlr_MIDI_Sequential()
    MIDIinHndlrInit();
 }
    
-void InitHndlr_MIDI_Passport()                         
+FLASHMEM void InitHndlr_MIDI_Passport()                         
 {
    wIORegAddrMIDIControl  = 8;
    rIORegAddrMIDIStatus   = 8;
@@ -315,7 +352,7 @@ void InitHndlr_MIDI_Passport()
    MIDIinHndlrInit();
 }
    
-void InitHndlr_MIDI_NamesoftIRQ()                          
+FLASHMEM void InitHndlr_MIDI_NamesoftIRQ()                          
 {
    // same as seq, no NMI
    wIORegAddrMIDIControl  = 0;

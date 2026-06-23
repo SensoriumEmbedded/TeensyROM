@@ -1139,19 +1139,29 @@ void M2SOnPitchChange(uint8_t channel, int pitch)
 //__________________________________________________________________________________
 
 
-void InitHndlr_TeensyROM()
+FLASHMEM void InitHndlr_TeensyROM()
 {
    IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
    //MIDI handlers for MIDI2SID:
-   usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
-   usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
-   usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
-   usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+   if(IO1[rwRegMIDISettings] & rMIDISetNoteOffOnEn)
+   {
+      usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
+      usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
+      usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
+      usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
+   }
 
-   usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
-   usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
-   usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
-   usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
+   //These are for debug only, only note on/off is actually used
+   if(IO1[rwRegMIDISettings] & rMIDISetControlChangeEn)
+   {
+      usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
+      usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetPitchChangeEn)
+   {
+      usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+      usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
+   }
 }   
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
