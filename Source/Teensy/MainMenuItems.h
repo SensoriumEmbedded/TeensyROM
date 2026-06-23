@@ -59,7 +59,6 @@
 //#include "TRMenuFiles/ROMs/Terminator_2.crt.h" //can require minimal build if Ethernet, etc enabled
 //#include "TRMenuFiles/ROMs/ember_head.prg.h"   //now /Pics/T_Ember_Head.kla
 //#include "TRMenuFiles/ROMs/disp_fract.prg.h"   //now /Pics/T_BlackHole.kla
-//#include "TRMenuFiles/SIDs/YYZ.sid.h"          //mem conflict with TR app
 
 #include "TRMenuFiles/Text_PETSCII/Text_Viewer_Instructions.seq.h"
 #include "TRMenuFiles/Text_PETSCII/color_weave.seq.h"
@@ -86,6 +85,7 @@
 #include "TRMenuFiles/SIDs/Popcorn.sid.h"
 #include "TRMenuFiles/SIDs/Switch_625.sid.h"
 #include "TRMenuFiles/SIDs/Tom_Sawyer.sid.h"
+#include "TRMenuFiles/SIDs/YYZ.sid.h"
 #include "TRMenuFiles/SIDs/Wish_You_Were_Here.sid.h"
 #include "TRMenuFiles/SIDs/Odisey_2001_AD.sid.h"
 #include "TRMenuFiles/SIDs/When_Im_64.sid.h"
@@ -219,9 +219,10 @@ StructMenuItem dirSID_Covers[] =
     rtFileSID  , IOH_None         , (char*)"Another Brick In The Wall"        , (uint8_t*)Pink_Floyd_sid             , sizeof(Pink_Floyd_sid) ,
     rtFileSID  , IOH_None         , (char*)"Sleep Dirt            Frank Zappa", (uint8_t*)SleepDirt_norm_ntsc_1000_6581_sid , sizeof(SleepDirt_norm_ntsc_1000_6581_sid) ,
     rtFileSID  , IOH_None         , (char*)"Tom Sawyer            Rush"       , (uint8_t*)Tom_Sawyer_sid             , sizeof(Tom_Sawyer_sid) ,
+    rtFileSID  , IOH_None         , (char*)"YYZ                   Rush"       , (uint8_t*)YYZ_sid                    , sizeof(YYZ_sid) ,    //  Watch for menu mem conflict, $7580 start address
     rtFileSID  , IOH_None         , (char*)"Aces High             Iron Maiden", (uint8_t*)Aces_High_sid              , sizeof(Aces_High_sid) ,
     rtFileSID  , IOH_None         , (char*)"Switch 625            Def Leppard", (uint8_t*)Switch_625_sid             , sizeof(Switch_625_sid) ,
-//    rtFileSID  , IOH_None         , (char*)"YYZ                   Rush"       , (uint8_t*)YYZ_sid                    , sizeof(YYZ_sid) ,                  //  C64 mem conflict as of 0.6.2
+
 };
 
 StructMenuItem dirPic_Files[] = 
