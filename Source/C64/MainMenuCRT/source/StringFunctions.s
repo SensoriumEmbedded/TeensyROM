@@ -259,15 +259,4 @@ l  clc
 pr jsr SendChar
    rts
 
-PrintOnOff:
-   ;Print "On" or "Off" based on Zero flag
-   ;uses A and Y regs
-   bne +
-   lda #<MsgOff
-   ldy #>MsgOff
-   jmp ++
-+  lda #<MsgOn
-   ldy #>MsgOn
-++ jsr PrintString 
-   rts
 

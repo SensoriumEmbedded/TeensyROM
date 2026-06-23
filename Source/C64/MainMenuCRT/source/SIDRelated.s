@@ -272,8 +272,8 @@ ShowSIDInfoPage:
    ldy #>MsgSIDInfo3
    jsr PrintString 
 
-   lda #<MsgSettingsMenu2SpaceRet
-   ldy #>MsgSettingsMenu2SpaceRet
+   lda #<MsgSpaceRet
+   ldy #>MsgSpaceRet
    jsr PrintString 
 
    ;page identifier for check from interrupt
