@@ -29,13 +29,13 @@ TRSettings:
 
 ;print kernal file name:
    lda #rCtlMakeKernalStrWAIT
-   ldx #7 ;row
+   ldx #8 ;row
    ldy #2 ;col
    jsr PrintFileName
    
 ;print REU file name:
    lda #rCtlMakeREUStrWAIT
-   ldx #10 ;row
+   ldx #11 ;row
    ldy #2 ;col
    jsr PrintFileName
 
@@ -51,7 +51,7 @@ ShowTRSettings:
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
-   ldx #14  ;row Joy 2 Speed
+   ldx #15  ;row Joy 2 Speed
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -65,7 +65,7 @@ ShowTRSettings:
    lda #' '
    jsr SendChar
 
-   ldx #15 ;row Show Extension
+   ldx #16 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -73,7 +73,7 @@ ShowTRSettings:
    and #rpudShowExtension  
    jsr PrintOnOff
    
-   ldx #16 ;row Host Serial Control
+   ldx #17 ;row Host Serial Control
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -217,7 +217,7 @@ smcTestIOCnt
    rts
 
 CursorToTest:
-   ldx #18 ;row 
+   ldx #19 ;row test status
    ldy #22 ;col
    clc
    jsr SetCursor   
@@ -233,13 +233,13 @@ MsgFail:
 MsgTRSettings:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: TeensyROM General ", ChrReturn, ChrReturn
    
-   !tx EscC,EscTimeColor,  " Special Emulation Selections:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
+   !tx EscC,EscTimeColor,  " Emulation Selections:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn, ChrReturn
 
    !tx EscC,EscSourcesColor,  "  Kernal replace file:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file:", ChrReturn, ChrReturn, ChrReturn, ChrReturn
 
-   !tx ChrReturn, EscC,EscTimeColor,  " User Interface/other:", ChrReturn
+   !tx EscC,EscTimeColor,  " User Interface/other:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
