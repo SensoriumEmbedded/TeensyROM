@@ -1221,6 +1221,18 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[rWRegCurrMenuWAIT]=Data;
             IO1[rwRegStatus] = rsChangeMenu; //work this in the main code
             break;
+         case rwRegMIDISettings:
+            IO1[rwRegMIDISettings]= Data;
+            eepAddrToWrite = eepAdMIDISettings;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
+         case rwRegMIDISettings2:
+            IO1[rwRegMIDISettings2]= Data;
+            eepAddrToWrite = eepAdMIDISettings2;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
          case rwRegPwrUpDefaults:
             IO1[rwRegPwrUpDefaults]= Data;
             eepAddrToWrite = eepAdPwrUpDefaults;
@@ -1249,6 +1261,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[wRegSearchLetterWAIT] = Data;
             IO1[rwRegStatus] = rsSearchForLetter; //work this in the main code
             break;
+            
          case wRegSIDSpeedChange:
             {
                int16_t SidSpeedAdjustTemp = SidSpeedAdjust;

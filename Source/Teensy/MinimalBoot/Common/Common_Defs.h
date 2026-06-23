@@ -91,7 +91,7 @@
                                        // 10: 2/24/26  REU added to IO Handlers list
                                        // 12: 4/12/26  New Default SID, unused/future space init to 0
                                        // 14: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
-                                       // 15: 6/22/26  Def time color Orange->LtRed
+                                       // 15: 6/22/26  Def time color Orange->LtRed, MIDI Settings
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -118,11 +118,12 @@ enum InternalEEPROMmap
    eepAdHotKeyPaths   = 2440, // (256*5:MaxPathLength*NumHotKeys)  Default Hot Key settings
    eepAdKERNALBinName = 3720, // (256:MaxPathLength) Kernal binary file/path
    eepAdREUFilename   = 3976, // (256:MaxPathLength) REU file/path
+   eepAdMIDISettings  = 4232, // (1:uint8_t)    MIDI Settings reg#1, see RegMIDISettingsMasks
+   eepAdMIDISettings2 = 4233, // (1:uint8_t)    MIDI Settings reg#2, see RegMIDISettingsMasks2
    
-   eepAdNext          = 4232, // Next address to be used
+   eepAdNext          = 4234, // Next address to be used
    eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
-   eepAdUnusedSize    = (4284-eepAdUnused),
-   //Max size = 4284 (emulated in flash)
+   eepAdUnusedSize    = (4284-eepAdUnused), //Max size = 4284 (emulated in flash)
 };
 
 enum MinBootIndFlags

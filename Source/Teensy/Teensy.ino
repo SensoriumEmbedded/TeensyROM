@@ -145,6 +145,8 @@ void setup()
    IO1[rRegPresence2]     = 0xAA;   
    for (uint8_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm] = 0;   
+   IO1[rwRegMIDISettings]= EEPROM.read(eepAdMIDISettings);
+   IO1[rwRegMIDISettings2]= EEPROM.read(eepAdMIDISettings2);
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegPwrUpDefaults2]= EEPROM.read(eepAdPwrUpDefaults2);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
@@ -430,6 +432,8 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
    
+   EEPROM.write(eepAdMIDISettings, 0xff);  //see RegMIDISettingsMasks
+   EEPROM.write(eepAdMIDISettings2, 0x0f); //see RegMIDISettingsMasks2
    
    //future use:
    for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)
