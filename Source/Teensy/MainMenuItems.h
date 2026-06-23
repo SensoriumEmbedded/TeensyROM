@@ -167,21 +167,17 @@ StructMenuItem dirUtilities[] =
 {
      rtDirectory, IOH_None         , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
      rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
-/*2*/rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,    //used by location, see ExitToBASIC
+/*2*/rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,    //used by location, see ExitToBASIC:
 /*3*/rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) , //used by location, see Load8Run:
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
-     rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TR Command IO access"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
      rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
-     rtBin8kLo  , IOH_TeensyROM    , (char*)"TeensyROM Menu Cart+TeensyROM IOH", (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
      rtFilePrg  , IOH_None         , (char*)"80 Columns"                       , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
      rtFilePrg  , IOH_None         , (char*)"DualCopy"                         , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg) ,
      rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
      rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
-     rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM Settings Menu"          , (uint8_t*)SettingsMenu_prg           , sizeof(SettingsMenu_prg) ,
-     rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM Help Pages"             , (uint8_t*)TRHelpScreens_prg          , sizeof(TRHelpScreens_prg) ,
 //     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 
@@ -281,6 +277,22 @@ StructMenuItem dirTEXT_PETSCII[] =
    rtFilePETSCII , IOH_None      , (char*)"Trains II by Yoda"                , (uint8_t*)Trains_II__Yoda______12picturedisk_6_seq       , sizeof(Trains_II__Yoda______12picturedisk_6_seq) ,
 };
 
+StructMenuItem dirTeensyROMSpecific[] = 
+{
+     rtDirectory   , IOH_None      , (char*)UpDirString                        , NULL, 0 , //one dir level max, up Dir is always root
+/*1*/rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM Settings Menu"          , (uint8_t*)SettingsMenu_prg           , sizeof(SettingsMenu_prg) ,  //used by location, see TagTRSettings
+/*2*/rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM Help Pages"             , (uint8_t*)TRHelpScreens_prg          , sizeof(TRHelpScreens_prg) , //used by location, see TagTRHelp
+     rtFilePETSCII , IOH_None      , (char*)"Text Viewer Usage Document"       , (uint8_t*)Text_Viewer_Instructions_seq, sizeof(Text_Viewer_Instructions_seq) ,
+     rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
+     rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC TR Command IO access only"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
+     rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
+//could repeat these here...
+   //rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
+   //rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
+   //rtFileKla  , IOH_None         , (char*)"TS: TeensyROM"                    , (uint8_t*)T_TeensyROM_kla            , sizeof(T_TeensyROM_kla) ,
+};
+
+
 //define this last:
 StructMenuItem TeensyROMMenu[] = 
 {
@@ -298,6 +310,6 @@ StructMenuItem TeensyROMMenu[] =
  /* 6 */ rtDirectory, IOH_None           , (char*)"/Test+Diags"                      , (uint8_t*)dirTest_Diags              , sizeof(dirTest_Diags) ,
  /**7**/ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
  /* 8 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
-
+ /**9**/ rtDirectory, IOH_None           , (char*)"/TeensyROM Specific"              , (uint8_t*)dirTeensyROMSpecific       , sizeof(dirTeensyROMSpecific) ,
 };
 
