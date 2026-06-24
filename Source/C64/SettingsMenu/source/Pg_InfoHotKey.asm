@@ -18,7 +18,7 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-!set HKStartRow = 4
+!set HKStartRow = 6
 
 InfoHotKeyMenu:
    jsr CommonInit ;print banner and common keys/page#
@@ -33,29 +33,29 @@ InfoHotKeyMenu:
    jsr PrintFileName
 
    lda #rCtlMakeHotKey2WAIT
-   ldx #HKStartRow+3 ;row
+   ldx #HKStartRow+2 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeHotKey3WAIT
-   ldx #HKStartRow+6 ;row
+   ldx #HKStartRow+4 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeHotKey4WAIT
-   ldx #HKStartRow+9 ;row
+   ldx #HKStartRow+6 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeHotKey5WAIT
-   ldx #HKStartRow+12 ;row
+   ldx #HKStartRow+8 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #18 ;row
+   ldx #16 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
@@ -87,14 +87,13 @@ WaitInfoHotKeyMenuKey:
    jmp WaitInfoHotKeyMenuKey   
    
 MsgInfoHotKeyMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKey/General", ChrReturn
-   ;!tx EscC,EscNameColor,  "HotKey file assignments:", ChrReturn
-   
-   !tx EscC,EscSourcesColor,  "Hot Key #1:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "Hot Key #2:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "Hot Key #3:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "Hot Key #4:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "Hot Key #5:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKey/General", ChrReturn, ChrReturn
+   !tx EscC,EscTimeColor, " HotKey file assignments:", ChrReturn
+   !tx EscC,EscSourcesColor, "  Hot Key #1:", ChrReturn, ChrReturn
+   !tx                       "  Hot Key #2:", ChrReturn, ChrReturn
+   !tx                       "  Hot Key #3:", ChrReturn, ChrReturn
+   !tx                       "  Hot Key #4:", ChrReturn, ChrReturn
+   !tx                       "  Hot Key #5:", ChrReturn, ChrReturn
    !tx 0 
 
 MsgMachInfo1:
@@ -102,7 +101,7 @@ MsgMachInfo1:
    !tx 0
 MsgMachInfo2:
    !tx "0Hz TOD", ChrReturn
-   ;!tx EscC,EscNameColor, " For additional details, see:", ChrReturn
-   ;!tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
+   !tx EscC,EscNameColor, " For additional details, see:", ChrReturn
+   !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0
  
