@@ -389,9 +389,18 @@ FLASHMEM void MakeBuildInfo()
    sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
+FLASHMEM void MakeIPSSBfromEEPAddr(uint32_t EEPAddress)
+{
+   uint32_t ip32;
+   EEPROM.get(EEPAddress, ip32);
+   IPAddress ip = ip32;
+   sprintf(SerialStringBuf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);       
+}
+
 FLASHMEM void MakeFilenameStr()
 {
-   //Get filename from EEPROM (selected in IO1[wRegControl] = rCtlMakeKernalStrWAIT)
+   //Get filename/value from EEPROM (selected in IO1[wRegControl])
+   uint16_t invalU16;
    
    switch (IO1[wRegControl])
    {
@@ -418,6 +427,53 @@ FLASHMEM void MakeFilenameStr()
       case rCtlMakeHotKey1WAIT...rCtlMakeHotKey5WAIT:
          EEPreadStr(eepAdHotKeyPaths + (IO1[wRegControl]-rCtlMakeHotKey1WAIT)*MaxPathLength , SerialStringBuf);      
          break;
+        
+       case rCtlMakeEthMACWAIT:
+       {
+         uint8_t  mac[6];
+         EEPreadNBuf(eepAdMyMAC, mac, 6);
+         sprintf(SerialStringBuf, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+       }
+         break;
+       case rCtlMakeEthIPAcqTypeWAIT:
+         if (EEPROM.read(eepAdDHCPEnabled)) sprintf(SerialStringBuf, "DHCP");
+         else sprintf(SerialStringBuf, "Static");
+         break;
+       case rCtlMakeEthDHCPTOWAIT:
+         EEPROM.get(eepAdDHCPTimeout, invalU16);
+         sprintf(SerialStringBuf, "%dmS", invalU16);
+         break;
+       case rCtlMakeEthDHCPRespTOWAIT:
+         EEPROM.get(eepAdDHCPRespTO, invalU16);
+         sprintf(SerialStringBuf, "%dmS", invalU16);
+         break;
+       case rCtlMakeEthStatIPWAIT:
+         MakeIPSSBfromEEPAddr(eepAdMyIP);
+         break;       
+       case rCtlMakeEthStatDNSIPWAIT:
+         MakeIPSSBfromEEPAddr(eepAdDNSIP);
+         break;
+       case rCtlMakeEthStatGatewWAIT:
+         MakeIPSSBfromEEPAddr(eepAdGtwyIP);
+         break;
+       case rCtlMakeEthStatSubMskWAIT:
+         MakeIPSSBfromEEPAddr(eepAdMaskIP);
+         break;
+         
+      //rCtlMakeEthLocalIPWAIT   
+      //IPAddress ip = Ethernet.localIP();
+      //AddToPETSCIIStrToRxQueue(" Local IP: ");
+      //AddIPaddrToRxQueueLN(ip);
+      //
+      //ip = Ethernet.subnetMask();
+      //AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
+      //AddIPaddrToRxQueueLN(ip);
+      //
+      //ip = Ethernet.gatewayIP();
+      //AddToPETSCIIStrToRxQueue(" Gateway IP: ");
+      //AddIPaddrToRxQueueLN(ip);
+         
+         
       default: 
          //*SerialStringBuf = 0; //default blank
          strcpy(SerialStringBuf, "Error"); 
@@ -430,7 +486,7 @@ FLASHMEM void MakeFilenameStr()
 
    uint16_t Length = strlen(SerialStringBuf);
    if (Length>MaxLength)
-   {  
+   {  //assume it's a filename if more than MaxLength
       uint16_t CharNum = SourceLength;
       //for (; CharNum<SourceLength+SeparateLength; CharNum++) SerialStringBuf[CharNum] = '.'; //add "..." after source media
       SerialStringBuf[CharNum++] = '}'; //string sep char #1  |-

@@ -17,7 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
+EthernetValColumn = 19   ;Column for values
 
 EthernetMenu:
    jsr CommonInit ;print banner and common keys/page#
@@ -25,6 +25,47 @@ EthernetMenu:
    lda #<MsgEthernetMenu
    ldy #>MsgEthernetMenu
    jsr PrintString 
+   
+  
+   lda #rCtlMakeEthMACWAIT
+   ldx #5 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthIPAcqTypeWAIT
+   ldx #6 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthDHCPTOWAIT
+   ldx #9 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthDHCPRespTOWAIT
+   ldx #10 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthStatIPWAIT
+   ldx #13 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthStatDNSIPWAIT
+   ldx #14 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthStatGatewWAIT
+   ldx #15 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
+
+   lda #rCtlMakeEthStatSubMskWAIT
+   ldx #16 ;row
+   ldy #EthernetValColumn ;col
+   jsr PrintFileName
    
 WaitEthernetMenuKey:
    jsr DisplayTime   
@@ -46,6 +87,22 @@ WaitEthernetMenuKey:
    
 MsgEthernetMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Info: Ethernet ", ChrReturn, ChrReturn
-   !tx EscC,EscNameColor,  "Some settings:", EscC,EscOptionColor, " (up/down)", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "hello", ChrReturn
+   
+   !tx EscC,EscTimeColor,  " General Settings:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    MAC Address:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, " IP Acquisition:", ChrReturn, ChrReturn  ;Static/DHCP
+      
+   !tx EscC,EscTimeColor,  " DHCP Specific:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "   DHCP Timeout:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "   DHCP Resp TO:", ChrReturn, ChrReturn
+   
+   !tx EscC,EscTimeColor,  " Static IP Specific:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "      Static IP:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "         DNS IP:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     Gateway IP:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    Subnet Mask:", ChrReturn, ChrReturn
+   
+   !tx EscC,EscArgSpaces+4, "Modify values in terminal such as", ChrReturn
+   !tx EscC,EscArgSpaces+4, " CCGMS, use \"AT?\" for help there"
+   ;                         1234567890123456789012345678901234567890
    !tx 0 

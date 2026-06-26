@@ -29,9 +29,9 @@ SetC64TODfromRTC_Preloaded:
    sta TODTenthSecBCD ;have to write 10ths to release latch, start incrementing
    rts
 
-StartSelItem_WaitForTRDots:
-   lda #rCtlStartSelItemWAIT ;kick off the selection
-   sta wRegControl+IO1Port   
+;StartSelItem_WaitForTRDots:
+;   lda #rCtlStartSelItemWAIT ;kick off the selection
+;   sta wRegControl+IO1Port   
 ;WaitForTR* uses acc, X and Y
 WaitForTRDots:  ;prints a dot per second while waiting, doesn't move cursor
    ldy TODSecBCD ;reset dot second counter
