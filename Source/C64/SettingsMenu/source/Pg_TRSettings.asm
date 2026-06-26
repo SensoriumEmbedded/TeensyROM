@@ -51,7 +51,7 @@ ShowTRSettings:
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
   
-   ldx #15  ;row Joy 2 Speed
+   ldx #16  ;row Joy 2 Speed
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -65,7 +65,7 @@ ShowTRSettings:
    lda #' '
    jsr SendChar
 
-   ldx #16 ;row Show Extension
+   ldx #17 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -73,7 +73,7 @@ ShowTRSettings:
    and #rpudShowExtension  
    jsr PrintOnOff
    
-   ldx #17 ;row Host Serial Control
+   ldx #15 ;row Host Serial Control
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -108,7 +108,7 @@ WaitTRSettingsKey:
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
-+  cmp #'b'  ;Joystick 2 Speed Increment
++  cmp #'c'  ;Joystick 2 Speed Increment
    bne +
    lda rwRegPwrUpDefaults+IO1Port
    clc
@@ -117,7 +117,7 @@ WaitTRSettingsKey:
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
-+  cmp #'B'  ;Joystick 2 Speed Decrement
++  cmp #'C'  ;Joystick 2 Speed Decrement
    bne +
    lda rwRegPwrUpDefaults+IO1Port
    sec       ;set to subtract without carry
@@ -126,7 +126,7 @@ WaitTRSettingsKey:
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
-+  cmp #'c'  ;Show File Extensions
++  cmp #'d'  ;Show File Extensions
    bne +
    lda rwRegPwrUpDefaults+IO1Port
    eor #rpudShowExtension
@@ -134,7 +134,7 @@ WaitTRSettingsKey:
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
-+  cmp #'d'  ;Choose Serial control device
++  cmp #'b'  ;Choose Serial control device
    bne +
    lda rwRegPwrUpDefaults2+IO1Port
    and #rpud2NFCEnabled
@@ -162,7 +162,7 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
    
-+  cmp #'e'  ;Reboot TeensyROM
++  cmp #'f'  ;Reboot TeensyROM
    bne +
    lda #139  ; 155 default minus bit 4
    sta $d011   ;blank the display   
@@ -171,7 +171,7 @@ smcNewscd
    ;no need to wait, TR/C64 will be rebooting...
    jmp WaitTRSettingsKey  
    
-+  cmp #'f'  ;Self Test IO
++  cmp #'e'  ;Self Test IO
    bne +
    jsr TestIO
    jmp WaitTRSettingsKey     
@@ -217,7 +217,7 @@ smcTestIOCnt
    rts
 
 CursorToTest:
-   ldx #19 ;row test status
+   ldx #18 ;row test status
    ldy #22 ;col
    clc
    jsr SetCursor   
@@ -236,15 +236,16 @@ MsgTRSettings:
    !tx EscC,EscTimeColor,  " Emulation Selections:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn, ChrReturn
 
-   !tx EscC,EscSourcesColor,  "  Kernal replace file:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file:", ChrReturn, ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  Kernal replace file: ('K' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file: ('R' to sel)", ChrReturn, ChrReturn, ChrReturn, ChrReturn
+   ;                           1234567890123456789012345678901234567890
 
    !tx EscC,EscTimeColor,  " User Interface/other:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Hosted Serial Device:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 
 TblMsgHostSerCtl: ;must match RegPowerUpDefaultMasks2 bits

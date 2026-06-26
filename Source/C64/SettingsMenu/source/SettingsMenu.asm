@@ -58,9 +58,9 @@ tblSettingsPages:
    !word ColorConfigMenu   
    !word MIDIMenu
    !word TimeRTCMenu
+   !word InfoOtherMenu
    !word EthernetMenu
    !word InfoHotKeyMenu
-   !word InfoOtherMenu
       
    ;settings pages:
    !src "source/Pg_InfoOther.asm"

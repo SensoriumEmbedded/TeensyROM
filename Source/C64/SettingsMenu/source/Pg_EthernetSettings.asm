@@ -103,6 +103,6 @@ MsgEthernetMenu:
    !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, " Subnet Mask:", ChrReturn, ChrReturn
    
    !tx EscC,EscArgSpaces+4, "Modify values in terminal such as", ChrReturn
-   !tx EscC,EscArgSpaces+5, "CCGMS, use \"AT?\" for help there"
+   !tx EscC,EscArgSpaces+6,   "CCGMS, use \"AT?\" for help"
    ;                         1234567890123456789012345678901234567890
    !tx 0 

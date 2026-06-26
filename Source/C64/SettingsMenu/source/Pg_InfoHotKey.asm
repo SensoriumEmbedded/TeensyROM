@@ -69,11 +69,11 @@ WaitInfoHotKeyMenuKey:
 MsgInfoHotKeyMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKeys", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor, " HotKey file assignments:", ChrReturn
-   !tx EscC,EscSourcesColor, "  Hot Key #1:", ChrReturn, ChrReturn, ChrReturn
-   !tx                       "  Hot Key #2:", ChrReturn, ChrReturn, ChrReturn
-   !tx                       "  Hot Key #3:", ChrReturn, ChrReturn, ChrReturn
-   !tx                       "  Hot Key #4:", ChrReturn, ChrReturn, ChrReturn
-   !tx                       "  Hot Key #5:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, "  Hot Key #1: ('!' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #2: ('\"' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #3: ('#' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #4: ('$' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #5: ('%' to sel)", ChrReturn, ChrReturn, ChrReturn
    !tx 0 
 
  

@@ -90,7 +90,7 @@ WaitInfoOtherMenuKey:
    jmp WaitInfoOtherMenuKey   
    
 MsgInfoOtherMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: Other/General", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: General", ChrReturn, ChrReturn
 
    !tx EscC,EscTimeColor,  " Current Ethernet IP Values:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     IP Address:", ChrReturn
