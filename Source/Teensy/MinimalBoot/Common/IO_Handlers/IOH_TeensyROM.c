@@ -479,16 +479,19 @@ FLASHMEM void MakeFilenameStr()
    }
    //Create printable filename for C64 display in SerialStringBuf
    const uint16_t MaxLength = 37; //  allow for indent (2) and 1 space at the end
-   const uint8_t  SourceLength = 4; //first x chars for source info
-   const uint8_t  SeparateLength = 2; //Num of chars in string separator
+   const uint8_t  SourceLength = 3; //first x chars for source info
+   const uint8_t  SeparateLength = 3; //Num of chars in string separator
 
    uint16_t Length = strlen(SerialStringBuf);
    if (Length>MaxLength)
    {  //assume it's a filename if more than MaxLength
       uint16_t CharNum = SourceLength;
-      //for (; CharNum<SourceLength+SeparateLength; CharNum++) SerialStringBuf[CharNum] = '.'; //add "..." after source media
-      SerialStringBuf[CharNum++] = '}'; //string sep char #1  |-
-      SerialStringBuf[CharNum++] = '{'; //string sep char #2  -|
+      //while (CharNum<SourceLength+SeparateLength) SerialStringBuf[CharNum++] = '.'; //add "..." after source media
+      //SerialStringBuf[CharNum++] = '}'; //string sep char #1  |-
+      //SerialStringBuf[CharNum++] = '{'; //string sep char #2  -|
+      SerialStringBuf[CharNum++] = '<'; 
+      SerialStringBuf[CharNum++] = '.'; 
+      SerialStringBuf[CharNum++] = '>'; 
       uint16_t StartChar = Length+SourceLength+SeparateLength-MaxLength; 
       //CharNum == SourceLength+SeparateLength
       while (StartChar<=Length) //include the term
