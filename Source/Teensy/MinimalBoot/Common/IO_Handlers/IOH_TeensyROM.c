@@ -389,12 +389,16 @@ FLASHMEM void MakeBuildInfo()
    sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
 
+FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
+{
+   sprintf(SerialStringBuf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);       
+}
+
 FLASHMEM void MakeIPSSBfromEEPAddr(uint32_t EEPAddress)
 {
    uint32_t ip32;
    EEPROM.get(EEPAddress, ip32);
-   IPAddress ip = ip32;
-   sprintf(SerialStringBuf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);       
+   MakeIPSSBfromIP(ip32);
 }
 
 FLASHMEM void MakeFilenameStr()
@@ -428,52 +432,46 @@ FLASHMEM void MakeFilenameStr()
          EEPreadStr(eepAdHotKeyPaths + (IO1[wRegControl]-rCtlMakeHotKey1WAIT)*MaxPathLength , SerialStringBuf);      
          break;
         
-       case rCtlMakeEthMACWAIT:
-       {
+      case rCtlMakeEthMACWAIT:
+      {
          uint8_t  mac[6];
          EEPreadNBuf(eepAdMyMAC, mac, 6);
          sprintf(SerialStringBuf, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-       }
+      }
          break;
-       case rCtlMakeEthIPAcqTypeWAIT:
+      case rCtlMakeEthIPAcqTypeWAIT:
          if (EEPROM.read(eepAdDHCPEnabled)) sprintf(SerialStringBuf, "DHCP");
          else sprintf(SerialStringBuf, "Static");
          break;
-       case rCtlMakeEthDHCPTOWAIT:
+      case rCtlMakeEthDHCPTOWAIT:
          EEPROM.get(eepAdDHCPTimeout, invalU16);
          sprintf(SerialStringBuf, "%dmS", invalU16);
          break;
-       case rCtlMakeEthDHCPRespTOWAIT:
+      case rCtlMakeEthDHCPRespTOWAIT:
          EEPROM.get(eepAdDHCPRespTO, invalU16);
          sprintf(SerialStringBuf, "%dmS", invalU16);
          break;
-       case rCtlMakeEthStatIPWAIT:
+      case rCtlMakeEthStatIPWAIT:
          MakeIPSSBfromEEPAddr(eepAdMyIP);
          break;       
-       case rCtlMakeEthStatDNSIPWAIT:
+      case rCtlMakeEthStatDNSIPWAIT:
          MakeIPSSBfromEEPAddr(eepAdDNSIP);
          break;
-       case rCtlMakeEthStatGatewWAIT:
+      case rCtlMakeEthStatGatewWAIT:
          MakeIPSSBfromEEPAddr(eepAdGtwyIP);
          break;
-       case rCtlMakeEthStatSubMskWAIT:
+      case rCtlMakeEthStatSubMskWAIT:
          MakeIPSSBfromEEPAddr(eepAdMaskIP);
          break;
-         
-      //rCtlMakeEthLocalIPWAIT   
-      //IPAddress ip = Ethernet.localIP();
-      //AddToPETSCIIStrToRxQueue(" Local IP: ");
-      //AddIPaddrToRxQueueLN(ip);
-      //
-      //ip = Ethernet.subnetMask();
-      //AddToPETSCIIStrToRxQueue(" Subnet Mask: ");
-      //AddIPaddrToRxQueueLN(ip);
-      //
-      //ip = Ethernet.gatewayIP();
-      //AddToPETSCIIStrToRxQueue(" Gateway IP: ");
-      //AddIPaddrToRxQueueLN(ip);
-         
-         
+       case rCtlMakeEthLocalIPWAIT:
+         MakeIPSSBfromIP(Ethernet.localIP());
+         break;
+       case rCtlMakeEthLocalSubMskWAIT:
+         MakeIPSSBfromIP(Ethernet.subnetMask());
+         break;
+       case rCtlMakeEthLocalGatewWAIT:
+         MakeIPSSBfromIP(Ethernet.gatewayIP());
+         break;
       default: 
          //*SerialStringBuf = 0; //default blank
          strcpy(SerialStringBuf, "Error"); 

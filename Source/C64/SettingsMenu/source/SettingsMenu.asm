@@ -55,9 +55,9 @@ tblSettingsPages:
    ;!word GeneralSettings
    !word TRSettings
    !word StartupOptionsMenu
-   !word TimeRTCMenu
    !word ColorConfigMenu   
    !word MIDIMenu
+   !word TimeRTCMenu
    !word EthernetMenu
    !word InfoHotKeyMenu
       
