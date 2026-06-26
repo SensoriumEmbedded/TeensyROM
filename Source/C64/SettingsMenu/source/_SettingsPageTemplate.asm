@@ -26,6 +26,9 @@ EthernetMenu:
    ldy #>MsgEthernetMenu
    jsr PrintString 
 
+   ;update static settings
+
+
 ShowEthernetSettings:
    ;update dynamic settings
    
@@ -50,6 +53,14 @@ WaitEthernetMenuKey:
    
 MsgEthernetMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Ethernet ", ChrReturn, ChrReturn
-   !tx EscC,EscNameColor,  "Some settings:", EscC,EscOptionColor, " (up/down)", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "hello", ChrReturn
+   !tx EscC,EscTimeColor, " HotKey file assignments:", ChrReturn
+
+   !tx EscC,EscSourcesColor, "  Hot Key #1:", ChrReturn, ChrReturn
+   !tx                       "  Hot Key #2:", ChrReturn, ChrReturn
+
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Time/RTC, Network Info ", ChrReturn, ChrReturn
+   !tx EscC,EscTimeColor,  " Format/Location:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "12/24 hour clock:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Local Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
+
    !tx 0 

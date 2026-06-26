@@ -33,45 +33,25 @@ InfoHotKeyMenu:
    jsr PrintFileName
 
    lda #rCtlMakeHotKey2WAIT
-   ldx #HKStartRow+2 ;row
+   ldx #HKStartRow+3 ;row
    ldy #2 ;col
    jsr PrintFileName
 
    lda #rCtlMakeHotKey3WAIT
-   ldx #HKStartRow+4 ;row
-   ldy #2 ;col
-   jsr PrintFileName
-
-   lda #rCtlMakeHotKey4WAIT
    ldx #HKStartRow+6 ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeHotKey5WAIT
-   ldx #HKStartRow+8 ;row
+   lda #rCtlMakeHotKey4WAIT
+   ldx #HKStartRow+9 ;row
    ldy #2 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeInfoStrWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #16 ;row
-   ldy #0 ;col
-   clc
-   jsr SetCursor
-   lda TblEscC+EscMenuMiscColor
-   sta $0286  ;set text color
-   lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
-   jsr PrintSerialString
+   lda #rCtlMakeHotKey5WAIT
+   ldx #HKStartRow+12 ;row
+   ldy #2 ;col
+   jsr PrintFileName
 
-   lda #<MsgMachInfo1
-   ldy #>MsgMachInfo1
-   jsr PrintString 
-   lda #rsstMachineInfo
-   jsr PrintSerialString
-   lda #<MsgMachInfo2
-   ldy #>MsgMachInfo2
-   jsr PrintString 
 
 ShowInfoHotKeySettings:
    ;update dynamic settings
@@ -87,21 +67,13 @@ WaitInfoHotKeyMenuKey:
    jmp WaitInfoHotKeyMenuKey   
    
 MsgInfoHotKeyMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKey/General", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKeys", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor, " HotKey file assignments:", ChrReturn
-   !tx EscC,EscSourcesColor, "  Hot Key #1:", ChrReturn, ChrReturn
-   !tx                       "  Hot Key #2:", ChrReturn, ChrReturn
-   !tx                       "  Hot Key #3:", ChrReturn, ChrReturn
-   !tx                       "  Hot Key #4:", ChrReturn, ChrReturn
-   !tx                       "  Hot Key #5:", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, "  Hot Key #1:", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #2:", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #3:", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #4:", ChrReturn, ChrReturn, ChrReturn
+   !tx                       "  Hot Key #5:", ChrReturn, ChrReturn, ChrReturn
    !tx 0 
 
-MsgMachInfo1:
-   !tx EscC,EscSourcesColor, "  C64/128 Info: ", EscC,EscNameColor
-   !tx 0
-MsgMachInfo2:
-   !tx "0Hz TOD", ChrReturn
-   !tx EscC,EscNameColor, " For additional details, see:", ChrReturn
-   !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
-   !tx 0
  

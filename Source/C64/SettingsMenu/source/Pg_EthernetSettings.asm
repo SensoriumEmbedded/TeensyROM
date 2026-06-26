@@ -89,20 +89,20 @@ MsgEthernetMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Info: Ethernet ", ChrReturn, ChrReturn
    
    !tx EscC,EscTimeColor,  " General Settings:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    MAC Address:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, " IP Acquisition:", ChrReturn, ChrReturn  ;Static/DHCP
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, " MAC Address:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "     IP Type:", ChrReturn, ChrReturn  ;Static/DHCP
       
    !tx EscC,EscTimeColor,  " DHCP Specific:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "   DHCP Timeout:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "   DHCP Resp TO:", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "DHCP Timeout:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "DHCP Resp TO:", ChrReturn, ChrReturn
    
    !tx EscC,EscTimeColor,  " Static IP Specific:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "      Static IP:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "         DNS IP:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     Gateway IP:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    Subnet Mask:", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "   Static IP:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "      DNS IP:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "  Gateway IP:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, " Subnet Mask:", ChrReturn, ChrReturn
    
    !tx EscC,EscArgSpaces+4, "Modify values in terminal such as", ChrReturn
-   !tx EscC,EscArgSpaces+4, " CCGMS, use \"AT?\" for help there"
+   !tx EscC,EscArgSpaces+5, "CCGMS, use \"AT?\" for help there"
    ;                         1234567890123456789012345678901234567890
    !tx 0 

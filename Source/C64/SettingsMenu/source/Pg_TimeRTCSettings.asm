@@ -79,22 +79,6 @@ ShowTimeRTCSettings:
    lda #' '
    jsr SendChar
   
-   ;current ethernet settings:
-   lda #rCtlMakeEthLocalIPWAIT
-   ldx #16 ;row
-   ldy #19 ;col
-   jsr PrintFileName
-
-   lda #rCtlMakeEthLocalSubMskWAIT
-   ldx #17 ;row
-   ldy #19 ;col
-   jsr PrintFileName
-
-   lda #rCtlMakeEthLocalGatewWAIT
-   ldx #18 ;row
-   ldy #19 ;col
-   jsr PrintFileName
-
    
 WaitTimeRTCMenuKey:
    jsr DisplayTime   
@@ -183,7 +167,7 @@ DoRTCAdjust
    jmp WaitTimeRTCMenuKey   
    
 MsgTimeRTCMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Time/RTC, Network Info ", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Time Format/Real Time Clock ", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  " Format/Location:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "12/24 hour clock:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Local Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
@@ -194,9 +178,4 @@ MsgTimeRTCMenu:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e/E", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Minutes Down/Up", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f/F", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RTC Seconds Down/Up", ChrReturn, ChrReturn, ChrReturn
  
-   !tx EscC,EscTimeColor,  " Current Ethernet IP Values:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     IP Address:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     Gateway IP:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    Subnet Mask:"
-
    !tx 0 
