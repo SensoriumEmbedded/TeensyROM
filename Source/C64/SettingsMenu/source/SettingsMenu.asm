@@ -48,11 +48,14 @@ SysAddress:
 bPageNum:  ;current page num/default
    !byte 0
    
-bTotalPages: ;num of pages in tblSettingsPages
-   !byte 8
+NumPages = 9 ;num of pages in tblSettingsPages
+
+bTotalPages: 
+   !byte NumPages
    
 tblSettingsPages:
    ;!word GeneralSettings
+   !word IndexMenu
    !word TRSettings
    !word StartupOptionsMenu
    !word ColorConfigMenu   
@@ -63,6 +66,7 @@ tblSettingsPages:
    !word InfoHotKeyMenu
       
    ;settings pages:
+   !src "source/Pg_Index.asm"
    !src "source/Pg_InfoOther.asm"
    !src "source/Pg_TRSettings.asm"
    !src "source/Pg_StartupOptions.asm"

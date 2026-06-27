@@ -100,15 +100,31 @@ CheckCommonKeys:
 ++ dec bPageNum
    jmp PopPageUpdate
 
-+  cmp #ChrF1  ;Back to TeensyROM menu
-   beq ++
-   cmp #ChrSpace  ;Back to TeensyROM menu
++  cmp #'1' ;Jump to page # 
+   bmi +   ;skip if below '1'
+   cmp #'1'+ NumPages
+   bpl +   ;skip if above Num pages
+   sec       ;set to subtract without carry
+   sbc #'1'   ;make zero based
+   sta bPageNum
+   jmp PopPageUpdate
+   
++  cmp #ChrF1  ;Reboot TR
    bne +
-++ lda #rCtlReturnToMainMenu 
+   lda #139  ; 155 default minus bit 4
+   sta $d011   ;blank the display   
+   lda #rCtlRebootTeensyROM 
+   sta wRegControl+IO1Port
+   ;no need to wait, TR/C64 will be rebooting...
+   jmp ++
+   
++  cmp #ChrSpace  ;Back to TeensyROM menu
+   bne +
+   lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
    ;C64 will be reset...
-   pla
-   pla ; pop the jsr return address to return to BASIC
+++ pla
+   pla ; pop the jsr return address to return to BASIC if TR not present
    
 +  rts 
 
@@ -168,10 +184,14 @@ CommonInit:
 
 
 MsgMenuPageSelections:
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
+   ;!tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<=CRSR=>", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "1-9", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Page Navigation", EscC,EscTimeColor, " ("
    !tx 0 
 MsgMenuExitSelection:
-   !tx ")", ChrReturn, EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space/F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
+   ;!tx ")", ChrReturn, EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space/F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
+   !tx ")", ChrReturn
+   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to main"
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Reboot TR"
    !tx 0 
 MsgWaiting:
    !tx EscC,EscTimeColor, " Waiting:", 0

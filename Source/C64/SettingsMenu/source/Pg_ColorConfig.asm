@@ -43,12 +43,16 @@ WaitColorMenuKey:
    jsr GetIn    
    beq WaitColorMenuKey
 
-+  cmp #'1' ;increment color parameter number 
-   bmi +   ;skip if below '1'
-   cmp #'1'+NumColorRefs
+FirstIncKey    = 'a'
+FirstDecKey    = 'A'
+FirstPresetKey = 'h'
+
++  cmp #FirstIncKey ;increment color parameter number 
+   bmi +   ;skip if below
+   cmp #FirstIncKey+NumColorRefs
    bpl +   ;skip if above NumColorRefs
    sec       ;set to subtract without carry
-   sbc #'1'   ;make zero based
+   sbc #FirstIncKey   ;make zero based
    tax
    ldy TempTblEscC, x
    iny
@@ -60,23 +64,24 @@ SavePrintColorUpdate
    jsr PrintColorRef   
    jmp WaitColorMenuKey  
 
-+  cmp #'!' ;decrement color parameter number 
-   bmi +   ;skip if below '!' (shift 1)
-   cmp #'!'+NumColorRefs
++  cmp #FirstDecKey ;decrement color parameter number 
+   bmi +   ;skip if below
+   cmp #FirstDecKey+NumColorRefs
    bpl +   ;skip if above NumColorRefs
    sec       ;set to subtract without carry
-   sbc #'!'   ;make zero based
+   sbc #FirstDecKey   ;make zero based
    tax
    ldy TempTblEscC, x
    dey
    jmp SavePrintColorUpdate
 
-+  cmp #'a' ;decrement color parameter number 
-   bmi +   ;skip if below 'a' 
-   cmp #'a'+NumPresetColors
+
++  cmp #FirstPresetKey ;set color Preset 
+   bmi +   ;skip if below 
+   cmp #FirstPresetKey+NumPresetColors
    bpl +   ;skip if above NumPresetColors
    sec       ;set to subtract without carry
-   sbc #'a'   ;make zero based
+   sbc #FirstPresetKey   ;make zero based
    asl ;mult by two
    tax
    ldy TblPresets+1, x ;ldy #>Preset_TRDef_TblEscC
@@ -185,26 +190,26 @@ MsgColorMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: Menu Colors ", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  "Individual colors:", EscC,EscOptionColor, " (up/down)", ChrReturn
 
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1!", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Background", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "2", ChrQuote, ChrQuote, ChrCRSRLeft, ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Border", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "3#", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "4$", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Time Display & Headings", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "5%", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Input key option indicator", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "6&", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "General text/descriptions", ChrReturn
-   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7'", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "File names & Values", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "aA", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Background", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "bB", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Screen Border", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "cC", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Top of screen banner color", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "dD", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Time Display & Headings", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "eE", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "Input key option indicator", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "fF", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "General text/descriptions", ChrReturn
+   !tx EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "gG", ChrRvsOff, ChrFillLeft, EscC,EscArgSpaces+9, EscC,EscSourcesColor, "File names & Values", ChrReturn
    !tx ChrReturn
 
    !tx EscC,EscTimeColor,  " Presets:", ChrReturn
-   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default"
-   !tx EscC,EscArgSpaces+2+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "CGA"
+   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR Default"
+   !tx EscC,EscArgSpaces+2+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "CGA"
    !tx ChrReturn
    
-   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
-   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "The Blues"
+   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Black & White"
+   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "The Blues"
    !tx ChrReturn
 
-   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C64 Mono"
-   !tx EscC,EscArgSpaces+2+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Rainbow"
+   !tx EscC,EscArgSpaces+2,   EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "C64 Mono"
+   !tx EscC,EscArgSpaces+2+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Rainbow"
    !tx ChrReturn, ChrReturn
    
    !tx EscC,EscTimeColor,  " General:", ChrReturn
@@ -245,12 +250,12 @@ TblEscC:  ;order matches enum ColorRefOffsets
 
 NumPresetColors = 6
 TblPresets:
-   !word Preset_TRDef_TblEscC    ;'a'
-   !word Preset_BnW_TblEscC      ;'b'
-   !word Preset_C64_TblEscC      ;'c'
-   !word Preset_CGA_TblEscC      ;'d'
-   !word Preset_Blues_TblEscC    ;'e'
-   !word Preset_Rainbow_TblEscC  ;'f'
+   !word Preset_TRDef_TblEscC    ;'h'
+   !word Preset_BnW_TblEscC      ;'i'
+   !word Preset_C64_TblEscC      ;'j'
+   !word Preset_CGA_TblEscC      ;'k'
+   !word Preset_Blues_TblEscC    ;'l'
+   !word Preset_Rainbow_TblEscC  ;'m'
    
 Preset_TRDef_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
 ;TR Defaults

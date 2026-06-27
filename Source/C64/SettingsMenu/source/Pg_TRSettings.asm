@@ -18,7 +18,7 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-SetValColumn = 29   ;Column for TR setting values
+SetValColumn = 30   ;Column for TR setting values
 
 TRSettings:
    jsr CommonInit ;print banner and common keys/page#
@@ -162,14 +162,14 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
    
-+  cmp #'f'  ;Reboot TeensyROM
-   bne +
-   lda #139  ; 155 default minus bit 4
-   sta $d011   ;blank the display   
-   lda #rCtlRebootTeensyROM 
-   sta wRegControl+IO1Port
-   ;no need to wait, TR/C64 will be rebooting...
-   jmp WaitTRSettingsKey  
+;+  cmp #'f'  ;Reboot TeensyROM
+;   bne +
+;   lda #139  ; 155 default minus bit 4
+;   sta $d011   ;blank the display   
+;   lda #rCtlRebootTeensyROM 
+;   sta wRegControl+IO1Port
+;   ;no need to wait, TR/C64 will be rebooting...
+;   jmp WaitTRSettingsKey  
    
 +  cmp #'e'  ;Self Test IO
    bne +
@@ -241,11 +241,11 @@ MsgTRSettings:
    ;                           1234567890123456789012345678901234567890
 
    !tx EscC,EscTimeColor,  " User Interface/other:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Hosted Serial Device:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "USB Hosted Serial Dev:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "      Joystick2 Speed:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Show File Extensions:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
+   ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 
 TblMsgHostSerCtl: ;must match RegPowerUpDefaultMasks2 bits
