@@ -576,8 +576,7 @@ def convert(fin, fout, hname="", stdvector=False, typemod=""):
 		signal.signal(signal.SIGINT, sigintHandler)
 
 		# open file stream for writing
-		ofs = codecs.open(fout, "w", "utf-8")
-
+		ofs = open(fout, "w", encoding="utf-8")
 		text = "#ifndef {0}{1}#define {0}{1}".format(hname_upper, eol)
 		if stdvector:
 			text += "{0}#ifdef __cplusplus{0}#include <vector>{0}#endif{0}".format(eol)
@@ -592,7 +591,7 @@ def convert(fin, fout, hname="", stdvector=False, typemod=""):
 		ofs.write(text)
 
 		# open file stream for reading
-		ifs = codecs.open(fin, "rb")
+		ifs = open(fin, "rb")
 
 		# empty line
 		print()
