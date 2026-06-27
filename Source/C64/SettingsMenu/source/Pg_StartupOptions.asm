@@ -133,7 +133,7 @@ MsgStartupOptionsMenu:
 
    !tx EscC,EscTimeColor,  " On Main Menu Startup:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Play selected SID:", ChrReturn
-   !tx EscC,EscSourcesColor,  "  SID file: ('S' to sel)", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  SID file: (SID info pg to sel)", ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
 ;   !tx EscC,EscSourcesColor,  "     IP/Port:", ChrReturn, ChrReturn, ChrReturn

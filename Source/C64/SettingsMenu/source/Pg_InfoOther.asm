@@ -93,13 +93,13 @@ WaitInfoOtherMenuKey:
    jmp WaitInfoOtherMenuKey   
    
 MsgInfoOtherMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: General", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: General ", ChrReturn, ChrReturn
 
    !tx EscC,EscTimeColor,  " Current Ethernet IP Values:", ChrReturn
    !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, " IP Address:", ChrReturn
    !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, " Gateway IP:", ChrReturn
    !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, "Subnet Mask:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Initialize Ethernet now", ChrReturn, ChrReturn   
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Initialize Ethernet Connection", ChrReturn, ChrReturn   
 
    !tx EscC,EscTimeColor,  " TeensyROM/Machine info:", ChrReturn
    !tx 0 

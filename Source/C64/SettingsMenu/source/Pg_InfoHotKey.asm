@@ -67,7 +67,7 @@ WaitInfoHotKeyMenuKey:
    jmp WaitInfoHotKeyMenuKey   
    
 MsgInfoHotKeyMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKeys", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Info: HotKeys ", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor, " HotKey file assignments:", ChrReturn
    !tx EscC,EscSourcesColor, "  Hot Key #1: ('!' to sel)", ChrReturn, ChrReturn, ChrReturn
    !tx                       "  Hot Key #2: ('\"' to sel)", ChrReturn, ChrReturn, ChrReturn
