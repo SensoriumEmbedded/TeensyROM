@@ -47,7 +47,7 @@ InfoOtherMenu:
    lda #rCtlMakeInfoStrWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRWaitMsg   ;moves cursor to upper right
-   ldx #11 ;row
+   ldx #12 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
@@ -76,15 +76,18 @@ WaitInfoOtherMenuKey:
    jsr GetIn    
    beq WaitInfoOtherMenuKey
 
-;+  cmp #'1' ;increment color parameter number 
-;   bmi +   ;skip if below '1'
-;   cmp #'1'+NumColorRefs
-;   bpl +   ;skip if above NumColorRefs
-;   sec       ;set to subtract without carry
-;   sbc #'1'   ;make zero based
-;   tax
-;   ldy TempTblEscC, x
-;   iny
+   
++  cmp #'a'  ;Force Ethernet init
+   bne +
+   jsr PrintBanner
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   lda #rCtlForceEthInitWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots 
+   jsr AnyKeyMsgWait ; For looking at messages/IP address
+   jmp InfoOtherMenu ;force to reprint all 
+
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitInfoOtherMenuKey   
@@ -93,9 +96,10 @@ MsgInfoOtherMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Info: General", ChrReturn, ChrReturn
 
    !tx EscC,EscTimeColor,  " Current Ethernet IP Values:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     IP Address:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "     Gateway IP:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscSourcesColor, "    Subnet Mask:", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, " IP Address:", ChrReturn
+   !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, " Gateway IP:", ChrReturn
+   !tx EscC,EscArgSpaces+6, EscC,EscSourcesColor, "Subnet Mask:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Initialize Ethernet now", ChrReturn, ChrReturn   
 
    !tx EscC,EscTimeColor,  " TeensyROM/Machine info:", ChrReturn
    !tx 0 
@@ -104,7 +108,7 @@ MsgMachInfo1:
    !tx ChrReturn, EscC,EscSourcesColor, "  C64/128 clocks: ", EscC,EscNameColor
    !tx 0
 MsgMachInfo2:
-   !tx "0Hz TOD", ChrReturn, ChrReturn, ChrReturn
+   !tx "0Hz TOD", ChrReturn, ChrReturn
    !tx EscC,EscSourcesColor, " For additional information, see:", ChrReturn
    !tx EscC,EscNameColor, " github.com/SensoriumEmbedded/TeensyROM"
    !tx 0

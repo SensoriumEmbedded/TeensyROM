@@ -70,13 +70,13 @@ ShowStartupOptionsSettings:
    and #rpud2TRTCPListen  
    jsr PrintOnOff
 
-   lda #rCtlMakeEthLocalIPWAIT
-   ldx #11 ;row
-   ldy #14 ;col
-   jsr PrintFileName
-   lda #<MsgPort2112
-   ldy #>MsgPort2112
-   jsr PrintString 
+   ;lda #rCtlMakeEthLocalIPWAIT
+   ;ldx #11 ;row
+   ;ldy #14 ;col
+   ;jsr PrintFileName
+   ;lda #<MsgPort2112
+   ;ldy #>MsgPort2112
+   ;jsr PrintString 
 
    ldx #15 ;Auto-Launch Enabled 
    ldy #StartupValColumn ;col
@@ -136,12 +136,13 @@ MsgStartupOptionsMenu:
    !tx EscC,EscSourcesColor,  "  SID file: ('S' to sel)", ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
-   !tx EscC,EscSourcesColor,  "     IP/Port:", ChrReturn, ChrReturn, ChrReturn
+;   !tx EscC,EscSourcesColor,  "     IP/Port:", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+5, "(port 2112 of current IP)", ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  " On TeensyROM Boot/Power-up:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Auto-Launch Enable:", ChrReturn
    !tx EscC,EscSourcesColor,  "  Auto-Launch file: ('A' to sel)", ChrReturn, ChrReturn, ChrReturn
    !tx 0 
 
-MsgPort2112:
-   !tx ":2112"
-   !tx 0 
+;MsgPort2112:
+;   !tx ":2112"
+;   !tx 0 

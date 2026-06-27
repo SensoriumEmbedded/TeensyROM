@@ -185,7 +185,7 @@ CommonInit:
 
 MsgMenuPageSelections:
    ;!tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<=CRSR=>", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "1-9", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Page Navigation", EscC,EscTimeColor, " ("
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<=CRSR=>", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "1-9", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Page Navigation", EscC,EscNameColor, " ("
    !tx 0 
 MsgMenuExitSelection:
    ;!tx ")", ChrReturn, EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space/F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
