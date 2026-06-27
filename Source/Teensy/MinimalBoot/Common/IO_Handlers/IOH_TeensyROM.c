@@ -187,6 +187,7 @@ uint8_t ASCIItoPETSCII[128]=
 };
 
 extern bool EthernetInit(void (*MsgOut)(const char *));
+extern bool ForceEthernetInit(void (*MsgOut)(const char *));
 extern void MenuChange();
 extern void HandleExecution();
 extern bool PathIsRoot();
@@ -228,8 +229,14 @@ void SendStrPrintfln(const char *Msg)
 }
 
 FLASHMEM void NetListenInit()
-{  //called on main menuy start when rpud2TRTCPListen
+{  //called on main menu start when rpud2TRTCPListen
    NetListenEnable = EthernetInit(SendStrPrintfln);
+}
+
+FLASHMEM void ForceEthInit()
+{  //called on settings general info
+   if(ForceEthernetInit(SendStrPrintfln)) SendMsgPrintfln("Success!\n");
+   else SendMsgPrintfln("Failed!\n");
 }
 
 FLASHMEM void SetRTCfromNet() 
@@ -1042,6 +1049,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &SetREUFile,          // rsSetREUFile
    &MakeFilenameStr,     // rsMakeFilenameStr
    &RTCAdjust,           // rsRTCAdjust
+   &ForceEthInit,        // rsForceEthInit
 };
 
 
@@ -1511,6 +1519,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNetListenInitWAIT:
                   IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
+                  break;
+               case rCtlForceEthInitWAIT:
+                  IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
                   break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
