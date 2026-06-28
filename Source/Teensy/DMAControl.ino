@@ -42,12 +42,12 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_Length = Length;
    DMA_FixC64Addr = FixC64Addr;
    
-   DMA_State = DMA_S_Start_BA_Transfer;
+   DMA_State = DMA_S_StartAsynch;
    while (DMA_State != DMA_S_TransferComplete); //delayMicroseconds(1);  //block until finished
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
-   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x)\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length);
+   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length, DMACycleCount);
 }
 
 FLASHMEM void CloseDMA()

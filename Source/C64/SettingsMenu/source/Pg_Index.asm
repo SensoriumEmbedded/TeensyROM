@@ -36,8 +36,15 @@ WaitIndexMenuKey:
    jsr DisplayTime   
    jsr GetIn    
    beq WaitIndexMenuKey
-
-
+   
+;;debug test case for DMA with blank screen, no interrupts and infinite read loop:
+;+  cmp #'z'  
+;   bne +
+;   lda #139  ; 155 default minus bit 4
+;   sta $d011   ;blank the display (so BA doesn't assert)
+;   sei  ;turn off IRQs    DMA could still fire
+;-  lda #0;
+;   beq-
 
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitIndexMenuKey   

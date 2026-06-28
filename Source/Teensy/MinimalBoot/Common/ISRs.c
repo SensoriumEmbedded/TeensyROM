@@ -27,6 +27,12 @@ FASTRUN void isrButton()
    BtnPressed = true;
 }
 
+void DMAWaitAssertReady()
+{
+   WaitUntil_nS(nS_DMAAssert); 
+   SetDMAAssert;
+   DMA_State = DMA_S_TransferReady;
+}
 
 //Phi2 rising edge:
 FASTRUN void isrPHI2() 
@@ -133,16 +139,44 @@ FASTRUN void isrPHI2()
                SetDMADeassert;
                DMA_State = DMA_S_DisableReady;
                return;
-               //break;
-            case DMA_S_Start_BA_Transfer:
-               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
-               { 
-                  WaitUntil_nS(nS_DMAAssert); 
-                  SetDMAAssert;
-                  DMA_State = DMA_S_TransferReady;
-                  return;
-               } 
-               break;               
+               
+               
+               
+               
+            case DMA_S_StartAsynch:  //starting state for safe asynchronous DMA
+               //based on "Safely freezing the C64 on an asynchronous event"  ©2008, by Gideon Zweijtzer
+               //   https://codebase64.com/lib/exe/fetch.php?media=base:safely_freezing_the_c64.pdf
+               
+               DMACycleCount = 0; //initialize for timeout
+               if (R_Wn) //Read
+               {
+                  if(!GP9_BA(ReadGPIO9)) DMAWaitAssertReady(); // start during any bad line read
+                  else DMA_State = DMA_S_StartAsynch_Wait_LRd ;
+               }
+               else DMA_State = DMA_S_StartAsynch_Wait_LWr;
+               return;
+            case DMA_S_StartAsynch_Wait_LWr: //Last cycle was a write
+               if (R_Wn) DMAWaitAssertReady(); //Last was a write, this is a read, assert!
+                  //else another write, no state change
+                  //Check for timeout? Continuous writes is not a real-worls situation
+               return;             
+            case DMA_S_StartAsynch_Wait_LRd: //Last cycle was a read
+               if (R_Wn) //Read
+               {
+                  if(!GP9_BA(ReadGPIO9)) DMAWaitAssertReady(); // start during any bad line read
+                  else 
+                  {
+                     //Another Read, no state change
+                     if (DMACycleCount++ > DMA_TIMEOUT_CYCLES) DMAWaitAssertReady(); // Timeout, assume read loop and assert
+                  }
+               }
+               else DMA_State = DMA_S_StartAsynch_Wait_LWr;
+               return;    
+               
+               
+               
+               
+               
             case DMA_S_StartActive:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;

@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.2.5"    //*VERSION*
+#define TRVersion              "0.7.2.6"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -145,12 +145,18 @@ enum DMA_States  //used with DMA_State
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
    DMA_S_StartDisable,     //deactivate/end DMA                               -> DMA_S_DisableReady
-   DMA_S_Start_BA_Transfer,//activate DMA for transfer on next bad line read, -> DMA_S_TransferReady
+   //used by PerformDMA (Remote DMA and Serial U/V/W):
+   DMA_S_StartAsynch,      //activate DMA for transfer asynch/safely, -> DMA_S_StartAsynch_Wait_LRd/LWr
+   DMA_S_StartAsynch_Wait_LRd, //  waiting to activate DMA, Last Cycle was Read  -> DMA_S_TransferReady
+   DMA_S_StartAsynch_Wait_LWr, //  waiting to activate DMA, Last Cycle was Write -> DMA_S_TransferReady
+
    DMA_S_StartActive,      //activate immediately,                            -> DMA_S_ActiveReady
    DMA_S_Start_BA_Freeze,  //activate for freeze mode on next bad line read,  -> DMA_S_FreezeReady
    DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)     -> DMA_S_ActiveReady
 };
 
+#define DMA_TIMEOUT_CYCLES  5000
+uint32_t DMACycleCount;
 volatile uint8_t DMA_State = DMA_S_DisableReady;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
@@ -327,7 +333,8 @@ const uint8_t OutputPins[] = {
 // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
-#define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
+#define Def_nS_DMAAssert     40  //    delay from Phi2 falling to DMA assertion when activating
+                                       // Initial val was 200, 80nS recommended. In scope analysis, min is ~108nS, when val is 40 or lower
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
