@@ -144,15 +144,17 @@ enum DMA_States  //used with DMA_State
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
-   DMA_S_StartDisable,     //deactivate/end DMA                               -> DMA_S_DisableReady
+   DMA_S_StartDisable,         //deactivate/end DMA                              -> DMA_S_DisableReady
+   
    //used by PerformDMA (Remote DMA and Serial U/V/W):
-   DMA_S_StartAsynch,      //activate DMA for transfer asynch/safely, -> DMA_S_StartAsynch_Wait_LRd/LWr
+   DMA_S_StartAsynch,          //activate DMA for transfer asynch/safely,        -> DMA_S_StartAsynch_Wait_LRd/LWr
    DMA_S_StartAsynch_Wait_LRd, //  waiting to activate DMA, Last Cycle was Read  -> DMA_S_TransferReady
    DMA_S_StartAsynch_Wait_LWr, //  waiting to activate DMA, Last Cycle was Write -> DMA_S_TransferReady
 
-   DMA_S_StartActive,      //activate immediately,                            -> DMA_S_ActiveReady
-   DMA_S_Start_BA_Freeze,  //activate for freeze mode on next bad line read,  -> DMA_S_FreezeReady
-   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)     -> DMA_S_ActiveReady
+   //used by REU and CRT pause/bank swap:
+   DMA_S_StartImmediate,        //activate immediately (current cycle)            -> DMA_S_ActiveReady
+   
+   DMA_S_Start_BA_Freeze,      //activate for freeze mode on next bad line read, -> DMA_S_FreezeReady
 };
 
 #define DMA_TIMEOUT_CYCLES  5000

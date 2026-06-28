@@ -139,10 +139,6 @@ FASTRUN void isrPHI2()
                SetDMADeassert;
                DMA_State = DMA_S_DisableReady;
                return;
-               
-               
-               
-               
             case DMA_S_StartAsynch:  //starting state for safe asynchronous DMA
                //based on "Safely freezing the C64 on an asynchronous event"  ©2008, by Gideon Zweijtzer
                //   https://codebase64.com/lib/exe/fetch.php?media=base:safely_freezing_the_c64.pdf
@@ -177,7 +173,7 @@ FASTRUN void isrPHI2()
                
                
                
-            case DMA_S_StartActive:
+            case DMA_S_StartImmediate:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
                DMA_State = DMA_S_ActiveReady;
@@ -190,15 +186,6 @@ FASTRUN void isrPHI2()
                   WaitUntil_nS(nS_DMAAssert); 
                   SetDMAAssert;
                   DMA_State = DMA_S_FreezeReady;
-                  return;
-               }
-               break;
-            case DMA_S_Start_BA_Active:
-               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
-               { 
-                  WaitUntil_nS(nS_DMAAssert); 
-                  SetDMAAssert;
-                  DMA_State = DMA_S_ActiveReady;
                   return;
                }
                break;

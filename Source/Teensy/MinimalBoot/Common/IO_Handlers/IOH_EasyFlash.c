@@ -155,7 +155,7 @@ uint8_t* ImageCheckAssign(uint8_t* BankRequested)
             return SwapBuffers[BuffNum].Image; //it's a match!
          }
       }
-      DMA_State = DMA_S_StartActive;  //no match, pause via DMA for swap
+      DMA_State = DMA_S_StartImmediate;  //no match, pause via DMA for swap
    }
    //Printf_dbg(" \n");
    return BankRequested;

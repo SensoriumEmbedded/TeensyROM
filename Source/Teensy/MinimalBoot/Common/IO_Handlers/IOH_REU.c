@@ -344,7 +344,7 @@ bool REU_FF00_W_Check(uint16_t Address, bool R_Wn)
       DirectREU();
       return true; //skip the rest of the cycle, DMA occurred
 #else
-      DMA_State = DMA_S_StartActive;   //activate immediately
+      DMA_State = DMA_S_StartImmediate;   //activate immediately
 #endif
    }
    return false;  //continue cycle
@@ -678,7 +678,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 #ifdef Direct_REU
                DirectREU();
 #else
-               DMA_State = DMA_S_StartActive;   //activate immediately
+               DMA_State = DMA_S_StartImmediate;   //activate immediately
 #endif
             }
             else
