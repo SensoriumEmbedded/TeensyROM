@@ -58,7 +58,7 @@ FASTRUN void isrPHI2()
 #endif
 
 #ifdef Fab04_FullDMACapable
-   if (DMA_State == DMA_S_TransferReady) // && GP9_BA(ReadGPIO9))
+   if (DMA_State == DMA_S_TransferExecuting) 
    {
 #ifndef MinimumBuild  //temporary exclusion of minimal mode DMAs
       DMATransferISR();
@@ -139,6 +139,7 @@ FASTRUN void isrPHI2()
                SetDMADeassert;
                DMA_State = DMA_S_DisableReady;
                return;
+               
             case DMA_S_StartAsynch:  //starting state for safe asynchronous DMA
                //based on "Safely freezing the C64 on an asynchronous event"  ©2008, by Gideon Zweijtzer
                //   https://codebase64.com/lib/exe/fetch.php?media=base:safely_freezing_the_c64.pdf
@@ -168,27 +169,12 @@ FASTRUN void isrPHI2()
                }
                else DMA_State = DMA_S_StartAsynch_Wait_LWr;
                return;    
-               
-               
-               
-               
-               
+
             case DMA_S_StartImmediate:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
                DMA_State = DMA_S_ActiveReady;
                return;
-               //break;
-            case DMA_S_Start_BA_Freeze:
-               if (R_Wn && !GP9_BA(ReadGPIO9)) // start during bad line read
-               //if (R_Wn) // start during any read
-               { 
-                  WaitUntil_nS(nS_DMAAssert); 
-                  SetDMAAssert;
-                  DMA_State = DMA_S_FreezeReady;
-                  return;
-               }
-               break;
          }
       }
       

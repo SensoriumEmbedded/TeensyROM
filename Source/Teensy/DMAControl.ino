@@ -43,7 +43,9 @@ FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t
    DMA_FixC64Addr = FixC64Addr;
    
    DMA_State = DMA_S_StartAsynch;
-   while (DMA_State != DMA_S_TransferComplete); //delayMicroseconds(1);  //block until finished
+   while (DMA_State != DMA_S_TransferReady); //block until finished
+   DMA_State = DMA_S_TransferExecuting;
+   while (DMA_State != DMA_S_TransferComplete); //block until finished
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
@@ -100,7 +102,7 @@ bool DMAByte(uint8_t *Data)
 
 void DMATransferISR()
 {
-   // called from Phi2 isr when (DMA_State == DMA_S_TransferReady)
+   // called from Phi2 isr when (DMA_State == DMA_S_TransferExecuting)
    
    if (!GP9_BA(ReadGPIO9)) return;  // bus not available, skip until it is
 

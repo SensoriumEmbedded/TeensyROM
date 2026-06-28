@@ -137,16 +137,16 @@ enum MinBootIndFlags
 enum DMA_States  //used with DMA_State
 {
    DMA_S_DisableReady,     //Disabled/default state
-   DMA_S_ActiveReady,      //DMA asserted state, ready for action
-   DMA_S_FreezeReady,      //DMA asserted state, frozen
-   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  -> DMA_S_TransferComplete
+   DMA_S_ActiveReady,      //DMA asserted state, ready for action from DMA_S_StartImmediate
+   DMA_S_TransferReady,    //DMA asserted, ready for action from DMA_S_StartAsynch
+   DMA_S_TransferExecuting,//DMA asserted, DMATransferISR hook active, transfer in progress,
    DMA_S_TransferComplete, //DMA asserted, transfer complete
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
    DMA_S_StartDisable,         //deactivate/end DMA                              -> DMA_S_DisableReady
    
-   //used by PerformDMA (Remote DMA and Serial U/V/W):
+   //used by PerformDMA (Remote DMA and Serial U/V/W) as well as special button and remote pause:
    DMA_S_StartAsynch,          //activate DMA for transfer asynch/safely,        -> DMA_S_StartAsynch_Wait_LRd/LWr
    DMA_S_StartAsynch_Wait_LRd, //  waiting to activate DMA, Last Cycle was Read  -> DMA_S_TransferReady
    DMA_S_StartAsynch_Wait_LWr, //  waiting to activate DMA, Last Cycle was Write -> DMA_S_TransferReady
@@ -154,7 +154,6 @@ enum DMA_States  //used with DMA_State
    //used by REU and CRT pause/bank swap:
    DMA_S_StartImmediate,        //activate immediately (current cycle)            -> DMA_S_ActiveReady
    
-   DMA_S_Start_BA_Freeze,      //activate for freeze mode on next bad line read, -> DMA_S_FreezeReady
 };
 
 #define DMA_TIMEOUT_CYCLES  5000

@@ -513,7 +513,7 @@ FLASHMEM void ProcessCommand()
          LaunchFile();
          return;
       case C64PauseOnToken: //pause C64 via DMA, during next bad line
-         DMA_State = DMA_S_Start_BA_Freeze; 
+         DMA_State = DMA_S_StartAsynch; 
          isFrozen = true;  //led will flash on/off
          SendU16(AckToken);
          return;
