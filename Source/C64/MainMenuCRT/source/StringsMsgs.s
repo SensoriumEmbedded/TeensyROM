@@ -59,14 +59,14 @@ MsgMountDxxFile:
 
 MsgSIDInfo1:
    !tx ChrReturn, EscC,EscSourcesColor, "SID Info Page:", ChrReturn, ChrReturn
-   !tx " File Information for", EscC,EscNameColor  ;EscC,EscMenuMiscColor
+   !tx EscC,EscTimeColor, " File Information for", EscC,EscNameColor  
    !tx 0
 MsgSIDInfo2:
-   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, " This Machine: ", EscC,EscNameColor
+   !tx ChrReturn, ChrReturn, EscC,EscTimeColor, " This Machine: ", EscC,EscNameColor
    !tx 0
 MsgSIDInfo3:
    !tx "0Hz TOD", ChrReturn
-   !tx ChrReturn, EscC,EscNameColor, " Settings:", ChrReturn
+   !tx ChrReturn, EscC,EscTimeColor, " Settings:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "+/-", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Sub-Song Number:", ChrReturn   
    !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Adj Play Speed:", ChrReturn   
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Speed Ctrl Type:", ChrReturn   
@@ -79,37 +79,6 @@ Msg123:
    !tx EscC,EscArgSpaces+6, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "s", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set main background SID", ChrReturn
    !tx 0
    
-MsgHelpMenu:   
-   !tx ChrReturn, EscC,EscSourcesColor, "Help Menu:", ChrReturn
-   !tx EscC,EscNameColor, " Main Menu Controls:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "U/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Cursor up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "CRSR/Joy2", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "L/R", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Page up/dn", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Return/Fire", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Select file or dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrUpArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Up directory", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a-z", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Next entry starting with letter", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Home", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Beginning of current dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrLeftArrow, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,    "Write NFC tag: Highlighted File", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, ChrQuestionMark, ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Set Auto-Launch to Highlighted", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Color Settings Page", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "1-5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Key: Launch", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "!-%", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Hot Key: Set to Highlighted", ChrReturn
-   !tx ChrReturn
-   !tx EscC,EscNameColor
-   !tx EscC,EscArgSpaces+3, "Source Select/other:", EscC,EscArgSpaces+3, ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Teensy Mem"
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F2", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Exit to BASIC", ChrReturn
-               
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F3", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "SD Card"
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F4", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID on/off", ChrReturn
-               
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F5", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "USB Drive"
-   !tx EscC,EscArgSpaces+3, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F6", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "SID Information", ChrReturn
-               
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F7", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help"
-   !tx EscC,EscArgSpaces+8, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "F8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Settings Menu", ChrReturn
-   !tx ChrReturn
-   !tx 0
 
 TblMsgMenuName: ;must match enum RegMenuTypes order/qty
    !word MsgMenuUSBDrive
@@ -122,32 +91,9 @@ MsgMenuSD:
 MsgMenuTeensy:
    !tx "Teensy Mem", 0
 
-MsgSettingsMenu1:
-   !tx ChrReturn, EscC,EscSourcesColor, "Settings Menu:", ChrReturn
-   !tx EscC,EscMenuMiscColor 
-   !tx EscC,EscArgSpaces+3, "Power-On Defaults:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b/B", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Local Time Zone:", EscC,EscNameColor, " UTC", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "    12/24 hour clock:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "   Synch RTC via net:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "   Play selected SID:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Show File Extensions:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "h", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "  Host Serial Device:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "i", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   " Enable TCP Listener:", ChrReturn
-   !tx EscC,EscArgSpaces+3, EscC,EscMenuMiscColor, "Immediate:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "j", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Re-boot TeensyROM", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "k", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Synch RTC via Ethernet", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "l", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "m", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Disable Auto-Launch", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "n", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Help Menu", ChrReturn
-   ;!tx ChrReturn
-MsgSettingsMenu2SpaceRet:
+MsgSpaceRet:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Back to Main menu", ChrReturn
    !tx 0 
-MsgSettingsMenu3:
-   !tx EscC,EscSourcesColor, " github.com/SensoriumEmbedded/TeensyROM"
-   !tx 0
 
 MsgFWVerify:
    !tx ChrReturn, ChrReturn, EscC,EscOptionColor, "Please Confirm:"
@@ -169,36 +115,18 @@ MsgAnyKey:
    !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
    !tx 0
 
-
-TblMsgHostSerCtl: ;must match RegPowerUpDefaultMasks2 bits
-   !word MsgHostSerCtlNone
-   !word MMsgHostSerCtlNFC
-   !word MsgHostSerCtlController
-MsgHostSerCtlNone:
-   !tx "None  ", 0
-MMsgHostSerCtlNFC:
-   !tx "NFC   ", 0
-MsgHostSerCtlController:
-   !tx "TRCont", 0
-
-MsgOn:
-   !tx "On ", 0
-MsgOff:
-   !tx "Off", 0
 MsgWaiting:
    !tx EscC,EscTimeColor, " Waiting:", 0
-MsgTesting:
-   !tx EscC,EscNameColor, "Testing", 0
-MsgPass:
-   !tx "Passed ", 0
-MsgFail:
-   !tx "Failed ", 0
 MsgDone:
    !tx EscC,EscNameColor, "Done", 0
 MsgHasHandler:
    !tx ChrCRSRLeft, "+", 0
 
 !ifdef DbgVerbose {
+MsgPass:
+   !tx "Passed ", 0
+MsgFail:
+   !tx "Failed ", 0
 MsgMain:
    !tx "Main OK", ChrReturn, 0
 MsgClkChecks:

@@ -27,15 +27,16 @@ PrintSerialString:
    ;load Acc with RegSerialStringSelect # that will be serialized out from TR port
    sta rwRegSerialString+IO1Port   ;selects message and resets to start of string
 PrintSerialStringLoaded: ;message already selected
+!ifndef DbgOffline {
 -  lda rwRegSerialString+IO1Port
    beq +
    jsr SendChar
    jmp -
+}
 +  rts
  
 PrintString:
-   ;replaces BASIC routine jsr $ab1e when unavailable
-   ;prints from C64 RAM location:
+   ;prints from C64 RAM location: with Esc modifiers
    ;   usage: lda #<MsgM2SPolyMenu,  ldy #>MsgM2SPolyMenu,  jsr PrintString 
    sta smcPrintStringAddr+1
    sty smcPrintStringAddr+2
@@ -82,11 +83,14 @@ smcPrintStringAddr
 ++ rts   
 
 PrintBanner:
-   lda #<MsgBanner
-   ldy #>MsgBanner
+   lda #<MsgBanner1
+   ldy #>MsgBanner1
    jsr PrintString 
    lda #rsstVersionNum
    jsr PrintSerialString
+   lda #<MsgBanner2
+   ldy #>MsgBanner2
+   jsr PrintString 
    sec
    jsr SetCursor ;read column into y reg
    lda #ChrSpace ;spaces to the end of the line
@@ -259,4 +263,70 @@ l  clc
 pr jsr SendChar
    rts
 
+PrintOnOff:
+   ;Print "On" or "Off" based on Zero flag
+   ;uses A and Y regs
+   bne +
+   lda #<MsgOff
+   ldy #>MsgOff
+   jmp ++
++  lda #<MsgOn
+   ldy #>MsgOn
+++ jsr PrintString 
+   rts
+
+AnyKeyMsgWait:
+   lda #<MsgAnyKey  ;wait for any key to continue 
+   ldy #>MsgAnyKey
+   jsr PrintString 
+-  jsr GetIn    
+   beq -
+   rts
+
+PrintFileName:
+   ; Acc contains rCtlMake*StrWAIT (ie rCtlMakeKernalStrWAIT)
+   ; X and Y are row, col to print it at
+   stx smcRow+1
+   sty smcCol+1
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
+smcRow
+   ldx #7 ;row
+smcCol
+   ldy #2 ;col
+   clc
+   jsr SetCursor
+   lda TblEscC+EscMenuMiscColor
+   sta $0286  ;set text color
+   lda #ChrQuote
+   jsr SendChar
+   jsr PrintSerialStringLoaded
+   lda #ChrQuote
+   jsr SendChar
+   rts
+
+
+MsgBanner1:  ;set color before clearing for char poke default  
+   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+9, 0
+MsgBanner2:  
+   !tx " Help", 0
+MsgAnyKey:
+   !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
+   !tx 0
+MsgOn:
+   !tx "On ", 0
+MsgOff:
+   !tx "Off", 0
+
+TblEscC:  ;order matches enum ColorRefOffsets
+        ;Main local storage for string escape token (EscC) next character cross-reference
+        ;Local Default     EEPROM default  Description
+        ;EscMenuMiscColor = EscNameColor  in Menu_Regs.i
+   !byte PokeBlack      ;PokeBlack       ; EscBackgndColor     = 0 ; Screen Background
+   !byte PokePurple     ;PokeDrkGrey     ; EscBorderColor      = 1 ; Screen Border
+   !byte PokePurple     ;PokeDrkGrey     ; EscTRBannerColor    = 2 ; Top of screen banner color
+   !byte PokeOrange     ;PokeWhite       ; EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokeYellow     ;PokeLtGrey      ; EscOptionColor      = 4 ; Input key option indication
+   !byte PokeLtBlue     ;PokeDrkGrey     ; EscSourcesColor     = 5 ; General text/descriptions
+   !byte PokeLtGreen    ;PokeMedGrey     ; EscNameColor        = 6 ; FIle names and information
 

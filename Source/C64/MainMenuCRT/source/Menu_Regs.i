@@ -43,30 +43,32 @@
    rwRegPageNumber     = 14 ;// Item sel/info: (one based) current page number
    rRegNumPages        = 15 ;// Item sel/info: total number of pages
    rRegItemTypePlusIOH = 16 ;// Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
-   rwRegPwrUpDefaults  = 17 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
-   rwRegPwrUpDefaults2 = 18 ;// EEPROM stored: power up default reg#2, see RegPowerUpDefaultMasks2
-   rwRegTimezone       = 19 ;// EEPROM stored: signed char for timezone: UTC +/-12 
-   rwRegNextIOHndlr    = 20 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
-   rwRegSerialString   = 21 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
-   wRegSearchLetterWAIT= 22 ;// Put cursor on first menu item with letter written
-   rRegSIDInitHi       = 23 ;// SID Play Info: Init address Hi
-   rRegSIDInitLo       = 24 ;// SID Play Info: Init Address Lo
-   rRegSIDPlayHi       = 25 ;// SID Play Info: Play Address Hi
-   rRegSIDPlayLo       = 26 ;// SID Play Info: Play Address Lo
-   rRegSIDDefSpeedHi   = 27 ;// SID Play Info: Default CIA interrupt timer speed Hi
-   rRegSIDDefSpeedLo   = 28 ;// SID Play Info: Default CIA interrupt timer speed Lo
-   rwRegSIDCurSpeedHi  = 29 ;// SID Play Info: Current CIA interrupt timer speed Hi
-   rwRegSIDCurSpeedLo  = 30 ;// SID Play Info: Current CIA interrupt timer speed Lo
-   wRegSIDSpeedChange  = 31 ;// SID Play Control: Change speed as indicated by RegSIDSpeedChanges
-   rwRegSIDSongNumZ    = 32 ;// SID Play Info: Current Song Number (Zero Based)
-   rRegSIDNumSongsZ    = 33 ;// SID Play Info: Number of Songs in SID (Zero Based)
-   wRegVid_TOD_Clks    = 34 ;// C64/128 Video Standard and TOD clock frequencies
-   wRegIRQ_ACK         = 35 ;// IRQ Ack from C64 app
-   rwRegIRQ_CMD        = 36 ;// IRQ Command from TeensyROM
-   rwRegCodeStartPage  = 37 ;// TR Code Start page in C64 RAM
-   rwRegCodeLastPage   = 38 ;// TR Code last page used in C64 RAM
-   rwRegScratch        = 39 ;// Bi-Directional Scratch Register
-   rwRegColorRefStart  = 40 ;// Color ref transfer eeprom<->C64, WAIT on Write
+   rwRegMIDISettings   = 17 ;// EEPROM stored: MIDI Settings reg, see RegMIDISettingsMasks
+   rwRegMIDISettings2  = 18 ;// EEPROM stored: MIDI Settings reg #2, see RegMIDISettingsMasks2
+   rwRegPwrUpDefaults  = 19 ;// EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
+   rwRegPwrUpDefaults2 = 20 ;// EEPROM stored: power up default reg#2, see RegPowerUpDefaultMasks2
+   rwRegTimezone       = 21 ;// EEPROM stored: signed char for timezone: UTC +/-12 
+   rwRegNextIOHndlr    = 22 ;// EEPROM stored: Which IO handler will take over upone exit/execute/emulate
+   rwRegSerialString   = 23 ;// Write selected item (RegSerialStringSelect) to select/reset, then Serially read out until 0 read.
+   wRegSearchLetterWAIT= 24 ;// Put cursor on first menu item with letter written
+   rRegSIDInitHi       = 25 ;// SID Play Info: Init address Hi
+   rRegSIDInitLo       = 26 ;// SID Play Info: Init Address Lo
+   rRegSIDPlayHi       = 27 ;// SID Play Info: Play Address Hi
+   rRegSIDPlayLo       = 28 ;// SID Play Info: Play Address Lo
+   rRegSIDDefSpeedHi   = 29 ;// SID Play Info: Default CIA interrupt timer speed Hi
+   rRegSIDDefSpeedLo   = 30 ;// SID Play Info: Default CIA interrupt timer speed Lo
+   rwRegSIDCurSpeedHi  = 31 ;// SID Play Info: Current CIA interrupt timer speed Hi
+   rwRegSIDCurSpeedLo  = 32 ;// SID Play Info: Current CIA interrupt timer speed Lo
+   wRegSIDSpeedChange  = 33 ;// SID Play Control: Change speed as indicated by RegSIDSpeedChanges
+   rwRegSIDSongNumZ    = 34 ;// SID Play Info: Current Song Number (Zero Based)
+   rRegSIDNumSongsZ    = 35 ;// SID Play Info: Number of Songs in SID (Zero Based)
+   wRegVid_TOD_Clks    = 36 ;// C64/128 Video Standard and TOD clock frequencies
+   wRegIRQ_ACK         = 37 ;// IRQ Ack from C64 app
+   rwRegIRQ_CMD        = 38 ;// IRQ Command from TeensyROM
+   rwRegCodeStartPage  = 39 ;// TR Code Start page in C64 RAM
+   rwRegCodeLastPage   = 40 ;// TR Code last page used in C64 RAM
+   rwRegScratch        = 41 ;// Bi-Directional Scratch Register
+   rwRegColorRefStart  = 42 ;// Color ref transfer eeprom<->C64, WAIT on Write
                             ;//offsets defined in enum ColorRefOffsets
    ;NextReg = rwRegColorRefStart+NumColorRefs,
 
@@ -168,9 +170,29 @@
    rpud2HostSerCtlMaskInv = 0b11111001 ; Inverted mask of all host serial control devices
    rpud2NFCEnabled        = 0b00000010 ; rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
    rpud2TRContEnabled     = 0b00000100 ; rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
+   rpud2TRAutoLaunch      = 0b01000000 ; rwRegPwrUpDefaults2 bit 6, 1=Auto-Launch Enabled
    rpud2TRTCPListen       = 0b10000000 ; rwRegPwrUpDefaults2 bit 7, 1=TCP Listen Enabled
-   ;bits 4:3 for future hosted serial devices (ie Meatloaf)
-   ;bits 6:5 unused
+   ;bits 4:3 for future hosted serial devices(?)
+   ;bit 5 unused
+
+;enum RegMIDISettingsMasks
+   ;eepAdMIDISettings, rwRegMIDISettings
+   rMIDISetNoteOffOnEn           = 0b00000001 ; 
+   rMIDISetAfterTouchPolyEn      = 0b00000010 ; 
+   rMIDISetControlChangeEn       = 0b00000100 ; 
+   rMIDISetProgramChangeEn       = 0b00001000 ; 
+   rMIDISetAfterTouchEn          = 0b00010000 ; 
+   rMIDISetPitchChangeEn         = 0b00100000 ; 
+   rMIDISetSystemExclusiveEn     = 0b01000000 ; 
+   rMIDISetTimeCodeQuarterFrameEn= 0b10000000 ; 
+
+;enum RegMIDISettingsMasks2
+   ;eepAdMIDISettings2, rwRegMIDISettings2
+   rMIDISet2SongPositionEn       = 0b00000001 ; 
+   rMIDISet2SongSelectEn         = 0b00000010 ; 
+   rMIDISet2TuneRequestEn        = 0b00000100 ; 
+   rMIDISet2RealTimeSystemEn     = 0b00001000 ; 
+   ;bits 7:4 unused, initialized to 0
 
 ;enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsChangeMenu         = 0x00  ;
@@ -190,7 +212,7 @@
    rsNFCReEnable        = 0x0e  ;
    rsSetBackgroundSID   = 0x0f  ;
    rsSetAutoLaunch      = 0x10  ;
-   rsClearAutoLaunch    = 0x11  ;
+   rsClearAutoLaunch    = 0x11  ; no longer used
    rsNextTextFile       = 0x12  ;
    rsLastTextFile       = 0x13  ;
    rsIOHWNextInit       = 0x14  ; no longer used
@@ -200,8 +222,11 @@
    rsSetKERNALBin       = 0x18  ;
    rsKERNALPreStart     = 0x19  ;
    rsSetREUFile         = 0x1a  ;
-   
-   rsNumStatusTypes     = 0x1b  ;
+   rsMakeFilenameStr    = 0x1b  ;
+   rsRTCAdjust          = 0x1c  ;
+   rsForceEthInit       = 0x1d  ;
+
+   rsNumStatusTypes     = 0x1e  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -223,7 +248,7 @@
    rCtlRunningPRG           =  5 ; final signal before running prg, allows IO1 handler change
    rCtlMakeInfoStrWAIT      =  6 ; MakeBuildCPUInfoStr
    rCtlUpDirectoryWAIT      =  7
-   rCtlLoadSIDWAIT          =  8 ;load .sid file to RAM buffer and prep for x-fer
+   rCtlLoadSIDWAIT          =  8 ; load .sid file to RAM buffer and prep for x-fer
    rCtlNextPicture          =  9 
    rCtlLastPicture          = 10 
    rCtlRebootTeensyROM      = 11 
@@ -241,6 +266,40 @@
    rCtlSetKERNALBinWAIT     = 23
    rCtlKERNALPreStartWAIT   = 24
    rCtlSetREUFileWAIT       = 25
+   rCtlReturnToMainMenu     = 26
+   
+   rCtlMakeStrWAIT_First    = 27 ; FIRST of a linear series that uses MakeFilenameStr
+      rCtlMakeKernalStrWAIT    = 27 
+      rCtlMakeREUStrWAIT       = 28 
+      rCtlMakeSIDStrWAIT       = 29 
+      rCtlMakeAutoLStrWAIT     = 30 
+      rCtlMakeHotKey1WAIT      = 31 
+      rCtlMakeHotKey2WAIT      = 32 
+      rCtlMakeHotKey3WAIT      = 33 
+      rCtlMakeHotKey4WAIT      = 34 
+      rCtlMakeHotKey5WAIT      = 35 
+      rCtlMakeEthMACWAIT       = 36 
+      rCtlMakeEthIPAcqTypeWAIT = 37 
+      rCtlMakeEthDHCPTOWAIT    = 38 
+      rCtlMakeEthDHCPRespTOWAIT= 39 
+      rCtlMakeEthStatDNSIPWAIT = 40 
+      rCtlMakeEthStatGatewWAIT = 41 
+      rCtlMakeEthStatSubMskWAIT= 42 
+      rCtlMakeEthStatIPWAIT    = 43 
+      rCtlMakeEthLocalIPWAIT   = 44
+      rCtlMakeEthLocalSubMskWAIT=45
+      rCtlMakeEthLocalGatewWAIT= 46
+   rCtlMakeStrWAIT_Last     = 46 ; LAST of a linear series that uses MakeFilenameStr
+
+   rCtlRTCAdjWAIT_First     = 47 ; FIRST of a linear series that uses RTCAdjust
+      rCtlRTCAdj_Hrs_Up_WAIT   = 47 
+      rCtlRTCAdj_Hrs_Dn_WAIT   = 48 
+      rCtlRTCAdj_Min_Up_WAIT   = 49 
+      rCtlRTCAdj_Min_Dn_WAIT   = 50 
+      rCtlRTCAdj_Sec_Up_WAIT   = 51 
+      rCtlRTCAdj_Sec_Dn_WAIT   = 52 
+   rCtlRTCAdjWAIT_Last      = 52 ; LAST of a linear series that uses RTCAdjust
+   rCtlForceEthInitWAIT     = 53
    
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0

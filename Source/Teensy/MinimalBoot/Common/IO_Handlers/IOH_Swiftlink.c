@@ -268,15 +268,8 @@ void FreeSwiftlinkBuffs()
    free(TxMsg); TxMsg = NULL;   
 }
 
-FLASHMEM bool EthernetInit(void (*MsgOut)(const char *))
+FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
 {
-   
-   if (Ethernet.linkStatus() == LinkON)
-   {
-      MsgOut("Ethernet connected");
-      return true;
-   }
-   
    uint32_t beginWait = millis();
    uint8_t  mac[6];
    bool retval = true;
@@ -326,7 +319,18 @@ FLASHMEM bool EthernetInit(void (*MsgOut)(const char *))
    MsgOut(msg);
    return retval;
 }
+ 
+FLASHMEM bool EthernetInit(void (*MsgOut)(const char *))
+{
+   if (Ethernet.linkStatus() == LinkON)
+   {
+      MsgOut("Ethernet connected");
+      return true;
+   }
    
+   return ForceEthernetInit(MsgOut);
+}
+ 
 FLASHMEM void SetEthEEPDefaults()
 {
    EEPROM.write(eepAdDHCPEnabled, 1); //DHCP enabled

@@ -391,12 +391,6 @@ CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
    jsr ListMenuItems ; reprint menu
    jmp HighlightCurrent    
 
-+  cmp #'C' ;Configure Colors
-   bne +
-   jsr ColorConfigMenu
-   jsr ListMenuItems ; reprint menu
-   jmp HighlightCurrent    
-
 +  cmp #ChrLeftArrow ;Write NFC Tag to current file
    bne +  
    lda #0  ;Normal File tag
@@ -439,11 +433,11 @@ CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
    bne +
 ;   lda #rCtlBasicReset ;reset to BASIC
 ;   sta wRegControl+IO1Port
+;-  jmp -  ;should be resetting to BASIC
 ExitToBASIC:
    ldx #7  ;dir Utilities
    lda #2  ;prog Exit to BASIC
    jmp DirectRunFromTeensyMenu
-;-  jmp -  ;should be resetting to BASIC
 
 +  cmp #ChrF3  ;SD Card Menu
    bne +
@@ -470,15 +464,17 @@ ExitToBASIC:
 
 +  cmp #ChrF7  ;Help Menu
    bne +
-   jsr HelpMenu
-   jsr ListMenuItems
-   jmp HighlightCurrent
+TagTRHelp
+   ldx #9  ;dir TR Specific
+   lda #2  ;prog Help Pages
+   jmp DirectRunFromTeensyMenu
 
 +  cmp #ChrF8  ;Settings Menu
    bne +
-   jsr SettingsMenu
-   jsr ListMenuItems
-   jmp HighlightCurrent  
+TagTRSettings
+   ldx #9  ;dir TR Specific
+   lda #1  ;prog TR Settings
+   jmp DirectRunFromTeensyMenu
 
 +  cmp #'K' ;Select Kernal File
    bne +
@@ -1095,65 +1091,6 @@ smcInverseRowDest
    bne -
    rts
 
-HelpMenu:
-   jsr PrintBanner ;SourcesColor
-   lda #<MsgHelpMenu
-   ldy #>MsgHelpMenu
-   jsr PrintString 
-
-   lda #<MsgSettingsMenu2SpaceRet
-   ldy #>MsgSettingsMenu2SpaceRet
-   jsr PrintString 
-
-WaitHelpMenuKey:
-   jsr DisplayTime   
-   jsr CheckForIRQGetIn    
-   beq WaitHelpMenuKey
-
-+  cmp #ChrF1  ;Teensy mem Menu
-   bne +
-   lda #rmtTeensy
-   jmp MenuChangeInit
-
-+  cmp #ChrF2  ;Exit to BASIC
-   bne +
-   jmp ExitToBASIC
-;   lda #rCtlBasicReset ;reset to BASIC
-;   sta wRegControl+IO1Port
-;-  jmp -  ;should be resetting to BASIC
-
-+  cmp #ChrF3  ;SD Card Menu
-   bne +
-   lda #rmtSD
-   jmp MenuChangeInit
-
-+  cmp #ChrF4  ;toggle music
-   bne +
-   jsr ToggleSIDMusic
-   jmp WaitHelpMenuKey  
-
-+  cmp #ChrF5  ;USB Drive Menu
-   bne +
-   lda #rmtUSBDrive
-   jmp MenuChangeInit
-   
-+  cmp #ChrF6  ;Show SID info
-   bne +
-   jmp ShowSIDInfoPage  ;return from there
-
-+  cmp #ChrF7  ;Help
-   bne +
-   jmp HelpMenu ;refresh (could ignore)
-
-+  cmp #ChrF8  ;Settings Menu
-   bne +
-   jmp SettingsMenu  ;return from there
-
-+  cmp #ChrSpace  ;back to Main Menu
-   bne WaitHelpMenuKey   
-   rts
-
-
 MenuChangeInit:  ;changing menu source.  Prep: Load acc with menu to change to
    sta rWRegCurrMenuWAIT+IO1Port  ;must wait on a write (load dir)
    jsr WaitForTRWaitMsg
@@ -1484,11 +1421,11 @@ TblRowToMemLoc:
    ; check MaxItemsPerPage
    
    
-   !src "source/SettingsMenu.asm"
+;   !src "source/SettingsMenu.asm"
    !src "source/PRGLoadStartReloc.s"
    !src "source/SIDRelated.s"
    !src "source/StringFunctions.s"
    !src "source/StringsMsgs.s"
-   !src "source/ColorConfig.s"
+;   !src "source/ColorConfig.s"
 MainCodeRAMEnd = *
    !byte 0

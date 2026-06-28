@@ -145,6 +145,8 @@ void setup()
    IO1[rRegPresence2]     = 0xAA;   
    for (uint8_t reg=rRegSIDStrStart; reg<rRegSIDStringTerm; reg++) IO1[reg]=' '; 
    IO1[rRegSIDStringTerm] = 0;   
+   IO1[rwRegMIDISettings]= EEPROM.read(eepAdMIDISettings);
+   IO1[rwRegMIDISettings2]= EEPROM.read(eepAdMIDISettings2);
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegPwrUpDefaults2]= EEPROM.read(eepAdPwrUpDefaults2);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
@@ -191,8 +193,8 @@ void setup()
             uint32_t AutoStartmS = millis();
             if(!CheckLaunchSDAuto()) //if nothing autolaunched from SD autolaunch file
             {
-               if (EEPROM.read(eepAdAutolaunchName) && (ReadButton!=0)) //If name is non zero length & button not pressed
-               {
+               if ((EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRAutoLaunch) && (ReadButton!=0)) 
+               { //If autolaunch enabled & button not pressed
                   EEPRemoteLaunch(eepAdAutolaunchName);
                }
             }
@@ -398,7 +400,7 @@ FLASHMEM void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
-   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
+   EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: TCP Listen Off, Auto-Launch Off, NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
    EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
@@ -406,12 +408,12 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdDefaultSID+1, DefSIDPath);
    EEPwriteStr(eepAdDefaultSID+strlen(DefSIDPath)+2, DefSIDName);  
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin);
-   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+   EEPwriteStr(eepAdAutolaunchName, "TR:/Test+Diags/DesTestMAX:  Desmond's RAM Test"); //default auto Launch file
    //default color scheme:
    EEPROM.write(eepAdColorRefStart+EscBackgndColor , PokeBlack  ); 
    EEPROM.write(eepAdColorRefStart+EscBorderColor  , PokePurple ); 
    EEPROM.write(eepAdColorRefStart+EscTRBannerColor, PokePurple ); 
-   EEPROM.write(eepAdColorRefStart+EscTimeColor    , PokeOrange ); 
+   EEPROM.write(eepAdColorRefStart+EscTimeColor    , PokeLtRed  ); 
    EEPROM.write(eepAdColorRefStart+EscOptionColor  , PokeYellow ); 
    EEPROM.write(eepAdColorRefStart+EscSourcesColor , PokeLtBlue ); 
    EEPROM.write(eepAdColorRefStart+EscNameColor    , PokeLtGreen); 
@@ -419,14 +421,19 @@ FLASHMEM void SetEEPDefaults()
    EEPwriteStr(eepAdHotKeyPaths+0*MaxPathLength, "TR:/MIDI + ASID/Cynthcart 2.0.1       +Datel MIDI"); 
 #ifdef Fab04_REU
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/Test+Diags/REU-Checker v1.0            +REU"); 
+   EEPROM.write(eepAdKERNALBinName, 0); //No default Kernal Selection
+   EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name needed for saving
 #else
    EEPwriteStr(eepAdHotKeyPaths+1*MaxPathLength, "TR:/MIDI + ASID/Station64 2.6      +Passport MIDI"); 
+   EEPwriteStr(eepAdKERNALBinName, "TR+ Only"); 
+   EEPwriteStr(eepAdREUFilename, "TR+ Only"); 
 #endif
    EEPwriteStr(eepAdHotKeyPaths+2*MaxPathLength, "TR:/Utilities/CCGMS 2021 Term       +SwiftLink "); 
    EEPwriteStr(eepAdHotKeyPaths+3*MaxPathLength, "TR:/MIDI + ASID/TeensyROM ASID Player    +TR ASID"); 
    EEPwriteStr(eepAdHotKeyPaths+4*MaxPathLength, "TR:/Games/Jupiter Lander"); 
-   EEPROM.write(eepAdKERNALBinName, 0); //No Kernal Selection
-   EEPwriteStr(eepAdREUFilename, "SD:/reu.reu"); //Default REU File Name
+   
+   EEPROM.write(eepAdMIDISettings, 0xff);  //see RegMIDISettingsMasks
+   EEPROM.write(eepAdMIDISettings2, 0x0f); //see RegMIDISettingsMasks2
    
    //future use:
    for(uint32_t EEPByteNum = 0; EEPByteNum<eepAdUnusedSize ; EEPByteNum++)
@@ -579,7 +586,7 @@ void SpecialBtn_Pause(bool Up_nDn)
    {
       if ((isFrozen = !isFrozen))
       {
-         DMA_State = DMA_S_StartFreeze; 
+         DMA_State = DMA_S_Start_BA_Freeze; 
          //led will flash on/off
       }
       else 

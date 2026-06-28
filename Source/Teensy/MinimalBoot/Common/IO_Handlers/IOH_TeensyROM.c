@@ -41,7 +41,7 @@ bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
-char SerialStringBuf[MaxPathLength] = "err"; // used for message passing to C64, up to full path length
+char SerialStringBuf[MaxPathLength+6] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
 const unsigned char *HIROM_Image = NULL;
 const unsigned char *LOROM_Image = NULL;
@@ -187,6 +187,7 @@ uint8_t ASCIItoPETSCII[128]=
 };
 
 extern bool EthernetInit(void (*MsgOut)(const char *));
+extern bool ForceEthernetInit(void (*MsgOut)(const char *));
 extern void MenuChange();
 extern void HandleExecution();
 extern bool PathIsRoot();
@@ -214,6 +215,8 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern void MountDxxFile();
 extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
+extern volatile uint8_t BtnPressed;
+extern void EEPreadStr(uint16_t addr, char* buf);
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -226,8 +229,14 @@ void SendStrPrintfln(const char *Msg)
 }
 
 FLASHMEM void NetListenInit()
-{  //called on main menuy start when rpud2TRTCPListen
+{  //called on main menu start when rpud2TRTCPListen
    NetListenEnable = EthernetInit(SendStrPrintfln);
+}
+
+FLASHMEM void ForceEthInit()
+{  //called on settings general info
+   if(ForceEthernetInit(SendStrPrintfln)) SendMsgPrintfln("Success!\n");
+   else SendMsgPrintfln("Failed!\n");
 }
 
 FLASHMEM void SetRTCfromNet() 
@@ -327,6 +336,39 @@ FLASHMEM void C64TODfromRTC()
    Printf_dbg ("TOD Time: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
 }
 
+FLASHMEM void RTCAdjust()
+{
+   //Adjust RTC up/down manually
+     
+   time_t adj = 0; //default to no adjustment
+   
+   switch (IO1[wRegControl])
+   {
+      case rCtlRTCAdj_Hrs_Up_WAIT:
+         adj = SECS_PER_HOUR;
+         break;
+      case rCtlRTCAdj_Hrs_Dn_WAIT:
+         adj = -SECS_PER_HOUR;
+         break;
+      case rCtlRTCAdj_Min_Up_WAIT:
+         adj = SECS_PER_MIN;
+         break;
+      case rCtlRTCAdj_Min_Dn_WAIT:
+         adj = -SECS_PER_MIN;
+         break;
+      case rCtlRTCAdj_Sec_Up_WAIT:
+         adj = 1;
+         break;
+      case rCtlRTCAdj_Sec_Dn_WAIT:
+         adj = -1;
+         break;
+   }
+   
+   time_t t = Teensy3Clock.get() + adj; //read the RTC time, add adjustment
+   Teensy3Clock.set(t); // set the RTC
+   C64TODfromRTC(); //also update IO1 current time regs
+}
+
 void WriteEEPROM()
 {
    Printf_dbg("Wrote $%02x to EEP addr %d\n", eepDataToWrite, eepAddrToWrite);
@@ -353,6 +395,126 @@ FLASHMEM void MakeBuildInfo()
    //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
    sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
 }
+
+FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
+{
+   sprintf(SerialStringBuf, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);       
+}
+
+FLASHMEM void MakeIPSSBfromEEPAddr(uint32_t EEPAddress)
+{
+   uint32_t ip32;
+   EEPROM.get(EEPAddress, ip32);
+   MakeIPSSBfromIP(ip32);
+}
+
+FLASHMEM void MakeFilenameStr()
+{
+   //Get filename/value from EEPROM (selected in IO1[wRegControl])
+   uint16_t invalU16;
+   
+   switch (IO1[wRegControl])
+   {
+      case rCtlMakeKernalStrWAIT:
+         EEPreadStr(eepAdKERNALBinName, SerialStringBuf);
+         break;
+      case rCtlMakeREUStrWAIT:
+         EEPreadStr(eepAdREUFilename, SerialStringBuf);
+         break;
+      case rCtlMakeSIDStrWAIT:
+      {
+         char SIDSourcePathName[MaxPathLength];
+         EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
+         char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
+
+         sprintf(SerialStringBuf, "%s:/%s/%s", 
+            (SIDSourcePathName[0] == rmtUSBDrive ? "USB" : (SIDSourcePathName[0] == rmtSD ? "SD" : "TR")),
+            SIDSourcePathName+1, SIDName);
+      }
+         break;
+      case rCtlMakeAutoLStrWAIT:
+         EEPreadStr(eepAdAutolaunchName, SerialStringBuf);      
+         break;
+      case rCtlMakeHotKey1WAIT...rCtlMakeHotKey5WAIT:
+         EEPreadStr(eepAdHotKeyPaths + (IO1[wRegControl]-rCtlMakeHotKey1WAIT)*MaxPathLength , SerialStringBuf);      
+         break;
+        
+      case rCtlMakeEthMACWAIT:
+      {
+         uint8_t  mac[6];
+         EEPreadNBuf(eepAdMyMAC, mac, 6);
+         sprintf(SerialStringBuf, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      }
+         break;
+      case rCtlMakeEthIPAcqTypeWAIT:
+         if (EEPROM.read(eepAdDHCPEnabled)) sprintf(SerialStringBuf, "DHCP");
+         else sprintf(SerialStringBuf, "Static");
+         break;
+      case rCtlMakeEthDHCPTOWAIT:
+         EEPROM.get(eepAdDHCPTimeout, invalU16);
+         sprintf(SerialStringBuf, "%dmS", invalU16);
+         break;
+      case rCtlMakeEthDHCPRespTOWAIT:
+         EEPROM.get(eepAdDHCPRespTO, invalU16);
+         sprintf(SerialStringBuf, "%dmS", invalU16);
+         break;
+      case rCtlMakeEthStatIPWAIT:
+         MakeIPSSBfromEEPAddr(eepAdMyIP);
+         break;       
+      case rCtlMakeEthStatDNSIPWAIT:
+         MakeIPSSBfromEEPAddr(eepAdDNSIP);
+         break;
+      case rCtlMakeEthStatGatewWAIT:
+         MakeIPSSBfromEEPAddr(eepAdGtwyIP);
+         break;
+      case rCtlMakeEthStatSubMskWAIT:
+         MakeIPSSBfromEEPAddr(eepAdMaskIP);
+         break;
+       case rCtlMakeEthLocalIPWAIT:
+         MakeIPSSBfromIP(Ethernet.localIP());
+         break;
+       case rCtlMakeEthLocalSubMskWAIT:
+         MakeIPSSBfromIP(Ethernet.subnetMask());
+         break;
+       case rCtlMakeEthLocalGatewWAIT:
+         MakeIPSSBfromIP(Ethernet.gatewayIP());
+         break;
+      default: 
+         //*SerialStringBuf = 0; //default blank
+         strcpy(SerialStringBuf, "Error"); 
+         break;
+   }
+   //Create printable filename for C64 display in SerialStringBuf
+   const uint16_t MaxLength = 37; //  allow for indent (2) and 1 space at the end
+   const uint8_t  SourceLength = 3; //first x chars for source info
+   const uint8_t  SeparateLength = 3; //Num of chars in string separator
+
+   uint16_t Length = strlen(SerialStringBuf);
+   if (Length>MaxLength)
+   {  //assume it's a filename if more than MaxLength
+      uint16_t CharNum = SourceLength;
+      //while (CharNum<SourceLength+SeparateLength) SerialStringBuf[CharNum++] = '.'; //add "..." after source media
+      //SerialStringBuf[CharNum++] = '}'; //string sep char #1  |-
+      //SerialStringBuf[CharNum++] = '{'; //string sep char #2  -|
+      SerialStringBuf[CharNum++] = '<'; 
+      SerialStringBuf[CharNum++] = '.'; 
+      SerialStringBuf[CharNum++] = '>'; 
+      uint16_t StartChar = Length+SourceLength+SeparateLength-MaxLength; 
+      //CharNum == SourceLength+SeparateLength
+      while (StartChar<=Length) //include the term
+      {
+         SerialStringBuf[CharNum++] = SerialStringBuf[StartChar++];
+      } 
+   }
+   
+   if (Length == 0) strcpy(SerialStringBuf, "<none selected>");
+
+   //Serial.printf("\nx%sx\n", SerialStringBuf);
+   //set print buffer for PrintSerialString and reset counter
+   ptrSerialString = SerialStringBuf;
+   StringOffset = 0;
+}
+
 
 //FLASHMEM void MakeBuildCPUInfoStr()
 //{
@@ -754,15 +916,16 @@ FLASHMEM void SetAutoLaunch()
       return;
    }
 
-   SendMsgPrintfln("Auto Launch updated:\r  * Will take effect next power-up\r  * See Settings menu to disable\r");
+   SendMsgPrintfln("Auto Launch file updated\r  * Currently %sabled\r  * See Settings menu to enable/disable\r", ((EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRAutoLaunch) ? "En":"Dis"));
    
-   EEPwriteStr(eepAdAutolaunchName, PathMsg);  //set autolaunch in EEPROM:
+   EEPwriteStr(eepAdAutolaunchName, PathMsg);  //set autolaunch filename in EEPROM:
 
 }
 
 FLASHMEM void ClearAutoLaunch()
-{
-   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
+{  //no longer used (old settings menu)
+   uint newval = EEPROM.read(eepAdPwrUpDefaults2) & ~rpud2TRAutoLaunch;  //disable auto Launch
+   EEPROM.write(eepAdPwrUpDefaults2, newval); 
 }
 
 FLASHMEM void SetBackgroundSID()
@@ -884,6 +1047,9 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &SetKERNALBin,        // rsSetKERNALBin
    &KERNALPreStart,      // rsKERNALPreStart
    &SetREUFile,          // rsSetREUFile
+   &MakeFilenameStr,     // rsMakeFilenameStr
+   &RTCAdjust,           // rsRTCAdjust
+   &ForceEthInit,        // rsForceEthInit
 };
 
 
@@ -1043,19 +1209,29 @@ void M2SOnPitchChange(uint8_t channel, int pitch)
 //__________________________________________________________________________________
 
 
-void InitHndlr_TeensyROM()
+FLASHMEM void InitHndlr_TeensyROM()
 {
    IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
    //MIDI handlers for MIDI2SID:
-   usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
-   usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
-   usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
-   usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+   if(IO1[rwRegMIDISettings] & rMIDISetNoteOffOnEn)
+   {
+      usbHostMIDI.setHandleNoteOff      (M2SOnNoteOff);             // 8x
+      usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
+      usbHostMIDI.setHandleNoteOn       (M2SOnNoteOn);              // 9x
+      usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
+   }
 
-   usbDevMIDI.setHandleNoteOff       (M2SOnNoteOff);             // 8x
-   usbDevMIDI.setHandleNoteOn        (M2SOnNoteOn);              // 9x
-   usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
-   usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
+   //These are for debug only, only note on/off is actually used
+   if(IO1[rwRegMIDISettings] & rMIDISetControlChangeEn)
+   {
+      usbHostMIDI.setHandleControlChange(M2SOnControlChange);       // Bx
+      usbDevMIDI.setHandleControlChange (M2SOnControlChange);       // Bx
+   }
+   if(IO1[rwRegMIDISettings] & rMIDISetPitchChangeEn)
+   {
+      usbHostMIDI.setHandlePitchChange  (M2SOnPitchChange);         // Ex
+      usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
+   }
 }   
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -1125,6 +1301,18 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[rWRegCurrMenuWAIT]=Data;
             IO1[rwRegStatus] = rsChangeMenu; //work this in the main code
             break;
+         case rwRegMIDISettings:
+            IO1[rwRegMIDISettings]= Data;
+            eepAddrToWrite = eepAdMIDISettings;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
+         case rwRegMIDISettings2:
+            IO1[rwRegMIDISettings2]= Data;
+            eepAddrToWrite = eepAdMIDISettings2;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
          case rwRegPwrUpDefaults:
             IO1[rwRegPwrUpDefaults]= Data;
             eepAddrToWrite = eepAdPwrUpDefaults;
@@ -1153,6 +1341,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[wRegSearchLetterWAIT] = Data;
             IO1[rwRegStatus] = rsSearchForLetter; //work this in the main code
             break;
+            
          case wRegSIDSpeedChange:
             {
                int16_t SidSpeedAdjustTemp = SidSpeedAdjust;
@@ -1295,6 +1484,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlNFCReEnableWAIT:
                   IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
                   break;
+               case rCtlReturnToMainMenu:
+                  BtnPressed = true;
+                  break;
                case rCtlRebootTeensyROM:
                   REBOOT;
                   break;
@@ -1327,6 +1519,17 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNetListenInitWAIT:
                   IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
+                  break;
+               case rCtlForceEthInitWAIT:
+                  IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
+                  break;
+               case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
+                  IO1[wRegControl] = Data; //preserve for later use
+                  IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
+                  break;
+               case rCtlRTCAdjWAIT_First...rCtlRTCAdjWAIT_Last:
+                  IO1[wRegControl] = Data; //preserve for later use
+                  IO1[rwRegStatus] = rsRTCAdjust; //work this in the main code
                   break;
             }
             break;

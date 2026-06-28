@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.7.2.3"    //*VERSION*
+#define TRVersion              "0.7.2.5"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -62,6 +62,8 @@
 #define GetDirectoryToken 0x64DD  // regular JSON format, to be deprecated
 #define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
+#define WriteC64MemToken  0x64FB
+#define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
 #define BadSIDToken       0x9B80
@@ -71,7 +73,7 @@
 #define FWFullToken       0x64E2  // Full firmware response
 
 
-#define eepMagicNum         0xfeed6414 // 01: 6/22/23  net settings added 
+#define eepMagicNum         0xfeed6415 // 01: 6/22/23  net settings added 
                                        // 02: 9/07/23  Joy2 speed added
                                        // 03: 11/3/23  Browser Bookmarks added
                                        // 04: 11/4/23  Browser DL drive/path added
@@ -89,6 +91,7 @@
                                        // 10: 2/24/26  REU added to IO Handlers list
                                        // 12: 4/12/26  New Default SID, unused/future space init to 0
                                        // 14: 5/8/26   MaxPathLength=256(from 300), EEP mapping refactor
+                                       // 15: 6/22/26  Def time color Orange->LtRed, MIDI Settings
 enum InternalEEPROMmap
 {
    eepAdMagicNum      =    0, // (4:uint32_t)   Mismatch indicates internal EEPROM needs initialization
@@ -115,11 +118,12 @@ enum InternalEEPROMmap
    eepAdHotKeyPaths   = 2440, // (256*5:MaxPathLength*NumHotKeys)  Default Hot Key settings
    eepAdKERNALBinName = 3720, // (256:MaxPathLength) Kernal binary file/path
    eepAdREUFilename   = 3976, // (256:MaxPathLength) REU file/path
+   eepAdMIDISettings  = 4232, // (1:uint8_t)    MIDI Settings reg#1, see RegMIDISettingsMasks
+   eepAdMIDISettings2 = 4233, // (1:uint8_t)    MIDI Settings reg#2, see RegMIDISettingsMasks2
    
-   eepAdNext          = 4232, // Next address to be used
+   eepAdNext          = 4234, // Next address to be used
    eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
-   eepAdUnusedSize    = (4284-eepAdUnused),
-   //Max size = 4284 (emulated in flash)
+   eepAdUnusedSize    = (4284-eepAdUnused), //Max size = 4284 (emulated in flash)
 };
 
 enum MinBootIndFlags
@@ -135,16 +139,16 @@ enum DMA_States  //used with DMA_State
    DMA_S_DisableReady,     //Disabled/default state
    DMA_S_ActiveReady,      //DMA asserted state, ready for action
    DMA_S_FreezeReady,      //DMA asserted state, frozen
-   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  ->DMA_S_TransferComplete
+   DMA_S_TransferReady,    //DMA asserted, DMATransferISR hook active, transfer executes,  -> DMA_S_TransferComplete
    DMA_S_TransferComplete, //DMA asserted, transfer complete
    
    DMA_S_BeginStartStates, //states higher than this request action during phi1 vic cycle
    
-   DMA_S_StartDisable,     //deactivate/end DMA
-   DMA_S_StartTransfer,    //activate DMA for transfer next bad line read, ->DMA_S_TransferReady
-   DMA_S_StartActive,      //activate immediately, ->DMA_S_ActiveReady
-   DMA_S_StartFreeze,      //activate for freeze mode
-   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)
+   DMA_S_StartDisable,     //deactivate/end DMA                               -> DMA_S_DisableReady
+   DMA_S_Start_BA_Transfer,//activate DMA for transfer on next bad line read, -> DMA_S_TransferReady
+   DMA_S_StartActive,      //activate immediately,                            -> DMA_S_ActiveReady
+   DMA_S_Start_BA_Freeze,  //activate for freeze mode on next bad line read,  -> DMA_S_FreezeReady
+   DMA_S_Start_BA_Active,  //activate while BA is not asserted (bad line)     -> DMA_S_ActiveReady
 };
 
 volatile uint8_t DMA_State = DMA_S_DisableReady;
@@ -325,8 +329,8 @@ const uint8_t OutputPins[] = {
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 #define Def_nS_DMAAssert    200  //    delay from Phi2 falling to DMA assertion when activating
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
-#define Def_nS_DMASetupNTSC 440  //380 too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
-
+#define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
+                                 //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes

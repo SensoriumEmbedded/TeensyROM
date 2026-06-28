@@ -64,120 +64,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
 
    if (CurrentIOHandler == IOH_TR_BASIC) return; //special case, handler will take care of serial input
    
-   uint16_t inVal = CmdChannel->read();
-   switch (inVal)
+   uint8_t CharIn = CmdChannel->read();
+   switch (CharIn)
    {
-      case 0x64: //'d' command from app
-         if(!SerialAvailabeTimeout()) return;
-         inVal = (inVal<<8) | CmdChannel->read(); //READ NEXT BYTE
-         
-         //only commands available when busy:
-         if (inVal == ResetC64Token) //Reset C64
-         {
-            CmdChannel->println("Reset cmd received");  //UI looks for this string, do not change.
-            BtnPressed = true;
-            return;
-         }
-         else if (inVal == LaunchFileToken) //Launch File
-         {
-            LaunchFile();
-            return;
-         }
-         else if (inVal == C64PauseOnToken) //pause C64 via DMA, during next bad line
-         {
-            DMA_State = DMA_S_StartFreeze; 
-            isFrozen = true;  //led will flash on/off
-            SendU16(AckToken);
-            return;
-         }
-         else if (inVal == C64PauseOffToken) //un-pause C64 DMA
-         {
-            DMA_State = DMA_S_StartDisable;
-            isFrozen = false;
-            SetLEDOn;
-            SendU16(AckToken);
-            return;
-         }
-         else if (inVal == VersionInfoToken) //Version Info
-         {
-            MakeBuildInfo();
-            SendU16(AckToken);
-            CmdChannel->printf("\n%s\n%s\n", strVersionNumber, SerialStringBuf);
-            return;
-         }
-         else if (inVal == FWCheckToken) //Check firmware type
-         {
-            SendU16(FWFullToken);
-            return;
-         }
-         
-         
-         if (CurrentIOHandler != IOH_TeensyROM)
-         {
-            SendU16(FailToken);
-            CmdChannel->print("Busy!\n");
-            return;
-         }
-         //TeensyROM IO Handler is active...
-         
-         switch (inVal)
-         {
-            case PingToken:  //ping
-               CmdChannel->printf("%s ready!\n", strVersionNumber);
-               break;
-            case SendFileToken: //file x-fer pc->TR
-            case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
-               PostFileCommand();
-               break;
-            case CopyFileToken:
-               CopyFileCommand();
-               break;
-            case DeleteFileToken:
-               DeleteFileCommand();
-               break;
-            case GetFileToken:
-               GetFileCommand();
-               break;
-            case GetDirectoryToken:  // JSON directory listing (to be deprecated)
-            case GetDirNDJSONToken:  // NDJSON directory listing from TR
-               GetDirectoryCommand(inVal==GetDirNDJSONToken);
-               break;
-            case PauseSIDToken: //Pause SID
-               if(RemotePauseSID()) SendU16(AckToken);
-               else SendU16(FailToken);
-               break;
-            case SIDSpeedLinToken: //Set playback speed (Linear)
-            case SIDSpeedLogToken: //Set playback speed (Logrithmic)
-               if(RemoteSetSIDSpeed(inVal==SIDSpeedLogToken)) SendU16(AckToken);
-               else SendU16(FailToken);
-               break;
-            case SetSIDSongToken: //Set sub-tune
-               if(SetSIDSong()) SendU16(AckToken);
-               else SendU16(FailToken);
-               break;
-            case SIDVoiceMuteToken: //Set Individual Voice muting
-               if(RemoteSetSIDVoiceMute()) SendU16(AckToken);
-               else SendU16(FailToken);
-               break;
-            case SetColorToken: //Set a TR UI color value
-               if(SetColorRef()) SendU16(AckToken);
-               else SendU16(FailToken);
-               break;
-            case DebugToken: //'dg'Test/debug
-               //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
-               //PrintDebugLog();
-               //nfcInit();
-               //Printf_dbg("isFab2x: %d\n", isFab2x()); 
-               //USBHostSerial.print("USB Host Serial\n");
-               //Serial.print("Sent:USB Host Serial\n");
-               //EEPROM.write(eepAdDHCPEnabled, 0); //DHCP disabled
-               //EEPROM.put(eepAdMyIP, (uint32_t)IPAddress(192,168,1,222));
-               //CmdChannel->printf("Static IP updated\n"); 
-               break;
-            default:
-               CmdChannel->printf("Unk cmd: 0x%04x\n", inVal); 
-               break;
-         }
+      case 0x64: //'d' remote command identifier (first byte)
+         ProcessCommand();
          break;
       case 'e': //Reset EEPROM to defaults
          SetEEPDefaults();
@@ -187,24 +78,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          BusAnalysis();
          break;
          
-   
-      //case 'u':  //dump Super Snapshot v5 RAM
-      //   if (SSv5_RAM_Buf==NULL)
-      //   {
-      //      Serial.printf("No init!");
-      //   }
-      //   else 
-      //   {
-      //      SetDebugAssert;
-      //      for (uint32_t count=0; count<32*1024; count++)
-      //      {
-      //         if(count % 16 == 0) Serial.printf("\n %04x: ", count);
-      //         Serial.printf(" %02x", SSv5_RAM_Buf[count]);
-      //      }
-      //      SetDebugDeassert;
-      //   }
-      //   break;
-      
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
       //   {
@@ -216,25 +89,6 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       //         if (USBHostSerial.available()) Serial.print((char)USBHostSerial.read());
       //      }
       //   }
-      //   break;
-            
-      //case 'u':  //set up autolaunch
-      //   EEPROM.write(eepAdAutolaunchName, 0); //disable auto Launch
-      //   CmdChannel->printf("Autolaunch disabled\n");
-      //   
-      //   //EEPwriteStr(eepAdAutolaunchName, "USB:multimedia/totaleclipse-fth.prg");
-      //   //CmdChannel->printf("Autolaunch set\n");
-      //   
-      //   //RemoteLaunch(rmtUSBDrive, "multimedia/totaleclipse-fth.prg", false);
-      //   //RemoteLaunch(rmtSD, "games/minesweeper game.prg", false);
-      //   //RemoteLaunch(rmtTeensy, "Cynthcart 2.0.1      +Datel MIDI ", false);
-      //   break;
-     
-      //case 'u':  //Reboot to minimal build
-      //   //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
-      //   EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Briley Witch Chronicles 2 v1.0.2.crt");
-      //   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);         
-      //   REBOOT;
       //   break;
 
 // *** The rest of these cases are used for debug/testing only  
@@ -634,6 +488,113 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
    }
 }
 
+FLASHMEM void ProcessCommand()
+{
+   //0x64 command indicator received
+   if(!SerialAvailabeTimeout()) return;
+   uint16_t TokenVal = 0x6400 | CmdChannel->read(); //Read second byte
+   
+   //only these commands are available when busy:
+   switch (TokenVal)
+   {
+   #ifdef Fab04_FullDMACapable
+      case WriteC64MemToken: //Write to C64 mem via DMA
+         WriteC64MemCommand();
+         return;
+      case ReadC64MemToken: //Write to C64 mem via DMA
+         ReadC64MemCommand();
+         return;
+   #endif
+      case ResetC64Token:   //Reset C64
+         CmdChannel->println("Reset cmd received");  //UI looks for this string, do not change.
+         BtnPressed = true;
+         return;
+      case LaunchFileToken:  //Launch File
+         LaunchFile();
+         return;
+      case C64PauseOnToken: //pause C64 via DMA, during next bad line
+         DMA_State = DMA_S_Start_BA_Freeze; 
+         isFrozen = true;  //led will flash on/off
+         SendU16(AckToken);
+         return;
+      case C64PauseOffToken: //un-pause C64 DMA
+         DMA_State = DMA_S_StartDisable;
+         isFrozen = false;
+         SetLEDOn;
+         SendU16(AckToken);
+         return;
+      case VersionInfoToken: //Version Info
+         MakeBuildInfo();
+         SendU16(AckToken);
+         CmdChannel->printf("\n%s\n%s\n", strVersionNumber, SerialStringBuf);
+         return;
+      case FWCheckToken: //Check firmware type
+         SendU16(FWFullToken);
+         return;   
+   }
+
+   
+   if (CurrentIOHandler != IOH_TeensyROM)
+   {
+      SendU16(FailToken);
+      CmdChannel->print("Busy!\n");
+      return;
+   }
+   //TeensyROM IO Handler is active, additional commands available...
+   
+   switch (TokenVal)
+   {
+      case PingToken:  //ping
+         CmdChannel->printf("%s ready!\n", strVersionNumber);
+         break;
+      case SendFileToken: //file x-fer pc->TR
+      case PostFileToken:  // v2 file x-fer pc->TR.  For use with v2 UI.
+         PostFileCommand();
+         break;
+      case CopyFileToken:
+         CopyFileCommand();
+         break;
+      case DeleteFileToken:
+         DeleteFileCommand();
+         break;
+      case GetFileToken:
+         GetFileCommand();
+         break;
+      case GetDirectoryToken:  // JSON directory listing (to be deprecated)
+      case GetDirNDJSONToken:  // NDJSON directory listing from TR
+         GetDirectoryCommand(TokenVal==GetDirNDJSONToken);
+         break;
+      case PauseSIDToken: //Pause SID
+         if(RemotePauseSID()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case SIDSpeedLinToken: //Set playback speed (Linear)
+      case SIDSpeedLogToken: //Set playback speed (Logrithmic)
+         if(RemoteSetSIDSpeed(TokenVal==SIDSpeedLogToken)) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case SetSIDSongToken: //Set sub-tune
+         if(SetSIDSong()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case SIDVoiceMuteToken: //Set Individual Voice muting
+         if(RemoteSetSIDVoiceMute()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case SetColorToken: //Set a TR UI color value
+         if(SetColorRef()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case DebugToken: //'dg'Test/debug
+         //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
+         //Printf_dbg("isFab2x: %d\n", isFab2x()); 
+         break;
+      default:
+         CmdChannel->printf("Unk cmd: 0x%04x\n", TokenVal); 
+         break;
+   }
+}
+
 FLASHMEM void AddAndCheckSource(StructMenuItem SourceMenu, uint32_t *TotalSize, uint32_t *FileCount)
 {
    *FileCount += 1;
@@ -926,4 +887,103 @@ FLASHMEM void  getFreeITCM()
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
+
+#ifdef Fab04_FullDMACapable
+// Command: 
+// Write sequential C64 memory segment with supplied data
+// 
+// Workflow:
+// Receive <-- WriteC64MemToken (0x64FB)
+// Receive <-- C64 address (Hi,Low)
+// Receive <-- Data Length (Hi,Low)
+// Receive <-- Data Bytes (Data Length)
+// TR+ Performs DMA Write
+// Send --> AckToken 0x64CC on successful completion, 0x9b7f on Fail
+FLASHMEM void WriteC64MemCommand() 
+{
+   uint32_t DMAAddr, DMALength;
+   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+
+   if (!GetUInt(&DMAAddr, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving address!");
+       return;
+   }
+
+   if (!GetUInt(&DMALength, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving length!");
+       return;
+   }
+
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   {
+      if(!SerialAvailabeTimeout())
+      {
+         SendU16(FailToken);
+         CmdChannel->println("Error receiving data!");
+         return;
+      }
+      DMABuf[ByteNum] = CmdChannel->read();
+   }
+   
+   //uint32_t StartTime = micros();  
+   PerformDMA(false, DMAAddr, DMABuf, DMALength, false);
+   CloseDMA();
+   //StartTime = micros() - StartTime;  
+   SendU16(AckToken);
+   
+   //CmdChannel->printf
+   //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+   //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+}
+
+// Command: 
+// read sequential C64 memory segment and send to host
+// 
+// Workflow:
+// Receive <-- ReadC64MemToken (0x64FD)
+// Receive <-- C64 address (Hi,Low)
+// Receive <-- Data Length (Hi,Low)
+// TR+ Performs DMA Read
+// Send --> AckToken 0x64CC on successful Read, 0x9b7f on Fail
+// Send --> Data Bytes (Data Length)
+FLASHMEM void ReadC64MemCommand() 
+{
+   uint32_t DMAAddr, DMALength;
+   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+
+   if (!GetUInt(&DMAAddr, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving address!");
+       return;
+   }
+
+   if (!GetUInt(&DMALength, 2))
+   {
+       SendU16(FailToken);
+       CmdChannel->println("Error receiving length!");
+       return;
+   }
+   
+   //uint32_t StartTime = micros();  
+   PerformDMA(true, DMAAddr, DMABuf, DMALength, false);
+   CloseDMA();
+
+   //StartTime = micros() - StartTime;  
+   SendU16(AckToken);
+   
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   {
+      CmdChannel->write(DMABuf[ByteNum]);
+   }
+   
+   //CmdChannel->printf
+   //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
+   //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+}
+#endif
 
