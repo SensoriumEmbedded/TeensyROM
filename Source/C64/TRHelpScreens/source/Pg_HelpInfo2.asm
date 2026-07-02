@@ -32,14 +32,14 @@ MsgHelpMenu2:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Directory Alt File Select ", ChrReturn, ChrReturn
 
    !tx EscC,EscTimeColor, " Highlighted File Select Options:", ChrReturn
-   !tx                      EscC,EscOptionColor, " <Ret>",                                EscC,EscSourcesColor, "  Launch file/enter dir", ChrReturn
+   !tx                      EscC,EscOptionColor, " <Ret>",                                 EscC,EscSourcesColor, "  Launch file/enter dir", ChrReturn
    !tx                      EscC,EscOptionColor, " !\"#$%",                                EscC,EscSourcesColor, "  Set as Hot Key 1-5", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "A",                                      EscC,EscSourcesColor, "  Set as Auto-Launch", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrLeftArrow,    EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Highlighted File", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, ChrQuestionMark, EscC,EscNameColor, " *", EscC,EscSourcesColor, "Write NFC tag: Random in Dir", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "M",             EscC,EscNameColor, " *", EscC,EscSourcesColor, "Meatloaf: Mount/Launch Dxx", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "K",             EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as Kernal Replace File", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscOptionColor, "R",             EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as REU Pre-load/save File", ChrReturn
+   !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>A",                                  EscC,EscSourcesColor, "  Set as Auto-Launch", ChrReturn
+   !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>M",         EscC,EscNameColor, " *", EscC,EscSourcesColor, "Meatloaf: Mount/Launch Dxx", ChrReturn
+   !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>K",         EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as Kernal Replace File", ChrReturn
+   !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>R",         EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as REU Pre-load/save File", ChrReturn
    !tx ChrReturn
    !tx EscC,EscNameColor, "   *:", EscC,EscSourcesColor, " External HW Required", ChrReturn
    !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Only", ChrReturn
