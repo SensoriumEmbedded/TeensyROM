@@ -302,7 +302,7 @@ Preset_Blues_TblEscC:  ;matches enum ColorRefOffsets, NumColorRefs long
    !byte PokeBlack       ;EscBackgndColor     = 0 ; Screen Background
    !byte PokeBlack       ;EscBorderColor      = 1 ; Screen Border
    !byte PokeBlue        ;EscTRBannerColor    = 2 ; Top of screen banner color
-   !byte PokeCyan        ;EscTimeColor        = 3 ; Time Display & Waiting msg
+   !byte PokePurple      ;EscTimeColor        = 3 ; Time Display & Waiting msg
    !byte PokeBlue        ;EscOptionColor      = 4 ; Input key option indication
    !byte PokeGreen       ;EscSourcesColor     = 5 ; General text/descriptions
    !byte PokeLtBlue      ;EscNameColor        = 6 ; FIle names and information
