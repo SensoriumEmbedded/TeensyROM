@@ -37,7 +37,7 @@ StartupOptionsMenu:
    
    ;print Autolaunch filename
    lda #rCtlMakeAutoLStrWAIT
-   ldx #17 ;row
+   ldx #18 ;row
    ldy #2 ;col
    jsr PrintFileName
  
@@ -54,15 +54,7 @@ ShowStartupOptionsSettings:
    eor #rpudSIDPauseMask  
    jsr PrintOnOff
 
-   ldx #9 ;row Synch Time
-   ldy #StartupValColumn ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults+IO1Port
-   and #rpudNetTimeMask  
-   jsr PrintOnOff
-
-   ldx #10 ;row TCP Listen 
+   ldx #9 ;row TCP Listen 
    ldy #StartupValColumn ;col
    clc
    jsr SetCursor
@@ -78,7 +70,15 @@ ShowStartupOptionsSettings:
    ;ldy #>MsgPort2112
    ;jsr PrintString 
 
-   ldx #15 ;Auto-Launch Enabled 
+   ldx #12 ;row Synch Time
+   ldy #StartupValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults+IO1Port
+   and #rpudNetTimeMask  
+   jsr PrintOnOff
+
+   ldx #16 ;Auto-Launch Enabled 
    ldy #StartupValColumn ;col
    clc
    jsr SetCursor
@@ -100,15 +100,7 @@ WaitStartupOptionsMenuKey:
    jsr WaitForTRWaitMsg
    jmp ShowStartupOptionsSettings  
 
-+  cmp #'b'  ;Power-up Synch Time toggle
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudNetTimeMask  
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowStartupOptionsSettings  
-
-+  cmp #'c'  ;Toggle TCP Listener
++  cmp #'b'  ;Toggle TCP Listener
    bne +
    lda rwRegPwrUpDefaults2+IO1Port
    eor #rpud2TRTCPListen  
@@ -116,6 +108,14 @@ WaitStartupOptionsMenuKey:
    jsr WaitForTRWaitMsg
    jmp ShowStartupOptionsSettings  
    
++  cmp #'c'  ;Power-up Synch RTC toggle
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudNetTimeMask  
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowStartupOptionsSettings  
+
 +  cmp #'d'  ;Toggle Auto-Launch Enable
    bne +
    lda rwRegPwrUpDefaults2+IO1Port
@@ -134,10 +134,10 @@ MsgStartupOptionsMenu:
    !tx EscC,EscTimeColor,  " On Main Menu Startup:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Play selected SID:", ChrReturn
    !tx EscC,EscSourcesColor,  "  SID file: (SID info pg to sel)", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Enable TCP Listener:", ChrReturn
+   !tx EscC,EscArgSpaces+5, "(port 2112 of current IP)", ChrReturn, ChrReturn
 ;   !tx EscC,EscSourcesColor,  "     IP/Port:", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscArgSpaces+5, "(port 2112 of current IP)", ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Synch RTC via net:", ChrReturn, ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  " On TeensyROM Boot/Power-up:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Auto-Launch Enable:", ChrReturn
    !tx EscC,EscSourcesColor,  "  Auto-Launch file: ('A' to sel)", ChrReturn, ChrReturn, ChrReturn
