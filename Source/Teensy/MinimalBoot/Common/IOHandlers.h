@@ -81,6 +81,8 @@ struct stcIOHandlers
       #include "IO_Handlers/IOH_TeensyROM.c" 
    #ifdef Fab04_Freezers
       #include "IO_Handlers/IOH_SuperSnapshotV5.c"
+//      #include "IO_Handlers/IOH_RetroReplay.c"
+      #include "IO_Handlers/IOH_ActionReplay.c"
    #endif
       #include "IO_Handlers/IOH_TR_BASIC.c" 
       #include "IO_Handlers/IOH_Swiftlink.c"
@@ -124,6 +126,8 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
       &IOHndlr_TeensyROM,          //IOH_TeensyROM, 
    #ifdef Fab04_Freezers
       &IOHndlr_SuperSnapshotV5,    //IOH_SuperSnapshotV5
+//      &IOHndlr_RetroReplay,        //IOH_RetroReplay
+      &IOHndlr_ActionReplay,       //IOH_ActionReplay
    #endif
       &IOHndlr_ASID,               //IOH_ASID,
       &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
