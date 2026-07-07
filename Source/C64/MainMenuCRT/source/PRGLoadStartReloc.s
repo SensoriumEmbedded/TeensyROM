@@ -82,11 +82,14 @@ MsgOverflow:
    dey
    bne -
    
+smcSkipPrintRunning:
+   lda #0    ;set to non-zero to skip printing MsgRunning
+   bne +
    lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
    ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
    jsr $ab1e   ;PrintString
    ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
-   jsr $a659	;reset execution to start, clear variables and flush stack
++  jsr $a659	;reset execution to start, clear variables and flush stack
    jsr $a533	;rebuild BASIC line chaining
    ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
    
