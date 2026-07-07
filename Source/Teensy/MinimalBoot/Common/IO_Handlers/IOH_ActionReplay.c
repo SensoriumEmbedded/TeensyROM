@@ -38,21 +38,10 @@ stcIOHandlers IOHndlr_ActionReplay =
   CycleHndlr_ActionReplay, //called at the end of EVERY c64 cycle
 };
 
-//extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
-//extern uint16_t LOROM_Mask;
-//extern uint8_t* TgetQueue;
 extern volatile uint32_t CycleCountdown;
 extern uint8_t *lcl_LOROM_Image;
-//uint8_t BankNum;
-//
+
 #define AR_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
-//#define CycCntFreeze 255   //trigger to freeze next read, must be higher than CycCntNumWr
-//#define CycCntNumWr  3     //number of writes in a row to wait for 6510 stack pushes
-//
-////ref: https://vice-emu.sourceforge.io/vice_17.html#SEC466
-////     https://rr.pokefinder.org/wiki/Super_Snapshot
-////     https://rr.pokefinder.org/wiki/File:Super_Snapshot_v5_Schematics.gif
-////     https://rr.pokefinder.org/rrwiki/images/8/80/Super_Snapshot_binaries_rr.c64.org_2021-03.rar
 
 #define AR_CR_RBANK15   0b10000000   // ROM/RAM bank bit 15 (unused)
 #define AR_CR_RELEASE   0b01000000   // Release freeze
@@ -68,7 +57,6 @@ extern uint8_t *lcl_LOROM_Image;
 
 void ProcessARControlReg(uint8_t ControlReg)
 {
-   
    if (ControlReg & AR_CR_RELEASE) // Release freeze
    {
       SetNMIDeassert;
@@ -80,8 +68,7 @@ void ProcessARControlReg(uint8_t ControlReg)
    lcl_LOROM_Image = CrtChips[BankNum].ChipROM;  //default to ROM, may update below.
    HIROM_Image = lcl_LOROM_Image; //ROM only, same as lower ROM image
 
-   if (ControlReg & AR_CR_RAMEN) lcl_LOROM_Image = AR_RAM_Buf; //Set lcl_LOROM_Image to enable RAM
-   //lcl_LOROM_Image = AR_RAM_Buf + (BankNum & 3) * 0x2000; //Set lcl_LOROM_Image to enable RAM, Set RAM bank
+   if (ControlReg & AR_CR_RAMEN) lcl_LOROM_Image = AR_RAM_Buf; //Set lcl_LOROM_Image to RAM
    //else disable RAM, use lcl_LOROM_Image already set
 
    if (ControlReg & AR_CR_EXROM) SetExROMDeassert;  //rtBin8kHi or None
@@ -98,17 +85,9 @@ void ProcessARControlReg(uint8_t ControlReg)
    }   
 }
 
-//void SpecialBtn_ActionReplay(bool Up_nDn)
-//{
-//   if(Up_nDn) 
-//   {  //on button release
-//     CycleCountdown = CycCntFreeze; //Trigger NMI next read
-//   }
-//}
-
 //__________________________________________________________________________________
 
-void InitHndlr_ActionReplay()
+FLASHMEM void InitHndlr_ActionReplay()
 {
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
    
@@ -147,18 +126,14 @@ void IO2Hndlr_ActionReplay(uint8_t Address, bool R_Wn)
    if (lcl_LOROM_Image == NULL) return;  //skip if disabled
 
    if (R_Wn) //High (IO2 Read)
-   {  //The last page of the currently selected lower ROM bank is mirrored in the I/O-1 range when reading
-      //DataPortWriteWaitLog(lcl_LOROM_Image[Address]); //may be pointing at RAM, use BankNum set previously
-      //DataPortWriteWaitLog(CrtChips[BankNum].ChipROM[0x1e00+Address]); 
-      
+   {  //The last page of the currently selected RAM or ROM bank is mirrored in the I/O2 range
       DataPortWriteWaitLog(lcl_LOROM_Image[0x1f00+Address]); //Read RAM or ROM
    }
    else  // IO2 write
    {  
-      if (lcl_LOROM_Image != CrtChips[BankNum].ChipROM) //allow RAM writes only
-      //if (ControlReg & AR_CR_RAMEN) //allow RAM writes only
+      if (lcl_LOROM_Image == AR_RAM_Buf) //!= CrtChips[BankNum].ChipROM) //allow RAM writes only
          lcl_LOROM_Image[0x1f00+Address] = DataPortWaitRead();
-      else Printf_dbg("Attempted write to ROM via IO2\n");
+      //else Printf_dbg("Attempted write to ROM via IO2\n");
    }
 }
 
@@ -172,10 +147,8 @@ void ROMLHndlr_ActionReplay(uint32_t Address, bool R_Wn)
       }
       else
       {
-         if (lcl_LOROM_Image != CrtChips[BankNum].ChipROM) //allow RAM writes only
-         //if (ControlReg & AR_CR_RAMEN) //allow RAM writes only
+         if (lcl_LOROM_Image == AR_RAM_Buf ) //!= CrtChips[BankNum].ChipROM) //allow RAM writes only
             lcl_LOROM_Image[Address & 0x1fff] = DataPortWaitRead();
-         else Printf_dbg("Attempted write to ROMvia ROML\n");
       }
    }
 }
@@ -188,13 +161,13 @@ void CycleHndlr_ActionReplay(bool R_Wn)
       {
          if (R_Wn) 
          {
-            //assert NMI during read cycle
+            //assert IRQ/NMI during read cycle
             SetNMIAssert;
             SetIRQAssert;
             SetLEDOn;
             //CycleCountdown = CycCntNumWr;  //will happen below
          }
-         else return;
+         else return; //preserve CycCntFreeze state, wait for read
       }
       
       if (R_Wn) CycleCountdown = CycCntNumWr; //require 3 writes *in a row*

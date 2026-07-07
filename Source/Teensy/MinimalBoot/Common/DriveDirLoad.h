@@ -20,7 +20,7 @@
 //Known/public Cartridge HW types:
 
 #define Cart_Generic                  0  //Supported
-#define Cart_ActionReplay             1
+#define Cart_ActionReplay             1  //Supported on v0.4
 #define Cart_KCSPowerCartridge        2
 #define Cart_FinalCartridgeIII        3
 #define Cart_SimonsBASIC              4
@@ -55,7 +55,7 @@
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
 #define Cart_ActionReplay3           35
-#define Cart_RetroReplay             36
+#define Cart_RetroReplay             36  //WIP on v0.4
 #define Cart_MMC64                   37
 #define Cart_MMCReplay               38
 #define Cart_IDE64                   39
@@ -119,7 +119,7 @@
 #define Cart_TFE                   -116
 #define Cart_Turbo232              -117  //Supported
 #define Cart_SwiftLink             -118  //Supported
-#define Cart_ACIA                  -119  //Supported?, not associated
+#define Cart_ACIA                  -119  //Supported, not associated
 #define Cart_Plus60K               -120
 #define Cart_Plus256K              -121
 #define Cart_C64_256K              -122
@@ -146,6 +146,8 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
 #ifdef Fab04_Freezers
    (uint16_t)Cart_SuperSnapshotV5, IOH_SuperSnapshotV5,
+//   (uint16_t)Cart_RetroReplay,     IOH_RetroReplay,
+   (uint16_t)Cart_ActionReplay,    IOH_ActionReplay,
 #endif
 #endif
 
