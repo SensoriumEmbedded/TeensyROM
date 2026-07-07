@@ -437,6 +437,7 @@ CtlWriteWaitDotsAnyKeyListMenuHighlightCur:
 ExitToBASIC:
    ldx #7  ;dir Utilities
    lda #2  ;prog Exit to BASIC
+   sta smcSkipPrintRunning+1 ; set to non-zero to skip printing MsgRunning
    jmp DirectRunFromTeensyMenu
 
 +  cmp #ChrF3  ;SD Card Menu
