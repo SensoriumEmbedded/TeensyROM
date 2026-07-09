@@ -334,7 +334,7 @@ void loop()
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
 }
 
-void SetUpMainMenuROM()
+FLASHMEM void SetUpMainMenuROM()
 {
    fBusSnoop = NULL;
 #ifdef Fab04_GlobalKernalReplace
@@ -361,7 +361,27 @@ void SetUpMainMenuROM()
    free(LSFileName); LSFileName=NULL;
    IOHandlerInit(IOH_TeensyROM);  
    SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
-   fSpecialBtnChange = &SpecialBtn_Pause;    //Pointer to function called when Special Button Changes
+   
+   switch (IO1[rwRegPwrUpDefaults2] & rpud2AltBtnActionMask)
+   {
+      case rpud2AltBtnAutoLaunch:
+         fSpecialBtnChange = &SpecialBtn_AutoLaunch;
+         break;
+      case rpud2AltBtnPause:
+         fSpecialBtnChange = &SpecialBtn_Pause;
+         break;
+      case rpud2AltBtnTRMenu:
+         fSpecialBtnChange = &SpecialBtn_TRMenu;
+         break;
+      case rpud2AltBtnRebootTR:
+         fSpecialBtnChange = &SpecialBtn_RebootTR;
+         break;
+      //case rpud2AltBtnNone:
+      default:
+         fSpecialBtnChange = &SpecialBtn_None;
+         break;
+   }
+   
    isFrozen = false;
    doReset = true;
 }
@@ -580,7 +600,17 @@ bool CheckLaunchSDAuto()
    return false;
 }
 
-void SpecialBtn_Pause(bool Up_nDn)
+
+FLASHMEM void SpecialBtn_AutoLaunch(bool Up_nDn)
+{
+   if (!Up_nDn) //button pressed down
+   {
+      EEPRemoteLaunch(eepAdAutolaunchName);
+      Printf_dbg("SpecialBtn_AutoLaunch\n");
+   }
+}
+
+FLASHMEM void SpecialBtn_Pause(bool Up_nDn)
 {
    if (!Up_nDn) //button pressed down
    {
@@ -594,7 +624,34 @@ void SpecialBtn_Pause(bool Up_nDn)
          DMA_State = DMA_S_StartDisable;
          SetLEDOn;
       }
-      Printf_dbg("SpecButtonPress");
+      Printf_dbg("SpecialBtn_Pause\n");
+   }
+}
+
+FLASHMEM void SpecialBtn_TRMenu(bool Up_nDn)
+{
+   if (!Up_nDn) //button pressed down
+   {
+      BtnPressed = true;
+      Printf_dbg("SpecialBtn_TRMenu\n");
+   }
+}
+
+FLASHMEM void SpecialBtn_RebootTR(bool Up_nDn)
+{
+   if (!Up_nDn) //button pressed down
+   {
+      REBOOT;
+      Printf_dbg("SpecialBtn_RebootTR\n");
+   }
+}
+
+FLASHMEM void SpecialBtn_None(bool Up_nDn)
+{
+   if (!Up_nDn) //button pressed down
+   {
+
+      Printf_dbg("SpecialBtn_None\n");
    }
 }
 

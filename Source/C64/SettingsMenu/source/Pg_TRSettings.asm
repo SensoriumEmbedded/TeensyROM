@@ -18,7 +18,7 @@
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-SetValColumn = 30   ;Column for TR setting values
+SetValColumn = 29   ;Column for TR setting values
 
 TRSettings:
    jsr CommonInit ;print banner and common keys/page#
@@ -50,8 +50,33 @@ ShowTRSettings:
    jsr SetCursor
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
-  
-   ldx #16  ;row Joy 2 Speed
+
+   ldx #15 ;row Host Serial Control
+   ldy #SetValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2HostSerCtlMask  ;already shifted to be 2x the value 0-2
+   tax
+   lda TblMsgHostSerCtl,x
+   ldy TblMsgHostSerCtl+1,x
+   jsr PrintString
+
+   ldx #16 ; Alt button action
+   ldy #SetValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2AltBtnActionMask  
+   lsr ; knowledge of value location in bitfield
+   lsr
+   ;lsr only two (3r+1l) to end up at 2x the value
+   tax
+   lda TblMsgAltBtnAction,x
+   ldy TblMsgAltBtnAction+1,x
+   jsr PrintString
+   
+   ldx #17  ;row Joy 2 Speed
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -65,7 +90,7 @@ ShowTRSettings:
    lda #' '
    jsr SendChar
 
-   ldx #17 ;row Show Extension
+   ldx #18 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -73,17 +98,8 @@ ShowTRSettings:
    and #rpudShowExtension  
    jsr PrintOnOff
    
-   ldx #15 ;row Host Serial Control
-   ldy #SetValColumn ;col
-   clc
-   jsr SetCursor
-   lda rwRegPwrUpDefaults2+IO1Port
-   and #rpud2HostSerCtlMask  ;already shifted to be 2x the value 0-2
-   tax
-   lda TblMsgHostSerCtl,x
-   ldy TblMsgHostSerCtl+1,x
-   jsr PrintString
-
+   ;also see: CursorToTest row
+   
 
 WaitTRSettingsKey:
    jsr DisplayTime   
@@ -105,32 +121,6 @@ WaitTRSettingsKey:
    ldx rwRegNextIOHndlr+IO1Port
    dex
    stx rwRegNextIOHndlr+IO1Port ;TR code will roll-over underflow
-   jsr WaitForTRWaitMsg
-   jmp ShowTRSettings  
-
-+  cmp #'c'  ;Joystick 2 Speed Increment
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   clc
-   adc #$10
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowTRSettings  
-
-+  cmp #'C'  ;Joystick 2 Speed Decrement
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   sec       ;set to subtract without carry
-   sbc #$10   
-   sta rwRegPwrUpDefaults+IO1Port
-   jsr WaitForTRWaitMsg
-   jmp ShowTRSettings  
-
-+  cmp #'d'  ;Show File Extensions
-   bne +
-   lda rwRegPwrUpDefaults+IO1Port
-   eor #rpudShowExtension
-   sta rwRegPwrUpDefaults+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
@@ -162,6 +152,63 @@ smcNewscd
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
    
++  cmp #'c'  ;Choose Alt button action
+   bne +
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2AltBtnActionMask
+   lsr ; knowledge of value location in bitfield
+   lsr   
+   lsr   
+   tax
+   inx 
+   txa
+   cmp #NumAltButtons
+   bne ++
+   lda #0
+++ asl
+   asl
+   asl
+   sta smcNewAltBtnActionVal+1
+   ;update the reg val and write it back
+   lda rwRegPwrUpDefaults2+IO1Port
+   and #rpud2AltBtnActionMaskInv  
+smcNewAltBtnActionVal
+   ora #0
+   sta rwRegPwrUpDefaults2+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowTRSettings  
+
++  cmp #'d'  ;Joystick 2 Speed Increment
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   clc
+   adc #$10
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowTRSettings  
+
++  cmp #'D'  ;Joystick 2 Speed Decrement
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   sec       ;set to subtract without carry
+   sbc #$10   
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowTRSettings  
+
++  cmp #'e'  ;Show File Extensions
+   bne +
+   lda rwRegPwrUpDefaults+IO1Port
+   eor #rpudShowExtension
+   sta rwRegPwrUpDefaults+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowTRSettings  
+
++  cmp #'f'  ;Self Test IO
+   bne +
+   jsr TestIO
+   jmp WaitTRSettingsKey     
+   
 ;+  cmp #'f'  ;Reboot TeensyROM
 ;   bne +
 ;   lda #139  ; 155 default minus bit 4
@@ -170,11 +217,6 @@ smcNewscd
 ;   sta wRegControl+IO1Port
 ;   ;no need to wait, TR/C64 will be rebooting...
 ;   jmp WaitTRSettingsKey  
-   
-+  cmp #'e'  ;Self Test IO
-   bne +
-   jsr TestIO
-   jmp WaitTRSettingsKey     
    
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitTRSettingsKey   
@@ -217,7 +259,7 @@ smcTestIOCnt
    rts
 
 CursorToTest:
-   ldx #18 ;row test status
+   ldx #19 ;row test status
    ldy #22 ;col
    clc
    jsr SetCursor   
@@ -241,10 +283,11 @@ MsgTRSettings:
    ;                           1234567890123456789012345678901234567890
 
    !tx EscC,EscTimeColor,  " User Interface/other:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "USB Hosted Serial Dev:", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c/C", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "      Joystick2 Speed:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " Show File Extensions:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "b",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " USB Host Serial Dev:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  TR+ Alt Btn Action:", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Show File Extensions:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
    ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 
@@ -258,3 +301,20 @@ MsgHostSerCtlNFC:
    !tx "NFC   ", 0
 MsgHostSerCtlController:
    !tx "TRCont", 0
+
+TblMsgAltBtnAction: ;must match rpud2AltBtnActionMask order and NumAltButtons qty
+   !word MsgAltBtnActionAutoLaunch
+   !word MsgAltBtnActionPause
+   !word MsgAltBtnActionTRMenu
+   !word MsgAltBtnActionRebootTR
+   !word MsgAltBtnActionNone
+MsgAltBtnActionAutoLaunch:
+   !tx "AutoLaunch", 0
+MsgAltBtnActionPause: 
+   !tx "Pause/Unp ", 0
+MsgAltBtnActionTRMenu:
+   !tx "TR Menu   ", 0
+MsgAltBtnActionRebootTR:
+   !tx "Reboot TR ", 0
+MsgAltBtnActionNone:
+   !tx "None      ", 0

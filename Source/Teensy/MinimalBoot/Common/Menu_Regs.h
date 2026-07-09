@@ -171,17 +171,31 @@ enum RegPowerUpDefaultMasks
    rpudJoySpeedMask    = 0b11110000, // rwRegPwrUpDefaults bits 4-7=Joystick2 speed setting
 };
 
-enum RegPowerUpDefaultMasks2  //SerCtl bits match TblMsgHostSerCtl
+enum RegPowerUpDefaultMasks2  //SerCtl bits match TblMsgHostSerCtl and TblAltButtons
 {  //eepAdPwrUpDefaults2, rwRegPwrUpDefaults2
-   //bit 0 unused
+
+                                        // bit 0 unused, for future hosted serial devices(?)
    rpud2HostSerCtlMask    = 0b00000110, // mask of all host serial control devices
    rpud2HostSerCtlMaskInv = 0b11111001, // Inverted mask of all host serial control devices
-   rpud2NFCEnabled        = 0b00000010, // rwRegPwrUpDefaults2 bit 1, 1=NFC Enabled
-   rpud2TRContEnabled     = 0b00000100, // rwRegPwrUpDefaults2 bit 2, 1=TRCont Enabled
-   rpud2TRAutoLaunch      = 0b01000000, // rwRegPwrUpDefaults2 bit 6, 1=Auto-Launch Enabled
-   rpud2TRTCPListen       = 0b10000000, // rwRegPwrUpDefaults2 bit 7, 1=TCP Listen Enabled
-   //bits 4:3 for future hosted serial devices(?)
-   //bit 5 unused
+   //match TblMsgHostSerCtl
+   rpud2NFCEnabled        = 0b00000010, // bit 1, 1=NFC Enabled
+   rpud2TRContEnabled     = 0b00000100, // bit 2, 1=TRCont Enabled
+   
+   rpud2AltBtnActionMask  = 0b00111000, // mask of all Alternate Button Action options
+  rpud2AltBtnActionMaskInv= 0b11000111, // Inverted mask of all Alternate Button Action options
+   //match TblMsgAltBtnAction
+   rpud2AltBtnAutoLaunch  = 0b00000000, // bits 5:3, 000 = AutoLaunch (default = 0)
+   rpud2AltBtnPause       = 0b00001000, // bits 5:3, 001 = Pause C64
+   rpud2AltBtnTRMenu      = 0b00010000, // bits 5:3, 010 = TRMenu    
+   rpud2AltBtnRebootTR    = 0b00011000, // bits 5:3, 011 = Reboot    
+   rpud2AltBtnNone        = 0b00100000, // bits 5:3, 100 = None      
+   NumAltButtons          =          5, // Update to indicate number of alt button options
+   rpud2AltBtnUnused1     = 0b00101000, // bits 5:3, 101 = Unused1   
+   rpud2AltBtnUnused2     = 0b00110000, // bits 5:3, 110 = Unused2   
+   rpud2AltBtnUnused3     = 0b00111000, // bits 5:3, 111 = Unused3   
+   
+   rpud2TRAutoLaunch      = 0b01000000, // bit 6, 1=Auto-Launch Enabled
+   rpud2TRTCPListen       = 0b10000000, // bit 7, 1=TCP Listen Enabled
 };
 
 enum RegMIDISettingsMasks
