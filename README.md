@@ -82,6 +82,7 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
     * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
+    * **[Serial/USB Remote Command Protocol](docs/ControlComms.md)**
   * **SW Release notes/developnment**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Win App Release History](bin/WinApp/WinApp_Release_History.md)**
