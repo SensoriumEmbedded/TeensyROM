@@ -1,11 +1,10 @@
 cls
-:: $2400 main menu code
-:: $8000 compile for Lower ROM copy code (w/ main menu code and SID BINs embedded for copy)
+:: $6000 main menu code
+:: $8000 compile for Lower ROM, copy code
 :: No crunching
 :: Compiled/Saved as BIN w/ no header ("plain" format) for ROM image
 :: bin2header to convert/copy .bin file to C header file for ROM emulation
-::        copy it yo main proj ROM dir
-:: cartconv to convert/copy .bin file to .crt file for PC emulation
+::
 
 @echo off
 
@@ -73,7 +72,9 @@ copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
 ::pause
 @exit /b
 
-::only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
+
+::: cartconv to convert/copy .bin file to .crt file for PC emulation
+:only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
 ::echo ***CartConvert...
 ::%cartconvPath%\%cartconv% %cartconvArgs%
 ::echo ***CartConvert Read Info...

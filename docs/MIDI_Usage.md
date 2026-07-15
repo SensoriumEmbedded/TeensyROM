@@ -18,6 +18,9 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
       * Sequential, Datel/Siel, Passport/Sentech, Namesoft
     * All use $DExx address space and IRQ for interrupts
   * Select/load a MIDI capable application on your C64 to receive the MIDI data from your controller
+    * For multi-SID systems (or C64u/U64) Cynthcart can utilize 2 SIDs (6 independant voices).  
+      * To do this, set the second SID address to $DF00 and choose the 6CHAN sounds mode or press "="
+      * See full Cynthcart documentation [here](https://www.qotile.net/files/cynthcart2.0.pdf).
   * Play around and have fun!
   * MIDI out (C64 to MIDI Device) is also implemented so that keyboards, etc with their own sound capability can be "played" by the C64
   * Some C64 sequencer apps require the 6840 timer chip in Passport/Namesoft, which is not currently emulated.
@@ -31,8 +34,8 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
     * Connect USB cable from a MIDI Host/computer to the USB Type B Micro Device port on the Teensy module.
     * Power up C64/128 to TeensyROM main menu.
     * Select Cynthcart+Datel MIDI or Station64+Passport MIDI to play the MIDI data
-      * Select a polyphonic voice profile to get as many independent notes as possible (3).
-    * The buit-in MIDI2SID (F8 from the main menu) can be used instead of these
+      * Select a polyphonic voice profile to get as many independent notes as possible.
+     * The buit-in MIDI2SID can be used as well
       * Can be helpful in seeing/hearing independent notes and seeing any voice overflows
       * No other MIDI special HW emulation required
   * **PC Instructions using Cakewalk by BandLab.**

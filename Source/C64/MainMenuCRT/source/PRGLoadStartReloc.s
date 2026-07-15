@@ -94,10 +94,10 @@ smcSkipPrintRunning:
    ;Also see https://codebase64.org/doku.php?id=base:runbasicprg
    
    ;determine if JiffyDOS is installed
-      ;.e477  20 20 20 20 20 4a 49 46  ;      jif
-      ;.e47f  46 59 44 4f 53 20 56 36  ; fydos v6
-   lda $e47c
-   cmp #$4a   ;j of "jiffydos"
+   ; First address of JiffyDOS vector table 
+   ; located at $f7f5 is $f533 
+   lda $f7f5
+   cmp #$33   ;low-byte of vector address
    bne +
    ;JiffyDOS Specific:
    ;jsr $e453	; init JiffyDOS command vectors
