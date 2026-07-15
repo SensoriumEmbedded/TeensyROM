@@ -52,6 +52,7 @@
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
 #include "TRMenuFiles/ROMs/SettingsMenu.prg.h"
 #include "TRMenuFiles/ROMs/TRHelpScreens.prg.h"
+#include "TRMenuFiles/ROMs/TRExtPortCheck.prg.h"
 #ifdef Fab04_REU
    #include "TRMenuFiles/ROMs/reutest.prg.h"
    #include "TRMenuFiles/ROMs/reu_checker_v1.0.prg.h"
@@ -287,6 +288,7 @@ StructMenuItem dirTeensyROMSpecific[] =
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC TR Command IO access only"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
+     rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM External Ports Test"    , (uint8_t*)TRExtPortCheck_prg         , sizeof(TRExtPortCheck_prg) ,
 //could repeat these here...
    //rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
    //rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,

@@ -251,8 +251,9 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsMakeFilenameStr    = 0x1b,
    rsRTCAdjust          = 0x1c,
    rsForceEthInit       = 0x1d,
+   rsExtPortCheck       = 0x1e,
    
-   rsNumStatusTypes     = 0x1e,
+   rsNumStatusTypes     = 0x1f,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -331,7 +332,8 @@ enum RegCtlCommands
       rCtlRTCAdj_Sec_Dn_WAIT   = 52, 
    rCtlRTCAdjWAIT_Last      = 52, // LAST of a linear series that uses RTCAdjust
    rCtlForceEthInitWAIT     = 53,
-         
+   rCtlExtPortCheckWAIT     = 54,
+   
 };                               
                                  
 enum regItemTypes //synch with TblItemType

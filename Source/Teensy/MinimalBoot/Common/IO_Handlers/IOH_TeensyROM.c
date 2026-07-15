@@ -205,6 +205,7 @@ extern char* LatestSIDLoaded;
 extern char StrMachineInfo[];
 extern uint8_t nfcState;
 extern void SendMsgPrintfln(const char *Fmt, ...);
+extern void SendMsgPrintf(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
@@ -217,6 +218,7 @@ extern void MountDxxFile();
 extern void EEPRemoteLaunch(uint16_t eepAdNameToLaunch);
 extern volatile uint8_t BtnPressed;
 extern void EEPreadStr(uint16_t addr, char* buf);
+extern Bounce SpecialBtnBounce;
 
 #define DecToBCD(d) ((int((d)/10)<<4) | ((d)%10))
 
@@ -1018,6 +1020,111 @@ FLASHMEM void LoadMainSIDforXfer()
    ParseSIDHeader(LatestSIDName);
 }
 
+FLASHMEM void ExtPortCheck()
+{
+   //SendMsgPrintfln("\r\rExternal Port check started");
+   IO1[rwRegScratch] = 0; //default fail
+   
+//Ethernet Init:
+   if (!EthernetInit(SendStrPrintfln)) 
+   {
+      SendMsgPrintfln("Could not init Ethernet");
+      return;
+   }
+
+//SD/SD Card:
+   if (!SDFullInit()) 
+   {
+      SendMsgPrintfln("Could not init SD");
+      return;
+   }
+   File dir = SD.open("/");
+   const char *filename;
+   File entry = dir.openNextFile();
+   if (!entry) 
+   {
+      SendMsgPrintfln("Couldn't open SD file");
+      return;
+   }
+   filename = entry.name();
+   entry.close();
+   if (filename[0] == 0) 
+   {
+      SendMsgPrintfln("No SD filename");
+      return;
+   }
+   SendMsgPrintfln("\r1st SD file: %s", filename);
+   
+//USB Host/thumb drive:
+   if (!USBFileSystemWait()) 
+   {
+      SendMsgPrintfln("Could not init USB");
+      return;
+   }
+   dir = firstPartition.open("/");
+   entry = dir.openNextFile();
+   if (!entry) 
+   {
+      SendMsgPrintfln("Couldn't open USB file");
+      return;
+   }
+   filename = entry.name();
+   entry.close();
+   if (filename[0] == 0) 
+   {
+      SendMsgPrintfln("No USB filename");
+      return;
+   }
+   SendMsgPrintfln("1st USB file: %s", filename);
+
+//Menu button:
+   SendMsgPrintfln("\rPress and release the TR Menu Button");
+   SendMsgPrintfln("  Waiting for press..");
+   while(ReadButton);
+   SendMsgPrintf("detected");
+   SendMsgPrintfln("  Waiting for release..");
+   while(!ReadButton);
+   SendMsgPrintf("detected");
+   BtnPressed = false;
+ 
+//Alt Button: (TR+ Only)
+   #ifdef Fab04_SpecialButton
+
+   SendMsgPrintfln("\rPress and release the Alt Button");
+   SendMsgPrintfln("  Waiting for press..");
+   while (1)
+   {
+      if (SpecialBtnBounce.update())
+      {  //Special button Change (rise or fall)
+         if (!SpecialBtnBounce.read()) break;
+      }      
+   }
+   SendMsgPrintf("detected");
+   SendMsgPrintfln("  Waiting for release..");
+   while (1)
+   {
+      if (SpecialBtnBounce.update())
+      {  //Special button Change (rise or fall)
+         if (SpecialBtnBounce.read()) break;
+      }      
+   }
+   SendMsgPrintf("detected");
+
+   #endif
+  
+//USB Device
+   C64TODfromRTC();
+   char TimeStr[100];
+   sprintf(TimeStr, "Hello from TR at: %02x:%02x:%02x %sm\n", (IO1[rRegLastHourBCD] & 0x7f) , IO1[rRegLastMinBCD], IO1[rRegLastSecBCD], (IO1[rRegLastHourBCD] & 0x80) ? "p" : "a");        
+   Serial.println();
+   Serial.println(TimeStr);
+   SendMsgPrintfln("\rSent to USB Serial:\r   %s", TimeStr);
+   
+   IO1[rwRegScratch] = 1; //passed
+   //SendMsgPrintfln("External Port check finished");
+   BtnPressed = false;  //in case of re-trigger/debounce
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu 
@@ -1050,6 +1157,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MakeFilenameStr,     // rsMakeFilenameStr
    &RTCAdjust,           // rsRTCAdjust
    &ForceEthInit,        // rsForceEthInit
+   &ExtPortCheck,        // rsExtPortCheck
 };
 
 
@@ -1519,6 +1627,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNetListenInitWAIT:
                   IO1[rwRegStatus] = rsNetListenInit; //work this in the main code
+                  break;
+               case rCtlExtPortCheckWAIT:
+                  IO1[rwRegStatus] = rsExtPortCheck; //work this in the main code
                   break;
                case rCtlForceEthInitWAIT:
                   IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
