@@ -10,14 +10,17 @@ cls
 
 set CartFilename=TeensyROMC64
 set MainFilename=MainMenu
-set toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
+
+call ../SetToolPaths.bat
+
+:: set toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
 
 setlocal EnableDelayedExpansion
 SET clean=del
 SET cleanArgs=/F /Q 
 SET buildPath=build
 SET sourcePath=source
-SET compilerPath=%toolPath%\C64-devkit\compiler\win32
+:: SET compilerPath=%toolPath%\C64-devkit\compiler\win32
 SET compiler=acme.exe
 
 SET CartBuild=%CartFilename%.bin

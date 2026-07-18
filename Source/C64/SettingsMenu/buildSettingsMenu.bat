@@ -3,7 +3,10 @@ cls
 @echo off
 
 set MainFilename=SettingsMenu
-set toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
+
+call ../SetToolPaths.bat
+
+:: set toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
 :: set toolPath="C:\Users\trav\AppData\Roaming"
 
 setlocal EnableDelayedExpansion
@@ -11,7 +14,7 @@ SET clean=del
 SET cleanArgs=/F /Q 
 SET buildPath=build
 SET sourcePath=source
-SET compilerPath=%toolPath%\C64-devkit\compiler\win32
+:: SET compilerPath=%toolPath%\C64-devkit\compiler\win32
 :: SET compilerPath=%toolPath%\acme0.97win\acme
 SET compiler=acme.exe
 
@@ -23,10 +26,10 @@ SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
 :: Python script updated to allow type modifier (-t "PROGMEM ") addition
 :: set bin2headerPy="d:/MyData/Geek Stuff/Projects/Commodore 64/Software/PC Utils-SW/bin2header/bin2header/src/bin2header.py"
 set bin2headerPy="bin2header.py"
-set PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
+:: set PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
 ::set PythonExe="py"
 
-SET emulatorPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
+:: SET emulatorPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
 SET emulator=x64sc.exe
 SET emulatorArgs=-autostart
 

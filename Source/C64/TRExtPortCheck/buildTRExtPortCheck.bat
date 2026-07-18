@@ -4,11 +4,13 @@ cls
 
 set MainFilename=TRExtPortCheck
 
+call ../SetToolPaths.bat
+
 ::old laptop:
-SET toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
-SET compilerPath=%toolPath%\C64-devkit\compiler\win32
-SET PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
-SET emulatorPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
+::SET toolPath="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW"
+::SET compilerPath=%toolPath%\C64-devkit\compiler\win32
+::SET PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
+::SET emulatorPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
 
 ::new laptop:
 ::SET toolPath="C:\Users\trav\AppData\Roaming"
