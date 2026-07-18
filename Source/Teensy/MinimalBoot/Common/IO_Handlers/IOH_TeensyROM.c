@@ -1055,18 +1055,37 @@ FLASHMEM void ExpPortDMA()
    if (!TestDMAPage(0x3f00, 0xaa)) return;
    if (!TestDMAPage(0x3f00, 0x00)) return;
    if (!TestDMAPage(0x3f00, 0xff)) return;
- 
+
    SendMsgPrintfln("IRQ Test");
-   IO1[wRegIRQDMATest] = 0;
+   IO1[wRegIRQNMITest] = 0;
    uint32_t StartMillis = millis();
    SetIRQAssert;
-   while (IO1[wRegIRQDMATest] != 1)
+   while (IO1[wRegIRQNMITest] != 1)
       if (millis() - StartMillis > 250) //Wait for IRQ detection w/timeout
       {
+         SetIRQDeassert;
          SendMsgPrintfln(" IRQ not detected");
          return;
       }
+   SetIRQDeassert;
    SendMsgPrintf(" OK");
+ 
+   SendMsgPrintfln("NMI Test");
+   IO1[wRegIRQNMITest] = 0;
+   StartMillis = millis();
+   SetNMIAssert;
+   while (IO1[wRegIRQNMITest] != 2)
+      if (millis() - StartMillis > 250) //Wait for NMI detection w/timeout
+      {
+         SetNMIDeassert;
+         SendMsgPrintfln(" NMI not detected");
+         return;
+      }
+   SetNMIDeassert;
+   SendMsgPrintf(" OK");
+ 
+   //Set up ROMs for HIROM/LOROM/GAME/EXROM test...
+ 
  
  
    IO1[rwRegScratch] = 1; //passed
@@ -1439,14 +1458,10 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rwRegSIDCurSpeedHi:
          case rwRegSIDCurSpeedLo:
          case rwRegScratch:
+         case wRegIRQNMITest:
             IO1[Address]=Data;
             break;    
             
-         case wRegIRQDMATest:
-            IO1[Address]=Data;
-            SetIRQDeassert;
-            SetDMADeassert;
-            break;
          case wRegVid_TOD_Clks:
             IO1[Address]=Data;
             nS_DMASetup  = ((Data & 1) ? Def_nS_DMASetupNTSC : Def_nS_DMASetupPAL);

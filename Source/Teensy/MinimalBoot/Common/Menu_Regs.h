@@ -71,7 +71,7 @@ enum IO1_Registers  //offset from 0xDE00
    rwRegColorRefStart  = 42 , // Color ref transfer eeprom<->C64, WAIT on Write
                               //offsets defined in enum ColorRefOffsets
    //NextReg = rwRegColorRefStart+NumColorRefs,
-   wRegIRQDMATest      = 50 , // Turns Off IRQ/DMA and logs receipt
+   wRegIRQNMITest      = 50 , // Turns Off IRQ/DMA and logs receipt
    
   
    // These are used for the MIDI2SID app, keep in synch or make separate handler

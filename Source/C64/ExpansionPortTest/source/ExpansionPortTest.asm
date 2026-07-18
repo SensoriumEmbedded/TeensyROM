@@ -7,6 +7,8 @@
    VICIRQ      = $d019         ; VIC-II interrupt register
    CIA1ICR     = $dc0d         ; CIA #1 interrupt control/status
    KIRQ_EXIT   = $ea81         ; KERNAL: pla/tay/pla/tax/pla/rti
+   NMINV       = $0318         ; KERNAL NMI RAM vector (default $FE47)
+   CIA2ICR     = $dd0d         ; CIA #2 interrupt control/status
 
    ;!set DbgOffline = 1   ;if defined, skips all waits/dependancies on TR HW
 
@@ -59,6 +61,15 @@ SysAddress:
    sta CINV
    lda #>IRQwedge
    sta CINV+1
+   ;install NMI Wedge for NMI test:
+   lda NMINV       ; preserve current vector for chaining
+   sta smcChainNMI+1     ; (self-modifying JMP)
+   lda NMINV+1
+   sta smcChainNMI+2
+   lda #<NMIwedge
+   sta NMINV
+   lda #>NMIwedge
+   sta NMINV+1
    cli
    
 StartFromBegining:
@@ -119,6 +130,54 @@ Failed:
 -  jmp -
 
 
+
+NMIwedge:
+   pha             ; KERNAL hasn't saved anything —
+   txa             ; save A/X/Y ourselves
+   pha
+   tya
+   pha
+
+   ; CIA #2?  Bit 7 of $DD0D is set if any enabled CIA #2
+   ; interrupt fired.  READING CLEARS ALL FLAGS and drops
+   ; the CIA's /NMI assertion, so stash the value, if needed.
+   lda CIA2ICR
+   ;sta nmiflags
+   bmi cia2_source
+
+   ; Not CIA #2: the line was pulled by RESTORE or by an
+   ; external device — indistinguishable by elimination.
+external_or_restore:
+   lda #2 ;2==NMI 
+   sta wRegIRQNMITest+IO1Port
+
+   ; Fall-through default: treat as RESTORE.  The original
+   ; handler pushes A/X/Y itself, so restore ours first to
+   ; keep the stack balanced.
+   pla
+   tay
+   pla
+   tax
+   pla
+smcChainNMI:
+   jmp $fe47       ; operand rewritten by installer with
+                   ; whatever NMINV held before us
+ 
+; ------------------- internal source: CIA #2 --------------------
+cia2_source:
+   ; We already consumed/acknowledged $DD0D (value is in
+   ; nmiflags), so the stock handler's RS-232 servicing
+   ; can't run correctly — we just exit.  If you use
+   ; KERNAL RS-232, handle nmiflags here instead.
+;exit:
+   pla
+   tay
+   pla
+   tax
+   pla
+   rti
+            
+
 IRQwedge:
    bit VICIRQ
    bmi IRQinternal    ; VIC caused it -> normal chain
@@ -127,12 +186,10 @@ IRQwedge:
    ;sta ciaflags ;Need to save it for use later?
    bmi IRQinternal    ; CIA #1 caused it -> normal chain
 
-   ; 3) Neither internal source claims the interrupt:
+   ; Neither internal source claims the interrupt:
    ;    the /IRQ line was pulled by an external device.
-external:
    lda #1 ;1==IRQ 
-   sta wRegIRQDMATest+IO1Port
-
+   sta wRegIRQNMITest+IO1Port
    jmp KIRQ_EXIT   ; restore A/X/Y and RTI, skipping the
                    ; KERNAL keyboard/jiffy housekeeping
  
