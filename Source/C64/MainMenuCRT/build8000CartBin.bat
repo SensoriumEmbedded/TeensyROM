@@ -1,4 +1,4 @@
-cls
+:: cls
 :: $6000 main menu code
 :: $8000 compile for Lower ROM, copy code
 :: No crunching
@@ -38,7 +38,7 @@ SET MainCompilerArgs=-r %buildPath%\MainBuildReport --vicelabels %buildPath%\Mai
 
 SET bin2headerPath=%toolPath%\bin2header
 SET bin2header=bin2header.exe
-SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
+:: SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
 
 ::only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
 ::SET cartconvPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin

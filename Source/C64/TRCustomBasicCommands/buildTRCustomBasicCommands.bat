@@ -1,4 +1,4 @@
-cls
+:: cls
 :: Compiles TR CustomBasicCommands via KickAssembler
 :: https://github.com/barryw/CustomBasicCommands
 :: https://theweb.dk/KickAssembler/KickAssembler.pdf
@@ -13,10 +13,11 @@ call ../SetToolPaths.bat
 
 ::set bin2headerExe="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\bin2header\bin2header.exe"
 :: Python script updated to allow type modifier (-t "PROGMEM ") addition
-set bin2headerPy="d:/MyData/Geek Stuff/Projects/Commodore 64/Software/PC Utils-SW/bin2header/bin2header/src/bin2header.py"
+:: set bin2headerPy="d:/MyData/Geek Stuff/Projects/Commodore 64/Software/PC Utils-SW/bin2header/bin2header/src/bin2header.py"
 :: set PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
 
-set TRROMPath=..\..\Teensy\TRMenuFiles\ROMs
+::SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
+::        set TRROMPath=..\..\Teensy\TRMenuFiles\ROMs
 set MainAsm="source\main.asm"
 set MainPrg=TRCBC.prg
 
@@ -35,7 +36,7 @@ if NOT %ERRORLEVEL% == 0 exit /b 1
 %PythonExe% %bin2headerPy% -t "PROGMEM " build\%MainPrg%
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
-copy build\%MainPrg%.h %TRROMPath%\%MainPrg%.h
+copy build\%MainPrg%.h %bin2headerROMPath%\%MainPrg%.h
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
