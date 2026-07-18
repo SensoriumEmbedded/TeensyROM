@@ -1036,9 +1036,10 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++) 
       if (PageBuf[ByteNum] != BytePat)
       {
-         SendMsgPrintfln("Miscompare at location $%04x: Exp $%02x, Read: $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
+         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
          return false;
       }
+   SendMsgPrintf(" OK");
    return true;
 }
 
@@ -1046,7 +1047,6 @@ FLASHMEM void ExpPortDMA()
 {
    IO1[rwRegScratch] = 0; //default fail
    SendMsgPrintfln("DMA Read/Write Test");
-   
    if (!TestDMAPage(0xc000, 0x55)) return;
    if (!TestDMAPage(0xc000, 0xaa)) return;
    if (!TestDMAPage(0xc000, 0x00)) return;
@@ -1055,6 +1055,19 @@ FLASHMEM void ExpPortDMA()
    if (!TestDMAPage(0x3f00, 0xaa)) return;
    if (!TestDMAPage(0x3f00, 0x00)) return;
    if (!TestDMAPage(0x3f00, 0xff)) return;
+ 
+   SendMsgPrintfln("IRQ Test");
+   IO1[wRegIRQDMATest] = 0;
+   uint32_t StartMillis = millis();
+   SetIRQAssert;
+   while (IO1[wRegIRQDMATest] != 1)
+      if (millis() - StartMillis > 250) //Wait for IRQ detection w/timeout
+      {
+         SendMsgPrintfln(" IRQ not detected");
+         return;
+      }
+   SendMsgPrintf(" OK");
+ 
  
    IO1[rwRegScratch] = 1; //passed
 }
@@ -1429,6 +1442,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             IO1[Address]=Data;
             break;    
             
+         case wRegIRQDMATest:
+            IO1[Address]=Data;
+            SetIRQDeassert;
+            SetDMADeassert;
+            break;
          case wRegVid_TOD_Clks:
             IO1[Address]=Data;
             nS_DMASetup  = ((Data & 1) ? Def_nS_DMASetupNTSC : Def_nS_DMASetupPAL);

@@ -3,6 +3,11 @@
    !src "../MainMenuCRT/source/c64defs.i"  ;C64 colors, mem locations, etc.
    !src "../MainMenuCRT/source/Menu_Regs.i"  ;IO space registers matching Teensy code
 
+   CINV        = $0314         ; KERNAL IRQ RAM vector
+   VICIRQ      = $d019         ; VIC-II interrupt register
+   CIA1ICR     = $dc0d         ; CIA #1 interrupt control/status
+   KIRQ_EXIT   = $ea81         ; KERNAL: pla/tay/pla/tax/pla/rti
+
    ;!set DbgOffline = 1   ;if defined, skips all waits/dependancies on TR HW
 
 
@@ -44,6 +49,18 @@ SysAddress:
    jsr SetC64TODfromRTC   ;do this even if not part of test
    jsr DisplayTime ;do it once here
    
+   ;install IRQ Wedge for IRQ test:
+   sei
+   lda CINV          ; preserve the current vector so we
+   sta smcChainIRQ+1     ; chain to it (self-modifying JMP)
+   lda CINV+1
+   sta smcChainIRQ+2
+   lda #<IRQwedge
+   sta CINV
+   lda #>IRQwedge
+   sta CINV+1
+   cli
+   
 StartFromBegining:
    jsr PrintBanner
    
@@ -63,9 +80,8 @@ StartTest:
    
    ;
    
-   
 
-   
+
    lda #<MsgPassed
    ldy #>MsgPassed
    jsr PrintString
@@ -101,6 +117,31 @@ Failed:
    sta wRegControl+IO1Port
    ;C64 will be reset...
 -  jmp -
+
+
+IRQwedge:
+   bit VICIRQ
+   bmi IRQinternal    ; VIC caused it -> normal chain
+
+   lda CIA1ICR
+   ;sta ciaflags ;Need to save it for use later?
+   bmi IRQinternal    ; CIA #1 caused it -> normal chain
+
+   ; 3) Neither internal source claims the interrupt:
+   ;    the /IRQ line was pulled by an external device.
+external:
+   lda #1 ;1==IRQ 
+   sta wRegIRQDMATest+IO1Port
+
+   jmp KIRQ_EXIT   ; restore A/X/Y and RTI, skipping the
+                   ; KERNAL keyboard/jiffy housekeeping
+ 
+; ------------------- internal source: chain ---------------------
+IRQinternal:
+smcChainIRQ:
+      jmp $ea31       ; operand rewritten by installer with
+                            ; whatever CINV held before
+ 
 
 MsgExpansionPortTest:
    !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " C64/TeensyROM Expansion Port Test ", ChrReturn
