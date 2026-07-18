@@ -32,18 +32,21 @@ SET emulatorArgs=-autostart
 
 @echo on
 echo ***Start...
+md %buildPath%
 %clean% %cleanArgs% %buildPath%\*.*
 
 echo ***Compile Main...
 %compilerPath%\%compiler% %MainCompilerArgs% %buildPath%\%MainBuild% %sourcePath%\%MainFilename%.asm
-if NOT %ERRORLEVEL% == 0 exit /b
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 echo ***bin2header
 ::%bin2headerPath%\%bin2header% %buildPath%\%MainBuild%
 :: Add "PROGMEM " type modifier to force to flash memory
 %PythonExe% %bin2headerPy% -t "PROGMEM " %buildPath%\%MainBuild%
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 copy %buildPath%\%MainBuild%.h %bin2headerROMPath%\%MainBuild%.h
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
 @echo Completed: %date% %time%
@@ -55,7 +58,7 @@ copy %buildPath%\%MainBuild%.h %bin2headerROMPath%\%MainBuild%.h
 ::"C:\Program Files\Notepad++\notepad++.exe"
 
 ::pause
-@exit /b
+@exit /b 0
 
 ::only some features can be emulated without the associated TeensyROM hardware, not very useful
 ::

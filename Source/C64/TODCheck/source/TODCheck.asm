@@ -19,7 +19,7 @@ BasicEnd
 SysAddress
    ;jmp Init
    
-   !src "source\C64Defs.asm"
+   !src "source/C64Defs.asm"
 
 Init:
    ;screen setup:     

@@ -14,7 +14,7 @@ set emulatorExe="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW
 set bin2headerPy="d:/MyData/Geek Stuff/Projects/Commodore 64/Software/PC Utils-SW/bin2header/bin2header/src/bin2header.py"
 set PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
 
-set TRROMPath=..\..\Teensy\ROMs
+set TRROMPath=..\..\Teensy\TRMenuFiles\ROMs
 set MainAsm="source\main.asm"
 set MainPrg=TRCBC.prg
 
@@ -22,16 +22,19 @@ set MainPrg=TRCBC.prg
 
 
 @echo ***Start...
+md %buildPath%
 @echo ***Compile Code...
 %JavaExe% -jar %KickAssemblerJar% -showmem %MainAsm% -o build\%MainPrg% -odir ..\build
-if NOT %ERRORLEVEL% == 0 exit /b
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo ***bin2header
 ::%bin2headerExe% build\%MainPrg%
 :: Add "PROGMEM " type modifier to force to flash memory
 %PythonExe% %bin2headerPy% -t "PROGMEM " build\%MainPrg%
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 copy build\%MainPrg%.h %TRROMPath%\%MainPrg%.h
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
 @echo Completed: %date% %time%
@@ -42,7 +45,7 @@ copy build\%MainPrg%.h %TRROMPath%\%MainPrg%.h
 ::cmd.exe /c start /b notepad++.exe %TRROMPath%\%MainPrg%.h
 
 ::pause
-@exit /b
+@exit /b 0
 
 echo ***Emulate...
 start "" %emulatorExe% -autostart build\%MainPrg%

@@ -2,8 +2,10 @@
 
 ; ********************************   Symbols   ********************************   
    !convtab pet   ;key in and text out conv to PetSCII throughout
-   !src "..\MainMenuCRT\source\c64defs.i"  ;C64 colors, mem locations, etc.
-   !src "..\MainMenuCRT\source\CommonDefs.i" ;Common between crt loader and main code in RAM
+   !src "../MainMenuCRT/source/c64defs.i"  ;C64 colors, mem locations, etc.
+   ;!src "../MainMenuCRT/source/CommonDefs.i" ;Common between crt loader and main code in RAM
+   ;!src "../MainMenuCRT/source/Menu_Regs.i"  ;IO space registers matching Teensy code
+   IRQDefault          = $ea31
 
 ;enum ASIDregsMatching  //synch with IOH_ASID.c
    ;// registers:
@@ -606,7 +608,7 @@ ASIDIntFinished:
    jmp $ea81  ;jump to the *end* of the interrupt (pull YXA from the stack and RTI)
 
 
-   !src "source\ASIDsupport.asm"
+   !src "source/ASIDsupport.asm"
 
 
    !align $1f, 0 , 0  ;32 byte align to index within page.
@@ -614,7 +616,7 @@ memNoSID: ;set "none" sid writes to here
    !fill $20, $00	; reserve 32 bytes for "none" sid
 
    *=Charset
-   !binary "bin\ASID-charset.bin"
+   !binary "bin/ASID-charset.bin"
 
 EOF:
    !byte 0

@@ -19,7 +19,7 @@ rem --format plain leaves off the 2 byte address from the start of the file.  "c
 
 ::SET bin2headerPath=%toolPath%\bin2header
 ::SET bin2header=bin2header.exe
-SET bin2headerROMPath=..\..\Teensy\ROMs
+SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
 :: Python script updated to allow type modifier (-t "PROGMEM ") addition
 set bin2headerPy="d:/MyData/Geek Stuff/Projects/Commodore 64/Software/PC Utils-SW/bin2header/bin2header/src/bin2header.py"
 set PythonExe="C:/Users/trav/AppData/Local/Microsoft/WindowsApps/python3.11.exe"
@@ -32,18 +32,21 @@ SET emulatorArgs=-autostart
 
 @echo on
 echo ***Start...
+md %buildPath%
 %clean% %cleanArgs% %buildPath%\*.*
 
 echo ***Compile Main...
 %compilerPath%\%compiler% %MainCompilerArgs% %buildPath%\%MainBuild% %sourcePath%\%MainFilename%.asm
-if NOT %ERRORLEVEL% == 0 exit /b
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 echo ***bin2header
 ::%bin2headerPath%\%bin2header% %buildPath%\%MainBuild%
 :: Add "PROGMEM " type modifier to force to flash memory
 %PythonExe% %bin2headerPy% -t "PROGMEM " %buildPath%\%MainBuild%
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 copy %buildPath%\%MainBuild%.h %bin2headerROMPath%\%MainBuild%.h
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
 @echo Completed: %date% %time%
@@ -55,7 +58,7 @@ copy %buildPath%\%MainBuild%.h %bin2headerROMPath%\%MainBuild%.h
 ::"C:\Program Files\Notepad++\notepad++.exe"
 
 ::pause
-@exit /b
+@exit /b 0
 
 ::only some features can be emulated without the associated TeensyROM hardware, not very useful
 ::

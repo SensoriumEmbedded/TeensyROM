@@ -51,30 +51,33 @@ SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
 
 @echo on
 echo ***Start...
+md %buildPath%
 %clean% %cleanArgs% %buildPath%\*.*
 
 echo ***Compile Main...
 %compilerPath%\%compiler% %MainCompilerArgs% %buildPath%\%MainBuild% %sourcePath%\%MainFilename%.asm
-if NOT %ERRORLEVEL% == 0 exit /b
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 echo ***Compile Cart...
 %compilerPath%\%compiler% %CartCompilerArgs% %buildPath%\%CartBuild% %sourcePath%\%CartFilename%.asm
-if NOT %ERRORLEVEL% == 0 exit /b
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 echo ***bin2header
 ::Note: This header does *not* get PROGMEM type mod, needs to sit in RAM
 %bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h
+if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
 @echo Completed: %date% %time%
 ::pause
-@exit /b
+@exit /b 0
 
 
 ::: cartconv to convert/copy .bin file to .crt file for PC emulation
-:only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
+::only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
 ::echo ***CartConvert...
 ::%cartconvPath%\%cartconv% %cartconvArgs%
 ::echo ***CartConvert Read Info...

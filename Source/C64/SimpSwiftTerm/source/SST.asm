@@ -19,8 +19,8 @@ BasicEnd
 SysAddress
    jmp Init
    
-   !src "source\C64Defs.asm"
-   !src "source\SSTSupport.asm"
+   !src "source/C64Defs.asm"
+   !src "source/SSTSupport.asm"
 
 Init:
    ;screen setup:     
