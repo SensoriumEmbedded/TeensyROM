@@ -241,8 +241,9 @@
    rsRTCAdjust          = 0x1c  ;
    rsForceEthInit       = 0x1d  ;
    rsExtPortCheck       = 0x1e  ;
+   rsExpPortDMA         = 0x1f  ;
 
-   rsNumStatusTypes     = 0x1f  ;
+   rsNumStatusTypes     = 0x20  ;
 
    rsReady              = 0x5a  ;//FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5  ;//FW->64 (Rd) message for the C64, set to continue when finished
@@ -318,6 +319,7 @@
    
    rCtlForceEthInitWAIT     = 53
    rCtlExtPortCheckWAIT     = 54
+   rCtlExpPortDMAWAIT       = 55
 
 ;enum regItemTypes //synch with TblItemType
    rtNone        = 0

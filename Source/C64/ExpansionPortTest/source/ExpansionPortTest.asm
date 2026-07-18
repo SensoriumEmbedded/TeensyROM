@@ -40,43 +40,67 @@ SysAddress:
    and #rpudClock12_24hr
    sta smc24HourClockDisp+1  ;local copy of 12/24 hr
    
+   ;jsr SetRTCfromEthernet  ; establishes net connection early
+   jsr SetC64TODfromRTC   ;do this even if not part of test
+   jsr DisplayTime ;do it once here
+   
+StartFromBegining:
    jsr PrintBanner
+   
+; -----------  Start of test  -----------
+StartTest:
    lda #<MsgExpansionPortTest
    ldy #>MsgExpansionPortTest
    jsr PrintString 
    
-; -----------  Start of test  -----------
+   ;Do DMA test
+   lda #rCtlExpPortDMAWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots   
 
-  
-   jsr DisplayTime ;do it once here
-   ;jsr SetRTCfromEthernet  ; establishes net connection early
-   jsr SetC64TODfromRTC   ;do this even if not part of test
+   lda rwRegScratch+IO1Port  ; 0=fail, 1=pass
+   beq Failed   ;halt on error
+   
+   ;
+   
+   
 
-   ;lda #rCtlExtPortCheckWAIT
-   ;sta wRegControl+IO1Port
-   ;jsr WaitForTRDots   
+   
+   lda #<MsgPassed
+   ldy #>MsgPassed
+   jsr PrintString
 
-;   lda rwRegScratch+IO1Port  ; 0=fail, 1=pass
-;   beq +
-;   lda #<MsgPassed
-;   ldy #>MsgPassed
-;   jmp ++
-;+  lda #<MsgFailed
-;   ldy #>MsgFailed
-;++ jsr PrintString 
+smcLoopOnPass  
+   lda #00
+   bne StartTest ;debug/looping  
+   jmp +
+   
+Failed:
+   lda #<MsgFailed
+   ldy #>MsgFailed
+   jsr PrintString 
+   
++  lda #<MsgAnyKey
+   ldy #>MsgAnyKey
+   jsr PrintString 
    
 -  jsr GetIn    
    bne -    ;clear the kbd queue in case of accidental press
-   lda #<MsgAnyKey  ;wait for any key to continue 
-   ldy #>MsgAnyKey
-   jsr PrintString 
 -  jsr DisplayTime  
    jsr GetIn   
    beq -
-
-   lda #rCtlReturnToMainMenu 
+   
+   cmp #'L' ;Cap-L after first pass to Loop forever
+   bne +
+   lda #01
+   sta smcLoopOnPass+1
+   jmp StartFromBegining
+   
+   ;any other key, return to main menu
++  lda #rCtlReturnToMainMenu 
    sta wRegControl+IO1Port
    ;C64 will be reset...
+-  jmp -
 
 MsgExpansionPortTest:
    !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " C64/TeensyROM Expansion Port Test ", ChrReturn
@@ -84,7 +108,7 @@ MsgExpansionPortTest:
    !tx 0 
    
 MsgPassed:
-   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " External Port Check Passed.", ChrReturn, ChrReturn
+   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed.", ChrReturn, ChrReturn
 ;   !tx EscC,EscOptionColor, "  Verify the following:", ChrReturn
 ;   !tx "   * Ethernet Port Green LED is on", ChrReturn
 ;   !tx "   * TR main LED (by Menu button) is on", ChrReturn
@@ -94,7 +118,7 @@ MsgPassed:
    !tx 0 
 
 MsgFailed:
-   !tx ChrReturn, EscC,EscOptionColor, ChrRvsOn, " External Port Check Failed!", ChrReturn
+   !tx ChrReturn, EscC,EscOptionColor, ChrRvsOn, " Expansion Port Test Failed!", ChrReturn
    !tx 0 
 
 MsgAnyKey:
@@ -104,5 +128,6 @@ MsgAnyKey:
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report
+   ;Don't exceed $3fxx as DMA test writes over that page (and C0xx too)
 
 

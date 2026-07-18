@@ -1020,6 +1020,45 @@ FLASHMEM void LoadMainSIDforXfer()
    ParseSIDHeader(LatestSIDName);
 }
 
+#define TestPageSize   256
+
+FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
+{
+   uint8_t PageBuf[TestPageSize];
+   
+   SendMsgPrintfln("Testing $%04x w/ $%02x", Address, BytePat);
+   //PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
+   memset(PageBuf, BytePat, TestPageSize);
+   PerformDMA(false, Address, PageBuf, TestPageSize, false); //Write the buffer
+   CloseDMA();
+   PerformDMA(true, Address, PageBuf, TestPageSize, false);  //Read back
+   CloseDMA();
+   for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++) 
+      if (PageBuf[ByteNum] != BytePat)
+      {
+         SendMsgPrintfln("Miscompare at location $%04x: Exp $%02x, Read: $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
+         return false;
+      }
+   return true;
+}
+
+FLASHMEM void ExpPortDMA()
+{
+   IO1[rwRegScratch] = 0; //default fail
+   SendMsgPrintfln("DMA Read/Write Test");
+   
+   if (!TestDMAPage(0xc000, 0x55)) return;
+   if (!TestDMAPage(0xc000, 0xaa)) return;
+   if (!TestDMAPage(0xc000, 0x00)) return;
+   if (!TestDMAPage(0xc000, 0xff)) return;
+   if (!TestDMAPage(0x3f00, 0x55)) return;
+   if (!TestDMAPage(0x3f00, 0xaa)) return;
+   if (!TestDMAPage(0x3f00, 0x00)) return;
+   if (!TestDMAPage(0x3f00, 0xff)) return;
+ 
+   IO1[rwRegScratch] = 1; //passed
+}
+
 FLASHMEM void ExtPortCheck()
 {
    //SendMsgPrintfln("\r\rExternal Port check started");
@@ -1158,6 +1197,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &RTCAdjust,           // rsRTCAdjust
    &ForceEthInit,        // rsForceEthInit
    &ExtPortCheck,        // rsExtPortCheck
+   &ExpPortDMA,          // rsExpPortDMA
 };
 
 
@@ -1630,6 +1670,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlExtPortCheckWAIT:
                   IO1[rwRegStatus] = rsExtPortCheck; //work this in the main code
+                  break;
+               case rCtlExpPortDMAWAIT:
+                  IO1[rwRegStatus] = rsExpPortDMA; //work this in the main code
                   break;
                case rCtlForceEthInitWAIT:
                   IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
