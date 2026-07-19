@@ -36,6 +36,7 @@ The protocol is also currently implemented in several control projects, for refe
 |**[c64cast](https://github.com/kfox/c64cast/)**  |[Kelly Fox](https://github.com/kfox) |Python project to stream video/audio to the C64 via the TR+|
 |**[TRWinApp](https://github.com/SensoriumEmbedded/TRWinApp)** |[SensoriumEmbedded](https://github.com/SensoriumEmbedded)|Very basic command implementation, used for test/development|
 |**[TeensyROMControl](https://github.com/SensoriumEmbedded/TeensyROMControl)** |[SensoriumEmbedded](https://github.com/SensoriumEmbedded)|Library for TeensyROM control from a microcontroller|
+|**[trterm](https://github.com/idolpx/trterm)** |[idolpx](https://github.com/idolpx)|TeensyROM Terminal Client in Python|
 
 ---
 
