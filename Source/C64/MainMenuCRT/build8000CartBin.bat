@@ -36,8 +36,8 @@ SET MainCompilerArgs=-r %buildPath%\MainBuildReport --vicelabels %buildPath%\Mai
 :: SET cruncherArgs=-x$2400 -c64 -g55 -fshort
 :: rem SET cruncherArgs=-x$0801 -c64 -g55 -fshort
 
-SET bin2headerPath=%toolPath%\bin2header
-SET bin2header=bin2header.exe
+:: SET bin2headerPath=%toolPath%\bin2header
+:: SET bin2header=bin2header.exe
 :: SET bin2headerROMPath=..\..\Teensy\TRMenuFiles\ROMs
 
 ::only some features can be emulated from a crt file without the associated TeensyROM hardware, not very useful
@@ -67,7 +67,8 @@ if NOT %ERRORLEVEL% == 0 exit /b 1
 
 echo ***bin2header
 ::Note: This header does *not* get PROGMEM type mod, needs to sit in RAM
-%bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
+%PythonExe% %bin2headerPy% %buildPath%\%CartBuild%
+::%bin2headerPath%\%bin2header% %buildPath%\%CartBuild%
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
 copy %buildPath%\%CartBuild%.h %bin2headerROMPath%\%CartFilename%.h

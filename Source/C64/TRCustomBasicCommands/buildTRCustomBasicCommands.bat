@@ -7,9 +7,14 @@
 
 call ../SetToolPaths.bat
 
+SET buildPath=build
+
 :: set JavaExe="C:\Program Files (x86)\Java\jre1.8.0_421\bin\java.exe"
 :: set KickAssemblerJar="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\KickAssembler\KickAss.jar"
 :: set emulatorExe="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\Emulation\GTK3VICE-3.6.1-win64\bin\x64sc.exe"
+:: SET emulatorPath=%toolPath%\Emulation\GTK3VICE-3.6.1-win64\bin
+SET emulator=x64sc.exe
+SET emulatorArgs=-autostart
 
 ::set bin2headerExe="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\bin2header\bin2header.exe"
 :: Python script updated to allow type modifier (-t "PROGMEM ") addition
@@ -27,16 +32,16 @@ set MainPrg=TRCBC.prg
 @echo ***Start...
 md %buildPath%
 @echo ***Compile Code...
-%JavaExe% -jar %KickAssemblerJar% -showmem %MainAsm% -o build\%MainPrg% -odir ..\build
+%JavaExe% -jar %KickAssemblerJar% -showmem %MainAsm% -o %buildPath%\%MainPrg% -odir ..\%buildPath%
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo ***bin2header
 ::%bin2headerExe% build\%MainPrg%
 :: Add "PROGMEM " type modifier to force to flash memory
-%PythonExe% %bin2headerPy% -t "PROGMEM " build\%MainPrg%
+%PythonExe% %bin2headerPy% -t "PROGMEM " %buildPath%\%MainPrg%
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
-copy build\%MainPrg%.h %bin2headerROMPath%\%MainPrg%.h
+copy %buildPath%\%MainPrg%.h %bin2headerROMPath%\%MainPrg%.h
 if NOT %ERRORLEVEL% == 0 exit /b 1
 
 @echo .
@@ -51,7 +56,8 @@ if NOT %ERRORLEVEL% == 0 exit /b 1
 @exit /b 0
 
 echo ***Emulate...
-start "" %emulatorExe% -autostart build\%MainPrg%
+start "" %emulatorPath%\%emulator% %emulatorArgs% %buildPath%\%MainBuild%
+::start "" %emulatorExe% -autostart build\%MainPrg%
 
 ::pause
 @exit /b
