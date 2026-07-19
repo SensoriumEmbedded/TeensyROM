@@ -540,7 +540,7 @@ void SendMsgSerialStringBuf()
       IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
       uint32_t beginWait = millis();
       //wait up to 3 sec for C64 to read message:
-      while (millis()-beginWait<3000) if(IO1[rwRegStatus] == rsContinue) return;
+      while (millis()-beginWait<3000 && !BtnPressed) if(IO1[rwRegStatus] == rsContinue) return;
       Serial.printf("\nSout Timeout!\n"); 
    }
    else
