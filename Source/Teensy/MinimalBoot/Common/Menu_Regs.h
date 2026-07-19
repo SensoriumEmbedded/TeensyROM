@@ -117,6 +117,8 @@ enum IO1_Registers  //offset from 0xDE00
    IO1Size             = StartSIDRegs + 40, //last entry, sets size
 };
 
+#define    IO2Scratch     0x7F    //;Used for Expansion Port Test
+
 enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
 {
    ricmdNone           = 0, // no command, always 0 (init)

@@ -291,7 +291,7 @@ StructMenuItem dirTeensyROMSpecific[] =
      rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
      rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM External Ports Test"    , (uint8_t*)TRExtPortCheck_prg         , sizeof(TRExtPortCheck_prg) ,
 #ifdef Fab04_REU
-     rtFilePrg  , IOH_TeensyROM    , (char*)"C64-TR Expansion Port Test"       , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
+     rtFilePrg  , IOH_TeensyROM    , (char*)"C64-TR+ Expansion Port Test"      , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
 #endif
 //could repeat these here...
    //rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,

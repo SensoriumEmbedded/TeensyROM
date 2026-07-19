@@ -81,16 +81,66 @@ StartTest:
    ldy #>MsgExpansionPortTest
    jsr PrintString 
    
-   ;Do DMA test
+;DMA, IRQ, & NMI tests:
    lda #rCtlExpPortDMAWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots   
 
    lda rwRegScratch+IO1Port  ; 0=fail, 1=pass
-   beq Failed   ;halt on error
+   beq FailOut   ;halt on error
    
-   ;
    
+;old IO1 "self test":
+   lda #<MsgIO1ReadTest
+   ldy #>MsgIO1ReadTest
+   jsr PrintString 
+   ldx #$00
+   ;ldy #$00
+-  lda rRegPresence1+IO1Port
+   cmp #$55
+   bne FailCurrent
+   lda rRegPresence2+IO1Port
+   cmp #$AA
+   bne FailCurrent
+   dex
+   bne - 
+   ;dey   ;256 loops is sufficient...
+   ;bne -
+   lda #<MsgOK
+   ldy #>MsgOK
+   jsr PrintString 
+
+;IO1 W/IO2 R  test:
+   lda #<MsgIO1WIO2RTest
+   ldy #>MsgIO1WIO2RTest
+   jsr PrintString 
+   ldx #$00
+-  stx wRegIRQNMITest+IO1Port ;write it to IO1
+   cpx IO2Scratch+$df00 ;read it back from IO2
+   bne FailCurrent
+   dex
+   bne - 
+   lda #<MsgOK
+   ldy #>MsgOK
+   jsr PrintString 
+
+;IO2 W/IO1 R test:
+   lda #<MsgIO2WIO1RTest
+   ldy #>MsgIO2WIO1RTest
+   jsr PrintString 
+   ldx #$00
+-  stx IO2Scratch+$df00 ;write it to IO2 reg
+   cpx wRegIRQNMITest+IO1Port ;read it back from IO1
+   bne FailCurrent
+   dex
+   bne - 
+   lda #<MsgOK
+   ldy #>MsgOK
+   jsr PrintString 
+
+;ROMH, ROML, Game, ExROM tests:
+
+
 
 
    lda #<MsgPassed
@@ -99,15 +149,24 @@ StartTest:
 
 smcLoopOnPass  
    lda #00
-   bne StartTest ;debug/looping  
-   jmp +
+   beq WaitForKey 
+   ;looping, check for any key to exit loop: 
+   jsr GetIn    
+   bne WaitForKey
+   jmp StartTest
+
+FailCurrent:
+   lda #<MsgFail
+   ldy #>MsgFail
+   jsr PrintString 
    
-Failed:
+FailOut:
    lda #<MsgFailed
    ldy #>MsgFailed
    jsr PrintString 
    
-+  lda #<MsgAnyKey
+WaitForKey:
+   lda #<MsgAnyKey
    ldy #>MsgAnyKey
    jsr PrintString 
    
@@ -117,7 +176,13 @@ Failed:
    jsr GetIn   
    beq -
    
-   cmp #'L' ;Cap-L after first pass to Loop forever
++  cmp #'o' ;O after first pass to Re-run once
+   bne +
+   lda #00
+   sta smcLoopOnPass+1
+   jmp StartFromBegining
+   
++  cmp #'l' ;after first pass to Loop forever
    bne +
    lda #01
    sta smcLoopOnPass+1
@@ -199,6 +264,25 @@ smcChainIRQ:
       jmp $ea31       ; operand rewritten by installer with
                             ; whatever CINV held before
  
+MsgIO1ReadTest:
+   !tx ChrReturn, "IO1 Read Test "
+   !tx 0 
+
+MsgIO2WIO1RTest:
+   !tx "IO2 Wr, IO1 Rd Test "
+   !tx 0 
+
+MsgIO1WIO2RTest:
+   !tx "IO1 Wr, IO2 Rd Test "
+   !tx 0 
+
+MsgOK:
+   !tx "OK", ChrReturn
+   !tx 0 
+
+MsgFail:
+   !tx "Fail", ChrReturn
+   !tx 0 
 
 MsgExpansionPortTest:
    !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " C64/TeensyROM Expansion Port Test ", ChrReturn
@@ -206,7 +290,7 @@ MsgExpansionPortTest:
    !tx 0 
    
 MsgPassed:
-   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed.", ChrReturn, ChrReturn
+   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed.", ChrReturn
 ;   !tx EscC,EscOptionColor, "  Verify the following:", ChrReturn
 ;   !tx "   * Ethernet Port Green LED is on", ChrReturn
 ;   !tx "   * TR main LED (by Menu button) is on", ChrReturn
@@ -220,7 +304,8 @@ MsgFailed:
    !tx 0 
 
 MsgAnyKey:
-   !tx ChrReturn, EscC,EscOptionColor, "Press any key to return", ChrReturn
+   ;                         1234567890123456789012345678901234567890
+   !tx EscC,EscOptionColor, " l:Loop, o:Once, any other key to exit"
    !tx 0
 
    

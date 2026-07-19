@@ -21,6 +21,7 @@
 //IO Handler for TeensyROM 
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn);  
+void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn);  
 void PollingHndlr_TeensyROM();                           
 void InitHndlr_TeensyROM();                           
 
@@ -29,7 +30,7 @@ stcIOHandlers IOHndlr_TeensyROM =
   "TeensyROM",              //Name of handler
   &InitHndlr_TeensyROM,     //Called once at handler startup
   &IO1Hndlr_TeensyROM,      //IO1 R/W handler
-  NULL,                     //IO2 R/W handler
+  &IO2Hndlr_TeensyROM,      //IO2 R/W handler
   NULL,                     //ROML Read handler, in addition to any ROM data sent
   NULL,                     //ROMH Read handler, in addition to any ROM data sent
   &PollingHndlr_TeensyROM,  //Polled in main routine
@@ -1413,6 +1414,15 @@ FLASHMEM void InitHndlr_TeensyROM()
       usbDevMIDI.setHandlePitchChange   (M2SOnPitchChange);         // Ex
    }
 }   
+
+void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
+{
+   if (Address == IO2Scratch) 
+   {
+      if (R_Wn) DataPortWriteWaitLog(IO1[wRegIRQNMITest]);  //High (IO2 Read)
+      else IO1[wRegIRQNMITest] = DataPortWaitRead();  //Low (IO2 Write)
+   }
+}
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {

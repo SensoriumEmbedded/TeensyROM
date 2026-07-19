@@ -116,6 +116,8 @@
    IO1Size             = StartSIDRegs + 40  ;//last entry, sets size
    ;;;;;;;;;;;;;;;;;;  end IO1_Registers  ;;;;;;;;;;;;;;;;;;;;;;;;;
 
+   IO2Scratch          = 0x7f    ;Used for Expansion Port Test
+
 ;enum RegIRQCommands       //rwRegIRQ_CMD
    ricmdNone           = 0 ; no command, always 0 (init)
    ricmdAck1           = 1 ; Ack1 response from C64 IRQ routine
