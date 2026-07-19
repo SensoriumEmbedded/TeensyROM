@@ -71,7 +71,8 @@
    rwRegColorRefStart  = 42 ;// Color ref transfer eeprom<->C64, WAIT on Write
                             ;//offsets defined in enum ColorRefOffsets
    ;NextReg = rwRegColorRefStart+NumColorRefs,
-   wRegIRQNMITest      = 50 ;// Turns Off IRQ/DMA and logs receipt
+   wRegIRQNMITest      = 50 ;// logs receipt of IRQ/DMA, and used for IO2 test via IO2Scratch
+   wRegGameExROMCtl    = 51 ;// Allows Exp Port test app to control Game and ExROM signals
 
    ; These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 ;// start of SID Regs, matching SID Reg order ($D400)

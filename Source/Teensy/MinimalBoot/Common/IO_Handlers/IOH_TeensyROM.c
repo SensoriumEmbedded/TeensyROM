@@ -1027,7 +1027,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 {
    uint8_t PageBuf[TestPageSize];
    
-   SendMsgPrintfln("Testing $%04x w/ $%02x", Address, BytePat);
+   SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
    //PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
    memset(PageBuf, BytePat, TestPageSize);
    PerformDMA(false, Address, PageBuf, TestPageSize, false); //Write the buffer
@@ -1047,7 +1047,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 FLASHMEM void ExpPortDMA()
 {
    IO1[rwRegScratch] = 0; //default fail
-   SendMsgPrintfln("DMA Read/Write Test");
+   SendMsgPrintfln("DMA Read/Write Tests:");
    if (!TestDMAPage(0xc000, 0x55)) return;
    if (!TestDMAPage(0xc000, 0xaa)) return;
    if (!TestDMAPage(0xc000, 0x00)) return;
@@ -1086,8 +1086,10 @@ FLASHMEM void ExpPortDMA()
    SendMsgPrintf(" OK");
  
    //Set up ROMs for HIROM/LOROM/GAME/EXROM test...
- 
- 
+   LOROM_Image = RAM_Image;
+   HIROM_Image = RAM_Image+0x2000;
+   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum] = 0x55;
+   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum+0x2000] = 0xaa;
  
    IO1[rwRegScratch] = 1; //passed
 }
@@ -1471,7 +1473,13 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case wRegIRQNMITest:
             IO1[Address]=Data;
             break;    
-            
+         
+         case wRegGameExROMCtl:
+            if (Data & 1) SetGameAssert; //rtBin8kHi or rtBin16k
+            else SetGameDeassert;  //8kLo or None
+            if (Data & 2) SetExROMAssert;  //rtBin16k or 8kLo
+            else SetExROMDeassert;  //rtBin8kHi or None
+            break;
          case wRegVid_TOD_Clks:
             IO1[Address]=Data;
             nS_DMASetup  = ((Data & 1) ? Def_nS_DMASetupNTSC : Def_nS_DMASetupPAL);

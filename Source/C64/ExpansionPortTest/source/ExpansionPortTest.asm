@@ -87,28 +87,29 @@ StartTest:
    jsr WaitForTRDots   
 
    lda rwRegScratch+IO1Port  ; 0=fail, 1=pass
-   beq FailOut   ;halt on error
+   bne +
+   jmp FailOut   ;halt on error
    
    
 ;old IO1 "self test":
-   lda #<MsgIO1ReadTest
++  lda #<MsgIO1ReadTest
    ldy #>MsgIO1ReadTest
    jsr PrintString 
    ldx #$00
    ;ldy #$00
 -  lda rRegPresence1+IO1Port
    cmp #$55
-   bne FailCurrent
+   bne FailCurrentJmp
    lda rRegPresence2+IO1Port
    cmp #$AA
-   bne FailCurrent
-   dex
+   beq + 
+FailCurrentJmp:
+   jmp FailCurrent
++  dex
    bne - 
    ;dey   ;256 loops is sufficient...
    ;bne -
-   lda #<MsgOK
-   ldy #>MsgOK
-   jsr PrintString 
+   jsr PrintMsgOK 
 
 ;IO1 W/IO2 R  test:
    lda #<MsgIO1WIO2RTest
@@ -117,12 +118,10 @@ StartTest:
    ldx #$00
 -  stx wRegIRQNMITest+IO1Port ;write it to IO1
    cpx IO2Scratch+$df00 ;read it back from IO2
-   bne FailCurrent
+   bne FailCurrentJmp
    dex
    bne - 
-   lda #<MsgOK
-   ldy #>MsgOK
-   jsr PrintString 
+   jsr PrintMsgOK 
 
 ;IO2 W/IO1 R test:
    lda #<MsgIO2WIO1RTest
@@ -131,18 +130,80 @@ StartTest:
    ldx #$00
 -  stx IO2Scratch+$df00 ;write it to IO2 reg
    cpx wRegIRQNMITest+IO1Port ;read it back from IO1
-   bne FailCurrent
+   bne FailCurrentJmp
    dex
    bne - 
-   lda #<MsgOK
-   ldy #>MsgOK
-   jsr PrintString 
+   jsr PrintMsgOK 
 
 ;ROMH, ROML, Game, ExROM tests:
+   lda #<MsgROMLROMHGameExROMTests
+   ldy #>MsgROMLROMHGameExROMTests
+   jsr PrintString 
 
+;        case wRegGameExROMCtl:
+;           if (Data & 1) SetGameAssert; //rtBin8kHi or rtBin16k
+;           else SetGameDeassert;  //8kLo or None
+;           if (Data & 2) SetExROMAssert;  //rtBin16k or 8kLo
+;           else SetExROMDeassert;  //rtBin8kHi or None
 
-
-
+;   LOROM_Image = RAM_Image;
+;   HIROM_Image = RAM_Image+0x2000;
+;   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) LOROM_Image[ByteNum] = 0x55;
+;   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) HIROM_Image[ByteNum] = 0xaa;
+ 
+   lda #<MsgNoCart
+   ldy #>MsgNoCart
+   jsr PrintString 
+   lda #$00 ;deassert Game & ExROM (No Cart)
+   sta wRegGameExROMCtl+IO1Port
+   jsr TestPageLo
+   beq FailCurrent ; match=unexpected
+   jsr TestPageHi
+   beq FailCurrent ; match=unexpected
+   jsr TestPageUlti
+   beq FailCurrent ; match=unexpected
+   jsr PrintMsgOK 
+   
+   lda #<Msg8kCart
+   ldy #>Msg8kCart
+   jsr PrintString 
+   lda #$02 ;deassert Game & assert ExROM (8k Cart)
+   sta wRegGameExROMCtl+IO1Port
+   jsr TestPageLo
+   bne FailCurrent ; mismatch=unexpected
+   jsr TestPageHi
+   beq FailCurrent ; match=unexpected
+   jsr TestPageUlti
+   beq FailCurrent ; match=unexpected
+   jsr PrintMsgOK 
+   
+   lda #<Msg16kCart
+   ldy #>Msg16kCart
+   jsr PrintString 
+   lda #$03 ;assert Game & ExROM (16k Cart)
+   sta wRegGameExROMCtl+IO1Port
+   jsr TestPageLo
+   bne FailCurrent ; mismatch=unexpected
+   jsr TestPageHi
+   bne FailCurrent ; mismatch=unexpected
+   jsr TestPageUlti
+   beq FailCurrent ; match=unexpected
+   jsr PrintMsgOK 
+   
+   lda #<MsgUltiCart
+   ldy #>MsgUltiCart
+   jsr PrintString 
+   sei  ;diable interrupts as Kernal will be banked out
+   lda #$01 ;assert Game & deassert ExROM (Ultimax Cart)
+   sta wRegGameExROMCtl+IO1Port
+   jsr TestPageLo
+   bne FailCurrent ; mismatch=unexpected    ;Didn't think this was the case, ROML still fires in UltiMax mode...
+   jsr TestPageHi
+   beq FailCurrent ; match=unexpected
+   jsr TestPageUlti
+   bne FailCurrent ; mismatch=unexpected
+   jsr PrintMsgOK 
+   
    lda #<MsgPassed
    ldy #>MsgPassed
    jsr PrintString
@@ -156,6 +217,9 @@ smcLoopOnPass
    jmp StartTest
 
 FailCurrent:
+   lda #$00 ;deassert Game & ExROM (No Cart)
+   sta wRegGameExROMCtl+IO1Port
+   cli
    lda #<MsgFail
    ldy #>MsgFail
    jsr PrintString 
@@ -261,9 +325,44 @@ IRQwedge:
 ; ------------------- internal source: chain ---------------------
 IRQinternal:
 smcChainIRQ:
-      jmp $ea31       ; operand rewritten by installer with
+   jmp $ea31       ; operand rewritten by installer with
                             ; whatever CINV held before
- 
+TestPageLo:
+   lda #$55  ;Acc=Pattern to check for
+   ldx #$80  ;x=page Num (upper 8 bits of address)
+   jmp TestPage ;return from there
+TestPageHi:
+   lda #$aa  ;Acc=Pattern to check for
+   ldx #$a0  ;x=page Num (upper 8 bits of address)
+   jmp TestPage ;return from there
+TestPageUlti:
+   lda #$aa  ;Acc=Pattern to check for
+   ldx #$e0  ;x=page Num (upper 8 bits of address)
+   jmp TestPage ;return from there
+
+TestPage: 
+   ;prereq: Acc=Pattern to check for, x=page Num (upper 8 bits of address)
+   ;return: Zero Flag set if all match, clear if any don't match
+   stx smcReadPage+2
+   ldx #$00
+smcReadPage
+-  cmp $8000,x
+   bne +
+   dex
+   bne -
++  rts
+
+PrintMsgOK:
+   lda #$00 ;deassert Game & ExROM (No Cart)
+   sta wRegGameExROMCtl+IO1Port
+   cli
+   lda #<MsgOK
+   ldy #>MsgOK
+   jsr PrintString 
+   rts
+
+;--------   strings/text/messages -------------------------------------------
+
 MsgIO1ReadTest:
    !tx ChrReturn, "IO1 Read Test "
    !tx 0 
@@ -276,6 +375,26 @@ MsgIO1WIO2RTest:
    !tx "IO1 Wr, IO2 Rd Test "
    !tx 0 
 
+MsgROMLROMHGameExROMTests:
+   !tx "Game, ExROM, ROMH, ROML Tests:", ChrReturn
+   !tx 0 
+
+MsgNoCart:
+   !tx " No Cart ROM Test "
+   !tx 0 
+
+Msg8kCart:
+   !tx " 8k Cart ROM Test "
+   !tx 0 
+
+Msg16kCart:
+   !tx " 16k Cart ROM Test "
+   !tx 0 
+
+MsgUltiCart:
+   !tx " Ultimax Cart ROM Test "
+   !tx 0 
+
 MsgOK:
    !tx "OK", ChrReturn
    !tx 0 
@@ -285,12 +404,12 @@ MsgFail:
    !tx 0 
 
 MsgExpansionPortTest:
-   !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " C64/TeensyROM Expansion Port Test ", ChrReturn
+   !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " C64/TeensyROM Expansion Port Test "
    !tx EscC, EscNameColor
    !tx 0 
    
 MsgPassed:
-   !tx ChrReturn, ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed.", ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed. ", ChrReturn
 ;   !tx EscC,EscOptionColor, "  Verify the following:", ChrReturn
 ;   !tx "   * Ethernet Port Green LED is on", ChrReturn
 ;   !tx "   * TR main LED (by Menu button) is on", ChrReturn
@@ -300,11 +419,12 @@ MsgPassed:
    !tx 0 
 
 MsgFailed:
-   !tx ChrReturn, EscC,EscOptionColor, ChrRvsOn, " Expansion Port Test Failed!", ChrReturn
+   !tx ChrReturn, EscC,EscOptionColor, ChrRvsOn, " Expansion Port Test Failed! ", ChrReturn
    !tx 0 
 
 MsgAnyKey:
    ;                         1234567890123456789012345678901234567890
+   !tx EscC,EscOptionColor, " Apply External Reset to test Rst Input", ChrReturn
    !tx EscC,EscOptionColor, " l:Loop, o:Once, any other key to exit"
    !tx 0
 
