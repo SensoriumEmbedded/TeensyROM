@@ -2,6 +2,15 @@
 
 C64-side (6502 assembly) programs for the TeensyROM cartridge. Builds are Windows batch based.
 
+## Prerequisites
+
+Referenced versions from `SetToolPaths.bat` (newer versions will likely work):
+
+- **ACME cross-assembler** 0.97 (Windows build)
+- **Python 3** (for `bin2header.py`; Python 2 is rejected by the script)
+- **KickAssembler** + **Java JRE 1.8** (TRCustomBasicCommands only)
+- **VICE** 3.9 (GTK3, win64) — optional, for emulator test launches
+
 ## Tool Path Setup (`SetToolPaths.bat`)
 
 All build scripts call `SetToolPaths.bat` to locate the required tools. Edit the paths in this file to match your machine before building:
@@ -16,16 +25,9 @@ All build scripts call `SetToolPaths.bat` to locate the required tools. Edit the
 
 ## Build All (`BuildAllC64.bat`)
 
-Runs each sub-project's build script in sequence, stopping on the first failure. Core programs/dependencies build first (MainMenuCRT, SettingsMenu, TRHelpScreens, TRExtPortCheck, ExpansionPortTest, ASIDPlayer, MIDI2SID), followed by the other programs. Outputs are converted with `bin2header.py` and copied into the Teensy firmware tree for inclusion in the ROM image.
+Runs each sub-project's build script in sequence. Core programs/dependencies build first (MainMenuCRT, SettingsMenu, TRHelpScreens, TRExtPortCheck, ExpansionPortTest, ASIDPlayer, MIDI2SID), followed by the other programs. Outputs are converted with `bin2header.py` and copied into the Teensy firmware tree for inclusion in the ROM image.
 
-## Prerequisites
-
-Referenced versions from `SetToolPaths.bat` (newer versions will likely work):
-
-- **ACME cross-assembler** 0.97 (Windows build)
-- **Python 3** (for `bin2header.py`; Python 2 is rejected by the script)
-- **KickAssembler** + **Java JRE 1.8** (TRCustomBasicCommands only)
-- **VICE** 3.9 (GTK3, win64) — optional, for emulator test launches
+**Note:** The script halts immediately on the first build error — anything after the failing sub-project will not be built. A run is only successful if it finishes with the `*** All programs built/copied! ***` message; if you don't see it, scroll up to find which build failed.
 
 ## bin2header.py
 
