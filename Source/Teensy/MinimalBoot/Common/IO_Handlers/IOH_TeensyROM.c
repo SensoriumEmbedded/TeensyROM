@@ -1047,6 +1047,58 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 FLASHMEM void ExpPortDMA()
 {
    IO1[rwRegScratch] = 0; //default fail
+   
+//Cascading ones  
+   SendMsgPrintfln("Cascading ones address test");
+   //tests addresses 0003,0007,000f,
+   //           001f,003f,007f,00ff,
+   //           01ff,03ff,07ff,0fff,
+   //           1fff,3fff,7fff
+   
+   uint8_t OrigValues[16]; //Place to store RAM values for restoration later
+   const uint8_t FirstAddrBit =2; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
+   //read/store original values:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      PerformDMA(true, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, false);  //Read back
+      CloseDMA();
+   }
+   //write address bit num as data:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
+   { 
+      PerformDMA(false, (1<<AddrBit)-1, &AddrBit, 1, false); //Write the buffer
+      CloseDMA();
+   }
+   //read back for errors:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      uint8_t ReadVal;
+      PerformDMA(true, (1<<AddrBit)-1, &ReadVal, 1, false);  //Read back
+      CloseDMA();
+      if (ReadVal != AddrBit)
+      {
+         //write back original values
+         for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
+         { 
+            PerformDMA(false, (1<<AddrBitA)-1, &OrigValues[AddrBitA], 1, false); //Write the buffer
+            CloseDMA();
+         }
+         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit)-1, AddrBit, ReadVal);
+         return;
+      }
+      //causes miscompare at $0400 (screen memory) if text scrolls (Walking Ones only)
+      //SendMsgPrintfln(" $%04x(A%02d): $%02x", (1<<AddrBit)-1, AddrBit, AddrBit); 
+   }
+   //write back original values
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      PerformDMA(false, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, false); //Write the buffer
+      CloseDMA();
+   }
+   SendMsgPrintf(" OK");
+
+//DMA Page R/W
    SendMsgPrintfln("DMA Read/Write Tests:");
    if (!TestDMAPage(0xc000, 0x55)) return;
    if (!TestDMAPage(0xc000, 0xaa)) return;
@@ -1057,6 +1109,7 @@ FLASHMEM void ExpPortDMA()
    if (!TestDMAPage(0x3f00, 0x00)) return;
    if (!TestDMAPage(0x3f00, 0xff)) return;
 
+//IRQ
    SendMsgPrintfln("IRQ Test");
    IO1[wRegIRQNMITest] = 0;
    uint32_t StartMillis = millis();
@@ -1071,6 +1124,7 @@ FLASHMEM void ExpPortDMA()
    SetIRQDeassert;
    SendMsgPrintf(" OK");
  
+//NMI
    SendMsgPrintfln("NMI Test");
    IO1[wRegIRQNMITest] = 0;
    StartMillis = millis();
@@ -1085,7 +1139,7 @@ FLASHMEM void ExpPortDMA()
    SetNMIDeassert;
    SendMsgPrintf(" OK");
  
-   //Set up ROMs for HIROM/LOROM/GAME/EXROM test...
+//Set up ROMs for HIROM/LOROM/GAME/EXROM test...
    LOROM_Image = RAM_Image;
    HIROM_Image = RAM_Image+0x2000;
    for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum] = 0x55;
