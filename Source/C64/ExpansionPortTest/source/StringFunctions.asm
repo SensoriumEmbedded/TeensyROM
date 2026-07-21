@@ -189,50 +189,50 @@ Print_mm_ss   ;print :mm:ss  read 10ths
    jsr SendChar
 +++rts
 
-PrintIntByte: 
-   ;Print acc as int, no padding
-;Hundreds 
-   ldx #0
-   cmp #10
-   bmi Ones ;skip 100s/10s if <10
--  cmp #100
-   bmi +     ;loop until below 100
-   sec       ;set to subtract without carry
-   sbc #100   ;subtract 100
-   inx      ;100s place in X
-   jmp -
-
-+  cpx #0
-   beq Tens  ;skip 100s if <100
-   tay  ;preserve remainder in Y
-   txa
-   clc
-   adc #'0'
-   jsr SendChar
-   tya
-
-Tens   
-   ldx #0
--  cmp #10
-   bmi +     ;loop until below 10
-   sec       ;set to subtract without carry
-   sbc #10   ;subtract 10
-   inx
-   jmp -
-
-+  tay  ;preserve remainder
-   txa
-   clc
-   adc #'0'
-   jsr SendChar
-   tya
-   
-Ones
-   clc
-   adc #'0'
-   jsr SendChar
-
-   rts
+;PrintIntByte: 
+;   ;Print acc as int, no padding
+;;Hundreds 
+;   ldx #0
+;   cmp #10
+;   bmi Ones ;skip 100s/10s if <10
+;-  cmp #100
+;   bmi +     ;loop until below 100
+;   sec       ;set to subtract without carry
+;   sbc #100   ;subtract 100
+;   inx      ;100s place in X
+;   jmp -
+;
+;+  cpx #0
+;   beq Tens  ;skip 100s if <100
+;   tay  ;preserve remainder in Y
+;   txa
+;   clc
+;   adc #'0'
+;   jsr SendChar
+;   tya
+;
+;Tens   
+;   ldx #0
+;-  cmp #10
+;   bmi +     ;loop until below 10
+;   sec       ;set to subtract without carry
+;   sbc #10   ;subtract 10
+;   inx
+;   jmp -
+;
+;+  tay  ;preserve remainder
+;   txa
+;   clc
+;   adc #'0'
+;   jsr SendChar
+;   tya
+;   
+;Ones
+;   clc
+;   adc #'0'
+;   jsr SendChar
+;
+;   rts
    
 PrintHexByte:
    ;Print byte value stored in acc in hex (2 chars)

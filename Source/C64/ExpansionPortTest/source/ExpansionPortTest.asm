@@ -81,7 +81,7 @@ StartTest:
    ldy #>MsgExpansionPortTest
    jsr PrintString 
    
-;DMA, IRQ, & NMI tests:
+;DMA, IRQ, & NMI tests: (Teensy driven)
    lda #rCtlExpPortDMAWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRNone   
@@ -136,32 +136,26 @@ FailCurrentJmp:
    jsr PrintMsgOK 
 
 ;ROMH, ROML, Game, ExROM tests:
+   ; case wRegGameExROMCtl:
+   ;    if (Data & 1) SetGameAssert; //rtBin8kHi or rtBin16k
+   ;    else SetGameDeassert;  //8kLo or None
+   ;    if (Data & 2) SetExROMAssert;  //rtBin16k or 8kLo
+   ;    else SetExROMDeassert;  //rtBin8kHi or None
    lda #<MsgROMLROMHGameExROMTests
    ldy #>MsgROMLROMHGameExROMTests
    jsr PrintString 
 
-;        case wRegGameExROMCtl:
-;           if (Data & 1) SetGameAssert; //rtBin8kHi or rtBin16k
-;           else SetGameDeassert;  //8kLo or None
-;           if (Data & 2) SetExROMAssert;  //rtBin16k or 8kLo
-;           else SetExROMDeassert;  //rtBin8kHi or None
-
-;   LOROM_Image = RAM_Image;
-;   HIROM_Image = RAM_Image+0x2000;
-;   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) LOROM_Image[ByteNum] = 0x55;
-;   for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) HIROM_Image[ByteNum] = 0xaa;
- 
    lda #<MsgNoCart
    ldy #>MsgNoCart
    jsr PrintString 
    lda #$00 ;deassert Game & ExROM (No Cart)
    sta wRegGameExROMCtl+IO1Port
    jsr TestPageLo
-   beq FailCurrent ; match=unexpected
+   beq FailCurrentJmp ; match=unexpected
    jsr TestPageHi
-   beq FailCurrent ; match=unexpected
+   beq FailCurrentJmp ; match=unexpected
    jsr TestPageUlti
-   beq FailCurrent ; match=unexpected
+   beq FailCurrentJmp ; match=unexpected
    jsr PrintMsgOK 
    
    lda #<Msg8kCart
@@ -214,7 +208,22 @@ smcLoopOnPass
    ;looping, check for any key to exit loop: 
    jsr GetIn    
    bne WaitForKey
+   ;inc loop #
+   inc LoopLoNum+1
+   bne +
+   inc LoopHiNum+1
+   ;print loop #
++  lda #<MsgLoopNum
+   ldy #>MsgLoopNum
+   jsr PrintString
+LoopHiNum
+   lda #00
+   jsr PrintHexByte
+LoopLoNum
+   lda #00
+   jsr PrintHexByte
    jmp StartTest
+
 
 FailCurrent:
    lda #$00 ;deassert Game & ExROM (No Cart)
@@ -326,7 +335,11 @@ IRQwedge:
 IRQinternal:
 smcChainIRQ:
    jmp $ea31       ; operand rewritten by installer with
-                            ; whatever CINV held before
+                   ; whatever CINV held before
+
+
+;        LOROM_Image[0...255] = 0x55;
+;        HIROM_Image[0...255] = 0xaa;
 TestPageLo:
    lda #$55  ;Acc=Pattern to check for
    ldx #$80  ;x=page Num (upper 8 bits of address)
@@ -410,18 +423,16 @@ MsgExpansionPortTest:
    
 MsgPassed:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Expansion Port Test Passed. ", ChrReturn
-;   !tx EscC,EscOptionColor, "  Verify the following:", ChrReturn
-;   !tx "   * Ethernet Port Green LED is on", ChrReturn
-;   !tx "   * TR main LED (by Menu button) is on", ChrReturn
-;   !tx "   * Serial output \"Hello from TR at..\"", ChrReturn
-;   !tx "   * Check time shown above.", ChrReturn
-;   !tx "   * RTC batt: cycle power & recheck", ChrReturn
    !tx 0 
 
 MsgFailed:
    !tx ChrReturn, EscC,EscOptionColor, ChrRvsOn, " Expansion Port Test Failed! ", ChrReturn
    !tx 0 
 
+MsgLoopNum:
+   !tx EscC,EscOptionColor, " Loop # $"
+   !tx 0
+   
 MsgAnyKey:
    ;                         1234567890123456789012345678901234567890
    !tx EscC,EscOptionColor, " Apply External Reset to test Rst Input", ChrReturn
