@@ -6,18 +6,18 @@ ScreenColorOnly:
    sta BackgndColorReg
    rts
 
-SetRTCfromEthernet:
-   ; Synchs the Teensy RTC with time acquired from Ethernet
-   lda #rCtlSetRTCfromNetWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
-   rts
+;SetRTCfromEthernet:
+;   ; Synchs the Teensy RTC with time acquired from Ethernet
+;   lda #rCtlSetRTCfromNetWAIT
+;   sta wRegControl+IO1Port
+;   jsr WaitForTRDots ;use WaitForTRWaitMsg instead?
+;   rts
  
 SetC64TODfromRTC:
    ;Sets the C64 TOD clock from the Teensy RTC (with timezone offset)
    lda #rCtlC64TODfromRTCWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTRDots 
+   jsr WaitForTRNone 
 SetC64TODfromRTC_Preloaded:
    lda rRegLastHourBCD+IO1Port
    sta TODHoursBCD  ;stop TOD regs incrementing
@@ -41,6 +41,7 @@ WaitForTRWaitMsg:  ;Print Waiting message in upper right and waits
    lda #<MsgWaiting
    ldy #>MsgWaiting
    jsr PrintString
+WaitForTRNone: ;No waiting msg or dots
    ldy #$ff ;don't print dots
 WaitForTRMain   ;Main wait loop
 !ifndef DbgOffline {

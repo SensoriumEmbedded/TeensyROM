@@ -84,7 +84,7 @@ StartTest:
 ;DMA, IRQ, & NMI tests:
    lda #rCtlExpPortDMAWAIT
    sta wRegControl+IO1Port
-   jsr WaitForTRDots   
+   jsr WaitForTRNone   
 
    lda rwRegScratch+IO1Port  ; 0=fail, 1=pass
    bne +
