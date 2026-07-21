@@ -1277,11 +1277,14 @@ FLASHMEM void ExtPortCheck()
    SendMsgPrintfln("\rPress and release the TR Menu Button");
    SendMsgPrintfln("  Waiting for press..");
    while(ReadButton);
+   delay(10); //debounce
+   BtnPressed = false; //force off so SendMsgPrintf doesn't abort wait
    SendMsgPrintf("detected");
    SendMsgPrintfln("  Waiting for release..");
    while(!ReadButton);
+   delay(10); //debounce
+   BtnPressed = false; //force off so SendMsgPrintf doesn't abort wait
    SendMsgPrintf("detected");
-   BtnPressed = false;
  
 //Alt Button: (TR+ Only)
    #ifdef Fab04_SpecialButton
@@ -1603,7 +1606,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             else SetExROMDeassert;  //rtBin8kHi or None
             break;
          case wRegVid_TOD_Clks:
-            IO1[Address]=Data;
+            IO1[wRegVid_TOD_Clks]=Data;
             nS_DMASetup  = ((Data & 1) ? Def_nS_DMASetupNTSC : Def_nS_DMASetupPAL);
             break;
          case rwRegPageNumber:
