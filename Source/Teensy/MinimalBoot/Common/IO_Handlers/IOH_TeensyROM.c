@@ -1027,7 +1027,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 {
    uint8_t PageBuf[TestPageSize];
    
-   SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
+   //SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
    //PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
    memset(PageBuf, BytePat, TestPageSize);
    PerformDMA(false, Address, PageBuf, TestPageSize, false); //Write the buffer
@@ -1040,7 +1040,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
          return false;
       }
-   SendMsgPrintf(" OK");
+   //SendMsgPrintf(" OK");
    return true;
 }
 
@@ -1050,15 +1050,65 @@ FLASHMEM void ExpPortDMA()
    
 #ifdef Fab04_FullDMACapable
 
+
+//Walking ones  
+   SendMsgPrintfln("Walking ones address Test");
+   //tests addresses 0002,0004,0008,
+   //           0010,0020,0040,0080,
+   //           0100,0200,0400,0800,
+   //           1000,2000,4000,8000,
+   uint8_t OrigValues[16]; //Place to store RAM values for restoration later
+   uint8_t FirstAddrBit =1; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
+   //read/store original values:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      PerformDMA(true, (1<<AddrBit), &OrigValues[AddrBit], 1, false);  //Read back
+      CloseDMA();
+   }
+   //write address bit num as data:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
+   { 
+      PerformDMA(false, (1<<AddrBit), &AddrBit, 1, false); //Write the buffer
+      CloseDMA();
+   }
+   //read back for errors:
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      uint8_t ReadVal;
+      PerformDMA(true, (1<<AddrBit), &ReadVal, 1, false);  //Read back
+      CloseDMA();
+      if (ReadVal != AddrBit)
+      {
+         //write back original values
+         for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
+         { 
+            PerformDMA(false, (1<<AddrBitA), &OrigValues[AddrBitA], 1, false); //Write the buffer
+            CloseDMA();
+         }
+         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit), AddrBit, ReadVal);
+         return;
+      }
+      //causes miscompare at $0400 (screen memory) if text scrolls (Walking Ones only)
+      //SendMsgPrintfln(" $%04x(A%02d): $%02x", (1<<AddrBit), AddrBit, AddrBit); 
+   }
+   //write back original values
+   for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
+   { 
+      PerformDMA(false, (1<<AddrBit), &OrigValues[AddrBit], 1, false); //Write the buffer
+      CloseDMA();
+   }
+   SendMsgPrintf(" OK");
+
+
 //Cascading ones  
-   SendMsgPrintfln("Cascading ones address test");
+   SendMsgPrintfln("Cascading ones address Test");
    //tests addresses 0003,0007,000f,
    //           001f,003f,007f,00ff,
    //           01ff,03ff,07ff,0fff,
    //           1fff,3fff,7fff
    
-   uint8_t OrigValues[16]; //Place to store RAM values for restoration later
-   const uint8_t FirstAddrBit =2; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
+   FirstAddrBit =2; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
    //read/store original values:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    { 
@@ -1089,7 +1139,6 @@ FLASHMEM void ExpPortDMA()
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit)-1, AddrBit, ReadVal);
          return;
       }
-      //causes miscompare at $0400 (screen memory) if text scrolls (Walking Ones only)
       //SendMsgPrintfln(" $%04x(A%02d): $%02x", (1<<AddrBit)-1, AddrBit, AddrBit); 
    }
    //write back original values
@@ -1100,16 +1149,27 @@ FLASHMEM void ExpPortDMA()
    }
    SendMsgPrintf(" OK");
 
+
 //DMA Page R/W
-   SendMsgPrintfln("DMA Read/Write Tests:");
+   SendMsgPrintfln("DMA Page Read/Write Tests");
    if (!TestDMAPage(0xc000, 0x55)) return;
    if (!TestDMAPage(0xc000, 0xaa)) return;
    if (!TestDMAPage(0xc000, 0x00)) return;
    if (!TestDMAPage(0xc000, 0xff)) return;
-   if (!TestDMAPage(0x3f00, 0x55)) return;
+   
+   if (!TestDMAPage(0x4000, 0xc3)) return;
+   if (!TestDMAPage(0x4000, 0x3c)) return;
+   if (!TestDMAPage(0x5000, 0x4b)) return;
+   if (!TestDMAPage(0x6000, 0xb4)) return;
+   if (!TestDMAPage(0x7000, 0x77)) return;
+   if (!TestDMAPage(0x8000, 0x88)) return;
+   
    if (!TestDMAPage(0x3f00, 0xaa)) return;
-   if (!TestDMAPage(0x3f00, 0x00)) return;
+   if (!TestDMAPage(0x3f00, 0x55)) return;
    if (!TestDMAPage(0x3f00, 0xff)) return;
+   if (!TestDMAPage(0x3f00, 0x00)) return;
+   SendMsgPrintf(" OK");
+
 
 //IRQ
    SendMsgPrintfln("IRQ Test");
@@ -1126,6 +1186,7 @@ FLASHMEM void ExpPortDMA()
    SetIRQDeassert;
    SendMsgPrintf(" OK");
  
+ 
 //NMI
    SendMsgPrintfln("NMI Test");
    IO1[wRegIRQNMITest] = 0;
@@ -1141,13 +1202,15 @@ FLASHMEM void ExpPortDMA()
    SetNMIDeassert;
    SendMsgPrintf(" OK");
  
+ 
+   IO1[rwRegScratch] = 1; //passed all TR+ sourced tests
+ 
 //Set up ROMs for HIROM/LOROM/GAME/EXROM test...
-   LOROM_Image = RAM_Image;
-   HIROM_Image = RAM_Image+0x2000;
    for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum] = 0x55;
    for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum+0x2000] = 0xaa;
+   LOROM_Image = RAM_Image;
+   HIROM_Image = RAM_Image+0x2000;
  
-   IO1[rwRegScratch] = 1; //passed
 #else
    SendMsgPrintfln("For TR+ Only");
 #endif
