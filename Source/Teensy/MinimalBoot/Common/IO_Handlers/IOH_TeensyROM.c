@@ -1048,6 +1048,8 @@ FLASHMEM void ExpPortDMA()
 {
    IO1[rwRegScratch] = 0; //default fail
    
+#ifdef Fab04_FullDMACapable
+
 //Cascading ones  
    SendMsgPrintfln("Cascading ones address test");
    //tests addresses 0003,0007,000f,
@@ -1146,6 +1148,9 @@ FLASHMEM void ExpPortDMA()
    for(uint16_t ByteNum=0; ByteNum<256; ByteNum++) RAM_Image[ByteNum+0x2000] = 0xaa;
  
    IO1[rwRegScratch] = 1; //passed
+#else
+   SendMsgPrintfln("For TR+ Only");
+#endif
 }
 
 FLASHMEM void ExtPortCheck()
