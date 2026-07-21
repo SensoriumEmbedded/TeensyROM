@@ -1021,8 +1021,8 @@ FLASHMEM void LoadMainSIDforXfer()
    ParseSIDHeader(LatestSIDName);
 }
 
+#ifdef Fab04_FullDMACapable
 #define TestPageSize   256
-
 FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 {
    uint8_t PageBuf[TestPageSize];
@@ -1043,6 +1043,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    //SendMsgPrintf(" OK");
    return true;
 }
+#endif
 
 FLASHMEM void ExpPortDMA()
 {
