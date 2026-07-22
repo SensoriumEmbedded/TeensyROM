@@ -21,9 +21,8 @@
 //  Copyright (c) 2023 Travis Smith <travis@sensoriumembedded.com> 
 
 
-#include <PN532.h>      //From: https://github.com/elechouse/PN532
-#include "PN532_UHSU.h" //Customized for USBSerial instead of HardwareSerial
- 
+#include "src/PN532/PN532.h"      //Modified/local, originally from: https://github.com/elechouse/PN532
+
 PN532_UHSU pn532uhsu(USBHostSerial);
 PN532 nfc(pn532uhsu);
 
