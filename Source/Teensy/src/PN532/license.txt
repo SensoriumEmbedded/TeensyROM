@@ -1,3 +1,7 @@
+
+originally from: https://github.com/elechouse/PN532
+
+
 Software License Agreement (BSD License)
 
 Copyright (c) 2012, Adafruit Industries
