@@ -843,7 +843,7 @@ FLASHMEM void memInfo ()
   CmdChannel->printf("<ITCM>  %08x .. %08x\n",
          _stext, _stext + ((int) _itcm_block_count << 15) - 1);
   CmdChannel->printf("<DTCM>  %08x .. %08x\n",
-         _sdata, _estack - 1);
+         _sdata, (uint32_t)(uintptr_t)_estack - 1);
   CmdChannel->printf("<RAM>   %08x .. %08x\n",
          RAM_BASE, RAM_BASE + RAM_SIZE - 1);
   CmdChannel->printf("<FLASH> %08x .. %08x\n",
