@@ -30,6 +30,31 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+function Test-Fab04FeaturesDefined {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $false }
+    foreach ($line in Get-Content $Path) {
+        # Match an active (non-commented) #define, ignoring leading whitespace
+        if ($line -match '^\s*#define\s+Fab04_Features\b') {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Disable-Fab04FeaturesDefine {
+    param([string]$Path)
+    $content = Get-Content $Path
+    $updated = $content | ForEach-Object {
+        if ($_ -match '^(\s*)#define(\s+Fab04_Features\b.*)$') {
+            "$($Matches[1])// #define$($Matches[2])"
+        } else {
+            $_
+        }
+    }
+    Set-Content -Path $Path -Value $updated
+}
+
 # Auto-detect Arduino paths
 $LocalAppData = $env:LOCALAPPDATA
 $ArduinoBasePath = "$LocalAppData\Arduino15"
@@ -51,6 +76,24 @@ if ($Fab04_Features) {
     Write-Host "Fab04_Features: DISABLED  (for TeensyROM Fab0.2/0.3)" -ForegroundColor Yellow
 }
 
+# Guard: Fab04FeatureCtl.h has a commented-out "#define Fab04_Features" that overrides
+# the build scripts if uncommented. If it's active but the -Fab04_Features switch wasn't
+# passed, the build would silently produce a TR+ image while claiming to be plain TR.
+$Fab04FeatureCtlPath = Join-Path $ScriptPath "..\MinimalBoot\Common\Fab04FeatureCtl.h"
+if (-not $Fab04_Features -and (Test-Fab04FeaturesDefined -Path $Fab04FeatureCtlPath)) {
+    Write-Host "WARNING: Fab04_Features is #define'd in $Fab04FeatureCtlPath" -ForegroundColor Red
+    Write-Host "  but the -Fab04_Features switch was not passed to this script." -ForegroundColor Red
+    Write-Host "  This mismatch would build a TR+ image while labeled as plain TR." -ForegroundColor Red
+    $Response = Read-Host "  Comment out the #define and continue with a plain TR build? (y/N)"
+    if ($Response -match '^[Yy]') {
+        Disable-Fab04FeaturesDefine -Path $Fab04FeatureCtlPath
+        Write-Host "  Fab04_Features #define commented out in $Fab04FeatureCtlPath" -ForegroundColor Green
+    } else {
+        Write-Host "  ERROR: Aborting build. Comment out the #define, or re-run with -Fab04_Features." -ForegroundColor Red
+        exit 1
+    }
+}
+
 # Find Teensy hardware version
 $TeensyPath = Get-ChildItem "$ArduinoBasePath\packages\teensy\hardware\avr" -Directory -ErrorAction SilentlyContinue |
                Sort-Object Name -Descending |
@@ -62,6 +105,12 @@ if (-not $TeensyPath) {
 }
 
 $TeensyCorePath = "$($TeensyPath.FullName)\cores\teensy4"
+Write-Host "Teensy Core: $TeensyCorePath" -ForegroundColor Gray
+
+if (-not (Test-Path $TeensyCorePath)) {
+    Write-Host "ERROR: Teensy core path does not exist: $TeensyCorePath" -ForegroundColor Red
+    exit 1
+}
 
 # Build paths
 $TeensyInoPath = Join-Path $ScriptPath "..\Teensy.ino"
@@ -213,6 +262,7 @@ function Invoke-HexCombine {
 }
 
 # Build Process
+$BuildStartTime = Get-Date
 Write-Host "Starting build..." -ForegroundColor Cyan
 
 if (-not $SkipTeensyBuild) {
@@ -252,4 +302,9 @@ if (-not $SkipCombine) {
 
 Write-Host "`n=== BUILD COMPLETE ===" -ForegroundColor Green
 Write-Host "Output: $FinalOutput" -ForegroundColor White
+
+$BuildEndTime = Get-Date
+$BuildDuration = $BuildEndTime - $BuildStartTime
+Write-Host ("Build time: {0:hh\:mm\:ss}" -f $BuildDuration) -ForegroundColor White
+Write-Host "Finished at: $($BuildEndTime.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor White
 
