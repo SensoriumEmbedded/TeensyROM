@@ -46,7 +46,6 @@ uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
 uint8_t  TR_BASContRegAction, TR_BASStatRegVal, TR_BASStrAvailableRegVal;
-uint32_t TR_BASTIVal;
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -57,9 +56,6 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    TR_BASFileNameReg     = 0xb8,   // (Write only) File name transfer
    TR_BASStreamDataReg   = 0xba,   // (R/W Only) File transfer stream data
    TR_BASStrAvailableReg = 0xbc,   // (Read Only) Signals stream data available
-   TR_BASTIHiReg         = 0xbe,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
-   TR_BASTIMedReg        = 0xc0,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
-   TR_BASTILoReg         = 0xc2,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
 
    // Control Reg Commands:
    TR_BASCont_None       = 0x00,   // No Action to be taken
@@ -323,8 +319,21 @@ FLASHMEM uint8_t ContRegAction_DmaTest()
 FLASHMEM uint8_t ContRegAction_TISet()
 {  //Get the time from RTC, convert to jiffies for readback into TI/TI$   
    int8_t tz = (int8_t)IO1[rwRegTimezone]; //time zone to signed
-   uint32_t secsSinceMidnight = ((uint32_t)Teensy3Clock.get() + (int16_t)tz*30*60) % SECS_PER_DAY; //read the RTC time, offset timezone, and reduce to seconds since midnight
-   TR_BASTIVal = secsSinceMidnight * 60; //convert to jiffies
+   
+   //read the RTC time, offset timezone, and reduce to seconds since midnight and convert to jiffies
+   uint32_t JifsSinceMidnight = (((uint32_t)Teensy3Clock.get() + (int16_t)tz*30*60) % SECS_PER_DAY)*60; 
+   
+   //prepare to send out the stream interface
+   //TR_BASStrAvailableRegVal = 0xff;    // transfer available flag, not used for this
+   XferSize = 0;
+   Printf_dbg("JSM = %06x\n", JifsSinceMidnight);
+   while (XferSize<3) 
+   {
+      RAM_Image[XferSize] = (uint8_t)(JifsSinceMidnight>>((2-XferSize)*8));
+      Printf_dbg("RAM_Image[%d] = $%02x\n", XferSize, RAM_Image[XferSize]);
+      XferSize++;
+   }
+   StreamOffsetAddr = 0; //initialize
    return TR_BASStat_Ready;  
 }
 
@@ -369,15 +378,6 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);
-            break;
-         case TR_BASTIHiReg:
-            DataPortWriteWait((uint8_t)(TR_BASTIVal>>16));
-            break;
-         case TR_BASTIMedReg:
-            DataPortWriteWait((uint8_t)(TR_BASTIVal>>8));
-            break;
-         case TR_BASTILoReg:
-            DataPortWriteWait((uint8_t)TR_BASTIVal);
             break;
          default: //used for all other IO1 reads
             //DataPortWriteWaitLog(0); 

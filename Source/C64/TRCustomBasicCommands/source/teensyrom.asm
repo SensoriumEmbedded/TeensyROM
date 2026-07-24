@@ -10,9 +10,6 @@
 .label TR_BASFileNameReg     = $b8   // (Write only) File name transfer
 .label TR_BASStreamDataReg   = $ba   // (Read Only) File transfer stream data
 .label TR_BASStrAvailableReg = $bc   // (Read Only) Signals stream data available
-.label TR_BASTIHiReg         = $be   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
-.label TR_BASTIMedReg        = $c0   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
-.label TR_BASTILoReg         = $c2   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
 
    // Control Reg Commands/Actions:
 .label TR_BASCont_None       = $00   // No Action to be taken
@@ -311,12 +308,13 @@ TISet:
    ldx #TR_BASCont_TISet
    stx TR_BASContReg+IO1Port   
    jsr WaitForTR
-   lda TR_BASTIHiReg+IO1Port
-   sta $a0
-   lda TR_BASTIMedReg+IO1Port
-   sta $a1
-   lda TR_BASTILoReg+IO1Port
-   sta $a2
+
+   ldx #0
+!: lda TR_BASStreamDataReg+IO1Port //read from stream reg & inc
+   sta $a0, x 
+   inx
+   cpx #3
+   bne !-
    rts
 
 
