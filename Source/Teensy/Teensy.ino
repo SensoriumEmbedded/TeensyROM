@@ -386,27 +386,27 @@ FLASHMEM void SetUpMainMenuROM()
    doReset = true;
 }
 
-void PadSpace(char* StrToPad, uint8_t PadToLength)
+FLASHMEM void PadSpace(char* StrToPad, uint8_t PadToLength)
 {
    while(strlen(StrToPad)<PadToLength) strcat(StrToPad, " ");
 }
 
-void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len)
+FLASHMEM void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint16_t len)
 {
    while (len--) EEPROM.write(addr+len, buf[len]);    
 }
 
-void EEPwriteStr(uint16_t addr, const char* buf)
+FLASHMEM void EEPwriteStr(uint16_t addr, const char* buf)
 {
    EEPwriteNBuf(addr, (uint8_t*)buf, strlen(buf)+1); //include terminator    
 }
 
-void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len)
+FLASHMEM void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len)
 {
    while (len--) buf[len] = EEPROM.read(addr+len);   
 }
 
-void EEPreadStr(uint16_t addr, char* buf)
+FLASHMEM void EEPreadStr(uint16_t addr, char* buf)
 {
    uint16_t CharNum = 0;
    
