@@ -12,9 +12,9 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find the table of tokens below at NewTab
 .label CMDSTART = $cc
-.label CMDEND   = $e0
+.label CMDEND   = $e1
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $e3
+.label FUNEND   = $e4
 
 .label MainMemLoc  = $c000
 
@@ -161,12 +161,14 @@ NewTab:
     .byte 'E' + $80
     .text "TDI"         // $e0
     .byte 'R' + $80
+    .text "TISE"        // $e1
+    .byte 'T' + $80
     // Functions start here
-    .text "WEE"         // $e1
+    .text "WEE"         // $e2
     .byte 'K' + $80
-    .text "SCRLO"       // $e2
+    .text "SCRLO"       // $e3
     .byte 'C' + $80
-    .text "RE"          // $e3
+    .text "RE"          // $e4
     .byte 'U' + $80
     .byte 0
 
@@ -194,6 +196,7 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word TLoadCmd - 1
     .word TSaveCmd - 1
     .word TDirCmd - 1
+    .word TISet - 1
     
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART

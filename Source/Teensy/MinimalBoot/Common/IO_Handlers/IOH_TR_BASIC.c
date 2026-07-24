@@ -46,7 +46,7 @@ uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
 uint8_t  TR_BASContRegAction, TR_BASStatRegVal, TR_BASStrAvailableRegVal;
-
+uint32_t TR_BASTIVal;
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -57,6 +57,9 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    TR_BASFileNameReg     = 0xb8,   // (Write only) File name transfer
    TR_BASStreamDataReg   = 0xba,   // (R/W Only) File transfer stream data
    TR_BASStrAvailableReg = 0xbc,   // (Read Only) Signals stream data available
+   TR_BASTIHiReg         = 0xbe,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
+   TR_BASTIMedReg        = 0xc0,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
+   TR_BASTILoReg         = 0xc2,   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
 
    // Control Reg Commands:
    TR_BASCont_None       = 0x00,   // No Action to be taken
@@ -65,6 +68,7 @@ enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
    TR_BASCont_SaveFinish = 0x06,   // Save file from TR RAM to SD/USB
    TR_BASCont_DirPrep    = 0x08,   // Load Dir into TR RAM
    TR_BASCont_DmaTest    = 0x0a,   // Assert DMA for 100mS
+   TR_BASCont_TISet      = 0x0c,   // Get the time from RTC, convert to jiffies for readback into TI/TI$
    
    // StatReg Values:
    TR_BASStat_Processing = 0x00,   // No update, still processing
@@ -110,7 +114,7 @@ enum BASIC_Error_Codes
 //__________________________________________________________________________________
 
 
-FS *FSfromFileName(char** ptrptrLSFileName)
+FLASHMEM FS *FSfromFileName(char** ptrptrLSFileName)
 {  //returns file system type (default USB) and changes pointer to skip USB:/SD:
 
    FS *sourceFS = &firstPartition; //default to USB
@@ -152,7 +156,7 @@ FS *FSfromFileName(char** ptrptrLSFileName)
 }
 
 
-void AddToRAM_Image(const char *ToAdd)
+FLASHMEM void AddToRAM_Image(const char *ToAdd)
 {  //and convert to petscii
    uint32_t count = 0;
    
@@ -165,7 +169,7 @@ void AddToRAM_Image(const char *ToAdd)
 }
 
 
-uint8_t ContRegAction_LoadPrep()
+FLASHMEM uint8_t ContRegAction_LoadPrep()
 { //load file into RAM, returns TR_BASStatRegVal                
    //check that file exists & load into RAM_Image
    
@@ -224,7 +228,7 @@ uint8_t ContRegAction_LoadPrep()
 }
 
 
-uint8_t ContRegAction_SaveFinish()
+FLASHMEM uint8_t ContRegAction_SaveFinish()
 {  //file was transferred to RAM_Image[], size=StreamOffsetAddr  
    //save file from RAM, returns TR_BASStatRegVal                
 
@@ -256,7 +260,7 @@ uint8_t ContRegAction_SaveFinish()
 }
 
 
-uint8_t ContRegAction_DirPrep()
+FLASHMEM uint8_t ContRegAction_DirPrep()
 { //load dir into RAM, returns TR_BASStatRegVal                
    //check that dir exists & load into RAM_Image
    
@@ -307,17 +311,26 @@ uint8_t ContRegAction_DirPrep()
    return TR_BASStat_Ready;   //Save Sussceful
 }
 
-uint8_t ContRegAction_DmaTest()
+FLASHMEM uint8_t ContRegAction_DmaTest()
 {  // Assert DMA for 100mS and release
+   //DMA started immediately in IO1 handler, just waiting and trigerring disable here.
    Printf_dbg("DMA Trig\n");
    delay(100);  //100
    DMA_State = DMA_S_StartDisable;
    return TR_BASStat_Ready;  
 }
 
+FLASHMEM uint8_t ContRegAction_TISet()
+{  //Get the time from RTC, convert to jiffies for readback into TI/TI$   
+   int8_t tz = (int8_t)IO1[rwRegTimezone]; //time zone to signed
+   uint32_t secsSinceMidnight = ((uint32_t)Teensy3Clock.get() + (int16_t)tz*30*60) % SECS_PER_DAY; //read the RTC time, offset timezone, and reduce to seconds since midnight
+   TR_BASTIVal = secsSinceMidnight * 60; //convert to jiffies
+   return TR_BASStat_Ready;  
+}
+
 //__________________________________________________________________________________
 
-void InitHndlr_TR_BASIC()
+FLASHMEM void InitHndlr_TR_BASIC()
 {
    if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
    if (LSFileName == NULL) LSFileName = (uint8_t*)malloc(MaxPathLength);
@@ -356,6 +369,16 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);
+            break;
+         case TR_BASTIHiReg:
+            DataPortWriteWait((uint8_t)(TR_BASTIVal>>16));
+            break;
+         case TR_BASTIMedReg:
+            DataPortWriteWait((uint8_t)(TR_BASTIVal>>8));
+            break;
+         case TR_BASTILoReg:
+            DataPortWriteWait((uint8_t)TR_BASTIVal);
+            break;
          default: //used for all other IO1 reads
             //DataPortWriteWaitLog(0); 
             break;
@@ -387,6 +410,7 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                case TR_BASCont_LoadPrep:   //load file into RAM 
                case TR_BASCont_SaveFinish: //save file from RAM
                case TR_BASCont_DirPrep:    // Load Dir into RAM
+               case TR_BASCont_TISet:      // Get the time from RTC, convert to jiffies for readback into TI/TI$
                   TR_BASContRegAction = Data; //pass it to process outside of interrupt
                   TR_BASStatRegVal = TR_BASStat_Processing; //initialize status
                   break;
@@ -432,7 +456,10 @@ void PollingHndlr_TR_BASIC()
             break;
          case TR_BASCont_DmaTest:
             TR_BASStatRegVal = ContRegAction_DmaTest();
-            break;         
+            break;        
+         case TR_BASCont_TISet:
+            TR_BASStatRegVal = ContRegAction_TISet();
+            break;        
          default:
             Printf_dbg("Unexpected TR_BASContRegAction: %d\n", TR_BASContRegAction);
       }

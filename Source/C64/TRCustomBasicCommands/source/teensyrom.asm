@@ -10,6 +10,9 @@
 .label TR_BASFileNameReg     = $b8   // (Write only) File name transfer
 .label TR_BASStreamDataReg   = $ba   // (Read Only) File transfer stream data
 .label TR_BASStrAvailableReg = $bc   // (Read Only) Signals stream data available
+.label TR_BASTIHiReg         = $be   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
+.label TR_BASTIMedReg        = $c0   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
+.label TR_BASTILoReg         = $c2   // (Read Only) TI Jiffies based on RTC (Hi/MSB)
 
    // Control Reg Commands/Actions:
 .label TR_BASCont_None       = $00   // No Action to be taken
@@ -18,6 +21,7 @@
 .label TR_BASCont_SaveFinish = $06   // Save file to TR
 .label TR_BASCont_DirPrep    = $08   // Load Dir into TR RAM
 .label TR_BASCont_DmaTest    = $0a   // Assert DMA for 100mS
+.label TR_BASCont_TISet      = $0c   // Get the time from RTC, convert to jiffies for readback into TI/TI$
 
    // StatReg Values:
 .label TR_BASStat_Processing = $00   // No update, still processing
@@ -296,9 +300,27 @@ TDirCmd:
    jmp !-
 !: rts
 
+/*
+
+    Set the BASIC TI & TI$ variables from the TR RTC
+
+    Example- TISET 
+
+*/
+TISet:
+   ldx #TR_BASCont_TISet
+   stx TR_BASContReg+IO1Port   
+   jsr WaitForTR
+   lda TR_BASTIHiReg+IO1Port
+   sta $a0
+   lda TR_BASTIMedReg+IO1Port
+   sta $a1
+   lda TR_BASTILoReg+IO1Port
+   sta $a2
+   rts
+
 
 //  ************** Functions **************
-
 
 /*
     Utility- Send filename to be loaded/saved  to TR
