@@ -395,8 +395,9 @@ FLASHMEM uint8_t RAM2blocks()
 
 FLASHMEM void MakeBuildInfo()
 {
-   //Serial.printf("\nBuild Date/Time: %s  %s\nCPU Freq: %lu MHz   Temp: %.1f°C\n", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
-   sprintf(SerialStringBuf, "     FW: %s, %s\r\n       Teensy: %luMHz  %.1fC\r", __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp());
+   uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse 
+   if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
+   sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)

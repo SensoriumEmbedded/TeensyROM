@@ -526,7 +526,7 @@ FLASHMEM void ProcessCommand()
       case VersionInfoToken: //Version Info
          MakeBuildInfo();
          SendU16(AckToken);
-         CmdChannel->printf("\n%s\n%s\n", strVersionNumber, SerialStringBuf);
+         CmdChannel->printf("\n%s\n", SerialStringBuf);
          return;
       case FWCheckToken: //Check firmware type
          SendU16(FWFullToken);

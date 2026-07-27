@@ -175,9 +175,9 @@ Retrieves firmware version and build information from the TeensyROM.
 
 **Example output:**
 ```
-"TeensyROM+ v0.7.2"
-"   FW: Jul 11 2026, 14:13:30"
-"      Teensy: 816MHz  43.8C"
+  FW: TeensyROM+ v0.7.2
+      Jul 27 2026, 09:41:32
+  Teensy: 816MHz  59.1C  UID: 19307720
 ```
 
 **Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string.
