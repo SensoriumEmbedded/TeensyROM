@@ -53,6 +53,7 @@
 #include "TRMenuFiles/ROMs/SettingsMenu.prg.h"
 #include "TRMenuFiles/ROMs/TRHelpScreens.prg.h"
 #include "TRMenuFiles/ROMs/TRExtPortCheck.prg.h"
+#include "TRMenuFiles/ROMs/CLOCK0726A_TR.PRG.h"
 #ifdef Fab04_REU
    #include "TRMenuFiles/ROMs/ExpansionPortTest.prg.h"
    #include "TRMenuFiles/ROMs/reutest.prg.h"
@@ -180,6 +181,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
+     rtFilePrg  , IOH_TR_BASIC     , (char*)"Segment-Dot Matrix Clock"         , (uint8_t*)CLOCK0726A_TR_PRG          , sizeof(CLOCK0726A_TR_PRG) ,
 //     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 
