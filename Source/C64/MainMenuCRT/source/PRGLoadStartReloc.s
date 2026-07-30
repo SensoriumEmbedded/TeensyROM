@@ -34,26 +34,32 @@ PRGLoadStart:
    sta PtrAddrHi
    ldy #0   ;zero offset
    
--  lda rRegStrAvailable+IO1Port ;are we done?
+LoadLoop
+   lda rRegStrAvailable+IO1Port ;are we done?
    beq +   ;exit the loop
    lda rRegStreamData+IO1Port ;read from rRegStreamData+IO1Port increments address & checks for end
    sta (PtrAddrLo), y 
    iny
-   bne -
+   bne LoadLoop  ;relative branch
    inc PtrAddrHi
-   bne -
-   ;good luck if we get to here... Trying to overflow and write to zero page
-   lda #<(MsgOverflow - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc 
-   ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
-   jsr $ab1e   ;PrintString
-   jmp (BasicWarmStartVect)
+   jmp LoadLoop - PRGLoadStart + PRGLoadStartReloc ;absolute jump, corrected for relocation
+; 7/30/26 Now allowing wrap-around loading, only exit the loop when end is indicated
+;         JiffyMon (for example) fills all the way to FFFF then printed "overflow!" before exit
+;         other loads may want to wrap and update zero page, let them.  Trust the rRegStrAvailable
+; was:
+;   bne -
+;   ;good luck if we get to here... Trying to overflow and write to zero page
+;   lda #<(MsgOverflow - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc 
+;   ldy #>(MsgOverflow - PRGLoadStart + PRGLoadStartReloc)
+;   jsr $ab1e   ;PrintString
+;   jmp (BasicWarmStartVect)
    
    ;we're in caps/graphics mode for these messages, use all lower case:
    ;placing these here instead of the end in case we want to erase them before running PRG
 MsgRunning:
    !tx ChrReturn, "running...", ChrReturn, 0
-MsgOverflow:
-   !tx ChrReturn, "overflow!", ChrReturn, 0
+;MsgOverflow:
+;   !tx ChrReturn, "overflow!", ChrReturn, 0
 
    ;last byte of prg (+1) = y+PtrAddrLo/Hi, store this in 2D/2E
 +  ldx PtrAddrHi
@@ -85,8 +91,8 @@ MsgOverflow:
 smcSkipPrintRunning:
    lda #0    ;set to non-zero to skip printing MsgRunning
    bne +
-   lda #<(MsgRunning - PRGLoadStart + PRGLoadStartReloc) ; corrected for reloc
-   ldy #>(MsgRunning - PRGLoadStart + PRGLoadStartReloc)
+   lda #< MsgRunning - PRGLoadStart + PRGLoadStartReloc ; corrected for reloc
+   ldy #> MsgRunning - PRGLoadStart + PRGLoadStartReloc
    jsr $ab1e   ;PrintString
    ;as is done at $A52A    https://skoolkid.github.io/sk6502/c64rom/asm/A49C.html#A52A
 +  jsr $a659	;reset execution to start, clear variables and flush stack
