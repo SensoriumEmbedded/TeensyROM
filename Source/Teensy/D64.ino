@@ -205,8 +205,17 @@ FLASHMEM bool LoadDxxFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       myFile.seek(CurTSOffset);
       Track  = myFile.read();  //0x00
       Sector  = myFile.read(); //0x01
-      myFile.read(RAM_Image+MyMenuItem->Size, 254); //read in the rest of the sector
-      MyMenuItem->Size += 254;
+
+      uint16_t BytesToCopy = 254; //normal sector: full 254 data bytes used
+      if (Track == 0)
+      { //last sector: Sector byte instead gives the offset of the last used byte
+        //(counting the 2 link bytes), so valid data bytes = Sector-1
+         BytesToCopy = (Sector >= 1) ? (Sector - 1) : 0;
+         if (BytesToCopy > 254) BytesToCopy = 254; //safety clamp for corrupt images
+      }
+
+      myFile.read(RAM_Image+MyMenuItem->Size, BytesToCopy); //read in only the valid bytes
+      MyMenuItem->Size += BytesToCopy;
    }
    
    SendMsgPrintfln("Done");
