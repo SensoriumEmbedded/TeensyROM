@@ -15,6 +15,7 @@
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 * **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
+* **TeensyROM+ added features** [are documented here](docs/TR+NewFeatures.md)
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
