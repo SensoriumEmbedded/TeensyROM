@@ -18,6 +18,8 @@ Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex` and/or
 3. **Builds MinimalBoot** (lower memory, USB: Serial)
 4. **Combines** both into single hex file
 
+**Note:** Before building, the script checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features`. If that's set but `-Fab04_Features` wasn't passed to this script, it will interactively prompt (y/N) to comment out the `#define` and continue as a plain TR build, or abort. This prevents accidentally building a TR+ image while labeling it as plain TR.
+
 ## Default Usage
 Builds both images for TeensyROM and combines them.
 

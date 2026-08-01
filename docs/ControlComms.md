@@ -79,7 +79,7 @@ TeensyROM uses a dual-firmware system for large cartridge support:
 
 #### Full Firmware
   * **All commands available** (when not busy with active handler)
-  * **Larger memory footprint** limits maximum cartridge size (~740–800 KB before switch to Minimal FW)
+  * **Larger memory footprint** limits maximum cartridge size (~650 KB before switch to Minimal FW)
 
 ---
  

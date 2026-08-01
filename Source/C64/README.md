@@ -35,7 +35,7 @@ A Python 3 utility (bin2header v0.3.1, MIT licensed) that converts a compiled bi
 
 ## Build Outputs
 
-Each sub-project compiles into its local `build\` directory (cleaned at the start of every build). The generated `.h` file is then copied to `..\Teensy\TRMenuFiles\ROMs\` (set via `bin2headerROMPath`), where the Teensy firmware picks it up. After running a build, verify the header begins with `PROGMEM static const unsigned char ..._prg[] = {` (except the MainMenuCRT cartridge header, which intentionally has no `PROGMEM`).
+Each sub-project compiles into its local `build\` directory (cleaned at the start of every build). The generated `.h` file is then copied to `..\..\Teensy\TRMenuFiles\ROMs\` (set via `bin2headerROMPath`), where the Teensy firmware picks it up. After running a build, verify the header begins with `PROGMEM static const unsigned char ..._prg[] = {` (except the MainMenuCRT cartridge header, which intentionally has no `PROGMEM`).
 
 ## Sub-Projects
 

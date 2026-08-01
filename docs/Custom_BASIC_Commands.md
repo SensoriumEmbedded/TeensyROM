@@ -11,6 +11,7 @@ Implementation built upon **[Custom Basic Commands](https://github.com/barryw/Cu
 ## TeensyROM specific commands available:
 |Command|Description|
 |:--|:--|
+|`TISET`|Set the BASIC TI/TI$ variables to the TR RTC time|
 |`TSAVE <media><path><filename>`|Super fast Saves the current BASIC file to SD or USB on the TR|
 |`TLOAD <media><path><filename>`|Super fast Loads a BASIC file from SD or USB on the TR|
 |`TDIR <media><path>`|Display directory contents of TR media|

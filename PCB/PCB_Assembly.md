@@ -70,7 +70,7 @@ There are step-by-step instructions with pics below, there's also an assembly vi
 - Includes: LED, Ethernet port, USB-A port, push button
 - LED polarity: Square hole=short lead=flat side=Cathode
 - USB port and push button will hold upside-down, and LED pins can be bent to hold (see pic)
-- Ethernet port either needs downward presure with PCB resting on a ~1/2" ledge (see pic), or use tape to hold it in place.
+- Ethernet port either needs downward pressure with PCB resting on a ~1/2" ledge (see pic), or use tape to hold it in place.
 
 | <img src="../media/v0.3/assy/assy07_THM1.jpg" width="500"> | <img src="../media/v0.3/assy/assy08_THM2.jpg" width="500"> |
 |--|--|
@@ -79,9 +79,8 @@ There are step-by-step instructions with pics below, there's also an assembly vi
 ### Teensy Heatsink Assembly
 - Remove backing to expose sticky surface, attach heatsink to center of the microcontroller on the Teensy module.
 - Make sure the heatsink is not contacting any pins or other components, such as the large capacitor near it.
-  - Centerring also required for low profile case protrusion.
+  - Centering also required for low profile case protrusion.
 
-**Add Heatsink assy and final pic**
 | <img src="../media/v0.3/assy/assy10_HeatSink.jpg" width="500"> |  |
 |--|--|
 

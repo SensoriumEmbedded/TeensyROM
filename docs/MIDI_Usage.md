@@ -12,13 +12,13 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
     * Note: If your MIDI controller has a 5-pin DIN connector instead of USB, you can use an adapter such as [this link](https://www.amazon.ca/USB-OUT-MIDI-Cable-Converter/dp/B077X7R74Y?th=1).
   * Select MIDI device to emulate
     * **Note: If using the ***built-in*** CynthCart, Station64, SID-Wizard, ASID Player, or MIDI2SID app**, the correct IO is already associated, **you can skip this step.**
-    * Prior to running a MIDI program, go to the settings menu (F8) 
+    * Prior to running a MIDI program, go to the settings menu (F8), then press "2" for the TeensyROM General settings page
     * Under "Special IO:", select your preferred "MIDI:*" device by cycling through the options.
     * The following MIDI cartridges can be emulated/selected:
       * Sequential, Datel/Siel, Passport/Sentech, Namesoft
     * All use $DExx address space and IRQ for interrupts
   * Select/load a MIDI capable application on your C64 to receive the MIDI data from your controller
-    * For multi-SID systems (or C64u/U64) Cynthcart can utilize 2 SIDs (6 independant voices).  
+    * For multi-SID systems (or C64u/U64) Cynthcart can utilize 2 SIDs (6 independent voices).  
       * To do this, set the second SID address to $DF00 and choose the 6CHAN sounds mode or press "="
       * See full Cynthcart documentation [here](https://www.qotile.net/files/cynthcart2.0.pdf).
   * Play around and have fun!
@@ -35,7 +35,7 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
     * Power up C64/128 to TeensyROM main menu.
     * Select Cynthcart+Datel MIDI or Station64+Passport MIDI to play the MIDI data
       * Select a polyphonic voice profile to get as many independent notes as possible.
-     * The buit-in MIDI2SID can be used as well
+    * The built-in MIDI2SID can be used as well
       * Can be helpful in seeing/hearing independent notes and seeing any voice overflows
       * No other MIDI special HW emulation required
   * **PC Instructions using Cakewalk by BandLab.**
@@ -50,7 +50,7 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
       * Click OK to close Preferences window
     * Load a .mid/.midi file and play it
       * Remember that there are only 3 voices in the SID, so complex midi files with more simultaneous notes/voices won't sound right.
-    * The playback should be eminating from your C64/128!
+    * The playback should be emanating from your C64/128!
 
 ### MIDI Source setup
   * As with the original MIDI devices that the TeensyROM emulates, all MIDI tokens/packets received are passed through to the C64 and the software running there. That software (ie Cynthcart or Station 64) can be sensitive to the type and density of commands received and potentially overflow their buffer/interrupt handler and crash.   It may be necessary in these cases to filter out unnecessary data from the stream, such as indicated with the Cakewalk "Zero Controllers" example above.  Most sources/DAWs have the capability to filter out this extra/unused information.

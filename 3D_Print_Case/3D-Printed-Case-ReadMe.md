@@ -9,8 +9,8 @@
 
 ## "Classic" Design by [Stefan Wessels](https://github.com/StewBC)
   * V2 (**Latest**)
-    * [Models availble here](/3D_Print_Case/TeensyROM-Case-V2-04.zip) See README.txt inside zip file
-    * Screw hole accomodation for v0.2c-0.3 PCB
+    * [Models available here](/3D_Print_Case/TeensyROM-Case-V2-04.zip) See README.txt inside zip file
+    * Screw hole accommodation for v0.2c-0.3 PCB
       * Use M2.5x15mm screw [such as this](https://www.amazon.com/dp/B01M0DCMHQ)
     * Version included for v0.2b PCB (No Hole/screw)
   * V1 ([Archived](/3D_Print_Case/Archive/v1/))

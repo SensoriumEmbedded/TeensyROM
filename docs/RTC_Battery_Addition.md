@@ -4,7 +4,7 @@ A battery can be added to your TeensyROM  to track the current time of day when 
 
 The TeensyROM+ (v0.4) has a built-in battery holder for a CR1225 coin cell, but this functionality can be added to TeensyROM PCB v0.2/0.3 as well by following these steps:
 * **Parts list:**
-  * **Battery Holder:** I used [this Battery holder via Amazon](https://www.amazon.com/dp/B09KTVG1Y5?th=1). It holds a CR2023 battery, is well insulated, and has nice lead wires for connection to the Teensy module.
+  * **Battery Holder:** I used [this Battery holder via Amazon](https://www.amazon.com/dp/B09KTVG1Y5?th=1). It holds a CR2032 battery, is well insulated, and has nice lead wires for connection to the Teensy module.
     * This holder has an on/off switch, which can be left in the "On" position. 
   * **Battery:** 
     * Must be one of these 3v Lithium types: CR2032, CR1220, or CR1225(used on TR+)
@@ -27,8 +27,8 @@ The TeensyROM+ (v0.4) has a built-in battery holder for a CR1225 coin cell, but 
     * Install the battery into the holder, observing correct polarity.
       * If the holder has a switch, be sure it is set to "on"
     * Power on your C64/TeensyROM and connect an Ethernet cable to synch the time.
-    * Go to the settings menu (F8) and Synch RTC Via Ethernet (K) to set the RTC time
-    * Adjust the time zone to your area using C/c
+    * Go to the settings menu (F8), press "6" for the Time Format/Real Time Clock page, then press "c" to Synch RTC via Ethernet and set the RTC time
+    * Adjust the time zone to your area using b/B
     * Ethernet cable is no longer needed for time synch, the time will be retained through future power cycles.
 
     If you find a better battery holder or storage method, please [let me know](mailto:travis@sensoriumembedded.com).
