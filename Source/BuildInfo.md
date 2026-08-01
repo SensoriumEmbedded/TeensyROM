@@ -4,9 +4,8 @@
 ## Main TeensyROM C/C++ application
 ### Software tools & lib needed
   * [Arduino IDE 2.x](https://www.arduino.cc/en/software)
-  * [Teenyduino app](https://www.pjrc.com/teensy/td_download.html)
+  * [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
   * Install as directed in links above
-  * The PN532 NFC library can be found [here](https://github.com/elechouse/PN532)
 
 ### Build parameters/instructions
   * In the Arduino IDE
@@ -19,13 +18,13 @@
        * USB Type: "Serial + MIDI"
      * Build the project and download directly to TeensyROM
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
-     * Alternately, you can generate a .hex file and put it on a SD/USB drive
+     * Alternatively, you can generate a .hex file and put it on a SD/USB drive
        * See FW update section of the [General Usage doc](/docs/General_Usage.md)
-   * Note: To do a full build including the minimal image for large CRT files, see [**this doc**](Teensy/tools/_Dual%20Boot%20Build.txt).
+   * Note: To do a full build including the minimal image for large CRT files, see [**this doc**](Teensy/tools/Build-DualBoot.md).
    
-### Latest Support tool/lib versions as of v0.7.1+ on 2026/03/08
-   * Arduino IDE 2.3.7
-   * Teensyduino 1.60.0
+### Latest Support tool/lib versions as of FW v0.8 on 2026/08/02
+   * Arduino IDE 2.3.10
+   * Teensyduino 1.62.0
    * Included libraries
      * SD at version 2.0.0
      * SdFat at version 2.1.2
@@ -34,8 +33,9 @@
      * NativeEthernet at version 1.0.5
      * FNET at version 0.1.3
      * EEPROM at version 2.0
+     * Time at version 1.6.1
+     * Bounce (legacy)
      * CRC32 at version 2.0.0
-     * PN532 (link above) last updated 9/12/2018
 
 ## C64/128 6502 Assembly code
 These steps are only needed if modifying the application menu assembly code running on the C64/128.
@@ -44,7 +44,7 @@ These steps are only needed if modifying the application menu assembly code runn
   * [bin2header util](https://github.com/AntumDeluge/bin2header)
 
 ### Build instructions
-  * Edit the "build8000CartBin.bat" file in the C64 directory
+  * Edit the "build8000CartBin.bat" file in the C64/MainMenuCRT directory
     * Set "toolPath" to an absolute path of the SW tools
     * Edit the following 2 variables to point to the associated tool directory
       * Relative, based on toolPath: "compilerPath", "bin2headerPath"
