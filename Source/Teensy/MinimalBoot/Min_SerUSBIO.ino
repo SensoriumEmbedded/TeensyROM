@@ -38,8 +38,10 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          }
          else if (inVal == VersionInfoToken) //Version Info
          {
+            uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse 
+            if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
             SendU16(AckToken);
-            CmdChannel->printf("\nTeensyROM minimal %s\n\n", strVersionNumber);
+            CmdChannel->printf("\n  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r\n", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
             return;
          }
          else if (inVal == LaunchFileToken) //Launch File
