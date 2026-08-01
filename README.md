@@ -3,7 +3,7 @@
 ***Connect your Commodore to the 21st century***
 
 **Features include:**
-* **ROM emulator**: The perfect way to play CRT files, such as the highly recommend [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
+* **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
 * **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
 * **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
 * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
@@ -15,7 +15,7 @@
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 * **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
-* **TeensyROM+ added features** [are documented here](docs/TR+NewFeatures.md)
+* **TeensyROM+ (PCB v0.4) added features** such as KERNAL replacement, 512k REU, Freezer Carts, remote DMA, second button, and external reset detection [are documented here](docs/TR+NewFeatures.md)
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
@@ -25,32 +25,33 @@
 |:--:|:--:|
 
 Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
-<BR>**Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom).  I also sell on [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) and [eBay](https://www.ebay.com/usr/travis_sensorium).
-<BR><a href="https://lectronz.com/products/teensyrom"><img src="media/Other/i-sell-on-lectronz-large.png" alt="Lectronz Logo Link" width="150" height="78"></a>
 
-Case/enclosures are avaible to [download](3D_Print_Case/) and print at home, for sale with a new unit (See links links above), or direct from [0ldSKull](https://www.0ldskull-retro.com/)
+**Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom).  I also sell on [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) and [eBay](https://www.ebay.com/usr/travis_sensorium).
+
+<a href="https://lectronz.com/products/teensyrom"><img src="media/Other/i-sell-on-lectronz-large.png" alt="Lectronz Logo Link" width="150" height="78"></a>
+
+Case/enclosures are available to [download](3D_Print_Case/) and print at home, for sale with a new unit (see links above), or direct from [0ldSKull](https://www.0ldskull-retro.com/)
 
 Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U) to meet other TeensyROM users, ask questions, provide thoughts/input/feedback, etc.
 
 ## Table of contents
-  * [TeensyROM Feature details](#teensyrom-feature-details)
+  * [TeensyROM Feature Details](#teensyrom-feature-details)
   * [Links to detailed documentation](#links-to-detailed-documentation)
   * [Demo Videos](#demo-videos)
   * [Hardware/PCB Design](#hardware-pcb-design)
   * [Compatibility](#compatibility)
-  * [Inspiration](#inspiration-and-thank-yous)
+  * [Inspiration and Thank-Yous](#inspiration-and-thank-yous)
   * [Pictures/screen captures](#pictures-screen-captures)
 
-<BR>
-
 ## TeensyROM Feature Details
-### Compatable with C64 and C128 machines/variants, NTSC and PAL supported
+Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
+
 ### **Super fast Loading (.PRG/P00) or ROM emulation (.CRT)** directly from:
   * USB thumb Drive
   * SD card
   * Teensy Internal Flash Memory
-  * Transfer directly from PC using the [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)
-  * See supported file details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#loading-programs-and-emulating-roms)
+  * Transfer directly from PC using [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) (cross-platform, recommended) or the [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) (Windows desktop)
+  * See supported file details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#loading-files-and-emulating-roms)
   * [NFC Loading system](docs/NFC_Loader.md) available to quickly select/load with NFC tags.
 ### **MIDI in/out via USB Host connection:** 
   * Play your SID with a USB MIDI keyboard!
@@ -71,8 +72,8 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
   * Sets C64 system time from internet
 ### **Firmware updates directly from SD card or USB thumb drive**
   * Just drop the .hex file on an SD card or USB drive, no need for extra software to update.
-### Key parameters stored in internal EEPROM
-  * Startup, Ethernet, timezone, etc retained after power down.
+
+**Key parameters** (startup, Ethernet, timezone, etc.) are stored in internal EEPROM and retained after power down.
 
 ## Links to detailed documentation
   * **Usage Documents**
@@ -84,17 +85,16 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
     * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
     * **[Serial/USB Remote Command Protocol](docs/ControlComms.md)**
-  * **SW Release notes/developnment**
+  * **SW Release notes/development**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
-    * **[Win App Release History](bin/WinApp/WinApp_Release_History.md)**
     * **[Software Build Instructions](Source/BuildInfo.md)**
   * **Hardware & PCB Related**
     * **[3D printed case files/document](3D_Print_Case/3D-Printed-Case-ReadMe.md)**
     * **[RTC Battery Addition for v0.2/0.3 PCBs](docs/RTC_Battery_Addition.md)**
     * **[TeensyROM Assembly Instructions](PCB/PCB_Assembly.md)**
     * **[PCB Design History](PCB/PCB_History.md)**
-    * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM%20v0.2c%20BOM.xlsx)**
-    * **[PDF Schematic](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.2c/TeensyROM_v0.2c_Schem.pdf)**
+    * **[Bill of materials with cost info](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.3/TeensyROM%20v0.3%20BOM.xlsx)**
+    * **[PDF Schematic](https://github.com/SensoriumEmbedded/TeensyROM/raw/main/PCB/v0.3/TeensyROM_v0.3_Schem.pdf)**
 
 
 ## Demo Videos:
@@ -106,25 +106,27 @@ Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/
     * SID Player and Picture viewer demo 
 
 ## Compatibility
-* TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as EVO64, Mega65 (r5 and higher), Ultimate 64, and Reloaded MKII
+* TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as the C64U, Ultimate 64, EVO64, Mega65 (r5 and higher), and Reloaded MKII
 * The early "prototype" version of breadbin (PCA 326298 w/ 5 pin video) has a known issue with the reset circuit that must be corrected to be compatible with the TeensyROM and other fastload cartridges. See [this post](https://www.lemon64.com/forum/viewtopic.php?t=74222) or [this video](https://youtu.be/agDFLPP9yIw?t=813) for instructions on how to correct this issue.
 
-## Hardware-PCB Design
-Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production isn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
+## Hardware/PCB Design
+PCB 0.2/0.3 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production wasn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
+
+Beginning with PCB v0.4 (TeensyROM+) the package sizes are reduced (TSSOP and 0603 passives) to allow additional needed circuitry and single sided manufacturing.
 
 **A note about overclocking**
-The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per the app, external cooling is not required for this speed.  However, in abundance of caution, a heatsink is specified in the BOM for this project.  In addition, the temperature can be read on the setup screen of the main TeensyROM app. The max spec is 95C, and there is a panic shutdown at 90C.  In my experience, even on a warm day running for hours with no heatsink, the temp doesn't excede 75C.
+The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per the app, external cooling is not required for this speed.  However, in abundance of caution, a heatsink is specified in the BOM for this project.  In addition, the temperature can be read on the setup screen of the main TeensyROM app. The max spec is 95C, and there is a panic shutdown at 90C.  In my experience, even on a warm day running for hours with no heatsink, the temp doesn't exceed 75C.
 
 ## Inspiration and Thank-Yous:
 * [**Heather S**](https://www.instagram.com/dalliancecreations/): Loving wife, continuous encourager, saintly patience
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web), [UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
 * [**Avrilcadabra**](https://www.youtube.com/@avrilcadabra): Musician, experimenter, provider of ideas and feedback 
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
 * [**StatMat**](https://github.com/Stat-Mat): NFC Scanner idea, Fast boot code, OneLoad64 creation
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
-## Pictures-screen captures:
+## Pictures/screen captures:
 |![TeensyROM pic1](media/v0.3/v0.3_top.png)|![TeensyROM pic1](media/case/lp-case_connected.png)|
 |:--:|:--:|
 |![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|

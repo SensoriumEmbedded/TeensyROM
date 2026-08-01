@@ -6,13 +6,13 @@
   * Defaults loaded with popular text sites
 * Previously visited sites saved in a browsing queue, use the 'p' command to go back.
 * Ability to Read filtered (via [FrogFind](http://www.frogfind.com/)) or raw/unfiltered web pages
-* Download files directly to specified path on USB or SD 
+* Download files directly to a specified path on USB or SD 
   * Path saved in TeensyROM
-* View doawnloaded files and launch directly from browser
+* View downloaded files and launch directly from browser
 * Use search engine terms to find content quickly
 * Displays PETSCII characters via HTML ([development tools here](http://sensoriumembedded.com/tinyweb64/petsciitag/))
 
-### Using a C64/128 Terminal program to surf the web, limitations
+### Limitations
 * This is a text based interface only.  There is some formatting and colors based on HTML tags, and the ability to download, but no in-line graphics, etc. 
 * HTTPS is not supported directly.  However, secure sites can be filtered/loaded via FrogFind.  If you see a message regarding this, try the reload/filtered command: 'rf'
 * Redirects are not automatic. Either apply filter or follow link.
@@ -44,7 +44,7 @@
 | Modifier | Description |
 |--|--|
 | (none) | Use previous/default |
-| D | Download as file to the Download path<br>Note that .prg, .crt, .sid, and .hex files are auomatically downloaded without modifier |
+| D | Download as file to the Download path<br>Note that .prg, .crt, .sid, and .hex files are automatically downloaded without modifier |
 | F | Filter the URL response through FrogFind |
 | R | Read raw, directly from unfiltered URL |
 

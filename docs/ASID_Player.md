@@ -16,7 +16,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 
 ## USB/TeensyROM Setup
 * Connect USB cable from a MIDI Host/computer to the USB Type B Micro Device port on the Teensy module.
- * Recommend direct connection between PC/Mac and TeensyROM, USB hubs can add additional timing jitter.
+ * We recommend direct connection between PC/Mac and TeensyROM, USB hubs can add additional timing jitter.
 * Power up C64/128 to the TeensyROM main menu.
 * Select "TeensyROM ASID Player", or press the number '4' for fast hotkey access.
 * Program starts ready to receive/play MIDI ASID data
@@ -28,7 +28,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |`v`|Clear Voices|Initialize/clear all voices on all SID chips|
 |`s`|Screen Toggle|Turn on/off C64 screen blanking, can help with audio noise reduction|
 |`m`|Mute All Toggle|Clears all voices and mutes incoming stream. "Mute" displayed when active|
-|`1`/`2`/`3`|Voice # Toggle|Enable/Disable voice # 1/2/3 individually.<BR>Voice # group red when active, applies to all active SIDs
+|`1`/`2`/`3`|Voice # Toggle|Enable/Disable voice # 1/2/3 individually.<BR>Voice # group turns red when active, applies to all active SIDs
 |`?`|Help List|Displays keyboard commands list|
 |`d`|Indicator Decoder|Displays info about indicators at top of screen (see below)|
 |`c`|Clear Screen|Clears text from display, just leaves indicators|
@@ -36,7 +36,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |`F1`/`F2`|First  SID address|Inc/Dec address of the *primary* SID, typically $d400|
 |`F3`/`F4`|Second SID address|Inc/Dec address of SID #2 for multi-SID playback|
 |`F5`/`F6`|Third  SID address|Inc/Dec address of SID #3 for multi-SID playback|
-|`t`|Frame Timer (beta)|Turns On/Off the frame-retimer (see below)|
+|`T`/`t`|Frame Timer (beta)|Inc/Dec through timer states: Off, On-50Hz, On-Auto (see below)|
 |`B`/`b`|Buffer Size|Inc/Dec the size of the Frame Timer buffer, if used (see below)|
 
 ### Register indicators
@@ -60,7 +60,7 @@ The top of the ASID Player screen displays real-time playback information. This 
 ### Frame timer (beta)
 Timing imperfections can be introduced by control PC workload, USB packetization, drivers, and other factors. This can be compensated for by re-timing the output to the C64/SID to a repeatably accurate cadence.
 
-The first step is to enable the re-timer on and select 50Hz or Auto timing of playback using the `t` command. 
+The first step is to enable the re-timer on and select 50Hz or Auto timing of playback using the `T`/`t` command. 
 * `Off` (default) simply plays each ASID packet as soon as it arrives via USB/MIDI
 * `On-50Hz` is for most standard 1x speed SIDs, and can insure accurate starting speeds for SIDs of that type.
 * `On-Auto` measures the initial packets for the starting time constant. Timing can start slightly off if initial packets aren't received well-timed.
@@ -88,7 +88,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * Select "TeensyROM" from the "MIDI port for ASID" drop-down
     * Set the Frame Timer as desired per above, or leave it off
     * Select your SID tune from the vast library and play it
-    * The playback should be eminating from your C64/128!
+    * The playback should be emanating from your C64/128!
 * **ChipSynth C64** to control your SID chip directly as a synthesizer
     * Go to https://www.plogue.com/products/chipsynth-c64.html and download/install/launch "chipsynth C64"
     * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and "TeensyROM" as the destination
@@ -111,7 +111,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * Click the "Conf" button and highlight "TeensyROM", click OK
     * Either Click "Load" or drag/drop a .sid file into the window.
     * Click "Play"
-    * The playback should be eminating from your C64/128!
+    * The playback should be emanating from your C64/128!
     * You can play with the frequency to adjust the playback tempo if needed.
     
 <br>

@@ -1,17 +1,16 @@
 
 # TeensyROM NFC Loading system
 The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card instant launch machine! Here's a [video](https://www.youtube.com/watch?v=iNfQx2gx0hA) of it in action. 
-<BR>
 
 ## Table of contents
   * [NFC Loader Hardware](#nfc-loader-hardware)
-    + [Electronics](#electronics)
-    + [NFC Tag cards/media](#nfc-tag-cards-media)
-    + [Card labels](#card-labels)
-    + [Reader enclosure/case](#reader-enclosure-case)
+    * [Electronics](#electronics)
+    * [NFC Tag cards/media](#nfc-tag-cards-media)
+    * [Card labels](#card-labels)
+    * [Reader enclosure/case](#reader-enclosure-case)
   * [Tag programming](#tag-programming)
-    + [Programming tag directly with the TeensyROM](#programming-tag-directly-with-the-teensyrom)
-    + [Programming tag via cell phone (Alternate)](#programming-tag-via-cell-phone)
+    * [Programming tag directly with the TeensyROM](#programming-tag-directly-with-the-teensyrom)
+    * [Programming tag via cell phone (Alternate)](#programming-tag-via-cell-phone)
   * [TeensyROM Software setup](#teensyrom-software-setup)
 
 ## Thank you very much to:
@@ -45,10 +44,10 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 ### Card labels
 * Labels can be created using this [Zaparoo Label Generator](https://design.zaparoo.org/)
   * Choose the "HuCard (C64)" Card template
-  * Recommend printing to glossy sticker sheets, then cut out individually for your tag cards.
+  * We recommend printing to glossy sticker sheets, then cut out individually for your tag cards.
     * ![TapTo_Label_Designer](/media/NFC/TapTo_Label_Designer.webp)
 
-### Reader enclosure-case
+### Reader enclosure/case
 * These 3D printable case designs by [Bedroom Ninja](https://makerworld.com/en/@RetroDojo) fit the theme perfectly!
   * [TapTo NFC-Engine](https://makerworld.com/en/models/1542524-nfc-engine-v2#profileId-1619125)
     * ![NFCEngine](/media/NFC/NFC_Engine.jpg)
@@ -71,8 +70,8 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 ### Programming tag directly with the TeensyROM
   * Using the TeensyROM menu, navigate to the file on SD or USB that you would like to create a tag for
   * Press the `Left Arrow` key to select the file for tag writing.
-    * Alternately, press `?` to write an NFC Tag that will launch a random file from the currently selected Directory
-    * Recommend using random with directories containing <100 items. Functiom must load full directory to pick one at random, so large directories will take longer to pick/launch from.  
+    * Alternatively, press `?` to write an NFC Tag that will launch a random file from the currently selected Directory
+    * We recommend using random with directories containing <100 items. Function must load full directory to pick one at random, so large directories will take longer to pick/launch from.  
   * Follow the on-screen instructions to load a tag and write to it.
   * ![Write Tag Screen](/media/NFC/Write_Tag.jpg)
 
@@ -88,14 +87,14 @@ The NFC loading system makes your TeensyROM enabled C64/128 into an NFC card ins
 * Be sure your TeensyROM is using Firmware version 0.7 or later for the latest NFC features
   * See update instructions [here](General_Usage.md#firmware-updates) if update is needed.
 * Connect your NFC reader to the USB Host port of the TeensyROM.
-  * Alternately, a powered USB hub can by used.  This allows the NFC reader, USB Thumb drive, and MIDI device(s) to be connected simultaneously.
+  * Alternatively, a powered USB hub can be used.  This allows the NFC reader, USB Thumb drive, and MIDI device(s) to be connected simultaneously.
 * Power up your C64/TeensyROM
-* In the TeensyROM Main Menu, select **F8** to go to the Settings Menu
-* Select the letter next to "Host Serial Device" to set to "NFC"
-  * Recommend also setting "Special IO" to "None" to avoid interference.
-* A reboot is required for this to take effect.  Either select "Re-boot TeensyROM" from the menu, or power-cycle the C64.
+* In the TeensyROM Main Menu, select **F8** to go to the Settings Menu, then **2** for Config: TeensyROM General
+* Press `b` to cycle "USB Host Serial Dev" to "NFC"
+  * We recommend also cycling "Special IO" (`a`/`A`) to "None" to avoid interference.
+* A reboot is required for this to take effect. Either press `F1` to reboot TeensyROM, or power-cycle the C64.
 * This setting stays persistent when the unit is powered down again.
-  * Recommend disabling this option when the reader isn't connected to prevent slow start-up.
+  * We recommend disabling this option when the reader isn't connected to prevent slow start-up.
   * Automatically disabled while using Ethernet or MIDI applications due to increased latency.
 
 <br>

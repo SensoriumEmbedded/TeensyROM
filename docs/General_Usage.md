@@ -2,12 +2,13 @@
 
 ## Table of contents
   * [TeensyROM connections and Menu button](#teensyrom-connections-and-menu-button)
-  * [Main Menu Options/Navigation](#main-menu-options-navigation)
-  * [SD Card (or USB Drive) Setup](#sd-card-or-usb-drive-setup)
+  * [Main Menu Options-Navigation](#main-menu-options-navigation)
+  * [SD Card or USB Drive Setup](#sd-card-or-usb-drive-setup)
   * [Loading files and emulating ROMs](#loading-files-and-emulating-roms)
   * [The Settings Menu](#the-settings-menu)
   * [Selecting and associating Special IO](#selecting-and-associating-special-io)
   * [Firmware updates](#firmware-updates)
+  * [Troubleshooting](#troubleshooting)
 
 ## TeensyROM connections and Menu button
   * With the power off, attach the TeensyROM to the Expansion port of your Commodore64 or 128 machine
@@ -17,54 +18,59 @@
     * ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options-Navigation
-  * (as of FW v0.6.6)
+  * (as of FW v0.8)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
     * `CRSR or Joystick Left/Right` Page up/down the list of files
     * `Return or Joystick Fire button` Select/run the highlighted file or enter sub-directory
   * Additional Keyboard commands:
     * `Up Arrow` Up 1 directory level
-    * `a-z` (lower case) Search current directory for first item beginning with letter pressed
+    * `a-z`  Search current directory for first item beginning with letter pressed
     * `Home` Move cursor to first item in directory
     * `Left Arrow` Write NFC Tag that will launch currently highlighted file
     * `?` Write NFC Tag that will launch a random file from the currently selected Directory
-    * `A` (upper case) Set Auto-Launch to currently highlighted file
-    * `C` (upper case) Enter Color Settings Page
-    * `M` (upper case) Transfer/Mount/Launch highlighted .Dxx file via attached [Meatloaf](https://github.com/idolpx/meatloaf) device
+    * `<Shift-A>` Set Auto-Launch to currently highlighted file
+    * `<Shift-M>` Transfer/Mount/Launch highlighted .Dxx file via attached [Meatloaf](https://github.com/idolpx/meatloaf) device
       * Requires Meatloaf using latest FW connected to the TR USB Host port.
+    * `<Shift-K>` **(TR+ only)** Set highlighted file as the Kernal Replace image
+    * `<Shift-R>` **(TR+ only)** Set highlighted file as the REU pre-load/save image
     * `1-5` Programmable Hot Keys to immediately launch a specified file
-      * Defaults: `1` Cynthcart, `2` Station64, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
+      * Defaults: `1` Cynthcart, `2` Station64 **(TR+ default: REU-Checker v1.0)**, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
     * `!-%` (Shift `1-5`) Set corresponding Hot Key to currently highlighted file (on any media source)
     * `F1` Display files stored in Teensy Memory via firmware
     * `F3` Display files on an attached SD card
     * `F5` Display files on an attached USB Drive
-    * `F7` Show Help Menu
+    * `F7` Show Help Menu (2 pages: navigation/source keys, and per-file select options)
     * `F2` Exit to regular BASIC startup screen, TeensyROM deactivated
       * Re-activate TeensyROM by pressing button
     * `F4` Toggle background SID on/off
-    * `F6` Show SID Informartion
+    * `F6` Show SID Information
     * `F8` Show Settings Menu
   * Screen contents:
     * **File Source and dir path** is shown in the upper left corner
     * **Page number and number of pages** is shown in the lower right corner
-    * **Current time** is shown in the upper right (if ethernet connected/syncing).  Otherwise the time will start at midnight upon startup.
+    * **Current time** is shown in the upper right.
+      * Time is synched to the Teensy integrated RTC
+      * If an RTC battery is present (built-in on TR+, or added to TR via [battery mod](RTC_Battery_Addition.md)), the time should be correct, no Ethernet needed.
+      * Optionally, the time can be automatically synced via Ethernet on startup (see settings).
+      * If neither of these are available, time can be set manually in the settings menu, or just let it start at midnight.
     * **File type** is to the right of each file/dir displayed. If "Unk" (unknown) then it is not a recognized/supported file type.
-      * **'+'** in front of file type means it is pre-associated with Special IO emulation needed for function (MIDI, Swiftlink network) 
+      * **'+'** in front of file type means it is pre-associated with [Special IO](#selecting-and-associating-special-io) emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
 ## SD Card or USB Drive Setup
   * General info/configuration
-    * No TR code is stored on these external drives, so they not are required to start using your TeensyROM and all of its FW bundled programs.
+    * No TR code is stored on these external drives, so they are not required to start using your TeensyROM and all of its FW bundled programs.
     * SD Cards are somewhat favored over USB drives as they have slightly faster access times.
       * 32GB SD cards typically give the fastest directory read times
     * We've seen some issues with USB (or SD) drives with non-standard partitioning of the drive, especially manufacturer default partitions.  
       * If you have issues reading drive contents via the TR, try deleting the existing partition(s) (either via the 'diskman' Disk Management gui or using 'diskpart' and 'clean' via command line) then re-partition. After that, re-format in either FAT32 or FAT16 and load files.
-    * Mac users: Before removing the SD card from your Mac, recommend running the `dot_clean` command on the top-level directory of the volume, e.g. `dot_clean -m /Volumes/TEENSYSD`. This will remove all macOS-specific meta files from the SD card and reduce clutter.
+    * Mac users: Before removing the SD card from your Mac, we recommend running the `dot_clean` command on the top-level directory of the volume, e.g. `dot_clean -m /Volumes/TEENSYSD`. This will remove all macOS-specific meta files from the SD card and reduce clutter.
   * Recommended Files/Games/SIDs
     * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a wonderful (and free) source for thousands of files/games in CRT format, which is perfect for the TeensyROM
     * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
     * There's a great collection of Single Load Demos [located here](http://sensoriumembedded.com/tinyweb64/Demos/).
-    * Recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
+    * We recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
 
     
 ## Loading files and emulating ROMs
@@ -81,6 +87,7 @@
         * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon, GMod2
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay, Magic Desk 2
         * Ethernet (Swiftlink/Turbo-232), MIDI (Passport, Datel, Sequential, & Namesoft)
+        * Action Replay, Super Snapshot V5 (freezer carts, **TR+ only**)
       * Additional CRT support info
         * Files larger than 850KB will automatically employ a bank-swap scheme 
           * These files must be run from an SD Card (not USB Stick)
@@ -90,7 +97,7 @@
           * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
           * See full CRT implementation details [here](CRT_Implementation.md).
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. 
-          * This issue only impacts UltiMax CRTs on C128s and is resolved in PCA rev 0.3
+          * This issue only impacts UltiMax CRTs on C128s and is resolved in PCB rev 0.3
         * EasyFlash EAPI not currently supported
     * **.SID files:**
       * Play SID file: ~90% of known SID files are supported
@@ -114,40 +121,102 @@
       * Used for TeensyROM firmware updates (see below)
 
 ## The Settings Menu 
-  * (as of FW v0.7)
-  * Keyboard commands available from the Settings Menu:
-    * These commands modify settings stored in the Teensy, and are recalled on power-up
-      * `a/A` Select Special IO to apply when launching a PRG/CRT (see below)
-      * `b/B` Set Port 2 Joystick repeat speed for menu navigation from 0 (very slow) to 15 (super fast) 
-      * `c/C` Set local Time Zone for system/screen clock (applied next Ethernet time synch)
-      * `d` 12/24 hour clock display
-      * `e` Internet Time Synch on power-up
-      * `f` Background SID music start on power-up
-      * `g` Show file extensions of known file types
-      * `h` Select Serial device connected to USB Host Port ([NFC Reader](docs/NFC_Loader.md), [TR Control device](https://github.com/SensoriumEmbedded/TeensyROMControl), or None).
-        * Will init identified device on power-up.
-      * `i` Ethernet TCP Listener capability
-    * These commands only change settings for this session and execute immediately
-      * `j` Reboot TeensyROM to execute updated power-up settings
-      * `k` Perform Internet Time Synch now
-        * Also displays local IP address
-      * `l` Execute Self-Test (takes ~4 seconds)
-        * Tests the TeensyROM ability to rapidly read from emulated IO Space
-        * Helpful in testing out HW and debug, but should not fail in normal use
-        * The is not an exhaustive test, but may be expanded later
-      * `m` Disable auto-launch feature.  Re-enable by selecting another program with `Shift-Return` (see above)
-      * `n` Display Help menu
-      * `Space Bar` Return to Main Menu
-      * `Return` Screen refresh.  Handy for updating the temperature reading 
-  * Other information on the Settings screen
-    * Build Date/Time
-      * In addition to the FW version number, the date/time of the build is also logged.
-      * This is helpful for tracking custom builds & sub-releases
-    * Teensy Frequency and Temperature
-      * As mentioned in the main Readme, the Teensy is slightly overclocked to 816MHz in this application
-      * External cooling is not required for this speed. However, in abundance of caution, a heatsink is specified in the BOM for this project.
-      * The max spec is 95C, and there is an automatic shutdown at 90C.
-      * Even in extended use, I've never seen the internal temperature exceeded 75C.
+  * (as of FW v0.8)
+  * Accessed via `F8` from the main menu. Organized into 9 indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
+  * Shared navigation, works from any page:
+    * `CRSR Left/Right` Previous/Next page
+    * `1-9` Jump directly to a page (see page # below)
+    * `F1` Reboot TeensyROM (applies any power-up-only settings)
+    * `Space Bar` Return to Main Menu
+
+### 1. Index
+  * Lists all 9 pages below for quick-jump access
+
+### 2. Config: TeensyROM General
+  * Emulation Selections:
+    * `a/A` Cycle forward/backward through available Special IO to apply when launching a PRG/CRT (see [Selecting and associating Special IO](#selecting-and-associating-special-io))
+      * Current Kernal Replace file is shown **(TR+ only)** — select via `<Shift-K>` from the file browser
+      * Current REU Pre-load/save file is shown **(TR+ only)** — select via `<Shift-R>` from the file browser
+  * User Interface/other:
+    * `b` Cycle Serial device connected to USB Host Port: None, [NFC Reader](NFC_Loader.md), or [TR Controller](https://github.com/SensoriumEmbedded/TeensyROMControl)
+      * Selected device is initialized on power-up/reboot
+    * `c` Cycle Alt Button action **(TR+ only)**: `AutoLaunch` (default), `Pause/Unpause`, `TR Menu`, `Reboot TR`, or `None`
+      * Only active when the button isn't already in use by a freezer cart or REU
+    * `d/D` Increment/Decrement Joystick 2 repeat speed for menu navigation
+    * `e` Toggle Show File Extensions
+    * `f` Run Self Test (quickly verifies the TR can read its own emulated IO space)
+      * See TR External Port and Expansion Port tests for more thorough testing.
+
+### 3. Config: Startup Options
+  * On Main Menu Startup:
+    * `a` Toggle Play selected SID on startup (file shown; select from the SID Info page)
+    * `b` Toggle Enable TCP Listener on port 2112 of the current IP, for remote control — see [ControlComms.md](ControlComms.md)
+    * `c` Toggle Synch RTC via net on startup (Ethernet NTP time sync — see [Main Menu Options-Navigation](#main-menu-options-navigation) for how this interacts with a battery-backed RTC)
+  * On TeensyROM Boot/Power-up:
+    * `d` Toggle Auto-Launch Enable (file shown; select via `<Shift-A>` from the file browser)
+
+### 4. Config: Menu Colors
+  * Individual colors, each cycled through the 16 C64 colors:
+    * `a/A` Screen Background
+    * `b/B` Screen Border
+    * `c/C` Top of screen banner color
+    * `d/D` Time Display & Headings
+    * `e/E` Input key option indicator
+    * `f/F` General text/descriptions
+    * `g/G` File names & Values
+  * Presets:
+    * `h` TR Default
+    * `i` Black & White
+    * `j` C64 Mono
+    * `k` CGA
+    * `l` The Blues
+    * `m` Rainbow
+  * `Return` Apply the selected colors
+
+### 5. Config: MIDI Message Filters
+  * Only message types marked "On" are passed through to the C64/128 — useful for DAWs or MIDI controllers that send extra packets that can overwhelm some C64 MIDI software (such as Cynthcart)
+  * Packet types to transfer, each individually toggled on/off:
+    * `a` Note Off/On (8x/9x)
+    * `b` AfterTouch Poly (Ax)
+    * `c` Control Change (Bx)
+    * `d` Program Change (Cx)
+    * `e` AfterTouch (Dx)
+    * `f` Pitch Change (Ex)
+    * `g` System Exclusive (F0)
+    * `h` TimeCode QuarterFrame (F1)
+    * `i` Song Position (F2)
+    * `j` Song Select (F3)
+    * `k` Tune Request (F6)
+    * `l` Real Time System (F8-FF)
+
+### 6. Config: Time Format/Real Time Clock
+  * Format/Location:
+    * `a` Toggle 12/24 hour clock display
+    * `b/B` Set local Time Zone (UTC offset, half-hour increments)
+  * RTC Adjustment:
+    * `c` Synch RTC via Ethernet now (also displays the local IP address)
+    * `d/D` RTC Hours down/up
+    * `e/E` RTC Minutes down/up
+    * `f/F` RTC Seconds down/up
+
+### 7. Info: General
+  * Current Ethernet IP Values: IP Address, Gateway IP, Subnet Mask
+    * `a` Initialize/re-init Ethernet connection
+  * TeensyROM/Machine info:
+    * FW version and build date/time
+    * Teensy clock speed and internal temperature
+    * Unique Teensy hardware ID (also shown via the Version Info remote command — see [ControlComms.md](ControlComms.md))
+    * Detected C64/128 clock rates (PAL/NTSC and CIA TOD) — handy for confirming what machine video/mains power standard the TR sees
+
+### 8. Info: Ethernet
+  * General Settings: MAC Address, IP Type (Static/DHCP)
+  * DHCP Specific: DHCP Timeout, DHCP Response Timeout
+  * Static IP Specific: Static IP, DNS IP, Gateway IP, Subnet Mask
+  * This is a read-only display — to modify these values, use a terminal program (such as CCGMS) and the `AT?` command for help. See [Ethernet Usage](Ethernet_Usage.md).
+
+### 9. Info: HotKeys
+  * Shows the currently assigned file for each of the 5 programmable Hot Keys (#1-5)
+  * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
 ## Selecting and associating Special IO
   * What is it?
@@ -165,16 +234,8 @@
     * Special IO can also be selected in the settings menu
       * This setting will be applied at the time of launching any program or generic cartridge
       * The setting stays in memory and will be re-loaded for any app until changed
-      * Recommend disabling NFC if Special IO is selected to avoid interference.
-    * If a selected CRT file is associated with different Special IO (ie Epyx, EZFlash etc), that Special IO will be loaded instead
-
-## Resetting EEPROM Contents
-  * To set *all* EEPROM values back to default settings:
-    * With C64 off, press and hold down menu button on the TeensyROM
-    * Power up the C64 (nothing will be displayed)
-    * Keep TR menu button pressed for ~10 sec, until the LED starts blinking
-    * Release the TR Menu button and wait for the TR menu to be displayed
-    * TR EEPROM settings are now reset to default   
+      * We recommend disabling NFC if Special IO is selected to avoid interference.
+    * If a selected CRT file is associated with different Special IO (i.e. Epyx, EasyFlash etc), that Special IO will be loaded instead
 
 ## Firmware updates
   There are multiple ways to update the TeensyROM firmware, choose one of the following:
@@ -206,7 +267,7 @@
   * There are two sites hosting TeensyROM firmware updates, use one of the default bookmarks to enter either of them
     * Bookmark #1 is for the TinyWeb64 site, entering "b1" will take you to sensoriumembedded.com/tinyweb64
     * Bookmark #2 is for Digitalman's site, so "b2" to go to digitalman.azurewebsites.net
-    * Alternately the 'U' command will also work: "u sensoriumembedded.com/tinyweb64"
+    * Alternatively the 'U' command will also work: "u sensoriumembedded.com/tinyweb64"
   * From the main menu, link #5 will take you to the Firmware download section on either site
   * Choose the link # for the FW version you want to download/install
     * The FW file will take a minute or two to download, dots shown on screen to indicate progress
@@ -218,7 +279,7 @@
   * Get the .hex file of the latest released version [from here](/bin/TeensyROM/)
   * Download and install the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
     * Teensyduino requires arduino to run, which works fine.
-    * Alternately, the Teensyloader stand alone file can be downloaded via a link further down the page
+    * Alternatively, the Teensyloader stand alone file can be downloaded via a link further down the page
   * Launch the Teensyloader/teensyduino app (teensy.exe)
   * Select File, Open HEX File and select the save TeensyROM .hex file
   * Connect the TeensyROM to your computer with a USB A to microB cable.
@@ -231,6 +292,24 @@
 ### **Using the arduino environment** (for custom builds/code)
   * See the [Software build document](/Source/BuildInfo.md) for details on this process.
 
+## Troubleshooting
+
+### Commodore C64 Ultimate
+  * Check settings to be sure no other devices (such as a SID/UtiliSID or ACIA/Swiftlink mapping) are using the IO1 ($DE00) location. Some CRTs emulated by the TR can use the IO2 ($DF00) range as well.
+  * Set the Cartridge Port to the default settings (Preference: Auto, Bus Operation: Quiet, Bus Sharing: Both for all)
+
+### Resetting EEPROM Contents
+  * To set *all* EEPROM values back to default settings:
+    * With C64 off, press and hold down menu button on the TeensyROM
+    * Power up the C64 (nothing will be displayed)
+    * Keep TR menu button pressed for ~10 sec, until the LED starts blinking
+    * Release the TR Menu button and wait for the TR menu to be displayed
+    * TR EEPROM settings are now reset to default   
+
+### Additional help
+  * For additional support, please consider joining the [TeensyROM Discord](https://discord.gg/ubSAb74S5U)
+  * Or contact Travis directly via [e-mail](mailto:travis@sensoriumembedded.com).
+  
 <br>
 
 [Back to main ReadMe](/README.md)

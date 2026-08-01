@@ -4,14 +4,14 @@
   * Use an Ethernet cable (RJ-45) to connect your TeensyROM to an Ethernet hub/router with internet access.
 
 ## Using a Terminal program to connect to the internet
-  ### Yes, bulletin board and other telnet based services are still out there and popular!
+  Yes, bulletin board and other telnet based services are still out there and popular!
   * Here are just a few:
     * [Oasis BBS:](https://theoasisbbs.com/) oasisbbs.hopto.org:6400
     * Retro Campus BBS: bbs.retrocampus.com:6510 (no login required)
     * 8-Bit Playground: 8bit.hoyvision.com:6502
 
   ### TeensyROM Setup
-  * Select "Swif-Turbo/Modem" Special IO HW from the settings menu prior to running a terminal program.
+  * Select "Swift-Turbo/Modem" Special IO HW from the settings menu prior to running a terminal program.
     * Note: if you use the included CCGMS Terminal program, this association is automatic and this step can be skipped.
   * The default TeensyROM Ethernet settings are as follows:
     * DHCP enabled
@@ -19,7 +19,7 @@
   * If different settings such as static IP or a custom MAC are needed, use AT commands in any terminal program as described below.
     * Customized settings are stored in the TeensyROM for later use, even when power is removed.
 
-  ### Most C64/128 terminal programs can be used with the TeensyROM
+  Most C64/128 terminal programs can be used with the TeensyROM
   * Configure to use a SwiftLink or Turbo-232 cartridge at address $DExx
   * Swiftlink baud rates up to 38.4K and Turbo-232 up to 230.4K are supported
     
@@ -39,7 +39,7 @@
   * After connected, follow the BBS prompts/menus to log in or browse
   * Log out to disconnect prescribed by the BBS
     * Disconnecting will return back to AT/command mode
-    * Alternately,  connection can be aborted by rapidly typing "+++" while on-line to kill the connection 
+    * Alternatively, connection can be aborted by rapidly typing "+++" while on-line to kill the connection 
   * To see a complete list of available AT commands, enter "AT?" or see the next section below.
     * These commands include setting Network configurations such as static IP address and custom MAC address.
 
@@ -53,7 +53,7 @@
 |--|--|
 |AT | Ping  |
 |ATDT\<HostName>:\<Port> | Connect to host and enter On-line mode|
-|ATI | TeensROM ID & Firmware Version |
+|ATI | TeensyROM ID & Firmware Version |
 |AT? | Quick help list of AT commands |
 |ATC | Connect Ethernet using saved parameters and/or display connection info|
 |ATBROWSE | Start the TeensyROM Web Browser ([Documented here](Browser_Usage.md))|
@@ -96,18 +96,18 @@
 |OK          |0|Setting successful/complete                            |
 |CONNECT     |1|Successful server connection (ATDT)                    |
 |RING        |2|unused                                                 |
-|NO_CARRIER  |3|Connection Dropped (after CD de-assert)                |
+|NO CARRIER  |3|Connection Dropped (after CD de-assert)                |
 |ERROR       |4|Syntax or formatting errors                            |
-|CONNECT_1200|5|unused                                                 |
-|NO_DIALTONE |6|No cable, DHCP or local host ethernet init fail (ATDT) |
+|CONNECT 1200|5|unused                                                 |
+|NO DIALTONE |6|No cable, DHCP or local host ethernet init fail (ATDT) |
 |BUSY        |7|unused                                                 |
-|NO_ANSWER   |8|No response from remote server (ATDT)                  |
+|NO ANSWER   |8|No response from remote server (ATDT)                  |
 
 ## External App Control via TCP
 You can control the TeensyROM via TCP at port 2112 from the various available external applications or even your own custom app.
 ### Enable the TCP Listener
-* Press 'f8' to go to the TeensyROM Settings Menu 
-* Press 'i' to enable the TCP Listener
+* Press `F8` to go to the TeensyROM Settings Menu, then `3` for Config: Startup Options
+* Press `b` to toggle Enable TCP Listener on
 * Turn the C64/128 off and on to engage the TCP Listener
 
 ### Applications Supporting TCP
@@ -126,14 +126,14 @@ Set a static IP address to speed up the network connection process. When launchi
 
 ## TeensyROM/C64/128 internet Time Synch
 The TeensyROM main menu/application can synch the C64/128 system time with the internet for display in the TeensyROM menu and use in other applications.
-* Go to the TeensyROM Settings Menu to control when the time is synchronized
-  * Press 'f' to synch the time in the current session
-  * Press 'd' to turn on/off automatic time-synch each time the TeensyROM is started
+* Go to the TeensyROM Settings Menu (`F8`) to control when the time is synchronized
+  * Press `6` for Config: Time Format/Real Time Clock, then `c` to synch the time in the current session
+  * Press `3` for Config: Startup Options, then `c` to turn on/off automatic time-synch each time the TeensyROM is started
     * Assuming ethernet cable is connected
 * The network settings (DHCP, MAC, etc) used by the time synchronization routine are the same as used by the Swiftlink modem interface.
   * They can be customized by AT commands as described above in this document.
 * The NTP (Network Time Protocol) Server used in TeensyROM is
-  * "us.pool.ntp.org"  via port 8888
+  * "us.pool.ntp.org", using standard NTP port 123 on the server side (the TeensyROM listens locally on port 8888 for the reply)
   * May make this customizable in a future revision if there is interest
 
  <br>
