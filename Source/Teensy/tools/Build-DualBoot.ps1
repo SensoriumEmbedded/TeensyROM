@@ -55,6 +55,21 @@ function Disable-Fab04FeaturesDefine {
     Set-Content -Path $Path -Value $updated
 }
 
+function Get-TRVersion {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) {
+        Write-Host "ERROR: Cannot find $Path to read TRVersion" -ForegroundColor Red
+        exit 1
+    }
+    foreach ($line in Get-Content $Path) {
+        if ($line -match '^\s*#define\s+TRVersion\s+"([^"]+)"') {
+            return $Matches[1]
+        }
+    }
+    Write-Host "ERROR: TRVersion not found in $Path" -ForegroundColor Red
+    exit 1
+}
+
 # Auto-detect Arduino paths
 $LocalAppData = $env:LOCALAPPDATA
 $ArduinoBasePath = "$LocalAppData\Arduino15"
@@ -104,8 +119,10 @@ if (-not $TeensyPath) {
     exit 1
 }
 
+Write-Host "Teensyduino Version: $($TeensyPath.Name)" -ForegroundColor Gray
+
 $TeensyCorePath = "$($TeensyPath.FullName)\cores\teensy4"
-Write-Host "Teensy Core: $TeensyCorePath" -ForegroundColor Gray
+Write-Host "Teensy Core path: $TeensyCorePath" -ForegroundColor Gray
 
 if (-not (Test-Path $TeensyCorePath)) {
     Write-Host "ERROR: Teensy core path does not exist: $TeensyCorePath" -ForegroundColor Red
@@ -121,10 +138,25 @@ $HexCombinePath = Join-Path $ScriptPath "HexCombineUtil\HexCombine.exe"
 
 $TeensyHexOutput = Join-Path $ScriptPath "..\build\Teensy.ino.hex"
 $MinimalHexOutput = Join-Path $ScriptPath "..\MinimalBoot\build\MinimalBoot.ino.hex"
+
+$CommonDefsPath = Join-Path $ScriptPath "..\MinimalBoot\Common\Common_Defs.h"
+$TRVersion = Get-TRVersion -Path $CommonDefsPath
+Write-Host "TRVersion: $TRVersion" -ForegroundColor Gray
+
 if ($Fab04_Features) {
-    $FinalOutput = Join-Path $BuildPath "TeensyROM+_full.hex"
+    $FinalOutput = Join-Path $BuildPath "TeensyROM+_${TRVersion}_full.hex"
 } else {
-    $FinalOutput = Join-Path $BuildPath "TeensyROM_full.hex"
+    $FinalOutput = Join-Path $BuildPath "TeensyROM_${TRVersion}_full.hex"
+}
+
+# Check up front (before either build runs) so we don't waste build time only to
+# abort at the combine step because the output file already exists.
+if (-not $SkipCombine -and (Test-Path $FinalOutput)) {
+    $Response = Read-Host "  $FinalOutput already exists. Overwrite? (y/N)"
+    if ($Response -notmatch '^[Yy]') {
+        Write-Host "  Aborting: user declined to overwrite existing file." -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Helper Functions
