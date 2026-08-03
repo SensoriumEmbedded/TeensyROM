@@ -1,10 +1,10 @@
 # TeensyROM Dual-Boot Build Script
 
-Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex` and/or `TeensyROM+_full.hex`) containing both MinimalBoot and TeensyROM images.
+Automates building the dual-boot TeensyROM firmware (`TeensyROM_<TRVersion>_full.hex` and/or `TeensyROM+_<TRVersion>_full.hex`) containing both MinimalBoot and TeensyROM images.
 
 ## Prerequisites
 
-- **Arduino IDE** with Teensyduino installed
+- **Arduino IDE** with Teensyduino installed — see the "Latest Support tool/lib versions" section of [BuildInfo.md](../../BuildInfo.md) for the recommended Teensyduino version and known-bad versions to avoid
 - **Windows PowerShell** (Windows 10/11)
 - **Teensy 4.1** board
 
@@ -19,6 +19,8 @@ Automates building the dual-boot TeensyROM firmware (`TeensyROM_full.hex` and/or
 4. **Combines** both into single hex file
 
 **Note:** Before building, the script checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features`. If that's set but `-Fab04_Features` wasn't passed to this script, it will interactively prompt (y/N) to comment out the `#define` and continue as a plain TR build, or abort. This prevents accidentally building a TR+ image while labeling it as plain TR.
+
+**Note:** The script also checks up front, before either build starts, whether the final output file (named using the `TRVersion` from `Common_Defs.h`) already exists. If so, it prompts (y/N) to overwrite or abort, so a rebuild doesn't run both builds only to fail at the combine step.
 
 ## Default Usage
 Builds both images for TeensyROM and combines them.
@@ -41,7 +43,7 @@ Builds both images for TeensyROM and combines them.
 
 ## Output
 
-**Final firmware:** `tools\build\TeensyROM_full.hex` and/or `tools\build\TeensyROM+_full.hex`
+**Final firmware:** `tools\build\TeensyROM_<TRVersion>_full.hex` and/or `tools\build\TeensyROM+_<TRVersion>_full.hex`
 
 **Intermediate files:**
 - `build\Teensy.ino.hex` - TeensyROM image
@@ -52,7 +54,7 @@ Builds both images for TeensyROM and combines them.
 The script does **NOT** flash automatically. Use Teensy Loader:
 
 1. Open Teensy Loader
-2. Drag `TeensyROM_full.hex` or `TeensyROM+_full.hex` onto it
+2. Drag `TeensyROM_<TRVersion>_full.hex` or `TeensyROM+_<TRVersion>_full.hex` onto it
 3. Press button on Teensy 4.1
 
 ## Security
