@@ -173,9 +173,16 @@ Retrieves firmware version and build information from the TeensyROM.
 | Send | `AckToken 0x64CC` |
 | Send | Version/build info string |
 
-**Example output:**
+**Example output (full FW):**
 ```
   FW: TeensyROM+ v0.7.2
+      Jul 27 2026, 09:41:32
+  Teensy: 816MHz  59.1C  UID: 19307720
+```
+
+**Example output (minimal FW):**
+```
+  FW: TeensyROM+ v0.7.2(minimal)
       Jul 27 2026, 09:41:32
   Teensy: 816MHz  59.1C  UID: 19307720
 ```
