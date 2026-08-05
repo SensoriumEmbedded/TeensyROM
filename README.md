@@ -15,22 +15,27 @@
 * Lots of games, utilities, pics, and music built-in: no external media required to get started!
 * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
 * **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
-* **TeensyROM+ (PCB v0.4) added features** such as KERNAL replacement, 512k REU, Freezer Carts, remote DMA, second button, and external reset detection [are documented here](docs/TR+NewFeatures.md)
+* **TeensyROM+ (PCB v0.4)** adds many additional features, **[see this document](docs/TR+NewFeatures.md)** for more details.
+  * **Kernal Replacement** — load a custom KERNAL ROM image, with no hardware modification.
+  * **512KB REU (RAM Expansion Unit)** — a real REU your C64 software can detect and use
+  * **Freezer Cartridge Support** — Action Replay and Super Snapshot V5 (PAL and NTSC) emulated natively
+  * **Remote DMA Memory Access** — give an external app Serial or Ethernet read/write access to C64 memory
+    * Supported by [c64cast](https://github.com/kfox/c64cast) — streaming video, audio, visualizations and much more
+  * **Battery-Backed Real-Time Clock** — with an added coin-cell, the TR+ remembers the correct time
+  * **External Reset Detect** — press an external reset (C64U button, User port, etc) returns you to the TR menu
+  * **Programmable Alternate Button** — the "Alt" button is assignable to whatever's most useful
+  * **TR+ Expansion Port Test** — a full hardware validation suite built for the real cartridge port
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-![TeensyROM pic1](media/v0.3/v0.3_angle.png)
-
-|![TeensyROM pic1](media/case/lp-case-front-corner.png)|![TeensyROM case](media/case/case-front-corner.png)| 
+![TeensyROM pic1](media/v0.4/v0.4_angle.png)|![TeensyROM case](media/case/lp-case-front-corner.png)| 
 |:--:|:--:|
-
-Makers can build their own TeensyROM, the HW was designed with mid-level solder skills in mind. See these [assembly instructions](PCB/PCB_Assembly.md).
 
 **Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom).  I also sell on [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) and [eBay](https://www.ebay.com/usr/travis_sensorium).
 
 <a href="https://lectronz.com/products/teensyrom"><img src="media/Other/i-sell-on-lectronz-large.png" alt="Lectronz Logo Link" width="150" height="78"></a>
 
-Case/enclosures are available to [download](3D_Print_Case/) and print at home, for sale with a new unit (see links above), or direct from [0ldSKull](https://www.0ldskull-retro.com/)
+Case/enclosures are available for sale with a new unit (see links above), or [download](3D_Print_Case/3D-Printed-Case-ReadMe.md) and print at home.
 
 Please consider joining us in the [TeensyROM Discord Server](https://discord.gg/ubSAb74S5U) to meet other TeensyROM users, ask questions, provide thoughts/input/feedback, etc.
 
@@ -127,10 +132,13 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
 
 ## Pictures/screen captures:
-|![TeensyROM pic1](media/v0.3/v0.3_top.png)|![TeensyROM pic1](media/case/lp-case_connected.png)|
+|![TeensyROM pic1](media/v0.4/v0.4_top.png)|![TeensyROM pic1](media/case/lp-case_connected.jpg)|
 |:--:|:--:|
-|![TeensyROM pic1](media/Screen%20captures/Main%20Menu.png)|![TeensyROM pic1](media/Screen%20captures/USB%20Menu.png)|
-|![TeensyROM pic1](media/Screen%20captures/Settings%20Menu.png)|![TeensyROM help](media/Screen%20captures/Help%20Menu.png)|
 
-See the [media](media/) folder for more pics, videos, and oscilloscope shots.
+|![TeensyROM pic1](media/Screen%20captures/TR+/main-menu/TeensyMenu.png)|![TeensyROM pic1](media/Screen%20captures/TR+/main-menu/SDMenu.png)|
+|:--:|:--:|
+|![TeensyROM pic1](media/Screen%20captures/TR+/main-menu/SIDInfoPage.png)|![TeensyROM pic1](media/Screen%20captures/TR+/help-settings-info/settings1-index.png)|
+|![TeensyROM pic1](media/Screen%20captures/TR+/help-settings-info/help1.png)|![TeensyROM pic1](media/Screen%20captures/TR+/help-settings-info/help2.png)|
+
+See the [media](media/) folder for more pics and screen shots.
 
