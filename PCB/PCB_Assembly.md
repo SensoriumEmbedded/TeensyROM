@@ -1,4 +1,4 @@
-# TeensyROM Assembly Instructions:
+# TeensyROM v0.3 Assembly Instructions:
 
 The TeensyROM was designed with hand assembly in mind. While surface mount packages are used, they are the larger types (SOIC IC packages and 0805 passives).  If you feel this is beyond your solder capabilities, assembled units are usually [available here](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/). If there are additional questions, feel free to [contact me](mailto:travis@sensoriumembedded.com).
 

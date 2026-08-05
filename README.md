@@ -21,17 +21,16 @@
   * **Freezer Cartridge Support** — Action Replay and Super Snapshot V5 (PAL and NTSC) emulated natively
   * **Remote DMA Memory Access** — give an external app Serial or Ethernet read/write access to C64 memory
     * Supported by [c64cast](https://github.com/kfox/c64cast) — streaming video, audio, visualizations and much more
-  * **Battery-Backed Real-Time Clock** — with an added coin-cell, the TR+ remembers the correct time
+  * **Battery-Backed Real-Time Clock** — a built-in coin-cell holder: TR+ can remember the correct time through power cycles
   * **External Reset Detect** — press an external reset (C64U button, User port, etc) returns you to the TR menu
   * **Programmable Alternate Button** — the "Alt" button is assignable to whatever's most useful
-  * **TR+ Expansion Port Test** — a full hardware validation suite built for the real cartridge port
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
-![TeensyROM pic1](media/v0.4/v0.4_angle.png)|![TeensyROM case](media/case/lp-case-front-corner.png)| 
+|![TeensyROM pic1](media/v0.4/v0.4_angle.png)|![TeensyROM case](media/case/lp-case-front-corner.png)| 
 |:--:|:--:|
 
-**Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom).  I also sell on [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) and [eBay](https://www.ebay.com/usr/travis_sensorium).
+**Fully assembled/tested TeensyROM+ units** are available via my [Lectronz Shop](https://lectronz.com/products/teensyrom), or via [Tindie](https://www.tindie.com/products/travissmith/teensyrom-cartridge-for-c64128/) or [eBay](https://www.ebay.com/usr/travis_sensorium).
 
 <a href="https://lectronz.com/products/teensyrom"><img src="media/Other/i-sell-on-lectronz-large.png" alt="Lectronz Logo Link" width="150" height="78"></a>
 
@@ -116,6 +115,10 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
 
 ## Hardware/PCB Design
 PCB 0.2/0.3 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production wasn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.
+
+<a href="PCB/PCB_Assembly.md"><img src="media/v0.3/v0.3_top.png" alt="TeensyROM v0.3 PCB" width="300"></a>
+
+*The original TR (v0.2/0.3) — publicly self-buildable today; see [assembly instructions](PCB/PCB_Assembly.md).*
 
 Beginning with PCB v0.4 (TeensyROM+) the package sizes are reduced (TSSOP and 0603 passives) to allow additional needed circuitry and single sided manufacturing.
 

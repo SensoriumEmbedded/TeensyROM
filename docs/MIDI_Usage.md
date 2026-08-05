@@ -53,8 +53,10 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
     * The playback should be emanating from your C64/128!
 
 ### MIDI Source setup
-  * As with the original MIDI devices that the TeensyROM emulates, all MIDI tokens/packets received are passed through to the C64 and the software running there. That software (ie Cynthcart or Station 64) can be sensitive to the type and density of commands received and potentially overflow their buffer/interrupt handler and crash.   It may be necessary in these cases to filter out unnecessary data from the stream, such as indicated with the Cakewalk "Zero Controllers" example above.  Most sources/DAWs have the capability to filter out this extra/unused information.
-  * Alternatively, TeensyROM can filter unwanted MIDI message types itself: go to the settings menu (F8), press "5" for the MIDI Message Filters page, and toggle off any of the 12 supported message types (Note Off/On, AfterTouch Poly, Control Change, Program Change, AfterTouch, Pitch Change, System Exclusive, TimeCode Quarter Frame, Song Position, Song Select, Tune Request, Real Time System) to stop them from being passed through to the C64. Settings are saved to EEPROM.
+  * As with the original MIDI devices that the TeensyROM emulates, by default all MIDI tokens/packets received are passed through to the C64 and the software running there. That software (ie Cynthcart or Station 64) can be sensitive to the type and density of commands received and potentially overflow their buffer/interrupt handler and crash.   It may be necessary in these cases to filter out unnecessary data from the stream, such as indicated with the Cakewalk "Zero Controllers" example above.  Most sources/DAWs have the capability to filter out this extra/unused information.
+  * Alternatively, TeensyROM can filter unwanted MIDI message types itself: go to the settings menu (F8), press "5" for the MIDI Message Filters page, and toggle off any of the 12 supported message types to stop them from being passed through to the C64. Settings are saved to EEPROM.
+
+<img src="/media/Screen%20captures/TR+/help-settings-info/settings5-MIDIFilters.png" alt="MIDI Filter screen capture" width="480">
 
 <br>
 

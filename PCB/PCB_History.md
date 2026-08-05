@@ -1,8 +1,20 @@
 # PCB/Design History:
-## Latest firmware will work with all PCB versions 0.2 and higher, recommend always building with the latest
-### **[Link to latest design at OSH Park](https://oshpark.com/shared_projects/klnNznNJ)**
+## Latest firmware will work with all TR PCB versions 0.2 and higher, we recommend always building with the latest
+   [Two versions of FW now available: TR (v0.2-0.3) and TR+ (v0.4)](/bin/TeensyROM)
+
+## **v0.4: TeensyROM+ released Apr 20, 2026**
+  * SOIC packages changed to TSSOP
+  * R/C 0805s changed to 0603
+  * Moved all SMT to top side
+  * Buffer control signal changes
+  * Reset and R/*W signals use bi-directional buffer
+  * Added second button for alt functions
+  * CR1225 Battery Holder added for RTC backup
+ 
+![TeensyROM v0.4](/media/v0.4/v0.4_top.png)
 
 ## **v0.3: Minor Update released Dec 11, 2024**
+  [Link to this PCB design at OSH Park](https://oshpark.com/shared_projects/klnNznNJ)
   * Fix for screen noise when using UltiMax .crt files on C128 machines
     * Data Buffer (U5) Dir controlled directly from Teensy instead of R/nW signal
       * Previous "debug" signal used for this.
@@ -13,11 +25,11 @@
   * C1 & C2 (22uF bulk caps) replaced with 1210 size SMT versions
   * C9 added for Vhst (optional)
 
-![TeensyROM v0.3](../media/v0.3/v0.3_top.png)
+![TeensyROM v0.3](/media/v0.3/v0.3_top.png)
 
 ## **v0.2c: Minor Update released Nov 1, 2023**
   * **No electrical changes from previous version**
-  * **Mounting hole added to better accomodate cartridge case**
+  * **Mounting hole added to better accommodate cartridge case**
   * Removed C9 and JP1 (both unused)
   * Added 4th pin to unused header (J4)
   * Narrowed C1/C2 pad spacing 2.5->2.0mm to better fit caps
@@ -27,7 +39,7 @@
     * serial number location and label box on back under Teensy
     * values (1k/10k) by 3ea SMT Rs
 
-![TeensyROM v0.2c](../media/v0.2c/v0.2c_top.png)
+![TeensyROM v0.2c](/media/v0.2c/v0.2c_top.png)
 
 ## **v0.2b: Minor Update released July 1, 2023**
   * R3 added to ensure data buffer is off during reset/programming
@@ -45,7 +57,7 @@
     * shield connections:  USB is GND, Eth shorted to gnd via JP1
     * 0805 shapes:  left them the same, R's accomodate 0603s, prob not caps
     * Teensy symbol: Removed unused pins, made LAN header holes larger
-    * Extended 74lvc245 pads inward to support narrow packages if needed, wide still prefered
+    * Extended 74lvc245 pads inward to support narrow packages if needed, wide still preferred
     * Silk screen "Top" marking, project URL
     * pin 1 dots outside package outlines
     * Turned hex inverter 180 deg, gate swaps.  All ICs oriented same dir now
