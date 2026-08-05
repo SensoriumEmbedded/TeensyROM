@@ -1,17 +1,92 @@
 
 # FW Release Version history:
 
-## Dual FW releases moving forward
+## Dual FW releases
 The TR+ (PCB v0.4) has architectural differences that warrant a different binary build than the original TR (PCB v0.2–0.3).  
 The original TR will continue to be supported, with separate .hex file releases.
 
  * "+" in TR+ FW name, banner/title and serial boot-up messaging
  * Distinct FW file names
    * TR (PCB v0.2–0.3) example: **TeensyROM_0.7.2_full.hex**
-   * TR+ (PCB v0.4) example: **TeensyROM+_0.7.2_full.hex**
+   * TR+ (PCB v0.4)    example: **TeensyROM+_0.7.2_full.hex**
  * Safeguards in place to prevent loading FW on the wrong HW version via the normal menu-based TR FW update method.
    * If loading via the Teensy Loader program, take care to load only the correct version for your hardware.
-   
+
+
+## FW 0.8 Release 2026/08/05
+ * Note: EEPROM settings will be reset to defaults with this FW update.
+
+### Updates for both TR and TR+
+ * **Settings and Help screens rewritten as separate programs**
+   * Still accessed via F8 and F7 from main menu
+   * Allowed expansion of both for more information and additional settings
+     * Settings and info span 9 pages, on-screen help expanded to 2 pages
+     * **MIDI Message Filter addition**: Gate any of 12 MIDI message types. Settings persisted to EEPROM.
+       * Used for some DAWs and MIDI controllers that send extra/unnecessary packets that overwhelm some C64 software such as Cynthcart.
+     * **New Info pages** show Hot Key settings, Ethernet, TeensyROM and C64 machine info
+     * Time Format/Real Time Clock, Startup Options, Menu Colors, KERNAL, REU, and more.
+   * Main menu binary size reduced by 40% by offloading Help and Setup pages
+     * Allows more space for large/conflicting SID files, such as **Rush – YYZ**, which has now returned to SID cover tunes dir :)
+ * **New TR BASIC Command: TISET**
+   * Sets the BASIC TI/TI$ variables to the TeensyROM RTC setting
+ * Segment/Dot Matrix Digital Clock program by Steven Hardison added to TR Utils directory.  Slightly modified to set current C64 time from TR RTC.
+   * Thank you for the program/permission Steven!
+ * New **TR External Port test** added to `TeensyROM Specific` directory:
+   * Verifies Ethernet, USB Host/Device, and SD port connections
+     * Requires Ethernet connection and SD Card+USB Stick with at least 1 file on each.
+   * Also confirms button input(s), RTC, and LEDs
+ * Show unique Teensy ID on startup serial, General Info Settings, and on Version Info Remote Command.  See [ControlComms.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ControlComms.md)  for details.
+
+### Updates for TR+ only
+ * **KERNAL Replace capability:** load a custom KERNAL ROM image at runtime
+   * `<Shift-K>` from the SD/USB file browser selects a KERNAL image, path is stored in EEPROM
+   * Select KERNAL replacement as the Special IO in settings
+   * F2 "Exit to BASIC" or run a PRG directly to invoke the new KERNAL.
+ * **New remote DMA commands** `WriteC64Mem` and `ReadC64Mem` for direct remote DMA read/write of C64 memory via Serial or Ethernet. 
+   * Supported by the [c64cast](https://github.com/kfox/c64cast) project, stream video and more through your C64!
+   * Thank you [KFox](https://github.com/kfox) for the great project, interaction, and feedback!
+ * **REU image Pre-load and save**
+   * Select .REU file (or use `<Shift-R>`) to assign REU pre-load file.
+   * While the REU Special IO is running, the alt button can be used to save REU contents to SD/USB.   
+     * Never overwrites existing, appends filename with incrementing unique sequential number. Default filename is "SD:/reu.reu".
+ * **Action Replay** support added — new freezer cartridge support alongside Super Snapshot V5
+ * **New TR+ C64 Expansion Port Test** diagnostic suite added to `TeensyROM Specific` directory
+   * Covers all expansion port signals: DMA, bi-directional address/data bus, R/W, BA, IO1/IO2 read/write, IRQ, NMI, and all cart control signals (ROMH/ROML/GAME/EXROM)
+   * Walking Ones and Cascading Ones address bus tests
+   * Looping/counting capability for longer burn-in style testing.
+   * Every signal is individually toggled to help pinpoint a miswired or faulty connection
+ * **New Alternate Button actions**, selectable in General Settings (active when the button *isn't* being used by a freezer cart or REU):
+   * Select from the following options:
+     * AutoLaunch (default):  Immediately launch the selected Autolaunch file.  
+     * Pause/Unp: Pause/unpause the C64/128 system
+     * Others: TR Menu, Reboot TR, None
+   * Thanks to @Boris Schneider-Johne for the brainstorming!
+ * DMA state machine improvement for reliable asynchronous DMA start on read/write, bad line, or continuous read.
+
+### Infrastructure, bug fixes, and Housekeeping updates (TR and TR+)
+ * NFC: PN532 library now included locally (trimmed and warning-cleaned) instead of pulled from an external dependency
+ * Bug fix: occasional delayed reset resolved by watching for a button hold during the serial message wait/timeout
+ * `Build-DualBoot.ps1` updates: warns (with an option to auto-fix) if `Fab04_Features` is left defined in code while building plain TR, prints the detected Teensy core path, and reports total build time
+ * Misc compiler warning fixes (array-bounds, bin2header, free() cast)
+ * `MaxPathLength` reduced from 300 to 256 chars and EEPROM map reorganized to free up space
+ * Bug fix: D64/71/81 extracted file length was rounding up to end of sector
+ * Now allowing wrap-around ($FFFF to $0000) PRG loading. 
+ * JiffyDOS detection changed from a startup-text scan to a unique JD vector-table check
+   * Thank you @LessPaul for this suggestion and the wrap-around find!
+ * Updated C build environment to latest: Teensyduino 1.62 and Arduino 2.3.10
+ * C64 assembly code build process improvement:
+   * Centralized tooling paths so each sub-project doesn't have to be edited separately.
+   * Created a BuildAllC64.bat file to build all 10+ sub-projects from one file.
+   * Halt on error throughout to make sure nothing is missed
+
+### Documentation additions/updates since last release
+ * New document outlining the [C64 assembly code build setup/process](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/Source/C64/README.md).
+ * RTC [battery addition instructions for TR Fab 0.2/0.3](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/RTC_Battery_Addition.md) are now available (previously noted as "coming soon" in the 0.7.2 release)
+ * TR Remote control protocol documentation: [ControlComms.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ControlComms.md)
+ * **TeensyROM+ (PCB v0.4) added features** [are documented here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/TR+NewFeatures.md)
+ * [Commodore C64 Ultimate Enhancements](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/C64_Ultimate_Enhancements.md), how the TR augments the C64U
+
+
 ## FW 0.7.2 Release 2026/04/20
 
 ### Updates for both TR and TR+
@@ -50,6 +125,7 @@ The original TR will continue to be supported, with separate .hex file releases.
      * Previous TR only .bat and .sh scripts deprecated, PowerShell scripts cover all
  * Bus Snoop updated to count data bus reads and writes
 
+
 ## 0.7.1 Release 2026/02/02
 * **Support for Persistent TCP Connections via remote control listenner by @hExx**
   * Updates for TCP/Ethernet use with the [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web) application
@@ -83,6 +159,7 @@ The original TR will continue to be supported, with separate .hex file releases.
     * Thanks for the catch @DigitalMan
   * Menu clock in 24 hour mode can mess up background SID playback in the second half of the day.
   * Auto launch set could've been impacted by random NFC tag
+
 
 ## 0.7 Release 2025/12/04
 * Note: EEPROM Settings will reset with this FW update
@@ -296,7 +373,7 @@ The original TR will continue to be supported, with separate .hex file releases.
     * Thanks @Falcon for the find/testing
 * Program (PRG) loader and BASIC filesystem
   * Setting current device number to 8 so that file browsers will point at IEC for dir read, etc
-  * Load function key vector if JiffyDOS Kernal is present
+  * Load function key vector if JiffyDOS KERNAL is present
   * Main menu /Utilities directory updates/additions:
     * "Exit to BASIC" for NFC taggable method to enter BASIC
     * "TeensyROM Menu Cart..." for NFC taggable method to enter TR menu
@@ -486,7 +563,7 @@ The original TR will continue to be supported, with separate .hex file releases.
   * File open for writing retry in GetFileStream (by [**MetalHexx**](https://github.com/MetalHexx))
 * Other additions/fixes
   * .OCP and .PIC graphic file viewer support (Art Studio files, used by OneLoad64)
-  * MIDI2SID prg source code added to repo
+  * MIDI2SID PRG source code added to repo
   * Fix: 3 main menu filenames changed for NFC tag path compatibility
   * Fix: Current file path retained on menu restart when loading default SID from SD/USB
 
@@ -620,7 +697,7 @@ The original TR will continue to be supported, with separate .hex file releases.
   * F6 changed to Show SID info (was Settings menu)
   * F8 changed to Settings menu (was MIDI2SID)
   * Help screen (still F7) updated to reflect key changes
-  * MIDI2SID app moved to stand-alone prg in Multimedia directory
+  * MIDI2SID app moved to stand-alone PRG in Multimedia directory
 
 ### 0.5.8 sub-release 2023/12/13
 * Swiftlink/Browser updates: ([Web Browser Usage](/docs/Browser_Usage.md) is updated)
@@ -693,7 +770,7 @@ The original TR will continue to be supported, with separate .hex file releases.
   * '+' and '-' to change SID speed from main Menu
   * Playback speed set based on SID and Machine type
   * stopped border color tweak for now since IRQ is not raster
-  * Banking out BASIC and Kernal during SID play and init
+  * Banking out BASIC and KERNAL during SID play and init
   * check for SID/TR mem conflict (eventually enable TR code relocation)
   * SID file type association/selectability
 
