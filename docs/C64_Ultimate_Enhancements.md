@@ -88,6 +88,12 @@ Explore the internet from your C64 with optimized web access:
 
 For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
+## TR+ Compatibility Note
+
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more). It's safe to leave on regardless.
+
+For more information: [TR+ New Features Guide](/docs/TR+NewFeatures.md)
+
 ---
 
 [Back to main ReadMe](/README.md)

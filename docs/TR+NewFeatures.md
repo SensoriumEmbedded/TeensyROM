@@ -37,6 +37,10 @@ A handful of other new hardware additions round out the TR+ feature set.
    * Exercises every expansion port signal individually: address/data bus, DMA, BA, R/*W, IO1/IO2, IRQ, NMI, and all cart control lines (ROMH/ROML/GAME/EXROM)
    * Walking Ones and Cascading Ones bus tests, with a looping mode for extended burn-in testing
 
+## Using TR+ with a Commodore 64 Ultimate / Ultimate64
+
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave on, so there's no downside to setting it even if you're not using those specific capabilities yet.
+
 ## Q&A
 
 **What does this mean for support of the current TR design?**
