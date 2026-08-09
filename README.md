@@ -88,7 +88,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
     * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
-    * **[Serial/USB Remote Command Protocol](docs/ControlComms.md)**
+    * **[USB/Ethernet Remote Command Protocol](docs/ControlComms.md)**
   * **SW Release notes/development**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Software Build Instructions](Source/BuildInfo.md)**

@@ -1,4 +1,4 @@
-# TeensyROM Serial/USB Remote Command Protocol
+# TeensyROM USB/Ethernet Remote Command Protocol
  
 ## Overview
 
