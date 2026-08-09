@@ -27,6 +27,27 @@ FASTRUN void isrButton()
    BtnPressed = true;
 }
 
+#ifndef MinimumBuild 
+FASTRUN void isrExtResetDetect()
+{
+   //IO1[rwRegPwrUpDefaults3] doesn't exist in minimal build, would use EEPROM.read(eepAdPwrUpDefaults3) instead from there/both
+   if ((IO1[rwRegPwrUpDefaults3] & rpud3ResetDetectDisable) == 0) BtnPressed = true; //return to main menu
+   //else
+   //{
+      //This triggers a condition where the main menu is defeated due to self-trigger
+      //would need to re-validate these after if (doReset) in Teensy.ino
+   // //release/vanish, allow native reset
+   //   SetDMADeassert;
+   //   SetIRQDeassert;
+   //   SetNMIDeassert;
+   //   SetGameDeassert;
+   //   SetExROMDeassert; 
+   //   LOROM_Image = HIROM_Image = NULL;
+   //   CurrentIOHandler = IOH_None;
+   //}
+}
+#endif
+
 void DMAWaitAssertReady()
 {
    WaitUntil_nS(nS_DMAAssert); 

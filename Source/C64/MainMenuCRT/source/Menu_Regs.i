@@ -73,6 +73,7 @@
    ;NextReg = rwRegColorRefStart+NumColorRefs,
    wRegIRQNMITest      = 50 ;// logs receipt of IRQ/DMA, and used for IO2 test via IO2Scratch
    wRegGameExROMCtl    = 51 ;// Allows Exp Port test app to control Game and ExROM signals
+   rwRegPwrUpDefaults3 = 52 ;// EEPROM stored: power up default reg#3, see RegPowerUpDefaultMasks3
 
    ; These are used for the MIDI2SID app, keep in synch or make separate handler
    StartSIDRegs        = 64 ;// start of SID Regs, matching SID Reg order ($D400)
@@ -193,6 +194,11 @@
                                        
    rpud2TRAutoLaunch      = 0b01000000 ; bit 6, 1=Auto-Launch Enabled
    rpud2TRTCPListen       = 0b10000000 ; bit 7, 1=TCP Listen Enabled
+
+;enum RegPowerUpDefaultMasks3
+;  //eepAdPwrUpDefaults3, rwRegPwrUpDefaults3
+   rpud3ResetDetectDisable= 0b10000000 ; bit 7, 1=External Reset Detect Disabled (0=enabled/default)
+   ;// bits 6:0 unused
 
 ;enum RegMIDISettingsMasks
    ;eepAdMIDISettings, rwRegMIDISettings

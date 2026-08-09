@@ -51,7 +51,7 @@ ShowTRSettings:
    lda #rsstNextIOHndlrName
    jsr PrintSerialString
 
-   ldx #15 ;row Host Serial Control
+   ldx #14 ;row Host Serial Control
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -62,7 +62,7 @@ ShowTRSettings:
    ldy TblMsgHostSerCtl+1,x
    jsr PrintString
 
-   ldx #16 ; Alt button action
+   ldx #15 ; Alt button action
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -76,7 +76,7 @@ ShowTRSettings:
    ldy TblMsgAltBtnAction+1,x
    jsr PrintString
    
-   ldx #17  ;row Joy 2 Speed
+   ldx #16  ;row Joy 2 Speed
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -90,7 +90,7 @@ ShowTRSettings:
    lda #' '
    jsr SendChar
 
-   ldx #18 ;row Show Extension
+   ldx #17 ;row Show Extension
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -99,6 +99,15 @@ ShowTRSettings:
    jsr PrintOnOff
    
    ;also see: CursorToTest row
+   
+   ldx #19 ;row Ext Reset Detect
+   ldy #SetValColumn ;col
+   clc
+   jsr SetCursor
+   lda rwRegPwrUpDefaults3+IO1Port
+   and #rpud3ResetDetectDisable  
+   eor #rpud3ResetDetectDisable  ;invert to show enabled (not disabled)
+   jsr PrintOnOff
    
 
 WaitTRSettingsKey:
@@ -208,7 +217,15 @@ smcNewAltBtnActionVal
    bne +
    jsr TestIO
    jmp WaitTRSettingsKey     
-   
+
++  cmp #'g'  ;External Reset Detect
+   bne +
+   lda rwRegPwrUpDefaults3+IO1Port
+   eor #rpud3ResetDetectDisable
+   sta rwRegPwrUpDefaults3+IO1Port
+   jsr WaitForTRWaitMsg
+   jmp ShowTRSettings  
+
 ;+  cmp #'f'  ;Reboot TeensyROM
 ;   bne +
 ;   lda #139  ; 155 default minus bit 4
@@ -259,7 +276,7 @@ smcTestIOCnt
    rts
 
 CursorToTest:
-   ldx #19 ;row test status
+   ldx #18 ;row test status
    ldy #22 ;col
    clc
    jsr SetCursor   
@@ -279,7 +296,7 @@ MsgTRSettings:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "a/A", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Special IO:", ChrReturn, ChrReturn
 
    !tx EscC,EscSourcesColor,  "  Kernal replace file: ('K' to sel)", ChrReturn, ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file: ('R' to sel)", ChrReturn, ChrReturn, ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor,  "  REU Pre-load/save file: ('R' to sel)", ChrReturn, ChrReturn, ChrReturn
    ;                           1234567890123456789012345678901234567890
 
    !tx EscC,EscTimeColor,  " User Interface/other:", ChrReturn
@@ -288,6 +305,7 @@ MsgTRSettings:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR+ Ext Reset Detect:", ChrReturn   
    ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 

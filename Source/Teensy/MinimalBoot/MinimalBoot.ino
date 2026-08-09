@@ -75,6 +75,7 @@ void setup()
    
 #ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
+   //leaving this as isrButton (go to main menu) because isrExtResetDetect leaves it in an odd state from here
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
 #endif   
    SetResetAssert; //assert reset until main loop()

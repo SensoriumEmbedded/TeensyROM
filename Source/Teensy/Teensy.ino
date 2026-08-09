@@ -92,7 +92,7 @@ void setup()
    
 #ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
-   attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
+   attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrExtResetDetect, FALLING );
 #else
    SetResetDeassert; //added for C128 startup issue on TR
 #endif   
@@ -149,6 +149,7 @@ void setup()
    IO1[rwRegMIDISettings2]= EEPROM.read(eepAdMIDISettings2);
    IO1[rwRegPwrUpDefaults]= EEPROM.read(eepAdPwrUpDefaults);
    IO1[rwRegPwrUpDefaults2]= EEPROM.read(eepAdPwrUpDefaults2);
+   IO1[rwRegPwrUpDefaults3]= EEPROM.read(eepAdPwrUpDefaults3);
    IO1[rwRegTimezone]     = EEPROM.read(eepAdTimezone);  
    for (uint8_t reg=0; reg<NumColorRefs; reg++) IO1[rwRegColorRefStart+reg]=EEPROM.read(eepAdColorRefStart+reg); 
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
@@ -421,6 +422,7 @@ FLASHMEM void SetEEPDefaults()
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
    EEPROM.write(eepAdPwrUpDefaults2, 0x00); //default: TCP Listen Off, Auto-Launch Off, NFC & Serial TRCont off, see see bit mask defs RegPowerUpDefaultMasks2
+   EEPROM.write(eepAdPwrUpDefaults3, 0x00); //default: Reset Detect enabled, see see bit mask defs RegPowerUpDefaultMasks3
    EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

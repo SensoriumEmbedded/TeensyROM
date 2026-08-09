@@ -1651,6 +1651,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             eepDataToWrite = Data;
             IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
             break;
+         case rwRegPwrUpDefaults3:
+            IO1[rwRegPwrUpDefaults3]= Data;
+            eepAddrToWrite = eepAdPwrUpDefaults3;
+            eepDataToWrite = Data;
+            IO1[rwRegStatus] = rsWriteEEPROM; //work this in the main code
+            break;
          case rwRegTimezone:
             IO1[rwRegTimezone]= Data;
             eepAddrToWrite = eepAdTimezone;

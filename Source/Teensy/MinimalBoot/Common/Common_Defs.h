@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8"    //*VERSION*
+#define TRVersion              "0.8.0.1"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -120,8 +120,9 @@ enum InternalEEPROMmap
    eepAdREUFilename   = 3976, // (256:MaxPathLength) REU file/path
    eepAdMIDISettings  = 4232, // (1:uint8_t)    MIDI Settings reg#1, see RegMIDISettingsMasks
    eepAdMIDISettings2 = 4233, // (1:uint8_t)    MIDI Settings reg#2, see RegMIDISettingsMasks2
+   eepAdPwrUpDefaults3= 4234, // (1:uint8_t)    power up default reg3, see bit mask defs RegPowerUpDefaultMasks3
    
-   eepAdNext          = 4234, // Next address to be used
+   eepAdNext          = 4235, // Next address to be used
    eepAdUnused        = eepAdNext, // Reserved for future use, initialized to 0
    eepAdUnusedSize    = (4284-eepAdUnused), //Max size = 4284 (emulated in flash)
 };
