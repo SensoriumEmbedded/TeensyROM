@@ -55,7 +55,7 @@
 #define Cart_EasyFlashXbank          33
 #define Cart_Capture                 34
 #define Cart_ActionReplay3           35
-#define Cart_RetroReplay             36  //WIP on v0.4
+#define Cart_RetroReplay             36  //Supported on v0.4
 #define Cart_MMC64                   37
 #define Cart_MMCReplay               38
 #define Cart_IDE64                   39
@@ -146,7 +146,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
 #ifdef Fab04_Freezers
    (uint16_t)Cart_SuperSnapshotV5, IOH_SuperSnapshotV5,
-//   (uint16_t)Cart_RetroReplay,     IOH_RetroReplay,
+   (uint16_t)Cart_RetroReplay,     IOH_RetroReplay,
    (uint16_t)Cart_ActionReplay,    IOH_ActionReplay,
 #endif
 #endif

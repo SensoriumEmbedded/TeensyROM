@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8.0.1"    //*VERSION*
+#define TRVersion              "0.8.0.2"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
