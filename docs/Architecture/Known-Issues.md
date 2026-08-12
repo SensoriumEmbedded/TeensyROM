@@ -2,6 +2,102 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
+## FLASHMEM audit (running list)
+
+Functions that are safe `FLASHMEM` candidates — confirmed never called from `isrPHI2` or any per-cycle handler path (`ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr`) — but aren't currently marked, unlike their siblings that follow the same pattern correctly. Each one left in default RAM1/ITCM placement costs RAM1 space unnecessarily; moving to flash is low-risk (see [Constraints.md](Constraints.md#the-real-dividing-line-flash-backed-vs-ram-backed-not-just-the-isr-function-itself) for why this distinction is safe/unsafe in general). Expected to grow well beyond `IO_Handlers/` as more files get reviewed — check every `InitHndlr`/`PollingHndlr`/`SpecialBtn_*`/similar main-context-only function for this when reviewing a new file, not just when something else prompts it.
+
+- [ ] `InitHndlr_SuperSnapshotV5` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperSnapshotV5.c:114` — sibling handlers' `InitHndlr` (REU, KernalReplace, ActionReplay, RetroReplay) all correctly have it; this one doesn't.
+- [ ] `SpecialBtn_SuperSnapshotV5` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperSnapshotV5.c:104` — called only from `Teensy.ino:290` (`fSpecialBtnChange(...)`, inside the main-loop button-debounce check), confirmed never ISR-path. `SpecialBtn_REU` already has `FLASHMEM`; this one doesn't.
+- [ ] `PollingHndlr_TR_BASIC` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TR_BASIC.c:442` — main-loop-only (`PollingHndlr`), like `PollingHndlr_REU` which already has `FLASHMEM`.
+- [ ] `PollingHndlr_TeensyROM` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:1878` — same pattern, main-loop-only.
+- [ ] `IOH_ASID.c` — largest single opportunity found so far. Confirmed via call-graph trace (not assumed) that only `IO1Hndlr_ASID` (ISR-called) and `InitTimedASIDQueue()` (called from within it, own comment confirms "Called from ISR, must be fast!") and `SendTimedASID()` (`IntervalTimer` hardware-timer interrupt context, already correctly `FASTRUN`) need to stay RAM-resident. Everything else is only reachable via `PollingHndlr_ASID`'s main-loop `usbHostMIDI.read()`/`usbDevMIDI.read()` calls — safe FLASHMEM candidates: `InitHndlr_ASID`, `PollingHndlr_ASID`, `AddToASIDRxQueue`, `FlushASIDRxQueue`, `SetASIDIRQ`, `PrintflnToASID`, `AddErrorToASIDRxQueue`, `DecodeSendSIDRegData`, and `ASIDOnSystemExclusive` (the ~180-line SysEx decoder, `IOH_ASID.c:389-567`) — likely the single biggest RAM1 reclaim of any file reviewed this session.
+- [ ] `IOH_MIDI.c` — same shape as ASID. Only `IO1Hndlr_MIDI` is ISR-called; it doesn't call `SetMidiIRQ()` or any `HWEOn*` handler directly, so all of those are only reachable via `PollingHndlr_MIDI`'s main-loop `usbHostMIDI.read()`/`usbDevMIDI.read()` calls. Safe FLASHMEM candidates: `PollingHndlr_MIDI` (`IOH_MIDI.c:471`), `SetMidiIRQ` (`:107`), and all twelve `HWEOn*` callback functions (`HWEOnNoteOff`/`On`/`AfterTouchPoly`/`ControlChange`/`ProgramChange`/`AfterTouch`/`PitchChange`/`SystemExclusive`/`TimeCodeQuarterFrame`/`SongPosition`/`SongSelect`/`TuneRequest`/`RealTimeSystem`, lines 107-248).
+- [ ] `IOH_Swiftlink.c` — `InitHndlr_SwiftLink` (line 380) and `PollingHndlr_SwiftLink` (line 513) are candidates; likely also `FreeSwiftlinkBuffs()` (line 263, called from `SetUpMainMenuROM()` — main-context). By contrast `SetBaud()` and `ResetSwiftLink()` are correctly left unmarked — both carry their own "called from Phi IRQ/IO handler, be quick!" comments and are genuinely ISR-reachable via `IO1Hndlr_SwiftLink`.
+- [ ] `Swift_RxQueue.c` — the file demonstrates both patterns side-by-side: smaller helpers near the bottom (`AddIPaddrToRxQueueLN`, `AddMACToRxQueueLN`, `AddInvalidFormatToRxQueueLN`, `AddUpdatedToRxQueueLN`, `AddDHCPEnDisToRxQueueLN`, `AddDHCPTimeoutToRxQueueLN`, `AddDHCPRespTOToRxQueueLN`, `Add_BR_ToRxQueue`) are correctly `FLASHMEM`, but the foundational functions above them aren't, despite being equally main-context-only (reachable only via `PollingHndlr_SwiftLink`, never the ISR-path `IO1Hndlr_SwiftLink`/`CycleHndlr_SwiftLink`): `PullFromRxQueue`, `ReadyToSendRx`, `CheckRxNMITimeout`, `SendRxByte`, `CheckSendRxQueue`, `FlushRxQueue`, `AddRawCharToRxQueue`, `AddRawStrToRxQueue`, `AddToPETSCIIStrToRxQueue`, `AddToPETSCIIStrToRxQueueLN`, `inet_aton`.
+- [ ] `Swift_ATcommands.c` — otherwise fully consistent (every `AT_*` function correctly `FLASHMEM`), except two tiny one-line wrappers: `AddVerboseToPETSCIIStrToRxQueueLN` and `AddVerboseToPETSCIIStrToRxQueue` (lines 84-92). Negligible RAM impact given their size, noted for completeness.
+- [ ] `Swift_Browser.c` — confirmed via call-graph (only reachable through `PollingHndlr_SwiftLink`'s TxMsg/browser-command processing or `CheckSendRxQueue`'s HTML parsing, never the ISR-path `IO1Hndlr_SwiftLink`/`CycleHndlr_SwiftLink`): `SwiftTxBufToLcaseASSCII`, `SendPETSCIICharImmediate`, `SendASCIIStrImmediate`, `SendASCIIStrImmediateLN`, `SendASCIIErrorStrImmediate`, `DumpQueueUnPausePage`, `UnPausePage`, `ParseEntityReference`, `ParseHTMLTag`, `ParseURL`, `ReadClientLine`, `ClearClientStop`, `AddToPrevURLQueue`, `WebConnect`, `isURLFiltered`, `ModWebConnect`.
+- [ ] `InitHndlr_ZaxxonSuper` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_ZaxxonSuper.c:37` — main-context only (`InitHndlr`, called via `IOHandlerInit`), not currently marked.
+- [ ] `InitHndlr_MagicDesk` — `IOH_MagicDesk.c:40`
+- [ ] `InitHndlr_MagicDesk2` and `PollingHndlr_MagicDesk2` — `IOH_MagicDesk2.c:52` and `:117`
+- [ ] `InitHndlr_Ocean1` — `IOH_Ocean1.c:35`
+- [ ] `InitHndlr_SuperGames` — `IOH_SuperGames.c:37`
+- [ ] `InitHndlr_EpyxFastLoad` — `IOH_EpyxFastLoad.c:44`
+- [ ] `InitHndlr_GMod2` — `IOH_GMod2.c:35`
+- [ ] `InitHndlr_EasyFlash`, `LoadBank`, `PollingHndlr_EasyFlash` — `IOH_EasyFlash.c:90`, `:60`, `:214` — all main-context only; `ImageCheckAssign` (`:143`) is correctly left unmarked since it's genuinely ISR-reachable via `IO1Hndlr_EasyFlash`.
+- [ ] `PollingHndlr_Debug` — `IOH_Debug.c:243` — the one function in the file not covered by its own `DEBUG_MEMLOC` (`=FLASHMEM`) macro, which is otherwise applied consistently to everything else.
+
+**Status:** open, actively growing as more files are reviewed (2026-08-12).
+
+## `DownloadFile()` writes an over-length HTTP response chunk before validating it
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IO_Handlers/Swift_Browser.c:748-763`, inside `DownloadFile()`.
+
+```c
+uint32_t ChunkSize = client.available();
+if (ChunkSize)
+{
+   if (ChunkSize > MaxChunkSize) ChunkSize = MaxChunkSize;
+   client.read(DataChunk, ChunkSize);
+   dataFile.write(DataChunk, ChunkSize);      // written first
+   ...
+   if (ChunkSize > Length)                     // checked after
+   {
+      dataFile.close();
+      SendASCIIErrorStrImmediate("\rExtra data received");
+      return;
+   }
+```
+Not a buffer overflow — `DataChunk` is correctly capped to `MaxChunkSize` before use. But if a server sends more data than its own declared `Content-Length`, the oversized chunk is written to the destination file *before* the "Extra data received" error fires and aborts. The user sees the error, but the partially-corrupt file is left on disk rather than being caught before that last write or cleaned up (e.g. `sourceFS->remove()`) after.
+
+**Status:** deferred — not yet fixed (2026-08-12).
+
+## Design a consistent allocation-failure (OOM) policy across handlers
+
+**Where:** cross-cutting — seen across `IOH_REU.c`, `IOH_RetroReplay.c`, `IOH_ActionReplay.c`, `IOH_SuperSnapshotV5.c`, `IOH_Swiftlink.c`, and likely more not yet reviewed.
+
+Every handler that allocates RAM at init handles a failed `malloc`/`calloc` differently, with no consistent policy:
+- `IOH_REU.c`'s RAM12 bank-allocation loop actively detects persistent failure and calls `REBOOT` (`IOH_REU.c:539-546`) — "no better way to fail..." per its own comment.
+- `IOH_RetroReplay.c` and `IOH_ActionReplay.c` don't check at all (`IOH_ActionReplay.c:94-99` has the check written but commented out); `IOH_SuperSnapshotV5.c` has the identical commented-out check (see the earlier FLASHMEM/null-check discussion — assessed as low risk to leave, since the NULL guards elsewhere prevent a crash).
+- `IOH_Swiftlink.c`'s `InitHndlr_SwiftLink` allocation loops (lines 404-428) print an "OOM ..." message and continue, leaving that specific buffer slot `NULL`. **Confirmed (not just suspected): `Swift_RxQueue.c` does not check for this.** `PullFromRxQueue()` (`Swift_RxQueue.c:26`) and `AddRawCharToRxQueue()` (`:129`) both index `RxQueue[RxQueueHead/Tail / RxQueueBlockSize][...]` directly with no NULL guard — if the circular buffer wraps into a block whose allocation failed, that's a real NULL-pointer dereference/crash, not just a theoretical risk. Good supporting evidence for the REBOOT direction below: if allocation failure reboots immediately at init, this consumer-side gap becomes unreachable rather than needing to be individually guarded.
+
+**Current thinking (2026-08-12, not finalized):** the likely direction is to standardize on **REBOOT on allocation failure**, matching the precedent already set by `IOH_REU.c`'s RAM12 path — consistent with the project's general RAM-scarcity posture (MinimalBoot's whole existence is a response to RAM exhaustion, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware)) and simpler to reason about than trying to gracefully degrade every handler individually. Not yet designed in detail (e.g., whether every handler gets this treatment uniformly, or whether some cases warrant a softer failure).
+
+**Status:** deferred — direction leaning REBOOT, full design discussion not yet held (2026-08-12).
+
+## Audit `sprintf`/`vsprintf`-into-fixed-buffer pattern across the codebase
+
+**Where seen so far:**
+- `FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf` → `SerialStringBuf`, 262 bytes) — confirmed reachable overflow via a malformed CRT file's unterminated "Name" field (see the dedicated entry above).
+- `IOH_ASID.c:229-253` (`PrintflnToASID` → `ToSend`, 300 bytes) — lower risk, every call site is either a fixed literal, small integer formatting, or bounded by the MIDI library's SysEx null-termination/size cap (that cap itself not independently verified small enough to always fit).
+- `Swift_ATcommands.c:186-187` (`AT_DT()` → local `Buf[100]`) — **confirmed reachable via completely ordinary use**, not just a malformed-input edge case: `sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);` where `CmdArg` is user-typed hostname text from an `ATDT<hostname>:<port>` command, bounded only by `TxMsg`'s 128-byte limit — a normal long hostname plus the fixed format text alone can exceed the 100-byte `Buf`.
+
+Three independent instances of the same shape (`sprintf`/`vsprintf` into a fixed local/global buffer, no length argument) found without specifically looking for it — worth a dedicated sweep (`grep -rn "sprintf\|vsprintf"`, excluding the safe `snprintf`/`vsnprintf` variants) across the rest of the codebase rather than waiting to stumble onto more of them file-by-file.
+
+**Status:** open, not yet swept (2026-08-12).
+
+## Unbounded writes in `IOH_TR_BASIC.c`'s ISR-path IO1 write handler
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TR_BASIC.c:429` and `:436`, inside `IO1Hndlr_TR_BASIC` (called directly from `isrPHI2`, `ISRs.c:128`).
+
+Two writes into fixed-size buffers with no bounds check against the C64-side-controlled byte count:
+- `LSFileName[FNCount++] = Data;` (line 429, `TR_BASFileNameReg` write case) — `LSFileName` is a 256-byte (`MaxPathLength`) allocation; a filename stream longer than that with no null terminator would overflow it.
+- `RAM_Image[StreamOffsetAddr++] = Data;` (line 436, `TR_BASStreamDataReg` write case) — similarly unbounded against `RAM_Image`'s size.
+
+Both depend entirely on the C64-side `TRCustomBasicCommands` assembly code behaving itself and never streaming more bytes than the Teensy side expects — nothing on the Teensy side enforces the limit. Noted separately from the `Serial.write()` finding in this same file (see below) since this is a memory-safety/buffer-overflow concern from data volume, not a timing concern — the "BASIC interpreter overhead paces this" reasoning that resolved the `Serial.write()` question doesn't obviously extend to whether the *byte count* itself could ever exceed the buffer.
+
+**Status:** deferred — flagged, not yet assessed how to fix or whether real-world usage can trigger it (2026-08-12).
+
+## Documented exception: `Serial.write()` inside the ISR-path `IO1Hndlr_TR_BASIC`
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TR_BASIC.c:394`, inside `IO1Hndlr_TR_BASIC` (ISR-called, `TR_BASDataReg` write case — the TPUT BASIC command's output path).
+
+```c
+Serial.write(Data); //a bit risky doing this here, but seems fast enough in testing
+```
+This runs in the ISR call chain, which `Constraints.md` otherwise rules out for anything with unbounded latency (Serial writes included, same class as SD/USB/EEPROM). Confirmed by the developer as a **deliberate, understood exception**: TPUT's `Serial.write()` calls are paced by BASIC interpreter overhead (tokenization/dispatch), not raw machine-code speed, so in practice this can't be called densely enough to threaten bus timing — verified in testing. Not queued for a fix; recorded here (and to be folded into `Constraints.md`) so it isn't re-flagged as a fresh violation in a future pass.
+
+**Status:** accepted, documented exception — no action needed (2026-08-12).
+
 ## MinimalBoot's Ethernet-disable protection has a gap during VIC-cycle emulation
 
 **Where:** `Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino:53-55`
@@ -43,6 +139,46 @@ The >850KB bank-swap mechanism (REU-style DMA-line-assert pause, not true bus-ma
 Every other `Menu_Regs.i` consumer has an active `!src` line; ASIDPlayer's is present but commented out. Not yet confirmed whether this is intentional (ASID genuinely doesn't need those registers) or a leftover from an earlier split.
 
 **Status:** unverified, low priority.
+
+## `IOHandler[]` array and `enum enumIOHandlers` are hand-synced with no compile-time check
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IOHandlers.h:105-147` (array) and `Source/Teensy/MinimalBoot/Common/Menu_Regs.h:390-434` (enum), both explicitly commented "Synch order/qty with" the other.
+
+Every `stcIOHandlers*` entry in `IOHandler[]` must line up positionally with the matching `enumIOHandlers` value, across every `#ifdef` gate (`MinimumBuild`, `Fab04_REU`, `Fab04_KernalReplace`, `Fab04_Freezers`) — `CurrentIOHandler` is just an integer index into the array. Hand-verified during architecture review (2026-08-11) that the two currently match exactly, entry-for-entry including `RetroReplay`'s recent insertion — but nothing enforces that going forward; adding/removing a handler in only one list would silently misindex `IOHandler[CurrentIOHandler]` at runtime (e.g. selecting one cartridge type could actually load a different one).
+
+**Proposed fix:** add `_Static_assert(sizeof(IOHandler)/sizeof(IOHandler[0]) == IOH_Num_Handlers, "IOHandler[] / enumIOHandlers count mismatch");` right after the array definition (`IOHandlers.h:147`). Zero runtime cost, compile-time only, doesn't touch the ISR or any hot path. Note: this only catches a *count* mismatch (forgot to add/remove an entry in one list), not a pure *reordering* with the same count — still worth having since count mismatches are the more likely mistake.
+
+**Status:** deferred — fix proposed, not yet implemented (2026-08-12).
+
+## Third `USBHIDParser` instance (`hid3`) may be unnecessary RAM cost
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IOHandlers.h:38`
+
+Three `USBHIDParser` instances (`hid1`, `hid2`, `hid3`) are declared for the USB host stack, with the original developer's own comment `//need all 3?` left in place — an open question, not a confirmed requirement. Each instance carries its own RAM cost (endpoint buffers/state); if 3 simultaneous HID devices isn't a real-world scenario, removing `hid3` could reclaim some RAM in an area (full firmware's USB host stack) that already competes for the same RAM1/RAM2 budget as everything else.
+
+**Status:** deferred — needs investigation into whether 3 HID devices is a real usage case before touching (2026-08-12).
+
+## Unbounded `vsprintf` into a fixed global buffer — triggerable by a malformed CRT file
+
+**Where:** `Source/Teensy/FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf`), writing into `SerialStringBuf` (`char[MaxPathLength+6]` = 262 bytes, declared `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:45`).
+
+Both functions call `vsprintf(SerialStringBuf, Fmt, ap)` with no length limit. `SendMsgPrintfln` additionally shifts the buffer in place to prepend `\r\n` (`FileParsers.ino:518`), writing as far as `strlen(SerialStringBuf)+2` — a second unbounded-length write on top of the first.
+
+**Concrete trigger:** `ParseCRTHeader()` (`FileParsers.ino:93`) calls `SendMsgPrintfln("Name: %s", (CRT_Image+0x20))` — `CRT_Image+0x20` is the CRT file's 32-byte "Name" field, read directly from file content with no length bound enforced before the `%s`. A corrupted or malformed CRT (from SD/USB, or posted over the external USB/Ethernet protocol) with a non-terminated name field would have `%s` read straight into the rest of the ROM image looking for a zero byte — real cartridge ROM data could go a very long way before hitting one — overflowing the 262-byte global buffer.
+
+**Proposed fix:** swap `vsprintf` for `vsnprintf(SerialStringBuf, sizeof(SerialStringBuf), Fmt, ap)` in both functions, clamp the `\r\n`-shift loop to `sizeof(SerialStringBuf)-1`, and bound the CRT Name field read itself (e.g. `%.32s`) at the call site as defense in depth. Plain main-context code, no ISR/hot-path constraints apply.
+
+**Status:** deferred — fix proposed, not yet implemented (2026-08-12).
+
+## Planned refactor: split `StatusFunction[]` out of `IOH_TeensyROM.c`
+
+**Where:** `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c` (1891 lines, largest IO handler by far).
+
+Plan to pull all the `StatusFunction` functions and the `StatusFunction[]` declaration/array out into a separate file, for organization given the file's size.
+
+**Assessed during architecture review (2026-08-12), no structural problem found:** `StatusFunction[]` is only ever dispatched from `PollingHndlr_TeensyROM()` (main-loop context, not the ISR path) — zero interaction with hot-path constraints. Every `IO_Handlers/*.c` file is already `#include`d as raw source into `IOHandlers.h` rather than compiled as an independent translation unit, so adding one more file to that same `#include` chain doesn't introduce a new pattern or a real linkage boundary. The one thing to watch when actually doing the split: anything the moved `StatusFunction` bodies reference that's currently file-scoped in `IOH_TeensyROM.c` (statics, helpers without prototypes) needs to stay visible via include-order placement or get forward-declared — same discipline already used elsewhere (e.g. `IOH_REU.c`'s block of `extern` declarations for cross-file symbols).
+
+**Status:** deferred — planned by the developer, no blocker identified (2026-08-12).
 
 <br>
 
