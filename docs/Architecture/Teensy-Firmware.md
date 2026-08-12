@@ -65,6 +65,16 @@ Each cartridge/IO type is one `.c` file under `MinimalBoot/Common/IO_Handlers/` 
 
 A host app can query which mode is currently active via `FWCheckToken`. Only a restricted command set (`ResetC64Token`, `LaunchFileToken`, `VersionInfoToken`, `FWCheckToken`) is available while in minimal mode. Dual-boot hex combining (so both images ship in one `.hex`) is handled by `tools/Build-DualBoot.ps1` — see [Build-System.md](Build-System.md).
 
+**Why MinimalBoot includes Ethernet** despite the RAM cost of an otherwise memory-scarce build: it's specifically so a host app can remote-launch a command over the network while a large CRT is running in minimal mode, interrupting it and taking back system control — not because minimal-mode logic itself needs network access.
+
+## File associations: full vs. MinimalBoot vs. shared
+
+Confirmed directly from each sketch's `#include` list, not inferred:
+
+- **Full-firmware-only** (siblings of `Teensy.ino`, no minimal counterpart): `BusSnoop.ino`, `D64.ino`, `DMAControl.ino`, `DriveDirLoad.ino`, `FileParsers.ino`, `FileTransfer.ino`, `FlashUpdate.ino`, `IOHandlers.ino`, `MeatloafComm.ino`, `RemoteControl.ino`, `SerUSBIO.ino`, `ServiceTCP.ino`, `midiDevName.c`, `nfcScan.ino`, plus `TeensyROM.h` and `MainMenuItems.h` (the embedded interactive-menu ROM table — `MinimalBoot.ino` does not include this; it has no interactive menu). `Flash/` and `src/PN532/` are likewise full-only.
+- **MinimalBoot-only** (siblings of `MinimalBoot.ino`): `Min_DriveDirLoad.ino`, `Min_RunTeensyApp.ino`, `Min_SerUSBIO.ino`, `Min_ServiceTCP.ino`, `Min_TeensyROM.h`, `Min_core_cm7.h`. **The `Min_` prefix means "parallel, independently-written counterpart," not shared code** — despite the name similarity to a same-named full-FW file, each is its own implementation. `MinimalBoot.ino` doesn't include `USBHost_t36.h`, `Bounce.h`, or `MainMenuItems.h` — those subsystems are genuinely absent from this build, not just unused.
+- **Truly shared, single source, compiled into both** (confirmed by both sketches' `#include` lists pointing at the same files, and a marker file literally named `___These files used by both main and minimal builds___` sitting in the directory): everything under `MinimalBoot/Common/` — `Common_Defs.h`, `DriveDirLoad.h`, `Fab04FeatureCtl.h`, `IOHandlers.h`, `ISRs.c`, `Menu_Regs.h`, and all `IO_Handlers/*.c` files. There's no `Min_IOHandlers.ino` because none is needed — `MinimalBoot.ino` calls straight into the shared `Common/IOHandlers.h` dispatch table itself.
+
 ## Memory budgets (see [Constraints.md](Constraints.md) for the full list)
 
 - `MaxRAM_ImageSize = 128` KB in full build (`TeensyROM.h:26`)

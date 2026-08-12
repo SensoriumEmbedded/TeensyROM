@@ -11,7 +11,7 @@ TeensyROM is a Teensy 4.1-based multi-function cartridge for the Commodore 64/12
 | `Source/Teensy/` | Teensy microcontroller firmware — C/C++, Arduino/Teensyduino build. See [Teensy-Firmware.md](Teensy-Firmware.md). |
 | `Source/C64/` | Programs that run ON the C64 (menu, settings, utilities) — 6502 assembly. See [C64-Software.md](C64-Software.md). |
 | `Source/BuildInfo.md` | Canonical build instructions/tool versions for both sides. |
-| `PCB/` | KiCad schematic/PCB source, per hardware version (`v0.3` public/self-buildable, `v0.4`/TR+ not yet public). |
+| `PCB/` | Eagle PCB (`.sch`/`.brd`) schematic/PCB source, per hardware version (`v0.3` public/self-buildable under `v0.3/EaglePCB/`, `v0.4`/TR+ not yet public). |
 | `docs/` | User-facing feature docs (usage guides, protocol reference) — flat, no subfolders except this one. |
 | `docs/Architecture/` | This doc set — structural/AI-reference material, not user-facing. |
 | `bin/TeensyROM/` | Released firmware binaries + `FW_Release_History.md`. |
@@ -35,6 +35,7 @@ C64 code and Teensy firmware also talk to each other **at runtime** two differen
 - [Comms-Protocol.md](Comms-Protocol.md) — cartridge register protocol + link to external host protocol
 - [Build-System.md](Build-System.md) — toolchains, versions, dual-boot linking, known gotchas
 - [Constraints.md](Constraints.md) — hard rules: ISR hot path, memory budgets, toolchain pins
+- [Known-Issues.md](Known-Issues.md) — scoped, deferred findings from architecture walkthroughs, with designed (not yet implemented) fixes
 
 <br>
 

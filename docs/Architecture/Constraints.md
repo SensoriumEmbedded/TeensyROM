@@ -14,11 +14,40 @@ If a design genuinely seems to require touching the ISR, look for a solution ent
 
 New cartridge/IO types are added by writing a new `IO_Handlers/*.c` file and registering it in the `IOHandler[]` dispatch array — not by editing the ISR.
 
+### The real dividing line: flash-backed vs. RAM-backed, not just "the ISR function itself"
+
+The no-new-logic rule extends to everything reachable from the ISR's call path, not just `isrPHI2()` literally: `ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr` of the *active* IO handler are all called every cycle and must stay just as disciplined. Within that call path, only cheap, deterministic operations are safe — register reads/writes, small variable updates, anything backed by RAM1/RAM2. Nothing backed by flash is safe, and that's a wider category than it first looks:
+
+- **`FLASHMEM`-attributed code** — flash execution goes through the FlexSPI cache; a cache miss blows the cycle budget. `FLASHMEM` is fine for `InitHndlr`/`PollingHndlr`/main-loop code (never called from the ISR path), never for `ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr`.
+- **EEPROM access — including reads.** The Teensy's "EEPROM" isn't a separate low-latency peripheral; it's emulated on top of the same flash `FLASHMEM` code lives in, so it carries identical unbounded latency. Not just writes — reads too.
+- **SD card and USB access** — same unbounded-latency problem, different peripheral.
+
+So new cartridge/IO type authors: none of the per-cycle-called handler functions may touch flash in any form (code or EEPROM), SD, or USB. If a handler needs any of that, it belongs in `InitHndlr` (setup-time) or `PollingHndlr` (main-loop, see the wait mechanism below), never in the cycle-called functions.
+
+### The sanctioned way to run slow work: cooperative polling, not a CPU halt
+
+When a handler genuinely needs to do something slow — flash-backed work, or anything else that can't fit the cycle budget — the pattern used throughout the C64 menu code is a cooperative polling handoff, **not** a bus/CPU halt:
+
+1. C64 side writes a `rCtl*WAIT`-style command to `wRegControl`, then calls `WaitForTRDots` / `WaitForTRWaitMsg` (`WaitForTRMain` loop, `Source/C64/MainMenuCRT/source/MainMenu.asm:942-982`). This is ordinary running 6502 code — it prints one dot per second off the CIA TOD clock as a progress indicator and polls `rwRegStatus`, waiting for `rsReady` (or displays an interim `rsC64Message`).
+2. On the Teensy side, the ISR-path handler (e.g. `IO1Hndlr_TeensyROM`) only does the fast, RAM-safe part: record that a status/command was written. The actual work happens in `PollingHndlr_TeensyROM()` (`Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:1878`), called from the **main `loop()`**, not the ISR — `Teensy.ino`'s `loop()` dispatches to `IOHandler[CurrentIOHandler]->PollingHndlr()`. It sees `rwRegStatus != rsReady`, dispatches to the real handler via `StatusFunction[...]` (free to use FLASHMEM/EEPROM/SD/USB here), then writes `rsReady` back when done.
+
+The C64 keeps running its own bus cycles the entire time (feeding the ISR normally) — it's just spinning harmlessly on a status register while the Teensy works outside the ISR. This is a **different** mechanism from the DMA-line-assert pause used for large-CRT bank swapping (see below) — that one actually halts the C64 CPU; this one doesn't.
+
+### The PHI2 ISR runs at elevated interrupt priority, even over Ethernet
+
+`Teensy.ino:130` — `NVIC_SET_PRIORITY(IRQ_GPIO6789, 16); //set HW ints as high priority, otherwise ethernet int timer causes misses`. (Note: this "NVIC" is the ARM core's Nested Vectored Interrupt Controller — unrelated to the C64's VIC video chip; the acronym collision is coincidental.)
+
+Beyond priority, Ethernet/PIT interrupts are fully **disabled** (not just deprioritized) during specific windows where `isrPHI2` can't tolerate any preemption at all:
+
+- **VIC-cycle emulation** — `DriveDirLoad.ino:242-243` disables `IRQ_ENET`/`IRQ_PIT` when `EmulateVicCycles` is set, re-enabled at `Teensy.ino:352-353`. Servicing the VIC half of the cycle extends `isrPHI2`'s per-cycle work enough that a stray Ethernet IRQ could blow the timing budget for the *next* PHI2 cycle. See [Known-Issues.md](Known-Issues.md) for a related gap in MinimalBoot's version of this.
+- **Firmware self-flash** — `Flash/FXUtil.cpp:175-176` disables both, and goes further by fully `detachInterrupt()`-ing the button and PHI2 pins entirely just above (lines 173-174) — there's no valid handler to service PHI2 while live firmware is being overwritten.
+- **ASID (MIDI SID) playback** — `IOH_ASID.c:579-580` disables both during ASID streaming, which has its own tight audio-rate timing requirement.
+
 ## Memory budgets are hard caps, not soft targets
 
 - Full firmware: `MaxRAM_ImageSize = 128` KB (`Source/Teensy/TeensyROM.h:26`) — the RAM1 image buffer. Beyond that, CRT banks spill into RAM2 via `malloc()` (`FileParsers.ino:120-128`); when that allocation fails, firmware reboots into MinimalBoot (`FileParsers.ino:165-168`, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for the full trigger mechanism) — this exhaustion point empirically lands around **~650KB** total, it is not a hardcoded threshold.
 - MinimalBoot: `(392 - 8*Num8kSwapBuffers - EthernetDeduction)` KB (`Source/Teensy/MinimalBoot/Common/Min_TeensyROM.h:58`) — extends CRT support to **~850KB**, at the cost of dropping USB host support (SD-only loading in this mode).
-- Files beyond ~850KB use bank-swapping from SD (only), asserting the DMA line for ~3ms per uncached swap — not true bus-mastering DMA, just the old-school REU-style pause assertion. This mechanism is unreliable on most C128s and a low percentage of NTSC systems; a DMA Pause check utility (`TODCheck`/Test+Diags BASIC tool) exists to test a given system before relying on this.
+- Files beyond ~850KB use bank-swapping from SD (only), asserting the DMA line for ~3ms per uncached swap — not true bus-mastering DMA, just the old-school REU-style pause assertion. TR+'s true bus-mastering DMA doesn't help here: the pause just needs to be perceptually instant to the 6510 for an SD→RAM bank transfer, which bus-mastering doesn't improve. This mechanism was documented as unreliable on most C128s and a low percentage of NTSC systems; **that reliability claim may now be stale and is due for a re-test** (flagged during architecture review, 2026-08-11 — see [Known-Issues.md](Known-Issues.md)). A DMA Pause check utility (`TODCheck`/Test+Diags BASIC tool) exists to test a given system before relying on this.
 
 When editing anything that changes per-file/per-struct RAM footprint in either firmware image, check these budgets — MinimalBoot in particular has very little headroom (its whole reason for existing is memory scarcity).
 
@@ -32,7 +61,7 @@ Explicit warning in the file itself (`Common_Defs.h:2`): "re-compile both minima
 
 ## Cartridge register layout must be kept in sync by hand
 
-`Source/C64/MainMenuCRT/source/Menu_Regs.i` and the Teensy-side `Menu_Regs.h` define the same register map independently — there is no shared source of truth or build-time check. See [Comms-Protocol.md](Comms-Protocol.md).
+`Source/C64/MainMenuCRT/source/Menu_Regs.i` and the Teensy-side `Menu_Regs.h` define the same register map independently — there is no shared source of truth or build-time check. See [Comms-Protocol.md](Comms-Protocol.md) and [Known-Issues.md](Known-Issues.md) for a designed-but-not-yet-implemented fix.
 
 <br>
 

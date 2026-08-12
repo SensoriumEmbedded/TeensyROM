@@ -23,11 +23,13 @@ Toolchain: **ACME cross-assembler 0.97** for all `.asm`/`.s` files, except **TRC
 | `TODCheck` | `buildTODCheck.bat` | CIA Time-of-Day clock check utility |
 | `TRCustomBasicCommands` | `buildTRCustomBasicCommands.bat` | Custom BASIC commands — vendored, see below |
 | `BASIC` | `bin2header.bat` | Grab-bag of pre-built standalone `.prg` utilities, individually header-converted |
-| `v1541Wrapper` | `buildv1541Wrapper.bat` | Virtual 1541 wrapper — **not currently used in the full build** |
+| `v1541Wrapper` | `buildv1541Wrapper.bat` | Virtual 1541 wrapper — **deferred/planned feature**, not currently wired into the full build; waiting on further developer capability before inclusion. Also intended as a general-purpose wrapper for assembly-code PRGs. |
 
 ## MainMenuCRT — the cartridge boot menu
 
 Files in `MainMenuCRT/source/`: `TeensyROMC64.asm` (171 lines), `MainMenu.asm` (1432 lines), `PRGLoadStartReloc.s` (140), `SIDRelated.s` (522), `StringFunctions.s`, `StringsMsgs.s`, `CommonDefs.i`, `Menu_Regs.i` (register map, see [Comms-Protocol.md](Comms-Protocol.md)), `c64defs.i`.
+
+`Menu_Regs.i` physically lives here but is shared well beyond MainMenuCRT — it's `!src`-included by relative path from 6 sub-projects' top-level `.asm` files: both `MainMenuCRT` sources (`TeensyROMC64.asm`, `MainMenu.asm`), `SettingsMenu`, `TRHelpScreens`, `TRExtPortCheck`, `MIDI2SID`, and `ExpansionPortTest`. It's one physical file (not duplicated per sub-project), so any future fix to the [Menu_Regs sync problem](Known-Issues.md) only needs to regenerate this one file, not touch the 6 consumers. `ASIDPlayer.asm:7` has the same include line present but **commented out** — unclear if intentional (ASID doesn't need those registers) or a leftover; worth a quick check before relying on that assumption.
 
 - **`TeensyROMC64.asm`** is the actual 8K cartridge ROM image (`* = $8000`, `Coldstart`/`Warmstart` vectors, `CBM8O` autostart key). Does minimal hardware init (VIC/CIA/SID reset), prints the banner, then copies the separately-built `MainMenu.bin` (`!binary`-included) from cart ROM into C64 RAM at `MainCodeRAMStart` (`$6000`, per `CommonDefs.i`) and jumps there.
 - **`MainMenu.asm`** is the menu program proper, running from RAM: file browser/menu UI (`ListMenuItems`, `SelectItem`, `RunSelected`, `XferCopyRun`), cursor/page navigation, keyboard handling, NFC tag writing, RTC/time display.
