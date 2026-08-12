@@ -236,7 +236,7 @@ void IO1Hndlr_Debug(uint8_t Address, bool R_Wn)
    }
    #ifndef DbgIOTraceLog
       if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-      if (BigBufCount < BigBufSize) BigBufCount++;
+      if (BigBufCount < BigBufSize-1) BigBufCount++;
    #endif
 }
 

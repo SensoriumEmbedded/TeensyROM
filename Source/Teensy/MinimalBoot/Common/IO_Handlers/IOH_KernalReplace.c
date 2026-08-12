@@ -175,6 +175,7 @@ FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, man
    if (LoadFile.size() != 8192)
    {
       Serial.println("Wrong Size!");
+      LoadFile.close();
       return;
    }
 

@@ -24,7 +24,7 @@
 //choose one for REU swap buffer;  direct: PSRAM/RAM12 only, Indirect: SD/PSRAM only
 #define USE_RAM12          //use RAM1/2 space
 //#define USE_PSRAM          //use external PSRAM chip(s)
-//#define USE_SD             //use SD card`
+//#define USE_SD             //use SD card
 
 
 #ifdef USE_RAM12
@@ -548,7 +548,8 @@ FLASHMEM void InitHndlr_REU()
    }
    Printf_dbg_reu("Used %lu bytes from RAM2, %luK bytes REU total\n", REU_Size+(uint32_t)RAM_Image-(uint32_t)pRAM_Image, REU_Size/1024);
 
-   
+   fSpecialBtnChange = &SpecialBtn_REU;  //REU RAM is ready; enable button now so a failed/missing preload below doesn't skip it
+
    //pre-load REU into RAM here:
    char Filename[MaxPathLength];
    EEPreadStr(eepAdREUFilename, Filename);
@@ -558,7 +559,7 @@ FLASHMEM void InitHndlr_REU()
 
    if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
    if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
-   //rmtTeensy not allowed, no kernal files in Teensy Mem
+   //rmtTeensy not allowed, no reu files in Teensy Mem
    
    FS *sourceFS = FSfromSourceID(MenuSourceID);
    File LoadFile = sourceFS->open(ptrFileName, FILE_READ);
@@ -571,6 +572,7 @@ FLASHMEM void InitHndlr_REU()
    if (LoadFile.size() > REU_Size)
    {
       Serial.println("Too Large!");
+      LoadFile.close();
       return;
    }
 
@@ -613,7 +615,8 @@ FLASHMEM void InitHndlr_REU()
    const float frequency = clocks[(CCM_CBCMR >> 8) & 3] / (float)(((CCM_CBCMR >> 29) & 7) + 1);
    Serial.printf(" CCM_CBCMR=%08X (%.1f MHz)\n", CCM_CBCMR, frequency);
    Serial.printf(" PSRAM loc: $%08x\n", pPSRAM);
-   
+   fSpecialBtnChange = &SpecialBtn_REU;
+
 #elif defined(USE_SD)
    uint32_t StartmS = millis();
    REUFile = SD.open(REU_Temp_FileName, FILE_WRITE);
@@ -635,10 +638,9 @@ FLASHMEM void InitHndlr_REU()
       //REUFile.close();  //leave open 
       Printf_dbg_reu("  increased to $%08x in %lumS\n", REUFileSize, millis()-StartmS);
    }
+   fSpecialBtnChange = &SpecialBtn_REU;
 #endif
 
-   fSpecialBtnChange = &SpecialBtn_REU;
- 
 }  //InitHndlr_REU
 
 
