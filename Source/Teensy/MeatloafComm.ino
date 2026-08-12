@@ -133,13 +133,12 @@ FLASHMEM void MountDxxFile()
       }      
       //Printf_dbg("Ack\n");
    }
-   DxxFile.close();   
+   DxxFile.close();
    USBHostSerial.printf("\r\n");
    //wait for pass/fail response.
    if (!WaitCheckresponse("Conf", '0'))
    {
-      DxxFile.close();
-      return;      
+      return;
    }
    SendMsgPrintfln("Complete in %lu mS", millis()-StartmS );
    
