@@ -305,17 +305,17 @@ FLASHMEM void MIDIinHndlrInit()
       usbHostMIDI.setHandleSongPosition        (HWEOnSongPosition);        // F2
       usbDevMIDI.setHandleSongPosition         (HWEOnSongPosition);        // F2
    }
-   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   if(IO1[rwRegMIDISettings2] & rMIDISet2SongSelectEn)
    {
       usbHostMIDI.setHandleSongSelect          (HWEOnSongSelect);          // F3
       usbDevMIDI.setHandleSongSelect           (HWEOnSongSelect);          // F3
    }
-   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   if(IO1[rwRegMIDISettings2] & rMIDISet2TuneRequestEn)
    {
       usbHostMIDI.setHandleTuneRequest         (HWEOnTuneRequest);         // F6
       usbDevMIDI.setHandleTuneRequest          (HWEOnTuneRequest);         // F6
    }
-   if(IO1[rwRegMIDISettings2] & rMIDISet2SongPositionEn)
+   if(IO1[rwRegMIDISettings2] & rMIDISet2RealTimeSystemEn)
    {
       usbHostMIDI.setHandleRealTimeSystem      (HWEOnRealTimeSystem);      // F8-FF (except FD)
       usbDevMIDI.setHandleRealTimeSystem       (HWEOnRealTimeSystem);      // F8-FF (except FD)
