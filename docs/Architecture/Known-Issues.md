@@ -2,20 +2,46 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
-## HIGH PRIORITY: `RemoteLaunch()` can overflow `DriveDirPath` via normal, documented protocol use
+## HIGH PRIORITY: `nfcReadTagLaunch()` can overflow its 256-byte `TagData` stack buffer reading a malformed/corrupted NFC tag
 
-**Where:** `Source/Teensy/RemoteControl.ino:198` (`strcpy(DriveDirPath, FileNamePath)` inside `RemoteLaunch()`), fed by `Source/Teensy/SerUSBIO.ino`'s `LaunchFile()`/`ReceiveFileName()`.
+**Where:** `Source/Teensy/nfcScan.ino:183-403`, `nfcReadTagLaunch()`.
 
-Unlike most other buffer findings this session, **this one is triggerable through completely normal, documented use of the external USB/Ethernet protocol** — no malformed file, no corrupted data required.
+More realistic trigger than most "corrupted file" scenarios already waved off this session: physical NFC tags degrade over time, and third-party tag-writing tools (part of the broader "TapTo" ecosystem this feature supports) can write tags that don't match TeensyROM's exact expectations — no adversarial intent needed, just an imperfect or aging tag.
 
-- `LaunchFile()` (`SerUSBIO.ino:699`) declares `char FileNamePath[MaxNamePathLength]`, where `MaxNamePathLength = MaxPathLength + MaxItemNameLength + 2 = 256+100+2 = 358` bytes.
-- `ReceiveFileName()` (`SerUSBIO.ino:723`) correctly bounds its read loop to that 358-byte limit, returning `FailToken`/"Path too long!" only if exceeded — so **a client is explicitly permitted, by the protocol's own declared limit, to send a path up to 357 characters** via the standard, documented `LaunchFileToken` command (see `docs/ControlComms.md`).
-- `RemoteLaunch()` then does `strcpy(DriveDirPath, FileNamePath)` with no length check. `DriveDirPath` is `char[MaxPathLength]` = **256 bytes** (`Teensy.ino:45`).
-- `MaxNamePathLength` exists specifically to accommodate a path *plus* a separate filename combined; `DriveDirPath` was apparently only ever sized for the path alone. Any path between 257-357 characters — accepted as valid by the protocol layer — overflows `DriveDirPath` by up to 101 bytes.
+The page-read loop (lines 192-252):
+```c
+uint8_t DataStart, messageLength, TagData[MaxPathLength];  // 256 bytes
+uint16_t CharNum = 0;
+while (MoreData)
+{
+   ...
+   nfc.mifareclassic_ReadDataBlock(PageNum, TagData+CharNum);  // writes 16 bytes at TagData+CharNum, unbounded
+   for(uint8_t Num = 0; Num<16; Num++)
+   {
+      if(TagData[CharNum] == 0xfe || CharNum >= DataStart+messageLength) MoreData = false;
+      else CharNum++;
+   }
+   ...
+}
+```
+`messageLength` is read directly from the tag's own data (one byte, so up to 255) and `DataStart` can be up to 7 — so the loop's own stopping condition, `CharNum >= DataStart+messageLength`, can itself reach 262, already past the 256-byte buffer. A tag with a large declared message length and no `0xfe` terminator before that point causes repeated 16-byte writes past the end of `TagData` — a real stack buffer overflow.
 
-Any client (any of the third-party TeensyROM control apps, or anything speaking the documented protocol) sending an ordinary `LaunchFileToken` with a sufficiently long path/filename combination triggers this.
+Telling contrast: `nfcWriteTag()` (same file, line 429-436) explicitly checks `if (messageLength>254) { ...; return; }` before writing anything — the write path was clearly designed with the 256-byte limit in mind. The read path wasn't given the equivalent treatment, suggesting this is an oversight rather than an accepted risk.
 
-**Status:** deferred — confirmed, high priority given it's protocol-reachable rather than requiring malformed input, not yet fixed (2026-08-12).
+A second, smaller instance of the same gap: the "random launch" handling (line 391) does `strcat((char*)pDataStart, CleanLocalDirMenu[...]->Name)`, appending an arbitrary filename (FAT32, up to 255 chars) into whatever's left in the same `TagData` buffer, also with no bound check against remaining space.
+
+**Status:** deferred — confirmed, high priority given realistic trigger path, not yet fixed (2026-08-12).
+
+## HIGH PRIORITY: `DriveDirPath` (256 bytes) has no length enforcement anywhere it's written, and two different normal-use paths can overflow it
+
+**Where:** `DriveDirPath` is `char[MaxPathLength]` = **256 bytes** (`Teensy.ino:45`). Two independent, unrelated call sites write into it with no bound:
+
+1. **`RemoteLaunch()`** — `Source/Teensy/RemoteControl.ino:198`, `strcpy(DriveDirPath, FileNamePath)`, fed by `SerUSBIO.ino`'s `LaunchFile()`/`ReceiveFileName()`. `LaunchFile()` (`SerUSBIO.ino:699`) declares `char FileNamePath[MaxNamePathLength]` (`MaxPathLength+MaxItemNameLength+2` = 358 bytes), and `ReceiveFileName()` correctly bounds its read loop to that 358-byte limit — so **a client is explicitly permitted, by the protocol's own declared limit, to send a path up to 357 characters** via the standard, documented `LaunchFileToken` command (see `docs/ControlComms.md`). `MaxNamePathLength` exists to accommodate path *plus* filename combined; `DriveDirPath` was apparently only ever sized for the path alone. Any path 257-357 characters — valid per the protocol layer — overflows `DriveDirPath` by up to 101 bytes. Triggerable by any client (third-party control apps included) sending an ordinary `LaunchFileToken`.
+2. **`HandleExecution()`** — `Source/Teensy/DriveDirLoad.ino:65,74-75,105`, repeated `strcat(DriveDirPath, MenuSelCpy.Name)` as the user navigates directories on the menu. `MenuSelCpy.Name` is a real SD/USB filename/dirname (FAT32 allows up to 255 chars per component), and `DriveDirPath` **accumulates across successive directory selections** with no check at any point. This is triggerable through **completely ordinary menu browsing** on a real SD card with a few levels of descriptively-named folders — no crafted input, no external protocol, no corrupted file needed at all. Arguably the easier of the two to hit in practice.
+
+Both point at the same underlying gap — nothing enforces `DriveDirPath`'s 256-byte limit at any write site — so a fix should address the buffer discipline generally rather than patching each call site individually.
+
+**Status:** deferred — confirmed via two independent paths, high priority, not yet fixed (2026-08-12).
 
 ## FLASHMEM audit (running list)
 
@@ -43,6 +69,8 @@ Functions that are safe `FLASHMEM` candidates — confirmed never called from `i
 - [ ] `ServiceTCP` — `Source/Teensy/ServiceTCP.ino:4` — likely main-context (polling-loop TCP handling), not independently confirmed via caller trace.
 - [ ] `InterruptC64`, `DoC64IRQ`, `EEPRemoteLaunch`, `RemoteLaunch` — `Source/Teensy/RemoteControl.ino` — all main-context only; `RemoteLaunch` is the largest of the batch.
 - [ ] `RAM2BytesFree` — `Source/Teensy/SerUSBIO.ino:785` — the one function in this file not marked `FLASHMEM`; everything else (`ServiceSerial`, `ProcessCommand`, `LaunchFile`, `ReceiveFileName`, etc.) is fully consistent.
+- [ ] `Source/Teensy/DriveDirLoad.ino` — **zero `FLASHMEM` coverage in the entire file**, likely the single largest opportunity of the session. Every function is menu-navigation-triggered, main-context only (reached via `HandleExecution()` from `RemoteLaunch()`/`IOHandlerSelectInit()`'s StatusFunction dispatch, never the ISR path): `HandleExecution` (~265 lines), `MenuChange`, `LoadFile`, `InitDriveDirMenu`, `SetDriveDirMenuNameType`, `LoadDirectory`, `AddDirEntry`, `FreeDriveDirMenu`, `FreeCrtChips`, `Assoc_Ext_ItemType`.
+- [ ] `nfcCheck`, `RegMenuTypeFromFileName`, `FSfromSourceID`, `nfcReadTagLaunch` — `Source/Teensy/nfcScan.ino` — NFC polling is main-loop-driven, not ISR; `nfcInit`/`nfcConfigCheck`/`nfcWriteTag` in the same file already correctly have `FLASHMEM`.
 
 **Status:** open, actively growing as more files are reviewed (2026-08-12).
 
