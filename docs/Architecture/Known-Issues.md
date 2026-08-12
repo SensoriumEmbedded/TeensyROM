@@ -2,6 +2,21 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
+## HIGH PRIORITY: `RemoteLaunch()` can overflow `DriveDirPath` via normal, documented protocol use
+
+**Where:** `Source/Teensy/RemoteControl.ino:198` (`strcpy(DriveDirPath, FileNamePath)` inside `RemoteLaunch()`), fed by `Source/Teensy/SerUSBIO.ino`'s `LaunchFile()`/`ReceiveFileName()`.
+
+Unlike most other buffer findings this session, **this one is triggerable through completely normal, documented use of the external USB/Ethernet protocol** — no malformed file, no corrupted data required.
+
+- `LaunchFile()` (`SerUSBIO.ino:699`) declares `char FileNamePath[MaxNamePathLength]`, where `MaxNamePathLength = MaxPathLength + MaxItemNameLength + 2 = 256+100+2 = 358` bytes.
+- `ReceiveFileName()` (`SerUSBIO.ino:723`) correctly bounds its read loop to that 358-byte limit, returning `FailToken`/"Path too long!" only if exceeded — so **a client is explicitly permitted, by the protocol's own declared limit, to send a path up to 357 characters** via the standard, documented `LaunchFileToken` command (see `docs/ControlComms.md`).
+- `RemoteLaunch()` then does `strcpy(DriveDirPath, FileNamePath)` with no length check. `DriveDirPath` is `char[MaxPathLength]` = **256 bytes** (`Teensy.ino:45`).
+- `MaxNamePathLength` exists specifically to accommodate a path *plus* a separate filename combined; `DriveDirPath` was apparently only ever sized for the path alone. Any path between 257-357 characters — accepted as valid by the protocol layer — overflows `DriveDirPath` by up to 101 bytes.
+
+Any client (any of the third-party TeensyROM control apps, or anything speaking the documented protocol) sending an ordinary `LaunchFileToken` with a sufficiently long path/filename combination triggers this.
+
+**Status:** deferred — confirmed, high priority given it's protocol-reachable rather than requiring malformed input, not yet fixed (2026-08-12).
+
 ## FLASHMEM audit (running list)
 
 Functions that are safe `FLASHMEM` candidates — confirmed never called from `isrPHI2` or any per-cycle handler path (`ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr`) — but aren't currently marked, unlike their siblings that follow the same pattern correctly. Each one left in default RAM1/ITCM placement costs RAM1 space unnecessarily; moving to flash is low-risk (see [Constraints.md](Constraints.md#the-real-dividing-line-flash-backed-vs-ram-backed-not-just-the-isr-function-itself) for why this distinction is safe/unsafe in general). Expected to grow well beyond `IO_Handlers/` as more files get reviewed — check every `InitHndlr`/`PollingHndlr`/`SpecialBtn_*`/similar main-context-only function for this when reviewing a new file, not just when something else prompts it.
@@ -25,8 +40,35 @@ Functions that are safe `FLASHMEM` candidates — confirmed never called from `i
 - [ ] `InitHndlr_GMod2` — `IOH_GMod2.c:35`
 - [ ] `InitHndlr_EasyFlash`, `LoadBank`, `PollingHndlr_EasyFlash` — `IOH_EasyFlash.c:90`, `:60`, `:214` — all main-context only; `ImageCheckAssign` (`:143`) is correctly left unmarked since it's genuinely ISR-reachable via `IO1Hndlr_EasyFlash`.
 - [ ] `PollingHndlr_Debug` — `IOH_Debug.c:243` — the one function in the file not covered by its own `DEBUG_MEMLOC` (`=FLASHMEM`) macro, which is otherwise applied consistently to everything else.
+- [ ] `ServiceTCP` — `Source/Teensy/ServiceTCP.ino:4` — likely main-context (polling-loop TCP handling), not independently confirmed via caller trace.
+- [ ] `InterruptC64`, `DoC64IRQ`, `EEPRemoteLaunch`, `RemoteLaunch` — `Source/Teensy/RemoteControl.ino` — all main-context only; `RemoteLaunch` is the largest of the batch.
+- [ ] `RAM2BytesFree` — `Source/Teensy/SerUSBIO.ino:785` — the one function in this file not marked `FLASHMEM`; everything else (`ServiceSerial`, `ProcessCommand`, `LaunchFile`, `ReceiveFileName`, etc.) is fully consistent.
 
 **Status:** open, actively growing as more files are reviewed (2026-08-12).
+
+## Debug-only `'y'` serial command has a genuinely unbounded read into a fixed buffer
+
+**Where:** `Source/Teensy/SerUSBIO.ino:183-192`, the `'y'` case (load REU PSRAM from file via serial), gated behind `Dbg_SerDMA` + `Fab04_FullDMACapable` + `USE_PSRAM`.
+
+```c
+char Filename[100];
+uint32_t CharNum = 0;
+while (SerialAvailabeTimeout())
+{
+   Filename[CharNum++] = CmdChannel->read();
+}
+```
+No bound against the 100-byte `Filename[]` at all — worse than most other findings this session in that there's no size reasoning whatsoever, just an idle-timeout-gated loop. Multiply debug-gated though, so low real-world exposure.
+
+**Status:** deferred — flagged, low priority given how narrowly gated it is (2026-08-12).
+
+## `LoadDxxDirectory()` has no cycle detection or entry-count bound on the D64/D71/D81 track/sector chain
+
+**Where:** `Source/Teensy/D64.ino:77-173`, inside `LoadDxxDirectory()`.
+
+Walks a directory track/sector chain read directly from the disk-image file (`Track = NextTrack; Sector = NextSect;`, values read from file data) with no cycle detection, and writes `DriveDirMenu[NumDrvDirMenuItems]` with no check against `MaxMenuItems` before incrementing. A malformed or circular chain in a corrupted/crafted D64/D71/D81 image could grow `NumDrvDirMenuItems` indefinitely. Also no NULL-check on the per-entry `malloc(DxxFNB_Bytes)` (line 143) before the following `memcpy` into it. Same general category as other malformed-file scenarios already waved off this session — flagging in case the entry-count angle (unbounded growth, not just a single bad index) changes the calculus. `LoadDxxFile()` (the sibling that actually loads file contents) is unaffected — it's naturally self-bounding via its `Size + 254 > RAM_ImageSize` check regardless of chain behavior.
+
+**Status:** deferred — flagged, not yet assessed (2026-08-12).
 
 ## `DownloadFile()` writes an over-length HTTP response chunk before validating it
 
@@ -53,12 +95,13 @@ Not a buffer overflow — `DataChunk` is correctly capped to `MaxChunkSize` befo
 
 ## Design a consistent allocation-failure (OOM) policy across handlers
 
-**Where:** cross-cutting — seen across `IOH_REU.c`, `IOH_RetroReplay.c`, `IOH_ActionReplay.c`, `IOH_SuperSnapshotV5.c`, `IOH_Swiftlink.c`, and likely more not yet reviewed.
+**Where:** cross-cutting — seen across `IOH_REU.c`, `IOH_RetroReplay.c`, `IOH_ActionReplay.c`, `IOH_SuperSnapshotV5.c`, `IOH_Swiftlink.c`, `BusSnoop.ino`, and likely more not yet reviewed.
 
 Every handler that allocates RAM at init handles a failed `malloc`/`calloc` differently, with no consistent policy:
 - `IOH_REU.c`'s RAM12 bank-allocation loop actively detects persistent failure and calls `REBOOT` (`IOH_REU.c:539-546`) — "no better way to fail..." per its own comment.
 - `IOH_RetroReplay.c` and `IOH_ActionReplay.c` don't check at all (`IOH_ActionReplay.c:94-99` has the check written but commented out); `IOH_SuperSnapshotV5.c` has the identical commented-out check (see the earlier FLASHMEM/null-check discussion — assessed as low risk to leave, since the NULL guards elsewhere prevent a crash).
 - `IOH_Swiftlink.c`'s `InitHndlr_SwiftLink` allocation loops (lines 404-428) print an "OOM ..." message and continue, leaving that specific buffer slot `NULL`. **Confirmed (not just suspected): `Swift_RxQueue.c` does not check for this.** `PullFromRxQueue()` (`Swift_RxQueue.c:26`) and `AddRawCharToRxQueue()` (`:129`) both index `RxQueue[RxQueueHead/Tail / RxQueueBlockSize][...]` directly with no NULL guard — if the circular buffer wraps into a block whose allocation failed, that's a real NULL-pointer dereference/crash, not just a theoretical risk. Good supporting evidence for the REBOOT direction below: if allocation failure reboots immediately at init, this consumer-side gap becomes unreachable rather than needing to be individually guarded.
+- `BusSnoop.ino`'s `BusAnalysis()` (line 16) doesn't check `calloc()` either — a failure would NULL-deref inside `BusCount()` (assigned to `fBusSnoop`, genuinely ISR-called) on the very next C64 bus write. Narrower in practice than the others since this is a manually-triggered diagnostic tool, not a normal-use code path.
 
 **Current thinking (2026-08-12, not finalized):** the likely direction is to standardize on **REBOOT on allocation failure**, matching the precedent already set by `IOH_REU.c`'s RAM12 path — consistent with the project's general RAM-scarcity posture (MinimalBoot's whole existence is a response to RAM exhaustion, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware)) and simpler to reason about than trying to gracefully degrade every handler individually. Not yet designed in detail (e.g., whether every handler gets this treatment uniformly, or whether some cases warrant a softer failure).
 

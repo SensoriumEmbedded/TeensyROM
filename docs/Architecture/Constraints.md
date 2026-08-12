@@ -24,6 +24,8 @@ The no-new-logic rule extends to everything reachable from the ISR's call path, 
 
 So new cartridge/IO type authors: none of the per-cycle-called handler functions may touch flash in any form (code or EEPROM), SD, or USB. If a handler needs any of that, it belongs in `InitHndlr` (setup-time) or `PollingHndlr` (main-loop, see the wait mechanism below), never in the cycle-called functions.
 
+**Separate exception, different reason: `Source/Teensy/FlashUpdate.ino`'s `DoFlashUpdate()` (the vendored FlasherX firmware-update code) and `Flash/FlashTxx.c` are deliberately *not* `FLASHMEM` candidates, despite being main-context-only.** This isn't about ISR reachability — it's a self-modifying-flash hazard: this code erases and rewrites the Teensy's own flash while running, so if it lived in flash itself, the CPU could be fetching its own next instruction from the exact region currently being erased/reprogrammed. Don't flag this file's core update path in a FLASHMEM audit for the reason above; it has its own, unrelated reason to stay RAM-resident.
+
 ### The sanctioned way to run slow work: cooperative polling, not a CPU halt
 
 When a handler genuinely needs to do something slow — flash-backed work, or anything else that can't fit the cycle budget — the pattern used throughout the C64 menu code is a cooperative polling handoff, **not** a bus/CPU halt:
