@@ -43,6 +43,24 @@ Both point at the same underlying gap — nothing enforces `DriveDirPath`'s 256-
 
 **Status:** deferred — confirmed via two independent paths, high priority, not yet fixed (2026-08-12).
 
+## HIGH PRIORITY: `Min_SerUSBIO.ino`'s `LaunchFile()` can overflow the `eepAdCrtBootName` EEPROM field into adjacent EEPROM fields
+
+**Where:** `Source/Teensy/MinimalBoot/Min_SerUSBIO.ino:244-279`, `LaunchFile()`.
+
+The persistent-storage (EEPROM) variant of the same `MaxNamePathLength`-vs-`MaxPathLength` size mismatch as the `DriveDirPath` entry above:
+
+```c
+char FileNamePath[MaxNamePathLength];  // 358 bytes, bounded correctly by ReceiveFileName()
+...
+EEPwriteStr(eepAdCrtBootName, DriveNames[DriveType]);
+EEPwriteStr(eepAdCrtBootName+strlen(DriveNames[DriveType]), FileNamePath);
+```
+`eepAdCrtBootName` is allocated only **256 bytes** in the EEPROM layout (`Common_Defs.h`: `eepAdCrtBootName = 1919, // (256:MaxPathLength)`, confirmed tight against the next field `eepAdMinBootInd = 2175` = `1919+256`, no slack) — but `FileNamePath` is sized and bounded to `MaxNamePathLength` (358 bytes) by `ReceiveFileName()`, not `MaxPathLength`. A path long enough (plus the `"USB:"`/`"SD:"`/`"TR:"` prefix) overflows past the 256-byte field, corrupting `eepAdMinBootInd` (1 byte, immediately adjacent) and writing into `eepAdAutolaunchName` (the next 256-byte field). Unlike the RAM-based `DriveDirPath` overflow, this corruption is **persistent** — it survives a reboot and can silently break the boot-mode indicator and the separate autolaunch-file setting.
+
+Same trigger class as the other two high-priority items: an ordinary `LaunchFileToken` with a long-but-protocol-valid path, sent while the device happens to be running in MinimalBoot mode.
+
+**Status:** deferred — confirmed, high priority, not yet fixed (2026-08-12).
+
 ## FLASHMEM audit (running list)
 
 Functions that are safe `FLASHMEM` candidates — confirmed never called from `isrPHI2` or any per-cycle handler path (`ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr`) — but aren't currently marked, unlike their siblings that follow the same pattern correctly. Each one left in default RAM1/ITCM placement costs RAM1 space unnecessarily; moving to flash is low-risk (see [Constraints.md](Constraints.md#the-real-dividing-line-flash-backed-vs-ram-backed-not-just-the-isr-function-itself) for why this distinction is safe/unsafe in general). Expected to grow well beyond `IO_Handlers/` as more files get reviewed — check every `InitHndlr`/`PollingHndlr`/`SpecialBtn_*`/similar main-context-only function for this when reviewing a new file, not just when something else prompts it.
@@ -69,9 +87,11 @@ Functions that are safe `FLASHMEM` candidates — confirmed never called from `i
 - [ ] `InitHndlr_EasyFlash`, `LoadBank`, `PollingHndlr_EasyFlash` — `IOH_EasyFlash.c:90`, `:60`, `:214` — all main-context only; `ImageCheckAssign` (`:143`) is correctly left unmarked since it's genuinely ISR-reachable via `IO1Hndlr_EasyFlash`.
 - [ ] `PollingHndlr_Debug` — `IOH_Debug.c:243` — the one function in the file not covered by its own `DEBUG_MEMLOC` (`=FLASHMEM`) macro, which is otherwise applied consistently to everything else.
 - [ ] `ServiceTCP` — `Source/Teensy/ServiceTCP.ino:4` — likely main-context (polling-loop TCP handling), not independently confirmed via caller trace.
+- [ ] `ServiceTCP` — `Source/Teensy/MinimalBoot/Min_ServiceTCP.ino:4` — MinimalBoot's own copy of the same function/gap. `EthernetInit()` in the same file is already correctly marked.
 - [ ] `InterruptC64`, `DoC64IRQ`, `EEPRemoteLaunch`, `RemoteLaunch` — `Source/Teensy/RemoteControl.ino` — all main-context only; `RemoteLaunch` is the largest of the batch.
 - [ ] `RAM2BytesFree` — `Source/Teensy/SerUSBIO.ino:785` — the one function in this file not marked `FLASHMEM`; everything else (`ServiceSerial`, `ProcessCommand`, `LaunchFile`, `ReceiveFileName`, etc.) is fully consistent.
 - [ ] `Source/Teensy/DriveDirLoad.ino` — **zero `FLASHMEM` coverage in the entire file**, likely the single largest opportunity of the session. Every function is menu-navigation-triggered, main-context only (reached via `HandleExecution()` from `RemoteLaunch()`/`IOHandlerSelectInit()`'s StatusFunction dispatch, never the ISR path): `HandleExecution` (~265 lines), `MenuChange`, `LoadFile`, `InitDriveDirMenu`, `SetDriveDirMenuNameType`, `LoadDirectory`, `AddDirEntry`, `FreeDriveDirMenu`, `FreeCrtChips`, `Assoc_Ext_ItemType`.
+- [ ] `Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino` — same pattern as its full-firmware counterpart above: zero `FLASHMEM` coverage, all main-context (`HandleExecution`, `LoadFile`, `ParseCRTHeader`, `ParseChipHeader`, `FreeCrtChips`, `PathIsRoot`, `SetTypeFromCRT`, `AssocHWID_IOH`, `SendMsgPrintfln`, `toU32`/`toU16`).
 - [ ] `nfcCheck`, `RegMenuTypeFromFileName`, `FSfromSourceID`, `nfcReadTagLaunch` — `Source/Teensy/nfcScan.ino` — NFC polling is main-loop-driven, not ISR; `nfcInit`/`nfcConfigCheck`/`nfcWriteTag` in the same file already correctly have `FLASHMEM`.
 - [ ] `setup()`, `SetNumItems`, `SDFullInit`, `USBFileSystemWait`, `SetRandomSeed`, `CheckLaunchSDAuto` — `Source/Teensy/Teensy.ino` — `setup()` runs exactly once at boot and is never ISR-reachable; verified `set_arm_clock()` (Teensyduino 1.61.0 core, `clockspeed.c`) only touches the ARM core clock tree, never FlexSPI/flash timing, so there's no clock-change-vs-flash-execution hazard ruling it out. The rest are ordinary main-context helpers. `SetUpMainMenuROM`, the `EEPwrite*`/`EEPread*` helpers, `SetEEPDefaults`, and all five `SpecialBtn_*` functions in the same file are already correctly marked.
 - [ ] `setup()`, `EEPwriteNBuf`, `EEPwriteStr`, `EEPreadNBuf`, `EEPreadStr`, `LoadCRT` — `Source/Teensy/MinimalBoot/MinimalBoot.ino` — same reasoning as `Teensy.ino`'s equivalents (which already have `FLASHMEM`); this build's own copies were missed. `RAM2blocks()` in the same file is already correctly marked.
@@ -145,8 +165,9 @@ Every handler that allocates RAM at init handles a failed `malloc`/`calloc` diff
 - `FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf` → `SerialStringBuf`, 262 bytes) — confirmed reachable overflow via a malformed CRT file's unterminated "Name" field (see the dedicated entry above).
 - `IOH_ASID.c:229-253` (`PrintflnToASID` → `ToSend`, 300 bytes) — lower risk, every call site is either a fixed literal, small integer formatting, or bounded by the MIDI library's SysEx null-termination/size cap (that cap itself not independently verified small enough to always fit).
 - `Swift_ATcommands.c:186-187` (`AT_DT()` → local `Buf[100]`) — **confirmed reachable via completely ordinary use**, not just a malformed-input edge case: `sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);` where `CmdArg` is user-typed hostname text from an `ATDT<hostname>:<port>` command, bounded only by `TxMsg`'s 128-byte limit — a normal long hostname plus the fixed format text alone can exceed the 100-byte `Buf`.
+- `DriveDirLoad.ino:406-417` (full firmware) and `Min_DriveDirLoad.ino:406-417` (MinimalBoot) — each has its **own independent copy** of `SendMsgPrintfln`/`SendMsgPrintf` with the same unbounded `vsprintf` into a local `SerialStringBuf[MaxPathLength]`. Their `ParseCRTHeader()`/`LoadFile()` call chain is a **more severe variant of the FileParsers.ino case above**: `LoadFile()` declares `uint8_t lclBuf[CRT_MAIN_HDR_LEN]` (64 bytes, confirmed via `DriveDirLoad.h:170`), and the CRT "Name" field read by `SendMsgPrintfln("Name: %s", (CRT_Image+0x20))` starts at byte 32 and is a 32-byte field ending *exactly* at byte 64 — the last byte of `lclBuf` itself. An unterminated Name field (fills all 32 bytes, no padding) causes the `%s` read to run off the end of `lclBuf` immediately — a stack **out-of-bounds read at the source**, before even reaching the already-known destination-buffer overflow. Tighter than the `FileParsers.ino` instance, where the Name field sits inside a buffer holding the whole loaded file (an unterminated name there just reads into subsequent legitimate file data, not immediately out of bounds). Present in both builds since `Source/C64`-style code sharing doesn't apply here — each `LoadFile()` is its own independent implementation.
 
-Three independent instances of the same shape (`sprintf`/`vsprintf` into a fixed local/global buffer, no length argument) found without specifically looking for it — worth a dedicated sweep (`grep -rn "sprintf\|vsprintf"`, excluding the safe `snprintf`/`vsnprintf` variants) across the rest of the codebase rather than waiting to stumble onto more of them file-by-file.
+Four independent instances of the same shape (`sprintf`/`vsprintf` into a fixed local/global buffer, no length argument) found without specifically looking for it — worth a dedicated sweep (`grep -rn "sprintf\|vsprintf"`, excluding the safe `snprintf`/`vsnprintf` variants) across the rest of the codebase rather than waiting to stumble onto more of them file-by-file.
 
 **Status:** open, not yet swept (2026-08-12).
 
