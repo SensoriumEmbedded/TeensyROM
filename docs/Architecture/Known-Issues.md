@@ -61,6 +61,20 @@ Same trigger class as the other two high-priority items: an ordinary `LaunchFile
 
 **Status:** deferred — confirmed, high priority, not yet fixed (2026-08-12).
 
+## HIGH PRIORITY: `nfcReadTagLaunch()`'s "random launch" path allocates a 16,000-byte array on the stack — likely root cause of the documented NFC large-directory crash
+
+**Where:** `Source/Teensy/nfcScan.ino`, `nfcReadTagLaunch()`, the "random launch" filtering branch:
+```c
+StructMenuItem *CleanLocalDirMenu[MaxMenuItems];  // MaxMenuItems=4000, ×4-byte pointers = 16,000 bytes, on the stack
+```
+This is a plain local array, not heap/`malloc`-backed — the full 16KB is claimed from the stack for the duration of this call, on top of whatever else is already on the stack at that call depth.
+
+This directly matches the crash scenario `TeensyROM.h` documents in its own comments (`>24000 RAM1 free for local` reliability-floor note, citing "Random(?) NFC tag with large directory, crash when tapped" as the historical test case that drove the `MaxRAM_ImageSize` 144→128KB reduction). Given current RAM1 `free for local variables` is ~40KB and this one call can claim 16KB of it in a single allocation, this looks like a strong candidate for the actual mechanism behind that crash, not just a theoretical risk — especially combined with whatever the rest of the call chain (NFC read, directory scan, menu-item filtering) has already put on the stack by the time this executes.
+
+Possible fixes: shrink the array to a more realistic bound; move it off the stack (heap-allocate for the duration of the call); or avoid materializing the full filtered list at all — count matching items first, then re-scan for the Nth match instead of building `CleanLocalDirMenu[]` up front.
+
+**Status:** deferred — newly identified, high priority given direct match to documented crash history, not yet fixed (2026-08-12).
+
 ## FLASHMEM audit (running list)
 
 Functions that are safe `FLASHMEM` candidates — confirmed never called from `isrPHI2` or any per-cycle handler path (`ROMLHndlr`/`ROMHHndlr`/`IO1Hndlr`/`IO2Hndlr`/`CycleHndlr`) — but aren't currently marked, unlike their siblings that follow the same pattern correctly. Each one left in default RAM1/ITCM placement costs RAM1 space unnecessarily; moving to flash is low-risk (see [Constraints.md](Constraints.md#the-real-dividing-line-flash-backed-vs-ram-backed-not-just-the-isr-function-itself) for why this distinction is safe/unsafe in general). Expected to grow well beyond `IO_Handlers/` as more files get reviewed — check every `InitHndlr`/`PollingHndlr`/`SpecialBtn_*`/similar main-context-only function for this when reviewing a new file, not just when something else prompts it.
