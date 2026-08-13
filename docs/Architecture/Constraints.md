@@ -59,13 +59,45 @@ FLASH: code:398356, data:1518744, headers:8496   free for files:6200868
 ```
 `RAM_Image` (the fixed 128KB CRT buffer) is RAM1's biggest single consumer and won't shrink, so moving eligible code to `FLASHMEM` (see the running audit in [Known-Issues.md](Known-Issues.md)) is the main lever available to keep this build compiling as more features get added — not just an optimization.
 
-**RAM1's 512KB is not two independently-fixed 512KB regions.** Verified against the actual `imxrt1062_t41.ld` linker script (Teensyduino 1.61.0): it's a single 16-bank × 32KB FlexRAM pool, dynamically split between ITCM (code) and DTCM (variables + stack) at link time, based on compiled code size rounded *up* to the next 32KB bank boundary (`_itcm_block_count`). `padding` is exactly that rounding waste — not usable, already consumed. `free for local variables` is the real, usable stack headroom, and it's the number that determines crash risk. This matters for planning: because future ISR-reachable code (which can never move to `FLASHMEM`) will eventually cross another 32KB boundary and remove a full 32K from `free for local variables` in one discontinuous jump, the working target shouldn't be "stay above the reliability floor" — it should be "stay above the floor **plus** enough margin to absorb that next jump," i.e. **~56KB+**, not the ~24KB floor itself.
+**RAM1's 512KB is not two independently-fixed 512KB regions.** Verified against the actual `imxrt1062_t41.ld` linker script (Teensyduino 1.61.0): it's a single 16-bank × 32KB FlexRAM pool, dynamically split between ITCM (code) and DTCM (variables + stack) at link time, based on compiled code size rounded *up* to the next 32KB bank boundary (`_itcm_block_count`). `padding` is that rounding waste — not usable as stack headroom directly, but it *is* usable runway for new RAM1-resident code (new IO handlers, features) to grow into before the next bank boundary gets crossed. `free for local variables` is the real, usable stack headroom, and it's the number that determines crash risk — but `padding` is the number that determines how much longer new code can be added before `free for local variables` takes its next hit. This matters for planning: because future ISR-reachable code (which can never move to `FLASHMEM`) will eventually cross another 32KB boundary and remove a full 32K from `free for local variables` in one discontinuous jump, the working target shouldn't be "stay above the reliability floor" — it should be "stay above the floor **plus** enough margin to absorb that next jump," i.e. **~56KB+**, not the ~24KB floor itself.
 
 **The ~24KB reliability floor itself is independently confirmed twice in your own crash-testing history, in both firmware images:**
 - `Source/Teensy/TeensyROM.h:26-30` (full firmware): `// Test case: Random(?) NFC tag with large directory, crash when tapped / 20000 free got further, but still crashes. Less always crashes / *Need >24000 RAM1 free for local` — this is also what motivated shrinking `MaxRAM_ImageSize` from 144KB to 128KB (20,000 → 36,476 bytes free). A local build on 2026-08-12 measured 40,444 bytes free for the current Fab04 config — roughly 4KB more headroom than that 9/25/2025 note, gained from unrelated changes since.
 - `Source/Teensy/MinimalBoot/Min_TeensyROM.h:48-52` (MinimalBoot, with Ethernet): same `>24000` threshold, independently arrived at.
 
 **Local build capability exists to verify this going forward** (see [[teensyrom_project_facts]] memory / ask before assuming it's still set up if picking this up much later): `Source/Teensy/tools/Build-DualBoot.ps1 -Fab04_Features -SkipMinimalBuild -SkipCombine`, run from `Source/Teensy/tools/`, builds the Fab04 main firmware in about a minute and prints this exact report — use it to check real before/after impact of any `FLASHMEM` migration rather than estimating from line counts.
+
+### Full-audit-list FLASHMEM experiment (2026-08-12) — applied, measured, then reverted
+
+Every candidate in the [Known-Issues.md FLASHMEM audit](Known-Issues.md#flashmem-audit-running-list) was applied at once (~115 functions across 27 files, both firmwares) to see where it landed. Both firmwares built clean.
+
+```
+Baseline: RAM1: variables:254468, code:220104, padding:9272   free for local variables:40444
+After:    RAM1: variables:254468, code:202744, padding:26632  free for local variables:40444
+```
+
+**The goal here wasn't stack headroom (`free for local variables`) — it was clearing `padding` runway for future RAM1-resident code growth**, e.g. new IO handlers. `code` dropped 17,360 bytes, all of which landed in `padding` (9,272 → 26,632) since the drop didn't cross a 32KB ITCM bank boundary. By that measure this was a clear success: 17KB is a lot of runway — for scale, the RetroReplay IOH added around the same time took about 800 bytes out of this same pool, so this batch is worth roughly 20+ IOH-sized additions before `padding` runs out again and a new feature starts eating into the crash-risk floor instead.
+
+It was reverted anyway, not because it failed, but because keeping ~115 functions in `FLASHMEM` continuously pays a small per-call flash-access-time cost on every one of them, including some not-especially-cold paths (`Swift_Browser.c`'s HTML/URL parsing, `IOH_MIDI.c`'s per-note callbacks) — not worth paying yet when the ~9KB baseline still has a while to run at ~800 bytes/feature. The per-file data below is kept so a future pass can move just enough, deliberately, rather than repeating the full 27-file batch.
+
+**Separately, also worth keeping in mind:** at 26,632/32,768 of padding, only **~6.1KB more** would have been needed to cross the boundary and jump `free for local variables` by a full 32KB in one step — a bigger, different win than the padding-runway one above, available whenever stack headroom itself (not just code-growth runway) is actually needed. Per-file impact, measured from the built ELF (`arm-none-eabi-nm --print-size`, not estimated from line counts) for files that compile into the Fab04 full firmware (Teensy.ino) — the build with the tight constraint:
+
+| File | Bytes moved | Functions |
+|---|---|---|
+| `DriveDirLoad.ino` | ~3970 | 10 |
+| `Swift_Browser.c` | ~3040 | 16 |
+| `IOH_ASID.c` | ~2420 | 9 |
+| `Teensy.ino` | ~1640 | 6 |
+| `IOH_Swiftlink.c` | ~1480 | 3 |
+| `IOH_MIDI.c` | ~1450 | 14 |
+| `nfcScan.ino` | ~1070 | 4 |
+| `RemoteControl.ino` | ~870 | 4 |
+| `Swift_RxQueue.c` | ~850 | 11 |
+| remaining 15 files (single `InitHndlr_*`/small helpers) | ~950 combined | ~20 |
+
+`DriveDirLoad.ino` + `IOH_ASID.c` alone (~6.4KB) would clear the ~6.1KB gap — no need to repeat the full 27-file batch to get the next boundary jump; those two are both large, already call-graph-verified, and genuinely cold (menu navigation, MIDI/SID setup) rather than latency-sensitive.
+
+(MinimalBoot-only files, not relevant to the Fab04 constraint above since that build already has 57KB+ headroom: `Min_DriveDirLoad.ino` ~5150 bytes/11 functions — `LoadFile()` alone is ~3890 bytes, the single largest function found in either firmware — plus `MinimalBoot.ino` ~1040 bytes/6 functions and `Min_ServiceTCP.ino` ~46 bytes.)
 
 ## Toolchain pin: avoid Teensyduino 1.62.0
 

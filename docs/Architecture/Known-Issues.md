@@ -110,7 +110,7 @@ Functions that are safe `FLASHMEM` candidates — confirmed never called from `i
 - [ ] `setup()`, `SetNumItems`, `SDFullInit`, `USBFileSystemWait`, `SetRandomSeed`, `CheckLaunchSDAuto` — `Source/Teensy/Teensy.ino` — `setup()` runs exactly once at boot and is never ISR-reachable; verified `set_arm_clock()` (Teensyduino 1.61.0 core, `clockspeed.c`) only touches the ARM core clock tree, never FlexSPI/flash timing, so there's no clock-change-vs-flash-execution hazard ruling it out. The rest are ordinary main-context helpers. `SetUpMainMenuROM`, the `EEPwrite*`/`EEPread*` helpers, `SetEEPDefaults`, and all five `SpecialBtn_*` functions in the same file are already correctly marked.
 - [ ] `setup()`, `EEPwriteNBuf`, `EEPwriteStr`, `EEPreadNBuf`, `EEPreadStr`, `LoadCRT` — `Source/Teensy/MinimalBoot/MinimalBoot.ino` — same reasoning as `Teensy.ino`'s equivalents (which already have `FLASHMEM`); this build's own copies were missed. `RAM2blocks()` in the same file is already correctly marked.
 
-**Status:** open, actively growing as more files are reviewed (2026-08-12).
+**Status:** open, actively growing as more files are reviewed (2026-08-12). Every item above was applied at once as an experiment on 2026-08-12 (both firmwares built clean), successfully clearing ~17KB of `padding` runway for future RAM1-resident code growth, then **reverted** anyway to avoid paying the flash access-time cost on ~115 functions continuously before it's needed — see [Constraints.md](Constraints.md#full-audit-list-flashmem-experiment-2026-08-12--applied-measured-then-reverted) for the measured RAM impact and the per-file byte-size ranking. None of these checkboxes reflect applied state; they're still open candidates for whenever clearing more `padding` runway (or crossing the next 32KB boundary for a `free for local variables` jump) is worth that tradeoff.
 
 ## Debug-only `'y'` serial command has a genuinely unbounded read into a fixed buffer
 
@@ -268,6 +268,18 @@ Three `USBHIDParser` instances (`hid1`, `hid2`, `hid3`) are declared for the USB
 
 **Status:** deferred — needs investigation into whether 3 HID devices is a real usage case before touching (2026-08-12).
 
+## Full-firmware and MinimalBoot each maintain their own independent copy of same-named functions — a standing maintainability risk, not a single bug
+
+**Where:** cross-cutting. `Source/Teensy/*.ino`/`.h` (full firmware) and `Source/Teensy/MinimalBoot/*.ino`/`.h` (MinimalBoot) are two separate builds that don't share translation units — despite many functions having identical names and near-identical logic, each build carries its own independent implementation. Confirmed pairs found this session: `SendMsgPrintfln`/`SendMsgPrintf` (`DriveDirLoad.ino` vs `Min_DriveDirLoad.ino`), the `EEPwrite*`/`EEPread*` helpers (`Teensy.ino` vs `MinimalBoot.ino`), the `LoadFile`/`ParseCRTHeader`/`ParseChipHeader` chain (`DriveDirLoad.ino` vs `Min_DriveDirLoad.ino`), and `ServiceTCP` (`ServiceTCP.ino` vs `Min_ServiceTCP.ino`).
+
+Unlike the C64 side, where `Menu_Regs.i`/`Menu_Regs.h` at least document the sync requirement in a comment, these pairs carry no such marker — nothing signals that a fix in one file has a counterpart that likely needs the same fix.
+
+**Already causing real drift, not just a theoretical risk:** MinimalBoot's `ParseChipHeader` correctly bounds-checks `NumCrtChips == MAX_CRT_CHIPS` before writing; the full-firmware `ParseChipHeader` in `DriveDirLoad.ino` does not. Same function, same name, same intended behavior, silently diverged.
+
+**No fix proposed** — restructuring this (shared translation units, a common library, etc.) would be a significant undertaking given the two builds' different memory/feature constraints, and isn't asked for. Recorded as a standing reminder: when fixing a bug in one of these known-duplicated functions, check whether the other build's copy needs the identical fix.
+
+**Status:** noted — not queued for a fix, kept as a reminder for future bug fixes in either build (2026-08-13).
+
 ## Unbounded `vsprintf` into a fixed global buffer — triggerable by a malformed CRT file
 
 **Where:** `Source/Teensy/FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf`), writing into `SerialStringBuf` (`char[MaxPathLength+6]` = 262 bytes, declared `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:45`).
@@ -289,6 +301,18 @@ Plan to pull all the `StatusFunction` functions and the `StatusFunction[]` decla
 **Assessed during architecture review (2026-08-12), no structural problem found:** `StatusFunction[]` is only ever dispatched from `PollingHndlr_TeensyROM()` (main-loop context, not the ISR path) — zero interaction with hot-path constraints. Every `IO_Handlers/*.c` file is already `#include`d as raw source into `IOHandlers.h` rather than compiled as an independent translation unit, so adding one more file to that same `#include` chain doesn't introduce a new pattern or a real linkage boundary. The one thing to watch when actually doing the split: anything the moved `StatusFunction` bodies reference that's currently file-scoped in `IOH_TeensyROM.c` (statics, helpers without prototypes) needs to stay visible via include-order placement or get forward-declared — same discipline already used elsewhere (e.g. `IOH_REU.c`'s block of `extern` declarations for cross-file symbols).
 
 **Status:** deferred — planned by the developer, no blocker identified (2026-08-12).
+
+## Low priority: style/consistency observations from the code-review pass
+
+Cosmetic, no functional impact — not queued for a dedicated pass, but worth applying prospectively (new code, or opportunistically when touching a function for another reason).
+
+- **Naming/abbreviation is inconsistent, sometimes within the same file.** E.g. `IOHandlers.h`: `struct stcIOHandlers` (spelled out) contains members named `InitHndlr`/`IO1Hndlr` (abbreviated), immediately followed by `#include "IO_Handlers/IOH_MIDI.c"` — "Handler" spelled out in the directory name, abbreviated in the filename. Same pattern with counts: `CharNum`, `NumRegs`, `BigBufCount`, `FNCount` are four different naming shapes for the same concept. Buffer names for the recurring "build an outgoing string" pattern are especially inconsistent (`SerialStringBuf`, `Buf`, `ToSend`, `TxMsg`, `lclBuf`) — a shared naming convention there might have made the repeated `vsprintf`-into-fixed-buffer pattern (see above) easier to spot by inspection.
+- **Very large files/functions are hard to review in one pass.** `IOH_TeensyROM.c` (~1,900 lines) and `HandleExecution()` (~265 lines) took noticeably longer to review than anything else this session. Worth treating size itself as a standing signal to split, beyond the one `StatusFunction[]` split already planned.
+- **Commented-out code left as an unresolved decision rather than a removed/explained one.** The OOM checks in `IOH_ActionReplay.c`/`IOH_SuperSnapshotV5.c` are commented out with no note on why — ambiguous later whether that was a deliberate call or an unfinished thought. A one-line "why" comment (or deletion, since git retains history) would remove the ambiguity.
+- **Open design questions sometimes live only as inline comments**, e.g. `//need all 3?` on `hid3` (`IOHandlers.h:38`) — easy to never resurface. `Known-Issues.md` is now available as a better home for these going forward.
+- **A couple of "must stay in sync" relationships are enforced only by comment, not the compiler**, where a cheap compile-time check exists — `IOHandler[]`/`enumIOHandlers` (`_Static_assert` proposed above) and `Menu_Regs.i`/`Menu_Regs.h`. Worth treating "keep in sync with X" comments generally as a prompt to ask whether a build-time check could replace the comment.
+
+**Status:** noted, low priority — not queued for a dedicated pass (2026-08-13).
 
 <br>
 
