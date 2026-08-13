@@ -51,7 +51,13 @@ Beyond priority, Ethernet/PIT interrupts are fully **disabled** (not just deprio
 - MinimalBoot: `(392 - 8*Num8kSwapBuffers - EthernetDeduction)` KB (`Source/Teensy/MinimalBoot/Common/Min_TeensyROM.h:58`) — extends CRT support to **~850KB**, at the cost of dropping USB host support (SD-only loading in this mode).
 - Files beyond ~850KB use bank-swapping from SD (only), asserting the DMA line for ~3ms per uncached swap — not true bus-mastering DMA, just the old-school REU-style pause assertion. TR+'s true bus-mastering DMA doesn't help here: the pause just needs to be perceptually instant to the 6510 for an SD→RAM bank transfer, which bus-mastering doesn't improve. This mechanism was documented as unreliable on most C128s and a low percentage of NTSC systems; **that reliability claim may now be stale and is due for a re-test** (flagged during architecture review, 2026-08-11 — see [Known-Issues.md](Known-Issues.md)). A DMA Pause check utility (`TODCheck`/Test+Diags BASIC tool) exists to test a given system before relying on this.
 
-When editing anything that changes per-file/per-struct RAM footprint in either firmware image, check these budgets — MinimalBoot in particular has very little headroom (its whole reason for existing is memory scarcity).
+When editing anything that changes per-file/per-struct RAM footprint in either firmware image, check these budgets — MinimalBoot's RAM scarcity is well-known and obvious, but **RAM1 pressure in the full Fab04 (TR+) build is actually the tighter, less-visible constraint**: as of 2026-08-12, the Fab04 main build (the tightest full-firmware config, since it compiles in REU/KernalReplace/Freezers on top of everything else) has only **~9-10KB of RAM1 "padding"** left before a hard link failure:
+```
+FLASH: code:398356, data:1518744, headers:8496   free for files:6200868
+ RAM1: variables:254468, code:220104, padding:9272   free for local variables:40444
+ RAM2: variables:17600  free for malloc/new:506688
+```
+`RAM_Image` (the fixed 128KB CRT buffer) is RAM1's biggest single consumer and won't shrink, so moving eligible code to `FLASHMEM` (see the running audit in [Known-Issues.md](Known-Issues.md)) is the main lever available to keep this build compiling as more features get added — not just an optimization.
 
 ## Toolchain pin: avoid Teensyduino 1.62.0
 
