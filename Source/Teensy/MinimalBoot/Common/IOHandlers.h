@@ -82,7 +82,7 @@ struct stcIOHandlers
    #ifdef Fab04_Freezers
       #include "IO_Handlers/IOH_SuperSnapshotV5.c"
       #include "IO_Handlers/IOH_RetroReplay.c"
-      #include "IO_Handlers/IOH_ActionReplay.c"
+//      #include "IO_Handlers/IOH_ActionReplay.c" Use IOH_RetroReplay for AR
    #endif
       #include "IO_Handlers/IOH_TR_BASIC.c" 
       #include "IO_Handlers/IOH_Swiftlink.c"
@@ -127,7 +127,7 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    #ifdef Fab04_Freezers
       &IOHndlr_SuperSnapshotV5,    //IOH_SuperSnapshotV5
       &IOHndlr_RetroReplay,        //IOH_RetroReplay
-      &IOHndlr_ActionReplay,       //IOH_ActionReplay
+//      &IOHndlr_RetroReplay,       //ActionReplay uses IOH_RetroReplay 
    #endif
       &IOHndlr_ASID,               //IOH_ASID,
       &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,
