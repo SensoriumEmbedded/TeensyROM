@@ -226,13 +226,17 @@ The full-firmware path disables `IRQ_ENET`/`IRQ_PIT` while `EmulateVicCycles` is
 
 Two independently hand-maintained files define the same register offset/enum map, with only a comment ("These need to match Teensy Code: Menu_Regs.h") enforcing consistency — no shared source, no build-time check.
 
-**Designed fix (not yet implemented):**
-1. Keep `Menu_Regs.h` as the single hand-edited source of truth, written in ordinary C (`#define NAME VALUE`) — no invented dual-purpose macro syntax.
-2. Regenerate `Menu_Regs.i` from it via a standard C-preprocessor pass (`gcc -E -x assembler-with-cpp` or plain `cpp`) — a well-established pattern for sharing C headers with assembly (used by e.g. GNU `as`, many NES/SNES homebrew toolchains), not a bespoke generator script.
-3. `Menu_Regs.i` keeps its current location and format, so none of its **6 consumers** need to change: `MainMenuCRT` (`TeensyROMC64.asm`, `MainMenu.asm`), `SettingsMenu`, `TRHelpScreens`, `TRExtPortCheck`, `MIDI2SID`, `ExpansionPortTest` (see [C64-Software.md](C64-Software.md)) all keep their existing `!src "../MainMenuCRT/source/Menu_Regs.i"` line unchanged.
-4. Regeneration step goes in **`Source/C64/SetToolPaths.bat`**, not `BuildAllC64.bat` — confirmed via grep that all 12 sub-project build scripts source `SetToolPaths.bat` first, unconditionally, so this is the only chokepoint that's guaranteed to run whether a developer invokes `BuildAllC64.bat` or a single sub-project's `build*.bat` directly. Putting it in `BuildAllC64.bat` alone would leave `Menu_Regs.i` stale for anyone building a single sub-project standalone.
+**Fix implemented:**
+1. `Menu_Regs.h` stays the single hand-edited source of truth. The region between the `These need to match C64 Code` / `End C64 matching` marker comments is now mechanically translated, not hand-copied.
+2. A generator script, **`Source/C64/gen_menu_regs_i.py`**, parses that region directly and emits ACME assignment lines — no C preprocessor involved. (The original plan called for `gcc -E`/`cpp`, but the synced region turned out to contain zero `#ifdef`/`#include` for a preprocessor to resolve, and a plain macro-expansion pass can't translate C `enum { A = 1, B };` block syntax into ACME's flat `A = 1` / `B = 2` assignment lines anyway — that translation is what the script does.) Handles multi-line enums, `#define` constants, auto-incrementing members with no explicit value, and comment-style translation (`//` → `;`).
+3. One documented exception: `IOH_None` is pulled in from `enum enumIOHandlers`, which lives just *outside* the synced region (deliberately — the rest of that enum is Teensy-internal `IOHandler[]` indices with no meaning on the C64 side, and its values shift under `MinimumBuild`/`Fab04_*` build flags that don't apply to C64 assembly). `IOH_None` is the only member any C64 code references (`ldx #IOH_None` in `Pg_TRSettings.asm`), and it's pinned at 0 by its own "always 0" comment in `Menu_Regs.h`, so the script asserts that invariant rather than hardcoding the value blindly.
+4. Found and fixed a real drift in the process: `EscMenuMiscColor`/`EscTypeColor` existed only in the hand-written `Menu_Regs.i`, with no `Menu_Regs.h` counterpart, even though they're referenced from 8 C64 ASM files. Moved them into `Menu_Regs.h`'s `enum ColorRefOffsets` as explicit aliases (`EscMenuMiscColor = EscNameColor`, `EscTypeColor = EscSourcesColor`) so they're now covered by the same sync guarantee as everything else.
+5. `Menu_Regs.i` keeps its existing location/format, so its 6 consumers (`MainMenuCRT`, `SettingsMenu`, `TRHelpScreens`, `TRExtPortCheck`, `MIDI2SID`, `ExpansionPortTest`) needed no changes.
+6. Regeneration is wired into **`Source/C64/SetToolPaths.bat`** (confirmed universal chokepoint — all 12 sub-project build scripts source it first, unconditionally), so every C64 build regenerates `Menu_Regs.i` from `Menu_Regs.h` before assembling.
 
-**Status:** deferred — plan agreed, not yet implemented (2026-08-11).
+**Verified:** assembled both the old hand-written `Menu_Regs.i` and the generated one with ACME 0.97 (`--symbollist`) — all 268 symbols matched name-for-name and value-for-value, and the resulting `.prg` output was byte-identical.
+
+**Status:** fixed (2026-08-14).
 
 ## Large-CRT bank-swap DMA reliability claim may be stale
 

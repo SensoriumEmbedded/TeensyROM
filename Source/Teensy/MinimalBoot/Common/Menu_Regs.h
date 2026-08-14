@@ -141,6 +141,10 @@ enum ColorRefOffsets       //Order matches TblEscC:
    EscSourcesColor     = 5, // LtBlue  General text/descriptions
    EscNameColor        = 6, // LtGreen FIle names & other text
    NumColorRefs        = 7, // Number of color references
+
+   //local use only, could re-factor for permanent change:
+   EscMenuMiscColor    = EscNameColor,    // Was Green: Menu alt color
+   EscTypeColor        = EscSourcesColor, // Was Blue : File types(only)
 };
 
 enum  RegSIDSpeedChanges  // wRegSIDSpeedChange

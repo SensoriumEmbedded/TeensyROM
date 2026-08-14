@@ -18,6 +18,10 @@ SET emulatorPath=C:\Users\trav\AppData\Local\GTK3VICE-3.9-win64\bin
 ::set JavaExe="C:\Program Files (x86)\Java\jre1.8.0_421\bin\java.exe"
 ::set KickAssemblerJar="D:\MyData\Geek Stuff\Projects\Commodore 64\Software\PC Utils-SW\KickAssembler\KickAss.jar"
 
+:: Regenerate Menu_Regs.i (ACME) from Teensy/MinimalBoot/Common/Menu_Regs.h (C) so the
+:: two stay in sync -- see docs/Architecture/Known-Issues.md. Menu_Regs.i is a build
+:: output; edit Menu_Regs.h instead.
+%PythonExe% "../gen_menu_regs_i.py"
 
 
 
