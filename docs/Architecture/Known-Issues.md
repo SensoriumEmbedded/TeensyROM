@@ -256,9 +256,9 @@ Every other `Menu_Regs.i` consumer has an active `!src` line; ASIDPlayer's is pr
 
 Every `stcIOHandlers*` entry in `IOHandler[]` must line up positionally with the matching `enumIOHandlers` value, across every `#ifdef` gate (`MinimumBuild`, `Fab04_REU`, `Fab04_KernalReplace`, `Fab04_Freezers`) — `CurrentIOHandler` is just an integer index into the array. Hand-verified during architecture review (2026-08-11) that the two currently match exactly, entry-for-entry including `RetroReplay`'s recent insertion — but nothing enforces that going forward; adding/removing a handler in only one list would silently misindex `IOHandler[CurrentIOHandler]` at runtime (e.g. selecting one cartridge type could actually load a different one).
 
-**Proposed fix:** add `_Static_assert(sizeof(IOHandler)/sizeof(IOHandler[0]) == IOH_Num_Handlers, "IOHandler[] / enumIOHandlers count mismatch");` right after the array definition (`IOHandlers.h:147`). Zero runtime cost, compile-time only, doesn't touch the ISR or any hot path. Note: this only catches a *count* mismatch (forgot to add/remove an entry in one list), not a pure *reordering* with the same count — still worth having since count mismatches are the more likely mistake.
+**Fix:** added `static_assert(sizeof(IOHandler) / sizeof(IOHandler[0]) == IOH_Num_Handlers, "IOHandler[] / enumIOHandlers count mismatch");` right after the array definition (`IOHandlers.h:105-149`). Used `static_assert` rather than `_Static_assert` since this header is included from `.ino` files and compiled as C++. Zero runtime cost, compile-time only, doesn't touch the ISR or any hot path. Note: this only catches a *count* mismatch (forgot to add/remove an entry in one list), not a pure *reordering* with the same count — still worth having since count mismatches are the more likely mistake.
 
-**Status:** deferred — fix proposed, not yet implemented (2026-08-12).
+**Status:** fixed (2026-08-14).
 
 ## Third `USBHIDParser` instance (`hid3`) may be unnecessary RAM cost
 

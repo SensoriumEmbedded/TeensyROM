@@ -145,3 +145,5 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    &IOHndlr_GMod2,              //IOH_GMod2,
    &IOHndlr_MagicDesk2,         //IOH_MagicDesk2,
 };
+static_assert(sizeof(IOHandler) / sizeof(IOHandler[0]) == IOH_Num_Handlers,
+              "IOHandler[] / enumIOHandlers count mismatch");
