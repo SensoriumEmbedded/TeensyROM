@@ -18,11 +18,10 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-//IO Handler for Retro Replay and Action Replay Firmware
+//IO Handler for RetroReplay 
 
 void InitHndlr_RetroReplay();                           
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn);  
-void IO2Hndlr_RetroReplay(uint8_t Address, bool R_Wn); 
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn);
 void CycleHndlr_RetroReplay(bool R_Wn);
 
@@ -31,7 +30,7 @@ stcIOHandlers IOHndlr_RetroReplay =
   "RetroReplay",           //Name of handler, IOHNameLength max
   &InitHndlr_RetroReplay,  //Called once at handler startup
   &IO1Hndlr_RetroReplay,   //IO1 R/W handler
-  &IO2Hndlr_RetroReplay,   //IO2 R/W handler
+  NULL,                    //IO2 R/W handler not use in RR REU compatibility mode
   &ROMLHndlr_RetroReplay,  //ROML Read handler, in addition to any ROM data sent
   NULL,                    //ROMH Read handler, in addition to any ROM data sent
   NULL,                    //Polled in main routine
@@ -50,41 +49,45 @@ extern uint8_t *lcl_LOROM_Image;
 // and a few peeks in the VICE CRT documentation at
 // https://vice-emu.sourceforge.io/vice_17.html#SEC442
 
-// $de00 Control Register - Write only
-// Same as Action Replay
-#define RR_CR_RBANK15   0b10000000   // Banking bit 15
+// Assumed that RR firmware initializes extended control register only once with a value
+// of 64 (REU compatible memory map) and ignores $de01 afterward. 
+// This means no freeze disable or and access to only ram bank 0 at $8000. 
+
+// $de00 Control Register - write only
+#define RR_CR_RBANK15   0b10000000   // ROM/RAM bank bit 15 (unused)
 #define RR_CR_RELEASE   0b01000000   // Release freeze (reset Game and EXROM)
-#define RR_CR_RAMEN     0b00100000   // RAM enable 
-#define RR_CR_RBANK14   0b00010000   // Banking bit 14
-#define RR_CR_RBANK13   0b00001000   // Banking bit 13
+#define RR_CR_RAMEN     0b00100000   // RAM enable (ROML and IO2 are ROM if disabled)
+#define RR_CR_RBANK14   0b00010000   // ROM/RAM bank bit 14
+#define RR_CR_RBANK13   0b00001000   // ROM/RAM bank bit 13
 #define RR_CR_DISABLE   0b00000100   // Disable RR cart, regs, and ROM/RAM
 #define RR_CR_EXROM     0b00000010   // EXROM signal control, 1=High
 #define RR_CR_nGAME     0b00000001   // GAME signal control, 1=low
 
-// $de01 Extended Control Register - Write only
-// RR38: Bits 1, 2, and 6 are written once then uses $de00
-// AR:   Does not use this register
-#define RR_ECR_REU_MAP   0b01000000  // Memory Map: 0 = Std  1 = REU compatible  
-#define RR_ECR_RBANK16   0b00100000  // Hardware EEPROM bank: Always 0
-#define RR_ECR_RBANK14   0b00010000  // Banking bit 14
-#define RR_ECR_RBANK13   0b00001000  // Banking bit 13
-#define RR_ECR_NOFREEZ   0b00000100  // Disables Freeze function 
-#define RR_ECR_ALWBNK    0b00000010  // Allows banking of RAM 
-#define RR_ECR_CLOCKEN   0b00000001  // Enable Clockport connector: Always 0
-                                     
-// $de00 & $de01 Status Register - read only
-// reports status of bits set by writes to CR and ECR
-#define RR_SR_RBANK15   0b10000000  // Banking bit 15 
-#define RR_SR_REU_MAP   0b01000000  // REU compatible memory map - RR38 = 1
-#define RR_SR_RBANK16   0b00100000  // EEPROM Banking bit: Always 0
-#define RR_SR_RBANK14   0b00010000  // Banking bit 14 
-#define RR_SR_RBANK13   0b00001000  // Banking bit 13 
-#define RR_SR_FREEZE    0b00000100  // Freeze button status: 1 = pressed
-#define RR_SR_ALWBNK    0b00000010  // AllowBank active: RR38 & AR = 0
-#define RR_SR_FLASH     0b00000001  // EEPROM flash mode active: Always 0
-                                    
-// uint8_t WriteOnce = 0; // RR38 writes $de01 only once                                   
-uint8_t RR_StatusReg;  
+// $de01 Control Register - write only
+// Bits 1, 2, and 6 can only be written once
+// RR firmware Uses $de00 after $de01 'write once'
+// -----------------------------------------------
+// Bit 7: ROM/RAM bank bit 15 (unused)
+// Bit 6: REU_MAP Enable  
+// Bit 5: Hardware Flash mode software is always 0
+// Bit 4: ROM/RAM bank bit 14
+// Bit 3: ROM/RAM bank bit 13
+// Bit 2: Disables Freeze function 
+// Bit 1: Allows banking of RAM in DF00/DE02 area
+// Bit 0: Enable Clockport connector
+                             
+// $de00 & $de01 Status Register Read
+// #define RR_SR_RBANK15   0b10000000 // Banking bit 15 - RR_CR_RBANK15
+// #define RR_SR_REU_MAP   0b01000000 // REU compatible memory map - Always 1
+// #define RR_SR_RBANK16   0b00100000 // Banking bit 16 - NOT USED Alway 0
+// #define RR_SR_RBANK14   0b00010000 // Banking bit 14 - RR_CR_RBANK14 
+// #define RR_SR_RBANK13   0b00001000 // Banking bit 13 - RR_CR_RBANK13  
+// #define RR_SR_FREEZE    0b00000100 // Status of Freeze button (1 = pressed)
+// #define RR_SR_ALWBNK    0b00000010 // AllowBank - Always 0 
+// #define RR_SR_FLASH     0b00000001 // Flashmode - Always 0
+
+uint8_t WriteOnce = 0; // With RR Firmware will have REU_MAP (64) set upon first write                                    
+uint8_t StatusReg;
                            
 void ProcessRRControlReg(uint8_t ControlReg)
 {
@@ -116,9 +119,9 @@ void ProcessRRControlReg(uint8_t ControlReg)
      SetLEDOff;
   } 
 
-  RR_StatusReg = ((RR_StatusReg & (RR_SR_ALWBNK | RR_SR_REU_MAP)) | // Maintain RR38 1x bits
-                 (ControlReg & (RR_CR_RBANK15 | RR_CR_RBANK14 | RR_CR_RBANK13))); // set banking bits
-                        
+  StatusReg = ((ControlReg & (RR_CR_RBANK15 | RR_CR_RBANK14 | RR_CR_RBANK13)) |
+                              WriteOnce); 
+                              // Writeonce could probably be hard-coded to 64. 
 }
 
 FLASHMEM void InitHndlr_RetroReplay()
@@ -137,7 +140,8 @@ FLASHMEM void InitHndlr_RetroReplay()
 }   
 
 // $deXX Handler
-// REU Map = $de02-$deff contains mirrored $9e02-$9eff of selected block 
+// Assuming REU_Map and  AllowBank Off 
+// $de02-$deff contains mirrored $9e02-$9eff of selected block 
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
 {
    if (lcl_LOROM_Image == NULL) return;  //skip if disabled
@@ -151,8 +155,8 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
    	  	 	  ProcessRRControlReg(Data);  
    	  	 	  break;
    	     case 0x01:           // Extended Control Register write
-   	        // WriteOnce = Data; 
-   	        RR_StatusReg = Data;  
+   	        WriteOnce = Data; 
+   	        StatusReg = Data; 
    	        break;
    	     default: 
        	  if (lcl_LOROM_Image == RR_RAM_Buf)  //only write if RAM is enabled
@@ -161,33 +165,17 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
    }  // end write           
    else // HIGH (IO1 read)
    { 
-   	 switch (Address)
+ 	   switch (Address)
  	   {	   
  	   	  // Return StatusRegister 
        case 0x00: 
        case 0x01: 
-          DataPortWriteWait(RR_StatusReg);  
+          DataPortWriteWait(StatusReg);  
           break;
-       default: // REU memory map
+       default: 
           DataPortWriteWait(lcl_LOROM_Image[0x1e00+Address]);  
     }
    } // End read
-}
-
-void IO2Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
-{
-	  //skip if disabled or if REU memory map is active
-   if ((lcl_LOROM_Image == NULL) | (RR_StatusReg & RR_SR_REU_MAP)) return; 
-
-   if (R_Wn) //High (IO2 Read)
-   {  //The last page of the currently selected RAM or ROM bank is mirrored in the I/O2 range
-      DataPortWriteWaitLog(lcl_LOROM_Image[0x1f00+Address]); //Read RAM or ROM
-   }
-   else  // IO2 write
-   {  
-      if (lcl_LOROM_Image == RR_RAM_Buf) //!= CrtChips[BankNum].ChipROM) //allow RAM writes only
-         lcl_LOROM_Image[0x1f00+Address] = DataPortWaitRead();
-   }
 }
 
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn)
