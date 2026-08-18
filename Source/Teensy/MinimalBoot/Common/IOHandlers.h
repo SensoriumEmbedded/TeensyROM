@@ -49,6 +49,9 @@
    EthernetUDP udp;
    EthernetClient client;
 
+   #ifndef USB_MIDI_SERIAL
+      #error TeensyROM requires Tools > USB Type: "Serial + MIDI" in the Arduino IDE
+   #endif
    #define usbDevMIDI usbMIDI
    #define nfcStateEnabled       0
    #define nfcStateBitDisabled   1
