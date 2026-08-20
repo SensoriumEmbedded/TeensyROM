@@ -39,7 +39,7 @@ A handful of other new hardware additions round out the TR+ feature set.
 
 ## Using TR+ with a Commodore 64 Ultimate / Ultimate64
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave on, so there's no downside to setting it even if you're not using those specific capabilities yet.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
 
 ## Q&A
 
