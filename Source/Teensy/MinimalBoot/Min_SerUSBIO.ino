@@ -126,7 +126,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                GetDigits(3, &nS_VICStart);
                break;
             case 'd': //Set Defaults
-               nS_MaxAdj    = Def_nS_MaxAdj; 
+               nS_MaxAdj    = Def_nS_MaxAdjPAL;
                nS_RWnReady  = Def_nS_RWnReady;  
                nS_PLAprop   = Def_nS_PLAprop;  
                nS_DataSetup = Def_nS_DataSetup;  

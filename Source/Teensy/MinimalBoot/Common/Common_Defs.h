@@ -316,7 +316,9 @@ const uint8_t OutputPins[] = {
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
     
-#define Def_nS_MaxAdj      1030  //    above this nS since last int causes adjustment, formerly 993 for NTSC only
+#define Def_nS_MaxAdjPAL    1030  //    above this nS since last int causes adjustment
+#define Def_nS_MaxAdjNTSC    993  //    NTSC's shorter nominal cycle (~978nS vs PAL's ~1015nS) leaves less slack before this must trigger;
+                                  //       restored as its own value - was merged into one shared 1030 constant for a while
 
 // Times from Phi2 rising (interrupt start):
 #define Def_nS_RWnReady     135  //    Phi2 rise to RWn valid.  
@@ -346,7 +348,7 @@ const uint8_t OutputPins[] = {
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-uint32_t nS_MaxAdj    = Def_nS_MaxAdj; 
+uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  
 uint32_t nS_DataSetup = Def_nS_DataSetup;  
