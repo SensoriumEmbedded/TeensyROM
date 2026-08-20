@@ -1051,7 +1051,8 @@ FLASHMEM void ExpPortDMA()
    IO1[rwRegScratch] = 0; //default fail
    
 #ifdef Fab04_FullDMACapable
-
+   NVIC_DISABLE_IRQ(IRQ_ENET); //disable ethernet interrupt when testing expansion port
+   NVIC_DISABLE_IRQ(IRQ_PIT);
 
 //Walking ones  
    SendMsgPrintfln("Walking ones address Test");
