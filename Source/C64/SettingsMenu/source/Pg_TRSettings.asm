@@ -17,6 +17,7 @@
 ; DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 ; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+; !set EnIO1ReadTest = 1   ;if defined, enables local IO1 read test (now part of Exp Port suite)
 
 SetValColumn = 29   ;Column for TR setting values
 
@@ -87,7 +88,7 @@ ShowTRSettings:
    lsr
    lsr
    jsr PrintIntByte
-   lda #' '
+   lda #' '  ;clear residual digits
    jsr SendChar
 
    ldx #17 ;row Show Extension
@@ -98,9 +99,7 @@ ShowTRSettings:
    and #rpudShowExtension  
    jsr PrintOnOff
    
-   ;also see: CursorToTest row
-   
-   ldx #19 ;row Ext Reset Detect
+   ldx #18 ;row Ext Reset Detect
    ldy #SetValColumn ;col
    clc
    jsr SetCursor
@@ -108,6 +107,8 @@ ShowTRSettings:
    and #rpud3ResetDetectDisable  
    eor #rpud3ResetDetectDisable  ;invert to show enabled (not disabled)
    jsr PrintOnOff
+   
+   ;also see: CursorToTest row (but not any more...)
    
 
 WaitTRSettingsKey:
@@ -213,18 +214,20 @@ smcNewAltBtnActionVal
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
 
-+  cmp #'f'  ;Self Test IO
-   bne +
-   jsr TestIO
-   jmp WaitTRSettingsKey     
-
-+  cmp #'g'  ;External Reset Detect
++  cmp #'f'  ;External Reset Detect
    bne +
    lda rwRegPwrUpDefaults3+IO1Port
    eor #rpud3ResetDetectDisable
    sta rwRegPwrUpDefaults3+IO1Port
    jsr WaitForTRWaitMsg
    jmp ShowTRSettings  
+
+!ifdef EnIO1ReadTest {
++  cmp #'g'  ;Self Test IO1 Read
+   bne +
+   jsr TestIO
+   jmp WaitTRSettingsKey     
+}
 
 ;+  cmp #'f'  ;Reboot TeensyROM
 ;   bne +
@@ -238,6 +241,9 @@ smcNewAltBtnActionVal
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitTRSettingsKey   
    
+   
+;TestIO aka "Self Test" aka IO1 read test is now integrated into the Expansion Port Test
+!ifdef EnIO1ReadTest {
 TestIO:
    jsr CursorToTest    
    lda #<MsgTesting
@@ -276,8 +282,8 @@ smcTestIOCnt
    rts
 
 CursorToTest:
-   ldx #18 ;row test status
-   ldy #22 ;col
+   ldx #19 ;row test status
+   ldy #26 ;col
    clc
    jsr SetCursor   
    rts   
@@ -288,7 +294,9 @@ MsgPass:
    !tx "Passed ", 0
 MsgFail:
    !tx "Failed ", 0
-   
+}   
+
+
 MsgTRSettings:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Config: TeensyROM General ", ChrReturn, ChrReturn
    
@@ -304,9 +312,11 @@ MsgTRSettings:
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "c",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  TR+ Alt Btn Action:", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Show File Extensions:", ChrReturn
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run Self Test", ChrReturn   
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR+ Ext Reset Detect:", ChrReturn   
-   ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR+ Ext Reset Detect:", ChrReturn   
+!ifdef EnIO1ReadTest {
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Run IO1 Read Test", ChrReturn   
+}
+   ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 
 TblMsgHostSerCtl: ;must match RegPowerUpDefaultMasks2 bits
