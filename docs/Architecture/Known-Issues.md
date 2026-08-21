@@ -2,6 +2,48 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
+## Summary (updated 2026-08-13)
+
+Detail for every item below is in its own full section further down — search this file for a distinctive word/name from the bullet to jump to it.
+
+**Memory-safety bugs (buffer/stack overflow) — none fixed yet:**
+- `nfcReadTagLaunch()` — 256-byte `TagData` overflow on a malformed NFC tag [HIGH PRIORITY]
+- `nfcReadTagLaunch()` — 16KB `CleanLocalDirMenu[]` stack array, likely root cause of the documented NFC large-directory crash [HIGH PRIORITY]
+- `DriveDirPath` (256 bytes) — overflowed by two independent normal-use paths (remote-launch protocol, ordinary deep menu browsing) [HIGH PRIORITY]
+- `Min_SerUSBIO.ino LaunchFile()` — overflows the `eepAdCrtBootName` EEPROM field into adjacent EEPROM, persists across reboot [HIGH PRIORITY]
+- `sprintf`/`vsprintf`-into-fixed-buffer pattern — 4 confirmed instances; full codebase sweep not yet done
+- `IOH_TR_BASIC.c` ISR-path handler — two unbounded writes (`LSFileName`, `RAM_Image`) trusting C64-side byte counts
+- Debug-only `'y'` serial command — unbounded read into a 100-byte buffer (low priority, narrowly gated)
+- `LoadDxxDirectory()` — no cycle detection / entry-count bound on D64/D71/D81 track/sector chain
+- `DownloadFile()` — writes an over-length HTTP chunk to disk before validating it against `Content-Length`
+
+**RAM1 savings:**
+- `FLASHMEM` audit — running list of main-context-only functions still RAM-resident; full-batch apply/measure/revert experiment already run once (clears ~17KB `padding`, doesn't by itself touch stack headroom — see `Constraints.md`), list itself still unapplied
+- `hid3` (third `USBHIDParser` instance) — possibly unnecessary RAM cost, needs real-world-usage confirmation
+
+**Design/process gaps:**
+- No consistent allocation-failure (OOM) policy across handlers — leaning REBOOT
+- Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
+
+**Fixed since last summary (2026-08-14, not open work — kept for context):**
+- `IOHandler[]` array / `enumIOHandlers` sync — `static_assert` added catching count mismatches
+- `Menu_Regs.i`/`Menu_Regs.h` duplication — `Menu_Regs.i` now generated from `Menu_Regs.h` via `Source/C64/gen_menu_regs_i.py`, wired into `SetToolPaths.bat`; verified byte-identical `.prg` output against the old hand-written file
+- `StatusFunction[]` split out of `IOH_TeensyROM.c` (1913 -> 886 lines) into new `StatusFunctions.c`; all 35 functions there (the 27 dispatched entries plus 8 exclusive helpers) now consistently marked `FLASHMEM`
+
+**Low priority — style/consistency:**
+- Inconsistent naming/abbreviation (`Hndlr` vs `Handler`, `Cnt`/`Count`/`Num`, inconsistent buffer names)
+- Oversized functions (`HandleExecution()` ~265 lines)
+- Commented-out code left unresolved with no explanation
+- Open design questions living only in inline comments (e.g. `//need all 3?`)
+- "Must stay in sync" relationships enforced by comment only where a compile-time check exists
+
+**Accepted, no action needed:**
+- `Serial.write()` inside `IO1Hndlr_TR_BASIC` — deliberate, developer-confirmed exception
+
+**Flagged for re-check, not yet assessed:**
+- MinimalBoot's Ethernet-disable gap during VIC-cycle emulation
+- Large-CRT bank-swap DMA reliability claim may be stale
+
 ## HIGH PRIORITY: `nfcReadTagLaunch()` can overflow its 256-byte `TagData` stack buffer reading a malformed/corrupted NFC tag
 
 **Where:** `Source/Teensy/nfcScan.ino:183-403`, `nfcReadTagLaunch()`.
@@ -84,7 +126,7 @@ Functions that are safe `FLASHMEM` candidates — confirmed never called from `i
 - [ ] `InitHndlr_SuperSnapshotV5` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperSnapshotV5.c:114` — sibling handlers' `InitHndlr` (REU, KernalReplace, ActionReplay, RetroReplay) all correctly have it; this one doesn't.
 - [ ] `SpecialBtn_SuperSnapshotV5` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperSnapshotV5.c:104` — called only from `Teensy.ino:290` (`fSpecialBtnChange(...)`, inside the main-loop button-debounce check), confirmed never ISR-path. `SpecialBtn_REU` already has `FLASHMEM`; this one doesn't.
 - [ ] `PollingHndlr_TR_BASIC` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TR_BASIC.c:442` — main-loop-only (`PollingHndlr`), like `PollingHndlr_REU` which already has `FLASHMEM`.
-- [ ] `PollingHndlr_TeensyROM` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:1878` — same pattern, main-loop-only.
+- [ ] `PollingHndlr_TeensyROM` — `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:875` — same pattern, main-loop-only. (Note: the 27 functions `StatusFunction[]` dispatches, plus their exclusive helpers, were split into `StatusFunctions.c` since this was written; all 35 of those already have `FLASHMEM`. `PollingHndlr_TeensyROM` itself stayed in `IOH_TeensyROM.c` and is still missing it.)
 - [ ] `IOH_ASID.c` — largest single opportunity found so far. Confirmed via call-graph trace (not assumed) that only `IO1Hndlr_ASID` (ISR-called) and `InitTimedASIDQueue()` (called from within it, own comment confirms "Called from ISR, must be fast!") and `SendTimedASID()` (`IntervalTimer` hardware-timer interrupt context, already correctly `FASTRUN`) need to stay RAM-resident. Everything else is only reachable via `PollingHndlr_ASID`'s main-loop `usbHostMIDI.read()`/`usbDevMIDI.read()` calls — safe FLASHMEM candidates: `InitHndlr_ASID`, `PollingHndlr_ASID`, `AddToASIDRxQueue`, `FlushASIDRxQueue`, `SetASIDIRQ`, `PrintflnToASID`, `AddErrorToASIDRxQueue`, `DecodeSendSIDRegData`, and `ASIDOnSystemExclusive` (the ~180-line SysEx decoder, `IOH_ASID.c:389-567`) — likely the single biggest RAM1 reclaim of any file reviewed this session.
 - [ ] `IOH_MIDI.c` — same shape as ASID. Only `IO1Hndlr_MIDI` is ISR-called; it doesn't call `SetMidiIRQ()` or any `HWEOn*` handler directly, so all of those are only reachable via `PollingHndlr_MIDI`'s main-loop `usbHostMIDI.read()`/`usbDevMIDI.read()` calls. Safe FLASHMEM candidates: `PollingHndlr_MIDI` (`IOH_MIDI.c:471`), `SetMidiIRQ` (`:107`), and all twelve `HWEOn*` callback functions (`HWEOnNoteOff`/`On`/`AfterTouchPoly`/`ControlChange`/`ProgramChange`/`AfterTouch`/`PitchChange`/`SystemExclusive`/`TimeCodeQuarterFrame`/`SongPosition`/`SongSelect`/`TuneRequest`/`RealTimeSystem`, lines 107-248).
 - [ ] `IOH_Swiftlink.c` — `InitHndlr_SwiftLink` (line 380) and `PollingHndlr_SwiftLink` (line 513) are candidates; likely also `FreeSwiftlinkBuffs()` (line 263, called from `SetUpMainMenuROM()` — main-context). By contrast `SetBaud()` and `ResetSwiftLink()` are correctly left unmarked — both carry their own "called from Phi IRQ/IO handler, be quick!" comments and are genuinely ISR-reachable via `IO1Hndlr_SwiftLink`.
@@ -246,14 +288,6 @@ The >850KB bank-swap mechanism (REU-style DMA-line-assert pause, not true bus-ma
 
 **Status:** flagged for re-test, not yet re-verified (2026-08-11).
 
-## `ASIDPlayer.asm` has its `Menu_Regs.i` include commented out
-
-**Where:** `Source/C64/ASIDPlayer/source/ASIDPlayer.asm:7`
-
-Every other `Menu_Regs.i` consumer has an active `!src` line; ASIDPlayer's is present but commented out. Not yet confirmed whether this is intentional (ASID genuinely doesn't need those registers) or a leftover from an earlier split.
-
-**Status:** unverified, low priority.
-
 ## `IOHandler[]` array and `enum enumIOHandlers` are hand-synced with no compile-time check
 
 **Where:** `Source/Teensy/MinimalBoot/Common/IOHandlers.h:105-147` (array) and `Source/Teensy/MinimalBoot/Common/Menu_Regs.h:390-434` (enum), both explicitly commented "Synch order/qty with" the other.
@@ -296,25 +330,15 @@ Both functions call `vsprintf(SerialStringBuf, Fmt, ap)` with no length limit. `
 
 **Status:** deferred — fix proposed, not yet implemented (2026-08-12).
 
-## Planned refactor: split `StatusFunction[]` out of `IOH_TeensyROM.c`
-
-**Where:** `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c` (1891 lines, largest IO handler by far).
-
-Plan to pull all the `StatusFunction` functions and the `StatusFunction[]` declaration/array out into a separate file, for organization given the file's size.
-
-**Assessed during architecture review (2026-08-12), no structural problem found:** `StatusFunction[]` is only ever dispatched from `PollingHndlr_TeensyROM()` (main-loop context, not the ISR path) — zero interaction with hot-path constraints. Every `IO_Handlers/*.c` file is already `#include`d as raw source into `IOHandlers.h` rather than compiled as an independent translation unit, so adding one more file to that same `#include` chain doesn't introduce a new pattern or a real linkage boundary. The one thing to watch when actually doing the split: anything the moved `StatusFunction` bodies reference that's currently file-scoped in `IOH_TeensyROM.c` (statics, helpers without prototypes) needs to stay visible via include-order placement or get forward-declared — same discipline already used elsewhere (e.g. `IOH_REU.c`'s block of `extern` declarations for cross-file symbols).
-
-**Status:** deferred — planned by the developer, no blocker identified (2026-08-12).
-
 ## Low priority: style/consistency observations from the code-review pass
 
 Cosmetic, no functional impact — not queued for a dedicated pass, but worth applying prospectively (new code, or opportunistically when touching a function for another reason).
 
 - **Naming/abbreviation is inconsistent, sometimes within the same file.** E.g. `IOHandlers.h`: `struct stcIOHandlers` (spelled out) contains members named `InitHndlr`/`IO1Hndlr` (abbreviated), immediately followed by `#include "IO_Handlers/IOH_MIDI.c"` — "Handler" spelled out in the directory name, abbreviated in the filename. Same pattern with counts: `CharNum`, `NumRegs`, `BigBufCount`, `FNCount` are four different naming shapes for the same concept. Buffer names for the recurring "build an outgoing string" pattern are especially inconsistent (`SerialStringBuf`, `Buf`, `ToSend`, `TxMsg`, `lclBuf`) — a shared naming convention there might have made the repeated `vsprintf`-into-fixed-buffer pattern (see above) easier to spot by inspection.
-- **Very large files/functions are hard to review in one pass.** `IOH_TeensyROM.c` (~1,900 lines) and `HandleExecution()` (~265 lines) took noticeably longer to review than anything else this session. Worth treating size itself as a standing signal to split, beyond the one `StatusFunction[]` split already planned.
+- **Very large files/functions are hard to review in one pass.** `IOH_TeensyROM.c` (~1,900 lines) and `HandleExecution()` (~265 lines) took noticeably longer to review than anything else this session. Worth treating size itself as a standing signal to split, as already done for `StatusFunction[]` (now in `StatusFunctions.c`).
 - **Commented-out code left as an unresolved decision rather than a removed/explained one.** The OOM checks in `IOH_ActionReplay.c`/`IOH_SuperSnapshotV5.c` are commented out with no note on why — ambiguous later whether that was a deliberate call or an unfinished thought. A one-line "why" comment (or deletion, since git retains history) would remove the ambiguity.
 - **Open design questions sometimes live only as inline comments**, e.g. `//need all 3?` on `hid3` (`IOHandlers.h:38`) — easy to never resurface. `Known-Issues.md` is now available as a better home for these going forward.
-- **A couple of "must stay in sync" relationships are enforced only by comment, not the compiler**, where a cheap compile-time check exists — `IOHandler[]`/`enumIOHandlers` (`_Static_assert` proposed above) and `Menu_Regs.i`/`Menu_Regs.h`. Worth treating "keep in sync with X" comments generally as a prompt to ask whether a build-time check could replace the comment.
+- **"Must stay in sync" relationships enforced only by comment, not the compiler, are worth a build-time check when one's cheap.** Both instances found this session (`IOHandler[]`/`enumIOHandlers`, `Menu_Regs.i`/`Menu_Regs.h`) have since been fixed this way — a `static_assert` and a generator script, respectively (see below). Worth treating "keep in sync with X" comments generally as a prompt to ask the same question.
 
 **Status:** noted, low priority — not queued for a dedicated pass (2026-08-13).
 
