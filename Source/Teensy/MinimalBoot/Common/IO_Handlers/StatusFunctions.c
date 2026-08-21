@@ -25,7 +25,7 @@
 // StatusFunction[] is declared last so every entry above it is already defined --  no
 // prototypes needed.
 
-void SendStrPrintfln(const char *Msg)
+FLASHMEM void SendStrPrintfln(const char *Msg)
 {
    SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
 }
@@ -171,7 +171,7 @@ FLASHMEM void RTCAdjust()
    C64TODfromRTC(); //also update IO1 current time regs
 }
 
-void WriteEEPROM()
+FLASHMEM void WriteEEPROM()
 {
    Printf_dbg("Wrote $%02x to EEP addr %d\n", eepDataToWrite, eepAddrToWrite);
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
@@ -303,7 +303,7 @@ FLASHMEM void MakeFilenameStr()
    StringOffset = 0;
 }
 
-void UpDirectory()
+FLASHMEM void UpDirectory()
 {
    //non-root of Teensy, SD or USB drive only
    if(PathIsRoot()) return;
@@ -321,7 +321,7 @@ void UpDirectory()
    }
 }
 
-void SetCursorToItemNum(uint16_t ItemNum)
+FLASHMEM void SetCursorToItemNum(uint16_t ItemNum)
 {
    IO1[rwRegPageNumber] = ItemNum/MaxItemsPerPage +1;
    IO1[rwRegCursorItemOnPg] = ItemNum % MaxItemsPerPage;
@@ -383,7 +383,7 @@ FLASHMEM void LastPicture()
    LastFileType(rtFileKla, rtFileArt);
 }
 
-void SearchForLetter()
+FLASHMEM void SearchForLetter()
 {
    uint16_t ItemNum = 0;
    uint8_t SearchFor = IO1[wRegSearchLetterWAIT];
