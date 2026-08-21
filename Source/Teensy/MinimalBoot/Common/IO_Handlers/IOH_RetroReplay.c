@@ -24,13 +24,14 @@ void InitHndlr_RetroReplay();
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn);  
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn);
 void CycleHndlr_RetroReplay(bool R_Wn);
+void NoFreeze(bool dummyval);  // do-nothing function to call when freeze is disabled
 
 stcIOHandlers IOHndlr_RetroReplay =
 {
   "RetroReplay",           //Name of handler, IOHNameLength max
   &InitHndlr_RetroReplay,  //Called once at handler startup
   &IO1Hndlr_RetroReplay,   //IO1 R/W handler
-  NULL,                    //IO2 R/W handler not use in RR REU compatibility mode
+  NULL,                    //IO2 R/W handler not used to maintain REU compatibility 
   &ROMLHndlr_RetroReplay,  //ROML Read handler, in addition to any ROM data sent
   NULL,                    //ROMH Read handler, in addition to any ROM data sent
   NULL,                    //Polled in main routine
@@ -42,19 +43,20 @@ extern uint8_t *lcl_LOROM_Image;
 
 #define RR_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
 
-// RetroReplay IOH design based on description of RetroReplay firmware at:
+// IOH_RetroReplay.c based on Cyberpunx firmware description:
 // https://rr.c64.org/wiki/Inside_Replay_Essentials.txt
-// Also hardware description at 
+// And RetroReplay hardware description:
 // https://rr.c64.org/wiki/Inside_Replay.txt
-// and a few peeks in the VICE CRT documentation at
+// ... and a few peeks into the VICE CRT documentation:
 // https://vice-emu.sourceforge.io/vice_17.html#SEC442
 
-// Assumed that RR firmware initializes extended control register only once with a value
-// of 64 (REU compatible memory map) and ignores $de01 afterward. 
-// This means no freeze disable or and access to only ram bank 0 at $8000. 
+// NOTE: Known deviations from hardware definition.
+//       REU memory map only: IO2 is not supported.
+//       No bank changes via $de01 ECR (see Replay Essentials)
+//       No Clockport support
+         
 
 // $de00 Control Register - Write only
-// Same as Action Replay
 #define RR_CR_RBANK15   0b10000000   // Banking bit 15
 #define RR_CR_RELEASE   0b01000000   // Release freeze (reset Game and EXROM)
 #define RR_CR_RAMEN     0b00100000   // RAM enable 
@@ -76,7 +78,7 @@ extern uint8_t *lcl_LOROM_Image;
 #define RR_ECR_CLOCKEN   0b00000001  // Enable Clockport connector: Always 0
                                      
 // $de00 & $de01 Status Register - read only
-// reports status of bits set by writes to CR and ECR
+// Status of bits set by writes to CR and ECR
 #define RR_SR_RBANK15   0b10000000  // Banking bit 15 
 #define RR_SR_REU_MAP   0b01000000  // REU compatible memory map - RR38 = 1
 #define RR_SR_RBANK16   0b00100000  // EEPROM Banking bit: Always 0
@@ -84,9 +86,10 @@ extern uint8_t *lcl_LOROM_Image;
 #define RR_SR_RBANK13   0b00001000  // Banking bit 13 
 #define RR_SR_FREEZE    0b00000100  // Freeze button status: 1 = pressed
 #define RR_SR_ALWBNK    0b00000010  // AllowBank active: RR38 & AR = 0
-#define RR_SR_FLASH     0b00000001  // EEPROM flash mode active: Always 0                                  
-
-uint8_t RR_StatusReg;
+#define RR_SR_FLASH     0b00000001  // EEPROM flash mode active: Always 0   
+                             
+//bool RR_RAM_Enabled;
+uint8_t RR_StatusReg = 0;
                            
 void ProcessRRControlReg(uint8_t ControlReg)
 {
@@ -94,23 +97,24 @@ void ProcessRRControlReg(uint8_t ControlReg)
   {
      SetNMIDeassert;
      SetIRQDeassert;
+     RR_StatusReg &= ~RR_SR_FREEZE;  //clear freeze bit
   }
 
-  //set RAM/ROM bank:
+  //set ROM bank:
   BankNum = (((ControlReg & (RR_CR_RBANK14 | RR_CR_RBANK13)) >> 3) |
              ((ControlReg & RR_CR_RBANK15) >> 5));
   lcl_LOROM_Image = CrtChips[BankNum].ChipROM;  //default to ROM, may update below.     
   HIROM_Image = lcl_LOROM_Image;
 
-  if (ControlReg & RR_CR_RAMEN) lcl_LOROM_Image = RR_RAM_Buf; //Set lcl_LOROM_Image to RAM
-  //else disable RAM, use lcl_LOROM_Image already set 
-  
+  if (ControlReg & RR_CR_RAMEN) 
+   	lcl_LOROM_Image = ( RR_RAM_Buf + ((BankNum & 3) * 0x2000) * sizeof(uint8_t) );  
+ 	 
   if (ControlReg & RR_CR_EXROM) SetExROMDeassert;  //rtBin8kHi or None
   else SetExROMAssert;  //rtBin16k or 8kLo  
   
   if (ControlReg & RR_CR_nGAME) SetGameAssert; //rtBin8kHi or rtBin16k
   else SetGameDeassert;  //8kLo or None
-  		
+        
   if (ControlReg & RR_CR_DISABLE) //disable cart
   {
      lcl_LOROM_Image = NULL;   
@@ -124,80 +128,97 @@ void ProcessRRControlReg(uint8_t ControlReg)
 
 FLASHMEM void InitHndlr_RetroReplay()
 {
-   fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
+  fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
    
-   RR_RAM_Buf = (uint8_t*)calloc(8*1024, sizeof(uint8_t)); //8k
+  RR_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k
 
-   // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
-   //  use ROMLHndlr_RetroReplay: for R/W instead
-   LOROM_Image = NULL; 
+  // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
+  //  use ROMLHndlr_RetroReplay: for R/W instead
+  LOROM_Image = NULL; 
    
-   CycleCountdown = 0;
+  CycleCountdown = 0;
    
-   ProcessRRControlReg(0);  // Initialize Control    
+  ProcessRRControlReg(0);  // Initialize Control    
 }   
 
-// $deXX Handler
-// Assuming REU_Map and  AllowBank Off 
-// $de02-$deff contains mirrored $9e02-$9eff of selected block 
+// $deXX Handler -- REU Memory Map
+// $de02-$deff contains mirrored $9e02-$9eff of selected bank 
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
 {
-   if (lcl_LOROM_Image == NULL) return;  //skip if disabled
-   
-   if (!R_Wn) // IO1 write
-   { 
-   	  uint8_t Data = DataPortWaitRead(); 
-   	  switch (Address)
-   	  { 
-   	  	 case 0x00:           // Control Register write
-   	  	 	  ProcessRRControlReg(Data);  
-   	  	 	  break;
-   	     case 0x01:           // Extended Control Register write
-   	        RR_StatusReg = Data; 
-   	        break;
-   	     default: 
-       	  if (lcl_LOROM_Image == RR_RAM_Buf)  //only write if RAM is enabled
-            lcl_LOROM_Image[0x1e00+Address] = Data;  
-      }        
-   }  // end write           
-   else // HIGH (IO1 read)
-   { 
- 	   switch (Address)
- 	   {	   
- 	   	  // Return RR_StatusRegister 
-       case 0x00: 
-       case 0x01: 
-          DataPortWriteWait(RR_StatusReg);  
-          break;
-       default: 
-          DataPortWriteWait(lcl_LOROM_Image[0x1e00+Address]);  
-    }
-   } // End read
+   if (lcl_LOROM_Image != NULL) 
+   {	
+   	// if HIROM and LOROM not eqaul then lcl_LOROM_Image = RAM 
+      if ((HIROM_Image != lcl_LOROM_Image) & !(RR_StatusReg & RR_SR_ALWBNK)) 
+      	lcl_LOROM_Image = RR_RAM_Buf;  // Use bank 0 if banking not enabled
+      	
+      if (!R_Wn) // IO1 write
+      { 
+         uint8_t Data = DataPortWaitRead(); 
+         switch (Address)
+         { 
+            case 0x00:           // Control Register write
+               ProcessRRControlReg(Data);  
+               break;
+            case 0x01:           // Extended Control Register write                
+               // ECR first write should always have RR_ECR_REU_MAP set. So we can avoid an 
+               // additional global by using RR_StatusReg to flag *and* store first write. 
+               if (RR_StatusReg == 0)  
+               { 	 
+                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = &NoFreeze; // Disable Freeze
+                  RR_StatusReg = (Data & ~RR_ECR_NOFREEZ);  //RR_StatusReg does not have NOFREEZ bit
+               }              
+               // else not first write. Ignore additional writes.
+               break;
+            default: 
+               if (HIROM_Image != lcl_LOROM_Image)  // if not ROM, then RAM
+                  lcl_LOROM_Image[Address+0x1e00] = Data;  // write  
+         }        
+      }             
+      else // IO1 read
+      { 
+         switch (Address)
+         {    
+            case 0x00: //$de00 & $de01 reads return status register
+            case 0x01: 
+               DataPortWriteWait(RR_StatusReg);  
+            break;
+            default: 
+               DataPortWriteWait(lcl_LOROM_Image[Address+0x1e00]);  
+         }
+      }
+   }
 }
+
+void NoFreeze(bool dummyval) {}  // do-nothing function to call when freeze is disabled
 
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn)
 {
-   if (lcl_LOROM_Image!=NULL) 
- 
-   {
+   if (lcl_LOROM_Image != NULL)           
+   {   
       if (R_Wn) // Read
       {
          DataPortWriteWait(lcl_LOROM_Image[Address & 0x1fff]); 
       }
       else  // Write -- RAM ONLY
-      {
-         if (lcl_LOROM_Image == RR_RAM_Buf ) //!= CrtChips[BankNum].ChipROM) //allow RAM writes only
-            lcl_LOROM_Image[Address & 0x1fff] = DataPortWaitRead();
+      {  
+      	// if not equal then lcl_LOROM_Image = RAM 
+         if (HIROM_Image != lcl_LOROM_Image)       
+            lcl_LOROM_Image[Address & 0x1fff] = DataPortWaitRead(); 
       }
    }
 }
 
+// TR+ uses Gideon's asynch freeze technique
+// https://codebase64.com/lib/exe/fetch.php?media=base:safely_freezing_the_c64.pdf
 void CycleHndlr_RetroReplay(bool R_Wn)
 {
    if (CycleCountdown)  
    {
+ 
       if (CycleCountdown == CycCntFreeze) // button activated
-      {  	
+      {  
+      	 RR_StatusReg &= RR_SR_FREEZE;  //set freeze bit
+      	 
          if (R_Wn) 
          {
             //assert IRQ/NMI during read cycle
