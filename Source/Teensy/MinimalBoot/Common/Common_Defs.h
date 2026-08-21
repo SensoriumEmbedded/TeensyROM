@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8.0.2"    //*VERSION*
+#define TRVersion              "0.8.0.4"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -434,7 +434,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 
 // reboot is the same for all ARM devices
 #define CPU_RESTART_ADDR   ((uint32_t *)0xE000ED0C)
-#define CPU_RESTART_VAL	   (0x5FA0004)
+#define CPU_RESTART_VAL    (0x5FA0004)
 #define REBOOT             (*CPU_RESTART_ADDR = CPU_RESTART_VAL)
 
 //C64 specific:
