@@ -74,18 +74,26 @@ MsgRunning:
    stx $af  ; (Hi)
    
    lda #rCtlRunningPRG    ;let TR know we're done, change IO handler
-   sta wRegControl+IO1Port  ;can't wait for it because handler is changing...
-   ;static delay instead of wait. 
-   ; without this, race condition fails under following conditions:
+   sta wRegControl+IO1Port  ;fBusSnoop is armed synchronously in this same write's ISR call (see
+                            ;  HandshakeSnoop in IOH_TeensyROM.c), so the poll below is safe to start immediately.
+                            
+   ;   ; 6*256*(2+2)/985250Hz(PAL) = ~6.3mS
+   ;   ldy #$06    ;<=3 fails, 4 intermittent, >=5 passes
+   ;   ldx #$00
+   ;-  dex
+   ;   bne -
+   ;   dey
+   ;   bne -
+
+   ; was a fixed delay tuned to survive the race described below; replaced with a poll of
+   ; rRegIOHSwapPoll, which HandshakeSnoop answers regardless of which IO handler is current,
+   ; so we wait exactly as long as the swap actually takes instead of a worst-case guess.
+   ; race being guarded against:
    ;  PAL clock, NFC on (slowing down polling), start Cynthcart
-   ; because Cynthcart starts and queries IO space, 
+   ; because Cynthcart starts and queries IO space,
    ;  causing corruption when TR handler still loaded (internet time query added)
-   ; 6*256*(2+2)/985250Hz(PAL) = ~6.3mS
-   ldy #$06    ;<=3 fails, 4 intermittent, >=5 passes
-   ldx #$ff
--  dex
-   bne -
-   dey
+-  lda rRegIOHSwapPoll+IO1Port
+   cmp #rihsReady
    bne -
    
 smcSkipPrintRunning:
@@ -131,6 +139,6 @@ smcSkipPrintRunning:
 ;   bne -
 
    jmp $a7ae ;BASIC warm start/interpreter inner loop/next statement (Run)
-   ;jmp (BasicWarmStartVect)  
+   ;jmp (BasicWarmStartVect)  ;go to BASIC but don't run
       
 PRGLoadEnd = *

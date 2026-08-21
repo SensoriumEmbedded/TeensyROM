@@ -92,9 +92,12 @@ void HandleExecution()
       Serial.printf("Loading IO handler: %s\n", IOHandler[RegNextIOHndlr]->Name);
       
       if (IOHandler[RegNextIOHndlr]->InitHndlr != NULL) IOHandler[RegNextIOHndlr]->InitHndlr();
-      
+
       Serial.flush();
       CurrentIOHandler = RegNextIOHndlr;
+      //MinimalBoot never runs IOHandlerInit()/the PRG-load handshake, so nothing else will ever
+      //promote a handler's staged snoop (see PendingfBusSnoop in IOH_REU.c/IOH_KernalReplace.c) -- apply it now.
+      fBusSnoop = PendingfBusSnoop;
       doReset=true;
    }
 

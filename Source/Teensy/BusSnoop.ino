@@ -8,6 +8,11 @@ volatile uint32_t BusSampleCount;
 
 FLASHMEM void BusAnalysis()
 {
+   if (fBusSnoop!=NULL || PendingfBusSnoop!=NULL)
+   {
+      Serial.printf("\nBus Snoop function is busy, aborting\n");
+      return;
+   }
    Serial.printf("\nTaking max %d samples in %dmS\n", BusSampleMaxSize, BusSampleTimeoutmS);
 #if !defined(DbgFab0_3plus) && !defined(Fab04_DataBufAlwaysEnabled)
    Serial.printf("Snooping data bus on C64 writes only (Fab 0.2x)\n");
@@ -20,7 +25,7 @@ FLASHMEM void BusAnalysis()
    fBusSnoop = &BusCount; 
    delay(1); // BusCount is never called if this isn't present
    while (BusSampleCount<BusSampleMaxSize && millis()-StartTime<BusSampleTimeoutmS); //wait to fill buffer or timeout
-   fBusSnoop = NULL;
+   if (fBusSnoop == &BusCount) fBusSnoop = NULL;  //in case something else took over the snoop function
 
    Serial.printf("Took %d samples in %dmS\n", BusSampleCount, millis()-StartTime);
    Serial.printf(" bit     Highs     Lows     Total\n");

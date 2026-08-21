@@ -791,7 +791,7 @@ FLASHMEM void KERNALPreStart()
 
 #ifdef Fab04_GlobalKernalReplace
    //check if enabled?
-   InitHndlr_KernalReplace(); //separate function so it doesn't get called twice
+   InitHndlr_KERNALReplace_PreStart(); //separate function so it doesn't get called twice
 #else
    
    //If kernal replace is selected for Special IO
@@ -807,7 +807,7 @@ FLASHMEM void KERNALPreStart()
    
    if (NextIOHndlr == IOH_KernalReplace)
    {   
-      InitHndlr_KernalReplace(); //separate function so it doesn't get called twice
+      InitHndlr_KERNALReplace_PreStart(); //separate function so it doesn't get called twice
       //Serial.println("Bye from KERNALPreStart");
    }
    //else 
@@ -1554,6 +1554,22 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
+bool HandshakeSnoop(uint16_t Address, bool R_Wn)
+{  //PRG-load IO handler swap handshake: lets C64 poll a fixed reg instead of a fixed delay.
+   //Installed by the rCtlRunningPRG case below; runs ahead of CurrentIOHandler's own dispatch
+   //(and works regardless of which handler is current), so it stays valid across the swap.
+   if (!R_Wn || Address != 0xDE00+rRegIOHSwapPoll) return false; //not ours, continue normal dispatch
+
+   if (!HandshakeReady)
+   {
+      DataPortWriteWait(rihsBusy);
+      return true;
+   }
+   DataPortWriteWait(rihsReady);
+   fBusSnoop = PendingfBusSnoop; //hand off to whatever the new IO handler staged (or NULL), atomically with this read
+   return true;
+}
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
@@ -1794,6 +1810,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlRunningPRG:
                   IO1[rwRegStatus] = rsIOHWSelInit; //Support IO handlers in PRG
+                  HandshakeReady = false;     //reset in case a prior PRG load left it set
+                  PendingfBusSnoop = NULL;
+                  fBusSnoop = &HandshakeSnoop; //armed now, so the C64's very next read already sees rihsBusy
                   break;
                case rCtlMakeInfoStrWAIT:
                   IO1[rwRegStatus] = rsMakeBuildCPUInfoStr; //work this in the main code

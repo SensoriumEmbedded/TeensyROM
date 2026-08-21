@@ -27,10 +27,12 @@
 // #define KERNAL_DEBUG_SIG_CONT
 
 
+void InitHndlr_KernalReplace();
+
 stcIOHandlers IOHndlr_KernalReplace =
 {
   "Kernal Replace",         //Name of handler (IOHNameLength max)
-  NULL,                     //Called once at handler startup
+  &InitHndlr_KernalReplace, //Called once at handler startup
   NULL,                     //IO1 R/W handler
   NULL,                     //IO2 R/W handler
   NULL,                     //ROML Read handler, in addition to any ROM data sent
@@ -142,7 +144,7 @@ extern FS *FSfromSourceID(RegMenuTypes SourceID);
 	bool (*fKernRepl)(uint16_t Address, bool R_Wn) = NULL;    //return true to skip out of phi2 isr
 #endif
 
-FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, manual only
+FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via init; called earlier, manually, from KERNALPreStart()
 {
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;  //default, make sure off during loading
@@ -190,12 +192,24 @@ FLASHMEM void InitHndlr_KernalReplace() //not called automatically via init, man
    LoadFile.close();
    delay(250);
    
-   //hook kernal checks:
+   //hook kernal checks: runs before BASIC init, well before any PRG-load handshake (see
+   //HandshakeSnoop in IOH_TeensyROM.c) could be armed, so it's safe to touch fBusSnoop directly here.
    HIRAM_State = HIRAM_State_Unknown;
 #ifdef Fab04_GlobalKernalReplace
-   fKernRepl = &KernalCheck; 
+   fKernRepl = &KernalCheck;
 #else
-   fBusSnoop = &KernalCheck; 
+   fBusSnoop = &KernalCheck;
+#endif
+}
+
+FLASHMEM void InitHndlr_KernalReplace()
+{  //runs via the normal IOHandlerInit() handler-swap path (e.g. once PRG load completes).
+   //The actual kernal load/setup already happened earlier in InitHndlr_KERNALReplace_PreStart();
+   //this just re-stages the hook so the PRG-load handshake hands fBusSnoop back to KernalCheck
+   //once it completes, instead of leaving it NULL.
+#ifndef Fab04_GlobalKernalReplace  //Fab04_GlobalKernalReplace uses fKernRepl, which the handshake never touches -- nothing to restage
+   HIRAM_State = HIRAM_State_Unknown;
+   PendingfBusSnoop = &KernalCheck; //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
 #endif
 }
 

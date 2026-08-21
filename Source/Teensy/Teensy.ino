@@ -337,7 +337,7 @@ void loop()
 
 FLASHMEM void SetUpMainMenuROM()
 {
-   fBusSnoop = NULL;
+   PendingfBusSnoop = fBusSnoop = NULL;
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;
 #endif

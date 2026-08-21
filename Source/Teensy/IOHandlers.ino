@@ -25,6 +25,7 @@ void IOHandlerNextInit()
 
 void IOHandlerSelectInit()
 { //called after cart loaded, PRG x-fer finished, or exit to basic (rsIOHWSelInit)
+   PendingfBusSnoop = NULL; //clean slate for whatever InitHndlr below is about to stage
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
       Printf_dbg("IO Handler set by Teensy Menu\n");
@@ -50,9 +51,16 @@ void IOHandlerInit(uint8_t NewIOHandler)
    Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
    
    if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
-   
+
    Serial.flush();
    CurrentIOHandler = NewIOHandler;
+
+   //PRG-load handshake handoff (see HandshakeSnoop in IOH_TeensyROM.c):
+   //if the handshake currently owns fBusSnoop, let its own completion-read do the handoff later;
+   //otherwise (e.g. a cart loaded directly from the menu, no handshake involved) apply it now,
+   //since nothing else will.
+   if (fBusSnoop == &HandshakeSnoop) HandshakeReady = true;
+   else fBusSnoop = PendingfBusSnoop;
 }
 
 // F0 SysEx single call, message larger than buffer is truncated

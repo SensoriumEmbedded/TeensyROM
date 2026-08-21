@@ -163,6 +163,10 @@ volatile uint8_t DMA_State = DMA_S_DisableReady;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 
+//PRG-load IO handler swap handshake (see HandshakeSnoop in IOH_TeensyROM.c):
+bool (*PendingfBusSnoop)(uint16_t Address, bool R_Wn) = NULL;  //staged by an IO handler's InitHndlr instead of touching fBusSnoop directly
+volatile bool HandshakeReady = false;    //true once IOHandlerInit has completed the current IO handler swap
+
 #ifdef Dbg_SerLog 
    #define BigBufSize          1000
 #else

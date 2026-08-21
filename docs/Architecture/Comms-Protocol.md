@@ -13,6 +13,7 @@ Base address `IO1Port = $de00` (`c64defs.i`); everything else is an offset from 
 
 - `rRegStrAvailable` (2), `rRegStreamData` (3) — used by the PRG streaming loader (`PRGLoadStartReloc.s`)
 - `wRegControl` (4) with `enum RegCtlCommands` — e.g. `rCtlRunningPRG=5`, `rCtlRebootTeensyROM=11`
+- `rRegIOHSwapPoll` (`0xFE`, high IO1) with `enum RegIOHSwapStates` (`rihsBusy`/`rihsReady`) — polled by `PRGLoadStartReloc.s` right after sending `rCtlRunningPRG`, so the C64 waits exactly as long as the Teensy's IO-handler swap actually takes instead of a fixed worst-case delay; see the `fBusSnoop`/`HandshakeSnoop` writeup in [Constraints.md](Constraints.md#fbussnoop-is-a-single-contested-global-slot--never-assign-it-directly-if-anything-else-might-own-it) for the mechanism
 - `rwRegStatus` (1) with `enum RegStatusTypes` — e.g. `rsChangeMenu`, `rsLoadSIDforXfer`, `rsMountDxxFile`
 - SID play-info/control registers
 - An IRQ command channel: `wRegIRQ_ACK` / `rwRegIRQ_CMD` with `enum RegIRQCommands` (e.g. `ricmdLaunch`, `ricmdSIDPause`) — this is what `RemoteControl.ino`'s `DoC64IRQ()` drives from the Teensy side

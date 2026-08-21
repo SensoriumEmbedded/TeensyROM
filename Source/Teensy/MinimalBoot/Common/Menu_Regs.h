@@ -120,6 +120,14 @@ enum IO1_Registers  //offset from 0xDE00
 
 #define    IO2Scratch     0x7F    //;Used for Expansion Port Test
 
+#define    rRegIOHSwapPoll  0xFE  // High IO1: poll for IO handler swap completion after rCtlRunningPRG (see HandshakeSnoop)
+
+enum RegIOHSwapStates     //rRegIOHSwapPoll values
+{
+   rihsBusy            = 0x00, // IO handler swap not yet complete, keep polling
+   rihsReady           = 0xff, // IO handler swap complete, safe to proceed
+};
+
 enum RegIRQCommands       //rwRegIRQ_CMD, echoed to wRegIRQ_ACK
 {
    ricmdNone           = 0, // no command, always 0 (init)

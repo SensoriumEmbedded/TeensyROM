@@ -504,7 +504,7 @@ FLASHMEM void SpecialBtn_REU(bool Up_nDn)
 
 FLASHMEM void InitHndlr_REU()
 {
-   fBusSnoop = NULL;
+   PendingfBusSnoop = NULL; //not fBusSnoop directly -- may race a pending PRG-load handshake, see HandshakeSnoop
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
