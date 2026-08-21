@@ -24,7 +24,6 @@ void InitHndlr_RetroReplay();
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn);  
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn);
 void CycleHndlr_RetroReplay(bool R_Wn);
-void NoFreeze(bool dummyval);  // do-nothing function to call when freeze is disabled
 
 stcIOHandlers IOHndlr_RetroReplay =
 {
@@ -35,7 +34,7 @@ stcIOHandlers IOHndlr_RetroReplay =
   &ROMLHndlr_RetroReplay,  //ROML Read handler, in addition to any ROM data sent
   NULL,                    //ROMH Read handler, in addition to any ROM data sent
   NULL,                    //Polled in main routine
-  CycleHndlr_RetroReplay,  //called at the end of EVERY c64 cycle
+  &CycleHndlr_RetroReplay, //called at the end of EVERY c64 cycle
 };
 
 extern volatile uint32_t CycleCountdown;
@@ -107,8 +106,8 @@ void ProcessRRControlReg(uint8_t ControlReg)
   HIROM_Image = lcl_LOROM_Image;
 
   if (ControlReg & RR_CR_RAMEN) 
-   	lcl_LOROM_Image = ( RR_RAM_Buf + ((BankNum & 3) * 0x2000) * sizeof(uint8_t) );  
- 	 
+     lcl_LOROM_Image = RR_RAM_Buf + (BankNum & 3) * 0x2000;  
+  
   if (ControlReg & RR_CR_EXROM) SetExROMDeassert;  //rtBin8kHi or None
   else SetExROMAssert;  //rtBin16k or 8kLo  
   
@@ -146,11 +145,11 @@ FLASHMEM void InitHndlr_RetroReplay()
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
 {
    if (lcl_LOROM_Image != NULL) 
-   {	
-   	// if HIROM and LOROM not eqaul then lcl_LOROM_Image = RAM 
-      if ((HIROM_Image != lcl_LOROM_Image) & !(RR_StatusReg & RR_SR_ALWBNK)) 
-      	lcl_LOROM_Image = RR_RAM_Buf;  // Use bank 0 if banking not enabled
-      	
+   {
+      // if HIROM and LOROM not eqaul then lcl_LOROM_Image = RAM 
+      if ((HIROM_Image != lcl_LOROM_Image) && !(RR_StatusReg & RR_SR_ALWBNK)) 
+         lcl_LOROM_Image = RR_RAM_Buf;  // Use bank 0 if banking not enabled
+      
       if (!R_Wn) // IO1 write
       { 
          uint8_t Data = DataPortWaitRead(); 
@@ -163,8 +162,8 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
                // ECR first write should always have RR_ECR_REU_MAP set. So we can avoid an 
                // additional global by using RR_StatusReg to flag *and* store first write. 
                if (RR_StatusReg == 0)  
-               { 	 
-                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = &NoFreeze; // Disable Freeze
+               {
+                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = NULL; // Disable Freeze
                   RR_StatusReg = (Data & ~RR_ECR_NOFREEZ);  //RR_StatusReg does not have NOFREEZ bit
                }              
                // else not first write. Ignore additional writes.
@@ -189,8 +188,6 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
    }
 }
 
-void NoFreeze(bool dummyval) {}  // do-nothing function to call when freeze is disabled
-
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn)
 {
    if (lcl_LOROM_Image != NULL)           
@@ -201,7 +198,7 @@ void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn)
       }
       else  // Write -- RAM ONLY
       {  
-      	// if not equal then lcl_LOROM_Image = RAM 
+         // if not equal then lcl_LOROM_Image = RAM 
          if (HIROM_Image != lcl_LOROM_Image)       
             lcl_LOROM_Image[Address & 0x1fff] = DataPortWaitRead(); 
       }
@@ -217,8 +214,8 @@ void CycleHndlr_RetroReplay(bool R_Wn)
  
       if (CycleCountdown == CycCntFreeze) // button activated
       {  
-      	 RR_StatusReg &= RR_SR_FREEZE;  //set freeze bit
-      	 
+         RR_StatusReg |= RR_SR_FREEZE;  //set freeze bit
+       
          if (R_Wn) 
          {
             //assert IRQ/NMI during read cycle

@@ -287,7 +287,7 @@ void loop()
 #ifdef Fab04_SpecialButton
    if (SpecialBtnBounce.update())
    {  //Special button Change (rise or fall)
-      fSpecialBtnChange(SpecialBtnBounce.read());
+      if (fSpecialBtnChange != NULL) fSpecialBtnChange(SpecialBtnBounce.read());
    }
 #endif
 
@@ -379,7 +379,7 @@ FLASHMEM void SetUpMainMenuROM()
          break;
       //case rpud2AltBtnNone:
       default:
-         fSpecialBtnChange = &SpecialBtn_None;
+         fSpecialBtnChange = NULL;
          break;
    }
    
@@ -648,12 +648,4 @@ FLASHMEM void SpecialBtn_RebootTR(bool Up_nDn)
    }
 }
 
-FLASHMEM void SpecialBtn_None(bool Up_nDn)
-{
-   if (!Up_nDn) //button pressed down
-   {
-
-      Printf_dbg("SpecialBtn_None\n");
-   }
-}
 
