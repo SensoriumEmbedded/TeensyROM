@@ -206,6 +206,11 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    {  //separate path/filename
       *ptrFilename = 0; //terminate DriveDirPath
       ptrFilename++; //inc to point to filename
+      if (!DriveDirPath[0]) //root-level file: the only slash was the leading one, DriveDirPath is now empty
+      {
+         strcpy(DriveDirPath, "/"); //restore the leading slash
+         ptrFilename = (char*)FileNamePath + 1; //re-point into the untouched source string (past its leading slash) --
+      }                                          //DriveDirPath's buffer can't hold both "/" and the filename starting at index 1
    }
    
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
