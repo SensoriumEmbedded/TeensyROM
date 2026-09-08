@@ -34,6 +34,20 @@ profile and service bit, checks payload CRC and applies non-executable MPU
 protection. Profile 0 retains the full 512 KiB guest arena. Neither requires
 PSRAM, module flash writes or executable code in RAM2.
 
+Optional profile 2 keeps all 512 KiB of RAM2 and restricts module code to
+64 KiB (`0x18000..0x27fff`). The host lends a non-executable 32 KiB ITCM tail
+and the first 16 KiB of its retired CRT swap arena through `VmHost::auxiliary`.
+Only a validated profile-2 module with the auxiliary service bit receives these
+spans. The VM image blocks legacy swap access for their lifetime; ordinary
+cartridge firmware retains its cache. This supports the current DOS module's
+640K layout without borrowing the execution stack or host heap.
+
+The host also accepts the optional center and fitted full-height F5 setup
+extensions. Modules lend bounded video workspace; dirty raster hints avoid
+reconverting unchanged source cells. Transfers update the hidden display bank
+in bounded slices, and workspace stays owned until the frame is acknowledged.
+These optional services do not change the requirements of existing ABI-2 clients.
+
 The host provides ABI 2 file read/write/directory services, clock, packets,
 native cell video, indexed video, RAM2 constants and indexed-raster services.
 Input and presentation policy remain in the client/module, with generic video

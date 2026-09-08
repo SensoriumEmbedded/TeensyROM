@@ -1,0 +1,51 @@
+✔ three disjoint images round-trip and leave stock updater staging space (0.9391ms)
+✔ reject bad checksum, truncated image and data after EOF (0.2998ms)
+✔ reject cross-partition records, overlapping images and unsafe updater span (0.6205ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.5213
+
+PASS: actual generic host file services; read/write/flush/truncate/rename/list/space, 24 handles, invalid paths/flags/spans and injected write/flush failures
+
+PASS actual VM host replay: frozen SID/max packet, RAM guards, quiet/ACK order, busy DMA and all DMA failures
+
+PASS: centered native-width F5/F7, full-width F1/F3, live color/sharp, Auto-8 cap, all 25 useful bands, stable plans, bounded dual-bank PAL/NTSC kernels; host conversion 0.68 ms/frame (not Teensy timing)
+
+PASS: exact 160x200 pixels at center/all corners, tagged/reader parity, unchanged F1/F5/F7, camera repeat/release/opposites/clamps/reentry/clock wrap
+
+PASS: F5 preserves 6000 minority highlight pixels; error 265236000 -> 241722000; exact two-color scenery, immutable repeat, unchanged 10000-byte picture, NES/GB/Doom/DOS byte and raster geometry
+
+PASS: production F5 three/four same-row colors at all edges, exact repairs under saturation, reader parity, deterministic packing, NES F1/F3/F7 tag parity and centered F5/F7
+
+PASS: full source fitted to 296x200 beyond black margin, exact endpoints, bottom-four-line 8x4 fallback, all source dirty footprints/reversions, zero unchanged reads, palette/geometry/start invalidation; FullFrame=13392 converter=1280 workspace=18768 bytes
+
+PASS full8x2 PAL bank0: 2644 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 PAL bank1: 2644 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 NTSC bank0: 2746 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 NTSC bank1: 2746 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+
+Delta F5: initial 12775 bytes, repeated 0 bytes, moving 8x8 patch 24 bytes
+PASS: live raster snapshot, pre-consumption Busy, immutable conversion during live VRAM changes, generation rejection and nonblack background
+PASS: opt-in stable F5 through actual host, changing pictures reuse both raster programs
+PASS: sprite F5 negotiated, frozen generation, 85-segment ordinary DMA, no raster grants, centered NES margins and timed-mode transition pause
+PASS: F3 native crop through actual host, ordinary color-RAM DMA, frozen camera during ACK, zero-DMA repeat and F5/F7/F1/F3 transitions
+PASS: indexed bounds/lifecycle, centered geometry, legacy restoration, inactive-bank PAL/NTSC sliced uploads, expired grants, atomic ACK ownership, picker reinitialization, DMA failure release
+
+PASS: 16 KiB center F5, all pixels/four maps/two banks, unchanged frames, small changes/reversions, immutable visible bank, pending-loan rejection, release, PAL/NTSC budgets
+
+PASS: full 8x2 fitted to 296x200, both banks/standards, black margin, unchanged zero conversion/handshake, mapped dirty conversion, pending reversion and stale-bank repair; workspace=19456 actual=18768
+
+PASS: RAM1_AUX headers/services, 64 KiB code limit, loader CRC/bounds, untouched 32 KiB ITCM tail/RAM2, and stock EasyFlash swap ownership with legacy fallthrough
+
+PASS: real registry/preflight, generic .nes routing, client launch, one-shot record, duplicate extension, traversal, malformed manifest and corrupt module rejection
+
+PASS: DoomVM launcher/direct association, ordinary 1/2 MiB CRT fallthrough, protected extensions, non-SD routing, corrupt/missing packages and relocated boot-image bounds
+
+PASS: MVM1 image CRC, 64 header corruption cases, truncation, overflow, ABI, imports, entry and arena bounds
+
+PASS: legacy/profile headers, 3-section loader, payload CRC, bounds, short reads and guest/table isolation

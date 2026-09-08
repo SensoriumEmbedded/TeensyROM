@@ -14,7 +14,10 @@ const lockPath=path.join(root,'mpe/source-lock.json');
 const lock=JSON.parse(fs.readFileSync(lockPath));
 const adapted=new Set(lock.adaptations.map(a=>a.path));
 for(const p of ['vm/video/mpe_video_camera.h','vm/video/mpe_video_sprites.h',
-  'vm/tests/mpe_video_crop_test.cpp','vm/tests/mpe_video_detail_test.cpp','vm/tests/mpe_video_sprite_test.cpp']){
+  'vm/tests/mpe_video_crop_test.cpp','vm/tests/mpe_video_detail_test.cpp','vm/tests/mpe_video_sprite_test.cpp',
+  'vm/tests/center_video_test.cpp','vm/tests/full_video_converter_test.cpp',
+  'vm/tests/full_video_host_test.cpp','vm/tests/full_video_kernel_test.cpp',
+  'vm/tests/helpers/indexed_video_fixture.h']){
   if(!lock.files.some(f=>f.path===p))lock.files.push({path:p});
 }
 // Read every source before writing anything, to reject an incomplete revision.

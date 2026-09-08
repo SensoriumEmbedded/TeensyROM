@@ -10,7 +10,14 @@ int main(int argc,char **argv){
     for(unsigned i=0;i<64;i++){auto h=good;((uint8_t *)&h)[i]^=0x80;assert(!vm_valid_header(h,b.size()));}
     for(uint32_t size:{0u,63u,(uint32_t)b.size()-1,(uint32_t)b.size()+1})assert(!vm_valid_header(good,size));
     auto reject=[&](VmImageHeader h){h.header_crc=0;h.header_crc=vm_crc32(&h,64);assert(!vm_valid_header(h,b.size()));};
-    auto video=good;video.required_services=VM_SERVICE_VIDEO;video.header_crc=0;video.header_crc=vm_crc32(&video,64);assert(vm_valid_header(video,b.size()));
+    auto video=good;video.required_services=VM_SERVICE_VIDEO|(good.reserved[0]==VM_PROFILE_RAM1_AUX?VM_SERVICE_RAM1_AUX:0);video.header_crc=0;video.header_crc=vm_crc32(&video,64);assert(vm_valid_header(video,b.size()));
+    if(good.reserved[0]==VM_PROFILE_RAM1_AUX){
+      auto bad=good;bad.reserved[0]=VM_PROFILE_LEGACY;reject(bad);
+      bad=good;bad.required_services&=~VM_SERVICE_RAM1_AUX;reject(bad);
+      bad=good;bad.reserved[1]=32;reject(bad);
+      bad=good;bad.code_bytes=VM_AUX_CODE_LIMIT-VM_CODE_BASE+1;reject(bad);
+      bad=good;bad.entry=VM_AUX_CODE_LIMIT|1;reject(bad);
+    }
     auto h=good;h.code_bytes=0xffffffff;reject(h);h=good;h.data_bytes=0xffffffff;reject(h);h=good;h.bss_bytes=VM_RAM_BYTES+1;reject(h);
     h=good;h.entry=VM_CODE_BASE-1;reject(h);h=good;h.entry&=~1;reject(h);h=good;h.entry=VM_CODE_LIMIT|1;reject(h);h=good;h.required_services=0x80000000u;reject(h);
     h=good;h.abi++;reject(h);h=good;h.ram_base=0x20000000;reject(h);

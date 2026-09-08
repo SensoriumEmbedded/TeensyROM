@@ -1,0 +1,1440 @@
+{
+  "upstreamBase": "0997c5a066f87f8f6528ed3887684a80c5af17a9",
+  "sharedHostRevision": "8024a9107f24b586ed4ffad7cae541cfe59e7d37",
+  "artifact": {
+    "path": "mpe/review/TeensyROM+_0.8.0.4_MPE-1.2.1_full.hex",
+    "bytes": 6753400,
+    "sha256": "b14a3d3e9ee518bf0f8128970faa48b73666bdbb99cea14a4e337884a7d77bd8"
+  },
+  "toolchain": {
+    "arduinoCli": "1.4.1",
+    "teensyCore": "1.61.0",
+    "gcc": "11.3.1",
+    "optimization": "o2std",
+    "board": "TeensyROM+ Fab0.4"
+  },
+  "memory": {
+    "main": {
+      "itcmCodeBytes": 219048,
+      "itcmPhysicalBytes": 219052,
+      "itcmBanks": 7,
+      "itcmPaddingBytes": 10324,
+      "dtcmStaticBytes": 268352,
+      "linkedEndToStackGapBytes": 26560,
+      "ram2StaticBytes": 17600,
+      "heapStart": 538985664,
+      "heapEnd": 539492352
+    },
+    "minimal": {
+      "itcmCodeBytes": 136888,
+      "itcmPhysicalBytes": 136892,
+      "itcmBanks": 5,
+      "itcmPaddingBytes": 26948,
+      "dtcmStaticBytes": 345888,
+      "linkedEndToStackGapBytes": 14560,
+      "ram2StaticBytes": 12448,
+      "heapStart": 538980512,
+      "heapEnd": 539492352
+    },
+    "vm": {
+      "itcmCodeBytes": 93032,
+      "itcmPhysicalBytes": 93036,
+      "itcmBanks": 6,
+      "dtcmStaticBytes": 52640,
+      "ram2StaticBytes": 0,
+      "heapStart": 536923584,
+      "heapEnd": 536939968,
+      "hostCodeLimitBytes": 98304,
+      "hostPhysicalCodeHeadroomBytes": 5268,
+      "moduleCodeReservationBytes": 98304,
+      "moduleDataReservationBytes": 196608,
+      "executionStackReservationBytes": 49152,
+      "hostHeapReservationBytes": 16384,
+      "reservedAndStackSpanBytes": 275040
+    }
+  },
+  "unchanged": {
+    "ordinaryMinimalHex": true,
+    "mainMemoryLayout": true,
+    "baselineRevision": "72de2955be90c7bc9b4c41169b4848b427af2655"
+  },
+  "layout": {
+    "regions": [
+      {
+        "name": "minimal",
+        "start": 1610612736,
+        "end": 1611005952,
+        "usedEnd": 1610990592,
+        "occupiedBytes": 377852
+      },
+      {
+        "name": "main",
+        "start": 1611005952,
+        "end": 1613234176,
+        "usedEnd": 1612948480,
+        "occupiedBytes": 1942524
+      },
+      {
+        "name": "vm",
+        "start": 1613234176,
+        "end": 1613627392,
+        "usedEnd": 1613369344,
+        "occupiedBytes": 135168
+      }
+    ],
+    "imageSpan": 2756608,
+    "stagingStart": 1613369344,
+    "stagingBytes": 5369856
+  },
+  "tests": {
+    "firmwareSha256": "b14a3d3e9ee518bf0f8128970faa48b73666bdbb99cea14a4e337884a7d77bd8",
+    "passed": true,
+    "unchangedUpstreamFiles": 219,
+    "packageHashes": [
+      {
+        "path": "VMS/DOOMVM/manifest.vmi",
+        "sha256": "802de5ae380853970ce2d635749f3274127beb239a7b64a7d6fe2d2314fe1264"
+      },
+      {
+        "path": "VMS/DOOMVM/engine.mvm",
+        "sha256": "65244805eb5856ddd4bc6b9fc0db7200324585e1703dec62ca37a051dce8a71b"
+      },
+      {
+        "path": "VMS/DOOMVM/client.crt",
+        "sha256": "3f1de49341ff00875fdd859f37e47e72a7b8e0d301094c16e343030afe4637ed"
+      }
+    ],
+    "hardwareTested": false,
+    "notes": [
+      "Host conformance and image checks; no VM engine gameplay or physical hardware acceptance is implied.",
+      "Synthetic large CRT files test launch fallthrough, not cartridge emulation."
+    ]
+  },
+  "testLog": {
+    "path": "mpe/review/host-1.2.1-tests.log",
+    "sha256": "ccceb7b453baf1125c2d9c1188d88527aefffa3c35db3ce09c5117361157db75"
+  },
+  "localModulePreflight": {
+    "passed": true,
+    "scope": "Header, CRC, service, entry and arena validation only; no gameplay",
+    "engines": [
+      {
+        "name": "DOSVM",
+        "sha256": "04d0b247bd340cc193fd8697bb29a859e7fc5e25de34b14b6de69ad7dc7a525a"
+      },
+      {
+        "name": "NESVM",
+        "sha256": "8ad32d74846974bd539031190559d7cb76df2e098b92011b99f73a3dc646f2b0"
+      },
+      {
+        "name": "GBVM",
+        "sha256": "49ff738359395cb30f0f6ccb93eaed98d88bf3bacb14a7de350640e35828fd61"
+      }
+    ]
+  },
+  "compiledSourceInputs": [
+    {
+      "path": "mpe/host/Min_TeensyROM.h",
+      "sha256": "06ce783d63af45f5fc7c418b574b577be20d11f4c5328fef86a59b5d8f9f25ed"
+    },
+    {
+      "path": "mpe/host/MinimalBoot.ino",
+      "sha256": "1e3b2384fe7ecf69c1944ff5e322ae2f0b5bb42b4e665cfe3b4b391f7b23babb"
+    },
+    {
+      "path": "mpe/tools/build.mjs",
+      "sha256": "733cb8f198295817bae7ca8e6dfdb3d8138ca92e07e85a435cfb94fdeee1923a"
+    },
+    {
+      "path": "mpe/tools/hex.mjs",
+      "sha256": "50d68a3678cb8e7e93b1665f8559b512a7920d20271178a1c55b4b76afeb1bcd"
+    },
+    {
+      "path": "Source/BuildInfo.md",
+      "sha256": "98fa6e874583ebd1bcdab395cdd87145b1472b53b2fa02db9c615bf063afd5a7"
+    },
+    {
+      "path": "Source/C64/ASIDPlayer/.gitignore",
+      "sha256": "1db9ee75ad03a4cc5da847a124c124a55f9b20229a626a8e5c6767b727829197"
+    },
+    {
+      "path": "Source/C64/ASIDPlayer/bin/ASID-charset.bin",
+      "sha256": "c1d495a241caf45eab36e0b57d510a3d3e65e8954e6b1255a96a5d33228549fe"
+    },
+    {
+      "path": "Source/C64/ASIDPlayer/buildASIDPlayer.bat",
+      "sha256": "8bdb66defc362d075ec8e94e67711ce96e4f5d6998edf429fd989184c1040b09"
+    },
+    {
+      "path": "Source/C64/ASIDPlayer/source/ASIDPlayer.asm",
+      "sha256": "468b4857374a194ae594f390095da19f07ec795cf60b7f0051a073b59240f9ba"
+    },
+    {
+      "path": "Source/C64/ASIDPlayer/source/ASIDsupport.asm",
+      "sha256": "ceb8bcaeab9df0627e128bb2e97bdd7a89af5c7cb595827d6888ce18a5b3e979"
+    },
+    {
+      "path": "Source/C64/BASIC/build_prg2header.bat",
+      "sha256": "d491cb216caa6d1ee01704e412fe0ecd794b58d3c0b2084ac18fc0f4487a889e"
+    },
+    {
+      "path": "Source/C64/BASIC/cia tod.prg",
+      "sha256": "130bcd4d769ffe8ab4c68120372adae3b0e27f6c44adb5d2bfe2e9eba886d9db"
+    },
+    {
+      "path": "Source/C64/BASIC/DMACheck.prg",
+      "sha256": "58b67636105f2a93b699bebaa8d239372463a6d388623b9e69d829afaafacb03"
+    },
+    {
+      "path": "Source/C64/BASIC/empty.prg",
+      "sha256": "43c7a440698026153be5bf84aa60000ddc9fa8d5e662e3079e62c44ce585eabb"
+    },
+    {
+      "path": "Source/C64/BASIC/Load8Run.prg",
+      "sha256": "a724ad44339983fcd66e9c4774279c7bee1f9a9e139baac78669f60d1cc30ee6"
+    },
+    {
+      "path": "Source/C64/BASIC/shclock_tr.prg",
+      "sha256": "7683933bbc3fc41f1b3f356d7d3e7f1f9bdd8393db453d0b9d9d81a3b9f981ba"
+    },
+    {
+      "path": "Source/C64/BASIC/SID check.prg",
+      "sha256": "268a6b1a0bc19fb4e6286872b9ca616fe5ecbad3b0e2d3abfc05761b0da2521e"
+    },
+    {
+      "path": "Source/C64/bin2header.py",
+      "sha256": "2f7f177c1ba1c2be70a27e52bb4436c4356c4f500e31e54f81d19d4f7b7eb8b1"
+    },
+    {
+      "path": "Source/C64/BuildAllC64.bat",
+      "sha256": "0b7171489c73a5a78cdc1c800dd22e9a2f1d9d7d7c41dacba079e9a29e67fbd8"
+    },
+    {
+      "path": "Source/C64/ExpansionPortTest/.gitignore",
+      "sha256": "805f8f1f6da91491a8f2c63fe0db47fe5f85fb50a91611bd7c445a0c70d23a52"
+    },
+    {
+      "path": "Source/C64/ExpansionPortTest/buildExpansionPortTest.bat",
+      "sha256": "1760e06c55bbeb6569a6beb311993564676063ec6136eb8370a3238db1c2db44"
+    },
+    {
+      "path": "Source/C64/ExpansionPortTest/source/ExpansionPortTest.asm",
+      "sha256": "d47eb2c3e68b94e0737533466a516bc7bdab6b99dd864357c7e37ad750f42f4d"
+    },
+    {
+      "path": "Source/C64/ExpansionPortTest/source/StringFunctions.asm",
+      "sha256": "c46b393b3f92cd0a1e30812c84434efc5a7f1470220c8be62761d5ef1d966d0a"
+    },
+    {
+      "path": "Source/C64/ExpansionPortTest/source/SupportFunctions.asm",
+      "sha256": "b00767a7c4ef3c72951bb5540630a96bdd6b73586179cb661bce9af167b3a112"
+    },
+    {
+      "path": "Source/C64/gen_menu_regs_i.py",
+      "sha256": "d6ec2ac434383193127615c0139798a11d76de51f1e346289c1f8b2787b7f3aa"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/.gitignore",
+      "sha256": "af750417ffc9bfc5999d326fc7cadc7ee24bc2bedd7c3d4ac1820f232e3cbe9a"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/build8000CartBin.bat",
+      "sha256": "44dbf3c881da13c668f4535ea0aa2d694796a4f26b35d7f3e05fdbd52f0e0184"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/c64defs.i",
+      "sha256": "343337222c62d119566c73a616c10d5a4a95f04dfce8f153bccfdf84a12fc638"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/CommonDefs.i",
+      "sha256": "a101e4076a5a4d375638243ff33a0b617e0f9614e955f37d359d85fcf0393c9f"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/MainMenu.asm",
+      "sha256": "0559f2338d2cadc9095875dcc497770e3e900908feec3562fbdcb8848f035c72"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/Menu_Regs.i",
+      "sha256": "b65cacd8929f28cdfa9dd44ea82a69bfa50a8a420be154f2c9a413d4e7c26ada"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/PRGLoadStartReloc.s",
+      "sha256": "70d8dba52761df64fdb352257121b2040b0fb22dfbf927db7b4c63a670dd96f7"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/SIDRelated.s",
+      "sha256": "57f09fb77935db4b2b5cebf95ca29c2c0b469bc5d378c818ee5814c7ed4f6460"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/StringFunctions.s",
+      "sha256": "3f0242da8f572c60bf53fc781b3c7aa14b5adb41078081626654d2c5c73bc3ab"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/StringsMsgs.s",
+      "sha256": "d72c48cf4031f95ba14f60651470787b85eaae009af2d4a94726fab70db20c01"
+    },
+    {
+      "path": "Source/C64/MainMenuCRT/source/TeensyROMC64.asm",
+      "sha256": "ad4c057139f3fcf4edf2100ae860435c44499a0f6cc1094c3cc1e7c60e5f0704"
+    },
+    {
+      "path": "Source/C64/MIDI2SID/.gitignore",
+      "sha256": "af750417ffc9bfc5999d326fc7cadc7ee24bc2bedd7c3d4ac1820f232e3cbe9a"
+    },
+    {
+      "path": "Source/C64/MIDI2SID/buildMIDI2SID.bat",
+      "sha256": "4cf3b80e140fc3ce055477f96f083f9f24bbf80f7eb2dbf6223583f27f994d16"
+    },
+    {
+      "path": "Source/C64/MIDI2SID/source/M2Ssupport.asm",
+      "sha256": "666459462e19aadfb5bb9aa6390b44674907d2c49611fd355388d55b38a6299a"
+    },
+    {
+      "path": "Source/C64/MIDI2SID/source/MIDI2SID.asm",
+      "sha256": "92ed5257a8facf43ed30a01624207aa39a8d86c6c428b1aa6c1aa37c179666c2"
+    },
+    {
+      "path": "Source/C64/README.md",
+      "sha256": "43687f2d77a39d46f50faf0ac9406de7ba50584e6ba18029ea557801a7f037c4"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/.gitignore",
+      "sha256": "805f8f1f6da91491a8f2c63fe0db47fe5f85fb50a91611bd7c445a0c70d23a52"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/buildSettingsMenu.bat",
+      "sha256": "2983f033eee2dec2dba061e6d420df63f123fd9dd835d7320f2306f2855c8a17"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/_SettingsPageTemplate.asm",
+      "sha256": "e0a0dbf365fb52d9083a288b161691ee5a53f7068b1e1a1c1cb915827492ba61"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_ColorConfig.asm",
+      "sha256": "d9a2dd9aba264c3013c8524041b41daf9fd466c97a61c0dfa4bcd76f088e5a8d"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_EthernetSettings.asm",
+      "sha256": "8ab04f531efda5781fcb47774b765fb65ee89f432d457cf427559377c74006cf"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_Index.asm",
+      "sha256": "85aae40c8a45c71a198cb5119dbc399a05d8b992f2fa0d92922ca193003bf5f9"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_InfoHotKey.asm",
+      "sha256": "e5a98cc93f9a3117afc6404af270a1bffa4cb87a0561c959cc3cf6379bce10d4"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_InfoOther.asm",
+      "sha256": "59ad36a610917e7bf7e79ce598cd01b45f52242db917a0f918cd72ea01aecc72"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_MIDISettings.asm",
+      "sha256": "cc16e961cb1219d9ccb99a4b2960239b180a9dcc4b35a0fc67aec9ab6a13364a"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_StartupOptions.asm",
+      "sha256": "3956e2ba735923bd9fb62fa5ae30647c4b28171e355f096e37ab54a9aebcffdf"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_TimeRTCSettings.asm",
+      "sha256": "ef47969ea47831a53efd66868dfc95c650364081996cd7f3e9d27d204b88acd7"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/Pg_TRSettings.asm",
+      "sha256": "4f354dca76ab7c38545eb2ec543b074c2e11a3611a35cfa4b034cce39fb8b32e"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/SettingsMenu.asm",
+      "sha256": "3cc1d14bd3c7084f9b06b0f445a409a15800c668631ab84e020bfac56ee9f8dd"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/StringFunctions.asm",
+      "sha256": "16e9e8951ec94b3b805bade6d51bcb9435685a2976ab155ce7e557e898b933ce"
+    },
+    {
+      "path": "Source/C64/SettingsMenu/source/SupportFunctions.asm",
+      "sha256": "872817561094f28dd7f1a096f26e5d2c6d97a4fb6997b0a6ee090c803dea5e60"
+    },
+    {
+      "path": "Source/C64/SetToolPaths.bat",
+      "sha256": "8f5b8fe8f978f58aa46d30d373e933ad230bf981222d1f352df9b075bda1bd51"
+    },
+    {
+      "path": "Source/C64/SimpSwiftTerm/.gitignore",
+      "sha256": "df2dd9535053880103ba1d2e1a78c53a8879d15be534bf33ab0790aa34b7c149"
+    },
+    {
+      "path": "Source/C64/SimpSwiftTerm/buildSimpSwiftTerm.bat",
+      "sha256": "4948b7bfa0c89c4598b00f0730baeb669b1daf436f17986cf18a379512cdda1f"
+    },
+    {
+      "path": "Source/C64/SimpSwiftTerm/source/C64Defs.asm",
+      "sha256": "9b15f05da922292260923246eadd3220f64746550a7b21fa48be5b4e7615e5d9"
+    },
+    {
+      "path": "Source/C64/SimpSwiftTerm/source/SST.asm",
+      "sha256": "ed43501951cde5064d0574b0e759472384295a019ab26046d1364ce842dbf850"
+    },
+    {
+      "path": "Source/C64/SimpSwiftTerm/source/SSTSupport.asm",
+      "sha256": "0b0e55867021892fd5f08b6789cb3b0144bb2709b34013d3028586c1a9bed936"
+    },
+    {
+      "path": "Source/C64/TODCheck/.gitignore",
+      "sha256": "0cc677f741e52357f047bcddfd5330b628d57a993dc89e9977c742f17a57e8e5"
+    },
+    {
+      "path": "Source/C64/TODCheck/buildTODCheck.bat",
+      "sha256": "1cabbf73aa9742e8c2f5807cf675661a61dd044bafba27ab33069043e04fc866"
+    },
+    {
+      "path": "Source/C64/TODCheck/source/C64Defs.asm",
+      "sha256": "9b15f05da922292260923246eadd3220f64746550a7b21fa48be5b4e7615e5d9"
+    },
+    {
+      "path": "Source/C64/TODCheck/source/TODCheck.asm",
+      "sha256": "ef04198dc7ea5d023c4fcfd7cd177b344d77763ac356bc7ee09bf58bbc98ff23"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/.gitignore",
+      "sha256": "386e2915626a78d91f3ba9285874132410934420a3567f0a21c4b743653c3eda"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/buildTRCustomBasicCommands.bat",
+      "sha256": "a683a809917c145201efec9fb9db7e748f5ed14f75747f9b4718a7b6c4ab2e43"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/all.asm",
+      "sha256": "3a583b8623ac7af15716130282246254381a5f48c08bed1ed4f721021a2b430b"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/basic.asm",
+      "sha256": "e4666086e2c7ca711f06851bd99dea6277b70f2d09eacf2ef28632e2d899ffd7"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/kernal.asm",
+      "sha256": "4d7ecc3d05a25172f7953697337eb5d62afeef880cc2c2eafc6272b583ccdd73"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/labels.asm",
+      "sha256": "85e15f0c3fa9b4dea2215644004d5ff841f1125c0406798eda803db7843bd766"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/macros.asm",
+      "sha256": "cd5654443f9c8a933f1311c2b7b829e908b318c3da9f10c6b76af9445f47930f"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/pseudocommands.asm",
+      "sha256": "fc1cc3e24e79150fd3b84f05cc790e1bd93a06a504b3337ad8fa8e2b6898a913"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/registers.asm",
+      "sha256": "5a53591da59faac59492fcba1917110411756d06c63f66c5bb5348754eb14def"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/timer.asm",
+      "sha256": "c54728da0acba1a862bdb9dc6929906b526d520c43dfd34f67f9adc2e5ca6e7a"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/vectors.asm",
+      "sha256": "d293651ffd0c33b70a12be5601b77c42b09f18bddbc38810f0c2a4d46cbbb500"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/vic.asm",
+      "sha256": "c243f01084a260781f636105e7acb888039df42f933e7c2f36ba188156eb84cc"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/include/zp.asm",
+      "sha256": "01b1de8990d8370494c3fdf8b24c9f94f0bd1c769b04fc009adaefc3d943f769"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/main.asm",
+      "sha256": "22fa7a213c107e2e293f50344195f36a542beb736f6491525e81b5e4afd874f9"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/memory.asm",
+      "sha256": "de0a6e038237d33463750bdfdaa3801c8670f581eac22ea040d76d6b49a5b464"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/README.md",
+      "sha256": "bb1a8a37c077665a6244f7547351adc029adec2ad532da5ae2a45e3dfd668384"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/reu.asm",
+      "sha256": "abd991fef7f1d2433ab95208c4e2b7812de57bbefebd0b9a99849c8177e36017"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/sprites.asm",
+      "sha256": "115538188fe9a33ccd9d08dfb0665ec22df12cb7d5fce8c1ab36a04f80e94aff"
+    },
+    {
+      "path": "Source/C64/TRCustomBasicCommands/source/teensyrom.asm",
+      "sha256": "c5b57de7238b49c15791c71e8bcf1f9e8117a772328bb32f209d8cf1455dc42d"
+    },
+    {
+      "path": "Source/C64/TRExtPortCheck/.gitignore",
+      "sha256": "805f8f1f6da91491a8f2c63fe0db47fe5f85fb50a91611bd7c445a0c70d23a52"
+    },
+    {
+      "path": "Source/C64/TRExtPortCheck/buildTRExtPortCheck.bat",
+      "sha256": "1be61ea1e51a0b02a7c341a31c67adcfda8aa9be159d5be97a718fdc434bddf1"
+    },
+    {
+      "path": "Source/C64/TRExtPortCheck/source/StringFunctions.asm",
+      "sha256": "772d053017bb74e660e6e85d8cc8a575f0b67b5eb2a0d15493f14c855ddaaf60"
+    },
+    {
+      "path": "Source/C64/TRExtPortCheck/source/SupportFunctions.asm",
+      "sha256": "b8c4a7d0201227be1806c47de12c0aeebc3703824220f7d0c05f4d5c8321ca3c"
+    },
+    {
+      "path": "Source/C64/TRExtPortCheck/source/TRExtPortCheck.asm",
+      "sha256": "68d851a4492564e29aac6c289a9a1efa751428d670e932e854a74ecf2f80f666"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/.gitignore",
+      "sha256": "805f8f1f6da91491a8f2c63fe0db47fe5f85fb50a91611bd7c445a0c70d23a52"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/buildTRHelpScreens.bat",
+      "sha256": "c56493902eb4c53337e201629dfbc2489378dd7c90552509c2695b1668b329b5"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/_PageTemplate.asm",
+      "sha256": "ac2a865e967f72545b6c8a5738cd980d9682c4274f57a5e14a3a80990e51ffdc"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/Pg_HelpInfo.asm",
+      "sha256": "03e9f4902d55cec30dac8cf1a48174c3102e1f119b8b3acd2e2ab10d19f48bc1"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/Pg_HelpInfo2.asm",
+      "sha256": "345722c9110b15b98816842199b3c9146b0871b9d84759bdb4682c3b6bfb14b9"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/StringFunctions.asm",
+      "sha256": "1f246d12948bc5db4eb43ca8d66b9e8cdcf0bc85d55f8b034730e74ca1537332"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/SupportFunctions.asm",
+      "sha256": "c035956dd5caf338ef0106c84936e26dec9fddd241498125c55d0e67658db161"
+    },
+    {
+      "path": "Source/C64/TRHelpScreens/source/TRHelpScreens.asm",
+      "sha256": "c5c5b3f7a448a1af5f53850b1b57731eb9ec878dc5de81f83cf8846c53f753d3"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/.gitignore",
+      "sha256": "1e0875e430cf5abb097cfba90e820c0934efbffec0dfb008b19ec719e36cff20"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/buildv1541Wrapper.bat",
+      "sha256": "4dc5408ffa9d96c0c3d0efb5fa07576ffd289be4207efa8071550ad908075f27"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/source/v-1541.19k.sl.prg",
+      "sha256": "d963cdbaee338212af23bbe2c86c544ed6f44f21e71be51eeb9344b8bf58e5d1"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/source/V-1541.D64",
+      "sha256": "c8099e221736087ee38109605dbab609bd1994c9d351b9dcbe5e0a2d542ceaa6"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/source/v-1541lo.19k.sl.prg",
+      "sha256": "a514b3453e030da0bc23f470c09233970357774b4e152a0d1a1d8f8242634563"
+    },
+    {
+      "path": "Source/C64/v1541Wrapper/source/v1541wrap.asm",
+      "sha256": "bd38f269bda6218c52e04b4f807f78a151e674f2b4d97f4fb263b67c6be200a7"
+    },
+    {
+      "path": "Source/Teensy/.gitignore",
+      "sha256": "af750417ffc9bfc5999d326fc7cadc7ee24bc2bedd7c3d4ac1820f232e3cbe9a"
+    },
+    {
+      "path": "Source/Teensy/BusSnoop.ino",
+      "sha256": "cd929ddfc4a98e37cb59967c1e66e2fb7e1732fffedb0c6d1a9e9b3be1f70c57"
+    },
+    {
+      "path": "Source/Teensy/D64.ino",
+      "sha256": "c385b88f90fa3e83ea5c9deb7efce6b9a29c9822386152b8e13416cf32609f66"
+    },
+    {
+      "path": "Source/Teensy/DMAControl.ino",
+      "sha256": "b03f0a92d860273d88c8b576b25dc8f9a0a396b8e9cc8000efb8231504be5bc2"
+    },
+    {
+      "path": "Source/Teensy/DriveDirLoad.ino",
+      "sha256": "2e61a9dfa4f1d67d83daa1922ea4946cc345a531b57ff9d0af504e344d3b7231"
+    },
+    {
+      "path": "Source/Teensy/FileParsers.ino",
+      "sha256": "dc597377d431ca39d311be02ab67c4068685730e75caffe0298f7be05ceca816"
+    },
+    {
+      "path": "Source/Teensy/FileTransfer.ino",
+      "sha256": "da8a267ebcea53dd0a626f073ced3d68e7dd4cd3641fe896254aa45ca17ad658"
+    },
+    {
+      "path": "Source/Teensy/Flash/FlashTxx.c",
+      "sha256": "c5910d66de055e0326448911918f003ce2b2d9b3babf858a257c5f30105e5669"
+    },
+    {
+      "path": "Source/Teensy/Flash/FlashTxx.h",
+      "sha256": "e1feae71e204112b6053303f8b2ffb2b617264a3d3ec52511103f612338d4851"
+    },
+    {
+      "path": "Source/Teensy/Flash/FXUtil.cpp",
+      "sha256": "ca7d38d3647af2718fbf96eaee64cac14f68c3d8e4821307074ffd37665db465"
+    },
+    {
+      "path": "Source/Teensy/Flash/FXUtil.h",
+      "sha256": "fc8725e4ef3da514b6736d4086d424df43a5b26abf21e8a4d3d0f94dac7ec0c1"
+    },
+    {
+      "path": "Source/Teensy/FlashUpdate.ino",
+      "sha256": "ff293489c34e9c0606fd7f8fdd3fb06878ce3dff6de6055d56315c082d5c5e72"
+    },
+    {
+      "path": "Source/Teensy/IOHandlers.ino",
+      "sha256": "49068a55b0ca6a6c995677a3ba69f25695b1a788f8bcc06612ffe8dc70c505cc"
+    },
+    {
+      "path": "Source/Teensy/MainMenuItems.h",
+      "sha256": "efc23da57486ff09a5dba05a8d289397af0384aa9fa1cb629d00f975675f8d6a"
+    },
+    {
+      "path": "Source/Teensy/MeatloafComm.ino",
+      "sha256": "325b4570abf2ee635fc8fa56a8d47b04067a495993068b326609f4b96daa1048"
+    },
+    {
+      "path": "Source/Teensy/midiDevName.c",
+      "sha256": "e1fc5c9eaf7f5a0959fb81d4b5f99bd0a1708b401c14f4828c7204acfc981f6b"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/.gitignore",
+      "sha256": "5e007ede04f1310e2abf738b2b198563394a79ebc3a0c5945b7b5ac80069d6f6"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/___These files used by both main and minimal builds___",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/Common_Defs.h",
+      "sha256": "b3f65d8068c574e2f53a19130f46638c48d7d7c3cd89da3016cc92ba2fb045cc"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/DMAControl_Minimal.h",
+      "sha256": "4b6c45414e124d0478b67ab2e317c5ec3a6dbd60dbb07fcb514804515021b624"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/DriveDirLoad.h",
+      "sha256": "e1899986e3175cf2da827812bc501ec637685eb127d4ad4972aee3291b5bbc4a"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h",
+      "sha256": "2e51dbdca2330fdc15268dc3f4cf8831f56d0909ad6fc5bf6a671baa77aac182"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_ActionReplay.c",
+      "sha256": "55cad616ed3d2b88777369de7b5f4aa56f2ad570892f2d52e079587dc5752d1c"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_ASID.c",
+      "sha256": "34f1a843bfcf0636a0e41de847db3a9d66205c383d9d6bc6d638a2a33f8ad41a"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_C64GameSystem3.c",
+      "sha256": "a037567b529d4cc2d7ebe802c325ca14db6467da20231fda2be12cb55c47110e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_Debug.c",
+      "sha256": "bb2d49a3fd9f6e1e79e23d348dc86ece263b0675ebf6694833ddc8553d452595"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_Dinamic.c",
+      "sha256": "138e42ab7301f5d37aabc095e338b1cd4f810e23a037560ce8a94fceb84f0d80"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_EasyFlash.c",
+      "sha256": "b332bdf9f11aef51594c5ab242310bf19ad25c71cd598b32d5d35e86d6c6cdd8"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_EpyxFastLoad.c",
+      "sha256": "3a95b880f3a182a41b0dff8a3c44000eb1e273734aecd4bfd7f9ae4639f87671"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_FunPlay.c",
+      "sha256": "c6c0c14b2cfabf525f922a63bb1724cd7723eb3cfe7c15bf2fb358bbe6ecd6b5"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_GMod2.c",
+      "sha256": "d6624a0fd3dfbfa9a6fd1d0b6dfe5a22608ebbb786c2c11fd6602a125205cc39"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_KernalReplace.c",
+      "sha256": "a6f3b0ea1673f65670f6cd17695cfddf8e3273127d6f8b7a13f6d8d39d96e06b"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MagicDesk.c",
+      "sha256": "2468d4820cae3f078d715cecd96fe21f8a62ca4e30975c7b4aeff1448292c32f"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MagicDesk2.c",
+      "sha256": "cbe1b4699515934e0f0dc94ed077e402d2f32ba743c0a61a254458a9f3dcdbe1"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MIDI.c",
+      "sha256": "b3cccf4776de590077de2514d874eac4a2e0f5cdd8f236ea1e2fbb2baad1a7da"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_None.c",
+      "sha256": "357d6039b51c0b0c65cd4c213bdbb34c9fb9f3e92043e170d823384b50cbbf78"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_Ocean1.c",
+      "sha256": "030f937d6770003cf5b052e6d10974063b7aa88ac1c57ad612fa4ddb96a004e8"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_RetroReplay.c",
+      "sha256": "9c834f9bf2fb5d7d12208b733597c082a5c4ceb066a83095e5a0b1a2e39002dc"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_REU.c",
+      "sha256": "0f9c0b627350276721b8cb2b5a3717e7a336f2f23b73516393bf07ec8dc86d1e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperGames.c",
+      "sha256": "0aa31847f2b687484c74cc691fa55a1ec2d98ed8834265718edd0d1d72dddf41"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_SuperSnapshotV5.c",
+      "sha256": "4c4a2a568db15cb090605cefa919619330f05315108c2457d888b52618539455"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_Swiftlink.c",
+      "sha256": "6b1855ef73bdd0f1c39d33d302b324cd6c95a23b136d601364915a684f97f785"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c",
+      "sha256": "ab9b5ef45feebc04ca6162984e5cdeaa4caa8a7d6f1744dfb860f81addbfd330"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TR_BASIC.c",
+      "sha256": "c13dfcc235628b58a45d78df5d06aaa1f51d0c53c22fde017fb71b7a3461204a"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_ZaxxonSuper.c",
+      "sha256": "fa6797a53f95254cbb945e5d014d8eee619eab92f905b24abf0755e6b91f4601"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c",
+      "sha256": "f21d66f5bb8396ab62fa0d4de35be3fb10cc4157ac143025c01a5f36b9203d6e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/Swift_ATcommands.c",
+      "sha256": "13fb1610d8e7c39215b34f22ff16149520f315d9e8f102caa7d19ba298554971"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/Swift_Browser.c",
+      "sha256": "11e6e614f794132bb0fcc942a9b9da3053a69a4134279c6af3df112ecd032c74"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/Swift_RxQueue.c",
+      "sha256": "2bc9638e35558d1cb760b5b57e84831d3bc8fdfc0c12e48865b16bd4ff918f23"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IOHandlers.h",
+      "sha256": "0e06b7d20ad5988431525ca6948d979e2c80d048b508215b33b94fbe8ff17344"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/ISRs.c",
+      "sha256": "573161c4de94e912e8ee41bec77385d3a8e5274bb07eee74d8b245252390c8d0"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/Menu_Regs.h",
+      "sha256": "603e2dab866661b6d2b3a5aa95546b7240f6bf0da5373b17929c1d37017f7ac7"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/MPEBootImage.h",
+      "sha256": "f72b6bd7698b426e2760b93dee240c9e52b76c646d8f456bb3b29c8c6f6e4189"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/MPELaunch.h",
+      "sha256": "24a5e11c8319e4dd000b82cc6e45b904d866ac6ee2a5bff8310f44722481c2c8"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMABI.h",
+      "sha256": "7b76d312eab8dd2fc912aee735b7bb15aca7d6f2ff91b56d8358c3b52c76531a"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMFiles.h",
+      "sha256": "c6f487db2116108a18fd49a7fb20f71408465b01535ebc4c8f1a3fddb5fd11c4"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMImageLoad.h",
+      "sha256": "10b98a8f25238a49ffd6de26aca3ac69eb21d21bccef5c449f78d1f694bec29e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMRegistry.h",
+      "sha256": "c0be3f3dd013e598321431226542a5f17c7d4124e0241bb6e5038448924ec97d"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_core_cm7.h",
+      "sha256": "6a334af1dfddd4a565caed5e37d86c21d6718c2898b986c342cac3e42753dcf8"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino",
+      "sha256": "9a4ac4a32d930930d01cdcf24b9b733193b94850eb363b63dee82e2302010ee0"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_RunTeensyApp.ino",
+      "sha256": "63400f3a3418b0841f8c7e4f098db064834cf575741837b53cd2cdf0f55ff545"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_SerUSBIO.ino",
+      "sha256": "a078ad4e4b3dd5bc9308cb08cb2ba8d04429732efe8cc6dc7240c6736fda7599"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_ServiceTCP.ino",
+      "sha256": "8e7f8069466a7e3eddeda233b74937c8f19144a09e55e848a2f09aaed2ebfdfa"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Min_TeensyROM.h",
+      "sha256": "f88289ab8deac70703bc6885317f705f9303336bf5f0e4ecec976ef79e66227e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/MinimalBoot.ino",
+      "sha256": "b0258b14de7d3af89cca2cd1ac8816b3d09d973944d57d2ab0ffab200f269c69"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMHost.h",
+      "sha256": "1cfc10d1943f8dc2d7afad78a18809105be0e33df17f5cf09a5224c9111e3c82"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMHostPoll.h",
+      "sha256": "211826e37f1407f24c12efb80e5565340adc07ab7b4d39982204725924a98aca"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMIndexedVideo.h",
+      "sha256": "a37b9ee4d81c0e6a3b3b28ba7fad750ad2b480b3495bfb9042a774ff84742a74"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMPacketReplay.h",
+      "sha256": "0e65e331134342108a5d1cff63d66fc5e45bf1715883bff9d691b8a29cb29d3e"
+    },
+    {
+      "path": "Source/Teensy/nfcScan.ino",
+      "sha256": "cd5238cfe3ca44b7ec47817214b1f0a193a66cd408991b5bad358554efc745a0"
+    },
+    {
+      "path": "Source/Teensy/RemoteControl.ino",
+      "sha256": "39359bbd5a83e5570563fff52d715e5377fc376e5bc2988a4c2227d894f6476f"
+    },
+    {
+      "path": "Source/Teensy/SerUSBIO.ino",
+      "sha256": "dbc0548ac9b4bb32a74accc22cce10cdd5ea2213ff65cce6bb895476ccf7eb89"
+    },
+    {
+      "path": "Source/Teensy/ServiceTCP.ino",
+      "sha256": "3dae93b0b986647f10c827b450b498bf70a61727ffa5811bea2e551d4bef0a1e"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/license.txt",
+      "sha256": "f0c522a8410c798e41c294d2033001b1379c16447e0bd56865a7918d210d11d9"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532_debug.h",
+      "sha256": "dbe31aa87fb32f2b68895259c86ef74d97307102b61ba5ba272b4eb3d1aab3ae"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532_UHSU.cpp",
+      "sha256": "6ba88d05a5ae1783a52eb46f51ecb6cf40fab54c4be9d5973c041ca927e907f9"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532_UHSU.h",
+      "sha256": "1f444d828de23cea4a98048f86089f91d981c576c51bb63171ce86be42a1271b"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532.cpp",
+      "sha256": "1054621b62881be8b5c5d3df1d0c367d8b38d1a4b6425543625f1131d07c8d43"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532.h",
+      "sha256": "d6672e267b3934e78e6ec9f13e57b6860a12925a1249a16be692ad94bf03f5e0"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/PN532Interface.h",
+      "sha256": "89600a2407d552806a0443ca4155d7b9ed11ddaf7c0836ae6f7ec27b90bccffa"
+    },
+    {
+      "path": "Source/Teensy/src/PN532/README.md",
+      "sha256": "0dd33a34965117ba74f1ef6c8cd382f2d658d564b31c082ef62c349cd63f829a"
+    },
+    {
+      "path": "Source/Teensy/Teensy.ino",
+      "sha256": "bcf70a00cf8397ad9c7f3e2a7129a299e1fb4f840b3f82c709f9dc4f52be62c9"
+    },
+    {
+      "path": "Source/Teensy/TeensyROM.h",
+      "sha256": "3cdfbf6b5a9f22e3b72f405453cb584f0a3fef31e592b48c60e187889eb8d4af"
+    },
+    {
+      "path": "Source/Teensy/tools/_Build-Both TR and TR+.ps1",
+      "sha256": "94b1c56f5b3e13d669e757adaf2bd2b93671ef5fe99e9d7aa86a21411fc6aadc"
+    },
+    {
+      "path": "Source/Teensy/tools/_Build-TeensyROM.ps1",
+      "sha256": "513d2f1e560b17fc8c833cef9e8d87f0eb9258cc53e031895d86082b8a04bf0d"
+    },
+    {
+      "path": "Source/Teensy/tools/_Build-TeensyROM+.ps1",
+      "sha256": "670a7ed350f5d812d2f25ad63b847aa9e5c8795a74dfaab3c3b6c3d5c60db4da"
+    },
+    {
+      "path": "Source/Teensy/tools/.gitignore",
+      "sha256": "f299f04b240fac8dc35f9ca0f3dc32328cb74758a581ba079ffa9e87c39e209c"
+    },
+    {
+      "path": "Source/Teensy/tools/BootLinkerFiles/bootdata.c.orig",
+      "sha256": "3eb3e390669dd3817cc09b619de1806242f23fa50d1022720cdad2e8816612b4"
+    },
+    {
+      "path": "Source/Teensy/tools/BootLinkerFiles/bootdata.c.upper",
+      "sha256": "5da95c6ecf3ac3661b769a180434bd888fa1159d7fb068f62f430a25120c63a2"
+    },
+    {
+      "path": "Source/Teensy/tools/BootLinkerFiles/imxrt1062_t41.ld.orig",
+      "sha256": "a9b7041a568c3cc57701cc0d773b300736bbc519a78b56f35b7611f80792eaa2"
+    },
+    {
+      "path": "Source/Teensy/tools/BootLinkerFiles/imxrt1062_t41.ld.upper",
+      "sha256": "8bc395e904561b4cfae2d093e7dbc0361c0eab7d0d49f673d69ecd2db125cb2e"
+    },
+    {
+      "path": "Source/Teensy/tools/Build-DualBoot.md",
+      "sha256": "6efb781c10e5b44782785ec7eb8292a5b9f0b150b08f5dc7b9be6d395765d362"
+    },
+    {
+      "path": "Source/Teensy/tools/Build-DualBoot.ps1",
+      "sha256": "b1f4975d441893f09460cf5e11663271a16cbf7acf0503f33060d564e50c89e5"
+    },
+    {
+      "path": "Source/Teensy/tools/Clear-ArduinoCache.ps1",
+      "sha256": "52bc10b065ec0b585a26875522cdde5776c398ab9cadac677ba4d20c7dd0ddb3"
+    },
+    {
+      "path": "Source/Teensy/tools/HexCombineUtil/HexCombine.exe",
+      "sha256": "3ce40fd810b250881c71fe9adc2cfe53d76ee0af35002067344ced2ea12aa558"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/Ex_Pie2.art.h",
+      "sha256": "ed8310e48e609fdb249be81c30ebc8b69b12cd3d25a3cae38dce5723595b39bb"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/HA_Bluejay.kla.h",
+      "sha256": "500a5dbc183aac2f744bd6bed849f1b5c77e1e614ae76dbf404bed2afd13a51b"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/HA_Hummingbird.kla.h",
+      "sha256": "92c3f9ca026b7f1699ed6e7dc982eba12496d994a9590c1a1d99d6c4d71cfa97"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/HA_Sugar_Skull.kla.h",
+      "sha256": "8d4eba04c3b4ffc351dde14104af161bf29b8b1690648494cdcfe1a6d01f153a"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/KP_Bird.kla.h",
+      "sha256": "7707f7ba16432448bc9de44672bc943a32b442d50c5632b701253fb1177944d7"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/KP_Burger.kla.h",
+      "sha256": "917aee33cd5e26672ddc7b687e2d5bfc10ab16cb96c9ed0edb008de5ea595739"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/KP_Koala.kla.h",
+      "sha256": "51931dc5b64294a4eebeecac409a6630fe1840ae6be8eeed6c8ab69649c459f2"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/KP_Tiger.kla.h",
+      "sha256": "4e93a7c6d369cf42e1052a9c0f1a05b5a6dff66e738faa031950a60469c952f7"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/LP_Boston.kla.h",
+      "sha256": "53bc9853678d689a04fdb3c69be0041f50320e33749d9cbf15f30be1821b804e"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/LP_ELP_Tarkus.kla.h",
+      "sha256": "a2995d5a29db69a411374df8a62bd1fc971f10310648d23d2fe21b8fc848f1af"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/LP_Zappa_Apostrophe.kla.h",
+      "sha256": "ea662391aa111334aff82a71c01470189ce9495bd1720b68dad638e172616392"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/LP_Zappa_Sleep_Dirt.kla.h",
+      "sha256": "9e9e507c50cb80dd273fe109d7da68501713e3b11b8737006541678d5410248c"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/T_BlackHole.kla.h",
+      "sha256": "1e48b27e5de53fd6bcf423d758f37807d280da3f83876cc064220aa327837eb5"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/T_Ember_Head.kla.h",
+      "sha256": "9315e77cfe1a487be10c8a59df4f829e676e13c4438d24d610cb7cc6a3a3a5ac"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/T_Sensorium_Heatmap.kla.h",
+      "sha256": "cc1a866d3dc1c0e4b21bced0c91e2b5f576842cc8ec0c0e4ce94edaba615f5f9"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Pics/T_TeensyROM.kla.h",
+      "sha256": "79389099117d8f8fbbffe60da0230a1b10985c4b4a26d9530f9b84e61c897fc2"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/1541_Diagnostics.h",
+      "sha256": "e01b1834c1d74664ec0e61f683553fa0ccf1bdd5459223c96d01ef96f5607776"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/586220ast_Diagnostics.h",
+      "sha256": "3c166baf60e80177824ff174be07d58268c506a1b2271ddd5e6d2d643d783257"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/781220_Dead_Test.h",
+      "sha256": "481c4632c80cc831eff3d752c64314b369945a9bb0af94ad6081c4044735c5bb"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/80columns.prg.h",
+      "sha256": "8a8041102fce4879c17fceb4b74642c8b9547d06d6487224e13bf3052b908bba"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/ASIDPlayer.prg.h",
+      "sha256": "45717db14b03822a0dd609d6adb9307a434acf04329650f7790804e698180725"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Beach_Head_II.crt.h",
+      "sha256": "473347a24c9c16ea0882910516695df3b018fb4478f69ad234fedc9b946b6d55"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/C128_789010.crt.h",
+      "sha256": "cc993bf6d80e625aa9746c341b1519f33467afe5c0e48515451b159118641f4c"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/C64618_Gorf_8000.crt.h",
+      "sha256": "28980083315664bc0e434ce9cd5e12536dc74f944167dd225dfc83c390057adf"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/ccgms_2021_Swiftlink_DE_2400.prg.h",
+      "sha256": "d7159171fef474e54fc3a62a758911a64293c8bd9709a3ee6d63eb0a4bb82bde"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/ccgms_2021_Swiftlink_DE_38400.prg.h",
+      "sha256": "6c97594611810566533f2f86019413392bf57115532fc501c64a517478b7609d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/cia_tod.prg.h",
+      "sha256": "7b5cfd79dd6966f88bbecbdae6a084feae822c7b96b94561649a12a75874b042"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/cynthcart_201.prg.h",
+      "sha256": "53b0026e1063f5b19a58c8137c50d3fbed0cbf550e509d77124926edde1b5331"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/destest_max.rom.h",
+      "sha256": "54f070ae52e53e91a326fc69aa16e9e5f78cb3391b2a2aea466672e1b53ded3a"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Dig_Dug.bin.h",
+      "sha256": "7edc15cd461e1ff0aa185eee939cdf3017718a4d20cdd2acc60129ab86a2a0a2"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/disp_fract.prg.h",
+      "sha256": "77758a687cbc8d29873f7b2218007a75048723f3e814034bc361b27490d6fbfb"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/DMACheck.prg.h",
+      "sha256": "5671d255b7287f5a137b21ec9ec32206218cc26882ab18cf828c6e024885af06"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Donkey_Kong.h",
+      "sha256": "08ddd220f0d1d4d01902c78b52ae8a6e845f5c67ffdd9c5c9307b792130a35ed"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/draw01.prg.h",
+      "sha256": "64be7824a3b96d47b3cfb0cdaa17a62d7ac32c0d89499b6d48b25d4eb8735d0c"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/DualCopy.prg.h",
+      "sha256": "e6a41fbd40141f5bf90cf59ed4a6f4c872ac100c4d7d349e9636f27c68a73a05"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/ember_head.prg.h",
+      "sha256": "c1331d9c788ed70e37a2be9067552cb9f41fed08d1d124994153f80c27bfbbdd"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/empty.prg.h",
+      "sha256": "9cf8850218a523e8df893d8d1a133ad3d40f6660d76fc4152f4e1973f87e01e9"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Epyx_Fast_Load.crt.h",
+      "sha256": "36b900c28b21a2d5421f940860542208940e58bc6aa0f726c6b93a5c9d3decb9"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/ExpansionPortTest.prg.h",
+      "sha256": "f47b0551c11fc833d8b7a99dcb61310a951b5609ab64225f4cd7e5f8c9313a93"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/game_controller_tester.prg.h",
+      "sha256": "ce54c5fe47d1c895f78ff24463661dda322db05da031291a92f7ae5623c00f60"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/hex_mon.prg.h",
+      "sha256": "0752b3d54cc1bdb9f9f19cea20a19c22f6ef2ba2b1ba957716c22649bb8ef284"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/joust.prg.h",
+      "sha256": "3bc99cd6aa5eb64e9c4217492e895dda627be8f6d97b26e084bb57ca38d69110"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Joystick_Tester.h",
+      "sha256": "1f48634fbc069d56feff2de6b59f4902ead45adba75b3fd619a48983e2fef115"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/jupiter_lander_crack.prg.h",
+      "sha256": "76c0e48e3139f6710c3b77b1ae835dd2fc8fee9f1f6d59d4d16a6aa2d0620c1e"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Jupiter_Lander.h",
+      "sha256": "d691cc76d5b304ea5cca949554b0154a483001f23c7c244f220e18ba6f599902"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/KawariQuickChange.prg.h",
+      "sha256": "421c5a8d26f7b707a59f6aa4080ab906207c81875ac7b4368c18840604d648bf"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Keyboard_Tester.h",
+      "sha256": "27a8988ebb3dbefb7938d49f41b521889bdf4f5108f03902fc6129f25a219537"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Load8Run.prg.h",
+      "sha256": "f101e1cb770283939287017873c4fb570c262669e5dc8c1d40963445dc238da1"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Mario_Bros.prg.h",
+      "sha256": "5f7e0e31749bcf5bf148464ceae212fe344d7b9261c96f14a21e7255eb1eac59"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/MIDI2SID.prg.h",
+      "sha256": "f2ae89b8bf6701bb6c60c019849d410af71fe55be15540e859f469f76a17a031"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/minesweeper_game.prg.h",
+      "sha256": "830b46c90c83fb7d628f64876e1eceac981a1491738ab9f9e080e5d1a476d4b2"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Ms._Pac_Man.crt.h",
+      "sha256": "0dbc8566659d62a13431e6176bf8e5a158144b0b4c3e03f2d8cfcb306f083637"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/retromate_teensyrom.prg.h",
+      "sha256": "fc67ef2bc71e2175698598b33f3a764cdfb46a54464befd52a1580cbaf15dadf"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/reu_checker_v1.0.prg.h",
+      "sha256": "52e5caaaf7a76f91ba06fe59163b48b732d4e028cebbfe60018b73935e76cb9c"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/reutest.prg.h",
+      "sha256": "c331d1ce63a1ab16d44831007ebaafc5cfb927a4a364d4dab72f9d94c758940d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Robocop_2_EasyFlash.crt.h",
+      "sha256": "89b7fad7ba0a2c03d4b45ba1320b7834dc694989cb5f11c3f2ac8022ee267449"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/rom_chksum_137kernals.prg.h",
+      "sha256": "fc6b4d518d0e79a4d99afbefb8c942c27b0b23d980558a35f43135b6f97ef0f3"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/sam.prg.h",
+      "sha256": "9f312ca756c77859b34b4f1ab1f21a8c231404a7170d36e6b819fcb52326e840"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/SettingsMenu.prg.h",
+      "sha256": "cd696831beeab8bda619663b3b0532beb91c9b7792c69a2f152d98e2b47385e8"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/shclock_tr.prg.h",
+      "sha256": "7bf3986f91761517b3cfd16653f4cd04fa952ba1397203dba3b7b342cca2133d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/SID_check.prg.h",
+      "sha256": "354764991655b5f0defb078546da561ce94bf4efca1aa58d34d90d6767513b4c"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/SID_Tester.h",
+      "sha256": "2bee9a4e4f488e7787e1b8616b1107b4b05b50fb0a805d2935f47abb2be20aee"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/sid_wizard_1.9.prg.h",
+      "sha256": "dfac9ad096e3dcf6e8f11ee7a9b3469952e8d7d92f31cc97eb3de4e00bdf4865"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/SID_Wizard_2SID.prg.h",
+      "sha256": "6504fa0732dc95c48d81be1759f882114c0b4b5e9ad411a6c2d7b6f33d41ca61"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/SST.prg.h",
+      "sha256": "a74832e180330bf65240a16c9b441e0ac4ad4d596e309ab014a16830129a2ccd"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/sta64_v2_6.prg.h",
+      "sha256": "8e49b93e9d196b513b6d32c8a1c1ab2d35175d3f5bd82ce4639afd8fd06fff96"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/super_expander_64.crt.h",
+      "sha256": "6eb81ee92ce9b49acf4481c90e331d854db71acec91bb61c80f4eac625f3dfe4"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/super.m.bros.64.prg.h",
+      "sha256": "3bd28e81ca0157032970e06127ccc95aeb58391e03465903f686e94c3fbb2458"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/sw_1.9_manual.prg.h",
+      "sha256": "60ced676211f0026b90a0c0343754ca023f9d7dd03b0456e628413fe7c98f819"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/swinth_LIGHT_FANTASTIC.PRG.h",
+      "sha256": "b05c6cb09690f7e662e991da1cf67b43882a1def49f3367bed4715f7aba697c4"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/TeensyROMC64.h",
+      "sha256": "3e047590a2d264430962d7047b65820de3237216c1cb49cff7d06da5a51d8355"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Terminator_2.crt.h",
+      "sha256": "5e2009201aeb878b14dea30e83885fa919be500598f4010fdb62c76483376932"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/Tetris.prg.h",
+      "sha256": "abc89627322474bc88c400bca9937d64a65d65a5f74ea62440460c2c56613726"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/TODCheck.prg.h",
+      "sha256": "8597aba0b5c542b33790dfb2f7473d6c8381712ef72078a78fc327c49f719f56"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/TRCBC.prg.h",
+      "sha256": "933384f684600c0d83a9807360692419b834acef019a6c30bf4d240ec52dc4d8"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/TRExtPortCheck.prg.h",
+      "sha256": "5385f9d0444d449261b6092cacf6c86b93bfc3372d63f887b71a7faa4df0eff0"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/TRHelpScreens.prg.h",
+      "sha256": "3069a90e6d1e8b4932a346b0d5f0deefc5592116a8540d5a44524cf65f7d7b2f"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/ROMs/v1541wrap.prg.h",
+      "sha256": "0aa9018520347f4a17de4cf0c47de698d4a2432bf6e76674ee153207a7377dbc"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Aces_High.sid.h",
+      "sha256": "375ef781d82d92e04dfe7293111f13272b15b79f7fdc4064c445acadba7e3342"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Av_Endless_Sands.sid.h",
+      "sha256": "97605ce2b26b7caacfebcdda61a3ed06adc22564f5bd2a20899c8fd06fd0109d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Av_Still_Time.sid.h",
+      "sha256": "dd585cc5b3c469a9aba6dacf921c23ad419bffadb98c5e69dcc124520a9ff41b"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Av_Twilight_Destruction.sid.h",
+      "sha256": "7bf28a25317d1bc1c2c58a1910832b484b91dbd4db86a492a711575c425615b9"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Comfortably_Numb.sid.h",
+      "sha256": "6a363894c23649a3ef08858403e710a092de7ddcb866762c717d155eedf81970"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Div_Death_Is_no_Evil.sid.h",
+      "sha256": "6a65f38c60e5c7a2834e66d27c0ea4fec2ffdf695b8c365730c45b0c257ee232"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Div_Harvest.sid.h",
+      "sha256": "8a79a73a6a6ac3f238acb9e28c2ae05ea3b95abf6b2b7904d56a0089078e52dd"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Div_KarmaDoor_SickSteveWhore.sid.h",
+      "sha256": "67a882588af88487ed0f4151cc6452f0d1d1323913493bfc19ddd3bc2243ab95"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Div_Sometimes_Low_key_O__m.sid.h",
+      "sha256": "36454a35957db1e6b27bf5a616dfcc509a51ad2754011f02b81c59b336022500"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Echoes.sid.h",
+      "sha256": "b6891a5ee1a658446542e3dc92b9acbe3f71f807003552e8e2cd98cc204cf4f5"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/LH_Alpha.sid.h",
+      "sha256": "e5b87e27cd9e64b9d18c58a23f6f23fb48d0eb8a29bb6c06715194d81684e349"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/LH_Bootloader.sid.h",
+      "sha256": "720070bd3e898ab29180c872cc9343357d3d3e3026927771dfa5136621c62892"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/LH_Raster_Bar.sid.h",
+      "sha256": "6c54cd8a93b70a8aa4e113586b7b83d8af020ddae1447cdb5b8b28fceb7f711a"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Medley.sid.h",
+      "sha256": "f4e0d085e54a33606d575cef16d421f1ff611e4a2fe9c0d66d3a10d76a611148"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Odisey_2001_AD.sid.h",
+      "sha256": "333b7375bdaac2cbc6535839905371a9fb93f33b4f4349928472707f37cfa232"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Pink_Floyd.sid.h",
+      "sha256": "30cfc2d5d6c05dea24500b0160d8e542994b9d7332ba302f839c2b2f6d0cc840"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Popcorn.sid.h",
+      "sha256": "3b7c767c5c57c0f5e42f70ee5f24d0e21f8fd7f5dc005b28657beea81044db8a"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/SleepDirt_norm_ntsc_1000_6581.sid.h",
+      "sha256": "2a8634ef8810caccf6595a1e275a65863d50ea5e98db68eabd92d2f1a163fd39"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Switch_625.sid.h",
+      "sha256": "3942ba5d52210dd8555888f0d0604e618ebf1e2934eac11a6e1213b148755604"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Tom_Sawyer.sid.h",
+      "sha256": "637f991faee06a5c7299acb1c21e235e7106cd61df581654ec0687f495ee7818"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/ts_Debut_and_Credit.sid.h",
+      "sha256": "642d0ef51aead27f648a0071687d06320d84fb5dfd3f62cdd37c1818968a103d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/When_Im_64.sid.h",
+      "sha256": "1f6936a2d981f1a2f9a00162fd49f4651a38cb6068b09a4dad5adff100ef76db"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/Wish_You_Were_Here.sid.h",
+      "sha256": "446c449d3b3d5430b2f0d39bf49e0d34665b35c1c99c5ae858a6f295107da226"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/SIDs/YYZ.sid.h",
+      "sha256": "523c9a46e910bd2775a96288bda85bcacf9a13d19fa35ff40e6fcbfec543ccc1"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/color_weave.seq.h",
+      "sha256": "8de547b35522af5c9825107db525a6138b960afd400256d8cbb7657fe12c0c1a"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Cygnus_X_1_Book_I___The_Voyage.txt.h",
+      "sha256": "9aafe2a8040f946d037606aa555beb955e2c6f00299b57df56a4188161e6e848"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/do_not_panic.seq.h",
+      "sha256": "f2fcf1516a582a2110950dd9471e9ebae041504c4d3d964550baa26ec79f7a9e"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/electric_guitar.seq.h",
+      "sha256": "5d4e74f6de3ca0140d0e9fa211476e3a3af38e790d92e8ea8a639f489f32feb0"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/inter.circuits.seq.h",
+      "sha256": "cfeaa9d5f6c4679200eaa86520eb24f880742b7c7b0b5216b590df3050c31aac"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/irnmdn_aceshigh.seq.h",
+      "sha256": "4ba394bbb10ecab11ecfeba8aa95f13f94afd8f3e9e43b380c26eccc772e3056"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Jousters___c_g179.seq.h",
+      "sha256": "f3e68bedaf656077c166d2299fbdf8db4fe5570b5dcb2a3c40b5e8a4c0a4cd75"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/living_color.1.seq.h",
+      "sha256": "edad8ee8fd478afbb2e15a5bc7330b28db3df6c9b47886cc6b224393bd9c5b92"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Small_Kindnesses.txt.h",
+      "sha256": "cbf046a6b26d514b8ed29851bbf1a73ba91ebf5210ec2115bff7f4b933c9d1cd"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Stripes__Shoeshine_Boy___13picturedisk_2.seq.h",
+      "sha256": "c0a72506bf89032fc9b17798f0da5d0f6363a62e9e938642dcde836884269ef0"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Text_Viewer_Instructions.seq.h",
+      "sha256": "6de1b66f3155ac436dd5ef922a2e1dd6927586aab6456f7c6e61b91e98e4f12e"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/tiger.cg.seq.h",
+      "sha256": "b042dc01669baf3574bb81933efbd0b712b8f2cb7a871b63bee0cea37224ee49"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Time_Travel__Shoeshine_Boy__11picturedisk_2.seq.h",
+      "sha256": "386e1593c6a8966bb3ebbffa6e347d47ab2b4a34ae13bbb7ad3745c98045438e"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Trains_II__Yoda______12picturedisk_6.seq.h",
+      "sha256": "b41734536af0b033904327898f6477f2a147bdf869342fdc579c3460ec1fcf2d"
+    },
+    {
+      "path": "Source/Teensy/TRMenuFiles/Text_PETSCII/Wish_You_Were_Here.txt.h",
+      "sha256": "ccc11a610d689d2d241d54079d6add35ba4aef26763a5b5462fe1966d9cb5e78"
+    },
+    {
+      "path": "vm/video/mpe_video_camera.h",
+      "sha256": "8e88a090a6fa01f02b3f05204e75a5c5a8e38902a623cb15bb2c9c036d537bad"
+    },
+    {
+      "path": "vm/video/mpe_video_kernel.h",
+      "sha256": "d5fff8adbcb7dbea9c96d734873142282012b1e1da5ae1eb45e83b3dae23b2f5"
+    },
+    {
+      "path": "vm/video/mpe_video_live.cpp",
+      "sha256": "abff6b54aeb1d80fa988905456a657e5317060e29706e1a168dfbc1c1867e552"
+    },
+    {
+      "path": "vm/video/mpe_video_live.h",
+      "sha256": "561685bf1bc89b078be3b22eae16ee569389799cab4b4d327974f530a75c5ac2"
+    },
+    {
+      "path": "vm/video/mpe_video_policy.h",
+      "sha256": "e5ea4a3ebcd6410f43be88b69542561abbdadcfdca1dc48ffe52d8ab130cca63"
+    },
+    {
+      "path": "vm/video/mpe_video_sprites.h",
+      "sha256": "b2e42bbc9f69c9d2c6f2887ab2758cbc84b05b117fa1921c61c03dc8e6622bab"
+    },
+    {
+      "path": "vm/video/mpe_video.cpp",
+      "sha256": "4e76e2d83d8d6ebeb7d3c7be2aac10f1a0dad1bc5007867c52b007df9d65b3f4"
+    },
+    {
+      "path": "vm/video/mpe_video.h",
+      "sha256": "28f1bef8cf5596971656fb6af2323da4282ff92f88b94b0c4d87eb4485583b9d"
+    }
+  ],
+  "notes": [
+    "The main summary omits 9756 bytes of NonCacheable data; linked gaps include it.",
+    "The VM end-to-stack gap contains module and heap reservations and is not free RAM.",
+    "Only generic firmware is included. No emulator engine, client or game payload is imported.",
+    "The source-input manifest identifies the actual built tree; the builder started from the upstream base with these recorded changes.",
+    "Build and host conformance passed; physical text firmware acceptance is pending."
+  ]
+}

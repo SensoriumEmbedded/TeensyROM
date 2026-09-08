@@ -10,6 +10,25 @@ MPE_VIDEO_CODE const uint8_t *LiveConverter::palette(){
         {139,84,41},{87,66,0},{184,105,98},{80,80,80},{120,120,120},{148,224,137},{120,105,196},{159,159,159}};
     return &rgb[0][0];
 }
+MPE_VIDEO_CODE void LiveConverter::prepare(const IndexedSource &s){
+    const auto rgb=palette();
+    for(unsigned i=0;i<16;i++)for(unsigned j=0;j<16;j++){uint32_t e=0;for(unsigned c=0;c<3;c++){int d=int(rgb[i*3+c])-rgb[j*3+c];e+=d*d;}distance_[i][j]=e;}
+    for(unsigned i=0;i<256;i++){
+        uint32_t best=~0u;map_[i]=0;if(i>=s.colors)continue;
+        for(unsigned j=0;j<16;j++){uint32_t e=0;for(unsigned c=0;c<3;c++){int d=int(s.palette[i*3+c])-rgb[j*3+c];e+=d*d;}
+            if(e<best){best=e;map_[i]=j;}}
+        if(s.geometry&32){
+            // Preserve DOS's established RGBI mapping. Only exact RGBI
+            // entries take this path; arbitrary RGB still uses nearest color.
+            static const uint8_t vic[16]={0,6,5,3,2,4,8,15,11,14,13,3,10,4,7,1};
+            for(unsigned c=0;c<16;c++){
+                const unsigned light=(c&8)?85:0;
+                if(s.palette[i*3]==((c&4)?170:0)+light&&s.palette[i*3+1]==(c==6?85:((c&2)?170:0)+light)&&s.palette[i*3+2]==((c&1)?170:0)+light){map_[i]=vic[c];break;}
+            }
+        }
+    }
+    if(s.geometry&256)for(unsigned i=0;i<64;i++)map_[i|64]=map_[i];
+}
 MPE_VIDEO_CODE bool LiveConverter::render(const IndexedSource &s,uint8_t mode,LiveFrame &out,const LiveFrame *previous){
     if((!s.pixels&&!s.read_pixel)||!s.palette||!s.width||!s.height||s.width>1024||s.height>1024||(!s.read_pixel&&s.stride<s.width)||!s.colors||s.colors>256||mode>3)return false;
     if((s.geometry&~1019)||((s.geometry&256)&&s.colors>64))return false;
@@ -40,23 +59,7 @@ MPE_VIDEO_CODE bool LiveConverter::render(const IndexedSource &s,uint8_t mode,Li
     const bool nativeWidth=(mode==2||mode==3)&&(unsigned(s.width)*((s.geometry&2)?2:1)<=320);
     const uint32_t previousMask=previous?previous->mask:0;uint8_t previousSplit[25]{};
     if(previous)memcpy(previousSplit,previous->split,25);
-    const auto rgb=palette();
-    for(unsigned i=0;i<16;i++)for(unsigned j=0;j<16;j++){uint32_t e=0;for(unsigned c=0;c<3;c++){int d=int(rgb[i*3+c])-rgb[j*3+c];e+=d*d;}distance_[i][j]=e;}
-    for(unsigned i=0;i<256;i++){
-        uint32_t best=~0u;map_[i]=0;if(i>=s.colors)continue;
-        for(unsigned j=0;j<16;j++){uint32_t e=0;for(unsigned c=0;c<3;c++){int d=int(s.palette[i*3+c])-rgb[j*3+c];e+=d*d;}
-            if(e<best){best=e;map_[i]=j;}}
-        if(s.geometry&32){
-            // Preserve DOS's established RGBI mapping. Only exact RGBI
-            // entries take this path; arbitrary RGB still uses nearest color.
-            static const uint8_t vic[16]={0,6,5,3,2,4,8,15,11,14,13,3,10,4,7,1};
-            for(unsigned c=0;c<16;c++){
-                const unsigned light=(c&8)?85:0;
-                if(s.palette[i*3]==((c&4)?170:0)+light&&s.palette[i*3+1]==(c==6?85:((c&2)?170:0)+light)&&s.palette[i*3+2]==((c&1)?170:0)+light){map_[i]=vic[c];break;}
-            }
-        }
-    }
-    if(s.geometry&256)for(unsigned i=0;i<64;i++)map_[i|64]=map_[i];
+    prepare(s);
     out.overlays=0;
     out.background=mode==0?(s.background_index<s.colors?map_[s.background_index]:(s.geometry&16)?map_[0]:0):0;
     const bool stable=(s.geometry&64)&&mode==2&&!spriteF5;
@@ -129,6 +132,79 @@ MPE_VIDEO_CODE bool LiveConverter::render(const IndexedSource &s,uint8_t mode,Li
         dst[8]=(a.b<<4)|a.a;dst[9]=(b.b<<4)|b.a;
     }
     return true;
+}
+MPE_VIDEO_CODE bool LiveConverter::renderCenter(const IndexedSource &s,CenterFrame &out,unsigned first,unsigned rows){
+    if((!s.pixels&&!s.read_pixel)||!s.palette||!s.width||!s.height||s.width>1024||s.height>1024||
+       (!s.read_pixel&&s.stride<s.width)||!s.colors||s.colors>256||!rows||rows>9||first+rows>25||(s.geometry&~59))return false;
+    prepare(s);
+    renderQuad(s,out.frame,out.extra[0],out.extra[1],&out.dirty[0][0],first,rows,nullptr);
+    return true;
+}
+MPE_VIDEO_CODE bool LiveConverter::renderFull(const IndexedSource &s,FullFrame &out,bool *changed){
+    if(changed)*changed=false;
+    if((!s.pixels&&!s.read_pixel)||!s.palette||!s.width||!s.height||s.width>1024||s.height>1024||
+       (!s.read_pixel&&s.stride<s.width)||!s.colors||s.colors>256||(s.geometry&~59))return false;
+    auto &cache=out.cache;const auto &old=cache.source;
+    const bool paletteChanged=!cache.valid||cache.converter!=this||old.colors!=s.colors||
+        ((old.geometry^s.geometry)&32)||memcmp(cache.palette,s.palette,s.colors*3);
+    const bool sourceChanged=paletteChanged||old.pixels!=s.pixels||old.read_pixel!=s.read_pixel||old.context!=s.context||
+        old.width!=s.width||old.height!=s.height||old.stride!=s.stride||old.geometry!=s.geometry||
+        old.crop_x!=s.crop_x||old.crop_y!=s.crop_y||old.background_index!=s.background_index;
+    if(paletteChanged){prepare(s);memcpy(cache.palette,s.palette,s.colors*3);memcpy(cache.map,map_,sizeof map_);}
+    // Other rendering profiles may have used this converter since the last
+    // full frame. Restore the small lookup instead of repeating RGB searches;
+    // the C64-to-C64 distance table is independent of the source palette.
+    else memcpy(map_,cache.map,sizeof map_);
+    const bool outputChanged=renderQuad(s,out.frame,out.extra[0],out.extra[1],&out.dirty[0][0],0,25,
+                                      sourceChanged?nullptr:s.dirty_cells);
+    cache.source=s;cache.converter=this;cache.valid=true;
+    if(changed)*changed=sourceChanged||outputChanged;
+    return true;
+}
+MPE_VIDEO_CODE bool LiveConverter::renderQuad(const IndexedSource &s,LiveFrame &frame,uint8_t *extra0,uint8_t *extra1,
+                                            uint8_t *dirty,unsigned first,unsigned rows,const uint8_t *sourceDirty){
+    const bool nativeWidth=unsigned(s.width)*((s.geometry&2)?2:1)<=320;
+    const bool fullFit=first==0&&rows==25;
+    bool outputChanged=false;
+    for(unsigned cell=0;cell<1000;cell++){
+        const unsigned band=cell/40,local=cell-first*40;
+        if(sourceDirty){
+            if(fullFit){
+                const unsigned x=(cell%40)*8;
+                if(x<FullPictureLeft)continue; // constant black margin
+                const unsigned from=band*40+fullSourceX(x)/8,to=band*40+fullSourceX(x+7)/8;
+                bool changed=false;
+                for(unsigned c=from;c<=to;c++)changed|=(sourceDirty[c/8]&(1u<<(c&7)))!=0;
+                if(!changed)continue;
+            }else if(!(sourceDirty[cell/8]&(1u<<(cell&7))))continue;
+        }
+        const bool enhanced=band>=first&&band<first+rows;
+        // With the normal 200-line picture origin, the VIC cannot create the
+        // final forced badline at raster 249. Preserve the last four source
+        // rows with one 8x4 pair instead of hiding or dropping those pixels.
+        const bool bottomPair=fullFit&&band==24;
+        uint8_t p[64],next[10]{},extra[2]{};samples(s,cell,p,nativeWidth,false,fullFit);
+        for(unsigned plane=0;plane<(enhanced?(bottomPair?3u:4u):1u);plane++){
+            const unsigned begin=enhanced?plane*2:0,end=enhanced&&!(bottomPair&&plane==2)?begin+2:8;
+            uint8_t hist[16]{};for(unsigned i=begin*8;i<end*8;i++)++hist[p[i]];
+            const auto choice=detailPair(hist,pair(hist),(end-begin)*8);
+            encode(p,begin,end,choice,next);
+            const uint8_t attribute=(choice.b<<4)|choice.a;
+            if(plane<2)next[8+plane]=attribute;else extra[plane-2]=attribute;
+        }
+        if(bottomPair)extra[1]=extra[0];
+        if(!enhanced)next[9]=next[8];
+        bool changed=memcmp(next,frame.cells[cell],10)!=0;
+        if(enhanced)for(unsigned i=0;i<2;i++){
+            auto plane=i?extra1:extra0;
+            changed|=extra[i]!=plane[local];plane[local]=extra[i];
+        }
+        if(changed){outputChanged=true;for(unsigned bank=0;bank<2;bank++)dirty[bank*125+cell/8]|=1u<<(cell&7);}
+        memcpy(frame.cells[cell],next,10);
+    }
+    frame.mode=2;frame.background=frame.overlays=frame.multicolor=0;
+    frame.mask=((1u<<rows)-1)<<first;memset(frame.split,2,sizeof frame.split);
+    return outputChanged;
 }
 MPE_VIDEO_CODE void LiveConverter::overlay(const IndexedSource &s,LiveFrame &out,bool nativeWidth) const {
     const unsigned scale=(s.geometry&2)?2:1,extent=s.width*scale,left=nativeWidth?(320-extent)/2:0;

@@ -110,7 +110,7 @@ if(mode==='mpe'){
 }
 const combined=combineHex(images.map((image,i)=>({name:image.name,text:read(image.hex),start:[FLASH_BASE,MAIN_BASE,VM_BASE][i],end:[MAIN_BASE,VM_BASE,VM_LIMIT][i]})));
 const version=read(path.join(root,'Source/Teensy/MinimalBoot/Common/Common_Defs.h')).match(/#define TRVersion\s+"([^"]+)"/)[1];
-const filename=`TeensyROM${mode==='stock'?'':'+'}_${version}${mode==='mpe'?'_MPE-review2':''}_full.hex`;
+const filename=`TeensyROM${mode==='stock'?'':'+'}_${version}${mode==='mpe'?'_MPE-1.2.1':''}_full.hex`;
 const artifact=path.join(runRoot,filename);write(artifact,combined.hex);
 if(JSON.stringify(inputs())!==JSON.stringify(inputSnapshot))throw Error('Source changed during build; do not use these artifacts');
 const report={mode,sourceRevision:run('git',['rev-parse','HEAD']).trim(),inputs:inputSnapshot,runRoot,artifact,sha256:sha(fs.readFileSync(artifact)),layout:{regions:combined.regions,imageSpan:combined.imageSpan,stagingStart:combined.stagingStart,stagingBytes:combined.stagingBytes},images:images.map(({name,elf,hex,symbols})=>({name,elf,hex,sha256:sha(fs.readFileSync(hex)),itcmEnd:symbols.match(/^([0-9a-f]+) \w _etext$/m)?.[1]}))};

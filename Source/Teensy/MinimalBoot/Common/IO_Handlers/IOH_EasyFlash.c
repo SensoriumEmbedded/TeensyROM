@@ -25,6 +25,7 @@ uint8_t EZFlashRAM[256];
 uint8_t CurrentEasyFlashBank;
 bool VMHostIO2(uint8_t, bool);
 void VMHostPoll();
+bool VMHostOwnsSwapRAM();
 #endif
 
 #ifdef MinimumBuild
@@ -147,6 +148,9 @@ void InitHndlr_EasyFlash()
 #ifdef MinimumBuild
 uint8_t* ImageCheckAssign(uint8_t* BankRequested)
 {
+#ifdef FeatVMHost
+   if(VMHostOwnsSwapRAM())return BankRequested;
+#endif
    //Printf_dbg(" Ad %08x", (uint32_t)BankRequested);
    if (((uint32_t)BankRequested & SwapSeekAddrMask) == SwapSeekAddrMask) //requested bank is a swap bank
    {
@@ -227,7 +231,10 @@ void PollingHndlr_EasyFlash()
 #ifdef FeatVMHost
    VMHostPoll();
 #endif
-#ifdef MinimumBuild   
+#ifdef MinimumBuild
+#ifdef FeatVMHost
+   if(VMHostOwnsSwapRAM())return;
+#endif
    if (DMA_State == DMA_S_ActiveReady) 
    {
       //DMA asserted, paused for bank swap from SD

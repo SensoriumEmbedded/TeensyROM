@@ -13,6 +13,7 @@ enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
 // non-executable constants; the guest receives only the lower 416 KiB.
 // Legacy images keep the entire 512 KiB guest arena and the same ABI/layout.
 enum : uint32_t { VM_PROFILE_LEGACY=0, VM_PROFILE_RAM2_RO96=1,
+                  VM_PROFILE_RAM1_AUX=2, VM_AUX_CODE_LIMIT=0x28000,
                   VM_RAM2_RO_BYTES=96*1024, VM_RAM2_GUEST_BYTES=VM_RAM_BYTES-VM_RAM2_RO_BYTES,
                   VM_RAM2_RO_BASE=VM_RAM_BASE+VM_RAM2_GUEST_BYTES };
 struct VmImageHeader {
@@ -67,6 +68,16 @@ enum : uint16_t { VM_INDEXED_SPRITE_F5=128, VM_INDEXED_SPRITE_TAGS=256 };
 // Combined input 83h then carries W/S/A/D in display bits 4/5/6/7; bits 0..1
 // retain the selector and bits 2..3 stay zero. Guest button bits are unchanged.
 enum : uint16_t { VM_INDEXED_CROP_F3=512 };
+// Optional compact F5: four hires color pairs in a bounded horizontal band.
+// Uses VmCenterVideoSetup and 16 KiB scratch. Older hosts reject the extension.
+enum : uint16_t { VM_INDEXED_CENTER_F5=1024 };
+constexpr uint32_t VM_CENTER_VIDEO_WORKSPACE_BYTES=16384;
+// DOS-only experiment: four hires color pairs across the 320x200 picture
+// (the final four scanlines share one pair at the VIC badline boundary),
+// with the native FLI left-edge artifact exposed (no covering sprites).
+// Negotiates separately so existing 16 KiB center-profile modules still work.
+enum : uint16_t { VM_INDEXED_FULL_F5=2048 };
+constexpr uint32_t VM_FULL_VIDEO_WORKSPACE_BYTES=19456;
 // Opt-in indexed service: packed RGB palette and row-major 8-bit indices.
 // Modes 0 Color, 1 Auto-8, 2 Enhanced-25, 3 Sharp; capability bit = 1<<mode.
 // Configuration lends an aligned, lifetime-long RAM1 workspace to firmware.
@@ -76,6 +87,11 @@ enum : uint16_t { VM_INDEXED_CROP_F3=512 };
 struct VmIndexedVideoSetup {
     uint32_t bytes;void *workspace;uint32_t workspace_bytes;
     uint8_t default_mode,capabilities;uint16_t reserved;
+};
+struct VmCenterVideoSetup {
+    VmIndexedVideoSetup setup; // bytes = sizeof(VmCenterVideoSetup)
+    uint8_t first_row,row_count; // center: first 1..14/count 1..9; full: 0/25
+    uint16_t reserved;
 };
 struct VmIndexedFrame {
     uint32_t bytes,generation;
@@ -99,9 +115,19 @@ struct VmIndexedRasterFrame {
     uint8_t reserved,resolved_background;
     uint32_t source_consumed;   // output only, initialize to zero
 };
+// Optional dirty raster extension, negotiated by the full F5 profile. The
+// bitmap uses output coordinates: 40x25 cells, low bit first, 125 bytes.
+// Null requests a full conversion. A non-null map may be cleared only after
+// source_consumed becomes 1; later guest writes belong to the next picture.
+// Palette/geometry changes still invalidate conversion regardless of hints.
+struct VmIndexedDirtyRasterFrame {
+    VmIndexedRasterFrame raster; // frame.bytes = sizeof(this extension)
+    const uint8_t *source_dirty;
+};
 enum : uint32_t { VM_OPEN_READ=1,VM_OPEN_WRITE=2,VM_OPEN_CREATE=4,VM_OPEN_EXCLUSIVE=8,VM_OPEN_TRUNCATE=16 };
 enum class VmFsOp : uint32_t { Flush,Truncate,Timestamp,Close,Mkdir,Rmdir,Remove,Rename,Space };
 struct VmFsRequest { VmFsOp operation; uint32_t handle,value,extra; const char *path,*destination; };
+struct VmRamSpan { uint8_t *data; uint32_t bytes; };
 struct VmHost {
     uint32_t abi, bytes, services;
     uint8_t *workspace; uint32_t workspace_bytes;
@@ -123,8 +149,13 @@ struct VmHost {
     bool (*should_yield)();
     void (*fail)(uint8_t code,uint32_t detail);
     VmVideoResult (*video_present)(const VmVideoFrame *frame);
+    // New center-profile hosts accept null to return a completed loan;
+    // false means the frame/ACK is still pending and storage remains owned.
     bool (*video_configure)(const VmIndexedVideoSetup *setup);
     VmVideoResult (*video_indexed)(VmIndexedFrame *frame);
+    // Profile RAM1_AUX only: non-executable ITCM tail and retired CRT swap
+    // RAM. No live FlexRAM repartition, stack or heap borrowing.
+    VmRamSpan auxiliary[2];
 };
 // The video callback is a tail extension. Modules which do not require it may
 // still run against an ABI-2 host whose VmHost ends immediately before it.
@@ -143,7 +174,8 @@ enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_VIDEO=32, VM_SERVICES=31,
                   VM_SERVICE_INDEXED_VIDEO=64, VM_SERVICE_RAM2_RO=128,
                   VM_SERVICE_INDEXED_RASTER=256,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_VIDEO|VM_SERVICE_INDEXED_VIDEO|VM_SERVICE_RAM2_RO|VM_SERVICE_INDEXED_RASTER,
+                  VM_SERVICE_RAM1_AUX=512,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_VIDEO|VM_SERVICE_INDEXED_VIDEO|VM_SERVICE_RAM2_RO|VM_SERVICE_INDEXED_RASTER|VM_SERVICE_RAM1_AUX,
                   VM_KNOWN_SERVICES=VM_HOST_SERVICES, VM_IMAGE_MAGIC=0x314d564d };
 static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     auto p=static_cast<const uint8_t *>(data); uint32_t c=~0u;
@@ -151,11 +183,15 @@ static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     return ~c;
 }
 static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserved[1];}
-static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO96?VM_RAM2_GUEST_BYTES:VM_RAM_BYTES;}
+static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO96?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
     if(h.reserved[2]||h.reserved[3])return false;
-    if(h.reserved[0]==VM_PROFILE_LEGACY){
+    if(h.reserved[0]==VM_PROFILE_RAM1_AUX){
+        if(h.reserved[1]||!(h.required_services&VM_SERVICE_RAM1_AUX)||
+           (h.required_services&VM_SERVICE_RAM2_RO)||h.code_bytes>VM_AUX_CODE_LIMIT-VM_CODE_BASE)return false;
+    }else if(h.required_services&VM_SERVICE_RAM1_AUX)return false;
+    else if(h.reserved[0]==VM_PROFILE_LEGACY){
         if(h.reserved[1]||(h.required_services&VM_SERVICE_RAM2_RO))return false;
     }else if(h.reserved[0]==VM_PROFILE_RAM2_RO96){
         if(!(h.required_services&VM_SERVICE_RAM2_RO)||!h.reserved[1]||h.reserved[1]>VM_RAM2_RO_BYTES)return false;

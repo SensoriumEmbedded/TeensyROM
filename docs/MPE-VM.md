@@ -77,7 +77,7 @@ or publish anything. Use a short output directory because the Windows ARM
 toolchain still encounters path-length limits. Each run has its own directory;
 `latest.json` identifies its HEX, hashes, source inputs and memory layout.
 
-The output is named `TeensyROM+_0.8.0.4_MPE-review2_full.hex` for this upstream
+The output is named `TeensyROM+_0.8.0.4_MPE-1.2.1_full.hex` for this upstream
 revision. The visible stock firmware version remains unchanged; identify this
 review build by its filename and SHA-256. The original stock build script is
 unchanged. For comparison builds with the isolated builder:
@@ -124,11 +124,15 @@ testing. Build success and memory bounds do not establish that acceptance.
 
 ## Review scope and source provenance
 
-Base: upstream `442aaaa266f3306ba30dd925235939ee3878db77` (2026-08-31).
+Base: upstream `442aaaa266f3306ba30dd925235939ee3878db77`, with Travis's
+`mpe-vm-review` fixes through `0997c5a066f87f8f6528ed3887684a80c5af17a9`.
 Shared MPE code: Custom GUI revision
-`69a711a42fd8e07d7857872073c9d2c7dee5bcc9`, ABI 2, shared host version 1.1.12.
-This matches the host source used by the public GUI firmware 1.1.12. The Doom
-module and launcher are unchanged; uncommitted development experiments are excluded.
+`8024a9107f24b586ed4ffad7cae541cfe59e7d37`, ABI 2, shared host version 1.2.1.
+This includes the opt-in auxiliary RAM profile used for 640K DOS and the
+accepted fitted full-height F5 transport, including dirty updates and bounded
+transfer slices. The auxiliary profile retires the VM image's CRT swap arena;
+the ordinary images retain their existing cartridge swap behavior. VM engines,
+mouse clients and game data remain separate packages. No payload is imported here.
 See [source-lock.json](../mpe/source-lock.json) for the imported file hashes.
 The imported VM loader, ABI, file services, packet replay and video code retain
 their source provenance. The dedicated boot sketch adapts request consumption
@@ -175,6 +179,6 @@ input, sound, reset/menu return, missing SD and interrupted launch recovery,
 normal/large CRTs including active bank swapping, stock networking/USB/MIDI,
 REU/freezer/KERNAL functionality, settings retention and the firmware updater.
 Compare with the unmodified build on the same hardware. See the accompanying
-[current retest results](MPE-RETEST-2026-09-06.md) for measured evidence and
+[current retest results](MPE-RETEST-1.2.1.md) for measured evidence and
 remaining checks. The [initial review1 results](MPE-REVIEW-RESULTS.md) are retained
 as historical baseline evidence.

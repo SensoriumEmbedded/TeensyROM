@@ -18,6 +18,30 @@ struct LiveFrame {
     uint8_t overlays; // Uses existing struct padding; second plane is sprites.
     uint8_t multicolor; // Crop F3; fills the last padding byte, no size growth.
 };
+// The first two attributes share the existing frame representation; only
+// the additional two planes need storage for the selected nine rows.
+struct CenterFrame {
+    LiveFrame frame;
+    uint8_t extra[2][360];
+    uint8_t dirty[2][125];
+    void invalidate(){memset(dirty,0xff,sizeof dirty);}
+    bool changed(unsigned bank,unsigned cell) const {return dirty[bank][cell/8]&(1u<<(cell&7));}
+    void mark(unsigned cell){for(auto &bank:dirty)bank[cell/8]|=1u<<(cell&7);}
+};
+constexpr unsigned CenterMaskBytes=136;
+// Two expanded 24-pixel-wide sprites hide the VIC's invalid first three
+// attribute fetches. They cover only the enhanced band, with transparent
+// trailing pattern rows. Patterns follow the 8000-byte bitmap in both banks.
+inline uint8_t centerMaskByte(unsigned offset,unsigned rows){
+    if(offset>=128)return (offset&1)?0xfe:0xfd;
+    const unsigned sprite=offset/64,local=offset%64;
+    const unsigned lines=rows*8>sprite*42?rows*8-sprite*42:0;
+    return local<63&&local<(lines/2)*3?0xff:0;
+}
+inline uint16_t centerMaskAddress(unsigned bank,unsigned offset){
+    return offset<128?(bank?0xbf40:0x7f40)+offset:
+        (bank?0x8ff8:0x5ff8)-((offset-128)/2)*0x400+(offset&1);
+}
 struct IndexedSource {
     const uint8_t *pixels,*palette;
     uint16_t width,height,stride,colors;
@@ -26,12 +50,44 @@ struct IndexedSource {
     void *context=nullptr;
     uint16_t crop_x=0,crop_y=0;
     uint16_t background_index=256; // Internal crop hint; 256 keeps legacy choice.
+    // Optional changed-source hint in logical 40x25 cells before Full F5's
+    // horizontal fit. A physical cell may depend on two logical source cells;
+    // clear hints may skip conversion only with unchanged palette/geometry.
+    // Null forces conversion of every cell; the producer owns invalidation
+    // for changes inside a read_pixel context, including display-start changes.
+    const uint8_t *dirty_cells=nullptr;
+};
+class LiveConverter;
+constexpr unsigned FullPictureLeft=24,FullPictureWidth=320-FullPictureLeft;
+// Fit the complete logical picture beyond the three invalid FLI columns.
+// Endpoints remain 0 and 319; input and source dirtiness stay logical.
+inline unsigned fullSourceX(unsigned x){return ((x-FullPictureLeft)*2+1)*320/(FullPictureWidth*2);}
+// Full-height F5 adds just two 1000-byte attributes to the common bitmap.
+// Cache storage belongs only to this larger profile, preserving the legacy
+// 16 KiB center workspace and the ordinary converter's existing allocation.
+struct FullFrame {
+    LiveFrame frame;
+    uint8_t extra[2][1000];
+    uint8_t dirty[2][125];
+    struct Cache {
+        uint8_t palette[768];
+        uint8_t map[256];
+        IndexedSource source{};
+        const LiveConverter *converter=nullptr;
+        bool valid=false;
+    } cache;
+    void invalidate(){memset(dirty,0xff,sizeof dirty);cache.valid=false;}
+    bool changed(unsigned bank,unsigned cell) const {return dirty[bank][cell/8]&(1u<<(cell&7));}
+    void mark(unsigned cell){for(auto &bank:dirty)bank[cell/8]|=1u<<(cell&7);}
 };
 class LiveConverter {
     uint8_t map_[256];
     uint32_t distance_[16][16];
     void overlay(const IndexedSource &s,LiveFrame &out,bool nativeWidth) const;
     static const uint8_t *palette();
+    void prepare(const IndexedSource &s);
+    bool renderQuad(const IndexedSource &s,LiveFrame &frame,uint8_t *extra0,uint8_t *extra1,
+                    uint8_t *dirty,unsigned first,unsigned rows,const uint8_t *sourceDirty);
     struct Pair {uint8_t a,b;};
     static Pair pair(const uint8_t *hist) {
         uint8_t a=0,b=0;
@@ -68,7 +124,7 @@ class LiveConverter {
         for(unsigned y=first;y<end;y++){out[y]=0;for(unsigned x=0;x<8;x++)
             if(distance_[pixels[y*8+x]][p.b]<distance_[pixels[y*8+x]][p.a])out[y]|=0x80>>x;}
     }
-    void samples(const IndexedSource &s,unsigned cell,uint8_t *p,bool nativeWidth,bool colorMode) const {
+    void samples(const IndexedSource &s,unsigned cell,uint8_t *p,bool nativeWidth,bool colorMode,bool fullFit=false) const {
         const unsigned cx=(cell%40)*8,cy=(cell/40)*8;
         const unsigned scale=(s.geometry&2)?2:1;
         const unsigned extent=s.width*scale;
@@ -79,7 +135,9 @@ class LiveConverter {
             const bool margin=nativeHeight&&(dy<top||dy>=top+s.height);
             const unsigned sy=nativeHeight?dy-top:((2*dy+1)*s.height)/400;
             for(unsigned x=0;x<8;x++){
-                const unsigned dx=cx+x;
+                const unsigned outputX=cx+x;
+                if(fullFit&&outputX<FullPictureLeft){p[y*8+x]=0;continue;}
+                const unsigned dx=fullFit?fullSourceX(outputX):outputX;
                 // Padding is C64 black, independent of the source palette.
                 if(margin||(nativeWidth&&(dx<left||dx>=left+extent))){p[y*8+x]=0;continue;}
                 const unsigned sx=nativeWidth?(dx-left)/scale:((2*dx+1)*s.width)/640;
@@ -97,5 +155,7 @@ public:
     // mode: 0 ordinary multicolor; 1 Auto8; 2 Enhanced25; 3 Sharp.
     // Enhanced25/Sharp center narrower sources; all modes fit height.
     bool render(const IndexedSource &s,uint8_t mode,LiveFrame &out,const LiveFrame *previous=nullptr);
+    bool renderCenter(const IndexedSource &s,CenterFrame &out,unsigned first,unsigned rows);
+    bool renderFull(const IndexedSource &s,FullFrame &out,bool *changed=nullptr);
 };
 }

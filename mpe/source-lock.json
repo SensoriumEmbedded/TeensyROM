@@ -1,10 +1,10 @@
 {
   "repository": "https://github.com/ziggystar12/Teensy-Rom-Custom-GUI",
-  "revision": "69a711a42fd8e07d7857872073c9d2c7dee5bcc9",
+  "revision": "8024a9107f24b586ed4ffad7cae541cfe59e7d37",
   "files": [
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMABI.h",
-      "sha256": "4b5c0cd7193bf552f7c0b4911eb45991af08fa21f257da3c072ea473e0ebc393"
+      "sha256": "7b76d312eab8dd2fc912aee735b7bb15aca7d6f2ff91b56d8358c3b52c76531a"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMRegistry.h",
@@ -20,7 +20,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMHost.h",
-      "sha256": "e858f757a6eacbb606e69a8dbbe8b5db65e9a400070c293dd5a28a71a5a4899c"
+      "sha256": "1cfc10d1943f8dc2d7afad78a18809105be0e33df17f5cf09a5224c9111e3c82"
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMHostPoll.h",
@@ -28,7 +28,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMIndexedVideo.h",
-      "sha256": "d45e2cd21ae55fa4c0be1e91e4e94ceaca981312f12d52b954747fabafea074c"
+      "sha256": "a37b9ee4d81c0e6a3b3b28ba7fad750ad2b480b3495bfb9042a774ff84742a74"
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMPacketReplay.h",
@@ -60,15 +60,15 @@
     },
     {
       "path": "vm/video/mpe_video_kernel.h",
-      "sha256": "01c3984f27c22bdb89d6fc08c0fd1a98c5d8e392f6695c582186ad2016b8e1d0"
+      "sha256": "d5fff8adbcb7dbea9c96d734873142282012b1e1da5ae1eb45e83b3dae23b2f5"
     },
     {
       "path": "vm/video/mpe_video_live.cpp",
-      "sha256": "9c13cb6b369cef8745ac478800f76694e750647789016b1dee681e6a452b35a3"
+      "sha256": "abff6b54aeb1d80fa988905456a657e5317060e29706e1a168dfbc1c1867e552"
     },
     {
       "path": "vm/video/mpe_video_live.h",
-      "sha256": "7c038d8cf6848efcf7d003e8f85c7fef0b9902a8a0d99742cd03b7628d58330f"
+      "sha256": "561685bf1bc89b078be3b22eae16ee569389799cab4b4d327974f530a75c5ac2"
     },
     {
       "path": "vm/video/mpe_video_policy.h",
@@ -76,7 +76,7 @@
     },
     {
       "path": "vm/tests/image_test.cpp",
-      "sha256": "b22ff3c832cf0a3f799bef99e4c15f33622b9ee02286c2520429edbe811a643f"
+      "sha256": "7617cc63ab53b816d11355ce9078d8ee68ff40e34c4179b6d8349da468c2401d"
     },
     {
       "path": "vm/tests/registry_test.cpp",
@@ -100,7 +100,7 @@
     },
     {
       "path": "vm/tests/indexed_host_test.cpp",
-      "sha256": "4309e96f7458b9b2a6b204727fb0ecd3f2905c3b204d935cb727945dfccc947f"
+      "sha256": "5ace3e9ed1acef5eeb3c20a9cdbe66992dd40cd8b5efb39d14bf61f4bbc768c0"
     },
     {
       "path": "vm/tests/mpe_video_live_test.cpp",
@@ -139,6 +139,26 @@
     {
       "path": "vm/tests/mpe_video_sprite_test.cpp",
       "sha256": "bfa408a39c4594119f0dc1e978211770d62050940265290007e5a6c1bde73567"
+    },
+    {
+      "path": "vm/tests/center_video_test.cpp",
+      "sha256": "ad704f4b93a327cbaf999af8e0660c724827ee3939a7677d4474caf9cbce1a66"
+    },
+    {
+      "path": "vm/tests/full_video_converter_test.cpp",
+      "sha256": "d623b68246255be56c9bfaa6590ebf6cd09f4539aaad9d26c75f7779d7dbc72d"
+    },
+    {
+      "path": "vm/tests/full_video_host_test.cpp",
+      "sha256": "05a4bb6df3634409ad165c14e7ecc81c898183c9c7b4faf0eb85f7acf95389ef"
+    },
+    {
+      "path": "vm/tests/full_video_kernel_test.cpp",
+      "sha256": "247ab827fc90a4f2a94f182333fb771230750e15f8f37d306c03eac60546c235"
+    },
+    {
+      "path": "vm/tests/helpers/indexed_video_fixture.h",
+      "sha256": "fb0f602b0ca713f1817fd33f14afc0db1ee495c53d803e5e8a9668057311428a"
     }
   ],
   "adaptations": [

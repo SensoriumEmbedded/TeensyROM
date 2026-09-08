@@ -20,16 +20,17 @@ static volatile bool packetReplayRequested;
 static uint32_t sliceStarted;
 static volatile uint8_t videoTiming;
 static bool videoDmaEnabled;
+static bool auxiliaryOwned;
 #if defined(FeatVMVideoDMA) && defined(Fab04_FullDMACapable)
 static constexpr uint32_t providedServices=VM_HOST_SERVICES;
 #else
-static constexpr uint32_t providedServices=VM_SERVICES|VM_SERVICE_RAM2_RO;
+static constexpr uint32_t providedServices=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_RAM1_AUX;
 #endif
 static void moduleFail(uint8_t error,uint32_t detail);
 static VmVideoResult videoPresent(const VmVideoFrame *frame);
 static bool configureIndexedVideo(const VmIndexedVideoSetup *setup);
 static VmVideoResult submitIndexedVideo(VmIndexedFrame *frame);
-static void codeAccess(bool loading){
+static void codeAccess(bool loading,bool auxiliary=false){
     // Core region 1 makes all ITCM read-only. A higher-priority region grants
     // only the module window RW+XN while loading, then restores RO+execute.
     uint32_t mask;__asm__ volatile("mrs %0, primask":"=r"(mask));__disable_irq();
@@ -40,6 +41,11 @@ static void codeAccess(bool loading){
         SCB_MPU_RASR=SCB_MPU_RASR_TEX(1)|SCB_MPU_RASR_AP(loading?3:7)|
             (loading?SCB_MPU_RASR_XN:0)|SCB_MPU_RASR_SIZE(i?15:14)|SCB_MPU_RASR_ENABLE;
     }
+    // Region 14 overrides only the unused top 32 KiB of module ITCM.
+    // Keep the same physical banks: data accesses use the CPU TCM interface.
+    SCB_MPU_RBAR=VM_AUX_CODE_LIMIT|SCB_MPU_RBAR_VALID|14u;
+    SCB_MPU_RASR=auxiliary?(SCB_MPU_RASR_TEX(1)|SCB_MPU_RASR_AP(3)|
+        SCB_MPU_RASR_XN|SCB_MPU_RASR_SIZE(14)|SCB_MPU_RASR_ENABLE):0;
     SCB_MPU_CTRL=SCB_MPU_CTRL_ENABLE;__asm__ volatile("dsb\nisb":::"memory");
     if(!mask)__enable_irq();
 }
@@ -70,7 +76,7 @@ static bool loadModule(){
     constantAccess(false);
     codeAccess(true);
     const bool loaded=vm_load_payload(h,f,code,data,ro,failure);
-    f.close();codeAccess(false);
+    f.close();codeAccess(false,loaded&&h.reserved[0]==VM_PROFILE_RAM1_AUX);
     if(!loaded)return false;
     if(h.reserved[0]==VM_PROFILE_RAM2_RO96)constantAccess(true);
     __asm__ volatile("dsb\nisb":::"memory");
@@ -79,9 +85,18 @@ static bool loadModule(){
         (uint8_t *)VM_RAM_BASE,vm_image_guest_bytes(h),openFlags,writeFile,fileOp,shouldYield,moduleFail};
     host.video_present=videoPresent;
     host.video_configure=configureIndexedVideo;host.video_indexed=submitIndexedVideo;
+    if(h.reserved[0]==VM_PROFILE_RAM1_AUX){
+        static_assert(sizeof(SwapBuffers)>=16384,"auxiliary swap arena");
+        // Boot fixed every decode pointer to RAM_Image before loadModule.
+        // No later bank selection or polling may enter the legacy swap path.
+        auxiliaryOwned=true;
+        host.auxiliary[0]={(uint8_t *)VM_AUX_CODE_LIMIT,32768};
+        host.auxiliary[1]={(uint8_t *)SwapBuffers,16384};
+    }
     module=reinterpret_cast<VmEntry>(h.entry)(&host);
     // Native modules are trusted, but reject corrupt API pointers before calling.
-    auto codePointer=[](uintptr_t p){return (p&1)&&(p&~1u)>=VM_CODE_BASE&&(p&~1u)<VM_CODE_LIMIT;};
+    const uintptr_t end=VM_CODE_BASE+h.code_bytes;
+    auto codePointer=[end](uintptr_t p){return (p&1)&&(p&~1u)>=VM_CODE_BASE&&(p&~1u)<end;};
     const uintptr_t p=(uintptr_t)module;
     if(p<VM_CODE_BASE||p>VM_CODE_LIMIT-sizeof(VmModule)||module->abi!=VM_ABI||module->bytes!=sizeof(VmModule)||
        !codePointer((uintptr_t)module->input)||!codePointer((uintptr_t)module->pump)||!codePointer((uintptr_t)module->packet)||!codePointer((uintptr_t)module->ack)){if(!failure)failure=0x14;module=nullptr;return false;}
@@ -128,6 +143,7 @@ static void moduleFail(uint8_t error,uint32_t detail){
     fail(error?error:0x16);
 }
 }
+bool VMHostOwnsSwapRAM(){return VmRuntime::auxiliaryOwned;}
 // Called only by the stock EasyFlash IO2 handler. No file or VM code in ISR.
 #include "VMIndexedVideo.h"
 bool VMHostIO2(uint8_t address,bool read){
