@@ -2,6 +2,29 @@
 
 ***Connect your Commodore to the 21st century***
 
+## MHS Power Engine integration (review branch)
+
+**Current MPE VMs require TeensyROM+ PCB v0.4 and its full bus-mastering DMA.
+Original TeensyROM PCB v0.2/v0.3 does not support this VM implementation.**
+The stock interface is retained on TR+; regular TR comparison builds have VM
+support disabled and are ordinary-firmware regression checks only.
+
+[MHS Power Engine (MPE)](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine)
+is the system and **MPE Cartridge VM format created by MHS for TeensyROM+**.
+It lets downloadable VM engines execute directly on the cartridge's Teensy ARM
+processor, with the C64 handling display, SID sound and user input. MHS developed
+the shared host, loader, services and C64 transport that make this possible.
+
+This optional firmware integration adds MPE support to Travis's existing
+interface. It uses the same VM format as the MHS Custom GUI firmware and retains
+the stock menu and ordinary cartridge configuration. **DoomVM is the only VM
+selected for public shipment; other VMs are withheld pending testing.**
+
+This branch is a maintainer review candidate with successful builds and host
+checks; physical hardware acceptance remains pending. See the
+[MPE build and integration guide](docs/MPE-VM.md). TeensyROM hardware and original
+firmware remain the work of Travis Smith / Sensorium Embedded.
+
 **Features include:**
 * **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
 * **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
@@ -92,6 +115,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
   * **SW Release notes/development**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Software Build Instructions](Source/BuildInfo.md)**
+    * [Optional MHS Power Engine VM build (maintainer review)](docs/MPE-VM.md) — stock interface with separately downloaded DoomVM.
   * **Hardware & PCB Related**
     * **[3D printed case files/document](3D_Print_Case/3D-Printed-Case-ReadMe.md)**
     * **[RTC Battery Addition for v0.2/0.3 PCBs](docs/RTC_Battery_Addition.md)**

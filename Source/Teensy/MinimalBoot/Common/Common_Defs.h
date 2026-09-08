@@ -4,6 +4,10 @@
 
 #include "Fab04FeatureCtl.h"  //determines if build is for Fab0.2/0.3 or Fab0.4+
 
+#if defined(MPE_VM_ENABLED) && !defined(Fab04_Features)
+#error "MPE VM support requires TeensyROM+ PCB v0.4"
+#endif
+
 //fab 0.4 adds bi-dir data buffers, R/W Signal, Reset Signal and Special Button
 #ifdef Fab04_Features   //see Fab04FeatureCtl.h
    #define Fab04_DataBufAlwaysEnabled //eliminates need for data buf enable/disable

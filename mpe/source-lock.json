@@ -1,0 +1,158 @@
+{
+  "repository": "https://github.com/ziggystar12/Teensy-Rom-Custom-GUI",
+  "revision": "69a711a42fd8e07d7857872073c9d2c7dee5bcc9",
+  "files": [
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMABI.h",
+      "sha256": "4b5c0cd7193bf552f7c0b4911eb45991af08fa21f257da3c072ea473e0ebc393"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMRegistry.h",
+      "sha256": "c0be3f3dd013e598321431226542a5f17c7d4124e0241bb6e5038448924ec97d"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMFiles.h",
+      "sha256": "c6f487db2116108a18fd49a7fb20f71408465b01535ebc4c8f1a3fddb5fd11c4"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/VMImageLoad.h",
+      "sha256": "10b98a8f25238a49ffd6de26aca3ac69eb21d21bccef5c449f78d1f694bec29e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMHost.h",
+      "sha256": "e858f757a6eacbb606e69a8dbbe8b5db65e9a400070c293dd5a28a71a5a4899c"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMHostPoll.h",
+      "sha256": "211826e37f1407f24c12efb80e5565340adc07ab7b4d39982204725924a98aca"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMIndexedVideo.h",
+      "sha256": "d45e2cd21ae55fa4c0be1e91e4e94ceaca981312f12d52b954747fabafea074c"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/VMPacketReplay.h",
+      "sha256": "0e65e331134342108a5d1cff63d66fc5e45bf1715883bff9d691b8a29cb29d3e"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/DMAControl_Minimal.h",
+      "sha256": "4b6c45414e124d0478b67ab2e317c5ec3a6dbd60dbb07fcb514804515021b624"
+    },
+    {
+      "path": "vm/abi/vm_abi.h",
+      "sha256": "3775d7cf9eb47043989b43544372b360a960ada6f7fcc6b7bf6ad3bdd1cd4b23"
+    },
+    {
+      "path": "vm/abi/module.ld",
+      "sha256": "81a363385126a086083b7d6ef7a7540d44232d9332f5379c7f62fd614e02a0f4"
+    },
+    {
+      "path": "vm/abi/README.md",
+      "sha256": "762f98def39f0f11d75f2f08d22373fd77ef17f6103b0ffd5d1f22b95b4aa908"
+    },
+    {
+      "path": "vm/video/mpe_video.cpp",
+      "sha256": "4e76e2d83d8d6ebeb7d3c7be2aac10f1a0dad1bc5007867c52b007df9d65b3f4"
+    },
+    {
+      "path": "vm/video/mpe_video.h",
+      "sha256": "28f1bef8cf5596971656fb6af2323da4282ff92f88b94b0c4d87eb4485583b9d"
+    },
+    {
+      "path": "vm/video/mpe_video_kernel.h",
+      "sha256": "01c3984f27c22bdb89d6fc08c0fd1a98c5d8e392f6695c582186ad2016b8e1d0"
+    },
+    {
+      "path": "vm/video/mpe_video_live.cpp",
+      "sha256": "9c13cb6b369cef8745ac478800f76694e750647789016b1dee681e6a452b35a3"
+    },
+    {
+      "path": "vm/video/mpe_video_live.h",
+      "sha256": "7c038d8cf6848efcf7d003e8f85c7fef0b9902a8a0d99742cd03b7628d58330f"
+    },
+    {
+      "path": "vm/video/mpe_video_policy.h",
+      "sha256": "e5ea4a3ebcd6410f43be88b69542561abbdadcfdca1dc48ffe52d8ab130cca63"
+    },
+    {
+      "path": "vm/tests/image_test.cpp",
+      "sha256": "b22ff3c832cf0a3f799bef99e4c15f33622b9ee02286c2520429edbe811a643f"
+    },
+    {
+      "path": "vm/tests/registry_test.cpp",
+      "sha256": "0025d3eea5d633f7303df0d9ea8bf7aaae00e8667e984398c9b75ae110b6a84f"
+    },
+    {
+      "path": "vm/tests/files_test.cpp",
+      "sha256": "5ae96d951c8b84a86bd9a3bae853192314d00728f00534322f55e8ad1c9a01f5"
+    },
+    {
+      "path": "vm/tests/fake_sd.h",
+      "sha256": "829c8f9acf3312d0dd80e15fd051b17ac157ebb8b26eba5622137d5eced4e08a"
+    },
+    {
+      "path": "vm/tests/ram2_profile_test.cpp",
+      "sha256": "9d28d73af05e7bf58ed1dcfd00dc8c82f78ca62da9fb39d2b792a76be69aaafd"
+    },
+    {
+      "path": "vm/tests/packet_replay_test.cpp",
+      "sha256": "68bdf2d629320bd1a34cd665e89a270aa4686b05b90ee07788a1c2c2e85df077"
+    },
+    {
+      "path": "vm/tests/indexed_host_test.cpp",
+      "sha256": "4309e96f7458b9b2a6b204727fb0ecd3f2905c3b204d935cb727945dfccc947f"
+    },
+    {
+      "path": "vm/tests/mpe_video_live_test.cpp",
+      "sha256": "c2ebfc6823fadca7982c877749b4d050d93eca3dc6a6d1eaf3111058e8fffbf8"
+    },
+    {
+      "path": "vm/tests/diagnostic_module.cpp",
+      "sha256": "4117bdbe051fb483402acf2e3321649783beb11d59c3dd92bf44b54c1f92d6ba"
+    },
+    {
+      "path": "mpe/host/MinimalBoot.ino",
+      "sourcePath": "Source/Teensy/MinimalBoot/MinimalBoot.ino",
+      "sha256": "ad435bdacb7c707c2667abb9610cb6cd335c28ab93c04b4e5ed10359463c42d1"
+    },
+    {
+      "path": "mpe/host/Min_TeensyROM.h",
+      "sourcePath": "Source/Teensy/MinimalBoot/Min_TeensyROM.h",
+      "sha256": "bb960f90dbb83ad0304d9bfa8bb4ef88943ec7b9722b7e90fbfee7540091d056"
+    },
+    {
+      "path": "vm/video/mpe_video_camera.h",
+      "sha256": "8e88a090a6fa01f02b3f05204e75a5c5a8e38902a623cb15bb2c9c036d537bad"
+    },
+    {
+      "path": "vm/video/mpe_video_sprites.h",
+      "sha256": "b2e42bbc9f69c9d2c6f2887ab2758cbc84b05b117fa1921c61c03dc8e6622bab"
+    },
+    {
+      "path": "vm/tests/mpe_video_crop_test.cpp",
+      "sha256": "bade72b15b68bde18e3bbea3368ed3b94c7a8f99d1214acc4f60bc7de3933426"
+    },
+    {
+      "path": "vm/tests/mpe_video_detail_test.cpp",
+      "sha256": "cc544fac8e6de3e9fbb9a5c4c6a407d41a50efc7ae86532cf0c06d687732cdb4"
+    },
+    {
+      "path": "vm/tests/mpe_video_sprite_test.cpp",
+      "sha256": "bfa408a39c4594119f0dc1e978211770d62050940265290007e5a6c1bde73567"
+    }
+  ],
+  "adaptations": [
+    {
+      "path": "mpe/host/MinimalBoot.ino",
+      "reason": "Dedicated-image entry consumes the existing request in the stock router; reset/failure returns to stock menu and skips autolaunch once. Trailing whitespace normalized for the review patch."
+    },
+    {
+      "path": "vm/abi/README.md",
+      "reason": "Document the upstream integration and Doom-only public shipment policy; ABI code remains shared."
+    },
+    {
+      "path": "mpe/host/Min_TeensyROM.h",
+      "reason": "Only trailing whitespace normalized; VM build configuration is unchanged."
+    }
+  ]
+}

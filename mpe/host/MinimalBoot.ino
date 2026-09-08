@@ -1,20 +1,20 @@
 // MIT License
-// 
+//
 // Copyright (c) 2023 Travis Smith
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
-// and associated documentation files (the "Software"), to deal in the Software without 
-// restriction, including without limitation the rights to use, copy, modify, merge, publish, 
-// distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom 
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+// and associated documentation files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom
 // the Software is furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in all copies or 
+//
+// The above copyright notice and this permission notice shall be included in all copies or
 // substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
-// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+// BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
@@ -26,8 +26,15 @@
 #include "Common/DriveDirLoad.h"
 #include "Common/IOHandlers.h"
 
+#if (defined(FeatAGIPictureDMA) || defined(FeatVMVideoDMA)) && defined(Fab04_FullDMACapable)
+   // Full firmware gets this sketch automatically from the parent directory.
+   // MinimalBoot reuses the validated bus-master implementation only for a
+   // feature which owns an explicit DMA transaction.
+   #include "Common/DMAControl_Minimal.h"
+#endif
+
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
-volatile uint8_t BtnPressed = false; 
+volatile uint8_t BtnPressed = false;
 volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
 StructMenuItem DriveDirMenu;
@@ -38,23 +45,28 @@ Stream *CmdChannel  = &Serial;
 #ifdef FeatTCPListen
    #include <NativeEthernet.h>
    EthernetServer tcpServer(2112); // We will assume control on port 2112
-   EthernetClient tcpClient; 
+   EthernetClient tcpClient;
    bool TCPListen = false;
 #endif
 
 #include "Common/ISRs.c"
+#include "VMHost.h"
+#ifdef USB_DISABLED
+// The core's crash reporter polls this symbol even with USB compiled out.
+extern "C" void usb_isr(void) {}
+#endif
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 
-void setup() 
+void setup()
 {
    set_arm_clock(816000000);  //slight overclocking, no cooling required
-   
+
    SetLEDOn;  //On for minimal build, off for main init, then on at end of main init
    Serial.begin(115200);
    if (CrashReport) Serial.print(CrashReport);
 
-   for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
+   for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT);
 #ifdef Fab04_FullDMACapable
    SetAddrPortDirIn;
    SetAddrBufsIn;   //default to reading address (normal use)
@@ -68,16 +80,16 @@ void setup()
    //SetDataBufOut  done in ISR based on R/W signal state
    SetDataPortDirOut; //default to output (for C64 Read)
 #endif
-   
+
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
-   
+
 #ifdef Fab04_BiDirReset
    pinMode(BiDir_Reset_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    //leaving this as isrButton (go to main menu) because isrExtResetDetect leaves it in an odd state from here
    attachInterrupt( digitalPinToInterrupt(BiDir_Reset_PIN), isrButton, FALLING );
-#endif   
+#endif
    SetResetAssert; //assert reset until main loop()
 
 #ifdef Fab04_SpecialButton
@@ -96,17 +108,17 @@ void setup()
 #endif
 #endif
 #endif
-  
-   for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT); 
+
+   for(uint8_t PinNum=0; PinNum<sizeof(InputPins); PinNum++) pinMode(InputPins[PinNum], INPUT);
    pinMode(Menu_Btn_In_PIN, INPUT_PULLUP);  //also makes it Schmitt triggered (PAD_HYS)
    pinMode(PHI2_PIN, INPUT_PULLUP);   //also makes it Schmitt triggered (PAD_HYS)
    attachInterrupt( digitalPinToInterrupt(Menu_Btn_In_PIN), isrButton, FALLING );
    attachInterrupt( digitalPinToInterrupt(PHI2_PIN), isrPHI2, RISING );
    NVIC_SET_PRIORITY(IRQ_GPIO6789,16); //set HW ints as high priority, otherwise ethernet int timer causes misses
-  
+
    //end of IO init: mostly identical to Teensy.ino setup()
-   
-  
+
+
 #ifdef Dbg_TestMin
    //write a game path to execute
    //EEPwriteStr(eepAdCrtBootName, "/OneLoad v5/Main- MagicDesk CRTs/Auriga.crt");
@@ -119,8 +131,8 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A_Pig_Quest_1.02_ef.crt");                            //  some     no fails observed
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/A Pig Quest +2 {EasyFlash}[EX].crt");             //not on SD!
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/commercial_20XX_releases/a_pig_quest_v102_+9_[trex].crt");               //not on SD!
-   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt"); 
-   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/AlternativeFormats/EasyFlash/OneLoad64-Vol#5.crt"); 
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/Extras/OtherCRTs/Turrican & Turrican II [EasyFlash].crt");
+   //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/oneload64v4/AlternativeFormats/EasyFlash/OneLoad64-Vol#5.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Maniac Mansion & Zak McKracken [EasyFlash].crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/882k Last Ninja 1 + 2, The [EasyFlash].crt");
 
@@ -128,39 +140,35 @@ void setup()
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/hf_audio_playback_01.crt"); //good test of all banks, clicks during swaps at the end
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/954k Eye of the Beholder - v1.00 [EasyFlash].crt");        //swaps quickly during play                            //   Lots!
    //EEPwriteStr(eepAdCrtBootName, "/validation/crts/32_EasyFlash/Other-Large/svc64_update2.crt");  //SNK vs CAPCOM,  swaps quickly during play                                //   Lots!
-   //EEPwriteStr(eepAdCrtBootName, "/svc64_md2.crt");  
+   //EEPwriteStr(eepAdCrtBootName, "/svc64_md2.crt");
    //EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/svc64_md2.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
    EEPwriteStr(eepAdCrtBootName, "/validation/FileSize/Very Large CRTs/SNKvsCap/svc64_stronger.crt");  //SNK vs CAPCOM Strong Edition: Magic Desk 2
- 
+
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
-#endif  
-   
-   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin || ReadButton==0) runMainTRApp(); //jump to main app if not booting a CRT
-   
+#endif
+
+   // The stock lower image consumed the one-shot request before this image's
+   // ResetHandler ran. Only this dedicated image executes the VM RAM profile.
+   if (ReadButton==0) { REBOOT; }
+
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
 
-#ifdef MPE_VM_ENABLED
+   //we have a crt to load in minimal mode, proceed....
+
+   EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin); // reset returns to menu; skip autolaunch once
+
    char vmMarker[5]{};
-   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
-   if (vmMarker[0]=='@' && vmMarker[1]=='V' && vmMarker[2]=='M' && vmMarker[3]=='1') {
-      // Consume the request before entering the other image. Reset, load
-      // failure and the menu button return to the menu without autolaunch.
-      EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
-      delay(10);
-      runMPEApp();
-      runMainTRApp_FromMin(); // Missing/invalid MPE image: recover to stock menu.
+   EEPreadNBuf(eepAdCrtBootName,(uint8_t *)vmMarker,4);
+   if(!strcmp(vmMarker,"@VM1")) {
+      if(!VMHostBoot()) { REBOOT; }
+      BtnPressed=false;
       return;
    }
-#endif
-   
-   //we have a crt to load in minimal mode, proceed....
-   
-   EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 
 #ifdef FeatTCPListen
-   if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
+   if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen)
    { //Init Ethernet to to listen for TCP packets  Dynamically allocates ~100k of RAM2
       TCPListen = EthernetInit(); //turn off if failed init
    }
@@ -178,18 +186,18 @@ void setup()
    LOROM_Mask = HIROM_Mask = 0x1fff;
    EmulateVicCycles = false;
    FreeCrtChips();
-   
+
    strcpy(DriveDirPath, "/");
    SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    Serial.printf("\n%s *minimal* is on-line\n", strVersionNumber);
    Serial.printf(" %luMHz  %.1fC\n FW: %s, %s\n", (F_CPU_ACTUAL/1000000), tempmonGetTemp(), __DATE__, __TIME__);
-   
+
 #ifdef Dbg_TestMin
    //calc/show free RAM space for CRT:
    uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
-   Serial.printf(" RAM1    Buffer: %luK (%lu blks)\n", CrtMax, CrtMax/8);   
+   Serial.printf(" RAM1    Buffer: %luK (%lu blks)\n", CrtMax, CrtMax/8);
    Serial.printf(" RAM1 Swap Blks: %luK (%lu blks)\n", Num8kSwapBuffers*8, Num8kSwapBuffers);
    uint8_t NumChips = RAM2blocks();
    //Serial.printf("RAM2 Blks: %luK (%lu blks)\n", NumChips*8, NumChips);
@@ -201,39 +209,40 @@ void setup()
 
    // assuming it's a .crt file, and present on SD drive (verified in main image)
    LoadCRT(CrtBootNamePath);
-   if (!doReset) 
+   if (!doReset)
    {
       Serial.print("CRT not loaded, Abort!\n");
       runMainTRApp_FromMin(); //didn't load right if not calling for reset
    }
    BtnPressed = !ReadButton; //set to current state, could have false triggered from Reset signal on Fab04_
-} 
-     
+}
+
 void loop()
 {
    if (BtnPressed)
    {
+      if(VmRuntime::active) { REBOOT; }
       //Serial.print("Button detected (minimal)\n");
 #ifdef Dbg_TestMin
       REBOOT;  //button does a restart in test min mode
 #else
-      runMainTRApp_FromMin(); 
-#endif       
+      runMainTRApp_FromMin();
+#endif
    }
-   
+
    if (doReset)
    {
-      SetResetAssert; 
-      Serial.println("Resetting C64"); 
+      SetResetAssert;
+      Serial.println("Resetting C64");
       Serial.flush();
-      delay(50); 
-      
+      delay(50);
+
 #ifdef Fab04_BiDirReset
       SetResetInput;
       delay(50);  //debounce
-#else      
+#else
       SetResetDeassert;
-#endif      
+#endif
       doReset=false;
       BtnPressed = false;
 
@@ -241,9 +250,9 @@ void loop()
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );
 #endif
    }
-  
-   if (Serial.available()) ServiceSerial(&Serial);
-   
+
+   if (!VmRuntime::active && Serial.available()) ServiceSerial(&Serial);
+
 #ifdef FeatTCPListen
    if (TCPListen)
    {
@@ -260,7 +269,7 @@ void loop()
       if (tcpClient) ServiceTCP(tcpClient);
    }
 #endif
-   
+
    //handler specific polling items:
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
 }
@@ -268,26 +277,26 @@ void loop()
 
 void EEPwriteNBuf(uint16_t addr, const uint8_t* buf, uint8_t len)
 {
-   while (len--) EEPROM.write(addr+len, buf[len]);    
+   while (len--) EEPROM.write(addr+len, buf[len]);
 }
 
 void EEPwriteStr(uint16_t addr, const char* buf)
 {
-   EEPwriteNBuf(addr, (uint8_t*)buf, strlen(buf)+1); //include terminator    
+   EEPwriteNBuf(addr, (uint8_t*)buf, strlen(buf)+1); //include terminator
 }
 
 void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len)
 {
-   while (len--) buf[len] = EEPROM.read(addr+len);   
+   while (len--) buf[len] = EEPROM.read(addr+len);
 }
 
 void EEPreadStr(uint16_t addr, char* buf)
 {
    uint16_t CharNum = 0;
-   
+
    do
    {
-      buf[CharNum] = EEPROM.read(addr+CharNum); 
+      buf[CharNum] = EEPROM.read(addr+CharNum);
    } while (buf[CharNum++] !=0); //end on termination, but include it in buffer
 }
 
@@ -298,24 +307,24 @@ void LoadCRT( const char *FileNamePath)
 
    ///IO1[rWRegCurrMenuWAIT] = rmtSD;
    SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
-   
+
    //set path & filename
    strcpy(DriveDirPath, FileNamePath);
    char* ptrFilename = strrchr(DriveDirPath, '/'); //pointer file name, find last slash
-   if (ptrFilename == NULL) 
+   if (ptrFilename == NULL)
    {  //no path:
       strcpy(DriveDirPath, "/");
-      ptrFilename = (char*)FileNamePath; 
+      ptrFilename = (char*)FileNamePath;
    }
    else
    {  //separate path/filename
       *ptrFilename = 0; //terminate DriveDirPath
       ptrFilename++; //inc to point to filename
    }
-   
+
    DriveDirMenu.Name = ptrFilename;
    DriveDirMenu.ItemType = rtFileCrt; //Assoc_Ext_ItemType(DriveDirMenu[0].Name);
-     
+
    HandleExecution();
 }
 
@@ -329,7 +338,7 @@ FLASHMEM uint8_t RAM2blocks()
       ptrChip[ChipNum] = (char *)malloc(8192);
       if (ptrChip[ChipNum] == NULL) break;
       ChipNum++;
-   } 
+   }
    for(uint8_t Cnt=0; Cnt < ChipNum; Cnt++) free(ptrChip[Cnt]);
    //Serial.printf("Created/freed %d  8k blocks (%dk total) in RAM2\n", ChipNum, ChipNum*8);
    return ChipNum;
