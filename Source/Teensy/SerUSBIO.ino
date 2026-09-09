@@ -179,6 +179,26 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
              CloseDMA();
          }
          break;
+      case 'z':  //DMA bit-transition test, for sweeping the DMA data timing constants
+         {
+            const uint16_t Addr = 0xc000;
+            uint32_t Passes = 0;
+            GetDigits(3, &Passes); //z### : 256 byte pages written per pattern
+            if(Passes == 0) Passes = 64;
+            NVIC_DISABLE_IRQ(IRQ_ENET); //keep the bus quiet while testing, as ExpPortDMA does
+            NVIC_DISABLE_IRQ(IRQ_PIT);
+            Serial.printf("\nDMA pattern test: DMADataHold=%lu DMADataSetup=%lu DMASetup=%lu Passes=%lu"
+                          "\n  (overwrites C64 $%04x-$%04x)\n",
+               nS_DMADataHold, nS_DMADataSetup, nS_DMASetup, Passes, Addr, Addr+255);
+            TestDMAPattern(Addr, 0xff, 0xff, 0xff, Passes); //control: nothing has to change
+            TestDMAPattern(Addr, 0x00, 0xff, 0xff, Passes); //uniform, over the opposite value
+            TestDMAPattern(Addr, 0xff, 0x00, 0x00, Passes);
+            TestDMAPattern(Addr, 0x00, 0x00, 0xff, Passes); //alternating: bus swings each cycle
+            TestDMAPattern(Addr, 0xff, 0x55, 0xaa, Passes);
+            NVIC_ENABLE_IRQ(IRQ_PIT);
+            NVIC_ENABLE_IRQ(IRQ_ENET);
+         }
+         break;
    #ifdef USE_PSRAM
       case 'y':  //Load REU PSRAM from file
          {  //   example: y/reu/nuvies/speed.reu
@@ -448,6 +468,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case 'e': //nS_DMASetup change
                GetDigits(3, &nS_DMASetup);
                break;
+            case 'w': //nS_DMADataHold change
+               GetDigits(3, &nS_DMADataHold);
+               break;
+            case 'y': //nS_DMADataSetup change
+               GetDigits(3, &nS_DMADataSetup);
+               break;
             case 'k': //Cyc_KernProp change
                GetDigits(2, &Cyc_KernProp);
                break;
@@ -461,6 +487,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
                nS_DMASetup  = Def_nS_DMASetupPAL;
+               nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+               nS_DMADataSetup = Def_nS_DMADataSetupPAL;
                Cyc_KernProp = Def_Cyc_KernProp;
                CmdChannel->printf("Defaults set\n");
                break;
@@ -478,6 +506,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          CmdChannel->printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
          CmdChannel->printf("\t nS_DMAAssert %03d (ta###)\n", nS_DMAAssert);
          CmdChannel->printf("\t nS_DMASetup  %03d (te###)\n", nS_DMASetup);
+         CmdChannel->printf("\t nS_DMADataHold  %03d (tw###)\n", nS_DMADataHold);
+         CmdChannel->printf("\t nS_DMADataSetup %03d (ty###)\n", nS_DMADataSetup);
          CmdChannel->printf("\t Cyc_KernProp  %02d (tk##)\n", Cyc_KernProp);
 
          CmdChannel->printf("\tSet Defaults      (td)\n");

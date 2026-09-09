@@ -346,6 +346,15 @@ const uint8_t OutputPins[] = {
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
+
+//Both are measured from StartCycCnt, which DMAByte() re-latches nS_DMASetup after Phi2 falling, not from Phi2 rising
+#define Def_nS_DMADataSetupPAL  390  //delay to latching the data bus on a DMA read, too soon = bad reads
+#define Def_nS_DMADataSetupNTSC 390  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
+#define Def_nS_DMADataHoldPAL   430  //delay to releasing the data bus on a DMA write.  390 (err), 470 OK, 430 OK(?)
+#define Def_nS_DMADataHoldNTSC  410  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
+                                     //      intermittent partial-byte errors, <=425 clean.  PAL's own collapse is at 482
+                                     //      (9/10/26, C64 Ultimate in PAL mode) so 430 clears it, but that rig is an FPGA
+                                     //      and can't show the partial-byte mode - PAL's analog margin stays unverified.
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
@@ -361,6 +370,8 @@ uint32_t nS_VICStart  = Def_nS_VICStart;
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
 uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+uint32_t nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;
 uint32_t Cyc_KernProp = Def_Cyc_KernProp;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
