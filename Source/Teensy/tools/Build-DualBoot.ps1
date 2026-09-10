@@ -293,6 +293,15 @@ function Invoke-HexCombine {
     Write-Host "Combined: $FinalOutput ($([math]::Round($FinalSize/1KB, 2)) KB)" -ForegroundColor Green
 }
 
+function Invoke-FlashHeadroomCheck {
+    $CheckScript = Join-Path $ScriptPath "Test-FlashHeadroom.ps1"
+    if (-not (Test-Path $CheckScript)) { return }
+    & $CheckScript -HexPath $FinalOutput
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  (build artifact was still produced; this is a warning, not a build failure)" -ForegroundColor Yellow
+    }
+}
+
 # Build Process
 $BuildStartTime = Get-Date
 Write-Host "Starting build..." -ForegroundColor Cyan
@@ -330,6 +339,7 @@ if (-not $SkipMinimalBuild) {
 if (-not $SkipCombine) {
     Write-Host "`n[Step 3/3] Combining..." -ForegroundColor Magenta
     Invoke-HexCombine
+    Invoke-FlashHeadroomCheck
 }
 
 Write-Host "`n=== BUILD COMPLETE ===" -ForegroundColor Green
