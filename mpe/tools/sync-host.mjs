@@ -17,7 +17,16 @@ for(const p of ['vm/video/mpe_video_camera.h','vm/video/mpe_video_sprites.h',
   'vm/tests/mpe_video_crop_test.cpp','vm/tests/mpe_video_detail_test.cpp','vm/tests/mpe_video_sprite_test.cpp',
   'vm/tests/center_video_test.cpp','vm/tests/full_video_converter_test.cpp',
   'vm/tests/full_video_host_test.cpp','vm/tests/full_video_kernel_test.cpp',
-  'vm/tests/helpers/indexed_video_fixture.h']){
+  'vm/tests/helpers/indexed_video_fixture.h',
+  'vm/video/mpe_video_color_f1.h','vm/video/mpe_video_color_f1.cpp',
+  'vm/tests/indexed_ram2_source_test.cpp','vm/tests/indexed_timing_test.cpp','vm/tests/color_f1_host_test.cpp','vm/tests/color_f1_test.cpp',
+  'Source/Teensy/Flash/FXUtil.cpp','Source/Teensy/Flash/FXUtil.h',
+  'Source/Teensy/tests/flash-update-parser.cpp','Source/Teensy/tests/recovery-flash-source.test.js',
+  ...['native-fit.h','native-display.h','native-display.cpp','native-export.h','native-cache.h','native-host.h',
+    'double-host.h','double-export.h','native-data.mjs','double-data.mjs','double-buffer.mjs','live-audio.mjs',
+    'double-host-test.cpp','THIRD-PARTY-NOTICES.md','upstream-pinned/LICENSE',
+    'upstream-pinned/NuflixStudio/Settings/nufli-template.bin',
+    'upstream-pinned/NuflixStudio/Assets/Scripts/NuflixFormat.cs'].map(name=>'experiments/dosvm-nuflix/'+name)]){
   if(!lock.files.some(f=>f.path===p))lock.files.push({path:p});
 }
 // Read every source before writing anything, to reject an incomplete revision.

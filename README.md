@@ -17,13 +17,19 @@ the shared host, loader, services and C64 transport that make this possible.
 
 This optional firmware integration adds MPE support to Travis's existing
 interface. It uses the same VM format as the MHS Custom GUI firmware and retains
-the stock menu and ordinary cartridge configuration. **DoomVM is the only VM
-selected for public shipment; other VMs are withheld pending testing.**
+the stock menu and ordinary cartridge configuration. Compatible VM packages
+are separate downloads from the [MPE project](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms).
 
 This branch is a maintainer review candidate with successful builds and host
 checks; physical hardware acceptance remains pending. See the
 [MPE build and integration guide](docs/MPE-VM.md). TeensyROM hardware and original
 firmware remain the work of Travis Smith / Sensorium Embedded.
+
+The current [MPE 1.2.6 review build](docs/MPE-RETEST-1.2.6.md) includes MHS F1
+colour fitting, NUFLIX double buffering and SID servicing during uploads.
+Startup and button handling match upstream; there is no two-button firmware
+recovery option. Use the ordinary firmware updater. See the
+[component notices](docs/MPE-FIRMWARE-NOTICES.md).
 
 **Features include:**
 * **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.

@@ -1,6 +1,7 @@
 #include "helpers/indexed_video_fixture.h"
 int main(){
     void *arena=VirtualAlloc((void *)0x20010000,0x40000,MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);assert(arena==(void *)0x20010000);
+    void *guestArena=VirtualAlloc((void *)VM_RAM_BASE,VM_RAM2_GUEST_BYTES,MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);assert(guestArena==(void *)VM_RAM_BASE);
     auto p=(uint8_t *)VM_DATA_BASE;VmIndexedVideoSetup setup{sizeof(setup),p,VM_INDEXED_VIDEO_WORKSPACE_BYTES,0,15,0};
     setup.workspace_bytes--;assert(!configureIndexedVideo(&setup));setup.workspace_bytes++;
     setup.workspace=p+1;assert(!configureIndexedVideo(&setup));setup.workspace=p;assert(configureIndexedVideo(&setup));
@@ -8,6 +9,16 @@ int main(){
     const uint8_t rgb[]={0,0,0,255,255,255,136,57,50,103,182,189};memcpy(palette,rgb,sizeof rgb);
     for(unsigned y=0;y<200;y++)for(unsigned x=0;x<320;x++)pixels[y*320+x]=((y&7)>=4?2:0)+(x&1);
     VmIndexedFrame source{sizeof(source),1,pixels,palette,64000,12,320,200,320,4,0};
+    // SCUMM-sized decoded frames live in RAM2. The host snapshots them into
+    // RAM1 synchronously, so guest pixels and palette are valid source ranges.
+    auto guestPixels=(uint8_t *)VM_RAM_BASE,guestPalette=guestPixels+64000;
+    memcpy(guestPixels,pixels,64000);memcpy(guestPalette,rgb,sizeof rgb);
+    auto guestSource=source;guestSource.generation=99;guestSource.pixels=guestPixels;guestSource.palette=guestPalette;
+    assert(submitIndexedVideo(&guestSource)==VmVideoResult::Busy&&indexedVideo.phase==1);
+    indexedVideoAck();assert(transferIndexedVideo());indexedVideo.phase=3;indexedVideoAck();
+    assert(submitIndexedVideo(&guestSource)==VmVideoResult::Transferred);
+    auto outsideGuest=guestSource;outsideGuest.generation++;outsideGuest.pixels=(uint8_t *)(VM_RAM_BASE+VM_RAM2_GUEST_BYTES);assert(submitIndexedVideo(&outsideGuest)==VmVideoResult::Failed);
+    assert(configureIndexedVideo(&setup));segments=0;
     auto bad=source;bad.pixel_bytes--;assert(submitIndexedVideo(&bad)==VmVideoResult::Failed);
     bad=source;bad.palette=(uint8_t *)VM_DATA_LIMIT;assert(submitIndexedVideo(&bad)==VmVideoResult::Failed);
     indexedVideo.requested=1;assert(submitIndexedVideo(&source)==VmVideoResult::Busy&&indexedVideo.phase==1);
@@ -239,7 +250,7 @@ int main(){
     assert(indexedVideo.camera.x==48&&indexedVideo.camera.y==20);checkCrop();
     puts("PASS: F3 native crop through actual host, ordinary color-RAM DMA, frozen camera during ACK, zero-DMA repeat and F5/F7/F1/F3 transitions");
 #endif
-    VirtualFree(arena,0,MEM_RELEASE);
+    VirtualFree(guestArena,0,MEM_RELEASE);VirtualFree(arena,0,MEM_RELEASE);
     puts("PASS: indexed bounds/lifecycle, centered geometry, legacy restoration, inactive-bank PAL/NTSC sliced uploads, expired grants, atomic ACK ownership, picker reinitialization, DMA failure release");
     return 0;
 }

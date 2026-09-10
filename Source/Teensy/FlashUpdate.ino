@@ -103,12 +103,14 @@ void DoFlashUpdate(FS *sourceFS, const char *FilePathName)
       
    if (!hexFile) {
       SendMsgFailed();
+      firmware_buffer_free(buffer_addr, buffer_size);
       return;
    }
    SendMsgOK();
    
    // read hex file, write new firmware to flash, clean up, reboot
    update_firmware( &hexFile, &Serial, buffer_addr, buffer_size );
+   hexFile.close();
   
    // return from update_firmware() means error or user abort, so clean up and
    // reboot to ensure that static vars get boot-up initialized before retry(? nah)

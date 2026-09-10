@@ -1,10 +1,10 @@
 {
-  "upstreamBase": "0997c5a066f87f8f6528ed3887684a80c5af17a9",
-  "sharedHostRevision": "8024a9107f24b586ed4ffad7cae541cfe59e7d37",
+  "upstreamBase": "dc1174ce8475153160e0b0da4ff65525a7dd4e5a",
+  "sharedHostRevision": "59b86dff016ded4cdab27e5da5a989a4cb2eddca",
   "artifact": {
-    "path": "mpe/review/TeensyROM+_0.8.0.4_MPE-1.2.1_full.hex",
-    "bytes": 6753400,
-    "sha256": "b14a3d3e9ee518bf0f8128970faa48b73666bdbb99cea14a4e337884a7d77bd8"
+    "path": "mpe/review/TeensyROM+_0.8.0.5_MPE-1.2.6_full.hex",
+    "bytes": 7051912,
+    "sha256": "321155d52ec077c3c7469b60961019ec30227f56b682de626fad0e2912adb7a5"
   },
   "toolchain": {
     "arduinoCli": "1.4.1",
@@ -14,49 +14,48 @@
     "board": "TeensyROM+ Fab0.4"
   },
   "memory": {
-    "main": {
-      "itcmCodeBytes": 219048,
-      "itcmPhysicalBytes": 219052,
-      "itcmBanks": 7,
-      "itcmPaddingBytes": 10324,
-      "dtcmStaticBytes": 268352,
-      "linkedEndToStackGapBytes": 26560,
-      "ram2StaticBytes": 17600,
-      "heapStart": 538985664,
-      "heapEnd": 539492352
-    },
     "minimal": {
       "itcmCodeBytes": 136888,
       "itcmPhysicalBytes": 136892,
       "itcmBanks": 5,
-      "itcmPaddingBytes": 26948,
       "dtcmStaticBytes": 345888,
       "linkedEndToStackGapBytes": 14560,
       "ram2StaticBytes": 12448,
+      "psramStaticBytes": 0,
       "heapStart": 538980512,
       "heapEnd": 539492352
     },
+    "main": {
+      "itcmCodeBytes": 220584,
+      "itcmPhysicalBytes": 220588,
+      "itcmBanks": 7,
+      "dtcmStaticBytes": 268992,
+      "linkedEndToStackGapBytes": 25920,
+      "ram2StaticBytes": 17600,
+      "psramStaticBytes": 0,
+      "heapStart": 538985664,
+      "heapEnd": 539492352
+    },
     "vm": {
-      "itcmCodeBytes": 93032,
-      "itcmPhysicalBytes": 93036,
+      "itcmCodeBytes": 91320,
+      "itcmPhysicalBytes": 91324,
       "itcmBanks": 6,
       "dtcmStaticBytes": 52640,
+      "linkedEndToStackGapBytes": 275040,
       "ram2StaticBytes": 0,
+      "psramStaticBytes": 0,
       "heapStart": 536923584,
-      "heapEnd": 536939968,
-      "hostCodeLimitBytes": 98304,
-      "hostPhysicalCodeHeadroomBytes": 5268,
-      "moduleCodeReservationBytes": 98304,
-      "moduleDataReservationBytes": 196608,
-      "executionStackReservationBytes": 49152,
-      "hostHeapReservationBytes": 16384,
-      "reservedAndStackSpanBytes": 275040
+      "heapEnd": 536939968
     }
   },
-  "unchanged": {
-    "ordinaryMinimalHex": true,
-    "mainMemoryLayout": true,
-    "baselineRevision": "72de2955be90c7bc9b4c41169b4848b427af2655"
+  "vmReservations": {
+    "hostCode": 98304,
+    "hostHeap": 16384,
+    "moduleData": 196608,
+    "executionStack": 49152,
+    "legacyModuleCode": 98304,
+    "auxProfileModuleCode": 65536,
+    "auxProfileNonExecutableItcmTail": 32768
   },
   "layout": {
     "regions": [
@@ -71,23 +70,71 @@
         "name": "main",
         "start": 1611005952,
         "end": 1613234176,
-        "usedEnd": 1612948480,
-        "occupiedBytes": 1942524
+        "usedEnd": 1612950528,
+        "occupiedBytes": 1944572
       },
       {
         "name": "vm",
         "start": 1613234176,
         "end": 1613627392,
-        "usedEnd": 1613369344,
-        "occupiedBytes": 135168
+        "usedEnd": 1613475840,
+        "occupiedBytes": 241664
       }
     ],
-    "imageSpan": 2756608,
-    "stagingStart": 1613369344,
-    "stagingBytes": 5369856
+    "imageSpan": 2863104,
+    "stagingStart": 1613475840,
+    "stagingBytes": 5263360
   },
-  "tests": {
-    "firmwareSha256": "b14a3d3e9ee518bf0f8128970faa48b73666bdbb99cea14a4e337884a7d77bd8",
+  "images": [
+    {
+      "name": "minimal",
+      "sha256": "b1d09e9e266ae7064e7faf2b823527fb74bb00573a6dc8c23550c3947824e528"
+    },
+    {
+      "name": "main",
+      "sha256": "51542de3a9271b2219087e369deb6504adca23f07f130d8bc0337fc68f3c82a7"
+    },
+    {
+      "name": "vm",
+      "sha256": "f5c5357f21a813e9f2a1c9ea569ecb4f6e9512e4d645ea7f6e7d1bce0ef2ffdd"
+    }
+  ],
+  "comparisonBuilds": [
+    {
+      "mode": "stock-plus",
+      "sha256": "b98034de15f386314a1fc494fc267bc7d3fbc9c5c80b2cea21ba99a001bf3cca",
+      "mainMemory": {
+        "itcmCodeBytes": 220264,
+        "itcmPhysicalBytes": 220268,
+        "itcmBanks": 7,
+        "dtcmStaticBytes": 268992,
+        "linkedEndToStackGapBytes": 25920,
+        "ram2StaticBytes": 17600,
+        "psramStaticBytes": 0,
+        "heapStart": 538985664,
+        "heapEnd": 539492352
+      },
+      "hardwareTested": false
+    },
+    {
+      "mode": "stock",
+      "sha256": "a2951e9f8bc4cd53b3e2113d4f5353fd985cf4b507068b79d878f9a9f8bfae31",
+      "mainMemory": {
+        "itcmCodeBytes": 214120,
+        "itcmPhysicalBytes": 214124,
+        "itcmBanks": 7,
+        "dtcmStaticBytes": 264832,
+        "linkedEndToStackGapBytes": 30080,
+        "ram2StaticBytes": 17600,
+        "psramStaticBytes": 0,
+        "heapStart": 538985664,
+        "heapEnd": 539492352
+      },
+      "hardwareTested": false
+    }
+  ],
+  "verification": {
+    "firmwareSha256": "321155d52ec077c3c7469b60961019ec30227f56b682de626fad0e2912adb7a5",
     "passed": true,
     "unchangedUpstreamFiles": 219,
     "packageHashes": [
@@ -97,11 +144,11 @@
       },
       {
         "path": "VMS/DOOMVM/engine.mvm",
-        "sha256": "65244805eb5856ddd4bc6b9fc0db7200324585e1703dec62ca37a051dce8a71b"
+        "sha256": "6ccfae8a598726addce10b6d4a55dd073145e4090f0c521a04806fa4fcb4a69d"
       },
       {
         "path": "VMS/DOOMVM/client.crt",
-        "sha256": "3f1de49341ff00875fdd859f37e47e72a7b8e0d301094c16e343030afe4637ed"
+        "sha256": "56fc8b95135cb3956023d802f79c74ed26fc1e2eb7d4e97e70c781be74dafd0a"
       }
     ],
     "hardwareTested": false,
@@ -110,29 +157,98 @@
       "Synthetic large CRT files test launch fallthrough, not cartridge emulation."
     ]
   },
-  "testLog": {
-    "path": "mpe/review/host-1.2.1-tests.log",
-    "sha256": "ccceb7b453baf1125c2d9c1188d88527aefffa3c35db3ce09c5117361157db75"
-  },
-  "localModulePreflight": {
-    "passed": true,
-    "scope": "Header, CRC, service, entry and arena validation only; no gameplay",
-    "engines": [
-      {
-        "name": "DOSVM",
-        "sha256": "04d0b247bd340cc193fd8697bb29a859e7fc5e25de34b14b6de69ad7dc7a525a"
-      },
-      {
-        "name": "NESVM",
-        "sha256": "8ad32d74846974bd539031190559d7cb76df2e098b92011b99f73a3dc646f2b0"
-      },
-      {
-        "name": "GBVM",
-        "sha256": "49ff738359395cb30f0f6ccb93eaed98d88bf3bacb14a7de350640e35828fd61"
-      }
-    ]
-  },
-  "compiledSourceInputs": [
+  "tests": [
+    {
+      "path": "mpe/tools/verify.mjs",
+      "sha256": "4f4b37152ecbcfcec8d95346a206a3d07af06136aeb106ff5667b2fd712ff596"
+    },
+    {
+      "path": "mpe/tests/startup.test.mjs",
+      "sha256": "c51e767f15d0628d4e5f09f7ca740b462e60f45e5e28cfa69b2b3bc0455f0d09"
+    },
+    {
+      "path": "Source/Teensy/tests/recovery-flash-source.test.js",
+      "sha256": "db7fb0529f59fe996a7ee59f8d864482861e0ecf9aebd0aabca08153e94e91a8"
+    },
+    {
+      "path": "mpe/tests/nuflix-poll.cpp",
+      "sha256": "13ea92e311fdf218ebd1a56ab50e06230dfdfced544e9c1b930d956096ba18bb"
+    },
+    {
+      "path": "Source/Teensy/tests/flash-update-parser.cpp",
+      "sha256": "10a762df6a986cea4d18fccb32768b855c7fcbac4e9d621d47083ba1fba9d744"
+    }
+  ],
+  "testLogSha256": "2b4d4fd767b73969407e42c7586f9ec7fcc409e90267bbb76bb2bb28a5ab20b6",
+  "sourceInputs": [
+    {
+      "path": "experiments/dosvm-nuflix/double-buffer.mjs",
+      "sha256": "183a06155637030ac0b7577cf3c8ead5fc283cf364f21ac833f60a12f2fc7fb4"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-data.mjs",
+      "sha256": "370e68e58710e9f7647f13eec7f75c6975f75603529ee52a57f1496692e40913"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-export.h",
+      "sha256": "6f9cb5261ff80b76e3ed8472e50ad6b7d26d09d822dbd5a24e0a9cf007600205"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-host-test.cpp",
+      "sha256": "381791700c9383003675c138e77626c71e38c3b4946c5fe6930bc73d7133daca"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-host.h",
+      "sha256": "7dc3ebb16f928bd613799d0285801b02bb24398c937232cfa322e9bd793c5dfa"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/live-audio.mjs",
+      "sha256": "cc61a4b2d286a2052eb630f42d7657e0d13bbfe1d0e3d7fd15db274533e04cf2"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-cache.h",
+      "sha256": "ef0c2a4fc47dd034df26da2e50b94e251f832f72352911423b2578ad39019e67"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-data.mjs",
+      "sha256": "e9a8cbef3f890dd2a8c8608851a76408c381565fc33fd3cfd6fc5a1605242525"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-display.cpp",
+      "sha256": "2023ff834e6466eea55285f10b1e36692ace2240fc6135deb7008200b237b124"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-display.h",
+      "sha256": "1af3e2d2f0a6f410347942a8d5bf232f3db78fe272e87bac1cd9dbcc5bbff662"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-export.h",
+      "sha256": "1bebc00a9d5beed46ec11bee4b075b01e9b9ba7f13761b404d2473536140144c"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-fit.h",
+      "sha256": "3cb7a2355366af9ae4ed552b5f94b9f87c9fa718ae85c6f3ffeaa810d74e1ef2"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-host.h",
+      "sha256": "8cca75b0503d08cbe42af7cc833c6d0e6ece66406420d1f6785185dce9d1f60c"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/THIRD-PARTY-NOTICES.md",
+      "sha256": "aa805234b10e0f1741c734adc4262f0990e9dffbd409eb671b221c325c0e18ff"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/LICENSE",
+      "sha256": "1a969dd98763da79faa7d888975880da8529f8eea768fe7cc8f43befe0c2750f"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/NuflixStudio/Assets/Scripts/NuflixFormat.cs",
+      "sha256": "09b932ce3c4652e0a1cbf0311e20e76561491d6132eb83766ba06063161edd1b"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/NuflixStudio/Settings/nufli-template.bin",
+      "sha256": "9d644d1012e22cf5e74de54d3ab689380ac9272b45d672bfd6769de8673b877c"
+    },
     {
       "path": "mpe/host/Min_TeensyROM.h",
       "sha256": "06ce783d63af45f5fc7c418b574b577be20d11f4c5328fef86a59b5d8f9f25ed"
@@ -143,7 +259,7 @@
     },
     {
       "path": "mpe/tools/build.mjs",
-      "sha256": "733cb8f198295817bae7ca8e6dfdb3d8138ca92e07e85a435cfb94fdeee1923a"
+      "sha256": "ef8aff2e34cba7f3424d19044c83954d76f0c07c6ac8aceb5784812f1e4d3a9d"
     },
     {
       "path": "mpe/tools/hex.mjs",
@@ -571,7 +687,7 @@
     },
     {
       "path": "Source/Teensy/FileParsers.ino",
-      "sha256": "dc597377d431ca39d311be02ab67c4068685730e75caffe0298f7be05ceca816"
+      "sha256": "c2a73872ecf8db1addbd9a03d498472a54349da033bd898ed42f8ecb8d92c01c"
     },
     {
       "path": "Source/Teensy/FileTransfer.ino",
@@ -587,15 +703,15 @@
     },
     {
       "path": "Source/Teensy/Flash/FXUtil.cpp",
-      "sha256": "ca7d38d3647af2718fbf96eaee64cac14f68c3d8e4821307074ffd37665db465"
+      "sha256": "3a8ae06a7f8b43686e19e914bb371f1d0f08af7054a9edcb888f10b6a7c0df39"
     },
     {
       "path": "Source/Teensy/Flash/FXUtil.h",
-      "sha256": "fc8725e4ef3da514b6736d4086d424df43a5b26abf21e8a4d3d0f94dac7ec0c1"
+      "sha256": "fb4e0fc3c4e1a93d21c2ab8756788aecf1b7197b7df9b180d148e26bf0fae181"
     },
     {
       "path": "Source/Teensy/FlashUpdate.ino",
-      "sha256": "ff293489c34e9c0606fd7f8fdd3fb06878ce3dff6de6055d56315c082d5c5e72"
+      "sha256": "e522073b361e11db7422d8ab248153e76b124864a7f79b89523f87581406cd93"
     },
     {
       "path": "Source/Teensy/IOHandlers.ino",
@@ -623,7 +739,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/Common_Defs.h",
-      "sha256": "b3f65d8068c574e2f53a19130f46638c48d7d7c3cd89da3016cc92ba2fb045cc"
+      "sha256": "a542e3b557faf24d3bf09ac23fd427eaffafbc83e46588765a17896f6a602d66"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/DMAControl_Minimal.h",
@@ -631,7 +747,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/DriveDirLoad.h",
-      "sha256": "e1899986e3175cf2da827812bc501ec637685eb127d4ad4972aee3291b5bbc4a"
+      "sha256": "dfc8cda1a547ca5fb8a758f0cf33ece63ab242c825716f7f67348c6cbbf9315c"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h",
@@ -664,6 +780,10 @@
     {
       "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_EpyxFastLoad.c",
       "sha256": "3a95b880f3a182a41b0dff8a3c44000eb1e273734aecd4bfd7f9ae4639f87671"
+    },
+    {
+      "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_FinalCartridgeIII.c",
+      "sha256": "5a677388fa37bf7e7b77fe8c7e4a2c392bfe7de33b5048540a693c500b3c59ae"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_FunPlay.c",
@@ -747,7 +867,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/IOHandlers.h",
-      "sha256": "0e06b7d20ad5988431525ca6948d979e2c80d048b508215b33b94fbe8ff17344"
+      "sha256": "fc2ca8fbd01976a234848a05e7b2dc186f929f7c17ce9d637a6336231deda162"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/ISRs.c",
@@ -755,7 +875,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/Menu_Regs.h",
-      "sha256": "603e2dab866661b6d2b3a5aa95546b7240f6bf0da5373b17929c1d37017f7ac7"
+      "sha256": "ffd784914c84e31e3e9c88b2d8571d69ca25cb3bedc26be4b14408a8f011f9ff"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/MPEBootImage.h",
@@ -767,7 +887,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMABI.h",
-      "sha256": "7b76d312eab8dd2fc912aee735b7bb15aca7d6f2ff91b56d8358c3b52c76531a"
+      "sha256": "edd3469275632154bd1b0cddb837d0e409282c894cde319b07f0a640401c91ed"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMFiles.h",
@@ -819,7 +939,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMIndexedVideo.h",
-      "sha256": "a37b9ee4d81c0e6a3b3b28ba7fad750ad2b480b3495bfb9042a774ff84742a74"
+      "sha256": "b06719471808cc50cab5172bbc49bda687130cb1ed4653cb2a8cb10cc3e26a3d"
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMPacketReplay.h",
@@ -875,11 +995,19 @@
     },
     {
       "path": "Source/Teensy/Teensy.ino",
-      "sha256": "bcf70a00cf8397ad9c7f3e2a7129a299e1fb4f840b3f82c709f9dc4f52be62c9"
+      "sha256": "40007f84cf478246ef0450505bb4107e3d559fb11280e5f6451b26987e4ca12a"
     },
     {
       "path": "Source/Teensy/TeensyROM.h",
       "sha256": "3cdfbf6b5a9f22e3b72f405453cb584f0a3fef31e592b48c60e187889eb8d4af"
+    },
+    {
+      "path": "Source/Teensy/tests/flash-update-parser.cpp",
+      "sha256": "10a762df6a986cea4d18fccb32768b855c7fcbac4e9d621d47083ba1fba9d744"
+    },
+    {
+      "path": "Source/Teensy/tests/recovery-flash-source.test.js",
+      "sha256": "db7fb0529f59fe996a7ee59f8d864482861e0ecf9aebd0aabca08153e94e91a8"
     },
     {
       "path": "Source/Teensy/tools/_Build-Both TR and TR+.ps1",
@@ -919,7 +1047,7 @@
     },
     {
       "path": "Source/Teensy/tools/Build-DualBoot.ps1",
-      "sha256": "b1f4975d441893f09460cf5e11663271a16cbf7acf0503f33060d564e50c89e5"
+      "sha256": "c90ec3978026b7683723296d5a8d10685f57f85151f669c38bca3d3dd0bf21a3"
     },
     {
       "path": "Source/Teensy/tools/Clear-ArduinoCache.ps1",
@@ -928,6 +1056,10 @@
     {
       "path": "Source/Teensy/tools/HexCombineUtil/HexCombine.exe",
       "sha256": "3ce40fd810b250881c71fe9adc2cfe53d76ee0af35002067344ced2ea12aa558"
+    },
+    {
+      "path": "Source/Teensy/tools/Test-FlashHeadroom.ps1",
+      "sha256": "5495f01911d90707ca93b9ff2a2111304982d709a75f2b5d8338b4aefde4df91"
     },
     {
       "path": "Source/Teensy/TRMenuFiles/Pics/Ex_Pie2.art.h",
@@ -1402,16 +1534,24 @@
       "sha256": "8e88a090a6fa01f02b3f05204e75a5c5a8e38902a623cb15bb2c9c036d537bad"
     },
     {
+      "path": "vm/video/mpe_video_color_f1.cpp",
+      "sha256": "256c98c68a8275e9396bde288efdc335066a3f2acec4eed6afd31735fadcc417"
+    },
+    {
+      "path": "vm/video/mpe_video_color_f1.h",
+      "sha256": "d55c4138c02647ec3609cbbaa4c5f76d2423f613f860a84f167539030d3dcdfa"
+    },
+    {
       "path": "vm/video/mpe_video_kernel.h",
       "sha256": "d5fff8adbcb7dbea9c96d734873142282012b1e1da5ae1eb45e83b3dae23b2f5"
     },
     {
       "path": "vm/video/mpe_video_live.cpp",
-      "sha256": "abff6b54aeb1d80fa988905456a657e5317060e29706e1a168dfbc1c1867e552"
+      "sha256": "f86bbc87a2ccbe77f9cd5a90d5c953171fe94c3bac2ea7e9fa7a31ee4ffa928f"
     },
     {
       "path": "vm/video/mpe_video_live.h",
-      "sha256": "561685bf1bc89b078be3b22eae16ee569389799cab4b4d327974f530a75c5ac2"
+      "sha256": "0a1af43b34dd951af16f635b4ab4f90c096d63e8cc21a466064ab6966cc1a90d"
     },
     {
       "path": "vm/video/mpe_video_policy.h",
@@ -1430,11 +1570,12 @@
       "sha256": "28f1bef8cf5596971656fb6af2323da4282ff92f88b94b0c4d87eb4485583b9d"
     }
   ],
+  "hardwareTested": false,
   "notes": [
-    "The main summary omits 9756 bytes of NonCacheable data; linked gaps include it.",
-    "The VM end-to-stack gap contains module and heap reservations and is not free RAM.",
-    "Only generic firmware is included. No emulator engine, client or game payload is imported.",
-    "The source-input manifest identifies the actual built tree; the builder started from the upstream base with these recorded changes.",
-    "Build and host conformance passed; physical text firmware acceptance is pending."
+    "The original text UI and 219 protected upstream files remain unchanged.",
+    "Firmware contains the host, not DOS/SCI/SCUMM or other emulator engines or private games.",
+    "Startup checks exclude button-triggered flashing; parser tests stub flash operations.",
+    "PAL/NTSC double-buffer tests simulate DMA. Physical gameplay, audio and updater acceptance remain pending.",
+    "Component licenses are documented in docs/MPE-FIRMWARE-NOTICES.md."
   ]
 }

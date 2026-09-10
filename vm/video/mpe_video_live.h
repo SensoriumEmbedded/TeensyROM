@@ -2,6 +2,7 @@
 #pragma once
 #include <stdint.h>
 #include <string.h>
+#include "mpe_video_color_f1.h"
 
 namespace mpe_video {
 // Optional larger workspace retains exact images of both C64 banks. Older
@@ -56,6 +57,10 @@ struct IndexedSource {
     // Null forces conversion of every cell; the producer owns invalidation
     // for changes inside a read_pixel context, including display-start changes.
     const uint8_t *dirty_cells=nullptr;
+    // Negotiated MHS color conversion. Only native 320x200 F1 uses this hint.
+    bool color_f1=false;
+    // Caller-owned cell-aligned bottom UI band, 200 means no protected band.
+    uint16_t solid_from_y=200;
 };
 class LiveConverter;
 constexpr unsigned FullPictureLeft=24,FullPictureWidth=320-FullPictureLeft;
@@ -81,11 +86,12 @@ struct FullFrame {
     void mark(unsigned cell){for(auto &bank:dirty)bank[cell/8]|=1u<<(cell&7);}
 };
 class LiveConverter {
-    uint8_t map_[256];
+    uint8_t map_[256]{};
     uint32_t distance_[16][16];
     void overlay(const IndexedSource &s,LiveFrame &out,bool nativeWidth) const;
     static const uint8_t *palette();
     void prepare(const IndexedSource &s);
+    void renderColorF1(const IndexedSource &s,LiveFrame &out,ColorF1Cache *cache);
     bool renderQuad(const IndexedSource &s,LiveFrame &frame,uint8_t *extra0,uint8_t *extra1,
                     uint8_t *dirty,unsigned first,unsigned rows,const uint8_t *sourceDirty);
     struct Pair {uint8_t a,b;};
@@ -154,7 +160,7 @@ class LiveConverter {
 public:
     // mode: 0 ordinary multicolor; 1 Auto8; 2 Enhanced25; 3 Sharp.
     // Enhanced25/Sharp center narrower sources; all modes fit height.
-    bool render(const IndexedSource &s,uint8_t mode,LiveFrame &out,const LiveFrame *previous=nullptr);
+    bool render(const IndexedSource &s,uint8_t mode,LiveFrame &out,const LiveFrame *previous=nullptr,ColorF1Cache *cache=nullptr);
     bool renderCenter(const IndexedSource &s,CenterFrame &out,unsigned first,unsigned rows);
     bool renderFull(const IndexedSource &s,FullFrame &out,bool *changed=nullptr);
 };

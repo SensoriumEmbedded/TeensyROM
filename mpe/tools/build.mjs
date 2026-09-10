@@ -7,6 +7,9 @@ import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {combineHex,FLASH_BASE,FLASH_LIMIT,MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
+import {generateNativeData} from '../../experiments/dosvm-nuflix/native-data.mjs';
+import {generateDoubleData} from '../../experiments/dosvm-nuflix/double-data.mjs';
+import {audioHost} from '../../experiments/dosvm-nuflix/live-audio.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const args=process.argv.slice(2), option=(name,fallback)=>{
@@ -31,7 +34,7 @@ function inputs(){
     if(e.name==='build')continue;const p=path.join(dir,e.name);
     if(e.isDirectory())walk(p);else files.push({path:p.replaceAll('\\','/'),sha256:sha(fs.readFileSync(path.join(root,p)))});
   }};
-  for(const dir of ['Source','mpe/host','vm/video'])walk(dir);
+  for(const dir of ['Source','mpe/host','vm/video','experiments/dosvm-nuflix'])walk(dir);
   for(const p of ['mpe/tools/build.mjs','mpe/tools/hex.mjs'])files.push({path:p,sha256:sha(fs.readFileSync(path.join(root,p)))});
   return files.sort((a,b)=>a.path.localeCompare(b.path));
 }
@@ -43,6 +46,12 @@ if(process.platform==='win32'&&data.length>70)throw Error('Use a shorter --out p
 fs.cpSync(path.join(root,'Source'),path.join(stage,'Source'),{recursive:true,filter:p=>!path.relative(path.join(root,'Source'),p).split(path.sep).includes('build')});
 if(mode==='mpe'){
   fs.cpSync(path.join(root,'vm/video'),path.join(stage,'vm/video'),{recursive:true});
+  const nuflix=path.join(stage,'experiments/dosvm-nuflix');
+  fs.cpSync(path.join(root,'experiments/dosvm-nuflix'),nuflix,{recursive:true});
+  generateNativeData(path.join(nuflix,'upstream-pinned'),nuflix);
+  generateDoubleData(nuflix);
+  const poll=path.join(stage,'Source/Teensy/MinimalBoot/VMHostPoll.h');
+  write(poll,audioHost(read(poll)));
   const vmSketch=path.join(stage,'Source/Teensy/MPEBoot');
   fs.cpSync(path.join(stage,'Source/Teensy/MinimalBoot'),vmSketch,{recursive:true});
   fs.unlinkSync(path.join(vmSketch,'MinimalBoot.ino'));
@@ -106,11 +115,11 @@ if(mode==='mpe'){
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap guest RAM2")
       ASSERT(SIZEOF(.bss.extram) == 0, "Host requires PSRAM")`);
   const bootdata=read(path.join(linkers,'bootdata.c.orig')).replace('0x60000000,','0x'+VM_BASE.toString(16)+',');
-  compile('vm',true,{sketchName:'MPEBoot',ld,bootdata,usb:'USB_DISABLED',extra:' -DMHS_VM_PROFILE_192_320 -I'+stage.replaceAll('\\','/')});
+  compile('vm',true,{sketchName:'MPEBoot',ld,bootdata,usb:'USB_DISABLED',extra:' -DMHS_VM_PROFILE_192_320 -DMPE_DOS_NUFLIX -DMPE_DOS_NUFLIX_DOUBLE -I'+stage.replaceAll('\\','/')});
 }
 const combined=combineHex(images.map((image,i)=>({name:image.name,text:read(image.hex),start:[FLASH_BASE,MAIN_BASE,VM_BASE][i],end:[MAIN_BASE,VM_BASE,VM_LIMIT][i]})));
 const version=read(path.join(root,'Source/Teensy/MinimalBoot/Common/Common_Defs.h')).match(/#define TRVersion\s+"([^"]+)"/)[1];
-const filename=`TeensyROM${mode==='stock'?'':'+'}_${version}${mode==='mpe'?'_MPE-1.2.1':''}_full.hex`;
+const filename=`TeensyROM${mode==='stock'?'':'+'}_${version}${mode==='mpe'?'_MPE-1.2.6':''}_full.hex`;
 const artifact=path.join(runRoot,filename);write(artifact,combined.hex);
 if(JSON.stringify(inputs())!==JSON.stringify(inputSnapshot))throw Error('Source changed during build; do not use these artifacts');
 const report={mode,sourceRevision:run('git',['rev-parse','HEAD']).trim(),inputs:inputSnapshot,runRoot,artifact,sha256:sha(fs.readFileSync(artifact)),layout:{regions:combined.regions,imageSpan:combined.imageSpan,stagingStart:combined.stagingStart,stagingBytes:combined.stagingBytes},images:images.map(({name,elf,hex,symbols})=>({name,elf,hex,sha256:sha(fs.readFileSync(hex)),itcmEnd:symbols.match(/^([0-9a-f]+) \w _etext$/m)?.[1]}))};

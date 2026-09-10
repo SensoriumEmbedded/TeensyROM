@@ -78,6 +78,15 @@ constexpr uint32_t VM_CENTER_VIDEO_WORKSPACE_BYTES=16384;
 // Negotiates separately so existing 16 KiB center-profile modules still work.
 enum : uint16_t { VM_INDEXED_FULL_F5=2048 };
 constexpr uint32_t VM_FULL_VIDEO_WORKSPACE_BYTES=19456;
+enum : uint16_t { VM_INDEXED_NUFLIX_F5=8192 };
+constexpr uint32_t VM_NUFLIX_VIDEO_WORKSPACE_BYTES=23328;
+// MHS palette-cached multicolor conversion for native 320x200 F1.
+// Explicit producer opt-in; other modes retain their established converter.
+// Old firmware rejects the bit: retry without it to retain clean F1.
+enum : uint16_t { VM_INDEXED_COLOR_F1=4096 };
+// Keep the bottom 32 source rows as solid-color UI in Color F1 only.
+// Older hosts reject this optional bit; retry without it, then without COLOR.
+enum : uint16_t { VM_INDEXED_SOLID_STATUS=16384 };
 // Opt-in indexed service: packed RGB palette and row-major 8-bit indices.
 // Modes 0 Color, 1 Auto-8, 2 Enhanced-25, 3 Sharp; capability bit = 1<<mode.
 // Configuration lends an aligned, lifetime-long RAM1 workspace to firmware.

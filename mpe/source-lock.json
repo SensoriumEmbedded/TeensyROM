@@ -1,10 +1,10 @@
 {
   "repository": "https://github.com/ziggystar12/Teensy-Rom-Custom-GUI",
-  "revision": "8024a9107f24b586ed4ffad7cae541cfe59e7d37",
+  "revision": "59b86dff016ded4cdab27e5da5a989a4cb2eddca",
   "files": [
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMABI.h",
-      "sha256": "7b76d312eab8dd2fc912aee735b7bb15aca7d6f2ff91b56d8358c3b52c76531a"
+      "sha256": "edd3469275632154bd1b0cddb837d0e409282c894cde319b07f0a640401c91ed"
     },
     {
       "path": "Source/Teensy/MinimalBoot/Common/VMRegistry.h",
@@ -28,7 +28,7 @@
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMIndexedVideo.h",
-      "sha256": "a37b9ee4d81c0e6a3b3b28ba7fad750ad2b480b3495bfb9042a774ff84742a74"
+      "sha256": "b06719471808cc50cab5172bbc49bda687130cb1ed4653cb2a8cb10cc3e26a3d"
     },
     {
       "path": "Source/Teensy/MinimalBoot/VMPacketReplay.h",
@@ -64,11 +64,11 @@
     },
     {
       "path": "vm/video/mpe_video_live.cpp",
-      "sha256": "abff6b54aeb1d80fa988905456a657e5317060e29706e1a168dfbc1c1867e552"
+      "sha256": "f86bbc87a2ccbe77f9cd5a90d5c953171fe94c3bac2ea7e9fa7a31ee4ffa928f"
     },
     {
       "path": "vm/video/mpe_video_live.h",
-      "sha256": "561685bf1bc89b078be3b22eae16ee569389799cab4b4d327974f530a75c5ac2"
+      "sha256": "0a1af43b34dd951af16f635b4ab4f90c096d63e8cc21a466064ab6966cc1a90d"
     },
     {
       "path": "vm/video/mpe_video_policy.h",
@@ -100,7 +100,7 @@
     },
     {
       "path": "vm/tests/indexed_host_test.cpp",
-      "sha256": "5ace3e9ed1acef5eeb3c20a9cdbe66992dd40cd8b5efb39d14bf61f4bbc768c0"
+      "sha256": "7aeb371fee27aa39f52fec9dc4e69a17e62c502d5d3456ceb7ce37f03f643dde"
     },
     {
       "path": "vm/tests/mpe_video_live_test.cpp",
@@ -159,6 +159,114 @@
     {
       "path": "vm/tests/helpers/indexed_video_fixture.h",
       "sha256": "fb0f602b0ca713f1817fd33f14afc0db1ee495c53d803e5e8a9668057311428a"
+    },
+    {
+      "path": "vm/tests/indexed_ram2_source_test.cpp",
+      "sha256": "16659288154b00cd1703ead3227c99665105857fbd857d95d0fd6ddfec51c95c"
+    },
+    {
+      "path": "Source/Teensy/Flash/FXUtil.cpp",
+      "sha256": "3a8ae06a7f8b43686e19e914bb371f1d0f08af7054a9edcb888f10b6a7c0df39"
+    },
+    {
+      "path": "Source/Teensy/Flash/FXUtil.h",
+      "sha256": "fb4e0fc3c4e1a93d21c2ab8756788aecf1b7197b7df9b180d148e26bf0fae181"
+    },
+    {
+      "path": "Source/Teensy/tests/flash-update-parser.cpp",
+      "sha256": "10a762df6a986cea4d18fccb32768b855c7fcbac4e9d621d47083ba1fba9d744"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-fit.h",
+      "sha256": "3cb7a2355366af9ae4ed552b5f94b9f87c9fa718ae85c6f3ffeaa810d74e1ef2"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-display.h",
+      "sha256": "1af3e2d2f0a6f410347942a8d5bf232f3db78fe272e87bac1cd9dbcc5bbff662"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-display.cpp",
+      "sha256": "2023ff834e6466eea55285f10b1e36692ace2240fc6135deb7008200b237b124"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-export.h",
+      "sha256": "1bebc00a9d5beed46ec11bee4b075b01e9b9ba7f13761b404d2473536140144c"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-cache.h",
+      "sha256": "ef0c2a4fc47dd034df26da2e50b94e251f832f72352911423b2578ad39019e67"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-host.h",
+      "sha256": "8cca75b0503d08cbe42af7cc833c6d0e6ece66406420d1f6785185dce9d1f60c"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-host.h",
+      "sha256": "7dc3ebb16f928bd613799d0285801b02bb24398c937232cfa322e9bd793c5dfa"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-export.h",
+      "sha256": "6f9cb5261ff80b76e3ed8472e50ad6b7d26d09d822dbd5a24e0a9cf007600205"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/native-data.mjs",
+      "sha256": "e9a8cbef3f890dd2a8c8608851a76408c381565fc33fd3cfd6fc5a1605242525"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-data.mjs",
+      "sha256": "370e68e58710e9f7647f13eec7f75c6975f75603529ee52a57f1496692e40913"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-buffer.mjs",
+      "sha256": "183a06155637030ac0b7577cf3c8ead5fc283cf364f21ac833f60a12f2fc7fb4"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/live-audio.mjs",
+      "sha256": "cc61a4b2d286a2052eb630f42d7657e0d13bbfe1d0e3d7fd15db274533e04cf2"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/double-host-test.cpp",
+      "sha256": "381791700c9383003675c138e77626c71e38c3b4946c5fe6930bc73d7133daca"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/THIRD-PARTY-NOTICES.md",
+      "sha256": "aa805234b10e0f1741c734adc4262f0990e9dffbd409eb671b221c325c0e18ff"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/LICENSE",
+      "sha256": "1a969dd98763da79faa7d888975880da8529f8eea768fe7cc8f43befe0c2750f"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/NuflixStudio/Settings/nufli-template.bin",
+      "sha256": "9d644d1012e22cf5e74de54d3ab689380ac9272b45d672bfd6769de8673b877c"
+    },
+    {
+      "path": "experiments/dosvm-nuflix/upstream-pinned/NuflixStudio/Assets/Scripts/NuflixFormat.cs",
+      "sha256": "09b932ce3c4652e0a1cbf0311e20e76561491d6132eb83766ba06063161edd1b"
+    },
+    {
+      "path": "vm/video/mpe_video_color_f1.h",
+      "sha256": "d55c4138c02647ec3609cbbaa4c5f76d2423f613f860a84f167539030d3dcdfa"
+    },
+    {
+      "path": "vm/video/mpe_video_color_f1.cpp",
+      "sha256": "256c98c68a8275e9396bde288efdc335066a3f2acec4eed6afd31735fadcc417"
+    },
+    {
+      "path": "vm/tests/color_f1_host_test.cpp",
+      "sha256": "c277f0426c5fa948b791b263ecdb6dfbda021e0491f3f2cac1b71a0a0be31825"
+    },
+    {
+      "path": "vm/tests/color_f1_test.cpp",
+      "sha256": "9b7340899efb44c050329fa648cb55109e5542916becb987f07585c46dd69ee6"
+    },
+    {
+      "path": "Source/Teensy/tests/recovery-flash-source.test.js",
+      "sha256": "db7fb0529f59fe996a7ee59f8d864482861e0ecf9aebd0aabca08153e94e91a8"
+    },
+    {
+      "path": "vm/tests/indexed_timing_test.cpp",
+      "sha256": "b25f9f9b8e3f6b2058e27e023af33bd6b0ff73f68ebe90b6e318535673da9209"
     }
   ],
   "adaptations": [
@@ -168,7 +276,7 @@
     },
     {
       "path": "vm/abi/README.md",
-      "reason": "Document the upstream integration and Doom-only public shipment policy; ABI code remains shared."
+      "reason": "Document the upstream integration and separate VM downloads; ABI code remains shared."
     },
     {
       "path": "mpe/host/Min_TeensyROM.h",
