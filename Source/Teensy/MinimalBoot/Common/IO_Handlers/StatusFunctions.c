@@ -732,6 +732,100 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    //SendMsgPrintf(" OK");
    return true;
 }
+
+FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, uint8_t ValB, uint16_t Passes)
+{
+   //Alternating ValA/ValB swings the data bus between DMA cycles, which a uniform fill never does.
+   //   Pre-filling with PriorVal is what makes a dropped write visible - TestDMAPage() writing $ff
+   //   over a page already holding $ff verifies clean either way.  PriorVal==ValA==ValB is a control.
+   uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize];
+   uint32_t BadBytes = 0, WorstPass = 0, Unchanged = 0, PrefillBad = 0;
+   uint32_t BitFell[8] = {0}, BitRose[8] = {0};
+   uint32_t PrefillFell = 0, PrefillRose = 0;
+   uint8_t XorMask = 0, PrefillXor = 0;
+
+   for(uint16_t Pass = 0; Pass < Passes; Pass++)
+   {
+      memset(PageBuf, PriorVal, TestPageSize);
+      PerformDMA(false, Address, PageBuf, TestPageSize, false);
+      CloseDMA();
+      PerformDMA(true, Address, PriorBuf, TestPageSize, false); //what the page really holds now
+      CloseDMA();
+      //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
+      //   partial-byte vs whole-byte detail as the pattern write, not just a count
+      for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
+      {
+         uint8_t Diff = PriorBuf[ByteNum] ^ PriorVal;
+         if(Diff == 0) continue;
+         PrefillBad++;
+         PrefillXor |= Diff;
+         for(uint8_t Bit = 0; Bit < 8; Bit++)
+         {
+            if(!(Diff & (1<<Bit))) continue;
+            if(PriorVal & (1<<Bit)) PrefillFell++;
+            else PrefillRose++;
+         }
+      }
+
+      for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
+         PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
+      PerformDMA(false, Address, PageBuf, TestPageSize, false);
+      CloseDMA();
+      PerformDMA(true, Address, PageBuf, TestPageSize, false);
+      CloseDMA();
+
+      uint32_t PassBad = 0;
+      for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
+      {
+         uint8_t Expected = (ByteNum & 1) ? ValB : ValA;
+         uint8_t Diff = PageBuf[ByteNum] ^ Expected;
+         if(Diff == 0) continue;
+         PassBad++;
+         XorMask |= Diff;
+         if(PageBuf[ByteNum] == PriorBuf[ByteNum]) Unchanged++; //write never landed, vs a partial byte that landed mid-settle
+         for(uint8_t Bit = 0; Bit < 8; Bit++)
+         {
+            if(!(Diff & (1<<Bit))) continue;
+            if(Expected & (1<<Bit)) BitFell[Bit]++;
+            else BitRose[Bit]++;
+         }
+      }
+      BadBytes += PassBad;
+      if(PassBad > WorstPass) WorstPass = PassBad;
+   }
+
+   uint32_t TotalBytes = (uint32_t)Passes * TestPageSize;
+   uint32_t Fell = 0, Rose = 0;
+   for(uint8_t Bit = 0; Bit < 8; Bit++) { Fell += BitFell[Bit]; Rose += BitRose[Bit]; }
+
+   if(ValA == ValB) Serial.printf("$%02x", ValA);
+   else Serial.printf("$%02x/$%02x alt", ValA, ValB);
+   Serial.printf(" over $%02x @ $%04x: %lu bad of %lu bytes", PriorVal, Address, BadBytes, TotalBytes);
+   if(PrefillBad) Serial.printf(", pre-fill %lu bad", PrefillBad);
+   if(BadBytes == 0 && PrefillBad == 0)
+   {
+      Serial.printf("  CLEAN\n");
+      return true;
+   }
+   Serial.printf("\n");
+   if(PrefillBad)
+      Serial.printf("  pre-fill: xor mask $%02x, 1->0: %lu, 0->1: %lu\n",
+         PrefillXor, PrefillFell, PrefillRose);
+   if(BadBytes)
+   {
+      Serial.printf("  worst page: %lu, unchanged: %lu, xor mask $%02x, 1->0: %lu, 0->1: %lu\n",
+         WorstPass, Unchanged, XorMask, Fell, Rose);
+      //Not a drive-strength measure - a uniform pattern forces every failing bit into one column
+      Serial.printf("  bit:  ");
+      for(int8_t Bit = 7; Bit >= 0; Bit--) Serial.printf("%8d", Bit);
+      Serial.printf("\n  1->0: ");
+      for(int8_t Bit = 7; Bit >= 0; Bit--) Serial.printf("%8lu", BitFell[Bit]);
+      Serial.printf("\n  0->1: ");
+      for(int8_t Bit = 7; Bit >= 0; Bit--) Serial.printf("%8lu", BitRose[Bit]);
+      Serial.printf("\n");
+   }
+   return false;
+}
 #endif
 
 FLASHMEM void ExpPortDMA()
@@ -859,6 +953,21 @@ FLASHMEM void ExpPortDMA()
    if (!TestDMAPage(0x3f00, 0x55)) return;
    if (!TestDMAPage(0x3f00, 0xff)) return;
    if (!TestDMAPage(0x3f00, 0x00)) return;
+   SendMsgPrintf(" OK");
+
+
+//DMA bit transitions
+   SendMsgPrintfln("DMA Bit Transition Tests");
+   //Unlike the uniform fills above, these set the prior page contents so the data lines actually move
+   if (!TestDMAPattern(0xc000, 0xff, 0xff, 0xff, 16) || //control: nothing has to change
+       !TestDMAPattern(0xc000, 0x00, 0xff, 0xff, 64) || //uniform, over the opposite value
+       !TestDMAPattern(0xc000, 0xff, 0x00, 0x00, 64) ||
+       !TestDMAPattern(0xc000, 0x00, 0x00, 0xff, 64) || //alternating: bus swings each cycle
+       !TestDMAPattern(0xc000, 0xff, 0x55, 0xaa, 64))
+   {
+      SendMsgPrintfln(" Failed, details on serial");
+      return;
+   }
    SendMsgPrintf(" OK");
 
 

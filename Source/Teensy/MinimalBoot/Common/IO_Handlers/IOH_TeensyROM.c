@@ -602,8 +602,20 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case wRegVid_TOD_Clks:
             IO1[wRegVid_TOD_Clks]=Data;
             //make NTSC/PAL specific timing tweaks upon discovery
-            if (Data & 1) { nS_DMASetup = Def_nS_DMASetupNTSC; nS_MaxAdj = Def_nS_MaxAdjNTSC; }
-            else          { nS_DMASetup = Def_nS_DMASetupPAL;  nS_MaxAdj = Def_nS_MaxAdjPAL;  }
+            if (Data & 1)
+            {
+               nS_DMASetup     = Def_nS_DMASetupNTSC;
+               nS_MaxAdj       = Def_nS_MaxAdjNTSC;
+               nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
+               nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
+            }
+            else
+            {
+               nS_DMASetup     = Def_nS_DMASetupPAL;
+               nS_MaxAdj       = Def_nS_MaxAdjPAL;
+               nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+               nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+            }
             break;
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
