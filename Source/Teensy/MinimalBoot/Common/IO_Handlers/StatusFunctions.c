@@ -741,7 +741,8 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize];
    uint32_t BadBytes = 0, WorstPass = 0, Unchanged = 0, PrefillBad = 0;
    uint32_t BitFell[8] = {0}, BitRose[8] = {0};
-   uint8_t XorMask = 0;
+   uint32_t PrefillFell = 0, PrefillRose = 0;
+   uint8_t XorMask = 0, PrefillXor = 0;
 
    for(uint16_t Pass = 0; Pass < Passes; Pass++)
    {
@@ -750,8 +751,21 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
       CloseDMA();
       PerformDMA(true, Address, PriorBuf, TestPageSize, false); //what the page really holds now
       CloseDMA();
+      //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
+      //   partial-byte vs whole-byte detail as the pattern write, not just a count
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
-         if(PriorBuf[ByteNum] != PriorVal) PrefillBad++;
+      {
+         uint8_t Diff = PriorBuf[ByteNum] ^ PriorVal;
+         if(Diff == 0) continue;
+         PrefillBad++;
+         PrefillXor |= Diff;
+         for(uint8_t Bit = 0; Bit < 8; Bit++)
+         {
+            if(!(Diff & (1<<Bit))) continue;
+            if(PriorVal & (1<<Bit)) PrefillFell++;
+            else PrefillRose++;
+         }
+      }
 
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
          PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
@@ -794,6 +808,9 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
       return true;
    }
    Serial.printf("\n");
+   if(PrefillBad)
+      Serial.printf("  pre-fill: xor mask $%02x, 1->0: %lu, 0->1: %lu\n",
+         PrefillXor, PrefillFell, PrefillRose);
    if(BadBytes)
    {
       Serial.printf("  worst page: %lu, unchanged: %lu, xor mask $%02x, 1->0: %lu, 0->1: %lu\n",

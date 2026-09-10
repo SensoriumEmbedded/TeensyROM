@@ -92,7 +92,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       //   break;
 
 // *** The rest of these cases are used for debug/testing only  
-   // u,v,w,y
+   // u,v,w,y,z
    #ifdef Dbg_SerDMA
    #ifdef Fab04_FullDMACapable
       case 'u':  //Perform DMA Write
@@ -185,6 +185,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             uint32_t Passes = 0;
             GetDigits(3, &Passes); //z### : 256 byte pages written per pattern
             if(Passes == 0) Passes = 64;
+            //restore rather than enable on exit - ExpPortDMA and some handlers leave these off on purpose
+            bool ENETWasOn = NVIC_IS_ENABLED(IRQ_ENET), PITWasOn = NVIC_IS_ENABLED(IRQ_PIT);
             NVIC_DISABLE_IRQ(IRQ_ENET); //keep the bus quiet while testing, as ExpPortDMA does
             NVIC_DISABLE_IRQ(IRQ_PIT);
             Serial.printf("\nDMA pattern test: DMADataHold=%lu DMADataSetup=%lu DMASetup=%lu Passes=%lu"
@@ -195,8 +197,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             TestDMAPattern(Addr, 0xff, 0x00, 0x00, Passes);
             TestDMAPattern(Addr, 0x00, 0x00, 0xff, Passes); //alternating: bus swings each cycle
             TestDMAPattern(Addr, 0xff, 0x55, 0xaa, Passes);
-            NVIC_ENABLE_IRQ(IRQ_PIT);
-            NVIC_ENABLE_IRQ(IRQ_ENET);
+            if(PITWasOn) NVIC_ENABLE_IRQ(IRQ_PIT);
+            if(ENETWasOn) NVIC_ENABLE_IRQ(IRQ_ENET);
          }
          break;
    #ifdef USE_PSRAM
@@ -478,7 +480,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                GetDigits(2, &Cyc_KernProp);
                break;
             case 'd': //Set Defaults
-               nS_MaxAdj    = Def_nS_MaxAdjPAL;
+            {  //match what detection would have set, or a sweep resumes from the wrong standard's values
+               bool IsNTSC = (IO1[wRegVid_TOD_Clks] & 1);
+               nS_MaxAdj    = IsNTSC ? Def_nS_MaxAdjNTSC : Def_nS_MaxAdjPAL;
                nS_PLAprop   = Def_nS_PLAprop;  
                nS_DataSetup = Def_nS_DataSetup;  
                nS_DataHold  = Def_nS_DataHold;  
@@ -486,12 +490,13 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_VICDHold  = Def_nS_VICDHold;
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
-               nS_DMASetup  = Def_nS_DMASetupPAL;
-               nS_DMADataHold  = Def_nS_DMADataHoldPAL;
-               nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+               nS_DMASetup     = IsNTSC ? Def_nS_DMASetupNTSC     : Def_nS_DMASetupPAL;
+               nS_DMADataHold  = IsNTSC ? Def_nS_DMADataHoldNTSC  : Def_nS_DMADataHoldPAL;
+               nS_DMADataSetup = IsNTSC ? Def_nS_DMADataSetupNTSC : Def_nS_DMADataSetupPAL;
                Cyc_KernProp = Def_Cyc_KernProp;
-               CmdChannel->printf("Defaults set\n");
+               CmdChannel->printf("Defaults set (%s)\n", IsNTSC ? "NTSC" : "PAL");
                break;
+            }
             default:
                CmdChannel->printf("No changes\n");
                break;

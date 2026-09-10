@@ -362,10 +362,15 @@ const uint8_t OutputPins[] = {
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-//PAL-biased until the main menu's first wRegVid_TOD_Clks write.  Deliberate: NTSC's MaxAdj of 993 is
-//   under PAL's 1015nS cycle, so a PAL machine would re-adjust every interrupt.  The 430 hold is in
-//   NTSC's bad band for that window, but nothing DMAs before detection - the menu writes the register
-//   before ExpPortDMA or the REU are reachable, and a C64 reset leaves these already detected.
+//PAL-biased until the main menu's first wRegVid_TOD_Clks write.  MaxAdj has to stay PAL here: NTSC's
+//   993 is under PAL's 1015nS cycle, so a PAL machine would re-adjust on every interrupt.
+//The hold is the problem.  Autolaunch (Teensy.ino -> RemoteLaunch w/ DoCartDirect) starts a CRT without
+//   ever loading the C64 menu, so MainMenu.asm never writes the register and an NTSC machine keeps the
+//   PAL 430 - inside NTSC's own 430-450 partial-byte band.  DMA is reachable there: the REU handler,
+//   and Write/ReadC64MemToken, which ProcessCommand() answers ahead of the busy check.
+//Not fixed by dropping this to 410: that needs a PAL board that reproduces the 390 (err) below, and the
+//   one PAL rig measured so far does not.  The real fix is timing Phi2 on the Teensy rather than
+//   waiting for the C64 to report it, which would retire this whole bootstrap.
 uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL;
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  
