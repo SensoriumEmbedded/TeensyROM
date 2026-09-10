@@ -362,7 +362,11 @@ const uint8_t OutputPins[] = {
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+//PAL-biased until the main menu's first wRegVid_TOD_Clks write.  Deliberate: NTSC's MaxAdj of 993 is
+//   under PAL's 1015nS cycle, so a PAL machine would re-adjust every interrupt.  The 430 hold is in
+//   NTSC's bad band for that window, but nothing DMAs before detection - the menu writes the register
+//   before ExpPortDMA or the REU are reachable, and a C64 reset leaves these already detected.
+uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL;
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  
 uint32_t nS_DataSetup = Def_nS_DataSetup;  
@@ -370,7 +374,7 @@ uint32_t nS_DataHold  = Def_nS_DataHold;
 uint32_t nS_VICStart  = Def_nS_VICStart;  
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
-uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+uint32_t nS_DMASetup  = Def_nS_DMASetupPAL;
 uint32_t nS_DMADataSetup = Def_nS_DMADataSetupPAL;
 uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;
 uint32_t Cyc_KernProp = Def_Cyc_KernProp;
