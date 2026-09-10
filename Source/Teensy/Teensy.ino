@@ -61,10 +61,13 @@ void (*fSpecialBtnChange)(bool Up_nDn);    //Pointer to function called when Spe
 
 #include "MinimalBoot/Common/ISRs.c"
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
+extern "C" void MidiDevName_AppendUniqueID(void);
 extern float tempmonGetTemp(void);
 
-void setup() 
+void setup()
 {
+   MidiDevName_AppendUniqueID(); //must run before USB host reads the product/serial name strings
+
    set_arm_clock(816000000);  //slight overclocking, no cooling required
    
    SetLEDOff;  //On from minimal build, off for this setup completion
