@@ -352,9 +352,10 @@ const uint8_t OutputPins[] = {
 #define Def_nS_DMADataSetupNTSC 390  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
 #define Def_nS_DMADataHoldPAL   430  //delay to releasing the data bus on a DMA write.  390 (err), 470 OK, 430 OK(?)
 #define Def_nS_DMADataHoldNTSC  410  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
-                                     //      intermittent partial-byte errors, <=425 clean.  PAL's own collapse is at 482
-                                     //      (9/10/26, C64 Ultimate in PAL mode) so 430 clears it, but that rig is an FPGA
-                                     //      and can't show the partial-byte mode - PAL's analog margin stays unverified.
+                                     //      intermittent partial-byte errors, <=425 clean.  PAL collapses at 485 (9/10/26,
+                                     //      C64+Kawari in PAL, Ultimate agrees) and swept 385-475 clean over 12MB, but that
+                                     //      board won't repro the 390 err above - it's forgiving, so PAL's partial-byte
+                                     //      mode is untested rather than absent.
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
