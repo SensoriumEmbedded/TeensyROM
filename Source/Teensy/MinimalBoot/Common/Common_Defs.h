@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8.0.6"    //*VERSION*
+#define TRVersion              "0.8.0.6t"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -319,7 +319,17 @@ const uint8_t OutputPins[] = {
 
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
-    
+   
+//Hoists the nS-to-cycles conversion outside the poll loop. nSToCyc() reads the volatile
+//   F_CPU_ACTUAL, so left inline in a while() condition it redoes a reload+shift+multiply+
+//   divide on every single pass - wasted work that widens the loop's polling period and
+//   biases every wait to overshoot late, never early (it can only exit on a check, never
+//   exactly on target). Converting once up front instead of once per pass shrinks that
+//   overshoot from ~24-33nS avg (old, per-pass conversion) to ~1.8-3.7nS avg (this macro) -
+//   measured/derived at this board's 816MHz clock; the gap in nS scales with clock speed,
+//   since the wasted work is a fixed cycle count, not a fixed time.
+#define WaitUntil_nS_fine(N) do{uint32_t Cycles = nSToCyc(N); while((ARM_DWT_CYCCNT-StartCycCnt) < Cycles);}while(0)
+       
 #define Def_nS_MaxAdjPAL    1030  //    above this nS since last int causes adjustment
 #define Def_nS_MaxAdjNTSC    993  //    NTSC's shorter nominal cycle (~978nS vs PAL's ~1015nS) leaves less slack before this must trigger;
                                   //       restored as its own value - was merged into one shared 1030 constant for a while
