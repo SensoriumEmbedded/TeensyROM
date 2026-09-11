@@ -733,7 +733,7 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    return true;
 }
 
-FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, uint8_t ValB, uint16_t Passes)
+FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, uint8_t ValB, uint16_t Passes, bool ToScreen)
 {
    //Alternating ValA/ValB swings the data bus between DMA cycles, which a uniform fill never does.
    //   Pre-filling with PriorVal is what makes a dropped write visible - TestDMAPage() writing $ff
@@ -797,6 +797,20 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    uint32_t TotalBytes = (uint32_t)Passes * TestPageSize;
    uint32_t Fell = 0, Rose = 0;
    for(uint8_t Bit = 0; Bit < 8; Bit++) { Fell += BitFell[Bit]; Rose += BitRose[Bit]; }
+
+   //40-column summary for the menu-driven self-test - the bit-direction table below is serial-only,
+   //   it doesn't fit a C64/128 screen and isn't much use condensed
+   if(ToScreen)
+   {
+      bool Clean = (BadBytes == 0 && PrefillBad == 0);
+      if(ValA == ValB) SendMsgPrintfln(" $%02x: %lu/%lu%s", ValA, BadBytes, TotalBytes, Clean ? " OK" : " Failed");
+      else SendMsgPrintfln(" $%02x/$%02x: %lu/%lu%s", ValA, ValB, BadBytes, TotalBytes, Clean ? " OK" : " Failed");
+      //pre-fill and pattern failures are independent - a clean pattern write can still follow a
+      //   corrupted pre-fill, so report each only when its own bad count is nonzero, not on !Clean
+      if(PrefillBad) SendMsgPrintfln("  pre-fill $%02x bad %lu", PrefillXor, PrefillBad);
+      //unchanged discriminates the two failure modes: 0 -> marginal/partial-byte, high -> cycle-overrun/whole-byte
+      if(BadBytes) SendMsgPrintfln("  xor $%02x unch %lu", XorMask, Unchanged);
+   }
 
    if(ValA == ValB) Serial.printf("$%02x", ValA);
    else Serial.printf("$%02x/$%02x alt", ValA, ValB);
@@ -959,16 +973,16 @@ FLASHMEM void ExpPortDMA()
 //DMA bit transitions
    SendMsgPrintfln("DMA Bit Transition Tests");
    //Unlike the uniform fills above, these set the prior page contents so the data lines actually move
-   if (!TestDMAPattern(0xc000, 0xff, 0xff, 0xff, 16) || //control: nothing has to change
-       !TestDMAPattern(0xc000, 0x00, 0xff, 0xff, 64) || //uniform, over the opposite value
-       !TestDMAPattern(0xc000, 0xff, 0x00, 0x00, 64) ||
-       !TestDMAPattern(0xc000, 0x00, 0x00, 0xff, 64) || //alternating: bus swings each cycle
-       !TestDMAPattern(0xc000, 0xff, 0x55, 0xaa, 64))
+   if (!TestDMAPattern(0xc000, 0xff, 0xff, 0xff, 16, true) || //control: nothing has to change
+       !TestDMAPattern(0xc000, 0x00, 0xff, 0xff, 64, true) || //uniform, over the opposite value
+       !TestDMAPattern(0xc000, 0xff, 0x00, 0x00, 64, true) ||
+       !TestDMAPattern(0xc000, 0x00, 0x00, 0xff, 64, true) || //alternating: bus swings each cycle
+       !TestDMAPattern(0xc000, 0xff, 0x55, 0xaa, 64, true))
    {
-      SendMsgPrintfln(" Failed, details on serial");
+      SendMsgPrintfln(" Failed, additional details on serial");
       return;
    }
-   SendMsgPrintf(" OK");
+   //SendMsgPrintf(" OK");
 
 
 //IRQ

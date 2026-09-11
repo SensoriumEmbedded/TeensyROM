@@ -192,11 +192,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             Serial.printf("\nDMA pattern test: DMADataHold=%lu DMADataSetup=%lu DMASetup=%lu Passes=%lu"
                           "\n  (overwrites C64 $%04x-$%04x)\n",
                nS_DMADataHold, nS_DMADataSetup, nS_DMASetup, Passes, Addr, Addr+255);
-            TestDMAPattern(Addr, 0xff, 0xff, 0xff, Passes); //control: nothing has to change
-            TestDMAPattern(Addr, 0x00, 0xff, 0xff, Passes); //uniform, over the opposite value
-            TestDMAPattern(Addr, 0xff, 0x00, 0x00, Passes);
-            TestDMAPattern(Addr, 0x00, 0x00, 0xff, Passes); //alternating: bus swings each cycle
-            TestDMAPattern(Addr, 0xff, 0x55, 0xaa, Passes);
+            TestDMAPattern(Addr, 0xff, 0xff, 0xff, Passes, false); //control: nothing has to change
+            TestDMAPattern(Addr, 0x00, 0xff, 0xff, Passes, false); //uniform, over the opposite value
+            TestDMAPattern(Addr, 0xff, 0x00, 0x00, Passes, false);
+            TestDMAPattern(Addr, 0x00, 0x00, 0xff, Passes, false); //alternating: bus swings each cycle
+            TestDMAPattern(Addr, 0xff, 0x55, 0xaa, Passes, false);
             if(PITWasOn) NVIC_ENABLE_IRQ(IRQ_PIT);
             if(ENETWasOn) NVIC_ENABLE_IRQ(IRQ_ENET);
          }
