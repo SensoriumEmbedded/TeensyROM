@@ -40,8 +40,8 @@
   // #define DbgMsgs_M2S   //MIDI2SID MIDI handler messages
 
 //Special use serial commands:
-   #define Dbg_SerDMA    //Serial commands that do direct DMAs.
-   #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
+  // #define Dbg_SerDMA    //Serial commands that do direct DMAs.
+  // #define Dbg_SerTimChg //Serial commands that tweak timing parameters.
   // #define Dbg_SerSwift  //Serial commands that tweak SwiftLink parameters.
   // #define Dbg_SerMem    //Serial commands that display memory info
   // #define Dbg_SerASID   //Serial commands that test the ASID player + queue adjust info
