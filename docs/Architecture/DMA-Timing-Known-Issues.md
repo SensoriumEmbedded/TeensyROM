@@ -156,30 +156,89 @@ but the most direct link between the two mechanisms found so far.
 
 ## Housekeeping (low risk, found along the way)
 
-### 10. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Development]`
-Disables `IRQ_ENET`/`IRQ_PIT` for the duration of the self-test but doesn't
-re-enable them if it bails out early on a failure — leaves the system degraded
-until reboot.
+### 10. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Closed — not a bug]`
+Disables `IRQ_ENET`/`IRQ_PIT` for the duration of the self-test. Turns out this
+isn't asymmetric between pass/fail as originally framed — all 19 `return;`
+points in the function leave them off, and so does the "success" path (which
+hands off into a follow-on ROM/GAME/EXROM test phase instead of restoring
+them). That's deliberate: `SetUpMainMenuROM()` (`Teensy.ino:341-356`, the
+normal way back to the menu from any diagnostic) unconditionally re-enables
+both alongside its other resets. No reboot needed, no degraded state survives
+returning to the menu — confirmed by the user, and a short comment added at
+the disable site in `ExpPortDMA()` pointing at `SetUpMainMenuROM()` so this
+doesn't get re-flagged later.
 
-### 11. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Development]`
+### 11. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Closed — script being deprecated]`
 Differs from the Teensyduino version (`1.61.0`) pinned in `BuildInfo.md` in the
-FlexSPI configuration block; the build script leaves the older file behind in
-the developer's core.
+FlexSPI configuration block; `Build-DualBoot.ps1`'s `Copy-LinkerFiles` writes it
+straight over `$TeensyCorePath\bootdata.c` — the developer's real, shared
+Teensyduino core, not a private copy — so the stale content silently sticks
+around for unrelated future builds too.
 
-### 12. `nSToCyc(N)` doesn't parenthesize its argument `[Development]`
+Not fixing it in place: `Build-DualBoot.ps1` is being deprecated in favor of
+`mpe/tools/build.mjs` (`mpe-vm-review`), which doesn't have this problem by
+design — every build works in a fresh `mkdtempSync` temp copy of the installed
+core and never writes back into the real shared install. This bug is one more
+reason for that deprecation, not something worth patching in the outgoing
+script. Flagged to the `MeanHamster VM Incorporation` session (2026-09-11).
+
+### 12. `nSToCyc(N)` doesn't parenthesize its argument `[Closed — fixed by calculation, unverified]`
 ```
 #define nSToCyc(N)  (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 ```
-so `nSToCyc(nS_DMASetup-90)` in `IOH_REU.c` expands to `nS_DMASetup -
+so `nSToCyc(nS_DMASetup-90)` in `IOH_REU.c:217` expands to `nS_DMASetup -
 54` = 386 cycles (643 nS), not the intended 210 cycles (350 nS). The PSRAM
 slow-read guard arms far later than the comment implies. The Teensy core's own
 version of this expression does parenthesize.
 
-Worth noting why it survived: the slope is identical in both expansions
-(−0.6 cycles/nS), so the 75 / 80 / 85 sweep recorded in that comment behaved
-sensibly and converged — it was locally correct, just offset by a constant
-293 nS. Which also means fixing the macro invalidates that calibration and
-needs a re-tune on hardware, so it was left alone.
+**Two call sites, not one:** `IOH_REU.c:236` has the identical pattern,
+`nSToCyc(nS_DMASetup-85)`, guarding the same PSRAM slow-read detection for a
+different REU command type (`TypeSwp` vs. `TypeR2C` at line 217) — with its
+own separate empirical tuning history in the comment ("fixes block missing
+pixels during Bit Fill in CMD 1750 Test"). Every other `nSToCyc(` call site
+in the codebase passes a bare variable with no operator inside (`nS_DataHold`,
+`nS_MaxAdj`), so those are unaffected — this only bites when the argument is
+itself an expression.
+
+Worth noting why both survived: the slope is identical in both expansions
+(−0.6 cycles/nS), so the 75 / 80 / 85 sweep recorded at line 217 (and
+presumably whatever sweep produced line 236's `85`) behaved sensibly and
+converged — locally correct, just offset by a constant amount from what the
+comment claims. Which also means fixing the macro invalidates both
+calibrations and needs a re-tune on hardware, so it was left alone.
+
+**Fixed at the root** — `nSToCyc(N)`/`CycTonS(N)` in `Common_Defs.h` now
+parenthesize `N`. Safe as a global change: every other call site in the
+codebase already passes a bare variable (`nS_DataHold`, `nS_MaxAdj`,
+`BigBuf[Cnt]`), so parenthesizing `N` is a no-op for all of them — only these
+two `IOH_REU.c` sites were ever affected.
+
+Fixing the macro alone would have shifted both guards ~98-100nS *earlier*
+than their existing empirically-converged behavior (the old `-90`/`-85`
+literals were themselves calibrated against the buggy expansion, not a clean
+one) — so the literals were adjusted too, to reproduce the *same* arm point
+under the now-correct formula rather than silently moving it:
+
+- `:217`: `-90` → **`+9`** (`nSToCyc(nS_DMASetup+9)`) — matches the old ~367
+  cycles/PAL, ~357/NTSC within ~1-2 cycles either standard
+- `:236`: `-85` → **`+14`** (`nSToCyc(nS_DMASetup+14)`) — matches the old
+  ~371/~361 the same way
+
+Both new literals came out negative-of-the-original (subtracting a negative,
+i.e. now adding) because the buggy formula was systematically arming *later*
+than its own literal suggested — matching that behavior with a clean formula
+needs the sign to flip, not just the magnitude to shrink. The ~99nS shift is
+consistent across both sites, which checks out: the gap between the buggy and
+correct expansions works out to a near-constant offset largely independent of
+which literal you start from, for values this close to each other.
+
+Still **not verified on real hardware** — `USE_PSRAM` isn't in active use on
+this project, so there's no live way to sweep-confirm either the original
+values or this correction. Closed on that basis: the precedence bug itself is
+fixed and protected against recurrence elsewhere, and the two affected sites
+are calculated to behave the same as before, not differently — the honest
+residual risk is only in the *original* empirical numbers, which was already
+true before this fix and is unchanged by it.
 
 <br>
 

@@ -314,8 +314,10 @@ const uint8_t OutputPins[] = {
    #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
 #endif                            
 
-#define CycTonS(N)          (N*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
-#define nSToCyc(N)          (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
+//N parenthesized - an unparenthesized N silently only multiplies the last term of an
+//   expression argument (e.g. nSToCyc(X-90) becomes X - nSToCyc(90), not nSToCyc(X-90)).
+#define CycTonS(N)          ((N)*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
+#define nSToCyc(N)          ((N)*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))

@@ -214,8 +214,15 @@ void DirectREU()
 #ifdef USE_PSRAM       
             //Look for slow PSRAM read and give an extra clock if needed
             //too slow fails size detect in both REU tests
-            if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup-90)) // 75: not enough,  80: intermittent, 85: OK (PAL)
-            //NUVIES: 90, 95,105,125: silent works but glitchy; 85: nope
+            //nSToCyc() now parenthesizes N (Common_Defs.h) - the old "-90" here relied on
+            //   nSToCyc's precedence bug (was computing nS_DMASetup - nSToCyc(90), not
+            //   nSToCyc(nS_DMASetup - 90)). "+9" reproduces that same arm point (within
+            //   ~1-2 cycles, PAL or NTSC) under the corrected macro - by calculation only,
+            //   not re-verified on hardware; USE_PSRAM isn't in active use (2026-09-11).
+            //   Original empirical sweep, now against the buggy value this replicates:
+            //   75: not enough, 80: intermittent, 85: OK (PAL). NUVIES: 90,95,105,125: silent
+            //   works but glitchy; 85: nope
+            if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup+9))
             {  //missed completing read within VIC cycle, wait for next one.
                //MisCount++;
                while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase, in case it's not there yet)
@@ -233,7 +240,10 @@ void DirectREU()
 #ifdef USE_PSRAM       
             //Look for slow PSRAM read and give an extra clock if needed
             //fixes block missing pixels during Bit Fill in CMD 1750 Test:
-            if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup-85)) // nS_DMASetup
+            //Same nSToCyc precedence fix as the TypeR2C case above - old "-85" relied on the
+            //   bug, "+14" reproduces the same arm point under the corrected macro (by
+            //   calculation only, not re-verified - USE_PSRAM isn't in active use, 2026-09-11)
+            if(ARM_DWT_CYCCNT - StartCycCnt > nSToCyc(nS_DMASetup+14)) // nS_DMASetup
             {  //missed completing read within VIC cycle, wait for next one.
                //MisCount++;
                while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase, in case it's not there yet)
