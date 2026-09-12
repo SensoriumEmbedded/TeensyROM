@@ -301,6 +301,8 @@ Two independently hand-maintained files define the same register offset/enum map
 
 The >850KB bank-swap mechanism (REU-style DMA-line-assert pause, not true bus-mastering DMA — TR+'s bus-mastering doesn't help here since the pause just needs to be perceptually instant, which bus-mastering doesn't improve) is documented as unreliable on most C128s and a low percentage of NTSC systems. That claim may no longer hold and is worth re-testing.
 
+Possible (unconfirmed) shared root cause: this mechanism (`IOH_MagicDesk2.c`) uses the same `nS_DMAAssert`/`SetDMAAssert` sequence as the unrelated `DMA_Timing` branch's true-bus-mastering-DMA work, to enter the same paused state — it just never goes on to do an actual transfer. `nS_DMAAssert` hasn't been re-characterized yet (see [DMA-Timing-Known-Issues.md](DMA-Timing-Known-Issues.md) item #9); if it turns out marginal on C128 the way a data-hold constant did on NTSC, that would explain this entry too.
+
 **Status:** flagged for re-test, not yet re-verified (2026-08-11).
 
 ## `IOHandler[]` array and `enum enumIOHandlers` are hand-synced with no compile-time check
