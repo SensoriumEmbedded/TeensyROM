@@ -11,7 +11,11 @@ This is about TR+'s true bus-mastering DMA (`DMAControl.ino`'s `PerformDMA()`/
 "Large-CRT bank-swap DMA reliability" entry) — that one never does an actual
 bus-mastered data transfer, so nothing here bears on it.
 
-## Open bugs
+Grouped by what's needed next: **Development** (a code change), **Investigation**
+(no clear fix direction yet, needs more data), **Validation** (fix direction
+known, needs hardware to confirm), then **Closed**.
+
+## Development
 
 ### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Development]`
 `wRegVid_TOD_Clks` (video standard detection) is only written by the C64-side
@@ -24,11 +28,75 @@ the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
 Check, which necessarily runs after `Start:` has already set the constants.
 — *Common_Defs.h `nS_MaxAdj` comment, PR #21*
 
-### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
-The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
-430 default is inherited from the old shared constant, not independently
-measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
-correctly, but not the analog margin (its buffers/bus loading are its own).
+### 5. Cycle-overrun mode has no graceful degradation `[Development]`
+Past ~455ns hold, the DMA write wait doesn't return before Phi2 falls, and the
+transfer collapses completely (deterministic, whole-byte corruption) rather
+than degrading. The non-DMA `DataPortWriteWait()` already caps its wait at the
+Phi2 falling edge; the DMA path doesn't. Needs a scope trace to confirm the
+cycle budget before capping it — a robustness guard, not a fix for the marginal
+mode above.
+
+Mirroring `DataPortWriteWait()`'s cap verbatim isn't safe here — the removed
+Phi2 check in `DataPortWriteWaitDMA()` was taken out on purpose (comment:
+"not checking Phi2 state due to tight timing and early in cycle call can
+cause early exit"); a per-iteration `GP6_Phi2` read this early/tight could
+cut the hold *short* on a false read, trading one corruption mode for another.
+
+**Next step:** scope it. Only one call site (`DMAControl.ino:93`, inside
+`DMAByte()`'s write branch), so no per-site ambiguity. Data bus alone isn't
+enough to read on a scope — persistence-mode capture just shows a noisy band
+(every transaction overlaid, DMA and non-DMA indistinguishable). Bracket the
+wait itself with the existing debug signal instead:
+```c
+SetDebugAssert;
+WaitUntil_nS_fine(nS_DMADataHold);
+SetDebugDeassert;
+```
+in `DataPortWriteWaitDMA()` ([DMAControl.ino:28](../../Source/Teensy/DMAControl.ino)) — pin 52 on this TR+ build
+(`Fab04_DebugSignals`). Phi2 on one channel, that pulse on another: the gap
+between the pulse's falling edge and Phi2's next falling edge is the real
+margin, and tells you how early in the wait it'd be safe to start polling
+Phi2 without risking the early-exit failure the original check was pulled
+for. Deferred — needs the scope, not done yet.
+
+### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
+`WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
+overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
+`DataPortWriteWaitDMA()` have been switched over so far. Nine live call sites
+still use the coarser `WaitUntil_nS()`:
+
+- `DMAControl.ino:70` — BA-transition wait in `DMAByte()`
+- `DMAControl.ino:77` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
+- `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
+  `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
+  DMA-assert path
+- `Common_Defs.h:435,457` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
+  read/write helpers)
+- `IOH_REU.c:178` — `nS_DMAAssert`
+
+"Methodically" because each conversion is a real timing change, not a pure
+refactor — same lesson as this branch's own hoist: shrinking the overshoot
+moves every one of these waits earlier by some amount, and several
+(`nS_RWnReady`, `nS_PLAprop`, `nS_DMAAssert`) already carry board-specific
+tuning history (C128/C64C-specific bumps, Reloaded Mk2 special builds) in
+their surrounding comments. Converting all nine in one pass risks re-opening
+several already-settled margins at once with no way to tell which one
+regressed. Convert and re-verify one call site — or one tightly related group,
+like the three VIC-cycle waits inside `isrPHI2()` — at a time.
+
+`nS_DMAAssert` specifically is worth prioritizing over the others in this
+list: it's the *only* one of the nine that's shared with the CRT bank-swap
+pause mechanism (confirmed via `IOH_MagicDesk2.c`, which drives the same
+`DMA_State` machine and `SetDMAAssert`/`nS_DMAAssert` sequence used to enter
+`DMA_S_ActiveReady`, then never touches `nS_DMADataSetup`/`nS_DMADataHold` at
+all — those only run inside `DMAByte()`'s per-cycle transfer loop). If
+`nS_DMAAssert` turns out marginal on C128 the same way `nS_DMADataHold` was
+on NTSC, that would explain the bank-swap mechanism's separately-documented
+C128 unreliability (see [Known-Issues.md](Known-Issues.md)'s "Large-CRT
+bank-swap DMA reliability" entry) through one shared root cause — unconfirmed,
+but the most direct link between the two mechanisms found so far.
+
+## Investigation
 
 ### 3. NTSC-vs-PAL and C64-vs-C128 are confounded in the PR #21 data `[Investigation]`
 The only "NTSC" characterization rig was a flat C128; the only "PAL" rig was a
@@ -45,13 +113,13 @@ a positive control). Unknown what gates it: thermal, uptime, VIC/screen state.
 No margin number here is fully trustworthy until this is understood, and no A/B
 against it is repeatable yet.
 
-### 5. Cycle-overrun mode has no graceful degradation `[Development]`
-Past ~455ns hold, the DMA write wait doesn't return before Phi2 falls, and the
-transfer collapses completely (deterministic, whole-byte corruption) rather
-than degrading. The non-DMA `DataPortWriteWait()` already caps its wait at the
-Phi2 falling edge; the DMA path doesn't. Needs a scope trace to confirm the
-cycle budget before capping it — a robustness guard, not a fix for the marginal
-mode above.
+## Validation
+
+### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
+The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
+430 default is inherited from the old shared constant, not independently
+measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
+correctly, but not the analog margin (its buffers/bus loading are its own).
 
 ### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Validation]`
 Earlier research (RAD project postmortem) suggested the C64 has more delay
@@ -71,6 +139,8 @@ but distinct fact: C128 routes `/DMA` through the MMU (GAEC gating, Z80
 C64 does — one extra, verified-real logic stage between the port pin and a
 settled bus that could plausibly cost margin without appearing in any
 published number. Still no scope capture on either theory.
+
+## Closed
 
 ### 7. `TestDMAPage()` (uniform-fill diagnostic) has a detectability blind spot `[Closed]`
 A write that never lands is invisible to a uniform-fill verify if the page
@@ -117,46 +187,25 @@ means cycle-overrun/whole-byte (#5). `WorstPass` still stays serial-only.
 
 Verified on hardware after the fix above — screen output confirmed correct.
 
-### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
-`WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
-overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
-`DataPortWriteWaitDMA()` have been switched over so far. Nine live call sites
-still use the coarser `WaitUntil_nS()`:
+### 10. `ExpPortDMA()` doesn't force off active IO Handlers before testing `[Closed — not a bug]`
+Initial read: entry to `ExpPortDMA()` ([StatusFunctions.c:845-851](../../Source/Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c)) never touches `CurrentIOHandler`, so whatever handler was active before the diagnostic started would stay live and could cross-talk with the test's own bus activity.
 
-- `DMAControl.ino:70` — BA-transition wait in `DMAByte()`
-- `DMAControl.ino:77` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
-- `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
-  `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
-  DMA-assert path
-- `Common_Defs.h:435,457` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
-  read/write helpers)
-- `IOH_REU.c:178` — `nS_DMAAssert`
+Doesn't hold up: both menu entries that can reach `ExpPortDMA()` ("TeensyROM
+External Ports Test", "TR+ C64 Expansion Port Test" — [MainMenuItems.h:294,296](../../Source/Teensy/MainMenuItems.h))
+are registered with `IOHndlrAssoc = IOH_TeensyROM`, so launching either from
+the menu already sets `CurrentIOHandler = IOH_TeensyROM` via the normal
+`IOHandlerSelectInit()` path before the diagnostic program ever runs. And it
+has to stay that way: `rCtlExpPortDMAWAIT` (the control-register write that
+actually triggers `ExpPortDMA()`) is handled inside `IOH_TeensyROM.c`'s own
+IO1 handler — `isrPHI2()` routes every IO1 access through
+`IOHandler[CurrentIOHandler]->IO1Hndlr`, so that write literally cannot reach
+TR's code unless `CurrentIOHandler` is already `IOH_TeensyROM`. No stale-handler
+scenario is reachable by construction, and forcing `IOH_None` would have
+broken the diagnostic's own ability to report status/results back to the
+still-running C64 program afterward. False alarm - closed without a code
+change (2026-09-11).
 
-"Methodically" because each conversion is a real timing change, not a pure
-refactor — same lesson as this branch's own hoist: shrinking the overshoot
-moves every one of these waits earlier by some amount, and several
-(`nS_RWnReady`, `nS_PLAprop`, `nS_DMAAssert`) already carry board-specific
-tuning history (C128/C64C-specific bumps, Reloaded Mk2 special builds) in
-their surrounding comments. Converting all nine in one pass risks re-opening
-several already-settled margins at once with no way to tell which one
-regressed. Convert and re-verify one call site — or one tightly related group,
-like the three VIC-cycle waits inside `isrPHI2()` — at a time.
-
-`nS_DMAAssert` specifically is worth prioritizing over the others in this
-list: it's the *only* one of the nine that's shared with the CRT bank-swap
-pause mechanism (confirmed via `IOH_MagicDesk2.c`, which drives the same
-`DMA_State` machine and `SetDMAAssert`/`nS_DMAAssert` sequence used to enter
-`DMA_S_ActiveReady`, then never touches `nS_DMADataSetup`/`nS_DMADataHold` at
-all — those only run inside `DMAByte()`'s per-cycle transfer loop). If
-`nS_DMAAssert` turns out marginal on C128 the same way `nS_DMADataHold` was
-on NTSC, that would explain the bank-swap mechanism's separately-documented
-C128 unreliability (see [Known-Issues.md](Known-Issues.md)'s "Large-CRT
-bank-swap DMA reliability" entry) through one shared root cause — unconfirmed,
-but the most direct link between the two mechanisms found so far.
-
-## Housekeeping (low risk, found along the way)
-
-### 10. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Closed — not a bug]`
+### 11. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Closed — not a bug]`
 Disables `IRQ_ENET`/`IRQ_PIT` for the duration of the self-test. Turns out this
 isn't asymmetric between pass/fail as originally framed — all 19 `return;`
 points in the function leave them off, and so does the "success" path (which
@@ -168,7 +217,7 @@ returning to the menu — confirmed by the user, and a short comment added at
 the disable site in `ExpPortDMA()` pointing at `SetUpMainMenuROM()` so this
 doesn't get re-flagged later.
 
-### 11. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Closed — script being deprecated]`
+### 12. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Closed — script being deprecated]`
 Differs from the Teensyduino version (`1.61.0`) pinned in `BuildInfo.md` in the
 FlexSPI configuration block; `Build-DualBoot.ps1`'s `Copy-LinkerFiles` writes it
 straight over `$TeensyCorePath\bootdata.c` — the developer's real, shared
@@ -182,7 +231,7 @@ core and never writes back into the real shared install. This bug is one more
 reason for that deprecation, not something worth patching in the outgoing
 script. Flagged to the `MeanHamster VM Incorporation` session (2026-09-11).
 
-### 12. `nSToCyc(N)` doesn't parenthesize its argument `[Closed — fixed by calculation, unverified]`
+### 13. `nSToCyc(N)` doesn't parenthesize its argument `[Closed — fixed by calculation, unverified]`
 ```
 #define nSToCyc(N)  (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 ```
