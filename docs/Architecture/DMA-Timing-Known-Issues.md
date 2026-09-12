@@ -59,15 +59,36 @@ between its internal CPU clock and the port-visible PHI2 than the C128 does —
 a distinct, unmeasured hypothesis from the DMA-hold marginality PR #21 found.
 No scope capture has confirmed or ruled this out independently.
 
-### 7. `TestDMAPage()` (uniform-fill diagnostic) has a detectability blind spot `[Development]`
+Cross-checked (2026-09-11) against Commodore's own manuals/schematics — see
+[C64-C128-DMA-Port-Reference.md](C64-C128-DMA-Port-Reference.md). The C64 and
+C128 PRGs publish the *identical* `/DMA` assert/de-assert rule (only while Φ2
+is low) with no separate timing spec for either machine, so this specific
+PHI2-generation-delay theory is neither corroborated nor ruled out by any
+official spec — it'd have to be a real, undocumented difference in the two
+VIC chips' PHI2 output stage. What the official docs do confirm is a related
+but distinct fact: C128 routes `/DMA` through the MMU (GAEC gating, Z80
+`/BUSRQST`, TA/SA bus-direction reversal) rather than straight to the CPU like
+C64 does — one extra, verified-real logic stage between the port pin and a
+settled bus that could plausibly cost margin without appearing in any
+published number. Still no scope capture on either theory.
+
+### 7. `TestDMAPage()` (uniform-fill diagnostic) has a detectability blind spot `[Closed]`
 A write that never lands is invisible to a uniform-fill verify if the page
 already held that value. This means historical "passed DMA check" results —
 including whatever data underlies the "most C128s fail" line in
 `General_Usage.md` — were only ever screened with an instrument that can't see
 this failure class on the passing side either. `TestDMAPattern()` (added in
-PR #21) is the first diagnostic actually sensitive to it.
+PR #21) is sensitive to it, proven at `0xc000`.
 
-### 8. `TestDMAPattern()` reports only to serial, not to the C64/C128 screen `[Development — implemented, unverified]`
+`TestDMAPattern()` only runs at `0xc000` — the other six addresses
+`TestDMAPage()` covers (`0x3f00`, `0x4000`, `0x5000`, `0x6000`, `0x7000`,
+`0x8000`) are still only screened by the blind method. Not extending it there
+is an accepted scope decision, not an open gap: nothing about those addresses
+is special, and `TestDMAPage()` running alongside costs nothing to leave in
+place. Closing this as "the tool that fixes the blind spot exists and works,"
+not "every address has been swept with it."
+
+### 8. `TestDMAPattern()` reports only to serial, not to the C64/C128 screen `[Closed]`
 All of its pass/fail detail (bad-byte counts, XOR mask, unchanged count,
 per-bit direction) goes through `Serial.printf()` only, same as the rest of
 `ExpPortDMA()`'s DMA bit transition tests. Without a PC serial terminal
@@ -93,6 +114,8 @@ prints when `BadBytes` is nonzero — independently, not both gated on the same
 `!Clean`. `Unchanged` stays included because it's the actual discriminator
 between the two failure modes above — 0 means marginal/partial-byte (#4), high
 means cycle-overrun/whole-byte (#5). `WorstPass` still stays serial-only.
+
+Verified on hardware after the fix above — screen output confirmed correct.
 
 ### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
 `WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
