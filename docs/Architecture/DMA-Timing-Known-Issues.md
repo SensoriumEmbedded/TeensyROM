@@ -105,6 +105,19 @@ point exists. Can't yet tell whether the 410/430 cliff difference is a
 video-standard cycle-length effect (the stated theory) or a C64/C128 hardware
 effect (the original question this branch started from) — or both.
 
+**Update (2026-09-12):** the missing NTSC-C64 point now exists, via the `TR
+Validation Tracker` hardware log (fw `0.8.0.6t`, Expansion Port Diagnostics,
+looped). Two separate NTSC C64 units passed clean — 757 loops (#14) and 461
+loops (#002b "Rat64") — while the one C128 in the collection, also NTSC, same
+firmware constants, failed repeatedly on the DMA test. Same video standard,
+same constants, one hardware type passes and the other doesn't — that's
+direct evidence for the C64-vs-C128 hardware-effect side of this confound,
+not the video-standard theory (which would predict the NTSC-C64 units
+struggling too). Still not fully closed: no PAL-C128 unit exists in the
+collection, so the video-standard effect isn't ruled out entirely, just
+outweighed by the one remaining cell still being empty rather than
+contradicting.
+
 ### 4. Marginal partial-byte failure mode is intermittent and uncharacterized `[Investigation]`
 The 430–450ns partial-byte error band went quiescent partway through the PR #21
 test session and could not be re-confirmed in a follow-up interleaved A/B
@@ -113,15 +126,7 @@ a positive control). Unknown what gates it: thermal, uptime, VIC/screen state.
 No margin number here is fully trustworthy until this is understood, and no A/B
 against it is repeatable yet.
 
-## Validation
-
-### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
-The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
-430 default is inherited from the old shared constant, not independently
-measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
-correctly, but not the analog margin (its buffers/bus loading are its own).
-
-### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Validation]`
+### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Investigation]`
 Earlier research (RAD project postmortem) suggested the C64 has more delay
 between its internal CPU clock and the port-visible PHI2 than the C128 does —
 a distinct, unmeasured hypothesis from the DMA-hold marginality PR #21 found.
@@ -139,6 +144,19 @@ but distinct fact: C128 routes `/DMA` through the MMU (GAEC gating, Z80
 C64 does — one extra, verified-real logic stage between the port pin and a
 settled bus that could plausibly cost margin without appearing in any
 published number. Still no scope capture on either theory.
+
+Reclassified from Validation to Investigation (2026-09-12): unlike #2, there's
+no existing fix or established direction here to confirm — just competing,
+untested hypotheses (PHI2 phase/skew at the VIC output stage vs. the MMU
+arbitration path) and candidate test methods, same shape as #3/#4.
+
+## Validation
+
+### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
+The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
+430 default is inherited from the old shared constant, not independently
+measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
+correctly, but not the analog margin (its buffers/bus loading are its own).
 
 ## Closed
 
