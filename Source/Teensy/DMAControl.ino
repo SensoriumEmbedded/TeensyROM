@@ -67,7 +67,8 @@ bool DMAByte(uint8_t *Data)
    if (DMA_FixC64Addr) RegAddrBits = (DMA_StartAddr << 16);
    else RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
    
-   WaitUntil_nS(200);  //BA transitions high ~100nS in
+   uint32_t Cyc_DMABAWait = nSToCyc(nS_DMABAWait); //convert outside the spin, see DataPortWaitReadDMA
+   while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DMABAWait);
    if (!GP9_BA(ReadGPIO9)) return false;  // bus not available, skip until it is
    
    CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive

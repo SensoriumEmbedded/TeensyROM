@@ -545,6 +545,33 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
+void SetVideoStdTiming()
+{  //from the machine type MainMenu.asm reported in IO1[wRegVid_TOD_Clks]; also used by the td serial command
+   if (IO1[wRegVid_TOD_Clks] & rvtcNTSC)
+   {
+      nS_MaxAdj = Def_nS_MaxAdjNTSC;
+      if (IO1[wRegVid_TOD_Clks] & rvtcC128)
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC128;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC128;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC128;
+      }
+      else
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
+      }
+   }
+   else
+   {  //PAL C128 has no measured set of its own yet
+      nS_MaxAdj       = Def_nS_MaxAdjPAL;
+      nS_DMASetup     = Def_nS_DMASetupPAL;
+      nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+      nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+   }
+}
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
@@ -601,21 +628,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             break;
          case wRegVid_TOD_Clks:
             IO1[wRegVid_TOD_Clks]=Data;
-            //make NTSC/PAL specific timing tweaks upon discovery
-            if (Data & 1)
-            {
-               nS_DMASetup     = Def_nS_DMASetupNTSC;
-               nS_MaxAdj       = Def_nS_MaxAdjNTSC;
-               nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
-               nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
-            }
-            else
-            {
-               nS_DMASetup     = Def_nS_DMASetupPAL;
-               nS_MaxAdj       = Def_nS_MaxAdjPAL;
-               nS_DMADataSetup = Def_nS_DMADataSetupPAL;
-               nS_DMADataHold  = Def_nS_DMADataHoldPAL;
-            }
+            SetVideoStdTiming(); //make NTSC/PAL/C128 specific timing tweaks upon discovery
             break;
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;

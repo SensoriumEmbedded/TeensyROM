@@ -467,6 +467,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case 'a': //nS_DMAAssert change
                GetDigits(3, &nS_DMAAssert);
                break;
+            case 'b': //nS_DMABAWait change
+               GetDigits(3, &nS_DMABAWait);
+               break;
             case 'e': //nS_DMASetup change
                GetDigits(3, &nS_DMASetup);
                break;
@@ -481,20 +484,18 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                break;
             case 'd': //Set Defaults
             {  //match what detection would have set, or a sweep resumes from the wrong standard's values
-               bool IsNTSC = (IO1[wRegVid_TOD_Clks] & 1);
-               nS_MaxAdj    = IsNTSC ? Def_nS_MaxAdjNTSC : Def_nS_MaxAdjPAL;
-               nS_PLAprop   = Def_nS_PLAprop;  
+               SetVideoStdTiming(); //MaxAdj and the DMA setup/hold set
+               nS_PLAprop   = Def_nS_PLAprop;
                nS_DataSetup = Def_nS_DataSetup;  
                nS_DataHold  = Def_nS_DataHold;  
                nS_VICStart  = Def_nS_VICStart;  
                nS_VICDHold  = Def_nS_VICDHold;
                nS_RWnReady  = Def_nS_RWnReady;
                nS_DMAAssert = Def_nS_DMAAssert;
-               nS_DMASetup     = IsNTSC ? Def_nS_DMASetupNTSC     : Def_nS_DMASetupPAL;
-               nS_DMADataHold  = IsNTSC ? Def_nS_DMADataHoldNTSC  : Def_nS_DMADataHoldPAL;
-               nS_DMADataSetup = IsNTSC ? Def_nS_DMADataSetupNTSC : Def_nS_DMADataSetupPAL;
+               nS_DMABAWait = Def_nS_DMABAWait;
                Cyc_KernProp = Def_Cyc_KernProp;
-               CmdChannel->printf("Defaults set (%s)\n", IsNTSC ? "NTSC" : "PAL");
+               CmdChannel->printf("Defaults set (%s%s)\n", (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
+                  (IO1[wRegVid_TOD_Clks] & rvtcC128) ? " C128" : "");
                break;
             }
             default:
@@ -510,6 +511,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          CmdChannel->printf("\t nS_VICStart  %03d (tv###)\n", nS_VICStart);
          CmdChannel->printf("\t nS_VICDHold  %03d (ti###)\n", nS_VICDHold);
          CmdChannel->printf("\t nS_DMAAssert %03d (ta###)\n", nS_DMAAssert);
+         CmdChannel->printf("\t nS_DMABAWait %03d (tb###)\n", nS_DMABAWait);
          CmdChannel->printf("\t nS_DMASetup  %03d (te###)\n", nS_DMASetup);
          CmdChannel->printf("\t nS_DMADataHold  %03d (tw###)\n", nS_DMADataHold);
          CmdChannel->printf("\t nS_DMADataSetup %03d (ty###)\n", nS_DMADataSetup);

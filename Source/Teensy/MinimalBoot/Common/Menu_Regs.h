@@ -62,7 +62,7 @@ enum IO1_Registers  //offset from 0xDE00
    wRegSIDSpeedChange  = 33 , // SID Play Control: Change speed as indicated by RegSIDSpeedChanges
    rwRegSIDSongNumZ    = 34 , // SID Play Info: Current Song Number (Zero Based)
    rRegSIDNumSongsZ    = 35 , // SID Play Info: Number of Songs in SID (Zero Based)
-   wRegVid_TOD_Clks    = 36 , // C64/128 Video Standard and TOD clock frequencies
+   wRegVid_TOD_Clks    = 36 , // C64/128 Video Standard and TOD clock frequencies, see RegVidTODClksMasks
    wRegIRQ_ACK         = 37 , // IRQ Ack from C64 app
    rwRegIRQ_CMD        = 38 , // IRQ Command from TeensyROM
    rwRegCodeStartPage  = 39 , // TR Code Start page in C64 RAM
@@ -176,6 +176,13 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
    rsstSIDSpeed        = 7,  // Current SID playback speed
    rsstSIDSpeedCtlType = 8,  // Current SID Speed Control Type (Log/Lin)
+};
+
+enum RegVidTODClksMasks
+{  //wRegVid_TOD_Clks, set once by MainMenu.asm on startup
+   rvtcNTSC            = 0b00000001, // bit 0, 1=NTSC, 0=PAL
+   rvtc60Hz            = 0b00000010, // bit 1, 1=60Hz TOD, 0=50Hz
+   rvtcC128            = 0b00000100, // bit 2, 1=C128 (VIC-IIe), from $D030 bit 1 reading 0
 };
 
 enum RegPowerUpDefaultMasks
