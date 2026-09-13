@@ -1,0 +1,41 @@
+name: Experiment build (TR+, manual)
+
+# Manual only, and no `contents: write` permission: this can never publish a Release,
+# regardless of what changes in the build step below. TR+ always includes MPE once MPE is
+# on main; until then this builds the same image as the tr-plus target in build.yml. Once
+# MPE lands, give this workflow a way to build without it (e.g. a --no-mpe flag) so it keeps
+# doing what its name says.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install Teensy core 1.61.0
+        shell: bash
+        run: |
+          arduino-cli config init --additional-urls https://www.pjrc.com/teensy/package_teensy_index.json
+          arduino-cli core update-index
+          arduino-cli core install teensy:avr@1.61.0
+          arduino-cli lib install CRC32
+
+      - name: Build TR+ (experimental)
+        run: npm run build:tr-plus
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tr-plus-experiment
+          path: build/firmware/*.hex
