@@ -76,8 +76,18 @@ export function defaultArduinoDataDir() {
   return path.join(process.env.HOME, '.arduino15');
 }
 
+// arduino-cli's own default sketchbook path (`directories.user`), which is *not* the same
+// on every platform: Windows and macOS use Documents/Arduino, but Linux just uses ~/Arduino.
+// `arduino-cli lib install` (run separately, with no override) lands libraries here, so this
+// has to match arduino-cli's real default exactly or a step like the workflow's
+// `arduino-cli lib install CRC32` silently installs somewhere the build never looks.
 export function defaultArduinoUserDir() {
   if (process.env.ARDUINO_DIRECTORIES_USER) return process.env.ARDUINO_DIRECTORIES_USER;
-  const docs = process.platform === 'win32' ? path.join(process.env.USERPROFILE ?? process.env.HOME, 'Documents') : path.join(process.env.HOME, 'Documents');
-  return path.join(docs, 'Arduino');
+  if (process.platform === 'win32') {
+    return path.join(process.env.USERPROFILE ?? process.env.HOME, 'Documents', 'Arduino');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(process.env.HOME, 'Documents', 'Arduino');
+  }
+  return path.join(process.env.HOME, 'Arduino');
 }
