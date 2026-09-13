@@ -5,7 +5,7 @@ video services and reset. A separately downloaded trusted native ARM module
 supplies the engine and its C64 client. Compatible VM packages are distributed
 separately through the [MPE project](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms).
 
-See [the TeensyROM build and installation guide](../../docs/MPE-VM.md) and the
+See [the TeensyROM MPE installation/usage guide](../../docs/MPE_VM_Usage.md) and the
 [authoritative ABI header](../../Source/Teensy/MinimalBoot/Common/VMABI.h).
 
 Each package contains /VMS/<id>/manifest.vmi, engine.mvm, client.crt and its

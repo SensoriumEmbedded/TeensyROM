@@ -50,6 +50,6 @@ const record={upstreamBase:'dc1174ce8475153160e0b0da4ff65525a7dd4e5a',sharedHost
     'Firmware contains the host, not DOS/SCI/SCUMM or other emulator engines or private games.',
     'Startup checks exclude button-triggered flashing; parser tests stub flash operations.',
     'PAL/NTSC double-buffer tests simulate DMA. Physical gameplay, audio and updater acceptance remain pending.',
-    'Component licenses are documented in docs/MPE-FIRMWARE-NOTICES.md.']};
+    'Component licenses are documented in THIRD-PARTY-NOTICES.md.']};
 fs.writeFileSync(path.join(review,'host-1.2.6-verification.json'),JSON.stringify(record,null,2)+'\n');
 console.log(JSON.stringify({artifact:record.artifact,memory:record.memory,passed:true,hardwareTested:false},null,2));

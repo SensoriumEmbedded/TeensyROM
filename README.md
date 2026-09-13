@@ -2,49 +2,9 @@
 
 ***Connect your Commodore to the 21st century***
 
-## MHS Power Engine integration (review branch)
-
-**Current MPE VMs require TeensyROM+ PCB v0.4 and its full bus-mastering DMA.
-Original TeensyROM PCB v0.2/v0.3 does not support this VM implementation.**
-The stock interface is retained on TR+; regular TR comparison builds have VM
-support disabled and are ordinary-firmware regression checks only.
-
-[MHS Power Engine (MPE)](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine)
-is the system and **MPE Cartridge VM format created by MHS for TeensyROM+**.
-It lets downloadable VM engines execute directly on the cartridge's Teensy ARM
-processor, with the C64 handling display, SID sound and user input. MHS developed
-the shared host, loader, services and C64 transport that make this possible.
-
-This optional firmware integration adds MPE support to Travis's existing
-interface. It uses the same VM format as the MHS Custom GUI firmware and retains
-the stock menu and ordinary cartridge configuration. Compatible VM packages
-are separate downloads from the [MPE project](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms).
-
-This branch is a maintainer review candidate with successful builds and host
-checks; physical hardware acceptance remains pending. See the
-[MPE build and integration guide](docs/MPE-VM.md). TeensyROM hardware and original
-firmware remain the work of Travis Smith / Sensorium Embedded.
-
-The current [MPE 1.2.6 review build](docs/MPE-RETEST-1.2.6.md) includes MHS F1
-colour fitting, NUFLIX double buffering and SID servicing during uploads.
-Startup and button handling match upstream; there is no two-button firmware
-recovery option. Use the ordinary firmware updater. See the
-[component notices](docs/MPE-FIRMWARE-NOTICES.md).
-
 **Features include:**
-* **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
-* **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
-* **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
-* **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
-* **Remote Control** your C64 using 
-  * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
-  * The feature rich (and cross-platform) [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) and [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
-* SID File Player with voice muting and speed control 
-* Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
-* Lots of games, utilities, pics, and music built-in: no external media required to get started!
-* [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
-* **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
 * **TeensyROM+ (PCB v0.4)** adds many additional features, **[see this document](docs/TR+NewFeatures.md)** for more details.
+  * **MHS Power Engine VM support** — Run downloadable VM engines like DoomVM directly on the TR+'s 816MHz ARM processor, created by [ziggystar12](https://github.com/ziggystar12) at [Mean Hamster Software](https://meanhamster.com/) — see the [VM downloads](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms).
   * **Kernal Replacement** — load a custom KERNAL ROM image, with no hardware modification.
   * **512KB REU (RAM Expansion Unit)** — a real REU your C64 software can detect and use
   * **Freezer Cartridge Support** — Action Replay and Super Snapshot V5 (PAL and NTSC) emulated natively
@@ -53,6 +13,19 @@ recovery option. Use the ordinary firmware updater. See the
   * **Battery-Backed Real-Time Clock** — a built-in coin-cell holder: TR+ can remember the correct time through power cycles
   * **External Reset Detect** — press an external reset (C64U button, User port, etc) returns you to the TR menu
   * **Programmable Alternate Button** — the "Alt" button is assignable to whatever's most useful
+* **All TeensyROM PCB versions** 
+  * **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
+  * **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
+  * **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
+  * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
+  * **Remote Control** your C64 using 
+    * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
+    * The feature rich (and cross-platform) [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) and [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
+  * SID File Player with voice muting and speed control 
+  * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
+  * Lots of games, utilities, pics, and music built-in: no external media required to get started!
+  * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
+* **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
@@ -111,6 +84,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
 ## Links to detailed documentation
   * **Usage Documents**
     * **[General Usage](docs/General_Usage.md)**
+    * **[MHS Power Engine VM usage](docs/MPE_VM_Usage.md)**
     * **[MIDI Usage](docs/MIDI_Usage.md)**
     * **[ASID Player](docs/ASID_Player.md)**
     * **[Ethernet Usage](docs/Ethernet_Usage.md)**
@@ -121,7 +95,6 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
   * **SW Release notes/development**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
     * **[Software Build Instructions](Source/BuildInfo.md)**
-    * [Optional MHS Power Engine VM build (maintainer review)](docs/MPE-VM.md) — stock interface with separately downloaded DoomVM.
   * **Hardware & PCB Related**
     * **[3D printed case files/document](3D_Print_Case/3D-Printed-Case-ReadMe.md)**
     * **[RTC Battery Addition for v0.2/0.3 PCBs](docs/RTC_Battery_Addition.md)**
@@ -162,7 +135,9 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
 * [**StatMat**](https://github.com/Stat-Mat): NFC Scanner idea, Fast boot code, OneLoad64 creation
-* **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team
+* [**ziggystar12**](https://github.com/ziggystar12) ([Mean Hamster Software](https://meanhamster.com/)): Creator of the MHS Power Engine, bringing downloadable VM engines to TeensyROM+
+* [**kfox**](https://github.com/kfox): Creator of [c64cast](https://github.com/kfox/c64cast), showcasing TR+'s Remote DMA Memory Access
+* **Giants with tall shoulders**: SID/SIDEKick, KungFu Flash, VICE Team, Ultimate
 
 ## Pictures/screen captures:
 |![TeensyROM pic1](media/v0.4/v0.4_top.png)|![TeensyROM pic1](media/case/lp-case_connected.jpg)|
