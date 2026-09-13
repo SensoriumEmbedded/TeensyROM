@@ -380,8 +380,9 @@ const uint8_t OutputPins[] = {
 //   (hold = 840-setup, data setup = 820-setup): 380 collapses, 405-430 intermittent, 440-450 clean,
 //   455-460 errors creep back, 465+ collapses.  Blanking the screen (no badlines) and moving the BA sample
 //   point did not fix it; readback showed reads are clean, so it's write-side.  Keeping the address
-//   bus driven between bytes doubled the errors.  What errors remain land on addresses whose low byte has a single 0
-//   bit ($xxEF, $xxF7, ...; $xxFF never), and only while the C64 program is writing RAM.  C64s keep the NTSC set.
+//   bus driven between bytes doubled the errors.  What errors remain only show while the C64 program is writing
+//   RAM.  In 256-byte sessions they clustered on addresses whose low byte has a single 0 bit ($xxEF, $xxF7, ...),
+//   but lone writes to $C0FF fail about as often as to $C0EF.  C64s keep the NTSC set.
 //   PAL C128 is untested (no rig) and keeps the PAL set.
 #define Def_nS_DMASetupNTSC128     445
 #define Def_nS_DMADataSetupNTSC128 375
