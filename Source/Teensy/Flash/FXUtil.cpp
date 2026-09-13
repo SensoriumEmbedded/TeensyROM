@@ -1,10 +1,12 @@
 //******************************************************************************
 // FXUTIL.H -- FlasherX utility functions
 //******************************************************************************
+#ifndef FXUTIL_HOST_TEST
 #include <Arduino.h>
 extern "C" {
   #include "FlashTxx.h"		// TLC/T3x/T4x/TMM flash primitives
 }
+#endif
 
 //******************************************************************************
 // hex_info_t	struct for hex record and hex file info
@@ -27,32 +29,70 @@ typedef struct {	//
 //******************************************************************************
 // hex_info_t	struct for hex record and hex file info
 //******************************************************************************
-void read_ascii_line( Stream *serial, char *line, int maxbytes );
+int  read_ascii_line( Stream *serial, char *line, int maxbytes );
 int  parse_hex_line( const char *theline, char *bytes,
 	unsigned int *addr, unsigned int *num, unsigned int *code );
 int  process_hex_record( hex_info_t *hex );
 void update_firmware( Stream *in, Stream *out,
-			uint32_t buffer_addr, uint32_t buffer_size );
+			uint32_t buffer_addr, uint32_t buffer_size,
+			uint32_t expected_crc, bool verify_crc );
+static int read_ascii_line_crc( Stream *serial, char *line, int maxbytes, uint32_t *crc );
+
+static uint32_t firmware_crc32_byte(uint32_t value, uint8_t byte)
+{
+  // A 16-entry table is much faster than the old bit-at-a-time loop without
+  // spending a kilobyte of flash on a full 256-entry table.
+  static const uint32_t table[16] = {
+    0x00000000u,0x1db71064u,0x3b6e20c8u,0x26d930acu,
+    0x76dc4190u,0x6b6b51f4u,0x4db26158u,0x5005713cu,
+    0xedb88320u,0xf00f9344u,0xd6d6a3e8u,0xcb61b38cu,
+    0x9b64c2b0u,0x86d3d2d4u,0xa00ae278u,0xbdbdf21cu
+  };
+  value ^= byte;
+  value = (value >> 4) ^ table[value & 15];
+  return (value >> 4) ^ table[value & 15];
+}
 
 //******************************************************************************
 // update_firmware()	read hex file and write new firmware to program flash
 //******************************************************************************
 void update_firmware( Stream *in, Stream *out, 
-				uint32_t buffer_addr, uint32_t buffer_size )
+				uint32_t buffer_addr, uint32_t buffer_size,
+				uint32_t expected_crc, bool verify_crc )
 {
-  static char line[96];					// buffer for hex lines
-  static char data[32] __attribute__ ((aligned (8)));	// buffer for hex data
+  static char line[524];					// maximum Intel HEX record plus terminator
+  static char data[256] __attribute__ ((aligned (8)));	// maximum record payload
   hex_info_t hex = {					// intel hex info struct
     data, 0, 0, 0,					//   data,addr,num,code
     0, 0xFFFFFFFF, 0, 					//   base,min,max,
     0, 0						//   eof,lines
   };
 
+  bool has_data = false;
+  uint32_t file_crc = UINT32_MAX;
+  (void)out;
   SendMsgPrintfln("Reading hex file");  
+
+  const uint64_t flash_limit = (uint64_t)FLASH_BASE_ADDR + buffer_size;
+  const uint64_t buffer_limit = (uint64_t)buffer_addr + buffer_size;
+  if (!in || !buffer_size || flash_limit > (uint64_t)UINT32_MAX + 1u ||
+      buffer_limit > (uint64_t)UINT32_MAX + 1u) {
+    SendMsgPrintfln("Invalid firmware buffer range");
+    return;
+  }
 
   // read and process intel hex lines until EOF or error
   while (!hex.eof)  {
-    read_ascii_line( in, line, sizeof(line) );
+    const int line_length = read_ascii_line_crc( in, line, sizeof(line),
+      verify_crc ? &file_crc : NULL );
+    if (line_length == -1) {
+      SendMsgPrintfln("Unexpected end of hex file");
+      return;
+    }
+    if (line_length == -2) {
+      SendMsgPrintfln("Hex line too long");
+      return;
+    }
     //// reliability of transfer via USB is improved by this printf/flush
     //if (in == out && out == (Stream*)&Serial) {
     //  out->printf( "%s\n", line );
@@ -65,38 +105,70 @@ void update_firmware( Stream *in, Stream *out,
       SendMsgPrintfln("Bad hex line: %s", line);
       return;
     }
-    else if (process_hex_record( &hex ) != 0) 
+    else if (hex.code == 0) {
+      const uint64_t source = (uint64_t)hex.base + hex.addr;
+      const uint64_t source_end = source + hex.num;
+      const uint64_t destination = (uint64_t)buffer_addr + source - FLASH_BASE_ADDR;
+      const uint64_t destination_end = destination + hex.num;
+      if (source < FLASH_BASE_ADDR || source_end < source || source_end > flash_limit ||
+          destination < buffer_addr || destination_end < destination || destination_end > buffer_limit) {
+        SendMsgPrintfln("Firmware address out of range");
+        return;
+      }
+      if (process_hex_record( &hex ) != 0) {
+        SendMsgPrintfln("Invalid hex record");
+        return;
+      }
+      has_data = has_data || hex.num != 0;
+      const uint32_t addr = (uint32_t)destination;
+      if (!IN_FLASH(buffer_addr)) {
+        memcpy( (void*)(uintptr_t)addr, (void*)hex.data, hex.num );
+      }
+      else {
+        const int error = flash_write_block( addr, hex.data, hex.num );
+        if (error) {
+          SendMsgPrintfln("Error %02X in flash_write_block", error);
+          return;
+        }
+      }
+    }
+    else if (process_hex_record( &hex ) != 0)
     { // error on bad hex code
       //out->printf( "abort - invalid hex code %d\n", hex.code );
       SendMsgPrintfln("Invalid hex code %d", hex.code);
       return;
     }
-    else if (hex.code == 0) 
-    { // if data record
-      uint32_t addr = buffer_addr + hex.base + hex.addr - FLASH_BASE_ADDR;
-      if (hex.max > (FLASH_BASE_ADDR + buffer_size)) 
-      {
-        //out->printf( "abort - max address %08lX too large\n", hex.max );
-        SendMsgPrintfln("Max address %08lX too large", hex.max);
-        return;
-      }
-      else if (!IN_FLASH(buffer_addr)) 
-      {
-        memcpy( (void*)addr, (void*)hex.data, hex.num );
-      }
-      else if (IN_FLASH(buffer_addr)) 
-      {
-        int error = flash_write_block( addr, hex.data, hex.num );
-        if (error) 
-        {
-           //out->printf( "abort - error %02X in flash_write_block()\n", error );
-           SendMsgPrintfln("Error %02X in flash_write_block", error);
-           return;
-        }
-      }
-    }
     hex.lines++;
   }
+
+  // The EOF record must be the logical end of the file. Silently accepting a
+  // second image or damaged tail would make the confirmed file ambiguous.
+  while (in->available()) {
+    const int c = in->read();
+    if (c < 0) break;
+    if (verify_crc) file_crc = firmware_crc32_byte(file_crc,(uint8_t)c);
+    if (c != ' ' && c != '\t' && c != '\r' && c != '\n') {
+      SendMsgPrintfln("Data after hex EOF record");
+      return;
+    }
+  }
+  if (!has_data || hex.min == 0xFFFFFFFFu || hex.max <= FLASH_BASE_ADDR) {
+    SendMsgPrintfln("Hex file contains no firmware data");
+    return;
+  }
+  // flash_move() copies from FLASH_BASE_ADDR through the highest record. A
+  // sparse image may contain erased gaps, but it must explicitly provide the
+  // boot/vector prefix at the flash base.
+  if (hex.min != FLASH_BASE_ADDR) {
+    SendMsgPrintfln("Firmware image does not start at flash base");
+    return;
+  }
+  if (verify_crc && ~file_crc != expected_crc) {
+    SendMsgPrintfln("Firmware changed after confirmation");
+    return;
+  }
+
+  const uint32_t image_size = hex.max - FLASH_BASE_ADDR;
     
   SendMsgPrintfln("Hex file: %1d lines, %1luK\r\n(%08lX - %08lX)",
 			hex.lines, (hex.max-hex.min)/1024, hex.min, hex.max );
@@ -119,7 +191,10 @@ void update_firmware( Stream *in, Stream *out,
 #else
   SendMsgPrintfln("Verify file for TeensyROM: ");  //27 chars
 #endif
-  if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID )) 
+  // The upstream search subtracts strlen(FLASH_ID) from this unsigned size.
+  // Guard short images here so malformed but checksummed input cannot
+  // underflow that bound and scan outside the staging buffer.
+  if (image_size >= strlen(FLASH_ID) && check_flash_id( buffer_addr, image_size, FLASH_ID ))
   {
     //out->printf( "new code contains correct target ID %s\n", FLASH_ID );
     SendMsgOK();
@@ -128,7 +203,7 @@ void update_firmware( Stream *in, Stream *out,
   {
     //out->printf( "abort - new code missing string %s\n", FLASH_ID );
 #ifndef Fab04_Features
-    if (check_flash_id( buffer_addr, hex.max - hex.min, FLASH_ID_ORIG ))
+    if (image_size >= strlen(FLASH_ID_ORIG) && check_flash_id( buffer_addr, image_size, FLASH_ID_ORIG ))
     {
        if (isFab2x())  //fab 0.2x boards can load older FLASH_ID_ORIG
        {
@@ -176,7 +251,7 @@ void update_firmware( Stream *in, Stream *out,
   NVIC_DISABLE_IRQ(IRQ_PIT);
   //SetResetAssert;
   
-  flash_move( FLASH_BASE_ADDR, buffer_addr, hex.max-hex.min );
+  flash_move( FLASH_BASE_ADDR, buffer_addr, image_size );
 
   // should not return from flash_move(), but put REBOOT here as reminder
   REBOOT;
@@ -185,25 +260,41 @@ void update_firmware( Stream *in, Stream *out,
 //******************************************************************************
 // read_ascii_line()	read ascii characters until '\n', '\r', or max bytes
 //******************************************************************************
-void read_ascii_line( Stream *serial, char *line, int maxbytes )
+int read_ascii_line( Stream *serial, char *line, int maxbytes )
 {
-  int c=0, nchar=0;
-  while (serial->available()) {
-    c = serial->read();
-    if (c == '\n' || c == '\r')
-      continue;
-    else {
-      line[nchar++] = c;
-      break;
+  return read_ascii_line_crc(serial,line,maxbytes,NULL);
+}
+
+static int read_ascii_line_crc( Stream *serial, char *line, int maxbytes, uint32_t *crc )
+{
+  if (line && maxbytes > 0) line[0] = 0;
+  if (!line || maxbytes < 2 || !serial) return -1;
+  int nchar = 0;
+  bool started = false, overflow = false;
+  for (;;) {
+    // Firmware files are synchronous streams. Treat no available byte as EOF
+    // instead of spinning forever after removal or a truncated final line.
+    if (!serial->available()) {
+      line[nchar] = 0;
+      if (!started) return -1;
+      return overflow ? -2 : nchar;
     }
-  }
-  while (nchar < maxbytes && !(c == '\n' || c == '\r')) {
-    if (serial->available()) {
-      c = serial->read();
-      line[nchar++] = c;
+    const int c = serial->read();
+    if (c < 0) {
+      line[nchar] = 0;
+      if (!started) return -1;
+      return overflow ? -2 : nchar;
     }
+    if (crc) *crc = firmware_crc32_byte(*crc,(uint8_t)c);
+    if (c == '\n' || c == '\r') {
+      if (!started) continue;
+      line[nchar] = 0;
+      return overflow ? -2 : nchar;
+    }
+    started = true;
+    if (nchar + 1 < maxbytes) line[nchar++] = (char)c;
+    else overflow = true;
   }
-  line[nchar-1] = 0;	// null-terminate
 }
 
 //******************************************************************************
@@ -218,20 +309,23 @@ int process_hex_record( hex_info_t *hex )
       hex->min = hex->base + hex->addr;
   }
   else if (hex->code==1) { // EOF (:flash command not received yet)
+    if (hex->num != 0 || hex->addr != 0) return 1;
     hex->eof = 1;
   }
   else if (hex->code==2) { // extended segment address (top 16 of 24-bit addr)
-    hex->base = ((hex->data[0] << 8) | hex->data[1]) << 4;
+    if (hex->num != 2 || hex->addr != 0) return 1;
+    hex->base = ((((uint8_t)hex->data[0] << 8) | (uint8_t)hex->data[1]) << 4);
   }
   else if (hex->code==3) { // start segment address (80x86 real mode only)
     return 1;
   }
   else if (hex->code==4) { // extended linear address (top 16 of 32-bit addr)
-    hex->base = ((hex->data[0] << 8) | hex->data[1]) << 16;
+    if (hex->num != 2 || hex->addr != 0) return 1;
+    hex->base = ((uint32_t)(((uint8_t)hex->data[0] << 8) | (uint8_t)hex->data[1])) << 16;
   }
   else if (hex->code==5) { // start linear address (32-bit big endian addr)
-    hex->base = (hex->data[0] << 24) | (hex->data[1] << 16)
-              | (hex->data[2] <<  8) | (hex->data[3] <<  0);
+    // This is an execution entry point, not a new base for later data records.
+    if (hex->num != 4 || hex->addr != 0) return 1;
   }
   else {
     return 1;
@@ -287,11 +381,19 @@ int parse_hex_line( const char *theline, char *bytes,
     return 0;
   if (strlen (theline) < 11)
     return 0;
+  // scanf field widths are maximums, not exact widths: "%02x" accepts a
+  // single nibble before a non-hex character. Reject every malformed nibble
+  // before parsing any fixed-width Intel HEX field.
+  for (const char *scan = theline + 1; *scan; ++scan) {
+    const char c = *scan;
+    if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
+          (c >= 'a' && c <= 'f'))) return 0;
+  }
   ptr = theline + 1;
   if (!sscanf (ptr, "%02x", &len))
     return 0;
   ptr += 2;
-  if (strlen (theline) < (11 + (len * 2)))
+  if (strlen (theline) != (11 + (len * 2)))
     return 0;
   if (!sscanf (ptr, "%04x", (unsigned int *)addr))
     return 0;

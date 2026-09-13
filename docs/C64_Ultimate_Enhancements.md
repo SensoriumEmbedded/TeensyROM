@@ -2,6 +2,17 @@
 
 Even the feature-rich C64 Ultimate benefits from TeensyROM's enhanced capabilities. Here's what TeensyROM brings to the table:
 
+## MHS Power Engine VM Support (TeensyROM+)
+
+TeensyROM+ can run downloadable VM engines — like DoomVM — directly on its own ARM processor, with the C64 handling display, SID sound, and input. It's a genuinely different kind of capability than the C64 Ultimate's own FPGA-based emulation: native code execution on a dedicated ARM chip, hosted through the cartridge port, using the same stock TeensyROM menu you already know.
+
+- **Native VM Execution**: VM engines run directly on the TeensyROM+ hardware, not emulated by the C64/C64U itself
+- **Growing Library**: DoomVM is available now, with NES, Game Gear, and Game Boy VMs in development
+- Created by [ziggystar12](https://github.com/ziggystar12) at [Mean Hamster Software](https://meanhamster.com/) — [VM downloads here](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms)
+- **TeensyROM+ Only**: requires the v0.4 PCB's full bus-mastering DMA hardware
+
+For more information: [MHS Power Engine VM Guide](/docs/MPE_VM_Usage.md)
+
 ## MIDI Support
 
 Connect a MIDI controller for an engaging musical experience—no musical background required. Whether you're casually exploring sounds with friends and family or diving into serious music production, TeensyROM makes it accessible and fun.  For professional music makers, TeensyROM stands out as a premier cartridge solution. 
@@ -90,7 +101,7 @@ For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
 ## TR+ Compatibility Note
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more). It's safe to leave these set regardless.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, MHS Power Engine VM Support, and more). It's safe to leave these set regardless.
 
 For more information: [TR+ New Features Guide](/docs/TR+NewFeatures.md)
 

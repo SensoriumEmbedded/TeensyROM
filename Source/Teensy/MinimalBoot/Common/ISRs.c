@@ -81,7 +81,7 @@ FASTRUN void isrPHI2()
 #ifdef Fab04_FullDMACapable
    if (DMA_State == DMA_S_TransferExecuting) 
    {
-#ifndef MinimumBuild  //temporary exclusion of minimal mode DMAs
+#if !defined(MinimumBuild) || defined(FeatVMVideoDMA)
       DMATransferISR();
       return;
 #endif

@@ -140,6 +140,20 @@ void setup()
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
+
+#ifdef MPE_VM_ENABLED
+   char vmMarker[5]{};
+   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
+   if (vmMarker[0]=='@' && vmMarker[1]=='V' && vmMarker[2]=='M' && vmMarker[3]=='1') {
+      // Consume the request before entering the other image. Reset, load
+      // failure and the menu button return to the menu without autolaunch.
+      EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
+      delay(10);
+      runMPEApp();
+      runMainTRApp_FromMin(); // Missing/invalid MPE image: recover to stock menu.
+      return;
+   }
+#endif
    
    //we have a crt to load in minimal mode, proceed....
    

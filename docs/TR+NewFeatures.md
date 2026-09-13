@@ -7,12 +7,15 @@ The TeensyROM+ represents the next generation of TeensyROM hardware (PCB v0.4) a
 
 The biggest hardware upgrade in TR+ unlocks several of its most significant new capabilities. The original TR can *assert* the DMA line to pause the C64's CPU — that's how it pulls off tricks like swapping in banks for very large CRT files — but it never actually takes control of the address/data bus itself.
 
-TR+ adds the extra bus-buffering hardware needed to do the real thing: full bi-directional control of the address bus, data bus, and R/*W line, so it can act as a genuine second bus master. That one addition is what unlocks live KERNAL replacement, a real 512KB REU, and remote read/write of C64 memory — none of which are possible on the original hardware.
+TR+ adds the extra bus-buffering hardware needed to do the real thing: full bi-directional control of the address bus, data bus, and R/*W line, so it can act as a genuine second bus master. That one addition is what unlocks live KERNAL replacement, a real 512KB REU, remote read/write of C64 memory, and the video path that downloadable VM engines use to draw to the C64's screen — none of which are possible on the original hardware.
 
 A handful of other new hardware additions round out the TR+ feature set.
 
 ## TR+ Specific Additions
 
+ * **MHS Power Engine VM Support** — run downloadable VM engines like DoomVM directly on the Teensy's own ARM processor, with the C64 handling display, SID sound, and input
+   * Created by [ziggystar12](https://github.com/ziggystar12) at [Mean Hamster Software](https://meanhamster.com/) — see the [MPE guide](MPE_VM_Usage.md) and [VM downloads](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms)
+   * The TR menu, cartridge support, and firmware itself are unchanged; VM packages are separate, optional SD-card downloads — no firmware update needed to add a new VM
  * **Kernal Replacement** — load a custom KERNAL ROM image, with no other hardware additions or modification.
    * Select any KERNAL image right from the SD/USB file browser (`<Shift-K>`); your choice is remembered in EEPROM
    * Once enabled in Special IO, it takes effect through the normal "Exit to BASIC" (F2) path or when launching a PRG
@@ -39,7 +42,7 @@ A handful of other new hardware additions round out the TR+ feature set.
 
 ## Using TR+ with a Commodore 64 Ultimate / Ultimate64
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, MHS Power Engine VM Support, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
 
 ## Q&A
 

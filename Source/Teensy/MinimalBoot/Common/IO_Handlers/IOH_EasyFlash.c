@@ -21,6 +21,12 @@
 #define NumDecodeBanks   64
 uint8_t *BankDecode[NumDecodeBanks][2];
 uint8_t EZFlashRAM[256];
+#ifdef FeatVMHost
+uint8_t CurrentEasyFlashBank;
+bool VMHostIO2(uint8_t, bool);
+void VMHostPoll();
+bool VMHostOwnsSwapRAM();
+#endif
 
 #ifdef MinimumBuild
    struct stcSwapBuffers
@@ -142,6 +148,9 @@ void InitHndlr_EasyFlash()
 #ifdef MinimumBuild
 uint8_t* ImageCheckAssign(uint8_t* BankRequested)
 {
+#ifdef FeatVMHost
+   if(VMHostOwnsSwapRAM())return BankRequested;
+#endif
    //Printf_dbg(" Ad %08x", (uint32_t)BankRequested);
    if (((uint32_t)BankRequested & SwapSeekAddrMask) == SwapSeekAddrMask) //requested bank is a swap bank
    {
@@ -172,6 +181,9 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
       {
          case 0x00:   // Register $DE00 – EasyFlash Bank (write-only)
             Data &= 0x3f;
+#ifdef FeatVMHost
+            CurrentEasyFlashBank = Data;
+#endif
             
 #ifdef MinimumBuild
             //check if swapped bank is being selected, check for same or initiate swap
@@ -199,6 +211,9 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 
 void IO2Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 {
+#ifdef FeatVMHost
+   if (VMHostIO2(Address, R_Wn)) return;
+#endif
    if (R_Wn) //IO2 Read  -------------------------------------------------
    {
       DataPortWriteWaitLog(EZFlashRAM[Address]);
@@ -213,7 +228,13 @@ void IO2Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_EasyFlash()
 {
-#ifdef MinimumBuild   
+#ifdef FeatVMHost
+   VMHostPoll();
+#endif
+#ifdef MinimumBuild
+#ifdef FeatVMHost
+   if(VMHostOwnsSwapRAM())return;
+#endif
    if (DMA_State == DMA_S_ActiveReady) 
    {
       //DMA asserted, paused for bank swap from SD

@@ -8,6 +8,20 @@
 
 typedef  void (*pFunction)(void);
 
+#ifdef MPE_VM_ENABLED
+#include "Common/MPEBootImage.h"
+FLASHMEM void runMPEApp()
+{
+   if (!MPEBootImage::installed()) return;
+   const uint32_t entry = *((const volatile uint32_t*)(MPEBootImage::base + 0x1004u));
+   // Same core-startup handoff used for the upper stock image. The target
+   // ResetHandler installs its own FlexRAM map, stack, vectors and MPU.
+   disableCache();
+   ((pFunction)entry)();
+   REBOOT;
+}
+#endif
+
 FLASHMEM void runMainTRApp_FromMin()
 {  //flag as "FromMin" to indicate skip of autolaunch (if enabled)
    EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
