@@ -1,0 +1,58 @@
+name: Build firmware
+
+on:
+  push:
+    branches: ['**']
+    tags: ['Release_v*']
+  pull_request:
+
+# contents: write is needed only for the tag-triggered publish step below; the repo's
+# default workflow token is read-only, so this has to be requested explicitly here.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject npm dependencies
+        run: |
+          if node -e "const p=require('./package.json'); process.exit((p.dependencies||p.devDependencies)?1:0)"; then
+            echo "package.json has no dependencies field, as required"
+          else
+            echo "::error::package.json declares dependencies/devDependencies; this build path is zero-dependency Node only"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install Teensy core 1.61.0
+        run: |
+          arduino-cli config init --additional-urls https://www.pjrc.com/teensy/package_teensy_index.json
+          arduino-cli core update-index
+          arduino-cli core install teensy:avr@1.61.0
+          arduino-cli lib install CRC32
+
+      - name: Build TR
+        run: npm run build:tr
+
+      - name: Build TR+
+        run: npm run build:tr-plus
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: build/firmware/*.hex
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/Release_v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/firmware/*.hex
