@@ -10,8 +10,8 @@ uint8_t *DMA_Buffer;
 //These assume Fab04_DataBufAlwaysEnabled
 __attribute__((always_inline)) inline uint8_t DataPortWaitReadDMA()
 {  // for "normal" (non-VIC) C64 write cycles
-   WaitUntil_nS(390);  // nS_DataSetup=220  //takes a little longer for read data DMA
-      //too soon = bad reads 
+   //takes a little longer than the nS_DataSetup=220 non-DMA case, too soon = bad reads
+   WaitUntil_nS_fine(nS_DMADataSetup);
    uint32_t DataIn = ReadGPIO7;
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
@@ -24,8 +24,8 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN10_PORTSET = RegBits;
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
-   
-   WaitUntil_nS(430);  // nS_DataHold = 390 (err), 470 OK, 430 OK(?)
+
+   WaitUntil_nS_fine(nS_DMADataHold);  // nS_DataHold = 390 (err), 470 OK, 430 OK(?)
    //not checking Phi2 state due to tight timing and early in cycle call can cause early exit
 
    SetDataPortDirIn; //set data ports back to inputs/default

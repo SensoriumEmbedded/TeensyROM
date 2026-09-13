@@ -29,7 +29,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8.0.6"    //*VERSION*
+#define TRVersion              "0.8.0.6t"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -314,12 +314,24 @@ const uint8_t OutputPins[] = {
    #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
 #endif                            
 
-#define CycTonS(N)          (N*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
-#define nSToCyc(N)          (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
+//N parenthesized - an unparenthesized N silently only multiplies the last term of an
+//   expression argument (e.g. nSToCyc(X-90) becomes X - nSToCyc(90), not nSToCyc(X-90)).
+#define CycTonS(N)          ((N)*(1000000000UL>>16)/(F_CPU_ACTUAL>>16))
+#define nSToCyc(N)          ((N)*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
 #define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
-    
+   
+//Hoists the nS-to-cycles conversion outside the poll loop. nSToCyc() reads the volatile
+//   F_CPU_ACTUAL, so left inline in a while() condition it redoes a reload+shift+multiply+
+//   divide on every single pass - wasted work that widens the loop's polling period and
+//   biases every wait to overshoot late, never early (it can only exit on a check, never
+//   exactly on target). Converting once up front instead of once per pass shrinks that
+//   overshoot from ~24-33nS avg (old, per-pass conversion) to ~1.8-3.7nS avg (this macro) -
+//   measured/derived at this board's 816MHz clock; the gap in nS scales with clock speed,
+//   since the wasted work is a fixed cycle count, not a fixed time.
+#define WaitUntil_nS_fine(N) do{uint32_t Cycles = nSToCyc(N); while((ARM_DWT_CYCCNT-StartCycCnt) < Cycles);}while(0)
+       
 #define Def_nS_MaxAdjPAL    1030  //    above this nS since last int causes adjustment
 #define Def_nS_MaxAdjNTSC    993  //    NTSC's shorter nominal cycle (~978nS vs PAL's ~1015nS) leaves less slack before this must trigger;
                                   //       restored as its own value - was merged into one shared 1030 constant for a while
@@ -346,13 +358,32 @@ const uint8_t OutputPins[] = {
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
+
+//Both are measured from StartCycCnt, which DMAByte() re-latches nS_DMASetup after Phi2 falling, not from Phi2 rising
+#define Def_nS_DMADataSetupPAL  390  //delay to latching the data bus on a DMA read, too soon = bad reads
+#define Def_nS_DMADataSetupNTSC 390  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
+#define Def_nS_DMADataHoldPAL   430  //delay to releasing the data bus on a DMA write.  390 (err), 470 OK, 430 OK(?)
+#define Def_nS_DMADataHoldNTSC  410  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
+                                     //      intermittent partial-byte errors, <=425 clean.  PAL collapses at 485 (9/10/26,
+                                     //      C64+Kawari in PAL, Ultimate agrees) and swept 385-475 clean over 12MB, but that
+                                     //      board won't repro the 390 err above - it's forgiving, so PAL's partial-byte
+                                     //      mode is untested rather than absent.
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+//PAL-biased until the main menu's first wRegVid_TOD_Clks write.  MaxAdj has to stay PAL here: NTSC's
+//   993 is under PAL's 1015nS cycle, so a PAL machine would re-adjust on every interrupt.
+//The hold is the problem.  Autolaunch (Teensy.ino -> RemoteLaunch w/ DoCartDirect) starts a CRT without
+//   ever loading the C64 menu, so MainMenu.asm never writes the register and an NTSC machine keeps the
+//   PAL 430 - inside NTSC's own 430-450 partial-byte band.  DMA is reachable there: the REU handler,
+//   and Write/ReadC64MemToken, which ProcessCommand() answers ahead of the busy check.
+//Not fixed by dropping this to 410: that needs a PAL board that reproduces the 390 (err) below, and the
+//   one PAL rig measured so far does not.  The real fix is timing Phi2 on the Teensy rather than
+//   waiting for the C64 to report it, which would retire this whole bootstrap.
+uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL;
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  
 uint32_t nS_DataSetup = Def_nS_DataSetup;  
@@ -360,7 +391,9 @@ uint32_t nS_DataHold  = Def_nS_DataHold;
 uint32_t nS_VICStart  = Def_nS_VICStart;  
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
-uint32_t nS_DMASetup  = Def_nS_DMASetupPAL; //default to PAL, updated on main menu load (wRegVid_TOD_Clks write)
+uint32_t nS_DMASetup  = Def_nS_DMASetupPAL;
+uint32_t nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;
 uint32_t Cyc_KernProp = Def_Cyc_KernProp;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
