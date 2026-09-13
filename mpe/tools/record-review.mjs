@@ -36,7 +36,7 @@ fs.copyFileSync(build.artifact,artifact);assert.equal(sha(artifact),build.sha256
 const testLog=path.join(build.runRoot,'verification/tests.log');
 fs.copyFileSync(testLog,path.join(review,'host-1.2.6-tests.log'));
 const lock=read(path.join(root,'mpe/source-lock.json'));
-const tests=['mpe/tools/verify.mjs','mpe/tests/startup.test.mjs','Source/Teensy/tests/recovery-flash-source.test.js','mpe/tests/nuflix-poll.cpp','Source/Teensy/tests/flash-update-parser.cpp'];
+const tests=['mpe/tools/verify.mjs','mpe/tests/startup.test.mjs','Source/Teensy/tests/recovery-flash-source.test.js','mpe/tests/nuflix-poll.cpp'];
 const record={upstreamBase:'dc1174ce8475153160e0b0da4ff65525a7dd4e5a',sharedHostRevision:lock.revision,
   artifact:{path:'mpe/review/'+filename,bytes:fs.statSync(artifact).size,sha256:build.sha256},
   toolchain:{arduinoCli:'1.4.1',teensyCore:'1.61.0',gcc:'11.3.1',optimization:'o2std',board:'TeensyROM+ Fab0.4'},

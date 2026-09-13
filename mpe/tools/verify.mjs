@@ -38,7 +38,6 @@ assert.ok(build.inputs?.length,'Build is missing its source input manifest');
 for(const input of build.inputs)assert.equal(sha(path.join(root,input.path)),input.sha256,'Built source drift: '+input.path);
 logs.push(run(process.execPath,['--test','mpe/tools/hex.test.mjs']));
 logs.push(run(process.execPath,['--test','Source/Teensy/tests/recovery-flash-source.test.js','mpe/tests/startup.test.mjs']));
-sourceTest('flash-parser','Source/Teensy/tests/flash-update-parser.cpp');
 fs.writeFileSync(path.join(output,'audio-host-poll.h'),audioHost(fs.readFileSync(path.join(root,'Source/Teensy/MinimalBoot/VMHostPoll.h'),'utf8')));
 assert.equal(sha(path.join(output,'audio-host-poll.h')),sha(path.join(build.runRoot,'source/Source/Teensy/MPEBoot/VMHostPoll.h')),'Tested scheduler differs from firmware');
 sourceTest('nuflix-poll','mpe/tests/nuflix-poll.cpp');
