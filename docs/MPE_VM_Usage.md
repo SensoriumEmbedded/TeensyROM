@@ -18,7 +18,7 @@ Created by [ziggystar12](https://github.com/ziggystar12) at [Mean Hamster Softwa
 
   * **TeensyROM+** (PCB v0.4) using its full bus-mastering DMA hardware. 
     * Original TeensyROM (PCB v0.2/v0.3) not supported for this feature.
-  * **TR+ Firmware v0.9 or higher**.
+  * **TR+ Firmware v0.8.0.7 or higher**.
 
 ## Downloading and installing a VM
 
