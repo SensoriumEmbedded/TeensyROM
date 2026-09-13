@@ -1,0 +1,13 @@
+{
+  "name": "teensyrom-build",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node tools/build-firmware.mjs",
+    "build:tr": "node tools/build-firmware.mjs --target tr",
+    "build:tr-plus": "node tools/build-firmware.mjs --target tr-plus"
+  }
+}
