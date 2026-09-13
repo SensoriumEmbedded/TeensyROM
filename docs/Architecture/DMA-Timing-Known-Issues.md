@@ -28,6 +28,9 @@ the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
 Check, which necessarily runs after `Start:` has already set the constants.
 — *Common_Defs.h `nS_MaxAdj` comment, PR #21*
 
+Confirmed to hit C128 too, not just NTSC C64 — see #14: an autolaunched C128
+never reaches its own `te445` set either, same mechanism.
+
 ### 5. Cycle-overrun mode has no graceful degradation `[Development]`
 Past ~455ns hold, the DMA write wait doesn't return before Phi2 falls, and the
 transfer collapses completely (deterministic, whole-byte corruption) rather
@@ -62,10 +65,9 @@ for. Deferred — needs the scope, not done yet.
 ### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
 `WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
 overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
-`DataPortWriteWaitDMA()` have been switched over so far. Nine live call sites
+`DataPortWriteWaitDMA()` have been switched over so far. Eight live call sites
 still use the coarser `WaitUntil_nS()`:
 
-- `DMAControl.ino:70` — BA-transition wait in `DMAByte()`
 - `DMAControl.ino:77` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
@@ -73,6 +75,12 @@ still use the coarser `WaitUntil_nS()`:
 - `Common_Defs.h:435,457` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
   read/write helpers)
 - `IOH_REU.c:178` — `nS_DMAAssert`
+
+(`DMAControl.ino:70`'s BA-transition wait is no longer on this list — the
+`C128-DMA-Timing` import hoisted it to the same manual pattern as the
+already-fixed data-setup/hold waits, and gave it a name, `nS_DMABAWait`. Not
+using the `WaitUntil_nS_fine()` macro itself, so still worth a small follow-up
+for consistency, but the actual overshoot bug is already gone.)
 
 "Methodically" because each conversion is a real timing change, not a pure
 refactor — same lesson as this branch's own hoist: shrinking the overshoot
@@ -118,6 +126,13 @@ collection, so the video-standard effect isn't ruled out entirely, just
 outweighed by the one remaining cell still being empty rather than
 contradicting.
 
+**Second, independent line of evidence (2026-09-13, see #14):** on a
+different constant entirely (`te`/`nS_DMASetup`, not `nS_DMADataHold`), a
+real NTSC C128 measurably needs a later assert point (445) than the shared
+NTSC default (430) — 13–25× fewer errors at the C128-specific value. Same
+direction as the tracker data, different mechanism/constant, independently
+pointing at C64-vs-C128 as a real, active variable rather than noise.
+
 ### 4. Marginal partial-byte failure mode is intermittent and uncharacterized `[Investigation]`
 The 430–450ns partial-byte error band went quiescent partway through the PR #21
 test session and could not be re-confirmed in a follow-up interleaved A/B
@@ -150,6 +165,59 @@ no existing fix or established direction here to confirm — just competing,
 untested hypotheses (PHI2 phase/skew at the VIC output stage vs. the MMU
 arbitration path) and candidate test methods, same shape as #3/#4.
 
+**Related but not resolving (2026-09-13):** #14's finding (C128 needs a later
+`te` than shipped) is consistent with this theory — but equally consistent
+with the MMU-arbitration-path theory above, since both predict "C128 needs
+more time before the bus settles." Doesn't separate the two. #15's residual
+fault (address-bit-to-data-bit coupling, DRAM-mux signature) looks like a
+*different* mechanism from either PHI2-timing theory here — worth not
+conflating the two open questions just because they're both C128-specific.
+
+### 15. Residual C128 DMA write fault persists even at `te445` `[Investigation]`
+From the same write-up as #14. Even with the fixed C128 assert timing, a
+small but real fault remains — ~1.4 bad bytes/MB, all partial-byte (some bits
+took the new value; none left the byte fully unchanged).
+
+Two preconditions, neither fully explained yet:
+- **Needs the C64 program to be actively writing RAM.** A quiet loop (CPU
+  parked, no writes) shows zero errors — `DMA_S_StartAsynch`'s normal start
+  path needs a write→read boundary to trigger; a quiet program only ever
+  starts DMA through its 5000-cycle timeout instead. Whether the *start path*
+  or the *ongoing CPU activity* is what actually matters isn't separated yet.
+- **Highly variable run-to-run** — identical 3000-write runs at the same
+  settings produced anywhere from 0 to 70 bad writes. No condition found yet
+  (same shape as #4's intermittency, though a different mechanism/constant).
+
+**A specific, address-dependent signature, not fully consistent:** in
+256-byte write sessions, errors clustered on addresses whose low byte has
+exactly one 0 bit, with the *specific data bit that drops matching that
+address bit's position* (`$C0EF`, A4=0, drops data bit 4). Lone (single-byte)
+writes don't hold this up as cleanly — `$C0FF` (no 0 bit) fails about as
+often as `$C0EF` when tested alone, just with a different, unfixed bit
+position each time.
+
+**Extensively eliminated already** (firmware-only, no scope needed):
+- BA sample point — exposed as a new tunable (`Def_nS_DMABAWait`, was a
+  hardcoded `WaitUntil_nS(200)` in `DMAByte()`), swept 60–400: worse at both
+  ends, no better value than the existing 200. Directly relevant to #9's
+  `nS_DMAAssert`/bank-swap cross-reference, though this rules out the BA-wait
+  specifically, not `nS_DMAAssert` itself.
+- Badlines/VIC-IIe cycle stealing — screen blanked, sprites off: roughly
+  halved the error count, so a real contributor, not the sole cause.
+- Read path — write once, read back 30×, 0 of 230k reads disagreed: fault is
+  write-side only.
+- Stray writes into video RAM, write-release (`tw`) timing, address bus
+  tri-state switching — all ruled out (holding the address bus driven for a
+  whole session instead of releasing per-byte made it *worse*, doubling
+  errors, at the same addresses).
+
+**Next step:** firmware-side elimination has run out of road — needs a
+scope/logic analyser capture of A0–A7 plus DRAM `/RAS`, `/CAS`, and the
+address-mux select on a real C128, comparing a lone write to `$C0EF` against
+one to `$C0FF` (different bits fail). `Source/Teensy/tools/dma_scope_write.py`
+(imported alongside this) drives single-byte DMA writes from a PC and stops
+on the first bad readback, for triggering the scope.
+
 ## Validation
 
 ### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
@@ -157,6 +225,34 @@ The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
 430 default is inherited from the old shared constant, not independently
 measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
 correctly, but not the analog margin (its buffers/bus loading are its own).
+
+### 14. NTSC C128 needs a later DMA assert point (`te`/`nS_DMASetup`) than the shared NTSC set — detected and applied automatically `[Validation]`
+Imported from kfox's fork (`C128-DMA-Timing` branch, off `DMA_Timing`) — real
+hardware data, not a hypothesis. On a flat NTSC C128, the shipped shared NTSC
+`nS_DMASetup` (430) drops bits intermittently: 19–36 bad bytes/MB. Moving the
+R/W+address assert point to 445 — later, not earlier — cuts that 13–25×, to
+~1.4 bad bytes/MB. Not zero (see #15), but a real, large, measured fix.
+
+Detection: the C128's VIC-IIe implements `$D030` bits 0–1 differently — it
+reads `$FC` at 1MHz where a C64's VIC-II reads `$FF`. `MainMenu.asm` now
+checks this and sets a new `rvtcC128` bit in `wRegVid_TOD_Clks` alongside the
+existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
+out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
+can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
+`Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` instead of
+the plain NTSC set, when both bits are set.
+
+Same exposure as #1: this only ever fires once the menu has reported the
+machine type, so an autolaunched C128 never reaches its own set either —
+confirmed directly in the write-up ("an autolaunched NTSC C64 gets the write
+errors PR #21 fixed, and a C128 gets the same, never reaching its own set
+either").
+
+**Not yet independently verified** — tested extensively by kfox on their own
+rig, not yet run against this branch's own hardware or reconciled with
+`DMA_Timing`'s existing NTSC/PAL constants. PAL C128 has no measured set of
+its own yet either; falls through to the plain PAL constants (itself
+untested on C128, per #2).
 
 ## Closed
 
