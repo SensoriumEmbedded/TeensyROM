@@ -6,7 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
 const root=path.resolve(import.meta.dirname,'../..');
-const upstream='dc1174ce8475153160e0b0da4ff65525a7dd4e5a';
+const upstream='80ba6378b4417b284d3e212f65befd8c9b25d968';
 const read=file=>fs.readFileSync(path.join(root,file),'utf8').replaceAll('\r\n','\n');
 
 test('ordinary startup and button handling match current upstream exactly',()=>{

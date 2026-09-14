@@ -80,7 +80,7 @@ __attribute__((always_inline)) inline bool AGIDMAWaitForPhi2(bool High)
 // These assume Fab04_DataBufAlwaysEnabled.
 __attribute__((always_inline)) inline uint8_t DataPortWaitReadDMA()
 {
-   WaitUntil_nS(390);
+   WaitUntil_nS_fine(nS_DMADataSetup);
    uint32_t DataIn = ReadGPIO7;
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
@@ -94,7 +94,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    CORE_PIN10_PORTSET = RegBits;
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
 
-   WaitUntil_nS(430);
+   WaitUntil_nS_fine(nS_DMADataHold);
    SetDataPortDirIn;
    SetDataBufIn;
 }

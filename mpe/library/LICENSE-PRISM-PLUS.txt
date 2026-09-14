@@ -1,0 +1,60 @@
+MHS Prism+ Restricted Distribution License
+Version 1.0, 14 September 2026
+
+Copyright (c) 2026 Mean Hamster Software. All rights reserved.
+
+1. Scope
+
+This license applies only to the original Mean Hamster Software contributions
+to the independently implemented Prism+ renderer that the accompanying
+component manifest expressly identifies as covered by this license. It does
+not apply to the entire MPE firmware, VM engines, original Prism renderer,
+third-party libraries, independently licensed components, or user game data.
+
+2. Permission
+
+You may install, run and make backup copies of the covered software. You may
+redistribute complete, unmodified binary distributions with their original
+copyright notices, this license, and accompanying third-party notices intact.
+Where MHS supplies source or linkable object files, you may inspect them and
+use them to reproduce the supplied software, subject to section 4 below.
+No fee or royalty is required for these permissions.
+
+3. Reserved rights
+
+Except as permitted by section 4 or by separate written permission from MHS,
+you may not modify the covered MHS contributions, create derivative versions
+of them, distribute modified versions of them, or sublicense them under
+different terms. You may not remove the applicable copyright or license
+notices or represent a modified product as an official MHS release.
+Copy this license verbatim with authorized distributions. Editing a copy of
+this text does not grant rights to MHS software or change these terms.
+
+4. Existing rights, third-party licenses and mandatory exceptions
+
+This license does not withdraw permissions previously granted for an earlier
+copy under MIT or another license. It does not restrict rights in third-party
+or separately licensed code. Those components retain their original licenses,
+including the rights those licenses grant to modify and redistribute them.
+
+When covered code is supplied in a work linked with an LGPL-covered library,
+you may modify that combined work for your own use, reverse engineer it to
+debug those modifications, and relink it with a modified library, as required
+by the applicable LGPL. The supplied relinking materials may be used for that
+purpose. Nothing here restricts activities that applicable law permits
+without the copyright holder's permission. If a condition conflicts with an
+applicable third-party license, that third-party license controls to the
+extent of the conflict. This license does not impose additional restrictions
+on a GPL- or LGPL-covered work or its corresponding source.
+
+5. No warranty
+
+The covered software is provided as is, without warranties of any kind,
+including warranties of merchantability, fitness for a particular purpose or
+noninfringement. To the extent permitted by law, MHS and its contributors are
+not liable for claims, damages or other liability arising from the software
+or its use, whether in contract, tort or otherwise.
+
+Prism+ is not offered under an open-source license. Keeping implementation
+source private and reserving modification rights is a licensing policy,
+not a claim that a distributed binary is technically impossible to modify.

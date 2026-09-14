@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node tools/build-firmware.mjs",
     "build:tr": "node tools/build-firmware.mjs --target tr",
-    "build:tr-plus": "node tools/build-firmware.mjs --target tr-plus"
+    "build:tr-plus": "node tools/build-firmware.mjs --target tr-plus",
+    "build:mpe": "node mpe/tools/build.mjs --mode mpe"
   }
 }

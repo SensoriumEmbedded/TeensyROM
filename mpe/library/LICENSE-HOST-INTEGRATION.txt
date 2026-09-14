@@ -1,0 +1,43 @@
+MHS MPE Host Library Integration Permission
+14 September 2026
+
+Copyright (c) 2026 Mean Hamster Software. All rights reserved.
+
+This is additional written permission under section 3 of the accompanying
+MHS Prism+ Restricted Distribution License. It covers only the MHS-owned
+Prism+ contributions identified in PRISM-PLUS-COMPONENTS.json as contained
+in libMPEPrismHost.a. It does not change ownership or licenses of other code
+contained in that archive or in a combined firmware.
+
+Any recipient may copy the supplied compiled host archive, link its
+unmodified covered contributions into their own TeensyROM or other firmware,
+and distribute the resulting firmware and the archive, commercially or
+noncommercially, without a fee or royalty to MHS. Normal linking, relocation,
+section selection, and combination with independently developed or separately
+licensed code are permitted and are not prohibited modifications of the
+covered contributions. You may change your own integration code and use
+modified third-party libraries under their applicable licenses.
+
+Keep this permission, LICENSE-PRISM-PLUS.txt, PRISM-PLUS-COMPONENTS.json,
+and applicable copyright and third-party notices with authorized
+distributions. Make the matching relinking materials and corresponding
+library source available with, or from the same download location as, the
+combined binary when the applicable library licenses require them. This
+permission may be passed on verbatim with authorized copies.
+
+This permission does not authorize modifying the covered MHS Prism+
+implementation, publishing its private implementation source, or relicensing
+the covered contributions. All permissions and mandatory exceptions in
+LICENSE-PRISM-PLUS.txt remain effective, including prior MIT grants, rights
+under third-party licenses, modification for the user's own use and reverse
+engineering to debug modifications where required by the LGPL, and rights
+that applicable law provides. It imposes no restriction on independently
+licensed MPE host infrastructure or on third-party code.
+
+The public interface, entry-point glue and relink script are separately
+MIT-licensed, as stated in LICENSE-PUBLIC-INTERFACE-MIT.txt. No private
+implementation source license is needed to build that glue and link the
+supplied host archive. This archive contains the complete MPE host with
+Prism+ support, not a renderer-only library.
+
+The warranty and liability exclusions in LICENSE-PRISM-PLUS.txt apply.

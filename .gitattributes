@@ -1,3 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 mpe/review/*.hex binary
+mpe/review/*.zip binary
+mpe/library/*.a binary
+mpe/library/*.zip binary

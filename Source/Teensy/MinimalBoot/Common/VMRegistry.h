@@ -16,8 +16,12 @@ static FLASHMEM bool absolute(const char *s,size_t cap){
 // A bounded comma-separated extension list uses the existing manifest field;
 // e.g. gb,gbc. This is generic routing, not a VM-specific firmware exception.
 static FLASHMEM bool extensionMatches(const char *list,const char *ext){
+    // Both Game Boy Color suffixes share the existing manifest field.
+    const bool colorAlias=!strcasecmp(ext,"gc")||!strcasecmp(ext,"gbc");
     const size_t n=strlen(ext);for(const char *p=list;*p;){const char *end=strchr(p,',');size_t len=end?size_t(end-p):strlen(p);
-        if(len==n&&!strncasecmp(p,ext,n))return true;if(!end)break;p=end+1;}return false;
+        if(len==n&&!strncasecmp(p,ext,n))return true;
+        if(colorAlias&&((len==2&&!strncasecmp(p,"gc",2))||(len==3&&!strncasecmp(p,"gbc",3))))return true;
+        if(!end)break;p=end+1;}return false;
 }
 static FLASHMEM bool validExtensions(const char *list){
     if(!*list||strlen(list)>7)return false;
@@ -120,7 +124,11 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
         strcpy(id,(char *)d+16);clientId=id;
     }
     const int found=find(ext,clientId,l);
-    if(!found){if(!clientId)return false;SendMsgPrintfln("VM package missing in /VMS");return true;}
+    if(!found){
+        // Known console ROMs must not enter the stock unknown-as-PRG path.
+        if(!clientId&&!extensionMatches("nes,gb,gbc,gg",ext))return false;
+        SendMsgPrintfln("VM package missing in /VMS");return true;
+    }
     if(found<0){SendMsgPrintfln("Ambiguous or over-limit VM registry");return true;}
     if(!clientId)strcpy(l.content,selected);
     if(!preflight(l)){SendMsgPrintfln("VM package/client failed validation");return true;}

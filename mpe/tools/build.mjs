@@ -7,9 +7,7 @@ import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {combineHex,FLASH_BASE,FLASH_LIMIT,MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
-import {generateNativeData} from '../../experiments/dosvm-nuflix/native-data.mjs';
-import {generateDoubleData} from '../../experiments/dosvm-nuflix/double-data.mjs';
-import {audioHost} from '../../experiments/dosvm-nuflix/live-audio.mjs';
+import {createBuildIdentity,guardFeatureControl} from './build-identity.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const args=process.argv.slice(2), option=(name,fallback)=>{
@@ -28,14 +26,32 @@ if(!fs.existsSync(hardware))throw Error('Install Teensy core 1.61.0, or specify 
 const write=(p,b)=>{fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,b);};
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 const read=p=>fs.readFileSync(p,'utf8');
+const version=read(path.join(root,'Source/Teensy/MinimalBoot/Common/Common_Defs.h')).match(/#define TRVersion\s+"([^"]+)"/)?.[1];
+const identity=createBuildIdentity(mode,version);
+const libraryRoot=path.join(root,'mpe/library');
+let library=null;
+if(mode==='mpe'){
+  const manifestPath=path.join(libraryRoot,'manifest.json');
+  const manifest=JSON.parse(read(manifestPath));
+  if(manifest.version!==identity.mpeVersion||manifest.entrypointAbi!==1||
+     manifest.flashBase!==VM_BASE||manifest.flashLimit!==VM_LIMIT||manifest.mainBase!==MAIN_BASE)
+    throw Error('MPE library version, entry-point ABI or flash layout does not match this builder');
+  if(manifest.archive!=='libMPEPrismHost.a')throw Error('Unexpected MPE library archive');
+  const archive=path.join(libraryRoot,manifest.archive);
+  if(sha(fs.readFileSync(archive))!==manifest.sha256)throw Error('MPE library archive SHA-256 mismatch');
+  library={version:manifest.version,packageRevision:manifest.packageRevision,archive,sha256:manifest.sha256,
+    manifestPath,manifestSha256:sha(fs.readFileSync(manifestPath)),entrypointAbi:manifest.entrypointAbi,
+    flashBase:manifest.flashBase,flashLimit:manifest.flashLimit,mainBase:manifest.mainBase,
+    sourceFirmwareSha256:manifest.sourceFirmwareSha256};
+}
 function inputs(){
   const files=[];
   const walk=dir=>{for(const e of fs.readdirSync(path.join(root,dir),{withFileTypes:true})){
     if(e.name==='build')continue;const p=path.join(dir,e.name);
     if(e.isDirectory())walk(p);else files.push({path:p.replaceAll('\\','/'),sha256:sha(fs.readFileSync(path.join(root,p)))});
   }};
-  for(const dir of ['Source','mpe/host','vm/video','experiments/dosvm-nuflix'])walk(dir);
-  for(const p of ['mpe/tools/build.mjs','mpe/tools/hex.mjs'])files.push({path:p,sha256:sha(fs.readFileSync(path.join(root,p)))});
+  for(const dir of ['Source','mpe/host',...(mode==='mpe'?['mpe/library']:[])])walk(dir);
+  for(const p of ['mpe/tools/build.mjs','mpe/tools/hex.mjs','mpe/tools/build-identity.mjs'])files.push({path:p,sha256:sha(fs.readFileSync(path.join(root,p)))});
   return files.sort((a,b)=>a.path.localeCompare(b.path));
 }
 const inputSnapshot=inputs();
@@ -44,19 +60,20 @@ const runRoot=fs.mkdtempSync(path.join(output,'run-'));
 const stage=path.join(runRoot,'source'),data=path.join(runRoot,'Arduino15');
 if(process.platform==='win32'&&data.length>70)throw Error('Use a shorter --out path, for example C:/MPE-build, to stay within Windows toolchain path limits');
 fs.cpSync(path.join(root,'Source'),path.join(stage,'Source'),{recursive:true,filter:p=>!path.relative(path.join(root,'Source'),p).split(path.sep).includes('build')});
+const featureControl=path.join(stage,'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h');
+write(featureControl,guardFeatureControl(read(featureControl),mode));
 if(mode==='mpe'){
-  fs.cpSync(path.join(root,'vm/video'),path.join(stage,'vm/video'),{recursive:true});
-  const nuflix=path.join(stage,'experiments/dosvm-nuflix');
-  fs.cpSync(path.join(root,'experiments/dosvm-nuflix'),nuflix,{recursive:true});
-  generateNativeData(path.join(nuflix,'upstream-pinned'),nuflix);
-  generateDoubleData(nuflix);
-  const poll=path.join(stage,'Source/Teensy/MinimalBoot/VMHostPoll.h');
-  write(poll,audioHost(read(poll)));
   const vmSketch=path.join(stage,'Source/Teensy/MPEBoot');
-  fs.cpSync(path.join(stage,'Source/Teensy/MinimalBoot'),vmSketch,{recursive:true});
-  fs.unlinkSync(path.join(vmSketch,'MinimalBoot.ino'));
-  fs.copyFileSync(path.join(root,'mpe/host/MinimalBoot.ino'),path.join(vmSketch,'MPEBoot.ino'));
-  fs.copyFileSync(path.join(root,'mpe/host/Min_TeensyROM.h'),path.join(vmSketch,'Min_TeensyROM.h'));
+  write(path.join(vmSketch,'MPEBoot.ino'),read(path.join(libraryRoot,'MPEBoot/MPEBoot.ino')).replace('../include/MpeHost.h','MpeHost.h'));
+  fs.copyFileSync(path.join(libraryRoot,'include/MpeHost.h'),path.join(vmSketch,'MpeHost.h'));
+  fs.copyFileSync(library.archive,path.join(runRoot,'libMPEPrismHost.a'));
+  // Keep the original text menu and callback. Only the MPE combination uses
+  // the independently implemented MIT button helper supplied with this build.
+  const mainSketch=path.join(stage,'Source/Teensy/Teensy.ino');
+  const mainSource=read(mainSketch);
+  if(!mainSource.includes('#include <Bounce.h>'))throw Error('Text-menu button include changed; review MPE adapter');
+  write(mainSketch,mainSource.replace('#include <Bounce.h>','#include "ButtonDebounce.h"\n#define Bounce ButtonDebounce'));
+  fs.copyFileSync(path.join(root,'mpe/host/ButtonDebounce.h'),path.join(stage,'Source/Teensy/ButtonDebounce.h'));
 }
 fs.cpSync(hardware,path.join(data,'packages/teensy/hardware/avr/1.61.0'),{recursive:true});
 fs.symlinkSync(path.join(sdk,'packages/teensy/tools'),path.join(data,'packages/teensy/tools'),process.platform==='win32'?'junction':'dir');
@@ -72,7 +89,7 @@ function run(exe,argv){
 const arm=path.join(sdk,'packages/teensy/tools/teensy-compile/11.3.1/arm/bin/arm-none-eabi-');
 const exe=process.platform==='win32'?'.exe':'';
 const images=[];
-function compile(name,min,{extra='',ld=null,bootdata=null,usb=null,sketchName=null}={}){
+function compile(name,min,{extra='',ld=null,bootdata=null,usb=null,sketchName=null,archive=null}={}){
   const suffix=min?'orig':'upper';
   write(path.join(core,'imxrt1062_t41.ld'),ld??read(path.join(linkers,'imxrt1062_t41.ld.'+suffix)));
   write(path.join(core,'bootdata.c'),bootdata??read(path.join(linkers,'bootdata.c.'+suffix)));
@@ -85,6 +102,11 @@ function compile(name,min,{extra='',ld=null,bootdata=null,usb=null,sketchName=nu
   const options=['compile','--fqbn',fqbn,'--build-path',build,'--build-property',
     'build.flags.defs='+defs+(mode==='stock'?'':' -DFab04_Features')+extra];
   if(usb)options.push('--build-property','build.usbtype='+usb);
+  if(archive){
+    const ldFlags=props.match(/^build.flags.ld=(.*)$/m)?.[1].trim();
+    if(!ldFlags)throw Error('Cannot resolve Teensy linker flags');
+    options.push('--build-property','build.flags.ld='+ldFlags+' -Wl,--whole-archive "'+archive.replaceAll('\\','/')+'" -Wl,--no-whole-archive');
+  }
   console.log('Building '+name);
   const result=spawnSync(cli,[...options,sketch],{cwd:root,env,encoding:'utf8',windowsHide:true,maxBuffer:48*1024*1024});
   const log=(result.stdout??'')+(result.stderr??'');write(path.join(runRoot,name+'.log'),log);
@@ -103,6 +125,8 @@ if(mode==='mpe'){
   // Core 1.61 leaves this reference unguarded when USB is disabled.
   write(path.join(core,'yield.cpp'),yieldSource.replace('if (Serial.available()) serialEvent();','#ifndef USB_DISABLED\n\tif (Serial.available()) serialEvent();\n#endif'));
   let ld=read(path.join(linkers,'imxrt1062_t41.ld.orig'))
+    // Prism+ fitting runs from flash, leaving the module's ITCM window free.
+    .replace('*(.flashmem*)','*(.flashmem*)\n        *(.text.*mhs_prism_native*)')
     .replace('ORIGIN = 0x60000000, LENGTH = 7936K',`ORIGIN = 0x${VM_BASE.toString(16)}, LENGTH = ${(VM_LIMIT-VM_BASE)/1024}K`)
     .replace('_itcm_block_count = (SIZEOF(.text.itcm) + SIZEOF(.ARM.exidx) + 0x7FFF) >> 15;','_itcm_block_count = 6;')
     .replace('_heap_start = ADDR(.bss.dma) + SIZEOF(.bss.dma);','_heap_start = ALIGN(_ebss, 32) + 32;')
@@ -115,14 +139,13 @@ if(mode==='mpe'){
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap guest RAM2")
       ASSERT(SIZEOF(.bss.extram) == 0, "Host requires PSRAM")`);
   const bootdata=read(path.join(linkers,'bootdata.c.orig')).replace('0x60000000,','0x'+VM_BASE.toString(16)+',');
-  compile('vm',true,{sketchName:'MPEBoot',ld,bootdata,usb:'USB_DISABLED',extra:' -DMHS_VM_PROFILE_192_320 -DMPE_DOS_NUFLIX -DMPE_DOS_NUFLIX_DOUBLE -I'+stage.replaceAll('\\','/')});
+  compile('vm',true,{sketchName:'MPEBoot',ld,bootdata,usb:'USB_DISABLED',extra:' -DMHS_VM_PROFILE_192_320 -DMHS_DENSE_COMPACT_SCHEDULE=1',archive:path.join(runRoot,'libMPEPrismHost.a')});
 }
 const combined=combineHex(images.map((image,i)=>({name:image.name,text:read(image.hex),start:[FLASH_BASE,MAIN_BASE,VM_BASE][i],end:[MAIN_BASE,VM_BASE,VM_LIMIT][i]})));
-const version=read(path.join(root,'Source/Teensy/MinimalBoot/Common/Common_Defs.h')).match(/#define TRVersion\s+"([^"]+)"/)[1];
-const filename=`TeensyROM${mode==='stock'?'':'+'}_${version}${mode==='mpe'?'_MPE-1.2.6':''}_full.hex`;
+const filename=identity.artifactFilename;
 const artifact=path.join(runRoot,filename);write(artifact,combined.hex);
 if(JSON.stringify(inputs())!==JSON.stringify(inputSnapshot))throw Error('Source changed during build; do not use these artifacts');
-const report={mode,sourceRevision:run('git',['rev-parse','HEAD']).trim(),inputs:inputSnapshot,runRoot,artifact,sha256:sha(fs.readFileSync(artifact)),layout:{regions:combined.regions,imageSpan:combined.imageSpan,stagingStart:combined.stagingStart,stagingBytes:combined.stagingBytes},images:images.map(({name,elf,hex,symbols})=>({name,elf,hex,sha256:sha(fs.readFileSync(hex)),itcmEnd:symbols.match(/^([0-9a-f]+) \w _etext$/m)?.[1]}))};
+const report={mode,identity,library,sourceRevision:run('git',['rev-parse','HEAD']).trim(),inputs:inputSnapshot,runRoot,artifact,sha256:sha(fs.readFileSync(artifact)),layout:{regions:combined.regions,imageSpan:combined.imageSpan,stagingStart:combined.stagingStart,stagingBytes:combined.stagingBytes},images:images.map(({name,elf,hex,symbols})=>({name,elf,hex,sha256:sha(fs.readFileSync(hex)),itcmEnd:symbols.match(/^([0-9a-f]+) \w _etext$/m)?.[1]}))};
 write(path.join(runRoot,'report.json'),JSON.stringify(report,null,2)+'\n');
 write(path.join(output,'latest.json'),JSON.stringify(report,null,2)+'\n');
 console.log('Build report: '+path.join(runRoot,'report.json'));

@@ -1,6 +1,6 @@
-# Upstream source used by the isolated experiment
+# Third-party display components used by the isolated experiment
 
-NUFLIX Studio by Patai Gergely: https://github.com/cobbpg/nuflix-studio
+Display software by Patai Gergely: https://github.com/cobbpg/nuflix-studio
 Pinned commit: `b33f4d93875a3fdbabaf52216811962847fdfcf1`.
 
 The runner reads the unmodified Constants.cs, CodeGeneration.cs,
@@ -34,7 +34,7 @@ the generated routine. Its exporter patches both template calls to that entry;
 it still uses the upstream scheduler and displayer, with the license below.
 The
 separate, earlier NFLXBEN module measures only native color fitting; it is
-not a DOS interpreter or live NUFLIX display engine. Its text font is the existing
+not a DOS interpreter or live display engine. Its text font is the existing
 public-domain Daniel Hepper/Marcel Sondaar/IBM font, whose notice is retained
 in engine/native-dos/mpe5_font8x8.h.
 
