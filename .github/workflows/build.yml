@@ -15,7 +15,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Full history, not the default shallow clone: mpe/tests/startup.test.mjs's
+      # byte-identity check does `git show <pinned commit>:<path>`, and that commit is an
+      # ancestor a depth-1 clone doesn't include.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Reject npm dependencies
         run: |
@@ -30,8 +35,16 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
+      - name: Run tool tests
+        run: npm test
+
       - name: Install arduino-cli
-        uses: arduino/setup-arduino-cli@v2
+        run: |
+          CLI=$(node tools/install-arduino-cli.mjs)
+          echo "Resolved arduino-cli: $CLI"
+          if [ "$CLI" != "arduino-cli" ]; then
+            dirname "$CLI" >> "$GITHUB_PATH"
+          fi
 
       - name: Install Teensy core 1.61.0
         run: |
