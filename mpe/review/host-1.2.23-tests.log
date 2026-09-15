@@ -1,0 +1,119 @@
+✔ three disjoint images round-trip and leave stock updater staging space (2.185ms)
+✔ reject bad checksum, truncated image and data after EOF (0.6858ms)
+✔ reject cross-partition records, overlapping images and unsafe updater span (1.4689ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 105.1966
+
+✔ ordinary startup and button handling match current upstream exactly (68.0925ms)
+✔ normal browser update route remains available (0.7774ms)
+✔ retired source importer fails closed without a library package or checkout (168.3457ms)
+✔ a recorded package and exactly staged public adapter pass integrity checks (38.557ms)
+✔ a replaced archive fails even if other report metadata is unchanged (27.6738ms)
+✔ a different archive staged for the linker fails independently of the package (17.95ms)
+✔ manifest drift and report version disagreement fail (18.3092ms)
+✔ unrecorded package files and changed notices fail the build snapshot check (48.5562ms)
+✔ staged public API or wrapper changes fail exact package comparison (36.1063ms)
+✔ a legacy scheduler cannot silently remain the staged library implementation (23.4681ms)
+✔ linked public and Prism entry points must all be defined in host code (0.9774ms)
+✔ startup keeps normal menu entry without an automatic recovery-flash route (1.6548ms)
+✔ legacy updater retains target admission before its flash move (0.4569ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 333.6664
+
+10 debounce and production integration scenarios passed
+{
+  "passed": true,
+  "scenarios": 10,
+  "desktopResetCallbacks": 0,
+  "sourceRoot": "E:\\MPE123\\mpe-fixed\\run-LjqdDW\\source\\Source",
+  "helperSha256": "e3acfdeec59ca63cb5338af54cf845722564bf337dc438a45e5dd53d30bf227e",
+  "testedSourceFiles": [
+    {
+      "path": "Teensy/Teensy.ino",
+      "sha256": "ea802cb883b90261d7bfceb6ccfe2aca1ac3f8f801bb1f8b0c904c984da3661c"
+    },
+    {
+      "path": "Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c",
+      "sha256": "063438e1197e351e08f0852ba79b258fdc1138a3209f23dd9fc221f3697068c5"
+    },
+    {
+      "path": "Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c",
+      "sha256": "93d4a00058703afe55f13205d97156b09fb7e9d486f42a03a1851fb11cd66471"
+    }
+  ]
+}
+
+Legacy source compatibility tests; these do not execute the compiled Prism+ archive.
+PASS: actual transformed host poll publishes SID during NUFLIX upload, progresses DMA behind pending SID, freezes pending bytes, consumes ACK, respects quiet/replay/failure and preserves legacy gating; simulated I/O, no listening acceptance
+
+PASS: actual generic host file services; read/write/flush/truncate/rename/list/space, 24 handles, invalid paths/flags/spans and injected write/flush failures
+
+PASS actual VM host replay: frozen SID/max packet, RAM guards, quiet/ACK order, busy DMA and all DMA failures
+
+PASS Color F1: legal/stable cells, cached=fresh, mode isolation, short palettes, raster input, solid status; converter 1280, cache 1296 bytes
+
+PASS: centered native-width F5/F7, full-width F1/F3, live color/sharp, Auto-8 cap, all 25 useful bands, stable plans, bounded dual-bank PAL/NTSC kernels; host conversion 1.12 ms/frame (not Teensy timing)
+
+PASS: exact 160x200 pixels at center/all corners, tagged/reader parity, unchanged F1/F5/F7, camera repeat/release/opposites/clamps/reentry/clock wrap
+
+PASS: F5 preserves 6000 minority highlight pixels; error 265236000 -> 241722000; exact two-color scenery, immutable repeat, unchanged 10000-byte picture, NES/GB/Doom/DOS byte and raster geometry
+
+PASS: production F5 three/four same-row colors at all edges, exact repairs under saturation, reader parity, deterministic packing, NES F1/F3/F7 tag parity and centered F5/F7
+
+PASS: full source fitted to 296x200 beyond black margin, exact endpoints, bottom-four-line 8x4 fallback, all source dirty footprints/reversions, zero unchanged reads, palette/geometry/start invalidation; FullFrame=13400 converter=1280 workspace=18776 bytes
+
+PASS full8x2 PAL bank0: 2644 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 PAL bank1: 2644 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 NTSC bank0: 2746 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+PASS full8x2 NTSC bank1: 2746 bytes, 200 D011 writes, fitted-margin sprite enable/expansion/disable
+
+Delta F5: initial 12775 bytes, repeated 0 bytes, moving 8x8 patch 24 bytes
+PASS: live raster snapshot, pre-consumption Busy, immutable conversion during live VRAM changes, generation rejection and nonblack background
+PASS: opt-in stable F5 through actual host, changing pictures reuse both raster programs
+PASS: sprite F5 negotiated, frozen generation, 85-segment ordinary DMA, no raster grants, centered NES margins and timed-mode transition pause
+PASS: F3 native crop through actual host, ordinary color-RAM DMA, frozen camera during ACK, zero-DMA repeat and F5/F7/F1/F3 transitions
+PASS: indexed bounds/lifecycle, centered geometry, legacy restoration, inactive-bank PAL/NTSC sliced uploads, expired grants, atomic ACK ownership, picker reinitialization, DMA failure release
+
+PASS: 16 KiB center F5, all pixels/four maps/two banks, unchanged frames, small changes/reversions, immutable visible bank, pending-loan rejection, release, PAL/NTSC budgets
+
+PASS: full 8x2 fitted to 296x200, both banks/standards, black margin, unchanged zero conversion/handshake, mapped dirty conversion, pending reversion and stale-bank repair; workspace=19456 actual=18776
+
+PASS RAM2 indexed pixels/palette/raster context/dirty map; exact 416 KiB boundary; RAM1-only workspace
+
+PASS indexed timing: F1/F3/F7 accept 80-83 and 8e/8f, preserve PAL/NTSC setup, reject every other byte before DMA
+
+PASS Color F1 negotiated through firmware; ordinary 76-segment transfer; legacy opt-out; bounded cache; frame 10036, converter 1280 bytes
+
+standard,input,bank,host_ms,payload_bytes,grants,host_pipeline_ms
+pal,0,0,0.998,27136,0,1.020
+pal,1,1,0.984,27136,9,1.023
+pal,2,0,0.936,16384,6,0.956
+ntsc,0,0,0.900,27136,0,0.919
+ntsc,1,1,0.910,27136,18,0.950
+ntsc,2,0,0.917,16384,11,0.941
+PASS: double-buffer host, two independent bank histories, every active byte preserved throughout upload, early/late grant rejection, under-I/O guard, per-grant payload bound, immutable source and failure release; workspace 23284 bytes; host DMA is simulated
+
+PASS: RAM1_AUX headers/services, 64 KiB code limit, loader CRC/bounds, untouched 32 KiB ITCM tail/RAM2, and stock EasyFlash swap ownership with legacy fallthrough
+
+PASS: real registry/preflight, generic .nes routing, client launch, one-shot record, duplicate extension, traversal, malformed manifest and corrupt module rejection
+
+PASS: DoomVM launcher/direct association, ordinary 1/2 MiB CRT fallthrough, protected extensions, non-SD routing, corrupt/missing packages and relocated boot-image bounds
+
+PASS: 40 launch-route checks, 2 released-package preflights, 512 PAL/NTSC DMA byte cases; actual production functions, simulated SD/GPIO, no ROM emulation or hardware acceptance
+Verification: E:\MPE123\mpe-fixed\run-LjqdDW\verification\direct-console-launch\latest.json
+
+PASS: MVM1 image CRC, 64 header corruption cases, truncation, overflow, ABI, imports, entry and arena bounds
+
+PASS: legacy/profile headers, 3-section loader, payload CRC, bounds, short reads and guest/table isolation

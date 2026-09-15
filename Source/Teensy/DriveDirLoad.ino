@@ -28,11 +28,10 @@ FLASHMEM void HandleExecution()
    IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
 
 #ifdef MPE_VM_ENABLED
-   // Existing browser and item types are unchanged. Intercept only physical SD
-   // files before the unknown-file fallback and ordinary cartridge parser.
-   if (IO1[rWRegCurrMenuWAIT] == rmtSD && MenuSelCpy.ItemType != rtDirectory &&
-       DriveDirPath[0] && DriveDirPath[strlen(DriveDirPath)-1] != '*' &&
-       MPELaunch::tryFile(rmtSD, DriveDirPath, MenuSelCpy.Name)) return;
+   // Validate MPE containers before ordinary parsing. The helper also rejects
+   // unsupported .MPE sources while preserving ordinary USB/disk files.
+   if (MenuSelCpy.ItemType != rtDirectory &&
+       MPELaunch::tryFile(IO1[rWRegCurrMenuWAIT], DriveDirPath, MenuSelCpy.Name)) return;
 #endif
    
    if (MenuSelCpy.ItemType == rtNone) //should no longer reach here

@@ -196,6 +196,9 @@ struct StructCrtChip
      //Ext ,  ItemType
       "prg",  rtFilePrg,
       "crt",  rtFileCrt,
+#ifdef MPE_VM_ENABLED
+      "mpe",  rtFileCrt, // Validated MGC1 container; reuses the text menu's CRT item.
+#endif
       "hex",  rtFileHex,
       "p00",  rtFileP00,
       "sid",  rtFileSID,

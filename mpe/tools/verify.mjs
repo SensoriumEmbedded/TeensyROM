@@ -7,6 +7,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {decodeHex,VM_BASE,VM_LIMIT} from './hex.mjs';
 import {registryFixture} from './fixtures.mjs';
+import {verifyLibraryInputs,verifyLibrarySymbols} from './library-verification.mjs';
 import {generateNativeData} from '../../experiments/dosvm-nuflix/native-data.mjs';
 import {generateDoubleData} from '../../experiments/dosvm-nuflix/double-data.mjs';
 import {audioHost} from '../../experiments/dosvm-nuflix/live-audio.mjs';
@@ -36,10 +37,19 @@ function sourceTest(name,source,argv=[]){
 assert.equal(sha(build.artifact),build.sha256);
 assert.ok(build.inputs?.length,'Build is missing its source input manifest');
 for(const input of build.inputs)assert.equal(sha(path.join(root,input.path)),input.sha256,'Built source drift: '+input.path);
+const libraryVerification=build.library?verifyLibraryInputs(build,root):null;
 logs.push(run(process.execPath,['--test','mpe/tools/hex.test.mjs']));
-logs.push(run(process.execPath,['--test','Source/Teensy/tests/recovery-flash-source.test.js','mpe/tests/startup.test.mjs']));
+logs.push(run(process.execPath,['--test','mpe/tests/startup.test.mjs','mpe/tests/game-cart-launch.test.mjs','mpe/tests/sync-host.test.mjs','mpe/tools/library-verification.test.mjs','mpe/tools/upstream-flash-verification.test.mjs']));
+let buttonVerification=null;
+if(libraryVerification){
+  const report=path.join(output,'button-debounce.json');
+  logs.push(run(process.execPath,['mpe/tests/button-debounce.mjs','--build',path.resolve(reportPath),'--report',report,'--cxx',compiler]));
+  buttonVerification=JSON.parse(fs.readFileSync(report,'utf8'));
+}
 fs.writeFileSync(path.join(output,'audio-host-poll.h'),audioHost(fs.readFileSync(path.join(root,'Source/Teensy/MinimalBoot/VMHostPoll.h'),'utf8')));
-assert.equal(sha(path.join(output,'audio-host-poll.h')),sha(path.join(build.runRoot,'source/Source/Teensy/MPEBoot/VMHostPoll.h')),'Tested scheduler differs from firmware');
+if(!libraryVerification)assert.equal(sha(path.join(output,'audio-host-poll.h')),sha(path.join(build.runRoot,'source/Source/Teensy/MPEBoot/VMHostPoll.h')),'Tested scheduler differs from firmware');
+const compatibilityScope=libraryVerification?'Legacy source compatibility tests; these do not execute the compiled Prism+ archive.':'Source host conformance tests.';
+logs.push(compatibilityScope);console.log(compatibilityScope);
 sourceTest('nuflix-poll','mpe/tests/nuflix-poll.cpp');
 native('files_test',[fs.mkdtempSync(path.join(output,'files-sandbox-'))]);
 native('packet_replay_test');native('color_f1_test');native('mpe_video_live_test',[path.join(output,'kernel')]);
@@ -75,10 +85,16 @@ native('ram1_aux_profile_test',[],['-fpermissive']);
 const fixture=registryFixture(fs.mkdtempSync(path.join(output,'synthetic-fixture-')));
 native('registry_test',[fixture,fs.mkdtempSync(path.join(output,'registry-sandbox-'))]);
 native('upstream_launch_test',[sd,fs.mkdtempSync(path.join(output,'launch-sandbox-')),...(allPackages?['all']:[])]);
+const launchOutput=path.join(output,'direct-console-launch');
+logs.push(run(process.execPath,['mpe/tests/direct-console-launch.mjs','--packages',sd,'--cxx',compiler,'--out',launchOutput]));
+const directConsoleLaunch=JSON.parse(fs.readFileSync(path.join(launchOutput,'latest.json'),'utf8'));
+assert.equal(directConsoleLaunch.status,'PASS');
 const imageTest=native('image_test',[path.join(fixture,'VMS/NESVM/engine.mvm')]);
-if(allPackages)for(const id of ['NESVM','DOSVM','AGIVM','GBVM'])logs.push(run(imageTest,[path.join(sd,'VMS',id,'engine.mvm')]));
+if(allPackages)for(const id of ['NESVM','DOSVM','AGIVM','GBVM','GGVM'])logs.push(run(imageTest,[path.join(sd,'VMS',id,'engine.mvm')]));
 native('ram2_profile_test',[path.join(sd,'VMS/DOOMVM/engine.mvm')]);
 const image=build.images.find(i=>i.name==='vm'),symbols=fs.readFileSync(path.join(build.runRoot,'vm.nm'),'utf8');
+for(const builtImage of build.images)assert.equal(sha(builtImage.hex),builtImage.sha256,'Built image drift: '+builtImage.name);
+if(libraryVerification)libraryVerification.linkedEntries=verifyLibrarySymbols(symbols);
 const symbol=name=>{const m=symbols.match(new RegExp('^([0-9a-f]+) \\w '+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','m'));assert.ok(m,name);return parseInt(m[1],16);};
 assert.equal(symbol('_itcm_block_count'),6);assert.equal(symbol('_flexram_bank_config'),0xaaaaafff);
 assert.ok(symbol('_etext')<=0x18000);assert.equal(symbol('_vm_data_start'),0x20014000);
@@ -92,20 +108,23 @@ assert.match(sizes,/^\.bss.dma\s+0\s/m);assert.match(sizes,/^\.bss.extram\s+0\s/
 assert.ok(!/nes::|doomgeneric|MPE[4567]|AGIPicture/.test(symbols),'Emulator code leaked into host');
 for(const name of ['main','minimal']){
   const ordinary=fs.readFileSync(path.join(build.runRoot,name+'.nm'),'utf8');
-  assert.ok(!/VMHostIO2|VMHostPoll|VmRuntime::/.test(ordinary),'VM runtime leaked into ordinary '+name);
+  assert.ok(!/VMHostIO2|VMHostPoll|VmRuntime::|mpeHostSetup|mpeHostLoop/.test(ordinary),'VM runtime leaked into ordinary '+name);
+  if(libraryVerification)assert.doesNotMatch(ordinary,/^[0-9a-f]+ \w Bounce::/m,'MPE ordinary image still links Bounce: '+name);
 }
+if(libraryVerification)assert.doesNotMatch(symbols,/^[0-9a-f]+ \w Bounce::/m,'MPE host still links Bounce');
 const bytes=decodeHex(fs.readFileSync(image.hex,'utf8'));
 const word=address=>{let v=0;for(let i=0;i<4;i++){assert.ok(bytes.has(address+i));v+=bytes.get(address+i)*2**(i*8);}return v;};
 assert.equal(word(VM_BASE),0x42464346);assert.equal(word(VM_BASE+0x1000),0x432000d1);
 const entry=word(VM_BASE+0x1004);assert.equal(entry&1,1);assert.ok(entry>=VM_BASE+0x1000&&entry<=VM_BASE+0x3001);
 assert.equal(word(VM_BASE+0x1020),VM_BASE);assert.ok(word(VM_BASE+0x1024)<=VM_LIMIT-VM_BASE);
 assert.ok(build.layout.stagingBytes>=build.layout.imageSpan);
-const upstream='dc1174ce8475153160e0b0da4ff65525a7dd4e5a';
-const unchanged=run('git',['ls-tree','-r',upstream,'Source/C64','Source/Teensy/TRMenuFiles','Source/Teensy/MinimalBoot/Min_TeensyROM.h','Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino','Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MagicDesk2.c']).trim().split('\n');
+const upstream='80ba6378b4417b284d3e212f65befd8c9b25d968';
+const unchanged=run('git',['ls-tree','-r',upstream,'Source/C64','Source/Teensy/TRMenuFiles','Source/Teensy/MinimalBoot/Min_TeensyROM.h','Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino','Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MagicDesk2.c','Source/Teensy/Flash/FXUtil.cpp','Source/Teensy/Flash/FXUtil.h']).trim().split('\n');
 for(const row of unchanged){const [metadata,file]=row.split('\t');const expected=metadata.split(' ')[2];assert.equal(run('git',['hash-object','--path='+file,file]).trim(),expected,file+' changed');}
 const packageHashes=[];
-for(const id of allPackages?['AGIVM','DOSVM','NESVM','GBVM','DOOMVM']:['DOOMVM'])for(const name of ['manifest.vmi','engine.mvm','client.crt'])packageHashes.push({path:'VMS/'+id+'/'+name,sha256:sha(path.join(sd,'VMS',id,name))});
-const result={firmwareSha256:build.sha256,passed:true,unchangedUpstreamFiles:unchanged.length,packageHashes,hardwareTested:false,notes:['Host conformance and image checks; no VM engine gameplay or physical hardware acceptance is implied.','Synthetic large CRT files test launch fallthrough, not cartridge emulation.']};
+const packageIds=allPackages?['AGIVM','DOSVM','NESVM','GBVM','GGVM','DOOMVM']:['NESVM','DOOMVM','GBVM','GGVM'];
+for(const id of packageIds)for(const name of ['manifest.vmi','engine.mvm','client.crt'])packageHashes.push({path:'VMS/'+id+'/'+name,sha256:sha(path.join(sd,'VMS',id,name))});
+const result={firmwareSha256:build.sha256,passed:true,upstreamBaseline:upstream,unchangedUpstreamFiles:unchanged.length,library:libraryVerification,buttonVerification,sourceTestScope:compatibilityScope,directConsoleLaunch,packageCount:packageIds.length,packageFileCount:packageHashes.length,packageHashes,hardwareTested:false,notes:['Package, host compatibility, production launch-route and linked-image checks; no VM engine gameplay or physical hardware acceptance is implied.','Synthetic large CRT files test launch fallthrough, not cartridge emulation.',...(libraryVerification?['Legacy renderer and scheduler source tests are compatibility evidence only; they do not execute the compiled Prism+ archive.']:[])]};
 fs.writeFileSync(path.join(output,'tests.log'),logs.join('\n'));fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(result,null,2)+'\n');
 console.log('PASS: VM link/boot headers, updater space, '+unchanged.length+' upstream files unchanged. Hardware acceptance remains pending.');
 console.log('Verification report: '+path.join(output,'report.json'));

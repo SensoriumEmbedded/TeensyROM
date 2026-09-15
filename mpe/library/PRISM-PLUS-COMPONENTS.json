@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "license": "LICENSE-PRISM-PLUS.txt",
+  "effectiveDate": "2026-09-14",
+  "scope": "Only new, independently authored Mean Hamster Software Prism+ contributions embodied in the listed binary containers. Not a license for each entire container. Prior MIT grants and all third-party rights remain effective.",
+  "implementationSourceIncluded": false,
+  "components": [
+    {
+      "id": "mhs-prism-plus-firmware-service",
+      "container": "libMPEPrismHost.a",
+      "sha256": "3ff46b8942b788af3ad330e7174e951428d9d17ab16a6d6afae107c6f6fb07fd",
+      "description": "Independent Prism+ fitting, raster generation, scheduling, picture packing, inactive-picture delivery and host service contributions.",
+      "privateImplementationInputs": [
+        {
+          "path": "experiments/prism-native/dense-code.h",
+          "sha256": "93e18923d2cd3f37242fdbb4889ce0be8defda8b372b846a70791d7770eaab5a"
+        },
+        {
+          "path": "experiments/prism-native/dense-convert.h",
+          "sha256": "321bc99d4a55ccf04978d8bfe388e5d43189db4117b996fe5b0b2c3461ad82e4"
+        },
+        {
+          "path": "experiments/prism-native/dense-double-host.h",
+          "sha256": "eefd02c40204c7d27ab9318af8647d0dc9974fb262fee51cf6885f457d543293"
+        },
+        {
+          "path": "experiments/prism-native/dense-double-layout.h",
+          "sha256": "3c9a131712b915cd8ed2601c47685bfe989b456f45d5e7f06fe7ed8a23afd3d1"
+        },
+        {
+          "path": "experiments/prism-native/dense-embedded-convert.h",
+          "sha256": "13fd803c33fcf1a8eaa865d09924dd4624a05c9ae744d60d5b0478a12486b9a4"
+        },
+        {
+          "path": "experiments/prism-native/dense-event-plan.h",
+          "sha256": "409af864f5fc1cd64b2798e43c9177e12072e83f74c86f9919d1e2846d14c9ab"
+        },
+        {
+          "path": "experiments/prism-native/dense-fit.h",
+          "sha256": "e556111735b858182ee8cc684c120525e27346dd942f218d8e7d4eefe6f6464c"
+        },
+        {
+          "path": "experiments/prism-native/dense-host.h",
+          "sha256": "db2ec749af4fbce39f5358369f9d87bd61b39a6f811c8f701814a0cecd4784b4"
+        },
+        {
+          "path": "experiments/prism-native/dense-live-motion.h",
+          "sha256": "7f6550efb25e38c4a35ee3ede8bf0792f09de54593b07d6a9b1662aa86e787f1"
+        },
+        {
+          "path": "experiments/prism-native/dense-live-plan.h",
+          "sha256": "f1e59e51e060cbba0a0f6241683ac3820a2791cbc9549df5c7922e76a26dab9d"
+        },
+        {
+          "path": "experiments/prism-native/dense-live-transfer.h",
+          "sha256": "4d637a18acaa017fb7727721e7d244951422b4d39bb746da8bd9ab788766458f"
+        },
+        {
+          "path": "experiments/prism-native/dense-motion-attributes.h",
+          "sha256": "ac9d6a2a2aa20097c0af6efc014c9057f74659cf09f882b9bc4fd276a798e230"
+        },
+        {
+          "path": "experiments/prism-native/dense-motion.h",
+          "sha256": "1c1afd157f0e7f73a61079554a1a74fedb6bfb82a570e996e25d08eebe72d236"
+        },
+        {
+          "path": "experiments/prism-native/dense-pack.h",
+          "sha256": "a4b9ff936363d9501aaed92ac6b6fac9b2ceb53d11f10b5ad46defba9c86e03a"
+        },
+        {
+          "path": "experiments/prism-native/dense-raster-source.h",
+          "sha256": "03aca9fb8c56bba153369efabdfdc4b866e3274f6b3630152688da3fdf1878d1"
+        },
+        {
+          "path": "experiments/prism-native/dense-reuse.h",
+          "sha256": "e9d6453fb1a3ddc6b232659210022e28435e78b3304e3149650efeffadd8c1f1"
+        },
+        {
+          "path": "experiments/prism-native/dense-schedule.h",
+          "sha256": "ef17b4c575ce9e13ddee023ba9c5f496ee00456257ad5c1a0442cb57104770fe"
+        },
+        {
+          "path": "experiments/prism-native/dense-telemetry.h",
+          "sha256": "cc613689b3516dbb523c045d11e63c7276edebb3f78b4092732fd0e33749597e"
+        }
+      ]
+    }
+  ],
+  "excluded": "Original TeensyROM; previously published generic MHS color conversion, transport and client infrastructure; original Prism and third-party display code/templates; Teensy/Arduino/other libraries; Nofrendo and its NESVM adapter; DOOMVM; game/demo media; and any rights already granted under another license.",
+  "thirdPartyExceptions": "LGPL-covered code retains modification, redistribution, reverse-engineering and relinking rights under its license. The new MHS license expressly permits combined-work modification for customer own use and debugging as LGPL requires. No additional conditions are imposed on GPL/LGPL-covered works.",
+  "integrationPermission": "LICENSE-HOST-INTEGRATION.txt"
+}
