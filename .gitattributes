@@ -3,5 +3,6 @@
 mpe/review/*.hex binary
 mpe/review/*.zip binary
 mpe/review/console-sources/*.zip binary
+mpe/review/*-tests.log -text
 mpe/library/*.a binary
 mpe/library/*.zip binary
