@@ -101,9 +101,13 @@ byte cases, 221 protected upstream files and byte-identical stock/stock-plus
 comparison builds. The main image retains 26,592 bytes between linked data
 and stack, with 1,125,376 bytes of steady-state self-update headroom.
 
-The [console package update](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/blob/main/docs/CONSOLE-STARTUP-UPDATE.md)
-describes the NES/GB/GG BASE-before-SID fixes, receiver regressions and source
-rebuilds. Use its corrected packages even when launching directly by ROM name.
+NESVM 1.2.1 and GBVM/GGVM 1.2.24 establish the first BASE picture before SID
+updates on direct launch. The NES regression reproduces error 09 with the old
+direct-launch path while the picker succeeds; the corrected path passes on
+PAL/NTSC with Standard/Prism+ and delayed handshakes. GB/GG checks cover the
+equivalent startup gate. Use the corrected [runtime packages](https://github.com/ziggystar12/MHS-Teensy-Rom-Power-Engine/tree/main/vms)
+even when launching directly by ROM name. Matching source rebuilds and test
+scope are described in the pull request.
 
 With a C++17 compiler and matching VM packages under a test SD root:
 
