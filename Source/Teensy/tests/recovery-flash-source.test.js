@@ -1,9 +1,8 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const read = name => fs.readFileSync(path.resolve(__dirname, '..', name), 'utf8');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+const read = name => fs.readFileSync(path.resolve(import.meta.dirname, '..', name), 'utf8');
 
 test('startup cannot flash from a two-button hold or a specially named SD file', () => {
   const startup = read('Teensy.ino');
@@ -15,6 +14,10 @@ test('startup cannot flash from a two-button hold or a specially named SD file',
 
 test('normal firmware update still validates the target before moving flash', () => {
   const flasher = read('Flash/FXUtil.cpp');
-  assert.match(flasher, /check_flash_id\( buffer_addr, image_size, FLASH_ID \)/);
-  assert.match(flasher, /flash_move\( FLASH_BASE_ADDR, buffer_addr, image_size \);/);
+  // check_flash_id/flash_move take hex.max - hex.min (the parsed image span) since the
+  // Intel HEX hardening revert (commit 80ba637) replaced the image_size local these
+  // regexes originally matched -- image_size measured from FLASH_BASE_ADDR, a different
+  // span -- with this inline expression.
+  assert.match(flasher, /check_flash_id\(\s*buffer_addr,\s*hex\.max\s*-\s*hex\.min,\s*FLASH_ID\s*\)/);
+  assert.match(flasher, /flash_move\(\s*FLASH_BASE_ADDR,\s*buffer_addr,\s*hex\.max\s*-\s*hex\.min\s*\);/);
 });

@@ -1,6 +1,6 @@
 # Build System
 
-Two independent toolchains, run in a fixed order. Canonical instructions (prefer these over this doc for exact commands/paths): [Source/BuildInfo.md](/Source/BuildInfo.md), [Source/C64/README.md](/Source/C64/README.md), [Source/Teensy/tools/Build-DualBoot.md](/Source/Teensy/tools/Build-DualBoot.md).
+Two independent toolchains, run in a fixed order. Canonical instructions (prefer these over this doc for exact commands/paths): [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md) for the C64 side; for the Teensy side, `npm run build:tr` / `npm run build:tr-plus` (see [Dual-boot linking](#dual-boot-linking-toolsbuild-firmwaremjs) below) — [Source/Teensy/tools/Build-DualBoot.md](/Source/Teensy/tools/Build-DualBoot.md) describes the legacy PowerShell path this superseded.
 
 ## Build order (matters)
 
@@ -18,15 +18,17 @@ Skipping step 1 after a C64-side change means the Teensy build silently uses sta
 
 ## Teensy side
 
-- Arduino IDE 2.x + Teensyduino, board "Teensy 4.1", Optimize "Faster", CPU Speed "600 MHz", USB Type "Serial + MIDI"
+- Arduino IDE 2.x + Teensyduino, board "Teensy 4.1", Optimize "Faster", CPU Speed "600 MHz", USB Type "Serial + MIDI" — useful for interactive single-image dev/debug builds and direct IDE upload.
 - **Known-bad toolchain version: Teensyduino 1.62.0** — its GCC 15.2.1 bump (from 11.3.1) causes intermittent SD-read stalls with 2 PSRAM chips installed. Current pinned/recommended version is **1.61.0** (as of FW 0.8, 2026-08-02). Root cause confirmed to be the toolchain, not TeensyROM source — do not "fix" this by changing source code.
 - Alternative: generate a `.hex` and flash via SD/USB drive instead of direct IDE upload (needed since the Teensy USB power trace is severed during assembly, and TR must be C64-powered to program directly)
 
-## Dual-boot linking (`Build-DualBoot.ps1`)
+## Dual-boot linking (`tools/build-firmware.mjs`)
 
-Produces the combined `TeensyROM(+)_<ver>_full.hex` containing **both** the full firmware and the MinimalBoot image (see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for why MinimalBoot exists). Steps: downloads a version-pinned, SHA256-checked `arduino-cli` if not present, builds TeensyROM Main, builds MinimalBoot, combines both into one hex. Does **not** flash automatically — use Teensy Loader afterward.
+The canonical way to produce a shippable, combined `TeensyROM(+)_<ver>_full.hex` — containing **both** the full firmware and the MinimalBoot image (see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for why MinimalBoot exists) — is the zero-dependency Node builder at `tools/build-firmware.mjs`, run via `npm run build:tr` (plain TeensyROM) or `npm run build:tr-plus` (TeensyROM+). This is what `.github/workflows/build.yml` runs on every push and tag. It downloads a version-pinned, SHA256-checked `arduino-cli` if not already on `PATH`, builds MinimalBoot, builds the main image, and combines them into one hex. Does **not** flash automatically — use Teensy Loader, or flash via SD/USB drive, afterward.
 
-Guardrail worth knowing about: before building, the script checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features`. If set but `-Fab04_Features` wasn't passed to the script, it interactively prompts (y/N) to comment out the define and continue as a plain TR build, or abort — this exists specifically to prevent accidentally building a TR+ image mislabeled as plain TR.
+`Source/Teensy/tools/Build-DualBoot.ps1`, the PowerShell script this replaced, still exists in the tree but is no longer used by CI or by either target's `npm run build:*` script; it's legacy, slated for eventual removal, not the path to reach for.
+
+Guardrail worth knowing about: before building a plain TR image, the builder checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features` and, by default, throws rather than continue — this exists specifically to prevent accidentally building a TR+ image mislabeled as plain TR. Comment out the define yourself, build `--target tr-plus` instead, or pass `--yes` to have the builder comment it out and continue (no interactive y/N prompt, unlike the old PowerShell script — this has to be decided up front on the command line).
 
 <br>
 

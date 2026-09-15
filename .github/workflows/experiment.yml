@@ -22,7 +22,12 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Install arduino-cli
-        uses: arduino/setup-arduino-cli@v2
+        run: |
+          CLI=$(node tools/install-arduino-cli.mjs)
+          echo "Resolved arduino-cli: $CLI"
+          if [ "$CLI" != "arduino-cli" ]; then
+            dirname "$CLI" >> "$GITHUB_PATH"
+          fi
 
       - name: Install Teensy core 1.61.0
         shell: bash
