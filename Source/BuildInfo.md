@@ -20,7 +20,12 @@
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
      * Alternatively, you can generate a .hex file and put it on a SD/USB drive
        * See FW update section of the [General Usage doc](/docs/General_Usage.md)
-   * To do a full build including the minimal image for large CRT files, see [**this doc**](Teensy/tools/Build-DualBoot.md).
+   * For a full, shippable build — the combined dual-boot hex (MinimalBoot + main) that CI produces and Releases ship — use the Node builder instead of the Arduino IDE:
+     * `npm run build:tr` for plain TeensyROM, `npm run build:tr-plus` for TeensyROM+
+     * Requires Node.js (`.nvmrc` pins the version) and no other dependencies; downloads a pinned, checksummed `arduino-cli` on first run if one isn't already on `PATH`
+     * `npm test` runs the build tooling's own tests
+     * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works
+     * [Build-DualBoot.md](/Source/Teensy/tools/Build-DualBoot.md) documents the legacy PowerShell path this replaced
    
 ### Latest Support tool/lib versions as of FW v0.8 on 2026/08/02
    * Arduino IDE 2.3.10
