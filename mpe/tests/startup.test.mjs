@@ -6,7 +6,13 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
 const root=path.resolve(import.meta.dirname,'../..');
-const upstream='dc1174ce8475153160e0b0da4ff65525a7dd4e5a';
+// Pinned to current main (80ba637), not the older pre-MPE snapshot (dc1174ce, still used
+// by mpe/tools/verify.mjs's separate curated-file check) -- a legitimate, unrelated
+// mainline commit (bb064ea, per-device MIDI naming) landed on Teensy.ino between those two
+// points, which broke byte-identity against dc1174ce for no MPE-related reason. This
+// file's own job is "ordinary startup hasn't drifted from upstream," so it should track
+// a point that moves forward with legitimate mainline edits, not stay fixed forever.
+const upstream='80ba6378b4417b284d3e212f65befd8c9b25d968';
 const read=file=>fs.readFileSync(path.join(root,file),'utf8').replaceAll('\r\n','\n');
 
 test('ordinary startup and button handling match current upstream exactly',()=>{
