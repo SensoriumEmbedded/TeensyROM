@@ -35,7 +35,7 @@ static void use(const char *name,bool installed=true) {
     base=sandbox/name;assert(!fs::exists(base));fs::create_directories(base);
     if(installed) {
         fs::copy(packages/"VMS",base/"VMS",fs::copy_options::recursive);
-        for(const char *id:{"NESVM","DOOMVM"})
+        for(const char *id:{"NESVM","DOOMVM","GBVM","GGVM"})
             fs::copy_file(base/"VMS"/id/"client.crt",base/(std::string(id)+".crt"));
     }
     failWrite=failFlush=false;
@@ -69,9 +69,10 @@ int main(int argc,char **argv) {
     assert(sandbox.filename().string().find("launch-sandbox-")==0);
     fs::create_directories(sandbox);
     use("released-packages");
-    for(const char *id:{"NESVM","DOOMVM"}) {
+    unsigned packagePreflights=0;
+    for(const char *id:{"NESVM","DOOMVM","GBVM","GGVM"}) {
         VmRegistry::Launch launch{};assert(VmRegistry::find("",id,launch)==1);
-        assert(VmRegistry::preflight(launch));
+        assert(VmRegistry::preflight(launch));++packagePreflights;
         const auto client=std::string(id)+".crt";
         route(rmtSD,"/",client.c_str(),Result::Launch);
         saved((std::string("/VMS/")+id).c_str(),"");
@@ -80,7 +81,10 @@ int main(int argc,char **argv) {
     saved("/VMS/NESVM","/Games/Nested Folder/Selected.NES");
     route(rmtSD,"/Games/","doom1.gbd",Result::Launch);saved("/VMS/DOOMVM","/Games/doom1.gbd");
 
-    use("gb-color-aliases");fixturePackage("GBVM","gb,gbc");fixturePackage("GGVM","gg");
+    // Real GB/GG engine, manifest and client bytes, including their actual
+    // ABI/service requirements and descriptor CRCs. A renamed NES fixture
+    // cannot prove that the released GB/GG packages are admissible.
+    use("gb-color-aliases");
     for(const char *name:{"Game.GB","Game.GBC","Game.gC"}) {
         route(rmtSD,"/Nested Games",name,Result::Launch);
         saved("/VMS/GBVM",(std::string("/Nested Games/")+name).c_str());
@@ -147,5 +151,5 @@ int main(int argc,char **argv) {
             assert(gpioSet==pins&&gpioClear==((~pins)&GP7_DataMask));++dmaCases;
         }
     }
-    std::printf("PASS: %u launch-route checks, 2 released-package preflights, %u PAL/NTSC DMA byte cases; actual production functions, simulated SD/GPIO, no ROM emulation or hardware acceptance\n",routeChecks,dmaCases);
+    std::printf("PASS: %u launch-route checks, %u released-package preflights, %u PAL/NTSC DMA byte cases; actual production functions, simulated SD/GPIO, no ROM emulation or hardware acceptance\n",routeChecks,packagePreflights,dmaCases);
 }

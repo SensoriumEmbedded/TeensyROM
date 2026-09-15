@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {combineHex,FLASH_BASE,FLASH_LIMIT,MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
-import {createBuildIdentity,guardFeatureControl} from './build-identity.mjs';
+import {createBuildIdentity,guardFeatureControl,MPE_LIBRARY_VERSION} from './build-identity.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const args=process.argv.slice(2), option=(name,fallback)=>{
@@ -33,7 +33,7 @@ let library=null;
 if(mode==='mpe'){
   const manifestPath=path.join(libraryRoot,'manifest.json');
   const manifest=JSON.parse(read(manifestPath));
-  if(manifest.version!==identity.mpeVersion||manifest.entrypointAbi!==1||
+  if(manifest.version!==MPE_LIBRARY_VERSION||manifest.entrypointAbi!==1||
      manifest.flashBase!==VM_BASE||manifest.flashLimit!==VM_LIMIT||manifest.mainBase!==MAIN_BASE)
     throw Error('MPE library version, entry-point ABI or flash layout does not match this builder');
   if(manifest.archive!=='libMPEPrismHost.a')throw Error('Unexpected MPE library archive');

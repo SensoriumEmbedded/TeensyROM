@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
-import {MPE_VERSION} from './build-identity.mjs';
+import {MPE_VERSION,MPE_LIBRARY_VERSION} from './build-identity.mjs';
 
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
@@ -18,7 +18,7 @@ export function verifyLibraryInputs(build,root){
   assert.equal(sha(library.manifestPath),library.manifestSha256,'MPE library manifest drift');
   const manifest=JSON.parse(fs.readFileSync(library.manifestPath,'utf8'));
   assert.equal(manifest.schemaVersion,1);
-  assert.equal(manifest.version,MPE_VERSION);
+  assert.equal(manifest.version,MPE_LIBRARY_VERSION);
   assert.equal(manifest.entrypointAbi,1);
   assert.equal(manifest.flashBase,VM_BASE);
   assert.equal(manifest.flashLimit,VM_LIMIT);
@@ -28,7 +28,7 @@ export function verifyLibraryInputs(build,root){
   for(const key of ['version','packageRevision','sha256','entrypointAbi','flashBase','flashLimit','mainBase','sourceFirmwareSha256']){
     assert.equal(library[key],manifest[key],'MPE library report differs: '+key);
   }
-  assert.equal(build.identity?.mpeVersion,manifest.version,'Artifact identity differs from MPE library');
+  assert.equal(build.identity?.mpeVersion,MPE_VERSION,'Artifact integration version differs');
   assert.equal(path.resolve(library.archive),path.join(folder,manifest.archive));
   assert.equal(sha(library.archive),manifest.sha256,'MPE library archive drift');
   assert.equal(sha(path.join(build.runRoot,manifest.archive)),manifest.sha256,'Linked archive differs from package');
@@ -45,7 +45,7 @@ export function verifyLibraryInputs(build,root){
   }};
   walk(folder);
   const header=fs.readFileSync(path.join(folder,'include/MpeHost.h'),'utf8');
-  assert.match(header,new RegExp('#define MPE_HOST_LIBRARY_VERSION "'+MPE_VERSION.replaceAll('.','\\.')+'"'));
+  assert.match(header,new RegExp('#define MPE_HOST_LIBRARY_VERSION "'+MPE_LIBRARY_VERSION.replaceAll('.','\\.')+'"'));
   assert.match(header,/#define MPE_HOST_LIBRARY_ABI 1\b/);
   assert.match(header,/void mpeHostSetup\(\);/);
   assert.match(header,/void mpeHostLoop\(\);/);

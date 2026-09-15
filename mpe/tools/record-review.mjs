@@ -52,7 +52,8 @@ const lock=read(path.join(root,'mpe/source-lock.json'));
 const tests=['mpe/tools/verify.mjs','mpe/tools/build-identity.mjs','mpe/tools/build-identity.test.mjs',
   'mpe/tools/library-verification.mjs','mpe/tools/library-verification.test.mjs','mpe/tools/upstream-flash-verification.test.mjs',
   'mpe/tests/startup.test.mjs','mpe/tests/direct-console-launch.mjs','mpe/tests/direct-console-launch.cpp',
-  'mpe/tests/button-debounce.mjs','mpe/tests/button-debounce.cpp','mpe/tests/sync-host.test.mjs'];
+  'mpe/tests/button-debounce.mjs','mpe/tests/button-debounce.cpp','mpe/tests/sync-host.test.mjs',
+  'mpe/tests/game-cart-launch.test.mjs','mpe/tests/game-cart-launch.cpp','mpe/tests/game-cart-fixture.mjs'];
 const record={upstreamBase:'80ba6378b4417b284d3e212f65befd8c9b25d968',legacyPublicSourceRevision:lock.revision,
   identity:build.identity,library:{version:build.library.version,packageRevision:build.library.packageRevision,
     archive:'mpe/library/'+path.basename(build.library.archive),sha256:build.library.sha256,

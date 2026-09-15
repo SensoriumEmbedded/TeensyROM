@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // MPE package identity is independent of the upstream TeensyROM version.
-export const MPE_VERSION='1.2.23';
+export const MPE_VERSION='1.2.24';
+// The integration can advance without rebuilding an unchanged host archive.
+export const MPE_LIBRARY_VERSION='1.2.23';
 const modes=new Set(['stock','stock-plus','mpe']);
 
 function checkMode(mode){

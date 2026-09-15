@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "VMRegistry.h"
+#include "VMGameCartLaunch.h"
 namespace MPELaunch {
 static FLASHMEM bool tryFile(uint8_t source, const char *directory, const char *name) {
-    if(source!=rmtSD || !directory || !directory[0] || !name ||
-       directory[strlen(directory)-1]=='*') return false;
+    if(!directory || !directory[0] || !name) return false;
+    if(directory[strlen(directory)-1]=='*') {
+        if(VmGameCart::isMpeFile(name)){SendMsgPrintfln("MPE game cartridges require a physical SD file");return true;}
+        return false;
+    }
+    if(VmGameCartLaunch::tryLaunch(source,directory,name)) return true;
+    if(source!=rmtSD) return false;
     const char *extension=strrchr(name,'.');
     if(!extension) return false;
     ++extension;

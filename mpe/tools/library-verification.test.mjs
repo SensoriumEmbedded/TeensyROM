@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {verifyLibraryInputs,verifyLibrarySymbols} from './library-verification.mjs';
-import {MPE_VERSION} from './build-identity.mjs';
+import {MPE_VERSION,MPE_LIBRARY_VERSION} from './build-identity.mjs';
 import {MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
 
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -19,11 +19,11 @@ function fixture(t){
   const write=(file,text)=>fs.writeFileSync(path.join(folder,file),text);
   const archive=path.join(folder,'libMPEPrismHost.a');
   write('libMPEPrismHost.a','Synthetic archive bytes: hashing fixture only.');
-  const manifest={schemaVersion:1,version:MPE_VERSION,packageRevision:'test-1',entrypointAbi:1,
+  const manifest={schemaVersion:1,version:MPE_LIBRARY_VERSION,packageRevision:'test-1',entrypointAbi:1,
     flashBase:VM_BASE,flashLimit:VM_LIMIT,mainBase:MAIN_BASE,
     archive:'libMPEPrismHost.a',sha256:sha(archive),sourceFirmwareSha256:'0'.repeat(64),publicHeaders:['include/MpeHost.h']};
   write('manifest.json',JSON.stringify(manifest));
-  write('include/MpeHost.h',`#define MPE_HOST_LIBRARY_VERSION "${MPE_VERSION}"\n#define MPE_HOST_LIBRARY_ABI 1\nvoid mpeHostSetup();\nvoid mpeHostLoop();\n`);
+  write('include/MpeHost.h',`#define MPE_HOST_LIBRARY_VERSION "${MPE_LIBRARY_VERSION}"\n#define MPE_HOST_LIBRARY_ABI 1\nvoid mpeHostSetup();\nvoid mpeHostLoop();\n`);
   write('MPEBoot/MPEBoot.ino','#include "../include/MpeHost.h"\nvoid setup() { mpeHostSetup(); }\nvoid loop() { mpeHostLoop(); }\n');
   write('LICENSE.txt','Synthetic license-file integrity fixture.');
   const files=['manifest.json','libMPEPrismHost.a','include/MpeHost.h','MPEBoot/MPEBoot.ino','LICENSE.txt'];
@@ -55,7 +55,7 @@ test('a different archive staged for the linker fails independently of the packa
 test('manifest drift and report version disagreement fail',t=>{
   const f=fixture(t);f.build.library.version='0.0.0';
   assert.throws(()=>verifyLibraryInputs(f.build,f.root),/report differs: version/);
-  f.build.library.version=MPE_VERSION;fs.appendFileSync(f.build.library.manifestPath,'\n');
+  f.build.library.version=MPE_LIBRARY_VERSION;fs.appendFileSync(f.build.library.manifestPath,'\n');
   assert.throws(()=>verifyLibraryInputs(f.build,f.root),/manifest drift/);
 });
 

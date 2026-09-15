@@ -25,6 +25,9 @@
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
 #include "Common/IOHandlers.h"
+#ifdef MPE_VM_ENABLED
+#include "Common/MPEGameCartBoot.h"
+#endif
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -153,6 +156,17 @@ void setup()
       runMainTRApp_FromMin(); // Missing/invalid MPE image: recover to stock menu.
       return;
    }
+   bool mpeSdInitialized=false;
+   char gameCartPath[256]{};
+   EEPreadNBuf(eepAdCrtBootName,reinterpret_cast<uint8_t *>(gameCartPath),sizeof gameCartPath);
+   if(MPEGameCartBoot::requested(gameCartPath,mpeSdInitialized)){
+      // Keep the exact cart path for the host's virtual files and sidecar saves.
+      EEPROM.write(eepAdMinBootInd,MinBootInd_FromMin);
+      delay(10);
+      runMPEApp();
+      runMainTRApp_FromMin(); // Missing/invalid third image returns to the menu.
+      return;
+   }
 #endif
    
    //we have a crt to load in minimal mode, proceed....
@@ -180,6 +194,9 @@ void setup()
    FreeCrtChips();
    
    strcpy(DriveDirPath, "/");
+#ifdef MPE_VM_ENABLED
+   if(!mpeSdInitialized)
+#endif
    SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
 
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));

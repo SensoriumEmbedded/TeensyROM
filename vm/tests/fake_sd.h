@@ -48,10 +48,11 @@ struct Files {
  bool rename(const char *p,const char *q){std::error_code e;auto a=base/fs::path(p).relative_path(),b=base/fs::path(q).relative_path();if(fs::exists(b))return false;fs::rename(a,b,e);return !e;}
 };
 static struct {Files sdfs;} SD;
-static bool rebooted;static std::string message,marker;
+static bool rebooted,failEEPRead;static std::string message,marker;
 static void SendMsgPrintfln(const char *m){message=m;}
 static void EEPwriteStr(int,const char *m){marker=m;}
-static struct {void write(int,int){}} EEPROM;
+static void EEPreadNBuf(uint16_t,uint8_t *out,uint16_t n){memset(out,0,n);if(!failEEPRead)memcpy(out,marker.c_str(),std::min<size_t>(n,marker.size()+1));}
+static struct {int value=0;unsigned writes=0;void write(int,int v){value=v;++writes;}} EEPROM;
 static void delay(unsigned){}
 #define SetResetAssert ((void)0)
 #define REBOOT rebooted=true

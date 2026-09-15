@@ -25,7 +25,7 @@ static FLASHMEM bool extensionMatches(const char *list,const char *ext){
 }
 static FLASHMEM bool validExtensions(const char *list){
     if(!*list||strlen(list)>7)return false;
-    static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
+    static const char protectedExtensions[][4]={"prg","crt","mpe","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
     for(const char *p=list;*p;){char ext[8]{};const char *end=strchr(p,',');size_t n=end?size_t(end-p):strlen(p);
         if(!n||n>=sizeof ext)return false;memcpy(ext,p,n);if(!component(ext)||strchr(ext,'.'))return false;
         for(const auto &protectedExt:protectedExtensions)if(!strcasecmp(ext,protectedExt))return false;
@@ -40,7 +40,7 @@ static FLASHMEM bool readManifest(const char *root,Manifest &m){
     if(count!=6||*p||strcmp(line[0],"VM1")||strcmp(line[5],"END"))return false;
     if(!component(line[1])||!validExtensions(line[2])||!component(line[3])||!component(line[4])||
        strlen(line[1])>=sizeof m.id||strlen(line[2])>=sizeof m.extension||strlen(line[3])>=sizeof m.module||strlen(line[4])>=sizeof m.client)return false;
-    static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
+    static const char protectedExtensions[][4]={"prg","crt","mpe","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
     if(strchr(line[2],'.'))return false;
     for(const auto &ext:protectedExtensions)if(!strcasecmp(ext,line[2]))return false;
     const char *id=strrchr(root,'/');if(!id||strcmp(id+1,line[1]))return false;

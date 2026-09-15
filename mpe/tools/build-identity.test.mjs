@@ -2,13 +2,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import path from 'node:path';
 import {MPE_VERSION,createBuildIdentity,guardFeatureControl} from './build-identity.mjs';
 
 // Any C++ preprocessor is sufficient; CXX can select the pinned ARM compiler.
 const compiler=process.env.CXX??'g++';
 function preprocess(source,args=[]){
   const result=spawnSync(compiler,['-E','-P','-x','c++',...args,'-'],{
-    input:source,encoding:'utf8',windowsHide:true,maxBuffer:1024*1024
+    input:source,encoding:'utf8',windowsHide:true,maxBuffer:1024*1024,
+    env:{...process.env,PATH:path.dirname(compiler)+path.delimiter+process.env.PATH}
   });
   assert.ifError(result.error);
   return result;
@@ -23,12 +25,12 @@ function mismatch(result){
 }
 
 test('artifact names preserve stock identity and version MPE independently',()=>{
-  assert.equal(MPE_VERSION,'1.2.23');
+  assert.equal(MPE_VERSION,'1.2.24');
   const stock=createBuildIdentity('stock','0.8.0.8');
   assert.deepEqual(stock,{mode:'stock',board:'TeensyROM',upstreamVersion:'0.8.0.8',
     mpeVersion:null,artifactFilename:'TeensyROM_0.8.0.8_full.hex'});
   assert.equal(createBuildIdentity('stock-plus','0.8.0.8').artifactFilename,'TeensyROM+_0.8.0.8_full.hex');
-  assert.equal(createBuildIdentity('mpe','0.8.0.8').artifactFilename,'TeensyROM+_0.8.0.8_MPE-1.2.23_full.hex');
+  assert.equal(createBuildIdentity('mpe','0.8.0.8').artifactFilename,'TeensyROM+_0.8.0.8_MPE-1.2.24_full.hex');
   assert.equal(createBuildIdentity('mpe','0.8.0.6t').upstreamVersion,'0.8.0.6t');
 });
 

@@ -12,7 +12,7 @@ under MIT. Its template and adapted transport retain the
 [display-component notice](experiments/dosvm-nuflix/THIRD-PARTY-NOTICES.md)
 and [license](experiments/dosvm-nuflix/upstream-pinned/LICENSE).
 
-The MPE 1.2.23 build links the supplied complete MPE host library, including
+The MPE build links the supplied complete MPE host library 1.2.23, including
 original Prism and new MHS Prism+ services, as its independent third image.
 Travis's text interface and ordinary cartridge firmware are compiled from
 the public source in this repository. The archive is broader than a display
@@ -38,7 +38,7 @@ the supplied corresponding libraries, with third-party modification rights
 retained. The complete MIT display-component license is also retained in
 [LICENSE-DISPLAY-COMPONENTS.txt](mpe/library/LICENSE-DISPLAY-COMPONENTS.txt).
 
-The matching [minimal/text-main library source bundle](mpe/review/firmware-1.2.23-library-sources.zip)
+The matching [minimal/text-main library source bundle](mpe/review/firmware-1.2.24-library-sources.zip)
 supplies the selected libraries, individual notices, build profiles and
 provenance for the two public application images. Their application source
 is in this repository. This supplement and the host relink SDK cover

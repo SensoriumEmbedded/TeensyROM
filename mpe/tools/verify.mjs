@@ -39,7 +39,7 @@ assert.ok(build.inputs?.length,'Build is missing its source input manifest');
 for(const input of build.inputs)assert.equal(sha(path.join(root,input.path)),input.sha256,'Built source drift: '+input.path);
 const libraryVerification=build.library?verifyLibraryInputs(build,root):null;
 logs.push(run(process.execPath,['--test','mpe/tools/hex.test.mjs']));
-logs.push(run(process.execPath,['--test','mpe/tests/startup.test.mjs','mpe/tests/sync-host.test.mjs','mpe/tools/library-verification.test.mjs','mpe/tools/upstream-flash-verification.test.mjs']));
+logs.push(run(process.execPath,['--test','mpe/tests/startup.test.mjs','mpe/tests/game-cart-launch.test.mjs','mpe/tests/sync-host.test.mjs','mpe/tools/library-verification.test.mjs','mpe/tools/upstream-flash-verification.test.mjs']));
 let buttonVerification=null;
 if(libraryVerification){
   const report=path.join(output,'button-debounce.json');
@@ -90,7 +90,7 @@ logs.push(run(process.execPath,['mpe/tests/direct-console-launch.mjs','--package
 const directConsoleLaunch=JSON.parse(fs.readFileSync(path.join(launchOutput,'latest.json'),'utf8'));
 assert.equal(directConsoleLaunch.status,'PASS');
 const imageTest=native('image_test',[path.join(fixture,'VMS/NESVM/engine.mvm')]);
-if(allPackages)for(const id of ['NESVM','DOSVM','AGIVM','GBVM'])logs.push(run(imageTest,[path.join(sd,'VMS',id,'engine.mvm')]));
+if(allPackages)for(const id of ['NESVM','DOSVM','AGIVM','GBVM','GGVM'])logs.push(run(imageTest,[path.join(sd,'VMS',id,'engine.mvm')]));
 native('ram2_profile_test',[path.join(sd,'VMS/DOOMVM/engine.mvm')]);
 const image=build.images.find(i=>i.name==='vm'),symbols=fs.readFileSync(path.join(build.runRoot,'vm.nm'),'utf8');
 for(const builtImage of build.images)assert.equal(sha(builtImage.hex),builtImage.sha256,'Built image drift: '+builtImage.name);
@@ -122,8 +122,9 @@ const upstream='80ba6378b4417b284d3e212f65befd8c9b25d968';
 const unchanged=run('git',['ls-tree','-r',upstream,'Source/C64','Source/Teensy/TRMenuFiles','Source/Teensy/MinimalBoot/Min_TeensyROM.h','Source/Teensy/MinimalBoot/Min_DriveDirLoad.ino','Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_MagicDesk2.c','Source/Teensy/Flash/FXUtil.cpp','Source/Teensy/Flash/FXUtil.h']).trim().split('\n');
 for(const row of unchanged){const [metadata,file]=row.split('\t');const expected=metadata.split(' ')[2];assert.equal(run('git',['hash-object','--path='+file,file]).trim(),expected,file+' changed');}
 const packageHashes=[];
-for(const id of allPackages?['AGIVM','DOSVM','NESVM','GBVM','DOOMVM']:['NESVM','DOOMVM'])for(const name of ['manifest.vmi','engine.mvm','client.crt'])packageHashes.push({path:'VMS/'+id+'/'+name,sha256:sha(path.join(sd,'VMS',id,name))});
-const result={firmwareSha256:build.sha256,passed:true,upstreamBaseline:upstream,unchangedUpstreamFiles:unchanged.length,library:libraryVerification,buttonVerification,sourceTestScope:compatibilityScope,directConsoleLaunch,packageHashes,hardwareTested:false,notes:['Package, host compatibility, production launch-route and linked-image checks; no VM engine gameplay or physical hardware acceptance is implied.','Synthetic large CRT files test launch fallthrough, not cartridge emulation.',...(libraryVerification?['Legacy renderer and scheduler source tests are compatibility evidence only; they do not execute the compiled Prism+ archive.']:[])]};
+const packageIds=allPackages?['AGIVM','DOSVM','NESVM','GBVM','GGVM','DOOMVM']:['NESVM','DOOMVM','GBVM','GGVM'];
+for(const id of packageIds)for(const name of ['manifest.vmi','engine.mvm','client.crt'])packageHashes.push({path:'VMS/'+id+'/'+name,sha256:sha(path.join(sd,'VMS',id,name))});
+const result={firmwareSha256:build.sha256,passed:true,upstreamBaseline:upstream,unchangedUpstreamFiles:unchanged.length,library:libraryVerification,buttonVerification,sourceTestScope:compatibilityScope,directConsoleLaunch,packageCount:packageIds.length,packageFileCount:packageHashes.length,packageHashes,hardwareTested:false,notes:['Package, host compatibility, production launch-route and linked-image checks; no VM engine gameplay or physical hardware acceptance is implied.','Synthetic large CRT files test launch fallthrough, not cartridge emulation.',...(libraryVerification?['Legacy renderer and scheduler source tests are compatibility evidence only; they do not execute the compiled Prism+ archive.']:[])]};
 fs.writeFileSync(path.join(output,'tests.log'),logs.join('\n'));fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(result,null,2)+'\n');
 console.log('PASS: VM link/boot headers, updater space, '+unchanged.length+' upstream files unchanged. Hardware acceptance remains pending.');
 console.log('Verification report: '+path.join(output,'report.json'));
