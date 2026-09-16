@@ -175,7 +175,7 @@
 
 ;enum RegVidTODClksMasks
 ;wRegVid_TOD_Clks, set once by MainMenu.asm on startup
-   rvtcNTSC = 0b00000001 ; bit 0, 1=NTSC, 0=PAL
+   rvtcNTSC = 0b00000001 ; bit 0, 1=NTSC, 0=PAL  <- do not change location
    rvtc60Hz = 0b00000010 ; bit 1, 1=60Hz TOD, 0=50Hz
    rvtcC128 = 0b00000100 ; bit 2, 1=C128 (VIC-IIe), from $D030 bit 1 reading 0
 

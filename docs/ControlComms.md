@@ -178,6 +178,7 @@ Retrieves firmware version and build information from the TeensyROM.
   FW: TeensyROM+ v0.7.2
       Jul 27 2026, 09:41:32
   Teensy: 816MHz  59.1C  UID: 19307720
+  C128  NTSC Vid  60 Hz
 ```
 
 **Example output (minimal FW):**
@@ -187,7 +188,7 @@ Retrieves firmware version and build information from the TeensyROM.
   Teensy: 816MHz  59.1C  UID: 19307720
 ```
 
-**Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string.
+**Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string. Full FW (only) appends a fourth line with the detected machine info (C64/C128, NTSC/PAL, TOD Hz)
 
 ---
 

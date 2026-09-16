@@ -105,7 +105,7 @@ MsgInfoOtherMenu:
    !tx 0 
 
 MsgMachInfo1:
-   !tx ChrReturn, EscC,EscSourcesColor, "  C64/128 clocks: ", EscC,EscNameColor
+   !tx ChrReturn, EscC,EscSourcesColor, "  Machine: ", EscC,EscNameColor
    !tx 0
 MsgMachInfo2:
    !tx "0Hz TOD", ChrReturn, ChrReturn

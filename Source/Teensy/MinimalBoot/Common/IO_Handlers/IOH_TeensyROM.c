@@ -571,6 +571,10 @@ void SetVideoStdTiming()
       nS_DMADataSetup = Def_nS_DMADataSetupPAL;
       nS_DMADataHold  = Def_nS_DMADataHoldPAL;
    }
+
+   sprintf(StrMachineInfo, "C%d  %s Vid  %s", (IO1[wRegVid_TOD_Clks] & rvtcC128) ? 128 : 64,
+      (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
+      (IO1[wRegVid_TOD_Clks] & rvtc60Hz) ? "6" : "5");
 }
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)

@@ -22,7 +22,7 @@ uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
 char* LatestSIDLoaded; // allocated to RAM2 via MaxPathLength
-char StrMachineInfo[16]; //~5 extra
+char StrMachineInfo[21] = ""; //~3 extra
 bool SendC64Msgs = true;
 
 void ParseP00File(StructMenuItem* MyMenuItem)   
@@ -373,12 +373,6 @@ FLASHMEM void ParseSIDHeader(const char *filename)
    Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
       VStandard[(IO1[wRegVid_TOD_Clks] & rvtcNTSC)+1], MainsFreq);
       
-   //** Finish StrSIDInfo
-   //"NTSC vid, 6"
-   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & rvtcNTSC)+1]); 
-   strcat(StrMachineInfo, " Vid, "); 
-   strcat(StrMachineInfo, MainsFreq); 
-
    SidFlags = (IO1[wRegVid_TOD_Clks] & rvtcNTSC) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
 

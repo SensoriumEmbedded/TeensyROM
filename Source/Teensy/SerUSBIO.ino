@@ -494,8 +494,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_DMAAssert = Def_nS_DMAAssert;
                nS_DMABAWait = Def_nS_DMABAWait;
                Cyc_KernProp = Def_Cyc_KernProp;
-               CmdChannel->printf("Defaults set (%s%s)\n", (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
-                  (IO1[wRegVid_TOD_Clks] & rvtcC128) ? " C128" : "");
+               CmdChannel->printf("Defaults set (%s %s)\n", (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
+                  (IO1[wRegVid_TOD_Clks] & rvtcC128) ? "C128" : "C64");
                break;
             }
             default:
@@ -563,7 +563,7 @@ FLASHMEM void ProcessCommand()
       case VersionInfoToken: //Version Info
          MakeBuildInfo();
          SendU16(AckToken);
-         CmdChannel->printf("\n%s\n", SerialStringBuf);
+         CmdChannel->printf("\n%s\n  %s0 Hz\n", SerialStringBuf, StrMachineInfo);
          return;
       case FWCheckToken: //Check firmware type
          SendU16(FWFullToken);
