@@ -355,6 +355,13 @@ const uint8_t OutputPins[] = {
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 #define Def_nS_DMAAssert     40  //    delay from Phi2 falling to DMA assertion when activating
                                        // Initial val was 200, 80nS recommended. In scope analysis, min is ~108nS, when val is 40 or lower
+#define Def_nS_DMABAWait    200  //    delay from Phi2 falling to sampling BA in DMAByte(), before deciding whether to steal the cycle.
+                                       //   9/12/26: was a hardcoded literal (not runtime-pokeable) characterized against C64 VIC-II;
+                                       //   exposed as a global to test whether the C128's VIC-IIe samples BA at a different point -
+                                       //   its BA signal reaches the expansion port through the C128's gate array/MMU, unlike a C64's
+                                       //   more direct routing, and C128-only DMA failures have shown up here before (see the bank-swap
+                                       //   DMA-pause reliability note in Known-Issues.md).  Swept 60-400 on a flat NTSC C128 (in 64
+                                       //   mode): worse at both ends, no better than 200 in between.  Not the C128 fault, see DMASetupNTSC128.
 #define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
@@ -368,6 +375,18 @@ const uint8_t OutputPins[] = {
                                      //      C64+Kawari in PAL, Ultimate agrees) and swept 385-475 clean over 12MB, but that
                                      //      board won't repro the 390 err above - it's forgiving, so PAL's partial-byte
                                      //      mode is untested rather than absent.
+//NTSC C128 (MainMenu.asm reports rvtcC128): the NTSC set above gives intermittent write errors, fixed by
+//   asserting R/W+address later.  9/12/26, flat NTSC C128 in 64 mode, te swept with release/latch held
+//   (hold = 840-setup, data setup = 820-setup): 380 collapses, 405-430 intermittent, 440-450 clean,
+//   455-460 errors creep back, 465+ collapses.  Blanking the screen (no badlines) and moving the BA sample
+//   point did not fix it; readback showed reads are clean, so it's write-side.  Keeping the address
+//   bus driven between bytes doubled the errors.  What errors remain only show while the C64 program is writing
+//   RAM.  In 256-byte sessions they clustered on addresses whose low byte has a single 0 bit ($xxEF, $xxF7, ...),
+//   but lone writes to $C0FF fail about as often as to $C0EF.  C64s keep the NTSC set.
+//   PAL C128 is untested (no rig) and keeps the PAL set.
+#define Def_nS_DMASetupNTSC128     445
+#define Def_nS_DMADataSetupNTSC128 375
+#define Def_nS_DMADataHoldNTSC128  395
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
@@ -391,6 +410,7 @@ uint32_t nS_DataHold  = Def_nS_DataHold;
 uint32_t nS_VICStart  = Def_nS_VICStart;  
 uint32_t nS_VICDHold  = Def_nS_VICDHold;
 uint32_t nS_DMAAssert = Def_nS_DMAAssert;
+uint32_t nS_DMABAWait = Def_nS_DMABAWait;
 uint32_t nS_DMASetup  = Def_nS_DMASetupPAL;
 uint32_t nS_DMADataSetup = Def_nS_DMADataSetupPAL;
 uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;

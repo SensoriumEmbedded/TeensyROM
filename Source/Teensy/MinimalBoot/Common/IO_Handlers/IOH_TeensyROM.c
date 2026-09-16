@@ -408,8 +408,8 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    float Frequency = 440*pow(1.059463094359,note-60);
    // https://codebase64.org/doku.php?id=base:how_to_calculate_your_own_sid_frequency_table
    // 256^3 = 16777216
-   // IO1[wRegVid_TOD_Clks] & 1  //1=NTSC, 0=PAL
-   uint32_t RegVal = Frequency*16777216/((IO1[wRegVid_TOD_Clks] & 1) ? NTSCBusFreq : PALBusFreq);
+   // IO1[wRegVid_TOD_Clks] & rvtcNTSC  //1=NTSC, 0=PAL
+   uint32_t RegVal = Frequency*16777216/((IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? NTSCBusFreq : PALBusFreq);
 
    if (RegVal > 0xffff)
    {
@@ -545,6 +545,34 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
+void SetVideoStdTiming()
+{  //from the machine type MainMenu.asm reported in IO1[wRegVid_TOD_Clks]; also used by the td serial command
+   //called from IO1 handler, do not FLASHMEM
+   if (IO1[wRegVid_TOD_Clks] & rvtcNTSC)
+   {
+      nS_MaxAdj = Def_nS_MaxAdjNTSC;
+      if (IO1[wRegVid_TOD_Clks] & rvtcC128)
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC128;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC128;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC128;
+      }
+      else
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
+      }
+   }
+   else
+   {  //PAL C128 has no measured set of its own yet
+      nS_MaxAdj       = Def_nS_MaxAdjPAL;
+      nS_DMASetup     = Def_nS_DMASetupPAL;
+      nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+      nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+   }
+}
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
@@ -601,21 +629,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             break;
          case wRegVid_TOD_Clks:
             IO1[wRegVid_TOD_Clks]=Data;
-            //make NTSC/PAL specific timing tweaks upon discovery
-            if (Data & 1)
-            {
-               nS_DMASetup     = Def_nS_DMASetupNTSC;
-               nS_MaxAdj       = Def_nS_MaxAdjNTSC;
-               nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
-               nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
-            }
-            else
-            {
-               nS_DMASetup     = Def_nS_DMASetupPAL;
-               nS_MaxAdj       = Def_nS_MaxAdjPAL;
-               nS_DMADataSetup = Def_nS_DMADataSetupPAL;
-               nS_DMADataHold  = Def_nS_DMADataHoldPAL;
-            }
+            SetVideoStdTiming(); //make NTSC/PAL/C128 specific timing tweaks upon discovery
             break;
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;

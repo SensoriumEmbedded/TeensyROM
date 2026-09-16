@@ -369,17 +369,17 @@ FLASHMEM void ParseSIDHeader(const char *filename)
   
 
    //bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
-   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & 2)==2 ? '6' : '5' , 0};
+   char MainsFreq[2] = {(IO1[wRegVid_TOD_Clks] & rvtc60Hz) ? '6' : '5' , 0};
    Printf_dbg("\nMachine Clocks: %s Vid, %s0Hz TOD", 
-      VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1], MainsFreq);
+      VStandard[(IO1[wRegVid_TOD_Clks] & rvtcNTSC)+1], MainsFreq);
       
    //** Finish StrSIDInfo
    //"NTSC vid, 6"
-   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & 1)+1]); 
+   strcpy(StrMachineInfo, VStandard[(IO1[wRegVid_TOD_Clks] & rvtcNTSC)+1]); 
    strcat(StrMachineInfo, " Vid, "); 
    strcat(StrMachineInfo, MainsFreq); 
 
-   SidFlags = (IO1[wRegVid_TOD_Clks] & 1) | (SidFlags & 2); //now selects from CIATimer
+   SidFlags = (IO1[wRegVid_TOD_Clks] & rvtcNTSC) | (SidFlags & 2); //now selects from CIATimer
    Printf_dbg("\nCIA Timer: %02x%02x", CIATimer[SidFlags][0], CIATimer[SidFlags][1]);
 
    Printf_dbg("\nrelocStartPage: %02x", XferImage[0x78]);

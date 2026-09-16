@@ -118,7 +118,7 @@ TODPass
    ;$70a6 for 60Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   11
    ;$3251 for 50Hz TOD clock and 985248.444(PAL) CPU/CIA clock    00
    ;$20c0 for 50Hz TOD clock and 1022727.14(NTSC) CPU/CIA clock   01
-   ;convert from MSB timing to: bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz
+   ;convert from MSB timing to: bit 0: 1=NTSC, 0=PAL;    bit 1: 1=60Hz, 0=50Hz;   bit 2 (below): 1=C128
    ldy #%10000000  ;use bit 7 of Y for 50/60Hz setting, set 1=50Hz TOD default
    cmp #$29
    bcs +  ;(>29)
@@ -135,7 +135,14 @@ set60NTSC
    ldx #%00000011  ;60/NTSC
    jmp ++
 +  ldx #%00000010  ;60/PAL
-++ stx wRegVid_TOD_Clks+IO1Port   
+++ lda $d030       ;C128 VIC-IIe: bits 0-1 are real (reads $fc at 1MHz), a C64's VIC-II reads $ff
+   and #%00000010
+   bne NotC128
+   txa
+   ora #rvtcC128   ;firmware uses this to pick C128 DMA timing
+   tax
+NotC128
+   stx wRegVid_TOD_Clks+IO1Port
    ;set CIA1 50/60 Hz counter
    sty smcTODbit+1
    lda $dc0e
