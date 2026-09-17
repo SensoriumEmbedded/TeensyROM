@@ -5,6 +5,12 @@ on:
     branches: ['**']
     tags: ['Release_v*']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      no_ccache:
+        description: 'Disable ccache (compile everything from scratch)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,8 +25,9 @@ jobs:
         target: [tr, tr-plus]
     env:
       # Release tags always build without ccache, so published hex files come from a clean
-      # compile. Everything else reuses compiled objects from earlier runs.
-      USE_CCACHE: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      # compile, and so does a manual run with "Disable ccache" checked. Everything else
+      # reuses compiled objects from earlier runs. (inputs.no_ccache is null outside manual runs.)
+      USE_CCACHE: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.no_ccache }}
     steps:
       - uses: actions/checkout@v7
 
@@ -81,8 +88,9 @@ jobs:
   collect:
     needs: build
     runs-on: ubuntu-latest
-    # contents: write is needed only for the tag-triggered publish step below; the repo's
-    # default workflow token is read-only, so this has to be requested explicitly here.
+    # contents: write is needed only for the tag-push publish step below (a manual run on a
+    # tag builds but never publishes); the repo's default workflow token is read-only, so
+    # this has to be requested explicitly here.
     permissions:
       contents: write
     steps:
@@ -94,13 +102,13 @@ jobs:
           delete-merged: true
 
       - uses: actions/download-artifact@v8
-        if: startsWith(github.ref, 'refs/tags/Release_v')
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/Release_v')
         with:
           name: firmware
           path: build/firmware
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/Release_v')
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/Release_v')
         uses: softprops/action-gh-release@v3
         with:
           files: build/firmware/*.hex
