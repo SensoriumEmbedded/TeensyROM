@@ -60,7 +60,9 @@ jobs:
         if: env.USE_CCACHE == 'true'
         uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
-          key: ${{ matrix.target }}
+          # The action restores the newest cache whose key starts with "ccache-<key>-", so
+          # a bare "tr" would also match (and restore) tr-plus caches. The suffix keeps them apart.
+          key: ${{ matrix.target }}-firmware
           # The action's own checksum-verified ccache build: faster than apt (8-16 s), and new
           # enough (4.10+) for the job-summary stats.
           install: binary
