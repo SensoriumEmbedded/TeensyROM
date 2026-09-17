@@ -30,6 +30,8 @@ The canonical way to produce a shippable, combined `TeensyROM(+)_<ver>_full.hex`
 
 Guardrail worth knowing about: before building a plain TR image, the builder checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features` and, by default, throws rather than continue — this exists specifically to prevent accidentally building a TR+ image mislabeled as plain TR. Comment out the define yourself, build `--target tr-plus` instead, or pass `--yes` to have the builder comment it out and continue (no interactive y/N prompt, unlike the old PowerShell script — this has to be decided up front on the command line).
 
+`--ccache` (macOS/Linux, with `ccache` on `PATH`) sends compiles through ccache. Add it after `--` when going through npm, e.g. `npm run build:tr -- --ccache`. CI builds TR and TR+ as parallel jobs with this on, and turns it off for `Release_v*` tags so released hex files always come from a clean compile. With it on, the build works in a fixed `run-ccache-<target>` directory that each run clears, instead of a new `run-XXXX` one. The directory path is part of ccache's cache key, so a new name every run would never hit the cache.
+
 <br>
 
 [Back to Architecture Overview](Overview.md)

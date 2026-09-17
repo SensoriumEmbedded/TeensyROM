@@ -17,6 +17,12 @@
 //   --yes    confirm disabling an active Fab04_Features #define when building --target tr
 //   --force  overwrite an existing output file
 //
+// --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
+// Two things that only matter with it on: the build root is a fixed run-ccache-<target>
+// directory, cleared each run, because the compiler's working directory and -I paths are
+// part of ccache's key (-g is on) and a fresh mkdtemp name would miss every time; and the
+// fixed SOURCE_DATE_EPOCH below is what lets SdFat's __DATE__/__TIME__ files hit at all.
+//
 // The final combine step uses lib/legacy-hex-combine.mjs, a literal port of
 // HexCombineUtil/HexCombine.exe's algorithm (its source was recovered 2026-09-13). That
 // port, and this build overall, has been verified end to end: flashed to a real Teensy in a
@@ -60,6 +66,10 @@ const force = flag('--force');
 const skipTeensyBuild = flag('--skip-teensy-build');
 const skipMinimalBuild = flag('--skip-minimal-build');
 const skipCombine = flag('--skip-combine');
+const useCcache = flag('--ccache');
+if (useCcache && process.platform === 'win32') {
+  throw new Error('--ccache is not supported on Windows');
+}
 const outDir = path.resolve(option('--out', path.join(root, 'build', 'firmware')));
 
 const sdk = path.resolve(option('--arduino-data', defaultArduinoDataDir()));
@@ -123,7 +133,14 @@ const hashGuardedFiles = () => guardedFiles.map((f) => sha256(fs.readFileSync(f)
 const installedCoreHashBefore = hashGuardedFiles();
 
 fs.mkdirSync(outDir, { recursive: true });
-const runRoot = fs.mkdtempSync(path.join(outDir, 'run-'));
+let runRoot;
+if (useCcache) {
+  runRoot = path.join(outDir, `run-ccache-${target}`);
+  fs.rmSync(runRoot, { recursive: true, force: true });
+  fs.mkdirSync(runRoot);
+} else {
+  runRoot = fs.mkdtempSync(path.join(outDir, 'run-'));
+}
 if (process.platform === 'win32' && runRoot.length > 70) {
   throw new Error('Use a shorter --out path (e.g. C:/tr-build) to stay within Windows toolchain path limits');
 }
@@ -146,10 +163,34 @@ const env = {
   ARDUINO_DIRECTORIES_DATA: privateData,
   ARDUINO_DIRECTORIES_USER: arduinoUser,
   SOURCE_DATE_EPOCH,
+  // The CI toolchain is reinstalled every run, so its mtime says nothing about the compiler.
+  ...(useCcache && { CCACHE_COMPILERCHECK: 'content' }),
 };
 
 const armBin = path.join(sdk, 'packages/teensy/tools/teensy-compile/11.3.1/arm/bin/arm-none-eabi-');
 const exeSuffix = process.platform === 'win32' ? '.exe' : '';
+
+// --- ccache shim: the platform recipes quote "{compiler.path}{build.toolchain}<tool>", so
+// there's no room for a "ccache " prefix. Instead, point compiler.path at a directory whose
+// arm/bin/ (build.toolchain) wraps gcc/g++ in ccache and symlinks every other tool. ---
+const compilerPathProps = [];
+if (useCcache) {
+  run('ccache', ['--version'], env);
+  const realBin = path.dirname(armBin);
+  const shimRoot = path.join(runRoot, 'ccache-shim');
+  const shimBin = path.join(shimRoot, 'arm/bin');
+  fs.mkdirSync(shimBin, { recursive: true });
+  for (const tool of fs.readdirSync(realBin)) {
+    const shim = path.join(shimBin, tool);
+    if (tool === 'arm-none-eabi-gcc' || tool === 'arm-none-eabi-g++') {
+      fs.writeFileSync(shim, `#!/bin/sh\nexec ccache "${path.join(realBin, tool)}" "$@"\n`, { mode: 0o755 });
+    } else {
+      fs.symlinkSync(path.join(realBin, tool), shim);
+    }
+  }
+  compilerPathProps.push('--build-property', `compiler.path=${shimRoot}/`);
+  console.log(`ccache enabled via ${shimBin}`);
+}
 
 function copyLinkerFiles(suffix) {
   fs.copyFileSync(path.join(linkers, `bootdata.c.${suffix}`), path.join(privateCore, 'bootdata.c'));
@@ -160,12 +201,12 @@ function build(name, { inoPath, fqbn, suffix, elfStem }) {
   console.log(`\n[${name}] Building`);
   copyLinkerFiles(suffix);
   const buildDir = path.join(runRoot, name);
-  const props = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, '--show-properties', inoPath], env);
+  const props = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--show-properties', inoPath], env);
   const defsMatch = props.match(/^build\.flags\.defs=(.*)$/m);
   if (!defsMatch) throw new Error('Could not retrieve build.flags.defs from --show-properties');
   const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '');
 
-  const log = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, '--build-property', `build.flags.defs=${defs}`, inoPath], env);
+  const log = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--build-property', `build.flags.defs=${defs}`, inoPath], env);
   write(path.join(runRoot, `${name}.log`), log);
   console.log(log.split(/\r?\n/).filter((l) => /Memory Usage|RAM1:|RAM2:|FLASH:/.test(l)).join('\n'));
 

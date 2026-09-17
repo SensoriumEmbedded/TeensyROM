@@ -6,14 +6,21 @@ on:
     tags: ['Release_v*']
   pull_request:
 
-# contents: write is needed only for the tag-triggered publish step below; the repo's
-# default workflow token is read-only, so this has to be requested explicitly here.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  # TR and TR+ build in parallel; `collect` gathers both hex files into one artifact.
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [tr, tr-plus]
+    env:
+      # Release tags always build without ccache, so published hex files come from a clean
+      # compile. Everything else reuses compiled objects from earlier runs.
+      USE_CCACHE: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -48,16 +55,44 @@ jobs:
           arduino-cli core install teensy:avr@1.61.0
           arduino-cli lib install CRC32
 
-      - name: Build TR
-        run: npm run build:tr
+      # Third-party action, so pinned to a full commit SHA rather than a movable tag.
+      - name: Set up ccache
+        if: env.USE_CCACHE == 'true'
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: ${{ matrix.target }}
+          # Drop anything this run didn't use, so the cache tracks the current tree
+          # instead of growing with every past revision.
+          evict-old-files: job
 
-      - name: Build TR+
-        run: npm run build:tr-plus
+      - name: Build ${{ matrix.target }}
+        run: npm run build:${{ matrix.target }} -- ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
 
       - uses: actions/upload-artifact@v7
         with:
-          name: firmware
+          name: firmware-${{ matrix.target }}
           path: build/firmware/*.hex
+
+  collect:
+    needs: build
+    runs-on: ubuntu-latest
+    # contents: write is needed only for the tag-triggered publish step below; the repo's
+    # default workflow token is read-only, so this has to be requested explicitly here.
+    permissions:
+      contents: write
+    steps:
+      - name: Merge firmware artifacts
+        uses: actions/upload-artifact/merge@v7
+        with:
+          name: firmware
+          pattern: firmware-*
+          delete-merged: true
+
+      - uses: actions/download-artifact@v8
+        if: startsWith(github.ref, 'refs/tags/Release_v')
+        with:
+          name: firmware
+          path: build/firmware
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/Release_v')
