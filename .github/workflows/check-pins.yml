@@ -1,0 +1,55 @@
+name: Check pinned build dependencies
+
+# Dependabot can't see the CRC32 / Teensy core / arduino-cli pins, so this checks them
+# weekly (see tools/check-pins.mjs). While any has a newer release, it keeps a single issue
+# open, closing it once they're all current again. If the repo has Issues turned off, the
+# run fails instead, with the report in its job summary.
+on:
+  schedule:
+    - cron: '17 14 * * 1' # Mondays, 14:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Compare pins with the latest releases
+        id: pins
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/check-pins.mjs --report "$RUNNER_TEMP/pins.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report updates (tracking issue, or a failed run if Issues are off)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTDATED: ${{ steps.pins.outputs.outdated }}
+          TITLE: Pinned build dependencies have updates
+        run: |
+          if [ "$(gh repo view "$GITHUB_REPOSITORY" --json hasIssuesEnabled --jq .hasIssuesEnabled)" != true ]; then
+            if [ "$OUTDATED" != 0 ]; then
+              echo "::error::$OUTDATED pinned build dependency update(s); see this run's summary"
+              exit 1
+            fi
+            exit 0
+          fi
+          number=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+            --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ "$OUTDATED" != 0 ]; then
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file "$RUNNER_TEMP/pins.md"
+            else
+              gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/pins.md"
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --comment "All pinned build dependencies are up to date again."
+          fi

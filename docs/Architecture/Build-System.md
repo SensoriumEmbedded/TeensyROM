@@ -32,6 +32,8 @@ Guardrail worth knowing about: before building a plain TR image, the builder che
 
 `--ccache` (macOS/Linux, with `ccache` on `PATH`) sends compiles through ccache. Add it after `--` when going through npm, e.g. `npm run build:tr -- --ccache`. CI builds TR and TR+ as parallel jobs with this on, and turns it off for `Release_v*` tags so released hex files always come from a clean compile. With it on, the build works in a fixed `run-ccache-<target>` directory that each run clears, instead of a new `run-XXXX` one. The directory path is part of ccache's cache key, so a new name every run would never hit the cache.
 
+Pinned versions: arduino-cli (`tools/lib/toolchain.mjs`), the Teensy core (the workflows and `tools/build-firmware.mjs`) and the CRC32 library (the workflows). Dependabot can't see these pins, so `.github/workflows/check-pins.yml` runs `tools/check-pins.mjs` weekly to compare them with the latest releases. It keeps an issue open while there are updates, or fails the run when the repo has Issues turned off. A release you've decided against, like Teensy core 1.62.0, goes in that dependency's `rejected` list with the reason, so it stops being reported.
+
 <br>
 
 [Back to Architecture Overview](Overview.md)

@@ -41,7 +41,7 @@
      * EEPROM at version 2.0
      * Time at version 1.6.1
      * Bounce (legacy)
-     * CRC32 at version 2.0.0
+     * CRC32 at version 2.0.1
 
 ## C64/128 6502 Assembly code
 These steps are only needed if modifying the application menu assembly code running on the C64/128.
