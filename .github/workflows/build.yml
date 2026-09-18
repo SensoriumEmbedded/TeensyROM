@@ -60,7 +60,7 @@ jobs:
           arduino-cli config init --additional-urls https://www.pjrc.com/teensy/package_teensy_index.json
           arduino-cli core update-index
           arduino-cli core install teensy:avr@1.61.0
-          arduino-cli lib install CRC32
+          arduino-cli lib install CRC32@2.0.1
 
       # Third-party action, so pinned to a full commit SHA rather than a movable tag.
       - name: Set up ccache
