@@ -717,11 +717,11 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    uint8_t PageBuf[TestPageSize];
 
    //SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
-   //PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
+   //PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
    memset(PageBuf, BytePat, TestPageSize);
-   PerformDMA(false, Address, PageBuf, TestPageSize, false); //Write the buffer
+   PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT); //Write the buffer
    CloseDMA();
-   PerformDMA(true, Address, PageBuf, TestPageSize, false);  //Read back
+   PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);  //Read back
    CloseDMA();
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++)
       if (PageBuf[ByteNum] != BytePat)
@@ -747,9 +747,9 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    for(uint16_t Pass = 0; Pass < Passes; Pass++)
    {
       memset(PageBuf, PriorVal, TestPageSize);
-      PerformDMA(false, Address, PageBuf, TestPageSize, false);
+      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
       CloseDMA();
-      PerformDMA(true, Address, PriorBuf, TestPageSize, false); //what the page really holds now
+      PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT); //what the page really holds now
       CloseDMA();
       //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
       //   partial-byte vs whole-byte detail as the pattern write, not just a count
@@ -769,9 +769,9 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
 
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
          PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
-      PerformDMA(false, Address, PageBuf, TestPageSize, false);
+      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
       CloseDMA();
-      PerformDMA(true, Address, PageBuf, TestPageSize, false);
+      PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
       CloseDMA();
 
       uint32_t PassBad = 0;
@@ -863,28 +863,28 @@ FLASHMEM void ExpPortDMA()
    //read/store original values:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(true, (1<<AddrBit), &OrigValues[AddrBit], 1, false);  //Read back
+      PerformDMA(DMA_READ, (1<<AddrBit), &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT);  //Read back
       CloseDMA();
    }
    //write address bit num as data:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
    {
-      PerformDMA(false, (1<<AddrBit), &AddrBit, 1, false); //Write the buffer
+      PerformDMA(DMA_WRITE, (1<<AddrBit), &AddrBit, 1, DMA_ADDR_INCREMENT); //Write the buffer
       CloseDMA();
    }
    //read back for errors:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
       uint8_t ReadVal;
-      PerformDMA(true, (1<<AddrBit), &ReadVal, 1, false);  //Read back
+      PerformDMA(DMA_READ, (1<<AddrBit), &ReadVal, 1, DMA_ADDR_INCREMENT);  //Read back
       CloseDMA();
       if (ReadVal != AddrBit)
       {
          //write back original values
          for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
          {
-            PerformDMA(false, (1<<AddrBitA), &OrigValues[AddrBitA], 1, false); //Write the buffer
+            PerformDMA(DMA_WRITE, (1<<AddrBitA), &OrigValues[AddrBitA], 1, DMA_ADDR_INCREMENT); //Write the buffer
             CloseDMA();
          }
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit), AddrBit, ReadVal);
@@ -896,7 +896,7 @@ FLASHMEM void ExpPortDMA()
    //write back original values
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(false, (1<<AddrBit), &OrigValues[AddrBit], 1, false); //Write the buffer
+      PerformDMA(DMA_WRITE, (1<<AddrBit), &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT); //Write the buffer
       CloseDMA();
    }
    SendMsgPrintf(" OK");
@@ -913,28 +913,28 @@ FLASHMEM void ExpPortDMA()
    //read/store original values:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(true, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, false);  //Read back
+      PerformDMA(DMA_READ, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT);  //Read back
       CloseDMA();
    }
    //write address bit num as data:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
    {
-      PerformDMA(false, (1<<AddrBit)-1, &AddrBit, 1, false); //Write the buffer
+      PerformDMA(DMA_WRITE, (1<<AddrBit)-1, &AddrBit, 1, DMA_ADDR_INCREMENT); //Write the buffer
       CloseDMA();
    }
    //read back for errors:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
       uint8_t ReadVal;
-      PerformDMA(true, (1<<AddrBit)-1, &ReadVal, 1, false);  //Read back
+      PerformDMA(DMA_READ, (1<<AddrBit)-1, &ReadVal, 1, DMA_ADDR_INCREMENT);  //Read back
       CloseDMA();
       if (ReadVal != AddrBit)
       {
          //write back original values
          for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
          {
-            PerformDMA(false, (1<<AddrBitA)-1, &OrigValues[AddrBitA], 1, false); //Write the buffer
+            PerformDMA(DMA_WRITE, (1<<AddrBitA)-1, &OrigValues[AddrBitA], 1, DMA_ADDR_INCREMENT); //Write the buffer
             CloseDMA();
          }
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit)-1, AddrBit, ReadVal);
@@ -945,7 +945,7 @@ FLASHMEM void ExpPortDMA()
    //write back original values
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(false, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, false); //Write the buffer
+      PerformDMA(DMA_WRITE, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT); //Write the buffer
       CloseDMA();
    }
    SendMsgPrintf(" OK");

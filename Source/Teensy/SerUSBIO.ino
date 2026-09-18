@@ -105,7 +105,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             //init buffer and Write
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
             uint32_t StartTime = micros();  
-            PerformDMA(false, DMAAddr, DMABuf, DMALength, false);
+            PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
             CloseDMA();
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Write (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
@@ -121,7 +121,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to comp mem to 0 instead of lower addr byte
 
             uint32_t StartTime = micros();  
-            PerformDMA(true, DMAAddr, DMABuf, DMALength, false); 
+            PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT); 
             CloseDMA();
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Read  (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
@@ -159,14 +159,14 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             for(uint32_t Address = 0; Address < 0xFFFF; Address+=BlockSize)
             {
                
-               PerformDMA(true, Address, &DMABuf, 1, false);  //Read val
+               PerformDMA(DMA_READ, Address, &DMABuf, 1, DMA_ADDR_INCREMENT);  //Read val
                delay(1);
                InvVal = ~DMABuf;
-               PerformDMA(false, Address, &InvVal, 1, false); //Write the inverse
+               PerformDMA(DMA_WRITE, Address, &InvVal, 1, DMA_ADDR_INCREMENT); //Write the inverse
                delay(1);
-               PerformDMA(true, Address, &ReadBack, 1, false);  //Read back
+               PerformDMA(DMA_READ, Address, &ReadBack, 1, DMA_ADDR_INCREMENT);  //Read back
                delay(1);
-               PerformDMA(false, Address, &DMABuf, 1, false); //Re-Write original to preserve
+               PerformDMA(DMA_WRITE, Address, &DMABuf, 1, DMA_ADDR_INCREMENT); //Re-Write original to preserve
                delay(1);
                
                //compare/print
@@ -967,7 +967,7 @@ FLASHMEM void WriteC64MemCommand()
    }
    
    //uint32_t StartTime = micros();  
-   PerformDMA(false, DMAAddr, DMABuf, DMALength, false);
+   PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
    CloseDMA();
    //StartTime = micros() - StartTime;  
    SendU16(AckToken);
@@ -1007,7 +1007,7 @@ FLASHMEM void ReadC64MemCommand()
    }
    
    //uint32_t StartTime = micros();  
-   PerformDMA(true, DMAAddr, DMABuf, DMALength, false);
+   PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
    CloseDMA();
 
    //StartTime = micros() - StartTime;  

@@ -171,7 +171,7 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
             //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)            
             uint8_t BlankD011 = 0x00;
-            PerformDMA(false, 0xD011, &BlankD011, 1, false);
+            PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
             CloseDMA();
 #endif
             RebootTR();

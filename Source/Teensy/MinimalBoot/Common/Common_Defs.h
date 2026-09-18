@@ -309,10 +309,24 @@ const uint8_t OutputPins[] = {
    #define SetRWOutWrite       CORE_PIN0_PORTCLEAR = CORE_PIN0_BITMASK; CORE_PIN0_DDRREG |= CORE_PIN0_BITMASK   //output, low=write
    #define SetRWInput          CORE_PIN0_DDRREG &= ~CORE_PIN0_BITMASK   //set as input
 
-   #define GP6_AddrMask        0xFFFF0000  // bits 16-31 contain address bus, in order       
+   #define GP6_AddrMask        0xFFFF0000  // bits 16-31 contain address bus, in order
    #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
    #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
-#endif                            
+
+   //Here, not DMAControl.ino: IOHandlers.h (included above, from Teensy.ino) pulls in
+   //   IOH_REU.c/StatusFunctions.c, which reference these, before DMAControl.ino's own
+   //   content is reached in the concatenated sketch.
+   enum DMA_Trans_RnW
+   {
+      DMA_READ =  true,
+      DMA_WRITE = false
+   };
+   enum DMA_Addr_Mode
+   {
+      DMA_ADDR_FIXED     = true,  //same address every byte (e.g. a hardware register)
+      DMA_ADDR_INCREMENT = false  //address advances per byte (normal block transfer)
+   };
+#endif
 
 //N parenthesized - an unparenthesized N silently only multiplies the last term of an
 //   expression argument (e.g. nSToCyc(X-90) becomes X - nSToCyc(90), not nSToCyc(X-90)).

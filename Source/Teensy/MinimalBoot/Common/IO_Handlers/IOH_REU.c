@@ -66,7 +66,7 @@ stcIOHandlers IOHndlr_REU =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
-extern void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr);
+extern void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
 extern void CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 extern void EEPreadStr(uint16_t addr, char* buf);
@@ -724,7 +724,7 @@ FLASHMEM void PollingHndlr_REU()
    uint32_t REUAddr = REU_Size_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
    uint32_t C64Addr = REURegs[REUReg_C64StartAddrLo] + 256*REURegs[REUReg_C64StartAddrHi];
    
-   bool FixC64Addr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64;
+   DMA_Addr_Mode FixC64Addr = (REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixC64) ? DMA_ADDR_FIXED : DMA_ADDR_INCREMENT;
    bool FixREUAddr = REURegs[REUReg_AddressControl] & REUReg_AddrCont_FixREU;
    
    Printf_dbg_reu("Execute REU x-fer\n");
@@ -736,21 +736,21 @@ FLASHMEM void PollingHndlr_REU()
    switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
    {
       case REUReg_Command_TypeC2R:
-         PerformDMA(true, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
+         PerformDMA(DMA_READ, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
          ReadWriteREU(false, REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
          break;
       case REUReg_Command_TypeR2C:
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr);      //read REU into buffer
-         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
+         PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
          break;
       case REUReg_Command_TypeSwp:
       {  //read both and swap
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
-         PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
+         PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
          
          ReadWriteREU(false, REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
-         PerformDMA(false, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
+         PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
 
          free(C64Buf);
       }
@@ -760,7 +760,7 @@ FLASHMEM void PollingHndlr_REU()
       {  //read both and verify
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          uint32_t ByteNum = 0;
-         PerformDMA(true, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
+         PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf
          
          while (ByteNum < REULength)

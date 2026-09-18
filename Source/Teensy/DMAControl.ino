@@ -2,7 +2,6 @@
 
 #ifdef Fab04_FullDMACapable
 
-
 bool DMA_RnW, DMA_FixC64Addr;
 uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
@@ -32,7 +31,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
-FLASHMEM void PerformDMA(bool RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, bool FixC64Addr)
+FLASHMEM void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
