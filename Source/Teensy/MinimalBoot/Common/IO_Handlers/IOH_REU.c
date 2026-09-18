@@ -552,7 +552,7 @@ FLASHMEM void InitHndlr_REU()
          Serial.printf("alloc err bank %d!\n", NumCrtChips);
          //Serial.flush(); //doesn't flush Tx before reboot?
          delay(250);
-         REBOOT; //no better way to fail...
+         RebootTR(); //no better way to fail...
       }
       NumCrtChips++;
    }

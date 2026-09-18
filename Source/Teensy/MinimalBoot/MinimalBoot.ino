@@ -201,7 +201,7 @@ void loop()
    {
       //Serial.print("Button detected (minimal)\n");
 #ifdef Dbg_TestMin
-      REBOOT;  //button does a restart in test min mode
+      RebootTR();  //button does a restart in test min mode
 #else
       runMainTRApp_FromMin(); 
 #endif       

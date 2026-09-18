@@ -488,7 +488,13 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 // reboot is the same for all ARM devices
 #define CPU_RESTART_ADDR   ((uint32_t *)0xE000ED0C)
 #define CPU_RESTART_VAL    (0x5FA0004)
+// Raw MCU reset -- Use RebootTR() below instead
 #define REBOOT             (*CPU_RESTART_ADDR = CPU_RESTART_VAL)
+
+// Assert the C64's own /RESET before rebooting the Teensy, to reduce screen garbage 
+// do/while(0)-wrapped: several call sites are unbraced (e.g. `if (x) REBOOT;`), and a bare
+// multi-statement macro would execute its second half unconditionally there.
+#define RebootTR()         do { SetResetAssert; REBOOT; } while(0)
 
 //C64 specific:
 enum PokeColors

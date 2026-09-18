@@ -847,7 +847,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   BtnPressed = true;
                   break;
                case rCtlRebootTeensyROM:
-                  REBOOT;
+                  RebootTR();
                   break;
                case rCtlSetBackgroundSIDWAIT:
                   IO1[rwRegStatus] = rsSetBackgroundSID; //work this in the main code

@@ -330,9 +330,9 @@ RAMFUNC void flash_move( uint32_t dst, uint32_t src, uint32_t size )
     }   
   }
 
-  // for T3.x, at least, must REBOOT here (via macro) because original code has
+  // for T3.x, at least, must reboot here (via macro) because original code has
   // been erased and overwritten, so return address is no longer valid
-  REBOOT;
+  RebootTR();
   // wait here until REBOOT actually happens 
   for (;;) {}
 }

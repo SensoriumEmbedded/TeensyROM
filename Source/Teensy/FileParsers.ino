@@ -162,10 +162,19 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
                return false;                        
             }
 
-            SendMsgPrintfln("Rebooting Teensy to Minimal"); 
+            SendMsgPrintfln("Rebooting Teensy to Minimal");
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
             EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
-            REBOOT;
+#ifdef Fab04_FullDMACapable
+            // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
+            //robust for the large majority of real CRT files, with one narrow, named exception:
+            //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
+            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)            
+            uint8_t BlankD011 = 0x00;
+            PerformDMA(false, 0xD011, &BlankD011, 1, false);
+            CloseDMA();
+#endif
+            RebootTR();
             
          }
          else

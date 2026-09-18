@@ -264,7 +264,7 @@ void loop()
       if (DefEEPReboot)
       {
          SetEEPDefaults();
-         REBOOT;
+         RebootTR();
       }
 #ifdef Fab04_BiDirReset
       SetResetInput;
@@ -647,7 +647,7 @@ FLASHMEM void SpecialBtn_RebootTR(bool Up_nDn)
 {
    if (!Up_nDn) //button pressed down
    {
-      REBOOT;
+      RebootTR();
       Printf_dbg("SpecialBtn_RebootTR\n");
    }
 }

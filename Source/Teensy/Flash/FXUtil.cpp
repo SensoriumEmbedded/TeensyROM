@@ -172,14 +172,13 @@ void update_firmware( Stream *in, Stream *out,
   
   detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
-  NVIC_DISABLE_IRQ(IRQ_ENET); 
+  NVIC_DISABLE_IRQ(IRQ_ENET);
   NVIC_DISABLE_IRQ(IRQ_PIT);
-  //SetResetAssert;
-  
+
   flash_move( FLASH_BASE_ADDR, buffer_addr, hex.max-hex.min );
 
   // should not return from flash_move(), but put REBOOT here as reminder
-  REBOOT;
+  RebootTR();
 }
 
 //******************************************************************************
