@@ -20,8 +20,9 @@
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
 // directory, cleared each run, because the compiler's working directory and -I paths are
-// part of ccache's key (-g is on) and a fresh mkdtemp name would miss every time; and the
-// fixed SOURCE_DATE_EPOCH below is what lets SdFat's __DATE__/__TIME__ files hit at all.
+// part of ccache's key (-g is on) and a fresh mkdtemp name would miss every time; and
+// pinning SOURCE_DATE_EPOCH to the commit (below) is what lets the __DATE__/__TIME__ files
+// hit at all, until the next commit.
 //
 // The final combine step uses lib/legacy-hex-combine.mjs, a literal port of
 // HexCombineUtil/HexCombine.exe's algorithm (its source was recovered 2026-09-13). That
@@ -41,7 +42,6 @@ import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mj
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 
 const TEENSY_CORE_VERSION = '1.61.0';
-const SOURCE_DATE_EPOCH = '1788566400'; // fixed instant, for reproducible builds
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -89,6 +89,22 @@ function run(exe, argv, env) {
   }
   return (result.stdout ?? '') + (result.stderr ?? '');
 }
+
+// --- Build date: GCC takes __DATE__/__TIME__ from SOURCE_DATE_EPOCH (formatted in UTC),
+// so the firmware's build date is the HEAD commit's time. Rebuilding a commit reproduces
+// its hex, and the date still says which commit it came from. Uncommitted edits don't
+// move it. A SOURCE_DATE_EPOCH already in the environment wins, per the
+// reproducible-builds convention; outside a git checkout it falls back to now. ---
+function sourceDateEpoch() {
+  if (process.env.SOURCE_DATE_EPOCH) return process.env.SOURCE_DATE_EPOCH;
+  const git = spawnSync('git', ['log', '-1', '--format=%ct'], { cwd: root, encoding: 'utf8', windowsHide: true });
+  const commitTime = git.status === 0 ? git.stdout.trim() : '';
+  if (/^\d+$/.test(commitTime)) return commitTime;
+  console.warn('WARNING: no git commit found; using the current time as the build date');
+  return String(Math.floor(Date.now() / 1000));
+}
+const SOURCE_DATE_EPOCH = sourceDateEpoch();
+console.log(`Build date (SOURCE_DATE_EPOCH): ${new Date(SOURCE_DATE_EPOCH * 1000).toISOString()}`);
 
 // --- TRVersion, matching Get-TRVersion in Build-DualBoot.ps1 ---
 const commonDefsPath = path.join(root, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h');
