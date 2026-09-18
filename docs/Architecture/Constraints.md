@@ -123,6 +123,34 @@ It was reverted anyway, not because it failed, but because keeping ~115 function
 
 (MinimalBoot-only files, not relevant to the Fab04 constraint above since that build already has 57KB+ headroom: `Min_DriveDirLoad.ino` ~5150 bytes/11 functions — `LoadFile()` alone is ~3890 bytes, the single largest function found in either firmware — plus `MinimalBoot.ino` ~1040 bytes/6 functions and `Min_ServiceTCP.ino` ~46 bytes.)
 
+## The C64 main menu's compiled size directly gates SID playback compatibility
+
+The main menu program (`Source/C64/MainMenuCRT/source/MainMenu.asm`) has to stay small not just for tidiness — every byte it assembles to is a byte no SID file can load into without being rejected, because the two share the same C64 RAM at the same time (SID playback runs as a background feature while the menu is still resident).
+
+**Mechanism, verified end-to-end:**
+1. **Compile time:** `MainCodeRAMStart = $6000` (`CommonDefs.i:36`) is the fixed origin (`MainMenu.asm:35`: `* = MainCodeRAMStart`). `MainCodeRAMEnd = *` (`MainMenu.asm:1438`) captures the assembler's program counter at that point in the source — a real measurement of the compiled size, not an estimate.
+2. **Runtime, menu startup (`MainMenu.asm:155-159`):** the menu reports its own occupied page range to the Teensy over two IO1 registers:
+   ```asm
+   lda #>MainCodeRAMStart
+   sta rwRegCodeStartPage+IO1Port
+   lda #>MainCodeRAMEnd
+   sta rwRegCodeLastPage+IO1Port
+   ```
+3. **SID load time (`FileParsers.ino:339-344`, `ParseSIDHeader()`):** the SID's own load address + size (fixed by whoever composed it, decades ago in most cases — not renegotiable) is checked against that reported range:
+   ```c
+   //** check for RAM conflict with TR code:   
+   if (LoadAddress < (IO1[rwRegCodeLastPage]+1)*256 && LoadAddress+XferSize >= IO1[rwRegCodeStartPage]*256)
+   {
+      SIDLoadError("Mem conflict w/ TR app");
+      return;
+   }
+   ```
+   Overlap → the SID is outright rejected ("Mem conflict w/ TR app"), not corrupted or crashed.
+
+**Page-granularity nuance worth remembering when trimming the menu:** only the high byte of each address is stored/compared, so the conflict boundary is rounded *up* to the next full 256-byte page (`(IO1[rwRegCodeLastPage]+1)*256`). If `MainCodeRAMEnd` sits even 1 byte past a `$xx00` boundary, that costs a full extra 256-byte page of SID-incompatible space — getting the assembled end just *under* a page boundary is a discrete win, not just a linear one.
+
+**Real-world confirmation:** the YYZ SID couldn't play once the combined menu (with Settings and Help still built into it) grew past the point where `MainCodeRAMEnd` started overlapping YYZ's load address. Splitting Settings and Help out into their own separate PRGs (FW 0.8) shrank the resident menu enough to clear that conflict — YYZ plays again as of 0.8.
+
 ## Toolchain pin: avoid Teensyduino 1.62.0
 
 Confirmed root cause is the GCC 15.2.1 toolchain bump (from 11.3.1) in Teensyduino 1.62.0, **not** TeensyROM source code — causes intermittent SD-read stalls with 2 PSRAM chips installed. Build against **1.61.0**. Do not attempt to work around this by modifying source; it's an upstream toolchain regression.
@@ -131,9 +159,9 @@ Confirmed root cause is the GCC 15.2.1 toolchain bump (from 11.3.1) in Teensydui
 
 Explicit warning in the file itself (`Common_Defs.h:2`): "re-compile both minimal and full if anything changes here" — a change here silently desyncs the two firmware images if only one is rebuilt and flashed.
 
-## Cartridge register layout must be kept in sync by hand
+## Cartridge register layout: `Menu_Regs.i` is generated, not hand-edited
 
-`Source/C64/MainMenuCRT/source/Menu_Regs.i` and the Teensy-side `Menu_Regs.h` define the same register map independently — there is no shared source of truth or build-time check. See [Comms-Protocol.md](Comms-Protocol.md) and [Known-Issues.md](Known-Issues.md) for a designed-but-not-yet-implemented fix.
+`Source/C64/MainMenuCRT/source/Menu_Regs.i` (ACME) used to be an independently hand-maintained duplicate of the Teensy-side `Menu_Regs.h` (C), with no shared source of truth. Fixed: `Menu_Regs.i` is now generated from `Menu_Regs.h` by `Source/C64/gen_menu_regs_i.py`, wired into `Source/C64/SetToolPaths.bat` so every C64 build regenerates it. **`Menu_Regs.h` is the only one to hand-edit** — a manual change to `Menu_Regs.i` will be silently overwritten on the next build. See [Comms-Protocol.md](Comms-Protocol.md) and [Known-Issues.md](Known-Issues.md#cartridge-register-map-menu_regsi--menu_regsh-is-hand-duplicated-across-two-languages) for the full writeup.
 
 <br>
 
