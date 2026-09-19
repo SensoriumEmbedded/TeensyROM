@@ -1,0 +1,140 @@
+{
+  "projects": [
+    {
+      "name": "MainMenuCRT",
+      "description": "Main TeensyROM menu, built as a headerless cartridge ROM image at $8000. Its header has no PROGMEM: it must sit in RAM for ROM emulation.",
+      "dir": "Source/C64/MainMenuCRT",
+      "steps": [
+        { "assembler": "acme", "source": "source/MainMenu.asm", "output": "MainMenu.bin", "format": "plain", "report": "MainBuildReport", "labels": "MainSymbols" },
+        { "assembler": "acme", "source": "source/TeensyROMC64.asm", "output": "TeensyROMC64.bin", "format": "plain", "report": "CartBuildReport", "labels": "CartSymbols" }
+      ],
+      "headers": [
+        { "input": "build/TeensyROMC64.bin", "dest": "TeensyROMC64.h", "progmem": false }
+      ]
+    },
+    {
+      "name": "SettingsMenu",
+      "description": "TeensyROM settings/configuration menu",
+      "dir": "Source/C64/SettingsMenu",
+      "steps": [
+        { "assembler": "acme", "source": "source/SettingsMenu.asm", "output": "SettingsMenu.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/SettingsMenu.prg", "dest": "SettingsMenu.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "TRHelpScreens",
+      "description": "Help screens shown from the TeensyROM menu",
+      "dir": "Source/C64/TRHelpScreens",
+      "steps": [
+        { "assembler": "acme", "source": "source/TRHelpScreens.asm", "output": "TRHelpScreens.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/TRHelpScreens.prg", "dest": "TRHelpScreens.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "TRExtPortCheck",
+      "description": "External port check utility",
+      "dir": "Source/C64/TRExtPortCheck",
+      "steps": [
+        { "assembler": "acme", "source": "source/TRExtPortCheck.asm", "output": "TRExtPortCheck.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/TRExtPortCheck.prg", "dest": "TRExtPortCheck.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "ExpansionPortTest",
+      "description": "Expansion (cartridge) port test utility (TR+ only)",
+      "dir": "Source/C64/ExpansionPortTest",
+      "steps": [
+        { "assembler": "acme", "source": "source/ExpansionPortTest.asm", "output": "ExpansionPortTest.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/ExpansionPortTest.prg", "dest": "ExpansionPortTest.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "ASIDPlayer",
+      "description": "ASID (MIDI SID) player",
+      "dir": "Source/C64/ASIDPlayer",
+      "steps": [
+        { "assembler": "acme", "source": "source/ASIDPlayer.asm", "output": "ASIDPlayer.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/ASIDPlayer.prg", "dest": "ASIDPlayer.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "MIDI2SID",
+      "description": "MIDI-to-SID synthesizer",
+      "dir": "Source/C64/MIDI2SID",
+      "steps": [
+        { "assembler": "acme", "source": "source/MIDI2SID.asm", "output": "MIDI2SID.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/MIDI2SID.prg", "dest": "MIDI2SID.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "SimpSwiftTerm",
+      "description": "Simple SwiftLink terminal program",
+      "dir": "Source/C64/SimpSwiftTerm",
+      "steps": [
+        { "assembler": "acme", "source": "source/SST.asm", "output": "SST.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/SST.prg", "dest": "SST.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "TODCheck",
+      "description": "CIA time-of-day clock check utility",
+      "dir": "Source/C64/TODCheck",
+      "steps": [
+        { "assembler": "acme", "source": "source/TODCheck.asm", "output": "TODCheck.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/TODCheck.prg", "dest": "TODCheck.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "TRCustomBasicCommands",
+      "description": "Custom TeensyROM BASIC commands. Built with KickAssembler, which needs Java; the framework code is vendored from barryw/CustomBasicCommands (MIT).",
+      "dir": "Source/C64/TRCustomBasicCommands",
+      "steps": [
+        { "assembler": "kickass", "source": "source/main.asm", "output": "TRCBC.prg" }
+      ],
+      "headers": [
+        { "input": "build/TRCBC.prg", "dest": "TRCBC.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "v1541Wrapper",
+      "description": "Virtual 1541 wrapper. Not used by the firmware today; its header is still kept up to date.",
+      "dir": "Source/C64/v1541Wrapper",
+      "steps": [
+        { "assembler": "acme", "source": "source/v1541wrap.asm", "output": "v1541wrap.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/v1541wrap.prg", "dest": "v1541wrap.prg.h", "progmem": true }
+      ]
+    },
+    {
+      "name": "BASIC",
+      "description": "Standalone BASIC .prg utilities: nothing to assemble, each is only converted to a header.",
+      "dir": "Source/C64/BASIC",
+      "steps": [],
+      "headers": [
+        { "input": "cia tod.prg", "dest": "cia_tod.prg.h", "progmem": true },
+        { "input": "DMACheck.prg", "dest": "DMACheck.prg.h", "progmem": true },
+        { "input": "empty.prg", "dest": "empty.prg.h", "progmem": true },
+        { "input": "Load8Run.prg", "dest": "Load8Run.prg.h", "progmem": true },
+        { "input": "shclock_tr.prg", "dest": "shclock_tr.prg.h", "progmem": true },
+        { "input": "SID check.prg", "dest": "SID_check.prg.h", "progmem": true }
+      ]
+    }
+  ]
+}
