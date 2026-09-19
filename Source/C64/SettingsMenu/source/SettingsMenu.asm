@@ -48,23 +48,24 @@ SysAddress:
 bPageNum:  ;current page num/default
    !byte 0
    
-NumPages = 9 ;num of pages in tblSettingsPages
+NumPages = 10 ;num of pages in tblSettingsPages
 
-bTotalPages: 
+bTotalPages:
    !byte NumPages
-   
+
 tblSettingsPages:
    ;!word GeneralSettings
    !word IndexMenu
    !word TRSettings
    !word StartupOptionsMenu
-   !word ColorConfigMenu   
+   !word ColorConfigMenu
    !word MIDIMenu
    !word TimeRTCMenu
    !word InfoOtherMenu
    !word EthernetMenu
    !word InfoHotKeyMenu
-      
+   !word InstalledExtMenu
+
    ;settings pages:
    !src "source/Pg_Index.asm"
    !src "source/Pg_InfoOther.asm"
@@ -75,6 +76,7 @@ tblSettingsPages:
    !src "source/Pg_EthernetSettings.asm"
    !src "source/Pg_TimeRTCSettings.asm"
    !src "source/Pg_InfoHotKey.asm"
+   !src "source/Pg_InstalledExt.asm"
    
 EndOfCode:
    !byte $00 ;byte to mark end address in build report

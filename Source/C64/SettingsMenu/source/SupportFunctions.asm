@@ -100,15 +100,21 @@ CheckCommonKeys:
 ++ dec bPageNum
    jmp PopPageUpdate
 
-+  cmp #'1' ;Jump to page # 
-   bmi +   ;skip if below '1'
-   cmp #'1'+ NumPages
-   bpl +   ;skip if above Num pages
++  cmp #'1' ;Jump to page #, keys '1'-'9' only -- the 10th page (index 9) uses '0' below,
+   bmi +    ;since these are a contiguous ASCII/PETSCII run starting at '1', not a lookup table
+   cmp #'1'+9  ;hardcoded to 9: pages mapped by this arithmetic top out at '9' regardless of NumPages
+   bpl +   ;skip if above '9'
    sec       ;set to subtract without carry
    sbc #'1'   ;make zero based
    sta bPageNum
    jmp PopPageUpdate
-   
+
++  cmp #'0' ;Jump to page #10 (Installed Extensions)
+   bne +
+   lda #NumPages-1  ;zero-based index of the 10th (last) page
+   sta bPageNum
+   jmp PopPageUpdate
+
 +  cmp #ChrF1  ;Reboot TR
    bne +
    lda #139  ; 155 default minus bit 4
@@ -185,7 +191,7 @@ CommonInit:
 
 MsgMenuPageSelections:
    ;!tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<= CRSR =>", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Next/Previous page", EscC,EscNameColor, " ("
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<=CRSR=>", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "1-9", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Page Navigation", EscC,EscNameColor, " ("
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "<=CRSR=>", ChrRvsOff, ChrFillLeft, ChrFillRight, ChrRvsOn, "1-9,0", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Page Nav", EscC,EscNameColor, " ("
    !tx 0 
 MsgMenuExitSelection:
    ;!tx ")", ChrReturn, EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "Space/F1", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,  "Exit to Main menu"
