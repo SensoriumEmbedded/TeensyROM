@@ -2,7 +2,7 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
-## Summary (updated 2026-08-13)
+## Summary (updated 2026-09-19)
 
 Detail for every item below is in its own full section further down — search this file for a distinctive word/name from the bullet to jump to it.
 
@@ -25,6 +25,10 @@ Detail for every item below is in its own full section further down — search t
 - No consistent allocation-failure (OOM) policy across handlers — leaning REBOOT
 - Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
+- `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
+
+**Fixed since last summary (2026-09-19, not open work — kept for context):**
+- `CheckLaunchSDAuto()`'s DAT3 presence read had no settle delay after switching the pin's mode — added `delayMicroseconds(5)`, matching a reliability fix PJRC shipped upstream for the identical pattern
 
 **Fixed since last summary (2026-08-14, not open work — kept for context):**
 - `IOHandler[]` array / `enumIOHandlers` sync — `static_assert` added catching count mismatches
@@ -294,6 +298,149 @@ Two independently hand-maintained files define the same register offset/enum map
 **Verified:** assembled both the old hand-written `Menu_Regs.i` and the generated one with ACME 0.97 (`--symbollist`) — all 268 symbols matched name-for-name and value-for-value, and the resulting `.prg` output was byte-identical.
 
 **Status:** fixed (2026-08-14).
+
+## `CheckLaunchSDAuto()`'s DAT3 presence check read the pin with no settle delay after switching its mode
+
+**Where:** `Source/Teensy/Teensy.ino:556-558`, `CheckLaunchSDAuto()`.
+
+Boot-time SD auto-launch does a cheap presence check before paying `SDFullInit()`'s up-to-3-second
+cost: switch the SDIO DAT3 line (pin 46 on Teensy 4.1) to `INPUT_PULLDOWN`, then read it.
+
+```c
+// _SD_DAT3 = pin 46
+pinMode(46, INPUT_PULLDOWN);
+if (digitalReadFast(46))
+```
+
+No delay between the mode switch and the read. This is the identical pattern PJRC's own SD
+library carried internally for `SD.mediaPresent()`'s DAT3 fast-path, and found unreliable enough
+to fix with a dedicated commit: [PaulStoffregen/SD@c535ae9](https://github.com/PaulStoffregen/SD/commit/c535ae9e10723054a9c36b71d0c4ed3b4a1c7684),
+"Improve SDIO media presence detection" (Teensyduino 1.60, Nov 2024), added
+`delayMicroseconds(5)` after every `pinMode(_SD_DAT3, INPUT_PULLDOWN)` call in the library,
+immediately before reading the pin. Root cause per the author's own forum thread (a live-demoed
+detection bug, [msg #53](https://forum.pjrc.com/index.php?threads/mtp-file-size-limits.76053/page-3#post-351846) →
+fixed at [msg #80](https://forum.pjrc.com/index.php?threads/mtp-file-size-limits.76053/page-4#post-351928)):
+reading the pin immediately after switching its mode can catch a stale/transitional voltage
+before the pull resistor settles, rather than the true line state.
+
+For context on the mechanism itself: the DAT3-substitution fast-path isn't new or fragile — it
+shipped in Teensyduino 1.56 (Dec 2021, [PaulStoffregen/SD@534da7a](https://github.com/PaulStoffregen/SD/commit/534da7a64507f4ce3ebcae9b0ffb9764b9ff0124))
+and has ~4 years of production history. The settle-delay fix above is a refinement of a mature
+mechanism, not evidence the mechanism itself is unreliable.
+
+One caveat: PJRC's fix addresses the pin *after* the SDIO peripheral had been actively driving it
+(post-`SD.begin()`, mid-session hot-swap detection). `CheckLaunchSDAuto()` runs at cold boot,
+before `SD.begin()` has ever touched the pin, so the settling physics may not be identical — but
+it's the same instruction sequence on the same signal, and the fix costs 5 microseconds once per
+boot.
+
+**Fix:** added `delayMicroseconds(5);` between the `pinMode()` call and the `digitalReadFast()`
+call, matching upstream's own fix.
+
+**Status:** fixed (2026-09-19).
+
+## `SD.mediaPresent()` (and this repo's own `SDFullInit()`) can't distinguish "card absent" from "`SD.begin()` never called"
+
+**Where:** `Source/Teensy/Teensy.ino` (`setup()`, `SDFullInit()` at line 482, `CheckLaunchSDAuto()`
+at line 545); Teensy core `SD.cpp:111-184` and `SdFat.h:115,423` (core 1.61.0).
+
+`SDFullInit()` already carries a comment flagging half of this: `Printf_dbg("Start mediaPresent
+%d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()`. Traced
+the actual mechanism: `SD.mediaPresent()` checks `sdfs.card()`, which returns the
+default-initialized `SdCard* m_card = nullptr` (`SdFat.h:423`) until `SD.begin()` has run at
+least once — `cardBegin()` is the only thing that assigns `m_card`, and it's only called from
+`begin()`. Before that, `mediaPresent()`'s null-card branch unconditionally returns `false`
+(`SD.cpp:177-180`), regardless of whether a card is physically present.
+
+The less obvious half: **`SD.begin()` isn't guaranteed to run during full-firmware boot at all.**
+`setup()`'s boot-indicator switch only reaches `CheckLaunchSDAuto()` (the only caller of
+`SDFullInit()`, the only caller of `SD.begin()`) on the plain `MinBootInd_SkipMin` case, and only
+when the menu button isn't held:
+
+```c
+switch (EEPROM.read(eepAdMinBootInd))
+{
+   case MinBootInd_SkipMin: //normal first power up
+      if (ReadButton!=0) //skip autolaunch checks if button pressed
+         if(!CheckLaunchSDAuto()) { ... }   // only entry point to SD.begin()
+      break;
+   case MinBootInd_LaunchFull: // Launch command received in minimal, launch it from full
+      ...                                    // CheckLaunchSDAuto() never called
+      break;
+   default:                                  // recovery, most likely MinBootInd_FromMin
+      ...                                    // CheckLaunchSDAuto() never called
+      break;
+}
+```
+
+So `SD.begin()` runs at boot only if the boot indicator is `MinBootInd_SkipMin` **and** the button
+isn't held **and** `CheckLaunchSDAuto()`'s DAT3 pre-check reads high. It is skipped entirely on
+`MinBootInd_LaunchFull` (remote-launch-triggered reboot from minimal to full) and the `default`
+recovery case.
+
+**Why it's skipped on those two paths, not just an oversight:** `SDFullInit()`'s own comment gives
+the cost — `begin()` takes 3 seconds for fail, 20-200mS for pass, 2 seconds for unpopulated.
+`CheckLaunchSDAuto()`'s cheap DAT3 pin read exists to dodge that cost when no card is obviously
+present at all, but if the pin *does* read high, it still pays the full `SDFullInit()` cost,
+worst-case 3 seconds. `MinBootInd_LaunchFull` and the recovery `default` case skip
+`CheckLaunchSDAuto()` entirely — not just the SD-autolaunch feature it implements, but any risk of
+that worst-case delay — because both are boots where speed matters more than checking for a
+coincidental SD autolaunch file: `MinBootInd_LaunchFull` already has a specific, remote-requested
+file to launch (`EEPRemoteLaunch(eepAdCrtBootName)`) and a user or remote controller waiting on
+it, and running the SD check first would add pure latency to a launch that's already decided;
+the recovery case is already the tail end of a minimal-boot round trip and has no reason to risk
+adding another multi-second stall on top of it. Skipping `CheckLaunchSDAuto()` outright guarantees
+zero risk of that 3-second worst case on both paths, at the cost of `SD.begin()` never running
+during them.
+
+Until something else calls `SD.begin()` — e.g. the first file-transfer or directory-listing
+command, which already calls it per request — `SD.mediaPresent()` reports "absent" no matter
+what's in the slot on those two paths.
+
+**Consequence:** any future code path that queries `SD.mediaPresent()` early in a boot — before an
+ordinary storage command has incidentally called `SD.begin()` — cannot tell "no card" from "never
+checked." Most exposed right after a `MinBootInd_LaunchFull` reboot, since that's the one boot
+path that both (a) skips `CheckLaunchSDAuto()` entirely and (b) is reachable from a remote command,
+not just a manual power-on.
+
+**A lazy `SD.begin()` call is not a safe fix for a serial-command-triggered caller.** The obvious
+instinct — have the handler call `SD.begin()` itself the first time it's asked — reintroduces the
+exact cost `CheckLaunchSDAuto()`'s boot-time gating exists to avoid. Per
+[Constraints.md's single-threaded-main-loop rule](Constraints.md#the-main-loop-is-single-threaded--a-blocking-call-anywhere-in-it-stalls-every-other-main-loop-driven-task),
+any handler reachable from `ServiceSerial()`/`ProcessCommand()` that blocks for `SD.begin()`'s
+worst case (up to 3 seconds, per `SDFullInit()`'s own comment) stalls everything else
+main-loop-driven for that same duration — `PollingHndlr_ASID` (live MIDI/SID playback) included.
+
+**Fix (not yet done) — two options, no protocol change needed for either:**
+
+1. **Preferred: reuse the existing cheap DAT3 check as the fallback signal**, rather than
+   inventing a distinct "unknown" reply value. `SD.mediaPresent()` already does exactly this cheap
+   check (pin read, no `sdfs.restart()`) whenever `card` is non-null but wasn't previously present
+   (`SD.cpp`'s `!cardPreviouslyPresent` branch) — the only place it skips straight to `ret = false`
+   is when `card` itself is null, i.e. `SD.begin()` never ran. A small wrapper closes that one gap
+   with the same mechanism already trusted for the "check again" case:
+   ```c
+   bool TR_SDPresent()
+   {
+      if (!SD.sdfs.card())              // SD.begin() never ran this boot
+      {
+         pinMode(46, INPUT_PULLDOWN);   // _SD_DAT3 — same check CheckLaunchSDAuto() uses
+         delayMicroseconds(5);
+         return digitalReadFast(46);    // fast, non-blocking best-effort answer
+      }
+      return SD.mediaPresent();          // normal path once a card object exists
+   }
+   ```
+   Keeps any external reply format as plain present/absent, no new state for a consumer to handle.
+   Inherits the same DAT3 hot-swap-reliability question D5 (see the CONNECTION portfolio's
+   `CONNECTION-DECISIONS.md`, external) is already testing on real hardware — not a new risk, an
+   extension of one `mediaPresent()` already accepts elsewhere in the same function.
+2. **Alternative: expose a distinct "not yet checked" state** if a best-effort guess is
+   unacceptable and an honest "don't know" is preferred instead — costs a reply-format/protocol
+   change and requires whatever consumes it to handle a third case, for a question the cheap check
+   above answers directly without either.
+
+**Status:** deferred — flagged, not yet fixed (2026-09-19).
 
 ## Large-CRT bank-swap DMA reliability claim may be stale
 

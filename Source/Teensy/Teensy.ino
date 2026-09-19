@@ -554,6 +554,7 @@ bool CheckLaunchSDAuto()
    
    // _SD_DAT3 = pin 46
    pinMode(46, INPUT_PULLDOWN);
+   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
    if (digitalReadFast(46))
    {  //SD Presence detected, do full init and check for auotlaunch file    
       Printf_dbg("SD Presence detected\n");

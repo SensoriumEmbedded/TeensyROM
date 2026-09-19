@@ -69,6 +69,31 @@ Beyond priority, Ethernet/PIT interrupts are fully **disabled** (not just deprio
 - **Firmware self-flash** — `Flash/FXUtil.cpp:175-176` disables both, and goes further by fully `detachInterrupt()`-ing the button and PHI2 pins entirely just above (lines 173-174) — there's no valid handler to service PHI2 while live firmware is being overwritten.
 - **ASID (MIDI SID) playback** — `IOH_ASID.c:579-580` disables both during ASID streaming, which has its own tight audio-rate timing requirement.
 
+## The main `loop()` is single-threaded — a blocking call anywhere in it stalls every other main-loop-driven task
+
+`Teensy.ino`'s `loop()` dispatches `ServiceSerial()`/`ProcessCommand()` (incoming serial/network
+commands), `myusbHost.Task()`, NFC scanning, TCP servicing, and
+`IOHandler[CurrentIOHandler]->PollingHndlr()` (the cooperative-polling mechanism above) all from
+the same single-threaded loop, one iteration at a time. There's no scheduler or preemption between
+them — if any one of them blocks, everything else in the loop waits for it to return, however long
+that takes.
+
+This matters most for `PollingHndlr_ASID` (`IOH_ASID.c`): live MIDI/SID streaming needs servicing
+every loop iteration to stay in time, and a stall anywhere else in `loop()` delays it by the same
+amount. The unbounded-latency operations flagged as ISR-off-limits above (flash/`FLASHMEM`,
+EEPROM, SD, USB — see
+[the dividing-line section](#the-real-dividing-line-flash-backed-vs-ram-backed-not-just-the-isr-function-itself))
+are technically legal to call from a serial-command handler, since that's main-loop code, not the
+ISR — but legal isn't free: a command handler that blocks on one of them for its worst case stalls
+ASID playback (and NFC, and TCP, and every other pending command) for that same duration.
+
+Concrete instance: `SD.begin()` can block for up to 3 seconds (`SDFullInit()`'s own comment,
+`Teensy.ino`). A serial-command handler that lazily calls it — e.g. to resolve whether
+`SD.mediaPresent()` has ever been given a real answer this boot — would stall a live ASID session
+for that same 3 seconds. See
+[Known-Issues.md](Known-Issues.md#sdmediapresent-and-this-repos-own-sdfullinit-cant-distinguish-card-absent-from-sdbegin-never-called)
+for why that specific fix is unsafe, not just inelegant.
+
 ## Memory budgets are hard caps, not soft targets
 
 - Full firmware: `MaxRAM_ImageSize = 128` KB (`Source/Teensy/TeensyROM.h:26`) — the RAM1 image buffer. Beyond that, CRT banks spill into RAM2 via `malloc()` (`FileParsers.ino:120-128`); when that allocation fails, firmware reboots into MinimalBoot (`FileParsers.ino:165-168`, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for the full trigger mechanism) — this exhaustion point empirically lands around **~650KB** total, it is not a hardcoded threshold.
