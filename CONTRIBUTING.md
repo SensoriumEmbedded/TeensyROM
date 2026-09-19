@@ -49,7 +49,7 @@ smoothly on the first pass.
 
 Two independent toolchains, and **order matters**:
 
-1. C64-side 6502 assembly builds first (`Source/C64/BuildAllC64.bat`) and generates headers
+1. C64-side 6502 assembly builds first (`npm run build:c64`) and generates headers
    consumed by the Teensy build.
 2. Teensy firmware builds second, embedding those headers.
 

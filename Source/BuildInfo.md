@@ -45,19 +45,17 @@
 ## C64/128 6502 Assembly code
 These steps are only needed if modifying the application menu assembly code running on the C64/128.
 ### Software tools needed
-  * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/)
-  * [bin2header util](https://github.com/AntumDeluge/bin2header)
+  * Node (see `.nvmrc`)
+  * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/) 0.97 and, for TRCustomBasicCommands only, [KickAssembler](https://theweb.dk/KickAssembler/) with Java. The build finds them on your `PATH` (or through `ACME`, `KICKASS_JAR` and `JAVA_HOME`) and otherwise downloads a checksummed copy: KickAssembler on any platform, ACME on Windows and macOS (on Linux, install it with your package manager). Java is never downloaded. See [Source/C64/README.md](C64/README.md).
 
 ### Build instructions
-  * Edit the "build8000CartBin.bat" file in the C64/MainMenuCRT directory
-    * Set "toolPath" to an absolute path of the SW tools
-    * Edit the following 2 variables to point to the associated tool directory
-      * Relative, based on toolPath: "compilerPath", "bin2headerPath"
-  * Execute the batch file to complete the following
+  * Run `npm run build:c64` (or double-click `tools/Build-C64.ps1` on Windows) to complete the following
+    * Regenerate `Menu_Regs.i` from `Menu_Regs.h`
     * Compile the main TeensyROM Code
     * Compile the Cartridge loader executed on startup
-    * Convert the final binary into a header file for the Teensy code
-    * Copy the updated header file to the Teensy directory
+    * Compile the settings menu, help screens and the other bundled programs
+    * Convert each binary into a header file for the Teensy code, written straight into the Teensy directory
+  * `npm run build:c64 -- --project MainMenuCRT` builds just one program; `--list` shows the names
   * Any compile errors will cause early exit
   * Build information is displayed and files are created
   * Main TeensyROM application must be recompiled to incorporate header/code and load to Teensy module for execution

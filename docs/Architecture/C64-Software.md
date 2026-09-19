@@ -6,24 +6,24 @@ Canonical build reference: [Source/C64/README.md](/Source/C64/README.md) (verifi
 
 ## Layout
 
-`Source/C64/` has one directory per sub-project, each `<Project>/source/` (sources) + `<Project>/build/` (output, cleaned each build) + a `build*.bat` at the project root. `SetToolPaths.bat` centralizes tool locations for every build script; `BuildAllC64.bat` runs all sub-projects in dependency order and halts on first error.
+`Source/C64/` has one directory per sub-project, each `<Project>/source/` (sources) + `<Project>/build/` (output, cleaned each build). `tools/c64-projects.json` lists every sub-project's assembler steps and headers; `npm run build:c64` builds them in that order and halts on first error, and `--project <name>` builds one.
 
-Toolchain: **ACME cross-assembler 0.97** for all `.asm`/`.s` files, except **TRCustomBasicCommands**, which uses **KickAssembler** + Java. `bin2header.py` (Python 3) converts each compiled `.prg`/`.bin` into a C header and copies it into `Source/Teensy/TRMenuFiles/ROMs/` for the firmware build.
+Toolchain: **ACME cross-assembler 0.97** for all `.asm`/`.s` files, except **TRCustomBasicCommands**, which uses **KickAssembler** + Java. The builder converts each compiled `.prg`/`.bin` into a C header (a Node port of bin2header) written into `Source/Teensy/TRMenuFiles/ROMs/` for the firmware build.
 
-| Sub-project | Build script | What it is |
+| Sub-project | `--project` name | What it is |
 |---|---|---|
-| `MainMenuCRT` | `build8000CartBin.bat` | The cartridge boot menu itself — see below |
-| `SettingsMenu` | `buildSettingsMenu.bat` | F8-triggered 9-page settings/config menu — see below |
-| `TRHelpScreens` | `buildTRHelpScreens.bat` | In-menu help screens |
-| `TRExtPortCheck` | `buildTRExtPortCheck.bat` | External port check utility |
-| `ExpansionPortTest` | `buildExpansionPortTest.bat` | Expansion port test (TR+ only) |
-| `ASIDPlayer` | `buildASIDPlayer.bat` | ASID (MIDI SID) player app |
-| `MIDI2SID` | `buildMIDI2SID.bat` | MIDI-to-SID synth app (IO1 register block reuses raw SID register offsets — `Menu_Regs.i:78-108` flags this as needing to stay in sync or be split out) |
-| `SimpSwiftTerm` | `buildSimpSwiftTerm.bat` | Simple SwiftLink terminal program |
-| `TODCheck` | `buildTODCheck.bat` | CIA Time-of-Day clock check utility |
-| `TRCustomBasicCommands` | `buildTRCustomBasicCommands.bat` | Custom BASIC commands — vendored, see below |
-| `BASIC` | `bin2header.bat` | Grab-bag of pre-built standalone `.prg` utilities, individually header-converted |
-| `v1541Wrapper` | `buildv1541Wrapper.bat` | Virtual 1541 wrapper — **deferred/planned feature**, not currently wired into the full build; waiting on further developer capability before inclusion. Also intended as a general-purpose wrapper for assembly-code PRGs. |
+| `MainMenuCRT` | `MainMenuCRT` | The cartridge boot menu itself — see below |
+| `SettingsMenu` | `SettingsMenu` | F8-triggered 9-page settings/config menu — see below |
+| `TRHelpScreens` | `TRHelpScreens` | In-menu help screens |
+| `TRExtPortCheck` | `TRExtPortCheck` | External port check utility |
+| `ExpansionPortTest` | `ExpansionPortTest` | Expansion port test (TR+ only) |
+| `ASIDPlayer` | `ASIDPlayer` | ASID (MIDI SID) player app |
+| `MIDI2SID` | `MIDI2SID` | MIDI-to-SID synth app (IO1 register block reuses raw SID register offsets — `Menu_Regs.i:78-108` flags this as needing to stay in sync or be split out) |
+| `SimpSwiftTerm` | `SimpSwiftTerm` | Simple SwiftLink terminal program |
+| `TODCheck` | `TODCheck` | CIA Time-of-Day clock check utility |
+| `TRCustomBasicCommands` | `TRCustomBasicCommands` | Custom BASIC commands — vendored, see below |
+| `BASIC` | `BASIC` | Grab-bag of pre-built standalone `.prg` utilities, individually header-converted |
+| `v1541Wrapper` | `v1541Wrapper` | Virtual 1541 wrapper — **deferred/planned feature**: built and its header kept current, but not yet used by the firmware; waiting on further developer capability before inclusion. Also intended as a general-purpose wrapper for assembly-code PRGs. |
 
 ## MainMenuCRT — the cartridge boot menu
 
@@ -34,7 +34,7 @@ Files in `MainMenuCRT/source/`: `TeensyROMC64.asm` (171 lines), `MainMenu.asm` (
 - **`TeensyROMC64.asm`** is the actual 8K cartridge ROM image (`* = $8000`, `Coldstart`/`Warmstart` vectors, `CBM8O` autostart key). Does minimal hardware init (VIC/CIA/SID reset), prints the banner, then copies the separately-built `MainMenu.bin` (`!binary`-included) from cart ROM into C64 RAM at `MainCodeRAMStart` (`$6000`, per `CommonDefs.i`) and jumps there.
 - **`MainMenu.asm`** is the menu program proper, running from RAM: file browser/menu UI (`ListMenuItems`, `SelectItem`, `RunSelected`, `XferCopyRun`), cursor/page navigation, keyboard handling, NFC tag writing, RTC/time display.
 - **`PRGLoadStartReloc.s`**: relocated into the cassette-buffer zero page (`$033c`, per `CommonDefs.i`) and executed from there while a `.PRG` streams in. Polls `rRegStrAvailable`/`rRegStreamData` (IO1 registers) to pull bytes from the Teensy, sets BASIC's end-of-program/variables pointers, signals the Teensy via `wRegControl = rCtlRunningPRG`, then re-enters BASIC warm-start (`jmp $a7ae`). Comments document a hardcoded startup delay to avoid a race condition, and address wrap-around handling during load.
-- Build order: `build8000CartBin.bat` compiles `MainMenu.asm` to `MainMenu.bin` first, then `TeensyROMC64.asm` (which embeds that binary) to produce the final headerless cartridge image — the one C64 build output that intentionally has **no PROGMEM header** (must land in RAM for ROM emulation, per `Source/C64/README.md`).
+- Build order: the `MainMenuCRT` project compiles `MainMenu.asm` to `MainMenu.bin` first, then `TeensyROMC64.asm` (which embeds that binary) to produce the final headerless cartridge image — the one C64 build output that intentionally has **no PROGMEM header** (must land in RAM for ROM emulation, per `Source/C64/README.md`).
 
 ## SettingsMenu — the 9-page settings framework
 
@@ -50,7 +50,7 @@ Page files (index → content, per the FW 0.8 layout): `Pg_Index.asm`, `Pg_TRSet
 
 ## Build pipeline (per sub-project)
 
-Each `build*.bat` sources `SetToolPaths.bat`, cleans its local `build/`, invokes `acme.exe` (`-r <BuildReport> --vicelabels <Symbols> --msvc --color --format plain -v3 --outfile`), then runs `bin2header.py` to emit a header and copy it into `Source/Teensy/TRMenuFiles/ROMs/`. Full details, prerequisites, and tool versions: [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md).
+For each project, `tools/build-c64.mjs` empties its local `build/`, invokes ACME (`-r <BuildReport> --vicelabels <Symbols> --msvc --format <cbm|plain> --outfile`; KickAssembler for `TRCustomBasicCommands`), then converts each output to a header written straight into `Source/Teensy/TRMenuFiles/ROMs/`. Full details, prerequisites, and tool versions: [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md).
 
 <br>
 

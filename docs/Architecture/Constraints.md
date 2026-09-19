@@ -186,7 +186,7 @@ Explicit warning in the file itself (`Common_Defs.h:2`): "re-compile both minima
 
 ## Cartridge register layout: `Menu_Regs.i` is generated, not hand-edited
 
-`Source/C64/MainMenuCRT/source/Menu_Regs.i` (ACME) used to be an independently hand-maintained duplicate of the Teensy-side `Menu_Regs.h` (C), with no shared source of truth. Fixed: `Menu_Regs.i` is now generated from `Menu_Regs.h` by `Source/C64/gen_menu_regs_i.py`, wired into `Source/C64/SetToolPaths.bat` so every C64 build regenerates it. **`Menu_Regs.h` is the only one to hand-edit** — a manual change to `Menu_Regs.i` will be silently overwritten on the next build. See [Comms-Protocol.md](Comms-Protocol.md) and [Known-Issues.md](Known-Issues.md#cartridge-register-map-menu_regsi--menu_regsh-is-hand-duplicated-across-two-languages) for the full writeup.
+`Source/C64/MainMenuCRT/source/Menu_Regs.i` (ACME) used to be an independently hand-maintained duplicate of the Teensy-side `Menu_Regs.h` (C), with no shared source of truth. Fixed: `Menu_Regs.i` is now generated from `Menu_Regs.h` by `tools/lib/menu-regs.mjs` (originally `gen_menu_regs_i.py`), and every `npm run build:c64` regenerates it first. **`Menu_Regs.h` is the only one to hand-edit** — a manual change to `Menu_Regs.i` will be silently overwritten on the next build. See [Comms-Protocol.md](Comms-Protocol.md) and [Known-Issues.md](Known-Issues.md#cartridge-register-map-menu_regsi--menu_regsh-is-hand-duplicated-across-two-languages) for the full writeup.
 
 <br>
 
