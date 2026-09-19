@@ -25,7 +25,6 @@
      * Requires Node.js (`.nvmrc` pins the version) and no other dependencies; downloads a pinned, checksummed `arduino-cli` on first run if one isn't already on `PATH`
      * `npm test` runs the build tooling's own tests
      * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works
-     * [Build-DualBoot.md](/Source/Teensy/tools/Build-DualBoot.md) documents the legacy PowerShell path this replaced
    
 ### Latest Support tool/lib versions as of FW v0.8 on 2026/08/02
    * Arduino IDE 2.3.10

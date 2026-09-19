@@ -214,7 +214,7 @@ position each time.
 **Next step:** firmware-side elimination has run out of road — needs a
 scope/logic analyser capture of A0–A7 plus DRAM `/RAS`, `/CAS`, and the
 address-mux select on a real C128, comparing a lone write to `$C0EF` against
-one to `$C0FF` (different bits fail). `Source/Teensy/tools/dma_scope_write.py`
+one to `$C0FF` (different bits fail). `tools/dma_scope_write.py`
 (imported alongside this) drives single-byte DMA writes from a PC and stops
 on the first bad readback, for triggering the scope.
 

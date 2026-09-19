@@ -1,6 +1,6 @@
 # Build System
 
-Two independent toolchains, run in a fixed order. Canonical instructions (prefer these over this doc for exact commands/paths): [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md) for the C64 side; for the Teensy side, `npm run build:tr` / `npm run build:tr-plus` (see [Dual-boot linking](#dual-boot-linking-toolsbuild-firmwaremjs) below) — [Source/Teensy/tools/Build-DualBoot.md](/Source/Teensy/tools/Build-DualBoot.md) describes the legacy PowerShell path this superseded.
+Two independent toolchains, run in a fixed order. Canonical instructions (prefer these over this doc for exact commands/paths): [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md) for the C64 side; for the Teensy side, `npm run build:tr` / `npm run build:tr-plus` (see [Dual-boot linking](#dual-boot-linking-toolsbuild-firmwaremjs) below).
 
 ## Build order (matters)
 
@@ -25,8 +25,6 @@ Skipping step 1 after a C64-side change means the Teensy build silently uses sta
 ## Dual-boot linking (`tools/build-firmware.mjs`)
 
 The canonical way to produce a shippable, combined `TeensyROM(+)_<ver>_full.hex` — containing **both** the full firmware and the MinimalBoot image (see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for why MinimalBoot exists) — is the zero-dependency Node builder at `tools/build-firmware.mjs`, run via `npm run build:tr` (plain TeensyROM) or `npm run build:tr-plus` (TeensyROM+). This is what `.github/workflows/build.yml` runs on every push and tag. It downloads a version-pinned, SHA256-checked `arduino-cli` if not already on `PATH`, builds MinimalBoot, builds the main image, and combines them into one hex. Does **not** flash automatically — use Teensy Loader, or flash via SD/USB drive, afterward.
-
-`Source/Teensy/tools/Build-DualBoot.ps1`, the PowerShell script this replaced, still exists in the tree but is no longer used by CI or by either target's `npm run build:*` script; it's legacy, slated for eventual removal, not the path to reach for.
 
 Guardrail worth knowing about: before building a plain TR image, the builder checks `Fab04FeatureCtl.h` for an active `#define Fab04_Features` and, by default, throws rather than continue — this exists specifically to prevent accidentally building a TR+ image mislabeled as plain TR. Comment out the define yourself, build `--target tr-plus` instead, or pass `--yes` to have the builder comment it out and continue (no interactive y/N prompt, unlike the old PowerShell script — this has to be decided up front on the command line).
 

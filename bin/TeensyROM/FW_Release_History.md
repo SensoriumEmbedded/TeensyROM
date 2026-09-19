@@ -153,7 +153,7 @@ The original TR will continue to be supported, with separate .hex file releases.
   * **Contributed by @niclashoyer, thank you!**
 * **New Tool: Dual Boot Compile/Combine PowerShell script by @hExx**
   * Compile full dual boot TeensyROM FW .hex file with a single script.
-  * See full documentation [here](/Source/Teensy/tools/Build-DualBoot.md).
+  * (Since replaced by the Node-based `npm run build:tr` / `build:tr-plus`, see [Build-System.md](/docs/Architecture/Build-System.md).)
 * **Bug fixes:**
   * Number of hyperlinks per web browser page was artificially limited to 9 in v0.7.
     * Thanks for the catch @DigitalMan

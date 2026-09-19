@@ -171,7 +171,7 @@ for (const entry of fs.readdirSync(sdk, { withFileTypes: true })) {
   if (entry.isFile()) fs.copyFileSync(path.join(sdk, entry.name), path.join(privateData, entry.name));
 }
 const privateCore = path.join(privateData, 'packages/teensy/hardware/avr', TEENSY_CORE_VERSION, 'cores/teensy4');
-const linkers = path.join(root, 'Source/Teensy/tools/BootLinkerFiles');
+const linkers = path.join(root, 'tools/BootLinkerFiles');
 
 const cli = resolveArduinoCli(path.join(root, 'tools/.cache'));
 const env = {

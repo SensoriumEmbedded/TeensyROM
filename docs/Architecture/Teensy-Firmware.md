@@ -23,8 +23,7 @@ Source/Teensy/
 ├── src/PN532/                   vendored PN532 NFC reader library
 ├── Flash/                       Teensyduino in-app flash-update helper (FlashTxx, FXUtil)
 ├── MinimalBoot/                 separate minimal-boot sketch, see below
-├── TRMenuFiles/                 ROMs/ (embedded C64 .h byte arrays), Pics/, SIDs/, Text_PETSCII/
-└── tools/                       PowerShell build scripts, arduino-cli, dual-boot hex linker
+└── TRMenuFiles/                 ROMs/ (embedded C64 .h byte arrays), Pics/, SIDs/, Text_PETSCII/
 ```
 
 ## Entry point / boot flow

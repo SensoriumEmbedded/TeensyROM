@@ -12,7 +12,7 @@ narrative version.
   enabled, otherwise identical to the `Beta_0.8.0.7` release) — does **not** include
   kfox's C128-auto-detection code, so timing was forced by hand via serial (`te###`)
   rather than relying on machine detection.
-- Tool: `Source/Teensy/tools/dma_scope_write.py` — repeated single-byte DMA writes to
+- Tool: `tools/dma_scope_write.py` — repeated single-byte DMA writes to
   one address, alternating `$00`/`$FF`, with readback verification.
 - Two `te` (`nS_DMASetup`) values compared: `430` (today's shared NTSC default, used by
   both machines currently) and `445` (kfox's proposed C128-only fix, meant to be

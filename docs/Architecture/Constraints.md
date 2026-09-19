@@ -89,7 +89,7 @@ FLASH: code:398356, data:1518744, headers:8496   free for files:6200868
 - `Source/Teensy/TeensyROM.h:26-30` (full firmware): `// Test case: Random(?) NFC tag with large directory, crash when tapped / 20000 free got further, but still crashes. Less always crashes / *Need >24000 RAM1 free for local` — this is also what motivated shrinking `MaxRAM_ImageSize` from 144KB to 128KB (20,000 → 36,476 bytes free). A local build on 2026-08-12 measured 40,444 bytes free for the current Fab04 config — roughly 4KB more headroom than that 9/25/2025 note, gained from unrelated changes since.
 - `Source/Teensy/MinimalBoot/Min_TeensyROM.h:48-52` (MinimalBoot, with Ethernet): same `>24000` threshold, independently arrived at.
 
-**Local build capability exists to verify this going forward** (see [[teensyrom_project_facts]] memory / ask before assuming it's still set up if picking this up much later): `Source/Teensy/tools/Build-DualBoot.ps1 -Fab04_Features -SkipMinimalBuild -SkipCombine`, run from `Source/Teensy/tools/`, builds the Fab04 main firmware in about a minute and prints this exact report — use it to check real before/after impact of any `FLASHMEM` migration rather than estimating from line counts.
+**Local build capability exists to verify this going forward** (ask before assuming it's still set up if picking this up much later): `npm run build:tr-plus -- --skip-minimal-build --skip-combine`, run from the repo root, builds the Fab04 main firmware in about a minute and prints this exact report — use it to check real before/after impact of any `FLASHMEM` migration rather than estimating from line counts.
 
 ### Full-audit-list FLASHMEM experiment (2026-08-12) — applied, measured, then reverted
 

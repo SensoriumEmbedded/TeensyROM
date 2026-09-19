@@ -14,7 +14,7 @@ tracking doc.
   of relying on auto-detection.
 - **Hardware:** TR+ (Fab04/full-DMA-capable), real C128 (NTSC — confirmed via the `td`
   default-restore message each run).
-- **Tool:** `Source/Teensy/tools/dma_scope_write.py`, single-byte DMA write/readback
+- **Tool:** `tools/dma_scope_write.py`, single-byte DMA write/readback
   loop, alternating `$00`/`$FF`.
 - **`--te` mapping used throughout:** `te430` = stock/unfixed shared NTSC
   `nS_DMASetup` (`tw`=410, `ty`=390 by the script's formula — NOT the dedicated

@@ -66,8 +66,8 @@ code. Full setup and tool-version details: [Source/BuildInfo.md](Source/BuildInf
   against a native `g++`; `mpe/tools/verify.mjs` shows the exact compile/run invocation for
   each if you need to reproduce one locally.
 - If you changed firmware that affects RAM footprint, rebuild and check the link report
-  against the budgets in `Constraints.md` (`Source/Teensy/tools/Build-DualBoot.ps1
-  -Fab04_Features -SkipMinimalBuild -SkipCombine` prints it).
+  against the budgets in `Constraints.md` (`npm run build:tr-plus -- --skip-minimal-build
+  --skip-combine` prints it).
 - There's no hosted CI — tests are run locally before a PR is opened.
 
 There's no expectation that every contributor has physical TR/TR+ hardware to test
