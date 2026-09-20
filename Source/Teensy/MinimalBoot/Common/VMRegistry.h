@@ -10,7 +10,7 @@ static FLASHMEM bool component(const char *s) {
     return true;
 }
 static FLASHMEM bool absolute(const char *s,size_t cap){
-    if(s[0]!='/'||!memchr(s,0,cap)||strstr(s,"..")||strchr(s,'\\'))return false;
+    if(!s||s[0]!='/'||!memchr(s,0,cap)||strstr(s,"..")||strchr(s,'\\'))return false;
     return true;
 }
 // A bounded comma-separated extension list uses the existing manifest field;
@@ -36,9 +36,6 @@ static FLASHMEM bool readManifest(const char *root,Manifest &m){
     if(count!=6||*p||strcmp(line[0],"VM1")||strcmp(line[5],"END"))return false;
     if(!component(line[1])||!validExtensions(line[2])||!component(line[3])||!component(line[4])||
        strlen(line[1])>=sizeof m.id||strlen(line[2])>=sizeof m.extension||strlen(line[3])>=sizeof m.module||strlen(line[4])>=sizeof m.client)return false;
-    static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
-    if(strchr(line[2],'.'))return false;
-    for(const auto &ext:protectedExtensions)if(!strcasecmp(ext,line[2]))return false;
     const char *id=strrchr(root,'/');if(!id||strcmp(id+1,line[1]))return false;
     memset(&m,0,sizeof m);strcpy(m.id,line[1]);strcpy(m.extension,line[2]);strcpy(m.module,line[3]);strcpy(m.client,line[4]);
     m.crc=vm_crc32(&m,offsetof(Manifest,crc));return true;

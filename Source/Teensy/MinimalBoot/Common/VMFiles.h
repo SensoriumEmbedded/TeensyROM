@@ -7,7 +7,7 @@ static bool fileInfo(FsFile &f,VmFileInfo *out){
     if(f.fileSize()>UINT32_MAX)return false;memset(out,0,sizeof *out);out->bytes=f.fileSize();out->directory=f.isDirectory();
     out->attributes=(f.isReadOnly()?1:0)|(f.isHidden()?2:0)|(f.isDirectory()?16:32);
     f.getModifyDateTime(&out->date,&out->time);
-    auto n=f.getName(out->name,sizeof out->name);return n<sizeof out->name-1;
+    auto n=f.getName(out->name,sizeof out->name);return n&&n<sizeof out->name-1;  //SdFat returns 0 when it could not read the name
 }
 static uint32_t openFlags(const char *path,uint32_t flags,VmFileInfo *info){
     if(!VmRegistry::absolute(path,384))return 0;
@@ -33,7 +33,8 @@ static int32_t writeFile(uint32_t h,uint32_t offset,const void *p,uint32_t n){
     return files[h-1].write(p,n);
 }
 static int32_t fileOp(VmFsRequest *r){
-    if(!r)return -1;FsFile *f=r->handle&&r->handle<=24?&files[r->handle-1]:nullptr;
+    if(!r||(uint32_t)r->operation>(uint32_t)VmFsOp::Space)return -1;
+    FsFile *f=r->handle&&r->handle<=24?&files[r->handle-1]:nullptr;
     if((uint32_t)r->operation<=(uint32_t)VmFsOp::Close){
         if(!f||!*f)return -1;bool ok=false;
         switch(r->operation){

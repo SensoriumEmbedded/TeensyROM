@@ -12,7 +12,7 @@ namespace fs=std::filesystem;
 #define FLASHMEM
 enum { O_RDONLY=1,O_WRONLY=2,O_RDWR=3,O_CREAT=4,O_EXCL=8,O_TRUNC=16,T_WRITE=1,
  rmtSD=1,eepAdCrtBootName=100,eepAdMinBootInd=2,MinBootInd_ExecuteMin=1 };
-static fs::path base;static bool failWrite,failFlush,strictFatSeeks;
+static fs::path base;static bool failWrite,failFlush;
 struct FsFile {
  fs::path path;std::shared_ptr<std::fstream> file;std::vector<fs::path> entries;
  size_t index=0;bool valid=false,dir=false;int flags=0;
@@ -23,7 +23,7 @@ struct FsFile {
  int read(void *p,unsigned n){if(!file||!(flags&1))return -1;file->read((char *)p,n);return file->gcount();}
  unsigned write(const void *p,unsigned n){if(!file||!(flags&2)||failWrite)return 0;file->write((const char *)p,n);file->flush();return *file?n:0;}
  bool sync(){if(failFlush||!file)return false;file->clear();file->flush();return !!*file;}
- bool seekSet(uint32_t off){if(!file||(strictFatSeeks&&off>fileSize()))return false;file->clear();file->seekg(off);if(flags&2)file->seekp(off);return !!*file;}
+ bool seekSet(uint32_t off){if(!file||off>fileSize())return false;file->clear();file->seekg(off);if(flags&2)file->seekp(off);return !!*file;}  //FatFile::seekSet refuses a seek past EOF
  bool getError()const{return file&&file->bad();}
  bool close(){bool ok=true;if(file&&file->is_open()){file->close();ok=!file->bad();}valid=false;return ok;}
  bool getModifyDateTime(uint16_t *d,uint16_t *t){*d=33;*t=0;return valid;}
