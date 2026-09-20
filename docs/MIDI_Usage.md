@@ -44,7 +44,8 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
       * No need to activate/purchase unless you otherwise desire
     * In Cakewalk, press "p" or select Edit/Preferences to enter the preferences window
       * Select MIDI/Devices
-        * Check TeensyROM under the "Outputs" section, and click OK
+        * Check your TeensyROM under the "Outputs" section, and click OK
+          * Shown as "TeensyROM-xxxxxxxx" with the unique ID of its Teensy, so more than one TeensyROM can be connected and each driven from its own track.
       * Select Project/MIDI
         * Uncheck "Zero Controllers when play stops" under Other Options
       * Click OK to close Preferences window
