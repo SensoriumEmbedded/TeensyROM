@@ -29,11 +29,14 @@ const id = option('--id');
 const extensions = option('--extensions');
 const sources = options('--source');
 const clientBinary = option('--client');
+const clientSource = option('--client-source');
 const outRoot = path.resolve(option('--out', path.join(root, 'build/extensions')));
 const keep = args.includes('--keep');
 if (!id || !extensions || !sources.length) {
-  throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...] [--client <file.bin>] [--out <dir>]');
+  throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...]\n' +
+                  '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]');
 }
+if (clientBinary && clientSource) throw new Error('Pass either --client or --client-source, not both');
 
 // --- Toolchain -------------------------------------------------------------
 // Explicit prefix, then PATH, then the Teensy core's own bundled ARM tools,
@@ -130,15 +133,26 @@ fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(path.join(directory, 'engine.mvm'), image);
 fs.writeFileSync(path.join(directory, 'manifest.vmi'), buildManifest({ id, extensions }));
 
-if (clientBinary) {
-  const client = fs.readFileSync(path.resolve(root, clientBinary));
+// The client cartridge is 6502, so it needs ACME rather than the ARM toolchain.
+// Assembling it here keeps the whole package reproducible from sources.
+function assembleClient(source) {
+  const absolute = path.resolve(root, source);
+  const binary = path.join(work, id + '-client.bin');
+  const probe = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['acme'], { encoding: 'utf8' });
+  if (probe.status !== 0) throw new Error('--client-source needs the ACME assembler on PATH');
+  run('acme', ['--outfile', binary, '-f', 'plain', absolute], `assembling ${source}`);
+  return fs.readFileSync(binary);
+}
+
+if (clientBinary || clientSource) {
+  const client = clientSource ? assembleClient(clientSource) : fs.readFileSync(path.resolve(root, clientBinary));
   if (client.length > 16384) throw new Error(`Client binary is ${client.length} bytes; the cartridge holds 16384`);
   const cartridge = buildClientCrt({ id, bank0: client.subarray(0, 8192), bank1: client.subarray(8192) });
   fs.writeFileSync(path.join(directory, 'client.crt'), cartridge);
   // A copy at the card root is how a user launches the package directly.
   fs.writeFileSync(path.join(outRoot, id + '.crt'), cartridge);
 } else {
-  console.log('No --client given: the package has no cartridge and will not pass preflight.');
+  console.log('No client given: the package has no cartridge and will not pass preflight.');
 }
 
 if (keep) console.log(`Build tree kept in ${work}`);

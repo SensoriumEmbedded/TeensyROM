@@ -21,6 +21,12 @@
 #define NumDecodeBanks   64
 uint8_t *BankDecode[NumDecodeBanks][2];
 uint8_t EZFlashRAM[256];
+#ifdef FeatVMHost
+// Defined by the extension image only. Stock builds compile none of this.
+uint8_t CurrentEasyFlashBank;
+bool VMHostIO2(uint8_t, bool);
+void VMHostPoll();
+#endif
 
 #ifdef MinimumBuild
    struct stcSwapBuffers
@@ -172,6 +178,9 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
       {
          case 0x00:   // Register $DE00 – EasyFlash Bank (write-only)
             Data &= 0x3f;
+#ifdef FeatVMHost
+            CurrentEasyFlashBank = Data;
+#endif
             
 #ifdef MinimumBuild
             //check if swapped bank is being selected, check for same or initiate swap
@@ -199,6 +208,11 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 
 void IO2Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 {
+#ifdef FeatVMHost
+   // Claimed only while a module is running and the client has selected the
+   // agreed bank; otherwise this is an ordinary EasyFlash register window.
+   if (VMHostIO2(Address, R_Wn)) return;
+#endif
    if (R_Wn) //IO2 Read  -------------------------------------------------
    {
       DataPortWriteWaitLog(EZFlashRAM[Address]);
@@ -213,7 +227,10 @@ void IO2Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_EasyFlash()
 {
-#ifdef MinimumBuild   
+#ifdef FeatVMHost
+   VMHostPoll();
+#endif
+#ifdef MinimumBuild
    if (DMA_State == DMA_S_ActiveReady) 
    {
       //DMA asserted, paused for bank swap from SD
