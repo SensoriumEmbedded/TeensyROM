@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: MIT
+//
+// Compiles and runs the extension-loader conformance suite on the host. No
+// Teensy, no ARM toolchain and no SD card: every test here compiles the real
+// firmware headers and the real module source against packages written by the
+// real packager, so the JavaScript writer and the C++ reader are checked
+// against each other rather than each against itself.
+//
+// Hardware acceptance is a separate step and is not implied by a pass here.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { registryFixture } from './lib/fixtures.mjs';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const args = process.argv.slice(2);
+const option = (name, fallback) => { const i = args.indexOf(name); return i < 0 ? fallback : args[i + 1]; };
+const compiler = option('--cxx', process.env.CXX ?? 'g++');
+const output = fs.mkdtempSync(path.join(os.tmpdir(), 'vm-verify-'));
+const keep = args.includes('--keep');
+
+function run(exe, argv, label) {
+  const result = spawnSync(exe, argv, { cwd: root, encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
+  if (result.error || result.status) {
+    process.stderr.write(`${result.stdout ?? ''}${result.stderr ?? ''}`);
+    throw new Error(`${label} failed (${result.error ?? 'exit ' + result.status})`);
+  }
+  return (result.stdout ?? '') + (result.stderr ?? '');
+}
+
+function native(name, argv = []) {
+  const exe = path.join(output, name + (process.platform === 'win32' ? '.exe' : ''));
+  run(compiler, ['-std=c++17', '-O2', '-Wall', '-Wextra',
+    ...(process.platform === 'win32' ? ['-static'] : []),
+    '-I', root, path.join(root, 'vm/tests', name + '.cpp'), '-o', exe], `compiling ${name}`);
+  process.stdout.write(run(exe, argv, name));
+}
+
+const sandbox = (prefix) => fs.mkdtempSync(path.join(output, prefix));
+
+process.stdout.write(run(process.execPath, ['--test', 'tools/lib/extension.test.mjs'], 'package format unit tests'));
+
+// One fixture tree, written by the packager, read by every C++ test below.
+const fixture = registryFixture(sandbox('fixture-'));
+fs.mkdirSync(path.join(fixture, 'VMS/HELLO/DATA'), { recursive: true });
+fs.writeFileSync(path.join(fixture, 'VMS/HELLO/DATA/Sample.hi'), 'content');
+
+native('files_test', [sandbox('files-sandbox-')]);
+native('image_test', [path.join(fixture, 'VMS/HELLO/engine.mvm')]);
+native('registry_test', [fixture, sandbox('registry-sandbox-')]);
+native('launch_test', [fixture, sandbox('launch-sandbox-')]);
+native('hello_module_test', [sandbox('hello-sandbox-')]);
+
+if (keep) console.log(`Artifacts kept in ${output}`);
+else fs.rmSync(output, { recursive: true, force: true });
+console.log('PASS: extension loader conformance (package format, file services, image validation, registry, launch routing, reference module)');

@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: MIT
+// The real VMRegistry against real packages written by tools/lib/extension.mjs:
+// manifest parsing, extension routing, preflight (which re-validates the module
+// image AND the client cartridge's descriptor and bank CRCs), and the one-shot
+// launch record.
+#include "fake_sd.h"
+#include "../../Source/Teensy/MinimalBoot/Common/VMRegistry.h"
+
+static void put(const fs::path &p,const std::string &s){fs::create_directories(p.parent_path());std::ofstream(p,std::ios::binary)<<s;}
+
+int main(int argc,char **argv){
+    assert(argc==3);base=argv[2];
+    assert(base.string().find("registry-sandbox")!=std::string::npos);
+    fs::create_directories(base);
+    fs::copy(fs::path(argv[1]),base,fs::copy_options::recursive|fs::copy_options::overwrite_existing);
+    using namespace VmRegistry;
+
+    Launch launch{};
+    assert(find("hi",nullptr,launch)==1);
+    assert(!strcmp(launch.root,"/VMS/HELLO"));
+    // preflight re-reads the module image and the client cartridge end to end.
+    assert(preflight(launch));
+
+    // Comma lists are ordinary manifest data, not a per-package firmware case.
+    assert(validExtensions("gb,gbc")&&extensionMatches("gb,gbc","GB")&&extensionMatches("gb,gbc","GBC"));
+    assert(!extensionMatches("gb,gbc","g")&&!validExtensions("gb,crt")&&!validExtensions("gb,")&&!validExtensions(",gb"));
+
+    Manifest manifest{};
+    assert(readManifest(launch.root,manifest)&&!strcmp(manifest.id,"HELLO"));
+    refresh(true);assert(associated("Demo.HI")&&associated("Demo.hi"));
+    assert(!associated("Demo.hi.exe")&&!associated("Demo.prg"));
+    refresh(false);assert(!associated("Demo.HI"));
+
+    // Path traversal is refused at the component level, before any SD access.
+    assert(!absolute("/VMS/../secret",80));assert(!component("../HELLO"));assert(!component("HELLO/VM"));
+
+    // Launch by client cartridge: no content file, package identified by descriptor.
+    assert(tryLaunch(rmtSD,"/","HELLO.crt"));
+    assert(rebooted&&marker=="@VM1");
+    Launch saved{};assert(consume(saved)&&!saved.content[0]&&!strcmp(saved.root,"/VMS/HELLO"));
+
+    // Launch by associated content file: the selected path rides along.
+    rebooted=false;
+    assert(tryLaunch(rmtSD,"/VMS/HELLO/DATA","Sample.hi"));
+    assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
+
+    // Two packages claiming one extension is ambiguous, and ambiguity refuses.
+    put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\nhi\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("hi",nullptr,launch)==-1);
+    put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("hi",nullptr,launch)==1);
+    put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\n../bad\nclient.crt\nEND\n");
+    assert(!readManifest("/VMS/OTHER",manifest));
+
+    // A corrupt module fails preflight, and a failed preflight does not reboot.
+    auto module=base/"VMS/HELLO/engine.mvm";
+    std::fstream damage(module,std::ios::binary|std::ios::in|std::ios::out);
+    damage.seekg(64);const int byte=damage.get();damage.seekp(64);damage.put(byte^1);damage.close();
+    assert(!preflight(launch));
+    rebooted=false;message.clear();
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted&&!message.empty());
+
+    // A corrupt client cartridge is caught the same way, by its own CRC.
+    fs::copy_file(fs::path(argv[1])/"VMS/HELLO/engine.mvm",module,fs::copy_options::overwrite_existing);
+    assert(preflight(launch));
+    auto client=base/"VMS/HELLO/client.crt";
+    std::fstream bank(client,std::ios::binary|std::ios::in|std::ios::out);
+    bank.seekg(80);const int first=bank.get();bank.seekp(80);bank.put(first^1);bank.close();
+    assert(!preflight(launch));
+
+    puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
+         "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client");
+}

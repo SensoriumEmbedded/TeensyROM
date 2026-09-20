@@ -10,6 +10,7 @@
     "build:tr": "node tools/build-firmware.mjs --target tr",
     "build:tr-plus": "node tools/build-firmware.mjs --target tr-plus",
     "build:c64": "node tools/build-c64.mjs",
-    "test": "node --test \"Source/Teensy/tests/**/*.test.js\" \"tools/**/*.test.mjs\""
+    "test": "node --test \"Source/Teensy/tests/**/*.test.js\" \"tools/**/*.test.mjs\"",
+    "verify:extensions": "node tools/verify-extensions.mjs"
   }
 }
