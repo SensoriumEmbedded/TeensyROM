@@ -51,6 +51,7 @@ native('files_test', [sandbox('files-sandbox-')]);
 native('image_test', [path.join(fixture, 'VMS/HELLO/engine.mvm')]);
 native('registry_test', [fixture, sandbox('registry-sandbox-')]);
 native('launch_test', [fixture, sandbox('launch-sandbox-')]);
+native('scheduler_test');
 native('hello_module_test', [sandbox('hello-sandbox-')]);
 
 if (keep) console.log(`Artifacts kept in ${output}`);
