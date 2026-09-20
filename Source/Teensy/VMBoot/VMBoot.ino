@@ -43,6 +43,9 @@ Stream *CmdChannel  = &Serial;
 #endif
 
 #include "Common/ISRs.c"
+// The extension host. Only this image compiles it; the ordinary minimal and
+// main images never see it.
+#include "VMHost.h"
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 
@@ -140,24 +143,23 @@ void setup()
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
-
-#ifdef VM_EXTENSIONS_ENABLED
-   char vmMarker[5]{};
-   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
-   if (!strcmp(vmMarker, "@VM1")) {
-      // Consume the request before entering the other image. Reset, load
-      // failure and the menu button all return to the menu without autolaunch.
-      EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
-      delay(10);
-      runVMApp();
-      runMainTRApp_FromMin(); // Missing/invalid extension image: recover to stock menu.
-      return;
-   }
-#endif
    
    //we have a crt to load in minimal mode, proceed....
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
+
+   // The launcher leaves this marker in place of a file path when the selection
+   // was an extension rather than a cartridge. Only this image acts on it, and
+   // only this image reserves the module's ITCM and DTCM windows at link time,
+   // which is why the extension cannot simply run in the ordinary minimal image.
+   char vmMarker[5]{};
+   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
+   if (!strcmp(vmMarker, "@VM1"))
+   {
+      if (!VMHostBoot()) { RebootTR(); }
+      BtnPressed = false;
+      return;
+   }
 
 #ifdef FeatTCPListen
    if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
@@ -213,6 +215,9 @@ void loop()
 {
    if (BtnPressed)
    {
+      // A running extension owns the machine. Hand the button back to the menu
+      // by resetting, rather than returning to the main app underneath it.
+      if (VmRuntime::active) { RebootTR(); }
       //Serial.print("Button detected (minimal)\n");
 #ifdef Dbg_TestMin
       RebootTR();  //button does a restart in test min mode
@@ -242,7 +247,7 @@ void loop()
 #endif
    }
   
-   if (Serial.available()) ServiceSerial(&Serial);
+   if (!VmRuntime::active && Serial.available()) ServiceSerial(&Serial);
    
 #ifdef FeatTCPListen
    if (TCPListen)

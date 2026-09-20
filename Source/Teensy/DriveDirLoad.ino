@@ -18,10 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+#ifdef VM_EXTENSIONS_ENABLED
+#include "MinimalBoot/Common/VMLaunch.h"
+#endif
+
 FLASHMEM void HandleExecution()
 {
    StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
    IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
+
+#ifdef VM_EXTENSIONS_ENABLED
+   // Existing browser and item types are unchanged. Intercept only physical SD
+   // files, before the unknown-file fallback and the ordinary cartridge parser.
+   // Anything that is not an extension package falls straight through.
+   if (IO1[rWRegCurrMenuWAIT] == rmtSD && MenuSelCpy.ItemType != rtDirectory &&
+       DriveDirPath[0] && DriveDirPath[strlen(DriveDirPath)-1] != '*' &&
+       VmLaunch::tryFile(rmtSD, DriveDirPath, MenuSelCpy.Name)) return;
+#endif
    
    if (MenuSelCpy.ItemType == rtNone) //should no longer reach here
    {

@@ -8,6 +8,20 @@
 
 typedef  void (*pFunction)(void);
 
+#ifdef VM_EXTENSIONS_ENABLED
+#include "Common/VMBootImage.h"
+FLASHMEM void runVMApp()
+{
+   if (!VmBootImage::installed()) return;
+   const uint32_t entry = *((const volatile uint32_t*)(VmBootImage::base + 0x1004u));
+   // Same core-startup handoff used for the upper stock image. The target
+   // ResetHandler installs its own FlexRAM map, stack, vectors and MPU.
+   disableCache();
+   ((pFunction)entry)();
+   REBOOT;
+}
+#endif
+
 FLASHMEM void runMainTRApp_FromMin()
 {  //flag as "FromMin" to indicate skip of autolaunch (if enabled)
    EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);

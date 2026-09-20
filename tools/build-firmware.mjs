@@ -40,6 +40,11 @@ import { fileURLToPath } from 'node:url';
 import { resolveArduinoCli, defaultArduinoDataDir, defaultArduinoUserDir } from './lib/toolchain.mjs';
 import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mjs';
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
+import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
+import {
+  minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
+  patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget,
+} from './lib/extension-image.mjs';
 
 const TEENSY_CORE_VERSION = '1.61.0';
 
@@ -66,6 +71,10 @@ const force = flag('--force');
 const skipTeensyBuild = flag('--skip-teensy-build');
 const skipMinimalBuild = flag('--skip-minimal-build');
 const skipCombine = flag('--skip-combine');
+// Off by default: without it this builds exactly the two images it always has,
+// from the same linker scripts, and nothing below runs.
+const withExtensions = flag('--with-extensions');
+const skipExtensionBuild = flag('--skip-extension-build');
 const useCcache = flag('--ccache');
 if (useCcache && process.platform === 'win32') {
   throw new Error('--ccache is not supported on Windows');
@@ -208,21 +217,32 @@ if (useCcache) {
   console.log(`ccache enabled via ${shimBin}`);
 }
 
-function copyLinkerFiles(suffix) {
-  fs.copyFileSync(path.join(linkers, `bootdata.c.${suffix}`), path.join(privateCore, 'bootdata.c'));
-  fs.copyFileSync(path.join(linkers, `imxrt1062_t41.ld.${suffix}`), path.join(privateCore, 'imxrt1062_t41.ld'));
+// `suffix` picks a stock BootLinkerFiles pair; `ld`/`bootdata` override it with
+// generated text, which is how the extension image gets its own flash slot.
+function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
+  fs.writeFileSync(path.join(privateCore, 'bootdata.c'),
+    bootdata ?? read(path.join(linkers, `bootdata.c.${suffix}`)));
+  fs.writeFileSync(path.join(privateCore, 'imxrt1062_t41.ld'),
+    ld ?? read(path.join(linkers, `imxrt1062_t41.ld.${suffix}`)));
 }
 
-function build(name, { inoPath, fqbn, suffix, elfStem }) {
+function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '' }) {
   console.log(`\n[${name}] Building`);
-  copyLinkerFiles(suffix);
+  writeLinkerFiles(suffix, { ld, bootdata });
   const buildDir = path.join(runRoot, name);
   const props = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--show-properties', inoPath], env);
   const defsMatch = props.match(/^build\.flags\.defs=(.*)$/m);
   if (!defsMatch) throw new Error('Could not retrieve build.flags.defs from --show-properties');
-  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '');
+  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '') + extraDefs;
 
-  const log = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--build-property', `build.flags.defs=${defs}`, inoPath], env);
+  const compileArgs = ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps,
+    '--build-property', `build.flags.defs=${defs}`];
+  // The extension image needs USB fully off, which is not one of the core's
+  // `usb=` FQBN menu choices. The FQBN still says usb=serial; this wins.
+  if (usbType) compileArgs.push('--build-property', `build.usbtype=${usbType}`);
+  compileArgs.push(inoPath);
+
+  const log = run(cli, compileArgs, env);
   write(path.join(runRoot, `${name}.log`), log);
   console.log(log.split(/\r?\n/).filter((l) => /Memory Usage|RAM1:|RAM2:|FLASH:/.test(l)).join('\n'));
 
@@ -242,7 +262,13 @@ function build(name, { inoPath, fqbn, suffix, elfStem }) {
   return { name, elf, hex };
 }
 
-let minimalImage = null, teensyImage = null;
+let minimalImage = null, teensyImage = null, extensionImage = null;
+
+if (withExtensions) {
+  const budget = flashBudget();
+  console.log(`\nReserving ${budget.extensionKB}K at 0x${VM_BASE.toString(16)} for the extension image.` +
+    ` minimal ${budget.stockMinimalKB}K -> ${budget.minimalKB}K, main ${budget.stockMainKB}K -> ${budget.mainKB}K.`);
+}
 
 if (!skipMinimalBuild) {
   minimalImage = build('minimal', {
@@ -250,6 +276,8 @@ if (!skipMinimalBuild) {
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
     suffix: 'orig',
     elfStem: 'MinimalBoot',
+    ld: withExtensions ? minimalLinkerScript(linkers) : undefined,
+    extraDefs: withExtensions ? VM_EXTENSIONS_DEFINE : '',
   });
 }
 
@@ -259,7 +287,40 @@ if (!skipTeensyBuild) {
     fqbn: 'teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us',
     suffix: 'upper',
     elfStem: 'Teensy',
+    ld: withExtensions ? mainLinkerScript(linkers) : undefined,
+    extraDefs: withExtensions ? VM_EXTENSIONS_DEFINE : '',
   });
+}
+
+if (withExtensions && !skipExtensionBuild) {
+  // Arduino compiles a sketch directory as a unit, so the extension image is
+  // assembled from the minimal sketch with its own top-level .ino and build
+  // profile swapped in. A plain file copy: nothing is generated or rewritten,
+  // and both replacements are ordinary committed files.
+  const sketch = path.join(runRoot, 'VMBoot');
+  fs.cpSync(path.join(root, 'Source/Teensy/MinimalBoot'), sketch, { recursive: true });
+  fs.rmSync(path.join(sketch, 'MinimalBoot.ino'));
+  for (const file of ['VMBoot.ino', 'Min_TeensyROM.h']) {
+    fs.copyFileSync(path.join(root, 'Source/Teensy/VMBoot', file), path.join(sketch, file));
+  }
+  // Only this image builds with USB compiled out, so only its private core copy
+  // needs the two unguarded-USB fixes. Never applied to the installed core.
+  for (const [file, patch] of [['yield.cpp', patchYieldForUsbDisabled], ['startup.c', patchStartupForUsbDisabled]]) {
+    const target = path.join(privateCore, file);
+    write(target, patch(read(target)));
+  }
+
+  extensionImage = build('extension', {
+    inoPath: path.join(sketch, 'VMBoot.ino'),
+    fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
+    elfStem: 'VMBoot',
+    ld: extensionLinkerScript(linkers),
+    bootdata: extensionBootdata(linkers),
+    usbType: 'USB_DISABLED',
+    extraDefs: ' -DVM_HOST_PROFILE',
+  });
+} else if (withExtensions) {
+  console.log('\n[extension] Skipped (--skip-extension-build)');
 }
 
 // The private copy is the only thing the linker-file swap touched. Confirm the fix holds.
@@ -271,8 +332,26 @@ console.log('\nInstalled Teensy core unchanged (bootdata.c, imxrt1062_t41.ld has
 
 if (!skipCombine) {
   if (!minimalImage || !teensyImage) throw new Error('Combining requires both images; pass --skip-combine yourself if that is intentional');
+  if (withExtensions && !extensionImage) throw new Error('Combining an extension build requires the extension image; pass --skip-combine yourself if that is intentional');
   console.log('\n[combine] Combining hex images');
-  const combined = legacyCombineHex(read(minimalImage.hex), read(teensyImage.hex));
+  let combined;
+  if (withExtensions) {
+    // combineHex refuses an overlap or an out-of-bounds byte outright, so a
+    // mis-sized image is caught here rather than by corrupting its neighbour.
+    const merged = combineHex([
+      { name: 'minimal', text: read(minimalImage.hex), start: FLASH_BASE, end: MAIN_BASE },
+      { name: 'main', text: read(teensyImage.hex), start: MAIN_BASE, end: VM_BASE },
+      { name: 'extension', text: read(extensionImage.hex), start: VM_BASE, end: VM_LIMIT },
+    ]);
+    for (const region of merged.regions) {
+      const used = region.usedEnd - region.start, capacity = region.end - region.start;
+      console.log(`  ${region.name.padEnd(9)} ${(used / 1024).toFixed(1)}K of ${(capacity / 1024).toFixed(0)}K` +
+        ` (${(100 * used / capacity).toFixed(1)}%)`);
+    }
+    combined = merged.hex;
+  } else {
+    combined = legacyCombineHex(read(minimalImage.hex), read(teensyImage.hex));
+  }
   write(finalOutput, combined);
   if (!fs.existsSync(finalOutput)) throw new Error(`Combined hex not created: ${finalOutput}`);
   const finalKB = (fs.statSync(finalOutput).size / 1024).toFixed(2);
