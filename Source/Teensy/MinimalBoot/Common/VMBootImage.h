@@ -2,9 +2,10 @@
 #pragma once
 #include <stdint.h>
 
-// base/limit must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs -- tools/verify.mjs
-// asserts this on every verification run. The ordinary images keep their
-// upstream addresses. Only the extension image uses the module-compatible RAM map.
+// base/limit must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs, which partitions
+// the combined hex -- tools/verify-extensions.mjs compares the two. The ordinary
+// images keep their upstream addresses. Only the extension image uses the
+// module-compatible RAM map.
 namespace VmBootImage {
 static constexpr uint32_t base = 0x60280000u;
 static constexpr uint32_t limit = 0x602e0000u;

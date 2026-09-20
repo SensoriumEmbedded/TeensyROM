@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { MAIN_BASE, VM_BASE, VM_LIMIT } from './hex.mjs';
+import { FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './hex.mjs';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 
@@ -29,23 +29,29 @@ function replaceOnce(source, before, after) {
 // Not the host itself -- that is FeatVMHost, third image only.
 export const VM_EXTENSIONS_DEFINE = ' -DVM_EXTENSIONS_ENABLED';
 
+// The stock lengths are the anchors the replacements below match on, so they
+// live here rather than being written out twice.
+const STOCK_MINIMAL_KB = 7936, STOCK_MAIN_KB = 7552;
+const kilobytes = (bytes) => bytes / 1024;
+
 export function flashBudget() {
   return {
-    minimalKB: 384,
-    mainKB: (VM_BASE - MAIN_BASE) / 1024,
-    extensionKB: (VM_LIMIT - VM_BASE) / 1024,
-    stockMinimalKB: 7936,
-    stockMainKB: 7552,
+    minimalKB: kilobytes(MAIN_BASE - FLASH_BASE),
+    mainKB: kilobytes(VM_BASE - MAIN_BASE),
+    extensionKB: kilobytes(VM_LIMIT - VM_BASE),
+    stockMinimalKB: STOCK_MINIMAL_KB,
+    stockMainKB: STOCK_MAIN_KB,
   };
 }
 
 export function minimalLinkerScript(linkers) {
-  return replaceOnce(read(path.join(linkers, 'imxrt1062_t41.ld.orig')), 'LENGTH = 7936K', 'LENGTH = 384K');
+  return replaceOnce(read(path.join(linkers, 'imxrt1062_t41.ld.orig')),
+    `LENGTH = ${STOCK_MINIMAL_KB}K`, `LENGTH = ${flashBudget().minimalKB}K`);
 }
 
 export function mainLinkerScript(linkers) {
-  return replaceOnce(read(path.join(linkers, 'imxrt1062_t41.ld.upper')), 'LENGTH = 7552K',
-    `LENGTH = ${(VM_BASE - MAIN_BASE) / 1024}K`);
+  return replaceOnce(read(path.join(linkers, 'imxrt1062_t41.ld.upper')),
+    `LENGTH = ${STOCK_MAIN_KB}K`, `LENGTH = ${flashBudget().mainKB}K`);
 }
 
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
@@ -53,8 +59,8 @@ export function mainLinkerScript(linkers) {
 // into a link error instead of a hang on hardware.
 export function extensionLinkerScript(linkers) {
   let ld = read(path.join(linkers, 'imxrt1062_t41.ld.orig'));
-  ld = replaceOnce(ld, 'ORIGIN = 0x60000000, LENGTH = 7936K',
-    `ORIGIN = 0x${VM_BASE.toString(16)}, LENGTH = ${(VM_LIMIT - VM_BASE) / 1024}K`);
+  ld = replaceOnce(ld, `ORIGIN = 0x${FLASH_BASE.toString(16)}, LENGTH = ${STOCK_MINIMAL_KB}K`,
+    `ORIGIN = 0x${VM_BASE.toString(16)}, LENGTH = ${flashBudget().extensionKB}K`);
   // Pin the host to six 32 KiB ITCM blocks, so the module window at 0x18000
   // cannot be pushed around by a change in host code size.
   ld = replaceOnce(ld, '_itcm_block_count = (SIZEOF(.text.itcm) + SIZEOF(.ARM.exidx) + 0x7FFF) >> 15;',
@@ -75,7 +81,8 @@ export function extensionLinkerScript(linkers) {
 }
 
 export function extensionBootdata(linkers) {
-  return replaceOnce(read(path.join(linkers, 'bootdata.c.orig')), '0x60000000,', `0x${VM_BASE.toString(16)},`);
+  return replaceOnce(read(path.join(linkers, 'bootdata.c.orig')),
+    `0x${FLASH_BASE.toString(16)},`, `0x${VM_BASE.toString(16)},`);
 }
 
 // Teensy 4.x has no supported "No USB" build: boards.txt has the menu entry

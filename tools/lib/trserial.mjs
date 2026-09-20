@@ -9,10 +9,12 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { defaultArduinoDataDir } from './toolchain.mjs';
+
 // The Teensyduino tool that knows which USB devices are Teensys. Optional: we
 // fall back to scanning /dev when it is not installed.
 function teensyPortsTool() {
-  const base = path.join(process.env.HOME ?? '', 'Library/Arduino15/packages/teensy/tools/teensy-tools');
+  const base = path.join(defaultArduinoDataDir(), 'packages/teensy/tools/teensy-tools');
   if (!fs.existsSync(base)) return null;
   for (const version of fs.readdirSync(base).sort().reverse()) {
     const tool = path.join(base, version, 'teensy_ports');
@@ -34,8 +36,9 @@ export function findBoard() {
       if (match) return { port: match[1], bootloader: false };
     }
   }
+  // macOS names the CDC device cu.usbmodem*; Linux names it ttyACM*.
   const devices = fs.existsSync('/dev')
-    ? fs.readdirSync('/dev').filter((name) => name.startsWith('cu.usbmodem')).sort()
+    ? fs.readdirSync('/dev').filter((name) => name.startsWith('cu.usbmodem') || name.startsWith('ttyACM')).sort()
     : [];
   return devices.length ? { port: `/dev/${devices[0]}`, bootloader: false } : null;
 }

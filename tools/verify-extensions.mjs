@@ -13,6 +13,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { registryFixture } from './lib/fixtures.mjs';
+import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -42,6 +43,24 @@ function native(name, argv = []) {
 }
 
 const sandbox = (prefix) => fs.mkdtempSync(path.join(output, prefix));
+
+// The flash slot the extension image is linked into is written down twice: here,
+// where the hex is partitioned, and in VMBootImage.h, where the minimal image
+// decides whether that slot holds an image it may jump to. Neither side can see
+// the other, so compare them.
+function checkBootSlot() {
+  const header = fs.readFileSync(path.join(root, 'Source/Teensy/MinimalBoot/Common/VMBootImage.h'), 'utf8');
+  for (const [name, expected] of [['base', VM_BASE], ['limit', VM_LIMIT]]) {
+    const match = header.match(new RegExp(`uint32_t ${name} = (0x[0-9a-fA-F]+)u?;`));
+    if (!match) throw new Error(`VMBootImage.h no longer declares ${name}`);
+    if (parseInt(match[1], 16) !== expected) {
+      throw new Error(`VmBootImage::${name} is ${match[1]}, but hex.mjs partitions the extension slot at 0x${expected.toString(16)}`);
+    }
+  }
+  console.log('PASS: VmBootImage::base/limit match the extension flash partition in tools/lib/hex.mjs');
+}
+
+checkBootSlot();
 
 process.stdout.write(run(process.execPath, ['--test', 'tools/lib/extension.test.mjs'], 'package format unit tests'));
 
