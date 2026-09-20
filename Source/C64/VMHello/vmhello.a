@@ -46,8 +46,6 @@ token      = $C106
 ptr        = $FB
 cptr       = $FD
 
-!to "vmhello.bin", plain
-
 ; ---------------------------------------------------------------- ROML $8000
 * = $8000
         !word coldstart
