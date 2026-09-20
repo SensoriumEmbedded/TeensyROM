@@ -24,19 +24,7 @@ static VmInput lastInput;
 static bool offer;
 static VmPacket offered;
 static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZFlashRAM[0xf5] = 0xe0; }
-static uint16_t crc16(const uint8_t *p, unsigned n) {
-    uint16_t c = 0xffff;
-    while (n--) { c ^= uint16_t(*p++) << 8; for (unsigned b = 0; b < 8; b++) c = (c << 1) ^ ((c & 0x8000) ? 0x1021 : 0); }
-    return c;
-}
-static unsigned encodePacket(uint8_t *bytes) {
-    bytes[0] = 'M'; bytes[1] = '3'; bytes[2] = 1; bytes[3] = packet.type; bytes[4] = sequence;
-    bytes[5] = packet.flags; bytes[6] = packet.length; bytes[7] = 0;
-    memcpy(bytes + 8, packet.payload, packet.length);
-    const auto crc = crc16(bytes, 8 + packet.length);
-    bytes[8 + packet.length] = crc; bytes[9 + packet.length] = crc >> 8;
-    return 10u + packet.length;
-}
+#include "../../Source/Teensy/MinimalBoot/VMHostWire.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostYield.h"
 }
 #include "../../Source/Teensy/MinimalBoot/VMHostPoll.h"
@@ -67,9 +55,13 @@ int main() {
     VMHostPoll();
     assert(started && EZFlashRAM[0xf5] == 2 && pending && sequence == 1 && offers == 1);
 
-    // The published frame is exactly what the client is told to expect.
-    uint8_t expected[240];
-    const unsigned size = encodePacket(expected);
+    // The published frame, pinned to literal bytes. Comparing against the
+    // encoder that produced it would assert nothing about the wire format.
+    // The trailer is CRC-16/CCITT-FALSE over the 34 header and payload bytes.
+    uint8_t expected[36] = { 'M', '3', 1, 2, 1, 0, 26, 0 };
+    for (unsigned i = 0; i < 26; i++) expected[8 + i] = uint8_t(i * 7);
+    expected[34] = 0x61; expected[35] = 0x2e;
+    const unsigned size = sizeof expected;
     assert(!memcmp(EZFlashRAM, expected, size));
     assert(EZFlashRAM[0] == 'M' && EZFlashRAM[1] == '3' && EZFlashRAM[3] == 2 && EZFlashRAM[4] == 1);
     assert(EZFlashRAM[0xf7] == 1);
