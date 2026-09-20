@@ -138,7 +138,15 @@ void setup()
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    
-   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin || ReadButton==0) runMainTRApp(); //jump to main app if not booting a CRT
+   // NOT the stock indicator check. Minimal consumes the boot indicator before
+   // it jumps here -- it writes MinBootInd_FromMin first, so that a fault in
+   // this image cannot trap the cartridge in a relaunch loop -- which means the
+   // indicator never reads MinBootInd_ExecuteMin by the time this image sees
+   // it. Testing it the way MinimalBoot.ino does sent every extension launch
+   // straight back to the main app without ever reaching the host, which looks
+   // from the C64 exactly like a failed extension. The "@VM1" marker below is
+   // what says this image was entered on purpose.
+   if (ReadButton==0) runMainTRApp(); //button held: escape to the main menu
    
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
