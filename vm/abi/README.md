@@ -356,7 +356,9 @@ clear, no message. `Source/C64/VMHello/vmhello.a` is a working example.
 The extension image has no working USB, so it cannot explain itself. Instead it
 leaves a 32-byte record in the reserved top of RAM2 and resets; the main image
 collects it before anything can overwrite it and the menu prints it once the
-C64 is waiting to read messages. A successful hand-off is recorded too, as
+C64 is waiting to read messages. If three attempts go unread — the C64 is not in
+a wait loop and each one times out — the record is dropped and the reason is left
+on the Teensy's USB serial only. A successful hand-off is recorded too, as
 `$00`, so a client that then fails to draw is distinguishable from a host that
 never started.
 
@@ -437,7 +439,8 @@ it against that host to debug it, then cross-compile the identical source.
 
 `npm run verify:extensions` runs the whole loader suite this way in a few
 seconds: package format, file services, image validation, registry and
-preflight, menu-hook fall-through, and the reference module end to end.
+preflight, menu-hook fall-through, failure reporting, and the reference module
+end to end.
 
 A pass there says the formats and the contract hold. It says nothing about
 timing, the bus, or the C64 side — that needs the hardware.

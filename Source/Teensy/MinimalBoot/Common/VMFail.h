@@ -120,13 +120,26 @@ static FLASHMEM void printBoot() {
 }
 
 static inline bool pending() { return captureHeld; }
-// Cleared by the caller, and only once the C64 has actually read the message --
-// SendMsgSerialStringBuf gives up after three seconds if the menu is not in a
-// wait loop, and a reason dropped on the floor is the whole problem this
-// mechanism exists to solve.
+// Cleared by the caller once the C64 has read the message, and by report()
+// below when the attempts run out.
 static inline void clear() { captureHeld = false; }
 
+// An attempt the C64 does not read costs the menu SendMsgSerialStringBuf's
+// three-second wait, and pending() is still true afterwards, so the next poll
+// with queued work tries again. Bound the attempts here: SendMsgSerialStringBuf
+// carries every other message in the firmware and is not ours to change.
+static constexpr uint8_t reportAttemptLimit = 3;
+static uint8_t reportAttempts;
+
 static FLASHMEM void report() {
+    if (reportAttempts == reportAttemptLimit) {
+        Serial.printf("Extension boot: %s not read by the C64 in %u attempts, dropping it\n",
+                      describe((uint8_t)captured.code), (unsigned)reportAttemptLimit);
+        clear();
+        return;
+    }
+
+    ++reportAttempts;
     if (captured.detail) SendMsgPrintfln("Extension: %s ($%02x/$%lx)",
         describe((uint8_t)captured.code), (unsigned)captured.code, (unsigned long)captured.detail);
     else SendMsgPrintfln("Extension: %s ($%02x)",
