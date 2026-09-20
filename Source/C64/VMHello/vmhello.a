@@ -298,8 +298,15 @@ colourHi:
 
 ; ---------------------------------------------------------------- ROMH $E000
 ; The firmware starts the cartridge in Ultimax, where this bank answers at
-; $E000 and holds the reset vector. Switch to 16 KiB mode and hand back to the
-; KERNAL, which then finds the CBM80 header above.
+; $E000 and holds the reset vector. It has to switch to 16 KiB mode and hand
+; back to the KERNAL, which then finds the CBM80 header above.
+;
+; The switch cannot be followed by an instruction fetched from here: the moment
+; $DE02 latches, ROMH leaves $E000 and the KERNAL ROM appears in its place, so
+; the next opcode would come from the KERNAL's own $FF0A. (It lands in the RS-232
+; timer code and ends in an RTS with the stack just reset -- no screen clear, no
+; message, just whatever was there before.) RAM is mapped in both modes, so the
+; tail runs from there, the way EasyFlash's own startup code does.
 !pseudopc $E000 {
         !fill $FF00 - $E000, $FF
 ultimax:
@@ -307,9 +314,17 @@ ultimax:
         ldx #$FF
         txs
         cld
-        lda #$87                 ; LED on, 16 KiB mode: GAME and EXROM asserted
-        sta $DE02
-        jmp $FCE2                ; KERNAL reset, which finds the cartridge
+        ldx #7
+copyStub:
+        lda stub, x
+        sta $0100, x             ; below the stack, which starts at $01FF
+        dex
+        bpl copyStub
+        jmp $0100
+stub:
+        !byte $A9, $87           ; lda #$87   LED on, 16 KiB mode: GAME and EXROM asserted
+        !byte $8D, $02, $DE      ; sta $DE02
+        !byte $4C, $E2, $FC      ; jmp $FCE2  KERNAL reset, which finds the cartridge
         !fill $FFFA - *, $FF
         !word ultimax            ; NMI
         !word ultimax            ; RESET
