@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 //
 // A complete base-profile VmHost backed by the real filesystem, for running
-// extension modules on a development machine. It implements exactly what the
-// loader implements -- same handle limits, same validation, same refusals -- so
-// a module that passes here is exercising the contract, not a friendlier mock.
+// extension modules on a development machine. It matches the loader's handle
+// limits, path validation and refusals, so a module that passes here is
+// exercising the contract, not a friendlier mock. VmFsOp::Timestamp is the one
+// operation it does not carry out: it returns -1 rather than mapping the FAT
+// date and time onto a host filesystem.
 //
 // This is deliberately part of the published ABI directory's tooling: build
 // your module natively against this host to debug it, then cross-compile the
@@ -23,6 +25,7 @@ namespace fs = std::filesystem;
 
 struct Handle {
     bool open = false, directory = false;
+    fs::path path;
     std::fstream file;
     fs::directory_iterator iterator, end;
 };
@@ -71,6 +74,7 @@ inline uint32_t openFlags(const char *path, uint32_t flags, VmFileInfo *info) {
         handles[i] = Handle{};
         handles[i].open = true;
         handles[i].directory = directory;
+        handles[i].path = target;
         if (directory) {
             handles[i].iterator = fs::directory_iterator(target, error);
             if (error) { handles[i].open = false; return 0; }
@@ -137,6 +141,13 @@ inline int32_t fileOp(VmFsRequest *request) {
     switch (request->operation) {
     case VmFsOp::Flush: { Handle *h = resolve(request->handle); if (!h) return -1; h->file.flush(); return 0; }
     case VmFsOp::Close: closeFile(request->handle); return 0;
+    case VmFsOp::Truncate: {
+        Handle *h = resolve(request->handle);
+        if (!h || h->directory) return -1;
+        h->file.flush();
+        fs::resize_file(h->path, request->value, error);
+        return error ? -1 : 0;
+    }
     case VmFsOp::Mkdir: return acceptable(request->path) && fs::create_directories(request->path, error) ? 0 : -1;
     case VmFsOp::Rmdir:
     case VmFsOp::Remove: return acceptable(request->path) && fs::remove(request->path, error) ? 0 : -1;
