@@ -49,6 +49,17 @@ Stream *CmdChannel  = &Serial;
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
 
+// RebootTR() is a raw MCU reset, so it leaves the boot indicator at the
+// MinBootInd_SkipMin setup() wrote, which the main image reads as a cold power
+// up and answers by running its autolaunch checks. Leave MinBootInd_FromMin
+// behind instead, the way runMainTRApp_FromMin() does.
+FLASHMEM void RebootToMenu()
+{
+   EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
+   delay(10);  //let EEPROM write complete
+   RebootTR();
+}
+
 void setup() 
 {
    set_arm_clock(816000000);  //slight overclocking, no cooling required
@@ -164,7 +175,7 @@ void setup()
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
    if (!strcmp(vmMarker, "@VM1"))
    {
-      if (!VMHostBoot()) { RebootTR(); }
+      if (!VMHostBoot()) { RebootToMenu(); }
       BtnPressed = false;
       return;
    }
@@ -225,7 +236,7 @@ void loop()
    {
       // A running extension owns the machine. Hand the button back to the menu
       // by resetting, rather than returning to the main app underneath it.
-      if (VmRuntime::active) { RebootTR(); }
+      if (VmRuntime::active) { RebootToMenu(); }
       //Serial.print("Button detected (minimal)\n");
 #ifdef Dbg_TestMin
       RebootTR();  //button does a restart in test min mode
