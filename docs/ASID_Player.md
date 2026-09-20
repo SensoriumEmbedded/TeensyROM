@@ -21,6 +21,12 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 * Select "TeensyROM ASID Player", or press the number '4' for fast hotkey access.
 * Program starts ready to receive/play MIDI ASID data
 
+### Using more than one TeensyROM
+* Each TeensyROM shows up on the computer as its own MIDI device, named "TeensyROM-" followed by the unique ID of its Teensy (ie "TeensyROM-14470230"), so several can be connected at once and told apart.
+* Select the specific unit you want in each ASID source's MIDI port setting, per the source setup info below.
+* **ChipSynth C64 caveat:** multiple ChipSynth C64 plugin instances running inside the same DAW share a single ASID output, so they will all play the same TeensyROM regardless of the destination selected in each instance. This is a limitation of ChipSynth C64, not TeensyROM.
+    * To play more than one TeensyROM from ChipSynth C64, run the additional instance(s) as the standalone ChipSynth C64 application, outside of the DAW. Each standalone instance can select its own TeensyROM.
+
 ## TeensyROM ASID Player Usage/commands (FW 0.6.2 or higher)
 ### C64 Keyboard commands
 |Key|Function|Description|
@@ -85,13 +91,14 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
 * **DeepSID** to stream .sid files from the internet to your C64
     * In your computer/phone browser, navigate to https://deepsid.chordian.net/
     * Select "ASID (MIDI)" from the drop-down in the upper left corner
-    * Select "TeensyROM" from the "MIDI port for ASID" drop-down
+    * Select your "TeensyROM-xxxxxxxx" from the "MIDI port for ASID" drop-down
     * Set the Frame Timer as desired per above, or leave it off
     * Select your SID tune from the vast library and play it
     * The playback should be emanating from your C64/128!
 * **ChipSynth C64** to control your SID chip directly as a synthesizer
     * Go to https://www.plogue.com/products/chipsynth-c64.html and download/install/launch "chipsynth C64"
-    * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and "TeensyROM" as the destination
+    * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and your "TeensyROM-xxxxxxxx" as the destination
+    * Using more than one TeensyROM with ChipSynth C64? See [Using more than one TeensyROM](#using-more-than-one-teensyrom) above, extra instances need to run as the standalone application rather than inside the same DAW.
     * There are many things you can do with this great program, purchasing will unlock the 10 minute limit per use.
     * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
     * Be sure to leave the Frame timer **off** as ChipSynth does not send data in frames.
@@ -108,7 +115,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * Press F2 to play the song, then CTRL-P to enable "follow mode"
 * **ASID XP** to stream .sid files from your PC hard drive
     * Go to https://www.elektron.se/us/download-support-sidstation to download "ASID for Sidstation" and install/launch
-    * Click the "Conf" button and highlight "TeensyROM", click OK
+    * Click the "Conf" button and highlight your "TeensyROM-xxxxxxxx", click OK
     * Either Click "Load" or drag/drop a .sid file into the window.
     * Click "Play"
     * The playback should be emanating from your C64/128!
