@@ -4,7 +4,7 @@ Two independent toolchains, run in a fixed order. Canonical instructions (prefer
 
 ## Build order (matters)
 
-1. **C64 side first** — `Source/C64/BuildAllC64.bat` (or per-project `build*.bat`) assembles all 6502 sources and copies generated headers into `Source/Teensy/TRMenuFiles/ROMs/`.
+1. **C64 side first** — `npm run build:c64` (`tools/build-c64.mjs`, optionally `--project <name>`) assembles all 6502 sources and writes the generated headers into `Source/Teensy/TRMenuFiles/ROMs/`.
 2. **Teensy firmware second** — Arduino IDE / arduino-cli build, which embeds those headers as compiled-in byte arrays.
 
 Skipping step 1 after a C64-side change means the Teensy build silently uses stale menu/settings/utility code — there's no build-time check that the headers are current.
@@ -12,8 +12,8 @@ Skipping step 1 after a C64-side change means the Teensy build silently uses sta
 ## C64 side
 
 - Toolchain: ACME cross-assembler 0.97 (all sub-projects except `TRCustomBasicCommands`, which uses KickAssembler + Java JRE 1.8)
-- `bin2header.py` (Python 3 — Python 2 is explicitly rejected by the script) converts each `.prg`/`.bin` to a C header
-- Tool paths centralized in `Source/C64/SetToolPaths.bat`, edited per-machine
+- `tools/lib/bin2header.mjs` (a Node port of bin2header) converts each `.prg`/`.bin` to a C header; `node tools/bin2header.mjs` does the same for a single file
+- What gets built is the manifest `tools/c64-projects.json`; tools are found via `ACME` / `KICKASS_JAR` / `JAVA_HOME`, then `PATH`, then a pinned, checksummed download into `tools/.cache/` (ACME on Windows/macOS, KickAssembler everywhere; Java is never downloaded). Nothing is edited per machine.
 - See [C64-Software.md](C64-Software.md) for the sub-project list
 
 ## Teensy side

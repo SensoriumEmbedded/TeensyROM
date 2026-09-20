@@ -1,6 +1,6 @@
 ---
 name: add-menu-program
-description: Steps for adding a C64 program/binary to TeensyROM's built-in menu (converting a .prg/.crt/.bin into a PROGMEM header via bin2header.py, dropping it into Source/Teensy/TRMenuFiles/, and wiring it into MainMenuItems.h). Use this whenever the user wants to add a program, game, demo, cart, SID, or picture file to the TeensyROM menu, or asks to "add X to the menu" / "add a new ROM" for this project.
+description: Steps for adding a C64 program/binary to TeensyROM's built-in menu (converting a .prg/.crt/.bin into a PROGMEM header via tools/bin2header.mjs, dropping it into Source/Teensy/TRMenuFiles/, and wiring it into MainMenuItems.h). Use this whenever the user wants to add a program, game, demo, cart, SID, or picture file to the TeensyROM menu, or asks to "add X to the menu" / "add a new ROM" for this project.
 ---
 
 # Adding a program to TeensyROM's built-in menu
@@ -23,11 +23,11 @@ Ask for whatever isn't given:
 ## 1. Convert the binary to a header
 
 ```
-python "Source/C64/bin2header.py" -t "PROGMEM " "<path-to-file>"
+node tools/bin2header.mjs -t PROGMEM "<path-to-file>"
 ```
 
 This writes `<file>.h` next to the source (e.g. `MyProg.prg` → `MyProg.prg.h`) unless `-o`
-is given. The array name (`hname`) defaults to the filename with `.` replaced by `_` — this
+is given. The array name (`-n`) defaults to the filename with `.` replaced by `_` — this
 is the identifier you'll reference in step 3, so don't rename it after the fact without
 also updating the reference.
 
@@ -42,9 +42,9 @@ declaration line reads exactly:
 ```c
 PROGMEM static const unsigned char <hname>[] = {
 ```
-The `-t` value is inserted textually with no extra spacing added — if you passed `-t
-"PROGMEM"` without the trailing space, this line comes out as `PROGMEMstatic const...`,
-which won't compile. The trailing space in `-t "PROGMEM "` is load-bearing.
+`tools/bin2header.mjs` adds the space after `-t PROGMEM` for you (the old Python script did
+not, and produced `PROGMEMstatic const...`), so this check is a sanity check rather than a
+known trap.
 
 ## 2. Place the header
 

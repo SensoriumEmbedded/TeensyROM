@@ -1,55 +1,73 @@
 # TeensyROM C64 Source
 
-C64-side (6502 assembly) programs for the TeensyROM cartridge. Builds are Windows batch based.
+C64-side (6502 assembly) programs for the TeensyROM cartridge. One Node command builds all of them.
+
+## Building
+
+```
+npm run build:c64
+```
+
+That regenerates `Menu_Regs.i`, assembles every sub-project, and writes the results as C headers into `Source/Teensy/TRMenuFiles/ROMs/`, where the Teensy firmware build picks them up. It works the same on Windows, macOS and Linux, and it never asks you to edit a tracked file.
+
+Useful options (after `--` when going through npm):
+
+| Option | Effect |
+|---|---|
+| `--project SettingsMenu,TODCheck` | Build only those projects (names are case-insensitive) |
+| `--list` | List the projects and which assembler each needs |
+| `--verbose` | Show the assemblers' full output instead of a one-line summary per step |
+| `--rom-dir <dir>` | Write the headers there instead of the firmware tree, for example to compare against what is committed |
+
+The build stops at the first failure and names the project and file. Each project builds in its own `build/` directory, which is emptied first and also holds the assembly report and VICE label file (`Labels`; `MainSymbols` and `CartSymbols` for MainMenuCRT).
+
+**Rebuild the C64 side after any change to a `.asm`, `.s` or `.i` file, before building the Teensy firmware,** or the firmware embeds the old code. Nothing checks this for you yet.
 
 ## Prerequisites
 
-Referenced versions from `SetToolPaths.bat` (newer versions will likely work):
+Node (see `.nvmrc`), and nothing else for most work. The assemblers are found like this, in order:
 
-- **ACME cross-assembler** 0.97 (Windows build)
-- **Python 3** (for `bin2header.py`; Python 2 is rejected by the script)
-- **KickAssembler** + **Java JRE 1.8** (TRCustomBasicCommands only)
-- **VICE** 3.9 (GTK3, win64) — optional, for emulator test launches
+| Tool | Used by | Environment override | Otherwise |
+|---|---|---|---|
+| **ACME** 0.97 | every project except TRCustomBasicCommands | `ACME` (path to the executable) | `acme` on `PATH`, then a checksummed download on Windows and macOS. On Linux, install it (`apt install acme`). |
+| **KickAssembler** 5.25 | TRCustomBasicCommands only | `KICKASS_JAR` (path to `KickAss.jar`) | A checksummed download |
+| **Java** 8 or newer | KickAssembler | `JAVA_HOME` | `java` on `PATH`. Never downloaded. |
 
-## Tool Path Setup (`SetToolPaths.bat`)
+Downloads go to `tools/.cache/` (ignored by git) and are checked against a pinned SHA-256; a mismatch is an error. A tool is only looked for when a project you are building needs it, so building an ACME program never asks for Java. The macOS ACME download is an x86_64 binary, so Apple silicon runs it under Rosetta; a Homebrew `acme` on `PATH` is used first if you have one.
 
-All build scripts call `SetToolPaths.bat` to locate the required tools. Edit the paths in this file to match your machine before building:
+Optional: **VICE** (`x64sc`), if you want to try a `.prg` in an emulator. Only some features work without the cartridge hardware.
 
-| Variable | Purpose |
+## The project list
+
+What gets built, and how, is `tools/c64-projects.json`; the format is described at the top of `tools/lib/c64-projects.mjs`. To add a program, add an entry there.
+
+| Directory | Description |
 |---|---|
-| `PythonExe` | Python launcher, used to run `bin2header.py` |
-| `compilerPath` | Path to the ACME cross-assembler (`acme.exe`) |
-| `JavaExe` / `KickAssemblerJar` | Java runtime and KickAssembler (used by TRCustomBasicCommands) |
-| `emulatorPath` | VICE emulator `bin` directory, for optional test launches |
-| `bin2headerPy` / `bin2headerROMPath` | Local script and destination for generated C headers (`..\..\Teensy\TRMenuFiles\ROMs`) |
+| `MainMenuCRT` | Main TeensyROM menu, built as a headerless cartridge ROM binary at $8000 |
+| `SettingsMenu` | TeensyROM settings/configuration menu |
+| `TRHelpScreens` | Help screens displayed from the TeensyROM menu |
+| `TRExtPortCheck` | External port check utility |
+| `ExpansionPortTest` | Expansion (cartridge) port test utility (TR+ only) |
+| `ASIDPlayer` | ASID (MIDI SID) player application |
+| `MIDI2SID` | MIDI-to-SID synthesizer application |
+| `SimpSwiftTerm` | Simple SwiftLink terminal program |
+| `TODCheck` | CIA Time-of-Day clock check utility |
+| `TRCustomBasicCommands` | Custom TR BASIC command extensions (built with KickAssembler) |
+| `v1541Wrapper` | Virtual 1541 wrapper (not currently used by the firmware; its header is still kept current) |
+| `BASIC` | Standalone BASIC `.prg` utilities: nothing to assemble, each is converted to a header |
 
-## Build All (`BuildAllC64.bat`)
+## Headers
 
-Runs each sub-project's build script in sequence. Core programs/dependencies build first (MainMenuCRT, SettingsMenu, TRHelpScreens, TRExtPortCheck, ExpansionPortTest, ASIDPlayer, MIDI2SID), followed by the other programs. Outputs are converted with `bin2header.py` and copied into the Teensy firmware tree for inclusion in the ROM image.
+Each program is written as a C header holding a `static const unsigned char` array (the format of the [bin2header](https://github.com/AntumDeluge/bin2header) utility, which `tools/lib/bin2header.mjs` ports). Most are declared `PROGMEM` so they stay in Teensy flash; the MainMenuCRT cartridge image is a deliberate exception, because it must sit in RAM for ROM emulation.
 
-**Note:** The script halts immediately on the first build error — anything after the failing sub-project will not be built. A run is only successful if it finishes with the `*** All programs built/copied! ***` message; if you don't see it, scroll up to find which build failed.
+To add a program you didn't assemble here (a third-party `.prg`, `.crt`, `.sid`...), convert it with the command-line wrapper:
 
-## bin2header.py
+```
+node tools/bin2header.mjs -t PROGMEM "path/to/file.prg"
+```
 
-A Python 3 utility (bin2header v0.3.1, MIT licensed) that converts a compiled binary into a C header containing a `static const unsigned char` array. Build scripts run it on each `.prg`/`.bin` output so the program can be embedded directly in the Teensy firmware. Most builds pass `-t "PROGMEM "` to place the array in Teensy flash memory; the MainMenuCRT cartridge image is a deliberate exception — it omits PROGMEM because it must reside in RAM for ROM emulation.
+Options: `-n <array name>` (use it when the file name starts with a digit), `-o <output file>`. See `tools/bin2header.mjs`.
 
-## Build Outputs
+## Menu_Regs.i is generated
 
-Each sub-project compiles into its local `build\` directory (cleaned at the start of every build). The generated `.h` file is then copied to `..\..\Teensy\TRMenuFiles\ROMs\` (set via `bin2headerROMPath`), where the Teensy firmware picks it up. After running a build, verify the header begins with `PROGMEM static const unsigned char ..._prg[] = {` (except the MainMenuCRT cartridge header, which intentionally has no `PROGMEM`).
-
-## Sub-Projects
-
-| Directory | Build Script | Description |
-|---|---|---|
-| `MainMenuCRT` | `build8000CartBin.bat` | Main TeensyROM menu; built as a headerless cartridge ROM binary at $8000 |
-| `SettingsMenu` | `buildSettingsMenu.bat` | TeensyROM settings/configuration menu |
-| `TRHelpScreens` | `buildTRHelpScreens.bat` | Help screens displayed from the TeensyROM menu |
-| `TRExtPortCheck` | `buildTRExtPortCheck.bat` | External port check utility |
-| `ExpansionPortTest` | `buildExpansionPortTest.bat` | Expansion (cartridge) port test utility (TR+ only) |
-| `ASIDPlayer` | `buildASIDPlayer.bat` | ASID (MIDI SID) player application |
-| `MIDI2SID` | `buildMIDI2SID.bat` | MIDI-to-SID synthesizer application |
-| `SimpSwiftTerm` | `buildSimpSwiftTerm.bat` | Simple SwiftLink terminal program |
-| `TODCheck` | `buildTODCheck.bat` | CIA Time-of-Day clock check utility |
-| `TRCustomBasicCommands` | `buildTRCustomBasicCommands.bat` | Custom TR BASIC command extensions (built with KickAssembler) |
-| `BASIC` | `bin2header.bat` | Standalone BASIC `.prg` utilities, converted individually to headers |
-| `v1541Wrapper` | `buildv1541Wrapper.bat` | Virtual 1541 wrapper (not currently used in the full build) |
+`MainMenuCRT/source/Menu_Regs.i` is generated from `Source/Teensy/MinimalBoot/Common/Menu_Regs.h` at the start of every build, by `tools/lib/menu-regs.mjs`. Edit `Menu_Regs.h`, never `Menu_Regs.i`: a change to the `.i` file is overwritten on the next build.

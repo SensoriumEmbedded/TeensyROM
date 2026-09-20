@@ -38,7 +38,7 @@ const PINS = {
   },
 };
 
-function commandExists(exe) {
+export function commandExists(exe) {
   const probe = process.platform === 'win32' ? spawnSync('where', [exe]) : spawnSync('which', [exe]);
   return probe.status === 0;
 }

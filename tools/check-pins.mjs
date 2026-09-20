@@ -53,6 +53,28 @@ const DEPENDENCIES = [
     pins: [['tools/lib/toolchain.mjs', /PIN_VERSION = '([\d.]+)'/]],
     latest: async () => (await githubLatestRelease('arduino/arduino-cli')).replace(/^v/, ''),
   },
+  {
+    // No `latest`: ACME is released on SourceForge, which offers no release API we could ask
+    // without scraping the download page. The value here is catching a bump that updates the
+    // constant (and so the download URL, built from it) but leaves the docs saying 0.97.
+    name: 'ACME (C64 assembler)',
+    pins: [
+      ['tools/lib/c64-toolchain.mjs', /ACME_VERSION = '([\d.]+)'/],
+      ['Source/C64/README.md', /\*\*ACME\*\* ([\d.]+)/],
+      ['Source/BuildInfo.md', /acme-crossass\/\) ([\d.]+)/],
+      ['docs/Architecture/C64-Software.md', /ACME cross-assembler ([\d.]+)\*\*/],
+      ['docs/Architecture/Build-System.md', /ACME cross-assembler ([\d.]+)/],
+    ],
+  },
+  {
+    // No `latest`: KickAssembler is published at a single unversioned URL on theweb.dk, so a
+    // new release is caught by the download's checksum failing, not by this check.
+    name: 'KickAssembler',
+    pins: [
+      ['tools/lib/c64-toolchain.mjs', /KICKASS_VERSION = '([\d.]+)'/],
+      ['Source/C64/README.md', /\*\*KickAssembler\*\* ([\d.]+)/],
+    ],
+  },
 ];
 
 function pinnedVersion({ name, pins }) {
@@ -96,9 +118,11 @@ const rows = [];
 let outdated = 0;
 for (const dep of DEPENDENCIES) {
   const pinned = pinnedVersion(dep);
-  const latest = await dep.latest();
-  let status = 'up to date';
-  if (latest !== pinned) {
+  // A dependency with no `latest` is checked only for cross-file agreement: its publisher
+  // offers no way to ask what the newest release is (see the note on each such entry).
+  const latest = dep.latest ? await dep.latest() : 'not checked';
+  let status = dep.latest ? 'up to date' : 'pins agree';
+  if (dep.latest && latest !== pinned) {
     const reason = dep.rejected?.[latest];
     status = reason ? `skipped: ${reason}` : '**update available**';
     if (!reason) outdated++;
