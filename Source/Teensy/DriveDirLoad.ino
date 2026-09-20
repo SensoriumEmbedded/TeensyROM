@@ -464,6 +464,11 @@ bool SetDriveDirMenuNameType(uint16_t ItemNum, const char *filename)
 
 void LoadDirectory(FS *sourceFS) 
 {
+#ifdef VM_EXTENSIONS_ENABLED
+   // Pins VmRegistry's extension table to this listing: what VmLaunch::tryFile
+   // answers from must not be staler than what the user is choosing from.
+   VmRegistry::refresh(sourceFS == &SD);
+#endif
    InitDriveDirMenu();
    
    File dir = sourceFS->open(DriveDirPath);

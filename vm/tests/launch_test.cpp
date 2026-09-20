@@ -61,6 +61,39 @@ int main(int argc,char **argv){
     message.clear();
     assert(VmLaunch::tryFile(rmtSD,"/","HELLO.crt")&&!rebooted&&!message.empty());
 
+    // The cached extension table stands in for the scan only where it can
+    // answer. Refreshed with the listing, a file it does not know costs no scan,
+    // and a file it does know still launches.
+    fs::rename(base/"saved-HELLO",base/"VMS/HELLO");
+    VmRegistry::refresh(true);
+    vmsOpens=0;rebooted=false;message.clear();
+    assert(!VmLaunch::tryFile(rmtSD,"/Games","Example.zz")&&!vmsOpens&&!rebooted&&message.empty());
+    assert(VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&rebooted&&vmsOpens);
+
+    // A table that could not be built must not deny. Over the limit, and on a
+    // directory read error, the scan runs and refuses out loud instead.
+    for(unsigned i=0;i<33;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
+    VmRegistry::refresh(true);
+    rebooted=false;message.clear();
+    assert(VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&!rebooted&&!message.empty());
+    for(unsigned i=0;i<33;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
+    failDirError=true;
+    VmRegistry::refresh(true);
+    rebooted=false;message.clear();
+    assert(VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&!rebooted&&!message.empty());
+    failDirError=false;
+
+    // Staleness is what the refresh points above exist to bound: a package that
+    // appears after the listing was built is not seen until the next refresh.
+    fs::rename(base/"VMS/HELLO",base/"saved-HELLO");
+    VmRegistry::refresh(true);
+    rebooted=false;
+    assert(!VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&!rebooted);
+    fs::rename(base/"saved-HELLO",base/"VMS/HELLO");
+    assert(!VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&!rebooted);
+    VmRegistry::refresh(true);
+    assert(VmLaunch::tryFile(rmtSD,"/Games","Example.hi")&&rebooted);
+
     // The reserved flash slot the extension image boots from.
     using VmBootImage::valid;
     const auto address=VmBootImage::base;
@@ -73,5 +106,7 @@ int main(int argc,char **argv){
     assert(!valid(0x42464346,0x432000d1,address+0x1801,address,VmBootImage::limit-address+1));
 
     puts("PASS: client and content launch, 12 stock file types and non-SD sources fall through untouched, "
-         "1/2 MiB ordinary CRTs keep stock parsing, damaged and orphaned clients report without booting, boot-image bounds");
+         "1/2 MiB ordinary CRTs keep stock parsing, damaged and orphaned clients report without booting, "
+         "cached extension table skipping the scan, deferring to it when over the limit or errored, and its staleness bound, "
+         "boot-image bounds");
 }

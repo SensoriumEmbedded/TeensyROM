@@ -83,24 +83,38 @@ static FLASHMEM bool preflight(const Launch &l){
             for(auto v:block){c^=v;for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}}
     }f.close();return ~c==*(uint32_t *)(d+8);
 }
-static char extensions[32][8];static uint8_t extensionCount;
+// The extensions the installed packages claim, so launching an ordinary file
+// need not rescan /VMS. Rebuilt wherever the SD listing is, which keeps the
+// table no staler than the menu the launch was chosen from.
+//
+// Unknown is not NotAssociated. Only find() can report what it refuses; a table
+// that answered "no" after an overflow, a read error or no scan at all would
+// send an extension package into stock file handling with nothing said. So
+// every case where the table cannot speak for /VMS answers Unknown, and the
+// caller falls back to the scan.
+enum Association : uint8_t { NotAssociated, Associated, Unknown };
+static char extensions[32][8];static uint8_t extensionCount;static bool extensionsKnown;
 static FLASHMEM void refresh(bool sd){
-    extensionCount=0;if(!sd)return;FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
-    FsFile item;unsigned scanned=0;
+    extensionCount=0;extensionsKnown=false;if(!sd)return;
+    FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
+    FsFile item;unsigned scanned=0;bool overflowed=false;
     while(item.openNext(&dir,O_RDONLY)){
         if(item.isDirectory()){
-            if(++scanned>32){extensionCount=0;item.close();break;}
+            if(++scanned>32){overflowed=true;item.close();break;}
             char id[24],root[80];auto n=item.getName(id,sizeof id);Manifest m{};
             if(n&&n<sizeof id-1&&component(id)){
                 snprintf(root,sizeof root,"/VMS/%s",id);
                 if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
             }
         }item.close();
-    }if(dir.getError())extensionCount=0;dir.close();
+    }
+    extensionsKnown=!overflowed&&!dir.getError();if(!extensionsKnown)extensionCount=0;dir.close();
 }
-static FLASHMEM bool associated(const char *name){
-    const char *ext=strrchr(name,'.');if(!ext)return false;
-    for(unsigned i=0;i<extensionCount;i++)if(extensionMatches(extensions[i],ext+1))return true;return false;
+static FLASHMEM Association associated(const char *name){
+    if(!extensionsKnown)return Unknown;
+    const char *ext=strrchr(name,'.');if(!ext)return NotAssociated;
+    for(unsigned i=0;i<extensionCount;i++)if(extensionMatches(extensions[i],ext+1))return Associated;
+    return NotAssociated;
 }
 static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *name){
     if(source!=rmtSD)return false;

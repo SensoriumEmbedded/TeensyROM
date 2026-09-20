@@ -183,6 +183,12 @@ A launch begins in one of two ways:
 - the user picks a **content file** whose extension a manifest claims, in which
   case its full path is handed to the module as `content_path`.
 
+Which extensions are claimed is answered from a table the firmware rebuilds when
+it loads an SD listing, so a package copied onto the card while a listing is
+already on screen is picked up on the next listing. Over the 32-package limit, or
+on a read error, the table stands aside and the launch path scans `/VMS` itself,
+which refuses on screen rather than silently handing the file to the stock menu.
+
 Then:
 
 1. `preflight` re-validates the module image and the client cartridge in full,

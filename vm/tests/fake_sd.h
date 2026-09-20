@@ -12,7 +12,8 @@ namespace fs=std::filesystem;
 #define FLASHMEM
 enum { O_RDONLY=1,O_WRONLY=2,O_RDWR=3,O_CREAT=4,O_EXCL=8,O_TRUNC=16,T_WRITE=1,
  rmtSD=1,eepAdCrtBootName=100,eepAdMinBootInd=2,MinBootInd_ExecuteMin=1 };
-static fs::path base;static bool failWrite,failFlush;
+static fs::path base;static bool failWrite,failFlush,failDirError;
+static unsigned vmsOpens;   // how often the registry actually scanned /VMS
 struct FsFile {
  fs::path path;std::shared_ptr<std::fstream> file;std::vector<fs::path> entries;
  size_t index=0;bool valid=false,dir=false;int flags=0;
@@ -24,7 +25,7 @@ struct FsFile {
  unsigned write(const void *p,unsigned n){if(!file||!(flags&2)||failWrite)return 0;file->write((const char *)p,n);file->flush();return *file?n:0;}
  bool sync(){if(failFlush||!file)return false;file->clear();file->flush();return !!*file;}
  bool seekSet(uint32_t off){if(!file||off>fileSize())return false;file->clear();file->seekg(off);if(flags&2)file->seekp(off);return !!*file;}  //FatFile::seekSet refuses a seek past EOF
- bool getError()const{return file&&file->bad();}
+ bool getError()const{return (dir&&failDirError)||(file&&file->bad());}
  bool close(){bool ok=true;if(file&&file->is_open()){file->close();ok=!file->bad();}valid=false;return ok;}
  bool getModifyDateTime(uint16_t *d,uint16_t *t){*d=33;*t=0;return valid;}
  bool timestamp(int,unsigned year,unsigned month,unsigned day,unsigned h,unsigned m,unsigned s){return file&&(flags&2)&&year>=1980&&month>=1&&month<=12&&day>=1&&day<=31&&h<24&&m<60&&s<60;}
@@ -34,7 +35,8 @@ struct FsFile {
   if(!dir){file=std::make_shared<std::fstream>(path,std::ios::binary|std::ios::in);valid=!!*file;}return valid;}
 };
 struct Files {
- FsFile open(const char *p,int flags){FsFile f;f.path=base/fs::path(p).relative_path();bool exists=fs::exists(f.path);
+ FsFile open(const char *p,int flags){if(!strcmp(p,"/VMS"))++vmsOpens;
+  FsFile f;f.path=base/fs::path(p).relative_path();bool exists=fs::exists(f.path);
   if((!exists&&!(flags&O_CREAT))||(exists&&(flags&O_EXCL)))return f;
   f.dir=exists&&fs::is_directory(f.path);f.flags=flags;
   if(f.dir){for(auto &e:fs::directory_iterator(f.path))f.entries.push_back(e.path());f.valid=true;}

@@ -19,6 +19,10 @@
 
 //Functions to control C64/TR via USB connection
 
+#ifdef VM_EXTENSIONS_ENABLED
+#include "MinimalBoot/Common/VMRegistry.h"
+#endif
+
 
 //  TR: Set up wRegIRQ_ACK, rwRegIRQ_CMD, & launch menu info (if needed)
 //  TR: Assert IRQ, wait for ack1
@@ -191,6 +195,11 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    IO1[rWRegCurrMenuWAIT] = MenuSourceID;
 
    if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
+#ifdef VM_EXTENSIONS_ENABLED
+   // A remote launch builds its one-item DriveDirMenu without LoadDirectory, so
+   // the extension table LoadDirectory would have rebuilt is rebuilt here.
+   VmRegistry::refresh(MenuSourceID == rmtSD);
+#endif
 
    if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
    

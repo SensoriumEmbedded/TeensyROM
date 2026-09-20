@@ -27,9 +27,22 @@ int main(int argc,char **argv){
 
     Manifest manifest{};
     assert(readManifest(launch.root,manifest)&&!strcmp(manifest.id,"HELLO"));
-    refresh(true);assert(associated("Demo.HI")&&associated("Demo.hi"));
-    assert(!associated("Demo.hi.exe")&&!associated("Demo.prg"));
-    refresh(false);assert(!associated("Demo.HI"));
+    // The cached table answers for whatever was installed at the last refresh.
+    refresh(true);
+    assert(associated("Demo.HI")==Associated&&associated("Demo.hi")==Associated);
+    assert(associated("Demo.hi.exe")==NotAssociated&&associated("Demo.prg")==NotAssociated);
+    assert(associated("noextension")==NotAssociated);
+
+    // A table that cannot speak for /VMS answers Unknown rather than "no", so a
+    // caller falls back to the scan instead of dropping the file into stock
+    // handling: never scanned, a directory read error, and over the limit.
+    refresh(false);assert(associated("Demo.HI")==Unknown);
+    failDirError=true;refresh(true);failDirError=false;
+    assert(associated("Demo.HI")==Unknown&&extensionCount==0);
+    for(unsigned i=0;i<33;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
+    refresh(true);assert(associated("Demo.HI")==Unknown&&extensionCount==0);
+    for(unsigned i=0;i<33;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
+    refresh(true);assert(associated("Demo.HI")==Associated);
 
     // Path traversal is refused at the component level, before any SD access.
     assert(!absolute("/VMS/../secret",80));assert(!component("../HELLO"));assert(!component("HELLO/VM"));
@@ -69,5 +82,6 @@ int main(int argc,char **argv){
     assert(!preflight(launch));
 
     puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
-         "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client");
+         "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client, "
+         "extension cache answering Unknown when unscanned, errored or over the limit");
 }
