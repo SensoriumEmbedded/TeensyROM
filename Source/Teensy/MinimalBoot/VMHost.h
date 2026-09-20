@@ -106,6 +106,7 @@ static bool loadModule() {
 }
 
 #include "VMHostWire.h"
+#include "VMHostCommand.h"
 
 static void fail(uint8_t error) {
     failure = error; EZFlashRAM[0xfb] = error;
@@ -126,18 +127,7 @@ bool VMHostIO2(uint8_t address, bool read) {
     const uint8_t value = DataPortWaitRead();
     TraceLogAddValidData(value);
     if (address == 0xf6 || (address >= 0xf8 && address <= 0xfb) || address >= 0xfd) EZFlashRAM[address] = value;
-    if (address == 0xf4) {
-        EZFlashRAM[address] = value;
-        if (value == 1 && !started) startRequested = true;
-        if (value == 4) quietRequested = true;
-        if (value == 3 && !inputPending && EZFlashRAM[0xfe] && EZFlashRAM[0xfe] != EZFlashRAM[0xfc]) {
-            if ((uint8_t)(0xa5 ^ EZFlashRAM[0xf8] ^ EZFlashRAM[0xf9] ^ EZFlashRAM[0xfa] ^ EZFlashRAM[0xfd] ^ EZFlashRAM[0xfe]) == EZFlashRAM[0xff]) {
-                input.buttons = EZFlashRAM[0xf8]; input.display = EZFlashRAM[0xf9];
-                input.overflow = EZFlashRAM[0xfa]; input.protocol = EZFlashRAM[0xfd];
-                __asm__ volatile("dmb":::"memory"); inputPending = true; EZFlashRAM[0xfc] = EZFlashRAM[0xfe];
-            }
-        }
-    }
+    if (address == 0xf4) { EZFlashRAM[address] = value; commandWrite(value); }
     return true;
 }
 

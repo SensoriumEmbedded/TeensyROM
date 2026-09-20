@@ -25,7 +25,8 @@ void VMHostPoll() {
     // An acknowledged packet must also NOT consume the next slice, or a
     // responsive client plus a chatty module starves the module's own clock.
     sliceStarted = micros();
-    if (quietRequested) { EZFlashRAM[0xf5] = 0x12; } else module->pump();
+    EZFlashRAM[0xf5] = quietRequested ? 0x12 : 2;
+    if (!quietRequested) module->pump();
     if (failure || pending || quietRequested) return;
     if (!module->packet(&packet)) return;   // Nothing to say is not a failure.
     if (failure) return;

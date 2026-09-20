@@ -281,7 +281,7 @@ bank switch. Until then the window is an ordinary EasyFlash register area.
 | Address | Direction | Meaning |
 |--------:|:---------:|---------|
 | `$DF00..$DFEF` | read | the published packet |
-| `$DFF4` | write | command: `1` start, `3` input ready, `4` quiet |
+| `$DFF4` | write | command: `1` start or resume, `3` input ready, `4` quiet |
 | `$DFF5` | read | status: `2` running, `$12` quiet, `$E0` failed |
 | `$DFF6` | write | acknowledge: the sequence number you consumed |
 | `$DFF7` | read | sequence of the packet now published, `0` for none |
@@ -315,6 +315,11 @@ reflection, no final XOR. After consuming a valid packet, write its sequence to
 `$DFF6`. Until you do, the module holds that packet and asks for no other. A bad
 frame is simply not acknowledged. Unknown types should be acknowledged and
 ignored, so a module can add one without breaking older clients.
+
+**Going quiet.** Write `4` to `$DFF4` to stop the module running; `$DFF5` reads
+`$12` while it is stopped. Acknowledging the outstanding packet lifts it, and so
+does writing `1`, which is the only way back if nothing was outstanding when you
+asked.
 
 **Sending input.** Build the whole record first, then raise the command: put the
 values in `$DFF8..$DFFA` and `$DFFD`, a token in `$DFFE`, the checksum in
@@ -441,7 +446,7 @@ C64 screen:
 | Guest arena size (`507904` bytes reported by the module) | yes |
 | Failure record written by the host and read back on the menu | yes |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
-| `quiet` (`$DFF4` = 4) | **no** |
+| `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |

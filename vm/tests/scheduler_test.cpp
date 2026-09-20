@@ -25,6 +25,7 @@ static bool offer;
 static VmPacket offered;
 static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZFlashRAM[0xf5] = 0xe0; }
 #include "../../Source/Teensy/MinimalBoot/VMHostWire.h"
+#include "../../Source/Teensy/MinimalBoot/VMHostCommand.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostYield.h"
 }
 #include "../../Source/Teensy/MinimalBoot/VMHostPoll.h"
@@ -103,6 +104,33 @@ int main() {
     quietRequested = false;
     VMHostPoll();
     assert(pumps == 1 && pending);
+
+    // Quiet asked for with nothing outstanding has no ACK left to lift it, so
+    // $DFF4 = 1 has to, and the status has to leave $12 when it does.
+    reset();
+    started = true; offer = false;
+    commandWrite(4);
+    VMHostPoll();
+    assert(!pumps && EZFlashRAM[0xf5] == 0x12);
+    commandWrite(1);
+    assert(!quietRequested && !startRequested);
+    VMHostPoll();
+    assert(pumps == 1 && EZFlashRAM[0xf5] == 2);
+
+    // An input record is taken once, and only when its token is new and its
+    // checksum agrees.
+    reset();
+    started = true;
+    EZFlashRAM[0xf8] = 0x21; EZFlashRAM[0xf9] = 3; EZFlashRAM[0xfa] = 0; EZFlashRAM[0xfd] = 0x81;
+    EZFlashRAM[0xfe] = 7; EZFlashRAM[0xff] = 0xa5 ^ 0x21 ^ 3 ^ 0 ^ 0x81 ^ 7;
+    commandWrite(3);
+    assert(inputPending && EZFlashRAM[0xfc] == 7 && input.buttons == 0x21 && input.protocol == 0x81);
+    inputPending = false;
+    commandWrite(3);
+    assert(!inputPending);            // same token, already consumed
+    EZFlashRAM[0xfe] = 8;
+    commandWrite(3);
+    assert(!inputPending);            // new token, stale checksum
 
     // Sequence numbers skip zero, so the client can use zero as "none".
     reset();
