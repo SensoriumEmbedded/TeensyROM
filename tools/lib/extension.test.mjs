@@ -39,6 +39,23 @@ test('a corrupted payload or header is rejected, not silently loaded', () => {
   assert.throws(() => parseImage(built.subarray(0, built.length - 1)), /bytes, header describes/);
 });
 
+test('a header the loader would refuse is refused by the parser, not just a bad CRC', () => {
+  // Corrupt a field and re-stamp the header CRC, so the damage reaches the
+  // structural checks instead of stopping at the checksum.
+  const restamped = (word, value) => {
+    const b = Buffer.from(image());
+    b.writeUInt32LE(value >>> 0, word * 4);
+    b.writeUInt32LE(0, 44);
+    b.writeUInt32LE(crc32(b.subarray(0, 64)), 44);
+    return b;
+  };
+  assert.throws(() => parseImage(restamped(14, 1)), /Reserved header words/);
+  assert.throws(() => parseImage(restamped(6, CODE_BASE)), /outside the module code window/);
+  assert.throws(() => parseImage(restamped(9, BASE_SERVICES | 32)), /base profile does not provide/);
+  assert.throws(() => parseImage(restamped(12, 2)), /Unknown memory profile 2/);
+  assert.throws(() => parseImage(restamped(12, PROFILE_RAM2_RO)), /Profile 1 needs/);
+});
+
 test('entry points the loader would refuse are refused at build time', () => {
   assert.throws(() => image({ entry: CODE_BASE }), /Thumb bit/);
   assert.throws(() => image({ entry: (CODE_BASE + 0x100) | 1 }), /outside the module code window/);
@@ -81,6 +98,8 @@ test('a manifest cannot claim an extension the stock menu owns', () => {
   assert.throws(() => buildManifest({ id: 'X', extensions: 'a.b' }), /Invalid extension/);
   assert.throws(() => buildManifest({ id: '../escape', extensions: 'hi' }), /Invalid id/);
   assert.throws(() => buildManifest({ id: 'X'.repeat(24), extensions: 'hi' }), /shorter than 24/);
+  assert.throws(() => buildManifest({ id: 'HI', extensions: 'hi', module: 'm'.repeat(32) }), /shorter than 32/);
+  assert.throws(() => buildManifest({ id: 'HI', extensions: 'hi', client: 'c'.repeat(32) }), /shorter than 32/);
 });
 
 test('a client cartridge is byte-exact where the firmware looks for things', () => {

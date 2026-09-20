@@ -73,8 +73,9 @@ export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
   return Buffer.concat([header, payload]);
 }
 
-// Reads back what buildImage wrote, applying the same checks vm_valid_header
-// applies on target. Used by the tests and by the packager's self-check.
+// Reads back what buildImage wrote, applying the checks vm_valid_header applies
+// on target. Used by the tests and by the packager's self-check, so a header
+// the loader would refuse is refused here instead of on the C64.
 export function parseImage(image) {
   if (image.length < 64) throw new Error('Image is shorter than its header');
   const field = (i) => image.readUInt32LE(i * 4);
@@ -91,6 +92,28 @@ export function parseImage(image) {
   const zeroed = Buffer.from(image.subarray(0, 64));
   zeroed.writeUInt32LE(0, 44);
   if (crc32(zeroed) !== header.headerCrc) throw new Error('Image header CRC mismatch');
+  if (field(14) || field(15)) throw new Error('Reserved header words must be zero');
+  if (!header.codeBytes || header.codeBytes > CODE_LIMIT - CODE_BASE) {
+    throw new Error(`Module code is ${header.codeBytes} bytes, window is ${CODE_LIMIT - CODE_BASE}`);
+  }
+  if (header.dataBytes > DATA_BYTES || header.bssBytes > DATA_BYTES - header.dataBytes) {
+    throw new Error(`Module .data + .bss is ${header.dataBytes + header.bssBytes} bytes, window is ${DATA_BYTES}`);
+  }
+  if (!(header.entry & 1) || (header.entry & ~1) < CODE_BASE || (header.entry & ~1) >= CODE_BASE + header.codeBytes) {
+    throw new Error(`Entry 0x${header.entry.toString(16)} falls outside the module code window`);
+  }
+  if (header.requiredServices & ~KNOWN_SERVICES) {
+    throw new Error(`Image requires services 0x${(header.requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
+  }
+  if (header.profile === PROFILE_RAM2_RO) {
+    if (!header.readOnlyBytes || header.readOnlyBytes > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);
+    if (!(header.requiredServices & SERVICE.RAM2_RO)) throw new Error('Profile 1 must require VM_SERVICE_RAM2_RO');
+  } else if (header.profile === PROFILE_LEGACY) {
+    if (header.readOnlyBytes) throw new Error('Profile 0 stores no RAM2 constants');
+    if (header.requiredServices & SERVICE.RAM2_RO) throw new Error('Profile 0 must not require VM_SERVICE_RAM2_RO');
+  } else {
+    throw new Error(`Unknown memory profile ${header.profile}`);
+  }
   const payloadBytes = header.codeBytes + header.dataBytes + header.readOnlyBytes;
   if (image.length !== 64 + payloadBytes) throw new Error(`Image is ${image.length} bytes, header describes ${64 + payloadBytes}`);
   if (crc32(image.subarray(64)) !== header.payloadCrc) throw new Error('Image payload CRC mismatch');
@@ -106,10 +129,12 @@ export const PROTECTED_EXTENSIONS = ['prg', 'crt', 'hex', 'p00', 'sid', 'kla', '
 // six, so build it here rather than by hand.
 export function buildManifest({ id, extensions, module = 'engine.mvm', client = 'client.crt' }) {
   const list = Array.isArray(extensions) ? extensions.join(',') : extensions;
-  for (const [label, value] of [['id', id], ['module', module], ['client', client]]) {
+  // The limits are the firmware's Manifest field widths, which readManifest
+  // rejects the line for exceeding.
+  for (const [label, value, limit] of [['id', id, 24], ['module', module, 32], ['client', client, 32]]) {
     if (!NAME.test(value) || value.includes('..')) throw new Error(`Invalid ${label}: ${value}`);
+    if (value.length >= limit) throw new Error(`Package ${label} must be shorter than ${limit} characters`);
   }
-  if (id.length >= 24) throw new Error('Package id must be shorter than 24 characters');
   if (!list.length || list.length > 7) throw new Error(`Extension list "${list}" must be 1..7 characters`);
   for (const extension of list.split(',')) {
     if (!extension || !NAME.test(extension) || extension.includes('.')) throw new Error(`Invalid extension: ${extension}`);
