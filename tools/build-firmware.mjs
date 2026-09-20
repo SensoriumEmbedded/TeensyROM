@@ -16,6 +16,10 @@
 // fast instead of hanging:
 //   --yes    confirm disabling an active Fab04_Features #define when building --target tr
 //   --force  overwrite an existing output file
+//   --keep-work  keep the private build root (a full copy of the Teensy core, plus logs and
+//            symbol files, ~400 MB) after a successful build. By default it is removed; a
+//            failed build always keeps it, since its logs are what explain the failure, and so
+//            does --skip-combine, whose per-image results exist only there.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -68,6 +72,7 @@ if (!['tr', 'tr-plus'].includes(target)) {
 const fab04Features = target === 'tr-plus';
 const yes = flag('--yes');
 const force = flag('--force');
+const keepWork = flag('--keep-work');
 const skipTeensyBuild = flag('--skip-teensy-build');
 const skipMinimalBuild = flag('--skip-minimal-build');
 const skipCombine = flag('--skip-combine');
@@ -366,3 +371,9 @@ if (!skipCombine) {
 
 console.log(`\n=== BUILD COMPLETE (${target}) ===`);
 if (!skipCombine) console.log(`Output: ${finalOutput}`);
+
+if (keepWork || skipCombine) {
+  console.log(`Build files kept in ${runRoot}`);
+} else {
+  fs.rmSync(runRoot, { recursive: true, force: true });
+}
