@@ -440,15 +440,15 @@ C64 screen:
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
 | Guest arena size (`507904` bytes reported by the module) | yes |
 | Failure record written by the host and read back on the menu | yes |
-| **Input records** (`$DFF4` = 3) | **no** |
-| `quiet` (`$DFF4` = 4) | no |
+| Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
+| `quiet` (`$DFF4` = 4) | **no** |
 | The client-side `extension failed` path | no |
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |
 
-Nothing in the first group depends on timing beyond the ordinary EasyFlash bus
-handling, since the base profile never becomes bus master. Treat the second
-group as untested rather than as working.
+Nothing in the verified rows depends on timing beyond the ordinary EasyFlash bus
+handling, since the base profile never becomes bus master. Treat the rows marked
+**no** as untested rather than as working.
 
 The board is returned to the menu by the reset button. The alternate button is
 not serviced while an extension runs.
