@@ -25,6 +25,9 @@
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
 #include "Common/IOHandlers.h"
+#ifdef VM_EXTENSIONS_ENABLED
+#include "Common/VMFail.h"
+#endif
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -149,6 +152,10 @@ void setup()
       // failure and the menu button all return to the menu without autolaunch.
       EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
       delay(10);
+      // Claim the failure record before handing over. If the extension image
+      // faults before it reaches its own first checkpoint, this is what the
+      // main image finds, and "image did not start" is the right answer.
+      VmFail::set(VmFail::Entered);
       runVMApp();
       runMainTRApp_FromMin(); // Missing/invalid extension image: recover to stock menu.
       return;

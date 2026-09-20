@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
   CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
-  BASE_SERVICES, SERVICE, PROFILE_RAM2_RO96, RAM2_RO_BYTES, CODE_LIMIT,
+  BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
 } from './extension.mjs';
 
 const thumbReturn = Buffer.from([0x70, 0x47]);  // bx lr
@@ -53,15 +53,15 @@ test('an image cannot ask for more than the base profile provides', () => {
 test('the RAM2 read-only profile and the legacy profile stay consistent', () => {
   const readOnly = Buffer.alloc(1024, 0xab);
   const header = parseImage(image({
-    profile: PROFILE_RAM2_RO96, readOnly, requiredServices: BASE_SERVICES | SERVICE.RAM2_RO,
+    profile: PROFILE_RAM2_RO, readOnly, requiredServices: BASE_SERVICES | SERVICE.RAM2_RO,
   }));
-  assert.equal(header.profile, PROFILE_RAM2_RO96);
+  assert.equal(header.profile, PROFILE_RAM2_RO);
   assert.equal(header.readOnlyBytes, 1024);
-  assert.throws(() => image({ profile: PROFILE_RAM2_RO96, readOnly }), /must require VM_SERVICE_RAM2_RO/);
+  assert.throws(() => image({ profile: PROFILE_RAM2_RO, readOnly }), /must require VM_SERVICE_RAM2_RO/);
   assert.throws(() => image({ readOnly }), /Profile 0 stores no RAM2 constants/);
   assert.throws(() => image({
-    profile: PROFILE_RAM2_RO96, readOnly: Buffer.alloc(RAM2_RO_BYTES + 1), requiredServices: BASE_SERVICES | SERVICE.RAM2_RO,
-  }), /1\.\.96 KiB/);
+    profile: PROFILE_RAM2_RO, readOnly: Buffer.alloc(RAM2_RO_BYTES + 1), requiredServices: BASE_SERVICES | SERVICE.RAM2_RO,
+  }), /1\.\.80 KiB/);
 });
 
 test('code larger than the module window is refused with its measurement', () => {

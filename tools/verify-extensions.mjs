@@ -23,9 +23,12 @@ const keep = args.includes('--keep');
 
 function run(exe, argv, label) {
   const result = spawnSync(exe, argv, { cwd: root, encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
-  if (result.error || result.status) {
+  // A failed assert() aborts, which leaves status null and the signal set --
+  // so checking status alone reports an aborted C++ test as a pass.
+  if (result.error || result.status || result.signal) {
     process.stderr.write(`${result.stdout ?? ''}${result.stderr ?? ''}`);
-    throw new Error(`${label} failed (${result.error ?? 'exit ' + result.status})`);
+    const why = result.error ?? (result.signal ? `signal ${result.signal}` : `exit ${result.status}`);
+    throw new Error(`${label} failed (${why})`);
   }
   return (result.stdout ?? '') + (result.stderr ?? '');
 }

@@ -12,9 +12,13 @@ export const ABI = 2;
 export const CODE_BASE = 0x18000, CODE_LIMIT = 0x30000;
 export const DATA_BASE = 0x20014000, DATA_LIMIT = 0x20044000;
 export const DATA_BYTES = DATA_LIMIT - DATA_BASE;
-export const RAM_BYTES = 512 * 1024;
-export const RAM2_RO_BYTES = 96 * 1024;
-export const PROFILE_LEGACY = 0, PROFILE_RAM2_RO96 = 1;
+// The top 16 KiB of RAM2 belongs to the firmware (Teensy's CrashReport and the
+// loader's boot failure record), so the guest arena stops short of it. Keep in
+// step with VM_RAM_* in Source/Teensy/MinimalBoot/Common/VMABI.h.
+export const RAM_RESERVED_BYTES = 16 * 1024;
+export const RAM_BYTES = 512 * 1024 - RAM_RESERVED_BYTES;
+export const RAM2_RO_BYTES = 80 * 1024;
+export const PROFILE_LEGACY = 0, PROFILE_RAM2_RO = 1;
 export const SERVICE = {
   FILES: 1, CLOCK: 2, PACKETS: 4, WRITE: 8, GUEST_RAM: 16, RAM2_RO: 128,
 };
@@ -49,8 +53,8 @@ export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
   if (requiredServices & ~KNOWN_SERVICES) {
     throw new Error(`Image requires services 0x${(requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
   }
-  if (profile === PROFILE_RAM2_RO96) {
-    if (!readOnly.length || readOnly.length > RAM2_RO_BYTES) throw new Error('Profile 1 needs 1..96 KiB of RAM2 constants');
+  if (profile === PROFILE_RAM2_RO) {
+    if (!readOnly.length || readOnly.length > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);
     if (!(requiredServices & SERVICE.RAM2_RO)) throw new Error('Profile 1 must require VM_SERVICE_RAM2_RO');
   } else if (profile === PROFILE_LEGACY) {
     if (readOnly.length) throw new Error('Profile 0 stores no RAM2 constants');

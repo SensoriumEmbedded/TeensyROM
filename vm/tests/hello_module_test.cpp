@@ -82,9 +82,12 @@ int main(int argc, char **argv) {
     if (folded.size() > 40) folded.resize(40);
     assert(lines[0] == "HELLO WORLD FROM TEENSYROM");
     assert(lines[1] == folded);
-    // Fixed sizes, so assert the rendered line and not just the numbers in it.
-    assert(workspace.size() == 65536 && guest.size() == 524288);
-    assert(lines[2] == "WORKSPACE 65536 GUEST 524288");
+    // Assert the rendered line, not just the numbers in it. The sizes come from
+    // the ABI header so that shrinking the guest arena shows up here as a
+    // changed expectation rather than a stale literal.
+    assert(workspace.size() == 65536 && guest.size() == VM_RAM_BYTES);
+    assert(lines[2] == "WORKSPACE " + std::to_string(workspace.size()) +
+                       " GUEST " + std::to_string(guest.size()));
     // The file service really walked the package directory.
     assert(lines[3] == "PACKAGE FILES 3");
 

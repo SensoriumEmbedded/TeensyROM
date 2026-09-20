@@ -32,15 +32,29 @@
 enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
-                  VM_RAM_BASE = 0x20200000, VM_RAM_BYTES = 512*1024 };
-// Memory profiles. 0 gives the module the entire 512 KiB RAM2 arena. 1 keeps
-// the upper 96 KiB of RAM2 as initialized, non-executable, write-protected
-// constants loaded from the image, leaving the lower 416 KiB as guest arena.
+                  VM_RAM_BASE = 0x20200000,
+                  // RAM2 is 512 KiB, but its top 16 KiB stay with the firmware.
+                  // Teensy's core keeps its CrashReport in the last 128 bytes
+                  // (0x2027FF80), and the loader leaves its boot failure record
+                  // at VM_RAM_LIMIT; an arena running all the way to 0x20280000
+                  // overwrites both, which is what a module doing a both-ends
+                  // write of guest_ram actually did. 16 KiB is the MPU subregion
+                  // size for this window, so it is also the smallest amount that
+                  // can be held back from a write-protected profile.
+                  VM_RAM_RESERVED_BYTES = 16*1024,
+                  VM_RAM_BYTES = 512*1024-VM_RAM_RESERVED_BYTES,
+                  VM_RAM_LIMIT = VM_RAM_BASE+VM_RAM_BYTES };
+static_assert(VM_RAM_LIMIT+VM_RAM_RESERVED_BYTES==0x20280000, "RAM2 ends at 0x20280000");
+// Memory profiles. 0 gives the module the whole 496 KiB RAM2 arena. 1 keeps the
+// upper 80 KiB of it as initialized, non-executable, write-protected constants
+// loaded from the image, leaving the lower 416 KiB as guest arena.
 // Profile 2 is reserved (see VM_PROFILE_RESERVED_AUX below) and not loadable.
-enum : uint32_t { VM_PROFILE_LEGACY=0, VM_PROFILE_RAM2_RO96=1,
+enum : uint32_t { VM_PROFILE_LEGACY=0, VM_PROFILE_RAM2_RO=1,
                   VM_PROFILE_RESERVED_AUX=2,
-                  VM_RAM2_RO_BYTES=96*1024, VM_RAM2_GUEST_BYTES=VM_RAM_BYTES-VM_RAM2_RO_BYTES,
+                  VM_RAM2_RO_BYTES=80*1024, VM_RAM2_GUEST_BYTES=VM_RAM_BYTES-VM_RAM2_RO_BYTES,
                   VM_RAM2_RO_BASE=VM_RAM_BASE+VM_RAM2_GUEST_BYTES };
+static_assert(VM_RAM2_RO_BASE==0x20268000 && VM_RAM2_GUEST_BYTES==416*1024,
+              "profile 1 constants are the MPU subregions 2..6 of the 128 KiB window at 0x20260000");
 struct VmImageHeader {
     uint32_t magic, abi, header_bytes, code_bytes, data_bytes, bss_bytes;
     uint32_t entry, code_base, ram_base, required_services, payload_crc, header_crc;
@@ -130,13 +144,13 @@ static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     return ~c;
 }
 static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserved[1];}
-static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO96?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
+static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
     if(h.reserved[2]||h.reserved[3])return false;
     if(h.reserved[0]==VM_PROFILE_LEGACY){
         if(h.reserved[1]||(h.required_services&VM_SERVICE_RAM2_RO))return false;
-    }else if(h.reserved[0]==VM_PROFILE_RAM2_RO96){
+    }else if(h.reserved[0]==VM_PROFILE_RAM2_RO){
         if(!(h.required_services&VM_SERVICE_RAM2_RO)||!h.reserved[1]||h.reserved[1]>VM_RAM2_RO_BYTES)return false;
     }else return false;
     if(h.magic!=VM_IMAGE_MAGIC || h.abi!=VM_ABI || h.header_bytes!=sizeof h ||

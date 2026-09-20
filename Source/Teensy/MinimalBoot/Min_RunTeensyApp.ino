@@ -10,9 +10,10 @@ typedef  void (*pFunction)(void);
 
 #ifdef VM_EXTENSIONS_ENABLED
 #include "Common/VMBootImage.h"
+#include "Common/VMFail.h"
 FLASHMEM void runVMApp()
 {
-   if (!VmBootImage::installed()) return;
+   if (!VmBootImage::installed()) { VmFail::set(VmFail::NoImage); return; }
    const uint32_t entry = *((const volatile uint32_t*)(VmBootImage::base + 0x1004u));
    // Same core-startup handoff used for the upper stock image. The target
    // ResetHandler installs its own FlexRAM map, stack, vectors and MPU.

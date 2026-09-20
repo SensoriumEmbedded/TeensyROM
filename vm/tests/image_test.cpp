@@ -20,7 +20,7 @@ int main(int argc,char **argv){
     // not implement is refused outright, never loaded with the service missing.
     // These are the bit numbers reserved for out-of-tree extensions.
     for(uint32_t reserved:{32u,64u,256u,512u}){auto h=good;h.required_services|=reserved;reject(h);}
-    assert(good.reserved[0]==VM_PROFILE_LEGACY||good.reserved[0]==VM_PROFILE_RAM2_RO96);
+    assert(good.reserved[0]==VM_PROFILE_LEGACY||good.reserved[0]==VM_PROFILE_RAM2_RO);
     {auto h=good;h.reserved[0]=VM_PROFILE_RESERVED_AUX;reject(h);}
     if(good.reserved[0]==VM_PROFILE_LEGACY){
       auto h=good;h.reserved[1]=32;reject(h);

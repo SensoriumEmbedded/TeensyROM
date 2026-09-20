@@ -74,6 +74,8 @@ Two rules keep that promise workable:
 2. **Capability, then fallback.** If a host rejects a bit, retry without it.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
+Profile `0` lends the whole 496 KiB RAM2 arena; profile `1` keeps its upper
+80 KiB as write-protected constants loaded from the image, leaving 416 KiB.
 
 ## 3. The package
 
@@ -128,7 +130,7 @@ only) the RAM2 constants. `.bss` is not stored; the loader zeroes it.
 | 40 | `payload_crc` | CRC32 of everything after the header |
 | 44 | `header_crc` | CRC32 of the header with this field zeroed |
 | 48 | `reserved[0]` | memory profile |
-| 52 | `reserved[1]` | RAM2 constant bytes (profile 1) |
+| 52 | `reserved[1]` | RAM2 constant bytes (profile 1, 1..80 KiB) |
 | 56 | `reserved[2..3]` | zero |
 
 CRC32 throughout is the reflected `0xedb88320` polynomial.
@@ -204,11 +206,19 @@ the main and minimal firmware images keep their own addresses.
 | DTCM | below `0x20014000` | — | host state and heap |
 | DTCM | `0x20014000` | 192 KiB | **module `.data`, `.bss`, then workspace** |
 | DTCM | `0x20044000` | 48 KiB | shared stack |
-| RAM2 | `0x20200000` | 512 KiB | **guest arena** (416 KiB on profile 1) |
+| RAM2 | `0x20200000` | 496 KiB | **guest arena** (416 KiB on profile 1) |
+| RAM2 | `0x2027c000` | 16 KiB | firmware-reserved — see below |
 
 `workspace` is whatever is left of the 192 KiB DTCM window after the module's
 own `.data` and `.bss`, aligned up to 32 bytes. Size it by shrinking your static
 footprint, not by asking for more.
+
+RAM2 is 512 KiB, but the top 16 KiB are not yours. Teensy's core keeps its
+`CrashReport` in the last 128 bytes of it, and the loader leaves the reason a
+launch failed just below the arena, where the main firmware image reads it after
+the reset. Take the size from `host->guest_ram_bytes`, never from the physical
+end of RAM2: a module that writes to `0x20280000 - 1` destroys the crash report
+that would have explained why it later died.
 
 While a module is being loaded the host makes its code window writable and
 non-executable, then restores it to read-only and executable before the entry
