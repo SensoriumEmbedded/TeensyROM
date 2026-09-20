@@ -281,7 +281,7 @@ bank switch. Until then the window is an ordinary EasyFlash register area.
 | Address | Direction | Meaning |
 |--------:|:---------:|---------|
 | `$DF00..$DFEF` | read | the published packet |
-| `$DFF4` | write | command: `1` start or resume, `3` input ready, `4` quiet |
+| `$DFF4` | write | command: `1` run, `3` input ready, `4` quiet |
 | `$DFF5` | read | status: `2` running, `$12` quiet, `$E0` failed |
 | `$DFF6` | write | acknowledge: the sequence number you consumed |
 | `$DFF7` | read | sequence of the packet now published, `0` for none |
@@ -293,6 +293,11 @@ bank switch. Until then the window is an ordinary EasyFlash register area.
 module does not run until it sees that. Poll `$DFF5`: `$E0` means the host or the
 module failed and `$DFFB` says why; the reference client prints
 `extension failed` and stops.
+
+`1` means *run*, and writing it is idempotent: before the start it starts the
+module, while the module is quiet it resumes it, and while the module is already
+running it does nothing. Write `1` whenever you want the module running, without
+tracking which of the three states the host is in.
 
 **Reading a packet.** When `$DFF7` is non-zero and differs from the last sequence
 you consumed, copy the window, then validate the copy — the window is live, and

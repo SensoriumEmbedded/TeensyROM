@@ -52,7 +52,8 @@ int main() {
     offer = true;
     VMHostPoll();
     assert(!pumps && !offers && !pending);
-    startRequested = true;
+    commandWrite(1);                  // before the start, 1 starts
+    assert(startRequested && !started);
     VMHostPoll();
     assert(started && EZFlashRAM[0xf5] == 2 && pending && sequence == 1 && offers == 1);
 
@@ -117,6 +118,13 @@ int main() {
     VMHostPoll();
     assert(pumps == 1 && EZFlashRAM[0xf5] == 2);
 
+    // 1 is idempotent, so a client can write it without tracking the state:
+    // asked for again while the module is already running, it changes nothing.
+    commandWrite(1);
+    assert(started && !startRequested && !quietRequested);
+    VMHostPoll();
+    assert(pumps == 2 && EZFlashRAM[0xf5] == 2 && !failure);
+
     // An input record is taken once, and only when its token is new and its
     // checksum agrees.
     reset();
@@ -171,5 +179,6 @@ int main() {
     assert(shouldYield());
 
     puts("PASS: real scheduler; start handshake, wire framing, frozen-until-ACK, ACK before pump, "
-         "input ordering, silence, quiet, sequence wrap, three malformed packets latched, load failure and yield conditions");
+         "input ordering, silence, idempotent run over all three states, sequence wrap, three malformed packets "
+         "latched, load failure and yield conditions");
 }
