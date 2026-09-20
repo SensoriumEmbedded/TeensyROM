@@ -121,8 +121,11 @@ const write = spawnSync(loader, ['--mcu=TEENSY41', '-w', '-v', hexPath], { stdio
 if (write.status !== 0) fail(`teensy_loader_cli exited ${write.status}`);
 
 // Confirm what is actually running, rather than trusting that the write took.
-// The build timestamp is the discriminator: TRVersion often does not change
-// between builds, so a matching version number alone proves nothing.
+// Note what this can and cannot tell you: the build timestamp comes from the
+// HEAD commit (see sourceDateEpoch in build-firmware.mjs), not from the moment
+// of compilation, so it distinguishes one commit's firmware from another's but
+// says nothing about a rebuild of uncommitted edits. Commit first if you need
+// the banner to prove which build is on the board.
 const after = findBoard();
 if (!after?.port) {
   console.log('\nWritten. Board has not re-enumerated yet — re-run with --check to confirm.');
