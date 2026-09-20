@@ -11,10 +11,12 @@ This document is the whole contract. A module needs
 from this repository to build.
 
 > **Status.** The formats and the base profile described here are frozen; the
-> version marker is `VM_ABI = 2`. Everything below has been verified on a
-> development machine by `npm run verify:extensions`, which builds real packages
-> and reads them back with the firmware's own parsers. None of it has been run
-> on hardware yet.
+> version marker is `VM_ABI = 2`. The launch path, the module loader and the
+> client link have run on a TeensyROM+ with the reference extension: it appears
+> on the C64 screen. [§10](#10-what-has-run-on-hardware) says exactly which parts
+> that covers and which it does not. The rest is verified on a development
+> machine by `npm run verify:extensions`, which builds real packages and reads
+> them back with the firmware's own parsers.
 
 ## 1. The base profile, and why the loader stops there
 
@@ -268,7 +270,104 @@ between a module and its own client, so a new protocol needs no firmware change.
 [`../hello/hello.cpp`](../hello/hello.cpp) defines a two-field text protocol in
 about ten lines, which is the intended pattern rather than a shortcut.
 
-## 6. Building a module
+## 6. The C64 client
+
+The client is a 16 KiB EasyFlash cartridge that TeensyROM presents to the
+machine like any other. Everything a client needs is in the IO2 window at
+`$DF00`. Selecting **EasyFlash bank 58** (`$DE00` = 58) is what opens it; the
+firmware maps every bank to the same 16 KiB, so the write is a signal, not a
+bank switch. Until then the window is an ordinary EasyFlash register area.
+
+| Address | Direction | Meaning |
+|--------:|:---------:|---------|
+| `$DF00..$DFEF` | read | the published packet |
+| `$DFF4` | write | command: `1` start, `3` input ready, `4` quiet |
+| `$DFF5` | read | status: `2` running, `$12` quiet, `$E0` failed |
+| `$DFF6` | write | acknowledge: the sequence number you consumed |
+| `$DFF7` | read | sequence of the packet now published, `0` for none |
+| `$DFF8..$DFFA` | write | input: buttons, display, overflow |
+| `$DFFB` | read | failure code, when status is `$E0` |
+| `$DFFD..$DFFF` | write | input: protocol, token, checksum |
+
+**Start.** After the cold start, select bank 58 and write `1` to `$DFF4`. The
+module does not run until it sees that. Poll `$DFF5`: `$E0` means the host or the
+module failed and `$DFFB` says why; the reference client prints
+`extension failed` and stops.
+
+**Reading a packet.** When `$DFF7` is non-zero and differs from the last sequence
+you consumed, copy the window, then validate the copy — the window is live, and
+checking bytes that can change underneath you proves nothing. The frame is:
+
+```
+$DF00  'M' '3'   magic
+$DF02  01        framing version
+$DF03  type      module-defined, never 0
+$DF04  sequence  1..255, wraps 255 -> 1
+$DF05  flags     module-defined
+$DF06  length    0..228
+$DF07  00        reserved
+$DF08  payload   length bytes
+       crc16     little-endian, over everything above it
+```
+
+The CRC is CRC-16/CCITT-FALSE: polynomial `0x1021`, initial value `0xFFFF`, no
+reflection, no final XOR. After consuming a valid packet, write its sequence to
+`$DFF6`. Until you do, the module holds that packet and asks for no other. A bad
+frame is simply not acknowledged. Unknown types should be acknowledged and
+ignored, so a module can add one without breaking older clients.
+
+**Sending input.** Build the whole record first, then raise the command: put the
+values in `$DFF8..$DFFA` and `$DFFD`, a token in `$DFFE`, the checksum in
+`$DFFF`, and write `3` to `$DFF4`. The checksum is `$A5` XOR each of `$DFF8`,
+`$DFF9`, `$DFFA`, `$DFFD`, `$DFFE`. The token must be non-zero and differ from
+the last one, or the host ignores the record. What the four bytes mean is
+between a module and its client.
+
+**The cartridge starts in Ultimax.** The firmware presents every client with
+`GAME` asserted and `EXROM` deasserted, as its EasyFlash emulation does, so
+your ROMH bank answers at `$E000` and its reset vector at `$FFFC` is the entry
+point. A client normally wants to run as a 16 KiB cartridge instead. Switch by
+writing `$87` to `$DE02` — but the switch takes effect at once, ROMH leaves
+`$E000` and the KERNAL appears there, so **the next instruction cannot be
+fetched from your stub**. Copy the last three instructions
+(`lda #$87 / sta $DE02 / jmp $FCE2`) to RAM and run them there. This is how
+EasyFlash's own startup code does it, and forgetting it leaves the C64 running
+KERNAL code from the middle of a routine with a freshly reset stack: no screen
+clear, no message. `Source/C64/VMHello/vmhello.a` is a working example.
+
+## 7. When a launch fails
+
+The extension image has no working USB, so it cannot explain itself. Instead it
+leaves a 32-byte record in the reserved top of RAM2 and resets; the main image
+collects it before anything can overwrite it and the menu prints it once the
+C64 is waiting to read messages. A successful hand-off is recorded too, as
+`$00`, so a client that then fails to draw is distinguishable from a host that
+never started.
+
+| Code | Meaning |
+|-----:|---------|
+| `$00` | the client is up |
+| `$01` | minimal jumped to the extension image and it did not start |
+| `$02` | the top flash slot holds no valid image |
+| `$10` | SD card would not initialise (detail: attempts) |
+| `$11` | `launch.vml` missing, short or corrupt |
+| `$12` | manifest unreadable or malformed |
+| `$13` | manifest changed since preflight |
+| `$14` | client cartridge would not open |
+| `$15` | not a 16 KiB C64 EasyFlash cartridge |
+| `$16` | CHIP header or bank payload bad (detail: bank) |
+| `$17` | third CHIP is not a valid `VMH1` descriptor |
+| `$18` | client banks do not match the descriptor CRC |
+| `$20` | module image refused (detail: the host's failure code) |
+
+The failure code a client reads from `$DFFB` is separate, and is the same value
+the record carries as its detail for `$20`: `$11` the image would not open, has
+a bad header, or requires a service this host does not provide; `$14` the
+returned `VmModule` table failed validation; `$15` the module published a
+malformed packet; `$16` the module reported an error without giving a code.
+Other values come from the image loader's own bounds and CRC checks.
+
+## 8. Building a module
 
 The packager does the whole job — compile, link, measure, package:
 
@@ -313,7 +412,7 @@ build changes.
 For reference, the module in `vm/hello` builds to 776 bytes of code, 32 bytes of
 data and 192 bytes of bss, leaving 196,384 bytes of workspace.
 
-## 7. Testing without hardware
+## 9. Testing without hardware
 
 [`../tests/native_host.h`](../tests/native_host.h) is a complete base-profile
 host over the real filesystem — same 24-handle limit, same path validation, same
@@ -326,3 +425,30 @@ preflight, menu-hook fall-through, and the reference module end to end.
 
 A pass there says the formats and the contract hold. It says nothing about
 timing, the bus, or the C64 side — that needs the hardware.
+
+## 10. What has run on hardware
+
+On a TeensyROM+ with the reference extension, from the SD card through to the
+C64 screen:
+
+| Verified on hardware | |
+|----------------------|:-:|
+| Launch record, manifest and client validation in the extension image | yes |
+| Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes |
+| Client cartridge cold start from the Ultimax reset vector | yes |
+| Bank 58 opens the IO2 window; `start` handshake | yes |
+| Four packets published, framed, CRC-checked by the client and acknowledged | yes |
+| Guest arena size (`507904` bytes reported by the module) | yes |
+| Failure record written by the host and read back on the menu | yes |
+| **Input records** (`$DFF4` = 3) | **no** |
+| `quiet` (`$DFF4` = 4) | no |
+| The client-side `extension failed` path | no |
+| Memory profile 1 (write-protected constants) | no |
+| PAL timing | no |
+
+Nothing in the first group depends on timing beyond the ordinary EasyFlash bus
+handling, since the base profile never becomes bus master. Treat the second
+group as untested rather than as working.
+
+The board is returned to the menu by the reset button. The alternate button is
+not serviced while an extension runs.
