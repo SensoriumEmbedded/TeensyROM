@@ -24,12 +24,12 @@ export const KICKASS_VERSION = '5.25';
 // manager's `acme` (or build it) and it is found on PATH. The macOS binary is x86_64, so
 // Apple silicon runs it under Rosetta; Windows on ARM likewise runs the x64 build.
 const ACME_WIN = {
-  url: 'https://sourceforge.net/projects/acme-crossass/files/win32/acme0.97win.zip/download',
+  url: `https://sourceforge.net/projects/acme-crossass/files/win32/acme${ACME_VERSION}win.zip/download`,
   sha256: '68f7c80c23806eced6ab96622d8e22b500ed76b4d34a01af33461dee04edc359',
-  exe: 'acme0.97win/acme/acme.exe',
+  exe: `acme${ACME_VERSION}win/acme/acme.exe`,
 };
 const ACME_MAC = {
-  url: 'https://sourceforge.net/projects/acme-crossass/files/macOS/acme0.97mac.zip/download',
+  url: `https://sourceforge.net/projects/acme-crossass/files/macOS/acme${ACME_VERSION}mac.zip/download`,
   sha256: 'd0a9311f2e1fc63b13bc321956696f0b127c0f0fa260d75571b8e90b126c6354',
   exe: 'acme',
 };
@@ -88,7 +88,7 @@ function warnUnlessPinnedAcme(acme) {
   if (found !== ACME_VERSION) {
     console.error(
       `Warning: using ACME ${found ?? '(unknown version)'} from ${acme}, but this build is pinned to ${ACME_VERSION}. ` +
-      'The generated headers may differ from the committed ones; set ACME to a 0.97 binary to be sure.',
+      `The generated headers may differ from the committed ones; set ACME to a ${ACME_VERSION} binary to be sure.`,
     );
   }
   return acme;
