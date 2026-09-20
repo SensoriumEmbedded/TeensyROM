@@ -176,6 +176,21 @@ The main menu program (`Source/C64/MainMenuCRT/source/MainMenu.asm`) has to stay
 
 **Real-world confirmation:** the YYZ SID couldn't play once the combined menu (with Settings and Help still built into it) grew past the point where `MainCodeRAMEnd` started overlapping YYZ's load address. Splitting Settings and Help out into their own separate PRGs (FW 0.8) shrank the resident menu enough to clear that conflict — YYZ plays again as of 0.8.
 
+## Startup hooks run before the C++ runtime exists
+
+The Teensyduino core's `ResetHandler2()` (`cores/teensy4/startup.c`, Teensyduino 1.61.0) calls three weak, empty hook functions during boot and uses whichever definition the sketch links in place of its own: `startup_early_hook()` (`:108`), `startup_middle_hook()` (`:192`), `startup_late_hook()` (`:209`). `Source/Teensy/StartupHooks.c` is the one place the full firmware defines them — add to that file rather than defining a hook elsewhere, so the boot-time work stays in one findable spot. Only the middle hook is currently defined; MinimalBoot defines none.
+
+**Nothing C++ is usable in any hook.** `__libc_init_array()` (`:210`) — the C++ constructors — runs after all three, so `Serial`, `EEPROM`, `SD`, the USB host stack, and any global with a constructor don't exist yet. Hook code is plain C touching its own globals and hardware registers, nothing more. `millis()` does work from the middle hook on (`configure_systick()`, `:163`).
+
+**Which hook depends on what has to be true when it runs:**
+- **Early** (`:108`) runs before `.data`/`.bss` are initialized (`:128-129`): globals don't hold their initial values yet, and anything written to one is overwritten moments later by the copy. It also runs before code is copied into ITCM (`:127`), so it must be `FLASHMEM` (the core's own comment at `:108` says so) — a hook defined here without that attribute jumps into ITCM before the code exists there and faults or hangs before `setup()`. Nothing in TeensyROM needs this one.
+- **Middle** (`:192`) is the last point before `usb_init()` (`:205`). Globals are in RAM, clocks and peripherals are up, the chip-ID fuse (`HW_OCOTP_MAC0`) is readable — the core itself reads it a few lines later at `usb.c:152` with nothing OCOTP-related in between — and nothing has been presented to the host yet: `usb_init()` attaches the controller at `usb.c:234`, resetting it first if a soft reboot left it running (`usb.c:176-197`). **Anything the host must see on first enumeration — the USB string descriptors in particular — has to be final by the end of this hook.**
+- **Late** (`:209`) runs after `usb_init()` *and* after the core's deliberate enumeration wait (until ~300ms after reset — `TEENSY_INIT_USB_DELAY_BEFORE`/`_AFTER`, `:194-206`), so it's no earlier than `setup()` for anything USB-visible; it only buys "before the C++ constructors."
+
+Hooks run exactly once per boot, so they're `FLASHMEM` candidates and should be marked as such given the RAM1 budget above.
+
+**This came up concretely.** `MidiDevName_AppendUniqueID()` (`midiDevName.c`) overwrites the placeholder zeros in the USB MIDI product/serial strings with the chip ID so two units enumerate with distinct names. It was originally the first line of `setup()` — but `setup()` can't run until after that ~300ms wait, by which point the host has already read the descriptors, and a unit powered on with USB pre-attached could enumerate as `TeensyROM-00000000`. The fix was not a core patch — it was moving the call into `startup_middle_hook()`, where the strings are final before the device ever attaches. Same lesson applies to anything else that must be true before enumeration: `setup()` is ~300ms too late, and the middle hook is the tool.
+
 ## Toolchain pin: avoid Teensyduino 1.62.0
 
 Confirmed root cause is the GCC 15.2.1 toolchain bump (from 11.3.1) in Teensyduino 1.62.0, **not** TeensyROM source code — causes intermittent SD-read stalls with 2 PSRAM chips installed. Build against **1.61.0**. Do not attempt to work around this by modifying source; it's an upstream toolchain regression.

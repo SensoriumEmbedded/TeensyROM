@@ -34,7 +34,7 @@ C64 code and Teensy firmware also talk to each other **at runtime** two differen
 - [C64-Software.md](C64-Software.md) — MainMenuCRT, SettingsMenu, sub-programs, build pipeline
 - [Comms-Protocol.md](Comms-Protocol.md) — cartridge register protocol + link to external host protocol
 - [Build-System.md](Build-System.md) — toolchains, versions, dual-boot linking, known gotchas
-- [Constraints.md](Constraints.md) — hard rules: ISR hot path, memory budgets, toolchain pins
+- [Constraints.md](Constraints.md) — hard rules: ISR hot path, memory budgets, startup hooks, toolchain pins
 - [Known-Issues.md](Known-Issues.md) — scoped, deferred findings from architecture walkthroughs, with designed (not yet implemented) fixes
 - [DMA-Timing-Known-Issues.md](DMA-Timing-Known-Issues.md) — itemized tracking for the `DMA_Timing` branch (TR+'s true bus-mastering DMA, not the CRT bank-swap pause mechanism)
 - [Reboot-Display-Blanking.md](Reboot-Display-Blanking.md) — why `RebootTR()` exists, the large-CRT reboot glitch fix, and what was tried and didn't help
