@@ -1,37 +1,36 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-#include "VMABI.h"
+#include "VMHostABI.h"
 
-// base/limit must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs, which partitions
-// the combined hex -- tools/verify-extensions.mjs compares the two. The ordinary
-// images keep their upstream addresses. Only the extension image uses the
-// module-compatible RAM map.
+// The extension host's flash slot, as the ordinary images see it. The geometry
+// and the validity predicate are the published host contract (VMHostABI.h);
+// this adds only the reads against real flash, and the buffer that stands in
+// for it on host conformance builds.
+//
+// The ordinary images keep their upstream addresses. Only the extension image
+// uses the module-compatible RAM map.
 namespace VmBootImage {
-static constexpr uint32_t base = 0x60280000u;
-static constexpr uint32_t limit = 0x602e0000u;
+static constexpr uint32_t base = VM_HOST_SLOT_BASE;
+static constexpr uint32_t limit = VM_HOST_SLOT_LIMIT;
 
-// In the 0xFF fill between the FlexSPI config block and the image vector
-// table. extensionLinkerScript() in tools/lib/extension-image.mjs places
-// .vmhostid here; tools/verify-extensions.mjs compares the two.
-static constexpr uint32_t idOffset = 0x800u;
+static constexpr uint32_t idOffset = VM_HOST_ID_OFFSET;
 
 #if defined(__arm__)
 static inline const uint8_t *window() { return reinterpret_cast<const uint8_t *>(base); }
 #else
 // Host conformance builds have no flash behind `base`, so the slot they inspect
-// is an ordinary buffer, which install() below fills.
-alignas(uint32_t) inline uint8_t hostWindow[0x1028];
+// is an ordinary buffer, which install() below fills. Sized to the whole slot,
+// so it can stand in for the region an installer writes.
+alignas(uint32_t) inline uint8_t hostWindow[VM_HOST_SLOT_BYTES];
 static inline const uint8_t *window() { return hostWindow; }
 #endif
 
 static inline bool valid(uint32_t flashMagic, uint32_t vectorMagic,
                          uint32_t entry, uint32_t bootBase, uint32_t imageBytes) {
-    const uint32_t address = entry & ~1u;
-    return flashMagic == 0x42464346u && vectorMagic == 0x432000d1u &&
-           (entry & 1u) && address >= base + 0x1000u && address <= base + 0x3000u &&
-           bootBase == base && imageBytes > 0x1000u && imageBytes <= limit - base;
+    return vm_host_slot_valid(flashMagic, vectorMagic, entry, bootBase, imageBytes);
 }
 static inline bool installed() {
     const auto flash = reinterpret_cast<const volatile uint32_t *>(window());
@@ -66,9 +65,10 @@ inline void installWithoutDescriptor() {
     memset(hostWindow + idOffset, 0xff, sizeof(VmHostId));
 }
 
-inline void install(uint32_t services, uint32_t abi = VM_ABI) {
+inline void install(uint32_t services, uint32_t abi = VM_ABI, const char *name = "TeensyROM") {
     installWithoutDescriptor();
-    const VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), "TeensyROM", 0 };
+    VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), {}, 0 };
+    snprintf(id.name, sizeof id.name, "%s", name);
     memcpy(hostWindow + idOffset, &id, sizeof id);
 }
 #endif
