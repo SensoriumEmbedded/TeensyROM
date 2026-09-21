@@ -133,6 +133,22 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
     return true;
 }
 
+// Every remote command that mutates storage reports what it wrote here, after
+// its response token is on the wire. The rebuild this arms is left to the menu
+// rather than done now: LoadDirectory prints to Serial, which is CmdChannel,
+// and these commands answer in bare 2-byte tokens.
+FLASHMEM void NoteRemoteFileChange(const char FileNamePath[], uint32_t storageType)
+{
+    const uint8_t device = LoadedListing::storageDevice(storageType);
+
+#ifdef VM_EXTENSIONS_ENABLED
+    if (device == rmtSD) RemoteChangedSDCard = true;
+#endif
+
+    if (LoadedListing::invalidatedBy(FileNamePath, device, IO1[rWRegCurrMenuWAIT], DriveDirPath))
+        RemoteChangedLoadedDir = true;
+}
+
 // Command: 
 // Post File to target directory and storage type on TeensyROM.
 // Automatically creates target directory if missing.
@@ -196,6 +212,8 @@ FLASHMEM void PostFileCommand()
     if (!ReceiveFileData(fileStream, fileLength, checksum)) return;
 
     SendU16(AckToken);
+
+    NoteRemoteFileChange(FileNamePath, storageType);
 }
 
 FLASHMEM void SendDirInfo(const char *itemName, const char *directoryPath)
@@ -481,27 +499,29 @@ FLASHMEM void CopyFileCommand()
     if (!CopyFile(sourcePath, destinationPath, *sourceFS)) return;
 
     SendU16(AckToken);
+
+    NoteRemoteFileChange(destinationPath, storageType);
 }
 
-FLASHMEM void DeleteFile(const char* filePath, FS& fileSystem)
+FLASHMEM bool DeleteFile(const char* filePath, FS& fileSystem)
 {
     if (!fileSystem.exists(filePath))
     {
         SendU16(FailToken);
         CmdChannel->printf("File not found: %s\n", filePath);
-        return;
+        return false;
     }
 
     if (fileSystem.remove(filePath))
     {
         SendU16(AckToken);
-        return;
+        return true;
     }
     else
     {
         SendU16(FailToken);
         CmdChannel->printf("Failed to delete file: %s\n", filePath);
-        return;
+        return false;
     }
 }
 
@@ -543,7 +563,7 @@ FLASHMEM void DeleteFileCommand()
         CmdChannel->println("Error getting storage device!");
     }
 
-    DeleteFile(filePath, *sourceFS);
+    if (DeleteFile(filePath, *sourceFS)) NoteRemoteFileChange(filePath, storageType);
 }
 
 FLASHMEM bool SendFileData(File& file, uint32_t len) {

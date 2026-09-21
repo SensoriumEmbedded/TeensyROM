@@ -22,10 +22,43 @@
 #include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
+// A remote file command changed storage under a listing the C64 has already
+// painted. The C64 selects by item number and the firmware cannot repaint it,
+// so rebuilding at the command would resolve painted numbers against a list
+// they no longer match. Rebuilding here and refusing the launch instead routes
+// the C64 through MainMenu.asm's ListAndDone, which reprints from the new list.
+FLASHMEM bool ApplyRemoteFileChanges()
+{
+   const uint8_t LoadedDevice = IO1[rWRegCurrMenuWAIT];
+   const bool Reload = RemoteChangedLoadedDir &&
+                       LoadedListing::reloadable(LoadedDevice, DriveDirPath);
+
+   RemoteChangedLoadedDir = false;
+
+#ifdef VM_EXTENSIONS_ENABLED
+   // Extension routing reads a table built from /VMS, not from the listing, so
+   // rebuilding it changes nothing the C64 has painted and needs no reprint.
+   // LoadDirectory does it for us when the listing is being rebuilt anyway.
+   if (RemoteChangedSDCard && !Reload && LoadedDevice == rmtSD) VmRegistry::refresh(true);
+   RemoteChangedSDCard = false;
+#endif
+
+   if (!Reload) return false;
+
+   LoadDirectory(LoadedDevice == rmtSD ? &SD : &firstPartition);
+   MenuSource = DriveDirMenu;
+   IO1[rwRegCursorItemOnPg] = 0;
+   SendMsgPrintfln("Files changed\r\nDirectory reloaded");
+   return true;
+}
+
 FLASHMEM void HandleExecution()
 {
-   StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
    IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
+
+   if (ApplyRemoteFileChanges()) return;
+
+   StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
 
 #ifdef VM_EXTENSIONS_ENABLED
    // Existing browser and item types are unchanged. Intercept only physical SD
@@ -468,7 +501,9 @@ void LoadDirectory(FS *sourceFS)
    // Pins VmRegistry's extension table to this listing: what VmLaunch::tryFile
    // answers from must not be staler than what the user is choosing from.
    VmRegistry::refresh(sourceFS == &SD);
+   RemoteChangedSDCard = false;
 #endif
+   RemoteChangedLoadedDir = false;
    InitDriveDirMenu();
    
    File dir = sourceFS->open(DriveDirPath);

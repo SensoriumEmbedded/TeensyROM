@@ -33,6 +33,7 @@
 #include "MinimalBoot/Common/Common_Defs.h"
 #include "MinimalBoot/Common/Menu_Regs.h"
 #include "MinimalBoot/Common/DriveDirLoad.h"
+#include "LoadedListing.h"
 #include "MainMenuItems.h"
 #ifdef VM_EXTENSIONS_ENABLED
    // Before IOHandlers.h: PollingHndlr_TeensyROM is where the record is shown.
@@ -49,6 +50,10 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
+bool RemoteChangedLoadedDir = false; //a remote file command wrote in the directory the menu is showing
+#ifdef VM_EXTENSIONS_ENABLED
+   bool RemoteChangedSDCard = false; //a remote file command wrote to the card the extension table is built from
+#endif
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 Stream *CmdChannel  = &Serial; 
 bool isFrozen = false;

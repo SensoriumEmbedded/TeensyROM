@@ -73,10 +73,11 @@ native('files_test', [sandbox('files-sandbox-')]);
 native('image_test', [path.join(fixture, 'VMS/HELLO/engine.mvm')]);
 native('registry_test', [fixture, sandbox('registry-sandbox-')]);
 native('launch_test', [fixture, sandbox('launch-sandbox-')]);
+native('listing_test');
 native('scheduler_test');
 native('fail_test');
 native('hello_module_test', [sandbox('hello-sandbox-')]);
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
-console.log('PASS: extension loader conformance (package format, file services, image validation, registry, launch routing, failure reporting, reference module)');
+console.log('PASS: extension loader conformance (package format, file services, image validation, registry, launch routing, listing invalidation, failure reporting, reference module)');

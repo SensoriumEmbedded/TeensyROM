@@ -199,7 +199,11 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    // A remote launch builds its one-item DriveDirMenu without LoadDirectory, so
    // the extension table LoadDirectory would have rebuilt is rebuilt here.
    VmRegistry::refresh(MenuSourceID == rmtSD);
+   RemoteChangedSDCard = false;
 #endif
+   // The one-item menu built below replaces whatever listing a remote file
+   // command may have changed, so there is nothing left for the menu to reload.
+   RemoteChangedLoadedDir = false;
 
    if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
    
