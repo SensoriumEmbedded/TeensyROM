@@ -89,9 +89,9 @@ static inline bool take(Record &out) {
     return valid;
 }
 
-// Runs in the minimal image, ahead of its print of the core's crash report:
-// printing is what clears the report, and minimal prints it before the main
-// image that collects the record ever runs.
+// Runs in the minimal image, where the reset after a fault lands. Validity
+// only: printing is what clears the report, and the main image prints it at
+// the end of its setup(), after USB has had time to enumerate.
 static inline void promoteFault(bool faulted) {
     if (!faulted) return;
 

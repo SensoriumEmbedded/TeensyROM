@@ -66,7 +66,6 @@ void setup()
    
    SetLEDOn;  //On for minimal build, off for main init, then on at end of main init
    Serial.begin(115200);
-   if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
 #ifdef Fab04_FullDMACapable

@@ -78,7 +78,6 @@ void setup()
    
    SetLEDOff;  //On from minimal build, off for this setup completion
    Serial.begin(115200); // baud rate doesn't matter here, uses USB layer only (no HW serial bus)
-   if (CrashReport) Serial.print(CrashReport);
 #ifdef VM_EXTENSIONS_ENABLED
    // Ahead of every allocation below: the heap runs to the top of RAM2, and
    // this record lives there. It is shown on the C64 later, from the polling
@@ -183,6 +182,10 @@ void setup()
 
    MakeBuildInfo();
    Serial.printf("\n%s\n%s is on-line\n", SerialStringBuf, strVersionNumber);
+   //USB is up by here. Not gated on a host listening: printing is what clears
+   //the report, and minimal's promoteFault() promotes a stale one to $03 on
+   //the next extension launch.
+   if (CrashReport) Serial.print(CrashReport);
 #ifdef VM_EXTENSIONS_ENABLED
    VmFail::printBoot(); //what the last extension launch left in preserved RAM2
 #endif

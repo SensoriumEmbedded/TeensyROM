@@ -373,10 +373,11 @@ before the entry point is called, because on profile 0 that address is inside
 the arena the module is about to own — which means `$00` also covers an entry
 point that faulted or never returned. A fault is separated back out by the
 core's `CrashReport`: an image that comes back up holding one rewrites a `$00`
-record as `$03`. That rewrite is the minimal image's job rather than the main
-image's, because printing the report is what clears it and minimal prints it
-first. An entry point that hangs writes no report, so it stays `$00` and stays
-silent.
+record as `$03`. That rewrite is the minimal image's job because minimal is
+where the reset lands, and it reads only the report's validity — printing a
+report is what clears it, so the main image does the printing, at the end of
+`setup()`, after USB has had time to enumerate. An entry point that hangs
+writes no report, so it stays `$00` and stays silent.
 
 | Code | Meaning |
 |-----:|---------|
