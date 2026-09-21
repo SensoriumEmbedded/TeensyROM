@@ -12,11 +12,12 @@ export const ABI = 2;
 export const CODE_BASE = 0x18000, CODE_LIMIT = 0x30000;
 export const DATA_BASE = 0x20014000, DATA_LIMIT = 0x20044000;
 export const DATA_BYTES = DATA_LIMIT - DATA_BASE;
-// The top 16 KiB of RAM2 belongs to the firmware (Teensy's CrashReport and the
-// loader's boot failure record), so the guest arena stops short of it. Keep in
-// step with VM_RAM_* in Source/Teensy/MinimalBoot/Common/VMABI.h.
+// Profile 0 lends the guest all of RAM2. Profile 1 holds back the top 16 KiB,
+// which carries Teensy's CrashReport and the loader's failure record, because
+// it write-protects its constants in MPU subregions of that size. Keep in step
+// with VM_RAM_* in Source/Teensy/MinimalBoot/Common/VMABI.h.
+export const RAM_BYTES = 512 * 1024;
 export const RAM_RESERVED_BYTES = 16 * 1024;
-export const RAM_BYTES = 512 * 1024 - RAM_RESERVED_BYTES;
 export const RAM2_RO_BYTES = 80 * 1024;
 export const PROFILE_LEGACY = 0, PROFILE_RAM2_RO = 1;
 export const SERVICE = {

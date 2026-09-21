@@ -76,8 +76,9 @@ Two rules keep that promise workable:
 2. **Capability, then fallback.** If a host rejects a bit, retry without it.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
-Profile `0` lends the whole 496 KiB RAM2 arena; profile `1` keeps its upper
-80 KiB as write-protected constants loaded from the image, leaving 416 KiB.
+Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
+write-protected constants loaded from the image and holds back the reserved top
+16 KiB, leaving 416 KiB.
 
 ## 3. The package
 
@@ -214,19 +215,25 @@ the main and minimal firmware images keep their own addresses.
 | DTCM | below `0x20014000` | — | host state and heap |
 | DTCM | `0x20014000` | 192 KiB | **module `.data`, `.bss`, then workspace** |
 | DTCM | `0x20044000` | 48 KiB | shared stack |
-| RAM2 | `0x20200000` | 496 KiB | **guest arena** (416 KiB on profile 1) |
-| RAM2 | `0x2027c000` | 16 KiB | firmware-reserved — see below |
+| RAM2 | `0x20200000` | 512 KiB | **guest arena** (416 KiB on profile 1) |
+| RAM2 | `0x2027ff60` | 160 bytes | loader record + Teensy's `CrashReport` (inside the profile-0 arena) |
 
 `workspace` is whatever is left of the 192 KiB DTCM window after the module's
 own `.data` and `.bss`, aligned up to 32 bytes. Size it by shrinking your static
 footprint, not by asking for more.
 
-RAM2 is 512 KiB, but the top 16 KiB are not yours. Teensy's core keeps its
-`CrashReport` in the last 128 bytes of it, and the loader leaves the reason a
-launch failed just below the arena, where the main firmware image reads it after
-the reset. Take the size from `host->guest_ram_bytes`, never from the physical
-end of RAM2: a module that writes to `0x20280000 - 1` destroys the crash report
-that would have explained why it later died.
+On profile 0 the arena is the whole of RAM2, including the 160 bytes at the top
+that hold the loader's failure record and Teensy's own `CrashReport`. The loader
+stamps its record before calling `vm_entry`, and writes it again only to record
+a refusal — at which point your module is no longer running. The core writes
+`CrashReport` from the fault handler. Overwriting either structure costs you
+only that diagnostic: both are CRC-gated on read, so a scribbled one reads back
+as absent rather than as a bogus report.
+
+Profile 1 cannot lend that span: its constants are write-protected in 16 KiB MPU
+subregions, and protecting the topmost one would fault the core's crash writer,
+so it holds the 16 KiB back. Take the size from `host->guest_ram_bytes`, never
+from the physical end of RAM2.
 
 While a module is being loaded the host makes its code window writable and
 non-executable, then restores it to read-only and executable before the entry
@@ -354,17 +361,21 @@ clear, no message. `Source/C64/VMHello/vmhello.a` is a working example.
 ## 7. When a launch fails
 
 The extension image has no working USB, so it cannot explain itself. Instead it
-leaves a 32-byte record in the reserved top of RAM2 and resets; the main image
-collects it before anything can overwrite it and the menu prints it once the
-C64 is waiting to read messages. If three attempts go unread — the C64 is not in
-a wait loop and each one times out — the record is dropped and the reason is left
-on the Teensy's USB serial only. A successful hand-off is recorded too, as
-`$00`, so a client that then fails to draw is distinguishable from a host that
-never started.
+leaves a 32-byte record at `0x2027ff60` and resets; the main image collects it
+before anything can overwrite it and the menu prints it once the C64 is waiting
+to read messages. If three attempts go unread — the C64 is not in a wait loop
+and each one times out — the record is dropped and the reason is left on the
+Teensy's USB serial only.
+
+A successful hand-off is recorded too, as `$00`, so a client that then fails to
+draw is distinguishable from a host that never started. `$00` is stamped just
+before the entry point is called, because on profile 0 that address is inside
+the arena the module is about to own — which means `$00` also covers an entry
+point that faulted or never returned, and those leave the menu silent.
 
 | Code | Meaning |
 |-----:|---------|
-| `$00` | the client is up |
+| `$00` | handed off to the client, or `vm_entry` never returned |
 | `$01` | minimal jumped to the extension image and it did not start |
 | `$02` | the top flash slot holds no valid image |
 | `$10` | SD card would not initialise (detail: attempts) |
@@ -457,8 +468,10 @@ C64 screen:
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
-| Guest arena size (`507904` bytes reported by the module) | yes |
-| Failure record written by the host and read back on the menu | yes |
+| Guest arena size reported by the module | yes — `guest_ram_bytes` = 524288 on profile 0 |
+| Failure record written by the host and read back on the menu | yes, before the record moved to `0x2027ff60`; not re-run since |
+| A guest fault under profile 0 leaving `CrashReport` readable | no |
+| A guest write across the top 128 bytes | no — `vm/hello` writes only its last byte, which the arena-size run above did |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |

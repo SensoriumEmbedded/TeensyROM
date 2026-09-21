@@ -13,6 +13,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { registryFixture } from './lib/fixtures.mjs';
+import { RAM_BYTES, RAM_RESERVED_BYTES, RAM2_RO_BYTES } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,7 +61,26 @@ function checkBootSlot() {
   console.log('PASS: VmBootImage::base/limit match the extension flash partition in tools/lib/hex.mjs');
 }
 
+// tools/lib/extension.mjs mirrors the RAM2 sizes from VMABI.h. Only
+// RAM2_RO_BYTES is enforced when packaging, so nothing would catch the other
+// two drifting. Nothing imports both, so compare them here.
+function checkRam2Sizes() {
+  const header = fs.readFileSync(path.join(root, 'Source/Teensy/MinimalBoot/Common/VMABI.h'), 'utf8');
+  for (const [name, mirrored] of [['VM_RAM_BYTES', RAM_BYTES],
+                                  ['VM_RAM_RESERVED_BYTES', RAM_RESERVED_BYTES],
+                                  ['VM_RAM2_RO_BYTES', RAM2_RO_BYTES]]) {
+    const match = header.match(new RegExp(`\\b${name}\\s*=\\s*(\\d+)\\s*\\*\\s*1024\\b`));
+    if (!match) throw new Error(`VMABI.h no longer defines ${name} as a KiB multiple`);
+    const declared = Number(match[1]) * 1024;
+    if (declared !== mirrored) {
+      throw new Error(`${name} is ${declared} in VMABI.h, but tools/lib/extension.mjs mirrors it as ${mirrored}`);
+    }
+  }
+  console.log('PASS: tools/lib/extension.mjs RAM2 sizes match VM_RAM_* in VMABI.h');
+}
+
 checkBootSlot();
+checkRam2Sizes();
 
 process.stdout.write(run(process.execPath, ['--test', 'tools/lib/extension.test.mjs'], 'package format unit tests'));
 

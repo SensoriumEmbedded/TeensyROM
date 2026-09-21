@@ -2,7 +2,8 @@
 // VmFail::report() against a C64 that never answers. On hardware each attempt
 // costs SendMsgSerialStringBuf's three-second wait and leaves pending() set, so
 // how many attempts there can be is what is asserted here. The record's RAM2
-// cache handling needs the chip and is not exercised.
+// cache handling needs the chip and is not exercised; its magic/CRC gate is,
+// because profile 0 lends the guest the address the record lives at.
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
@@ -45,10 +46,51 @@ static void poll(bool c64Answers) {
 // Three attempts is three times SendMsgSerialStringBuf's three-second wait.
 static_assert(VmFail::reportAttemptLimit == 3, "the menu stalls once per attempt");
 
-int main() {
-    (void)&VmFail::capture;   // reads the fixed RAM2 address; needs the chip
+// The record sits inside the profile-0 arena, so a guest is free to write over
+// it. Damage has to read as "no record" rather than as some other launch's
+// reason.
+static void scribbledRecordsReadAsAbsent() {
+    VmFail::Record got{};
+    VmFail::set(VmFail::ClientCrc, 0x1234);
+    assert(VmFail::take(got) && got.code == VmFail::ClientCrc && got.detail == 0x1234);
+    // take() clears, so the same reason cannot surface on the next boot too.
+    assert(!VmFail::take(got));
 
-    VmFail::captured = VmFail::Record{ VmFail::Magic, VmFail::ModuleLoad, 0x11, 0, {} };
+    for (unsigned bit = 0; bit < sizeof(VmFail::Record) * 8; bit++) {
+        VmFail::set(VmFail::ModuleLoad, 0x11);
+        ((uint8_t *)VmFail::slot())[bit / 8] ^= uint8_t(1u << (bit % 8));
+        assert(!VmFail::take(got));
+    }
+
+    // Whole-arena patterns a guest would plausibly leave behind.
+    for (uint8_t fill : {0x00, 0xff, 0x5a}) {
+        VmFail::set(VmFail::ModuleLoad, 0x11);
+        memset(VmFail::slot(), fill, sizeof(VmFail::Record));
+        assert(!VmFail::take(got));
+    }
+}
+
+// capture() decides what the menu is allowed to interrupt for, and a clean
+// hand-off must not be one of those things.
+static void okIsCollectedButNotShown() {
+    VmFail::set(VmFail::Ok);
+    VmFail::capture();
+    assert(VmFail::captureValid && !VmFail::pending());
+
+    VmFail::set(VmFail::ModuleLoad, 0x11);
+    VmFail::capture();
+    assert(VmFail::captureValid && VmFail::pending());
+
+    VmFail::capture();   // nothing left to collect
+    assert(!VmFail::captureValid && !VmFail::pending());
+}
+
+int main() {
+    scribbledRecordsReadAsAbsent();
+    okIsCollectedButNotShown();
+    VmFail::reportAttempts = 0;
+
+    VmFail::captured = VmFail::Record{ VmFail::Magic, VmFail::ModuleLoad, 0x11, {}, 0 };
     VmFail::captureValid = VmFail::captureHeld = true;
 
     // A C64 that never reaches its wait loop gets the limit and no more, and
@@ -79,6 +121,8 @@ int main() {
     VmFail::printBoot();
     assert(toSerial.size() == 1 && toSerial[0].find("module refused") != std::string::npos);
 
-    puts("PASS: extension failure reporting; bounded retries when the C64 never reads, "
-         "one message when it does, both message forms, and the serial line");
+    puts("PASS: extension failure reporting; a round trip through the record, every "
+         "single-bit and whole-line corruption of it reading as absent, a clean hand-off "
+         "collected but not shown, bounded retries when the C64 never reads, one message "
+         "when it does, both message forms, and the serial line");
 }

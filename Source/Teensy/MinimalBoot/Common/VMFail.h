@@ -9,9 +9,9 @@
 // tools/lib/extension-image.mjs). So it has no serial, and its only exit is a
 // reset back into the stock menu: a failure inside it is otherwise completely
 // silent, and looks from the couch like "junk on screen, then the menu came
-// back". It leaves one record here instead, in the first cache line of the RAM2
-// window reserved above the guest arena, which survives the soft reset. The
-// main image collects it on the way back up and shows it on the C64 menu.
+// back". It leaves one record here instead, in the cache line directly below
+// Teensy's own CrashReport at the top of RAM2, which survives the soft reset.
+// The main image collects it on the way back up and shows it on the C64 menu.
 //
 // Registry-level failures never get this far: VmRegistry::tryLaunch runs in the
 // main image, where SendMsgPrintfln already works, and only reboots on success.
@@ -24,7 +24,10 @@ namespace VmFail {
 // the single path that hands the machine to the C64 client; anything the module
 // itself has to say after that travels over IO2 to the client, not through here.
 enum : uint8_t {
-    Ok            = 0x00,  // client is up -- the successful end of the boot
+    // Stamped before the entry point is called, because after that the arena
+    // it sits in belongs to the module. A fault inside vm_entry therefore
+    // reads back as Ok rather than as Entered.
+    Ok            = 0x00,  // handed to the module; nothing refused it after
     Entered       = 0x01,  // minimal is about to jump to the extension image
     NoImage       = 0x02,  // ...but the top flash slot holds no valid image
     SdInit        = 0x10,  // SD card would not initialise (detail = attempts)
@@ -39,21 +42,33 @@ enum : uint8_t {
     ModuleLoad    = 0x20,  // module image refused (detail = VMHost failure code)
 };
 // Padded to a cache line: the cache maintenance below works in 32-byte units,
-// and nothing else may share the line.
-struct Record { uint32_t magic, code, detail, crc; uint32_t reserved[4]; };
+// and nothing else may share the line. crc comes last so that
+// vm_crc32(r, offsetof(Record, crc)) covers every other word, padding included.
+struct Record { uint32_t magic, code, detail; uint32_t reserved[4]; uint32_t crc; };
 static_assert(sizeof(Record)==32, "one cache line");
 enum : uint32_t { Magic = 0x3146564du };  // 'MVF1'
-static constexpr uint32_t base = VM_RAM_LIMIT;
-static_assert(base+sizeof(Record) <= 0x2027FF80u, "must clear Teensy's own CrashReport");
+// Fixed, not derived from the arena: profile 0 lends the guest all of RAM2, so
+// the record has to sit at one address whatever the profile. A guest that
+// overwrites it fails the magic/CRC gate in take() and reads as no record.
+static constexpr uint32_t base = 0x2027FF60u;
+static_assert(base % 32 == 0, "a cache line of its own");
+static_assert(base+sizeof(Record) == 0x2027FF80u, "directly below Teensy's CrashReport");
 
+#if defined(__arm__)
 static inline Record *slot() { return reinterpret_cast<Record *>(base); }
+#else
+// Host conformance builds have no RAM2 behind that address, so set() and take()
+// run against ordinary memory.
+inline Record hostSlot;
+static inline Record *slot() { return &hostSlot; }
+#endif
 
 // RAM2 is cached and the reset that follows does not write the cache back, so
 // the record has to be pushed out to physical RAM by hand -- exactly what the
 // core does for its own crash report in startup.c.
 static inline void set(uint8_t code, uint32_t detail = 0) {
     Record *r = slot();
-    *r = Record{ Magic, code, detail, 0, {} };
+    *r = Record{ Magic, code, detail, {}, 0 };
     r->crc = vm_crc32(r, offsetof(Record, crc));
     arm_dcache_flush_delete(r, sizeof *r);
 }

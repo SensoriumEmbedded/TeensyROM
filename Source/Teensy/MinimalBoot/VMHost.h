@@ -90,6 +90,9 @@ static bool loadModule() {
              launch.root, launch.content, timeNow, openFile, readFile, nextFile, closeFile,
              (uint8_t *)VM_RAM_BASE, vm_image_guest_bytes(h), openFlags, writeFile, fileOp,
              shouldYield, moduleFail };
+    // Before the call, not after: on profile 0 the record's cache line is
+    // inside the arena the module is about to own (VMFail.h).
+    VmFail::set(VmFail::Ok);
     module = reinterpret_cast<VmEntry>(h.entry)(&host);
     // Native modules are trusted, but a corrupt table is a mistake worth
     // catching before we start calling through it.
@@ -182,7 +185,6 @@ bool VMHostBoot() {
     // A module failure stays readable by the client rather than hanging -- but
     // it is also recorded, because a client that cannot draw leaves the menu as
     // the only place the reason can surface.
-    if (loadModule()) VmFail::set(VmFail::Ok);
-    else VmFail::set(VmFail::ModuleLoad, failure);
+    if (!loadModule()) VmFail::set(VmFail::ModuleLoad, failure);
     doReset = true; return true;
 }

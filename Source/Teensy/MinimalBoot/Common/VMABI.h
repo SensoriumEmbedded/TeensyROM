@@ -33,25 +33,22 @@ enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
                   VM_RAM_BASE = 0x20200000,
-                  // RAM2 is 512 KiB, but its top 16 KiB stay with the firmware.
-                  // Teensy's core keeps its CrashReport in the last 128 bytes
-                  // (0x2027FF80), and the loader leaves its boot failure record
-                  // at VM_RAM_LIMIT; an arena running all the way to 0x20280000
-                  // overwrites both, which is what a module doing a both-ends
-                  // write of guest_ram actually did. 16 KiB is the MPU subregion
-                  // size for this window, so it is also the smallest amount that
-                  // can be held back from a write-protected profile.
-                  VM_RAM_RESERVED_BYTES = 16*1024,
-                  VM_RAM_BYTES = 512*1024-VM_RAM_RESERVED_BYTES,
-                  VM_RAM_LIMIT = VM_RAM_BASE+VM_RAM_BYTES };
-static_assert(VM_RAM_LIMIT+VM_RAM_RESERVED_BYTES==0x20280000, "RAM2 ends at 0x20280000");
-// Memory profiles. 0 gives the module the whole 496 KiB RAM2 arena. 1 keeps the
-// upper 80 KiB of it as initialized, non-executable, write-protected constants
-// loaded from the image, leaving the lower 416 KiB as guest arena.
+                  VM_RAM_BYTES = 512*1024,
+                  VM_RAM_LIMIT = VM_RAM_BASE+VM_RAM_BYTES,
+                  // Profile 1 only: the MPU subregion size for this window,
+                  // so the smallest span it can hold back. It holds back the
+                  // top one because the core keeps its CrashReport there and
+                  // write-protecting it would fault the core's crash writer.
+                  VM_RAM_RESERVED_BYTES = 16*1024 };
+static_assert(VM_RAM_LIMIT==0x20280000, "RAM2 ends at 0x20280000");
+// Memory profiles. 0 gives the module all 512 KiB of RAM2. 1 keeps the upper
+// 80 KiB of its arena as initialized, non-executable, write-protected constants
+// loaded from the image and holds back the reserved top, leaving 416 KiB.
 // Profile 2 is reserved (see VM_PROFILE_RESERVED_AUX below) and not loadable.
 enum : uint32_t { VM_PROFILE_LEGACY=0, VM_PROFILE_RAM2_RO=1,
                   VM_PROFILE_RESERVED_AUX=2,
-                  VM_RAM2_RO_BYTES=80*1024, VM_RAM2_GUEST_BYTES=VM_RAM_BYTES-VM_RAM2_RO_BYTES,
+                  VM_RAM2_RO_BYTES=80*1024,
+                  VM_RAM2_GUEST_BYTES=VM_RAM_BYTES-VM_RAM_RESERVED_BYTES-VM_RAM2_RO_BYTES,
                   VM_RAM2_RO_BASE=VM_RAM_BASE+VM_RAM2_GUEST_BYTES };
 static_assert(VM_RAM2_RO_BASE==0x20268000 && VM_RAM2_GUEST_BYTES==416*1024,
               "profile 1 constants are the MPU subregions 2..6 of the 128 KiB window at 0x20260000");
@@ -85,7 +82,9 @@ struct VmHost {
     int32_t (*read)(uint32_t handle, uint32_t offset, void *data, uint32_t count);
     int32_t (*next)(uint32_t directory, VmFileInfo *info); // 1 entry, 0 EOF, -1 error
     void (*close)(uint32_t handle);
-    // RAM2 guest arena, sized by the image profile.
+    // RAM2 guest arena, sized by the image profile. Profile 0 runs it to the
+    // physical end of RAM2, over the loader's failure record and the core's
+    // CrashReport.
     uint8_t *guest_ram; uint32_t guest_ram_bytes;
     uint32_t (*open_flags)(const char *path,uint32_t flags,VmFileInfo *info);
     int32_t (*write)(uint32_t handle,uint32_t offset,const void *data,uint32_t count);
