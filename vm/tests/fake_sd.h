@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <strings.h>
@@ -51,7 +52,12 @@ struct Files {
 };
 static struct {Files sdfs;} SD;
 static bool rebooted;static std::string message,marker;
-static void SendMsgPrintfln(const char *m){message=m;}
+// Varargs like the firmware's, so a test sees the message the C64 would, and
+// -Wformat checks the firmware's format strings against their arguments.
+__attribute__((format(printf,1,2)))
+static void SendMsgPrintfln(const char *fmt,...){
+    char buffer[160];va_list args;va_start(args,fmt);
+    vsnprintf(buffer,sizeof buffer,fmt,args);va_end(args);message=buffer;}
 static void EEPwriteStr(int,const char *m){marker=m;}
 static struct {void write(int,int){}} EEPROM;
 static void delay(unsigned){}

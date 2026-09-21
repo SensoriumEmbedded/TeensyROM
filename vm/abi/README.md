@@ -194,11 +194,16 @@ Then:
 
 1. `preflight` re-validates the module image and the client cartridge in full,
    including both CRCs. A failure reports on screen and does **not** reboot.
-2. A `launch.vml` record is written to `/VMS` and read back to confirm.
-3. A one-shot EEPROM flag is set and the machine resets.
-4. The boot image sees the flag and jumps to the extension image, which reserves
+2. The installed extension image is read out of its flash slot. An empty slot,
+   a host that speaks another ABI, and a host missing a bit the module asked for
+   in `required_services` each report on screen and do **not** reboot. A host
+   built before that descriptor existed cannot say what it provides, so its
+   launch proceeds and the refusal happens after the reboot as it always did.
+3. A `launch.vml` record is written to `/VMS` and read back to confirm.
+4. A one-shot EEPROM flag is set and the machine resets.
+5. The boot image sees the flag and jumps to the extension image, which reserves
    the module's memory before anything else claims it.
-5. The extension image loads the client cartridge into RAM as EasyFlash banks,
+6. The extension image loads the client cartridge into RAM as EasyFlash banks,
    loads the module, and calls its entry point.
 
 The extension image lives in its own flash slot at `0x60280000..0x602e0000`, so

@@ -47,6 +47,36 @@ int main(int argc,char **argv){
     // Path traversal is refused at the component level, before any SD access.
     assert(!absolute("/VMS/../secret",80));assert(!component("../HELLO"));assert(!component("HELLO/VM"));
 
+    // An empty slot refuses before the reboot, and says so rather than booting
+    // an image that is not there.
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(message.find("No extension host")!=std::string::npos);
+
+    VmBootImage::install(VM_HOST_SERVICES);
+    assert(VmBootImage::installed());
+    VmHostId read{};assert(VmBootImage::identity(read)&&read.services==VM_HOST_SERVICES);
+
+    // A host that cannot serve what the module requires is refused here too,
+    // and the message names the bits it is missing.
+    VmBootImage::install(VM_HOST_SERVICES&~VM_SERVICE_PACKETS);
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(message.find("lacks service")!=std::string::npos);
+
+    // A host that speaks another ABI would refuse every module this image can
+    // validate, so that is knowable here too.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1);
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(message.find("is ABI")!=std::string::npos);
+
+    // A host image predating the descriptor cannot say what it provides, and
+    // that is not a refusal -- the launch proceeds as it did before.
+    VmBootImage::installWithoutDescriptor();
+    assert(VmBootImage::installed()&&!VmBootImage::identity(read));
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
+
+    rebooted=false;marker.clear();
+    VmBootImage::install(VM_HOST_SERVICES);
+
     // Launch by client cartridge: no content file, package identified by descriptor.
     assert(tryLaunch(rmtSD,"/","HELLO.crt"));
     assert(rebooted&&marker=="@VM1");

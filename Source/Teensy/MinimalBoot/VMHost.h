@@ -28,6 +28,12 @@ static uint32_t sliceStarted;
 static constexpr uint32_t providedServices = VM_HOST_SERVICES;
 static void moduleFail(uint8_t error, uint32_t detail);
 
+// Placed by extensionLinkerScript() in tools/lib/extension-image.mjs, and read
+// back out of flash by VmBootImage::identity() in the main image.
+__attribute__((used, section(".vmhostid")))
+const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, providedServices,
+                            sizeof(VmHost), "TeensyROM", 0 };
+
 static void codeAccess(bool loading) {
     // Core region 1 makes all ITCM read-only. A higher-priority region grants
     // only the module window RW+XN while loading, then restores RO+execute.

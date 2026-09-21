@@ -59,6 +59,16 @@ struct VmImageHeader {
     uint32_t reserved[4];
 };
 static_assert(sizeof(VmImageHeader)==64, "MVM1 image header");
+// Stamped into the extension image at a fixed offset, so the main image can
+// read the installed host's ABI and services without booting it. services is
+// the host's providedServices; name is for the refusal message.
+struct VmHostId {
+    uint32_t magic, abi, services, host_bytes;
+    char name[12];
+    uint32_t reserved;
+};
+static_assert(sizeof(VmHostId)==32, "MVH2 host descriptor");
+enum : uint32_t { VM_HOSTID_MAGIC=0x3248564du };  // 'MVH2'
 struct VmFileInfo { uint32_t bytes; uint8_t directory; char name[96]; uint8_t attributes; uint16_t date,time; };
 struct VmInput { uint8_t buttons, display, overflow, protocol; };
 struct VmPacket { uint8_t type, flags, length, reserved; uint8_t payload[228]; };

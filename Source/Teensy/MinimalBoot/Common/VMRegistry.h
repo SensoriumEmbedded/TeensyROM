@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "VMABI.h"
+#include "VMBootImage.h"
 namespace VmRegistry {
 struct Manifest { char id[24],extension[8],module[32],client[32];uint32_t crc; };
 struct Launch { uint32_t magic,manifest_crc;char root[80],content[256];uint32_t crc; };
@@ -66,10 +67,11 @@ static FLASHMEM bool consume(Launch &l){
         (!l.content[0]||absolute(l.content,sizeof l.content));
 }
 #ifndef MinimumBuild
-static FLASHMEM bool preflight(const Launch &l){
+static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
     Manifest m{};if(!readManifest(l.root,m)||m.crc!=l.manifest_crc)return false;
     char path[128];snprintf(path,sizeof path,"%s/%s",l.root,m.module);FsFile f=SD.sdfs.open(path,O_RDONLY);VmImageHeader h{};
     if(!f||f.isDirectory()||f.fileSize()>UINT32_MAX||f.read(&h,64)!=64||!vm_valid_header(h,f.fileSize())){f.close();return false;}
+    if(out)*out=h;
     uint8_t block[512];uint32_t remain=vm_image_payload_bytes(h),c=~0u;
     while(remain){const unsigned n=remain>sizeof block?sizeof block:remain;if(f.read(block,n)!=(int)n){f.close();return false;}
         for(unsigned i=0;i<n;i++){c^=block[i];for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}remain-=n;}
@@ -134,7 +136,15 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     if(!found){if(!clientId)return false;SendMsgPrintfln("VM package missing in /VMS");return true;}
     if(found<0){SendMsgPrintfln("Ambiguous or over-limit VM registry");return true;}
     if(!clientId)strcpy(l.content,selected);
-    if(!preflight(l)){SendMsgPrintfln("VM package/client failed validation");return true;}
+    VmImageHeader image{};
+    if(!preflight(l,&image)){SendMsgPrintfln("VM package/client failed validation");return true;}
+    if(!VmBootImage::installed()){SendMsgPrintfln("No extension host installed");return true;}
+    VmHostId hostId{};
+    if(VmBootImage::identity(hostId)){
+        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%.12s host is ABI %lu, not %lu",hostId.name,
+                        (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
+        if(image.required_services&~hostId.services){SendMsgPrintfln("%.12s host lacks service $%lx",hostId.name,
+                        (unsigned long)(image.required_services&~hostId.services));return true;}}
     l.magic=0x314c4d56;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
     const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();

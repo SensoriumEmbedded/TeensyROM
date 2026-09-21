@@ -61,6 +61,22 @@ function checkBootSlot() {
   console.log('PASS: VmBootImage::base/limit match the extension flash partition in tools/lib/hex.mjs');
 }
 
+// The host descriptor's offset is written down twice too: in the linker script
+// that places .vmhostid, and in VMBootImage.h, where the main image reads it
+// back. A mismatch reads erased flash and silently disables the refusal.
+function checkHostIdOffset() {
+  const header = fs.readFileSync(path.join(root, 'Source/Teensy/MinimalBoot/Common/VMBootImage.h'), 'utf8');
+  const image = fs.readFileSync(path.join(root, 'tools/lib/extension-image.mjs'), 'utf8');
+  const declared = header.match(/uint32_t idOffset = (0x[0-9a-fA-F]+)u?;/);
+  if (!declared) throw new Error('VMBootImage.h no longer declares idOffset');
+  const placed = image.match(/\. = ORIGIN\(FLASH\) \+ (0x[0-9a-fA-F]+);\s*KEEP\(\*\(\.vmhostid\)\)/);
+  if (!placed) throw new Error('extensionLinkerScript no longer places .vmhostid at a fixed offset');
+  if (parseInt(declared[1], 16) !== parseInt(placed[1], 16)) {
+    throw new Error(`VmBootImage::idOffset is ${declared[1]}, but the linker script places .vmhostid at ${placed[1]}`);
+  }
+  console.log('PASS: VmBootImage::idOffset matches where extensionLinkerScript places .vmhostid');
+}
+
 // tools/lib/extension.mjs mirrors the RAM2 sizes from VMABI.h. Only
 // RAM2_RO_BYTES is enforced when packaging, so nothing would catch the other
 // two drifting. Nothing imports both, so compare them here.
@@ -80,6 +96,7 @@ function checkRam2Sizes() {
 }
 
 checkBootSlot();
+checkHostIdOffset();
 checkRam2Sizes();
 
 process.stdout.write(run(process.execPath, ['--test', 'tools/lib/extension.test.mjs'], 'package format unit tests'));

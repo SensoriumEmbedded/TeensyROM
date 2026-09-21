@@ -69,6 +69,14 @@ export function extensionLinkerScript(linkers) {
   // 0x20014000 up belongs to the module.
   ld = replaceOnce(ld, '_heap_start = ADDR(.bss.dma) + SIZEOF(.bss.dma);', '_heap_start = ALIGN(_ebss, 32) + 32;');
   ld = replaceOnce(ld, '_heap_end = ORIGIN(RAM) + LENGTH(RAM);', '_heap_end = _heap_start + 16384;');
+  // The host descriptor the main image reads, in the 0xFF fill ahead of the
+  // image vector table. VmBootImage::idOffset must match. Either section
+  // outgrowing its slot moves the location counter backwards, which ld refuses
+  // before any ASSERT below is evaluated.
+  ld = replaceOnce(ld, `		. = ORIGIN(FLASH) + 0x1000;`,
+    `		. = ORIGIN(FLASH) + 0x800;
+		KEEP(*(.vmhostid))
+		. = ORIGIN(FLASH) + 0x1000;`);
   ld = replaceOnce(ld, '_teensy_model_identifier = 0x25;',
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;

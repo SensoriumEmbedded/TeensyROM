@@ -14,6 +14,7 @@ int main(int argc,char **argv){
 
     // Launching by client cartridge, then by associated content file.
     fs::copy_file(base/"VMS/HELLO/client.crt",base/"HELLO.crt",fs::copy_options::overwrite_existing);
+    VmBootImage::install(VM_HOST_SERVICES);
     rebooted=false;message.clear();
     assert(VmLaunch::tryFile(rmtSD,"/","HELLO.crt")&&rebooted&&message.empty());
     VmRegistry::Launch launch{};
