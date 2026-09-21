@@ -475,9 +475,10 @@ C64 screen:
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
 | Guest arena size reported by the module | yes — `guest_ram_bytes` = 524288 on profile 0 |
-| Failure record written by the host and read back on the menu | yes, before the record moved to `0x2027ff60`; not re-run since |
-| A guest fault under profile 0 reaching the menu as `$03` | no |
-| A guest write across the top 128 bytes | no — `vm/hello` writes only its last byte, which the arena-size run above did |
+| Failure record written at `0x2027ff60` and collected by the main image | yes |
+| A guest fault under profile 0 collected as `$03` | yes — `udf` inside `vm_entry`, reproduced twice |
+| A guest write across the top 128 bytes — the `CrashReport` span, not the 32-byte record below it — then a normal return | yes — collected as `$00`, so the scribble was not promoted to `$03` |
+| The menu rendering a collected failure record on the C64 screen | no — the three record rows above were read over the main image's USB serial |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |
@@ -488,5 +489,7 @@ Nothing in the verified rows depends on timing beyond the ordinary EasyFlash bus
 handling, since the base profile never becomes bus master. Treat the rows marked
 **no** as untested rather than as working.
 
-The board is returned to the menu by the reset button. The alternate button is
-not serviced while an extension runs.
+A running extension is returned to the menu by the reset button, which the
+extension image services from `loop()`; `vm_entry` is called from `setup()`, so
+an entry point that never returns never reaches that service. The alternate
+button is not serviced while an extension runs.
