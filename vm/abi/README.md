@@ -371,13 +371,19 @@ A successful hand-off is recorded too, as `$00`, so a client that then fails to
 draw is distinguishable from a host that never started. `$00` is stamped just
 before the entry point is called, because on profile 0 that address is inside
 the arena the module is about to own — which means `$00` also covers an entry
-point that faulted or never returned, and those leave the menu silent.
+point that faulted or never returned. A fault is separated back out by the
+core's `CrashReport`: an image that comes back up holding one rewrites a `$00`
+record as `$03`. That rewrite is the minimal image's job rather than the main
+image's, because printing the report is what clears it and minimal prints it
+first. An entry point that hangs writes no report, so it stays `$00` and stays
+silent.
 
 | Code | Meaning |
 |-----:|---------|
 | `$00` | handed off to the client, or `vm_entry` never returned |
 | `$01` | minimal jumped to the extension image and it did not start |
 | `$02` | the top flash slot holds no valid image |
+| `$03` | `$00` rewritten because the core reported a fault: the entry point crashed |
 | `$10` | SD card would not initialise (detail: attempts) |
 | `$11` | `launch.vml` missing, short or corrupt |
 | `$12` | manifest unreadable or malformed |
@@ -470,7 +476,7 @@ C64 screen:
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
 | Guest arena size reported by the module | yes — `guest_ram_bytes` = 524288 on profile 0 |
 | Failure record written by the host and read back on the menu | yes, before the record moved to `0x2027ff60`; not re-run since |
-| A guest fault under profile 0 leaving `CrashReport` readable | no |
+| A guest fault under profile 0 reaching the menu as `$03` | no |
 | A guest write across the top 128 bytes | no — `vm/hello` writes only its last byte, which the arena-size run above did |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |

@@ -55,6 +55,10 @@ void setup()
    
    SetLEDOn;  //On for minimal build, off for main init, then on at end of main init
    Serial.begin(115200);
+#ifdef VM_EXTENSIONS_ENABLED
+   // Ahead of the print below, which clears the report it is passed.
+   VmFail::promoteFault((bool)CrashReport);
+#endif
    if (CrashReport) Serial.print(CrashReport);
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 

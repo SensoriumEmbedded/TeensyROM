@@ -30,6 +30,7 @@ enum : uint8_t {
     Ok            = 0x00,  // handed to the module; nothing refused it after
     Entered       = 0x01,  // minimal is about to jump to the extension image
     NoImage       = 0x02,  // ...but the top flash slot holds no valid image
+    Faulted       = 0x03,  // Ok, but the core recorded a fault (promoteFault)
     SdInit        = 0x10,  // SD card would not initialise (detail = attempts)
     LaunchRecord  = 0x11,  // /VMS/launch.vml missing, short or corrupt
     Manifest      = 0x12,  // manifest.vmi unreadable or malformed
@@ -73,15 +74,30 @@ static inline void set(uint8_t code, uint32_t detail = 0) {
     arm_dcache_flush_delete(r, sizeof *r);
 }
 
+static inline bool intact(const Record *r) {
+    return r->magic == Magic && r->crc == vm_crc32(r, offsetof(Record, crc));
+}
+
 // Reads the record and clears it, so a stale reason cannot be reported twice.
 static inline bool take(Record &out) {
     Record *r = slot();
     arm_dcache_delete(r, sizeof *r);
-    const bool valid = r->magic == Magic && r->crc == vm_crc32(r, offsetof(Record, crc));
+    const bool valid = intact(r);
     if (valid) out = *r;
     r->magic = 0;
     arm_dcache_flush_delete(r, sizeof *r);
     return valid;
+}
+
+// Runs in the minimal image, ahead of its print of the core's crash report:
+// printing is what clears the report, and minimal prints it before the main
+// image that collects the record ever runs.
+static inline void promoteFault(bool faulted) {
+    if (!faulted) return;
+
+    Record *r = slot();
+    arm_dcache_delete(r, sizeof *r);
+    if (r->code == Ok && intact(r)) set(Faulted);
 }
 
 // Short enough for the C64's message window.
@@ -90,6 +106,7 @@ static inline const char *describe(uint8_t code) {
         case Ok:           return "handed off to client";
         case Entered:      return "image did not start";
         case NoImage:      return "no extension image installed";
+        case Faulted:      return "extension faulted";
         case SdInit:       return "SD card init failed";
         case LaunchRecord: return "launch record unreadable";
         case Manifest:     return "manifest unreadable";

@@ -85,9 +85,39 @@ static void okIsCollectedButNotShown() {
     assert(!VmFail::captureValid && !VmFail::pending());
 }
 
+// Ok is stamped before vm_entry, so a fault inside it leaves Ok standing, and
+// the core's crash report is the only thing that separates that from a clean
+// hand-off. promoteFault() runs in the image that still has the report;
+// capture() runs in the image that shows it, a hand-off later.
+static void aFaultUnderOkIsShown() {
+    VmFail::set(VmFail::Ok);
+    VmFail::promoteFault(true);
+    VmFail::capture();
+    assert(VmFail::captureValid && VmFail::pending() && VmFail::captured.code == VmFail::Faulted);
+
+    // A crash report alongside a reason of its own does not displace the reason.
+    VmFail::set(VmFail::ClientCrc, 0x22);
+    VmFail::promoteFault(true);
+    VmFail::capture();
+    assert(VmFail::pending() && VmFail::captured.code == VmFail::ClientCrc);
+
+    // A hand-off the core had nothing to say about stays Ok, and so stays silent.
+    VmFail::set(VmFail::Ok);
+    VmFail::promoteFault(false);
+    VmFail::capture();
+    assert(VmFail::captureValid && !VmFail::pending() && VmFail::captured.code == VmFail::Ok);
+
+    // With the record already taken there is nothing to promote, whatever the
+    // last capture left in the copy: the record is the trigger, not the report.
+    VmFail::promoteFault(true);
+    VmFail::capture();
+    assert(!VmFail::captureValid && !VmFail::pending());
+}
+
 int main() {
     scribbledRecordsReadAsAbsent();
     okIsCollectedButNotShown();
+    aFaultUnderOkIsShown();
     VmFail::reportAttempts = 0;
 
     VmFail::captured = VmFail::Record{ VmFail::Magic, VmFail::ModuleLoad, 0x11, {}, 0 };
@@ -123,6 +153,7 @@ int main() {
 
     puts("PASS: extension failure reporting; a round trip through the record, every "
          "single-bit and whole-line corruption of it reading as absent, a clean hand-off "
-         "collected but not shown, bounded retries when the C64 never reads, one message "
+         "collected but not shown, a crash report under one promoted to a fault and "
+         "ignored under any other reason, bounded retries when the C64 never reads, one message "
          "when it does, both message forms, and the serial line");
 }
