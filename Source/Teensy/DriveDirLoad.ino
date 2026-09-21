@@ -45,7 +45,9 @@ FLASHMEM bool ApplyRemoteFileChanges()
 
    if (!Reload) return false;
 
-   LoadDirectory(LoadedDevice == rmtSD ? &SD : &firstPartition);
+   FS *sourceFS = &firstPartition;
+   if (LoadedDevice == rmtSD) sourceFS = &SD;
+   LoadDirectory(sourceFS);
    MenuSource = DriveDirMenu;
    IO1[rwRegCursorItemOnPg] = 0;
    SendMsgPrintfln("Files changed\r\nDirectory reloaded");
