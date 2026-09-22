@@ -133,21 +133,22 @@ int main(int argc, char **argv) {
     }
     assert(total > VM_HOST_SECTORS);
 
-    for (long budget = 0; budget <= total; budget++) {
-        FakeFlash flash = fresh();
-        flash.budget = budget;
-        FakeReader r{&pkg};
-        bool cut = false;
-        try { vm_host_install(flash, r, good, candidate, staging); }
-        catch (const PowerCut &) { cut = true; }
-        assert(cut == (budget < total));
+    for (bool fromTail : {false, true}) {
+        for (long budget = 0; budget <= total; budget++) {
+            FakeFlash flash = fresh();
+            flash.budget = budget;
+            flash.eraseFromTail = fromTail;
+            FakeReader r{&pkg};
+            bool cut = false;
+            try { vm_host_install(flash, r, good, candidate, staging); }
+            catch (const PowerCut &) { cut = true; }
+            assert(cut == (budget < total));
 
-        const bool absent = !vm_host_installed(flash);
-        const bool untouched = slot_is(flash, old_image);
-        const bool complete = slot_is(flash, installed_image);
-        assert(absent || untouched || complete);
-        // The two that claim a host must be exactly the host they claim.
-        if (!absent) assert(untouched || complete);
+            const bool absent = !vm_host_installed(flash);
+            const bool untouched = slot_is(flash, old_image);
+            const bool complete = slot_is(flash, installed_image);
+            assert(absent || untouched || complete);
+        }
     }
 
     {   // an erase that reports failure stops before anything claims to be a host
@@ -166,6 +167,7 @@ int main(int argc, char **argv) {
 
     printf("PASS: TRH1 package header, %u single-bit corruptions, eight malformed-header cases, "
            "scan refusing a non-bootable payload / short read / bad CRC / ABI mirror, a clean install, "
-           "and a power cut at each of %ld operations leaving the slot absent, the old host, or the new one\n",
+           "and a power cut at each of %ld operations, under a torn erase reaching either half of its "
+           "sector, leaving the slot absent, the old host, or the new one\n",
            VM_TRH_HEADER_BYTES, total);
 }

@@ -140,6 +140,18 @@ static VmInstallResult vm_host_program(Flash &flash, uint32_t offset, const uint
     return { VmInstallStatus::Ok, 0 };
 }
 
+// Stops the slot reading as a host, before the sector holding the tag is
+// erased. A sector erase gives no order in which its cells reach the erased
+// state, so an interrupted one can leave the tag standing over a wiped
+// descriptor; a program can only clear bits, so a torn one cannot.
+template<class Flash>
+static VmInstallResult vm_host_invalidate(Flash &flash) {
+    static const uint8_t cleared[4] = { 0, 0, 0, 0 };
+    if (!flash.program(0, cleared, sizeof cleared)) return { VmInstallStatus::ProgramFailed, 0 };
+    if (!flash.erase(0)) return { VmInstallStatus::EraseFailed, 0 };
+    return { VmInstallStatus::Ok, 0 };
+}
+
 // Erases the slot and writes the package into it. The reader must already be
 // positioned at the payload, and is rewound to it again for the second pass.
 //
@@ -147,7 +159,8 @@ static VmInstallResult vm_host_program(Flash &flash, uint32_t offset, const uint
 template<class Flash, class Reader>
 static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrhHeader &h,
                                        const VmHostCandidate &candidate, uint8_t *staging) {
-    if (!flash.erase(0)) return { VmInstallStatus::EraseFailed, 0 };
+    const VmInstallResult cleared = vm_host_invalidate(flash);
+    if (!cleared) return cleared;
     for (uint32_t s = 1; s < VM_HOST_SECTORS; s++) {
         if (!flash.erase(s)) return { VmInstallStatus::EraseFailed, s };
     }
@@ -186,7 +199,7 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
         whole = vm_crc32(whole, flash.map(off), n);
     }
     if (vm_crc32_end(whole) != h.payloadCrc) {
-        flash.erase(0);   // un-commit, so a failed install reads as no host rather than a bad one
+        vm_host_invalidate(flash);   // so a failed install reads as no host rather than a bad one
         return { VmInstallStatus::VerifyFailed, vm_crc32_end(whole) };
     }
     return { VmInstallStatus::Ok, h.payloadBytes };

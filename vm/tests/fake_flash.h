@@ -21,6 +21,9 @@ struct FakeFlash {
  long budget=-1;            // <0 never cuts
  long ops=0;
  uint32_t eraseFailAt=~0u,programFailAt=~0u;
+ // Which half of the sector a torn erase reaches. Real NOR fixes no order in
+ // which a sector's cells reach the erased state, so the sweep runs both.
+ bool eraseFromTail=false;
 
  bool spend(){const long n=ops++;return budget>=0&&n>=budget;}
 
@@ -29,7 +32,8 @@ struct FakeFlash {
   if(sector==eraseFailAt)return false;
   const bool cut=spend();
   const uint32_t n=cut?VM_HOST_SECTOR_BYTES/2:VM_HOST_SECTOR_BYTES;
-  memset(&cells[sector*VM_HOST_SECTOR_BYTES],0xff,n);
+  const uint32_t at=sector*VM_HOST_SECTOR_BYTES+(eraseFromTail?VM_HOST_SECTOR_BYTES-n:0);
+  memset(&cells[at],0xff,n);
   if(cut)throw PowerCut{};
   return true;}
 
