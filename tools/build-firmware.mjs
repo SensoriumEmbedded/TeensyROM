@@ -222,6 +222,10 @@ if (useCcache) {
   console.log(`ccache enabled via ${shimBin}`);
 }
 
+// FNET's own default is FNET_CFG_TLS=2 (fnet_user_config.h in the installed Teensy core,
+// behind an #ifndef), which links mbedTLS into both images.
+const TLS_OFF = '-DFNET_CFG_TLS=0';
+
 // `suffix` picks a stock BootLinkerFiles pair; `ld`/`bootdata` override it with
 // generated text, which is how the extension image gets its own flash slot.
 function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
@@ -238,7 +242,7 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   const props = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--show-properties', inoPath], env);
   const defsMatch = props.match(/^build\.flags\.defs=(.*)$/m);
   if (!defsMatch) throw new Error('Could not retrieve build.flags.defs from --show-properties');
-  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '') + extraDefs;
+  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '') + extraDefs + ' ' + TLS_OFF;
 
   const compileArgs = ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps,
     '--build-property', `build.flags.defs=${defs}`];
@@ -261,6 +265,8 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   // heap/stack overlap) read these files, so it has to happen for every image.
   const symbols = run(armBin + 'nm' + exeSuffix, ['-n', '-C', elf], env);
   write(path.join(runRoot, `${name}.nm`), symbols);
+  if (!/^[0-9a-fA-F]+ \S /m.test(symbols)) throw new Error(`nm listed no symbols for ${name}; the linked-symbol checks cannot run`);
+  if (/mbedtls/i.test(symbols)) throw new Error(`mbedTLS is linked into ${name}; ${TLS_OFF} should have kept it out`);
   const sizes = run(armBin + 'size' + exeSuffix, ['-A', elf], env);
   write(path.join(runRoot, `${name}.size`), sizes);
 
