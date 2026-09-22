@@ -45,6 +45,7 @@ function native(name, argv = []) {
 
 const sandbox = (prefix) => fs.mkdtempSync(path.join(output, prefix));
 
+const MODULE_ABI = 'Source/Teensy/MinimalBoot/Common/VMABI.h';
 const HOST_ABI = 'Source/Teensy/MinimalBoot/Common/VMHostABI.h';
 
 // The flash slot the extension image is linked into is written down twice: here,
@@ -84,7 +85,7 @@ function checkHostIdOffset() {
 // RAM2_RO_BYTES is enforced when packaging, so nothing would catch the other
 // two drifting. Nothing imports both, so compare them here.
 function checkRam2Sizes() {
-  const header = fs.readFileSync(path.join(root, 'Source/Teensy/MinimalBoot/Common/VMABI.h'), 'utf8');
+  const header = fs.readFileSync(path.join(root, MODULE_ABI), 'utf8');
   for (const [name, mirrored] of [['VM_RAM_BYTES', RAM_BYTES],
                                   ['VM_RAM_RESERVED_BYTES', RAM_RESERVED_BYTES],
                                   ['VM_RAM2_RO_BYTES', RAM2_RO_BYTES]]) {
@@ -126,10 +127,74 @@ function checkEepromProtocol() {
   console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h');
 }
 
+// A directory holding only these files, so a build inside it sees nothing else
+// of TeensyROM whatever the include path would otherwise have offered.
+function vendorDir(...files) {
+  const dir = fs.mkdtempSync(path.join(output, 'standalone-'));
+  for (const file of files) fs.copyFileSync(path.join(root, file), path.join(dir, path.basename(file)));
+  return dir;
+}
+
+// Everything the published headers may include. The native build below settles
+// the #if defined(__arm__) and #ifdef FLASHMEM branches the target takes the
+// other way, so an include under either would compile clean there and fail
+// only for the vendor; read the directives rather than the branch chosen here.
+const PUBLISHED_INCLUDES = {
+  'VMABI.h': ['<stdint.h>', '<stddef.h>'],
+  'VMHostABI.h': ['<stdint.h>', '<stddef.h>', '<string.h>', '"VMABI.h"'],
+};
+
+function checkPublishedIncludes() {
+  for (const [name, allowed] of Object.entries(PUBLISHED_INCLUDES)) {
+    const text = fs.readFileSync(path.join(root, path.dirname(MODULE_ABI), name), 'utf8');
+    for (const [, taken] of text.matchAll(/^[ \t]*#[ \t]*include[ \t]+(\S+)/gm)) {
+      if (!allowed.includes(taken)) {
+        throw new Error(`${name} includes ${taken}, which a vendor who copied it out does not have`);
+      }
+    }
+  }
+  console.log('PASS: VMABI.h and VMHostABI.h include nothing outside the published set, on every target');
+}
+
+// VMABI.h says it is the whole contract for a module, and VMHostABI.h says the
+// two together are the whole contract for a host. Build each claim the way its
+// vendor would -- in a directory holding nothing else, no include path back
+// here -- since an include added to either still builds everywhere in this
+// repository.
+function checkPublishedHeadersStandalone() {
+  const moduleAlone = vendorDir(MODULE_ABI);
+  const moduleOnly = path.join(moduleAlone, 'module_only.cpp');
+  fs.writeFileSync(moduleOnly, '#include "VMABI.h"\nint main(){return 0;}\n');
+  run(compiler, ['-std=c++17', '-Wall', '-Wextra', '-Werror', '-fsyntax-only', moduleOnly],
+    'compiling VMABI.h with nothing beside it');
+  console.log('PASS: VMABI.h builds as the only TeensyROM file a module has');
+
+  const source = 'host_abi_standalone.cpp';
+  const alone = vendorDir(MODULE_ABI, HOST_ABI, `vm/tests/${source}`);
+  const exe = path.join(alone, 'standalone' + (process.platform === 'win32' ? '.exe' : ''));
+  const compile = spawnSync(compiler, ['-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror',
+    ...(process.platform === 'win32' ? ['-static'] : []), source, '-o', exe],
+    { cwd: alone, encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024 });
+  if (compile.error || compile.status || compile.signal) {
+    process.stderr.write(`${compile.stdout ?? ''}${compile.stderr ?? ''}`);
+    throw new Error(`${source} did not build from a directory holding only itself and the two published headers`);
+  }
+  process.stdout.write(run(exe, [], 'standalone host contract'));
+
+  // vm/abi/vm_abi.h is included by the native tests, but nothing in the tree
+  // includes vm_host_abi.h, so a broken relative path in it would go unnoticed.
+  const shim = path.join(output, 'abi-shims.cpp');
+  fs.writeFileSync(shim, '#include "vm/abi/vm_abi.h"\n#include "vm/abi/vm_host_abi.h"\nint main(){return 0;}\n');
+  run(compiler, ['-std=c++17', '-fsyntax-only', '-I', root, shim], 'compiling the vm/abi shims');
+  console.log('PASS: vm/abi/vm_abi.h and vm/abi/vm_host_abi.h resolve to the headers they publish');
+}
+
 checkBootSlot();
 checkHostIdOffset();
 checkEepromProtocol();
 checkRam2Sizes();
+checkPublishedIncludes();
+checkPublishedHeadersStandalone();
 
 process.stdout.write(run(process.execPath, ['--test', 'tools/lib/extension.test.mjs'], 'package format unit tests'));
 
@@ -149,4 +214,4 @@ native('hello_module_test', [sandbox('hello-sandbox-')]);
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
-console.log('PASS: extension loader conformance (package format, file services, image validation, registry, launch routing, listing invalidation, failure reporting, reference module)');
+console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, failure reporting, reference module)');

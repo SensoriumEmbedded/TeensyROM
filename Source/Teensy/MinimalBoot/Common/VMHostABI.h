@@ -10,8 +10,9 @@
 // VMABI.h is what a module compiles against. This is what a *host* compiles
 // against: the image that occupies the extension flash slot, is entered by the
 // minimal boot image, loads a module from the SD card and runs it. Copy the
-// two headers next to your sources; no gate yet proves they are sufficient on
-// their own.
+// two headers next to your sources: checkPublishedHeadersStandalone() in
+// tools/verify-extensions.mjs builds them that way, from a directory holding
+// nothing else, so that they stay sufficient on their own.
 //
 // What this header does NOT cover is TeensyROM's own implementation: the
 // EasyFlash client cartridge and its VMH1 descriptor, the IO2 register link,
