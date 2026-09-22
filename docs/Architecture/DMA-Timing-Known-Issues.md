@@ -15,6 +15,10 @@ Grouped by what's needed next: **Development** (a code change), **Investigation*
 (no clear fix direction yet, needs more data), **Validation** (fix direction
 known, needs hardware to confirm), then **Closed**.
 
+For a distilled, public-facing summary of the NTSC C128 write-fault investigation
+(items #6/#15/#16 below), see
+[TR+ NTSC C128 DMA Findings](../TR+NTSC_C128_DMA_Findings.md).
+
 ## Development
 
 ### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Development]`
@@ -173,6 +177,150 @@ fault (address-bit-to-data-bit coupling, DRAM-mux signature) looks like a
 *different* mechanism from either PHI2-timing theory here — worth not
 conflating the two open questions just because they're both C128-specific.
 
+**Update (2026-09-19), first possible supporting evidence for the MMU-arbitration
+side specifically:** confirmed via schematic-level research (not just the earlier
+qualitative PRG cross-check) that **U55 (the chip whose F245/LS245 variant this
+session has been tracking — see master list item #35) is specifically an address
+bus transceiver**, working alongside U17/U18/U19 to perform the MMU's TA
+(translated address) / SA (shared address) bus-direction reversal this item already
+describes — not a data bus buffer, as first assumed. On Marco2, cooling U55 directly
+worsened its DMA write fault rate (50.7% → 84.5%), heating it cleared the fault
+almost entirely (0.05%), reversibly (see item #16's update and the experiment log's
+"Marco2 — U55 thermal sensitivity" section for the full data). **Originally
+misread as evidence for a data-bus simultaneous-switching-noise mechanism — it
+isn't, since U55 doesn't carry data.** The better-supported reading: if U55's own
+address-bus-reversal timing is temperature-sensitive, a slow/marginal reversal
+during the MMU's GAEC-gated hand-off could let a write briefly target the wrong
+address rather than (or in addition to) corrupting the intended byte's data — which
+would also explain the screen/memory corruption seen beyond the targeted byte range
+on Marco1 (see item #16). Still not a scope-confirmed mechanism, but this is the
+first hardware evidence pointing at the MMU-arbitration-path side of this item's
+two competing theories specifically, rather than treating them as equally
+unsupported.
+
+**Update (2026-09-19), first direct scope capture at U55 itself:** using the user's
+own schematic, probed U55's `DIR`(pin1)=`/DMA`, `/OE`(pin19)=`/AEC`, A0(pin3), and
+SA0(pin17) directly. Confirmed on-scope that `/OE` toggles repeatedly *within* a
+single `/DMA`-asserted session (VIC stealing cycles even mid-DMA, per the official
+PRG rule already cited above) — so A0/SA0 disagreement during `/OE`-high isn't
+diagnostic (nothing forces agreement while tri-stated, and VIC's own unrelated fetch
+address may be on the bus then); the window that matters is `/OE`-low, when U55
+should actively force the two sides to agree.
+
+Clean (warm) capture: A0/SA0 converge to a matching value within the `/OE`-low
+window, after brief ringing. Cold (faulty) captures: **not one consistent
+signature** — the first `/OE`-low cycle in a session can still converge cleanly,
+while later cycles in the *same* session show a burst of high-frequency ringing on
+*both* A0 and SA0 together, with correlated noise appearing on `/DMA`/`DIR` at the
+same moments. That correlation across otherwise-unrelated signals points toward a
+shared disturbance (ground bounce / supply noise) rather than an isolated
+address-line problem — possibly the original data-bus SSN idea in a new form: U55
+doesn't carry data, but a real data-bus-driven disturbance elsewhere on the board
+could couple into U55's own local reference and destabilize its address behavior,
+especially when cold. Probe loading ruled out (similar low fault rate with/without
+probes attached).
+
+**Update (2026-09-19), coupling hypothesis confirmed directly, and a practical fix
+found.** Traded a probe for U55's own VCC (AC-coupled, 50mV/div — DC coupling at 1V/div
+would hide a real sag this small). Result: a real, large noise burst on VCC, landing
+exactly coincident with the A0/SA0 ringing, both in the same `/OE`-enabled window. Not
+just correlated timing — an actual voltage disturbance at U55's own supply pin at the
+moment its address output can't settle.
+
+Direct test: added a supplemental decoupling capacitor across U55's VCC/GND (parallel
+with the existing 0.1uF), re-ran the same cold/`te445`/`$C0FF` condition. **Clean
+dose-response**: no extra cap ~85% fail → `+0.1uF` 1.05% (~80x better, and the
+signature cleaned up to almost entirely one bit, `$7F`) → `+0.1uF +1.0uF electrolytic`
+0.15% (further improvement). More capacitance at U55 = progressively less failure —
+strong, practical confirmation that insufficient local decoupling at U55 is a major,
+real, directly-fixable contributor, not just a scope-observed correlation. Residual
+~0.15-1% may be the genuine underlying timing-margin issue this whole item chain has
+been chasing, previously masked by much larger power-integrity chaos.
+
+**Best current theory for *why* LS245 fixes it (2026-09-21), from working through the
+electrical difference with the user.** Not propagation delay, and not "Schottky vs.
+non-Schottky" (both 74LS and 74F are Schottky-clamped families — LS = Low-power
+Schottky, F = Fast/Advanced Schottky, so that dimension doesn't differentiate them).
+The more likely lever is **U55's own output drive current and slew rate**: F245 has
+substantially higher output drive current and a faster output edge than LS245. When
+U55 switches its own outputs, F245 pulls a bigger, faster current spike from its own
+VCC/GND than LS245 does for the identical transition — the textbook mechanism for
+ground bounce / simultaneous-switching noise, and it's intrinsic to U55's own output
+stage, independent of what's driving its input side. This fits the hardware evidence
+better than a pure timing-margin story: the VCC probe above found a real noise burst
+on U55's own supply coincident with the failures, and a bigger di/dt from a
+higher-drive output stage is a more direct explanation for that than delay alone
+(delay shifts *when* a transition happens, not how violently it happens).
+
+One open tension this doesn't fully resolve: U55 is address-only (A0-A7), but the
+fault signature has always been data-value-dependent (`$FF` fails, `$00` doesn't). If
+the mechanism is U55's own switching noise, it has to be coupling into the data path
+via a shared rail/ground-return impedance, not a direct connection — consistent with
+the "unified mechanism" framing below, but the exact coupling path is still not
+proven, just theorized.
+
+**Update (2026-09-19), TR+'s own schematic checked — confirmed facts, after two
+wrong guesses along the way.** `PCB/archive/v0.4 TRPlus/TeensyROM_v0.4_Schem.pdf`:
+the Teensy 4.1's GPIO pads don't drive the C64/C128 bus directly — four 74LVC245
+transceivers sit in between (`U2`-`U5`), plus one 74LVC07 hex buffer (`U6`) for
+single-bit control signals. The schematic PDF's OCR text doesn't reliably preserve
+which labels belong to which chip in a dense drawing — guessed `U5` then `U2` as
+the data bus, both wrong, before confirming directly from the PCB layout:
+**`U2` = address bus A0-A7 (drives U55 directly), `U3` = the actual data bus D0-D7.**
+Each chip has its own single 0.1uF cap (`U2`/`C3`, `U3`/`C4`, `U4`/`C5`, `U6`/`C6`,
+`U5`/`C7`) — the same starting configuration already shown insufficient at U55.
+
+Mechanism also corrected: `DMAByte()`'s `SetAddrBufsOut`/`SetAddrBufsIn` don't
+enable/disable U2's outputs, they flip its `DIR` pin — `/OE` is tied permanently to
+`GND` on these chips, so outputs are never tri-stated, and a `DIR` flip is an
+instant full reversal on all 8 lines at once. This happens once per byte
+transferred (once per `DMAByte()` call, timed to roughly a half-`Phi2`-cycle
+window), so a 256-byte page means 256 reversal events in one session — fits the
+recurring ringing seen across multiple `/OE`-low windows better than a
+one-transient-per-session story. Since U2 drives U55 directly, its switching lands
+on U55 with no indirect coupling needed — though U2's `DIR` flips happen the same
+regardless of `$00` vs `$FF`, so U3 (data, confirmed) is the more likely source of
+the `$FF`-specific asymmetry seen all day; both are candidates, not competing
+explanations. Plan: add supplemental capacitance to all five cap locations
+(`C3`-`C7`) at once, since they're physically adjacent — thorough test of the whole
+bus-driver bank rather than isolating one chip first. Staggering the 8-bit write
+was considered as an alternative firmware mitigation but deprioritized — timing
+budget is already tight everywhere in this investigation, and capacitance is
+lower-risk and already validated. Full detail: experiment log's "Marco2 — U55 scope
+session", "Supplemental decoupling at U55", and "TR+ as a candidate noise source"
+sections.
+
+**Update (2026-09-20), Marco1 — a second data point, and U55 confirmed F245.** Marco1's
+screen filled with garbage again during z999 testing, the same symptom that first prompted
+this theory on 2026-09-19 — corruption appearing outside the `$c000-$c0ff` target range,
+which a pure data-bit-value fault (wrong value, right address) can't explain but a write
+occasionally landing at the *wrong address* during the MMU's DMA hand-off can. Opening
+Marco1's RF shield (never done before) confirmed **U55 is F245** — the same chip family
+this whole theory, and Marco2's independent thermal-sensitivity findings, are built around.
+Cold (freeze spray) on Marco1's U55 didn't reproduce Marco2's clean, consistent
+cold-worsening pattern, though — it added chaos/variability instead (one pattern dropping
+below baseline while two normally-clean patterns spiked), more consistent with Marco1's
+already-documented high run-to-run variability than a clean thermal signal on its own. Still
+unconfirmed, but now with two independent data points and a shared candidate chip. The
+LS245 swap that fixed Marco2 is a natural next test here too, since it would validate or
+rule out the theory by fixing (or not) both the write-reliability numbers and the
+escaping-target garbage at once — not yet done. Full detail: experiment log's "Marco1
+revisit — F245 confirmed, address-targeting theory strengthened" section.
+
+**Update (2026-09-21) — the swap was done, and it's decisive.** A rough day first: a
+fresh-power-on baseline regressed sharply on completely unmodified hardware (11.35% vs.
+the prior day's 2.15%, now failing in both bit directions), an inconclusive thermal test
+on U62 (the C128's upper-address-bus buffer, a chip not previously investigated), a
+mid-session Teensy hardware failure (replaced), and the discovery of two undocumented
+bodge wires on the board's underside from an apparent prior repair. Then: U55 swapped
+F245 → LS245, same as Marco2. **5/5 immediately clean runs, ~6.4MB, 0 bad** — matching
+Marco2's exact clean standard, bodge wires notwithstanding. A fully clean full-page test
+means every intended address read back correctly every time, which argues against the
+address-mis-targeting theory being active in this state, not just against the raw
+failure rate. **The same single fix has now taken two independent boards from clearly
+faulty to fully clean.** Full detail: experiment log's "Marco1 — new-day regression, U62
+thermal test (inconclusive), bodge wires found, LS245 swap decisive" section.
+
 ### 15. Residual C128 DMA write fault persists even at `te445` `[Investigation]`
 From the same write-up as #14. Even with the fixed C128 assert timing, a
 small but real fault remains — ~1.4 bad bytes/MB, all partial-byte (some bits
@@ -218,6 +366,251 @@ one to `$C0FF` (different bits fail). `tools/dma_scope_write.py`
 (imported alongside this) drives single-byte DMA writes from a PC and stops
 on the first bad readback, for triggering the scope.
 
+**Update (2026-09-19):** a borrowed NTSC C128 (`Marco1`, TR+, FW `0.8.0.9`/`0.8.0.9td`)
+shows a real fault at `$C0FF`, but a full `te430`/`te445` matrix (see the experiment
+log) shows it's **not a match for this item's residual signature — it looks like a
+separate mechanism.** Rate is 2.2-2.6% either way (`te430` 65/3000, `te445` 153/6000,
+~21,700-25,500 bad bytes/MB) — `te445` doesn't meaningfully reduce it here, unlike
+kfox's own 13–25x improvement at this item's residual fault. Signature is also unusually
+specific: bits 1 and 3 (`$FD`/`$F7`) account for nearly every bad byte, both `te`
+settings — a tighter, more consistent pattern than this item's own "different, unfixed
+bit position each time" note above. Whatever's happening at `$C0FF` on this board,
+`te445` isn't touching it, so it probably isn't this item's fault at a worse rate — see
+the experiment log's "Marco1" section for the full matrix and open candidate
+explanations (board-specific hardware issue, unconfirmed).
+
+**`z` sweep at `$C000` (2026-09-19), triggered directly over serial:** a third distinct
+signature on the same board. All 5 of `TestDMAPattern()`'s sub-patterns run cleanly
+through (`z` has no short-circuit, unlike `ExpPortDMA()`), 255,744 bytes each. Real but
+low-rate faults (~4-293 bad bytes/MB, far below `$C0FF`'s ~2.2-2.6%), with a very
+consistent theme across every pattern: **writing `$FF` (driving bits high) fails, `$00`
+doesn't**, concentrated in the low-order bits (0-3) — broader than `$C0FF`'s bit-1/3-only
+signature. Even the control pattern (nothing should change) shows a trace amount at this
+sample size. Full table in the experiment log's "z sweep" section.
+
+**Update (2026-09-19), Marco2 — confirmed F245, mechanism identified:** a second
+borrowed C128 (`Marco2`, confirmed F245 at U55) shows the same "`$FF` fails, `$00`
+doesn't" theme as Marco1's `$C000` sweep, but roughly 600x worse and spread across all
+8 bits instead of just 0-3: writing a page to `$ff` fails ~15-20% of the time,
+regardless of whether it's the actual test pattern or just a prefill step, overwhelmingly
+as complete whole-byte drops. Every single-byte corner also fails, at rates from 4% to
+82%. This looks like a textbook simultaneous-switching-noise/drive-strength failure — 8
+outputs slamming high at once — not this item's marginal-timing mechanism at all. First
+quantified, TeensyROM-specific support for master list item #35's F245 concern. Full
+detail: experiment log's "Marco2" section.
+
+**Update (2026-09-19), Marco3 — clean negative control:** a third borrowed C128
+(`Marco3`) shows none of this — full corner matrix (6 combos, 27,000 writes) and `z999`
+sweeps at both `te430`/`te445` (~2.56MB, including the exact `$ff`-write patterns
+catastrophic on Marco2), all clean. Confirms neither this item's fault, #14's, nor
+Marco2's mechanism is universal to all C128s — genuinely board-specific. Full detail:
+experiment log's "Marco3" section.
+
+**Update (2026-09-20), Marco2 — U55 swapped F245 → LS245, the most decisive result of
+the whole investigation.** Directly tests master list item #35's F245-vs-LS245 question
+(Bill's own hands-on RAD/SIDKick fix) against TeensyROM specifically. No supplemental
+U55 caps needed with the LS245 (see #16's dose-response fix above — that was an F245-only
+workaround). Single-byte alternating test (`te445`/`$C0FF`): 5/5 runs clean, 10,000
+writes, 0 bad, room temp — cleaner than F245 ever got even with its best decoupling
+(0.15%) — and *also* 0/2000 cold (freeze spray), a stark contrast to F245's catastrophic
+cold failure (85% baseline). The harsher `z999` sweep — the test that originally caught
+F245's 15-20% catastrophic failure above — is not perfectly clean: the same "`$FF` fails,
+`$00` doesn't" signature persists (bits only fall 1→0, spread across all 8 bits), but at
+roughly 60-150x lower rate (room temp 0.11-0.25%, cold 0.12-0.19%, thermally flat unlike
+F245). **Conclusion:** LS245 eliminates F245's signature thermal sensitivity entirely and
+fully fixes the single-byte-write fault; what remains is a small, temperature-independent
+residual under heavy simultaneous-switching stress — likely a genuine, separate, low-level
+timing-margin issue distinct from the F245-specific mechanism, not something a chip swap
+would be expected to touch. Full detail: experiment log's "U55 chip swap, F245 → LS245"
+section.
+
+**Update (2026-09-20), Marco2/LS245 — `te` swept directly, confirms the residual really
+is timing-related, and finds why it can't easily be dodged.** Both z999 runs above left
+visible screen/menu garbage afterward, same as Marco1's 2026-09-19 finding — not confined
+to the tested page. A coarse `te` sweep (400-500, room temp) found a real, non-monotonic
+structure: relatively flat 0.2-0.7% from 400-460, a sharp bad spike at 480 (13.9%,
+confirmed on repeat), and a sharp improvement at 500 (0.02%, confirmed 3/3 runs) — not
+flat noise. But mapping past 500 in finer steps found zero margin: te505 already jumps to
+4.0% bad, climbing to 6.0% (510), 4.5%→17% (515→520), and 74% (540) — a knife-edge, not a
+usable improvement. The failure direction flips past te500 too (writing `$00` becomes the
+dominant failure, vs. writing `$FF` for every other result all session) — a qualitatively
+different symptom. This matches `nS_DMASetup`'s own firmware definition
+(`Common_Defs.h:379`, "delay from Phi2 falling to RW/Addr setup, just before rising edge")
+and a similar collapse already documented in that file's comments from an entirely
+different board/session (380 collapses, 440-450 clean, 465+ collapses) — strong evidence
+this is a genuine Phi2-low-phase-boundary effect, present identically on LS245 (which
+showed none of F245's other problems), not a leftover trace of the F245-specific
+mechanism. **te445 remains the right setting** — te500 is real but has no safety margin
+and isn't a safe recommendation for any board. Full detail: experiment log's "`te` sweep
+on the residual — Marco2/LS245" section.
+
+**Update (2026-09-20), Marco2/LS245 — the remaining four DMA timing knobs (`ta`/`tb`/
+`tw`/`ty`) swept too, none offer an actionable improvement.** A real verification gap
+was found and fixed along the way: neither sweep tool logged the firmware's full
+confirmation listing (the only place `ta`/`tb` ever appear — the `z999` status line only
+echoes `te`/`tw`/`ty`), so the first `tb` pass had no direct proof its override, or the
+other four knobs' state, actually took effect. Both `tools/dma_scope_write.py` and
+`tools/run_z_sweep.py` now capture and log that listing on every run. `tw`
+(`nS_DMADataHold`, write data-hold): flat/gentle 0.11-0.25% from 300-430, then a total
+catastrophic collapse at 450 (37-56% across every pattern, including the
+previously-always-clean `$ff over $ff` control) — matches `Common_Defs.h`'s existing
+"455+ overruns Phi2 falling" comment for the sibling constant almost exactly; default
+(395) has ~55ns margin. `ty` (`nS_DMADataSetup`, read data-latch): hard walls on both
+sides — catastrophic below ~300 (matches the existing "too soon = bad reads" comment)
+and, newly found, catastrophic above ~425-450 (not previously documented); flat plateau
+0.42-0.46% in between; default (375) centered with good margin. `tb` (`nS_DMABAWait`,
+steal-cycle sample point): noisy 0.53-1.25% across 60-400, no catastrophic wall, no clear
+trend — possibly a modest real noise contributor, but no actionable better setting. `ta`
+(`nS_DMAAssert`, once-per-session assert): completely flat 1.01-1.08% across 0-400, no
+measurable effect at all — expected, since it fires once per DMA session rather than once
+per byte like the other four. **All five DMA timing knobs are now characterized on this
+board/config; only `te` has a real (if unusably fragile) better point, and none of the
+others move the small residual at all.** Full detail: experiment log's "Verification gap
+found and fixed, then `tb`/`ty` swept" section.
+
+**Major reframe (2026-09-20, later the same day): the residual itself turned out to be
+connector-state-dependent, not a fixed timing-margin floor.** After the TR+ was
+reinserted following an extended power-off, 5/5 consecutive `z999` runs came back
+**perfectly clean** (0 bad, all 5 patterns, ~6.4MB) at default timing — the first
+perfectly-clean `z999` result all session, after an entire afternoon of runs at every one
+of the five knobs' settings showing the 0.1-1.2% residual. A quick reseat (no extended
+power-off) stayed clean too (6/6 total), weakening "long power-off" specifically as the
+cause — more likely just the same general connector-state sensitivity already established
+for this board (see item #16). Removing the weight brought back a tiny residual
+(6/255744, 0.0023%, plus single-digit prefill counts) — real, but two orders of magnitude
+smaller than the afternoon's 0.1-1.2%, which was measured *with* weight on — so pressure
+alone doesn't explain the size of the afternoon's swing; the connector likely also
+genuinely improved through the day's many reseats (ordinary contact wiping), with pressure
+acting as a smaller modulator on top. Reapplying weight returned it to clean.
+**Conclusion: the whole afternoon's `te`/`tw`/`ty`/`tb`/`ta` sweep characterized a residual
+that was itself a connector-state artifact at the time, not a hard physical timing limit.**
+The individual knob findings (the `tw`/`ty` hard walls, `te`'s knife-edge at 500, `tb`'s
+noise, `ta`'s total insensitivity) are still real — but the baseline they were measured
+against wasn't as fixed as it looked. In a good connector state with weight applied, this
+board now demonstrates a full clean 6.4MB `z999` pass, matching Marco3's own clean
+standard. Full detail: experiment log's "The residual reframed — it was connector-state,
+not a timing floor" section.
+
+**Update (2026-09-20), Marco2/LS245 — write vs. read isolated directly, decisive.** Using
+the firmware's `u`/`v` debug commands (`SerUSBIO.ino:98-146`, a bulk DMA write/read-compare
+over `$0c00-$a000`, separate from the `z999`/`dma_scope_write.py` tooling used everywhere
+else in this investigation): repeated `v` (read+compare) calls against *unchanged* RAM
+contents returned the exact same miscompare count and the same specific values every
+time — no read-to-read variation at all. Repeating `u` (write) reduced the miscompare
+count — some previously-wrong bytes got corrected by re-writing the same data. This
+cleanly isolates the fault: DMA reads are perfectly deterministic (faithfully reporting
+whatever's actually in RAM), and the *stored RAM content itself* is sometimes wrong after
+a write — a fresh write attempt has an independent chance of succeeding where the last one
+didn't. **Confirms the fault lives entirely in the write path, not in DMA reads or `ty`'s
+read-latch timing** — closes off read-side error as a possible confound for every
+read-verified write test run this session. Separately, a PHI2 scope session (4 channels:
+`/DMA` trigger at U55, PHI2/"1MHz" at both the expansion port and CIA2, R/W at CIA2) caught
+3 live bad writes via a new page-sweep capture tool (`dma_scope_page_sweep.py` —
+`dma_scope_write.py` alone couldn't reproduce the fault with 30,000 single-address writes;
+it needs `z999`'s full-page prefill-then-sweep pattern) — PHI2 looked clean on every
+capture, no visible ringing on either tap. Full detail: experiment log's "Further
+reseat-state characterization, and a PHI2 scope session" section.
+
+### 16. Mechanical connector pressure and power-cycle state are major, confirmed variables in DMA write reliability `[Investigation]`
+Discovered while re-baselining before further Marco1/Marco2 work (2026-09-19). Two
+separate, real effects, both confirmed reproducible on real hardware:
+
+**Connector pressure (Marco2):** pressing down vs. lifting up on the TR+/connector
+interface, at the identical `te445`/`$C0FF` condition, swings the failure rate roughly
+3x (33% vs. 94%), confirmed identically across two separate trials before and after
+cleaning the connector. Cleaning itself made no measurable difference — not simple
+oxidation. Even the best pressure condition still shows a real ~33% fault rate, so this
+doesn't explain the whole fault, just a large fraction of its variability. Some of the
+worst-case runs show readback values stuck at a constant, independent of what was
+written — a symptom more consistent with a genuinely bad connection (marginal solder
+joint, partially open pin) than with electrical margin alone.
+
+**Power-cycle state (Marco1):** the same `te445`/`$C0FF` condition went from
+consistently faulty (1.75-3.42% across 3 runs, with the affected bits changing every
+time even with nothing touched) to completely clean (0/6000) immediately after a power
+cycle — twice in a row. Screen-blanking (see below) also produced a large improvement,
+but was run in the same window as a power cycle, so the two are confounded and neither
+has been independently isolated yet.
+
+**Badline/VIC-timing state (Marco1):** confirmed a `--blank-screen` flag on
+`tools/dma_scope_write.py` (DMA-writes `$D011=$00`/`$D015=$00` before the loop, no
+firmware change) reduces `$C0FF`'s rate ~10-17x (3.42% → 0.2%) — bigger than item #4's
+original "roughly halved" finding for the `$C0EF` fault, and points the same direction.
+
+**This reframes a meaningful part of this session's data.** The connector-independent
+findings (kfox's item #14 fix, confirmed on 3 machines) still stand — but a lot of the
+noisier, harder-to-pin-down signatures this session found (Marco1's shifting bits,
+Marco2's chaos, the general "highly variable run-to-run" note under item #15) may be
+substantially driven by connector contact state and badline timing, not purely
+board-specific silicon variance. Full detail, all run data: experiment log's "Marco1
+revisit" and "Marco2 revisit" sections.
+
+**Update (2026-09-19), Marco1 chosen as primary focus — pressure-insensitive, and
+visible memory corruption confirmed.** Unlike Marco2, connector pressure has no effect
+on Marco1 (1/6000 both with no pressure and while lifting up) — its fault looks like
+genuine timing/runtime-state marginality, not a bad connection. A full suite re-run
+came back clean everywhere except `z999`/`te430`, which reproduced the same "writing
+`$FF` fails, `$00` doesn't" signature the original pass found at `te445` — the
+timing-sensitivity flipped which setting shows it, but the mechanism itself has been
+consistent across every `z999` run on this board all session, the one stable thread in
+otherwise-drifting data.
+
+**More seriously: after that run, the C64/128 menu screen showed visibly garbled text
+and graphics**, despite `z999` only ever targeting `$c000-$c0ff` — well outside screen
+RAM. Screenshot: `docs/Architecture/images/Marco1-menu-corruption-2026-09-19.png`. This
+directly confirms the "rolling garbage"/stray-characters symptom reported earlier the
+same day was real, not incidental — the marginal-write condition is not cleanly
+confined to the single targeted byte. Consistent with the looped `ExpPortDMA()`
+diagnostic on this board resetting after a few loops rather than just reporting bad
+bytes. Not yet investigated further, but any future scope capture should account for
+this — a capture scoped only to the tested write may not show the whole mechanism.
+
+**Update (2026-09-19), Marco2 — U55 thermal sensitivity, a third independent
+variable.** With connector pressure held constant (weight, not hand pressure), cooling
+U55 directly (freeze spray) worsened the rate 50.7% → 84.5%, reversibly (recovered to
+6.5% after warming back up); heating U55 directly cleared it to 0.05%. **Initially
+misread as the same mechanism as the connector-pressure finding above — it isn't.**
+Pressure was applied at the TR+/expansion-port connector; heat/cold was applied
+directly to U55, a separate physical location on the motherboard with no indication of
+its own connection problem.
+
+**Correction (2026-09-19, same day):** also initially read this as evidence for a
+data-bus simultaneous-switching-noise mechanism (per the `z999` sweep data) — that
+doesn't hold up either. **U55 is confirmed to be an address bus transceiver** (part of
+the MMU's TA/SA bus-direction-reversal, alongside U17/U18/U19 — see item #6's update),
+not a data bus buffer, so it has no direct path to cause the data-bit corruption the
+`z999` sweep found. The better-supported reading now points at item #6's
+MMU-arbitration-path theory instead: temperature-sensitive address-bus-reversal timing
+at U55 could cause a write to briefly target the wrong address during the DMA hand-off,
+which would also explain the screen/memory corruption seen beyond the targeted byte
+range on Marco1, above. Still gives a reliable, on-demand way to induce a high failure
+rate (cold-spray U55 → ~85%) for future scope work, rather than waiting on natural
+drift — just pointed at a different underlying mechanism than first thought. Full
+detail: experiment log's "Marco2 — U55 thermal sensitivity" section, item #6's update.
+
+**Update (2026-09-20), Marco2 — connector pressure/mechanical settling reconfirmed
+as the dominant same-day variable, thermal ruled out.** A morning re-baseline (same
+condition as yesterday's clean 0-0.15% end state — room temp, U55 supplemental caps
+still connected, nothing deliberately changed overnight) unexpectedly regressed to
+93.5% bad, and restoring the weight (previously this board's strongest positive
+lever) made it worse, not better (93.5% → 98.45%). Adding more weight plus mild U55
+self-heat (board simply powered on, no external heat source) produced two clean
+runs — but then flipped back, with nothing touched, into a stuck-bad regime that
+held steady across 4 consecutive runs (~93-99.7%, one partial 30.9% excursion),
+each with its own distinct sticky readback value ($54-56, then $70/71/78, then
+$79). Ruled out "too hot" — the user confirmed today's self-heat was well below
+yesterday's beneficial heat-gun level, which only ever helped. A fresh connector
+reseat (no thermal change) immediately recovered clean operation (1.05%, single
+consistent `$00`→`$80` bit-stuck signature) and stayed stable across 3 more
+consecutive runs (0.1-0.5%). Read together with 2026-09-19's finding above:
+connector pressure isn't just sensitive to hand pressure at the moment of testing —
+a fixed weight can apparently creep/settle to a worse-contact position over several
+minutes with nothing touched, meaning "pressure applied" is not a stable state by
+itself and needs periodic reseating, not just initial placement. U55's decoupling
+fix remains intact and unrelated — it fixes local supply noise at U55, not this
+separate mechanical variable. Full detail: experiment log's "Marco2 — overnight
+regression and connector-pressure/mechanical-settling confirmation" section.
+
 ## Validation
 
 ### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
@@ -253,6 +646,28 @@ rig, not yet run against this branch's own hardware or reconciled with
 `DMA_Timing`'s existing NTSC/PAL constants. PAL C128 has no measured set of
 its own yet either; falls through to the plain PAL constants (itself
 untested on C128, per #2).
+
+**Third independent confirmation (2026-09-19):** a borrowed NTSC C128
+(`Marco1`) reproduces this fault cleanly at `$C0EF` — whole-byte `unchanged`
+failures at `te430` (15/3000, ~5,000 bad bytes/MB), completely fixed by
+`te445` (0/6000). Same direction as kfox's own rig and Travis's own brief,
+unconfirmed-on-retest reproduction (see
+[C128-DMA-Timing-Experiment-Log.md](C128-DMA-Timing-Experiment-Log.md)), on a
+third, independent machine — real validation value for the fix itself, though
+at a notably higher magnitude than kfox's own 19–36 bad bytes/MB (~140-260x).
+This same board also shows a separate, `te`-independent fault at `$C0FF` — see
+#15's update, not part of this item's finding.
+
+**Complication (2026-09-19), Marco2:** on this board (confirmed F245 at U55), `$C0EF`
+still shows this item's whole-byte `unchanged` signature at `te430` — but **`te445`
+makes it worse, not better** (17.5% vs. 8.5% at `te430`), the opposite of this fix's
+intent and the opposite of every other machine tested (kfox's rig, Marco1, Travis's).
+Given the same board's `z` sweep (see #15's update) points to a severe, non-timing
+drive-strength issue on this specific F245 chip, the likeliest read is that Marco2's
+underlying hardware fault is severe enough to swamp whatever benefit `te445` provides
+here — not that `te445` itself is wrong. Doesn't change this item's validation on
+Marco1/kfox's hardware, but means the fix can't be assumed to help on every board
+regardless of its own hardware condition.
 
 ## Closed
 

@@ -112,6 +112,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
 ## Compatibility
 * TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as the C64U, Ultimate 64, EVO64, Mega65 (r5 and higher), and Reloaded MKII
 * The early "prototype" version of breadbin (PCA 326298 w/ 5 pin video) has a known issue with the reset circuit that must be corrected to be compatible with the TeensyROM and other fastload cartridges. See [this post](https://www.lemon64.com/forum/viewtopic.php?t=74222) or [this video](https://youtu.be/agDFLPP9yIw?t=813) for instructions on how to correct this issue.
+* Some NTSC C128s show an intermittent DMA write issue (used by REU, Remote DMA, etc.) — see **[TR+ NTSC C128 DMA Findings](docs/TR+NTSC_C128_DMA_Findings.md)** for symptoms, cause, and the fix.
 
 ## Hardware/PCB Design
 PCB 0.2/0.3 Component selection was done using parts large enough (SOIC and 0805s at the smallest) that any soldering enthusiast should be able to assemble themselves.   Since high volume production wasn't necessarily the vision for this device, 2 sided SMT was used to reduce the PCB size while still accommodating larger IC packages.

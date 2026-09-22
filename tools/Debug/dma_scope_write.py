@@ -10,6 +10,8 @@ showing that write.
   python dma_scope_write.py                         the only Teensy found, $C0EF, current timing
   python dma_scope_write.py COM5 --te 405           set te405 first (build with Dbg_SerTimChg)
   python dma_scope_write.py COM5 --te 405 --addr C0FF    another address, to compare captures
+  python dma_scope_write.py --tw 350                sweep nS_DMADataHold alone, te/ty left at their current value
+  python dma_scope_write.py --te 445 --tw 350       te445's te/ty, but tw overridden to 350 instead of 395
 
 The C64 is reset to the menu first: the errors only show while the C64 program is writing RAM, and a quiet
 loop hides them.  Needs pyserial (pip install pyserial).  Close the TeensyROM UI first, it holds the port."""
@@ -116,16 +118,29 @@ def main():
     ap.add_argument("--addr", default="C0EF", help="hex address to write (default C0EF)")
     ap.add_argument("--te", type=int, help="set nS_DMASetup (0-820) first, with tw=840-te and ty=820-te; needs "
                                            "a build with Dbg_SerTimChg, and the detected defaults are restored on exit")
+    ap.add_argument("--ta", type=int, help="set nS_DMAAssert (0-999) directly, independent of --te")
+    ap.add_argument("--tb", type=int, help="set nS_DMABAWait (0-999) directly, independent of --te")
+    ap.add_argument("--tw", type=int, help="set nS_DMADataHold (0-999) directly, independent of --te -- applied "
+                                           "after --te, so it overrides the tw --te would otherwise set")
+    ap.add_argument("--ty", type=int, help="set nS_DMADataSetup (0-999) directly, independent of --te -- applied "
+                                           "after --te, so it overrides the ty --te would otherwise set")
     ap.add_argument("--count", type=int, default=0, help="writes to do, 0 = until Ctrl+C")
     ap.add_argument("--interval", type=float, default=0, help="seconds between writes (default 0)")
     ap.add_argument("--keep-going", action="store_true", help="count bad writes instead of stopping at the first")
     ap.add_argument("--no-reset", action="store_true", help="don't reset the C64 to the menu first")
+    ap.add_argument("--blank-screen", action="store_true", help="DMA-write $D011=$00 (DEN, display off) and "
+                                     "$D015=$00 (sprites off) before the loop, to rule out badline/VIC cycle "
+                                     "stealing as a contributor -- undone by the next reset-to-menu")
     args = ap.parse_args()
     addr = int(args.addr, 16)
     if not 0 <= addr <= 0xFFFF:
         ap.error("--addr must be 0000-FFFF")
     if args.te is not None and not 0 <= args.te <= 820:
         ap.error("--te must be 0-820, so tw and ty stay 3-digit and positive")
+    overrides = {"ta": args.ta, "tb": args.tb, "tw": args.tw, "ty": args.ty}
+    for name, val in overrides.items():
+        if val is not None and not 0 <= val <= 999:
+            ap.error(f"--{name} must be 0-999")
 
     try:
         ser = open_port(args.port)
@@ -151,20 +166,36 @@ def main():
     timing_changed = False
     try:
         setup = dma_setup(ser)
-        if args.te is not None:
+        if args.te is not None or any(v is not None for v in overrides.values()):
             #check before sending anything else: without Dbg_SerTimChg the letters after 't' run as their own
             #   top-level commands, and 'e' resets the EEPROM to defaults
             if setup is None:
-                sys.exit("--te needs a firmware built with #define Dbg_SerTimChg in TeensyROM.h, nothing was sent")
+                sys.exit("--te/--ta/--tb/--tw/--ty need a firmware built with #define Dbg_SerTimChg in "
+                          "TeensyROM.h, nothing was sent")
             timing_changed = True
-            for cmd in (f"te{args.te:03d}", f"tw{840 - args.te:03d}", f"ty{820 - args.te:03d}"):
-                ser.write(cmd.encode())
-                drain(ser, 0.4)
+            if args.te is not None:
+                for cmd in (f"te{args.te:03d}", f"tw{840 - args.te:03d}", f"ty{820 - args.te:03d}"):
+                    ser.write(cmd.encode())
+                    drain(ser, 0.4)
+            for name, val in overrides.items():
+                if val is not None:
+                    ser.write(f"{name}{val:03d}".encode())
+                    drain(ser, 0.4)
             setup = dma_setup(ser)
-            if setup != args.te:
+            if args.te is not None and setup != args.te:
                 sys.exit(f"te didn't take, DMA setup reads {setup}")
-        print(f"DMA setup {setup if setup is not None else '(not reported by this build)'}, writing ${addr:04X} "
+            ser.write(b"t")  #bare listing query -- confirms every knob (ta/tb/te/tw/ty/...), not just nS_DMASetup
+            print("firmware-confirmed listing (ta/tb/te/tw/ty and the rest):")
+            print(drain(ser, 0.5), end="")
+        applied = ", ".join(f"{n}={v}" for n, v in {"te": args.te, **overrides}.items() if v is not None)
+        print(f"DMA setup {setup if setup is not None else '(not reported by this build)'}"
+              f"{f' ({applied} applied)' if applied else ''}, writing ${addr:04X} "
               f"alternating $00/$FF, Ctrl+C to stop", flush=True)
+
+        if args.blank_screen:
+            dma_write(ser, 0xD011, 0x00)  #DEN=0, display off
+            dma_write(ser, 0xD015, 0x00)  #all sprites off
+            print("screen blanked ($D011=$00, $D015=$00)", flush=True)
 
         prev = dma_read(ser, addr, probe=True)  #the first DMA request, so it carries the probe
         while not args.count or writes < args.count:

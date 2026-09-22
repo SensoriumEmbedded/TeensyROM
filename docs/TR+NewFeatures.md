@@ -36,6 +36,7 @@ A handful of other new hardware additions round out the TR+ feature set.
  * **TR+ Expansion Port Test** — a full hardware validation suite built for the real cartridge port, only possible because of TR+'s true bus-mastering DMA
    * Exercises every expansion port signal individually: address/data bus, DMA, BA, R/*W, IO1/IO2, IRQ, NMI, and all cart control lines (ROMH/ROML/GAME/EXROM)
    * Walking Ones and Cascading Ones bus tests, with a looping mode for extended burn-in testing
+   * Looping this test is the easiest way to check for a known intermittent DMA write issue on some NTSC C128s — see **[TR+ NTSC C128 DMA Findings](TR+NTSC_C128_DMA_Findings.md)** for details and the fix
 
 ## Using TR+ with a Commodore 64 Ultimate / Ultimate64
 
