@@ -7,6 +7,7 @@ The fake answers the same commands as a real board, using protocol.py's names
 but its own byte order, so a script and the fake cannot drift together. It
 proves the framing and reply handling; it cannot prove what a real board does.
 """
+import json
 import os
 import pty
 import subprocess
@@ -16,11 +17,14 @@ import threading
 import time
 import unittest
 
-from protocol import (ACK, DELETE_FILE, FAIL, LAUNCH_FILE, POST_FILE,
-                      READ_C64_MEM, WRITE_C64_MEM)
+from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, FAIL, FW_CHECK,
+                      FW_FULL, FW_MINIMAL, GET_DIR_NDJSON, LAUNCH_FILE,
+                      POST_FILE, READ_C64_MEM, RESET_C64, VERSION_INFO,
+                      WRITE_C64_MEM)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMMAND_PREFIX = 0x64
+BANNER = '\n  FW: TeensyROM+ v0.8.0.9\n      Sep 22 2026, 01:15:31\n'
 
 
 def reply(token):
@@ -36,7 +40,13 @@ class FakeBoard:
         self.mem = bytearray(65536)
         self.files = {}
         self.launched = []
+        self.entries_by_path = {}
+        self.listed = []
+        self.resets = 0
         self.refuse_reads = False
+        self.chatter = b''
+        self.stop_listing_early = False
+        self.image = FW_FULL     # None models the extension image: USB is off
         self.buf = b''
         self.stop = False
         self.thread = threading.Thread(target=self.run, daemon=True)
@@ -87,7 +97,15 @@ class FakeBoard:
             if not second:
                 continue
             command = COMMAND_PREFIX << 8 | second[0]
-            if command == READ_C64_MEM:
+            if command == FW_CHECK:
+                if self.image:
+                    self.send(self.chatter + reply(self.image))
+            elif command == VERSION_INFO:
+                self.send(reply(ACK) + BANNER.encode())
+            elif command == RESET_C64:
+                self.resets += 1
+                self.send(b'Reset cmd received\n')
+            elif command == READ_C64_MEM:
                 address, length = self.word(), self.word()
                 if self.refuse_reads:
                     self.send(reply(FAIL) + b'no DMA')
@@ -115,6 +133,18 @@ class FakeBoard:
                     self.send(reply(ACK))
                 else:
                     self.send(reply(FAIL) + b'checksum')
+            elif command == GET_DIR_NDJSON:
+                self.send(reply(ACK))
+                drive = self.take(1)[0]
+                page = self.take(4)
+                skip, take = page[0] << 8 | page[1], page[2] << 8 | page[3]
+                path = self.cstring()
+                self.listed.append((drive, path, skip, take))
+                self.send(reply(ACK) + reply(DIR_START))
+                for entry in self.entries_by_path.get(path, [])[skip:skip + take]:
+                    self.send(json.dumps(entry, separators=(',', ':')).encode() + b'\r\n')
+                if not self.stop_listing_early:
+                    self.send(reply(DIR_END))
             elif command == LAUNCH_FILE:
                 self.send(reply(ACK))
                 self.take(1)
@@ -180,9 +210,62 @@ class BenchScripts(unittest.TestCase):
         self.assertNotEqual(out.returncode, 0)
         self.assertIn('no DMA', out.stderr)
 
-    def test_probe_prints_the_reply(self):
+    def test_probe_names_the_running_image_and_prints_its_banner(self):
         out = run(self.board, 'probe.py')
-        self.assertIn('bus ok', out.stdout)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('image  main', out.stdout)
+        self.assertIn('v0.8.0.9', out.stdout)
+
+    def test_probe_reports_minimal_separately_from_main(self):
+        self.board.image = FW_MINIMAL
+        out = run(self.board, 'probe.py')
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('image  minimal', out.stdout)
+
+    def test_probe_calls_a_silent_port_out_and_fails(self):
+        self.board.image = None
+        out = run(self.board, 'probe.py')
+        self.assertEqual(out.returncode, 1)
+        self.assertIn('silent', out.stdout)
+
+    def test_ls_shows_directories_and_file_sizes(self):
+        self.board.entries_by_path['/VMS'] = [
+            {'type': 'dir', 'name': 'HELLO'},
+            {'type': 'file', 'name': 'engine.mvm', 'size': 8192}]
+        out = run(self.board, 'ls.py', '/VMS')
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('<dir>  HELLO', out.stdout)
+        self.assertIn('8192  engine.mvm', out.stdout)
+        self.assertIn('2 entries in /VMS', out.stdout)
+
+    def test_ls_sends_the_drive_the_path_and_big_endian_paging(self):
+        out = run(self.board, 'ls.py', '/GAMES', '0')
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(self.board.listed, [(0, '/GAMES', 0, 1000)])
+
+    def test_ls_fails_loudly_when_the_listing_never_ends(self):
+        self.board.entries_by_path['/VMS'] = [{'type': 'dir', 'name': 'HELLO'}]
+        self.board.stop_listing_early = True
+        out = run(self.board, 'ls.py', '/VMS')
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn('stopped before its end marker', out.stderr)
+
+    def test_ls_rejects_a_drive_that_is_not_one(self):
+        out = run(self.board, 'ls.py', '/', 'sd')
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("drive 'sd'", out.stderr)
+
+    def test_probe_reads_past_what_the_board_says_unprompted(self):
+        self.board.chatter = b'Loading IO handler: TeensyROM\n'
+        out = run(self.board, 'probe.py')
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('image  main', out.stdout)
+
+    def test_reset_prints_what_the_board_answered(self):
+        out = run(self.board, 'reset.py')
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn('Reset cmd received', out.stdout)
+        self.assertEqual(self.board.resets, 1)
 
     def test_no_board_is_a_clear_error(self):
         env = {k: v for k, v in os.environ.items() if k != 'TR_PORT'}

@@ -9,8 +9,9 @@ them all.
 The main image answers everything here. The minimal image answers reset,
 launch, version and the firmware check, and fails other 0x64 commands with
 "Busy!"; it is silent to anything else. The extension image runs with USB
-disabled and answers nothing at all. Reading and writing C64 memory (peek/poke)
-additionally needs a Fab 0.4 board (Fab04_FullDMACapable).
+disabled and answers nothing at all. `Link.fwcheck()` is how you tell the three
+apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
+board (Fab04_FullDMACapable).
 
 The port is $TR_PORT, else the first /dev/cu.usbmodem*. Do not hardcode it: the
 main image renames its USB device (MidiDevName_AppendUniqueID), so its node
@@ -19,6 +20,7 @@ differs from the one minimal and the extension image enumerate as.
 macOS and Linux only (termios); no third-party packages.
 """
 import glob
+import json
 import os
 import select
 import sys
@@ -26,11 +28,14 @@ import termios
 import time
 
 from c64 import KEYBUF, KEYCOUNT, SCREEN_BYTES, SCREEN_RAM
-from protocol import (ACK, DELETE_FILE, DRIVE_SD, FAIL, LAUNCH_FILE,
-                      POST_FILE, READ_C64_MEM, WRITE_C64_MEM, from_board,
+from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
+                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON, IMAGES,
+                      LAUNCH_FILE, POST_FILE, READ_C64_MEM, RESET_C64,
+                      VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
                       to_board)
 
 BAUD = termios.B115200
+LISTING_PAGE_SIZE = 1000
 
 
 def ports():
@@ -43,6 +48,22 @@ def find_port():
         raise SystemExit('no TeensyROM serial port found (/dev/cu.usbmodem*); '
                          'set TR_PORT, and note the extension image has no USB')
     return port
+
+
+def drive_number(text):
+    """The drive a command-line argument names."""
+    if text.isdigit() and int(text) in DRIVE_NAMES:
+        return int(text)
+    named = ', '.join(f'{n} the {name}' for n, name in DRIVE_NAMES.items())
+    raise SystemExit(f'drive {text!r}: use {named}')
+
+
+def image_in(seen):
+    """The image named by a firmware-check reply at the end of `seen`."""
+    for token, name in IMAGES.items():
+        if seen.endswith(board_reply(token)):
+            return name
+    return None
 
 
 class Link:
@@ -70,7 +91,6 @@ class Link:
     def __exit__(self, *exc):
         self.close()
 
-    # -- raw I/O ------------------------------------------------------------
     def rd(self, n, timeout=10):
         buf, end = b'', time.time() + timeout
         while len(buf) < n and time.time() < end:
@@ -106,14 +126,37 @@ class Link:
             try:
                 if select.select([self.fd], [], [], 0.4)[0]:
                     chunk = os.read(self.fd, 4096)
-                    if chunk:
-                        out.write(chunk.decode('latin1', 'replace'))
-                        out.flush()
+                    if not chunk:
+                        return True
+                    out.write(chunk.decode('latin1', 'replace'))
+                    out.flush()
+            except BlockingIOError:
+                continue
             except OSError:
                 return True
         return False
 
-    # -- replies ------------------------------------------------------------
+    def raw(self, idle=0.3, timeout=5):
+        """Whatever the board sends next: waits `timeout` for the first byte,
+        then until the port has been quiet for `idle` seconds. Stops early if
+        the port drops, which is what a reset looks like from here."""
+        out, deadline = b'', time.time() + timeout
+        while time.time() < deadline:
+            if select.select([self.fd], [], [], 0.05)[0]:
+                try:
+                    chunk = os.read(self.fd, 4096)
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    break
+                if not chunk:
+                    break
+                out, deadline = out + chunk, time.time() + idle
+        return out
+
+    def text(self, idle=0.3, timeout=5):
+        return self.raw(idle, timeout).decode('latin1', 'replace')
+
     def status(self, timeout=10):
         """Reads a 16-bit reply: (value, text). A failure carries its message."""
         reply = self.rd(2, timeout)
@@ -132,7 +175,28 @@ class Link:
         if value != ACK:
             raise SystemExit(f'{what}: unexpected 0x{value:04X}')
 
-    # -- C64 memory (DMA) ---------------------------------------------------
+    def fwcheck(self, timeout=3):
+        """'main', 'minimal', or None when nothing answered -- which is what the
+        extension image looks like, since it runs with USB disabled. Reads past
+        anything the board says unprompted, such as the line the main image
+        prints as it loads an IO handler."""
+        self.drain(0.3)
+        self.wr(to_board(FW_CHECK))
+        seen, image, end = b'', None, time.time() + timeout
+        while time.time() < end and not image:
+            seen += self.rd(1, 0.2)
+            image = image_in(seen)
+        if seen and not image:
+            raise SystemExit(f'firmware check answered {seen!r}: not a TeensyROM')
+        return image
+
+    def version(self, timeout=5):
+        """The build banner. Both the main and the minimal image answer this."""
+        self.drain(0.3)
+        self.wr(to_board(VERSION_INFO))
+        self.ack('version', timeout)
+        return self.text(timeout=timeout).strip()
+
     def peek(self, addr, length):
         self.drain(0.3)
         self.wr(to_board(READ_C64_MEM) + to_board(addr) + to_board(length))
@@ -161,7 +225,6 @@ class Link:
         """Puts one key in the C64 keyboard buffer, so the next GETIN returns it."""
         return self.poke(KEYBUF, [code]) and self.poke(KEYCOUNT, [1])
 
-    # -- SD card and launching ----------------------------------------------
     def delete(self, remote):
         # GetFileStream refuses to overwrite, so a post starts with a delete.
         self.drain(0.6)
@@ -184,6 +247,31 @@ class Link:
         self.wr(data)
         self.ack('post data', 180)
         log(f'pushed {remote} ({len(data)} bytes, {time.time() - started:.1f}s)')
+
+    def listdir(self, path='/', drive=DRIVE_SD, skip=0, take=LISTING_PAGE_SIZE):
+        """One dict per entry, as the board's NDJSON listing gives them:
+        {'type': 'dir', 'name': ...} or {'type': 'file', 'name': ..., 'size': ...}."""
+        self.drain(0.6)
+        self.wr(to_board(GET_DIR_NDJSON))
+        self.ack('dir token', 5)
+        self.wr(bytes([drive]) + to_board(skip) + to_board(take) + path.encode() + b'\0')
+        self.ack(f'dir {path}', 10)
+        start = self.rd(2, 10)
+        if len(start) < 2 or from_board(start) != DIR_START:
+            raise SystemExit(f'listing of {path} did not start: {start!r}')
+        listing, marker, _ = self.raw(idle=0.5, timeout=30).partition(board_reply(DIR_END))
+        if not marker:
+            raise SystemExit(f'listing of {path} stopped before its end marker; '
+                             'the board went quiet part way through')
+        return [json.loads(line) for line in listing.split(b'\r\n') if line.strip()]
+
+    def reset(self):
+        """Reset the C64 back to the menu. From the minimal image this also
+        returns the board to the main one, so the port drops and comes back
+        under a different name. Answers with a line, not an Ack."""
+        self.drain(0.4)
+        self.wr(to_board(RESET_C64))
+        return self.text().strip()
 
     def launch(self, path, drive=DRIVE_SD):
         self.drain(0.6)

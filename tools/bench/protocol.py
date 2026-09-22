@@ -34,6 +34,8 @@ IMAGES = {FW_FULL: 'main', FW_MINIMAL: 'minimal'}
 
 # Drive numbers, in file and directory commands.
 DRIVE_USB, DRIVE_SD, DRIVE_TEENSY = 0, 1, 2
+DRIVE_NAMES = {DRIVE_USB: 'USB drive', DRIVE_SD: 'SD card',
+               DRIVE_TEENSY: 'built-in menu'}
 
 FIRMWARE_NAMES = {
     'LaunchFileToken': LAUNCH_FILE,
@@ -65,3 +67,9 @@ def to_board(value, width=2):
 def from_board(data):
     """The 16-bit value in a two-byte reply, least significant byte first."""
     return data[0] | (data[1] << 8)
+
+
+def board_reply(value):
+    """The two bytes the board sends for a 16-bit value: the inverse of
+    from_board, for finding a marker in a stream."""
+    return bytes((value & 0xff, (value >> 8) & 0xff))

@@ -8,12 +8,12 @@ over to the extension image (after which the port drops and stays silent).
 """
 import sys
 from protocol import DRIVE_SD
-from trlink import Link
+from trlink import Link, drive_number
 
 if len(sys.argv) < 2:
     raise SystemExit(__doc__)
 path = sys.argv[1]
-drive = int(sys.argv[2]) if len(sys.argv) > 2 else DRIVE_SD
+drive = drive_number(sys.argv[2]) if len(sys.argv) > 2 else DRIVE_SD
 secs = float(sys.argv[3]) if len(sys.argv) > 3 else 20
 with Link() as tr:
     tr.drain()

@@ -13,16 +13,19 @@ their own port handling, and pyserial rather than the standard library.
 
 ## What talks, and what does not
 
-Everything here speaks to the **main image** over USB serial. The minimal image
-has no such commands, and the **extension image runs with USB disabled**, so it is
-silent. A silent port after launching an extension is success, not a hang. (The
-extension image arrives with the extension loader, PR #31; the other two are here
-today.)
+Which image is running decides how much of this works. The **main image**
+answers all of it. The **minimal image** answers reset, launch, version and the
+firmware check, and fails other commands with `Busy!`. The **extension image
+runs with USB disabled** and answers nothing at all, so a silent port after
+launching an extension is success, not a hang. (That image arrives with the
+extension loader, PR #31; the other two are here today.)
 
-The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it:
-the main image renames its USB device, so its node differs from the one minimal
-and the extension image enumerate as (`usbmodem2101` versus `usbmodem<serial>1`).
-That difference is also how you tell which image is running.
+`probe.py` asks the board whether it is main or minimal, and reports silence
+otherwise -- which is the extension image or a hung board. The port name is a
+second opinion: the main image renames its USB device, so it enumerates as
+`usbmodem2101` where the other two use the Teensy's serial number.
+
+The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it.
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).
@@ -40,7 +43,9 @@ That difference is also how you tell which image is running.
 | `keypress.py [code]` | Put a key in the keyboard buffer (default `Y`; F1/F3/F5/F7 are `0x85`..`0x88`). |
 | `colors.py` | Top row, its colour RAM and the VIC colour registers. |
 | `listen.py [secs] [hex]` | Echo serial output, optionally sending bytes first. |
-| `probe.py` | Liveness check: sends `b` (read-only) and prints the reply. |
+| `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
+| `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
+| `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
