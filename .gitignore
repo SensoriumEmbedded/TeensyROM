@@ -1,3 +1,4 @@
 /build/
 /node_modules/
 /tools/.cache/
+__pycache__/

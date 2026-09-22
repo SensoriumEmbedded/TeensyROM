@@ -5,14 +5,19 @@ poke the C64's memory. They were written to verify firmware without anyone at th
 machine. Python 3, standard library only, macOS or Linux (they use `termios`).
 
 You need a TR or TR+ in a C64/C128, powered on at the menu with an SD card in it,
-and a USB cable from the cartridge to the host. See `tools/flash-firmware.mjs` for
-the button-pressing route (`teensy_loader_cli`); these scripts are the hands-free one.
+and a USB cable from the cartridge to the host. These scripts are the hands-free
+route; `docs/General_Usage.md` lists the others, including the program-button one.
+
+`tools/Debug/` holds the scope and bus-timing scripts. They are a separate stack:
+their own port handling, and pyserial rather than the standard library.
 
 ## What talks, and what does not
 
 Everything here speaks to the **main image** over USB serial. The minimal image
 has no such commands, and the **extension image runs with USB disabled**, so it is
-silent. A silent port after launching an extension is success, not a hang.
+silent. A silent port after launching an extension is success, not a hang. (The
+extension image arrives with the extension loader, PR #31; the other two are here
+today.)
 
 The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it:
 the main image renames its USB device, so its node differs from the one minimal
@@ -48,7 +53,7 @@ Reflash without the program button (build for **your** cartridge: `--target tr-p
 Commit before building if you want the banner to prove which build is on the board:
 `SOURCE_DATE_EPOCH` is the HEAD commit time, so two builds of one commit carry one stamp.
 
-Run the hello extension:
+Run the hello extension (`build/extensions/` comes with PR #31):
 
     python3 tools/bench/push.py build/extensions/HELLO.crt=/HELLO.crt \
         build/extensions/VMS/HELLO/manifest.vmi=/VMS/HELLO/manifest.vmi \

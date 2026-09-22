@@ -9,8 +9,8 @@ Three outcomes, told apart by the serial port:
   * The port stays up and silent: the extension image is running. It is built
     USB_DISABLED, so silence is success, not a hang. Look at the C64.
   * The port drops and comes back: the extension image failed or exited and
-    reset into the main image. Its boot output carries the failure record
-    (VmFail, see vm/abi/README.md section 7), which is printed here.
+    reset into the main image. Its serial boot output carries the failure record the
+    loader left behind, which is printed here.
   * The port never drops and never speaks and the C64 did not change: the
     launch did nothing.
 
