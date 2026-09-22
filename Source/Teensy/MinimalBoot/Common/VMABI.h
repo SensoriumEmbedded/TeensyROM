@@ -25,10 +25,11 @@
 // refusal is the negotiation: build the capability behind a service bit, retry
 // without it, and one module binary runs on both hosts.
 //
-// Service bits 0..4 and 7 below are the base profile and will not change
-// meaning. The bits listed as reserved are assigned to known out-of-tree
-// extensions so the two sides cannot collide; the loader rejects them, but no
-// future loader release will reuse the numbers for something else.
+// Service bits 0..4 below are the base profile; bit 7 is this loader's
+// optional RAM2 memory profile. Neither set will change meaning. The bits
+// listed as reserved are assigned to known out-of-tree extensions so the two
+// sides cannot collide; the loader rejects them, but no future loader release
+// will reuse the numbers for something else.
 enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
@@ -138,7 +139,7 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
                   VM_SERVICE_RAM2_RO=128,
-                  // Base profile: what this loader provides.
+                  // The base profile, which every module may assume.
                   VM_SERVICES=31,
                   VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO,
                   VM_KNOWN_SERVICES=VM_HOST_SERVICES,
