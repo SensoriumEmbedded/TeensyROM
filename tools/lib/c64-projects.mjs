@@ -15,7 +15,8 @@
 //                             the file, "plain" leaves it off (for ROM images)
 //                  report, labels   acme only: file names in build/ for the assembly report
 //                             and the VICE label file (default BuildReport, Labels)
-//   headers      C headers to write into the firmware's ROM directory:
+//   headers      C headers to write into the firmware's ROM directory. Required, but [] is fine
+//                for a program the firmware does not embed (an extension's client cartridge):
 //                  input      path relative to dir: a step's build/<output>, or an existing file
 //                  dest       header file name
 //                  progmem    true puts the array in flash (PROGMEM); false keeps it in RAM
@@ -78,7 +79,7 @@ export function loadProjects(root) {
       }
     }
 
-    if (!Array.isArray(project.headers) || project.headers.length === 0) fail(where, 'headers is required');
+    if (!Array.isArray(project.headers)) fail(where, 'headers is required (use [] for a program the firmware does not embed)');
     for (const header of project.headers) {
       if (typeof header.input !== 'string' || !header.input) fail(where, 'header input is required');
       if (typeof header.progmem !== 'boolean') fail(where, `${header.input}: progmem must be true or false`);

@@ -25,9 +25,6 @@
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
 #include "Common/IOHandlers.h"
-#ifdef VM_EXTENSIONS_ENABLED
-#include "Common/VMFail.h"
-#endif
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -46,8 +43,22 @@ Stream *CmdChannel  = &Serial;
 #endif
 
 #include "Common/ISRs.c"
+// The extension host. Only this image compiles it; the ordinary minimal and
+// main images never see it.
+#include "VMHost.h"
 extern "C" uint32_t set_arm_clock(uint32_t frequency);
 extern float tempmonGetTemp(void);
+
+// RebootTR() is a raw MCU reset, so it leaves the boot indicator at the
+// MinBootInd_SkipMin setup() wrote, which the main image reads as a cold power
+// up and answers by running its autolaunch checks. Leave MinBootInd_FromMin
+// behind instead, the way runMainTRApp_FromMin() does.
+FLASHMEM void RebootToMenu()
+{
+   EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
+   delay(10);  //let EEPROM write complete
+   RebootTR();
+}
 
 void setup() 
 {
@@ -55,11 +66,6 @@ void setup()
    
    SetLEDOn;  //On for minimal build, off for main init, then on at end of main init
    Serial.begin(115200);
-#ifdef VM_EXTENSIONS_ENABLED
-   // Validity only. Printing is what clears the report, and USB has not
-   // enumerated this early, so the main image prints it once it can be read.
-   VmFail::promoteFault((bool)CrashReport);
-#endif
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
 #ifdef Fab04_FullDMACapable
@@ -142,33 +148,36 @@ void setup()
    EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #endif  
    
-   if (EEPROM.read(eepAdMinBootInd) != MinBootInd_ExecuteMin || ReadButton==0) runMainTRApp(); //jump to main app if not booting a CRT
+   // NOT the stock indicator check. Minimal consumes the boot indicator before
+   // it jumps here -- it writes MinBootInd_FromMin first, so that a fault in
+   // this image cannot trap the cartridge in a relaunch loop -- which means the
+   // indicator never reads MinBootInd_ExecuteMin by the time this image sees
+   // it. Testing it the way MinimalBoot.ino does sent every extension launch
+   // straight back to the main app without ever reaching the host, which looks
+   // from the C64 exactly like a failed extension. The "@VM1" marker below is
+   // what says this image was entered on purpose.
+   if (ReadButton==0) runMainTRApp(); //button held: escape to the main menu
    
    uint32_t MagNumRead;
    EEPROM.get(eepAdMagicNum, MagNumRead);
    if (MagNumRead != eepMagicNum) runMainTRApp(); //jump to main app if EEP not initialized/matching main
-
-#ifdef VM_EXTENSIONS_ENABLED
-   char vmMarker[5]{};
-   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
-   if (!strcmp(vmMarker, "@VM1")) {
-      // Consume the request before entering the other image. Reset, load
-      // failure and the menu button all return to the menu without autolaunch.
-      EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);
-      delay(10);
-      // Claim the failure record before handing over. If the extension image
-      // faults before it reaches its own first checkpoint, this is what the
-      // main image finds, and "image did not start" is the right answer.
-      VmFail::set(VmFail::Entered);
-      runVMApp();
-      runMainTRApp_FromMin(); // Missing/invalid extension image: recover to stock menu.
-      return;
-   }
-#endif
    
    //we have a crt to load in minimal mode, proceed....
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
+
+   // The launcher leaves this marker in place of a file path when the selection
+   // was an extension rather than a cartridge. Only this image acts on it, and
+   // only this image reserves the module's ITCM and DTCM windows at link time,
+   // which is why the extension cannot simply run in the ordinary minimal image.
+   char vmMarker[5]{};
+   EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
+   if (!strcmp(vmMarker, "@VM1"))
+   {
+      if (!VMHostBoot()) { RebootToMenu(); }
+      BtnPressed = false;
+      return;
+   }
 
 #ifdef FeatTCPListen
    if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
@@ -224,6 +233,9 @@ void loop()
 {
    if (BtnPressed)
    {
+      // A running extension owns the machine. Hand the button back to the menu
+      // by resetting, rather than returning to the main app underneath it.
+      if (VmRuntime::active) { RebootToMenu(); }
       //Serial.print("Button detected (minimal)\n");
 #ifdef Dbg_TestMin
       RebootTR();  //button does a restart in test min mode
@@ -253,7 +265,7 @@ void loop()
 #endif
    }
   
-   if (Serial.available()) ServiceSerial(&Serial);
+   if (!VmRuntime::active && Serial.available()) ServiceSerial(&Serial);
    
 #ifdef FeatTCPListen
    if (TCPListen)

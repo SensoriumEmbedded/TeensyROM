@@ -10,6 +10,9 @@
     "build:tr": "node tools/build-firmware.mjs --target tr",
     "build:tr-plus": "node tools/build-firmware.mjs --target tr-plus",
     "build:c64": "node tools/build-c64.mjs",
-    "test": "node --test \"Source/Teensy/tests/**/*.test.js\" \"tools/**/*.test.mjs\""
+    "flash": "node tools/flash-firmware.mjs",
+    "test": "node --test \"Source/Teensy/tests/**/*.test.js\" \"tools/**/*.test.mjs\"",
+    "verify:extensions": "node tools/verify-extensions.mjs",
+    "build:hello": "node tools/build-extension.mjs --id HELLO --extensions hi --source vm/hello/hello.cpp --client-source Source/C64/VMHello/vmhello.a"
   }
 }

@@ -135,6 +135,15 @@
         { "input": "shclock_tr.prg", "dest": "shclock_tr.prg.h", "progmem": true },
         { "input": "SID check.prg", "dest": "SID_check.prg.h", "progmem": true }
       ]
+    },
+    {
+      "name": "VMHello",
+      "description": "Reference extension client, the C64 half of vm/hello: a headerless 16 KiB EasyFlash image that tools/build-extension.mjs packages. Not embedded in the firmware, so it has no header.",
+      "dir": "Source/C64/VMHello",
+      "steps": [
+        { "assembler": "acme", "source": "vmhello.a", "output": "vmhello.bin", "format": "plain" }
+      ],
+      "headers": []
     }
   ]
 }

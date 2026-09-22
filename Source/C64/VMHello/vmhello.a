@@ -1,0 +1,330 @@
+; SPDX-License-Identifier: MIT
+;
+; Reference extension client: the C64 half of vm/hello.
+;
+; A client is an ordinary 16 KiB EasyFlash cartridge. TeensyROM presents it to
+; the machine exactly like any other cartridge; the only thing that makes it a
+; client is the VMH1 descriptor the packager appends, which the firmware reads
+; from the card and the C64 never sees.
+;
+; The link is the EasyFlash IO2 window at $DF00. Selecting the agreed bank is
+; what opens it -- the firmware maps every bank to the same 16 KiB, so the bank
+; write is a signal, not a bank switch.
+;
+;   $DF00..$DFEF  published packet: "M3" 01 type seq flags len 00 <payload> crc16
+;   $DFF4         command    1 start, 3 input ready, 4 quiet
+;   $DFF5         status     2 running, $12 quiet, $E0 failed
+;   $DFF6         acknowledge: write back the sequence you consumed
+;   $DFF7         sequence of the packet currently published, 0 for none
+;   $DFF8..$DFFA  input: buttons, display, overflow
+;   $DFFB         failure code when status is $E0
+;   $DFFD..$DFFF  input: protocol, token, checksum
+;
+; Packet payloads are private to a module and its client. This one uses type 1:
+; payload[0] screen row, payload[1] colour, payload[2..41] 40 screen codes.
+
+HOSTBANK   = 58
+IO2        = $DF00
+CMD        = $DFF4
+STATUS     = $DFF5
+ACK        = $DFF6
+SEQ        = $DFF7
+FAILCODE   = $DFFB
+
+SCREEN     = $0400
+COLOUR     = $D800
+
+; Free RAM once the cartridge cold start has run.
+packetbuf  = $C000        ; 238 bytes
+total      = $C100
+crcn       = $C101
+crclo      = $C102
+crchi      = $C103
+lastseq    = $C104
+lastbtn    = $C105
+token      = $C106
+ptr        = $FB
+cptr       = $FD
+
+; ---------------------------------------------------------------- ROML $8000
+* = $8000
+        !word coldstart
+        !word coldstart
+        !byte $C3, $C2, $CD, $38, $30    ; CBM80
+
+coldstart:
+        sei
+        ; The KERNAL jumps straight here on finding the cartridge, before it has
+        ; initialised anything, so the cartridge does it.
+        jsr $FDA3                ; IOINIT
+        jsr $FD50                ; RAMTAS
+        jsr $FD15                ; RESTOR
+        jsr $FF5B                ; CINT
+        cli
+        jsr $E544                ; clear screen
+        lda #0
+        sta $D020
+        sta $D021
+        sta lastseq
+        sta lastbtn
+        sta token
+
+        ; Open the host window, then ask the module to start.
+        lda #HOSTBANK
+        sta $DE00
+        lda #1
+        sta CMD
+
+main:
+        lda STATUS
+        cmp #$E0
+        bne running
+        jmp failed
+running:
+        lda SEQ
+        beq noPacket             ; nothing published yet
+        cmp lastseq
+        beq noPacket             ; already consumed this one
+        jsr readPacket
+        bcc noPacket             ; bad frame: leave it, the host will hold it
+        lda packetbuf + 4        ; the sequence the packet itself carries
+        sta lastseq
+        sta ACK
+noPacket:
+        jsr pollInput
+        jmp main
+
+; ---- Copy, validate and apply the published packet ------------------------
+; Returns carry set when the packet was consumed, clear when it was not. Sits
+; ahead of readPacket so every rejection branch stays in range.
+badFrame:
+        clc
+        rts
+
+readPacket:
+        lda IO2 + 0
+        cmp #$4D                 ; 'M'
+        bne badFrame
+        lda IO2 + 1
+        cmp #$33                 ; '3'
+        bne badFrame
+        lda IO2 + 2
+        cmp #1                   ; framing version
+        bne badFrame
+        lda IO2 + 6              ; payload length
+        cmp #229
+        bcs badFrame
+        clc
+        adc #8
+        sta crcn                 ; bytes covered by the CRC
+        clc
+        adc #2
+        sta total                ; bytes to copy, including the CRC itself
+
+        ; Take a copy before checking it: the window is live, and validating
+        ; bytes that can change underneath us proves nothing.
+        ldy #0
+copyLoop:
+        lda IO2, y
+        sta packetbuf, y
+        iny
+        cpy total
+        bne copyLoop
+
+        lda #$FF
+        sta crclo
+        sta crchi
+        ldy #0
+crcLoop:
+        lda packetbuf, y
+        jsr updateCrc
+        iny
+        cpy crcn
+        bne crcLoop
+        ldy crcn
+        lda packetbuf, y
+        cmp crclo
+        bne badFrame
+        iny
+        lda packetbuf, y
+        cmp crchi
+        bne badFrame
+
+        ; Valid. Unknown types are acknowledged and ignored, so a module can add
+        ; a packet type without every old client needing to understand it.
+        lda packetbuf + 3
+        cmp #1
+        bne consumed
+        ldx packetbuf + 8        ; payload[0]: screen row
+        cpx #25
+        bcs consumed
+        lda rowLo, x
+        sta ptr
+        sta cptr
+        lda rowHi, x
+        sta ptr + 1
+        lda colourHi, x
+        sta cptr + 1
+        ldy #0
+paintLoop:
+        lda packetbuf + 10, y    ; payload[2 + y]
+        sta (ptr), y
+        lda packetbuf + 9        ; payload[1]: colour
+        sta (cptr), y
+        iny
+        cpy #40
+        bne paintLoop
+consumed:
+        sec
+        rts
+
+; CRC16-CCITT, MSB first, polynomial $1021 -- the same one the host computes.
+updateCrc:
+        eor crchi
+        sta crchi
+        ldx #8
+crcBit:
+        asl crclo
+        rol crchi
+        bcc crcNext
+        lda crchi
+        eor #$10
+        sta crchi
+        lda crclo
+        eor #$21
+        sta crclo
+crcNext:
+        dex
+        bne crcBit
+        rts
+
+; ---- Input ----------------------------------------------------------------
+; Joystick port 2 fire, reported only when it changes.
+pollInput:
+        lda $DC00
+        and #$10
+        beq pressed
+        lda #0
+        beq store                ; always taken
+pressed:
+        lda #1
+store:
+        cmp lastbtn
+        beq inputDone
+        sta lastbtn
+        jsr sendInput
+inputDone:
+        rts
+
+; The host ignores an input record whose token repeats or whose checksum does
+; not match, so build the whole record before raising the command.
+sendInput:
+        sta $DFF8                ; buttons
+        lda #0
+        sta $DFF9                ; display
+        sta $DFFA                ; overflow
+        lda #$81
+        sta $DFFD                ; protocol
+        inc token
+        bne tokenOk
+        inc token                ; zero means "no input", so skip it
+tokenOk:
+        lda token
+        sta $DFFE
+        lda #$A5
+        eor lastbtn
+        eor #$81                 ; protocol; display and overflow are zero
+        eor token
+        sta $DFFF                ; checksum
+        lda #3
+        sta CMD
+        rts
+
+; ---- Failure --------------------------------------------------------------
+; The host reports a load or module fault here rather than simply going quiet.
+failed:
+        ldx #0
+messageLoop:
+        lda failMessage, x
+        beq showCode
+        sta SCREEN + 24 * 40, x
+        lda #2                   ; red
+        sta COLOUR + 24 * 40, x
+        inx
+        bne messageLoop
+showCode:
+        lda FAILCODE
+        pha
+        lsr
+        lsr
+        lsr
+        lsr
+        jsr nybble
+        sta SCREEN + 24 * 40 + 17
+        pla
+        and #$0F
+        jsr nybble
+        sta SCREEN + 24 * 40 + 18
+        lda #2
+        sta COLOUR + 24 * 40 + 17
+        sta COLOUR + 24 * 40 + 18
+stop:
+        jmp stop
+
+nybble:
+        cmp #10
+        bcc digit
+        adc #6                   ; carry is set: 'A' is screen code 1
+digit:
+        clc
+        adc #$30
+        and #$3F
+        rts
+
+failMessage:
+        !scr "extension failed "
+        !byte 0
+
+rowLo:
+        !for row, 0, 24 { !byte <(SCREEN + row * 40) }
+rowHi:
+        !for row, 0, 24 { !byte >(SCREEN + row * 40) }
+colourHi:
+        !for row, 0, 24 { !byte >(COLOUR + row * 40) }
+
+        !fill $A000 - *, $FF
+
+; ---------------------------------------------------------------- ROMH $E000
+; The firmware starts the cartridge in Ultimax, where this bank answers at
+; $E000 and holds the reset vector. It has to switch to 16 KiB mode and hand
+; back to the KERNAL, which then finds the CBM80 header above.
+;
+; The switch cannot be followed by an instruction fetched from here: the moment
+; $DE02 latches, ROMH leaves $E000 and the KERNAL ROM appears in its place, so
+; the next opcode would come from the KERNAL's own $FF0A. (It lands in the RS-232
+; timer code and ends in an RTS with the stack just reset -- no screen clear, no
+; message, just whatever was there before.) RAM is mapped in both modes, so the
+; tail runs from there, the way EasyFlash's own startup code does.
+!pseudopc $E000 {
+        !fill $FF00 - $E000, $FF
+ultimax:
+        sei
+        ldx #$FF
+        txs
+        cld
+        ldx #7
+copyStub:
+        lda stub, x
+        sta $0100, x             ; below the stack, which starts at $01FF
+        dex
+        bpl copyStub
+        jmp $0100
+stub:
+        !byte $A9, $87           ; lda #$87   LED on, 16 KiB mode: GAME and EXROM asserted
+        !byte $8D, $02, $DE      ; sta $DE02
+        !byte $4C, $E2, $FC      ; jmp $FCE2  KERNAL reset, which finds the cartridge
+        !fill $FFFA - *, $FF
+        !word ultimax            ; NMI
+        !word ultimax            ; RESET
+        !word ultimax            ; IRQ
+}

@@ -906,6 +906,17 @@ void PollingHndlr_TeensyROM()
 {
    if (IO1[rwRegStatus] != rsReady)
    {  //ISR requested work
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+      if (VmFail::pending())
+      {  //the C64 is inside WaitForTR*, so this is the first moment it can read
+         //why the last extension launch didn't run.  Restore the queued work
+         //afterwards: the dispatch below reads the same register.
+         const uint8_t Queued = IO1[rwRegStatus];
+         VmFail::report();
+         if (IO1[rwRegStatus] == rsContinue) VmFail::clear(); //the C64 read it
+         IO1[rwRegStatus] = Queued;
+      }
+#endif
       if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
       else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
       Serial.flush();

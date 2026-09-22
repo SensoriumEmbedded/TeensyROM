@@ -33,7 +33,12 @@
 #include "MinimalBoot/Common/Common_Defs.h"
 #include "MinimalBoot/Common/Menu_Regs.h"
 #include "MinimalBoot/Common/DriveDirLoad.h"
+#include "LoadedListing.h"
 #include "MainMenuItems.h"
+#ifdef VM_EXTENSIONS_ENABLED
+   // Before IOHandlers.h: PollingHndlr_TeensyROM is where the record is shown.
+   #include "MinimalBoot/Common/VMFail.h"
+#endif
 #include "MinimalBoot/Common/IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
@@ -45,6 +50,10 @@ uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 bool RemoteLaunched = false; //last app was launched remotely
+bool RemoteChangedLoadedDir = false; //a remote file command wrote in the directory the menu is showing
+#ifdef VM_EXTENSIONS_ENABLED
+   bool RemoteChangedSDCard = false; //a remote file command wrote to the card the extension table is built from
+#endif
 uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom and passes init
 Stream *CmdChannel  = &Serial; 
 bool isFrozen = false;
@@ -69,7 +78,12 @@ void setup()
    
    SetLEDOff;  //On from minimal build, off for this setup completion
    Serial.begin(115200); // baud rate doesn't matter here, uses USB layer only (no HW serial bus)
-   if (CrashReport) Serial.print(CrashReport);
+#ifdef VM_EXTENSIONS_ENABLED
+   // Ahead of every allocation below: the heap runs to the top of RAM2, and
+   // this record lives there. It is shown on the C64 later, from the polling
+   // handler, because that is the only time the menu reads messages.
+   VmFail::capture();
+#endif
 
    for(uint8_t PinNum=0; PinNum<sizeof(OutputPins); PinNum++) pinMode(OutputPins[PinNum], OUTPUT); 
 #ifdef Fab04_FullDMACapable
@@ -168,6 +182,13 @@ void setup()
 
    MakeBuildInfo();
    Serial.printf("\n%s\n%s is on-line\n", SerialStringBuf, strVersionNumber);
+   //USB is up by here. Not gated on a host listening: printing is what clears
+   //the report, and minimal's promoteFault() promotes a stale one to $03 on
+   //the next extension launch.
+   if (CrashReport) Serial.print(CrashReport);
+#ifdef VM_EXTENSIONS_ENABLED
+   VmFail::printBoot(); //what the last extension launch left in preserved RAM2
+#endif
 #ifdef Fab04_Features
    Serial.printf("  for Fab 0.4 PCB\n");
 #else

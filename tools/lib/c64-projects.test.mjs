@@ -12,7 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 test('the real manifest loads: every source, header input and directory exists', () => {
   const projects = loadProjects(root);
-  assert.equal(projects.length, 12);
+  assert.equal(projects.length, 13);
 });
 
 test('every directory under Source/C64 is in the manifest', () => {
@@ -89,4 +89,14 @@ test('validation: acme needs a format, kickass rejects acme-only fields, and nam
 test('validation: two headers may not write the same file', () => {
   const b = { ...good(), name: 'B' };
   withManifest({ projects: [good(), b] }, (dir) => assert.throws(() => loadProjects(dir), /two headers write a\.prg\.h/));
+});
+
+test('validation: headers must be present, but may be empty for a program the firmware does not embed', () => {
+  const none = good();
+  none.headers = [];
+  withManifest({ projects: [none] }, (dir) => assert.equal(loadProjects(dir).length, 1));
+
+  const omitted = good();
+  delete omitted.headers;
+  withManifest({ projects: [omitted] }, (dir) => assert.throws(() => loadProjects(dir), /headers is required/));
 });
