@@ -47,6 +47,9 @@ jobs:
       - name: Run tool tests
         run: npm test
 
+      - name: Run extension loader conformance suite
+        run: npm run verify:extensions
+
       - name: Install arduino-cli
         run: |
           CLI=$(node tools/install-arduino-cli.mjs)
