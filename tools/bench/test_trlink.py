@@ -3,8 +3,9 @@
 
   python3 -m unittest discover -s tools/bench
 
-The fake speaks the same tokens as the main image (see trlink.py). It proves the
-framing, byte order and reply handling; it cannot prove what a real board does.
+The fake answers the same commands as a real board, using protocol.py's names
+but its own byte order, so a script and the fake cannot drift together. It
+proves the framing and reply handling; it cannot prove what a real board does.
 """
 import os
 import pty
@@ -15,8 +16,16 @@ import threading
 import time
 import unittest
 
+from protocol import (ACK, DELETE_FILE, FAIL, LAUNCH_FILE, POST_FILE,
+                      READ_C64_MEM, WRITE_C64_MEM)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-ACK, FAIL = b'\xcc\x64', b'\x7f\x9b'
+COMMAND_PREFIX = 0x64
+
+
+def reply(token):
+    """The board answers least significant byte first."""
+    return bytes([token & 0xff, (token >> 8) & 0xff])
 
 
 class FakeBoard:
@@ -49,6 +58,11 @@ class FakeBoard:
         got, self.buf = self.buf[:n], self.buf[n:]
         return got
 
+    def word(self):
+        """A parameter, most significant byte first, as the firmware reads them."""
+        data = self.take(2)
+        return data[0] << 8 | data[1]
+
     def cstring(self):
         out = b''
         while True:
@@ -63,47 +77,49 @@ class FakeBoard:
     def run(self):
         os.set_blocking(self.master, False)
         while not self.stop:
-            tok = self.take(1)
-            if tok == b'b':          # the one single-byte command: BusAnalysis
+            first = self.take(1)
+            if first == b'b':          # the one single-byte command: BusAnalysis
                 self.send(b'bus ok\n')
                 continue
-            if tok != b'\x64':
+            if first != bytes([COMMAND_PREFIX]):
                 continue
-            tok += self.take(1)
-            if tok == b'\x64\xFD':
-                a = self.take(4)
-                addr, n = a[0] << 8 | a[1], a[2] << 8 | a[3]
+            second = self.take(1)
+            if not second:
+                continue
+            command = COMMAND_PREFIX << 8 | second[0]
+            if command == READ_C64_MEM:
+                address, length = self.word(), self.word()
                 if self.refuse_reads:
-                    self.send(FAIL + b'no DMA')
+                    self.send(reply(FAIL) + b'no DMA')
                 else:
-                    self.send(ACK + bytes(self.mem[addr:addr + n]))
-            elif tok == b'\x64\xFB':
-                a = self.take(4)
-                addr, n = a[0] << 8 | a[1], a[2] << 8 | a[3]
-                self.mem[addr:addr + n] = self.take(n)
-                self.send(ACK)
-            elif tok == b'\x64\xCF':
-                self.send(ACK)
+                    self.send(reply(ACK) + bytes(self.mem[address:address + length]))
+            elif command == WRITE_C64_MEM:
+                address, length = self.word(), self.word()
+                self.mem[address:address + length] = self.take(length)
+                self.send(reply(ACK))
+            elif command == DELETE_FILE:
+                self.send(reply(ACK))
                 self.take(1)
                 self.files.pop(self.cstring(), None)
-                self.send(ACK)
-            elif tok == b'\x64\xBB':
-                self.send(ACK)
-                h = self.take(7)
-                size, checksum = int.from_bytes(h[:4], 'big'), int.from_bytes(h[4:6], 'big')
+                self.send(reply(ACK))
+            elif command == POST_FILE:
+                self.send(reply(ACK))
+                header = self.take(4)
+                size, checksum = int.from_bytes(header, 'big'), self.word()
+                self.take(1)
                 name = self.cstring()
-                self.send(ACK)
+                self.send(reply(ACK))
                 data = self.take(size)
                 if sum(data) & 0xffff == checksum:
                     self.files[name] = data
-                    self.send(ACK)
+                    self.send(reply(ACK))
                 else:
-                    self.send(FAIL + b'checksum')
-            elif tok == b'\x64\x44':
-                self.send(ACK)
+                    self.send(reply(FAIL) + b'checksum')
+            elif command == LAUNCH_FILE:
+                self.send(reply(ACK))
                 self.take(1)
                 self.launched.append(self.cstring())
-                self.send(ACK)
+                self.send(reply(ACK))
 
 
 def run(board, script, *args, timeout=30):

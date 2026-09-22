@@ -7,7 +7,8 @@ firmware updater, a .crt or .prg runs on the C64, an extension launcher hands
 over to the extension image (after which the port drops and stays silent).
 """
 import sys
-from trlink import Link, DRIVE_SD
+from protocol import DRIVE_SD
+from trlink import Link
 
 if len(sys.argv) < 2:
     raise SystemExit(__doc__)

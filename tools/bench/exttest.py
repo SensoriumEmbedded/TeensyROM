@@ -20,7 +20,8 @@ is the only time it reads the message the loader left. Then it prints the screen
 """
 import sys
 import time
-from trlink import Link, reconnect, screen_rows, F5
+from c64 import F5, screen_rows
+from trlink import Link, reconnect
 
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 if len(args) != 1:

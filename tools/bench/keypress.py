@@ -9,7 +9,8 @@ keypress that starts a menu operation (F5 switches to the SD drive) is how you
 make a pending message appear.
 """
 import sys
-from trlink import Link, PETSCII_Y
+from c64 import PETSCII_Y
+from trlink import Link
 
 code = int(sys.argv[1], 0) if len(sys.argv) > 1 else PETSCII_Y
 with Link() as tr:

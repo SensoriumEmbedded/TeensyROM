@@ -42,7 +42,9 @@ That difference is also how you tell which image is running.
 | `listen.py [secs] [hex]` | Echo serial output, optionally sending bytes first. |
 | `probe.py` | Liveness check: sends `b` (read-only) and prints the reply. |
 | `trlink.py` | The shared library the above are built on. |
-| `test_trlink.py` | Tests against a fake board on a pty; no hardware. |
+| `protocol.py` | Every value that goes on the wire, named once. |
+| `c64.py` | C64 memory locations, and screen codes as text. |
+| `test_*.py` | Tests against a fake board on a pty, and against the firmware's own definitions; no hardware. |
 
 ## Recipes
 
@@ -68,7 +70,9 @@ shows text present and colour RAM row 0 all zeros. Fix it over serial with
 ## Limits
 
 The fake board in `test_trlink.py` proves the framing and byte order, not what a
-board does. `exttest.py` needs a real reset to exercise its reconnect path, and the
+board does. `test_protocol.py` checks every constant in `protocol.py` against the
+`Source/Teensy/` definition it came from, so a moved token fails a test rather
+than a board. `exttest.py` needs a real reset to exercise its reconnect path, and the
 fake does not cover it.
 
     python3 -m unittest discover -s tools/bench

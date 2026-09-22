@@ -18,7 +18,8 @@ commit time, so commit before building if you want the stamp to prove it.
 """
 import sys
 import time
-from trlink import Link, screen_rows, KEYBUF, KEYCOUNT, PETSCII_Y
+from c64 import KEYBUF, KEYCOUNT, PETSCII_Y, screen_rows
+from trlink import Link
 
 if len(sys.argv) < 2:
     raise SystemExit(__doc__)
