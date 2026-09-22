@@ -14,9 +14,11 @@ void VMHostPoll() {
         VmInput in{ input.buttons, input.display, input.overflow, input.protocol };
         inputPending = false;
         module->input(&in);
+        if (failure) return;
     }
     if (pending && EZFlashRAM[0xf6] == sequence) {
         module->ack();
+        if (failure) return;
         pending = false; quietRequested = false; EZFlashRAM[0xf5] = 2;
     }
     // Consume an ACK BEFORE pumping: a module may defer input or scene changes

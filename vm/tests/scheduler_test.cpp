@@ -21,6 +21,7 @@ static uint32_t sliceStarted;
 static VmInput input;
 static unsigned pumps, acks, offers, inputs;
 static VmInput lastInput;
+static uint8_t failIn;
 static bool offer;
 static VmPacket offered;
 static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZFlashRAM[0xf5] = 0xe0; }
@@ -32,15 +33,17 @@ static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZF
 
 using namespace VmRuntime;
 
+// failIn lets a callback report a module fault from where it is called, which
+// is the whole of what separates the spy from a module that gives up mid-turn.
 static const VmModule spy{ VM_ABI, sizeof(VmModule),
-    [](const VmInput *in) { ++inputs; lastInput = *in; },
+    [](const VmInput *in) { ++inputs; lastInput = *in; if (failIn == 1) fail(0x30); },
     []() { ++pumps; },
     [](VmPacket *p) { if (!offer) return false; offer = false; ++offers; *p = offered; return true; },
-    []() { ++acks; } };
+    []() { ++acks; if (failIn == 2) fail(0x31); } };
 
 static void reset() {
     module = &spy; active = true; started = startRequested = inputPending = pending = quietRequested = false;
-    failure = sequence = 0; pumps = acks = offers = inputs = 0; offer = false;
+    failure = sequence = failIn = 0; pumps = acks = offers = inputs = 0; offer = false;
     memset(EZFlashRAM, 0, sizeof EZFlashRAM);
     offered = {}; offered.type = 2; offered.length = 26;
     for (unsigned i = 0; i < 26; i++) offered.payload[i] = i * 7;
@@ -160,6 +163,25 @@ int main() {
         assert(pumps == pumpsAfter);
     }
 
+    // A failure raised from input() or ack() has to survive the rest of the
+    // turn. Every later poll leaves at the failure gate without touching the
+    // status register, so whatever $DFF5 holds when the turn ends is what the
+    // client reads for good.
+    reset();
+    started = true; failIn = 1; inputPending = true;
+    VMHostPoll();
+    assert(failure == 0x30 && EZFlashRAM[0xf5] == 0xe0 && EZFlashRAM[0xfb] == 0x30 && !pumps);
+    VMHostPoll();
+    assert(EZFlashRAM[0xf5] == 0xe0 && !pumps);
+
+    reset();
+    started = true; failIn = 2; offer = true;
+    VMHostPoll();
+    assert(pending && sequence == 1 && pumps == 1);
+    EZFlashRAM[0xf6] = 1;
+    VMHostPoll();
+    assert(acks == 1 && failure == 0x31 && EZFlashRAM[0xf5] == 0xe0 && pumps == 1);
+
     // A module that failed to load is reported at start, not silently idle.
     reset();
     failure = 0x11; startRequested = true;
@@ -180,5 +202,5 @@ int main() {
 
     puts("PASS: real scheduler; start handshake, wire framing, frozen-until-ACK, ACK before pump, "
          "input ordering, silence, idempotent run over all three states, sequence wrap, three malformed packets "
-         "latched, load failure and yield conditions");
+         "latched, a fault raised from input() and from ack() surviving the turn, load failure and yield conditions");
 }
