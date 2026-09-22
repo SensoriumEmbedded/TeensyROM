@@ -7,7 +7,7 @@ Two independent toolchains, run in a fixed order. Canonical instructions (prefer
 1. **C64 side first** — `npm run build:c64` (`tools/build-c64.mjs`, optionally `--project <name>`) assembles all 6502 sources and writes the generated headers into `Source/Teensy/TRMenuFiles/ROMs/`.
 2. **Teensy firmware second** — Arduino IDE / arduino-cli build, which embeds those headers as compiled-in byte arrays.
 
-Skipping step 1 after a C64-side change means the Teensy build silently uses stale menu/settings/utility code — there's no build-time check that the headers are current.
+Skipping step 1 after a C64-side change means the Teensy build silently uses stale menu/settings/utility code. The firmware build does not check, but CI does for every project but `TRCustomBasicCommands`, which KickAssembler builds and CI installs no JRE for: `tools/build-c64.test.mjs` reassembles the rest and byte-compares the result against the committed headers.
 
 ## C64 side
 

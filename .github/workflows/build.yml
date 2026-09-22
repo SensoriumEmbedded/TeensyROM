@@ -16,6 +16,36 @@ permissions:
   contents: read
 
 jobs:
+  # Everything that needs no Teensy toolchain. Independent of `build`, so a
+  # compile failure still reports the test results and vice versa.
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      # Unpinned on purpose: tools/check-pins.mjs tracks the ACME pin sites and
+      # reads this file for others, so a version named here would drift
+      # silently. build-c64.test.mjs byte-compares the headers, which is the
+      # check that a version string could not make.
+      - name: Install ACME
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y acme
+          acme --version
+
+      - name: Run tool tests
+        run: npm test
+
+      - name: Run extension loader conformance suite
+        run: npm run verify:extensions
+
+      - name: Run bench tests
+        run: python3 -m unittest discover -s tools/bench
+
   # TR and TR+ build in parallel; `collect` gathers both hex files into one artifact.
   build:
     runs-on: ubuntu-latest
@@ -43,12 +73,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-
-      - name: Run tool tests
-        run: npm test
-
-      - name: Run extension loader conformance suite
-        run: npm run verify:extensions
 
       - name: Install arduino-cli
         run: |
@@ -89,7 +113,7 @@ jobs:
           path: build/firmware/*.hex
 
   collect:
-    needs: build
+    needs: [build, tools]
     runs-on: ubuntu-latest
     # contents: write is needed only for the tag-push publish step below (a manual run on a
     # tag builds but never publishes); the repo's default workflow token is read-only, so

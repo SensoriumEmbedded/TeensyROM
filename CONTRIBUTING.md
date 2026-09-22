@@ -68,7 +68,10 @@ code. Full setup and tool-version details: [Source/BuildInfo.md](Source/BuildInf
 - If you changed firmware that affects RAM footprint, rebuild and check the link report
   against the budgets in `Constraints.md` (`npm run build:tr-plus -- --skip-minimal-build
   --skip-combine` prints it).
-- There's no hosted CI — tests are run locally before a PR is opened.
+- CI runs the tool tests, the bench tests and both firmware builds on every push and
+  pull request (`.github/workflows/build.yml`). Run `npm test` and `python3 -m unittest
+  discover -s tools/bench` locally first; the bench tests need macOS or Linux, since
+  they use `termios` and `pty`.
 
 There's no expectation that every contributor has physical TR/TR+ hardware to test
 against. Say so in your PR — hardware-untested changes get flagged and tested before
