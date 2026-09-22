@@ -5,34 +5,93 @@
 Pushes the hex to the SD card, launches it (a .hex runs TeensyROM's own SD
 updater, the supported path), waits for the C64's "UPDATE TEENSYROM FIRMWARE?
 Y/N" prompt, answers Y by writing to the keyboard buffer, then echoes the
-updater's serial output until the board reboots. No program button needed,
-unlike `teensy_loader_cli -w`.
+updater's serial output until the board reboots. No program button needed;
+docs/General_Usage.md has the routes that want one.
+
+Finally it asks the rebooted board which image it came up as and compares its
+banner against the build stamp compiled into the hex; the minimal image can
+carry the same stamp, so the check is the image as well as the stamp. A file
+that is not Intel HEX at all is refused before anything is pushed; a hex this
+reader cannot fully decode, or one without a single stamp, is flashed and the
+board is still checked for the main image, without the stamp comparison.
 
 Needs the main image running and a hex built for THIS cartridge (--target
-tr-plus for a TR+); the updater refuses a mismatched target string. Which image
-came up afterwards shows in the port name: the main image has a location-based
-name (usbmodem2101), minimal and the extension image a serial-number one.
+tr-plus for a TR+); the updater refuses a mismatched target string.
 
-The banner's build date cannot verify a rebuild: SOURCE_DATE_EPOCH is the HEAD
-commit time, so commit before building if you want the stamp to prove it.
+The stamp comes from SOURCE_DATE_EPOCH, which the build sets to the HEAD
+commit time unless the environment already holds one, so it identifies a
+commit rather than a build: commit before building if you want it to tell two
+runs apart.
 """
 import sys
 import time
+
 from c64 import KEYBUF, KEYCOUNT, PETSCII_Y, screen_rows
-from trlink import Link
+from hexfile import UnsupportedRecord, build_stamp
+from protocol import FW_FULL, IMAGES
+from trlink import Link, neighbours, reconnect
+
+CONFIRM_TIMEOUT, UPDATE_TIMEOUT, REBOOT_TIMEOUT = 30, 180, 90
+# One TR+ in an original C64, one sample: the port was down 1.34s, and the main
+# image gave its first clean firmware-check answer 5.37s after it came back.
+BOOT_WINDOW = 20
+MAIN_IMAGE = IMAGES[FW_FULL]
+SILENT = 'silent -- nothing answered the firmware check'
+
+
+def wanted_stamp(path):
+    """The banner line a board running this hex should print, and when there is
+    none, why. Raises ValueError when the file does not read as Intel HEX."""
+    try:
+        stamp = build_stamp(path)
+    except UnsupportedRecord as problem:
+        return None, str(problem)
+    if not stamp:
+        return None, 'no single build stamp in the main image'
+    return f'{stamp[0]}, {stamp[1]}', ''
+
+
+def answering_board(deadline, port, known):
+    """A (Link, image) for the rebooted board, with image None when nothing
+    answered within BOOT_WINDOW, or (None, None) when the port never came back.
+    `port` is the node the board was last talking on, which reconnect()
+    prefers, and `known` the nodes that were beside it before the reboot. The
+    port can drop a second time as the main image renames its USB device, so a
+    drop in the boot window means going back for the name it came up under."""
+    while time.time() < deadline:
+        tr = reconnect(timeout=deadline - time.time(), port=port, known=known)
+        if tr is None:
+            return None, None
+        print('--- boot output ---')
+        try:
+            return tr, tr.await_image(min(time.time() + BOOT_WINDOW, deadline))
+        except OSError:
+            port = tr.port
+            tr.close()
+    return None, None
+
 
 if len(sys.argv) < 2:
     raise SystemExit(__doc__)
 local = sys.argv[1]
 remote = sys.argv[2] if len(sys.argv) > 2 else '/fwupdate.hex'
 
+try:
+    expected, why_not = wanted_stamp(local)
+except ValueError as problem:
+    raise SystemExit(f'{local}: {problem}; this is not a firmware hex')
+print(f'{local}: build stamp {expected}' if expected else
+      f'{local}: {why_not}; the stamp cannot be checked')
+
 with Link() as tr:
+    port = tr.port
+    known = neighbours(port)
     tr.drain()
     tr.post(local, remote)
     tr.launch(remote)
     print('launched; waiting for the C64 confirm prompt')
 
-    end = time.time() + 30
+    end = time.time() + CONFIRM_TIMEOUT
     while time.time() < end:
         try:
             rows = screen_rows(tr.screen())
@@ -50,5 +109,26 @@ with Link() as tr:
         sys.exit(1)
 
     print('--- updater serial ---')
-    if tr.stream(180):
-        print('\n[port dropped -- rebooting]')
+    if not tr.stream(UPDATE_TIMEOUT):
+        print('\nthe updater never rebooted the board')
+        sys.exit(1)
+    print('\n[port dropped -- rebooting]')
+
+tr, image = answering_board(time.time() + REBOOT_TIMEOUT, port, known)
+if tr is None:
+    raise SystemExit('the board never came back on USB; check it with probe.py')
+banner = tr.version() if image else ''
+tr.close()
+
+print(f'\nimage  {image or SILENT}')
+print(banner)
+if image != MAIN_IMAGE:
+    raise SystemExit(f'FAILED: the board came back as "{image or SILENT}" rather than '
+                     f'the main image, so the update did not take')
+if not expected:
+    print('OK: the board came back on the main image; the stamp went unchecked')
+elif expected not in banner:
+    raise SystemExit(f'FAILED: the board does not report "{expected}"; it is still '
+                     f'running the firmware above, so the update did not take')
+else:
+    print(f'OK: the main image reports the build stamp from {local}')

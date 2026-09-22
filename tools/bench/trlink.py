@@ -36,18 +36,51 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
 
 BAUD = termios.B115200
 LISTING_PAGE_SIZE = 1000
+PORT_DIR, PORT_GLOB = '/dev', 'cu.usbmodem*'
+REPLY_BYTES = 2
+READ_TICK = 0.2
+ASK_AGAIN_AFTER = 2.0
 
 
-def ports():
-    return sorted(glob.glob('/dev/cu.usbmodem*'))
+def ports(beside=None):
+    """Every node that looks like a TeensyROM, in /dev or in the directory that
+    `beside` names."""
+    folder = os.path.dirname(beside) if beside else PORT_DIR
+    return sorted(glob.glob(os.path.join(folder, PORT_GLOB)))
+
+
+def neighbours(port):
+    """The nodes beside `port`. Sample this while the board is still on `port`:
+    once it has gone, a node it came back under looks like one that was there
+    all along."""
+    return set(ports(port)) - {port}
 
 
 def find_port():
     port = os.environ.get('TR_PORT') or next(iter(ports()), None)
     if not port:
-        raise SystemExit('no TeensyROM serial port found (/dev/cu.usbmodem*); '
+        raise SystemExit(f'no TeensyROM serial port found ({PORT_DIR}/{PORT_GLOB}); '
                          'set TR_PORT, and note the extension image has no USB')
     return port
+
+
+def configure(fd):
+    """Put a serial fd in raw 115200 8N1 with non-blocking reads."""
+    a = termios.tcgetattr(fd)
+    a[0] = a[1] = a[3] = 0
+    a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+    a[4] = a[5] = BAUD
+    a[6][termios.VMIN] = 0
+    a[6][termios.VTIME] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, a)
+
+
+def echo(data, out):
+    """Write what the board printed, and say how many bytes that was."""
+    if data:
+        out.write(data.decode('latin1', 'replace'))
+        out.flush()
+    return len(data)
 
 
 def drive_number(text):
@@ -68,15 +101,14 @@ def image_in(seen):
 
 class Link:
     def __init__(self, port=None, settle=0.4):
+        """Raises OSError when `port` is not a serial port this can talk to."""
         self.port = port or find_port()
         self.fd = os.open(self.port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        a = termios.tcgetattr(self.fd)
-        a[0] = a[1] = a[3] = 0
-        a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
-        a[4] = a[5] = BAUD
-        a[6][termios.VMIN] = 0
-        a[6][termios.VTIME] = 0
-        termios.tcsetattr(self.fd, termios.TCSANOW, a)
+        try:
+            configure(self.fd)
+        except termios.error as problem:
+            self.close()
+            raise OSError(f'{self.port} is not a serial port: {problem}') from problem
         time.sleep(settle)
 
     def close(self):
@@ -128,8 +160,7 @@ class Link:
                     chunk = os.read(self.fd, 4096)
                     if not chunk:
                         return True
-                    out.write(chunk.decode('latin1', 'replace'))
-                    out.flush()
+                    echo(chunk, out)
             except BlockingIOError:
                 continue
             except OSError:
@@ -159,8 +190,8 @@ class Link:
 
     def status(self, timeout=10):
         """Reads a 16-bit reply: (value, text). A failure carries its message."""
-        reply = self.rd(2, timeout)
-        if len(reply) < 2:
+        reply = self.rd(REPLY_BYTES, timeout)
+        if len(reply) < REPLY_BYTES:
             return None, ''
         value = from_board(reply)
         return value, (self.rd(200, 1.0).decode('latin1', 'replace').strip()
@@ -184,11 +215,29 @@ class Link:
         self.wr(to_board(FW_CHECK))
         seen, image, end = b'', None, time.time() + timeout
         while time.time() < end and not image:
-            seen += self.rd(1, 0.2)
+            seen += self.rd(1, READ_TICK)
             image = image_in(seen)
         if seen and not image:
             raise SystemExit(f'firmware check answered {seen!r}: not a TeensyROM')
         return image
+
+    def await_image(self, deadline, out=sys.stdout):
+        """The image name once the board answers a firmware check, echoing the
+        boot output it prints meanwhile, or None if nothing answers by
+        `deadline`. fwcheck() gives up on the first thing it does not
+        recognise; a board still coming up has to be asked again."""
+        seen, shown, asked = b'', 0, 0.0
+        while time.time() < deadline:
+            if time.time() - asked >= ASK_AGAIN_AFTER:
+                self.wr(to_board(FW_CHECK))
+                asked = time.time()
+            seen += self.rd(1, READ_TICK)
+            shown += echo(seen[shown:len(seen) - REPLY_BYTES], out)
+            image = image_in(seen)
+            if image:
+                return image
+        echo(seen[shown:], out)
+        return None
 
     def version(self, timeout=5):
         """The build banner. Both the main and the minimal image answer this."""
@@ -281,13 +330,33 @@ class Link:
         self.ack('launch name', 5)
 
 
-def reconnect(timeout=60, interval=0.05, port=None):
+def candidates(wanted, known):
+    """The ports to try after a reboot, best first: the one asked for while it
+    is still there, then any node that has appeared beside it. With none asked
+    for, whatever is there."""
+    if not wanted:
+        return ports()
+    if os.path.exists(wanted):
+        return [wanted]
+    return [p for p in ports(wanted) if p not in known]
+
+
+def reconnect(timeout=60, interval=0.05, port=None, known=None):
     """Waits for a board to enumerate and returns a Link, or None. Use it after
-    a reboot: the port vanishes and comes back, sometimes under a new name."""
+    a reboot: the port vanishes and comes back, sometimes under a new name,
+    because the USB serial number changes across some firmware changes. The port
+    asked for -- `port`, else $TR_PORT -- is a preference here and not a pin:
+    when it does not come back, a node that has appeared beside it is taken
+    instead. `known` is neighbours() from before the reboot; the default samples
+    it here, which is only right while the board is still away."""
+    wanted = port or os.environ.get('TR_PORT')
+    known = neighbours(wanted) if known is None else known
     end = time.time() + timeout
     while time.time() < end:
-        try:
-            return Link(port, settle=0.4)
-        except (OSError, SystemExit):
-            time.sleep(interval)
+        for candidate in candidates(wanted, known):
+            try:
+                return Link(candidate)
+            except OSError:
+                pass
+        time.sleep(interval)
     return None

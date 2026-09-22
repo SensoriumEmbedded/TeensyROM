@@ -26,6 +26,9 @@ second opinion: the main image renames its USB device, so it enumerates as
 `usbmodem2101` where the other two use the Teensy's serial number.
 
 The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it.
+After a reboot `$TR_PORT` is a preference rather than a pin: the USB serial
+number changes across some firmware changes, so a board that does not come back
+under its old name is picked up from whatever node appeared beside it.
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).
@@ -34,7 +37,7 @@ The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it.
 
 | Script | Does |
 |--------|------|
-| `fwupdate.py <hex> [remote]` | Push a hex to the SD card, launch it, answer the C64's Y/N prompt by DMA, echo the updater until the board reboots. |
+| `fwupdate.py <hex> [remote]` | Push a hex to the SD card, launch it, answer the C64's Y/N prompt by DMA, echo the updater until the board reboots, then check that the board came back on the main image reporting the hex's build stamp. A file that is not Intel HEX is refused before anything is pushed; a hex this reader cannot fully decode is flashed and the board is still checked for the main image, without the stamp comparison. |
 | `push.py <local>=<remote> ...` | Copy files to the SD card. Deletes the target first; the firmware will not overwrite. |
 | `launch.py <path> [drive] [secs]` | Launch a file from the SD card and echo serial. |
 | `exttest.py <path>` | Launch an extension and report how it ended: still running, or reset to the menu with a failure record. |
@@ -49,6 +52,7 @@ The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it.
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
+| `hexfile.py` | Reads a firmware hex: the two image regions, and the build stamp in the main one. |
 | `test_*.py` | Tests against a fake board on a pty, and against the firmware's own definitions; no hardware. |
 
 ## Recipes
@@ -57,8 +61,16 @@ Reflash without the program button (build for **your** cartridge: `--target tr-p
 
     python3 tools/bench/fwupdate.py "build/firmware/TeensyROM+_<version>_full.hex"
 
-Commit before building if you want the banner to prove which build is on the board:
-`SOURCE_DATE_EPOCH` is the HEAD commit time, so two builds of one commit carry one stamp.
+That ends by asking the rebooted board which image it came up as and comparing
+its banner with the build stamp compiled into the hex, because answering the Y/N
+prompt is the step that silently does nothing when the screen is not what the
+script expects, and the board then keeps running the old firmware and says so
+nowhere. The minimal image can carry the same stamp, so a board that fell back
+to it is a failed update however its banner reads.
+
+The stamp is `SOURCE_DATE_EPOCH`, which the build sets to the HEAD commit time
+unless the environment already holds one, so it identifies a commit and not a
+build: commit before building if you want two runs told apart.
 
 Run the hello extension (`build/extensions/` comes with PR #31):
 
@@ -77,7 +89,8 @@ shows text present and colour RAM row 0 all zeros. Fix it over serial with
 The fake board in `test_trlink.py` proves the framing and byte order, not what a
 board does. `test_protocol.py` checks every constant in `protocol.py` against the
 `Source/Teensy/` definition it came from, so a moved token fails a test rather
-than a board. `exttest.py` needs a real reset to exercise its reconnect path, and the
-fake does not cover it.
+than a board. The fake drops and re-publishes its pty, under a new name, for
+`fwupdate.py`'s post-reboot check; `exttest.py`'s own reconnect path still
+needs a real reset.
 
     python3 -m unittest discover -s tools/bench
