@@ -7,6 +7,8 @@
 // A package is a directory /VMS/<id> on the SD card holding exactly three
 // files: manifest.vmi, the module image, and the C64 client cartridge.
 
+import { VM_BASE, VM_LIMIT } from './hex.mjs';
+
 export const IMAGE_MAGIC = 0x314d564d;  // 'MVM1'
 export const ABI = 2;
 export const CODE_BASE = 0x18000, CODE_LIMIT = 0x30000;
@@ -193,4 +195,120 @@ export function buildClientCrt({ id, bank0, bank1, name = id }) {
     throw new Error('Descriptor did not land at its fixed offset');
   }
   return crt;
+}
+
+// ------------------------------------------- the .TRH host package
+
+// A host image arrives on the SD card as a 64-byte header followed by the raw
+// slot image, byte-identical to what `objcopy -O binary` produced. The header
+// is a separate container rather than a field inside the image because the
+// image's own descriptor sits at HOST_ID_OFFSET, inside the region a CRC would
+// have to cover; both writer and reader would have to stream around the hole.
+export const HOST_PACKAGE_MAGIC = 0x31485254;  // 'TRH1'
+export const HOST_PACKAGE_FORMAT = 1;
+export const HOST_PACKAGE_HEADER_BYTES = 64;
+export const HOST_SLOT_BYTES = VM_LIMIT - VM_BASE;
+export const HOST_ID_OFFSET = 0x800;
+export const HOSTID_MAGIC = 0x3248564d;  // 'MVH2'
+
+// The five words vm_host_slot_valid() in VMHostABI.h gates on. Four live in
+// the second sector, which is why the installer erases sector 0 by itself and
+// programs its tag last: any interruption then leaves a slot that reads as
+// absent rather than as present and half-written.
+const BOOT_WORD = { flashMagic: 0x0, vectorMagic: 0x1000, entry: 0x1004,
+                    bootBase: 0x1020, imageBytes: 0x1024 };
+
+export function hostBootWords(payload) {
+  const at = (offset) => payload.readUInt32LE(offset);
+  return Object.fromEntries(Object.entries(BOOT_WORD).map(([name, offset]) => [name, at(offset)]));
+}
+
+export function hostDescriptor(payload) {
+  const field = (i) => payload.readUInt32LE(HOST_ID_OFFSET + i * 4);
+  return { magic: field(0), abi: field(1), services: field(2), hostBytes: field(3),
+           name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
+}
+
+// Mirrors vm_host_slot_valid(). A payload that fails here would be refused by
+// the minimal image after installation, so it is refused before anything is
+// erased; checkHostSlotPredicate() in verify-extensions.mjs pins the two
+// against each other.
+export function hostSlotValid({ flashMagic, vectorMagic, entry, bootBase, imageBytes }) {
+  const address = entry & ~1;
+  return flashMagic === 0x42464346 && vectorMagic === 0x432000d1 && (entry & 1) !== 0 &&
+         address >= VM_BASE + 0x1000 && address <= VM_BASE + 0x3000 &&
+         bootBase === VM_BASE && imageBytes > 0x1000 && imageBytes <= HOST_SLOT_BYTES;
+}
+
+// `image` is the raw binary. _flashimagelen counts .text.csf, which objcopy
+// drops when the linker emits it as SHT_NOBITS, so a short image is padded
+// with the 0xFF an erased page already holds rather than refused.
+export function buildHostPackage({ image }) {
+  if (image.length < 0x2000) throw new Error(`Host image is ${image.length} bytes, too short to hold its own vector table`);
+  if (image.length > HOST_SLOT_BYTES) throw new Error(`Host image is ${image.length} bytes, slot is ${HOST_SLOT_BYTES}`);
+
+  const boot = hostBootWords(image);
+  if (boot.imageBytes < image.length) {
+    throw new Error(`Host image declares ${boot.imageBytes} bytes but the file is ${image.length}`);
+  }
+  const payload = boot.imageBytes === image.length ? image
+    : Buffer.concat([image, Buffer.alloc(boot.imageBytes - image.length, 0xff)]);
+  if (!hostSlotValid(boot)) {
+    throw new Error('Host image fails the checks the minimal image applies before it will jump; ' +
+                    'it would install and then read as no host at all');
+  }
+  const id = hostDescriptor(payload);
+  if (id.magic !== HOSTID_MAGIC) throw new Error(`No MVH2 host descriptor at 0x${HOST_ID_OFFSET.toString(16)}`);
+  if (id.abi !== ABI) throw new Error(`Host is ABI ${id.abi}, loader is ABI ${ABI}`);
+
+  const header = Buffer.alloc(HOST_PACKAGE_HEADER_BYTES);
+  const fields = [HOST_PACKAGE_MAGIC, HOST_PACKAGE_FORMAT, HOST_PACKAGE_HEADER_BYTES, VM_BASE,
+                  HOST_SLOT_BYTES, payload.length, boot.imageBytes, boot.entry,
+                  id.abi, id.services, crc32(payload), 0, 0, 0, 0, 0];
+  fields.forEach((value, i) => header.writeUInt32LE(value >>> 0, i * 4));
+  header.writeUInt32LE(crc32(header), 44);
+  return Buffer.concat([header, payload]);
+}
+
+// Reads back what buildHostPackage wrote, applying the checks the device
+// applies before it erases. The four mirrored fields earn their place by
+// naming the packaging bug: a CRC mismatch says something is wrong, a mirror
+// mismatch says the header claims one ABI and the image carries another.
+export function parseHostPackage(pkg) {
+  if (pkg.length < HOST_PACKAGE_HEADER_BYTES) throw new Error('Package is shorter than its header');
+  const field = (i) => pkg.readUInt32LE(i * 4);
+  const header = {
+    magic: field(0), format: field(1), headerBytes: field(2), targetBase: field(3),
+    targetBytes: field(4), payloadBytes: field(5), imageBytes: field(6), entry: field(7),
+    abi: field(8), services: field(9), payloadCrc: field(10), headerCrc: field(11),
+  };
+  if (header.magic !== HOST_PACKAGE_MAGIC) throw new Error('Not a TRH1 host package');
+  if (header.format !== HOST_PACKAGE_FORMAT) throw new Error(`Package is format ${header.format}, this reader is ${HOST_PACKAGE_FORMAT}`);
+  if (header.headerBytes !== HOST_PACKAGE_HEADER_BYTES) throw new Error('Unexpected header length');
+  if (header.targetBase !== VM_BASE || header.targetBytes !== HOST_SLOT_BYTES) {
+    throw new Error('Package was built for a different slot');
+  }
+  const zeroed = Buffer.from(pkg.subarray(0, HOST_PACKAGE_HEADER_BYTES));
+  zeroed.writeUInt32LE(0, 44);
+  if (crc32(zeroed) !== header.headerCrc) throw new Error('Package header CRC mismatch');
+  for (let i = 12; i < 16; i++) if (field(i)) throw new Error('Reserved header words must be zero');
+  if (header.payloadBytes <= 0x1000 || header.payloadBytes > HOST_SLOT_BYTES) {
+    throw new Error(`Package payload is ${header.payloadBytes} bytes, slot is ${HOST_SLOT_BYTES}`);
+  }
+  if (pkg.length !== HOST_PACKAGE_HEADER_BYTES + header.payloadBytes) {
+    throw new Error(`Package is ${pkg.length} bytes, header describes ${HOST_PACKAGE_HEADER_BYTES + header.payloadBytes}`);
+  }
+  const payload = pkg.subarray(HOST_PACKAGE_HEADER_BYTES);
+  if (crc32(payload) !== header.payloadCrc) throw new Error('Package payload CRC mismatch');
+
+  const boot = hostBootWords(payload);
+  const id = hostDescriptor(payload);
+  if (header.imageBytes !== boot.imageBytes) throw new Error(`Header says ${header.imageBytes} image bytes, image says ${boot.imageBytes}`);
+  if (header.entry !== boot.entry) throw new Error('Header entry does not match the image vector table');
+  if (header.abi !== id.abi) throw new Error(`Header says ABI ${header.abi}, descriptor says ABI ${id.abi}`);
+  if (header.services !== id.services) throw new Error('Header services do not match the descriptor');
+  if (header.payloadBytes !== boot.imageBytes) throw new Error('Payload is not the length the image declares');
+  if (!hostSlotValid(boot)) throw new Error('Package payload would not be entered by the minimal image');
+  if (id.magic !== HOSTID_MAGIC) throw new Error('Payload carries no MVH2 host descriptor');
+  return { ...header, name: id.name };
 }

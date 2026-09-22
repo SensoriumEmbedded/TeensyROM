@@ -6,7 +6,10 @@ import {
   CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
   ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES,
+  buildHostPackage, parseHostPackage, hostSlotValid,
+  HOST_ID_OFFSET, HOSTID_MAGIC, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
 } from './extension.mjs';
+import { VM_BASE } from './hex.mjs';
 
 const thumbReturn = Buffer.from([0x70, 0x47]);  // bx lr
 const image = (overrides = {}) => buildImage({ code: thumbReturn, entry: CODE_BASE | 1, ...overrides });
@@ -151,4 +154,74 @@ test('short client banks are padded rather than shifting the descriptor', () => 
   assert.equal(crt.length, CLIENT_BYTES);
   assert.equal(crt.subarray(DESCRIPTOR_OFFSET, DESCRIPTOR_OFFSET + 4).toString('latin1'), 'VMH1');
   assert.equal(crt[83], 0, 'unused bank space is zero filled');
+});
+
+const hostImage = ({ bytes = 0x8000, declared = null, entry = VM_BASE + 0x2001,
+                     flashMagic = 0x42464346, abi = ABI } = {}) => {
+  const image = Buffer.alloc(bytes, 0xa5);
+  const put = (offset, value) => image.writeUInt32LE(value >>> 0, offset);
+  put(0x0, flashMagic);
+  put(0x1000, 0x432000d1);
+  put(0x1004, entry);
+  put(0x1020, VM_BASE);
+  put(0x1024, declared ?? bytes);
+  put(HOST_ID_OFFSET, HOSTID_MAGIC);
+  put(HOST_ID_OFFSET + 4, abi);
+  put(HOST_ID_OFFSET + 8, HOST_SERVICES);
+  put(HOST_ID_OFFSET + 12, bytes);
+  image.fill(0, HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 32);
+  image.write('TestHost', HOST_ID_OFFSET + 16, 'latin1');
+  return image;
+};
+
+test('a host package round-trips and leaves the image byte-identical', () => {
+  const image = hostImage();
+  const pkg = buildHostPackage({ image });
+  const header = parseHostPackage(pkg);
+  assert.equal(pkg.length, HOST_PACKAGE_HEADER_BYTES + image.length);
+  assert.ok(pkg.subarray(HOST_PACKAGE_HEADER_BYTES).equals(image), 'payload is what objcopy produced');
+  assert.equal(header.name, 'TestHost');
+  assert.equal(header.abi, ABI);
+  assert.equal(header.targetBase, VM_BASE);
+});
+
+test('an image short of the length it declares is padded with the 0xFF an erased page holds', () => {
+  const image = hostImage({ bytes: 0x8000, declared: 0x8000 + 0xc00 });
+  const pkg = buildHostPackage({ image });
+  assert.equal(parseHostPackage(pkg).payloadBytes, 0x8000 + 0xc00);
+  assert.ok(pkg.subarray(HOST_PACKAGE_HEADER_BYTES + 0x8000).every((b) => b === 0xff));
+});
+
+test('an image the minimal loader would not enter is refused before it can be installed', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ flashMagic: 0 }) }), /would not be entered|fails the checks/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ entry: VM_BASE + 0x2000 }) }), /fails the checks/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ entry: VM_BASE + 0x9001 }) }), /fails the checks/);
+});
+
+test('an image longer than the slot, or shorter than it claims, is refused', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ bytes: HOST_SLOT_BYTES + 0x1000 }) }), /slot is/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ bytes: 0x8000, declared: 0x4000 }) }), /declares 16384 bytes/);
+});
+
+test('a host carrying another ABI is refused rather than installed and rejected on target', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ abi: ABI + 1 }) }), /ABI/);
+});
+
+test('every single-byte corruption of a host package is caught', () => {
+  const pkg = buildHostPackage({ image: hostImage() });
+  for (const at of [0, 4, 12, 24, 32, 44, HOST_PACKAGE_HEADER_BYTES, pkg.length - 1]) {
+    const bad = Buffer.from(pkg);
+    bad[at] ^= 0x80;
+    assert.throws(() => parseHostPackage(bad), new RegExp('.'), `corruption at ${at} went unnoticed`);
+  }
+});
+
+test('hostSlotValid agrees with the five words the minimal image reads', () => {
+  const ok = { flashMagic: 0x42464346, vectorMagic: 0x432000d1, entry: VM_BASE + 0x1001,
+               bootBase: VM_BASE, imageBytes: 0x8000 };
+  assert.ok(hostSlotValid(ok));
+  assert.ok(!hostSlotValid({ ...ok, entry: VM_BASE + 0x1000 }), 'a non-Thumb entry is refused');
+  assert.ok(!hostSlotValid({ ...ok, bootBase: 0 }));
+  assert.ok(!hostSlotValid({ ...ok, imageBytes: HOST_SLOT_BYTES + 1 }));
+  assert.ok(!hostSlotValid({ ...ok, imageBytes: 0x1000 }));
 });

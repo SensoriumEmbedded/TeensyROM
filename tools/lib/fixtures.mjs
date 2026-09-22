@@ -8,7 +8,9 @@
 // format rather than a test-only imitation of it.
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildImage, buildManifest, buildClientCrt, BASE_SERVICES, CODE_BASE,
+import { VM_BASE } from './hex.mjs';
+import { ABI, HOSTID_MAGIC, HOST_ID_OFFSET, HOST_SERVICES, buildHostPackage,
+         buildImage, buildManifest, buildClientCrt, BASE_SERVICES, CODE_BASE,
          SERVICE_EXAMPLE } from './extension.mjs';
 
 export function packageFixture(root, {
@@ -35,4 +37,28 @@ export function registryFixture(root) {
   packageFixture(root, { id: 'VENDOR', extensions: 'vn',
                          requiredServices: BASE_SERVICES | SERVICE_EXAMPLE });
   return root;
+}
+
+// A minimal image that satisfies vm_host_slot_valid, packaged as a .TRH. The
+// body is a recognisable fill rather than zeros so a test comparing the
+// installed slot against the package catches an off-by-one run of 0x00.
+export function hostPackageFixture(root, { bytes = 0x8000, services = HOST_SERVICES,
+                                           name = 'TestHost' } = {}) {
+  const image = Buffer.alloc(bytes, 0xa5);
+  const put = (offset, value) => image.writeUInt32LE(value >>> 0, offset);
+  put(0x0, 0x42464346);
+  put(0x1000, 0x432000d1);
+  put(0x1004, VM_BASE + 0x2001);
+  put(0x1020, VM_BASE);
+  put(0x1024, bytes);
+  put(HOST_ID_OFFSET, HOSTID_MAGIC);
+  put(HOST_ID_OFFSET + 4, ABI);
+  put(HOST_ID_OFFSET + 8, services);
+  put(HOST_ID_OFFSET + 12, bytes);
+  image.fill(0, HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 32);
+  image.write(name, HOST_ID_OFFSET + 16, 'latin1');
+
+  const file = path.join(root, 'testhost.trh');
+  fs.writeFileSync(file, buildHostPackage({ image }));
+  return file;
 }

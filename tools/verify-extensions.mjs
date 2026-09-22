@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { registryFixture } from './lib/fixtures.mjs';
+import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, RAM_BYTES, RAM_RESERVED_BYTES, RAM2_RO_BYTES,
          SERVICE } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
@@ -235,6 +235,7 @@ native('listing_test');
 native('scheduler_test');
 native('fail_test');
 native('hello_module_test', [sandbox('hello-sandbox-')]);
+native('host_install_test', [hostPackageFixture(sandbox('host-package-'))]);
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
