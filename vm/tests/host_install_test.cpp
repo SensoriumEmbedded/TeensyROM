@@ -3,9 +3,9 @@
 // tools/lib/extension.mjs, so the JavaScript writer and the C++ reader are
 // checked against each other rather than each against itself.
 //
-// The headline is the power-loss sweep at the end: every operation an install
-// performs is cut in turn, and the slot must land in one of three states.
-// Never a fourth, and never one that reads as a host but is not.
+// The power-loss sweep at the end cuts every operation an install performs in
+// turn, and requires the slot to read as absent, as the old host, or as the
+// new one.
 #include <cassert>
 #include <fstream>
 #include <vector>

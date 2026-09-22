@@ -197,8 +197,6 @@ export function buildClientCrt({ id, bank0, bank1, name = id }) {
   return crt;
 }
 
-// ------------------------------------------- the .TRH host package
-
 // A host image arrives on the SD card as a 64-byte header followed by the raw
 // slot image, byte-identical to what `objcopy -O binary` produced. The header
 // is a separate container rather than a field inside the image because the
@@ -211,10 +209,7 @@ export const HOST_SLOT_BYTES = VM_LIMIT - VM_BASE;
 export const HOST_ID_OFFSET = 0x800;
 export const HOSTID_MAGIC = 0x3248564d;  // 'MVH2'
 
-// The five words vm_host_slot_valid() in VMHostABI.h gates on. Four live in
-// the second sector, which is why the installer erases sector 0 by itself and
-// programs its tag last: any interruption then leaves a slot that reads as
-// absent rather than as present and half-written.
+// The five words vm_host_slot_valid() in VMHostABI.h gates on.
 const BOOT_WORD = { flashMagic: 0x0, vectorMagic: 0x1000, entry: 0x1004,
                     bootBase: 0x1020, imageBytes: 0x1024 };
 
@@ -229,10 +224,8 @@ export function hostDescriptor(payload) {
            name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
 }
 
-// Mirrors vm_host_slot_valid(). A payload that fails here would be refused by
-// the minimal image after installation, so it is refused before anything is
-// erased; checkHostSlotPredicate() in verify-extensions.mjs pins the two
-// against each other.
+// A hand mirror of vm_host_slot_valid() in VMHostABI.h; nothing checks the two
+// against each other, so an edit to either belongs in both.
 export function hostSlotValid({ flashMagic, vectorMagic, entry, bootBase, imageBytes }) {
   const address = entry & ~1;
   return flashMagic === 0x42464346 && vectorMagic === 0x432000d1 && (entry & 1) !== 0 &&
@@ -271,9 +264,7 @@ export function buildHostPackage({ image }) {
 }
 
 // Reads back what buildHostPackage wrote, applying the checks the device
-// applies before it erases. The four mirrored fields earn their place by
-// naming the packaging bug: a CRC mismatch says something is wrong, a mirror
-// mismatch says the header claims one ABI and the image carries another.
+// applies before it erases.
 export function parseHostPackage(pkg) {
   if (pkg.length < HOST_PACKAGE_HEADER_BYTES) throw new Error('Package is shorter than its header');
   const field = (i) => pkg.readUInt32LE(i * 4);

@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
 // A NOR flash that behaves like one: erase sets bits, programming only clears
-// them. The install ordering argument rests on that asymmetry, so a fake that
-// let a program set a bit would make the power-loss sweep prove nothing.
+// them.
 //
-// Power loss is modelled by a budget of operations. When it runs out the
-// operation in flight is applied to half its bytes and the run stops -- a
-// completed op and a skipped op are both easy cases, and the torn one is
-// where the ordering has to hold.
+// Power loss is modelled by a budget of operations; when it runs out the
+// operation in flight is applied to half its bytes and the run stops.
 
 #pragma once
 #include <stdexcept>

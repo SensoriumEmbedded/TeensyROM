@@ -39,9 +39,7 @@ export function registryFixture(root) {
   return root;
 }
 
-// A minimal image that satisfies vm_host_slot_valid, packaged as a .TRH. The
-// body is a recognisable fill rather than zeros so a test comparing the
-// installed slot against the package catches an off-by-one run of 0x00.
+// A minimal image that satisfies vm_host_slot_valid, packaged as a .TRH.
 export function hostPackageFixture(root, { bytes = 0x8000, services = HOST_SERVICES,
                                            name = 'TestHost' } = {}) {
   const image = Buffer.alloc(bytes, 0xa5);

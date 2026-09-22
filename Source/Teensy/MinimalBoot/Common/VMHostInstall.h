@@ -2,14 +2,6 @@
 //
 // Writing an extension host into the slot at runtime, from a .TRH package on
 // the SD card. tools/lib/extension.mjs writes what this reads.
-//
-// The ordering here is the whole design. Every interruption must leave a slot
-// that vm_host_slot_valid() rejects -- never one it accepts and then jumps
-// into. That holds because NOR erase only sets bits and programming only
-// clears them, so the FlexSPI tag at offset 0 either still reads 0x42464346
-// or it does not; there is no third state. Sector 0 is erased first and its
-// tag programmed last, so the window in which the slot claims to hold a host
-// is one 4-byte program wide.
 
 #ifndef VMHOSTINSTALL_H
 #define VMHOSTINSTALL_H
@@ -27,8 +19,6 @@ enum : uint32_t { VM_TRH_MAGIC = 0x31485254u,   // 'TRH1'
                   VM_HOST_PAGE_BYTES = 256u,
                   VM_FLASH_TAG = 0x42464346u };
 
-// What went wrong, in the order the install would hit it. Ok is the only
-// value that means the slot changed and is now a host.
 enum class VmInstallStatus : uint8_t {
     Ok, ShortFile, BadMagic, BadFormat, BadHeader, BadHeaderCrc, WrongSlot,
     BadLength, ReadError, BadPayloadCrc, MirrorMismatch, WrongAbi,
@@ -58,9 +48,7 @@ static inline uint32_t vm_crc32(uint32_t c, const uint8_t *p, uint32_t n) {
 static inline uint32_t vm_crc32_begin() { return 0xffffffffu; }
 static inline uint32_t vm_crc32_end(uint32_t c) { return c ^ 0xffffffffu; }
 
-// The header alone, before anything is read past it. Everything here is
-// cheap and non-destructive: a package that fails is refused with the C64
-// still running and the installed host untouched.
+// Validates the TRH1 container header alone, before anything past it is read.
 static inline VmInstallResult vm_trh_valid(const VmTrhHeader &h, uint32_t fileBytes) {
     if (fileBytes < VM_TRH_HEADER_BYTES) return { VmInstallStatus::ShortFile, fileBytes };
     if (h.magic != VM_TRH_MAGIC) return { VmInstallStatus::BadMagic, h.magic };
@@ -83,10 +71,8 @@ static inline VmInstallResult vm_trh_valid(const VmTrhHeader &h, uint32_t fileBy
     return { VmInstallStatus::Ok, 0 };
 }
 
-// What one streaming pass over the payload learned, so the second pass has
-// something to compare against and the caller can report the host by name.
 struct VmHostCandidate {
-    uint32_t payloadCrc, bodyCrc;      // whole payload; and 0x1000..end, which P6 re-reads
+    uint32_t payloadCrc, bodyCrc;      // whole payload; and 0x1000..end, which vm_host_install re-reads
     uint32_t bootWords[5];             // flashMagic, vectorMagic, entry, bootBase, imageBytes
     VmHostId id;
 };
@@ -127,8 +113,6 @@ static VmInstallResult vm_host_scan(Reader &reader, const VmTrhHeader &h,
     if (out.id.services != h.services) return { VmInstallStatus::MirrorMismatch, out.id.services };
     if (out.id.abi != VM_ABI) return { VmInstallStatus::WrongAbi, out.id.abi };
     if (h.payloadBytes != out.bootWords[4]) return { VmInstallStatus::BadLength, h.payloadBytes };
-    // The predicate the minimal image will apply. Failing it here costs
-    // nothing; failing it after the erase costs the installed host.
     if (!vm_host_slot_valid(out.bootWords[0], out.bootWords[1], out.bootWords[2],
                             out.bootWords[3], out.bootWords[4])) {
         return { VmInstallStatus::NotBootable, out.bootWords[1] };
@@ -180,8 +164,6 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
         if (!r) return r;
     }
 
-    // The body is verified before sector 0 is touched, so the only damage a
-    // later failure can reach is the two pages P7 and P8 write.
     uint32_t body = vm_crc32_begin();
     for (uint32_t off = VM_HOST_SECTOR_BYTES; off < h.payloadBytes; off += VM_HOST_SECTOR_BYTES) {
         const uint32_t n = h.payloadBytes - off < VM_HOST_SECTOR_BYTES ? h.payloadBytes - off : VM_HOST_SECTOR_BYTES;
@@ -189,9 +171,8 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
     }
     if (vm_crc32_end(body) != candidate.bodyCrc) return { VmInstallStatus::VerifyFailed, vm_crc32_end(body) };
 
-    // Everything but the tag. Programming the tag first would leave a slot
-    // that reads as installed while its descriptor is still erased, which
-    // makes identity() false and silently skips the ABI and service checks.
+    // Everything but the tag: the tag at offset 0 is what vm_host_slot_valid
+    // gates on, so it is programmed last, after the descriptor beside it.
     const VmInstallResult r = vm_host_program(flash, 4, sector0 + 4, VM_HOST_SECTOR_BYTES - 4);
     if (!r) return r;
 
@@ -211,8 +192,7 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
     return { VmInstallStatus::Ok, h.payloadBytes };
 }
 
-// True when the slot holds something the minimal image would enter. Reads the
-// same five words vm_host_scan checked before the erase.
+// True when the slot holds something the minimal image would enter.
 template<class Flash>
 static bool vm_host_installed(Flash &flash) {
     uint32_t w[5];
