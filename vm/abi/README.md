@@ -496,6 +496,7 @@ C64 screen:
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
+| The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
 | Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
