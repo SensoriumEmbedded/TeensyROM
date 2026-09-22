@@ -34,12 +34,12 @@ InfoOtherMenu:
    ldy #19 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeEthLocalSubMskWAIT
+   lda #rCtlMakeEthLocalGatewWAIT
    ldx #6 ;row
    ldy #19 ;col
    jsr PrintFileName
 
-   lda #rCtlMakeEthLocalGatewWAIT
+   lda #rCtlMakeEthLocalSubMskWAIT
    ldx #7 ;row
    ldy #19 ;col
    jsr PrintFileName
