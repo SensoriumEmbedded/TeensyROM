@@ -250,8 +250,10 @@ VM_MODULE_ENTRY const VmModule *vm_entry(const VmHost *host);
 
 Exactly one per module, placed in `.entry` by the `VM_MODULE_ENTRY` macro and
 linked first by [`module.ld`](module.ld). Return a pointer to a `VmModule`
-living in module code or data, or `nullptr` to refuse the host. The loader
-re-validates every pointer in the returned table before it calls any of them.
+living in the module's code window, or `nullptr` to refuse the host. Declare
+the table `const`, which puts it in `.rodata` and so in `.text`; a mutable one
+lands in DTCM and the loader refuses it with `$14`. The loader re-validates
+every pointer in the returned table before it calls any of them.
 
 ### The four callbacks
 
