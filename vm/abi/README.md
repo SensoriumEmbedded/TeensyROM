@@ -483,7 +483,8 @@ it against that host to debug it, then cross-compile the identical source.
 `npm run verify:extensions` runs the whole loader suite this way in a few
 seconds: the published headers built with no path back into this repository,
 package format, file services, image validation, registry and preflight,
-menu-hook fall-through, failure reporting, and the reference module end to end.
+menu-hook fall-through, failure reporting, host-package installation under
+power loss, and the reference module end to end.
 
 A pass there says the formats and the contract hold. It says nothing about
 timing, the bus, or the C64 side — that needs the hardware.
