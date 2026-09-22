@@ -17,7 +17,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, DATA_BASE, BASE_SERVICES,
+  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES, BASE_SERVICES,
 } from './lib/extension.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -158,7 +158,7 @@ if (clientBinary || clientSource) {
 if (keep) console.log(`Build tree kept in ${work}`);
 else fs.rmSync(work, { recursive: true, force: true });
 
-const free = 192 * 1024 - (data.length + bssBytes);
-console.log(`${id}: code ${code.length} of 98304 bytes, data ${data.length}, bss ${bssBytes}, ` +
+const free = DATA_BYTES - (data.length + bssBytes);
+console.log(`${id}: code ${code.length} of ${CODE_LIMIT - CODE_BASE} bytes, data ${data.length}, bss ${bssBytes}, ` +
             `workspace left for the module ${free} bytes`);
 console.log(`Package written to ${directory}`);
