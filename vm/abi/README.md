@@ -25,10 +25,7 @@ its tail, and `host->bytes` says how far this host's copy actually runs. The
 loader implements the first 76 bytes of it — files, clock, packets, write and
 guest RAM — and stops.
 
-That stopping point is not arbitrary. It is the same offset that a host with
-video callbacks appended has at `offsetof(VmHost, video_present)`, so **a module
-built against either header is binary compatible at the base**. A module asks
-for exactly what it needs and gets a straight answer:
+A module asks for exactly what it needs and gets a straight answer:
 
 ```c
 if (!h || h->abi != VM_ABI || h->bytes < VM_HOST_BASE_BYTES) return nullptr;
@@ -450,8 +447,8 @@ those and a few neighbours as **weak** definitions, and the packager links it
 into every module. Define your own if you want a faster one; yours wins with no
 build changes.
 
-For reference, the module in `vm/hello` builds to 776 bytes of code, 32 bytes of
-data and 192 bytes of bss, leaving 196,384 bytes of workspace.
+The packager prints the code, data and bss it measured and the workspace left,
+so `npm run build:hello` is the reference figure for `vm/hello`.
 
 ## 9. Testing without hardware
 
@@ -491,9 +488,7 @@ C64 screen:
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |
 
-Nothing in the verified rows depends on timing beyond the ordinary EasyFlash bus
-handling, since the base profile never becomes bus master. Treat the rows marked
-**no** as untested rather than as working.
+Treat the rows marked **no** as untested rather than as working.
 
 A running extension is returned to the menu by the reset button, which the
 extension image services from `loop()`; `vm_entry` is called from `setup()`, so
