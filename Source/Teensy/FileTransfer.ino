@@ -557,11 +557,8 @@ FLASHMEM void DeleteFileCommand()
     }
 
     FS* sourceFS = GetStorageDevice(storageType);
-    if (!sourceFS)
-    {
-        SendU16(FailToken);
-        CmdChannel->println("Error getting storage device!");
-    }
+
+    if (!sourceFS) return;
 
     if (DeleteFile(filePath, *sourceFS)) NoteRemoteFileChange(filePath, storageType);
 }
