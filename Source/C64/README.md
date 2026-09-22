@@ -21,7 +21,7 @@ Useful options (after `--` when going through npm):
 
 The build stops at the first failure and names the project and file. Each project builds in its own `build/` directory, which is emptied first and also holds the assembly report and VICE label file (`Labels`; `MainSymbols` and `CartSymbols` for MainMenuCRT).
 
-**Rebuild the C64 side after any change to a `.asm`, `.s` or `.i` file, before building the Teensy firmware,** or the firmware embeds the old code. Nothing checks this for you yet.
+**Rebuild the C64 side after any change to a `.asm`, `.s` or `.i` file, before building the Teensy firmware,** or the firmware embeds the old code. CI catches it for every project but `TRCustomBasicCommands`, which KickAssembler builds and CI installs no JRE for: `tools/build-c64.test.mjs` reassembles the rest and byte-compares against what is committed.
 
 ## Prerequisites
 
