@@ -260,14 +260,14 @@ showCode:
         lsr
         lsr
         jsr nybble
-        sta SCREEN + 24 * 40 + 14
+        sta SCREEN + 24 * 40 + 17
         pla
         and #$0F
         jsr nybble
-        sta SCREEN + 24 * 40 + 15
+        sta SCREEN + 24 * 40 + 18
         lda #2
-        sta COLOUR + 24 * 40 + 14
-        sta COLOUR + 24 * 40 + 15
+        sta COLOUR + 24 * 40 + 17
+        sta COLOUR + 24 * 40 + 18
 stop:
         jmp stop
 
