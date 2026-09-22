@@ -22,7 +22,9 @@ SCREEN_CODE_A, SCREEN_CODE_Z = 1, 26
 
 
 def petscii_row(row):
-    """Screen codes as text: letters, digits and punctuation survive, the rest is '.'."""
+    """Screen codes as text, uppercase/graphics charset only: 1-26 decode to A-Z
+    there, and the lower/uppercase charset's 65-90 do not decode. Digits and
+    punctuation survive either way; anything undecoded is '.'."""
     out = []
     for code in row:
         code &= ~REVERSE_VIDEO

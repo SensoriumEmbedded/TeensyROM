@@ -19,6 +19,7 @@ import threading
 import time
 import unittest
 
+from c64 import petscii_row
 from hexfile import MAIN_BASE, MINIMAL_BASE
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, FAIL, FW_CHECK,
                       FW_FULL, FW_MINIMAL, GET_DIR_NDJSON, LAUNCH_FILE,
@@ -351,6 +352,12 @@ class BenchScripts(unittest.TestCase):
         self.assertIn('Reset cmd received', out.stdout)
         self.assertEqual(self.board.resets, 1)
 
+    def test_push_says_so_when_the_local_file_is_missing(self):
+        out = run(self.board, 'push.py', '/nope/missing.bin=/X.bin')
+        self.assertEqual(out.returncode, 1)
+        self.assertIn('cannot read /nope/missing.bin', out.stderr)
+        self.assertNotIn('Traceback', out.stderr)
+
     def test_no_board_is_a_clear_error(self):
         env = {k: v for k, v in os.environ.items() if k != 'TR_PORT'}
         # Cannot assume no usbmodem device exists on the machine running the test.
@@ -384,6 +391,28 @@ class PortChoice(unittest.TestCase):
             with self.assertRaises(OSError):
                 Link(decoy.name, settle=0)
             self.assertEqual(len(os.listdir('/dev/fd')), open_fds)
+
+
+class WriteBound(unittest.TestCase):
+    """A board that stops draining its USB endpoint must not hang the host."""
+
+    def test_a_write_nobody_reads_gives_up_and_says_how_far_it_got(self):
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        self.addCleanup(os.close, slave)
+        link = Link(os.ttyname(slave), settle=0)
+        self.addCleanup(link.close)
+        with self.assertRaises(SystemExit) as stopped:
+            link.wr(b'x' * (4 * 1024 * 1024), stall=0.2)
+        self.assertIn('board stopped reading after', str(stopped.exception))
+
+
+class ScreenCodes(unittest.TestCase):
+    """petscii_row reads the uppercase/graphics charset, and says so."""
+
+    def test_the_lower_uppercase_charsets_letters_do_not_decode(self):
+        self.assertEqual(petscii_row(bytes([8, 5, 12, 12, 15])), 'HELLO')
+        self.assertEqual(petscii_row(bytes([72, 69, 76, 76, 79])), '.....')
 
 
 class Reflash(unittest.TestCase):

@@ -41,6 +41,7 @@ PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
 REPLY_BYTES = 2
 READ_TICK = 0.2
 ASK_AGAIN_AFTER = 2.0
+WRITE_STALL_LIMIT = 30.0
 
 
 def ports(beside=None):
@@ -136,12 +137,17 @@ class Link:
                     pass
         return buf
 
-    def wr(self, data):
-        view, off = memoryview(data), 0
+    def wr(self, data, stall=WRITE_STALL_LIMIT):
+        """Raises SystemExit when the board has taken nothing for `stall` seconds."""
+        view, off, deadline = memoryview(data), 0, time.time() + stall
         while off < len(view):
             try:
                 off += os.write(self.fd, view[off:off + 2048])
+                deadline = time.time() + stall
             except BlockingIOError:
+                if time.time() >= deadline:
+                    raise SystemExit(f'{self.port}: board stopped reading after '
+                                     f'{off} of {len(view)} bytes')
                 time.sleep(0.002)
 
     def drain(self, secs=0.4):
@@ -288,7 +294,11 @@ class Link:
         self.drain(0.6)
 
     def post(self, local, remote, log=print):
-        data = open(local, 'rb').read()
+        try:
+            with open(local, 'rb') as source:
+                data = source.read()
+        except OSError as problem:
+            raise SystemExit(f'cannot read {local}: {problem.strerror}')
         self.delete(remote)
         started = time.time()
         self.wr(to_board(POST_FILE))

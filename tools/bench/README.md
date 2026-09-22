@@ -94,4 +94,9 @@ than a board. The fake drops and re-publishes its pty, under a new name, for
 `fwupdate.py`'s post-reboot check; `exttest.py`'s own reconnect path still
 needs a real reset.
 
+`screen.py`, `colors.py`, `exttest.py` and `fwupdate.py` read the screen through
+`petscii_row`, which decodes the uppercase/graphics charset. A C64 in the
+lower/uppercase charset shows its letters as `.`, which is also why `fwupdate.py`
+would miss the `Y/N` prompt there and time out rather than answer it.
+
     python3 -m unittest discover -s tools/bench
