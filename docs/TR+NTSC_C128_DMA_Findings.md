@@ -4,7 +4,7 @@
 
 ## Summary
 
-The TeensyROM+ can use bus-mastering DMA over the C64/C128 expansion port to read and write host memory directly. This is used in features such as REU and the C64Cast project.
+The TeensyROM+ can use bus-mastering DMA over the C64/C128 expansion port to read and write host memory directly. This is used in features such as REU and the [c64cast](https://github.com/kfox/c64cast) project.
 
 On NTSC flat C128s, 2 of the 4 units tested showed intermittent DMA write failures under stress testing, with memory corruption appearing outside the targeted address range. The true rate across NTSC C128s generally isn't established by a sample this small. This investigation characterized the failure mode across all four units and found a single hardware fix that eliminates the fault, since confirmed on both previously failing boards.
 

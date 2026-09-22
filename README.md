@@ -128,7 +128,9 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 
 ## Inspiration and Thank-Yous:
 * [**Heather S**](https://www.instagram.com/dalliancecreations/): Loving wife, continuous encourager, saintly patience
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web), [UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, remote controls via [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web), [UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
+* [**Kelly Fox**](https://github.com/kfox): TR+ contributions (build system and much more), [c64cast](https://github.com/kfox/c64cast)
+* [**LessPaul**](https://github.com/LessPaul): Freezer cartridge contributions
 * [**Avrilcadabra**](https://www.youtube.com/@avrilcadabra): Musician, experimenter, provider of ideas and feedback 
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design
