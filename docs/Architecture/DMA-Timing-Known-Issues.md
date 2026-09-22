@@ -145,7 +145,17 @@ a positive control). Unknown what gates it: thermal, uptime, VIC/screen state.
 No margin number here is fully trustworthy until this is understood, and no A/B
 against it is repeatable yet.
 
-### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Investigation]`
+## Validation
+
+### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
+The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
+430 default is inherited from the old shared constant, not independently
+measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
+correctly, but not the analog margin (its buffers/bus loading are its own).
+
+## Closed
+
+### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Closed]`
 Earlier research (RAD project postmortem) suggested the C64 has more delay
 between its internal CPU clock and the port-visible PHI2 than the C128 does —
 a distinct, unmeasured hypothesis from the DMA-hold marginality PR #21 found.
@@ -321,7 +331,208 @@ failure rate. **The same single fix has now taken two independent boards from cl
 faulty to fully clean.** Full detail: experiment log's "Marco1 — new-day regression, U62
 thermal test (inconclusive), bodge wires found, LS245 swap decisive" section.
 
-### 15. Residual C128 DMA write fault persists even at `te445` `[Investigation]`
+**Closed (2026-09-21):** Resolved by the U55 chip-swap investigation above — the best-supported mechanism is now U55's own output drive current/slew rate (ground-bounce-style supply noise on switching), not propagation delay or Schottky clamping, and a validated practical fix exists (swap U55 74F245 -> 74LS245). See [TR+ NTSC C128 DMA Findings](../TR+NTSC_C128_DMA_Findings.md).
+
+### 7. `TestDMAPage()` (uniform-fill diagnostic) has a detectability blind spot `[Closed]`
+A write that never lands is invisible to a uniform-fill verify if the page
+already held that value. This means historical "passed DMA check" results —
+including whatever data underlies the "most C128s fail" line in
+`General_Usage.md` — were only ever screened with an instrument that can't see
+this failure class on the passing side either. `TestDMAPattern()` (added in
+PR #21) is sensitive to it, proven at `0xc000`.
+
+`TestDMAPattern()` only runs at `0xc000` — the other six addresses
+`TestDMAPage()` covers (`0x3f00`, `0x4000`, `0x5000`, `0x6000`, `0x7000`,
+`0x8000`) are still only screened by the blind method. Not extending it there
+is an accepted scope decision, not an open gap: nothing about those addresses
+is special, and `TestDMAPage()` running alongside costs nothing to leave in
+place. Closing this as "the tool that fixes the blind spot exists and works,"
+not "every address has been swept with it."
+
+### 8. `TestDMAPattern()` reports only to serial, not to the C64/C128 screen `[Closed]`
+All of its pass/fail detail (bad-byte counts, XOR mask, unchanged count,
+per-bit direction) goes through `Serial.printf()` only, same as the rest of
+`ExpPortDMA()`'s DMA bit transition tests. Without a PC serial terminal
+attached, the only thing visible on the C64/C128 itself is the overall "OK" /
+"Failed, details on serial" line. Items #2, #3, #4, and #6 above all depend on
+running these sweeps on various hardware in the field, which is a lot more
+accessible if the actual numbers show up on screen instead of requiring a
+serial capture.
+
+Added a `ToScreen` parameter: the detailed bit-direction table stays
+serial-only (too wide for 40 columns), but a one-line summary per pattern
+(`$ValA/$ValB: bad/total OK|Failed`) now goes through `SendMsgPrintfln()` when
+set. `ExpPortDMA()`'s menu-driven self-test passes `true`; the `'z'` serial
+sweep command passes `false`, unchanged.
+
+First on-hardware run (9/11/26) caught a real bug in the first pass at this:
+a pre-fill-only failure (`BadBytes=0`, `PrefillBad=1`) showed "Failed" on
+screen followed by `xor $00 unch 0` — misleading, since that line was always
+the *pattern* write's `XorMask`/`Unchanged`, both legitimately zero when the
+failure is entirely in the pre-fill phase. Fixed to mirror serial's structure:
+`pre-fill $XX bad N` prints when `PrefillBad` is nonzero, `xor $XX unch N`
+prints when `BadBytes` is nonzero — independently, not both gated on the same
+`!Clean`. `Unchanged` stays included because it's the actual discriminator
+between the two failure modes above — 0 means marginal/partial-byte (#4), high
+means cycle-overrun/whole-byte (#5). `WorstPass` still stays serial-only.
+
+Verified on hardware after the fix above — screen output confirmed correct.
+
+### 10. `ExpPortDMA()` doesn't force off active IO Handlers before testing `[Closed — not a bug]`
+Initial read: entry to `ExpPortDMA()` ([StatusFunctions.c:845-851](../../Source/Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c)) never touches `CurrentIOHandler`, so whatever handler was active before the diagnostic started would stay live and could cross-talk with the test's own bus activity.
+
+Doesn't hold up: both menu entries that can reach `ExpPortDMA()` ("TeensyROM
+External Ports Test", "TR+ C64 Expansion Port Test" — [MainMenuItems.h:294,296](../../Source/Teensy/MainMenuItems.h))
+are registered with `IOHndlrAssoc = IOH_TeensyROM`, so launching either from
+the menu already sets `CurrentIOHandler = IOH_TeensyROM` via the normal
+`IOHandlerSelectInit()` path before the diagnostic program ever runs. And it
+has to stay that way: `rCtlExpPortDMAWAIT` (the control-register write that
+actually triggers `ExpPortDMA()`) is handled inside `IOH_TeensyROM.c`'s own
+IO1 handler — `isrPHI2()` routes every IO1 access through
+`IOHandler[CurrentIOHandler]->IO1Hndlr`, so that write literally cannot reach
+TR's code unless `CurrentIOHandler` is already `IOH_TeensyROM`. No stale-handler
+scenario is reachable by construction, and forcing `IOH_None` would have
+broken the diagnostic's own ability to report status/results back to the
+still-running C64 program afterward. False alarm - closed without a code
+change (2026-09-11).
+
+### 11. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Closed — not a bug]`
+Disables `IRQ_ENET`/`IRQ_PIT` for the duration of the self-test. Turns out this
+isn't asymmetric between pass/fail as originally framed — all 19 `return;`
+points in the function leave them off, and so does the "success" path (which
+hands off into a follow-on ROM/GAME/EXROM test phase instead of restoring
+them). That's deliberate: `SetUpMainMenuROM()` (`Teensy.ino:341-356`, the
+normal way back to the menu from any diagnostic) unconditionally re-enables
+both alongside its other resets. No reboot needed, no degraded state survives
+returning to the menu — confirmed by the user, and a short comment added at
+the disable site in `ExpPortDMA()` pointing at `SetUpMainMenuROM()` so this
+doesn't get re-flagged later.
+
+### 12. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Closed — script being deprecated]`
+Differs from the Teensyduino version (`1.61.0`) pinned in `BuildInfo.md` in the
+FlexSPI configuration block; `Build-DualBoot.ps1`'s `Copy-LinkerFiles` writes it
+straight over `$TeensyCorePath\bootdata.c` — the developer's real, shared
+Teensyduino core, not a private copy — so the stale content silently sticks
+around for unrelated future builds too.
+
+Not fixing it in place: `Build-DualBoot.ps1` is being deprecated in favor of
+`mpe/tools/build.mjs` (`mpe-vm-review`), which doesn't have this problem by
+design — every build works in a fresh `mkdtempSync` temp copy of the installed
+core and never writes back into the real shared install. This bug is one more
+reason for that deprecation, not something worth patching in the outgoing
+script. Flagged to the `MeanHamster VM Incorporation` session (2026-09-11).
+
+### 13. `nSToCyc(N)` doesn't parenthesize its argument `[Closed — fixed by calculation, unverified]`
+```
+#define nSToCyc(N)  (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
+```
+so `nSToCyc(nS_DMASetup-90)` in `IOH_REU.c:217` expands to `nS_DMASetup -
+54` = 386 cycles (643 nS), not the intended 210 cycles (350 nS). The PSRAM
+slow-read guard arms far later than the comment implies. The Teensy core's own
+version of this expression does parenthesize.
+
+**Two call sites, not one:** `IOH_REU.c:236` has the identical pattern,
+`nSToCyc(nS_DMASetup-85)`, guarding the same PSRAM slow-read detection for a
+different REU command type (`TypeSwp` vs. `TypeR2C` at line 217) — with its
+own separate empirical tuning history in the comment ("fixes block missing
+pixels during Bit Fill in CMD 1750 Test"). Every other `nSToCyc(` call site
+in the codebase passes a bare variable with no operator inside (`nS_DataHold`,
+`nS_MaxAdj`), so those are unaffected — this only bites when the argument is
+itself an expression.
+
+Worth noting why both survived: the slope is identical in both expansions
+(−0.6 cycles/nS), so the 75 / 80 / 85 sweep recorded at line 217 (and
+presumably whatever sweep produced line 236's `85`) behaved sensibly and
+converged — locally correct, just offset by a constant amount from what the
+comment claims. Which also means fixing the macro invalidates both
+calibrations and needs a re-tune on hardware, so it was left alone.
+
+**Fixed at the root** — `nSToCyc(N)`/`CycTonS(N)` in `Common_Defs.h` now
+parenthesize `N`. Safe as a global change: every other call site in the
+codebase already passes a bare variable (`nS_DataHold`, `nS_MaxAdj`,
+`BigBuf[Cnt]`), so parenthesizing `N` is a no-op for all of them — only these
+two `IOH_REU.c` sites were ever affected.
+
+Fixing the macro alone would have shifted both guards ~98-100nS *earlier*
+than their existing empirically-converged behavior (the old `-90`/`-85`
+literals were themselves calibrated against the buggy expansion, not a clean
+one) — so the literals were adjusted too, to reproduce the *same* arm point
+under the now-correct formula rather than silently moving it:
+
+- `:217`: `-90` → **`+9`** (`nSToCyc(nS_DMASetup+9)`) — matches the old ~367
+  cycles/PAL, ~357/NTSC within ~1-2 cycles either standard
+- `:236`: `-85` → **`+14`** (`nSToCyc(nS_DMASetup+14)`) — matches the old
+  ~371/~361 the same way
+
+Both new literals came out negative-of-the-original (subtracting a negative,
+i.e. now adding) because the buggy formula was systematically arming *later*
+than its own literal suggested — matching that behavior with a clean formula
+needs the sign to flip, not just the magnitude to shrink. The ~99nS shift is
+consistent across both sites, which checks out: the gap between the buggy and
+correct expansions works out to a near-constant offset largely independent of
+which literal you start from, for values this close to each other.
+
+Still **not verified on real hardware** — `USE_PSRAM` isn't in active use on
+this project, so there's no live way to sweep-confirm either the original
+values or this correction. Closed on that basis: the precedence bug itself is
+fixed and protected against recurrence elsewhere, and the two affected sites
+are calculated to behave the same as before, not differently — the honest
+residual risk is only in the *original* empirical numbers, which was already
+true before this fix and is unchanged by it.
+
+### 14. NTSC C128 needs a later DMA assert point (`te`/`nS_DMASetup`) than the shared NTSC set — detected and applied automatically `[Closed]`
+Imported from kfox's fork (`C128-DMA-Timing` branch, off `DMA_Timing`) — real
+hardware data, not a hypothesis. On a flat NTSC C128, the shipped shared NTSC
+`nS_DMASetup` (430) drops bits intermittently: 19–36 bad bytes/MB. Moving the
+R/W+address assert point to 445 — later, not earlier — cuts that 13–25×, to
+~1.4 bad bytes/MB. Not zero (see #15), but a real, large, measured fix.
+
+Detection: the C128's VIC-IIe implements `$D030` bits 0–1 differently — it
+reads `$FC` at 1MHz where a C64's VIC-II reads `$FF`. `MainMenu.asm` now
+checks this and sets a new `rvtcC128` bit in `wRegVid_TOD_Clks` alongside the
+existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
+out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
+can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
+`Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` instead of
+the plain NTSC set, when both bits are set.
+
+Same exposure as #1: this only ever fires once the menu has reported the
+machine type, so an autolaunched C128 never reaches its own set either —
+confirmed directly in the write-up ("an autolaunched NTSC C64 gets the write
+errors PR #21 fixed, and a C128 gets the same, never reaching its own set
+either").
+
+**Not yet independently verified** — tested extensively by kfox on their own
+rig, not yet run against this branch's own hardware or reconciled with
+`DMA_Timing`'s existing NTSC/PAL constants. PAL C128 has no measured set of
+its own yet either; falls through to the plain PAL constants (itself
+untested on C128, per #2).
+
+**Third independent confirmation (2026-09-19):** a borrowed NTSC C128
+(`Marco1`) reproduces this fault cleanly at `$C0EF` — whole-byte `unchanged`
+failures at `te430` (15/3000, ~5,000 bad bytes/MB), completely fixed by
+`te445` (0/6000). Same direction as kfox's own rig and Travis's own brief,
+unconfirmed-on-retest reproduction (see
+[C128-DMA-Timing-Experiment-Log.md](C128-DMA-Timing-Experiment-Log.md)), on a
+third, independent machine — real validation value for the fix itself, though
+at a notably higher magnitude than kfox's own 19–36 bad bytes/MB (~140-260x).
+This same board also shows a separate, `te`-independent fault at `$C0FF` — see
+#15's update, not part of this item's finding.
+
+**Complication (2026-09-19), Marco2:** on this board (confirmed F245 at U55), `$C0EF`
+still shows this item's whole-byte `unchanged` signature at `te430` — but **`te445`
+makes it worse, not better** (17.5% vs. 8.5% at `te430`), the opposite of this fix's
+intent and the opposite of every other machine tested (kfox's rig, Marco1, Travis's).
+Given the same board's `z` sweep (see #15's update) points to a severe, non-timing
+drive-strength issue on this specific F245 chip, the likeliest read is that Marco2's
+underlying hardware fault is severe enough to swamp whatever benefit `te445` provides
+here — not that `te445` itself is wrong. Doesn't change this item's validation on
+Marco1/kfox's hardware, but means the fix can't be assumed to help on every board
+regardless of its own hardware condition.
+
+**Closed (2026-09-21):** Now confirmed across five independent configurations — kfox's own rig, Marco1, Marco2 (both F245 and post-swap LS245), and Marco3's clean baseline — all agree `te445` is correct or neutral. The one outlier (Marco2 getting worse at `te445` while still F245) is explained: that board's F245-specific drive-strength fault was severe enough to swamp the benefit; once U55 was swapped to LS245, a direct re-sweep confirmed `te445` remains the right setting there too (see item #15's 2026-09-20 `te`-sweep update).
+
+### 15. Residual C128 DMA write fault persists even at `te445` `[Closed]`
 From the same write-up as #14. Even with the fixed C128 assert timing, a
 small but real fault remains — ~1.4 bad bytes/MB, all partial-byte (some bits
 took the new value; none left the byte fully unchanged).
@@ -511,7 +722,9 @@ it needs `z999`'s full-page prefill-then-sweep pattern) — PHI2 looked clean on
 capture, no visible ringing on either tap. Full detail: experiment log's "Further
 reseat-state characterization, and a PHI2 scope session" section.
 
-### 16. Mechanical connector pressure and power-cycle state are major, confirmed variables in DMA write reliability `[Investigation]`
+**Closed (2026-09-21):** Fixed. Swapping U55 (74F245 -> 74LS245) eliminated this residual entirely on both previously-faulty boards: Marco2 and Marco1 each went from a real, measurable residual fault to 5/5 clean runs (~6.4MB, 0 bad). Marco1 additionally passed 512/512 loops of the on-device diagnostic with zero failures. See [TR+ NTSC C128 DMA Findings](../TR+NTSC_C128_DMA_Findings.md) for the summary.
+
+### 16. Mechanical connector pressure and power-cycle state are major, confirmed variables in DMA write reliability `[Closed]`
 Discovered while re-baselining before further Marco1/Marco2 work (2026-09-19). Two
 separate, real effects, both confirmed reproducible on real hardware:
 
@@ -611,212 +824,7 @@ fix remains intact and unrelated — it fixes local supply noise at U55, not thi
 separate mechanical variable. Full detail: experiment log's "Marco2 — overnight
 regression and connector-pressure/mechanical-settling confirmation" section.
 
-## Validation
-
-### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
-The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
-430 default is inherited from the old shared constant, not independently
-measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
-correctly, but not the analog margin (its buffers/bus loading are its own).
-
-### 14. NTSC C128 needs a later DMA assert point (`te`/`nS_DMASetup`) than the shared NTSC set — detected and applied automatically `[Validation]`
-Imported from kfox's fork (`C128-DMA-Timing` branch, off `DMA_Timing`) — real
-hardware data, not a hypothesis. On a flat NTSC C128, the shipped shared NTSC
-`nS_DMASetup` (430) drops bits intermittently: 19–36 bad bytes/MB. Moving the
-R/W+address assert point to 445 — later, not earlier — cuts that 13–25×, to
-~1.4 bad bytes/MB. Not zero (see #15), but a real, large, measured fix.
-
-Detection: the C128's VIC-IIe implements `$D030` bits 0–1 differently — it
-reads `$FC` at 1MHz where a C64's VIC-II reads `$FF`. `MainMenu.asm` now
-checks this and sets a new `rvtcC128` bit in `wRegVid_TOD_Clks` alongside the
-existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
-out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
-can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
-`Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` instead of
-the plain NTSC set, when both bits are set.
-
-Same exposure as #1: this only ever fires once the menu has reported the
-machine type, so an autolaunched C128 never reaches its own set either —
-confirmed directly in the write-up ("an autolaunched NTSC C64 gets the write
-errors PR #21 fixed, and a C128 gets the same, never reaching its own set
-either").
-
-**Not yet independently verified** — tested extensively by kfox on their own
-rig, not yet run against this branch's own hardware or reconciled with
-`DMA_Timing`'s existing NTSC/PAL constants. PAL C128 has no measured set of
-its own yet either; falls through to the plain PAL constants (itself
-untested on C128, per #2).
-
-**Third independent confirmation (2026-09-19):** a borrowed NTSC C128
-(`Marco1`) reproduces this fault cleanly at `$C0EF` — whole-byte `unchanged`
-failures at `te430` (15/3000, ~5,000 bad bytes/MB), completely fixed by
-`te445` (0/6000). Same direction as kfox's own rig and Travis's own brief,
-unconfirmed-on-retest reproduction (see
-[C128-DMA-Timing-Experiment-Log.md](C128-DMA-Timing-Experiment-Log.md)), on a
-third, independent machine — real validation value for the fix itself, though
-at a notably higher magnitude than kfox's own 19–36 bad bytes/MB (~140-260x).
-This same board also shows a separate, `te`-independent fault at `$C0FF` — see
-#15's update, not part of this item's finding.
-
-**Complication (2026-09-19), Marco2:** on this board (confirmed F245 at U55), `$C0EF`
-still shows this item's whole-byte `unchanged` signature at `te430` — but **`te445`
-makes it worse, not better** (17.5% vs. 8.5% at `te430`), the opposite of this fix's
-intent and the opposite of every other machine tested (kfox's rig, Marco1, Travis's).
-Given the same board's `z` sweep (see #15's update) points to a severe, non-timing
-drive-strength issue on this specific F245 chip, the likeliest read is that Marco2's
-underlying hardware fault is severe enough to swamp whatever benefit `te445` provides
-here — not that `te445` itself is wrong. Doesn't change this item's validation on
-Marco1/kfox's hardware, but means the fix can't be assumed to help on every board
-regardless of its own hardware condition.
-
-## Closed
-
-### 7. `TestDMAPage()` (uniform-fill diagnostic) has a detectability blind spot `[Closed]`
-A write that never lands is invisible to a uniform-fill verify if the page
-already held that value. This means historical "passed DMA check" results —
-including whatever data underlies the "most C128s fail" line in
-`General_Usage.md` — were only ever screened with an instrument that can't see
-this failure class on the passing side either. `TestDMAPattern()` (added in
-PR #21) is sensitive to it, proven at `0xc000`.
-
-`TestDMAPattern()` only runs at `0xc000` — the other six addresses
-`TestDMAPage()` covers (`0x3f00`, `0x4000`, `0x5000`, `0x6000`, `0x7000`,
-`0x8000`) are still only screened by the blind method. Not extending it there
-is an accepted scope decision, not an open gap: nothing about those addresses
-is special, and `TestDMAPage()` running alongside costs nothing to leave in
-place. Closing this as "the tool that fixes the blind spot exists and works,"
-not "every address has been swept with it."
-
-### 8. `TestDMAPattern()` reports only to serial, not to the C64/C128 screen `[Closed]`
-All of its pass/fail detail (bad-byte counts, XOR mask, unchanged count,
-per-bit direction) goes through `Serial.printf()` only, same as the rest of
-`ExpPortDMA()`'s DMA bit transition tests. Without a PC serial terminal
-attached, the only thing visible on the C64/C128 itself is the overall "OK" /
-"Failed, details on serial" line. Items #2, #3, #4, and #6 above all depend on
-running these sweeps on various hardware in the field, which is a lot more
-accessible if the actual numbers show up on screen instead of requiring a
-serial capture.
-
-Added a `ToScreen` parameter: the detailed bit-direction table stays
-serial-only (too wide for 40 columns), but a one-line summary per pattern
-(`$ValA/$ValB: bad/total OK|Failed`) now goes through `SendMsgPrintfln()` when
-set. `ExpPortDMA()`'s menu-driven self-test passes `true`; the `'z'` serial
-sweep command passes `false`, unchanged.
-
-First on-hardware run (9/11/26) caught a real bug in the first pass at this:
-a pre-fill-only failure (`BadBytes=0`, `PrefillBad=1`) showed "Failed" on
-screen followed by `xor $00 unch 0` — misleading, since that line was always
-the *pattern* write's `XorMask`/`Unchanged`, both legitimately zero when the
-failure is entirely in the pre-fill phase. Fixed to mirror serial's structure:
-`pre-fill $XX bad N` prints when `PrefillBad` is nonzero, `xor $XX unch N`
-prints when `BadBytes` is nonzero — independently, not both gated on the same
-`!Clean`. `Unchanged` stays included because it's the actual discriminator
-between the two failure modes above — 0 means marginal/partial-byte (#4), high
-means cycle-overrun/whole-byte (#5). `WorstPass` still stays serial-only.
-
-Verified on hardware after the fix above — screen output confirmed correct.
-
-### 10. `ExpPortDMA()` doesn't force off active IO Handlers before testing `[Closed — not a bug]`
-Initial read: entry to `ExpPortDMA()` ([StatusFunctions.c:845-851](../../Source/Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c)) never touches `CurrentIOHandler`, so whatever handler was active before the diagnostic started would stay live and could cross-talk with the test's own bus activity.
-
-Doesn't hold up: both menu entries that can reach `ExpPortDMA()` ("TeensyROM
-External Ports Test", "TR+ C64 Expansion Port Test" — [MainMenuItems.h:294,296](../../Source/Teensy/MainMenuItems.h))
-are registered with `IOHndlrAssoc = IOH_TeensyROM`, so launching either from
-the menu already sets `CurrentIOHandler = IOH_TeensyROM` via the normal
-`IOHandlerSelectInit()` path before the diagnostic program ever runs. And it
-has to stay that way: `rCtlExpPortDMAWAIT` (the control-register write that
-actually triggers `ExpPortDMA()`) is handled inside `IOH_TeensyROM.c`'s own
-IO1 handler — `isrPHI2()` routes every IO1 access through
-`IOHandler[CurrentIOHandler]->IO1Hndlr`, so that write literally cannot reach
-TR's code unless `CurrentIOHandler` is already `IOH_TeensyROM`. No stale-handler
-scenario is reachable by construction, and forcing `IOH_None` would have
-broken the diagnostic's own ability to report status/results back to the
-still-running C64 program afterward. False alarm - closed without a code
-change (2026-09-11).
-
-### 11. `ExpPortDMA()` leaves IRQs disabled on early-return failure paths `[Closed — not a bug]`
-Disables `IRQ_ENET`/`IRQ_PIT` for the duration of the self-test. Turns out this
-isn't asymmetric between pass/fail as originally framed — all 19 `return;`
-points in the function leave them off, and so does the "success" path (which
-hands off into a follow-on ROM/GAME/EXROM test phase instead of restoring
-them). That's deliberate: `SetUpMainMenuROM()` (`Teensy.ino:341-356`, the
-normal way back to the menu from any diagnostic) unconditionally re-enables
-both alongside its other resets. No reboot needed, no degraded state survives
-returning to the menu — confirmed by the user, and a short comment added at
-the disable site in `ExpPortDMA()` pointing at `SetUpMainMenuROM()` so this
-doesn't get re-flagged later.
-
-### 12. `tools/BootLinkerFiles/bootdata.c.orig` is stale `[Closed — script being deprecated]`
-Differs from the Teensyduino version (`1.61.0`) pinned in `BuildInfo.md` in the
-FlexSPI configuration block; `Build-DualBoot.ps1`'s `Copy-LinkerFiles` writes it
-straight over `$TeensyCorePath\bootdata.c` — the developer's real, shared
-Teensyduino core, not a private copy — so the stale content silently sticks
-around for unrelated future builds too.
-
-Not fixing it in place: `Build-DualBoot.ps1` is being deprecated in favor of
-`mpe/tools/build.mjs` (`mpe-vm-review`), which doesn't have this problem by
-design — every build works in a fresh `mkdtempSync` temp copy of the installed
-core and never writes back into the real shared install. This bug is one more
-reason for that deprecation, not something worth patching in the outgoing
-script. Flagged to the `MeanHamster VM Incorporation` session (2026-09-11).
-
-### 13. `nSToCyc(N)` doesn't parenthesize its argument `[Closed — fixed by calculation, unverified]`
-```
-#define nSToCyc(N)  (N*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
-```
-so `nSToCyc(nS_DMASetup-90)` in `IOH_REU.c:217` expands to `nS_DMASetup -
-54` = 386 cycles (643 nS), not the intended 210 cycles (350 nS). The PSRAM
-slow-read guard arms far later than the comment implies. The Teensy core's own
-version of this expression does parenthesize.
-
-**Two call sites, not one:** `IOH_REU.c:236` has the identical pattern,
-`nSToCyc(nS_DMASetup-85)`, guarding the same PSRAM slow-read detection for a
-different REU command type (`TypeSwp` vs. `TypeR2C` at line 217) — with its
-own separate empirical tuning history in the comment ("fixes block missing
-pixels during Bit Fill in CMD 1750 Test"). Every other `nSToCyc(` call site
-in the codebase passes a bare variable with no operator inside (`nS_DataHold`,
-`nS_MaxAdj`), so those are unaffected — this only bites when the argument is
-itself an expression.
-
-Worth noting why both survived: the slope is identical in both expansions
-(−0.6 cycles/nS), so the 75 / 80 / 85 sweep recorded at line 217 (and
-presumably whatever sweep produced line 236's `85`) behaved sensibly and
-converged — locally correct, just offset by a constant amount from what the
-comment claims. Which also means fixing the macro invalidates both
-calibrations and needs a re-tune on hardware, so it was left alone.
-
-**Fixed at the root** — `nSToCyc(N)`/`CycTonS(N)` in `Common_Defs.h` now
-parenthesize `N`. Safe as a global change: every other call site in the
-codebase already passes a bare variable (`nS_DataHold`, `nS_MaxAdj`,
-`BigBuf[Cnt]`), so parenthesizing `N` is a no-op for all of them — only these
-two `IOH_REU.c` sites were ever affected.
-
-Fixing the macro alone would have shifted both guards ~98-100nS *earlier*
-than their existing empirically-converged behavior (the old `-90`/`-85`
-literals were themselves calibrated against the buggy expansion, not a clean
-one) — so the literals were adjusted too, to reproduce the *same* arm point
-under the now-correct formula rather than silently moving it:
-
-- `:217`: `-90` → **`+9`** (`nSToCyc(nS_DMASetup+9)`) — matches the old ~367
-  cycles/PAL, ~357/NTSC within ~1-2 cycles either standard
-- `:236`: `-85` → **`+14`** (`nSToCyc(nS_DMASetup+14)`) — matches the old
-  ~371/~361 the same way
-
-Both new literals came out negative-of-the-original (subtracting a negative,
-i.e. now adding) because the buggy formula was systematically arming *later*
-than its own literal suggested — matching that behavior with a clean formula
-needs the sign to flip, not just the magnitude to shrink. The ~99nS shift is
-consistent across both sites, which checks out: the gap between the buggy and
-correct expansions works out to a near-constant offset largely independent of
-which literal you start from, for values this close to each other.
-
-Still **not verified on real hardware** — `USE_PSRAM` isn't in active use on
-this project, so there's no live way to sweep-confirm either the original
-values or this correction. Closed on that basis: the precedence bug itself is
-fixed and protected against recurrence elsewhere, and the two affected sites
-are calculated to behave the same as before, not differently — the honest
-residual risk is only in the *original* empirical numbers, which was already
-true before this fix and is unchanged by it.
+**Closed (2026-09-21):** Fully characterized, not just discovered. Connector pressure, power-cycle state, and mechanical settling are all confirmed, reproducible variables (see the updates above), and are now factored into how this investigation's own results are read and reproduced. This isn't something with more data left to gather — it's a real, permanent characteristic of the connector interface, not an open question. Closing as characterization-complete rather than fixed.
 
 <br>
 
