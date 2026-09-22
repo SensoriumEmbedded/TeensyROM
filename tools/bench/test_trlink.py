@@ -25,7 +25,7 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, FAIL, FW_CHECK,
                       POST_FILE, READ_C64_MEM, RESET_C64, VERSION_INFO,
                       WRITE_C64_MEM)
 from test_hexfile import RECORD_SEGMENT_ADDRESS, intel_hex, record, stamped
-from trlink import Link
+from trlink import Link, ports
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMMAND_PREFIX = 0x64
@@ -358,6 +358,20 @@ class BenchScripts(unittest.TestCase):
                               'import trlink; trlink.ports = lambda: []; trlink.find_port()'],
                              cwd=HERE, env=env, capture_output=True, text=True)
         self.assertIn('no TeensyROM serial port', out.stderr)
+
+
+class PortNames(unittest.TestCase):
+    """A Teensy enumerates under a different name on each platform."""
+
+    def test_the_macos_and_linux_node_names_are_found_and_others_are_not(self):
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder, ignore_errors=True)
+        for name in ('cu.usbmodem2101', 'ttyACM0',
+                     'tty.usbmodem2101', 'ttyS0', 'cu.Bluetooth'):
+            pathlib.Path(folder, name).touch()
+        found = ports(os.path.join(folder, 'anything'))
+        self.assertEqual([os.path.basename(node) for node in found],
+                         ['cu.usbmodem2101', 'ttyACM0'])
 
 
 class PortChoice(unittest.TestCase):

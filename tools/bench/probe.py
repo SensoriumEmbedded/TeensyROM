@@ -6,8 +6,9 @@ Asks FWCheckToken, which both the main and the minimal image answer whatever
 else they are doing, then prints the build banner. Silence means the extension
 image (built with USB disabled) or a hung board, and exits non-zero.
 
-The port name is a second opinion: the main image renames its USB device, so it
-enumerates as usbmodem2101 where the other two use the Teensy's serial number.
+On macOS the port name is a second opinion: the main image renames its USB
+device, so it enumerates as usbmodem2101 where the other two use the Teensy's
+serial number.
 """
 import sys
 from trlink import Link

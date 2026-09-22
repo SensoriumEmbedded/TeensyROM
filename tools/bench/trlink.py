@@ -13,9 +13,10 @@ disabled and answers nothing at all. `Link.fwcheck()` is how you tell the three
 apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
 board (Fab04_FullDMACapable).
 
-The port is $TR_PORT, else the first /dev/cu.usbmodem*. Do not hardcode it: the
-main image renames its USB device (MidiDevName_AppendUniqueID), so its node
-differs from the one minimal and the extension image enumerate as.
+The port is $TR_PORT, else the first /dev/cu.usbmodem* on macOS or /dev/ttyACM*
+on Linux. Do not hardcode it: on macOS the main image renames its USB device
+(MidiDevName_AppendUniqueID), so its node differs from the one minimal and the
+extension image enumerate as.
 
 macOS and Linux only (termios); no third-party packages.
 """
@@ -36,7 +37,7 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
 
 BAUD = termios.B115200
 LISTING_PAGE_SIZE = 1000
-PORT_DIR, PORT_GLOB = '/dev', 'cu.usbmodem*'
+PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
 REPLY_BYTES = 2
 READ_TICK = 0.2
 ASK_AGAIN_AFTER = 2.0
@@ -44,9 +45,10 @@ ASK_AGAIN_AFTER = 2.0
 
 def ports(beside=None):
     """Every node that looks like a TeensyROM, in /dev or in the directory that
-    `beside` names."""
+    `beside` names. A Teensy is cu.usbmodem* on macOS and ttyACM* on Linux."""
     folder = os.path.dirname(beside) if beside else PORT_DIR
-    return sorted(glob.glob(os.path.join(folder, PORT_GLOB)))
+    return sorted(node for pattern in PORT_GLOBS
+                  for node in glob.glob(os.path.join(folder, pattern)))
 
 
 def neighbours(port):
@@ -59,7 +61,8 @@ def neighbours(port):
 def find_port():
     port = os.environ.get('TR_PORT') or next(iter(ports()), None)
     if not port:
-        raise SystemExit(f'no TeensyROM serial port found ({PORT_DIR}/{PORT_GLOB}); '
+        looked = ' or '.join(f'{PORT_DIR}/{pattern}' for pattern in PORT_GLOBS)
+        raise SystemExit(f'no TeensyROM serial port found ({looked}); '
                          'set TR_PORT, and note the extension image has no USB')
     return port
 

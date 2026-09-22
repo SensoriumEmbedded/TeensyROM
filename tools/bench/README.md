@@ -21,14 +21,15 @@ launching an extension is success, not a hang. (That image arrives with the
 extension loader, PR #31; the other two are here today.)
 
 `probe.py` asks the board whether it is main or minimal, and reports silence
-otherwise -- which is the extension image or a hung board. The port name is a
-second opinion: the main image renames its USB device, so it enumerates as
-`usbmodem2101` where the other two use the Teensy's serial number.
+otherwise -- which is the extension image or a hung board. On macOS the port
+name is a second opinion: the main image renames its USB device, so it
+enumerates as `usbmodem2101` where the other two use the Teensy's serial number.
 
-The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*`. Do not hardcode it.
-After a reboot `$TR_PORT` is a preference rather than a pin: the USB serial
-number changes across some firmware changes, so a board that does not come back
-under its old name is picked up from whatever node appeared beside it.
+The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*` on macOS or
+`/dev/ttyACM*` on Linux. Do not hardcode it. After a reboot `$TR_PORT` is a
+preference rather than a pin: the USB serial number changes across some firmware
+changes, so a board that does not come back under its old name is picked up from
+whatever node appeared beside it.
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).
