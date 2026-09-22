@@ -49,23 +49,44 @@ service quietly absent.
 That refusal is the negotiation. Build a capability behind its own bit, and on a
 host that lacks it, fall back and retry without it. One binary, two hosts.
 
-| Bit | Name | Provided by the loader |
-|----:|------|------------------------|
-| 1 | `VM_SERVICE_FILES` | yes |
-| 2 | `VM_SERVICE_CLOCK` | yes |
-| 4 | `VM_SERVICE_PACKETS` | yes |
-| 8 | `VM_SERVICE_WRITE` | yes |
-| 16 | `VM_SERVICE_GUEST_RAM` | yes |
-| 128 | `VM_SERVICE_RAM2_RO` | yes (memory profile 1) |
-| 32 | video transport | **reserved** |
-| 64 | indexed video | **reserved** |
-| 256 | indexed raster | **reserved** |
-| 512 | RAM1 auxiliary spans | **reserved** |
+### The registry
 
-The reserved bits are assigned to known out-of-tree extensions. The loader
-refuses them, but **no future loader release will reuse those numbers for
-anything else** — so an extension can define its own host tail and its own
-service bits without ever colliding with a TeensyROM change.
+Bits are handed out one host at a time, so two hosts can add callbacks without
+ever meaning different things by the same number. An assignment binds the
+number for good. It says nothing about who implements it.
+
+| Bit | Name | Assigned to | This loader |
+|----:|------|-------------|-------------|
+| 1 | `VM_SERVICE_FILES` | base profile | yes |
+| 2 | `VM_SERVICE_CLOCK` | base profile | yes |
+| 4 | `VM_SERVICE_PACKETS` | base profile | yes |
+| 8 | `VM_SERVICE_WRITE` | base profile | yes |
+| 16 | `VM_SERVICE_GUEST_RAM` | base profile | yes |
+| 128 | `VM_SERVICE_RAM2_RO` | base profile | yes (memory profile 1) |
+| 32 | video transport | Mean Hamster Software | no |
+| 64 | indexed video | Mean Hamster Software | no |
+| 256 | indexed raster | Mean Hamster Software | no |
+| 512 | RAM1 auxiliary spans | Mean Hamster Software | no |
+| 1024 | speech | Mean Hamster Software | no |
+| 2048 | SD root | Mean Hamster Software | no |
+| 4096 | desktop | Mean Hamster Software | no |
+| 8192 | firmware catalogue | Mean Hamster Software | no |
+| 16384, 32768 | — | unassigned, on request | no |
+| 65536 | examples and conformance | this repository | no |
+| 1<<17 .. 1<<31 | — | unassigned | no |
+
+To claim a bit, open an issue naming the host and the callback it adds.
+
+An image requiring a bit this loader does not provide is **well formed**. The
+validator judges structure only; the refusal comes from a host, and names the
+bit — `TeensyROM host lacks service $10000`, not "failed validation". A host
+installed before it published a descriptor cannot be asked in advance, so it
+refuses after the reboot instead, as a `$20` record with detail `$11`
+(see [§7](#7-when-a-launch-fails)).
+
+So `tools/build-extension.mjs --services <mask>` will package a module asking
+for someone else's bit. It refuses only an *unassigned* number, which
+`--allow-unassigned-services` overrides while a claim is pending.
 
 Two rules keep that promise workable:
 

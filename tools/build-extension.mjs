@@ -7,6 +7,9 @@
 //   node tools/build-extension.mjs --id HELLO --extensions hi \
 //        --source vm/hello/hello.cpp --client build/c64/vmhello.bin
 //
+// --services is the mask of service bits the module cannot run without,
+// defaulting to the base profile. See the registry in vm/abi/README.md.
+//
 // The image and cartridge formats live in tools/lib/extension.mjs; this script
 // only turns an ELF into the inputs that library wants, then reads its own
 // output back through the same validation the firmware applies.
@@ -17,7 +20,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES, BASE_SERVICES,
+  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES,
+  BASE_SERVICES, ASSIGNED_SERVICES, HOST_SERVICES,
 } from './lib/extension.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,9 +36,26 @@ const clientBinary = option('--client');
 const clientSource = option('--client-source');
 const outRoot = path.resolve(option('--out', path.join(root, 'build/extensions')));
 const keep = args.includes('--keep');
+const allowUnassignedServices = args.includes('--allow-unassigned-services');
 if (!id || !extensions || !sources.length) {
   throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...]\n' +
-                  '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]');
+                  '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]\n' +
+                  '    [--services <bits>] [--allow-unassigned-services]');
+}
+
+const SERVICE_MASK = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
+function parseServices(text) {
+  const value = SERVICE_MASK.test(text ?? '') ? Number(text) : NaN;
+  if (!Number.isInteger(value) || value > 0xffffffff) {
+    throw new Error(`--services wants one 32-bit mask such as 0x1001b, not ${text || 'a bare flag'}`);
+  }
+  return value >>> 0;
+}
+const requiredServices = args.includes('--services') ? parseServices(option('--services')) : BASE_SERVICES;
+const beyondHost = (requiredServices & ~HOST_SERVICES) >>> 0;
+if (beyondHost & ASSIGNED_SERVICES) {
+  console.warn(`Note: services 0x${(beyondHost & ASSIGNED_SERVICES).toString(16)} are assigned to another host, ` +
+               'so the TeensyROM loader will refuse this module.');
 }
 if (clientBinary && clientSource) throw new Error('Pass either --client or --client-source, not both');
 
@@ -120,7 +141,7 @@ const code = binary('.text');
 const data = binary('.data');
 
 // --- Package ---------------------------------------------------------------
-const image = buildImage({ code, data, bssBytes, entry, requiredServices: BASE_SERVICES });
+const image = buildImage({ code, data, bssBytes, entry, requiredServices, allowUnassignedServices });
 // Read our own output back with the same checks the firmware applies, so a
 // packaging mistake fails here rather than on the C64.
 const header = parseImage(image);

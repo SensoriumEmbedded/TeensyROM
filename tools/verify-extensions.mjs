@@ -13,7 +13,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { registryFixture } from './lib/fixtures.mjs';
-import { RAM_BYTES, RAM_RESERVED_BYTES, RAM2_RO_BYTES } from './lib/extension.mjs';
+import { ASSIGNED_SERVICES, BASE_SERVICES, RAM_BYTES, RAM_RESERVED_BYTES, RAM2_RO_BYTES,
+         SERVICE } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -127,6 +128,28 @@ function checkEepromProtocol() {
   console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h');
 }
 
+// The packager mirrors both the registry and the base profile, and subtracts
+// one from the other to decide which numbers are still free to hand out.
+// Nothing imports both copies, so compare them here.
+function checkServiceRegistry() {
+  const header = fs.readFileSync(path.join(root, MODULE_ABI), 'utf8');
+  const orList = (name) => {
+    const match = header.match(new RegExp(`\\b${name}\\s*=\\s*([0-9|x a-fA-F]+?),`));
+    if (!match) throw new Error(`VMABI.h no longer defines ${name} as an or-list of literals`);
+    return match[1].split('|').reduce((bits, term) => bits | Number(term.trim()), 0) >>> 0;
+  };
+  for (const [name, mirrored] of [['VM_SERVICES_ASSIGNED', ASSIGNED_SERVICES],
+                                  ['VM_SERVICES', BASE_SERVICES],
+                                  ['VM_SERVICE_RAM2_RO', SERVICE.RAM2_RO]]) {
+    const declared = orList(name);
+    if (declared !== mirrored) {
+      throw new Error(`${name} is 0x${declared.toString(16)} in VMABI.h, but ` +
+                      `tools/lib/extension.mjs mirrors it as 0x${mirrored.toString(16)}`);
+    }
+  }
+  console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
+}
+
 // A directory holding only these files, so a build inside it sees nothing else
 // of TeensyROM whatever the include path would otherwise have offered.
 function vendorDir(...files) {
@@ -193,6 +216,7 @@ checkBootSlot();
 checkHostIdOffset();
 checkEepromProtocol();
 checkRam2Sizes();
+checkServiceRegistry();
 checkPublishedIncludes();
 checkPublishedHeadersStandalone();
 

@@ -62,6 +62,12 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("lacks service")!=std::string::npos);
 
+    // A bit no host here serves is refused by its number, not as a malformed
+    // package: the image is well formed and only the host can say otherwise.
+    VmBootImage::install(VM_HOST_SERVICES);
+    assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&!rebooted);
+    assert(message.find("lacks service $10000")!=std::string::npos);
+
     // A host that speaks another ABI would refuse every module this image can
     // validate, so that is knowable here too.
     VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1);
@@ -69,10 +75,13 @@ int main(int argc,char **argv){
     assert(message.find("is ABI")!=std::string::npos);
 
     // A host image predating the descriptor cannot say what it provides, and
-    // that is not a refusal -- the launch proceeds as it did before.
+    // that is not a refusal -- the launch proceeds as it did before. An
+    // unserved bit rides through the same way; validation is not the gate.
     VmBootImage::installWithoutDescriptor();
     assert(VmBootImage::installed()&&!VmBootImage::identity(read));
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
+    rebooted=false;message.clear();
+    assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&rebooted&&message.empty());
 
     rebooted=false;marker.clear();
     VmBootImage::install(VM_HOST_SERVICES);
@@ -113,5 +122,7 @@ int main(int argc,char **argv){
 
     puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
          "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client, "
-         "extension cache answering Unknown when unscanned, errored or over the limit");
+         "extension cache answering Unknown when unscanned, errored or over the limit, "
+         "a service belonging to another host refused by its number, and the same module "
+         "reaching the reboot when the installed host cannot say what it provides");
 }

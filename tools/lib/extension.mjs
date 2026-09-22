@@ -24,7 +24,14 @@ export const SERVICE = {
   FILES: 1, CLOCK: 2, PACKETS: 4, WRITE: 8, GUEST_RAM: 16, RAM2_RO: 128,
 };
 export const BASE_SERVICES = SERVICE.FILES | SERVICE.CLOCK | SERVICE.PACKETS | SERVICE.WRITE | SERVICE.GUEST_RAM;
-export const KNOWN_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO;
+export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO;
+// The service registry from VMABI.h. Refusing an unclaimed number is a
+// packaging rule, not a format rule: vm_valid_header accepts any bit. Keep in
+// step with VM_SERVICES_ASSIGNED.
+export const SERVICE_EXAMPLE = 0x10000;  // registry bit 16, this repository's own examples
+export const ASSIGNED_SERVICES = 32 | 64 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | SERVICE_EXAMPLE;
+export const UNASSIGNED_SERVICES = ~(HOST_SERVICES | ASSIGNED_SERVICES) >>> 0;
+export const unassignedServices = (requiredServices) => (requiredServices & UNASSIGNED_SERVICES) >>> 0;
 export const CLIENT_BYTES = 0x6070;
 export const DESCRIPTOR_OFFSET = 0x4070;
 
@@ -41,7 +48,7 @@ export function crc32(bytes) {
 // The 64-byte MVM1 header, followed by .text, then .data, then (profile 1 only)
 // the RAM2 constants. bss is not stored; the loader zeroes it after the copy.
 export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
-                             requiredServices = BASE_SERVICES,
+                             requiredServices = BASE_SERVICES, allowUnassignedServices = false,
                              profile = PROFILE_LEGACY, readOnly = Buffer.alloc(0) }) {
   if (!code?.length) throw new Error('Module image has no code');
   if (code.length > CODE_LIMIT - CODE_BASE) throw new Error(`Module code is ${code.length} bytes, window is ${CODE_LIMIT - CODE_BASE}`);
@@ -51,8 +58,10 @@ export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
   if ((entry & ~1) < CODE_BASE || (entry & ~1) >= CODE_BASE + code.length) {
     throw new Error(`Entry 0x${entry.toString(16)} falls outside the module code window`);
   }
-  if (requiredServices & ~KNOWN_SERVICES) {
-    throw new Error(`Image requires services 0x${(requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
+  const unassigned = unassignedServices(requiredServices);
+  if (unassigned && !allowUnassignedServices) {
+    throw new Error(`Image requires unassigned services 0x${unassigned.toString(16)}; claim the bits in the registry in ` +
+                    'Source/Teensy/MinimalBoot/Common/VMABI.h, or pass --allow-unassigned-services to build anyway');
   }
   if (profile === PROFILE_RAM2_RO) {
     if (!readOnly.length || readOnly.length > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);
@@ -102,9 +111,6 @@ export function parseImage(image) {
   }
   if (!(header.entry & 1) || (header.entry & ~1) < CODE_BASE || (header.entry & ~1) >= CODE_BASE + header.codeBytes) {
     throw new Error(`Entry 0x${header.entry.toString(16)} falls outside the module code window`);
-  }
-  if (header.requiredServices & ~KNOWN_SERVICES) {
-    throw new Error(`Image requires services 0x${(header.requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
   }
   if (header.profile === PROFILE_RAM2_RO) {
     if (!header.readOnlyBytes || header.readOnlyBytes > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);

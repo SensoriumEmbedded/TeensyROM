@@ -25,11 +25,11 @@
 // refusal is the negotiation: build the capability behind a service bit, retry
 // without it, and one module binary runs on both hosts.
 //
-// Service bits 0..4 below are the base profile; bit 7 is this loader's
-// optional RAM2 memory profile. Neither set will change meaning. The bits
-// listed as reserved are assigned to known out-of-tree extensions so the two
-// sides cannot collide; the loader rejects them, but no future loader release
-// will reuse the numbers for something else.
+// Service bits 0..4 below are the base profile and will not change meaning;
+// bit 7 is this loader's optional RAM2 memory profile. The registry below
+// hands out the rest one host at a time, so two hosts cannot pick the same
+// number; an assignment binds the number for good and says nothing about which
+// host implements it.
 enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
@@ -126,18 +126,26 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 #else
 #define VM_MODULE_ENTRY extern "C" __attribute__((used))
 #endif
+// Service registry. To claim a bit, open an issue naming the host and the
+// callback it adds; tools/lib/extension.mjs refuses to package a module
+// requiring an unassigned one.
+//   0..4,7    base profile, below
+//   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
+//             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
+//             desktop, firmware catalogue
+//   14,15     unassigned, available on request
+//   16        TeensyROM's own examples and conformance fixtures
+//   17..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
                   VM_SERVICE_RAM2_RO=128,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
                   VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO,
-                  VM_KNOWN_SERVICES=VM_HOST_SERVICES,
-                  // Assigned to out-of-tree extensions; never reused here.
-                  // 32 video, 64 indexed video, 256 indexed raster, 512 RAM1 aux.
-                  VM_SERVICES_RESERVED=32|64|256|512,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
-static_assert((VM_KNOWN_SERVICES&VM_SERVICES_RESERVED)==0, "reserved service bits stay unimplemented");
+static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
+              "this loader must not claim a bit assigned to another host");
 static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     auto p=static_cast<const uint8_t *>(data); uint32_t c=~0u;
     while(size--) { c^=*p++; for(unsigned b=0;b<8;b++) c=(c>>1)^((0u-(c&1))&0xedb88320u); }
@@ -146,6 +154,10 @@ static inline uint32_t vm_crc32(const void *data, uint32_t size) {
 static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserved[1];}
 static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
+// Structure and self-consistency only. Whether a service can be served is a
+// question about one host's `services`, asked by the preflight in VMRegistry.h
+// and by the loader. Bit 7 is judged here because it changes how reserved[1]
+// is read.
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
     if(h.reserved[2]||h.reserved[3])return false;
     if(h.reserved[0]==VM_PROFILE_LEGACY){
@@ -156,7 +168,7 @@ static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) 
     if(h.magic!=VM_IMAGE_MAGIC || h.abi!=VM_ABI || h.header_bytes!=sizeof h ||
        h.code_base!=VM_CODE_BASE || h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
        h.code_bytes>VM_CODE_LIMIT-VM_CODE_BASE || h.data_bytes>VM_DATA_BYTES ||
-       h.bss_bytes>VM_DATA_BYTES-h.data_bytes || (h.required_services&~VM_KNOWN_SERVICES) ||
+       h.bss_bytes>VM_DATA_BYTES-h.data_bytes ||
        file_bytes!=sizeof h+vm_image_payload_bytes(h) || !(h.entry&1) ||
        (h.entry&~1u)<VM_CODE_BASE || (h.entry&~1u)>=VM_CODE_BASE+h.code_bytes) return false;
     VmImageHeader check=h; check.header_crc=0;

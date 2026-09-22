@@ -5,6 +5,7 @@ import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
   CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
+  ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES,
 } from './extension.mjs';
 
 const thumbReturn = Buffer.from([0x70, 0x47]);  // bx lr
@@ -51,7 +52,7 @@ test('a header the loader would refuse is refused by the parser, not just a bad 
   };
   assert.throws(() => parseImage(restamped(14, 1)), /Reserved header words/);
   assert.throws(() => parseImage(restamped(6, CODE_BASE)), /outside the module code window/);
-  assert.throws(() => parseImage(restamped(9, BASE_SERVICES | 32)), /base profile does not provide/);
+  assert.equal(parseImage(restamped(9, BASE_SERVICES | 0x10000)).requiredServices, BASE_SERVICES | 0x10000);
   assert.throws(() => parseImage(restamped(12, 2)), /Unknown memory profile 2/);
   assert.throws(() => parseImage(restamped(12, PROFILE_RAM2_RO)), /Profile 1 needs/);
 });
@@ -62,9 +63,21 @@ test('entry points the loader would refuse are refused at build time', () => {
   assert.throws(() => image({ entry: (CODE_BASE - 2) | 1 }), /outside the module code window/);
 });
 
-test('an image cannot ask for more than the base profile provides', () => {
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | 32 }), /base profile does not provide/);
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | 512 }), /base profile does not provide/);
+test('a service assigned to another host packages and round trips through the parser', () => {
+  for (const bit of [32, 512, 0x10000]) {
+    assert.equal(parseImage(image({ requiredServices: BASE_SERVICES | bit })).requiredServices,
+                 BASE_SERVICES | bit);
+  }
+  // The static_assert in VMABI.h, mirrored: no bit is both served and assigned.
+  assert.equal(HOST_SERVICES & ASSIGNED_SERVICES, 0);
+});
+
+test('an unassigned service bit is refused at build time, and only there', () => {
+  const unclaimed = 1 << 20;
+  assert.equal(unclaimed & UNASSIGNED_SERVICES, unclaimed);
+  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x100000/);
+  const forced = image({ requiredServices: BASE_SERVICES | unclaimed, allowUnassignedServices: true });
+  assert.equal(parseImage(forced).requiredServices, BASE_SERVICES | unclaimed);
 });
 
 test('the RAM2 read-only profile and the legacy profile stay consistent', () => {
