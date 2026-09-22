@@ -122,7 +122,7 @@ void SetMidiIRQ()
 
 void HWEOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)  
 {
-   MIDIRxBuf[2] = 0x80 | channel; //8x
+   MIDIRxBuf[2] = 0x80 | (channel - 1); //8x
    MIDIRxBuf[1] = note;
    MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
@@ -131,7 +131,7 @@ void HWEOnNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
 
 void HWEOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)  
 {
-   MIDIRxBuf[2] = 0x90 | channel; //9x
+   MIDIRxBuf[2] = 0x90 | (channel - 1); //9x
    MIDIRxBuf[1] = note;
    MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
@@ -140,7 +140,7 @@ void HWEOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
 
 void HWEOnAfterTouchPoly(uint8_t channel, uint8_t note, uint8_t velocity)
 {
-   MIDIRxBuf[2] = 0xa0 | channel; // Ax
+   MIDIRxBuf[2] = 0xa0 | (channel - 1); // Ax
    MIDIRxBuf[1] = note;
    MIDIRxBuf[0] = velocity;
    MIDIRxBytesToSend = 3;
@@ -158,7 +158,7 @@ void HWEOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
       //if (NewVal>127) NewVal=127;
       //MIDIControlVals[control] = NewVal;
       
-   MIDIRxBuf[2] = 0xb0 | channel;  //Bx
+   MIDIRxBuf[2] = 0xb0 | (channel - 1);  //Bx
    MIDIRxBuf[1] = control;
    MIDIRxBuf[0] = value; //NewVal;
    MIDIRxBytesToSend = 3;
@@ -167,7 +167,7 @@ void HWEOnControlChange(uint8_t channel, uint8_t control, uint8_t value)
 
 void HWEOnProgramChange(uint8_t channel, uint8_t program)
 {
-   MIDIRxBuf[1] = 0xc0 | channel; // Cx
+   MIDIRxBuf[1] = 0xc0 | (channel - 1); // Cx
    MIDIRxBuf[0] = program;
    MIDIRxBytesToSend = 2;
    SetMidiIRQ();
@@ -175,7 +175,7 @@ void HWEOnProgramChange(uint8_t channel, uint8_t program)
 
 void HWEOnAfterTouch(uint8_t channel, uint8_t pressure)
 {   
-   MIDIRxBuf[1] = 0xd0 | channel;  // Dx
+   MIDIRxBuf[1] = 0xd0 | (channel - 1);  // Dx
    MIDIRxBuf[0] = pressure;
    MIDIRxBytesToSend = 2;
    SetMidiIRQ();
@@ -186,7 +186,7 @@ void HWEOnPitchChange(uint8_t channel, int pitch)
    //-8192 to 8192, returns to 0 always
    pitch+=8192;
    
-   MIDIRxBuf[2] = 0xe0 | channel;  //Ex
+   MIDIRxBuf[2] = 0xe0 | (channel - 1);  //Ex
    MIDIRxBuf[1] = pitch & 0x7f;
    MIDIRxBuf[0] = (pitch>>7) & 0x7f;
    MIDIRxBytesToSend = 3;
@@ -478,7 +478,7 @@ void PollingHndlr_MIDI()
    
    if (MIDITxBytesReceived == 3)  //Transmit MIDI-out data if buffer full/ready from C64
    {
-      if (MIDITxBuf[0]<0xf0) usbHostMIDI.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], MIDITxBuf[0] & 0x0f);
+      if (MIDITxBuf[0]<0xf0) usbHostMIDI.send(MIDITxBuf[0] & 0xf0, MIDITxBuf[1], MIDITxBuf[2], (MIDITxBuf[0] & 0x0f) + 1);
       else usbHostMIDI.send(MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2], 0);
       
       Printf_dbg("Mout: %02x %02x %02x\n", MIDITxBuf[0], MIDITxBuf[1], MIDITxBuf[2]);
