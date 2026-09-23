@@ -32,10 +32,21 @@ ShowInstalledExtSettings:
    ;update dynamic settings
    ;The firmware answers this in every build: a build without the loader, and a
    ;board with an empty slot, both say so here rather than leaving the row blank.
+   ;Not PrintFileName: that ends at PrintSerialStringLoaded, which reads whatever
+   ;source was selected last and from wherever that read was left. This is the
+   ;page's first string, so there is no previous selection to inherit and the row
+   ;came out empty. Selecting rsstSerialStringBuf here also rewinds it.
    lda #rCtlMakeExtHostStrWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
    ldx #5 ;row
    ldy #3 ;col
-   jsr PrintFileName
+   clc
+   jsr SetCursor
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
+   lda #rsstSerialStringBuf
+   jsr PrintSerialString
 
 WaitInstalledExtMenuKey:
    ;main wait loop
