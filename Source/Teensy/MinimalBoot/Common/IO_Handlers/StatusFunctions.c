@@ -215,7 +215,7 @@ FLASHMEM void MakeFilenameStr()
          EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
          char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
 
-         sprintf(SerialStringBuf, "%s:/%s/%s",
+         snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s:/%s/%s",
             (SIDSourcePathName[0] == rmtUSBDrive ? "USB" : (SIDSourcePathName[0] == rmtSD ? "SD" : "TR")),
             SIDSourcePathName+1, SIDName);
       }

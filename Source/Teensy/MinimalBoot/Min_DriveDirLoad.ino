@@ -412,7 +412,7 @@ void SendMsgPrintfln(const char *Fmt, ...)
    
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
     
    Serial.printf("%s\n", SerialStringBuf);
