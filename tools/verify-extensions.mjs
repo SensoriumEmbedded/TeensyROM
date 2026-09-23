@@ -13,8 +13,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
-import { ASSIGNED_SERVICES, BASE_SERVICES, RAM_BYTES, RAM_RESERVED_BYTES, RAM2_RO_BYTES,
-         SERVICE } from './lib/extension.mjs';
+import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
+         RAM2_RO_BYTES, SERVICE } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,6 +48,8 @@ const sandbox = (prefix) => fs.mkdtempSync(path.join(output, prefix));
 
 const MODULE_ABI = 'Source/Teensy/MinimalBoot/Common/VMABI.h';
 const HOST_ABI = 'Source/Teensy/MinimalBoot/Common/VMHostABI.h';
+const MENU_TABLE = 'Source/Teensy/MinimalBoot/Common/DriveDirLoad.h';
+const HOST_README = 'vm/abi/README.md';
 
 // The flash slot the extension image is linked into is written down twice: here,
 // where the hex is partitioned, and in VMHostABI.h, which is what a host vendor
@@ -63,6 +65,47 @@ function checkBootSlot() {
     }
   }
   console.log('PASS: VM_HOST_SLOT_BASE/LIMIT match the extension flash partition in tools/lib/hex.mjs');
+}
+
+// The extensions the stock menu owns are written down in four places: the
+// menu's own table in DriveDirLoad.h, the firmware's manifest guard in
+// VMHostABI.h, the packager's guard in extension.mjs, and the list vm/abi's
+// README publishes to host authors. Only the menu table decides what the
+// firmware opens; the guards exist to stop a package claiming one of those
+// extensions, and one that misses an entry lets a package claim it.
+function checkProtectedExtensions() {
+  const between = (text, open, close, label) => {
+    const start = text.indexOf(open);
+    if (start < 0) throw new Error(`${label} no longer declares ${open}`);
+    const body = start + open.length;
+    const end = text.indexOf(close, body);
+    if (end < 0) throw new Error(`${label} does not close ${open} with ${close}`);
+    return text.slice(body, end);
+  };
+  const quoted = (body) => body
+    .split('\n').filter((line) => !line.trim().startsWith('//'))
+    .join('\n').match(/'[a-z0-9]{1,3}'|"[a-z0-9]{1,3}"/g)
+    .map((token) => token.slice(1, -1));
+
+  const menu = quoted(between(fs.readFileSync(path.join(root, MENU_TABLE), 'utf8'),
+    'Ext_ItemType_Assoc[]=', '};', 'DriveDirLoad.h'));
+  const firmware = quoted(between(fs.readFileSync(path.join(root, HOST_ABI), 'utf8'),
+    'protectedExtensions[][4]=', '};', 'VMHostABI.h'));
+  const published = between(fs.readFileSync(path.join(root, HOST_README), 'utf8'),
+    'Extensions the stock menu owns are\nrefused: `', '`', 'vm/abi/README.md').split(/\s+/);
+
+  for (const [label, list] of [['VMHostABI.h protectedExtensions', firmware],
+                               ['extension.mjs PROTECTED_EXTENSIONS', PROTECTED_EXTENSIONS],
+                               ['the list vm/abi/README.md publishes', published]]) {
+    const missing = menu.filter((extension) => !list.includes(extension));
+    const extra = list.filter((extension) => !menu.includes(extension));
+    if (missing.length || extra.length) {
+      throw new Error(`${label} disagrees with the stock menu table in DriveDirLoad.h`
+        + `${missing.length ? `; missing ${missing.join(',')}` : ''}`
+        + `${extra.length ? `; claims ${extra.join(',')}, which the menu does not own` : ''}`);
+    }
+  }
+  console.log(`PASS: every protected-extension list matches the ${menu.length} the stock menu table owns`);
 }
 
 // The host descriptor's offset is written down twice too: in the linker script
@@ -214,6 +257,7 @@ function checkPublishedHeadersStandalone() {
 
 checkBootSlot();
 checkHostIdOffset();
+checkProtectedExtensions();
 checkEepromProtocol();
 checkRam2Sizes();
 checkServiceRegistry();

@@ -129,7 +129,7 @@ END
 Line 3 is a comma-separated list of file extensions this package claims, at most
 **7 characters in total** (`gb,gbc` fits). Extensions the stock menu owns are
 refused: `prg crt hex p00 sid kla koa ocp pic art aas hpi txt nfo md seq d64 d71
-d81 reu`.
+d81 reu trh`.
 
 ### engine.mvm — the MVM1 image
 

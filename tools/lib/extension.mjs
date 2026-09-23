@@ -132,7 +132,7 @@ export function parseImage(image) {
 const NAME = /^[A-Za-z0-9_.-]+$/;
 // Extensions the stock menu owns. A package may not claim any of them.
 export const PROTECTED_EXTENSIONS = ['prg', 'crt', 'hex', 'p00', 'sid', 'kla', 'koa', 'ocp',
-  'pic', 'art', 'aas', 'hpi', 'txt', 'nfo', 'md', 'seq', 'd64', 'd71', 'd81', 'reu'];
+  'pic', 'art', 'aas', 'hpi', 'txt', 'nfo', 'md', 'seq', 'd64', 'd71', 'd81', 'reu', 'trh'];
 
 // Six ASCII lines, newline terminated. The firmware parser is strict about all
 // six, so build it here rather than by hand.

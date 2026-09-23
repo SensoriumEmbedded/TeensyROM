@@ -167,7 +167,7 @@ struct VmSlotFlash
       if (offset + n > VM_HOST_SLOT_BYTES) return false;
 
       eepromemu_flash_write((void *)(VM_HOST_SLOT_BASE + offset), data, n);
-      return true;
+      return memcmp(map(offset), data, n) == 0;
    }
 
    // The slot is XIP and cacheable, so a read-back has to come from the part.
@@ -194,7 +194,7 @@ static const char *HostInstallWhy(VmInstallStatus status)
       case VmInstallStatus::Ok:             return "ok";
       case VmInstallStatus::ShortFile:      return "file too short";
       case VmInstallStatus::BadMagic:       return "not a TRH package";
-      case VmInstallStatus::BadFormat:      return "package format too new";
+      case VmInstallStatus::BadFormat:      return "package format unsupported";
       case VmInstallStatus::BadHeader:      return "package header bad";
       case VmInstallStatus::BadHeaderCrc:   return "package header CRC bad";
       case VmInstallStatus::WrongSlot:      return "package targets elsewhere";

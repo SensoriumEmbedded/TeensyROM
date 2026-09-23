@@ -219,4 +219,16 @@ struct StructCrtChip
 #endif
       //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
+
+   // Item types above rtFilePrg that rewrite the Teensy instead of loading
+   // something for the C64. A file the user did not name -- nfcScan.ino picks
+   // one at random out of the directory a tag points at -- must never be one.
+   inline bool IsDeviceWriteType(uint8_t ItemType)
+   {
+      return ItemType == rtFileHex
+#ifdef VM_EXTENSIONS_ENABLED
+          || ItemType == rtFileTRH
+#endif
+         ;
+   }
 #endif
