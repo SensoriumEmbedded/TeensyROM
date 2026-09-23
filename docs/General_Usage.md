@@ -125,15 +125,15 @@
 
 ## The Settings Menu 
   * (as of FW v0.8)
-  * Accessed via `F8` from the main menu. Organized into 9 indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
+  * Accessed via `F8` from the main menu. Organized into indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
   * Shared navigation, works from any page:
     * `CRSR Left/Right` Previous/Next page
-    * `1-9` Jump directly to a page (see page # below)
+    * `1-9`, `0` Jump directly to a page (see page # below)
     * `F1` Reboot TeensyROM (applies any power-up-only settings)
     * `Space Bar` Return to Main Menu
 
 ### 1. Index
-  * Lists all 9 pages below for quick-jump access
+  * Lists every page below for quick-jump access
 
 ### 2. Config: TeensyROM General
   * Emulation Selections:
@@ -220,6 +220,9 @@
 ### 9. Info: HotKeys
   * Shows the currently assigned file for each of the 5 programmable Hot Keys (#1-5)
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
+
+### 0. Installed Extensions
+  * Placeholder: TR+ Runtime Firmware Extensions are not implemented yet, so the page has nothing to list
 
 ## Selecting and associating Special IO
   * What is it?

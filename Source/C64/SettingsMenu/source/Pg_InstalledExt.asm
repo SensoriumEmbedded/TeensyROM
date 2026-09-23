@@ -19,9 +19,6 @@
 
 
 
-; Placeholder page -- lists/uninstalls TR+RFE extension slots once that mechanism exists.
-; See docs: TR+RFE proposal (project-pr20-review-checklist item #20, todo list items #12-18).
-
 InstalledExtMenu:
    jsr CommonInit ;print banner and common keys/page#
 

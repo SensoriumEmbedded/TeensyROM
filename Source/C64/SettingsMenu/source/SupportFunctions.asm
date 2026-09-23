@@ -100,18 +100,18 @@ CheckCommonKeys:
 ++ dec bPageNum
    jmp PopPageUpdate
 
-+  cmp #'1' ;Jump to page #, keys '1'-'9' only -- the 10th page (index 9) uses '0' below,
-   bmi +    ;since these are a contiguous ASCII/PETSCII run starting at '1', not a lookup table
-   cmp #'1'+9  ;hardcoded to 9: pages mapped by this arithmetic top out at '9' regardless of NumPages
++  cmp #'1' ;Jump to page #
+   bmi +   ;skip if below '1'
+   cmp #'9'+1
    bpl +   ;skip if above '9'
    sec       ;set to subtract without carry
    sbc #'1'   ;make zero based
    sta bPageNum
    jmp PopPageUpdate
 
-+  cmp #'0' ;Jump to page #10 (Installed Extensions)
++  cmp #'0' ;Jump to the Installed Extensions page
    bne +
-   lda #NumPages-1  ;zero-based index of the 10th (last) page
+   lda #PageIdxInstalledExt
    sta bPageNum
    jmp PopPageUpdate
 
