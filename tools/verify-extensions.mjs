@@ -16,6 +16,7 @@ import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
          RAM2_RO_BYTES, SERVICE } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
+import { readSource } from './lib/source-text.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -48,6 +49,11 @@ const sandbox = (prefix) => fs.mkdtempSync(path.join(output, prefix));
 
 const MODULE_ABI = 'Source/Teensy/MinimalBoot/Common/VMABI.h';
 const HOST_ABI = 'Source/Teensy/MinimalBoot/Common/VMHostABI.h';
+
+// Every gate below reads a declaration out of a source file as text, and a
+// comment that mentions one is not the declaration: see tools/lib/source-text.mjs.
+const sourceOf = (file) => readSource(path.join(root, file));
+
 const MENU_TABLE = 'Source/Teensy/MinimalBoot/Common/DriveDirLoad.h';
 const HOST_README = 'vm/abi/README.md';
 
@@ -56,7 +62,7 @@ const HOST_README = 'vm/abi/README.md';
 // compiles against and what the minimal image uses to decide whether that slot
 // holds an image it may jump to. Neither side can see the other, so compare them.
 function checkBootSlot() {
-  const header = fs.readFileSync(path.join(root, HOST_ABI), 'utf8');
+  const header = sourceOf(HOST_ABI);
   for (const [name, expected] of [['VM_HOST_SLOT_BASE', VM_BASE], ['VM_HOST_SLOT_LIMIT', VM_LIMIT]]) {
     const match = header.match(new RegExp(`${name} = (0x[0-9a-fA-F]+)u?`));
     if (!match) throw new Error(`VMHostABI.h no longer declares ${name}`);
@@ -82,14 +88,12 @@ function checkProtectedExtensions() {
     if (end < 0) throw new Error(`${label} does not close ${open} with ${close}`);
     return text.slice(body, end);
   };
-  const quoted = (body) => body
-    .split('\n').filter((line) => !line.trim().startsWith('//'))
-    .join('\n').match(/'[a-z0-9]{1,3}'|"[a-z0-9]{1,3}"/g)
+  const quoted = (body) => body.match(/'[a-z0-9]{1,3}'|"[a-z0-9]{1,3}"/g)
     .map((token) => token.slice(1, -1));
 
-  const menu = quoted(between(fs.readFileSync(path.join(root, MENU_TABLE), 'utf8'),
+  const menu = quoted(between(sourceOf(MENU_TABLE),
     'Ext_ItemType_Assoc[]=', '};', 'DriveDirLoad.h'));
-  const firmware = quoted(between(fs.readFileSync(path.join(root, HOST_ABI), 'utf8'),
+  const firmware = quoted(between(sourceOf(HOST_ABI),
     'protectedExtensions[][4]=', '};', 'VMHostABI.h'));
   const published = between(fs.readFileSync(path.join(root, HOST_README), 'utf8'),
     'Extensions the stock menu owns are\nrefused: `', '`', 'vm/abi/README.md').split(/\s+/);
@@ -113,7 +117,7 @@ function checkProtectedExtensions() {
 // a host vendor both read it. A mismatch reads erased flash and silently
 // disables the refusal.
 function checkHostIdOffset() {
-  const header = fs.readFileSync(path.join(root, HOST_ABI), 'utf8');
+  const header = sourceOf(HOST_ABI);
   const image = fs.readFileSync(path.join(root, 'tools/lib/extension-image.mjs'), 'utf8');
   const declared = header.match(/VM_HOST_ID_OFFSET = (0x[0-9a-fA-F]+)u?/);
   if (!declared) throw new Error('VMHostABI.h no longer declares VM_HOST_ID_OFFSET');
@@ -129,7 +133,7 @@ function checkHostIdOffset() {
 // RAM2_RO_BYTES is enforced when packaging, so nothing would catch the other
 // two drifting. Nothing imports both, so compare them here.
 function checkRam2Sizes() {
-  const header = fs.readFileSync(path.join(root, MODULE_ABI), 'utf8');
+  const header = sourceOf(MODULE_ABI);
   for (const [name, mirrored] of [['VM_RAM_BYTES', RAM_BYTES],
                                   ['VM_RAM_RESERVED_BYTES', RAM_RESERVED_BYTES],
                                   ['VM_RAM2_RO_BYTES', RAM2_RO_BYTES]]) {
@@ -147,8 +151,8 @@ function checkRam2Sizes() {
 // out of Common_Defs.h, which is firmware-wide and must never be included by a
 // vendor. Nothing links both, so compare them.
 function checkEepromProtocol() {
-  const defs = fs.readFileSync(path.join(root, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h'), 'utf8');
-  const host = fs.readFileSync(path.join(root, HOST_ABI), 'utf8');
+  const defs = sourceOf('Source/Teensy/MinimalBoot/Common/Common_Defs.h');
+  const host = sourceOf(HOST_ABI);
   const read = (text, name, pattern) => {
     const match = text.match(pattern);
     if (!match) throw new Error(`cannot read ${name} from ${text === defs ? 'Common_Defs.h' : 'VMHostABI.h'}`);
@@ -175,7 +179,7 @@ function checkEepromProtocol() {
 // one from the other to decide which numbers are still free to hand out.
 // Nothing imports both copies, so compare them here.
 function checkServiceRegistry() {
-  const header = fs.readFileSync(path.join(root, MODULE_ABI), 'utf8');
+  const header = sourceOf(MODULE_ABI);
   const orList = (name) => {
     const match = header.match(new RegExp(`\\b${name}\\s*=\\s*([0-9|x a-fA-F]+?),`));
     if (!match) throw new Error(`VMABI.h no longer defines ${name} as an or-list of literals`);
@@ -212,8 +216,8 @@ const PUBLISHED_INCLUDES = {
 
 function checkPublishedIncludes() {
   for (const [name, allowed] of Object.entries(PUBLISHED_INCLUDES)) {
-    const text = fs.readFileSync(path.join(root, path.dirname(MODULE_ABI), name), 'utf8');
-    for (const [, taken] of text.matchAll(/^[ \t]*#[ \t]*include[ \t]+(\S+)/gm)) {
+    const text = sourceOf(path.join(path.dirname(MODULE_ABI), name));
+    for (const [, taken] of text.matchAll(/^[ \t]*#[ \t]*include[ \t]*([<"][^>"\n]*[>"])/gm)) {
       if (!allowed.includes(taken)) {
         throw new Error(`${name} includes ${taken}, which a vendor who copied it out does not have`);
       }
