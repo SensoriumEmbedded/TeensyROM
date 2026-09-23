@@ -27,7 +27,13 @@
 
 FLASHMEM void SendStrPrintfln(const char *Msg)
 {
-   SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
+   SendMsgPrintfln("%s", Msg); //printf style, throws warning if used as callback in EthernetInit
+}
+
+FLASHMEM void TerminateSIDRecord(char* Record)
+{  //EEPROM may hold a record carrying neither terminator; SetLatestSIDLoaded keeps both fields below these
+   Record[MaxPathLength-2] = 0;
+   Record[MaxPathLength-1] = 0;
 }
 
 FLASHMEM void NetListenInit()
@@ -213,6 +219,7 @@ FLASHMEM void MakeFilenameStr()
       {
          char SIDSourcePathName[MaxPathLength];
          EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
+         TerminateSIDRecord(SIDSourcePathName);
          char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
 
          snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s:/%s/%s",
@@ -420,7 +427,7 @@ FLASHMEM void WriteNFCTagCheck()
    }
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    nfcState |= nfcStateBitDisabled; //keep if from triggering if re-using prev programmed tag
@@ -433,7 +440,7 @@ FLASHMEM void WriteNFCTag()
    //nfc polling not Enabled here
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
 
    SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
@@ -462,7 +469,7 @@ FLASHMEM void HotKeySetLaunch()
       //get/print path+filename
       SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
       IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-      GetCurrentFilePathName(PathFilename);
+      GetCurrentFilePathName(PathFilename, sizeof PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
       if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
@@ -528,7 +535,7 @@ FLASHMEM void SetREUFile()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_REU
@@ -569,7 +576,7 @@ FLASHMEM void SetKERNALBin()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_KernalReplace
@@ -608,7 +615,7 @@ FLASHMEM void SetAutoLaunch()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
@@ -641,6 +648,7 @@ FLASHMEM void LoadMainSIDforXfer()
    //Set XferImage and XferSize
 
    EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name from EEPROM
+   TerminateSIDRecord(LatestSIDLoaded);
    char* LatestSIDName = LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2;
    Printf_dbg("Sel SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
 

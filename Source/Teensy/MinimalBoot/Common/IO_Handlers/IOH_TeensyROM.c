@@ -286,7 +286,7 @@ bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
    return true;
 }
 
-FLASHMEM void GetCurrentFilePathName(char* FilePathName)
+FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
 {
    char *LclFilename = MenuSource[SelItemFullIdx].Name;
    char Rand[] = "?";
@@ -308,22 +308,22 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName)
             if (++DirNum == sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]))
             {
                Printf_dbg("TR Dir not found\n"); //what now?
-               sprintf(FilePathName, "TR:Dir not found");
+               snprintf(FilePathName, Size, "TR:Dir not found");
                return;
             }
          }
          strcpy(DirName, TeensyROMMenu[DirNum].Name);
       }
 
-      sprintf(FilePathName, "TR:%s/%s", DirName, LclFilename);
+      snprintf(FilePathName, Size, "TR:%s/%s", DirName, LclFilename);
    }
    else
    {
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
 
-      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, LclFilename);  // at root
-      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
+      if (PathIsRoot()) snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);  // at root
+      else snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
    }
 }
 

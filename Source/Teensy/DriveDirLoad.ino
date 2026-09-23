@@ -22,6 +22,14 @@
 #include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
+FLASHMEM void SetLatestSIDLoaded(uint8_t Source, const char* Path, const char* Name)
+{  //source byte, then path and name, each terminated, packed into MaxPathLength
+   LatestSIDLoaded[0] = Source;
+   snprintf(LatestSIDLoaded + 1, MaxPathLength - 2, "%s", Path);
+   size_t NameOffset = strlen(LatestSIDLoaded + 1) + 2;
+   snprintf(LatestSIDLoaded + NameOffset, MaxPathLength - NameOffset, "%s", Name);
+}
+
 // A remote file command changed storage under a listing the C64 has already
 // painted. The C64 selects by item number and the firmware cannot repaint it,
 // so rebuilding at the command would resolve painted numbers against a list
@@ -170,7 +178,7 @@ FLASHMEM void HandleExecution()
             return;
          }
          
-         SendMsgPrintfln(MenuSelCpy.Name); 
+         SendMsgPrintfln("%s", MenuSelCpy.Name);
          if (MenuSelCpy.ItemType == rtFileCrt)
          {  //load the CRT into RAM
             uint8_t EXROM;
@@ -229,16 +237,17 @@ FLASHMEM void HandleExecution()
    switch(MenuSelCpy.ItemType)
    {
       case rtFileSID:
+      {
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
          
          //save source/path/name for later use
-         LatestSIDLoaded[0] = IO1[rWRegCurrMenuWAIT]; //set source
-         if(LatestSIDLoaded[0] == rmtTeensy)
+         const char* SIDPath = DriveDirPath; // from SD or USB
+         if(IO1[rWRegCurrMenuWAIT] == rmtTeensy)
          { // built-in SID
             //figure out what menu dir we're in
-            if (MenuSource == TeensyROMMenu) strcpy(LatestSIDLoaded + 1, "/"); //root
-            else
+            SIDPath = "/"; //root
+            if (MenuSource != TeensyROMMenu)
             {
                //find sub-dir
                uint8_t DirNum = 0;
@@ -252,18 +261,15 @@ FLASHMEM void HandleExecution()
                      break;
                   }
                }
-               strcpy(LatestSIDLoaded + 1, TeensyROMMenu[DirNum].Name);
+               SIDPath = TeensyROMMenu[DirNum].Name;
             }
          }
-         else
-         { // from SD or USB
-            strcpy(LatestSIDLoaded + 1, DriveDirPath);
-         }
-         strcpy(LatestSIDLoaded + strlen(LatestSIDLoaded + 1) + 2, MenuSelCpy.Name);
+         SetLatestSIDLoaded(IO1[rWRegCurrMenuWAIT], SIDPath, MenuSelCpy.Name);
          Printf_dbg("Saved SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2);
                   
          ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
          break;
+      }
       case rtFileKla:
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;

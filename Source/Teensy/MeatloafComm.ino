@@ -51,7 +51,7 @@ FLASHMEM void MountDxxFile()
    //get/print path+filename
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
    IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-   GetCurrentFilePathName(DxxPathFilename);
+   GetCurrentFilePathName(DxxPathFilename, sizeof DxxPathFilename);
    SendMsgPrintfln("%s\r", DxxPathFilename);
    
    //check for Dxx file type

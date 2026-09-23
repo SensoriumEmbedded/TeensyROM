@@ -237,7 +237,7 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
    strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendU16(BadSIDToken);
    SendMsgPrintfln("Error:");
-   SendMsgPrintfln(ErrMsg);
+   SendMsgPrintfln("%s", ErrMsg);
 }
 
 FLASHMEM void ParseSIDHeader(const char *filename)
