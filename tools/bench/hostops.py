@@ -104,7 +104,20 @@ def _ready(tr):
         time.sleep(0.5)
 
 
-def _run(prepare, settle, out=sys.stdout):
+def run_step(prepare, settle, out=sys.stdout):
+    """Do something that may or may not reboot the board, and report which happened.
+
+    `prepare(tr)` is the action, run against a board already answering. `settle` is how
+    long to wait for the port to go before concluding it is not going to. The Outcome
+    carries everything a caller can assert on afterwards: whether it rebooted, the serial
+    text (which is where the VmFail record lands on the way back up), the C64 screen, and
+    which image is running.
+
+    Public because install and removal are not the only things worth driving this way --
+    anything that ends in a reboot has the same two shapes and the same trap, which is
+    that the main image renames its USB device as it comes up, so the first node to
+    appear is one that is about to disappear again.
+    """
     # `with` on both links, not close() on the way out: every step in here can raise --
     # _ready and prepare() raise SystemExit, await_image and the screen read raise OSError
     # when the port goes while they are reading it -- and a return-path close() covers
@@ -153,7 +166,7 @@ def install_host(local, remote=None, out=sys.stdout):
         if out:
             print(f'launched {target}; the board reboots if it got as far as writing', file=out)
 
-    return _run(prepare, 60, out)
+    return run_step(prepare, 60, out)
 
 
 def remove_host(out=sys.stdout):
@@ -165,4 +178,4 @@ def remove_host(out=sys.stdout):
         if out:
             print('accepted; the board reboots if it had a host to remove', file=out)
 
-    return _run(prepare, 30, out)
+    return run_step(prepare, 30, out)
