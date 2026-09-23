@@ -14,7 +14,7 @@ namespace VmRuntime {
 using namespace VmFiles;
 static VmRegistry::Launch launch;
 static VmRegistry::Manifest manifest;
-static VmHost host;
+static VmHostExit host;
 static const VmModule *module;
 static VmPacket packet;
 static uint8_t sequence;
@@ -27,12 +27,18 @@ static volatile bool quietRequested;
 static uint32_t sliceStarted;
 static constexpr uint32_t providedServices = VM_HOST_SERVICES;
 static void moduleFail(uint8_t error, uint32_t detail);
+static void exitToMenu(uint32_t status);
+}  // namespace VmRuntime
+// Defined in VMBoot.ino, below this include. The sketch preprocessor puts its
+// generated prototypes after the includes, so this one has to be written out.
+FLASHMEM void RebootToMenu();
+namespace VmRuntime {
 
 // Placed by extensionLinkerScript() in tools/lib/extension-image.mjs, and read
 // back out of flash by VmBootImage::identity() in the main image.
 __attribute__((used, section(".vmhostid")))
 const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, providedServices,
-                            sizeof(VmHost), "TeensyROM", 0 };
+                            sizeof(VmHostExit), "TeensyROM", 0 };
 
 static void constantAccess(bool protect) {
     // Profile 1 only. Region 13: subregions 2..6 of the aligned 128 KiB RAM2
@@ -76,14 +82,15 @@ static bool loadModule() {
     if (h.reserved[0] == VM_PROFILE_RAM2_RO) constantAccess(true);
     __asm__ volatile("dsb\nisb":::"memory");
     const uint32_t used = (h.data_bytes + h.bss_bytes + 31u) & ~31u;
-    host = { VM_ABI, sizeof(VmHost), providedServices, data + used, VM_DATA_BYTES - used,
-             launch.root, launch.content, timeNow, openFile, readFile, nextFile, closeFile,
-             (uint8_t *)VM_RAM_BASE, vm_image_guest_bytes(h), openFlags, writeFile, fileOp,
-             shouldYield, moduleFail };
+    host = { { VM_ABI, sizeof(VmHostExit), providedServices, data + used, VM_DATA_BYTES - used,
+               launch.root, launch.content, timeNow, openFile, readFile, nextFile, closeFile,
+               (uint8_t *)VM_RAM_BASE, vm_image_guest_bytes(h), openFlags, writeFile, fileOp,
+               shouldYield, moduleFail },
+             exitToMenu };
     // Before the call, not after: on profile 0 the record's cache line is
     // inside the arena the module is about to own (VMFail.h).
     VmFail::set(VmFail::Ok);
-    module = reinterpret_cast<VmEntry>(h.entry)(&host);
+    module = reinterpret_cast<VmEntry>(h.entry)(&host.base);
     if (!vm_module_table_valid(module, h.code_bytes)) {
         if (!failure) failure = 0x14; module = nullptr; return false;
     }
@@ -100,6 +107,18 @@ static void fail(uint8_t error) {
 static void moduleFail(uint8_t error, uint32_t detail) {
     EZFlashRAM[0xf8] = detail; EZFlashRAM[0xf9] = detail >> 8; EZFlashRAM[0xfa] = detail >> 16;
     fail(error ? error : 0x16);
+}
+
+// Service bit 14. Before this there was no way out of a running module but a
+// fault or a hand on the board: this image has no USB, and the module table is
+// frozen without a "done" callback. Recording Exited rather than leaving Ok
+// standing is the whole point -- Ok already means "handed off, or never came
+// back", so a module that finishes cleanly would otherwise be indistinguishable
+// from one that hung.
+static void exitToMenu(uint32_t status) {
+    VmFail::set(VmFail::Exited, status);
+    RebootToMenu();   // does not return
+    while (true) ;    // the pointer's contract says so even if that ever changes
 }
 }  // namespace VmRuntime
 

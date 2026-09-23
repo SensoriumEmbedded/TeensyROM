@@ -213,6 +213,22 @@ static const char *HostInstallWhy(VmInstallStatus status)
 
 // The install ends in a reboot either way, so its outcome travels in the
 // VmFail record the main image collects on the way back up.
+// The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this
+// core for up to 400 mS with interrupts off. Stop the 6510 first, then stop answering
+// it. Both the install and the removal erase, so both come through here.
+static void StopServingTheC64()
+{
+   SetResetAssert;
+   delay(20);
+   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
+   detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
+#ifdef Fab04_BiDirReset
+   detachInterrupt(digitalPinToInterrupt(BiDir_Reset_PIN));
+#endif
+   NVIC_DISABLE_IRQ(IRQ_ENET);
+   NVIC_DISABLE_IRQ(IRQ_PIT);
+}
+
 static uint8_t HostInstallCode(VmInstallStatus status)
 {
    switch (status)
@@ -276,23 +292,54 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
    PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
    CloseDMA();
 
-   // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase
-   // stalls this core for up to 400 mS. Stop the 6510 first, then stop
-   // answering it.
-   SetResetAssert;
-   delay(20);
-   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
-   detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
-#ifdef Fab04_BiDirReset
-   detachInterrupt(digitalPinToInterrupt(BiDir_Reset_PIN));
-#endif
-   NVIC_DISABLE_IRQ(IRQ_ENET);
-   NVIC_DISABLE_IRQ(IRQ_PIT);
+   StopServingTheC64();
 
    VmSlotFlash slot;
    const VmInstallResult done = vm_host_install(slot, package, header, candidate, staging);
 
    VmFail::set(HostInstallCode(done.status), done.detail);
+   RebootTR();
+   while (true) ;
+}
+
+// Removing a host is the install's own first step, on its own: clear the tag so the
+// slot stops reading as a host. The payload stays where it is, unreferenced, until
+// the next install overwrites it. Erasing the other 92 sectors to hide it would buy
+// nothing vm_host_slot_valid does not already decide, and would cost the C64 another
+// 45 seconds in reset for the privilege.
+void DoHostUninstall()
+{
+   if (!VmBootImage::installed())
+   {
+      SendMsgPrintfln("No extension host is installed.");
+      return;
+   }
+
+   VmHostId id{};
+   char HostName[sizeof id.name + 1] = {0};
+   if (VmBootImage::identity(id)) memcpy(HostName, id.name, sizeof id.name);
+   else strcpy(HostName, "(no descriptor)");   // a host built before the descriptor existed
+
+   // Before the reset assert, for the reason DoHostInstall gives above.
+   SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);
+
+   uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone
+   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+   CloseDMA();
+
+   StopServingTheC64();
+
+   VmSlotFlash slot;
+   const VmInstallResult done = vm_host_invalidate(slot);
+
+   // The tag is cleared before the sector is erased, so an erase that fails still leaves
+   // a slot that no longer reads as a host. Removal is a question about the slot, not
+   // about the last operation: reporting the status here would claim the host is still
+   // installed while the next boot finds nothing, and the menu would agree with the boot
+   // rather than with the message. Ask the slot.
+   const bool gone = !vm_host_installed(slot);
+   VmFail::set(gone ? VmFail::Removed : VmFail::RemoveFailed,
+               gone ? 0 : (uint32_t)done.status);
    RebootTR();
    while (true) ;
 }

@@ -201,11 +201,37 @@ int main(int argc, char **argv) {
         assert(vm_host_installed(flash));
     }
 
+    // Removal on its own. The firmware reports it by asking the slot rather than by
+    // reading the status back, and these are the three cases that separates.
+    {   // the ordinary one: the tag goes down and the slot stops being a host.
+        FakeFlash flash = fresh();
+        assert(vm_host_installed(flash));
+        const VmInstallResult got = vm_host_invalidate(flash);
+        assert(got && !vm_host_installed(flash));
+    }
+    {   // the tag will not clear, so the host is still there and the board must say so.
+        FakeFlash flash = fresh(); flash.programFailAt = 0;
+        const VmInstallResult got = vm_host_invalidate(flash);
+        assert(!got && got.status == VmInstallStatus::ProgramFailed);
+        assert(vm_host_installed(flash) && slot_is(flash, old_image));
+    }
+    {   // and the case the report hangs on: the tag cleared, the erase behind it did
+        // not. The slot is already not a host -- removal happened -- so reporting the
+        // operation's status here would tell the user the host is still installed while
+        // the next boot finds nothing. DoHostUninstall asks !vm_host_installed() for
+        // exactly this; delete that and this assert is what goes red.
+        FakeFlash flash = fresh(); flash.eraseFailAt = 0; flash.failFromOp = 1;
+        const VmInstallResult got = vm_host_invalidate(flash);
+        assert(!got && got.status == VmInstallStatus::EraseFailed);
+        assert(!vm_host_installed(flash));
+    }
+
     printf("PASS: TRH1 package header, %u single-bit corruptions, malformed-header cases and the "
            "payload floor from either side, "
            "scan refusing a non-bootable payload / short read / bad CRC / ABI mirror, a clean install, "
            "an un-commit after a whole-payload verify failure and the write failure reported when that "
-           "un-commit cannot land, "
+           "un-commit cannot land, removal on its own with the tag clearing, refusing to clear, and "
+           "clearing over an erase that fails, "
            "and a power cut at each of %ld operations, under a torn erase reaching either half of its "
            "sector, leaving the slot absent, the old host, or the new one\n",
            VM_TRH_HEADER_BYTES, total);

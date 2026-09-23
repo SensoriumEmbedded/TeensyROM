@@ -41,6 +41,9 @@
    // Here rather than in FlashUpdate.ino, where DoHostInstall lives: the sketch
    // preprocessor hoists its prototypes above every include below this point.
    #include "MinimalBoot/Common/VMHostInstall.h"
+   // What DoHostUninstall reads to name the host it is about to remove, and to
+   // tell "nothing installed" from a slot it should not silently erase.
+   #include "MinimalBoot/Common/VMBootImage.h"
 #endif
 #include "MinimalBoot/Common/IOHandlers.h"
 

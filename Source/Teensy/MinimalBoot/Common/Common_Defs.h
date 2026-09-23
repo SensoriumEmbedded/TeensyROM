@@ -79,6 +79,7 @@
 #define FWCheckToken      0x64E0  // Check firmware type
 #define FWMinimalToken    0x64E1  // Minimal firmware response
 #define FWFullToken       0x64E2  // Full firmware response
+#define HostRemoveToken   0x64E3  // Remove the installed extension host; board reboots
 
 
 #define eepMagicNum         0xfeed6415 // 01: 6/22/23  net settings added 

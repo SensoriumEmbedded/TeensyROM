@@ -622,9 +622,23 @@ FLASHMEM void ProcessCommand()
          if(SetColorRef()) SendU16(AckToken);
          else SendU16(FailToken);
          break;
+      case HostRemoveToken: //Remove the installed extension host
+#ifdef VM_EXTENSIONS_ENABLED
+         // The ACK goes out and is flushed first: DoHostUninstall does not return
+         // when it gets as far as clearing the tag, so an ACK sent after it never
+         // leaves. A caller that gets the ACK and then silence is the success case,
+         // and the outcome arrives in the record the reboot prints.
+         SendU16(AckToken);
+         CmdChannel->flush();
+         DoHostUninstall();
+#else
+         SendU16(FailToken);
+         CmdChannel->print("No extension loader in this firmware\n");
+#endif
+         break;
       case DebugToken: //'dg'Test/debug
          //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
-         //Printf_dbg("isFab2x: %d\n", isFab2x()); 
+         //Printf_dbg("isFab2x: %d\n", isFab2x());
          break;
       default:
          CmdChannel->printf("Unk cmd: 0x%04x\n", TokenVal); 

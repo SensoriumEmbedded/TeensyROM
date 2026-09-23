@@ -30,7 +30,8 @@ import time
 
 from c64 import KEYBUF, KEYCOUNT, SCREEN_BYTES, SCREEN_RAM
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
-                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON, IMAGES,
+                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON, HOST_REMOVE,
+                      IMAGES,
                       LAUNCH_FILE, POST_FILE, READ_C64_MEM, RESET_C64,
                       VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
                       to_board)
@@ -335,6 +336,16 @@ class Link:
         self.wr(to_board(RESET_C64))
         return self.text().strip()
 
+    def remove_host(self):
+        """Ask the board to remove its installed extension host. The firmware
+        ACKs and flushes before it starts, because clearing the tag takes a
+        sector erase it does not return from -- so the ACK means 'accepted',
+        not 'done'. A board with nothing installed ACKs too and stays up,
+        saying so on the C64; use answering_board() to tell the two apart."""
+        self.drain(0.4)
+        self.wr(to_board(HOST_REMOVE))
+        self.ack('host remove', 5)
+
     def launch(self, path, drive=DRIVE_SD):
         self.drain(0.6)
         self.wr(to_board(LAUNCH_FILE))
@@ -397,8 +408,9 @@ def answering_board(deadline, port, known, boot_window=BOOT_WINDOW, out=sys.stdo
             return None, None
         print('--- boot output ---', file=out)
         try:
-            return tr, tr.await_image(min(time.time() + boot_window, deadline))
+            return tr, tr.await_image(min(time.time() + boot_window, deadline), out)
         except OSError:
             port = tr.port
             tr.close()
     return None, None
+

@@ -42,6 +42,8 @@ whatever node appeared beside it.
 | `push.py <local>=<remote> ...` | Copy files to the SD card. Deletes the target first; the firmware will not overwrite. |
 | `launch.py <path> [drive] [secs]` | Launch a file from the SD card and echo serial. |
 | `hostinstall.py <local.trh> [remote]` | Push a `.TRH` extension host package to the SD card and install it. A package the firmware refuses comes back with the C64 still running and nothing erased; one it takes reboots the board, and the install record is read off the boot output. Build the package with `npm run build:host-package -- --hex <firmware.hex>`. |
+| `hostuninstall.py` | Remove the installed extension host: clear the tag so the slot stops reading as a host, which reboots the board. With nothing installed it says so and the board stays up. The payload stays in flash until the next install overwrites it. |
+| `hostcycle.py <local.trh>` | The install/remove round trip end to end against a real board, asserted and unattended: remove, refuse a second remove, install, remove, refuse again, reinstall. Exits non-zero on the first step whose outcome does not match. |
 | `exttest.py <path>` | Launch an extension and report how it ended: still running, or reset to the menu with a failure record. |
 | `peek.py <hex addr> <len>` | Hex dump C64 memory. |
 | `screen.py` | The C64 text screen. |
@@ -51,6 +53,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
+| `hostops.py` | Installing and removing a host, shared by the three scripts above. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |

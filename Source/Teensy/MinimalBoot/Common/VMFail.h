@@ -33,6 +33,9 @@ enum : uint8_t {
     Entered        = 0x01,  // minimal is about to jump to the extension image
     NoImage        = 0x02,  // ...but the top flash slot holds no valid image
     Faulted        = 0x03,  // Ok, but the core recorded a fault (promoteFault)
+    // Distinct from Ok, which also covers a module that never returned: this is
+    // the module asking to be finished with, through the exit service.
+    Exited         = 0x04,  // module called exit_to_menu (detail = its argument)
     SdInit         = 0x10,  // SD card would not initialise (detail = attempts)
     LaunchRecord   = 0x11,  // /VMS/launch.vml missing, short or corrupt
     Manifest       = 0x12,  // manifest.vmi unreadable or malformed
@@ -52,6 +55,11 @@ enum : uint8_t {
     InstallVerify  = 0x33,  // slot did not read back as written (detail = CRC)
     InstallProgram = 0x34,  // a page would not program (detail = offset)
     InstallFailed  = 0x3f,  // refused for a reason the codes above do not name
+    // Removal, which reboots for the same reason an install does: clearing the
+    // tag takes a sector erase, and the menu runs from cartridge ROM this core
+    // stops answering while that erase holds interrupts off.
+    Removed        = 0x40,  // slot no longer reads as a host (detail = 0)
+    RemoveFailed   = 0x41,  // the tag would not clear (detail = VmInstallStatus)
 };
 // Layout, magic and address are the published host contract (VMHostABI.h), so
 // that a third-party host writes a record this image can read.
@@ -105,6 +113,7 @@ static inline void promoteFault(bool faulted) {
 static inline const char *describe(uint8_t code) {
     switch (code) {
         case Ok:             return "handed off to client";
+        case Exited:         return "module exited";
         case Entered:        return "image did not start";
         case NoImage:        return "no extension image installed";
         case Faulted:        return "extension faulted";
@@ -124,6 +133,8 @@ static inline const char *describe(uint8_t code) {
         case InstallVerify:  return "host install verify failed";
         case InstallProgram: return "host install write failed";
         case InstallFailed:  return "host install failed";
+        case Removed:        return "extension host removed";
+        case RemoveFailed:   return "host removal failed";
         default:             return "unknown";
     }
 }

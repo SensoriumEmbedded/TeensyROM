@@ -205,7 +205,8 @@ function checkServiceRegistry() {
                                   ['VM_SERVICE_PACKETS', SERVICE.PACKETS],
                                   ['VM_SERVICE_WRITE', SERVICE.WRITE],
                                   ['VM_SERVICE_GUEST_RAM', SERVICE.GUEST_RAM],
-                                  ['VM_SERVICE_RAM2_RO', SERVICE.RAM2_RO]]) {
+                                  ['VM_SERVICE_RAM2_RO', SERVICE.RAM2_RO],
+                                  ['VM_SERVICE_EXIT', SERVICE.EXIT]]) {
     const declared = orList(name);
     if (declared !== mirrored) {
       throw new Error(`${name} is 0x${declared.toString(16)} in VMABI.h, but ` +
@@ -217,9 +218,9 @@ function checkServiceRegistry() {
   // compare the expression against the one extension.mjs derives.
   const hostServices = header.match(/\bVM_HOST_SERVICES\s*=\s*([^,}]+?)\s*,/);
   if (!hostServices) throw new Error('VMABI.h no longer defines VM_HOST_SERVICES');
-  if (hostServices[1] !== 'VM_SERVICES|VM_SERVICE_RAM2_RO') {
+  if (hostServices[1] !== 'VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT') {
     throw new Error(`VM_HOST_SERVICES is ${hostServices[1]} in VMABI.h, but tools/lib/extension.mjs ` +
-                    'derives HOST_SERVICES as BASE_SERVICES | SERVICE.RAM2_RO');
+                    'derives HOST_SERVICES as BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT');
   }
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }

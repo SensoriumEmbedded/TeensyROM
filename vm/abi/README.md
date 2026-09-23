@@ -71,7 +71,8 @@ number for good. It says nothing about who implements it.
 | 2048 | SD root | Mean Hamster Software | no |
 | 4096 | desktop | Mean Hamster Software | no |
 | 8192 | firmware catalogue | Mean Hamster Software | no |
-| 16384, 32768 | — | unassigned, on request | no |
+| 16384 | `VM_SERVICE_EXIT` | this loader | yes |
+| 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
 | 1<<17 .. 1<<31 | — | unassigned | no |
 
@@ -92,6 +93,35 @@ Two rules keep that promise workable:
 
 1. **`VmHost` only ever grows at the tail.** Never insert, never reorder.
 2. **Capability, then fallback.** If a host rejects a bit, retry without it.
+
+### Tail extensions
+
+A bit that adds a callback adds it past the end of `VmHost`, in a struct whose
+first member *is* a `VmHost`. `VM_SERVICE_EXIT` is the first one:
+
+```c
+struct VmHostExit {
+    VmHost base;
+    void (*exit_to_menu)(uint32_t status);   // does not return
+};
+```
+
+The entry point is still handed a `VmHost *`. A module that asked for the bit
+casts up to reach the tail, and checks **both** halves before it does:
+
+```c
+if (host->bytes >= VM_HOST_EXIT_BYTES && (host->services & VM_SERVICE_EXIT))
+    ((const VmHostExit *)host)->exit_to_menu(0);
+```
+
+Both, because the two are independent: a host may grow its struct for one bit
+while lending none of the others, and a host may publish a bit it implements
+through some other means. `bytes` says how far the struct can be read; the
+service bit says whether the callback behind it is yours to call.
+
+Requiring the bit means the loader refuses the image outright where it is
+absent, so the check above cannot fail on this loader — it is written for the
+module that treats exit as optional and falls back to running until reset.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
@@ -410,6 +440,7 @@ writes no report, so it stays `$00` and stays silent.
 | `$01` | minimal jumped to the extension image and it did not start |
 | `$02` | the top flash slot holds no valid image |
 | `$03` | `$00` rewritten because the core reported a fault: the entry point crashed |
+| `$04` | the module called `exit_to_menu` (detail: its argument) |
 | `$10` | SD card would not initialise (detail: attempts) |
 | `$11` | `launch.vml` missing, short or corrupt |
 | `$12` | manifest unreadable or malformed |
@@ -420,6 +451,22 @@ writes no report, so it stays `$00` and stays silent.
 | `$17` | third CHIP is not a valid `VMH1` descriptor |
 | `$18` | client banks do not match the descriptor CRC |
 | `$20` | module image refused (detail: the host's failure code) |
+| `$30` | host written and verified (detail: payload bytes) |
+| `$31` | package read failed mid-write (detail: offset) |
+| `$32` | a slot sector would not erase (detail: sector) |
+| `$33` | the slot did not read back as written (detail: CRC) |
+| `$34` | a page would not program (detail: offset) |
+| `$3f` | install refused for a reason the codes above do not name |
+| `$40` | the slot no longer reads as a host: removed |
+| `$41` | the tag would not clear (detail: `VmInstallStatus`) |
+
+The record is how installing and removing a host report as well, not just
+launching one. Both rewrite flash from the main image and reboot to do it, so
+neither can print its own outcome; `$30`..`$41` are what the board says on the
+way back up. `$40` is a question about the slot rather than about the erase —
+the tag is cleared before the sector behind it goes, so a sector erase that
+fails still leaves a slot that is no longer a host, and the board reports what
+the next boot will find rather than what the last operation returned.
 
 The failure code a client reads from `$DFFB` is separate, and is the same value
 the record carries as its detail for `$20`: `$11` the image would not open, has
@@ -512,10 +559,20 @@ C64 screen:
 | The client-side `extension failed` path | no |
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |
+| Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
+| Removing an installed host over USB, and the `$40` record it reports | yes |
+| A remove with nothing installed declining without touching flash | yes |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — the bit is published and the callback is wired, but no module here calls it |
 
 Treat the rows marked **no** as untested rather than as working.
 
-A running extension is returned to the menu by the reset button, which the
-extension image services from `loop()`; `vm_entry` is called from `setup()`, so
-an entry point that never returns never reaches that service. The alternate
-button is not serviced while an extension runs.
+There are two ways out of a running extension, and only one of them has run on
+hardware. A module that asked for `VM_SERVICE_EXIT` calls `exit_to_menu`, which
+records `$04` and reboots into the menu. A module that did not is returned by
+the reset button, which the extension image services from `loop()` — and
+`vm_entry` is called from `setup()`, so an entry point that never returns never
+reaches that service and the button is the only way back. The alternate button
+is not serviced while an extension runs.
+
+Installing and removing a host are main-image work and need no hand on the
+board at all; `tools/bench/hostcycle.py` drives a whole round trip over USB.

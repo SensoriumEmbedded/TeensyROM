@@ -20,6 +20,7 @@ WRITE_C64_MEM = 0x64FB     # TR+ only
 POST_FILE = 0x64BB
 DELETE_FILE = 0x64CF
 GET_DIR_NDJSON = 0x64DE
+HOST_REMOVE = 0x64E3       # TR+ extensions build only; ACKs, then reboots
 
 # Replies.
 ACK = 0x64CC
@@ -47,6 +48,7 @@ FIRMWARE_NAMES = {
     'PostFileToken': POST_FILE,
     'DeleteFileToken': DELETE_FILE,
     'GetDirNDJSONToken': GET_DIR_NDJSON,
+    'HostRemoveToken': HOST_REMOVE,
     'AckToken': ACK,
     'FailToken': FAIL,
     'FWFullToken': FW_FULL,

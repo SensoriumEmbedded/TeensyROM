@@ -24,9 +24,10 @@ export const RAM2_RO_BYTES = 80 * 1024;
 export const PROFILE_LEGACY = 0, PROFILE_RAM2_RO = 1;
 export const SERVICE = {
   FILES: 1, CLOCK: 2, PACKETS: 4, WRITE: 8, GUEST_RAM: 16, RAM2_RO: 128,
+  EXIT: 16384,
 };
 export const BASE_SERVICES = SERVICE.FILES | SERVICE.CLOCK | SERVICE.PACKETS | SERVICE.WRITE | SERVICE.GUEST_RAM;
-export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO;
+export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT;
 // The service registry from VMABI.h. checkServiceRegistry in
 // tools/verify-extensions.mjs holds these in step with VM_SERVICES_ASSIGNED.
 export const SERVICE_EXAMPLE = 0x10000;  // registry bit 16, this repository's own examples
