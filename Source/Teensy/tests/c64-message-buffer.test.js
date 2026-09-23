@@ -61,3 +61,11 @@ test('the default SID record stays inside the block that holds it', () => {
     assert.match(reader, /TerminateSIDRecord\(/, reader);
   }
 });
+
+test('the CRT name field is read only as far as the 32 bytes it occupies', () => {
+  // LoadFile parses the main header into a CRT_MAIN_HDR_LEN stack buffer, so the
+  // name field ends at its last byte and a name filling all 32 carries no terminator.
+  for (const parser of ['FileParsers.ino', 'MinimalBoot/Min_DriveDirLoad.ino']) {
+    assert.match(read(parser), /SendMsgPrintfln\("Name: %\.32s", \(CRT_Image\+0x20\)\)/);
+  }
+});

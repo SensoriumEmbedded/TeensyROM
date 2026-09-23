@@ -6,12 +6,12 @@ Concrete, scoped findings surfaced during architecture walkthroughs — real iss
 
 Detail for every item below is in its own full section further down — search this file for a distinctive word/name from the bullet to jump to it.
 
-**Memory-safety bugs (buffer/stack overflow) — none fixed yet:**
+**Memory-safety bugs (buffer/stack overflow):**
 - `nfcReadTagLaunch()` — 256-byte `TagData` overflow on a malformed NFC tag [HIGH PRIORITY]
 - `nfcReadTagLaunch()` — 16KB `CleanLocalDirMenu[]` stack array, likely root cause of the documented NFC large-directory crash [HIGH PRIORITY]
 - `DriveDirPath` (256 bytes) — overflowed by two independent normal-use paths (remote-launch protocol, ordinary deep menu browsing) [HIGH PRIORITY]
 - `Min_SerUSBIO.ino LaunchFile()` — overflows the `eepAdCrtBootName` EEPROM field into adjacent EEPROM, persists across reboot [HIGH PRIORITY]
-- `sprintf`/`vsprintf`-into-fixed-buffer pattern — 4 confirmed instances; full codebase sweep not yet done
+- `sprintf`/`vsprintf`-into-fixed-buffer pattern — the instances found so far are fixed or assessed; full codebase sweep not yet done
 - `IOH_TR_BASIC.c` ISR-path handler — two unbounded writes (`LSFileName`, `RAM_Image`) trusting C64-side byte counts
 - Debug-only `'y'` serial command — unbounded read into a 100-byte buffer (low priority, narrowly gated)
 - `LoadDxxDirectory()` — no cycle detection / entry-count bound on D64/D71/D81 track/sector chain
@@ -26,6 +26,13 @@ Detail for every item below is in its own full section further down — search t
 - Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
 - `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
+
+**Fixed since last summary (2026-09-22, not open work — kept for context):**
+- Unbounded `vsprintf` into `SerialStringBuf` — both message formatters and the minimal image's own copy now use `vsnprintf`, and the CRT "Name" field is read as `%.32s` so a name filling all 32 bytes cannot run off the 64-byte header buffer it sits at the end of
+- `GetCurrentFilePathName()` builds the path inside the buffer size its caller passes, which also keeps the hot-key and auto-launch callers inside their `MaxPathLength` EEPROM slots
+- `LatestSIDLoaded` is packed and read back inside the `MaxPathLength` block that holds it
+- No message format is a variable any more — a filename read off the card used to reach `SendMsgPrintfln` as its format string
+- `AT_DT()`'s 100-byte `Buf` is written with `snprintf`
 
 **Fixed since last summary (2026-09-19, not open work — kept for context):**
 - `CheckLaunchSDAuto()`'s DAT3 presence read had no settle delay after switching the pin's mode — added `delayMicroseconds(5)`, matching a reliability fix PJRC shipped upstream for the identical pattern
@@ -237,10 +244,10 @@ Every handler that allocates RAM at init handles a failed `malloc`/`calloc` diff
 ## Audit `sprintf`/`vsprintf`-into-fixed-buffer pattern across the codebase
 
 **Where seen so far:**
-- `FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf` → `SerialStringBuf`, 262 bytes) — confirmed reachable overflow via a malformed CRT file's unterminated "Name" field (see the dedicated entry above).
-- `IOH_ASID.c:229-253` (`PrintflnToASID` → `ToSend`, 300 bytes) — lower risk, every call site is either a fixed literal, small integer formatting, or bounded by the MIDI library's SysEx null-termination/size cap (that cap itself not independently verified small enough to always fit).
-- `Swift_ATcommands.c:186-187` (`AT_DT()` → local `Buf[100]`) — **confirmed reachable via completely ordinary use**, not just a malformed-input edge case: `sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);` where `CmdArg` is user-typed hostname text from an `ATDT<hostname>:<port>` command, bounded only by `TxMsg`'s 128-byte limit — a normal long hostname plus the fixed format text alone can exceed the 100-byte `Buf`.
-- `DriveDirLoad.ino:406-417` (full firmware) and `Min_DriveDirLoad.ino:406-417` (MinimalBoot) — each has its **own independent copy** of `SendMsgPrintfln`/`SendMsgPrintf` with the same unbounded `vsprintf` into a local `SerialStringBuf[MaxPathLength]`. Their `ParseCRTHeader()`/`LoadFile()` call chain is a **more severe variant of the FileParsers.ino case above**: `LoadFile()` declares `uint8_t lclBuf[CRT_MAIN_HDR_LEN]` (64 bytes, confirmed via `DriveDirLoad.h:170`), and the CRT "Name" field read by `SendMsgPrintfln("Name: %s", (CRT_Image+0x20))` starts at byte 32 and is a 32-byte field ending *exactly* at byte 64 — the last byte of `lclBuf` itself. An unterminated Name field (fills all 32 bytes, no padding) causes the `%s` read to run off the end of `lclBuf` immediately — a stack **out-of-bounds read at the source**, before even reaching the already-known destination-buffer overflow. Tighter than the `FileParsers.ino` instance, where the Name field sits inside a buffer holding the whole loaded file (an unterminated name there just reads into subsequent legitimate file data, not immediately out of bounds). Present in both builds since `Source/C64`-style code sharing doesn't apply here — each `LoadFile()` is its own independent implementation.
+- `FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf` → `SerialStringBuf`, 262 bytes) — **fixed**: `vsnprintf`, and the `\r\n` shift is given two bytes fewer than the buffer holds because it moves the text right by two afterwards.
+- `IOH_ASID.c:229-253` (`PrintflnToASID` → `ToSend`, 300 bytes) — the SysEx cap is `SYSEX_MAX_LEN` 290 (`USBHost_t36.h`), and `MIDIDevice_BigBuffer` enlarges the packet queue rather than `msg_sysex`, so `data+3` cannot exceed 287.
+- `Swift_ATcommands.c:186-187` (`AT_DT()` → local `Buf[100]`) — **confirmed reachable via completely ordinary use**, not just a malformed-input edge case: `sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);` where `CmdArg` is user-typed hostname text from an `ATDT<hostname>:<port>` command, bounded only by `TxMsg`'s 128-byte limit — a normal long hostname plus the fixed format text alone can exceed the 100-byte `Buf`. **Fixed**: `snprintf`.
+- `DriveDirLoad.ino:406-417` (full firmware) and `Min_DriveDirLoad.ino:406-417` (MinimalBoot) — each has its **own independent copy** of `SendMsgPrintfln`/`SendMsgPrintf` with the same unbounded `vsprintf` into a local `SerialStringBuf[MaxPathLength]`. Their `ParseCRTHeader()`/`LoadFile()` call chain is a **more severe variant of the FileParsers.ino case above**: `LoadFile()` declares `uint8_t lclBuf[CRT_MAIN_HDR_LEN]` (64 bytes, confirmed via `DriveDirLoad.h:170`), and the CRT "Name" field read by `SendMsgPrintfln("Name: %s", (CRT_Image+0x20))` starts at byte 32 and is a 32-byte field ending *exactly* at byte 64 — the last byte of `lclBuf` itself. An unterminated Name field (fills all 32 bytes, no padding) causes the `%s` read to run off the end of `lclBuf` immediately — a stack **out-of-bounds read at the source**, before even reaching the already-known destination-buffer overflow. Tighter than the `FileParsers.ino` instance, where the Name field sits inside a buffer holding the whole loaded file (an unterminated name there just reads into subsequent legitimate file data, not immediately out of bounds). Present in both builds since `Source/C64`-style code sharing doesn't apply here — each `LoadFile()` is its own independent implementation. **Fixed**: `vsnprintf` in the minimal image's copy, and `%.32s` at both `Name:` call sites.
 
 Four independent instances of the same shape (`sprintf`/`vsprintf` into a fixed local/global buffer, no length argument) found without specifically looking for it — worth a dedicated sweep (`grep -rn "sprintf\|vsprintf"`, excluding the safe `snprintf`/`vsnprintf` variants) across the rest of the codebase rather than waiting to stumble onto more of them file-by-file.
 
@@ -481,18 +488,6 @@ Unlike the C64 side, where `Menu_Regs.i`/`Menu_Regs.h` at least document the syn
 **No fix proposed** — restructuring this (shared translation units, a common library, etc.) would be a significant undertaking given the two builds' different memory/feature constraints, and isn't asked for. Recorded as a standing reminder: when fixing a bug in one of these known-duplicated functions, check whether the other build's copy needs the identical fix.
 
 **Status:** noted — not queued for a fix, kept as a reminder for future bug fixes in either build (2026-08-13).
-
-## Unbounded `vsprintf` into a fixed global buffer — triggerable by a malformed CRT file
-
-**Where:** `Source/Teensy/FileParsers.ino:510-532` (`SendMsgPrintfln`/`SendMsgPrintf`), writing into `SerialStringBuf` (`char[MaxPathLength+6]` = 262 bytes, declared `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c:45`).
-
-Both functions call `vsprintf(SerialStringBuf, Fmt, ap)` with no length limit. `SendMsgPrintfln` additionally shifts the buffer in place to prepend `\r\n` (`FileParsers.ino:518`), writing as far as `strlen(SerialStringBuf)+2` — a second unbounded-length write on top of the first.
-
-**Concrete trigger:** `ParseCRTHeader()` (`FileParsers.ino:93`) calls `SendMsgPrintfln("Name: %s", (CRT_Image+0x20))` — `CRT_Image+0x20` is the CRT file's 32-byte "Name" field, read directly from file content with no length bound enforced before the `%s`. A corrupted or malformed CRT (from SD/USB, or posted over the external USB/Ethernet protocol) with a non-terminated name field would have `%s` read straight into the rest of the ROM image looking for a zero byte — real cartridge ROM data could go a very long way before hitting one — overflowing the 262-byte global buffer.
-
-**Proposed fix:** swap `vsprintf` for `vsnprintf(SerialStringBuf, sizeof(SerialStringBuf), Fmt, ap)` in both functions, clamp the `\r\n`-shift loop to `sizeof(SerialStringBuf)-1`, and bound the CRT Name field read itself (e.g. `%.32s`) at the call site as defense in depth. Plain main-context code, no ISR/hot-path constraints apply.
-
-**Status:** deferred — fix proposed, not yet implemented (2026-08-12).
 
 ## Low priority: style/consistency observations from the code-review pass
 

@@ -267,7 +267,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    *GAME = CRT_Image[0x19];
    SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
-   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %.32s", (CRT_Image+0x20)); //the CRT Name field is 32 bytes and may fill them all
    return true;
 }
    

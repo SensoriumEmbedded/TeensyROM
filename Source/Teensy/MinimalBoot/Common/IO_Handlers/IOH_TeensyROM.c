@@ -322,7 +322,7 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
 
-      if (PathIsRoot()) snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);  // at root
+      if (PathIsRoot()) snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);
       else snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
    }
 }

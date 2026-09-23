@@ -242,11 +242,11 @@ FLASHMEM void HandleExecution()
          XferSize = MenuSelCpy.Size;
          
          //save source/path/name for later use
-         const char* SIDPath = DriveDirPath; // from SD or USB
+         const char* SIDPath = DriveDirPath;
          if(IO1[rWRegCurrMenuWAIT] == rmtTeensy)
          { // built-in SID
             //figure out what menu dir we're in
-            SIDPath = "/"; //root
+            SIDPath = "/";
             if (MenuSource != TeensyROMMenu)
             {
                //find sub-dir
