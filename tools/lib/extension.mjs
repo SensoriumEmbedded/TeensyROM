@@ -27,13 +27,12 @@ export const SERVICE = {
 };
 export const BASE_SERVICES = SERVICE.FILES | SERVICE.CLOCK | SERVICE.PACKETS | SERVICE.WRITE | SERVICE.GUEST_RAM;
 export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO;
-// The service registry from VMABI.h. Refusing an unclaimed number is a
-// packaging rule, not a format rule: vm_valid_header accepts any bit. Keep in
-// step with VM_SERVICES_ASSIGNED.
+// The service registry from VMABI.h. checkServiceRegistry in
+// tools/verify-extensions.mjs holds these in step with VM_SERVICES_ASSIGNED.
 export const SERVICE_EXAMPLE = 0x10000;  // registry bit 16, this repository's own examples
 export const ASSIGNED_SERVICES = 32 | 64 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | SERVICE_EXAMPLE;
 export const UNASSIGNED_SERVICES = ~(HOST_SERVICES | ASSIGNED_SERVICES) >>> 0;
-export const unassignedServices = (requiredServices) => (requiredServices & UNASSIGNED_SERVICES) >>> 0;
+const unassignedServices = (requiredServices) => (requiredServices & UNASSIGNED_SERVICES) >>> 0;
 export const CLIENT_BYTES = 0x6070;
 export const DESCRIPTOR_OFFSET = 0x4070;
 

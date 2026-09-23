@@ -129,7 +129,8 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 // Service registry. To claim a bit, open an issue naming the host and the
 // callback it adds; tools/lib/extension.mjs refuses to package a module
 // requiring an unassigned one.
-//   0..4,7    base profile, below
+//   0..4      base profile, below
+//   7         this loader's optional RAM2 memory profile
 //   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
 //             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
 //             desktop, firmware catalogue

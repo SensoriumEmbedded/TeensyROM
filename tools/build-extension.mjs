@@ -47,15 +47,15 @@ const SERVICE_MASK = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
 function parseServices(text) {
   const value = SERVICE_MASK.test(text ?? '') ? Number(text) : NaN;
   if (!Number.isInteger(value) || value > 0xffffffff) {
-    throw new Error(`--services wants one 32-bit mask such as 0x1001b, not ${text || 'a bare flag'}`);
+    throw new Error(`--services wants one 32-bit mask such as 0x1001f, not ${text || 'a bare flag'}`);
   }
   return value >>> 0;
 }
 const requiredServices = args.includes('--services') ? parseServices(option('--services')) : BASE_SERVICES;
 const beyondHost = (requiredServices & ~HOST_SERVICES) >>> 0;
-if (beyondHost & ASSIGNED_SERVICES) {
-  console.warn(`Note: services 0x${(beyondHost & ASSIGNED_SERVICES).toString(16)} are assigned to another host, ` +
-               'so the TeensyROM loader will refuse this module.');
+if (beyondHost) {
+  console.warn(`Note: this module requires services 0x${beyondHost.toString(16)}, which the TeensyROM ` +
+               'loader does not provide, so it refuses the module rather than launching it.');
 }
 if (clientBinary && clientSource) throw new Error('Pass either --client or --client-source, not both');
 

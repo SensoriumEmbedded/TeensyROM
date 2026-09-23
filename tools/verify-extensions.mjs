@@ -188,7 +188,6 @@ function checkEepromProtocol() {
 
 // The packager mirrors both the registry and the base profile, and subtracts
 // one from the other to decide which numbers are still free to hand out.
-// Nothing imports both copies, so compare them here.
 function checkServiceRegistry() {
   const header = sourceOf(MODULE_ABI);
   const orList = (name) => {
@@ -198,12 +197,26 @@ function checkServiceRegistry() {
   };
   for (const [name, mirrored] of [['VM_SERVICES_ASSIGNED', ASSIGNED_SERVICES],
                                   ['VM_SERVICES', BASE_SERVICES],
+                                  ['VM_SERVICE_FILES', SERVICE.FILES],
+                                  ['VM_SERVICE_CLOCK', SERVICE.CLOCK],
+                                  ['VM_SERVICE_PACKETS', SERVICE.PACKETS],
+                                  ['VM_SERVICE_WRITE', SERVICE.WRITE],
+                                  ['VM_SERVICE_GUEST_RAM', SERVICE.GUEST_RAM],
                                   ['VM_SERVICE_RAM2_RO', SERVICE.RAM2_RO]]) {
     const declared = orList(name);
     if (declared !== mirrored) {
       throw new Error(`${name} is 0x${declared.toString(16)} in VMABI.h, but ` +
                       `tools/lib/extension.mjs mirrors it as 0x${mirrored.toString(16)}`);
     }
+  }
+  // A bit this loader starts providing lands here, and the packager would go
+  // on refusing it as unassigned. It is named terms rather than literals, so
+  // compare the expression against the one extension.mjs derives.
+  const hostServices = header.match(/\bVM_HOST_SERVICES\s*=\s*([^,}]+?)\s*,/);
+  if (!hostServices) throw new Error('VMABI.h no longer defines VM_HOST_SERVICES');
+  if (hostServices[1] !== 'VM_SERVICES|VM_SERVICE_RAM2_RO') {
+    throw new Error(`VM_HOST_SERVICES is ${hostServices[1]} in VMABI.h, but tools/lib/extension.mjs ` +
+                    'derives HOST_SERVICES as BASE_SERVICES | SERVICE.RAM2_RO');
   }
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }

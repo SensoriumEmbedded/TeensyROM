@@ -62,7 +62,7 @@ number for good. It says nothing about who implements it.
 | 4 | `VM_SERVICE_PACKETS` | base profile | yes |
 | 8 | `VM_SERVICE_WRITE` | base profile | yes |
 | 16 | `VM_SERVICE_GUEST_RAM` | base profile | yes |
-| 128 | `VM_SERVICE_RAM2_RO` | base profile | yes (memory profile 1) |
+| 128 | `VM_SERVICE_RAM2_RO` | this loader | yes (memory profile 1) |
 | 32 | video transport | Mean Hamster Software | no |
 | 64 | indexed video | Mean Hamster Software | no |
 | 256 | indexed raster | Mean Hamster Software | no |

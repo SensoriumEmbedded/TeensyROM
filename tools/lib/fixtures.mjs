@@ -29,8 +29,8 @@ export function packageFixture(root, {
   return root;
 }
 
-// Second package, so the tests can cover ambiguous and non-matching registries.
-// Third holds registry bit 16, which no host in these tests provides.
+// OTHER makes the registry ambiguous and non-matching; VENDOR requires
+// registry bit 16, which no host in these tests provides.
 export function registryFixture(root) {
   packageFixture(root);
   packageFixture(root, { id: 'OTHER', extensions: 'ot' });

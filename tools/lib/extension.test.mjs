@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
   CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
-  ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES,
+  ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
   buildHostPackage, parseHostPackage, hostSlotValid,
   HOST_ID_OFFSET, HOSTID_MAGIC, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
 } from './extension.mjs';
@@ -73,6 +74,13 @@ test('a service assigned to another host packages and round trips through the pa
   }
   // The static_assert in VMABI.h, mirrored: no bit is both served and assigned.
   assert.equal(HOST_SERVICES & ASSIGNED_SERVICES, 0);
+});
+
+test('the mask --services offers as an example is one a module could really ship', () => {
+  const source = fs.readFileSync(new URL('../build-extension.mjs', import.meta.url), 'utf8');
+  const example = source.match(/--services wants one 32-bit mask such as (0x[0-9a-fA-F]+)/);
+  assert.ok(example, 'build-extension.mjs no longer offers an example mask');
+  assert.equal(Number(example[1]), BASE_SERVICES | SERVICE_EXAMPLE);
 });
 
 test('an unassigned service bit is refused at build time, and only there', () => {

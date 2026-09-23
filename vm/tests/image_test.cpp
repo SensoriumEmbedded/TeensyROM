@@ -17,8 +17,7 @@ int main(int argc,char **argv){
     for(uint32_t size:{0u,63u,(uint32_t)b.size()-1,(uint32_t)b.size()+1})assert(!vm_valid_header(good,size));
     auto reject=[&](VmImageHeader h){h.header_crc=0;h.header_crc=vm_crc32(&h,64);assert(!vm_valid_header(h,b.size()));};
     auto accept=[&](VmImageHeader h){h.header_crc=0;h.header_crc=vm_crc32(&h,64);assert(vm_valid_header(h,b.size()));};
-    // Requiring a service this loader does not provide is well formed. Bits
-    // assigned to another host and bits assigned to nobody read the same here.
+    // Requiring a service this loader does not provide is well formed.
     for(uint32_t other:{32u,64u,256u,512u,8192u,0x10000u,0x80000000u}){auto h=good;h.required_services|=other;accept(h);}
     assert(good.reserved[0]==VM_PROFILE_LEGACY||good.reserved[0]==VM_PROFILE_RAM2_RO);
     {auto h=good;h.reserved[0]=VM_PROFILE_RESERVED_AUX;reject(h);}
