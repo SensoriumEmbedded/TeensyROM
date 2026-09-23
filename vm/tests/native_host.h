@@ -209,4 +209,24 @@ inline VmHost make(const std::string &root, const std::string &content,
     return host;
 }
 
+inline uint32_t exitCalls, lastExitStatus;
+inline void exitToMenu(uint32_t status) { ++exitCalls; lastExitStatus = status; }
+
+// The same host, grown by the one tail extension this loader publishes. The
+// firmware's exit_to_menu does not return; this one does, because a native test
+// has nowhere to go. A module must therefore not be written to depend on code
+// after the call being unreachable, and this stub is what keeps that honest.
+inline VmHostExit makeWithExit(const std::string &root, const std::string &content,
+                               uint8_t *workspace, uint32_t workspaceBytes,
+                               uint8_t *guest, uint32_t guestBytes) {
+    VmHostExit host{};
+    host.base = make(root, content, workspace, workspaceBytes, guest, guestBytes);
+    host.base.bytes = sizeof(VmHostExit);
+    host.base.services = VM_SERVICES | VM_SERVICE_EXIT;
+    host.exit_to_menu = exitToMenu;
+    exitCalls = 0;
+    lastExitStatus = ~0u;
+    return host;
+}
+
 }  // namespace VmNativeHost

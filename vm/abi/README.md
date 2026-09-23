@@ -562,12 +562,12 @@ C64 screen:
 | Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
 | Removing an installed host over USB, and the `$40` record it reports | yes |
 | A remove with nothing installed declining without touching flash | yes |
-| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — the bit is published and the callback is wired, but no module here calls it |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover both the taken and the absent case, but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
 
 Treat the rows marked **no** as untested rather than as working.
 
 There are two ways out of a running extension, and only one of them has run on
-hardware. A module that asked for `VM_SERVICE_EXIT` calls `exit_to_menu`, which
+hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
 records `$04` and reboots into the menu. A module that did not is returned by
 the reset button, which the extension image services from `loop()` — and
 `vm_entry` is called from `setup()`, so an entry point that never returns never

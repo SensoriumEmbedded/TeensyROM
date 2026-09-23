@@ -91,6 +91,17 @@ int main(int argc, char **argv) {
     // The file service really walked the package directory.
     assert(lines[3] == "PACKAGE FILES 3");
 
+    // Up on a host that lends no exit does nothing at all -- not a fault, not a
+    // repaint. That is the fallback half of "capability, then fallback", and it
+    // is the state this host is in: make() publishes neither the bit nor the tail.
+    assert(host.bytes == sizeof(VmHost) && !(host.services & VM_SERVICE_EXIT));
+    VmInput up{ 2, 0, 0, 0x81 };
+    loaded->input(&up);
+    assert(!loaded->packet(&packet));
+    assert(!VmNativeHost::lastFailure);
+    VmInput released{ 0, 0, 0, 0x81 };
+    loaded->input(&released);
+
     // Input recolours and forces a repaint from row zero.
     VmInput press{ 1, 0, 0, 0x81 };
     loaded->input(&press);
@@ -105,6 +116,31 @@ int main(int argc, char **argv) {
     assert(!loaded->packet(&packet));
     assert(!VmNativeHost::lastFailure);
 
+    // On a host that does lend one, up takes it. Reloading the module is what
+    // resets its static edge state, and is also how the firmware gets here: the
+    // host is built once, before vm_entry.
+    {
+        VmHostExit exitHost = VmNativeHost::makeWithExit(root, "", workspace.data(),
+            uint32_t(workspace.size()), guest.data(), uint32_t(guest.size()));
+        const VmModule *withExit = vm_entry(&exitHost.base);
+        assert(withExit && !VmNativeHost::lastFailure);
+        assert(VmNativeHost::exitCalls == 0);
+        withExit->input(&released);          // establish the edge from a clean state
+        withExit->input(&up);
+        assert(VmNativeHost::exitCalls == 1 && VmNativeHost::lastExitStatus == 0);
+        // Held, not pressed again: one exit per edge, so a module that survived
+        // the call does not ask twice.
+        withExit->input(&up);
+        assert(VmNativeHost::exitCalls == 1);
+        // Fire still recolours on the same host: taking the exit did not replace
+        // the rest of the module's input handling.
+        withExit->input(&released);
+        withExit->input(&press);
+        assert(withExit->packet(&packet) && packet.payload[0] == 0);
+        assert(VmNativeHost::exitCalls == 1);
+    }
+
     printf("PASS: hello module loads on a base-profile host, rejects three bad hosts, "
-           "publishes %zu ACK-gated lines, walks its package directory and repaints on input\n", lines.size());
+           "publishes %zu ACK-gated lines, walks its package directory, repaints on input, and takes "
+           "the exit service on one edge where a host lends it and ignores it where none does\n", lines.size());
 }
