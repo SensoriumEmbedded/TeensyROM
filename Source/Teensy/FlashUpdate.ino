@@ -260,7 +260,7 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
 
    // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
    // watches, and the resulting BtnPressed ends the wait for the C64 to read.
-   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will freeze or blank.", HostName);
 
 #ifdef Fab04_FullDMACapable
    uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone

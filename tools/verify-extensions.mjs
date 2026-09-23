@@ -161,7 +161,9 @@ function checkRam2Sizes() {
 
 // The EEPROM addresses and boot-indicator values a host needs are duplicated
 // out of Common_Defs.h, which is firmware-wide and must never be included by a
-// vendor. Nothing links both, so compare them.
+// vendor. Both do reach one translation unit in each firmware build, so a
+// static_assert would carry this too; the gate is here because the copy that
+// has to agree is the published one.
 function checkEepromProtocol() {
   const defs = sourceOf('Source/Teensy/MinimalBoot/Common/Common_Defs.h');
   const host = sourceOf(HOST_ABI);

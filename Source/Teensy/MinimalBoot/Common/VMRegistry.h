@@ -2,6 +2,7 @@
 #pragma once
 #include "VMABI.h"
 #include "VMBootImage.h"
+#include "VMHostABI.h"
 namespace VmRegistry {
 // The record, the manifest and the path rules are the published host contract
 // (VMHostABI.h): the other side of the reboot may be a third-party host.

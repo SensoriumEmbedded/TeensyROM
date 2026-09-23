@@ -215,9 +215,14 @@ test('a host carrying another ABI is refused rather than installed and rejected 
   assert.throws(() => buildHostPackage({ image: hostImage({ abi: ABI + 1 }) }), /ABI/);
 });
 
-test('every single-byte corruption of a host package is caught', () => {
+test('corrupting any header byte, or the payload at either end, is caught', () => {
+  // The whole header, as host_install_test.cpp sweeps it, rather than a sample
+  // of it. Sweeping the payload too is the same property but thirty seconds of
+  // CRC, so it is sampled and the name says so.
   const pkg = buildHostPackage({ image: hostImage() });
-  for (const at of [0, 4, 12, 24, 32, 44, HOST_PACKAGE_HEADER_BYTES, pkg.length - 1]) {
+  const positions = [...Array(HOST_PACKAGE_HEADER_BYTES).keys()]
+    .concat([HOST_PACKAGE_HEADER_BYTES, HOST_ID_OFFSET, pkg.length - 1]);
+  for (const at of positions) {
     const bad = Buffer.from(pkg);
     bad[at] ^= 0x80;
     assert.throws(() => parseHostPackage(bad), new RegExp('.'), `corruption at ${at} went unnoticed`);
