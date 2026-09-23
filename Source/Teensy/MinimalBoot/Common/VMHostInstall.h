@@ -62,8 +62,10 @@ static inline VmInstallResult vm_trh_valid(const VmTrhHeader &h, uint32_t fileBy
     if (h.headerBytes != VM_TRH_HEADER_BYTES) return { VmInstallStatus::BadHeader, h.headerBytes };
     if (h.targetBase != VM_HOST_SLOT_BASE) return { VmInstallStatus::WrongSlot, h.targetBase };
     if (h.targetBytes != VM_HOST_SLOT_BYTES) return { VmInstallStatus::WrongSlot, h.targetBytes };
-    if (h.reserved[0] || h.reserved[1] || h.reserved[2] || h.reserved[3]) {
-        return { VmInstallStatus::BadHeader, h.reserved[0] };
+    // The detail is the word that is set, not reserved[0]: a refusal naming $0
+    // says nothing about which of the four the package got wrong.
+    for (unsigned i = 0; i < 4; i++) {
+        if (h.reserved[i]) return { VmInstallStatus::BadHeader, h.reserved[i] };
     }
     if (h.payloadBytes < VM_HOST_MIN_PAYLOAD_BYTES || h.payloadBytes > VM_HOST_SLOT_BYTES) {
         return { VmInstallStatus::BadLength, h.payloadBytes };
@@ -162,8 +164,9 @@ static VmInstallResult vm_host_invalidate(Flash &flash) {
     return { VmInstallStatus::Ok, 0 };
 }
 
-// Erases the slot and writes the package into it. The reader must already be
-// positioned at the payload, and is rewound to it again for the second pass.
+// Erases the slot and writes the package into it. The reader is seeked to the
+// payload itself, so where it was left does not matter; sector 0 is read last,
+// which is also the order it is written in.
 //
 // Reader must also provide: bool seek(uint32_t absoluteOffset).
 template<class Flash, class Reader>
@@ -175,10 +178,10 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
         if (!flash.erase(s)) return { VmInstallStatus::EraseFailed, s };
     }
 
-    if (!reader.seek(VM_TRH_HEADER_BYTES)) return { VmInstallStatus::ReadError, 0 };
-    if (!reader.read(staging, VM_HOST_SECTOR_BYTES)) return { VmInstallStatus::ReadError, 0 };
-    uint8_t sector0[VM_HOST_SECTOR_BYTES];
-    memcpy(sector0, staging, VM_HOST_SECTOR_BYTES);
+    // Sector 0 carries the tag and so is written last. It is read again below
+    // rather than held for the whole install in a second 4 KiB buffer, which
+    // on the device would be a stack frame reached from the menu.
+    if (!reader.seek(VM_TRH_HEADER_BYTES + VM_HOST_SECTOR_BYTES)) return { VmInstallStatus::ReadError, 0 };
 
     for (uint32_t off = VM_HOST_SECTOR_BYTES; off < h.payloadBytes; off += VM_HOST_SECTOR_BYTES) {
         const uint32_t n = h.payloadBytes - off < VM_HOST_SECTOR_BYTES ? h.payloadBytes - off : VM_HOST_SECTOR_BYTES;
@@ -194,13 +197,16 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
     }
     if (vm_crc32_end(body) != candidate.bodyCrc) return { VmInstallStatus::VerifyFailed, vm_crc32_end(body) };
 
+    if (!reader.seek(VM_TRH_HEADER_BYTES)) return { VmInstallStatus::ReadError, 0 };
+    if (!reader.read(staging, VM_HOST_SECTOR_BYTES)) return { VmInstallStatus::ReadError, 0 };
+
     // Everything but the tag: the tag at offset 0 is what vm_host_slot_valid
     // gates on, so it is programmed last, after the descriptor beside it.
-    const VmInstallResult r = vm_host_program(flash, 4, sector0 + 4, VM_HOST_SECTOR_BYTES - 4);
+    const VmInstallResult r = vm_host_program(flash, 4, staging + 4, VM_HOST_SECTOR_BYTES - 4);
     if (!r) return r;
 
     uint32_t tag;
-    memcpy(&tag, sector0, 4);
+    memcpy(&tag, staging, 4);
     if (!flash.program(0, (const uint8_t *)&tag, 4)) return { VmInstallStatus::ProgramFailed, 0 };
 
     uint32_t whole = vm_crc32_begin();
@@ -209,7 +215,12 @@ static VmInstallResult vm_host_install(Flash &flash, Reader &reader, const VmTrh
         whole = vm_crc32(whole, flash.map(off), n);
     }
     if (vm_crc32_end(whole) != h.payloadCrc) {
-        vm_host_invalidate(flash);   // so a failed install reads as no host rather than a bad one
+        // So a failed install reads as no host rather than a bad one. If the
+        // un-commit itself fails the tag still stands over an image that did
+        // not verify, and the minimal image would enter it -- so report that
+        // write failure rather than a refusal the slot does not reflect.
+        const VmInstallResult uncommitted = vm_host_invalidate(flash);
+        if (!uncommitted) return uncommitted;
         return { VmInstallStatus::VerifyFailed, vm_crc32_end(whole) };
     }
     return { VmInstallStatus::Ok, h.payloadBytes };

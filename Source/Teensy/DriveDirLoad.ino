@@ -381,8 +381,9 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    char FullFilePath[MaxNamePathLength];
 
    //PathIsRoot() uses DriveDirPath directly
-   if (strlen(FilePath) == 1 && FilePath[0] == '/') sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
+   //bounded: Name is malloc'd at the card's own length (SetDriveDirMenuNameType), not MaxItemNameLength
+   if (strlen(FilePath) == 1 && FilePath[0] == '/') snprintf(FullFilePath, sizeof FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
+   else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 

@@ -247,12 +247,14 @@ export function buildHostPackage({ image }) {
   if (boot.imageBytes < image.length) {
     throw new Error(`Host image declares ${boot.imageBytes} bytes but the file is ${image.length}`);
   }
-  const payload = boot.imageBytes === image.length ? image
-    : Buffer.concat([image, Buffer.alloc(boot.imageBytes - image.length, 0xff)]);
+  // Before the pad, not after: the length below is a word read out of the image,
+  // so a garbage one would otherwise size an allocation before anything bounded it.
   if (!hostSlotValid(boot)) {
     throw new Error('Host image fails the checks the minimal image applies before it will jump; ' +
                     'it would install and then read as no host at all');
   }
+  const payload = boot.imageBytes === image.length ? image
+    : Buffer.concat([image, Buffer.alloc(boot.imageBytes - image.length, 0xff)]);
   const id = hostDescriptor(payload);
   if (id.magic !== HOSTID_MAGIC) throw new Error(`No MVH2 host descriptor at 0x${HOST_ID_OFFSET.toString(16)}`);
   if (id.abi !== ABI) throw new Error(`Host is ABI ${id.abi}, loader is ABI ${ABI}`);

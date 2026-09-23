@@ -8,8 +8,9 @@ import {
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
   ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
   buildHostPackage, parseHostPackage, hostSlotValid,
-  HOST_ID_OFFSET, HOSTID_MAGIC, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
+  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
 } from './extension.mjs';
+import { hostImage } from './fixtures.mjs';
 import { VM_BASE } from './hex.mjs';
 
 const thumbReturn = Buffer.from([0x70, 0x47]);  // bx lr
@@ -164,24 +165,6 @@ test('short client banks are padded rather than shifting the descriptor', () => 
   assert.equal(crt[83], 0, 'unused bank space is zero filled');
 });
 
-const hostImage = ({ bytes = 0x8000, declared = null, entry = VM_BASE + 0x2001,
-                     flashMagic = 0x42464346, abi = ABI } = {}) => {
-  const image = Buffer.alloc(bytes, 0xa5);
-  const put = (offset, value) => image.writeUInt32LE(value >>> 0, offset);
-  put(0x0, flashMagic);
-  put(0x1000, 0x432000d1);
-  put(0x1004, entry);
-  put(0x1020, VM_BASE);
-  put(0x1024, declared ?? bytes);
-  put(HOST_ID_OFFSET, HOSTID_MAGIC);
-  put(HOST_ID_OFFSET + 4, abi);
-  put(HOST_ID_OFFSET + 8, HOST_SERVICES);
-  put(HOST_ID_OFFSET + 12, bytes);
-  image.fill(0, HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 32);
-  image.write('TestHost', HOST_ID_OFFSET + 16, 'latin1');
-  return image;
-};
-
 test('a host package round-trips and leaves the image byte-identical', () => {
   const image = hostImage();
   const pkg = buildHostPackage({ image });
@@ -209,6 +192,9 @@ test('an image the minimal loader would not enter is refused before it can be in
 test('an image longer than the slot, or shorter than it claims, is refused', () => {
   assert.throws(() => buildHostPackage({ image: hostImage({ bytes: HOST_SLOT_BYTES + 0x1000 }) }), /slot is/);
   assert.throws(() => buildHostPackage({ image: hostImage({ bytes: 0x8000, declared: 0x4000 }) }), /declares 16384 bytes/);
+  // The declared length sizes the 0xFF pad, so it has to be bounded before it
+  // is padded to -- not after, where a garbage word is an allocation first.
+  assert.throws(() => buildHostPackage({ image: hostImage({ declared: 0xfffffff0 }) }), /fails the checks/);
 });
 
 test('a host carrying another ABI is refused rather than installed and rejected on target', () => {
@@ -221,7 +207,9 @@ test('corrupting any header byte, or the payload at either end, is caught', () =
   // CRC, so it is sampled and the name says so.
   const pkg = buildHostPackage({ image: hostImage() });
   const positions = [...Array(HOST_PACKAGE_HEADER_BYTES).keys()]
-    .concat([HOST_PACKAGE_HEADER_BYTES, HOST_ID_OFFSET, pkg.length - 1]);
+    .concat([HOST_PACKAGE_HEADER_BYTES,                        // the payload's first byte
+             HOST_PACKAGE_HEADER_BYTES + HOST_ID_OFFSET,       // its MVH2 descriptor
+             pkg.length - 1]);
   for (const at of positions) {
     const bad = Buffer.from(pkg);
     bad[at] ^= 0x80;

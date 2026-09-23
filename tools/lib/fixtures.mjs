@@ -39,24 +39,31 @@ export function registryFixture(root) {
   return root;
 }
 
-// A minimal image that satisfies vm_host_slot_valid, packaged as a .TRH.
-export function hostPackageFixture(root, { bytes = 0x8000, services = HOST_SERVICES,
-                                           name = 'TestHost' } = {}) {
+// A minimal image that satisfies vm_host_slot_valid. The knobs are the ones
+// the packager's own unit tests vary; they live here so the image the native
+// installer test is fed and the image those tests corrupt are the same shape.
+export function hostImage({ bytes = 0x8000, declared = null, entry = VM_BASE + 0x2001,
+                            flashMagic = 0x42464346, abi = ABI, services = HOST_SERVICES,
+                            name = 'TestHost' } = {}) {
   const image = Buffer.alloc(bytes, 0xa5);
   const put = (offset, value) => image.writeUInt32LE(value >>> 0, offset);
-  put(0x0, 0x42464346);
+  put(0x0, flashMagic);
   put(0x1000, 0x432000d1);
-  put(0x1004, VM_BASE + 0x2001);
+  put(0x1004, entry);
   put(0x1020, VM_BASE);
-  put(0x1024, bytes);
+  put(0x1024, declared ?? bytes);
   put(HOST_ID_OFFSET, HOSTID_MAGIC);
-  put(HOST_ID_OFFSET + 4, ABI);
+  put(HOST_ID_OFFSET + 4, abi);
   put(HOST_ID_OFFSET + 8, services);
   put(HOST_ID_OFFSET + 12, bytes);
   image.fill(0, HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 32);
   image.write(name, HOST_ID_OFFSET + 16, 'latin1');
+  return image;
+}
 
+// That image packaged as a .TRH on disk.
+export function hostPackageFixture(root, options = {}) {
   const file = path.join(root, 'testhost.trh');
-  fs.writeFileSync(file, buildHostPackage({ image }));
+  fs.writeFileSync(file, buildHostPackage({ image: hostImage(options) }));
   return file;
 }

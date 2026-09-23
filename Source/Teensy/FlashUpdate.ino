@@ -240,9 +240,17 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
    VmTrhHeader header;
    VmHostCandidate candidate;
    const uint32_t FileBytes = (uint32_t)package.file.size();
-   VmInstallResult checked = package.read(&header, sizeof header)
-      ? vm_trh_valid(header, FileBytes)
-      : VmInstallResult{VmInstallStatus::ReadError, 0};
+
+   // The length is judged before the header is read: a file shorter than the
+   // header cannot supply one, and a short read there would otherwise blame
+   // the card for a file that is only too small.
+   VmInstallResult checked{VmInstallStatus::ShortFile, FileBytes};
+   if (FileBytes >= VM_TRH_HEADER_BYTES)
+   {
+      checked = package.read(&header, sizeof header)
+         ? vm_trh_valid(header, FileBytes)
+         : VmInstallResult{VmInstallStatus::ReadError, 0};
+   }
    if (checked) checked = vm_host_scan(package, header, staging, candidate);
 
    // Everything up to here only reads, so a refusal is an ordinary message
