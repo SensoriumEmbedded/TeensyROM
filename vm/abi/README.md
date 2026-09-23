@@ -123,6 +123,14 @@ Requiring the bit means the loader refuses the image outright where it is
 absent, so the check above cannot fail on this loader — it is written for the
 module that treats exit as optional and falls back to running until reset.
 
+The tail is a chain, not a set of alternatives. The *second* extension composes
+on `VmHostExit` — `struct VmHostNext { VmHostExit base; ... }` — and not on a
+bare `VmHost`, which would put its callback at offset 76, the offset
+`exit_to_menu` already occupies. Two extensions written that way cannot both
+exist in one host, and a module that checked `bytes` would be told the pointer
+was long enough to read the wrong function. Each new tail extends the longest
+one there is, and `VM_HOST_*_BYTES` grows with it.
+
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
 write-protected constants loaded from the image and holds back the reserved top
@@ -530,8 +538,9 @@ it against that host to debug it, then cross-compile the identical source.
 `npm run verify:extensions` runs the whole loader suite this way in a few
 seconds: the published headers built with no path back into this repository,
 package format, file services, image validation, registry and preflight,
-menu-hook fall-through, failure reporting, host-package installation under
-power loss, and the reference module end to end.
+menu-hook fall-through, loaded-listing invalidation, the packet scheduler,
+failure reporting, host-package installation under power loss, and the
+reference module end to end.
 
 A pass there says the formats and the contract hold. It says nothing about
 timing, the bus, or the C64 side — that needs the hardware.

@@ -4,16 +4,17 @@
 
   hostcycle.py build/firmware/TEENSYROM.TRH
 
-Six steps, each asserted:
+One normalising step, then five asserted ones -- the same numbers the run prints:
 
-  1. remove          -- normalise: whatever was there, the slot is empty after this
-  2. remove again    -- must refuse without rebooting: nothing left to clear
-  3. install         -- must reboot and report the host installed
-  4. remove          -- must reboot and report it removed
-  5. remove again    -- must refuse again: the tag really is gone, not just overwritten
-  6. install         -- must reboot and report installed, leaving the board usable
+  0. remove          -- normalise: whatever was there, the slot is empty after this.
+                        Not asserted; either answer is a legitimate starting point
+  1. remove again    -- must refuse without rebooting: nothing left to clear
+  2. install         -- must reboot and report the host installed
+  3. remove          -- must reboot and report it removed
+  4. remove again    -- must refuse again: the tag really is gone, not just overwritten
+  5. install         -- must reboot and report installed, leaving the board usable
 
-Steps 2 and 5 are the ones worth the extra minute. Without them an install that never
+Steps 1 and 4 are the ones worth the extra minute. Without them an install that never
 wrote and a removal that never cleared both still "pass": every reboot looks alike from
 here, and the board's own report is the only witness. Asking a second time makes the
 board answer from flash rather than from what it just did.

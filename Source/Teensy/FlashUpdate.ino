@@ -240,6 +240,16 @@ static void HostDisplayName(char *out, const VmHostId *id)
 // it. Both the install and the removal erase, so both come through here.
 static void StopServingTheC64()
 {
+   // Blank the screen while the bus is still ours to drive. DEN=0 stops VIC-II fetches,
+   // so the frozen menu does not sit on screen for the whole erase -- and it has to
+   // happen before the reset assert below, because after that there is no 6510 to run
+   // the DMA handshake. Unconditional: Common_Defs.h refuses an extensions build
+   // without Fab04_FullDMACapable, so the callers' messages can promise the blank
+   // rather than hedge about it.
+   uint8_t BlankD011 = 0x00;
+   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+   CloseDMA();
+
    SetResetAssert;
    delay(20);
    detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
@@ -308,12 +318,6 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
    // watches, and the resulting BtnPressed ends the wait for the C64 to read.
    SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
 
-   // Unconditional: Common_Defs.h refuses an extensions build without Fab04_FullDMACapable,
-   // so the message above can promise the blank rather than hedge about it.
-   uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone
-   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-   CloseDMA();
-
    StopServingTheC64();
 
    VmSlotFlash slot;
@@ -343,10 +347,6 @@ void DoHostUninstall()
 
    // Before the reset assert, for the reason DoHostInstall gives above.
    SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);
-
-   uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone
-   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-   CloseDMA();
 
    StopServingTheC64();
 

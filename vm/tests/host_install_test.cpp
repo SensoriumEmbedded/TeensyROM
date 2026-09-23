@@ -217,9 +217,15 @@ int main(int argc, char **argv) {
     }
     {   // and the case the report hangs on: the tag cleared, the erase behind it did
         // not. The slot is already not a host -- removal happened -- so reporting the
-        // operation's status here would tell the user the host is still installed while
-        // the next boot finds nothing. DoHostUninstall asks !vm_host_installed() for
-        // exactly this; delete that and this assert is what goes red.
+        // operation's status would tell the user the host is still installed while the
+        // next boot finds nothing. What this pins is that the two answers really do
+        // diverge here: vm_host_invalidate returns EraseFailed and vm_host_installed
+        // says no, in the same state.
+        //
+        // That divergence is why DoHostUninstall reports !vm_host_installed() rather
+        // than the operation's status -- but nothing here checks that it does. This
+        // file does not compile FlashUpdate.ino, so that call site is covered by
+        // hostcycle.py against a board, not by this assert.
         FakeFlash flash = fresh(); flash.eraseFailAt = 0; flash.failFromOp = 1;
         const VmInstallResult got = vm_host_invalidate(flash);
         assert(!got && got.status == VmInstallStatus::EraseFailed);
