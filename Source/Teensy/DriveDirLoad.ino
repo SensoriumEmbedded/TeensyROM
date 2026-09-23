@@ -62,10 +62,10 @@ FLASHMEM bool ApplyRemoteFileChanges()
    return true;
 }
 
-void FullPathToSelected(char *Path, const char *Name)
+void FullPathToSelected(char *Path, size_t Size, const char *Name)
 {
-   if (PathIsRoot()) sprintf(Path, "/%s", Name);  // at root
-   else sprintf(Path, "%s/%s", DriveDirPath, Name);
+   if (PathIsRoot()) snprintf(Path, Size, "/%s", Name);  // at root
+   else snprintf(Path, Size, "%s/%s", DriveDirPath, Name);
 }
 
 FLASHMEM void HandleExecution()
@@ -108,7 +108,7 @@ FLASHMEM void HandleExecution()
          {
             char FullFilePath[MaxNamePathLength];
             
-            FullPathToSelected(FullFilePath, MenuSelCpy.Name);
+            FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSelCpy.Name);
             DoFlashUpdate(sourceFS, FullFilePath);
             return;  //we're done here...
          }
@@ -118,7 +118,7 @@ FLASHMEM void HandleExecution()
          {
             char FullFilePath[MaxNamePathLength];
             
-            FullPathToSelected(FullFilePath, MenuSelCpy.Name);
+            FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSelCpy.Name);
             DoHostInstall(sourceFS, FullFilePath);
             return;  //we're done here...
          }

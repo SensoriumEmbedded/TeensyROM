@@ -48,6 +48,21 @@ test('the current path and filename is built inside the buffer the caller owns',
   }
 });
 
+test('the path handed to a device-writing item type is built inside its caller\'s buffer', () => {
+  // DriveDirPath is 256 bytes and grows through unbounded strcat, so the
+  // MaxNamePathLength arithmetic that makes the destination wide enough is not
+  // by itself a bound.
+  const loader = read('DriveDirLoad.ino');
+  assert.match(loader, /void FullPathToSelected\(char \*Path, size_t Size, const char \*Name\)/);
+  assert.doesNotMatch(loader, /\bsprintf\(Path,/);
+
+  // The definition lives in this file too, so match calls by their leading
+  // whitespace -- the definition is preceded by its return type.
+  for (const [, call] of loader.matchAll(/^\s+(FullPathToSelected\([^;]*\);)/gm)) {
+    assert.match(call, /,\s*sizeof \w+,/, call);
+  }
+});
+
 test('the default SID record stays inside the block that holds it', () => {
   // Source byte, path, name -- packed into MaxPathLength and written to an
   // EEPROM slot of exactly that size, so both fields have to fit together.
