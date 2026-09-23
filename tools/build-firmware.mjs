@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //
 // Node port of Source/Teensy/tools/Build-DualBoot.ps1. Builds the dual-boot TeensyROM
-// image (MinimalBoot at 0x60000000 + the main image at 0x60060000, combined into one hex)
+// image (MinimalBoot at 0x60000000 + the main image at 0x60060000, combined into one hex;
+// for --target tr-plus the same hex also carries the extension host image at 0x60280000)
 // for one of two release targets:
 //
 //   --target tr        plain TeensyROM (Fab 0.2/0.3). No extension loader: it needs the
@@ -23,7 +24,8 @@
 //            failed build always keeps it, since its logs are what explain the failure, and so
 //            does --skip-combine, whose per-image results exist only there.
 //   --no-extensions  build a TR+ without the extension loader: the two images it carried
-//            before the loader existed, from the stock linker scripts.
+//            before the loader existed, from the stock linker scripts. It lands under
+//            TeensyROM+_<ver>_noext_full.hex, not the shipping name.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -69,6 +71,23 @@ function option(name, fallback) {
   return args[i + 1];
 }
 
+// Extensions are on by default for --target tr-plus, so an argument this script does not
+// recognise cannot be ignored: a misspelled opt-out (--no-extension, --noextensions,
+// --no_extensions, -no-extensions) would otherwise ship the loader in an image the caller
+// asked to build without it. Anything not in these two sets is a refusal.
+const KNOWN_OPTIONS = new Set(['--target', '--out', '--arduino-data', '--arduino-user']);
+const KNOWN_FLAGS = new Set([
+  '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
+  '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
+]);
+for (let i = 0; i < args.length; i++) {
+  if (KNOWN_OPTIONS.has(args[i])) { i++; continue; }
+  if (!KNOWN_FLAGS.has(args[i])) {
+    throw new Error(`Unknown argument ${args[i]}. Known arguments: ` +
+      [...KNOWN_OPTIONS, ...KNOWN_FLAGS].sort().join(' '));
+  }
+}
+
 const target = option('--target', null);
 if (!['tr', 'tr-plus'].includes(target)) {
   throw new Error('Use --target tr or --target tr-plus');
@@ -85,9 +104,12 @@ const skipCombine = flag('--skip-combine');
 // fab 0.2/0.3 extensions build would leave the VIC painting a frozen menu for the whole
 // erase. --no-extensions builds exactly the two images the TR+ carried before, from the
 // stock linker scripts, and nothing below runs.
-if (!fab04Features && flag('--with-extensions')) {
-  throw new Error('--with-extensions needs --target tr-plus: the extension loader requires ' +
-    'the Fab 0.4 full DMA a plain TR does not have');
+if (flag('--with-extensions')) {
+  throw new Error(fab04Features
+    ? '--with-extensions no longer exists: --target tr-plus builds the extension loader by ' +
+      'default. Drop the flag, or pass --no-extensions to build a TR+ without the loader.'
+    : '--with-extensions needs --target tr-plus: the extension loader requires ' +
+      'the Fab 0.4 full DMA a plain TR does not have');
 }
 const withExtensions = fab04Features && !flag('--no-extensions');
 const skipExtensionBuild = flag('--skip-extension-build');
@@ -152,13 +174,22 @@ if (!fab04Features && fab04Active) {
       'Comment out the #define yourself, re-run with --target tr-plus, or pass --yes to have this comment it out and continue.',
     );
   }
-  const updated = read(fab04CtlPath).replace(/^(\s*)#define(\s+Fab04_Features\b.*)$/m, '$1// #define$2');
+  // /gm, not /m: a second active #define would otherwise survive this "repair" and the build
+  // would ship Fab 0.4 features under the plain-TR name. Re-read afterwards so any shape the
+  // pattern misses stops the build instead of passing for repaired.
+  const updated = read(fab04CtlPath).replace(/^([ \t]*)#define([ \t]+Fab04_Features\b.*)$/gm, '$1// #define$2');
   fs.writeFileSync(fab04CtlPath, updated);
+  if (/^\s*#define\s+Fab04_Features\b/m.test(read(fab04CtlPath))) {
+    throw new Error(`Fab04_Features is still #define'd in ${fab04CtlPath} after commenting it out; comment it out by hand.`);
+  }
   console.log(`Fab04_Features #define commented out in ${fab04CtlPath}`);
 }
 
 // --- Output path ---
-const finalOutput = path.join(outDir, target === 'tr-plus' ? `TeensyROM+_${trVersion}_full.hex` : `TeensyROM_${trVersion}_full.hex`);
+// A --no-extensions TR+ is a materially different image from the shipping one. Its own
+// name keeps it from overwriting, or being published as, the build that carries the loader.
+const outputStem = target === 'tr-plus' ? `TeensyROM+_${trVersion}` : `TeensyROM_${trVersion}`;
+const finalOutput = path.join(outDir, `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}_full.hex`);
 if (!skipCombine && fs.existsSync(finalOutput) && !force) {
   throw new Error(`${finalOutput} already exists. Re-run with --force to overwrite.`);
 }
@@ -234,7 +265,8 @@ if (useCcache) {
 }
 
 // FNET's own default is FNET_CFG_TLS=2 (fnet_user_config.h in the installed Teensy core,
-// behind an #ifndef), which links mbedTLS into both images.
+// behind an #ifndef), which links mbedTLS into MinimalBoot and the main image. build()
+// appends this to every image it compiles, the extension host included.
 const TLS_OFF = '-DFNET_CFG_TLS=0';
 
 // `suffix` picks a stock BootLinkerFiles pair; `ld`/`bootdata` override it with

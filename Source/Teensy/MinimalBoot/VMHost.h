@@ -8,8 +8,10 @@
 // the module, and carry packets between it and the C64 client.
 //
 // The client link is ordinary EasyFlash IO2 register traffic -- the base profile
-// never becomes bus master. Nothing here needs DMA, so the loader runs on
-// TeensyROM hardware that cannot do full bus mastering at all.
+// never becomes bus master, and nothing in this runtime needs DMA. The loader is
+// still built only for --target tr-plus: installing it (DoHostInstall) blanks the
+// screen through the full DMA only Fab 0.4 has, and Common_Defs.h stops the compile
+// if VM_EXTENSIONS_ENABLED ever reaches a build without Fab04_FullDMACapable.
 namespace VmRuntime {
 using namespace VmFiles;
 static VmRegistry::Launch launch;
