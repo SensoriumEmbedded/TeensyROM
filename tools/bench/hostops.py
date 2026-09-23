@@ -7,7 +7,10 @@ outcome the same way, so it lives here once.
 Both operations validate before they erase, so both split the same way: either the board
 is still answering, and nothing was written, or the port drops and the board reboots with
 its reason in the VmFail record the main image prints on the way back up. `rebooted` is
-the fact the rest hangs off.
+the first fact the rest hangs off, but it is not the outcome: the firmware reboots for a
+failed install ($31-$34, $3f) and a failed removal ($41) exactly as it does for a good
+one. What separates them is the record, so a caller asks Outcome.said(INSTALLED) or
+said(REMOVED) rather than treating any reboot as a success.
 
 Neither operation enters the extension image -- installing and removing are main-image
 work -- so neither needs a hand on the board. That is what lets hostcycle.py run a whole
@@ -29,6 +32,14 @@ REBOOT_TIMEOUT = 120
 # a reboot -- the round trip runs six in a row -- so each one waits for a real answer
 # rather than treating an open port as a ready board.
 READY_TIMEOUT = 30
+# The firmware reports the outcome of both operations in the VmFail record the main image
+# prints on the way back up, and it has more ways to fail than to succeed: $31-$34 and $3f
+# for an install, $41 for a removal. So the check is for the one success phrase rather
+# than a list of failures -- a record that is absent, truncated, or carries a code this
+# copy has never heard of then fails noisily instead of passing as "it rebooted, didn't
+# it". The strings are VmFail::describe()'s, in Source/Teensy/MinimalBoot/Common/VMFail.h.
+INSTALLED = 'extension host installed'   # VmFail::Installed, $30
+REMOVED = 'extension host removed'       # VmFail::Removed, $40
 
 
 class Tee:
@@ -75,43 +86,49 @@ def _screen_text(tr):
 
 
 def _ready(tr):
+    """Returns once the board answers a version request, and raises by READY_TIMEOUT if
+    it never does. `total=` is what makes that deadline real: version()'s own timeout is
+    pushed out by every chunk that arrives, so a board printing steadily with gaps under
+    the idle window never lets version() return, and a deadline checked only afterwards
+    is never checked at all."""
     deadline = time.time() + READY_TIMEOUT
     while True:
         try:
-            tr.version(timeout=3)
+            tr.version(timeout=3, total=max(0.0, deadline - time.time()))
             return
         except (SystemExit, OSError):
-            if time.time() >= deadline:
-                raise SystemExit(f'the port is open but the board did not answer a version '
-                                 f'request within {READY_TIMEOUT} s')
-            time.sleep(0.5)
+            pass
+        if time.time() >= deadline:
+            raise SystemExit(f'the port is open but the board did not answer a version '
+                             f'request within {READY_TIMEOUT} s')
+        time.sleep(0.5)
 
 
 def _run(prepare, settle, out=sys.stdout):
+    # `with` on both links, not close() on the way out: every step in here can raise --
+    # _ready and prepare() raise SystemExit, await_image and the screen read raise OSError
+    # when the port goes while they are reading it -- and a return-path close() covers
+    # none of those.
     echo = Tee(out)
-    tr = Link()
-    _ready(tr)
-    # Sampled before: once the board goes there is nothing left to ask.
-    port, known = tr.port, neighbours(tr.port)
-    prepare(tr)
-    if not tr.stream(settle, out=echo):
-        # Still up, so nothing was written. Name the image anyway: a caller checking that
-        # an operation declined wants to know the board is still the one it asked, not
-        # that it fell into the minimal image on the way to declining.
-        image = tr.await_image(time.time() + 5, echo)
-        screen = _screen_text(tr)
-        tr.close()
-        return Outcome(False, echo.buf.getvalue(), screen, image)
-    tr.close()
+    with Link() as tr:
+        _ready(tr)
+        # Sampled before: once the board goes there is nothing left to ask.
+        port, known = tr.port, neighbours(tr.port)
+        prepare(tr)
+        if not tr.stream(settle, out=echo):
+            # Still up, so nothing was written. Name the image anyway: a caller checking
+            # that an operation declined wants to know the board is still the one it
+            # asked, not that it fell into the minimal image on the way to declining.
+            image = tr.await_image(time.time() + 5, echo)
+            return Outcome(False, echo.buf.getvalue(), _screen_text(tr), image)
     # Not a bare reconnect(): the main image renames its USB device as it comes up, so
     # the first node to appear is one that is about to disappear again.
     tr, image = answering_board(time.time() + REBOOT_TIMEOUT, port, known, out=echo)
     if tr is None:
         raise SystemExit(f'the board did not come back within {REBOOT_TIMEOUT} s; '
                          'check it before power cycling')
-    screen = _screen_text(tr)
-    tr.close()
-    return Outcome(True, echo.buf.getvalue(), screen, image)
+    with tr:
+        return Outcome(True, echo.buf.getvalue(), _screen_text(tr), image)
 
 
 def install_host(local, remote=None, out=sys.stdout):
@@ -126,7 +143,12 @@ def install_host(local, remote=None, out=sys.stdout):
 
     def prepare(tr):
         tr.drain()
-        tr.post(local, target, log=(print if out else (lambda *a, **k: None)))
+        # Everything install_host prints goes to `out`, including the board's own output
+        # via Tee -- post()'s progress line has to as well, or a caller that passed
+        # somewhere other than stdout gets its run split across two streams.
+        tr.post(local, target,
+                log=((lambda line: print(line, file=out)) if out
+                     else (lambda *a, **k: None)))
         tr.launch(target)
         if out:
             print(f'launched {target}; the board reboots if it got as far as writing', file=out)

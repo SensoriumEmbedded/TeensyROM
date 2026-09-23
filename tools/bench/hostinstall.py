@@ -15,13 +15,17 @@ collects on the way back up, so this waits for the board to re-enumerate and ech
 boot output. A refusal never reboots, so a board still answering after the launch is the
 refusal case, and the C64 screen carries the reason.
 
+Past the refusal point the reboot is not the outcome either: an erase, verify or program
+that fails ($31-$34, $3f) reboots exactly as a good install does. Only the record saying
+the host was installed is a pass here; anything else exits non-zero.
+
 Build the package with:  node tools/build-host-package.mjs --hex <firmware.hex>
 Remove one with:         hostuninstall.py
 """
 import os
 import sys
 
-from hostops import install_host, show
+from hostops import INSTALLED, install_host, show
 
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 if not 1 <= len(args) <= 2:
@@ -30,6 +34,11 @@ if not 1 <= len(args) <= 2:
 result = install_host(args[0], args[1] if len(args) > 1 else None)
 if not result.rebooted:
     print('\nthe board is still up, so the package was refused before anything was erased:')
+    show(result.screen)
+    sys.exit(1)
+if not result.said(INSTALLED):
+    print(f'\nthe board rebooted but never said {INSTALLED!r}, so the slot was erased '
+          'and not written -- there is no host installed now:')
     show(result.screen)
     sys.exit(1)
 if result.image is None:

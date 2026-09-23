@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Remove the installed extension host, over USB.   hostuninstall.py
+"""Remove the installed extension host, over the USB device port.   hostuninstall.py
 
 Removal is the install's own first step on its own: clear the 4-byte tag so the slot stops
 reading as a host. The payload stays in flash, unreferenced, until the next install
 overwrites it.
 
+The firmware takes this command on the USB device port only -- the same token over the
+USB host port or the TCP listener is refused with "Busy!", because erasing flash is not
+something a peer on the LAN gets to ask for.
+
 The firmware ACKs and flushes before it starts, because clearing the tag takes a sector
-erase it does not return from -- so the ACK means accepted, not done. Two things can
+erase it does not return from -- so the ACK means accepted, not done. Three things can
 follow it:
 
-  * the port drops and the board reboots: the slot was cleared, and the record on the way
-    back up says so;
+  * the port drops, the board reboots, and the record on the way back up says the host
+    was removed: the slot was cleared;
+  * the port drops and the board reboots saying anything else, or nothing readable at
+    all: the erase was attempted and did not clear the tag ($41), so the host is still
+    installed. This exits non-zero, because a reboot on its own is not the outcome;
   * the board stays up: nothing was installed, and the C64 says so.
 
 Unlike launching an extension, none of this enters the extension image, so no part of it
@@ -19,7 +26,7 @@ needs a hand on the board.
 """
 import sys
 
-from hostops import remove_host, show
+from hostops import REMOVED, remove_host, show
 
 if [a for a in sys.argv[1:] if not a.startswith('--')]:
     raise SystemExit(__doc__)
@@ -27,6 +34,11 @@ if [a for a in sys.argv[1:] if not a.startswith('--')]:
 result = remove_host()
 if not result.rebooted:
     print('\nthe board is still up, so there was nothing installed:')
+    show(result.screen)
+    sys.exit(1)
+if not result.said(REMOVED):
+    print(f'\nthe board rebooted but never said {REMOVED!r}, so the tag did not clear '
+          'and the host is still installed:')
     show(result.screen)
     sys.exit(1)
 if result.image is None:

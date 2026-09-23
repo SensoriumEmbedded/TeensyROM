@@ -42,7 +42,16 @@ PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
 REPLY_BYTES = 2
 READ_TICK = 0.2
 ASK_AGAIN_AFTER = 2.0
+# Two bounds per operation, because one of them moves. wr()'s stall is reset by every
+# partial write and raw()'s idle by every chunk that arrives, so each bounds a *pause*
+# and neither bounds the operation: a board taking one byte a second, or printing one
+# line every 100 ms, never trips either. The _LIMIT_TOTAL pair is the deadline that does
+# not move. Both are sized for the largest thing this tool does -- pushing a firmware hex
+# of a few MB, and reading a 1000-entry directory listing -- at rates well below what USB
+# serial gives, so a healthy transfer has no reason to reach them.
 WRITE_STALL_LIMIT = 30.0
+WRITE_LIMIT_TOTAL = 300.0
+READ_LIMIT_TOTAL = 120.0
 
 
 def ports(beside=None):
@@ -138,18 +147,27 @@ class Link:
                     pass
         return buf
 
-    def wr(self, data, stall=WRITE_STALL_LIMIT):
-        """Raises SystemExit when the board has taken nothing for `stall` seconds."""
-        view, off, deadline = memoryview(data), 0, time.time() + stall
+    def wr(self, data, stall=WRITE_STALL_LIMIT, total=WRITE_LIMIT_TOTAL):
+        """Raises SystemExit when the board has taken nothing for `stall` seconds, or
+        when the whole write has run `total` seconds. Both are needed: every partial
+        write pushes `stall` out again, so it bounds a pause and not the transfer, and
+        a board accepting a byte at a time never trips it."""
+        view, off = memoryview(data), 0
+        stall_by, done_by = time.time() + stall, time.time() + total
         while off < len(view):
             try:
                 off += os.write(self.fd, view[off:off + 2048])
-                deadline = time.time() + stall
+                stall_by = time.time() + stall
             except BlockingIOError:
-                if time.time() >= deadline:
+                if time.time() >= stall_by:
                     raise SystemExit(f'{self.port}: board stopped reading after '
                                      f'{off} of {len(view)} bytes')
                 time.sleep(0.002)
+            # `off < len(view)` matters: a transfer that lands on the last byte exactly
+            # at the deadline delivered everything, and must return rather than raise.
+            if off < len(view) and time.time() >= done_by:
+                raise SystemExit(f'{self.port}: write did not finish within {total:g} s '
+                                 f'({off} of {len(view)} bytes went)')
 
     def drain(self, secs=0.4):
         end = time.time() + secs
@@ -177,12 +195,20 @@ class Link:
                 return True
         return False
 
-    def raw(self, idle=0.3, timeout=5):
+    def raw(self, idle=0.3, timeout=5, total=READ_LIMIT_TOTAL):
         """Whatever the board sends next: waits `timeout` for the first byte,
-        then until the port has been quiet for `idle` seconds. Stops early if
-        the port drops, which is what a reset looks like from here."""
+        then until the port has been quiet for `idle` seconds, and never longer
+        than `total` seconds in all. Stops early if the port drops, which is
+        what a reset looks like from here.
+
+        `total` is the only bound that holds. Every chunk that arrives pushes
+        the idle deadline out again, so a board printing steadily with gaps
+        under `idle` extends it for as long as it keeps printing -- and `out`
+        grows for exactly as long. A caller with its own deadline should pass
+        what is left of it rather than trust `timeout`."""
         out, deadline = b'', time.time() + timeout
-        while time.time() < deadline:
+        limit = time.time() + total
+        while time.time() < min(deadline, limit):
             if select.select([self.fd], [], [], 0.05)[0]:
                 try:
                     chunk = os.read(self.fd, 4096)
@@ -195,8 +221,8 @@ class Link:
                 out, deadline = out + chunk, time.time() + idle
         return out
 
-    def text(self, idle=0.3, timeout=5):
-        return self.raw(idle, timeout).decode('latin1', 'replace')
+    def text(self, idle=0.3, timeout=5, total=READ_LIMIT_TOTAL):
+        return self.raw(idle, timeout, total).decode('latin1', 'replace')
 
     def status(self, timeout=10):
         """Reads a 16-bit reply: (value, text). A failure carries its message."""
@@ -249,12 +275,14 @@ class Link:
         echo(seen[shown:], out)
         return None
 
-    def version(self, timeout=5):
-        """The build banner. Both the main and the minimal image answer this."""
+    def version(self, timeout=5, total=READ_LIMIT_TOTAL):
+        """The build banner. Both the main and the minimal image answer this.
+        `total` caps the whole read of the banner: `timeout` alone does not,
+        because a board that keeps printing keeps pushing it out."""
         self.drain(0.3)
         self.wr(to_board(VERSION_INFO))
         self.ack('version', timeout)
-        return self.text(timeout=timeout).strip()
+        return self.text(timeout=timeout, total=total).strip()
 
     def peek(self, addr, length):
         self.drain(0.3)
@@ -341,7 +369,12 @@ class Link:
         ACKs and flushes before it starts, because clearing the tag takes a
         sector erase it does not return from -- so the ACK means 'accepted',
         not 'done'. A board with nothing installed ACKs too and stays up,
-        saying so on the C64; use answering_board() to tell the two apart."""
+        saying so on the C64; use answering_board() to tell the two apart.
+
+        The firmware takes this command on the USB device port only. The same
+        token over the USB host port or the TCP listener is refused with FAIL
+        and 'Busy!', since erasing flash is not something a peer on the LAN
+        gets to ask for."""
         self.drain(0.4)
         self.wr(to_board(HOST_REMOVE))
         self.ack('host remove', 5)

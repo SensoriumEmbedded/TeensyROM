@@ -20,7 +20,9 @@ WRITE_C64_MEM = 0x64FB     # TR+ only
 POST_FILE = 0x64BB
 DELETE_FILE = 0x64CF
 GET_DIR_NDJSON = 0x64DE
-HOST_REMOVE = 0x64E3       # TR+ extensions build only; ACKs, then reboots
+HOST_REMOVE = 0x64E3       # TR+ extensions build only; ACKs, then reboots.
+                           # Also refused off the USB device port: erasing flash is not
+                           # something the USB host port or the TCP listener may ask for.
 
 # Replies.
 ACK = 0x64CC

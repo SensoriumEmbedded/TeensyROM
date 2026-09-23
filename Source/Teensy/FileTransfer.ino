@@ -621,7 +621,7 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
     Printf_dbg("[SendFileData] Complete - Sent %lu bytes\n", bytenum);
     Printf_dbg("[SendFileData] Flushing output...\n");
-    CmdChannel->flush();
+    FlushCmdChannel(CmdChannel);
     Printf_dbg("[SendFileData] Flush complete\n");
     return true;
 }

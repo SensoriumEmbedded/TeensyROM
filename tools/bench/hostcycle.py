@@ -37,7 +37,7 @@ is running, reset it first.
 import sys
 import time
 
-from hostops import install_host, remove_host, show
+from hostops import INSTALLED, REMOVED, install_host, remove_host, show
 
 package = None
 for a in sys.argv[1:]:
@@ -82,13 +82,10 @@ first = remove_host()
 print(f'\n=== step 0: normalise -- slot was {"populated" if first.rebooted else "empty"} ===')
 
 check('remove with nothing installed refuses', remove_host(), False)
-check('install writes the slot', install_host(package), True,
-      'extension host installed')
-check('remove clears the tag', remove_host(), True,
-      'extension host removed')
+check('install writes the slot', install_host(package), True, INSTALLED)
+check('remove clears the tag', remove_host(), True, REMOVED)
 check('the tag is gone, not just stale', remove_host(), False)
-check('reinstall works after a removal', install_host(package), True,
-      'extension host installed')
+check('reinstall works after a removal', install_host(package), True, INSTALLED)
 
 mins = (time.time() - started) / 60
 print(f'\n{"=" * 60}')

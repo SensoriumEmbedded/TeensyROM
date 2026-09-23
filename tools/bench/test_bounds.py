@@ -1,0 +1,222 @@
+# SPDX-License-Identifier: MIT
+"""Tests that the bench link's waits actually end. No hardware needed:
+
+  python3 -m unittest discover -s tools/bench
+
+Every wait here has two deadlines, and only one of them holds. wr()'s `stall` is
+reset by each partial write and raw()'s `idle` by each chunk that arrives, so
+both bound a *pause* -- a board that dribbles, or one that keeps printing, never
+reaches either. These are the tests for the deadline that does not move, and for
+the callers that have to pass what is left of their own.
+
+The fake board is a pty with a thread on the other side, and every one of them
+stops on its own after a few seconds. That is deliberate: a test that hangs
+forever against a regression is a test that cannot be watched go red.
+"""
+import os
+import pty
+import threading
+import time
+import unittest
+
+import hostops
+from hostops import READY_TIMEOUT, _ready
+from protocol import ACK, VERSION_INFO, to_board
+from trlink import Link
+
+CHATTER_GAP = 0.1      # short enough that no idle window of 0.3 s ever expires
+CHATTER_FOR = 8.0      # and long enough to run well past every cap asserted here
+CHATTER_LINE = b'SD card: scanning /\r\n'
+
+
+def reply(token):
+    """The board answers least significant byte first."""
+    return bytes([token & 0xff, (token >> 8) & 0xff])
+
+
+class FakePty(unittest.TestCase):
+    """A pty with something on the far end, torn down in the right order: stop the
+    thread, join it, then close the fds it writes to."""
+
+    def pty_pair(self):
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        self.addCleanup(os.close, slave)
+        return master, slave
+
+    def run_board(self, master, body):
+        stop = threading.Event()
+        board = threading.Thread(target=body, args=(master, stop), daemon=True)
+        self.addCleanup(board.join, 2)
+        self.addCleanup(stop.set)
+        board.start()
+        return stop
+
+    def link_to(self, slave):
+        link = Link(os.ttyname(slave), settle=0)
+        self.addCleanup(link.close)
+        return link
+
+
+def chatter(master, stop, until=None):
+    """Print a line every CHATTER_GAP seconds. This is an ordinary board coming up:
+    the SD scan and the NFC probe both narrate, and neither pauses for 0.3 s."""
+    end = until if until is not None else time.time() + CHATTER_FOR
+    while time.time() < end and not stop.is_set():
+        try:
+            os.write(master, CHATTER_LINE)
+        except OSError:
+            return
+        stop.wait(CHATTER_GAP)
+
+
+class ReadBound(FakePty):
+    """A board that keeps printing must not hold a read open for as long as it cares
+    to keep printing."""
+
+    def test_a_board_that_keeps_printing_does_not_hold_raw_open(self):
+        master, slave = self.pty_pair()
+        self.run_board(master, chatter)
+        link = self.link_to(slave)
+
+        started = time.time()
+        link.raw(idle=0.3, timeout=1, total=1.5)
+        took = time.time() - started
+
+        self.assertLess(took, CHATTER_FOR / 2,
+                        f'raw() capped at 1.5 s ran {took:.1f} s: every chunk pushed '
+                        f'the idle deadline out and nothing else stopped it')
+
+    def test_the_read_still_ends_on_silence_without_waiting_out_the_cap(self):
+        """The cap is the backstop, not the normal exit: a board that says its piece
+        and stops is still read at idle speed."""
+        master, slave = self.pty_pair()
+        os.write(master, b'quick answer\r\n')
+        link = self.link_to(slave)
+
+        started = time.time()
+        seen = link.raw(idle=0.3, timeout=2, total=30)
+        took = time.time() - started
+
+        self.assertIn(b'quick answer', seen)
+        self.assertLess(took, 2.0, f'a silent port took {took:.1f} s to fall out')
+
+
+class WriteBound(FakePty):
+    """A board that takes a trickle must not hold a write open forever. The stall
+    deadline cannot see this: every partial write resets it."""
+
+    def test_a_board_that_takes_a_trickle_gives_up_at_the_hard_cap(self):
+        master, slave = self.pty_pair()
+
+        def sipper(master, stop):
+            end = time.time() + CHATTER_FOR
+            while time.time() < end and not stop.is_set():
+                try:
+                    os.read(master, 64)
+                except OSError:
+                    return
+                stop.wait(0.05)
+
+        self.run_board(master, sipper)
+        link = self.link_to(slave)
+
+        started = time.time()
+        with self.assertRaises(SystemExit) as stopped:
+            link.wr(b'x' * (4 * 1024 * 1024), stall=30.0, total=1.5)
+        took = time.time() - started
+
+        self.assertLess(took, CHATTER_FOR / 2,
+                        f'wr() capped at 1.5 s ran {took:.1f} s: every partial write '
+                        f'pushed the stall deadline out and nothing else stopped it')
+        self.assertIn('did not finish within', str(stopped.exception))
+
+    def test_a_write_that_landed_is_not_failed_by_a_deadline_it_landed_on(self):
+        """The cap must fire on work left to do, not on the clock alone: bytes that went
+        went, and a caller told otherwise retries a delivered write."""
+        master, slave = self.pty_pair()
+        del master
+        link = self.link_to(slave)
+        link.wr(b'x', total=0)      # a deadline already in the past, and nothing left
+
+    def test_a_write_nobody_reads_still_reports_the_stall_and_not_the_cap(self):
+        """The stall deadline is the one that names how far the write got, and it is
+        still the one that fires when the board takes nothing at all."""
+        master, slave = self.pty_pair()
+        del master
+        link = self.link_to(slave)
+        with self.assertRaises(SystemExit) as stopped:
+            link.wr(b'x' * (4 * 1024 * 1024), stall=0.2, total=30.0)
+        self.assertIn('board stopped reading after', str(stopped.exception))
+
+
+class ReadyBound(FakePty):
+    """hostops._ready() promises an answer or a failure within READY_TIMEOUT. It
+    checks its deadline only where version() returns, so whatever version() waits on
+    has to be inside that deadline too."""
+
+    def setUp(self):
+        self.original, hostops.READY_TIMEOUT = hostops.READY_TIMEOUT, 3
+        self.addCleanup(setattr, hostops, 'READY_TIMEOUT', self.original)
+
+    def test_the_constant_the_scripts_advertise_is_the_one_ready_reads(self):
+        """Patching the module global is only a fair test of the bound if the function
+        reads it at call time rather than baking it into a default."""
+        self.assertEqual(READY_TIMEOUT, self.original)
+        self.assertNotEqual(hostops.READY_TIMEOUT, self.original)
+
+    def test_a_board_that_acks_then_talks_forever_does_not_hold_ready_open(self):
+        master, slave = self.pty_pair()
+
+        def acks_then_talks(master, stop):
+            """The reproduction: the board answers the version request and then keeps
+            narrating its boot. version() never returns, so the deadline after it is
+            never reached."""
+            end = time.time() + CHATTER_FOR
+            seen = b''
+            while time.time() < end and not stop.is_set():
+                try:
+                    seen += os.read(master, 64)
+                except OSError:
+                    return
+                if to_board(VERSION_INFO) in seen:
+                    break
+                stop.wait(0.01)
+            try:
+                os.write(master, reply(ACK))
+            except OSError:
+                return
+            chatter(master, stop, until=end)
+
+        self.run_board(master, acks_then_talks)
+        link = self.link_to(slave)
+
+        started = time.time()
+        try:
+            _ready(link)
+        except SystemExit:
+            pass
+        took = time.time() - started
+
+        self.assertLess(took, CHATTER_FOR - 1,
+                        f'_ready() ran {took:.1f} s against a '
+                        f'{hostops.READY_TIMEOUT} s deadline')
+
+    def test_a_silent_board_still_fails_noisily(self):
+        """The other direction of the same bound: capping the read must not turn a
+        board that never answers into one that passed."""
+        master, slave = self.pty_pair()
+        del master
+        link = self.link_to(slave)
+
+        started = time.time()
+        with self.assertRaises(SystemExit) as stopped:
+            _ready(link)
+        took = time.time() - started
+
+        self.assertIn('did not answer a version request', str(stopped.exception))
+        self.assertLess(took, hostops.READY_TIMEOUT + 6)
+
+
+if __name__ == '__main__':
+    unittest.main()
