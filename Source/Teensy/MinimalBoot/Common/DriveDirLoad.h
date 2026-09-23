@@ -214,6 +214,9 @@ struct StructCrtChip
       "d71",  rtD71,
       "d81",  rtD81,
       "reu",  rtFileREU,
+#ifdef VM_EXTENSIONS_ENABLED
+      "trh",  rtFileTRH,
+#endif
       //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
 #endif

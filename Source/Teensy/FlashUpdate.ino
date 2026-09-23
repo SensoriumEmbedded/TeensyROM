@@ -141,3 +141,151 @@ bool isFab2x()
    //fab 0.2x: 2230311 to 2296610 Highs, 1990311-2052164 Lows
    return(Highs>1000000 && Lows>1000000);
 }
+
+#ifdef VM_EXTENSIONS_ENABLED
+// Writing an extension host into the slot from a .TRH file on SD or USB.
+// VMHostInstall.h decides what happens in what order and is covered natively
+// by vm/tests/host_install_test.cpp; everything here is the device behind it.
+
+// The core's FlexSPI primitives hold interrupts off for one operation and
+// re-enable them on the way out, so nothing here may assume they stay off
+// across a call.
+struct VmSlotFlash
+{
+   bool erase(uint32_t sector)
+   {
+      if (sector >= VM_HOST_SECTORS) return false;
+
+      void *addr = (void *)(VM_HOST_SLOT_BASE + sector * VM_HOST_SECTOR_BYTES);
+      eepromemu_flash_erase_sector(addr);
+      arm_dcache_delete(addr, VM_HOST_SECTOR_BYTES);
+      return flash_sector_not_erased((uint32_t)addr) == 0;
+   }
+
+   bool program(uint32_t offset, const uint8_t *data, uint32_t n)
+   {
+      if (offset + n > VM_HOST_SLOT_BYTES) return false;
+
+      eepromemu_flash_write((void *)(VM_HOST_SLOT_BASE + offset), data, n);
+      return true;
+   }
+
+   // The slot is XIP and cacheable, so a read-back has to come from the part.
+   const uint8_t *map(uint32_t offset)
+   {
+      void *sector = (void *)(VM_HOST_SLOT_BASE + (offset & ~(VM_HOST_SECTOR_BYTES - 1)));
+      arm_dcache_delete(sector, VM_HOST_SECTOR_BYTES);
+      return (const uint8_t *)(VM_HOST_SLOT_BASE + offset);
+   }
+};
+
+struct VmTrhFile
+{
+   File file;
+
+   bool seek(uint32_t offset) { return file.seek(offset); }
+   bool read(void *dst, uint32_t n) { return file.read(dst, n) == (int)n; }
+};
+
+static const char *HostInstallWhy(VmInstallStatus status)
+{
+   switch (status)
+   {
+      case VmInstallStatus::Ok:             return "ok";
+      case VmInstallStatus::ShortFile:      return "file too short";
+      case VmInstallStatus::BadMagic:       return "not a TRH package";
+      case VmInstallStatus::BadFormat:      return "package format too new";
+      case VmInstallStatus::BadHeader:      return "package header bad";
+      case VmInstallStatus::BadHeaderCrc:   return "package header CRC bad";
+      case VmInstallStatus::WrongSlot:      return "package targets elsewhere";
+      case VmInstallStatus::BadLength:      return "package length wrong";
+      case VmInstallStatus::ReadError:      return "read error";
+      case VmInstallStatus::BadPayloadCrc:  return "payload CRC bad";
+      case VmInstallStatus::MirrorMismatch: return "header disagrees w/ image";
+      case VmInstallStatus::WrongAbi:       return "built for another ABI";
+      case VmInstallStatus::NotBootable:    return "image would not start";
+      case VmInstallStatus::EraseFailed:    return "erase failed";
+      case VmInstallStatus::ProgramFailed:  return "write failed";
+      case VmInstallStatus::VerifyFailed:   return "verify failed";
+   }
+   return "refused";
+}
+
+// The install ends in a reboot either way, so its outcome travels in the
+// VmFail record the main image collects on the way back up.
+static uint8_t HostInstallCode(VmInstallStatus status)
+{
+   switch (status)
+   {
+      case VmInstallStatus::Ok:            return VmFail::Installed;
+      case VmInstallStatus::ReadError:     return VmFail::InstallRead;
+      case VmInstallStatus::EraseFailed:   return VmFail::InstallErase;
+      case VmInstallStatus::ProgramFailed: return VmFail::InstallProgram;
+      case VmInstallStatus::VerifyFailed:  return VmFail::InstallVerify;
+      default:                             return VmFail::InstallFailed;
+   }
+}
+
+void DoHostInstall(FS *sourceFS, const char *FilePathName)
+{
+   static uint8_t staging[VM_HOST_SECTOR_BYTES];
+
+   VmTrhFile package{sourceFS->open(FilePathName, FILE_READ)};
+   if (!package.file)
+   {
+      SendMsgPrintfln("%s\r\nwould not open", FilePathName);
+      return;
+   }
+
+   VmTrhHeader header;
+   VmHostCandidate candidate;
+   const uint32_t FileBytes = (uint32_t)package.file.size();
+   VmInstallResult checked = package.read(&header, sizeof header)
+      ? vm_trh_valid(header, FileBytes)
+      : VmInstallResult{VmInstallStatus::ReadError, 0};
+   if (checked) checked = vm_host_scan(package, header, staging, candidate);
+
+   // Everything up to here only reads, so a refusal is an ordinary message
+   // with the C64 still running.
+   if (!checked)
+   {
+      package.file.close();
+      SendMsgPrintfln("Host package refused:\r\n%s ($%lx)",
+         HostInstallWhy(checked.status), (unsigned long)checked.detail);
+      return;
+   }
+
+   char HostName[sizeof candidate.id.name + 1] = {0};
+   memcpy(HostName, candidate.id.name, sizeof candidate.id.name);
+
+   // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
+   // watches, and the resulting BtnPressed ends the wait for the C64 to read.
+   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+
+#ifdef Fab04_FullDMACapable
+   uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone
+   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+   CloseDMA();
+#endif
+
+   // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase
+   // stalls this core for up to 400 mS. Stop the 6510 first, then stop
+   // answering it.
+   SetResetAssert;
+   delay(20);
+   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
+   detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
+#ifdef Fab04_BiDirReset
+   detachInterrupt(digitalPinToInterrupt(BiDir_Reset_PIN));
+#endif
+   NVIC_DISABLE_IRQ(IRQ_ENET);
+   NVIC_DISABLE_IRQ(IRQ_PIT);
+
+   VmSlotFlash slot;
+   const VmInstallResult done = vm_host_install(slot, package, header, candidate, staging);
+
+   VmFail::set(HostInstallCode(done.status), done.detail);
+   RebootTR();
+   while (true) ;
+}
+#endif

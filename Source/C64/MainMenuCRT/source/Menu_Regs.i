@@ -380,6 +380,7 @@
    rtBin8kLo = 17
    rtBinC128 = 18
    rtFileREU = 19
+   rtFileTRH = 20
 
 ;127 max, bit 7 used to indicate assigned IOH to TR
 ;TblItemType mult by 4 further limits to 63 max!

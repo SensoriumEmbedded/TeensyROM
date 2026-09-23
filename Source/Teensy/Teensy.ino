@@ -38,6 +38,9 @@
 #ifdef VM_EXTENSIONS_ENABLED
    // Before IOHandlers.h: PollingHndlr_TeensyROM is where the record is shown.
    #include "MinimalBoot/Common/VMFail.h"
+   // Here rather than in FlashUpdate.ino, where DoHostInstall lives: the sketch
+   // preprocessor hoists its prototypes above every include below this point.
+   #include "MinimalBoot/Common/VMHostInstall.h"
 #endif
 #include "MinimalBoot/Common/IOHandlers.h"
 

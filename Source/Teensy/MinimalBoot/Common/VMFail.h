@@ -13,8 +13,10 @@
 // Teensy's own CrashReport at the top of RAM2, which survives the soft reset.
 // The main image collects it on the way back up and shows it on the C64 menu.
 //
-// Registry-level failures never get this far: VmRegistry::tryLaunch runs in the
-// main image, where SendMsgPrintfln already works, and only reboots on success.
+// The host installer writes here too, from the main image. It has to reboot
+// whether it succeeded or not -- the C64 was held in reset and the FlexSPI LUT
+// re-initialises on the way back up -- so its outcome cannot be printed where
+// it happens either. Its codes start at 0x30.
 #ifndef MinimumBuild
 // Defined in FileParsers.ino, and declared the same way IOH_TeensyROM.c does.
 extern void SendMsgPrintfln(const char *Fmt, ...);
@@ -27,20 +29,29 @@ enum : uint8_t {
     // Stamped before the entry point is called, because after that the arena
     // it sits in belongs to the module. A fault inside vm_entry therefore
     // reads back as Ok rather than as Entered.
-    Ok            = 0x00,  // handed to the module; nothing refused it after
-    Entered       = 0x01,  // minimal is about to jump to the extension image
-    NoImage       = 0x02,  // ...but the top flash slot holds no valid image
-    Faulted       = 0x03,  // Ok, but the core recorded a fault (promoteFault)
-    SdInit        = 0x10,  // SD card would not initialise (detail = attempts)
-    LaunchRecord  = 0x11,  // /VMS/launch.vml missing, short or corrupt
-    Manifest      = 0x12,  // manifest.vmi unreadable or malformed
-    ManifestCrc   = 0x13,  // manifest changed since the main image preflighted it
-    ClientOpen    = 0x14,  // client cartridge would not open
-    ClientHeader  = 0x15,  // not a 16 KiB C64 EasyFlash cartridge
-    ClientBank    = 0x16,  // CHIP header or bank payload bad (detail = bank)
-    Descriptor    = 0x17,  // third CHIP is not a valid VMH1 descriptor
-    ClientCrc     = 0x18,  // client banks do not match the descriptor CRC
-    ModuleLoad    = 0x20,  // module image refused (detail = VMHost failure code)
+    Ok             = 0x00,  // handed to the module; nothing refused it after
+    Entered        = 0x01,  // minimal is about to jump to the extension image
+    NoImage        = 0x02,  // ...but the top flash slot holds no valid image
+    Faulted        = 0x03,  // Ok, but the core recorded a fault (promoteFault)
+    SdInit         = 0x10,  // SD card would not initialise (detail = attempts)
+    LaunchRecord   = 0x11,  // /VMS/launch.vml missing, short or corrupt
+    Manifest       = 0x12,  // manifest.vmi unreadable or malformed
+    ManifestCrc    = 0x13,  // manifest changed since the main image preflighted it
+    ClientOpen     = 0x14,  // client cartridge would not open
+    ClientHeader   = 0x15,  // not a 16 KiB C64 EasyFlash cartridge
+    ClientBank     = 0x16,  // CHIP header or bank payload bad (detail = bank)
+    Descriptor     = 0x17,  // third CHIP is not a valid VMH1 descriptor
+    ClientCrc      = 0x18,  // client banks do not match the descriptor CRC
+    ModuleLoad     = 0x20,  // module image refused (detail = VMHost failure code)
+    // The installer, which reboots on success as well as on failure. Installed
+    // is not Ok: captureHeld filters on code != Ok, and a success the menu
+    // never mentions looks from the couch like nothing happened.
+    Installed      = 0x30,  // host written and verified (detail = payload bytes)
+    InstallRead    = 0x31,  // package read failed mid-write (detail = offset)
+    InstallErase   = 0x32,  // a sector would not erase (detail = sector)
+    InstallVerify  = 0x33,  // slot did not read back as written (detail = CRC)
+    InstallProgram = 0x34,  // a page would not program (detail = offset)
+    InstallFailed  = 0x3f,  // refused for a reason the codes above do not name
 };
 // Layout, magic and address are the published host contract (VMHostABI.h), so
 // that a third-party host writes a record this image can read.
@@ -93,21 +104,27 @@ static inline void promoteFault(bool faulted) {
 // Short enough for the C64's message window.
 static inline const char *describe(uint8_t code) {
     switch (code) {
-        case Ok:           return "handed off to client";
-        case Entered:      return "image did not start";
-        case NoImage:      return "no extension image installed";
-        case Faulted:      return "extension faulted";
-        case SdInit:       return "SD card init failed";
-        case LaunchRecord: return "launch record unreadable";
-        case Manifest:     return "manifest unreadable";
-        case ManifestCrc:  return "manifest changed";
-        case ClientOpen:   return "client CRT missing";
-        case ClientHeader: return "client CRT header bad";
-        case ClientBank:   return "client CRT bank bad";
-        case Descriptor:   return "client descriptor bad";
-        case ClientCrc:    return "client CRC mismatch";
-        case ModuleLoad:   return "module refused";
-        default:           return "unknown";
+        case Ok:             return "handed off to client";
+        case Entered:        return "image did not start";
+        case NoImage:        return "no extension image installed";
+        case Faulted:        return "extension faulted";
+        case SdInit:         return "SD card init failed";
+        case LaunchRecord:   return "launch record unreadable";
+        case Manifest:       return "manifest unreadable";
+        case ManifestCrc:    return "manifest changed";
+        case ClientOpen:     return "client CRT missing";
+        case ClientHeader:   return "client CRT header bad";
+        case ClientBank:     return "client CRT bank bad";
+        case Descriptor:     return "client descriptor bad";
+        case ClientCrc:      return "client CRC mismatch";
+        case ModuleLoad:     return "module refused";
+        case Installed:      return "extension host installed";
+        case InstallRead:    return "host package read failed";
+        case InstallErase:   return "host install erase failed";
+        case InstallVerify:  return "host install verify failed";
+        case InstallProgram: return "host install write failed";
+        case InstallFailed:  return "host install failed";
+        default:             return "unknown";
     }
 }
 
