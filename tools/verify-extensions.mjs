@@ -211,7 +211,7 @@ function vendorDir(...files) {
 // only for the vendor; read the directives rather than the branch chosen here.
 const PUBLISHED_INCLUDES = {
   'VMABI.h': ['<stdint.h>', '<stddef.h>'],
-  'VMHostABI.h': ['<stdint.h>', '<stddef.h>', '<string.h>', '"VMABI.h"'],
+  'VMHostABI.h': ['<stdint.h>', '<stddef.h>', '<string.h>', '<strings.h>', '"VMABI.h"'],
 };
 
 function checkPublishedIncludes() {

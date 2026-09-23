@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+#include <strings.h>
 #include "VMABI.h"
 
 // TeensyROM extension HOST contract, ABI 2.
@@ -22,8 +23,9 @@
 //
 // Core dependencies. vm_host_code_window() below is #if defined(__arm__) and
 // uses the Teensy core's SCB_MPU_* and __disable_irq(); VM_HOST_TEXT picks up
-// the core's FLASHMEM when it is defined. Everything else here is stdint,
-// stddef and string.h.
+// the core's FLASHMEM when it is defined. The rest is the four standard
+// headers above; strings.h is there for strcasecmp, which is POSIX rather
+// than C, so a toolchain without it needs its own shim.
 
 // Placement. The extension image has only 96 KiB of ITCM, so TeensyROM keeps
 // the larger pure helpers in flash; FLASHMEM is the Teensy core's attribute
@@ -151,7 +153,7 @@ VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
 // whole file, NUL-terminated and writable; `root` is /VMS/<id>, whose last
 // component must equal the id. Returns false without touching `out` on any
 // malformed input.
-VM_HOST_TEXT static bool vm_manifest_parse(char *text, const char *root, VmManifest &out) {
+VM_HOST_TEXT static inline bool vm_manifest_parse(char *text, const char *root, VmManifest &out) {
     if(!vm_path_absolute(root,80))return false;
     char *line[6],*p=text;unsigned count=0;
     while(*p&&count<6){line[count++]=p;while(*p&&*p!='\n'&&*p!='\r')p++;if(*p){*p++=0;while(*p=='\n'||*p=='\r')p++;}}
@@ -217,7 +219,9 @@ static inline void vm_host_code_window(bool writable) {
 #endif
 
 // Streams .text, .data and the profile-1 constants from an open image, CRCs
-// the three together against the header, and zeroes .bss. Reader supplies
+// the three together against the header, and zeroes .bss. `h` must have passed
+// vm_valid_header (VMABI.h) already: nothing here bounds code_bytes, data_bytes
+// or bss_bytes, and the payload CRC is only checked once the copies are done. Reader supplies
 // int read(void *, uint32_t). Failure codes match the module-load detail the
 // menu reports: 0x12 short read, 0x13 payload CRC.
 template<class Reader> static bool vm_load_payload(const VmImageHeader &h,Reader &reader,
