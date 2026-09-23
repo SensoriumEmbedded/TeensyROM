@@ -41,6 +41,7 @@ whatever node appeared beside it.
 | `fwupdate.py <hex> [remote]` | Push a hex to the SD card, launch it, answer the C64's Y/N prompt by DMA, echo the updater until the board reboots, then check that the board came back on the main image reporting the hex's build stamp. A file that is not Intel HEX is refused before anything is pushed; a hex this reader cannot fully decode is flashed and the board is still checked for the main image, without the stamp comparison. |
 | `push.py <local>=<remote> ...` | Copy files to the SD card. Deletes the target first; the firmware will not overwrite. |
 | `launch.py <path> [drive] [secs]` | Launch a file from the SD card and echo serial. |
+| `hostinstall.py <local.trh> [remote]` | Push a `.TRH` extension host package to the SD card and install it. A package the firmware refuses comes back with the C64 still running and nothing erased; one it takes reboots the board, and the install record is read off the boot output. Build the package with `npm run build:host-package -- --hex <firmware.hex>`. |
 | `exttest.py <path>` | Launch an extension and report how it ended: still running, or reset to the menu with a failure record. |
 | `peek.py <hex addr> <len>` | Hex dump C64 memory. |
 | `screen.py` | The C64 text screen. |

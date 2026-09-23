@@ -373,3 +373,32 @@ def reconnect(timeout=60, interval=0.05, port=None, known=None):
                 pass
         time.sleep(interval)
     return None
+
+
+# One TR+ in an original C64, one sample: the port was down 1.34s, and the main
+# image gave its first clean firmware-check answer 5.37s after it came back.
+BOOT_WINDOW = 20
+
+
+def answering_board(deadline, port, known, boot_window=BOOT_WINDOW, out=sys.stdout):
+    """A (Link, image) for a rebooted board, with image None when nothing
+    answered within `boot_window`, or (None, None) when the port never came
+    back. `port` is the node the board was last talking on, which reconnect()
+    prefers, and `known` the nodes that were beside it before the reboot -- both
+    sampled BEFORE whatever caused the reboot.
+
+    The port can drop a second time as the main image renames its USB device, so
+    a drop inside the boot window means going back for the name it came up
+    under. Anything that reboots the board wants this rather than a bare
+    reconnect(), which hands back a Link to the node about to disappear."""
+    while time.time() < deadline:
+        tr = reconnect(timeout=deadline - time.time(), port=port, known=known)
+        if tr is None:
+            return None, None
+        print('--- boot output ---', file=out)
+        try:
+            return tr, tr.await_image(min(time.time() + boot_window, deadline))
+        except OSError:
+            port = tr.port
+            tr.close()
+    return None, None
