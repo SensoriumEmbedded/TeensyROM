@@ -4,9 +4,11 @@
 // image (MinimalBoot at 0x60000000 + the main image at 0x60060000, combined into one hex)
 // for one of two release targets:
 //
-//   --target tr        plain TeensyROM (Fab 0.2/0.3)
-//   --target tr-plus   TeensyROM+ (Fab 0.4). Always includes MPE once MPE is on main; until
-//                       then this builds today's TR+ image under today's name.
+//   --target tr        plain TeensyROM (Fab 0.2/0.3). No extension loader: it needs the
+//                       full DMA only Fab 0.4 has.
+//   --target tr-plus   TeensyROM+ (Fab 0.4), with the extension loader. Always includes MPE
+//                       once MPE is on main; until then this builds today's TR+ image under
+//                       today's name.
 //
 // Unlike Build-DualBoot.ps1, this never touches the installed Teensy core: the boot/linker
 // file swap happens in a private copy made fresh for this run, so nothing about your
@@ -20,6 +22,8 @@
 //            symbol files, ~400 MB) after a successful build. By default it is removed; a
 //            failed build always keeps it, since its logs are what explain the failure, and so
 //            does --skip-combine, whose per-image results exist only there.
+//   --no-extensions  build a TR+ without the extension loader: the two images it carried
+//            before the loader existed, from the stock linker scripts.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -76,9 +80,16 @@ const keepWork = flag('--keep-work');
 const skipTeensyBuild = flag('--skip-teensy-build');
 const skipMinimalBuild = flag('--skip-minimal-build');
 const skipCombine = flag('--skip-combine');
-// Off by default: without it this builds exactly the two images it always has,
-// from the same linker scripts, and nothing below runs.
-const withExtensions = flag('--with-extensions');
+// Extensions ride with the Fab 0.4 feature set rather than a flag of their own. The
+// install path blanks the screen through the full DMA Fab04_FullDMACapable gates, so a
+// fab 0.2/0.3 extensions build would leave the VIC painting a frozen menu for the whole
+// erase. --no-extensions builds exactly the two images the TR+ carried before, from the
+// stock linker scripts, and nothing below runs.
+if (!fab04Features && flag('--with-extensions')) {
+  throw new Error('--with-extensions needs --target tr-plus: the extension loader requires ' +
+    'the Fab 0.4 full DMA a plain TR does not have');
+}
+const withExtensions = fab04Features && !flag('--no-extensions');
 const skipExtensionBuild = flag('--skip-extension-build');
 const useCcache = flag('--ccache');
 if (useCcache && process.platform === 'win32') {

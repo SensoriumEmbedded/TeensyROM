@@ -268,13 +268,13 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
 
    // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
    // watches, and the resulting BtnPressed ends the wait for the C64 to read.
-   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will freeze or blank.", HostName);
+   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
 
-#ifdef Fab04_FullDMACapable
+   // Unconditional: Common_Defs.h refuses an extensions build without Fab04_FullDMACapable,
+   // so the message above can promise the blank rather than hedge about it.
    uint8_t BlankD011 = 0x00;  //DEN=0 stops VIC-II fetches while the bus is gone
    PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
    CloseDMA();
-#endif
 
    // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase
    // stalls this core for up to 400 mS. Stop the 6510 first, then stop
