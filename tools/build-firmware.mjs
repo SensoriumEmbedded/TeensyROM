@@ -26,6 +26,11 @@
 //   --no-extensions  build a TR+ without the extension loader: the two images it carried
 //            before the loader existed, from the stock linker scripts. It lands under
 //            TeensyROM+_<ver>_noext_full.hex, not the shipping name.
+//   --host-sketch <dir>  put a different program in the extension slot. The directory
+//            holds exactly one .ino plus whatever else it needs; those files are overlaid
+//            onto the MinimalBoot sketch, which is how the stock host is built too. This
+//            is the supported seam for a third-party extension host --
+//            see docs/Architecture/Extension-Hosts.md.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -75,7 +80,7 @@ function option(name, fallback) {
 // recognise cannot be ignored: a misspelled opt-out (--no-extension, --noextensions,
 // --no_extensions, -no-extensions) would otherwise ship the loader in an image the caller
 // asked to build without it. Anything not in these two sets is a refusal.
-const KNOWN_OPTIONS = new Set(['--target', '--out', '--arduino-data', '--arduino-user']);
+const KNOWN_OPTIONS = new Set(['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch']);
 const KNOWN_FLAGS = new Set([
   '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
   '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
@@ -113,6 +118,26 @@ if (flag('--with-extensions')) {
 }
 const withExtensions = fab04Features && !flag('--no-extensions');
 const skipExtensionBuild = flag('--skip-extension-build');
+
+// Which program goes in the extension slot. The default is this repo's own host;
+// a third-party host is the same build with its sketch directory swapped in, which
+// is the whole of the mechanism (docs/Architecture/Extension-Hosts.md). Refused
+// where the extension image is not built at all, rather than ignored: a flag that
+// silently does nothing here ships the stock host under the caller's own name.
+const hostSketchOption = option('--host-sketch', null);
+if (hostSketchOption !== null && !withExtensions) {
+  throw new Error(fab04Features
+    ? '--host-sketch has nothing to build with --no-extensions'
+    : '--host-sketch needs --target tr-plus: a plain TR reserves no extension slot');
+}
+if (hostSketchOption !== null && skipExtensionBuild) {
+  throw new Error('--host-sketch and --skip-extension-build contradict each other');
+}
+const hostSketch = path.resolve(hostSketchOption ?? path.join(root, 'Source/Teensy/VMBoot'));
+if (withExtensions && !skipExtensionBuild && !fs.existsSync(hostSketch)) {
+  throw new Error(`Host sketch directory not found: ${hostSketch}`);
+}
+
 const useCcache = flag('--ccache');
 if (useCcache && process.platform === 'win32') {
   throw new Error('--ccache is not supported on Windows');
@@ -350,12 +375,25 @@ if (withExtensions && !skipExtensionBuild) {
   // Arduino compiles a sketch directory as a unit, so the extension image is
   // assembled from the minimal sketch with its own top-level .ino and build
   // profile swapped in. A plain file copy: nothing is generated or rewritten,
-  // and both replacements are ordinary committed files.
-  const sketch = path.join(runRoot, 'VMBoot');
+  // and every replacement is an ordinary committed file.
+  //
+  // --host-sketch points that overlay at a different directory, which is how a
+  // third-party host is built: same memory map, same slot, different program.
+  // See docs/Architecture/Extension-Hosts.md. Every file in the directory is
+  // overlaid, not a fixed list, so a host that wants a third file does not have
+  // to come back here and edit the build.
+  const overlay = fs.readdirSync(hostSketch).filter((f) => fs.statSync(path.join(hostSketch, f)).isFile());
+  const inos = overlay.filter((f) => f.endsWith('.ino'));
+  if (inos.length !== 1) {
+    throw new Error(`${hostSketch} must hold exactly one .ino (the sketch entry point), found ${inos.length}`);
+  }
+  // Arduino requires the sketch directory and its entry .ino to share a name.
+  const elfStem = path.basename(inos[0], '.ino');
+  const sketch = path.join(runRoot, elfStem);
   fs.cpSync(path.join(root, 'Source/Teensy/MinimalBoot'), sketch, { recursive: true });
   fs.rmSync(path.join(sketch, 'MinimalBoot.ino'));
-  for (const file of ['VMBoot.ino', 'Min_TeensyROM.h']) {
-    fs.copyFileSync(path.join(root, 'Source/Teensy/VMBoot', file), path.join(sketch, file));
+  for (const file of overlay) {
+    fs.copyFileSync(path.join(hostSketch, file), path.join(sketch, file));
   }
   // Only this image builds with USB compiled out, so only its private core copy
   // needs the two unguarded-USB fixes. Never applied to the installed core.
@@ -365,9 +403,9 @@ if (withExtensions && !skipExtensionBuild) {
   }
 
   extensionImage = build('extension', {
-    inoPath: path.join(sketch, 'VMBoot.ino'),
+    inoPath: path.join(sketch, inos[0]),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
-    elfStem: 'VMBoot',
+    elfStem,
     ld: extensionLinkerScript(linkers),
     bootdata: extensionBootdata(linkers),
     usbType: 'USB_DISABLED',

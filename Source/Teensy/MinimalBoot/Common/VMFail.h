@@ -60,6 +60,11 @@ enum : uint8_t {
     // stops answering while that erase holds interrupts off.
     Removed        = 0x40,  // slot no longer reads as a host (detail = 0)
     RemoveFailed   = 0x41,  // the tag would not clear (detail = VmInstallStatus)
+    // For a host that is not this one. Every code above describes something this
+    // repo's host does, so a third-party host finishing normally had nothing to
+    // stamp: Ok is filtered out by captureHeld, and Exited names a module it may
+    // not have. detail is the host's own, and the menu prints it verbatim.
+    HostReturned   = 0x50,  // a third-party host handed the machine back
 };
 // Layout, magic and address are the published host contract (VMHostABI.h), so
 // that a third-party host writes a record this image can read.
@@ -135,6 +140,7 @@ static inline const char *describe(uint8_t code) {
         case InstallFailed:  return "host install failed";
         case Removed:        return "extension host removed";
         case RemoveFailed:   return "host removal failed";
+        case HostReturned:   return "extension host returned";
         default:             return "unknown";
     }
 }

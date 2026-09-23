@@ -16,6 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { readSource } from './lib/source-text.mjs';
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build-firmware.mjs');
 // The timeout bounds how long a lost refusal takes to fail, not whether it fails.
@@ -100,4 +101,67 @@ test('extensions are on by default for tr-plus, and only there', {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --host-sketch: the seam a third-party host is built through. Every case below is a
+// refusal rather than a silent fallback, because the fallback is this repo's own host --
+// a build that ignored the flag would ship the stock VM host under someone else's name
+// and pass every other check in this file.
+test('--host-sketch is refused where there is no extension slot to build into', () => {
+  assert.match(build('--target', 'tr', '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch needs --target tr-plus/);
+  assert.match(build('--target', 'tr-plus', '--no-extensions',
+    '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch has nothing to build with --no-extensions/);
+  assert.match(build('--target', 'tr-plus', '--skip-extension-build',
+    '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch and --skip-extension-build contradict each other/);
+});
+
+test('a host sketch directory that is not there is refused before anything is built', () => {
+  const result = build('--target', 'tr-plus', '--host-sketch', 'Source/Teensy/NoSuchHost');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Host sketch directory not found:.*NoSuchHost/);
+});
+
+test('a host sketch names its entry point by holding exactly one .ino', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const sketch = path.join(dir, 'sketch');
+  fs.mkdirSync(sketch, { recursive: true });
+  const attempt = () => spawnSync(process.execPath, [script,
+    '--target', 'tr-plus', '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
+    '--skip-minimal-build', '--skip-teensy-build', '--skip-combine', '--host-sketch', sketch],
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+  try {
+    assert.match(attempt().stderr, /must hold exactly one \.ino .*found 0/);
+    fs.writeFileSync(path.join(sketch, 'One.ino'), '');
+    fs.writeFileSync(path.join(sketch, 'Two.ino'), '');
+    assert.match(attempt().stderr, /must hold exactly one \.ino .*found 2/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The example host is documentation that compiles, so the four contract points it is
+// meant to demonstrate are asserted here rather than left to a reader to notice.
+test('the example host carries the four things a host owes', () => {
+  const repo = path.dirname(path.dirname(script));
+  // Comments blanked, because the file explains the VM_BOOT_EXECUTE_MIN trap in prose and
+  // the assertion below is about what the code does, not about what it talks about.
+  const ino = readSource(path.join(repo, 'Source/Teensy/ExampleHost/ExampleHost.ino'));
+  // 1. The descriptor, read out of flash by the main image without booting the host.
+  assert.match(ino, /section\("\.vmhostid"\)/);
+  assert.match(ino, /VmHostId vmHostId = \{ VM_HOSTID_MAGIC, VM_ABI/);
+  // 2. The marker, which is what authorizes a run. Testing the boot indicator instead is
+  // the trap: minimal has already replaced VM_BOOT_EXECUTE_MIN by the time a host sees it,
+  // so that test never passes, every launch falls through to the main app, and from the
+  // C64 that is indistinguishable from a host that failed.
+  assert.match(ino, /strcmp\(marker, VM_HOST_MARKER\)/);
+  assert.doesNotMatch(ino, /VM_BOOT_EXECUTE_MIN/);
+  // 3. The record the main image collects on the way back up, and 4. the boot indicator
+  // corrected before the reset that reads it.
+  assert.match(ino, /VmFail::set\(code, detail\)/);
+  assert.match(ino, /EEPROM\.write\(VM_EEP_BOOTIND_ADDR, VM_BOOT_FROM_MIN\)/);
 });
