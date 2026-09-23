@@ -45,7 +45,9 @@ struct FakeFlash {
   const uint32_t take=cut?n/2:n;
   for(uint32_t i=0;i<take;i++)cells[offset+i]&=data[i];   // NOR: programming only clears
   if(cut)throw PowerCut{};
-  return true;}
+  // VmSlotFlash::program reads back what it wrote, so a value the cells cannot
+  // hold is a refusal on the device rather than a CRC mismatch later.
+  return memcmp(&cells[offset],data,n)==0;}
 
  const uint8_t *map(uint32_t offset)const{return &cells[offset];}
 };
