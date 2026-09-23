@@ -28,9 +28,14 @@ InstalledExtMenu:
 
    ;update static settings
 
-
 ShowInstalledExtSettings:
    ;update dynamic settings
+   ;The firmware answers this in every build: a build without the loader, and a
+   ;board with an empty slot, both say so here rather than leaving the row blank.
+   lda #rCtlMakeExtHostStrWAIT
+   ldx #5 ;row
+   ldy #3 ;col
+   jsr PrintFileName
 
 WaitInstalledExtMenuKey:
    ;main wait loop
@@ -38,15 +43,68 @@ WaitInstalledExtMenuKey:
    jsr GetIn
    beq WaitInstalledExtMenuKey
 
++  cmp #'u'  ;Uninstall the extension host
+   bne +
+   jsr PrintBanner
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   lda #<MsgConfirmUninstall
+   ldy #>MsgConfirmUninstall
+   jsr PrintString
+   ;Name the host being removed, so a confirmation is about a thing rather than
+   ;about a menu key.
+   lda #rCtlMakeExtHostStrWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRWaitMsg   ;moves cursor to upper right
+   ldx #6 ;row
+   ldy #3 ;col
+   clc
+   jsr SetCursor
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
+   lda #rsstSerialStringBuf
+   jsr PrintSerialString
+   lda #<MsgConfirmPrompt
+   ldy #>MsgConfirmPrompt
+   jsr PrintString
+-  jsr GetIn
+   beq -
+   cmp #'y'
+   beq +++
+   jmp InstalledExtMenu ;anything but y backs out, including stop
++++
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   ;Does not return when there was a host to remove: the firmware holds the 6510
+   ;in reset for the sector erase and reboots, so the C64 restarts into the main
+   ;menu and the record is reported there. It does return when the slot was
+   ;already empty, and then the firmware's message is the whole answer.
+   lda #rCtlUninstallExtHostWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   jsr AnyKeyMsgWait
+   jmp InstalledExtMenu ;force to reprint all
+
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitInstalledExtMenuKey
 
 MsgInstalledExtMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Installed Extensions ", ChrReturn, ChrReturn
 
-   !tx EscC,EscTimeColor,  " Not yet implemented.", ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor, " Once TR+ Runtime Firmware Extensions ship,", ChrReturn
-   !tx EscC,EscSourcesColor, " each installed extension's name, version", ChrReturn
-   !tx EscC,EscSourcesColor, " and slot will be listed here, with an", ChrReturn
-   !tx EscC,EscSourcesColor, " option to uninstall.", ChrReturn
+   !tx EscC,EscTimeColor,  " Extension host in the firmware slot:", ChrReturn, ChrReturn
+   !tx ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
+
+   !tx EscC,EscSourcesColor, " Uninstalling clears the tag that makes", ChrReturn
+   !tx EscC,EscSourcesColor, " the slot bootable. The host image stays", ChrReturn
+   !tx EscC,EscSourcesColor, " in flash, unreferenced, until the next", ChrReturn
+   !tx EscC,EscSourcesColor, " install overwrites it.", ChrReturn, ChrReturn
+   !tx EscC,EscTimeColor,  " The TeensyROM reboots to do it.", ChrReturn
+   !tx 0
+
+MsgConfirmUninstall:
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Uninstall extension host ", ChrRvsOff, ChrReturn, ChrReturn
+   !tx 0
+MsgConfirmPrompt:
+   !tx ChrReturn, ChrReturn, EscC,EscOptionColor, " Remove it?  ", ChrRvsOn, "y", ChrRvsOff, " to remove, any other key to keep"
    !tx 0

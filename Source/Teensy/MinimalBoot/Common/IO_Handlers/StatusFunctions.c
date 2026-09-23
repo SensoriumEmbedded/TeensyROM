@@ -1148,6 +1148,49 @@ FLASHMEM void ExtPortCheck()
    BtnPressed = false;  //in case of re-trigger/debounce
 }
 
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+// Defined in FlashUpdate.ino. Written out because the sketch preprocessor puts its
+// generated prototypes after the includes, and this file arrives through one.
+void DoHostUninstall();
+#endif
+
+// Both of these are compiled into every image, including the minimal one and a
+// build without the loader, because StatusFunction[] below is indexed by status
+// code: dropping an entry would shift every later one. Where there is no loader
+// there is nothing installed, which is what they say.
+FLASHMEM void MakeExtHostStr()
+{
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   if (!VmBootImage::installed())
+   {
+      strcpy(SerialStringBuf, "None installed.");
+      return;
+   }
+   VmHostId id{};
+   if (VmBootImage::identity(id))
+   {
+      char Name[sizeof id.name + 1] = {0};
+      memcpy(Name, id.name, sizeof id.name);
+      //ABI and services come from the host itself, so a host from elsewhere
+      //describes itself here rather than being described by this firmware.
+      sprintf(SerialStringBuf, "%s  ABI %lu  services $%04lx\r",
+              Name, (unsigned long)id.abi, (unsigned long)id.services);
+   }
+   else strcpy(SerialStringBuf, "Installed, no descriptor.\r");
+#else
+   strcpy(SerialStringBuf, "No extension loader in this firmware.");
+#endif
+}
+
+FLASHMEM void UninstallExtHost()
+{
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   DoHostUninstall(); //does not return if there was a host to remove
+#else
+   SendMsgPrintfln("No extension loader in this firmware.");
+#endif
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu
@@ -1182,4 +1225,6 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ForceEthInit,        // rsForceEthInit
    &ExtPortCheck,        // rsExtPortCheck
    &ExpPortDMA,          // rsExpPortDMA
+   &MakeExtHostStr,      // rsMakeExtHostStr
+   &UninstallExtHost,    // rsUninstallExtHost
 };

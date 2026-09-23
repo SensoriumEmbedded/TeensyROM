@@ -282,8 +282,13 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsForceEthInit       = 0x1d,
    rsExtPortCheck       = 0x1e,
    rsExpPortDMA         = 0x1f,
+   //Extension host management, driven from the Installed Extensions page. Both
+   //are present in every build so the dispatch table keeps its indices; without
+   //the loader compiled in they say so and change nothing.
+   rsMakeExtHostStr     = 0x20,
+   rsUninstallExtHost   = 0x21,
    
-   rsNumStatusTypes     = 0x20,
+   rsNumStatusTypes     = 0x22,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -364,6 +369,8 @@ enum RegCtlCommands
    rCtlForceEthInitWAIT     = 53,
    rCtlExtPortCheckWAIT     = 54,
    rCtlExpPortDMAWAIT       = 55,
+   rCtlMakeExtHostStrWAIT   = 56, // installed host name and size, into SerialStringBuf
+   rCtlUninstallExtHostWAIT = 57, // clear the host tag; reboots if there was one to clear
    
 };                               
                                  

@@ -888,6 +888,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlForceEthInitWAIT:
                   IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
                   break;
+               case rCtlMakeExtHostStrWAIT:
+                  IO1[rwRegStatus] = rsMakeExtHostStr; //work this in the main code
+                  break;
+               case rCtlUninstallExtHostWAIT:
+                  IO1[rwRegStatus] = rsUninstallExtHost; //work this in the main code
+                  break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
