@@ -206,6 +206,10 @@ export const HOST_PACKAGE_FORMAT = 1;
 export const HOST_PACKAGE_HEADER_BYTES = 64;
 export const HOST_SLOT_BYTES = VM_LIMIT - VM_BASE;
 export const HOST_ID_OFFSET = 0x800;
+// The device reads the boot words out of the second 4 KiB sector, so a payload
+// that stops inside it is judged on whatever the first sector left in the
+// staging buffer. VM_HOST_MIN_PAYLOAD_BYTES in VMHostInstall.h is the same bound.
+export const HOST_MIN_PAYLOAD_BYTES = 0x2000;
 export const HOSTID_MAGIC = 0x3248564d;  // 'MVH2'
 
 // The five words vm_host_slot_valid() in VMHostABI.h gates on.
@@ -236,7 +240,7 @@ export function hostSlotValid({ flashMagic, vectorMagic, entry, bootBase, imageB
 // drops when the linker emits it as SHT_NOBITS, so a short image is padded
 // with the 0xFF an erased page already holds rather than refused.
 export function buildHostPackage({ image }) {
-  if (image.length < 0x2000) throw new Error(`Host image is ${image.length} bytes, too short to hold its own vector table`);
+  if (image.length < HOST_MIN_PAYLOAD_BYTES) throw new Error(`Host image is ${image.length} bytes, too short to hold its own vector table`);
   if (image.length > HOST_SLOT_BYTES) throw new Error(`Host image is ${image.length} bytes, slot is ${HOST_SLOT_BYTES}`);
 
   const boot = hostBootWords(image);
@@ -282,8 +286,8 @@ export function parseHostPackage(pkg) {
   zeroed.writeUInt32LE(0, 44);
   if (crc32(zeroed) !== header.headerCrc) throw new Error('Package header CRC mismatch');
   for (let i = 12; i < 16; i++) if (field(i)) throw new Error('Reserved header words must be zero');
-  if (header.payloadBytes <= 0x1000 || header.payloadBytes > HOST_SLOT_BYTES) {
-    throw new Error(`Package payload is ${header.payloadBytes} bytes, slot is ${HOST_SLOT_BYTES}`);
+  if (header.payloadBytes < HOST_MIN_PAYLOAD_BYTES || header.payloadBytes > HOST_SLOT_BYTES) {
+    throw new Error(`Package payload is ${header.payloadBytes} bytes, wanted ${HOST_MIN_PAYLOAD_BYTES}..${HOST_SLOT_BYTES}`);
   }
   if (pkg.length !== HOST_PACKAGE_HEADER_BYTES + header.payloadBytes) {
     throw new Error(`Package is ${pkg.length} bytes, header describes ${HOST_PACKAGE_HEADER_BYTES + header.payloadBytes}`);

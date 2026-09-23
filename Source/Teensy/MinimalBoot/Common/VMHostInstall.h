@@ -17,6 +17,12 @@ enum : uint32_t { VM_TRH_MAGIC = 0x31485254u,   // 'TRH1'
                   VM_HOST_SECTOR_BYTES = 0x1000u,
                   VM_HOST_SECTORS = VM_HOST_SLOT_BYTES / VM_HOST_SECTOR_BYTES,
                   VM_HOST_PAGE_BYTES = 256u,
+                  // vm_host_scan reads the boot words out of sector 1 of a
+                  // staging buffer it fills a sector at a time, so a payload
+                  // stopping inside that sector would be judged on what sector
+                  // 0 left behind. tools/lib/extension.mjs writes to the same
+                  // bound.
+                  VM_HOST_MIN_PAYLOAD_BYTES = 2u * VM_HOST_SECTOR_BYTES,
                   VM_FLASH_TAG = 0x42464346u };
 
 enum class VmInstallStatus : uint8_t {
@@ -59,7 +65,7 @@ static inline VmInstallResult vm_trh_valid(const VmTrhHeader &h, uint32_t fileBy
     if (h.reserved[0] || h.reserved[1] || h.reserved[2] || h.reserved[3]) {
         return { VmInstallStatus::BadHeader, h.reserved[0] };
     }
-    if (h.payloadBytes <= 0x1000u || h.payloadBytes > VM_HOST_SLOT_BYTES) {
+    if (h.payloadBytes < VM_HOST_MIN_PAYLOAD_BYTES || h.payloadBytes > VM_HOST_SLOT_BYTES) {
         return { VmInstallStatus::BadLength, h.payloadBytes };
     }
     if (fileBytes != VM_TRH_HEADER_BYTES + h.payloadBytes) return { VmInstallStatus::BadLength, fileBytes };

@@ -57,10 +57,6 @@ const sourceOf = (file) => readSource(path.join(root, file));
 const MENU_TABLE = 'Source/Teensy/MinimalBoot/Common/DriveDirLoad.h';
 const HOST_README = 'vm/abi/README.md';
 
-// The flash slot the extension image is linked into is written down twice: here,
-// where the hex is partitioned, and in VMHostABI.h, which is what a host vendor
-// compiles against and what the minimal image uses to decide whether that slot
-// holds an image it may jump to. Neither side can see the other, so compare them.
 // vm_host_serves() is the last refusal on a launch that reached the host
 // without a preflight -- a host installed before descriptors existed cannot be
 // asked in advance. No native test compiles VMHost.h, so read the call.
@@ -72,6 +68,11 @@ function checkHostAdmission() {
   console.log('PASS: the extension image refuses a module it cannot serve, via vm_host_serves');
 }
 
+// The flash slot the extension image is linked into is written down twice: in
+// tools/lib/hex.mjs, where the hex is partitioned, and in VMHostABI.h, which is
+// what a host vendor compiles against and what the minimal image uses to decide
+// whether that slot holds an image it may jump to. Neither side can see the
+// other, so compare them.
 function checkBootSlot() {
   const header = sourceOf(HOST_ABI);
   for (const [name, expected] of [['VM_HOST_SLOT_BASE', VM_BASE], ['VM_HOST_SLOT_LIMIT', VM_LIMIT]]) {

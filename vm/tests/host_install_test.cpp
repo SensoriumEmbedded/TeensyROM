@@ -59,6 +59,14 @@ int main(int argc, char **argv) {
     {VmTrhHeader h = good; h.reserved[2] = 1; reject(h, VmInstallStatus::BadHeader);}
     {VmTrhHeader h = good; h.payloadBytes = 0x1000u; reject(h, VmInstallStatus::BadLength);}
     {VmTrhHeader h = good; h.payloadBytes = VM_HOST_SLOT_BYTES + 1; reject(h, VmInstallStatus::BadLength);}
+    // A payload stopping inside sector 1 would have its boot words read out of
+    // what sector 0 left in the staging buffer, so the floor is both sectors.
+    {VmTrhHeader h = good; h.payloadBytes = VM_HOST_SECTOR_BYTES + 4; reject(h, VmInstallStatus::BadLength);}
+    {VmTrhHeader h = good; h.payloadBytes = VM_HOST_MIN_PAYLOAD_BYTES - 1; reject(h, VmInstallStatus::BadLength);}
+    {VmTrhHeader h = good; h.payloadBytes = VM_HOST_MIN_PAYLOAD_BYTES;
+     h.headerCrc = 0;
+     h.headerCrc = vm_crc32_end(vm_crc32(vm_crc32_begin(), (const uint8_t *)&h, sizeof h));
+     assert(vm_trh_valid(h, VM_TRH_HEADER_BYTES + h.payloadBytes));}
 
     uint8_t staging[VM_HOST_SECTOR_BYTES];
     auto scan = [&](VmHostCandidate &c, uint32_t failAfter = ~0u) {
