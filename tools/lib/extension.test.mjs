@@ -194,7 +194,19 @@ test('an image longer than the slot, or shorter than it claims, is refused', () 
   assert.throws(() => buildHostPackage({ image: hostImage({ bytes: 0x8000, declared: 0x4000 }) }), /declares 16384 bytes/);
   // The declared length sizes the 0xFF pad, so it has to be bounded before it
   // is padded to -- not after, where a garbage word is an allocation first.
-  assert.throws(() => buildHostPackage({ image: hostImage({ declared: 0xfffffff0 }) }), /fails the checks/);
+  // The refusal alone does not show that: padding first reaches the same
+  // refusal, just 4 GB later, and Buffer.alloc does not refuse a length that
+  // size. So the allocation is what is watched, and refused if it is oversized.
+  const realAlloc = Buffer.alloc;
+  Buffer.alloc = (size, ...rest) => {
+    if (size > HOST_SLOT_BYTES) throw new Error(`padded to ${size} bytes before the length was bounded`);
+    return realAlloc(size, ...rest);
+  };
+  try {
+    assert.throws(() => buildHostPackage({ image: hostImage({ declared: 0xfffffff0 }) }), /fails the checks/);
+  } finally {
+    Buffer.alloc = realAlloc;
+  }
 });
 
 test('a host carrying another ABI is refused rather than installed and rejected on target', () => {

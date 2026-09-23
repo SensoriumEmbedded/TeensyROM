@@ -173,17 +173,39 @@ int main(int argc, char **argv) {
         assert(!got && got.status == VmInstallStatus::EraseFailed && got.detail == 40);
         assert(!vm_host_installed(flash));
     }
-    {   // and a verify failure un-commits rather than leaving a bad host standing
+    {   // a body that does not verify stops before the tag is ever written, so
+        // there is nothing yet to un-commit
         FakeFlash flash = fresh(); FakeReader r{&pkg};
         VmHostCandidate wrong = candidate; wrong.bodyCrc ^= 1;
         const VmInstallResult got = vm_host_install(flash, r, good, wrong, staging);
         assert(!got && got.status == VmInstallStatus::VerifyFailed);
         assert(!vm_host_installed(flash));
     }
+    {   // a payload whose sectors each verify but whose whole does not is caught
+        // only after the tag has gone down, which is the one case that really
+        // un-commits. Deleting the un-commit leaves every other case green.
+        FakeFlash flash = fresh(); FakeReader r{&pkg};
+        VmTrhHeader h = good; h.payloadCrc ^= 1;
+        const VmInstallResult got = vm_host_install(flash, r, h, candidate, staging);
+        assert(!got && got.status == VmInstallStatus::VerifyFailed);
+        assert(!vm_host_installed(flash) && !slot_is(flash, installed_image));
+    }
+    {   // and when that un-commit cannot write, the tag is still standing over an
+        // image that did not verify: reporting VerifyFailed would describe a slot
+        // the device does not have, so the write failure is what comes back.
+        FakeFlash flash = fresh(); FakeReader r{&pkg};
+        VmTrhHeader h = good; h.payloadCrc ^= 1;
+        flash.programFailAt = 0; flash.failFromOp = total;   // only the un-commit's write
+        const VmInstallResult got = vm_host_install(flash, r, h, candidate, staging);
+        assert(!got && got.status == VmInstallStatus::ProgramFailed);
+        assert(vm_host_installed(flash));
+    }
 
     printf("PASS: TRH1 package header, %u single-bit corruptions, malformed-header cases and the "
            "payload floor from either side, "
            "scan refusing a non-bootable payload / short read / bad CRC / ABI mirror, a clean install, "
+           "an un-commit after a whole-payload verify failure and the write failure reported when that "
+           "un-commit cannot land, "
            "and a power cut at each of %ld operations, under a torn erase reaching either half of its "
            "sector, leaving the slot absent, the old host, or the new one\n",
            VM_TRH_HEADER_BYTES, total);

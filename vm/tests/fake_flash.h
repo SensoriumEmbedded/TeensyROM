@@ -21,6 +21,10 @@ struct FakeFlash {
  long budget=-1;            // <0 never cuts
  long ops=0;
  uint32_t eraseFailAt=~0u,programFailAt=~0u;
+ // eraseFailAt/programFailAt bite only from this operation onward, so a
+ // failure can be aimed at the un-commit after a failed verify rather than at
+ // the identical write vm_host_install opens with.
+ long failFromOp=0;
  // Which half of the sector a torn erase reaches. Real NOR fixes no order in
  // which a sector's cells reach the erased state, so the sweep runs both.
  bool eraseFromTail=false;
@@ -29,7 +33,7 @@ struct FakeFlash {
 
  bool erase(uint32_t sector){
   if(sector>=VM_HOST_SECTORS)throw std::logic_error("erase outside the slot");
-  if(sector==eraseFailAt)return false;
+  if(sector==eraseFailAt&&ops>=failFromOp)return false;
   const bool cut=spend();
   const uint32_t n=cut?VM_HOST_SECTOR_BYTES/2:VM_HOST_SECTOR_BYTES;
   const uint32_t at=sector*VM_HOST_SECTOR_BYTES+(eraseFromTail?VM_HOST_SECTOR_BYTES-n:0);
@@ -40,7 +44,7 @@ struct FakeFlash {
  bool program(uint32_t offset,const uint8_t *data,uint32_t n){
   if(offset+n>VM_HOST_SLOT_BYTES)throw std::logic_error("program outside the slot");
   if(offset/VM_HOST_PAGE_BYTES!=(offset+n-1)/VM_HOST_PAGE_BYTES)throw std::logic_error("program crosses a page boundary");
-  if(offset==programFailAt)return false;
+  if(offset==programFailAt&&ops>=failFromOp)return false;
   const bool cut=spend();
   const uint32_t take=cut?n/2:n;
   for(uint32_t i=0;i<take;i++)cells[offset+i]&=data[i];   // NOR: programming only clears
