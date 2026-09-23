@@ -173,7 +173,8 @@ int main(int argc, char **argv) {
         assert(!vm_host_installed(flash));
     }
 
-    printf("PASS: TRH1 package header, %u single-bit corruptions, eight malformed-header cases, "
+    printf("PASS: TRH1 package header, %u single-bit corruptions, malformed-header cases and the "
+           "payload floor from either side, "
            "scan refusing a non-bootable payload / short read / bad CRC / ABI mirror, a clean install, "
            "and a power cut at each of %ld operations, under a torn erase reaching either half of its "
            "sector, leaving the slot absent, the old host, or the new one\n",
