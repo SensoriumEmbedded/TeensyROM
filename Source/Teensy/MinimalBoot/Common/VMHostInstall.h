@@ -89,6 +89,10 @@ struct VmHostCandidate {
 template<class Reader>
 static VmInstallResult vm_host_scan(Reader &reader, const VmTrhHeader &h,
                                     uint8_t *staging, VmHostCandidate &out) {
+    if (h.payloadBytes < VM_HOST_MIN_PAYLOAD_BYTES || h.payloadBytes > VM_HOST_SLOT_BYTES) {
+        return { VmInstallStatus::BadLength, h.payloadBytes };
+    }
+
     uint32_t payload = vm_crc32_begin(), body = vm_crc32_begin();
     memset(&out, 0, sizeof out);
 

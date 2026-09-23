@@ -98,6 +98,14 @@ int main(int argc, char **argv) {
         const VmInstallResult got = scan(c, VM_TRH_HEADER_BYTES + 0x2000);
         assert(!got && got.status == VmInstallStatus::ReadError);
     }
+    {   // the scan does not lean on its caller having run vm_trh_valid first:
+        // short of two sectors it would read sector 1's boot words out of the
+        // staging bytes sector 0 left behind
+        VmTrhHeader h = good; h.payloadBytes = VM_HOST_SECTOR_BYTES + 4;
+        VmHostCandidate c; FakeReader r{&pkg}; r.pos = VM_TRH_HEADER_BYTES;
+        const VmInstallResult got = vm_host_scan(r, h, staging, c);
+        assert(!got && got.status == VmInstallStatus::BadLength);
+    }
     {   // a corrupted payload fails its CRC before the mirrors are consulted
         std::vector<uint8_t> bad = pkg; bad.back() ^= 1;
         VmHostCandidate c; FakeReader r{&bad}; r.pos = VM_TRH_HEADER_BYTES;
