@@ -923,8 +923,14 @@ void PollingHndlr_TeensyROM()
          IO1[rwRegStatus] = Queued;
       }
 #endif
-      if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
-      else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
+      //The null check is not redundant with the bounds check. StatusFunction[] is
+      //declared rsNumStatusTypes long and filled by an initializer list, so adding a
+      //status code without adding its entry leaves a zero there and compiles clean --
+      //and the C64 then reaches a null call, which is a hard fault with no message.
+      //Landing in the same "?Stat" line as an out-of-range code costs one compare.
+      const uint8_t Status = IO1[rwRegStatus];
+      if (Status<rsNumStatusTypes && StatusFunction[Status]) StatusFunction[Status]();
+      else Serial.printf("?Stat: %02x\n", Status);
       Serial.flush();
       IO1[rwRegStatus] = rsReady;
    }
