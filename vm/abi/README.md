@@ -562,6 +562,8 @@ C64 screen:
 | Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
 | Removing an installed host over USB, and the `$40` record it reports | yes |
 | A remove with nothing installed declining without touching flash | yes |
+| Removing a host from the C64 menu: Settings, Installed Extensions, `u`, `y` | yes |
+| The same page naming the installed host out of the slot's own descriptor | yes — `TeensyROM  ABI 2  SERVICES $409F` |
 | `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover both the taken and the absent case, but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
 
 Treat the rows marked **no** as untested rather than as working.
@@ -575,4 +577,8 @@ reaches that service and the button is the only way back. The alternate button
 is not serviced while an extension runs.
 
 Installing and removing a host are main-image work and need no hand on the
-board at all; `tools/bench/hostcycle.py` drives a whole round trip over USB.
+board at all. `tools/bench/hostcycle.py` drives a whole round trip over USB;
+the menu path is driven the same way, by putting keys in the C64's own
+keyboard buffer over DMA, which is what the settings menu reads. Neither is a
+test-only path — the firmware sees exactly what a person at the keyboard
+produces.
