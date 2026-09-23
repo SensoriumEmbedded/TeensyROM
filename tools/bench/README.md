@@ -2,7 +2,8 @@
 
 Drive a real TeensyROM from a host computer: reflash it, launch things, read and
 poke the C64's memory. They were written to verify firmware without anyone at the
-machine. Python 3, standard library only, macOS or Linux (they use `termios`).
+machine. Python 3, macOS or Linux (standard library only, `termios`), or Windows
+(needs pyserial, `pip install pyserial` -- termios does not exist there).
 
 You need a TR or TR+ in a C64/C128, powered on at the menu with an SD card in it,
 and a USB cable from the cartridge to the host. These scripts are the hands-free
@@ -25,11 +26,13 @@ otherwise -- which is the extension image or a hung board. On macOS the port
 name is a second opinion: the main image renames its USB device, so it
 enumerates as `usbmodem2101` where the other two use the Teensy's serial number.
 
-The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*` on macOS or
-`/dev/ttyACM*` on Linux. Do not hardcode it. After a reboot `$TR_PORT` is a
+The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*` on macOS, the first
+`/dev/ttyACM*` on Linux, or on Windows the first enumerated port reporting
+PJRC's USB vendor ID. Do not hardcode it. After a reboot `$TR_PORT` is a
 preference rather than a pin: the USB serial number changes across some firmware
 changes, so a board that does not come back under its old name is picked up from
-whatever node appeared beside it.
+whatever node appeared beside it (on Windows, from whatever else answers that
+vendor ID).
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).

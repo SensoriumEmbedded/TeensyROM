@@ -13,20 +13,28 @@ disabled and answers nothing at all. `Link.fwcheck()` is how you tell the three
 apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
 board (Fab04_FullDMACapable).
 
-The port is $TR_PORT, else the first /dev/cu.usbmodem* on macOS or /dev/ttyACM*
-on Linux. Do not hardcode it: on macOS the main image renames its USB device
-(MidiDevName_AppendUniqueID), so its node differs from the one minimal and the
-extension image enumerate as.
+The port is $TR_PORT, else the first matching device found: cu.usbmodem* on
+macOS, ttyACM* on Linux, or -- Windows, which has neither -- any enumerated
+port reporting PJRC's USB vendor ID (0x16C0). Do not hardcode it: on macOS the
+main image renames its USB device (MidiDevName_AppendUniqueID), so its node
+differs from the one minimal and the extension image enumerate as.
 
-macOS and Linux only (termios); no third-party packages.
+macOS and Linux: termios, no third-party packages. Windows: pyserial
+(`pip install pyserial`) -- termios does not exist there, and a Windows COM
+port needs different handling (see Link's Windows branch and alive() below).
 """
 import glob
 import json
 import os
-import select
 import sys
-import termios
 import time
+
+if sys.platform == 'win32':
+    import serial
+    import serial.tools.list_ports
+else:
+    import select
+    import termios
 
 from c64 import KEYBUF, KEYCOUNT, SCREEN_BYTES, SCREEN_RAM
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
@@ -35,9 +43,10 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
                       VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
                       to_board)
 
-BAUD = termios.B115200
+BAUD = 115200 if sys.platform == 'win32' else termios.B115200
 LISTING_PAGE_SIZE = 1000
 PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
+TEENSY_VID = 0x16C0  # PJRC's registered USB vendor ID, every Teensy image
 REPLY_BYTES = 2
 READ_TICK = 0.2
 ASK_AGAIN_AFTER = 2.0
@@ -46,7 +55,13 @@ WRITE_STALL_LIMIT = 30.0
 
 def ports(beside=None):
     """Every node that looks like a TeensyROM, in /dev or in the directory that
-    `beside` names. A Teensy is cu.usbmodem* on macOS and ttyACM* on Linux."""
+    `beside` names. A Teensy is cu.usbmodem* on macOS and ttyACM* on Linux. On
+    Windows, where neither /dev nor those names exist, every enumerated port
+    reporting PJRC's vendor ID is a candidate instead; `beside` has no meaning
+    there, since COM ports carry no directory to sample."""
+    if sys.platform == 'win32':
+        return sorted(p.device for p in serial.tools.list_ports.comports()
+                      if p.vid == TEENSY_VID)
     folder = os.path.dirname(beside) if beside else PORT_DIR
     return sorted(node for pattern in PORT_GLOBS
                   for node in glob.glob(os.path.join(folder, pattern)))
@@ -69,7 +84,7 @@ def find_port():
 
 
 def configure(fd):
-    """Put a serial fd in raw 115200 8N1 with non-blocking reads."""
+    """POSIX only. Put a serial fd in raw 115200 8N1 with non-blocking reads."""
     a = termios.tcgetattr(fd)
     a[0] = a[1] = a[3] = 0
     a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
@@ -107,19 +122,41 @@ class Link:
     def __init__(self, port=None, settle=0.4):
         """Raises OSError when `port` is not a serial port this can talk to."""
         self.port = port or find_port()
-        self.fd = os.open(self.port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        try:
-            configure(self.fd)
-        except termios.error as problem:
-            self.close()
-            raise OSError(f'{self.port} is not a serial port: {problem}') from problem
+        if sys.platform == 'win32':
+            self.ser = None
+            try:
+                # A small positive timeout on both directions, not 0: pyserial
+                # still raises on a genuine disconnect regardless of the
+                # timeout value, so this loses nothing there, but strictly
+                # non-blocking (timeout=0) reads interleaved with writes on
+                # the same handle are flaky on Windows -- a write that just
+                # succeeded can have the very next one fail outright
+                # (WriteFile/ERROR_BAD_COMMAND) once a non-blocking read has
+                # happened in between.
+                self.ser = serial.Serial(self.port, baudrate=BAUD, timeout=0.05, write_timeout=2)
+            except serial.SerialException as problem:
+                raise OSError(f'{self.port} is not a serial port: {problem}') from problem
+        else:
+            self.fd = os.open(self.port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+            try:
+                configure(self.fd)
+            except termios.error as problem:
+                self.close()
+                raise OSError(f'{self.port} is not a serial port: {problem}') from problem
         time.sleep(settle)
 
     def close(self):
-        try:
-            os.close(self.fd)
-        except OSError:
-            pass
+        if sys.platform == 'win32':
+            if self.ser is not None:
+                try:
+                    self.ser.close()
+                except OSError:
+                    pass
+        else:
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
 
     def __enter__(self):
         return self
@@ -128,9 +165,17 @@ class Link:
         self.close()
 
     def rd(self, n, timeout=10):
+        """Raises OSError (serial.SerialException on Windows) if the port dies
+        outright mid-read, rather than block or a benign 0-byte timeout --
+        callers that watch for a reboot's second, later drop (e.g. fwupdate.py's
+        answering_board()) catch it and reconnect() again."""
         buf, end = b'', time.time() + timeout
         while len(buf) < n and time.time() < end:
-            if select.select([self.fd], [], [], 0.2)[0]:
+            if sys.platform == 'win32':
+                chunk = self.ser.read(n - len(buf))
+                if chunk:
+                    buf += chunk
+            elif select.select([self.fd], [], [], 0.2)[0]:
                 try:
                     buf += os.read(self.fd, n - len(buf))
                 except BlockingIOError:
@@ -138,22 +183,44 @@ class Link:
         return buf
 
     def wr(self, data, stall=WRITE_STALL_LIMIT):
-        """Raises SystemExit when the board has taken nothing for `stall` seconds."""
+        """Raises SystemExit when the board has taken nothing for `stall`
+        seconds. On Windows, a harder failure (SerialException that is not
+        just a write timing out) is not swallowed into that retry: it
+        propagates as the OSError it is, the same signal rd() gives, for a
+        caller to catch and reconnect() again rather than hammer a handle
+        that is not coming back (e.g. a port mid-way through a second, later
+        re-enumeration)."""
         view, off, deadline = memoryview(data), 0, time.time() + stall
         while off < len(view):
-            try:
-                off += os.write(self.fd, view[off:off + 2048])
-                deadline = time.time() + stall
-            except BlockingIOError:
-                if time.time() >= deadline:
+            if sys.platform == 'win32':
+                try:
+                    n = self.ser.write(view[off:off + 2048])
+                except serial.SerialTimeoutException:
+                    n = 0
+                if n:
+                    off += n
+                    deadline = time.time() + stall
+                elif time.time() >= deadline:
                     raise SystemExit(f'{self.port}: board stopped reading after '
                                      f'{off} of {len(view)} bytes')
-                time.sleep(0.002)
+                else:
+                    time.sleep(0.05)
+            else:
+                try:
+                    off += os.write(self.fd, view[off:off + 2048])
+                    deadline = time.time() + stall
+                except BlockingIOError:
+                    if time.time() >= deadline:
+                        raise SystemExit(f'{self.port}: board stopped reading after '
+                                         f'{off} of {len(view)} bytes')
+                    time.sleep(0.002)
 
     def drain(self, secs=0.4):
         end = time.time() + secs
         while time.time() < end:
-            if select.select([self.fd], [], [], 0.1)[0]:
+            if sys.platform == 'win32':
+                self.ser.read(4096)
+            elif select.select([self.fd], [], [], 0.1)[0]:
                 try:
                     os.read(self.fd, 4096)
                 except BlockingIOError:
@@ -164,6 +231,14 @@ class Link:
         which is what a reboot, or the jump into the extension image, looks like."""
         end = time.time() + secs
         while time.time() < end:
+            if sys.platform == 'win32':
+                try:
+                    chunk = self.ser.read(4096)
+                except OSError:
+                    return True
+                if chunk:
+                    echo(chunk, out)
+                continue
             try:
                 if select.select([self.fd], [], [], 0.4)[0]:
                     chunk = os.read(self.fd, 4096)
@@ -182,6 +257,14 @@ class Link:
         the port drops, which is what a reset looks like from here."""
         out, deadline = b'', time.time() + timeout
         while time.time() < deadline:
+            if sys.platform == 'win32':
+                try:
+                    chunk = self.ser.read(4096)
+                except OSError:
+                    break
+                if chunk:
+                    out, deadline = out + chunk, time.time() + idle
+                continue
             if select.select([self.fd], [], [], 0.05)[0]:
                 try:
                     chunk = os.read(self.fd, 4096)
@@ -342,6 +425,25 @@ class Link:
         self.wr(bytes([drive]) + path.encode() + b'\0')
         self.ack('launch name', 5)
 
+    def alive(self, timeout=1.5):
+        """A quick, bounded check that this Link can actually talk to
+        something. reconnect() calls this on every candidate rather than
+        trusting a clean open alone: the original single-attempt reconnect()
+        can grab a board mid-way through a second, later re-enumeration (a
+        crash landing in minimal, which immediately hands off to main) just as
+        easily on macOS/Linux as on Windows -- fwupdate.py's own
+        answering_board() already has to retry for exactly this reason. On
+        Windows specifically, a COM port that has only just re-enumerated can
+        also open cleanly and then fail every write for the rest of that
+        handle's life; retrying the write does not clear that, only opening a
+        fresh handle does, which is the other reason this exists."""
+        try:
+            self.wr(to_board(FW_CHECK), stall=timeout)
+            self.rd(1, 0.2)  # harmless whether or not anything answers
+        except (SystemExit, OSError):
+            return False
+        return True
+
 
 def candidates(wanted, known):
     """The ports to try after a reboot, best first: the one asked for while it
@@ -349,7 +451,10 @@ def candidates(wanted, known):
     for, whatever is there."""
     if not wanted:
         return ports()
-    if os.path.exists(wanted):
+    # os.path.exists(wanted) served this on macOS/Linux, where a port is a
+    # /dev path; a bare "COM18" is not a filesystem path at all on Windows,
+    # so ask the same place ports() does instead, uniformly.
+    if wanted in ports():
         return [wanted]
     return [p for p in ports(wanted) if p not in known]
 
@@ -361,15 +466,21 @@ def reconnect(timeout=60, interval=0.05, port=None, known=None):
     asked for -- `port`, else $TR_PORT -- is a preference here and not a pin:
     when it does not come back, a node that has appeared beside it is taken
     instead. `known` is neighbours() from before the reboot; the default samples
-    it here, which is only right while the board is still away."""
+    it here, which is only right while the board is still away.
+
+    A candidate that opens but fails alive()'s smoke test is closed and
+    skipped rather than returned -- see alive()'s own docstring for why."""
     wanted = port or os.environ.get('TR_PORT')
     known = neighbours(wanted) if known is None else known
     end = time.time() + timeout
     while time.time() < end:
         for candidate in candidates(wanted, known):
             try:
-                return Link(candidate)
+                link = Link(candidate)
             except OSError:
-                pass
+                continue
+            if link.alive():
+                return link
+            link.close()
         time.sleep(interval)
     return None

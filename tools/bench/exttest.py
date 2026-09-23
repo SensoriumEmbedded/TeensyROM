@@ -21,7 +21,7 @@ is the only time it reads the message the loader left. Then it prints the screen
 import sys
 import time
 from c64 import F5, screen_rows
-from trlink import Link, reconnect
+from trlink import Link, neighbours, reconnect
 
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 if len(args) != 1:
@@ -48,11 +48,26 @@ if not dropped:
     sys.exit(0)
 
 print('\n[port dropped]')
-tr = reconnect(timeout=60)
-if tr is None:
-    raise SystemExit('board never came back')
-print('[reattached] -- main image boot output:')
-tr.stream(15)
+# A crash lands in minimal before minimal's own boot check hands off to main --
+# a second, later re-enumeration under its own new name. The same pattern as
+# fwupdate.py's answering_board(): if stream() reports the port dying again
+# mid-boot, that was minimal, not the image we actually want; go back for a
+# fresh reconnect() rather than act on a handle that already stopped talking.
+port, known = None, None
+deadline = time.time() + 75
+tr = None
+while time.time() < deadline:
+    tr = reconnect(timeout=deadline - time.time(), port=port, known=known)
+    if tr is None:
+        raise SystemExit('board never came back')
+    print(f'[reattached] port={tr.port} -- boot output:')
+    if not tr.stream(15):
+        break
+    print('  died again mid-boot -- that was minimal handing off; reconnecting')
+    port, known = tr.port, neighbours(tr.port)
+    tr.close()
+else:
+    raise SystemExit('board kept re-enumerating without ever settling')
 
 print('\n--- screen after the reboot ---')
 show(tr)
