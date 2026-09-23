@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { withoutComments } from './source-text.mjs';
+import { blankComments, withoutComments } from './source-text.mjs';
 
 const DECLARATION = /VM_HOST_SLOT_BASE = (0x[0-9a-fA-F]+)u?/;
 const INCLUDE = /^[ \t]*#[ \t]*include[ \t]*([<"][^>"\n]*[>"])/gm;
@@ -35,4 +35,14 @@ test('code outside comments is left alone', () => {
   const source = 'enum : uint32_t { VM_HOST_SLOT_BASE = 0x60280000u };\n#include <stdint.h>\n';
 
   assert.equal(withoutComments(source), source);
+});
+
+test('blanking a comment keeps every line and column after it', () => {
+  const source = '/* two\n   lines */ VM_HOST_SLOT_BASE = 0x60990000u; // trailing\nnext\n';
+  const blanked = blankComments(source);
+
+  assert.equal(blanked.split('\n').length, source.split('\n').length);
+  assert.equal(blanked.indexOf('VM_HOST_SLOT_BASE'), source.indexOf('VM_HOST_SLOT_BASE'));
+  assert.equal(blanked.match(DECLARATION)[1], '0x60990000');
+  assert.doesNotMatch(blanked, /trailing|lines/);
 });

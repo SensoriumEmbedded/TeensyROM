@@ -13,4 +13,11 @@ export function withoutComments(source) {
     .replace(/\/\/[^\n]*/g, '');
 }
 
+// Comments blanked rather than removed, so every offset and line number in the
+// result still matches the file on disk -- for a gate that reports where it
+// found something.
+export function blankComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (text) => text.replace(/[^\n]/g, ' '));
+}
+
 export const readSource = (file) => withoutComments(fs.readFileSync(file, 'utf8'));
