@@ -127,6 +127,25 @@ jobs:
             echo "no extension slot content, as expected for --target tr"
           fi
 
+      # Source/Teensy/ExampleHost is the third-party host story, and nothing else in the
+      # build compiles it: docs/Architecture/Extension-Hosts.md promises a reader that it
+      # builds, and the globals it has to define come from sibling sources that are free
+      # to change. Build it here so that promise fails in CI rather than in someone's
+      # first attempt at a host. Extension image only -- the other two are the same ones
+      # the step above already built.
+      - name: Build the example third-party host
+        if: matrix.target == 'tr-plus'
+        run: |
+          npm run build:example-host -- --yes --force --keep-work \
+            --skip-minimal-build --skip-teensy-build --skip-combine
+          hex=$(ls -t build/firmware/run-*/extension/ExampleHost.ino.hex | head -1)
+          node tools/build-host-package.mjs --hex "$hex" --out build/firmware/EXAMPLE.TRH \
+            | tee /tmp/example-host.txt
+          # The descriptor is what the menu names the host by, and it is the one thing
+          # packaging cannot check for itself. A host that built but published someone
+          # else's identity would otherwise pass this step.
+          grep -q 'Host "Example"' /tmp/example-host.txt
+
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.target }}
