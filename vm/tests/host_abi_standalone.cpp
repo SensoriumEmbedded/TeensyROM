@@ -17,6 +17,33 @@ struct CountingReader {
     int read(void *, uint32_t bytes) { reads++; return (int)bytes; }
 };
 
+// hostSlotValid() in tools/lib/extension.mjs decides the same question at
+// package time that this decides on the device, and neither can see the other.
+// Printing a verdict per vector lets checkHostSlotPredicate() in
+// tools/verify-extensions.mjs hold the two to the same answers.
+static const uint32_t slotVectors[][5] = {
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464347u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464346u, 0x432000d0u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1000u, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x0fffu, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x2001u, VM_HOST_SLOT_BASE, 0x2000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x3001u, VM_HOST_SLOT_BASE, 0x4000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x3003u, VM_HOST_SLOT_BASE, 0x4000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, 0u, 0x2000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, 0x1000u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, 0x1001u },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, VM_HOST_SLOT_BYTES },
+    { 0x42464346u, 0x432000d1u, VM_HOST_SLOT_BASE + 0x1001u, VM_HOST_SLOT_BASE, VM_HOST_SLOT_BYTES + 1u },
+};
+
+static void printSlotVerdicts() {
+    for (const auto &v : slotVectors) {
+        printf("SLOTVALID %08x %08x %08x %08x %08x %d\n", v[0], v[1], v[2], v[3], v[4],
+               vm_host_slot_valid(v[0], v[1], v[2], v[3], v[4]) ? 1 : 0);
+    }
+}
+
 int main() {
     // The slot, and the descriptor the main image reads out of it.
     assert(VM_HOST_SLOT_BYTES == VM_HOST_SLOT_LIMIT - VM_HOST_SLOT_BASE);
@@ -80,6 +107,7 @@ int main() {
     assert(failure == 0x13 && reads == 1);
     assert(!vm_module_table_valid(reinterpret_cast<const VmModule *>(VM_DATA_BASE), 4));
 
+    printSlotVerdicts();
     puts("PASS: the published host contract compiles and runs with no TeensyROM include path");
     return 0;
 }

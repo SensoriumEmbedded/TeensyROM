@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
-         RAM2_RO_BYTES, SERVICE } from './lib/extension.mjs';
+         RAM2_RO_BYTES, SERVICE, hostSlotValid } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import { readSource } from './lib/source-text.mjs';
 
@@ -222,6 +222,32 @@ function checkServiceRegistry() {
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }
 
+// hostSlotValid() in tools/lib/extension.mjs is a hand mirror of
+// vm_host_slot_valid() in VMHostABI.h. The packager refuses an image on the
+// strength of it and promises the device will enter one it accepts, so a
+// narrower device predicate installs a host that reads as no host, and a
+// narrower packager one refuses a legitimate host and blames the image.
+// Nothing links both, so compare their verdicts on the vectors the standalone
+// contract test prints.
+function checkHostSlotPredicate(output) {
+  const names = ['flashMagic', 'vectorMagic', 'entry', 'bootBase', 'imageBytes'];
+  const lines = [...output.matchAll(/^SLOTVALID((?: [0-9a-f]{8}){5}) ([01])$/gm)];
+  if (!lines.length) throw new Error('host_abi_standalone.cpp printed no SLOTVALID vectors');
+
+  for (const [, words, verdict] of lines) {
+    const value = Object.fromEntries(words.trim().split(' ')
+      .map((word, i) => [names[i], parseInt(word, 16)]));
+    const mirrored = hostSlotValid(value) ? '1' : '0';
+    if (mirrored !== verdict) {
+      throw new Error(`vm_host_slot_valid says ${verdict} and hostSlotValid in ` +
+        `tools/lib/extension.mjs says ${mirrored} for ` +
+        names.map((name) => `${name}=0x${value[name].toString(16)}`).join(' '));
+    }
+  }
+  console.log(`PASS: hostSlotValid in tools/lib/extension.mjs agrees with vm_host_slot_valid ` +
+              `on ${lines.length} vectors`);
+}
+
 // A directory holding only these files, so a build inside it sees nothing else
 // of TeensyROM whatever the include path would otherwise have offered.
 function vendorDir(...files) {
@@ -274,7 +300,9 @@ function checkPublishedHeadersStandalone() {
     process.stderr.write(`${compile.stdout ?? ''}${compile.stderr ?? ''}`);
     throw new Error(`${source} did not build from a directory holding only itself and the two published headers`);
   }
-  process.stdout.write(run(exe, [], 'standalone host contract'));
+  const standalone = run(exe, [], 'standalone host contract');
+  checkHostSlotPredicate(standalone);
+  process.stdout.write(standalone.replace(/^SLOTVALID .*\n/gm, ''));
 
   // vm/abi/vm_abi.h is included by the native tests, but nothing in the tree
   // includes vm_host_abi.h, so a broken relative path in it would go unnoticed.

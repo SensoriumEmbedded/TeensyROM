@@ -227,8 +227,8 @@ export function hostDescriptor(payload) {
            name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
 }
 
-// A hand mirror of vm_host_slot_valid() in VMHostABI.h; nothing checks the two
-// against each other, so an edit to either belongs in both.
+// A hand mirror of vm_host_slot_valid() in VMHostABI.h. checkHostSlotPredicate()
+// in tools/verify-extensions.mjs compares the two verdict by verdict.
 export function hostSlotValid({ flashMagic, vectorMagic, entry, bootBase, imageBytes }) {
   const address = entry & ~1;
   return flashMagic === 0x42464346 && vectorMagic === 0x432000d1 && (entry & 1) !== 0 &&
