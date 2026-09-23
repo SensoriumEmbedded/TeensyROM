@@ -59,6 +59,16 @@ int main() {
     assert(!vm_fail_intact(&fail));
     assert(VM_FAIL_BASE % 32 == 0);
 
+    // What a host will serve. The refusal a module sees when a host lacks one
+    // of its services is this predicate, not the image validator.
+    VmImageHeader wants{};
+    wants.required_services = VM_SERVICES | VM_SERVICE_RAM2_RO;
+    assert(vm_host_serves(wants, VM_HOST_SERVICES));
+    assert(!vm_host_serves(wants, VM_SERVICES));
+    wants.required_services = VM_SERVICES | 0x10000u;
+    assert(!vm_host_serves(wants, VM_HOST_SERVICES));
+    assert(vm_host_serves(wants, VM_HOST_SERVICES | 0x10000u));
+
     // Loading a module. vm_module_table_valid gets no accept case: the code
     // window is a fixed ITCM address no native allocation can land on.
     VmImageHeader image{};

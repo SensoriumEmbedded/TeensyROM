@@ -154,10 +154,10 @@ static inline uint32_t vm_crc32(const void *data, uint32_t size) {
 static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserved[1];}
 static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
-// Structure and self-consistency only. Whether a service can be served is a
-// question about one host's `services`, asked by the preflight in VMRegistry.h
-// and by the loader. Bit 7 is judged here because it changes how reserved[1]
-// is read.
+// Structure and self-consistency only. Whether a host can serve what an image
+// requires is vm_host_serves() in VMHostABI.h, which a host owes before it
+// loads. Bit 7 is judged here because it has to agree with the memory profile
+// in reserved[0].
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
     if(h.reserved[2]||h.reserved[3])return false;
     if(h.reserved[0]==VM_PROFILE_LEGACY){

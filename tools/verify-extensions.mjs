@@ -61,6 +61,17 @@ const HOST_README = 'vm/abi/README.md';
 // where the hex is partitioned, and in VMHostABI.h, which is what a host vendor
 // compiles against and what the minimal image uses to decide whether that slot
 // holds an image it may jump to. Neither side can see the other, so compare them.
+// vm_host_serves() is the last refusal on a launch that reached the host
+// without a preflight -- a host installed before descriptors existed cannot be
+// asked in advance. No native test compiles VMHost.h, so read the call.
+function checkHostAdmission() {
+  const host = sourceOf('Source/Teensy/MinimalBoot/VMHost.h');
+  if (!/!vm_host_serves\(h, providedServices\)/.test(host)) {
+    throw new Error('VMHost.h loadModule() no longer refuses an image whose services it cannot provide');
+  }
+  console.log('PASS: the extension image refuses a module it cannot serve, via vm_host_serves');
+}
+
 function checkBootSlot() {
   const header = sourceOf(HOST_ABI);
   for (const [name, expected] of [['VM_HOST_SLOT_BASE', VM_BASE], ['VM_HOST_SLOT_LIMIT', VM_LIMIT]]) {
@@ -259,6 +270,7 @@ function checkPublishedHeadersStandalone() {
   console.log('PASS: vm/abi/vm_abi.h and vm/abi/vm_host_abi.h resolve to the headers they publish');
 }
 
+checkHostAdmission();
 checkBootSlot();
 checkHostIdOffset();
 checkProtectedExtensions();

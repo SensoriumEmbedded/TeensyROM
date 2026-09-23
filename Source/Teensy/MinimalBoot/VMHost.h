@@ -59,7 +59,7 @@ static bool loadModule() {
     char path[128]; snprintf(path, sizeof path, "%s/%s", launch.root, manifest.module);
     FsFile f = SD.sdfs.open(path, O_RDONLY); VmImageHeader h{};
     if (!f || f.isDirectory() || f.fileSize() > UINT32_MAX || f.read(&h, sizeof h) != sizeof h ||
-        !vm_valid_header(h, f.fileSize()) || (h.required_services & ~providedServices)) {
+        !vm_valid_header(h, f.fileSize()) || !vm_host_serves(h, providedServices)) {
         // An image wanting a service this build does not provide is refused
         // here, whole. It is never loaded with the service quietly missing.
         f.close(); failure = 0x11; return false;

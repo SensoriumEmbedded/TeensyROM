@@ -199,6 +199,15 @@ static inline bool vm_fail_intact(const VmFailRecord *r) {
 
 // ------------------------------------------------------------ loading a module
 
+// A host publishes the services it provides; a module names the set it cannot
+// run without. An image requiring anything outside that set is refused whole,
+// never loaded with the service missing. The main image asks the same question
+// by name before it reboots, but it can only ask a host whose descriptor says
+// what it provides -- so the host owes this check whatever happened earlier.
+static inline bool vm_host_serves(const VmImageHeader &h, uint32_t provided) {
+    return (h.required_services & ~provided) == 0;
+}
+
 // The module's ITCM window is read-only at entry, because the core's MPU
 // region 1 covers all of ITCM, so the payload copy faults without this. Call
 // with true before copying code and false after, which also restores execute
