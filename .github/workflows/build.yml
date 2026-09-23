@@ -107,10 +107,32 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: npm run build:${{ matrix.target }} -- ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
 
+      # The extension loader ships with the TR+ and not with the TR, and neither hex says
+      # so in its name. build-host-package.mjs reads the extension slot out of the hex, so
+      # it answers the question directly: it packages a host from the TR+ build and refuses
+      # the TR build for carrying nothing there. A build that silently came out the other
+      # way round -- a TR+ without the loader, a TR with it -- fails here rather than on
+      # someone's cartridge.
+      - name: Check the loader is in the ${{ matrix.target }} image, or is not
+        run: |
+          hex=$(ls build/firmware/*.hex)
+          echo "checking $hex"
+          if [ "${{ matrix.target }}" = "tr-plus" ]; then
+            node tools/build-host-package.mjs --hex "$hex" --out build/firmware/host.TRH
+          else
+            if node tools/build-host-package.mjs --hex "$hex" --out /dev/null; then
+              echo "::error::the plain TR image carries an extension host; it has no DMA to run one"
+              exit 1
+            fi
+            echo "no extension slot content, as expected for --target tr"
+          fi
+
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.target }}
-          path: build/firmware/*.hex
+          path: |
+            build/firmware/*.hex
+            build/firmware/*.TRH
 
   collect:
     needs: [build, tools]
