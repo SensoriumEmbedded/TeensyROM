@@ -255,6 +255,12 @@ the table `const`, which puts it in `.rodata` and so in `.text`; a mutable one
 lands in DTCM and the loader refuses it with `$14`. The loader re-validates
 every pointer in the returned table before it calls any of them.
 
+`vm_entry` runs once, before `loop()` exists — it is not governed by
+`should_yield()` or the scheduler at all. Nothing recovers a hang here: the
+reset button is serviced from `loop()`, and `setup()` never reaches `loop()`
+until `vm_entry` returns. **Return promptly.** Do any real work from `pump()`
+instead, where a hang is at least yield-bounded.
+
 ### The four callbacks
 
 | Callback | Called when |
@@ -483,14 +489,38 @@ C64 screen:
 | Failure record written at `0x2027ff60` and collected by the main image | yes |
 | A guest fault under profile 0 collected as `$03` | yes — `udf` inside `vm_entry`, reproduced twice |
 | A guest write across the top 128 bytes — the `CrashReport` span, not the 32-byte record below it — then a normal return | yes — collected as `$00`, so the scribble was not promoted to `$03` |
-| The menu rendering a collected failure record on the C64 screen | no — the three record rows above were read over the main image's USB serial |
+| The menu rendering a collected failure record on the C64 screen | **tested, does not happen** — see note below |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |
 | Memory profile 1 (write-protected constants) | no |
-| PAL timing | no |
+| PAL timing | yes — reference extension run on a PAL C64, clean, no timing differences from NTSC |
 
 Treat the rows marked **no** as untested rather than as working.
+
+**On-screen rendering, tested 2026-09-23 (HFAULT, a `vm/hello`-derived module with
+a deliberate `udf` in `vm_entry`): confirmed not to happen, not just unobserved.**
+`tools/bench/exttest.py`, screen-captured via DMA and cross-checked against two
+video recordings, frame by frame: the record collects and prints correctly over
+the main image's USB serial (`Extension boot: extension faulted (code $03,
+detail $0)`), but the C64 screen itself never shows it, before or after the
+script's own F5 press (switches source to USB Drive, a genuine `WaitForTR*`
+moment). The screen is correct and legible at every checked point -- this is
+not a case of the message flashing past unread; `report()`/`pending()` is not
+reaching `SendMsgPrintfln()` on this path, or is being cleared before the menu
+gets to print it. Not yet root-caused.
+
+**Separate finding, same session: the crash-triggered reset itself glitches the
+display for several seconds.** Frame-by-frame video showed roughly 8.5s of
+corrupted VIC-II state (black screen with stray garbage blocks, then a garbled
+blue-background phase) between the fault and the screen correctly recovering.
+Distinct from the message-rendering question above and from the deliberate
+`VmRegistry::tryLaunch()` reboot (which does assert the C64's own reset line
+first) -- this reset goes through the Teensyduino core's generic fault-recovery
+path, not any TeensyROM-specific reboot code, so nothing tells the C64 to blank
+or hold reset first. Same class of issue the existing video-blank-before-reboot
+fix addresses for deliberate reboots, just not yet extended to a
+fault-triggered one.
 
 A running extension is returned to the menu by the reset button, which the
 extension image services from `loop()`; `vm_entry` is called from `setup()`, so
