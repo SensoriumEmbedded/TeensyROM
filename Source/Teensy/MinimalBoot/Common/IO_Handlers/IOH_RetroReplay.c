@@ -25,16 +25,30 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn);
 void ROMLHndlr_RetroReplay(uint32_t Address, bool R_Wn);
 void CycleHndlr_RetroReplay(bool R_Wn);
 
+void InitHndlr_RetroReplay_REU();   
+
 stcIOHandlers IOHndlr_RetroReplay =
 {
   "RetroReplay",           //Name of handler, IOHNameLength max
   &InitHndlr_RetroReplay,  //Called once at handler startup
   &IO1Hndlr_RetroReplay,   //IO1 R/W handler
-  NULL,                    //IO2 R/W handler not used to maintain REU compatibility 
+  NULL,                    //not used to maintain REU compatibility
   &ROMLHndlr_RetroReplay,  //ROML Read handler, in addition to any ROM data sent
   NULL,                    //ROMH Read handler, in addition to any ROM data sent
   NULL,                    //Polled in main routine
   &CycleHndlr_RetroReplay, //called at the end of EVERY c64 cycle
+};
+
+stcIOHandlers IOHndlr_RetroReplay_REU =
+{
+  "RetroReplay_REU",           //Name of handler, IOHNameLength max
+  &InitHndlr_RetroReplay_REU,  //Called once at handler startup
+  &IO1Hndlr_RetroReplay,       //IO1 R/W handler
+  &IO2Hndlr_REU,               //IO2 R/W handler for REU compatibility 
+  &ROMLHndlr_RetroReplay,      //ROML Read handler, in addition to any ROM data sent
+  NULL,                        //ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_REU,           //Polled in main routine
+  &CycleHndlr_RetroReplay,     //called at the end of EVERY c64 cycle
 };
 
 extern volatile uint32_t CycleCountdown;
@@ -140,6 +154,37 @@ FLASHMEM void InitHndlr_RetroReplay()
   ProcessRRControlReg(0);  // Initialize Control    
 }   
 
+// Button handler active ONLY when REU is also active
+FLASHMEM void SpecialBtn_FreezeCRT_REU(bool Up_nDn)
+{
+   #define LongPress_mS 700
+   static uint32_t StartTime;
+   static bool PressSeen = false;
+
+   if (Up_nDn == false)                      // if button pressed
+   {
+      StartTime = millis();
+      PressSeen = true; 
+   }   
+   else if (PressSeen)             // button released, after a press we saw
+   {
+      PressSeen = false;
+      if (millis() - StartTime < LongPress_mS)
+         CycleCountdown = CycCntFreeze;   // short press: freeze
+      else
+         Save_REU();                      // long press: save REU
+   }
+   // else: release with no matching press - ignore
+}
+
+
+FLASHMEM void InitHndlr_RetroReplay_REU()
+{
+  InitHndlr_RetroReplay();
+  InitHndlr_REU();  // Initialize REU handler for REU compatibility 
+  fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU;  // replace handler with long/short press
+} 
+
 // $deXX Handler -- REU Memory Map
 // $de02-$deff contains mirrored $9e02-$9eff of selected bank 
 void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
@@ -163,8 +208,12 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
                // additional global by using RR_StatusReg to flag *and* store first write. 
                if (RR_StatusReg == 0)  
                {
-                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = NULL; // Disable Freeze
+//                  NoFreeze not implemented in known RR versions and setting to null breaks
+//                  combined long/short Freezer + REU button handler
+//                  If needed in future re-implemnt with a disabled check rather than setting NULL
+//                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = NULL; // Disable Freeze
                   RR_StatusReg = (Data & ~RR_ECR_NOFREEZ);  //RR_StatusReg does not have NOFREEZ bit
+                   
                }              
                // else not first write. Ignore additional writes.
                break;
@@ -211,7 +260,6 @@ void CycleHndlr_RetroReplay(bool R_Wn)
 {
    if (CycleCountdown)  
    {
- 
       if (CycleCountdown == CycCntFreeze) // button activated
       {  
          RR_StatusReg |= RR_SR_FREEZE;  //set freeze bit
