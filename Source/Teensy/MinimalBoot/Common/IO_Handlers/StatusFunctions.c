@@ -183,12 +183,20 @@ FLASHMEM void WriteEEPROM()
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
-//Every rCtlMake*StrWAIT handler ends here: the string it just built is left selected
-//and rewound.  PrintFileName on the C64 side jumps into PrintSerialStringLoaded, which
-//reads whichever source was selected last from wherever that read stopped -- so a
-//handler that builds SerialStringBuf and skips this prints nothing through it, and the
-//Installed Extensions page's blank row was exactly that.  One copy, because the two
-//lines are the contract rather than an implementation detail of any one handler.
+//A handler whose string the C64 reads through the pre-selected contract ends here: what
+//it just built is left selected and rewound.  PrintFileName jumps into
+//PrintSerialStringLoaded, which reads whichever source was selected last from wherever
+//that read stopped, so a handler reached that way has to leave its own string selected.
+//One copy, because the two lines are the contract rather than an implementation detail
+//of any one handler.
+//
+//MakeBuildInfo is deliberately not in that class, and re-adding the call there for
+//symmetry is a regression rather than a tidy-up.  Its only C64 reader is Pg_InfoOther.asm,
+//which selects rsstSerialStringBuf by hand and so sets these same two values -- the call
+//would be dead on that path.  Its other callers are what make it harmful: SerUSBIO.ino's
+//VersionInfoToken is not debug-gated and can land while the C64 is mid-read with some
+//other source selected.  That read survives today because MakeBuildInfo only overwrites
+//the buffer's contents; selecting here would redirect and rewind the read as well.
 FLASHMEM void SelectSerialStringBuf()
 {
    ptrSerialString = SerialStringBuf;
@@ -200,7 +208,6 @@ FLASHMEM void MakeBuildInfo()
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
    sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
-   SelectSerialStringBuf();
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
