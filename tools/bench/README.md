@@ -110,7 +110,7 @@ startup: `MainMenu.asm`'s `TextScreenMemColor` writes `#$17` to `$d018`. Pass
 charset, where 65-90 are graphics and read as `.`.
 
 Both letter ranges decode, so a phrase asserted against the screen is no longer
-restricted to lower-case glyphs. Fold case anyway -- `hostops.Result.saw` does,
+restricted to lower-case glyphs. Fold case anyway -- `hostops.Outcome.said` does,
 and `fwupdate.py` now does for its `Y/N` prompt -- since which case a glyph
 carries is a property of the screen, and a launched program need not stay in the
 charset the menu left behind. Nobody has read a real updater screen to settle

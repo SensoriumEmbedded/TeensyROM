@@ -36,7 +36,7 @@ def petscii_row(row, charset=LOWER_UPPER):
     they read A-Z and graphics. Digits and punctuation survive either way; anything with
     no letter in the selected set -- graphics, the line-drawing codes -- is '.'.
 
-    Callers that match a phrase should still fold case (hostops.Result.saw does), since
+    Callers that match a phrase should still fold case (hostops.Outcome.said does), since
     which case a glyph carries is a property of the screen, not of what was asserted."""
     lower_upper = charset == LOWER_UPPER
     out = []
