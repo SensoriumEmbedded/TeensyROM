@@ -38,6 +38,17 @@ export function nonLiteralFormats(source, label) {
 const scanSource = (file) =>
   nonLiteralFormats(fs.readFileSync(file, 'utf8'), path.relative(FIRMWARE_ROOT, file));
 
+// Every call to `name` in the tree, minus its own declarations: in C, `void` followed
+// by the name opens a definition or a prototype and never a call, so the call's own
+// left context is what tells the two apart. Scoped to that context rather than to the
+// whole line on purpose. A line-anchored pattern -- `^[^\n]*NAME\(`, or the leading
+// whitespace the FullPathToSelected scan used -- yields at most one match per line and
+// swallows the rest of the line with it, so a call sharing a line with a prototype or
+// with a bounded call went unexamined, and `^\s+` also missed `if (x) NAME(...)` and
+// any call at column zero. `\s+` here spans newlines, so a definition that carries its
+// return type on the line above is excluded too.
+const callsTo = (name) => new RegExp(String.raw`(?<!\bvoid\s+)\b${name}\([^;]*\);`, 'g');
+
 // Every firmware source, not a list of the files that happen to call it today:
 // a hard-coded list lets the next call site through in silence.
 function scanTree(pattern, offending) {
@@ -69,14 +80,18 @@ test('the current path and filename is built inside the buffer the caller owns',
   assert.match(handler, /void GetCurrentFilePathName\(char\* FilePathName, size_t Size\)/);
   assert.doesNotMatch(handler, /\bsprintf\(FilePathName/);
 
-  // The definition lives in the tree too, and `[^;]*` runs from its parameter list
-  // to the first semicolon in its body -- so whether it looks like an unbounded call
-  // depends on what its first statement happens to end in. It ended in `];` until the
-  // body started with `MenuItemSel();`, at which point the definition began reporting
-  // itself. Match the whole line so the return type is visible, and drop it by that.
-  assert.deepEqual(scanTree(/^[^\n]*\bGetCurrentFilePathName\([^;]*\);/gm,
-                            (call) => !/\bvoid\s+GetCurrentFilePathName\s*\(/.test(call)
-                                   && !/,\s*sizeof \w+\);$/.test(call)), []);
+  // The definition lives in the tree too, and `[^;]*` runs from its parameter list to
+  // the first semicolon in its body -- so left to itself the pattern matches the
+  // definition, and whether that looks like an unbounded call depends on what its first
+  // statement happens to end in. It ended in `];` until the body started with
+  // `MenuItemSel();`, at which point the definition began reporting itself. callsTo
+  // drops it by the `void` in front of its name, which no call can have.
+  //
+  // Bounded: this reads the size argument's spelling, not the buffer it belongs to, so
+  // `sizeof` of the wrong variable passes. The destination-to-size pairing is not what
+  // this gate proves.
+  assert.deepEqual(scanTree(callsTo('GetCurrentFilePathName'),
+                            (call) => !/,\s*sizeof \w+\);$/.test(call)), []);
 });
 
 test('the path handed to a device-writing item type is built inside its caller\'s buffer', () => {
@@ -87,11 +102,11 @@ test('the path handed to a device-writing item type is built inside its caller\'
   assert.match(loader, /void FullPathToSelected\(char \*Path, size_t Size, const char \*Name\)/);
   assert.doesNotMatch(loader, /\bsprintf\(Path,/);
 
-  // The definition lives in this file too, so match calls by their leading
-  // whitespace -- the definition is preceded by its return type.
-  for (const [, call] of loader.matchAll(/^\s+(FullPathToSelected\([^;]*\);)/gm)) {
-    assert.match(call, /,\s*sizeof \w+,/, call);
-  }
+  // The definition lives in this file too, and callsTo drops it by the `void` in front
+  // of its name. Scanned across the tree rather than in this file alone: both callers
+  // are here today, and a hard-coded file is what lets the next one through in silence.
+  assert.deepEqual(scanTree(callsTo('FullPathToSelected'),
+                            (call) => !/,\s*sizeof \w+,/.test(call)), []);
 });
 
 test('the default SID record stays inside the block that holds it', () => {
