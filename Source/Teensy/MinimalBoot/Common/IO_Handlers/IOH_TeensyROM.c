@@ -40,7 +40,14 @@ stcIOHandlers IOHndlr_TeensyROM =
 int16_t SidSpeedAdjust = 0;
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
-volatile uint16_t StreamOffsetAddr, StringOffset = 0;
+//StreamOffsetAddr indexes XferImage/RAM_Image, both sized by uint32_t XferSize, and the
+//end-of-transfer tests are "++StreamOffsetAddr >= XferSize".  As a uint16_t it wrapped
+//before it could reach any XferSize >= 65536, so those tests never fired and the C64 was
+//never told the transfer had ended -- reachable with an ordinary >64KiB .txt/.seq, which
+//LoadFile admits up to RAM_ImageSize (128KiB).  StringOffset stays 16-bit: it indexes
+//strings bounded by MaxPathLength, and widening it would only cost DTCM.
+volatile uint32_t StreamOffsetAddr = 0;
+volatile uint16_t StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
 char SerialStringBuf[MaxPathLength+6] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
@@ -620,8 +627,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             //staged, so this also covers XferImage still being NULL at power-up.
             //rRegStrAvailable only *tells* the C64 where the end is; it cannot stop it.
             DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
-            //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
+            //inc on read, check for end.  Stops at XferSize rather than counting past it:
+            //the guard above makes running past harmless, but it is still a counter the
+            //C64 advances with nothing stopping it, and at uint32_t it would take 2^32
+            //reads to wrap back into the buffer instead of 2^16.
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
             //ptrSerialString is NULL until a selector is written below, and StringOffset

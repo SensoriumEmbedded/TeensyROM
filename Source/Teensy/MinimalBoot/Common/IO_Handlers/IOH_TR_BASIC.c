@@ -46,6 +46,7 @@ uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
 uint8_t  TR_BASContRegAction, TR_BASStatRegVal, TR_BASStrAvailableRegVal;
+volatile bool TR_BASSaveOverflow = false; //set in the ISR when a save runs past RAM_Image
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -233,7 +234,14 @@ FLASHMEM uint8_t ContRegAction_SaveFinish()
    
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
-   Printf_dbg("Save: %s\nSize: %d bytes\n", ptrLSFileName, StreamOffsetAddr);
+   if (TR_BASSaveOverflow)
+   {  //the C64 sent more than RAM_Image holds; the tail was dropped in the ISR, so
+      //writing what we have would silently save a truncated file
+      Printf_dbg("Save too large for RAM_Image\n");
+      return BAS_ERROR_OUT_OF_MEMORY;
+   }
+
+   Printf_dbg("Save: %s\nSize: %lu bytes\n", ptrLSFileName, (unsigned long)StreamOffsetAddr);
    sourceFS->remove(ptrLSFileName); //del prev version to overwrite!
    File myFile = sourceFS->open(ptrLSFileName, FILE_WRITE); //O_RDWR | O_CREAT <- doesn't reduce filesize if smaller 
       
@@ -372,9 +380,15 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(TR_BASStatRegVal);
             break;
          case TR_BASStreamDataReg:
-            DataPortWriteWait(RAM_Image[StreamOffsetAddr]);
+            //Same guard 0d61726/832ada5 put on rRegStreamData, which this site was missed
+            //by: nothing stopped the C64 reading past the end, and the offset only counted
+            //up.  At uint16_t that wrapped inside RAM_Image and stayed contained; at
+            //uint32_t it would walk out of it, so the read is bounded and the offset now
+            //stops at XferSize instead of counting forever.
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? RAM_Image[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);
@@ -401,6 +415,7 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                case TR_BASCont_SendFN: //file name being sent next
                   FNCount = 0;
                   StreamOffsetAddr = 0; //initialize for file load/save
+                  TR_BASSaveOverflow = false; //clear with the offset it belongs to
                   break;
                   
                //these commandd require action outside of interrupt: 
@@ -433,7 +448,14 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             }
             break;
          case TR_BASStreamDataReg: //receive save data
-            RAM_Image[StreamOffsetAddr++] = Data;
+            //The C64 decides how many bytes it sends; nothing here ever compared the
+            //count against RAM_Image.  While StreamOffsetAddr was uint16_t it wrapped at
+            //65536 and kept re-overwriting the front of a 128KiB buffer, which contained
+            //the damage by accident.  It is uint32_t now, so bound it for real.  Stop
+            //advancing as well as writing, so SaveFinish's write() length stays inside
+            //the buffer; the flag is how it learns the file was cut short.
+            if (StreamOffsetAddr < RAM_ImageSize) RAM_Image[StreamOffsetAddr++] = Data;
+            else TR_BASSaveOverflow = true;
             break;
       }
    } //write
