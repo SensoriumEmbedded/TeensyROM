@@ -3,12 +3,14 @@
 // here is answered before the script spawns a compiler, so each costs a process spawn
 // rather than a build.
 //
-// That extensions are *on* by default for --target tr-plus is carried by the last test in
-// this file, which reads the reservation line the script prints before any compile. Nothing
-// else carries it: the build workflow compiles both targets but asserts nothing about
-// whether the tr-plus hex contains the loader, and Common_Defs.h's #error fires only on an
-// extensions build *without* Fab04_FullDMACapable -- the opposite direction from a default
-// that silently flipped off.
+// That extensions are *on* by default for --target tr-plus is carried here by the
+// "extensions are on by default" test, which reads the reservation line the script prints
+// before any compile. The build workflow's "Check the loader is in the image, or is not"
+// step (.github/workflows/build.yml) asserts the same thing end to end, by running
+// build-host-package.mjs against each finished hex -- but only after a full compile of both
+// targets, so that is the slow net and this is the fast one. Common_Defs.h's #error is
+// not a net for this at all: it fires only on an extensions build *without*
+// Fab04_FullDMACapable, the opposite direction from a default that silently flipped off.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { readSource } from './lib/source-text.mjs';
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build-firmware.mjs');
+const repoRoot = path.dirname(path.dirname(script));
 // The timeout bounds how long a lost refusal takes to fail, not whether it fails.
 // spawnSync leaves status null on a kill, so assert.notEqual(status, 0) alone would not
 // catch it -- assert.match(stderr, ...) is what does, and nothing before it can make that
@@ -32,7 +35,16 @@ const build = (...args) =>
 test('extensions are refused on a target whose DMA cannot blank the screen', () => {
   const result = build('--target', 'tr', '--with-extensions');
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /--with-extensions needs --target tr-plus/);
+  // The plain-TR reason is still named, but the message may not send the caller to
+  // --target tr-plus: the flag is refused there too, so that would be a second refusal.
+  assert.match(result.stderr, /--with-extensions no longer exists/);
+  assert.match(result.stderr, /Fab 0\.4 full DMA/);
+});
+
+test('opting out of extensions is refused where there were never any to opt out of', () => {
+  const result = build('--target', 'tr', '--no-extensions');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--no-extensions needs --target tr-plus/);
 });
 
 test('a missing or unknown target is refused', () => {
@@ -63,13 +75,72 @@ test('the equals form of an option is refused by name', () => {
   assert.match(build('--target=tr-plus').stderr, /Unknown argument --target=tr-plus/);
 });
 
+// The source of every argument name the script reads, which is also the only thing keeping
+// KNOWN_OPTIONS/KNOWN_FLAGS honest. Comments are stripped, so the prose that discusses a
+// flag cannot stand in for a call site.
+const builderSource = readSource(script);
+const argumentReads = new Map(
+  [...builderSource.matchAll(/\b(option|flag)\('(--[a-z0-9-]+)'/g)].map((m) => [m[2], m[1]]));
+const namesIn = (setName) => {
+  const literal = builderSource.match(new RegExp(`const ${setName} = new Set\\(\\[([^\\]]*)\\]`));
+  assert.ok(literal, `${setName} is no longer a Set of literals; this test cannot read it`);
+  return new Set([...literal[1].matchAll(/'(--[a-z0-9-]+)'/g)].map((m) => m[1]));
+};
+
+// KNOWN_OPTIONS and KNOWN_FLAGS restate, by hand, the name at every option()/flag() call
+// site. Drift either way reintroduces the hazard the refusal was added for: a new call site
+// missing from the sets makes the script refuse its own argument, and a set entry with no
+// call site is a name the script accepts and then ignores -- which is what "silently builds
+// the image you did not ask for" looked like before the refusal existed.
+test('the known-argument sets name exactly the arguments the script reads', () => {
+  assert.ok(argumentReads.size >= 10, `only ${argumentReads.size} argument reads found; the scrape broke`);
+  const declared = { option: namesIn('KNOWN_OPTIONS'), flag: namesIn('KNOWN_FLAGS') };
+  for (const [name, kind] of argumentReads) {
+    assert.ok(declared[kind].has(name), `${name} is read with ${kind}() but is not in the matching set`);
+  }
+  for (const kind of ['option', 'flag']) {
+    for (const name of declared[kind]) {
+      assert.equal(argumentReads.get(name), kind, `${name} is in the ${kind} set but nothing reads it that way`);
+    }
+  }
+});
+
+// A repeated option used to be accepted and then half-used: option() takes the first
+// occurrence, so `npm run build:tr-plus -- --target tr` built tr-plus, extension loader and
+// all, and exited 0 -- the same wrong-image-at-exit-0 shape the unknown-argument refusal was
+// added to close, reached through an argument the script does recognise.
+test('a repeated option is refused rather than resolved to one of its values', () => {
+  // The unusable first value goes first on purpose: if the refusal is ever lost, the value
+  // that wins is one the target check rejects anyway, so these two cases fail in a process
+  // spawn and the expensive case below never runs.
+  assert.match(build('--target', 'tr-minus', '--target', 'tr-plus').stderr,
+    /--target was given more than once/);
+  assert.match(build('--target', 'tr-minus', '--out', 'a', '--out', 'b').stderr,
+    /--out was given more than once/);
+  // Then the shape that actually reaches people, which a lost refusal answers with a build.
+  const result = build('--target', 'tr-plus', '--target', 'tr');
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /--target was given more than once/);
+  // A repeated bare flag cannot select a different image (flag() is args.includes), so it
+  // stays accepted; refusing it would break nothing but help nothing either. An unusable
+  // target keeps this case a refusal too, so it costs a spawn rather than a build.
+  assert.match(build('--target', 'tr-minus', '--no-extensions', '--no-extensions').stderr,
+    /Use --target tr or --target tr-plus/);
+});
+
 // The default itself, which no argument check can reach. The reservation line prints before
 // the first compile, so a stub SDK is enough to read it: the two files the "installed core
 // unchanged" guard hashes, and the tools directory the private copy symlinks. Every build
 // step is skipped, so ARDUINO_CLI only has to name a file that exists -- it is never run.
+// The core version is read out of the builder rather than written here again: tools/
+// check-pins.mjs lists every place that literal lives so a bump cannot leave one behind,
+// and a copy in a test file is a place it does not list.
+const coreVersion = builderSource.match(/TEENSY_CORE_VERSION = '([\d.]+)'/)?.[1];
+assert.ok(coreVersion, 'TEENSY_CORE_VERSION not found in build-firmware.mjs');
+
 function stubSdk() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-build-firmware-args-'));
-  const core = path.join(dir, 'sdk/packages/teensy/hardware/avr/1.61.0/cores/teensy4');
+  const core = path.join(dir, `sdk/packages/teensy/hardware/avr/${coreVersion}/cores/teensy4`);
   fs.mkdirSync(core, { recursive: true });
   fs.mkdirSync(path.join(dir, 'sdk/packages/teensy/tools'), { recursive: true });
   for (const stub of ['bootdata.c', 'imxrt1062_t41.ld']) fs.writeFileSync(path.join(core, stub), '');
@@ -95,9 +166,52 @@ test('extensions are on by default for tr-plus, and only there', {
     assert.equal(plusOptedOut.status, 0, plusOptedOut.stderr);
     assert.doesNotMatch(plusOptedOut.stdout, RESERVATION);
 
+    // Fab04FeatureCtl.h's own comment invites uncommenting #define Fab04_Features for a
+    // manual Fab 0.4 build, and in that state `--target tr` is a contradiction the builder
+    // refuses by design -- so this leg reads the refusal instead of asserting exit 0, or a
+    // supported local edit turns into a failure of a test about something else. Either way
+    // the claim this leg carries is the same one: a plain TR reserves no extension slot.
+    const fab04Active = /^\s*#\s*define\s+Fab04_Features\b/m.test(fs.readFileSync(
+      path.join(repoRoot, 'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h'), 'utf8'));
     const plain = upTo('--target', 'tr');
-    assert.equal(plain.status, 0, plain.stderr);
+    if (fab04Active) assert.match(plain.stderr, /Fab04_Features is #define'd/);
+    else assert.equal(plain.status, 0, plain.stderr);
     assert.doesNotMatch(plain.stdout, RESERVATION);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The other half of --no-extensions: the loaderless TR+ is a different image from the
+// shipping one, so it gets a different filename. Nothing downstream can tell the two apart
+// by content at a glance, which is why sharing a name let one be published as the other.
+// The existence check runs before the first compile and names the exact path it would
+// write, so it is the cheapest place to read the planned output name.
+test('a --no-extensions TR+ writes its own filename, not the shipping one', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const version = fs.readFileSync(
+    path.join(repoRoot, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h'), 'utf8')
+    .match(/^\s*#define\s+TRVersion\s+"([^"]+)"/m)?.[1];
+  assert.ok(version, 'TRVersion not found in Common_Defs.h');
+  const dir = stubSdk();
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  // No --skip-combine: that is what makes the script check the output path at all.
+  const attempt = () => spawnSync(process.execPath, [script,
+    '--target', 'tr-plus', '--no-extensions',
+    '--arduino-data', path.join(dir, 'sdk'), '--out', out,
+    '--skip-minimal-build', '--skip-teensy-build'],
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+  try {
+    // A shipping hex already sitting there is not this build's output, so it neither stops
+    // the build nor gets overwritten by it.
+    fs.writeFileSync(path.join(out, `TeensyROM+_${version}_full.hex`), '');
+    assert.doesNotMatch(attempt().stderr, /already exists/);
+
+    fs.writeFileSync(path.join(out, `TeensyROM+_${version}_noext_full.hex`), '');
+    assert.match(attempt().stderr,
+      new RegExp(`TeensyROM\\+_${version.replace(/\./g, '\\.')}_noext_full\\.hex already exists`));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -232,10 +346,9 @@ test('a --host-sketch build is named for its host, not for the shipping image', 
 // The example host is documentation that compiles, so the four contract points it is
 // meant to demonstrate are asserted here rather than left to a reader to notice.
 test('the example host carries the four things a host owes', () => {
-  const repo = path.dirname(path.dirname(script));
   // Comments blanked, because the file explains the VM_BOOT_EXECUTE_MIN trap in prose and
   // the assertion below is about what the code does, not about what it talks about.
-  const ino = readSource(path.join(repo, 'Source/Teensy/ExampleHost/ExampleHost.ino'));
+  const ino = readSource(path.join(repoRoot, 'Source/Teensy/ExampleHost/ExampleHost.ino'));
   // 1. The descriptor, read out of flash by the main image without booting the host.
   assert.match(ino, /section\("\.vmhostid"\)/);
   assert.match(ino, /VmHostId vmHostId = \{ VM_HOSTID_MAGIC, VM_ABI/);

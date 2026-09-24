@@ -25,7 +25,8 @@
 //            does --skip-combine, whose per-image results exist only there.
 //   --no-extensions  build a TR+ without the extension loader: the two images it carried
 //            before the loader existed, from the stock linker scripts. It lands under
-//            TeensyROM+_<ver>_noext_full.hex, not the shipping name.
+//            TeensyROM+_<ver>_noext_full.hex, not the shipping name. Refused on --target
+//            tr, which never carries the loader.
 //   --host-sketch <dir>  put a different program in the extension slot. The directory
 //            holds exactly one .ino plus whatever else it needs, files only -- no
 //            subdirectories; those files are overlaid onto the MinimalBoot sketch, which
@@ -131,12 +132,23 @@ const skipCombine = flag('--skip-combine');
 // fab 0.2/0.3 extensions build would leave the VIC painting a frozen menu for the whole
 // erase. --no-extensions builds exactly the two images the TR+ carried before, from the
 // stock linker scripts, and nothing below runs.
+// Both branches open with "no longer exists" on purpose: the flag is refused on every
+// target now, so a --target tr message that only said "needs --target tr-plus" would be
+// routing the caller to a second refusal.
 if (flag('--with-extensions')) {
   throw new Error(fab04Features
     ? '--with-extensions no longer exists: --target tr-plus builds the extension loader by ' +
       'default. Drop the flag, or pass --no-extensions to build a TR+ without the loader.'
-    : '--with-extensions needs --target tr-plus: the extension loader requires ' +
-      'the Fab 0.4 full DMA a plain TR does not have');
+    : '--with-extensions no longer exists, and a plain TR could not carry the loader anyway: ' +
+      'it requires the Fab 0.4 full DMA a plain TR does not have. Drop the flag; ' +
+      '--target tr-plus builds the loader by default.');
+}
+// Refused rather than ignored on a plain TR, for the same reason --host-sketch is below:
+// a flag that silently does nothing tells the caller it opted out of something that was
+// never there, and the next such flag they reach for may not be harmless.
+if (!fab04Features && flag('--no-extensions')) {
+  throw new Error('--no-extensions needs --target tr-plus: a plain TR never carries the ' +
+    'extension loader, so there is nothing to opt out of');
 }
 const withExtensions = fab04Features && !flag('--no-extensions');
 const skipExtensionBuild = flag('--skip-extension-build');
@@ -249,7 +261,12 @@ console.log(`TRVersion: ${trVersion}`);
 // flag if uncommented. If it's active but --target tr was requested, the build would
 // silently produce a TR+ image while claiming to be plain TR.
 const fab04CtlPath = path.join(root, 'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h');
-const fab04Active = /^\s*#define\s+Fab04_Features\b/m.test(read(fab04CtlPath));
+// `#\s*define` because C allows whitespace between the # and the directive: `# define
+// Fab04_Features` compiles exactly like `#define Fab04_Features`, so a pattern that missed
+// it would leave this guard blind to an active define and ship a Fab 0.4 image under the
+// plain-TR name -- the one outcome the guard exists to prevent.
+const FAB04_DEFINE = /^\s*#\s*define\s+Fab04_Features\b/m;
+const fab04Active = FAB04_DEFINE.test(read(fab04CtlPath));
 if (!fab04Features && fab04Active) {
   if (!yes) {
     throw new Error(
@@ -259,13 +276,18 @@ if (!fab04Features && fab04Active) {
     );
   }
   // /gm, not /m: a second active #define would otherwise survive this "repair" and the build
-  // would ship Fab 0.4 features under the plain-TR name. Re-read afterwards so any shape the
-  // pattern misses stops the build instead of passing for repaired.
-  const updated = read(fab04CtlPath).replace(/^([ \t]*)#define([ \t]+Fab04_Features\b.*)$/gm, '$1// #define$2');
-  fs.writeFileSync(fab04CtlPath, updated);
-  if (/^\s*#define\s+Fab04_Features\b/m.test(read(fab04CtlPath))) {
-    throw new Error(`Fab04_Features is still #define'd in ${fab04CtlPath} after commenting it out; comment it out by hand.`);
+  // would ship Fab 0.4 features under the plain-TR name. The replacement keeps the line's
+  // own spelling rather than normalising it, and is deliberately narrower than FAB04_DEFINE
+  // ([ \t] where that has \s) so that re-testing with FAB04_DEFINE stops the build on any
+  // shape this pattern misses instead of passing for repaired. That test runs against the
+  // proposed text, before the write: an incomplete repair must not reach the tracked file,
+  // or the run that refused to continue still leaves an edit behind for someone to commit.
+  const updated = read(fab04CtlPath).replace(/^([ \t]*)(#[ \t]*define[ \t]+Fab04_Features\b.*)$/gm, '$1// $2');
+  if (FAB04_DEFINE.test(updated)) {
+    throw new Error(`Fab04_Features would still be #define'd in ${fab04CtlPath} after commenting it out, ` +
+      'so it has been left unchanged; comment it out by hand.');
   }
+  fs.writeFileSync(fab04CtlPath, updated);
   console.log(`Fab04_Features #define commented out in ${fab04CtlPath}`);
 }
 
