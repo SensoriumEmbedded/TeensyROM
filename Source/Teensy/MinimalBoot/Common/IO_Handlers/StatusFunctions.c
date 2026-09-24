@@ -460,7 +460,7 @@ FLASHMEM void WriteNFCTagCheck()
 
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
-   if (!IO1[rwRegScratch] && MenuSource[SelItemFullIdx].ItemType < rtFilePrg) //single file but not executable
+   if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType)) //single file, not storable
    {
       SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -512,7 +512,7 @@ FLASHMEM void HotKeySetLaunch()
       GetCurrentFilePathName(PathFilename, sizeof PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
-      if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+      if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
       {
          SendMsgPrintfln("Invalid File Type (%d)\r\rHot Key *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
          return;
@@ -663,7 +663,7 @@ FLASHMEM void SetAutoLaunch()
    GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
-   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
    {
       SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
       return;
