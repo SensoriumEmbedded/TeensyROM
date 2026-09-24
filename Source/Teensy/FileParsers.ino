@@ -166,13 +166,18 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
             EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #ifdef Fab04_FullDMACapable
-            // Same guard, and for the same reason, as the blank in StopServingTheC64:
-            // PerformDMA and CloseDMA never return with nothing clocking PHI2, and this
+            // Same guard, and for the same reason, as the blank in StopServingTheC64: this
             // path is reached over USB as well as from the menu -- RemoteControl.ino's
             // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
             // though: that powers the board too, so there is nothing left to reach it.
-            // Without the check a C64 that is powered but not clocking wedges here
-            // instead of rebooting.
+            // What is left is a C64 that still supplies 5 V but has stopped clocking.
+            //
+            // The check buys latency, not survival.  WaitForDMAState bounds every wait on
+            // its own -- 5 mS after the bus goes quiet, or the caller's ceiling while it is
+            // still clocking -- so PerformDMA and CloseDMA return false by themselves, both
+            // return values are ignored here, and RebootTR() below runs either way.  Asking
+            // first costs nothing on a live bus and, on a dead one, spends 5 mS to skip the
+            // ~10 mS of DMA that could not have worked.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.

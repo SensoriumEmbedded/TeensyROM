@@ -1011,7 +1011,11 @@ FLASHMEM void WriteC64MemCommand()
    // Short-circuit: a failed PerformDMA has already released the bus, and calling CloseDMA
    // after it would only spend the stall window a second time.  A C64 that is switched off
    // is not the case this catches -- it powers the board too, so no command arrives to be
-   // answered; C64IsClockingPHI2 in DMAControl.ino has what is left.
+   // answered.  What is left is a C64 that still supplies 5 V but has stopped clocking, and
+   // the checked return below is the whole of what catches it here: WaitForDMAState ends
+   // each wait itself and PerformDMA reports the failure.  C64IsClockingPHI2 is deliberately
+   // not called on this path -- the bound lives where the wait is -- so a new remote command
+   // is covered by checking this return and by nothing else.
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);

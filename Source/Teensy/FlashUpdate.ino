@@ -227,7 +227,8 @@ static void StopServingTheC64(bool MessageSeen)
    // Fab04_FullDMACapable, so the callers' messages can promise the blank on any board
    // that can show one; the only case they cannot cover is a C64 that is not running,
    // which has no screen to blank and no clock to blank it with. Skip it there rather
-   // than spin forever waiting for a handshake that cannot happen.
+   // than spend the DMA waits' own timeouts on a handshake that cannot happen --
+   // WaitForDMAState ends them by itself, so this saves that latency, not the board.
    if (C64IsClockingPHI2())
    {
       // Long enough to read the two lines the caller just printed -- but only when they
