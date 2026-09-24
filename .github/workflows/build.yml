@@ -152,16 +152,21 @@ jobs:
       - name: Build the example third-party host
         if: matrix.target == 'tr-plus'
         # Named explicitly to get -o pipefail, which the default `bash -e` run shell does
-        # not set. Without it a failing build-host-package.mjs exits into `tee`, the
-        # pipeline reports the status of `tee`, and the step passes over the failure.
+        # not set. Nothing below pipes, which is the point: this step used to package
+        # through `tee`, and a pipeline reports its last command's status, so
+        # build-host-package.mjs could exit 1 and be stepped over. The pipe is gone and
+        # the guard stays, so the next one added here cannot hide a failure either.
         shell: bash
         run: |
           npm run build:example-host -- --keep-work \
             --skip-minimal-build --skip-teensy-build --skip-combine \
             ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
-          # An array rather than `ls | head -1`: `head` exits 0 whether or not the glob
-          # matched anything, so a miss would otherwise arrive as an empty --hex argument
-          # and be reported three commands later as a missing-value error.
+          # An array rather than `ls -t | head -1`, which cannot report either way that
+          # goes wrong. `head` exits 0 whether or not the glob matched, so a miss arrives
+          # as an empty --hex argument and surfaces three commands later as a
+          # missing-value error naming the wrong cause; and on two matches `-t` packages
+          # whichever is newer without saying it chose. Insisting on exactly one names
+          # the ambiguity instead of guessing past it.
           shopt -s nullglob
           hexes=(build/firmware/run-*/extension/ExampleHost.ino.hex)
           if [ ${#hexes[@]} -ne 1 ]; then
