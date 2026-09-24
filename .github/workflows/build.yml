@@ -127,31 +127,55 @@ jobs:
             echo "no extension slot content, as expected for --target tr"
           fi
 
-      # Source/Teensy/ExampleHost is the third-party host story, and nothing else in the
-      # build compiles it: docs/Architecture/Extension-Hosts.md promises a reader that it
-      # builds, and the globals it has to define come from sibling sources that are free
-      # to change. Build it here so that promise fails in CI rather than in someone's
-      # first attempt at a host. Extension image only -- the other two are the same ones
-      # the step above already built.
-      - name: Build the example third-party host
-        if: matrix.target == 'tr-plus'
-        run: |
-          npm run build:example-host -- --yes --force --keep-work \
-            --skip-minimal-build --skip-teensy-build --skip-combine
-          hex=$(ls -t build/firmware/run-*/extension/ExampleHost.ino.hex | head -1)
-          node tools/build-host-package.mjs --hex "$hex" --out build/firmware/EXAMPLE.TRH \
-            | tee /tmp/example-host.txt
-          # The descriptor is what the menu names the host by, and it is the one thing
-          # packaging cannot check for itself. A host that built but published someone
-          # else's identity would otherwise pass this step.
-          grep -q 'Host "Example"' /tmp/example-host.txt
-
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.target }}
           path: |
             build/firmware/*.hex
             build/firmware/*.TRH
+
+      # Source/Teensy/ExampleHost is the third-party host story, and nothing else in the
+      # build compiles it: docs/Architecture/Extension-Hosts.md promises a reader that it
+      # builds, and the globals it has to define come from sibling sources that are free
+      # to change. Build it here so that promise fails in CI rather than in someone's
+      # first attempt at a host. Extension image only -- the other two are the same ones
+      # the "Build" step already built. --ccache is passed under that step's condition so
+      # this compile can reuse the same cache; without it the extension image is a full
+      # cold compile on every run.
+      #
+      # After the upload rather than before, and writing outside build/firmware, for two
+      # separate reasons. A stale doc should fail the run without also costing it the
+      # firmware it did build, which an earlier step would, since the upload never runs.
+      # And EXAMPLE.TRH is a host that does nothing on purpose: shipped in the artifact
+      # beside the real host.TRH it is something a reader can copy to a card and install
+      # over a working extension slot.
+      - name: Build the example third-party host
+        if: matrix.target == 'tr-plus'
+        # Named explicitly to get -o pipefail, which the default `bash -e` run shell does
+        # not set. Without it a failing build-host-package.mjs exits into `tee`, the
+        # pipeline reports the status of `tee`, and the step passes over the failure.
+        shell: bash
+        run: |
+          npm run build:example-host -- --keep-work \
+            --skip-minimal-build --skip-teensy-build --skip-combine \
+            ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
+          # An array rather than `ls | head -1`: `head` exits 0 whether or not the glob
+          # matched anything, so a miss would otherwise arrive as an empty --hex argument
+          # and be reported three commands later as a missing-value error.
+          shopt -s nullglob
+          hexes=(build/firmware/run-*/extension/ExampleHost.ino.hex)
+          if [ ${#hexes[@]} -ne 1 ]; then
+            echo "::error::expected one example-host extension image, found ${#hexes[@]}: ${hexes[*]}"
+            exit 1
+          fi
+          mkdir -p build/example-host
+          descriptor=$(node tools/build-host-package.mjs --hex "${hexes[0]}" \
+            --out build/example-host/EXAMPLE.TRH)
+          echo "$descriptor"
+          # The descriptor is what the menu names the host by, and it is the one thing
+          # packaging cannot check for itself. A host that built but published someone
+          # else's identity would otherwise pass this step.
+          grep -q 'Host "Example"' <<<"$descriptor"
 
   collect:
     needs: [build, tools]
