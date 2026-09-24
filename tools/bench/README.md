@@ -17,8 +17,7 @@ Which image is running decides how much of this works. The **main image**
 answers all of it. The **minimal image** answers reset, launch, version and the
 firmware check, and fails other commands with `Busy!`. The **extension image
 runs with USB disabled** and answers nothing at all, so a silent port after
-launching an extension is success, not a hang. (That image arrives with the
-extension loader, PR #31; the other two are here today.)
+launching an extension is success, not a hang.
 
 `probe.py` asks the board whether it is main or minimal, and reports silence
 otherwise -- which is the extension image or a hung board. On macOS the port
@@ -78,7 +77,7 @@ The stamp is `SOURCE_DATE_EPOCH`, which the build sets to the HEAD commit time
 unless the environment already holds one, so it identifies a commit and not a
 build: commit before building if you want two runs told apart.
 
-Run the hello extension (`build/extensions/` comes with PR #31):
+Run the hello extension (`npm run build:hello` writes `build/extensions/`):
 
     python3 tools/bench/push.py build/extensions/HELLO.crt=/HELLO.crt \
         build/extensions/VMS/HELLO/manifest.vmi=/VMS/HELLO/manifest.vmi \
