@@ -228,6 +228,40 @@ class ReadyBound(FakePty):
         self.assertIn(f'within {hostops.READY_TIMEOUT} s', str(stopped.exception))
         self.assertLess(took, hostops.READY_TIMEOUT + 6)
 
+    def test_the_last_attempt_waits_only_what_is_left_of_the_deadline(self):
+        """The regression setUp's 3 s cannot show, and the one the cap was added for.
+
+        _ready retries every 0.5 s, so any deadline longer than a single attempt starts
+        a second one -- and that attempt's Ack wait has to be cut to what is left rather
+        than run the full ANSWER_TIMEOUT it would take from a standing start. A flat
+        timeout there puts the raise well past the promise: measured against this silent
+        pty, 7.24 s against a 5 s deadline before the cap and 5.42 s after.
+
+        Three seconds cannot catch it because one attempt (drain 0.3 + ANSWER_TIMEOUT 3)
+        already passes the deadline, so there is never a second attempt to overrun with.
+        This needs READY_TIMEOUT above one attempt plus the 0.5 s sleep, so that the last
+        attempt begins with less than ANSWER_TIMEOUT left to spend.
+        """
+        # setUp already registered the cleanup that puts the original back.
+        hostops.READY_TIMEOUT = 5
+        self.assertGreater(hostops.READY_TIMEOUT, hostops.ANSWER_TIMEOUT + 0.5,
+                           'this test needs a deadline that allows a second attempt')
+        master, slave = self.pty_pair()
+        del master  # nothing ever answers
+        link = self.link_to(slave)
+
+        started = time.time()
+        with self.assertRaises(SystemExit):
+            _ready(link)
+        took = time.time() - started
+
+        # Slack for drain()'s fixed 0.3 s and the read tick, not for another whole
+        # answer wait -- that is the difference this asserts.
+        self.assertLess(took, hostops.READY_TIMEOUT + 1.5,
+                        f'_ready() ran {took:.2f} s against a {hostops.READY_TIMEOUT} s '
+                        'deadline: the last attempt waited a full answer timeout '
+                        'instead of what was left')
+
 
 if __name__ == '__main__':
     unittest.main()

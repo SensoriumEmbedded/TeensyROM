@@ -96,9 +96,10 @@ def _ready(tr):
     timeout is pushed out by every chunk that arrives and a board printing steadily with
     gaps under the idle window never lets version() return; and capping `timeout=` the
     same way keeps the last attempt's Ack wait from running past the deadline it was
-    started under. What is left over is drain()'s fixed 0.3 s and status()'s one-second
-    read of a failure message, so the raise lands within about a second of READY_TIMEOUT
-    rather than on it."""
+    started under. What is left over is drain()'s fixed 0.3 s, which runs before the
+    capped wait rather than inside it, so the raise lands a fraction of a second past
+    READY_TIMEOUT rather than on it -- measured at 5.42 s against a 5 s deadline, where
+    an uncapped Ack wait took 7.24 s."""
     deadline = time.time() + READY_TIMEOUT
     while True:
         left = max(0.0, deadline - time.time())

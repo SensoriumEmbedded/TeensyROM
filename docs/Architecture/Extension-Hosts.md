@@ -158,6 +158,13 @@ USB removal is gated to the device port. The same `ProcessCommand` switch serves
 the TCP listener on port 2112 and a USB host serial port, and an ungated
 flash-erase token there is two unauthenticated bytes from anywhere on the LAN.
 
+That gate is on the removal token alone. `LaunchFileToken` is handled in the
+switch that runs *before* it, on every channel, and a launch still routes a
+`.TRH` to `DoHostInstall` — which erases and programs this same slot — and a
+`.hex` to `DoFlashUpdate`. So the install direction remains reachable from the
+listener, and a board with `NetListenEnable` set is one where the whole command
+protocol, not just this token, is exposed to the LAN.
+
 ## What you get to use
 
 | | |

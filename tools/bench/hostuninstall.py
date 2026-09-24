@@ -7,8 +7,12 @@ reading as a host. The payload stays in flash, unreferenced, until the next inst
 overwrites it.
 
 The firmware takes this command on the USB device port only -- the same token over the
-USB host port or the TCP listener is refused with "Busy!", because erasing flash is not
-something a peer on the LAN gets to ask for.
+USB host port or the TCP listener is refused with "Busy!".
+
+That gate covers this token, not flash in general: LaunchFileToken is served on every
+channel, ahead of the gate, and launching a .TRH still reaches DoHostInstall (which
+erases and programs this same slot) and a .hex still reaches DoFlashUpdate. Do not read
+the refusal here as the LAN being unable to write flash.
 
 The firmware ACKs and flushes before it starts, because clearing the tag takes a sector
 erase it does not return from -- so the ACK means accepted, not done. Three things can

@@ -384,8 +384,9 @@ class Link:
 
         The firmware takes this command on the USB device port only. The same
         token over the USB host port or the TCP listener is refused with FAIL
-        and 'Busy!', since erasing flash is not something a peer on the LAN
-        gets to ask for."""
+        and 'Busy!'. That is this token only, not flash in general: launch()
+        below is served on every channel and a .TRH launched through it still
+        reaches DoHostInstall, which erases and programs this same slot."""
         self.drain(0.4)
         self.wr(to_board(HOST_REMOVE))
         self.ack('host remove', 5)
