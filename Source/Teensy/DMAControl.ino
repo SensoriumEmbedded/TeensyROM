@@ -55,38 +55,70 @@ FLASHMEM bool C64IsClockingPHI2()
    return false;
 }
 
-// Nothing is clocking the bus, so the handshake that normally releases DMA cannot run --
-// and with isrPHI2 not firing there is no ISR mid-update of this state to race.  Drop the
-// request line and put the data port back the way a completed CloseDMA would have left
+// Give up on a transfer and put the bus back the way a completed CloseDMA would have left
 // it, rather than return with DMA still asserted over a machine that may come back.
+//
+// The state goes first.  isrPHI2 dispatches on it, so clearing it is what stops the ISR
+// taking another transfer cycle; the pause after gives a DMATransferISR already inside a
+// byte time to finish one.  Only then are the ports torn down -- DMAByte drives the
+// address ports as well as the data ports, and an abort landing mid-byte can find them
+// still output.  On a dead bus none of that is running and the pause costs 4 uS.
 static FLASHMEM void AbortDMA()
 {
+   DMA_State = DMA_S_DisableReady;
+   delayMicroseconds(4);
+
    SetDMADeassert;
+   SetAddrPortDirIn;
+   SetAddrBufsIn;
    SetDataPortDirIn;
    SetDataBufIn;
-   DMA_State = DMA_S_DisableReady;
 }
 
-// Bounded by bus activity rather than by elapsed time.  How long a transfer legitimately
-// takes is set by its length -- a 64 KiB read is ~65 mS at the ~1 MHz PHI2 this board is
-// built for -- so any fixed deadline either cuts a long transfer short or leaves a stalled
-// one spinning for most of a second.  A stopped bus looks the same at every length:
-// LastCycCnt advances on every PHI2 edge whether or not the handshake progresses, so
-// waiting on *activity* bounds all four waits with one predicate and no per-caller tuning.
+// Two bounds, because two different things can stop a wait from ever ending.
 //
-// Only a dead bus ends the wait here.  A live bus that never reaches the state -- the
-// continuous-read case -- is the ISR's to break, and DMA_TIMEOUT_CYCLES already does.
-static FLASHMEM bool WaitForDMAState(uint8_t Target)
+// A dead bus: LastCycCnt advances on every PHI2 edge whether or not the handshake
+// progresses, so a stamp that stops moving is direct evidence nothing is clocking.  That
+// looks the same at every transfer length, which is why it is checked on activity rather
+// than against a deadline.
+//
+// A live bus that never reaches the state: here a deadline is the only instrument, and
+// CeilingmS is the caller's, because the two waits are different shapes.  The ISR breaks
+// one case of this itself -- DMA_TIMEOUT_CYCLES gives up on a continuous *read* loop and
+// asserts anyway.  It does not break the continuous-write case; ISRs.c leaves that branch
+// unbounded on the reasoning that continuous writes are not a real situation, which holds
+// for a 6510 and not for a bus held by something else, and asserting DMA out of a write
+// cycle is exactly what the safe-freeze sequence exists to avoid.  So the ISR cannot end
+// that one safely and the caller has to.
+static FLASHMEM bool WaitForDMAState(uint8_t Target, uint32_t CeilingmS)
 {
    uint32_t Seen = LastCycCnt;
-   uint32_t Began = millis();
+   uint32_t Quiet = millis();
+   const uint32_t Began = Quiet;
 
    while (DMA_State != Target)
    {
-      if (LastCycCnt != Seen) { Seen = LastCycCnt; Began = millis(); } //bus is alive, keep waiting
-      else if (millis() - Began >= 5) { AbortDMA(); return false; }
+      if (millis() - Began >= CeilingmS) { AbortDMA(); return false; }
+
+      if (LastCycCnt != Seen) { Seen = LastCycCnt; Quiet = millis(); } //bus is alive, keep waiting
+      else if (millis() - Quiet >= 5) { AbortDMA(); return false; }
    }
    return true;
+}
+
+// The handshake waits do not scale with anything: the safe-freeze sequence needs one
+// read cycle, and the ISR's own 5000-cycle read-loop timeout is ~5 mS at the ~1 MHz PHI2
+// this board is built for.  50 mS is ten times that, so it cannot fire on a bus that is
+// merely busy, and it still bounds the write case the ISR leaves open.
+#define DMA_HANDSHAKE_CEILING_mS  50
+
+// The transfer does scale: one PHI2 cycle per byte at best, ~1 uS each, and DMAByte skips
+// every cycle the VIC has taken the bus for.  Four times the ideal covers stolen cycles
+// with room to spare -- 312 mS for a full 64 KiB read -- and the floor keeps a short
+// transfer from being held to a deadline shorter than the handshake's.
+static FLASHMEM uint32_t DMATransferCeilingmS(uint32_t Length)
+{
+   return DMA_HANDSHAKE_CEILING_mS + (Length * 4) / 1000;
 }
 
 // false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
@@ -103,9 +135,9 @@ FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
    DMA_FixC64Addr = FixC64Addr;
 
    DMA_State = DMA_S_StartAsynch;
-   if (!WaitForDMAState(DMA_S_TransferReady)) return false;
+   if (!WaitForDMAState(DMA_S_TransferReady, DMA_HANDSHAKE_CEILING_mS)) return false;
    DMA_State = DMA_S_TransferExecuting;
-   if (!WaitForDMAState(DMA_S_TransferComplete)) return false;
+   if (!WaitForDMAState(DMA_S_TransferComplete, DMATransferCeilingmS(Length))) return false;
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
@@ -116,7 +148,7 @@ FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
 FLASHMEM bool CloseDMA()
 {
    DMA_State = DMA_S_StartDisable;
-   return WaitForDMAState(DMA_S_DisableReady);
+   return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
 }
 
 //__attribute__((always_inline)) inline bool DMAByte()
