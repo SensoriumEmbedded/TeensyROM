@@ -76,7 +76,7 @@ still use the coarser `WaitUntil_nS()`:
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
   DMA-assert path
-- `Common_Defs.h:435,457` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
+- `Common_Defs.h:482,504` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
   read/write helpers)
 - `IOH_REU.c:178` — `nS_DMAAssert`
 
