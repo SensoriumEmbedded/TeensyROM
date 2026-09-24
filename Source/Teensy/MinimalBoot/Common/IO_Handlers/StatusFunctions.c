@@ -544,8 +544,10 @@ FLASHMEM void KERNALPreStart()
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
    //Nothing re-forms SelItemFullIdx in this function, so it is whatever the last menu change
-   //left behind; fall back to the stored handler when it no longer names an item.
+   //left behind; fall back to the stored handler when it no longer names an item -- and say
+   //so, because that fallback is otherwise indistinguishable from the ordinary IOH_None case.
    const StructMenuItem* Item = MenuItemSel();
+   if (Item == NULL) Serial.printf("Menu sel out of range, using stored IO handler\n");
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       //Serial.println("IO Handler set by Teensy Menu\n");

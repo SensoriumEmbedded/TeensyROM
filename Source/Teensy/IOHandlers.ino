@@ -31,6 +31,11 @@ void IOHandlerSelectInit()
    //and the C64 polling rRegIOHSwapPoll with no timeout.  Fall back to the stored handler,
    //which the rwRegNextIOHndlr write path already clamps.
    const StructMenuItem* Item = MenuItemSel();
+   //Falling back is the right action, but say so.  "This item has no handler assigned" and
+   //"the selection no longer names an item at all" take the same branch and are not the same
+   //state -- only one of them means something went inconsistent.  Main loop, so printing is
+   //free; Serial rather than Printf_dbg, which a release build compiles away.
+   if (Item == NULL) Serial.printf("Menu sel out of range, using stored IO handler\n");
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       Printf_dbg("IO Handler set by Teensy Menu\n");
