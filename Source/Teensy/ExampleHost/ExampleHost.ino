@@ -12,8 +12,11 @@
 // Build and install:
 //
 //   node tools/build-firmware.mjs --target tr-plus --host-sketch Source/Teensy/ExampleHost
-//   node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_full.hex
-//   python3 tools/bench/hostinstall.py EXAMPLE.TRH
+//   node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_ExampleHost_full.hex
+//   python3 tools/bench/hostinstall.py build/firmware/EXAMPLE.TRH
+//
+// A --host-sketch build is named for its sketch directory, not the shipping name, so
+// this hex cannot be mistaken for -- or overwrite -- the release image.
 //
 // What you should see: the Installed Extensions page names "Example", launching
 // an extension blinks the LED four times with the C64 held in reset, and the
@@ -66,11 +69,13 @@ static constexpr uint32_t BlinkCount = 4;
 // ------------------------------------------------------------- the way back
 //
 // 4 of 4. RebootTR() is a raw MCU reset, which leaves the boot indicator at
-// whatever was last written. The minimal image writes VM_BOOT_SKIP_MIN before
-// it jumps here, and the main image reads that as a cold power up and re-runs
-// the user's autolaunch file -- so a host that resets without correcting it
-// sends the machine somewhere the user did not ask to go. Leave
-// VM_BOOT_FROM_MIN behind instead.
+// whatever was last written. Minimal writes VM_BOOT_FROM_MIN there before it
+// jumps here, so a host that never touches the byte is already right. A host
+// that writes VM_BOOT_SKIP_MIN of its own has replaced it -- VMBoot.ino does,
+// to clear the flag in case power is lost mid-run -- and the main image reads
+// VM_BOOT_SKIP_MIN as a cold power up and re-runs the user's autolaunch file,
+// sending the machine somewhere the user did not ask to go. Writing
+// VM_BOOT_FROM_MIN here makes the answer right either way.
 FLASHMEM void ReturnToMenu(uint8_t code, uint32_t detail)
 {
    VmFail::set(code, detail);   // 3 of 4: the record, read by the main image on the way up
@@ -96,11 +101,13 @@ void setup()
 
    // ------------------------------------------------------------- the marker
    //
-   // 2 of 4. Being in the slot is not authorization to run: the minimal image
-   // enters this image whenever the boot indicator says to, and the user may
-   // simply be holding the button to escape to the menu. The marker is what
-   // says an extension was actually selected. It is never consumed, so it is
-   // safe to read and wrong to rely on alone.
+   // 2 of 4. Being in the slot is not authorization to run: the marker is what
+   // says an extension was selected rather than a cartridge. Minimal tests it
+   // itself before it jumps, along with the button and the EEPROM magic, so the
+   // three checks below are a second look at what minimal already agreed to --
+   // cheap, and the right three to take if a host takes any. The marker is
+   // never consumed, so it is safe to read and wrong to rely on alone: only the
+   // boot indicator says this boot is the one that selected an extension.
    //
    // Checking the boot indicator the way MinimalBoot.ino does would be a
    // mistake here, and a quiet one: minimal has already replaced

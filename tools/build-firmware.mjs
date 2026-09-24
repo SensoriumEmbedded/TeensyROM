@@ -27,10 +27,12 @@
 //            before the loader existed, from the stock linker scripts. It lands under
 //            TeensyROM+_<ver>_noext_full.hex, not the shipping name.
 //   --host-sketch <dir>  put a different program in the extension slot. The directory
-//            holds exactly one .ino plus whatever else it needs; those files are overlaid
-//            onto the MinimalBoot sketch, which is how the stock host is built too. This
-//            is the supported seam for a third-party extension host --
-//            see docs/Architecture/Extension-Hosts.md.
+//            holds exactly one .ino plus whatever else it needs, files only -- no
+//            subdirectories; those files are overlaid onto the MinimalBoot sketch, which
+//            is how the stock host is built too. This is the supported seam for a
+//            third-party extension host -- see docs/Architecture/Extension-Hosts.md.
+//            It lands under TeensyROM+_<ver>_<dir>_full.hex, not the shipping name: the
+//            slot holds a program this repo did not write.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -69,12 +71,6 @@ const args = process.argv.slice(2);
 function flag(name) {
   return args.includes(name);
 }
-function option(name, fallback) {
-  const i = args.indexOf(name);
-  if (i < 0) return fallback;
-  if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(`Missing value for ${name}`);
-  return args[i + 1];
-}
 
 // Extensions are on by default for --target tr-plus, so an argument this script does not
 // recognise cannot be ignored: a misspelled opt-out (--no-extension, --noextensions,
@@ -85,12 +81,38 @@ const KNOWN_FLAGS = new Set([
   '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
   '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
 ]);
+// One pass, so an option's value is never mistaken for an option and a repeat cannot be
+// quietly dropped. Reading each option with its own indexOf() took the *first* occurrence
+// and ignored the rest, which is the wrong end for the one shape that produces a repeat in
+// practice: `npm run <script> -- --opt <value>` appends the caller's argument after the
+// script's own, so the override lost and the script's value won without a word. For
+// --host-sketch that means `npm run build:example-host -- --host-sketch Source/Teensy/MyHost`
+// builds Source/Teensy/ExampleHost and exits 0 -- the stock host under the caller's name,
+// which is the exact failure the refusals below exist to prevent. Refusing is the noisy
+// direction and costs a caller who meant to override nothing but naming the script directly.
+const optionValues = new Map();
 for (let i = 0; i < args.length; i++) {
-  if (KNOWN_OPTIONS.has(args[i])) { i++; continue; }
+  if (KNOWN_OPTIONS.has(args[i])) {
+    const name = args[i], value = args[i + 1];
+    if (!value || value.startsWith('--')) throw new Error(`Missing value for ${name}`);
+    if (optionValues.has(name)) {
+      throw new Error(`${name} given more than once (${optionValues.get(name)}, then ${value}). ` +
+        'Only one can take effect and the other would be ignored silently, so neither is. ' +
+        `If this came from \`npm run <script> -- ${name} ${value}\`, the script already passes ` +
+        `${name}; run tools/build-firmware.mjs directly instead.`);
+    }
+    optionValues.set(name, value);
+    i++;
+    continue;
+  }
   if (!KNOWN_FLAGS.has(args[i])) {
     throw new Error(`Unknown argument ${args[i]}. Known arguments: ` +
       [...KNOWN_OPTIONS, ...KNOWN_FLAGS].sort().join(' '));
   }
+}
+// Every caller below runs after the scan above, so the map is populated.
+function option(name, fallback) {
+  return optionValues.has(name) ? optionValues.get(name) : fallback;
 }
 
 const target = option('--target', null);
@@ -134,8 +156,45 @@ if (hostSketchOption !== null && skipExtensionBuild) {
   throw new Error('--host-sketch and --skip-extension-build contradict each other');
 }
 const hostSketch = path.resolve(hostSketchOption ?? path.join(root, 'Source/Teensy/VMBoot'));
-if (withExtensions && !skipExtensionBuild && !fs.existsSync(hostSketch)) {
-  throw new Error(`Host sketch directory not found: ${hostSketch}`);
+// The overlay is read here rather than where it is used, because the extension image is
+// built last: a host sketch that is a file, or holds no .ino or two, was otherwise refused
+// only after the minimal and main images had compiled, and a path that was not a directory
+// arrived as a raw ENOTDIR stack rather than as a refusal. Everything wrong with
+// --host-sketch now costs a process spawn, which is what the "not found" case already cost.
+let hostOverlay = [], hostEntryIno = null;
+if (withExtensions && !skipExtensionBuild) {
+  if (!fs.existsSync(hostSketch)) {
+    throw new Error(`Host sketch directory not found: ${hostSketch}`);
+  }
+  // Checked by name, because readdirSync on a file answers with an ENOTDIR stack trace --
+  // a crash report where this file's every other bad argument gets a sentence.
+  if (!fs.statSync(hostSketch).isDirectory()) {
+    throw new Error(`Host sketch is not a directory: ${hostSketch}`);
+  }
+  // Classified by stat rather than by dirent, so a symlink to a file still reads as the
+  // file it points at -- copyFileSync follows it too. A symlink to a directory, and one
+  // pointing at nothing, both land in notFiles and are refused with everything else.
+  const entries = fs.readdirSync(hostSketch).map((name) => {
+    let stats = null;
+    try { stats = fs.statSync(path.join(hostSketch, name)); } catch { /* dangling symlink */ }
+    return { name, file: stats !== null && stats.isFile() };
+  });
+  // Refused rather than skipped. The overlay copies files, so a host keeping sources in a
+  // subdirectory -- src/, which is an ordinary Arduino sketch layout -- would otherwise
+  // build without them: either a link error blaming something else, or, for a
+  // subdirectory shadowing one of MinimalBoot's own, a clean build of the wrong program
+  // shipped under the caller's name. Silent is the one thing it must not be.
+  const notFiles = entries.filter((e) => !e.file).map((e) => e.name);
+  if (notFiles.length) {
+    throw new Error(`${hostSketch} may hold only files: the overlay does not descend into ` +
+      `${notFiles.join(', ')}. Move those sources up beside the .ino.`);
+  }
+  hostOverlay = entries.map((e) => e.name);
+  const inos = hostOverlay.filter((f) => f.endsWith('.ino'));
+  if (inos.length !== 1) {
+    throw new Error(`${hostSketch} must hold exactly one .ino (the sketch entry point), found ${inos.length}`);
+  }
+  hostEntryIno = inos[0];
 }
 
 const useCcache = flag('--ccache');
@@ -213,8 +272,15 @@ if (!fab04Features && fab04Active) {
 // --- Output path ---
 // A --no-extensions TR+ is a materially different image from the shipping one. Its own
 // name keeps it from overwriting, or being published as, the build that carries the loader.
+// A --host-sketch TR+ is materially different in the same way and for a sharper reason: the
+// slot carries a program this repo did not write, and under the shipping name the two are
+// one `ls` apart. It takes the sketch directory's name, so `npm run build:example-host`
+// cannot leave an LED blinker sitting where the release hex goes, and so the --hex a host
+// author hands to build-host-package.mjs names the host they meant.
 const outputStem = target === 'tr-plus' ? `TeensyROM+_${trVersion}` : `TeensyROM_${trVersion}`;
-const finalOutput = path.join(outDir, `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}_full.hex`);
+const hostMark = hostSketchOption === null ? '' : `_${path.basename(hostSketch)}`;
+const finalOutput = path.join(outDir,
+  `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}${hostMark}_full.hex`);
 if (!skipCombine && fs.existsSync(finalOutput) && !force) {
   throw new Error(`${finalOutput} already exists. Re-run with --force to overwrite.`);
 }
@@ -381,18 +447,20 @@ if (withExtensions && !skipExtensionBuild) {
   // third-party host is built: same memory map, same slot, different program.
   // See docs/Architecture/Extension-Hosts.md. Every file in the directory is
   // overlaid, not a fixed list, so a host that wants a third file does not have
-  // to come back here and edit the build.
-  const overlay = fs.readdirSync(hostSketch).filter((f) => fs.statSync(path.join(hostSketch, f)).isFile());
-  const inos = overlay.filter((f) => f.endsWith('.ino'));
-  if (inos.length !== 1) {
-    throw new Error(`${hostSketch} must hold exactly one .ino (the sketch entry point), found ${inos.length}`);
-  }
-  // Arduino requires the sketch directory and its entry .ino to share a name.
-  const elfStem = path.basename(inos[0], '.ino');
-  const sketch = path.join(runRoot, elfStem);
+  // to come back here and edit the build. hostOverlay and hostEntryIno were read
+  // and checked up with the other argument handling, before anything compiled.
+  // Arduino requires the sketch directory and its entry .ino to share a name, so the
+  // directory name is the caller's to choose -- and runRoot is already occupied. build()
+  // puts each image's build tree at runRoot/<name> (minimal, main, extension), the private
+  // SDK copy is runRoot/Arduino15 and the ccache shim runRoot/ccache-shim. A host whose
+  // entry point is main.ino would have been staged straight onto the main image's finished
+  // build tree: cpSync merges, so nothing errors, and the extension image then compiles
+  // against that mixture. One directory of its own, so the caller's name can be anything.
+  const elfStem = path.basename(hostEntryIno, '.ino');
+  const sketch = path.join(runRoot, 'host', elfStem);
   fs.cpSync(path.join(root, 'Source/Teensy/MinimalBoot'), sketch, { recursive: true });
   fs.rmSync(path.join(sketch, 'MinimalBoot.ino'));
-  for (const file of overlay) {
+  for (const file of hostOverlay) {
     fs.copyFileSync(path.join(hostSketch, file), path.join(sketch, file));
   }
   // Only this image builds with USB compiled out, so only its private core copy
@@ -403,7 +471,7 @@ if (withExtensions && !skipExtensionBuild) {
   }
 
   extensionImage = build('extension', {
-    inoPath: path.join(sketch, inos[0]),
+    inoPath: path.join(sketch, hostEntryIno),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
     elfStem,
     ld: extensionLinkerScript(linkers),

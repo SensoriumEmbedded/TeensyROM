@@ -50,14 +50,17 @@ address. `name` is 12 bytes and need not be terminated. `services` is a bitmask 
 the module services you provide — `0` is legal and means a module asking for any
 service is refused against your host rather than crashing inside it.
 
-A host with no descriptor still runs. It shows up in the menu as `(no descriptor)`.
+A host with no descriptor still runs. The Installed Extensions page says
+`Installed, no descriptor.` rather than naming it.
 
 ### 2. The marker
 
-Being in the slot is not authorization to run. The minimal image enters your
-image whenever the boot indicator says to, and the user may simply be holding the
-button to escape to the menu. `@VM1` at `VM_EEP_BOOTNAME_ADDR` is what says an
-extension was actually selected.
+Being in the slot is not authorization to run. `@VM1` at `VM_EEP_BOOTNAME_ADDR` is
+what says an extension was selected rather than a cartridge. Minimal tests it
+itself before it jumps — along with the boot indicator, the menu button and the
+EEPROM magic — so a host checking it is taking a second look at what minimal
+already agreed to. Cheap, and the right thing to check if you check anything: it
+is the only value that means "entered on purpose".
 
 **Do not check the boot indicator the way `MinimalBoot.ino` does.** Minimal has
 already replaced `VM_BOOT_EXECUTE_MIN` with `VM_BOOT_FROM_MIN` by the time a host
@@ -90,20 +93,25 @@ have. `detail` is yours; the menu prints it and attaches no meaning to it.
 ### 4. The way back
 
 `RebootTR()` is a raw MCU reset, so it leaves the boot indicator at whatever was
-last written — and minimal wrote `VM_BOOT_SKIP_MIN` before jumping to you, which
-the main image reads as a cold power up and answers by re-running the user's
-autolaunch file. A host that resets without correcting that sends the machine
-somewhere the user did not ask to go.
+last written. Minimal wrote `VM_BOOT_FROM_MIN` there before jumping to you, so a
+host that never touches the byte is already right. A host that writes
+`VM_BOOT_SKIP_MIN` itself has replaced it — the stock host does, to clear the flag
+in case power is lost while it runs — and the main image reads `VM_BOOT_SKIP_MIN`
+as a cold power up and answers by re-running the user's autolaunch file, sending
+the machine somewhere the user did not ask to go.
 
 Write `VM_BOOT_FROM_MIN` to `VM_EEP_BOOTIND_ADDR` first, give the EEPROM write
-time to land, then reset.
+time to land, then reset. That is right either way, and costs one EEPROM write.
 
 ## Building it
 
-Your sketch directory holds exactly one `.ino` plus whatever else it needs. Those
-files are overlaid onto the `MinimalBoot` sketch — which is how the stock host is
-built too — so you inherit the pin definitions, the PHI2 ISR and the C64 bus
-machinery, and you replace the top-level program.
+Your sketch directory holds exactly one `.ino` plus whatever else it needs, as a
+flat directory of files. Those files are overlaid onto the `MinimalBoot` sketch —
+which is how the stock host is built too — so you inherit the pin definitions,
+the PHI2 ISR and the C64 bus machinery, and you replace the top-level program.
+A subdirectory is refused rather than skipped: the overlay copies files and does
+not descend, so a `src/` the build silently passed over would leave you holding a
+host built without your own code.
 
 ```
 node tools/build-firmware.mjs --target tr-plus --host-sketch Source/Teensy/ExampleHost
@@ -127,14 +135,27 @@ Two consequences of the overlay worth knowing before your first build:
 build into (`--target tr`, `--no-extensions`, `--skip-extension-build`): a flag
 that silently did nothing there would ship the stock host under your name.
 
+For the same reason, giving `--host-sketch` twice is refused rather than resolved.
+This matters because `npm run <script> -- …` appends your argument *after* the
+script's own, so `npm run build:example-host -- --host-sketch Source/Teensy/MyHost`
+passes `--host-sketch` twice — and the value that used to win was the script's, not
+yours. Call `node tools/build-firmware.mjs --target tr-plus --host-sketch <dir>`
+directly for your own host; `npm run build:example-host` is only for this repo's
+example.
+
 ## Packaging and installing it
 
 The `.TRH` container is a 64-byte header plus the raw slot image.
 
 ```
-node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_full.hex
+node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_MyHost_full.hex
 node tools/build-host-package.mjs --image my-host.bin --out MYHOST.TRH
 ```
+
+A `--host-sketch` build is named for the sketch directory it built, so the hex is
+`TeensyROM+_<ver>_MyHost_full.hex` rather than the shipping `TeensyROM+_<ver>_full.hex`.
+That is deliberate: the slot holds a program this repo did not write, and under
+the shipping name the release image and yours are one `ls` apart.
 
 `--hex` lifts the extension image back out of a combined firmware's flash slot;
 `--image` takes raw `objcopy -O binary` output. Every check the device applies

@@ -124,21 +124,106 @@ test('a host sketch directory that is not there is refused before anything is bu
   assert.match(result.stderr, /Host sketch directory not found:.*NoSuchHost/);
 });
 
-test('a host sketch names its entry point by holding exactly one .ino', {
+// The extension image is built last, so a host sketch checked where it is used is checked
+// only after the minimal and main images have compiled -- minutes, for a typo. These runs
+// therefore pass no --skip-*-build: the assertion is the refusal *and* that no compile was
+// started, which is what fails if the checks drift back down to the overlay.
+const NO_BUILD_STARTED = /\[(minimal|main|extension)\] Building/;
+
+test('every way a host sketch can be wrong is refused before an image is compiled', {
   skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
 }, () => {
   const dir = stubSdk();
   const sketch = path.join(dir, 'sketch');
   fs.mkdirSync(sketch, { recursive: true });
-  const attempt = () => spawnSync(process.execPath, [script,
+  const attempt = (target = sketch) => spawnSync(process.execPath, [script,
     '--target', 'tr-plus', '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
-    '--skip-minimal-build', '--skip-teensy-build', '--skip-combine', '--host-sketch', sketch],
+    '--host-sketch', target],
     { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+  const refused = (result, pattern) => {
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, pattern);
+    assert.doesNotMatch(result.stdout, NO_BUILD_STARTED);
+  };
   try {
-    assert.match(attempt().stderr, /must hold exactly one \.ino .*found 0/);
+    // Arduino takes the sketch directory name from its entry point, so there must be one.
+    refused(attempt(), /must hold exactly one \.ino .*found 0/);
     fs.writeFileSync(path.join(sketch, 'One.ino'), '');
     fs.writeFileSync(path.join(sketch, 'Two.ino'), '');
-    assert.match(attempt().stderr, /must hold exactly one \.ino .*found 2/);
+    refused(attempt(), /must hold exactly one \.ino .*found 2/);
+    fs.rmSync(path.join(sketch, 'Two.ino'));
+
+    // A path that exists but is not a directory used to reach readdirSync and come back as
+    // an ENOTDIR stack trace, which is a crash report rather than a refusal.
+    refused(attempt(path.join(sketch, 'One.ino')), /Host sketch is not a directory/);
+
+    // A subdirectory is refused, not skipped. The overlay copies files and does not
+    // descend, so a src/ passed over silently builds a host without the caller's code --
+    // and where the subdirectory shadows one of MinimalBoot's own, builds cleanly.
+    fs.mkdirSync(path.join(sketch, 'src'));
+    fs.writeFileSync(path.join(sketch, 'src/lib.cpp'), '');
+    refused(attempt(), /may hold only files: the overlay does not descend into src/);
+    fs.rmSync(path.join(sketch, 'src'), { recursive: true });
+
+    // A symlink to a directory is the same hole wearing a different hat; a dangling one
+    // cannot be copied at all. Both land in the same refusal rather than in a stat throw.
+    const elsewhere = path.join(dir, 'elsewhere');
+    fs.mkdirSync(elsewhere);
+    fs.symlinkSync(elsewhere, path.join(sketch, 'linked'));
+    refused(attempt(), /may hold only files: the overlay does not descend into linked/);
+    fs.rmSync(path.join(sketch, 'linked'));
+    fs.symlinkSync(path.join(dir, 'gone'), path.join(sketch, 'dangling'));
+    refused(attempt(), /may hold only files: the overlay does not descend into dangling/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// `npm run <script> -- --host-sketch <mine>` appends the caller's argument after the one
+// package.json already passes, and reading an option with indexOf() took the first. So the
+// override lost silently and build:example-host built Source/Teensy/ExampleHost under the
+// caller's name -- the stock-host-under-your-name failure the refusals above exist for,
+// arriving through the documented way to run the build.
+test('an option given twice is refused rather than resolved to one of them', () => {
+  const twice = build('--target', 'tr-plus',
+    '--host-sketch', 'Source/Teensy/ExampleHost', '--host-sketch', 'Source/Teensy/MyHost');
+  assert.equal(twice.status, 1);
+  assert.match(twice.stderr, /--host-sketch given more than once/);
+  // Named for the shape that produces it, because that is where a caller meets it.
+  assert.match(twice.stderr, /npm run/);
+  // Not special to --host-sketch: the same first-wins read served every option here.
+  assert.match(build('--target', 'tr-plus', '--target', 'tr').stderr,
+    /--target given more than once/);
+  assert.match(build('--target', 'tr-plus', '--out', 'a', '--out', 'b').stderr,
+    /--out given more than once/);
+  // A repeated *flag* carries no value to lose, so it is left idempotent and still reaches
+  // the refusal it was always going to reach, rather than being caught by the check above.
+  assert.match(build('--target', 'tr', '--with-extensions', '--with-extensions').stderr,
+    /--with-extensions needs --target tr-plus/);
+});
+
+// A --host-sketch build is not the shipping image -- the slot holds a program this repo
+// did not write -- and under the shipping name the two are one `ls` apart: an
+// `npm run build:example-host` would leave an LED blinker where the release hex goes, and
+// the --hex a host author hands to build-host-package.mjs would name the wrong thing. The
+// name is read off the refusal, which prints finalOutput before anything is copied or
+// compiled; the assertion is that the file the run claims is in its way is the marked one,
+// which a reverted stem could not produce.
+test('a --host-sketch build is named for its host, not for the shipping image', () => {
+  const repo = path.dirname(path.dirname(script));
+  const version = readSource(path.join(repo, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h'))
+    .match(/#define\s+TRVersion\s+"([^"]+)"/)[1];
+  const dir = stubSdk();
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  try {
+    fs.writeFileSync(path.join(out, `TeensyROM+_${version}_ExampleHost_full.hex`), '');
+    const result = spawnSync(process.execPath, [script, '--target', 'tr-plus',
+      '--arduino-data', path.join(dir, 'sdk'), '--out', out,
+      '--host-sketch', path.join(repo, 'Source/Teensy/ExampleHost')],
+      { encoding: 'utf8', timeout: 20_000 });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /TeensyROM\+_.*_ExampleHost_full\.hex already exists/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
