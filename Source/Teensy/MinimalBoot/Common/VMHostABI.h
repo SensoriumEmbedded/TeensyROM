@@ -143,10 +143,19 @@ struct VmManifest { char id[24],extension[8],module[32],client[32];uint32_t crc;
 VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
     if(!*list||strlen(list)>7)return false;
     static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu","trh"};
-    for(const char *p=list;*p;){char ext[8]{};const char *end=strchr(p,',');size_t n=end?size_t(end-p):strlen(p);
-        if(!n||n>=sizeof ext)return false;memcpy(ext,p,n);if(!vm_path_component(ext)||strchr(ext,'.'))return false;
+    for(const char *p=list;*p;){
+        char ext[8]{};
+        const char *end=strchr(p,',');
+        size_t n=end?size_t(end-p):strlen(p);
+        if(!n||n>=sizeof ext)return false;
+        memcpy(ext,p,n);
+        if(!vm_path_component(ext)||strchr(ext,'.'))return false;
         for(const auto &protectedExt:protectedExtensions)if(!strcasecmp(ext,protectedExt))return false;
-        if(!end)return true;p=end+1;if(!*p)return false;}return false;
+        if(!end)return true;
+        p=end+1;
+        if(!*p)return false;
+    }
+    return false;
 }
 
 // Six strict lines: VM1, id, extensions, module, client, END. `text` is the

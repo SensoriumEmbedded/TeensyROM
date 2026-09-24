@@ -13,8 +13,15 @@ static FLASHMEM bool absolute(const char *s,size_t cap){return vm_path_absolute(
 // A bounded comma-separated extension list uses the existing manifest field;
 // e.g. gb,gbc. This is generic routing, not a VM-specific firmware exception.
 static FLASHMEM bool extensionMatches(const char *list,const char *ext){
-    const size_t n=strlen(ext);for(const char *p=list;*p;){const char *end=strchr(p,',');size_t len=end?size_t(end-p):strlen(p);
-        if(len==n&&!strncasecmp(p,ext,n))return true;if(!end)break;p=end+1;}return false;
+    const size_t n=strlen(ext);
+    for(const char *p=list;*p;){
+        const char *end=strchr(p,',');
+        size_t len=end?size_t(end-p):strlen(p);
+        if(len==n&&!strncasecmp(p,ext,n))return true;
+        if(!end)break;
+        p=end+1;
+    }
+    return false;
 }
 static FLASHMEM bool validExtensions(const char *list){return vm_manifest_extensions(list);}
 static FLASHMEM bool readManifest(const char *root,Manifest &m){
