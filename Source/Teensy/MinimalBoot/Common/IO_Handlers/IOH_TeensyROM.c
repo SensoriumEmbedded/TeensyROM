@@ -67,10 +67,15 @@ bool NetListenEnable = false;
 //paths.  Those two are the invariant -- RedirectEmptyDriveDirMenu only covers
 //DriveDirMenu being NULL, which is a different condition.  If a future loader can leave
 //NumItemsFull at 0, the zero here becomes an out-of-range index and needs revisiting.
+//There is deliberately no NumItemsFull == 0 test below: with NumItemsFull 0 the third
+//term already catches every Idx >= 0 and the first catches every Idx < 0, so such a test
+//cannot change the result for any input, and returning 0 for an empty menu would be out
+//of range anyway.  The callers that cannot survive an empty menu guard themselves --
+//see Next/LastFileType in StatusFunctions.c.
 inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
 {
    int32_t Idx = (int32_t)ItemOnPage + ((int32_t)IO1[rwRegPageNumber] - 1) * MaxItemsPerPage;
-   if (Idx < 0 || NumItemsFull == 0 || Idx >= (int32_t)NumItemsFull) return 0;
+   if (Idx < 0 || Idx >= (int32_t)NumItemsFull) return 0;
    return (uint16_t)Idx;
 }
 
