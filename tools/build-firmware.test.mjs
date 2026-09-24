@@ -76,25 +76,28 @@ test('the equals form of an option is refused by name', () => {
 });
 
 // The source of every argument name the script reads, which is also the only thing keeping
-// KNOWN_OPTIONS/KNOWN_FLAGS honest. Comments are stripped, so the prose that discusses a
+// the declared lists honest. Comments are stripped, so the prose that discusses a
 // flag cannot stand in for a call site.
 const builderSource = readSource(script);
 const argumentReads = new Map(
   [...builderSource.matchAll(/\b(option|flag)\('(--[a-z0-9-]+)'/g)].map((m) => [m[2], m[1]]));
-const namesIn = (setName) => {
-  const literal = builderSource.match(new RegExp(`const ${setName} = new Set\\(\\[([^\\]]*)\\]`));
-  assert.ok(literal, `${setName} is no longer a Set of literals; this test cannot read it`);
+// The lists moved into the scanArgs({ options, flags }) call when the scan was shared with
+// the other build scripts; the claim they make is unchanged, so this reads the new shape
+// rather than being dropped with the old one.
+const namesIn = (key) => {
+  const literal = builderSource.match(new RegExp(`\\b${key}:\\s*\\[([^\\]]*)\\]`));
+  assert.ok(literal, `${key} is no longer a list of literals in the scanArgs call; this test cannot read it`);
   return new Set([...literal[1].matchAll(/'(--[a-z0-9-]+)'/g)].map((m) => m[1]));
 };
 
-// KNOWN_OPTIONS and KNOWN_FLAGS restate, by hand, the name at every option()/flag() call
+// The two lists restate, by hand, the name at every option()/flag() call
 // site. Drift either way reintroduces the hazard the refusal was added for: a new call site
 // missing from the sets makes the script refuse its own argument, and a set entry with no
 // call site is a name the script accepts and then ignores -- which is what "silently builds
 // the image you did not ask for" looked like before the refusal existed.
 test('the known-argument sets name exactly the arguments the script reads', () => {
   assert.ok(argumentReads.size >= 10, `only ${argumentReads.size} argument reads found; the scrape broke`);
-  const declared = { option: namesIn('KNOWN_OPTIONS'), flag: namesIn('KNOWN_FLAGS') };
+  const declared = { option: namesIn("options"), flag: namesIn("flags") };
   for (const [name, kind] of argumentReads) {
     assert.ok(declared[kind].has(name), `${name} is read with ${kind}() but is not in the matching set`);
   }

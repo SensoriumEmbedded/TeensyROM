@@ -18,6 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { scanArgs } from './lib/cli-args.mjs';
 import {
   buildImage, parseImage, buildManifest, buildClientCrt,
   CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES,
@@ -25,18 +26,24 @@ import {
 } from './lib/extension.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = process.argv.slice(2);
-const option = (name, fallback) => { const i = args.indexOf(name); return i < 0 ? fallback : args[i + 1]; };
-const options = (name) => args.reduce((found, value, i) => (args[i - 1] === name ? [...found, value] : found), []);
+// package.json bakes --id, --extensions, --source and --client-source into build:hello, and
+// `npm run <script> -- ...` appends the caller's arguments after those, so the previous
+// first-wins indexOf() meant `npm run build:hello -- --id OTHER` built HELLO and exited 0.
+const { option, all, flag, given } = scanArgs(process.argv.slice(2), {
+  options: ['--id', '--extensions', '--client', '--client-source', '--out', '--services',
+            '--toolchain', '--arduino-data'],
+  repeatable: ['--source'],
+  flags: ['--keep', '--allow-unassigned-services'],
+});
 
 const id = option('--id');
 const extensions = option('--extensions');
-const sources = options('--source');
+const sources = all('--source');
 const clientBinary = option('--client');
 const clientSource = option('--client-source');
 const outRoot = path.resolve(option('--out', path.join(root, 'build/extensions')));
-const keep = args.includes('--keep');
-const allowUnassignedServices = args.includes('--allow-unassigned-services');
+const keep = flag('--keep');
+const allowUnassignedServices = flag('--allow-unassigned-services');
 if (!id || !extensions || !sources.length) {
   throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...]\n' +
                   '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]\n' +
@@ -51,7 +58,7 @@ function parseServices(text) {
   }
   return value >>> 0;
 }
-const requiredServices = args.includes('--services') ? parseServices(option('--services')) : BASE_SERVICES;
+const requiredServices = given('--services') ? parseServices(option('--services')) : BASE_SERVICES;
 const beyondHost = (requiredServices & ~HOST_SERVICES) >>> 0;
 if (beyondHost) {
   console.warn(`Note: this module requires services 0x${beyondHost.toString(16)}, which the TeensyROM ` +

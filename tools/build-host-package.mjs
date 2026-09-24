@@ -22,16 +22,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { decodeHex, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
+import { scanArgs } from './lib/cli-args.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor,
          hostFileStem, hostNameForDisplay } from './lib/extension.mjs';
 
-const args = process.argv.slice(2);
-function option(name, fallback = null) {
-  const i = args.indexOf(name);
-  if (i < 0) return fallback;
-  if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(`Missing value for ${name}`);
-  return args[i + 1];
-}
+// Scanned inside main(), not at module scope: this file also exports hostImageFromHex, and
+// a top-level scan would run against whatever argv the importing process happens to have --
+// which under `node --test` is the runner's own arguments, and they are not ours to know.
+const KNOWN = { options: ['--hex', '--image', '--out'] };
 
 // The slot is flash: what the hex does not mention is erased, which reads as 0xFF. A hole
 // in the middle means the image was linked with one, not that bytes went missing, so it is
@@ -59,6 +57,7 @@ export function hostImageFromHex(text) {
 }
 
 function main() {
+  const { option } = scanArgs(process.argv.slice(2), KNOWN);
   const hexPath = option('--hex');
   const imagePath = option('--image');
   if (!hexPath === !imagePath) {

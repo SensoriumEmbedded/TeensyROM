@@ -58,6 +58,7 @@ import { fileURLToPath } from 'node:url';
 import { resolveArduinoCli, defaultArduinoDataDir, defaultArduinoUserDir } from './lib/toolchain.mjs';
 import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mjs';
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
+import { scanArgs } from './lib/cli-args.mjs';
 import { definesMacro } from './lib/source-text.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import {
@@ -68,54 +69,22 @@ import {
 const TEENSY_CORE_VERSION = '1.61.0';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = process.argv.slice(2);
-
-function flag(name) {
-  return args.includes(name);
-}
-
 // Extensions are on by default for --target tr-plus, so an argument this script does not
 // recognise cannot be ignored: a misspelled opt-out (--no-extension, --noextensions,
 // --no_extensions, -no-extensions) would otherwise ship the loader in an image the caller
 // asked to build without it. Anything not in these two sets is a refusal.
-const KNOWN_OPTIONS = new Set(['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch']);
-const KNOWN_FLAGS = new Set([
-  '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
-  '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
-]);
-// One pass, so an option's value is never mistaken for an option and a repeat cannot be
-// quietly dropped. Reading each option with its own indexOf() took the *first* occurrence
-// and ignored the rest, which is the wrong end for the one shape that produces a repeat in
-// practice: `npm run <script> -- --opt <value>` appends the caller's argument after the
-// script's own, so the override lost and the script's value won without a word. For
-// --host-sketch that means `npm run build:example-host -- --host-sketch Source/Teensy/MyHost`
-// builds Source/Teensy/ExampleHost and exits 0 -- the stock host under the caller's name,
-// which is the exact failure the refusals below exist to prevent. Refusing is the noisy
-// direction and costs a caller who meant to override nothing but naming the script directly.
-const optionValues = new Map();
-for (let i = 0; i < args.length; i++) {
-  if (KNOWN_OPTIONS.has(args[i])) {
-    const name = args[i], value = args[i + 1];
-    if (!value || value.startsWith('--')) throw new Error(`Missing value for ${name}`);
-    if (optionValues.has(name)) {
-      throw new Error(`${name} given more than once (${optionValues.get(name)}, then ${value}). ` +
-        'Only one can take effect and the other would be ignored silently, so neither is. ' +
-        `If this came from \`npm run <script> -- ${name} ${value}\`, the script already passes ` +
-        `${name}; run tools/build-firmware.mjs directly instead.`);
-    }
-    optionValues.set(name, value);
-    i++;
-    continue;
-  }
-  if (!KNOWN_FLAGS.has(args[i])) {
-    throw new Error(`Unknown argument ${args[i]}. Known arguments: ` +
-      [...KNOWN_OPTIONS, ...KNOWN_FLAGS].sort().join(' '));
-  }
-}
-// Every caller below runs after the scan above, so the map is populated.
-function option(name, fallback) {
-  return optionValues.has(name) ? optionValues.get(name) : fallback;
-}
+//
+// The scan itself now lives in tools/lib/cli-args.mjs, because the rule was needed in the
+// other two build scripts and neither had it -- `npm run build:hello -- --id OTHER` built
+// HELLO and exited 0 for the same first-wins reason this scan was written to stop. That
+// file carries the reasoning; this one just says which arguments it takes.
+const { option, flag } = scanArgs(process.argv.slice(2), {
+  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch'],
+  flags: [
+    '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
+    '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
+  ],
+});
 
 const target = option('--target', null);
 if (!['tr', 'tr-plus'].includes(target)) {
