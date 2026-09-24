@@ -369,6 +369,9 @@ FLASHMEM void SetCursorToItemNum(uint16_t ItemNum)
 
 FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 {
+   //An empty menu has no item to land on, and the wrap below counts against NumItemsFull
+   //rather than against MenuSource's real extent -- see LastFileType for what that costs.
+   if (NumItemsFull == 0) return;
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
    do
@@ -385,6 +388,11 @@ FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 
 FLASHMEM void LastFileType(uint8_t FileType1, uint8_t FileType2)
 {
+   //Must come before the wrap below: NumItemsFull is uint16_t, so NumItemsFull-1 promotes
+   //to int, evaluates to -1, and converts back to 65535 -- an index 65535*sizeof(
+   //StructMenuItem) = 1,048,560 bytes past MenuSource, walked downward one entry per
+   //iteration until it reaches InitItemNum.
+   if (NumItemsFull == 0) return;
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
 
