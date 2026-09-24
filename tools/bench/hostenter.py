@@ -74,8 +74,10 @@ if not result.rebooted:
     print('that is not an extension at all just falls through to an ordinary launch in')
     print('four more places. Every one of those declines reports through')
     print('SendMsgPrintfln, which goes to the C64 and not to serial, and which the C64')
-    print('only reads inside a WaitForTR* loop; nothing here opens one. exttest.py presses')
-    print('F5 by DMA to do exactly that, and is where to look when the reason matters.')
+    print('reads only inside a WaitForTR* loop -- but a remote launch is itself one, so')
+    print('the reason is usually already in the screen dump above. Measured: launching')
+    print('/HELLO.crt against a host publishing no services printed')
+    print('"Example host lacks service $1f" there with nothing else driving the C64.')
     raise SystemExit(1)
 
 if phrase is None:
