@@ -69,8 +69,14 @@ test('the current path and filename is built inside the buffer the caller owns',
   assert.match(handler, /void GetCurrentFilePathName\(char\* FilePathName, size_t Size\)/);
   assert.doesNotMatch(handler, /\bsprintf\(FilePathName/);
 
-  assert.deepEqual(scanTree(/GetCurrentFilePathName\([^;]*\);/g,
-                            (call) => !/,\s*sizeof \w+\);$/.test(call)), []);
+  // The definition lives in the tree too, and `[^;]*` runs from its parameter list
+  // to the first semicolon in its body -- so whether it looks like an unbounded call
+  // depends on what its first statement happens to end in. It ended in `];` until the
+  // body started with `MenuItemSel();`, at which point the definition began reporting
+  // itself. Match the whole line so the return type is visible, and drop it by that.
+  assert.deepEqual(scanTree(/^[^\n]*\bGetCurrentFilePathName\([^;]*\);/gm,
+                            (call) => !/\bvoid\s+GetCurrentFilePathName\s*\(/.test(call)
+                                   && !/,\s*sizeof \w+\);$/.test(call)), []);
 });
 
 test('the path handed to a device-writing item type is built inside its caller\'s buffer', () => {
