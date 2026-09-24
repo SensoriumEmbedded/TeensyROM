@@ -519,7 +519,7 @@ void SendMsgFailed()
    SendMsgPrintf("Failed!");
 }
 
-void SendMsgPrintfln(const char *Fmt, ...)
+bool SendMsgPrintfln(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
@@ -531,32 +531,47 @@ void SendMsgPrintfln(const char *Fmt, ...)
    SerialStringBuf[0] = '\r';
    SerialStringBuf[1] = '\n';
    
-   SendMsgSerialStringBuf();
+   return SendMsgSerialStringBuf();
 }
 
-void SendMsgPrintf(const char *Fmt, ...)
+bool SendMsgPrintf(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
    vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
-   SendMsgSerialStringBuf() ;
+   return SendMsgSerialStringBuf();
 }
 
-void SendMsgSerialStringBuf() 
+// true when the C64 actually read the message. The only code that answers rsC64Message is
+// WaitForTRMain (MainMenu.asm), and the C64 is in there only while waiting on a command it
+// issued itself -- so a message sent from a USB or TCP command path, with the C64 sitting
+// in its idle menu loop, is never drawn at all. Callers that pace themselves against the
+// reader need to know which happened rather than assume the message landed.
+bool SendMsgSerialStringBuf()
 {  //SerialStringBuf already populated
    Printf_dbg("%s<--", SerialStringBuf);
-   if(SendC64Msgs)
-   {
-      Serial.flush();
-      IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
-      uint32_t beginWait = millis();
-      //wait up to 3 sec for C64 to read message:
-      while (millis()-beginWait<3000 && !BtnPressed) if(IO1[rwRegStatus] == rsContinue) return;
-      Serial.printf("\nSout Timeout!\n"); 
-   }
-   else
+   if(!SendC64Msgs)
    {
       Printf_dbg("X");  //Indicates *not* sent to C64
+      return false;
    }
+
+   Serial.flush();
+   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
+   uint32_t beginWait = millis();
+   //wait up to 3 sec for C64 to read message:
+   while (millis()-beginWait<3000 && !BtnPressed) if(IO1[rwRegStatus] == rsContinue) return true;
+   Serial.printf("\nSout Timeout!\n");
+
+   // Take the sentinel back. rsC64Message is ours, written above to get the C64's
+   // attention, and rwRegStatus is also what PollingHndlr_TeensyROM dispatches on -- so
+   // leaving it set makes the next poll read our own signal as a status code from the C64
+   // and index StatusFunction[] with 0xa5, past the end of a table of rsNumStatusTypes.
+   // The bounds check there makes that a "?Stat: a5" line instead of a wild call through
+   // whatever follows the table, but the line should not be reachable at all: nothing
+   // asked for a status. Only when it is still ours -- a code the C64 wrote in the
+   // meantime is its to be answered, not ours to discard.
+   if (IO1[rwRegStatus] == rsC64Message) IO1[rwRegStatus] = rsReady;
+   return false;
 }

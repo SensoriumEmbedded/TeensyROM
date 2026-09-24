@@ -216,7 +216,9 @@ static const char *HostInstallWhy(VmInstallStatus status)
 // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this
 // core for up to 400 mS with interrupts off. Stop the 6510 first, then stop answering
 // it. Both the install and the removal erase, so both come through here.
-static void StopServingTheC64()
+// MessageSeen is what the caller's warning returned: true only if the C64 actually read
+// it. False means nothing was drawn, so there is nothing on screen to give time for.
+static void StopServingTheC64(bool MessageSeen)
 {
    // Blank the screen while the bus is still ours to drive. DEN=0 stops VIC-II fetches,
    // so the frozen menu does not sit on screen for the whole erase -- and it has to
@@ -228,12 +230,20 @@ static void StopServingTheC64()
    // than spin forever waiting for a handshake that cannot happen.
    if (C64IsClockingPHI2())
    {
-      // Long enough to read the two lines the callers just printed. The C64 writes
-      // rsContinue the instant PrintSerialString returns (MainMenu.asm, WaitForTRMain),
-      // and SendMsgSerialStringBuf returns on that -- so without a pause here the blank
-      // lands within a frame of the message appearing, and "Do not power off" is never
-      // legible. That warning guards the one action that can leave the slot half erased.
-      delay(2000);
+      // Long enough to read the two lines the caller just printed -- but only when they
+      // were printed. The C64 writes rsContinue the instant PrintSerialString returns
+      // (MainMenu.asm, WaitForTRMain) and SendMsgSerialStringBuf returns on that, so
+      // without a pause the blank would land within a frame of the message appearing and
+      // "Do not power off" would never be legible. That warning guards the one action
+      // that can leave the slot half erased.
+      //
+      // WaitForTRMain is the only thing that answers, though, and the C64 is in it only
+      // while waiting on a command it issued itself. Reached over USB or TCP -- the
+      // HostRemoveToken path, where the C64 is sitting in its idle menu loop -- the send
+      // times out after 3 s and draws nothing, and pausing here would add two more
+      // seconds of a stale menu for a warning that does not exist. The operator on that
+      // path is at the computer, and the host tool tells them there.
+      if (MessageSeen) delay(2000);
 
       uint8_t BlankD011 = 0x00;
       PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
@@ -306,9 +316,9 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
 
    // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
    // watches, and the resulting BtnPressed ends the wait for the C64 to read.
-   SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+   const bool Warned = SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
 
-   StopServingTheC64();
+   StopServingTheC64(Warned);
 
    VmSlotFlash slot;
    const VmInstallResult done = vm_host_install(slot, package, header, candidate, staging);
@@ -336,9 +346,9 @@ void DoHostUninstall()
    VmBootImage::displayName(HostName, sizeof HostName, VmBootImage::identity(id) ? &id : nullptr);
 
    // Before the reset assert, for the reason DoHostInstall gives above.
-   SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);
+   const bool Warned = SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);
 
-   StopServingTheC64();
+   StopServingTheC64(Warned);
 
    VmSlotFlash slot;
    const VmInstallResult done = vm_host_invalidate(slot);

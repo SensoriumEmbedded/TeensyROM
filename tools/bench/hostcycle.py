@@ -22,8 +22,10 @@ board answer from flash rather than from what it just did.
 The two kinds of step are checked differently, because the board has two ways of
 answering. A step that writes flash reboots, and the main image prints its VmFail record
 over serial on the way back up -- that text is the assertion. A step that declines has
-nothing to say over serial at all: SendMsgPrintfln goes to the C64, and the menu redraws
-over it within seconds, so by the time the screen can be read it is gone. A decline is
+nothing to say over serial at all: SendMsgPrintfln addresses the C64, and on this path the
+C64 never reads it. The only code that answers is WaitForTRMain, which the C64 is in only
+while waiting on a command it issued itself -- a step driven from here leaves it in its
+idle menu loop, so the send times out after 3 s and the text is never drawn. A decline is
 checked by what it did instead -- the firmware ACKed, the port stayed up, and the board
 is still answering on its main image, which together hold only if the early return was
 taken. The step after it carries the rest: an install that follows a refused remove had

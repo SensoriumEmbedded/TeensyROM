@@ -19,7 +19,7 @@
 // it happens either. Its codes start at 0x30.
 #ifndef MinimumBuild
 // Defined in FileParsers.ino, and declared the same way IOH_TeensyROM.c does.
-extern void SendMsgPrintfln(const char *Fmt, ...);
+extern bool SendMsgPrintfln(const char *Fmt, ...);
 #endif
 namespace VmFail {
 // One code per exit point, in the order they can be reached. Ok is written on

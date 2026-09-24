@@ -10,7 +10,12 @@ const SOURCE_EXTENSIONS = new Set(['.ino', '.c', '.cpp', '.h']);
 const SKIPPED_DIRECTORIES = new Set(['tests', 'TRMenuFiles']);
 
 const MESSAGE_FORMATTERS = /\b(SendMsgPrintfln|SendMsgPrintf|SendStrPrintfln)\s*\(\s*(\S)/g;
-const FORMATTER_DECLARATION = /^\s*(?:FLASHMEM\s+|extern\s+)*void\s+Send(?:Msg|Str)/;
+// The return type is matched loosely on purpose. Pinning it to `void` meant that giving
+// SendMsgPrintfln a bool return -- to say whether the C64 actually read the message --
+// stopped this from recognising its own definitions and prototypes, and the scan reported
+// all five of them as call sites with a non-literal format. What makes a line a
+// declaration here is the type-then-name shape, not which type it happens to be.
+const FORMATTER_DECLARATION = /^\s*(?:FLASHMEM\s+|extern\s+)*(?:void|bool)\s+Send(?:Msg|Str)/;
 
 const read = name => fs.readFileSync(path.join(FIRMWARE_ROOT, name), 'utf8');
 
