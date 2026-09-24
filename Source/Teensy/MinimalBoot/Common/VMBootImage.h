@@ -7,8 +7,9 @@
 
 // The extension host's flash slot, as the ordinary images see it. The geometry
 // and the validity predicate are the published host contract (VMHostABI.h);
-// this adds only the reads against real flash, and the buffer that stands in
-// for it on host conformance builds.
+// this adds the reads against real flash, the one way to render a descriptor's
+// name for a message, and the buffer that stands in for the slot on host
+// conformance builds.
 //
 // The ordinary images keep their upstream addresses. Only the extension image
 // uses the module-compatible RAM map.
@@ -48,6 +49,35 @@ static inline bool identity(VmHostId &out) {
     if (id.magic != VM_HOSTID_MAGIC) return false;
     out = id;
     return true;
+}
+
+// The name a host message shows, for every message that shows one -- the install and
+// removal notices and the menu's host line all come through here, because three copies
+// of it are how the buffer sizes drifted apart in the first place.
+//
+// Takes the array rather than a pointer so that rewriting this as a `const char *`
+// fails to compile: `sizeof` a pointer is 4, which would quietly size nameBytes below
+// from the field alone and restore the char[13] that a strcpy of the placeholder used
+// to overrun by three.
+static constexpr char noDescriptor[] = "(no descriptor)";
+template<unsigned N> static constexpr unsigned literalBytes(const char (&)[N]) { return N; }
+
+// Sized for whichever source is longer, because they are not the same length:
+// VmHostId::name is a fixed 12 bytes and need not be terminated, while the placeholder
+// is 15. A buffer sized from the field alone -- the obvious `sizeof id.name + 1` -- is
+// three bytes short of the placeholder.
+static constexpr unsigned nameBytes =
+    sizeof(VmHostId::name) + 1 > literalBytes(noDescriptor)
+        ? sizeof(VmHostId::name) + 1 : literalBytes(noDescriptor);
+
+// `bytes` is the caller's buffer, which is nameBytes wide if it wants either source
+// whole; both writes are bounded by it, so a later edit to either source truncates
+// rather than running off the end. `%.*s` is what reads a name that fills all 12 bytes
+// with no terminator. A null `id` is identity() saying no: a host built before the
+// descriptor existed, whose name cannot be read rather than being blank.
+static inline void displayName(char *out, size_t bytes, const VmHostId *id) {
+    if (id) snprintf(out, bytes, "%.*s", (int)sizeof id->name, id->name);
+    else    snprintf(out, bytes, "%s", noDescriptor);
 }
 
 #if !defined(__arm__)

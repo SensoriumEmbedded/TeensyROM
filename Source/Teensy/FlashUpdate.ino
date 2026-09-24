@@ -211,28 +211,6 @@ static const char *HostInstallWhy(VmInstallStatus status)
    return "refused";
 }
 
-// The name a host message shows. Sized for whichever source is longer, because they are
-// not the same length: VmHostId::name is a fixed 12 bytes and need not be terminated,
-// while the placeholder below is 15. A buffer sized from the field alone -- the obvious
-// `sizeof id.name + 1` -- is three bytes short of the placeholder.
-static constexpr char NoDescriptor[] = "(no descriptor)";
-static constexpr unsigned HostNameBytes =
-   (sizeof(VmHostId::name) > sizeof NoDescriptor - 1
-       ? sizeof(VmHostId::name) : sizeof NoDescriptor - 1) + 1;
-
-// `out` is a char[HostNameBytes]; it cannot say so in the signature, because the sketch
-// preprocessor hoists a prototype for this above the constant (the same hazard Teensy.ino
-// and VMHost.h call out), and a prototype naming HostNameBytes does not compile. Both
-// writes are bounded by it here instead, so a later edit to either source truncates
-// rather than running off the end, and `%.*s` is what reads a name that fills all 12
-// bytes with no terminator. A null `id` is VmBootImage::identity() saying no: a host
-// built before the descriptor existed, whose name cannot be read rather than being blank.
-static void HostDisplayName(char *out, const VmHostId *id)
-{
-   if (id) snprintf(out, HostNameBytes, "%.*s", (int)sizeof id->name, id->name);
-   else    snprintf(out, HostNameBytes, "%s", NoDescriptor);
-}
-
 // The install ends in a reboot either way, so its outcome travels in the
 // VmFail record the main image collects on the way back up.
 // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this
@@ -311,8 +289,8 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
       return;
    }
 
-   char HostName[HostNameBytes];
-   HostDisplayName(HostName, &candidate.id);
+   char HostName[VmBootImage::nameBytes];
+   VmBootImage::displayName(HostName, sizeof HostName, &candidate.id);
 
    // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
    // watches, and the resulting BtnPressed ends the wait for the C64 to read.
@@ -342,8 +320,8 @@ void DoHostUninstall()
    }
 
    VmHostId id{};
-   char HostName[HostNameBytes];
-   HostDisplayName(HostName, VmBootImage::identity(id) ? &id : nullptr);
+   char HostName[VmBootImage::nameBytes];
+   VmBootImage::displayName(HostName, sizeof HostName, VmBootImage::identity(id) ? &id : nullptr);
 
    // Before the reset assert, for the reason DoHostInstall gives above.
    SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);

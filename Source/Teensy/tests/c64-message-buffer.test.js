@@ -108,6 +108,25 @@ test('the CRT name field is read only as far as the 32 bytes it occupies', () =>
   }
 });
 
+test('the installed host name is rendered in one place, by a buffer wide enough for both sources', () => {
+  // The descriptor's name field is a fixed 12 bytes that need not be terminated, and the
+  // stand-in for a host that has no descriptor is 15. A buffer re-derived per site from
+  // the field alone is char[13], which a strcpy of the placeholder overran by three.
+  // Every site takes VmBootImage::nameBytes, which is the wider of the two, and reads the
+  // field through a precision that stops at its last byte.
+  const image = read('MinimalBoot/Common/VMBootImage.h');
+  assert.match(image, /snprintf\(out, bytes, "%\.\*s", \(int\)sizeof id->name, id->name\);/);
+  assert.match(image, /snprintf\(out, bytes, "%s", noDescriptor\);/);
+  // Through literalBytes, not sizeof: `const char *noDescriptor` would size this from the
+  // pointer and silently hand back the char[13].
+  assert.match(image, /nameBytes =\s*\n?\s*sizeof\(VmHostId::name\) \+ 1 > literalBytes\(noDescriptor\)/);
+  assert.match(image, /template<unsigned N> static constexpr unsigned literalBytes\(const char \(&\)\[N\]\)/);
+
+  // No site re-derives the buffer from the field, and none copies the name by hand.
+  assert.deepEqual(scanTree(/char \w+\[\s*sizeof [\w.>:-]*\bname\s*\+\s*1\s*\]/g, () => true), []);
+  assert.deepEqual(scanTree(/strcpy\(\s*\w*[Nn]ame\w*\s*,\s*"\(no descriptor\)"/g, () => true), []);
+});
+
 test('the formatters that write the C64 message buffer are bounded', () => {
   // The scan above keeps card-supplied text out of the format; this keeps the
   // output inside the buffer. Either alone leaves the overflow reachable, and

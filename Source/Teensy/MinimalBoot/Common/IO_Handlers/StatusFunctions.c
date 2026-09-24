@@ -1180,8 +1180,8 @@ FLASHMEM void MakeExtHostStr()
    if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.\r");
    else if (VmBootImage::identity(id))
    {
-      char Name[sizeof id.name + 1] = {0};
-      memcpy(Name, id.name, sizeof id.name);
+      char Name[VmBootImage::nameBytes];
+      VmBootImage::displayName(Name, sizeof Name, &id);
       //ABI and services come from the host itself, so a host from elsewhere
       //describes itself here rather than being described by this firmware -- which
       //is also why the write is bounded: the only variable-length part of this line
