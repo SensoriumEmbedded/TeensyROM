@@ -20,8 +20,11 @@ static void collect(std::vector<std::string> &into, const char *format, va_list 
     into.push_back(line);
 }
 
-void SendMsgPrintfln(const char *format, ...) {
+// true is "the C64 read it", which is what collecting it here stands for; the firmware
+// returns false only on the send timeout, and nothing here models one.
+bool SendMsgPrintfln(const char *format, ...) {
     va_list ap; va_start(ap, format); collect(toC64, format, ap); va_end(ap);
+    return true;
 }
 
 static struct UsbSerial {
