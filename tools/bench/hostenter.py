@@ -31,10 +31,10 @@ long a returning host may work before it reads as dead.
 `phrase` is optional and is matched case-insensitively against the serial output and the
 C64 screen together. Leave it off to see what a host says before deciding what to assert;
 note that the phrase comes from VmFail::describe() in the firmware *on the board*, so a
-code newer than that firmware reads back as "unknown" rather than by name. Prefer a
-phrase the serial record carries: the screen half of the match goes through petscii_row,
-and the menu sits in the lower/uppercase charset (MainMenu.asm writes #$17 to $d018),
-where an uppercase glyph reads back as '.' -- see the Limits note in tools/bench/README.md.
+code newer than that firmware reads back as "unknown" rather than by name. The screen half of the
+match goes through petscii_row, which decodes the charset the menu selects (MainMenu.asm
+writes #$17 to $d018), so both cases read back -- see the Limits note in
+tools/bench/README.md for the screen a launched program has switched.
 """
 import sys
 

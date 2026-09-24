@@ -74,7 +74,10 @@ with Link() as tr:
             rows = screen_rows(tr.screen())
         except SystemExit:
             rows = []
-        if 'Y/N' in ''.join(rows):
+        # Case-folded: which case these glyphs carry depends on where the VIC is
+        # pointed, and the updater is a launched program that need not be in the
+        # charset the menu left behind. 'Y/N' and 'y/n' are the same prompt.
+        if 'y/n' in ''.join(rows).lower():
             print('prompt is up; answering Y')
             tr.poke(KEYBUF, [PETSCII_Y])
             tr.poke(KEYCOUNT, [1])

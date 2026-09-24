@@ -101,13 +101,19 @@ needs a real reset.
 
 `screen.py`, `colors.py`, `exttest.py`, `fwupdate.py` and everything built on
 `hostops.py` -- `hostinstall.py`, `hostuninstall.py`, `hostcycle.py`,
-`hostenter.py` -- read the screen through `petscii_row`, which decodes the
-uppercase/graphics charset. A C64 in the lower/uppercase charset shows its
-uppercase letters as `.`, which is also why `fwupdate.py` would miss the `Y/N`
-prompt there and time out rather than answer it. That charset is not the exotic
-case: the menu puts the C64 in it at startup, writing `#$17` to `$d018` in
-`MainMenu.asm`'s `TextScreenMemColor`. So a phrase asserted against the screen
-should be one whose glyphs are lower case; a phrase carried by the serial
-record has no such limit.
+`hostenter.py` -- read the screen through `petscii_row`. Screen codes 1-26 are
+the unshifted letters and 65-90 the shifted ones, and which letters those are
+depends on where the VIC is pointed, so `petscii_row` takes a `charset`. It
+defaults to `LOWER_UPPER`, because that is where the menu puts the C64 at
+startup: `MainMenu.asm`'s `TextScreenMemColor` writes `#$17` to `$d018`. Pass
+`UPPER_GFX` for a screen a launched program has switched back to the power-on
+charset, where 65-90 are graphics and read as `.`.
+
+Both letter ranges decode, so a phrase asserted against the screen is no longer
+restricted to lower-case glyphs. Fold case anyway -- `hostops.Result.saw` does,
+and `fwupdate.py` now does for its `Y/N` prompt -- since which case a glyph
+carries is a property of the screen, and a launched program need not stay in the
+charset the menu left behind. Nobody has read a real updater screen to settle
+which one it uses, so folding case is what makes that question not matter.
 
     python3 -m unittest discover -s tools/bench

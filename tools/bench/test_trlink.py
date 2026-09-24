@@ -19,7 +19,7 @@ import threading
 import time
 import unittest
 
-from c64 import petscii_row
+from c64 import LOWER_UPPER, UPPER_GFX, petscii_row
 from hexfile import MAIN_BASE, MINIMAL_BASE
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, FAIL, FW_CHECK,
                       FW_FULL, FW_MINIMAL, GET_DIR_NDJSON, LAUNCH_FILE,
@@ -257,10 +257,14 @@ class BenchScripts(unittest.TestCase):
         self.assertIn('$FF00  78 A2 FF 9A', out.stdout)
 
     def test_screen_decodes_screen_codes(self):
-        self.board.mem[0x400:0x400 + 5] = bytes([8, 5, 12, 12, 15])  # HELLO
+        # Codes 1-26 are the unshifted letters, which the charset the menu selects
+        # draws in lower case; screen.py reads that charset.
+        self.board.mem[0x400:0x400 + 5] = bytes([8, 5, 12, 12, 15])
+        self.board.mem[0x400 + 40:0x400 + 40 + 5] = bytes([72, 69, 76, 76, 79])
         out = run(self.board, 'screen.py')
         self.assertEqual(out.returncode, 0, out.stderr)
-        self.assertIn(' 0 |HELLO', out.stdout)
+        self.assertIn(' 0 |hello', out.stdout)
+        self.assertIn(' 1 |HELLO', out.stdout)
 
     def test_keypress_writes_buffer_then_count(self):
         out = run(self.board, 'keypress.py', '0x87')
@@ -408,11 +412,32 @@ class WriteBound(unittest.TestCase):
 
 
 class ScreenCodes(unittest.TestCase):
-    """petscii_row reads the uppercase/graphics charset, and says so."""
+    """petscii_row decodes for whichever charset the VIC is pointed at, and defaults
+    to the one the menu selects."""
 
-    def test_the_lower_uppercase_charsets_letters_do_not_decode(self):
-        self.assertEqual(petscii_row(bytes([8, 5, 12, 12, 15])), 'HELLO')
-        self.assertEqual(petscii_row(bytes([72, 69, 76, 76, 79])), '.....')
+    def test_both_letter_ranges_decode_in_the_menus_charset(self):
+        # Default is LOWER_UPPER: 1-26 are the lower-case letters, 65-90 the upper.
+        self.assertEqual(petscii_row(bytes([8, 5, 12, 12, 15])), 'hello')
+        self.assertEqual(petscii_row(bytes([72, 69, 76, 76, 79])), 'HELLO')
+
+    def test_the_shifted_range_is_graphics_in_the_other_charset(self):
+        self.assertEqual(petscii_row(bytes([8, 5, 12, 12, 15]), UPPER_GFX), 'HELLO')
+        self.assertEqual(petscii_row(bytes([72, 69, 76, 76, 79]), UPPER_GFX), '.....')
+
+    def test_the_prompt_fwupdate_answers_is_readable_in_the_menus_charset(self):
+        # 'Y/N' drawn with shifted letters: fwupdate.py matches that literal
+        # case-sensitively, and under the old uppercase-only decode it read '././'.
+        self.assertIn('Y/N', petscii_row(bytes([89, 47, 78])))
+        self.assertNotIn('Y/N', petscii_row(bytes([89, 47, 78]), UPPER_GFX))
+
+    def test_digits_punctuation_and_at_are_charset_independent(self):
+        for cs in (LOWER_UPPER, UPPER_GFX):
+            self.assertEqual(petscii_row(bytes([0]), cs), '@')
+            self.assertEqual(petscii_row(bytes([32, 48, 57, 47, 63]), cs), ' 09/?')
+
+    def test_reverse_video_decodes_as_the_glyph_it_reverses(self):
+        self.assertEqual(petscii_row(bytes([72 | 0x80, 69 | 0x80])), 'HE')
+        self.assertEqual(petscii_row(bytes([8 | 0x80, 5 | 0x80])), 'he')
 
 
 class Reflash(unittest.TestCase):
@@ -425,6 +450,10 @@ class Reflash(unittest.TestCase):
         self.board = FakeBoard(port=os.path.join(self.dir, ORIGINAL_PORT))
         self.addCleanup(self.board.close)
         self.board.chatter = CHATTER
+        # Unshifted screen codes, as a program that converts ASCII by subtracting 64
+        # emits them. Those draw lower case in the menu's charset and upper case in
+        # the power-on one, which is why fwupdate.py folds case rather than pinning
+        # a spelling it cannot know in advance.
         row = [ord(c) - 64 if c.isalpha() else ord(c) for c in 'Y/N']
         self.board.mem[0x400 + 40:0x400 + 40 + 3] = bytes(row)
         self.image = intel_hex({MINIMAL_BASE: stamped(STAMP_DATE, STAMP_TIME),
