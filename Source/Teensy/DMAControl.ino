@@ -31,13 +31,13 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
-// The precondition for everything below it.  PerformDMA and CloseDMA are each a bare
-// `while (DMA_State != ...);`, and only isrPHI2 advances DMA_State, so with nothing
-// clocking PHI2 neither one ever returns.  There is no watchdog in this firmware to end
-// that: the board sits in its main loop until someone pulls its power.  Both blank-then-
-// reboot paths can be started while the C64 is off -- the host removal over the USB
-// device port, which is also what powers the Teensy, and a remote CRT launch through
-// RemoteControl.ino's HandleExecution -- so both ask this first.
+// Asked by the callers that have something better to do than attempt a transfer -- the
+// blank-then-reboot paths skip a blank nobody could see rather than pay for the wait.
+// It is not what keeps a dead bus from hanging the board; WaitForDMAState below is, and
+// it covers every caller including the ones that never ask.  An earlier version of this
+// comment claimed the two callers here were the only ones reachable with no C64 clocking.
+// They are not: WriteC64MemCommand and ReadC64MemCommand answer a remote command on any
+// channel, ahead of the busy check, and never ask.
 //
 // isrPHI2 stamps LastCycCnt from ARM_DWT_CYCCNT at its top, before any branch, so a
 // change in it is direct evidence that the handshake can complete.  5 mS is ~5000 edges
@@ -51,7 +51,44 @@ FLASHMEM bool C64IsClockingPHI2()
    return false;
 }
 
-FLASHMEM void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+// Nothing is clocking the bus, so the handshake that normally releases DMA cannot run --
+// and with isrPHI2 not firing there is no ISR mid-update of this state to race.  Drop the
+// request line and put the data port back the way a completed CloseDMA would have left
+// it, rather than return with DMA still asserted over a machine that may come back.
+static FLASHMEM void AbortDMA()
+{
+   SetDMADeassert;
+   SetDataPortDirIn;
+   SetDataBufIn;
+   DMA_State = DMA_S_DisableReady;
+}
+
+// Bounded by bus activity rather than by elapsed time.  How long a transfer legitimately
+// takes is set by its length -- a 64 KiB read is ~65 mS at the ~1 MHz PHI2 this board is
+// built for -- so any fixed deadline either cuts a long transfer short or leaves a stalled
+// one spinning for most of a second.  A stopped bus looks the same at every length:
+// LastCycCnt advances on every PHI2 edge whether or not the handshake progresses, so
+// waiting on *activity* bounds all four waits with one predicate and no per-caller tuning.
+//
+// Only a dead bus ends the wait here.  A live bus that never reaches the state -- the
+// continuous-read case -- is the ISR's to break, and DMA_TIMEOUT_CYCLES already does.
+static FLASHMEM bool WaitForDMAState(uint8_t Target)
+{
+   uint32_t Seen = LastCycCnt;
+   uint32_t Began = millis();
+
+   while (DMA_State != Target)
+   {
+      if (LastCycCnt != Seen) { Seen = LastCycCnt; Began = millis(); } //bus is alive, keep waiting
+      else if (millis() - Began >= 5) { AbortDMA(); return false; }
+   }
+   return true;
+}
+
+// false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
+// that only drive the bus may ignore it; a caller that reports a value to someone else has
+// to check, or it reports the stale contents of its own buffer as C64 memory.
+FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
@@ -60,21 +97,22 @@ FLASHMEM void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
    DMA_Buffer = Buffer;
    DMA_Length = Length;
    DMA_FixC64Addr = FixC64Addr;
-   
+
    DMA_State = DMA_S_StartAsynch;
-   while (DMA_State != DMA_S_TransferReady); //block until finished
+   if (!WaitForDMAState(DMA_S_TransferReady)) return false;
    DMA_State = DMA_S_TransferExecuting;
-   while (DMA_State != DMA_S_TransferComplete); //block until finished
+   if (!WaitForDMAState(DMA_S_TransferComplete)) return false;
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
    Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length, DMACycleCount);
+   return true;
 }
 
-FLASHMEM void CloseDMA()
+FLASHMEM bool CloseDMA()
 {
    DMA_State = DMA_S_StartDisable;
-   while (DMA_State != DMA_S_DisableReady ); //delayMicroseconds(1);  //block main loop until finished
+   return WaitForDMAState(DMA_S_DisableReady);
 }
 
 //__attribute__((always_inline)) inline bool DMAByte()

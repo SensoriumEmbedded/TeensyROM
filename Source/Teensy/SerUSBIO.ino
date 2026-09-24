@@ -1007,10 +1007,18 @@ FLASHMEM void WriteC64MemCommand()
       DMABuf[ByteNum] = CmdChannel->read();
    }
    
-   //uint32_t StartTime = micros();  
-   PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
-   CloseDMA();
-   //StartTime = micros() - StartTime;  
+   //uint32_t StartTime = micros();
+   // Answered ahead of the busy check and on every channel, so this is reachable with the
+   // C64 switched off -- the USB device port that carries the command also powers the
+   // Teensy.  Short-circuit: a failed PerformDMA has already released the bus, and calling
+   // CloseDMA after it would only spend the stall window a second time.
+   if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendU16(FailToken);
+      CmdChannel->println("C64 bus is not clocking, no transfer!");
+      return;
+   }
+   //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
    //CmdChannel->printf
@@ -1047,11 +1055,18 @@ FLASHMEM void ReadC64MemCommand()
        return;
    }
    
-   //uint32_t StartTime = micros();  
-   PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
-   CloseDMA();
+   //uint32_t StartTime = micros();
+   // Same reach as the write above.  Checked here for the second reason too: DMABuf is
+   // RAM_Image, which holds whatever the last operation left in it, so acking a transfer
+   // that did not happen would send that back as the contents of C64 memory.
+   if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendU16(FailToken);
+      CmdChannel->println("C64 bus is not clocking, no transfer!");
+      return;
+   }
 
-   //StartTime = micros() - StartTime;  
+   //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
    for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
