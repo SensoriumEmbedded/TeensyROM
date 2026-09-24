@@ -32,21 +32,15 @@ ShowInstalledExtSettings:
    ;update dynamic settings
    ;The firmware answers this in every build: a build without the loader, and a
    ;board with an empty slot, both say so here rather than leaving the row blank.
-   ;Not PrintFileName: that ends at PrintSerialStringLoaded, which reads whatever
-   ;source was selected last and from wherever that read was left. This is the
-   ;page's first string, so there is no previous selection to inherit and the row
-   ;came out empty. Selecting rsstSerialStringBuf here also rewinds it.
+   ;PrintFileName ends at PrintSerialStringLoaded and selects nothing, which is safe
+   ;because MakeExtHostStr calls SelectSerialStringBuf: it leaves the read pointed at
+   ;SerialStringBuf and rewound. A handler that only fills the buffer -- as this one
+   ;used to -- leaves the read where the banner's version string ended, and the row
+   ;comes out empty.
    lda #rCtlMakeExtHostStrWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg   ;moves cursor to upper right
    ldx #5 ;row
    ldy #3 ;col
-   clc
-   jsr SetCursor
-   lda TblEscC+EscNameColor
-   sta $0286  ;set text color
-   lda #rsstSerialStringBuf
-   jsr PrintSerialString
+   jsr PrintFileName
 
 WaitInstalledExtMenuKey:
    ;main wait loop
@@ -65,16 +59,9 @@ WaitInstalledExtMenuKey:
    ;Name the host being removed, so a confirmation is about a thing rather than
    ;about a menu key.
    lda #rCtlMakeExtHostStrWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg   ;moves cursor to upper right
    ldx #6 ;row
    ldy #3 ;col
-   clc
-   jsr SetCursor
-   lda TblEscC+EscNameColor
-   sta $0286  ;set text color
-   lda #rsstSerialStringBuf
-   jsr PrintSerialString
+   jsr PrintFileName
    lda #<MsgConfirmPrompt
    ldy #>MsgConfirmPrompt
    jsr PrintString

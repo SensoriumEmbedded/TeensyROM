@@ -1179,12 +1179,16 @@ void DoHostUninstall();
 // there is nothing installed, which is what they say.
 FLASHMEM void MakeExtHostStr()
 {
-   //Every arm ends its line with \r.  The confirmation screen prints its prompt from
-   //wherever this string leaves the cursor, so an arm that omits it lands the prompt a
-   //row above the one the other arms put it on.
+   //No arm ends its line with \r, because this string is printed through
+   //PrintFileName like every other dynamic settings row, and MakeFilenameStr -- which
+   //serves twenty of PrintFileName's twenty-two call sites -- does not end in one
+   //either. PrintFileName is built around that: it places the row with SetCursor and
+   //leaves the cursor wherever the text stops. A return here put the uninstall
+   //prompt a row lower, but only on the arms that carried one, which is how the
+   //inconsistency showed up in the first place.
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
    VmHostId id{};
-   if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.\r");
+   if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.");
    else if (VmBootImage::identity(id))
    {
       char Name[VmBootImage::nameBytes];
@@ -1193,13 +1197,21 @@ FLASHMEM void MakeExtHostStr()
       //describes itself here rather than being described by this firmware -- which
       //is also why the write is bounded: the only variable-length part of this line
       //is 12 bytes of third-party descriptor.
-      snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s  ABI %lu  services $%04lx\r",
+      snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s  ABI %lu  services $%04lx",
                Name, (unsigned long)id.abi, (unsigned long)id.services);
    }
-   else strcpy(SerialStringBuf, "Installed, no descriptor.\r");
+   else strcpy(SerialStringBuf, "Installed, no descriptor.");
 #else
-   strcpy(SerialStringBuf, "No extension loader in this firmware.\r");
+   strcpy(SerialStringBuf, "No extension loader in this firmware.");
 #endif
+   //displayName bounds the name to twelve drawn bytes, but abi and services are
+   //uint32 fields the host writes about itself, so the line can still reach 48
+   //characters. The row starts at column 3 of a 40 column screen, so it has 37 --
+   //the same bound MakeFilenameStr uses -- and a wider one wrapped onto the line
+   //below, which on the confirmation screen is where the prompt goes.
+   const uint16_t MaxLength = 37;
+   if (strlen(SerialStringBuf) > MaxLength) SerialStringBuf[MaxLength] = 0;
+
    SelectSerialStringBuf();
 }
 
