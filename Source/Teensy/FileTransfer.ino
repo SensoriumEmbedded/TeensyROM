@@ -103,13 +103,37 @@ FLASHMEM bool EnsureDirectory(const char* path, FS& fs)
     return result;
 }
 
+// The slowest link that still has to work, in bytes per millisecond. Two orders below what
+// USB serial or a 100 Mbit link sustains through an SD write, so a real transfer cannot
+// trip the deadline below it.
+#define ReceiveFloorBytesPer_mS  10
+
 FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
 {
     uint32_t bytenum = 0;
     uint8_t byteIn;
 
+    // SerialAvailabeTimeout bounds the wait for the *next* byte at SerialTimoutMillis. That
+    // says nothing about the transfer: a peer answering just inside that window every time
+    // holds this loop for len * 500 mS, and len is four bytes the peer chose. Nothing is
+    // served to the C64 for any of it, and on the TCP path the peer never authenticated.
+    //
+    // A deadline for the whole transfer turns that into a throughput requirement. It does
+    // not bound what a peer can claim -- len is still its four bytes, and a claim of 4 GiB
+    // still buys days at this floor -- but a peer holding the board now has to deliver real
+    // bytes to a real SD write to do it, which ends on its own when the card fills.
+    const uint32_t Began = millis();
+    const uint32_t CeilingmS = SerialTimoutMillis + len / ReceiveFloorBytesPer_mS;
+
     while (bytenum < len)
     {
+        if (millis() - Began >= CeilingmS)
+        {
+            SendU16(FailToken);
+            CmdChannel->printf("Too slow, %lu of %lu bytes\n", bytenum, len);
+            file.close();
+            return false;
+        }
         if (!SerialAvailabeTimeout())
         {
             SendU16(FailToken);
