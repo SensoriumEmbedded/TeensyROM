@@ -126,32 +126,43 @@ int main(int argc,char **argv){
         // bounds: the loop's `n + 1 < bytes` for a real name, snprintf's for the two
         // placeholders. Pinned here so the promise is checked rather than asserted.
         // Canaries either side catch a write that lands outside the buffer at all.
+        //
+        // Each case names the bytes it expects rather than a length. A length passes on a
+        // buffer that came back empty, and an empty name during an erase is the failure
+        // displayName exists to prevent -- so "shorter than the buffer" is the one answer
+        // that must not count as truncation. strcmp also stops at the first byte that
+        // differs, so an unterminated buffer fails the assert here rather than running the
+        // check off the end of the fence looking for a NUL that was never written.
         {
-            char fenced[3+4+3];
-            const char *const front=fenced, *const back=fenced+3+4;
-            char *const narrow=fenced+3;
+            //One place for the two widths, so a canary check cannot drift from the array.
+            constexpr size_t fenceBytes=3,narrowBytes=4;
+            char fenced[fenceBytes+narrowBytes+fenceBytes];
+            char *const narrow=fenced+fenceBytes;
+            auto unwritten=[](const char *p,size_t n){for(size_t i=0;i<n;i++)if(p[i]!='#')return false;return true;};
+            auto fence=[&]{memset(fenced,'#',sizeof fenced);};
+            auto fenceIntact=[&]{return unwritten(fenced,fenceBytes)&&unwritten(narrow+narrowBytes,fenceBytes);};
 
-            memset(fenced,'#',sizeof fenced);
+            fence();
             memcpy(probe.name,"ABCDEFGHIJKL",12);
-            VmBootImage::displayName(narrow,4,&probe);
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
             assert(!strcmp(narrow,"ABC"));                 //3 plus the terminator
-            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+            assert(fenceIntact());
 
-            memset(fenced,'#',sizeof fenced);
+            fence();
             memset(probe.name,0,12);                       //drives the (unnamed) branch
-            VmBootImage::displayName(narrow,4,&probe);
-            assert(strlen(narrow)<4);
-            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
+            assert(!strcmp(narrow,"(un"));
+            assert(fenceIntact());
 
-            memset(fenced,'#',sizeof fenced);
-            VmBootImage::displayName(narrow,4,nullptr);    //and the (no descriptor) one
-            assert(strlen(narrow)<4);
-            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+            fence();
+            VmBootImage::displayName(narrow,narrowBytes,nullptr); //and the (no descriptor) one
+            assert(!strcmp(narrow,"(no"));                 //still a different answer at this width
+            assert(fenceIntact());
 
             // Zero is the caller having nothing to write into; it must not write anyway.
-            memset(fenced,'#',sizeof fenced);
+            fence();
             VmBootImage::displayName(narrow,0,&probe);
-            assert(!memcmp(fenced,"##########",sizeof fenced));
+            assert(unwritten(fenced,sizeof fenced));
         }
     }
 
