@@ -55,8 +55,7 @@ FLASHMEM bool ApplyRemoteFileChanges()
 
    FS *sourceFS = &firstPartition;
    if (LoadedDevice == rmtSD) sourceFS = &SD;
-   LoadDirectory(sourceFS);
-   MenuSource = DriveDirMenu;
+   LoadDirectory(sourceFS); //publishes DriveDirMenu with its count
    IO1[rwRegCursorItemOnPg] = 0;
    SendMsgPrintfln("Files changed\r\nDirectory reloaded");
    return true;
@@ -74,7 +73,14 @@ FLASHMEM void HandleExecution()
 
    if (ApplyRemoteFileChanges()) return;
 
-   StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
+   const StructMenuItem* SelItem = MenuItemSel();
+   if (SelItem == NULL)
+   {  //the menu changed under the selection since the index was formed; this path goes on to
+      //open files, write EEPROM and swap IO handlers off the item it copies, so refuse loudly
+      SendMsgPrintfln("Selection is out of range\r\nfor the current menu");
+      return;
+   }
+   StructMenuItem MenuSelCpy = *SelItem; //local copy selected menu item to modify
 
 #ifdef VM_EXTENSIONS_ENABLED
    // Existing browser and item types are unchanged. Intercept only physical SD
@@ -146,7 +152,8 @@ FLASHMEM void HandleExecution()
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected d64 name as a dir
             LoadDxxDirectory(sourceFS, MenuSelCpy.ItemType); 
             strcat(DriveDirPath, "*"); //mark to indicate d64 file instead of "real" dir
-            SetNumItems(NumDrvDirMenuItems);
+            SetMenu(DriveDirMenu, NumDrvDirMenuItems); //LoadDxxDirectory rebuilt the array
+
             return;  //we're done here...
          }
          
@@ -171,8 +178,7 @@ FLASHMEM void HandleExecution()
             if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
             else 
             {
-               MenuSource = (StructMenuItem*)MenuSelCpy.Code_Image;
-               SetNumItems(MenuSelCpy.Size/sizeof(StructMenuItem));
+               SetMenu((StructMenuItem*)MenuSelCpy.Code_Image, MenuSelCpy.Size/sizeof(StructMenuItem));
                strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             }
             return;
@@ -360,17 +366,14 @@ void MenuChange()
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
-         MenuSource = TeensyROMMenu; 
-         SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
+         SetMenu(TeensyROMMenu, sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
-         MenuSource = DriveDirMenu; 
-         break;
+         break;              //LoadDirectory publishes DriveDirMenu with its count
       case rmtUSBDrive:
          LoadDirectory(&firstPartition);
-         MenuSource = DriveDirMenu; 
          break;
    }
    IO1[rwRegCursorItemOnPg] = 0;
@@ -587,7 +590,10 @@ void LoadDirectory(FS *sourceFS)
       AddDirEntry("<Empty>");
    }
    
-   SetNumItems(NumDrvDirMenuItems);
+   //Publishes the base as well as the count: callers used to assign MenuSource themselves
+   //*after* this returned, leaving a window where the new count described a menu the base did
+   //not point at yet, and an IO1 read landing in it indexed the old menu by the new length.
+   SetMenu(DriveDirMenu, NumDrvDirMenuItems);
 }
 
 void AddDirEntry(const char *EntryString)

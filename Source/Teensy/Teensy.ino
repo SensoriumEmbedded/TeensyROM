@@ -492,13 +492,29 @@ FLASHMEM void SetEEPDefaults()
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }
 
-void SetNumItems(uint16_t NumItems)
+//MenuSource and NumItemsFull are one fact kept in two variables, and MenuItemSel() reads both
+//together to decide whether SelItemFullIdx is still in range.  Assigned separately by the
+//caller, there is an instant where the count already describes the new menu and the base still
+//points at the old one -- and a menu change is milliseconds of main-loop work against a ~1uS
+//bus cycle, so the C64 gets to read in that instant.  Publish them here instead, in an order
+//whose gap is safe: drop the count to zero (MenuItemSel() then answers NULL), move the base,
+//then publish the real count.  The barriers keep the compiler from reordering the three
+//stores; isrPHI2 cannot preempt itself, so the reader needs nothing further.
+void SetMenu(StructMenuItem* Source, uint16_t NumItems)
 {
-   NumItemsFull = NumItems;
-   IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
+   NumItemsFull = 0;                //shut: every menu deref answers NULL from here
+   asm volatile("" ::: "memory");
+   MenuSource = Source;
+   //The index was clamped against the count of the moment it was formed, which is not this
+   //moment.  A menu that shrank under it leaves it pointing past the new end.
+   if (SelItemFullIdx >= NumItems) SelItemFullIdx = 0;
+   asm volatile("" ::: "memory");
+   NumItemsFull = NumItems;         //open: the base it describes is already in place
+
+   IO1[rRegNumItemsOnPage] = (NumItems > MaxItemsPerPage ? MaxItemsPerPage : NumItems);
    IO1[rwRegPageNumber] = 1;
-   IO1[rRegNumPages] = 
-      NumItems/MaxItemsPerPage + 
+   IO1[rRegNumPages] =
+      NumItems/MaxItemsPerPage +
       (NumItems%MaxItemsPerPage!=0 ? 1 : 0) +
       (NumItems==0 ? 1 : 0);
 }

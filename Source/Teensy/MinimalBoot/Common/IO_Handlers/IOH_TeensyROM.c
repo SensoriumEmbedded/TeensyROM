@@ -86,6 +86,24 @@ inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
    return (uint16_t)Idx;
 }
 
+//Clamping the index where it is formed is not the same as clamping it where it is used, and
+//the two are separated by whatever the C64 does in between.  The bound is a third C64-controlled
+//input alongside the item byte and the page byte: one write to rWRegCurrMenuWAIT swaps the menu,
+//and both NumItemsFull and MenuSource change while a formed SelItemFullIdx stays where it was.
+//Nothing re-checked it, so a 15-item menu's index 14 survived into a 10-item one and got
+//dereferenced -- twice from inside isrPHI2, where MenuSource[] elements hand out two pointers.
+//So re-check at the dereference, against the count in force now.  Answer NULL rather than
+//substituting item 0: a caller that cannot tell "out of range" from "the first item" acts on the
+//wrong file and says nothing.  SetMenu() (Teensy.ino) keeps the base and the count consistent
+//for this read.  Callers that form the index immediately above their own dereference are already
+//in range by MenuIdxFromRegs' construction and are left alone.
+inline StructMenuItem* MenuItemSel()
+{
+   const uint16_t Idx = SelItemFullIdx;   //one read: the ISR writes this too
+   if (MenuSource == NULL || Idx >= NumItemsFull) return NULL;  //covers NumItemsFull==0
+   return &MenuSource[Idx];
+}
+
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -320,7 +338,16 @@ bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
 
 FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
 {
-   char *LclFilename = MenuSource[SelItemFullIdx].Name;
+   const StructMenuItem* Item = MenuItemSel();
+   if (Item == NULL || Item->Name == NULL)
+   {  //Callers print this buffer and several then write it to EEPROM as a lasting file
+      //reference, so a path built from a stale selection has to be a visible refusal rather
+      //than a plausible name.  Same shape as the "TR:Dir not found" exit below.
+      snprintf(FilePathName, Size, "Sel out of range");
+      return;
+   }
+
+   char *LclFilename = Item->Name;
    char Rand[] = "?";
 
    if (IO1[rwRegScratch]) LclFilename = Rand; //random dir
@@ -617,9 +644,14 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rRegItemTypePlusIOH:
-            Data = MenuSource[SelItemFullIdx].ItemType;
-            if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+         {  //ISR context: cannot print, so an out-of-range selection reports the type that
+            //already means "not a valid item" (HandleExecution says so) rather than reading
+            //whatever sits past the end of the menu now in place.
+            const StructMenuItem* Item = MenuItemSel();
+            Data = (Item == NULL) ? rtNone : Item->ItemType;
+            if(Item != NULL && IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item->IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
             DataPortWriteWaitLog(Data);
+         }
             break;
          case rRegStreamData:
             //Same class as the StatusFunction[] guard: an index the C64 advances, with
@@ -781,16 +813,28 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  memcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength);
+               {  //This memcpy follows a pointer stored *in* the menu item, so an index past
+                  //the end of the menu copies 35 bytes from whatever a stray word happens to
+                  //point at -- and then hands them to the C64 a byte at a time.  ISR context
+                  //cannot print, so say it in the string itself, as "?Stat"/"?IOH" do.
+                  const StructMenuItem* Item = MenuItemSel();
+                  if (Item == NULL || Item->Name == NULL)
+                  {
+                     strcpy(SerialStringBuf, "?Item");
+                     ptrSerialString = SerialStringBuf;
+                     break;
+                  }
+                  memcpy(SerialStringBuf, Item->Name, MaxItemDispLength);
                   SerialStringBuf[MaxItemDispLength-1] = 0; //Trim to length, if needed
                   if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
-                      MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
+                      Item->ItemType > rtDirectory &&
                       IO1[rWRegCurrMenuWAIT] != rmtTeensy)
                   { // if not show ext, not dir or unknown, not a TR Menu: terminate before extension
                      char *pDot = strrchr(SerialStringBuf, '.'); //find last dot
                      if (pDot != NULL) *pDot = 0; //terminate there
                   }
                   ptrSerialString = SerialStringBuf;
+               }
                   break;
                case rsstNextIOHndlrName:
                {  //Same range rule the other two IOHandler[] index sites apply

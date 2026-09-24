@@ -26,10 +26,15 @@ void IOHandlerNextInit()
 void IOHandlerSelectInit()
 { //called after cart loaded, PRG x-fer finished, or exit to basic (rsIOHWSelInit)
    PendingfBusSnoop = NULL; //clean slate for whatever InitHndlr below is about to stage
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
+   //An out-of-range selection used to feed a byte read past the end of the menu straight into
+   //IOHandlerInit, which rejects it and returns early -- leaving the PRG-load handshake unset
+   //and the C64 polling rRegIOHSwapPoll with no timeout.  Fall back to the stored handler,
+   //which the rwRegNextIOHndlr write path already clamps.
+   const StructMenuItem* Item = MenuItemSel();
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       Printf_dbg("IO Handler set by Teensy Menu\n");
-      IOHandlerInit(MenuSource[SelItemFullIdx].IOHndlrAssoc); 
+      IOHandlerInit(Item->IOHndlrAssoc);
    }
    else IOHandlerNextInit();
 }

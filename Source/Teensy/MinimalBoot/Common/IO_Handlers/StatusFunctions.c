@@ -543,10 +543,13 @@ FLASHMEM void KERNALPreStart()
    //Serial.println("Hi from KERNALPreStart");
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
+   //Nothing re-forms SelItemFullIdx in this function, so it is whatever the last menu change
+   //left behind; fall back to the stored handler when it no longer names an item.
+   const StructMenuItem* Item = MenuItemSel();
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       //Serial.println("IO Handler set by Teensy Menu\n");
-      NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc;
+      NextIOHndlr = Item->IOHndlrAssoc;
    }
 
    if (NextIOHndlr == IOH_KernalReplace)
