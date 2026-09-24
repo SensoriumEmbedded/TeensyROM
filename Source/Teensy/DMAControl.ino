@@ -34,10 +34,14 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
 // Asked by the callers that have something better to do than attempt a transfer -- the
 // blank-then-reboot paths skip a blank nobody could see rather than pay for the wait.
 // It is not what keeps a dead bus from hanging the board; WaitForDMAState below is, and
-// it covers every caller including the ones that never ask.  An earlier version of this
-// comment claimed the two callers here were the only ones reachable with no C64 clocking.
-// They are not: WriteC64MemCommand and ReadC64MemCommand answer a remote command on any
-// channel, ahead of the busy check, and never ask.
+// it covers every caller including the ones that never ask.
+//
+// What neither of them guards is a C64 that is switched off.  The cartridge port is this
+// board's only supply -- PCB/PCB_Assembly.md has the Teensy's USB 5 V trace cut during
+// assembly so the two cannot back-feed -- so a C64 that is off takes the Teensy with it.
+// Measured with the C64 switched off: /dev/cu.usbmodem* disappears and no command can be
+// sent, let alone answered.  The state these guards are for is a C64 still supplying 5 V
+// that has stopped clocking: a fault, or the moment either side of the power switch.
 //
 // isrPHI2 stamps LastCycCnt from ARM_DWT_CYCCNT at its top, before any branch, so a
 // change in it is direct evidence that the handshake can complete.  5 mS is ~5000 edges

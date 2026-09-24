@@ -1008,10 +1008,10 @@ FLASHMEM void WriteC64MemCommand()
    }
    
    //uint32_t StartTime = micros();
-   // Answered ahead of the busy check and on every channel, so this is reachable with the
-   // C64 switched off -- the USB device port that carries the command also powers the
-   // Teensy.  Short-circuit: a failed PerformDMA has already released the bus, and calling
-   // CloseDMA after it would only spend the stall window a second time.
+   // Short-circuit: a failed PerformDMA has already released the bus, and calling CloseDMA
+   // after it would only spend the stall window a second time.  A C64 that is switched off
+   // is not the case this catches -- it powers the board too, so no command arrives to be
+   // answered; C64IsClockingPHI2 in DMAControl.ino has what is left.
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);

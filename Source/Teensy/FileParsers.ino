@@ -168,9 +168,11 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
 #ifdef Fab04_FullDMACapable
             // Same guard, and for the same reason, as the blank in StopServingTheC64:
             // PerformDMA and CloseDMA never return with nothing clocking PHI2, and this
-            // path is reachable with the C64 switched off -- RemoteControl.ino's forced
-            // CRT launch calls HandleExecution over the USB port that powers the Teensy.
-            // Without the check the board wedges here instead of rebooting.
+            // path is reached over USB as well as from the menu -- RemoteControl.ino's
+            // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
+            // though: that powers the board too, so there is nothing left to reach it.
+            // Without the check a C64 that is powered but not clocking wedges here
+            // instead of rebooting.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
