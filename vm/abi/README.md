@@ -599,10 +599,21 @@ Treat the rows marked **no** as untested rather than as working.
 There are two ways out of a running extension, and only one of them has run on
 hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
 records `$04` and reboots into the menu. A module that did not is returned by
-the reset button, which the extension image services from `loop()` — and
-`vm_entry` is called from `setup()`, so an entry point that never returns never
-reaches that service and the button is the only way back. The alternate button
-is not serviced while an extension runs.
+the reset button, which the extension image services from `loop()`: `isrButton`
+(`ISRs.c`) only sets `BtnPressed`, and the reboot happens on the next pass of
+the loop. That works for a resident module, because `vm_entry` returned and the
+loop is running.
+
+It does not work for a module whose `vm_entry` never returns. `vm_entry` is
+called from `setup()`, by way of `VMHostBoot()` and `loadModule()`, so a module
+that hangs there hangs `setup()`: `loop()` is never reached, `BtnPressed` is set
+by the ISR and never acted on, and neither the menu button nor the C64 reset
+line brings the board back — both are wired to the same `isrButton`. The way
+out is to power the C64 off, which is also the board's only supply, since the
+Teensy's own 5V/USB connection is cut during assembly
+([`PCB/PCB_Assembly.md`](../../PCB/PCB_Assembly.md)). The alternate button is
+not serviced while an extension runs either: `isrSpecial` is left unattached in
+this image.
 
 Installing and removing a host are main-image work and need no hand on the
 board at all. `tools/bench/hostcycle.py` drives a whole round trip over USB.
