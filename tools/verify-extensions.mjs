@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
-         RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameDraws,
+         RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameSafe,
          hostFileStem } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import { readSource } from './lib/source-text.mjs';
@@ -226,30 +226,40 @@ function checkServiceRegistry() {
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }
 
-// hostNameDraws() in tools/lib/extension.mjs is a hand mirror of nameByteDraws() in
-// VMBootImage.h. The firmware judges by it what a C64 will draw rather than execute; the
-// packager judges by it what may reach a terminal and what may become a filename. A
-// mirror that drifted would let the packager name a file with a byte the device refuses
-// to show, or print one the device would not -- so compare them over every byte, and
-// check the filename rule stays inside the display rule rather than beside it.
+// hostNameSafe() in tools/lib/extension.mjs is a hand mirror of nameByteSafe() in
+// VMBootImage.h. The firmware judges by it what may be handed to CHROUT without changing
+// what a later byte does; the packager judges by it what may reach a terminal and what
+// may become a filename. A mirror that drifted would let the packager name a file with a
+// byte the device refuses to show, or print one the device would not -- so compare them
+// over every byte, and check the filename rule stays inside the display rule rather than
+// beside it.
+//
+// The ranges are read out of the header rather than repeated, so the two cannot disagree
+// about a value. They can still disagree about the predicate's *shape*: this regex is
+// written to the one the header has, and a refinement that changes the shape fails here
+// with "cannot read", not with a mismatch. Loud and in the safe direction, but it is the
+// reason a change to nameByteSafe() is a change to this line too.
 function checkHostNamePolicy() {
   const image = sourceOf('Source/Teensy/MinimalBoot/Common/VMBootImage.h');
-  const match = image.match(/return !\(c < (0x[0-9a-f]+) \|\| \(c >= (0x[0-9a-f]+) && c <= (0x[0-9a-f]+)\)\);/);
-  if (!match) throw new Error('cannot read the nameByteDraws() ranges from VMBootImage.h');
+  const match = image.match(
+    /return !\(c < (0x[0-9a-f]+) \|\| \(c >= (0x[0-9a-f]+) && c <= (0x[0-9a-f]+)\) \|\| c == nameByteQuote\);/);
+  const quote = image.match(/nameByteQuote = (0x[0-9a-f]+);/);
+  if (!match || !quote) throw new Error('cannot read the nameByteSafe() ranges from VMBootImage.h');
   const [low, c1Low, c1High] = match.slice(1).map((word) => parseInt(word, 16));
-  const firmware = (c) => !(c < low || (c >= c1Low && c <= c1High));
+  const quoteByte = parseInt(quote[1], 16);
+  const firmware = (c) => !(c < low || (c >= c1Low && c <= c1High) || c === quoteByte);
 
   for (let c = 0; c < 256; c++) {
-    if (firmware(c) !== hostNameDraws(c)) {
-      throw new Error(`nameByteDraws($${c.toString(16)}) is ${firmware(c)} in VMBootImage.h ` +
-        `but hostNameDraws in tools/lib/extension.mjs says ${hostNameDraws(c)}`);
+    if (firmware(c) !== hostNameSafe(c)) {
+      throw new Error(`nameByteSafe($${c.toString(16)}) is ${firmware(c)} in VMBootImage.h ` +
+        `but hostNameSafe in tools/lib/extension.mjs says ${hostNameSafe(c)}`);
     }
-    // A byte the firmware will not draw must not survive into a filename either.
+    // A byte the firmware will not show must not survive into a filename either.
     if (!firmware(c) && hostFileStem(String.fromCharCode(c)) !== '') {
-      throw new Error(`hostFileStem kept $${c.toString(16)}, which nameByteDraws rejects`);
+      throw new Error(`hostFileStem kept $${c.toString(16)}, which nameByteSafe rejects`);
     }
   }
-  console.log('PASS: hostNameDraws mirrors nameByteDraws in VMBootImage.h over all 256 bytes, ' +
+  console.log('PASS: hostNameSafe mirrors nameByteSafe in VMBootImage.h over all 256 bytes, ' +
               'and hostFileStem stays inside it');
 }
 

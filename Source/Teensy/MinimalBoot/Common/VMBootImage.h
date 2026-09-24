@@ -96,12 +96,30 @@ static constexpr unsigned nameBytes =
 // two ranges draws, including the graphics blocks a host author may have picked on
 // purpose. Judging this by isprint() instead would have cut $60-$7f and $a0-$ff, which
 // are those blocks.
-static inline bool nameByteDraws(unsigned char c) {
-    return !(c < 0x20 || (c >= 0x80 && c <= 0x9f));
+//
+// $22 is the exception that makes "draws" the wrong question. It draws, and it also
+// toggles the screen editor's quote mode ($d4) on its way through CHROUT; in quote mode
+// the *next* control code is drawn instead of executed. RETURN is what clears the flag,
+// and MakeExtHostStr ends its row without one on purpose (StatusFunctions.c), so an odd
+// number of quotes in a name outlives the row it was printed on. The next control code
+// after it is PrintBanner's ChrClear when the user presses `u` on the extensions page
+// (StringFunctions.asm MsgBanner1), which then draws as a glyph instead of clearing --
+// and the uninstall confirmation lands on top of the page it should have replaced, at
+// the moment it is asking whether to erase the slot. Same outcome as a $93 in the name,
+// reached one byte later, so it is the same class rather than a second one.
+//
+// tools/lib/c64-screen.mjs models the same rule for the C64 sources: a quote flips
+// `quoted`, and control codes are executed only `&& !quoted`.
+static constexpr unsigned char nameByteQuote = 0x22;
+
+// True when a byte can be handed to CHROUT without changing what a later byte does.
+// Deliberately not called "draws": $22 draws and is still not safe.
+static inline bool nameByteSafe(unsigned char c) {
+    return !(c < 0x20 || (c >= 0x80 && c <= 0x9f) || c == nameByteQuote);
 }
 
 // $20 and $a0 are the two blanks, space and shifted space. A name of nothing but these
-// passes nameByteDraws byte for byte and still reaches the screen as an empty row, which
+// passes nameByteSafe byte for byte and still reaches the screen as an empty row, which
 // during an erase is the same failure as a cleared one: nothing left to report.
 static inline bool nameByteBlank(unsigned char c) { return c == 0x20 || c == 0xa0; }
 
@@ -117,20 +135,28 @@ static constexpr char nameSubstitute = '?';
 // first NUL and reads no more than its twelve bytes, which is what handles a name filling
 // the field with no terminator. A null `id` is identity() saying no: a host built before
 // the descriptor existed, whose name cannot be read rather than being blank.
+//
+// `named` is decided over the whole field and the write is bounded separately, because
+// they answer different questions: whether this descriptor names anything is a property
+// of the twelve bytes, while how much of it fits is a property of the caller's buffer.
+// Deciding both in one bounded loop makes a narrow buffer able to turn a host named
+// "   TR" into "(unnamed)" -- not a shortened name but a different one, and "(unnamed)"
+// mid-erase is the answer this function exists to keep honest. Every caller passes
+// nameBytes today, so that is a trap for the next one rather than a live bug.
 static inline void displayName(char *out, size_t bytes, const VmHostId *id) {
     if (!bytes) return;
     if (!id) { snprintf(out, bytes, "%s", noDescriptor); return; }
 
     size_t n = 0;
-    bool drawn = false;
-    for (size_t i = 0; i < sizeof id->name && n + 1 < bytes; i++) {
+    bool named = false;
+    for (size_t i = 0; i < sizeof id->name; i++) {
         const unsigned char c = (unsigned char)id->name[i];
         if (!c) break;
-        out[n++] = nameByteDraws(c) ? (char)c : nameSubstitute;
-        if (!nameByteBlank(c)) drawn = true;
+        if (!nameByteBlank(c)) named = true;
+        if (n + 1 < bytes) out[n++] = nameByteSafe(c) ? (char)c : nameSubstitute;
     }
     out[n] = 0;
-    if (!drawn) snprintf(out, bytes, "%s", unnamedHost);
+    if (!named) snprintf(out, bytes, "%s", unnamedHost);
 }
 
 #if !defined(__arm__)

@@ -103,6 +103,16 @@ int main(int argc,char **argv){
         VmBootImage::displayName(shown,sizeof shown,&probe);
         assert(!strcmp(shown,"?\xa6\xdb\x60"));
 
+        // $22 draws, and CHROUT still toggles quote mode on it, which leaves the next
+        // control code drawn rather than executed. The host line ends without a RETURN to
+        // clear the flag, so an odd number of quotes survives it and disarms the ChrClear
+        // PrintBanner issues on `u` -- the uninstall confirmation then lands on top of the
+        // page it should have replaced. Substituted like any other byte that cannot be
+        // handed over safely; an even number would balance, but the filter does not count.
+        memcpy(probe.name,"A\x22""B\x22""C\x22""\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"A?B?C?"));
+
         // A name that is empty, or nothing but the two blanks, would reach the screen as
         // no name at all -- during an erase that is the same failure as a cleared one.
         memset(probe.name,0,12);
@@ -146,6 +156,16 @@ int main(int argc,char **argv){
             memcpy(probe.name,"ABCDEFGHIJKL",12);
             VmBootImage::displayName(narrow,narrowBytes,&probe);
             assert(!strcmp(narrow,"ABC"));                 //3 plus the terminator
+            assert(fenceIntact());
+
+            // Blanks first, the only drawable byte past the cut. "Named" is a property of
+            // the field and "how much fits" is a property of the buffer, so deciding them
+            // together would answer "(unnamed)" for a host that has a name -- a different
+            // answer, not a shorter one, and the one this function exists to keep honest.
+            fence();
+            memcpy(probe.name,"   TR\x00\x00\x00\x00\x00\x00\x00",12);
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
+            assert(!strcmp(narrow,"   "));
             assert(fenceIntact());
 
             fence();

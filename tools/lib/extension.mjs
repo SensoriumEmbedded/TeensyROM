@@ -228,21 +228,24 @@ export function hostDescriptor(payload) {
            name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
 }
 
-// A hand mirror of nameByteDraws() in VMBootImage.h, which the firmware uses to keep a
+// A hand mirror of nameByteSafe() in VMBootImage.h, which the firmware uses to keep a
 // third-party descriptor's bytes from reaching a C64 as control codes. The same two
 // ranges serve a terminal: $00-$1f and $80-$9f are also C0 and C1, so $1b cannot start an
-// escape sequence here for the same reason $93 cannot clear a screen there. One predicate
-// rather than two, because two would drift -- checkHostNamePolicy() in
-// tools/verify-extensions.mjs compares this against the header byte for byte.
-export function hostNameDraws(byte) {
-  return !(byte < 0x20 || (byte >= 0x80 && byte <= 0x9f));
+// escape sequence here for the same reason $93 cannot clear a screen there. $22 is out
+// for a reason that is specific to the C64 -- it toggles the screen editor's quote mode
+// and disarms the next control code, which VMBootImage.h explains -- and is carried here
+// because the two predicates have to agree byte for byte, not because a terminal minds a
+// quote. One predicate rather than two, because two would drift --
+// checkHostNamePolicy() in tools/verify-extensions.mjs compares this against the header.
+export function hostNameSafe(byte) {
+  return !(byte < 0x20 || (byte >= 0x80 && byte <= 0x9f) || byte === 0x22);
 }
 
 // What the packager prints for a descriptor name: the substitution displayName() makes
 // for the C64, on a different renderer for the same reason.
 export function hostNameForDisplay(name) {
   return [...Buffer.from(name, 'latin1')]
-    .map((c) => (hostNameDraws(c) ? String.fromCharCode(c) : '?')).join('');
+    .map((c) => (hostNameSafe(c) ? String.fromCharCode(c) : '?')).join('');
 }
 
 // The stem of the .TRH the packager writes when it is given no --out. Built from the
@@ -250,16 +253,16 @@ export function hostNameForDisplay(name) {
 // third-party, and a name of "../../pwned" would otherwise put the file two directories
 // above the one the developer is looking in, on top of whatever is already there.
 //
-// Deliberately narrower than hostNameDraws. That predicate answers "will a C64 draw
-// this", and $2f draws perfectly well while being a path separator; this answers "is this
-// one ordinary filename component", which is the stricter question. An allowlist is what
+// Deliberately narrower than hostNameSafe. That predicate answers "can a C64 be handed
+// this", and $2f can be, while being a path separator; this answers "is this one ordinary
+// filename component", which is the stricter question. An allowlist is what
 // makes it stricter by construction: a separator, a `..`, a leading dot, a NUL and every
 // non-printable byte are out because they were never in, rather than because a denylist
 // remembered them. Returns '' when nothing survives, which the caller reports rather than
 // papering over.
 export function hostFileStem(name) {
   return [...Buffer.from(name, 'latin1')]
-    .filter((c) => hostNameDraws(c))
+    .filter((c) => hostNameSafe(c))
     .map((c) => String.fromCharCode(c).toUpperCase())
     .filter((ch) => /[A-Z0-9_-]/.test(ch)).join('');
 }

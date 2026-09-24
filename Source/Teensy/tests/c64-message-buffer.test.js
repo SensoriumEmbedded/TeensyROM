@@ -141,7 +141,7 @@ test('the installed host name is rendered in one place, by a buffer wide enough 
   // Every site takes VmBootImage::nameBytes, which is the wider of the two, and reads the
   // field through a precision that stops at its last byte.
   const image = read('MinimalBoot/Common/VMBootImage.h');
-  assert.match(image, /out\[n\+\+\] = nameByteDraws\(c\) \? \(char\)c : nameSubstitute;/);
+  assert.match(image, /out\[n\+\+\] = nameByteSafe\(c\) \? \(char\)c : nameSubstitute;/);
   assert.match(image, /snprintf\(out, bytes, "%s", noDescriptor\);/);
   assert.match(image, /snprintf\(out, bytes, "%s", unnamedHost\);/);
   // Through literalBytes, not sizeof: `const char *noDescriptor` would size this from the
@@ -171,13 +171,20 @@ test('a descriptor name reaches the C64 as glyphs, never as control codes', () =
   // holding "do not power off" across a 45-second erase. Bounding the read by length, as
   // %.*s did, does not bound the bytes.
   const image = read('MinimalBoot/Common/VMBootImage.h');
-  assert.match(image, /return !\(c < 0x20 \|\| \(c >= 0x80 && c <= 0x9f\)\);/);
+  assert.match(image, /return !\(c < 0x20 \|\| \(c >= 0x80 && c <= 0x9f\) \|\| c == nameByteQuote\);/);
+  // $22 draws and still is not safe: CHROUT toggles quote mode on it, and the next
+  // control code is then drawn rather than executed. The name's row ends without a
+  // RETURN to clear the flag, so the next one is PrintBanner's ChrClear on `u`.
+  assert.match(image, /nameByteQuote = 0x22;/);
   assert.match(image, /nameByteBlank\(unsigned char c\) \{ return c == 0x20 \|\| c == 0xa0; \}/);
 
   // Substituted, not dropped: an all-control name still renders twelve visible bytes, so
   // the host can be named in a report instead of leaving a blank mid-erase. The behaviour
   // this shape produces is asserted by execution in vm/tests/registry_test.cpp.
-  assert.match(image, /if \(!drawn\) snprintf\(out, bytes, "%s", unnamedHost\);/);
+  assert.match(image, /if \(!named\) snprintf\(out, bytes, "%s", unnamedHost\);/);
+  // Decided over the whole field, not over what fit: a narrow buffer must shorten a name,
+  // never turn one into "(unnamed)".
+  assert.match(image, /for \(size_t i = 0; i < sizeof id->name; i\+\+\)/);
 
   // Nothing goes round the filter: no message formatter takes the descriptor field
   // itself. displayName is the only way the name reaches a screen or the serial line.
