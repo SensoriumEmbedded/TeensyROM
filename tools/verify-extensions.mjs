@@ -373,4 +373,4 @@ native('host_install_test', [hostPackageFixture(sandbox('host-package-'))]);
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
-console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, failure reporting, host-package installation, reference module)');
+console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, packet scheduler, failure reporting, host-package installation, reference module)');
