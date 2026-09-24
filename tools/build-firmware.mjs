@@ -58,6 +58,7 @@ import { fileURLToPath } from 'node:url';
 import { resolveArduinoCli, defaultArduinoDataDir, defaultArduinoUserDir } from './lib/toolchain.mjs';
 import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mjs';
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
+import { definesMacro } from './lib/source-text.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import {
   minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
@@ -261,12 +262,14 @@ console.log(`TRVersion: ${trVersion}`);
 // flag if uncommented. If it's active but --target tr was requested, the build would
 // silently produce a TR+ image while claiming to be plain TR.
 const fab04CtlPath = path.join(root, 'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h');
-// `#\s*define` because C allows whitespace between the # and the directive: `# define
-// Fab04_Features` compiles exactly like `#define Fab04_Features`, so a pattern that missed
-// it would leave this guard blind to an active define and ship a Fab 0.4 image under the
-// plain-TR name -- the one outcome the guard exists to prevent.
-const FAB04_DEFINE = /^\s*#\s*define\s+Fab04_Features\b/m;
-const fab04Active = FAB04_DEFINE.test(read(fab04CtlPath));
+// What counts as active is whatever the preprocessor would act on, which is wider than the
+// usual spelling in two ways: `#  define Fab04_Features` (whitespace after the hash) and
+// `/*c*/ #define Fab04_Features` (a comment is whitespace by the time directives run) are
+// both live. A pattern anchored on a bare `#` at line start reaches the first and walks past
+// the second, leaving this guard blind to an active define and shipping a Fab 0.4 image under
+// the plain-TR name -- the one outcome it exists to prevent. Both were reproduced here: the
+// build ran as --target tr and exited 0 with the macro still defined.
+const fab04Active = definesMacro(read(fab04CtlPath), 'Fab04_Features');
 if (!fab04Features && fab04Active) {
   if (!yes) {
     throw new Error(
@@ -277,13 +280,14 @@ if (!fab04Features && fab04Active) {
   }
   // /gm, not /m: a second active #define would otherwise survive this "repair" and the build
   // would ship Fab 0.4 features under the plain-TR name. The replacement keeps the line's
-  // own spelling rather than normalising it, and is deliberately narrower than FAB04_DEFINE
-  // ([ \t] where that has \s) so that re-testing with FAB04_DEFINE stops the build on any
-  // shape this pattern misses instead of passing for repaired. That test runs against the
-  // proposed text, before the write: an incomplete repair must not reach the tracked file,
-  // or the run that refused to continue still leaves an edit behind for someone to commit.
+  // own spelling rather than normalising it, and is deliberately narrower than definesMacro
+  // (it cannot reach a directive sitting behind a comment) so that re-testing with
+  // definesMacro stops the build on any shape this pattern misses instead of passing for
+  // repaired. That test runs against the proposed text, before the write: an incomplete
+  // repair must not reach the tracked file, or the run that refused to continue still
+  // leaves an edit behind for someone to commit.
   const updated = read(fab04CtlPath).replace(/^([ \t]*)(#[ \t]*define[ \t]+Fab04_Features\b.*)$/gm, '$1// $2');
-  if (FAB04_DEFINE.test(updated)) {
+  if (definesMacro(updated, 'Fab04_Features')) {
     throw new Error(`Fab04_Features would still be #define'd in ${fab04CtlPath} after commenting it out, ` +
       'so it has been left unchanged; comment it out by hand.');
   }

@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readSource } from './lib/source-text.mjs';
+import { definesMacro, readSource } from './lib/source-text.mjs';
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build-firmware.mjs');
 const repoRoot = path.dirname(path.dirname(script));
@@ -171,8 +171,8 @@ test('extensions are on by default for tr-plus, and only there', {
     // refuses by design -- so this leg reads the refusal instead of asserting exit 0, or a
     // supported local edit turns into a failure of a test about something else. Either way
     // the claim this leg carries is the same one: a plain TR reserves no extension slot.
-    const fab04Active = /^\s*#\s*define\s+Fab04_Features\b/m.test(fs.readFileSync(
-      path.join(repoRoot, 'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h'), 'utf8'));
+    const fab04Active = definesMacro(fs.readFileSync(
+      path.join(repoRoot, 'Source/Teensy/MinimalBoot/Common/Fab04FeatureCtl.h'), 'utf8'), 'Fab04_Features');
     const plain = upTo('--target', 'tr');
     if (fab04Active) assert.match(plain.stderr, /Fab04_Features is #define'd/);
     else assert.equal(plain.status, 0, plain.stderr);
