@@ -561,5 +561,59 @@ class Reflash(unittest.TestCase):
         self.assertEqual(self.board.files, {})
 
 
+class ExtensionRun(unittest.TestCase):
+    """exttest.py's exit status, against a board that really drops its port and
+    comes back. The arm covered here is the one a reboot alone cannot classify:
+    the extension image resets back the same way whether the module finished or
+    the loader gave up on it, so only the record separates them.
+
+    Both tests pass --no-f5. The keypress exists to put the menu in the loop that
+    makes it read the record off IO1, and the fake board prints the record on
+    serial, where answering_board() picks it up either way."""
+
+    NORMAL = b'Extension boot: module exited (code $04, detail $0)\n'
+    FAULTED = b'Extension boot: extension faulted (code $03, detail $0)\n'
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
+        self.board = FakeBoard(port=os.path.join(self.dir, ORIGINAL_PORT))
+        self.addCleanup(self.board.close)
+
+    def drop_when_launched(self):
+        """The jump into the extension image, which takes the port with it."""
+        deadline = time.time() + 20
+        while time.time() < deadline and not self.board.launched:
+            time.sleep(0.02)
+        time.sleep(BEFORE_REBOOT)
+        self.board.reboot()
+
+    def launch(self, record, timeout=90):
+        self.board.chatter = record
+        threading.Thread(target=self.drop_when_launched, daemon=True).start()
+        return run(self.board, 'exttest.py', '/HELLO.crt', '--no-f5', timeout=timeout)
+
+    def test_a_module_that_finished_is_a_pass(self):
+        out = self.launch(self.NORMAL)
+        self.assertEqual(self.board.launched, ['/HELLO.crt'])
+        self.assertIn('gave up the machine', out.stdout)
+        self.assertIn('module exited', out.stdout)
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+
+    def test_a_launch_that_faulted_is_not(self):
+        out = self.launch(self.FAULTED)
+        self.assertIn('extension faulted', out.stdout)
+        self.assertIn('failed run rather than a completed one', out.stdout)
+        self.assertEqual(out.returncode, 1, out.stdout + out.stderr)
+
+    def test_a_reboot_carrying_no_record_at_all_is_not_a_pass(self):
+        # The reason the match is for the success phrases rather than against a
+        # list of failures: a record that never arrived must not read as one that
+        # said everything was fine.
+        out = self.launch(b'Extension boot: no record ($00000000 at $2027ff60)\n')
+        self.assertIn('failed run rather than a completed one', out.stdout)
+        self.assertEqual(out.returncode, 1, out.stdout + out.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()

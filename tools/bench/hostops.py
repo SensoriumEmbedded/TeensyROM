@@ -44,6 +44,18 @@ ANSWER_TIMEOUT = 3
 # it". The strings are VmFail::describe()'s, in Source/Teensy/MinimalBoot/Common/VMFail.h.
 INSTALLED = 'extension host installed'   # VmFail::Installed, $30
 REMOVED = 'extension host removed'       # VmFail::Removed, $40
+# A launch has more than one normal finish, so it gets a set rather than a phrase: the
+# module can be handed the machine and never come back ($00), ask to be finished with
+# through the exit service ($04), or -- for a host that is not this one -- hand the
+# machine back itself ($50). Every other code printBoot can print after a launch is a
+# failure, so exttest.py checks for these positively for the same reason the two above
+# are checked positively: the failures outnumber the successes and a new one must not
+# arrive as a pass.
+FINISHED_NORMALLY = (
+    'handed off to client',              # VmFail::Ok, $00
+    'module exited',                     # VmFail::Exited, $04
+    'extension host returned',           # VmFail::HostReturned, $50
+)
 
 
 class Tee:
@@ -63,6 +75,19 @@ class Tee:
     def flush(self):
         if self.out:
             self.out.flush()
+
+
+def finished_normally(text):
+    """Whether a VmFail record in `text` names a launch that ended the way it should.
+
+    Case-folded, like Outcome.said and for the same reason: the record reaches the C64
+    as well as the serial port, and which case a glyph carries is a property of the
+    screen. False for text carrying no record at all, which is the whole point -- an
+    absent, truncated or unrecognised record has to read as a failure rather than as
+    "it rebooted, didn't it".
+    """
+    lowered = text.lower()
+    return any(phrase in lowered for phrase in FINISHED_NORMALLY)
 
 
 class Outcome:
