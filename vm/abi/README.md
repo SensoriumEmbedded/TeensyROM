@@ -550,16 +550,22 @@ timing, the bus, or the C64 side — that needs the hardware.
 On a TeensyROM+ with the reference extension, from the SD card through to the
 C64 screen:
 
-Strings quoted below are the bytes the firmware formats, not a transcription of
-the glyphs. The firmware writes ASCII and the C64 prints it unconverted through
-CHROUT (`SendChar` = `$ffd2`, `StringFunctions.asm`), which reads PETSCII, so in
-the charset the menu selects (`$d018` = `$17`, `MainMenu.asm`'s
-`TextScreenMemColor`) every letter arrives case-inverted: `TeensyROM  ABI 2
-services $409f` is on the screen as `tEENSYrom  abi 2  SERVICES $409F`. A screen
-dump reads the same way, because `tools/bench/c64.py`'s `petscii_row` decodes the
-screen codes rather than undoing the swap. Match these phrases case-folded, as
-`hostops.Outcome.said` does; a capture that differs only in case is the expected
-result, not a failing row.
+Strings quoted below are the bytes the firmware formats, and they are also what
+the screen shows -- quote and capture compare directly. Two stages swap letter
+case and cancel: the firmware converts ASCII to PETSCII as the C64 reads each
+byte out of `rwRegSerialString` (`ToPETSCII`, `IOH_TeensyROM.c:675`, table at
+`:107` -- `'A'` goes to 97 and `'a'` to 65), and CHROUT (`SendChar` = `$ffd2`)
+stores the screen code for that PETSCII byte in the charset the menu selects
+(`$d018` = `$17`, `MainMenu.asm`'s `TextScreenMemColor`), where the unshifted
+letters read lower case. Run the pair and `TeensyROM  ABI 2  services $409f` is
+on the screen as `TeensyROM  ABI 2  services $409f`; a dump through
+`tools/bench/c64.py`'s `petscii_row` reads it the same way. Leave either stage
+out of the model and it comes out `tEENSYrom  abi 2  SERVICES $409F`, which is
+the shape to distrust: it means one half of the pair was missed. Nothing tests
+this round trip, so check it against the source rather than against a previous
+reading of this paragraph. Matching case-folded, as `hostops.Outcome.said` does,
+still costs nothing and covers a launched program that has switched charset --
+see the Limits note in `tools/bench/README.md`.
 
 | Verified on hardware | |
 |----------------------|:-:|
