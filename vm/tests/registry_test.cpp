@@ -74,6 +74,60 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("is ABI")!=std::string::npos);
 
+    // The descriptor's name is third-party bytes on their way to a C64, which executes
+    // the control codes rather than drawing them. displayName substitutes; it never
+    // drops, so a name that is all control codes still renders something to report.
+    {
+        char shown[VmBootImage::nameBytes];
+        VmHostId probe{};
+
+        // A name filling all twelve bytes with no terminator still comes back whole.
+        memcpy(probe.name,"ABCDEFGHIJKL",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"ABCDEFGHIJKL"));
+
+        // $93 clears the screen and $0d ends the line early, taking the "do not power
+        // off" warning with it. One visible byte each, and the length is preserved.
+        memcpy(probe.name,"AB\x93\x0d""EF\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"AB??EF"));
+
+        // Every byte a control code: twelve substitutes, never an empty row.
+        memset(probe.name,0x93,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"????????????")&&strlen(shown)==12);
+
+        // $80-$9f is control as well, and $a0-$ff is not: graphics blocks draw, and so
+        // does horizBar $60, which is why the range stops at $7f rather than at ASCII.
+        memcpy(probe.name,"\x9b\xa6\xdb\x60\x00\x00\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"?\xa6\xdb\x60"));
+
+        // A name that is empty, or nothing but the two blanks, would reach the screen as
+        // no name at all -- during an erase that is the same failure as a cleared one.
+        memset(probe.name,0,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+        memset(probe.name,0x20,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+        memset(probe.name,0xa0,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+
+        // No descriptor at all stays a different answer from a descriptor naming nothing.
+        VmBootImage::displayName(shown,sizeof shown,nullptr);
+        assert(!strcmp(shown,"(no descriptor)"));
+    }
+
+    // And the refusals carry the rendered name rather than the field, so nothing the
+    // host supplies reaches the screen as a control code.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1,"A\x93""B");
+    message.clear();
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(message.find("A?B host is ABI")!=std::string::npos);
+    for(unsigned char c:message)assert(c=='\r'||c=='\n'||(c>=0x20&&c<0x80)||c>=0xa0);
+
     // A host image predating the descriptor cannot say what it provides, and
     // that is not a refusal -- the launch proceeds as it did before. An
     // unserved bit rides through the same way; validation is not the gate.

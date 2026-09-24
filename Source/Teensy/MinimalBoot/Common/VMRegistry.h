@@ -122,12 +122,15 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     if(!VmBootImage::installed()){SendMsgPrintfln("No extension host installed");return true;}
     VmHostId hostId{};
     if(VmBootImage::identity(hostId)){
-        // Precision from the field, not a literal 12: these read the descriptor in place
-        // rather than through displayName's buffer, so the width has to track the field
-        // the same way nameBytes does. A literal here is what drifted last time.
-        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%.*s host is ABI %lu, not %lu",(int)sizeof hostId.name,hostId.name,
+        // Through displayName, like every other message that shows the name. These reach
+        // the same C64 screen, and reading the field in place put its raw bytes there:
+        // the width tracked the field but nothing stopped a control code, so a refusal
+        // could clear the screen it was printing on.
+        char hostName[VmBootImage::nameBytes];
+        VmBootImage::displayName(hostName,sizeof hostName,&hostId);
+        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%s host is ABI %lu, not %lu",hostName,
                         (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
-        if(image.required_services&~hostId.services){SendMsgPrintfln("%.*s host lacks service $%lx",(int)sizeof hostId.name,hostId.name,
+        if(image.required_services&~hostId.services){SendMsgPrintfln("%s host lacks service $%lx",hostName,
                         (unsigned long)(image.required_services&~hostId.services));return true;}}
     l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);

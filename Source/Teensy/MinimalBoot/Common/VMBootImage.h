@@ -52,32 +52,77 @@ static inline bool identity(VmHostId &out) {
 }
 
 // The name a host message shows, for every message that shows one -- the install and
-// removal notices and the menu's host line all come through here, because three copies
-// of it are how the buffer sizes drifted apart in the first place.
+// removal notices, the menu's host line and both launch refusals all come through here,
+// because copies of it are how the buffer sizes drifted apart in the first place, and
+// because a filter is only worth having where nothing can go round it.
 //
 // Takes the array rather than a pointer so that rewriting this as a `const char *`
 // fails to compile: `sizeof` a pointer is 4, which would quietly size nameBytes below
 // from the field alone and restore the char[13] that a strcpy of the placeholder used
 // to overrun by three.
 static constexpr char noDescriptor[] = "(no descriptor)";
+static constexpr char unnamedHost[] = "(unnamed)";
 template<unsigned N> static constexpr unsigned literalBytes(const char (&)[N]) { return N; }
+static constexpr unsigned largest(unsigned a, unsigned b) { return a > b ? a : b; }
 
-// Sized for whichever source is longer, because they are not the same length:
-// VmHostId::name is a fixed 12 bytes and need not be terminated, while the placeholder
-// is 15. A buffer sized from the field alone -- the obvious `sizeof id.name + 1` -- is
-// three bytes short of the placeholder.
+// Sized for whichever source is longest, because they are not the same length:
+// VmHostId::name is a fixed 12 bytes and need not be terminated, while the placeholders
+// are 15 and 9. A buffer sized from the field alone -- the obvious `sizeof id.name + 1`
+// -- is three bytes short of the longest. Every source goes through largest(), so adding
+// one cannot leave the constant behind the way the first two drifted apart.
 static constexpr unsigned nameBytes =
-    sizeof(VmHostId::name) + 1 > literalBytes(noDescriptor)
-        ? sizeof(VmHostId::name) + 1 : literalBytes(noDescriptor);
+    largest(largest(sizeof(VmHostId::name) + 1, literalBytes(noDescriptor)),
+            literalBytes(unnamedHost));
 
-// `bytes` is the caller's buffer, which is nameBytes wide if it wants either source
-// whole; both writes are bounded by it, so a later edit to either source truncates
-// rather than running off the end. `%.*s` is what reads a name that fills all 12 bytes
-// with no terminator. A null `id` is identity() saying no: a host built before the
-// descriptor existed, whose name cannot be read rather than being blank.
+// The descriptor's twelve bytes are third-party data: vm_host_scan checks the magic, the
+// ABI, the services, both CRCs and the boot words, and identity() checks only the magic,
+// so nothing upstream constrains their content. They are printed to a C64, which executes
+// control codes rather than drawing them -- and the removal notice they appear in is the
+// one carrying "do not power off" across a 45-second erase, so a name holding $93 (clear
+// screen) or $0d (return) takes that warning off the screen.
+//
+// The control ranges are $00-$1f and $80-$9f. IOH_Swiftlink.c settles it: all nineteen
+// control codes it names fall inside them -- return $0d, the charset pair $0e/$8e,
+// reverse $12/$92, clear $93, cursor $91 and its twelve colours -- and the only two it
+// names outside them are glyphs, space $20 and horizBar $60. So everything outside the
+// two ranges draws, including the graphics blocks a host author may have picked on
+// purpose. Judging this by isprint() instead would have cut $60-$7f and $a0-$ff, which
+// are those blocks.
+static inline bool nameByteDraws(unsigned char c) {
+    return !(c < 0x20 || (c >= 0x80 && c <= 0x9f));
+}
+
+// $20 and $a0 are the two blanks, space and shifted space. A name of nothing but these
+// passes nameByteDraws byte for byte and still reaches the screen as an empty row, which
+// during an erase is the same failure as a cleared one: nothing left to report.
+static inline bool nameByteBlank(unsigned char c) { return c == 0x20 || c == 0xa0; }
+
+// $3f, which draws in every charset. Substituted for a byte that would not draw.
+static constexpr char nameSubstitute = '?';
+
+// `bytes` is the caller's buffer, which is nameBytes wide if it wants any source whole;
+// every write is bounded by it, so a later edit to any source truncates rather than
+// running off the end. A byte that would not draw is substituted rather than dropped, so
+// a name that is entirely control codes still renders twelve visible characters someone
+// can read back and report -- dropping them would leave a blank where the host's identity
+// belongs, which is the failure this is here to prevent. The loop stops at the field's
+// first NUL and reads no more than its twelve bytes, which is what handles a name filling
+// the field with no terminator. A null `id` is identity() saying no: a host built before
+// the descriptor existed, whose name cannot be read rather than being blank.
 static inline void displayName(char *out, size_t bytes, const VmHostId *id) {
-    if (id) snprintf(out, bytes, "%.*s", (int)sizeof id->name, id->name);
-    else    snprintf(out, bytes, "%s", noDescriptor);
+    if (!bytes) return;
+    if (!id) { snprintf(out, bytes, "%s", noDescriptor); return; }
+
+    size_t n = 0;
+    bool drawn = false;
+    for (size_t i = 0; i < sizeof id->name && n + 1 < bytes; i++) {
+        const unsigned char c = (unsigned char)id->name[i];
+        if (!c) break;
+        out[n++] = nameByteDraws(c) ? (char)c : nameSubstitute;
+        if (!nameByteBlank(c)) drawn = true;
+    }
+    out[n] = 0;
+    if (!drawn) snprintf(out, bytes, "%s", unnamedHost);
 }
 
 #if !defined(__arm__)

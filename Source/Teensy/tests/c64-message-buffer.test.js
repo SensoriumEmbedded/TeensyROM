@@ -115,11 +115,13 @@ test('the installed host name is rendered in one place, by a buffer wide enough 
   // Every site takes VmBootImage::nameBytes, which is the wider of the two, and reads the
   // field through a precision that stops at its last byte.
   const image = read('MinimalBoot/Common/VMBootImage.h');
-  assert.match(image, /snprintf\(out, bytes, "%\.\*s", \(int\)sizeof id->name, id->name\);/);
+  assert.match(image, /out\[n\+\+\] = nameByteDraws\(c\) \? \(char\)c : nameSubstitute;/);
   assert.match(image, /snprintf\(out, bytes, "%s", noDescriptor\);/);
+  assert.match(image, /snprintf\(out, bytes, "%s", unnamedHost\);/);
   // Through literalBytes, not sizeof: `const char *noDescriptor` would size this from the
-  // pointer and silently hand back the char[13].
-  assert.match(image, /nameBytes =\s*\n?\s*sizeof\(VmHostId::name\) \+ 1 > literalBytes\(noDescriptor\)/);
+  // pointer and silently hand back the char[13]. Every source goes through largest(), so
+  // a fourth one cannot be added without widening the buffer with it.
+  assert.match(image, /nameBytes =\s*\n?\s*largest\(largest\(sizeof\(VmHostId::name\) \+ 1, literalBytes\(noDescriptor\)\),\s*\n?\s*literalBytes\(unnamedHost\)\);/);
   assert.match(image, /template<unsigned N> static constexpr unsigned literalBytes\(const char \(&\)\[N\]\)/);
 
   // No site re-derives the buffer from the field, and none copies the name by hand.
@@ -133,6 +135,29 @@ test('the installed host name is rendered in one place, by a buffer wide enough 
   // becomes the one place that disagrees with the field. Truncation, not overrun --
   // which is why it would go unnoticed.
   assert.deepEqual(scanTree(/%\.\d+s[^;]*?\bname\b/g, () => true), []);
+});
+
+test('a descriptor name reaches the C64 as glyphs, never as control codes', () => {
+  // The twelve bytes are third-party: vm_host_scan checks magic, ABI, services, both CRCs
+  // and the boot words, and identity() checks only the magic, so nothing constrains their
+  // content. A C64 executes $00-$1f and $80-$9f rather than drawing them -- $93 clears the
+  // screen, $0d ends the line -- and the removal notice carrying those bytes is the one
+  // holding "do not power off" across a 45-second erase. Bounding the read by length, as
+  // %.*s did, does not bound the bytes.
+  const image = read('MinimalBoot/Common/VMBootImage.h');
+  assert.match(image, /return !\(c < 0x20 \|\| \(c >= 0x80 && c <= 0x9f\)\);/);
+  assert.match(image, /nameByteBlank\(unsigned char c\) \{ return c == 0x20 \|\| c == 0xa0; \}/);
+
+  // Substituted, not dropped: an all-control name still renders twelve visible bytes, so
+  // the host can be named in a report instead of leaving a blank mid-erase. The behaviour
+  // this shape produces is asserted by execution in vm/tests/registry_test.cpp.
+  assert.match(image, /if \(!drawn\) snprintf\(out, bytes, "%s", unnamedHost\);/);
+
+  // Nothing goes round the filter: no message formatter takes the descriptor field
+  // itself. displayName is the only way the name reaches a screen or the serial line.
+  // Matched on the field rather than on a bare `name`, which tryLaunch already has as a
+  // parameter holding a filename -- that one is not the descriptor and may be printed.
+  assert.deepEqual(scanTree(/SendMsg\w*\([^;]*?\b\w*[Ii]d(?:\.|->)name\b/g, () => true), []);
 });
 
 test('the formatters that write the C64 message buffer are bounded', () => {
