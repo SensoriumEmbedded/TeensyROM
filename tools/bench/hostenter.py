@@ -22,11 +22,21 @@ things a host owes, and this is what checks it was paid.
 A host that stays resident instead (this repo's own, running a module) cannot be told
 apart from a board that died. Every host image is built USB_DISABLED -- tools/
 build-firmware.mjs passes it, and both Min_TeensyROM.h profiles #error without it -- so a
-resident host takes the port down and never brings it back, which is what a hung board
-looks like from here too: hostops.REBOOT_TIMEOUT seconds of waiting, then "the board did
-not come back", which for a resident host is the right answer wearing the wrong words.
-Use exttest.py for those, where silence is success. That same bound is the ceiling on how
-long a returning host may work before it reads as dead.
+resident host takes the main image's port down and does not bring it back. What this
+script then says depends on something it does not control: whether the node minimal
+enumerated is still there, unserviced, which exttest.py's own notes record as the usual
+case but not the only one.
+
+  * No node: reconnect finds nothing, and after hostops.REBOOT_TIMEOUT seconds this is
+    "the board did not come back" -- the right answer wearing the wrong words.
+  * A node: reconnect opens it, nothing answers the firmware check, and run_step goes on
+    to read the screen through it. That read is the thing that fails, with "no reply --
+    DMA read is not compiled into this image, or this is not the main image" -- which
+    invites a search for a bad flash when the host is running exactly as intended.
+
+Neither is a diagnosis, so use exttest.py for a resident host, where no image answering
+is the success it is. hostops.REBOOT_TIMEOUT is also the ceiling on how long a returning
+host may work before it reads as dead.
 
 `phrase` is optional and is matched case-insensitively against the serial output and the
 C64 screen together. Leave it off to see what a host says before deciding what to assert;

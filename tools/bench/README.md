@@ -45,7 +45,7 @@ whatever node appeared beside it.
 | `hostuninstall.py` | Remove the installed extension host: clear the tag so the slot stops reading as a host, which reboots the board. Exits non-zero unless the record on the way back up says the host was removed -- a failed erase reboots too. With nothing installed it says so and the board stays up. The payload stays in flash until the next install overwrites it. The firmware takes this command on the USB device port only; over the USB host port or the TCP listener it is refused with `Busy!`. |
 | `hostcycle.py <local.trh>` | The install/remove round trip end to end against a real board, asserted and unattended: remove, refuse a second remove, install, remove, refuse again, reinstall. Every step runs whatever the ones before it did; it exits non-zero at the end, listing each step whose outcome did not match. |
 | `exttest.py <path>` | Launch an extension and report how it ended, told apart by which image answers afterwards rather than by whether a serial node exists. No image answering is the success case for a resident module -- the main image's node goes away and the minimal image's usually stays behind, enumerated and serviced by nobody -- so look at the C64; the main image answering means the extension gave the machine back, and its record is printed *and read*, because a launch that faulted comes back the same way one that finished does; a port that never drops means nothing entered the image, and the screen carries the refusal. Exits 0 for a resident module or a record naming a normal finish (`hostops.FINISHED_NORMALLY`), and 1 for a launch nothing entered or a record that is a failure, absent, truncated or unrecognised -- the same positive match, and for the same reason, as `INSTALLED` and `REMOVED`. |
-| `hostenter.py <path> [phrase]` | The other shape from `exttest.py`, for a host that hands the machine back: launch, the port drops, the host runs and resets, and the main image prints its `VmFail` record on the way back up. With a `phrase` that record is the assertion; without one the run reports what it saw and asserts nothing, because a launch that failed after the jump reboots the same way a good one does. A host that stays resident never gives the main image's port back and reads here as a board that did not return -- use `exttest.py` for those, which asks which image answered instead of whether any node is there. |
+| `hostenter.py <path> [phrase]` | The other shape from `exttest.py`, for a host that hands the machine back: launch, the port drops, the host runs and resets, and the main image prints its `VmFail` record on the way back up. With a `phrase` that record is the assertion; without one the run reports what it saw and asserts nothing, because a launch that failed after the jump reboots the same way a good one does. A host that stays resident never gives the main image's port back, and what that looks like here depends on whether minimal's orphan node stayed behind: with no node, `REBOOT_TIMEOUT` seconds and then `the board did not come back`; with one -- the usual case -- the screen read that follows fails instead, `no reply -- DMA read is not compiled into this image, or this is not the main image`, which names the wrong diagnosis for a host that is running exactly as intended. Use `exttest.py` for those; it treats no image answering as the success it is. |
 | `peek.py <hex addr> <len>` | Hex dump C64 memory. |
 | `screen.py` | The C64 text screen. |
 | `keypress.py [code]` | Put a key in the keyboard buffer (default `Y`; F1/F3/F5/F7 are `0x85`..`0x88`). |
@@ -54,7 +54,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
-| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Shared by the `host*.py` scripts, and by `test_bounds.py`, which patches its timeouts to test them. |
+| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Also the phrases a reboot is judged by: `INSTALLED`, `REMOVED` and `FINISHED_NORMALLY`. Shared by the `host*.py` scripts and by `exttest.py`, whose exit status is `finished_normally()`'s answer, so a phrase edited here moves that verdict; and by `test_bounds.py`, which patches its timeouts to test them, and `test_protocol.py`, which pins the phrases against the firmware's own `VmFail::describe()`. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
@@ -96,8 +96,12 @@ The fake board in `test_trlink.py` proves the framing and byte order, not what a
 board does. `test_protocol.py` checks every constant in `protocol.py` against the
 `Source/Teensy/` definition it came from, so a moved token fails a test rather
 than a board. The fake drops and re-publishes its pty, under a new name, for
-`fwupdate.py`'s post-reboot check; `exttest.py`'s own reconnect path still
-needs a real reset.
+`fwupdate.py`'s post-reboot check and for `exttest.py`'s:
+`test_trlink.ExtensionRun` runs `exttest.py` end to end across a real port
+drop, so the arm a reboot alone cannot classify -- finished, faulted, or no
+record at all -- is covered without hardware. Its other two arms are not, and
+need a board that sits still: a module that stays resident, and a launch the
+firmware refuses before the port ever drops.
 
 `screen.py`, `colors.py`, `exttest.py`, `fwupdate.py` and everything built on
 `hostops.py` -- `hostinstall.py`, `hostuninstall.py`, `hostcycle.py`,
