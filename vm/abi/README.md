@@ -550,6 +550,17 @@ timing, the bus, or the C64 side — that needs the hardware.
 On a TeensyROM+ with the reference extension, from the SD card through to the
 C64 screen:
 
+Strings quoted below are the bytes the firmware formats, not a transcription of
+the glyphs. The firmware writes ASCII and the C64 prints it unconverted through
+CHROUT (`SendChar` = `$ffd2`, `StringFunctions.asm`), which reads PETSCII, so in
+the charset the menu selects (`$d018` = `$17`, `MainMenu.asm`'s
+`TextScreenMemColor`) every letter arrives case-inverted: `TeensyROM  ABI 2
+services $409f` is on the screen as `tEENSYrom  abi 2  SERVICES $409F`. A screen
+dump reads the same way, because `tools/bench/c64.py`'s `petscii_row` decodes the
+screen codes rather than undoing the swap. Match these phrases case-folded, as
+`hostops.Outcome.said` does; a capture that differs only in case is the expected
+result, not a failing row.
+
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
