@@ -7,7 +7,7 @@
 // and it links the two rows into one logical line. A ChrReturn after that moves to the line
 // *after* the logical one, so the row the wrap landed on is left blank. The text reads fine
 // in the source and has a hole in it on the screen, which is why this is only ever found by
-// reading a board -- bc43dfb was.
+// reading a board.
 //
 // This measures rows, not source lines. A row is whatever is emitted between two returns,
 // and it can be built from several !tx directives, so "keep each !tx under 40 columns" is

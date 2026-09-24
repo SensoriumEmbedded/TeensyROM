@@ -403,8 +403,8 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(TR_BASStatRegVal);
             break;
          case TR_BASStreamDataReg:
-            //Same guard 0d61726/832ada5 put on rRegStreamData, which this site was missed
-            //by: nothing stopped the C64 reading past the end, and the offset only counted
+            //Same guard as rRegStreamData in IOH_TeensyROM.c: nothing stopped the C64
+            //reading past the end, and the offset only counted
             //up.  At uint16_t that wrapped inside RAM_Image and stayed contained; at
             //uint32_t it would walk out of it, so the read is bounded and the offset now
             //stops at XferSize instead of counting forever.

@@ -30,8 +30,9 @@ const symbols = () => {
 const scan = (body) => scanSource('test.asm', `${DEFS}\nMsg:\n${body}\n   !tx 0\n`, symbols());
 
 // The row the wrap lands on is blank, so the sentence has a hole in it on the screen while
-// reading fine in the source. This is the case bc43dfb was opened for, kept here as the
-// control: a scanner that does not flag it is not measuring anything.
+// reading fine in the source. This is a row from Pg_InstalledExt.asm, one word longer
+// than it is written there, kept here as the control: a scanner that does not flag it is
+// not measuring anything.
 test('a row filled to all 40 columns and then given a return is reported', () => {
   const forty = ' the slot bootable. The host image stays';
   assert.equal(forty.length, COLUMNS);
