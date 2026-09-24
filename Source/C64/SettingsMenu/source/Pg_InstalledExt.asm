@@ -120,9 +120,11 @@ MsgInstalledExtMenu:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
 
    !tx EscC,EscSourcesColor, " Uninstalling clears the tag that makes", ChrReturn
-   ;Keep every line below 40 visible columns. A line that fills the row exactly makes
-   ;the screen editor advance on its own, and the ChrReturn here then advances again --
-   ;which put a blank row in the middle of this sentence on a real screen.
+   ;Keep every row below 40 visible columns -- a row, not an !tx line: what counts is
+   ;everything drawn between two returns, and that can be spread over several directives.
+   ;A row that fills all 40 makes the screen editor advance on its own, and the ChrReturn
+   ;then advances again, which put a blank row in the middle of this sentence on a real
+   ;screen.  tools/lib/c64-screen.test.mjs measures this for every C64 source.
    !tx EscC,EscSourcesColor, " the slot bootable. The host image", ChrReturn
    !tx EscC,EscSourcesColor, " stays in flash, unreferenced, until", ChrReturn
    !tx EscC,EscSourcesColor, " the next install overwrites it.", ChrReturn, ChrReturn
