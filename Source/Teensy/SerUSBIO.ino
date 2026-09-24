@@ -1027,10 +1027,13 @@ FLASHMEM void WriteC64MemCommand()
    // after it would only spend the stall window a second time.  A C64 that is switched off
    // is not the case this catches -- it powers the board too, so no command arrives to be
    // answered.  What is left is a C64 that still supplies 5 V but has stopped clocking, and
-   // the checked return below is the whole of what catches it here: WaitForDMAState ends
-   // each wait itself and PerformDMA reports the failure.  C64IsClockingPHI2 is deliberately
-   // not called on this path -- the bound lives where the wait is -- so a new remote command
-   // is covered by checking this return and by nothing else.
+   // the checked return below is the whole of what catches it here: on a bus that has
+   // already stopped WaitForDMAState ends each wait itself and PerformDMA reports the
+   // failure.  A bus that stops part way through a transfer is caught by nothing at all --
+   // DMATransferISR's edge waits are unbounded, see "two of the three things" in
+   // DMAControl.ino.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
+   // lives where the wait is -- so a new remote command is covered by checking this return
+   // and by nothing else.
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);

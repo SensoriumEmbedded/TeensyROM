@@ -227,8 +227,11 @@ static void StopServingTheC64(bool MessageSeen)
    // Fab04_FullDMACapable, so the callers' messages can promise the blank on any board
    // that can show one; the only case they cannot cover is a C64 that is not running,
    // which has no screen to blank and no clock to blank it with. Skip it there rather
-   // than spend the DMA waits' own timeouts on a handshake that cannot happen --
-   // WaitForDMAState ends them by itself, so this saves that latency, not the board.
+   // than spend the DMA waits' own timeouts on a handshake that cannot happen -- on a bus
+   // that has already stopped WaitForDMAState ends them by itself (~20 mS), so most of what
+   // skipping saves is latency.  Not all of it: DMATransferISR's edge waits are unbounded
+   // (DMAControl.ino, "two of the three things"), so a transfer begun on a bus that stops
+   // part way through wedges the board, and not starting one is the only thing that helps.
    if (C64IsClockingPHI2())
    {
       // Long enough to read the two lines the caller just printed -- but only when they

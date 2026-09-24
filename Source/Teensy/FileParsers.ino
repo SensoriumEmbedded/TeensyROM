@@ -172,12 +172,21 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             // though: that powers the board too, so there is nothing left to reach it.
             // What is left is a C64 that still supplies 5 V but has stopped clocking.
             //
-            // The check buys latency, not survival.  WaitForDMAState bounds every wait on
-            // its own -- 5 mS after the bus goes quiet, or the caller's ceiling while it is
-            // still clocking -- so PerformDMA and CloseDMA return false by themselves, both
-            // return values are ignored here, and RebootTR() below runs either way.  Asking
-            // first costs nothing on a live bus and, on a dead one, spends 5 mS to skip the
-            // ~10 mS of DMA that could not have worked.
+            // Against a bus that has already stopped, the check buys latency and not
+            // survival.  WaitForDMAState bounds the waits it runs itself -- 5 mS after the
+            // bus goes quiet, or the caller's ceiling while it is still clocking -- so
+            // PerformDMA and CloseDMA return false on their own, both return values are
+            // ignored here, and RebootTR() below runs either way.  Asking first costs
+            // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
+            // that could not have worked: each of the two waits pays 5 mS to notice the
+            // silence and another 5 mS inside AbortDMA.
+            //
+            // Against a bus that stops part way through, it is not only latency, which is
+            // why this is a check and not a deleted line.  DMATransferISR's edge waits have
+            // no bound at all -- see "two of the three things" over WaitForDMAState -- so a
+            // clock that dies while the ISR is inside one spins it forever at priority 16,
+            // thread mode never runs again, and RebootTR() is never reached.  Asking cannot
+            // close that window, only decline to open it on a bus that already reads dead.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.

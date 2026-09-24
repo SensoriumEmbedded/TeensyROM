@@ -33,8 +33,10 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
 
 // Asked by the callers that have something better to do than attempt a transfer -- the
 // blank-then-reboot paths skip a blank nobody could see rather than pay for the wait.
-// It is not what keeps a dead bus from hanging the board; WaitForDMAState below is, and
-// it covers every caller including the ones that never ask.
+// It is not the main thing that keeps a dead bus from hanging the board; WaitForDMAState
+// below is, and it covers every caller including the ones that never ask.  What neither
+// covers is a bus that stops while DMATransferISR is inside an edge wait -- the third case
+// named over WaitForDMAState -- and there declining to start a transfer is all there is.
 //
 // What neither of them guards is a C64 that is switched off.  The cartridge port is this
 // board's only supply -- PCB/PCB_Assembly.md has the Teensy's USB 5 V trace cut during
