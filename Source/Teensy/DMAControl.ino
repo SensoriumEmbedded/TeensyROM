@@ -58,24 +58,46 @@ FLASHMEM bool C64IsClockingPHI2()
 // Give up on a transfer and put the bus back the way a completed CloseDMA would have left
 // it, rather than return with DMA still asserted over a machine that may come back.
 //
-// The state goes first.  isrPHI2 dispatches on it, so clearing it is what stops the ISR
-// taking another transfer cycle; the pause after gives a DMATransferISR already inside a
-// byte time to finish one.  Only then are the ports torn down -- DMAByte drives the
-// address ports as well as the data ports, and an abort landing mid-byte can find them
-// still output.  On a dead bus none of that is running and the pause costs 4 uS.
+// The release is the ISR's to make, not ours.  isrPHI2 drops DMA from inside the falling
+// edge it has already re-aligned to (ISRs.c:158), because the C64 and C128 publish the same
+// rule -- DMA moves only while PHI2 is low (docs/Architecture/DMA-Timing-Known-Issues.md:166)
+// -- and on a C128 it also drives the MMU's bus-direction hand-off, where a marginal
+// reversal can let a write land at the wrong address.  Dropping it from here would land
+// uniformly at random inside the cycle, about half of it mid-access.  So while the bus is
+// clocking this asks for the controlled release and waits for it; the unsynchronised drop
+// is the fallback for a bus that is not clocking, where there is no phase to get wrong and
+// no ISR left to do it.
+//
+// No pause guards the ports.  Every caller of this is FLASHMEM and runs in thread mode
+// (Constraints.md:45), and thread mode cannot preempt a handler on a single core, so a
+// DMATransferISR "already inside a byte" is not a state that exists.  DMAByte restores the
+// ports on both its exits, so the four below are belt-and-braces for an abort that lands
+// between transfers rather than inside one.
 static FLASHMEM void AbortDMA()
 {
-   DMA_State = DMA_S_DisableReady;
-   delayMicroseconds(4);
+   uint32_t Seen = LastCycCnt;
+   uint32_t Began = millis();
 
-   SetDMADeassert;
+   DMA_State = DMA_S_StartDisable;
+   while (DMA_State != DMA_S_DisableReady)
+   {
+      if (LastCycCnt != Seen) { Seen = LastCycCnt; Began = millis(); } //still clocking, let it land
+      else if (millis() - Began >= 5) { SetDMADeassert; DMA_State = DMA_S_DisableReady; }
+   }
+
    SetAddrPortDirIn;
    SetAddrBufsIn;
    SetDataPortDirIn;
    SetDataBufIn;
 }
 
-// Two bounds, because two different things can stop a wait from ever ending.
+// Two bounds here, for two of the three things that can stop a wait from ever ending. The
+// third is not this function's to catch and is not caught: DMATransferISR's edge waits
+// (DMAControl.ino, "Find phi2 falling") have no exit but the pin changing, so a clock that
+// stops while the ISR is inside one spins it forever at priority 16 -- thread mode never
+// runs again and neither bound below can fire. That window is most of a long transfer.
+// Bounding those waits means putting a deadline in the hottest path in the firmware, which
+// wants a bus to test it on rather than a reviewer; it is recorded, not fixed.
 //
 // A dead bus: LastCycCnt advances on every PHI2 edge whether or not the handshake
 // progresses, so a stamp that stops moving is direct evidence nothing is clocking.  That
@@ -98,10 +120,18 @@ static FLASHMEM bool WaitForDMAState(uint8_t Target, uint32_t CeilingmS)
 
    while (DMA_State != Target)
    {
-      if (millis() - Began >= CeilingmS) { AbortDMA(); return false; }
+      // Re-read before giving up. isrPHI2 preempts thread mode, so it can reach Target
+      // between the loop's test and this one -- and aborting then would report a transfer
+      // that actually landed as one that did not, which for a write means a host that
+      // retries writes it twice. One volatile read is the whole of the window.
+      if (millis() - Began >= CeilingmS || (LastCycCnt == Seen && millis() - Quiet >= 5))
+      {
+         if (DMA_State == Target) return true;
+         AbortDMA();
+         return false;
+      }
 
       if (LastCycCnt != Seen) { Seen = LastCycCnt; Quiet = millis(); } //bus is alive, keep waiting
-      else if (millis() - Quiet >= 5) { AbortDMA(); return false; }
    }
    return true;
 }
@@ -113,9 +143,17 @@ static FLASHMEM bool WaitForDMAState(uint8_t Target, uint32_t CeilingmS)
 #define DMA_HANDSHAKE_CEILING_mS  50
 
 // The transfer does scale: one PHI2 cycle per byte at best, ~1 uS each, and DMAByte skips
-// every cycle the VIC has taken the bus for.  Four times the ideal covers stolen cycles
-// with room to spare -- 312 mS for a full 64 KiB read -- and the floor keeps a short
-// transfer from being held to a deadline shorter than the handshake's.
+// every cycle the VIC has taken the bus for.  Four times the ideal plus the flat floor is
+// 312 for a full 64 KiB read, against a modelled worst case of ~268 with every display line
+// a badline and eight sprites on it (NTSC; PAL is ~182).  So the margin at the maximum
+// length is the flat term, not the multiplier -- about 14% -- and it does not get thinner,
+// because 65535 is all a 16-bit address space can ask for.
+//
+// Those are mS of millis(), which is not wall clock here: SysTick sits at priority 32 and
+// isrPHI2 at 16, and a blocked tick is lost rather than accumulated, so a long transfer
+// under-counts. The error is in the safe direction -- the deadline arrives later than it
+// reads -- but it means this number is a floor on the elapsed time, not a bound on it, and
+// a host timeout sized from it should be larger.
 static FLASHMEM uint32_t DMATransferCeilingmS(uint32_t Length)
 {
    return DMA_HANDSHAKE_CEILING_mS + (Length * 4) / 1000;

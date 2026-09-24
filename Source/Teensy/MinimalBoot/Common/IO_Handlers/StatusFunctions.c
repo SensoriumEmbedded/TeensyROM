@@ -771,11 +771,27 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 
    //SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
    //PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+   //Read back into its own buffer, and check that both transfers happened. Reading into
+   //PageBuf made an abort indistinguishable from a pass: the buffer still held the pattern
+   //memset put there, so every byte compared equal and the page was reported good with
+   //nothing read from the C64 at all. A test that cannot fail is worse than no test.
+   uint8_t ReadBuf[TestPageSize];
+
    memset(PageBuf, BytePat, TestPageSize);
-   PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT); //Write the buffer
-   CloseDMA();
-   PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);  //Read back
-   CloseDMA();
+   memset(ReadBuf, (uint8_t)~BytePat, TestPageSize);
+
+   if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendMsgPrintfln(" No write at $%04x: bus stalled", Address);
+      return false;
+   }
+   if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendMsgPrintfln(" No read at $%04x: bus stalled", Address);
+      return false;
+   }
+   memcpy(PageBuf, ReadBuf, TestPageSize);
+
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++)
       if (PageBuf[ByteNum] != BytePat)
       {
@@ -800,10 +816,16 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    for(uint16_t Pass = 0; Pass < Passes; Pass++)
    {
       memset(PageBuf, PriorVal, TestPageSize);
-      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
-      PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT); //what the page really holds now
-      CloseDMA();
+      if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         SendMsgPrintfln(" Bus stalled, pass %u prefill", Pass);
+         return false;
+      }
+      if (!PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA()) //what the page really holds now
+      {
+         SendMsgPrintfln(" Bus stalled, pass %u prefill read", Pass);
+         return false;
+      }
       //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
       //   partial-byte vs whole-byte detail as the pattern write, not just a count
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
@@ -822,10 +844,20 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
 
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
          PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
-      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
-      PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
+      if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         SendMsgPrintfln(" Bus stalled, pass %u write", Pass);
+         return false;
+      }
+      //Into PriorBuf, not back over PageBuf: reading into the buffer that already holds the
+      //expected pattern makes an aborted read compare equal on every byte, so the pass
+      //reports clean having read nothing.
+      if (!PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         SendMsgPrintfln(" Bus stalled, pass %u read", Pass);
+         return false;
+      }
+      memcpy(PageBuf, PriorBuf, TestPageSize);
 
       uint32_t PassBad = 0;
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
