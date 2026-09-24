@@ -67,7 +67,10 @@ code. Full setup and tool-version details: [Source/BuildInfo.md](Source/BuildInf
   each if you need to reproduce one locally.
 - If you changed firmware that affects RAM footprint, rebuild and check the link report
   against the budgets in `Constraints.md` (`npm run build:tr-plus -- --skip-minimal-build
-  --skip-combine` prints it).
+  --skip-combine` prints it). Add `--no-extensions` to measure the configuration
+  `Constraints.md` reasons about, and use the same configuration for both halves of a
+  before/after comparison; drop it when you need the headroom of the image that ships,
+  which carries the extension loader.
 - CI runs the tool tests, the bench tests and both firmware builds on every push and
   pull request (`.github/workflows/build.yml`). Run `npm test` and `python3 -m unittest
   discover -s tools/bench` locally first; the bench tests need macOS or Linux, since
