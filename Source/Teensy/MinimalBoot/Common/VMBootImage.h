@@ -68,8 +68,13 @@ static constexpr unsigned largest(unsigned a, unsigned b) { return a > b ? a : b
 // Sized for whichever source is longest, because they are not the same length:
 // VmHostId::name is a fixed 12 bytes and need not be terminated, while the placeholders
 // are 15 and 9. A buffer sized from the field alone -- the obvious `sizeof id.name + 1`
-// -- is three bytes short of the longest. Every source goes through largest(), so adding
-// one cannot leave the constant behind the way the first two drifted apart.
+// -- is three bytes short of the longest.
+//
+// Every source that exists goes through largest(), but nothing makes the next one: a
+// placeholder added to displayName and not added here leaves the constant behind, and
+// the only thing that catches it is the screen. It truncates rather than overruns --
+// displayName writes through snprintf, which is bounded by the caller's size -- so the
+// failure is a name that comes up short, not the char[13] strcpy this replaced.
 static constexpr unsigned nameBytes =
     largest(largest(sizeof(VmHostId::name) + 1, literalBytes(noDescriptor)),
             literalBytes(unnamedHost));
