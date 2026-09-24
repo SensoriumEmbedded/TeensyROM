@@ -123,10 +123,17 @@ def run_step(prepare, settle, out=sys.stdout):
     text (which is where the VmFail record lands on the way back up), the C64 screen, and
     which image is running.
 
+    There is a third shape it cannot report, so it raises instead: the port drops and
+    nothing comes back inside REBOOT_TIMEOUT. That is a board to go and look at for an
+    install or a removal, which is what the SystemExit says -- but it is also what a step
+    that hands the machine to an extension image looks like when the image keeps it,
+    since that image is built USB_DISABLED. A caller whose step can legitimately end with
+    the board gone has to say so itself; see hostenter.py.
+
     Public because install and removal are not the only things worth driving this way --
     anything that ends in a reboot has the same two shapes and the same trap, which is
-    that the main image renames its USB device as it comes up, so the first node to
-    appear is one that is about to disappear again.
+    that the main image renames its USB device as it comes up (on macOS; see trlink.py),
+    so the first node to appear is one that is about to disappear again.
     """
     # `with` on both links, not close() on the way out: every step in here can raise --
     # _ready and prepare() raise SystemExit, await_image and the screen read raise OSError

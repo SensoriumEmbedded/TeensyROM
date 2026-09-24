@@ -45,6 +45,7 @@ whatever node appeared beside it.
 | `hostuninstall.py` | Remove the installed extension host: clear the tag so the slot stops reading as a host, which reboots the board. Exits non-zero unless the record on the way back up says the host was removed -- a failed erase reboots too. With nothing installed it says so and the board stays up. The payload stays in flash until the next install overwrites it. The firmware takes this command on the USB device port only; over the USB host port or the TCP listener it is refused with `Busy!`. |
 | `hostcycle.py <local.trh>` | The install/remove round trip end to end against a real board, asserted and unattended: remove, refuse a second remove, install, remove, refuse again, reinstall. Every step runs whatever the ones before it did; it exits non-zero at the end, listing each step whose outcome did not match. |
 | `exttest.py <path>` | Launch an extension and report how it ended: still running, or reset to the menu with a failure record. |
+| `hostenter.py <path> [phrase]` | The other shape from `exttest.py`, for a host that hands the machine back: launch, the port drops, the host runs and resets, and the main image prints its `VmFail` record on the way back up. With a `phrase` that record is the assertion; without one the run reports what it saw and asserts nothing, because a launch that failed after the jump reboots the same way a good one does. A host that stays resident never brings the port back and reads here as a board that did not return -- use `exttest.py` for those. |
 | `peek.py <hex addr> <len>` | Hex dump C64 memory. |
 | `screen.py` | The C64 text screen. |
 | `keypress.py [code]` | Put a key in the keyboard buffer (default `Y`; F1/F3/F5/F7 are `0x85`..`0x88`). |
@@ -53,7 +54,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
-| `hostops.py` | Installing and removing a host, shared by the three scripts above. |
+| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Shared by `hostinstall.py`, `hostuninstall.py`, `hostcycle.py` and `hostenter.py`. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
@@ -98,9 +99,15 @@ than a board. The fake drops and re-publishes its pty, under a new name, for
 `fwupdate.py`'s post-reboot check; `exttest.py`'s own reconnect path still
 needs a real reset.
 
-`screen.py`, `colors.py`, `exttest.py` and `fwupdate.py` read the screen through
-`petscii_row`, which decodes the uppercase/graphics charset. A C64 in the
-lower/uppercase charset shows its letters as `.`, which is also why `fwupdate.py`
-would miss the `Y/N` prompt there and time out rather than answer it.
+`screen.py`, `colors.py`, `exttest.py`, `fwupdate.py` and everything built on
+`hostops.py` -- `hostinstall.py`, `hostuninstall.py`, `hostcycle.py`,
+`hostenter.py` -- read the screen through `petscii_row`, which decodes the
+uppercase/graphics charset. A C64 in the lower/uppercase charset shows its
+uppercase letters as `.`, which is also why `fwupdate.py` would miss the `Y/N`
+prompt there and time out rather than answer it. That charset is not the exotic
+case: the menu puts the C64 in it at startup, writing `#$17` to `$d018` in
+`MainMenu.asm`'s `TextScreenMemColor`. So a phrase asserted against the screen
+should be one whose glyphs are lower case; a phrase carried by the serial
+record has no such limit.
 
     python3 -m unittest discover -s tools/bench
