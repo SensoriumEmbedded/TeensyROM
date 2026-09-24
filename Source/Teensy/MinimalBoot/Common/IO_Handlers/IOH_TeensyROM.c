@@ -54,6 +54,21 @@ uint16_t NumItemsFull;  //Num Items in Current Menu
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
+
+//Both halves of a menu index come from the C64: the item byte it just wrote, and
+//rwRegPageNumber, which is stored raw.  Their product was never compared against
+//NumItemsFull, and page 0 makes it negative -- which this uint16_t turns into ~65500.
+//MenuSource[] elements carry two pointers, and one of the dereference sites is inside
+//isrPHI2, so an out-of-range index is a wild read, not a wrong menu entry.  Clamp where
+//the index is formed rather than at each use, and stay silent: ISR context cannot print.
+//Item 0 always exists (see RedirectEmptyDriveDirMenu).
+inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
+{
+   int32_t Idx = (int32_t)ItemOnPage + ((int32_t)IO1[rwRegPageNumber] - 1) * MaxItemsPerPage;
+   if (Idx < 0 || NumItemsFull == 0 || Idx >= (int32_t)NumItemsFull) return 0;
+   return (uint16_t)Idx;
+}
+
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -590,16 +605,29 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(Data);
             break;
          case rRegStreamData:
-            DataPortWriteWait(XferImage[StreamOffsetAddr]);
+            //Same class as the StatusFunction[] guard: an index the C64 advances, with
+            //nothing checking it before the deref.  XferSize is 0 until an image is
+            //staged, so this also covers XferImage still being NULL at power-up.
+            //rRegStrAvailable only *tells* the C64 where the end is; it cannot stop it.
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
             //inc on read, check for end:
             if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
-            Data = ptrSerialString[StringOffset++];
+            //ptrSerialString is NULL until a selector is written below, and StringOffset
+            //only ever counted up -- a C64 reading past the terminator walked off the end
+            //of whichever string was selected, a byte per read.  Stop at the NUL instead.
+            Data = (ptrSerialString == NULL) ? 0 : ptrSerialString[StringOffset];
+            if (Data != 0) StringOffset++;
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          default: //used for all other IO1 reads
-            DataPortWriteWaitLog(IO1[Address]); //will read garbage if above IO1Size
+            //The ISR masks Address to 0..255 but IO1 is only IO1Size long, so DE68..DEFF
+            //used to hand the C64 heap past the allocation, a byte per read.  Zero is
+            //also the right answer for the one high register that lands here:
+            //rRegIOHSwapPoll reads rihsBusy (0x00) = keep polling, where garbage had a
+            //1-in-256 chance of reading as rihsReady.
+            DataPortWriteWaitLog(Address < IO1Size ? IO1[Address] : 0);
             break;
       }
    }
@@ -610,7 +638,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rwRegSelItemOnPage:
-            SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            SelItemFullIdx = MenuIdxFromRegs(Data);
          case rwRegStatus:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
@@ -744,7 +772,15 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   ptrSerialString = SerialStringBuf;
                   break;
                case rsstNextIOHndlrName:
-                  ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
+               {  //Same range rule the other two IOHandler[] index sites apply
+                  //(IOHandlers.ino, Min_DriveDirLoad.ino).  This register is not only
+                  //written by the C64: it is also loaded raw from EEPROM (line ~516),
+                  //where a byte saved by a build with more handlers -- or a corrupt
+                  //cell -- reads past the table and derefs whatever is there as ->Name.
+                  const uint8_t NextIOH = IO1[rwRegNextIOHndlr];
+                  ptrSerialString = (NextIOH < IOH_Num_Handlers) ?
+                     IOHandler[NextIOH]->Name : (char*)"?IOH";
+               }
                   break;
                case rsstSerialStringBuf:
                   //assumes SerialStringBuf built first...(FWUpd msg or BuildInfo)
@@ -782,6 +818,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                      }
                      else ptrSerialString = DriveDirPath;
                   }
+                  break;
+               default:
+                  //An unhandled selector used to leave ptrSerialString pointing at
+                  //whatever the previous one selected, so the C64 silently read back a
+                  //stale string.  Say so instead -- same choice as "?Stat" above.
+                  ptrSerialString = (char*)"?SerStr";
                   break;
             }
             break;
@@ -923,11 +965,12 @@ void PollingHndlr_TeensyROM()
          IO1[rwRegStatus] = Queued;
       }
 #endif
-      //The null check is not redundant with the bounds check. StatusFunction[] is
-      //declared rsNumStatusTypes long and filled by an initializer list, so adding a
-      //status code without adding its entry leaves a zero there and compiles clean --
-      //and the C64 then reaches a null call, which is a hard fault with no message.
-      //Landing in the same "?Stat" line as an out-of-range code costs one compare.
+      //The null check is not redundant with the bounds check. A status code appended
+      //without its StatusFunction[] entry is now a build error (the count static_assert
+      //in StatusFunctions.c), but an entry written null, or a table reordered so a live
+      //code lands on a null slot, still gets here. That call faults the core and reboots
+      //it; the CrashReport the main image prints on the way back up (Teensy.ino) cannot
+      //say which status code got there. Landing it in "?Stat" costs one compare.
       const uint8_t Status = IO1[rwRegStatus];
       if (Status<rsNumStatusTypes && StatusFunction[Status]) StatusFunction[Status]();
       else Serial.printf("?Stat: %02x\n", Status);
