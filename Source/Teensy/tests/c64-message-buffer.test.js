@@ -177,3 +177,63 @@ test('the formatters that write the C64 message buffer are bounded', () => {
     assert.doesNotMatch(read(file), /\bvsprintf\(/, `${file} still formats unbounded`);
   }
 });
+
+// Returns the body of a top-level C function by brace matching from its opening
+// brace, so a test can ask what one function does without the next one's text
+// leaking in.
+function functionBody(source, name) {
+  const signature = new RegExp(`^[^\\n]*\\bvoid\\s+${name}\\s*\\([^)]*\\)\\s*$`, 'm');
+  const at = source.search(signature);
+  assert.notEqual(at, -1, `no definition of ${name}`);
+  const open = source.indexOf('{', at);
+  assert.notEqual(open, -1, `${name} has no body`);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}' && --depth === 0) return source.slice(open, i + 1);
+  }
+  return assert.fail(`${name}'s body is unterminated`);
+}
+
+test('every rCtlMake*StrWAIT handler leaves the C64 string read selected and rewound', () => {
+  // PrintFileName prints every dynamic row in the settings menu. It ends at
+  // PrintSerialStringLoaded and selects nothing, so it prints whatever the firmware
+  // last pointed ptrSerialString at, from wherever that read stopped. A handler
+  // behind an rCtlMake*StrWAIT therefore owes its caller a read pointed at
+  // SerialStringBuf and rewound. MakeExtHostStr did not, and the Installed
+  // Extensions row printed the tail of the banner's version string -- blank, because
+  // the byte one past its terminator happened to be zero. Both pages that used to
+  // open-code the select around that gap now call PrintFileName instead, so for all
+  // three handlers this is load-bearing rather than defense in depth.
+  //
+  // The handler set is derived from the dispatch rather than listed here: that is
+  // what makes a new rCtlMake* control code whose handler forgets the close fail.
+  const dispatch = blankComments(read('MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c'));
+  const statusSource = read('MinimalBoot/Common/IO_Handlers/StatusFunctions.c');
+
+  const routes = [...dispatch.matchAll(
+    /case\s+(rCtlMake\w*)[^:]*:\s*(?:IO1\[wRegControl\]\s*=\s*Data\s*;\s*)?IO1\[rwRegStatus\]\s*=\s*(rs\w+)\s*;/g,
+  )].map(({ 1: control, 2: status }) => ({ control, status }));
+
+  // rCtlMakeInfoStrWAIT, rCtlMakeExtHostStrWAIT, and the rCtlMakeStrWAIT_First..Last
+  // range. A dispatch that stops matching is a rename, not a reason to pass.
+  assert.equal(routes.length, 3, `expected 3 rCtlMake* routes, found ${routes.length}`);
+
+  // rs code -> handler, from the trailing comment on each StatusFunction[] entry.
+  const handlers = new Map([...statusSource.matchAll(/&(\w+)\s*,\s*\/\/\s*(rs\w+)/g)]
+    .map(({ 1: fn, 2: status }) => [status, fn]));
+
+  for (const { control, status } of routes) {
+    const handler = handlers.get(status);
+    assert.ok(handler, `${status} has no StatusFunction[] entry naming its handler`);
+    const body = blankComments(functionBody(statusSource, handler));
+    assert.match(body, /\bSelectSerialStringBuf\s*\(\s*\)\s*;/,
+      `${control} -> ${status} -> ${handler} never calls SelectSerialStringBuf`);
+  }
+
+  // And the helper still does both halves. Asserting the call alone would pass on a
+  // helper that had quietly stopped rewinding, which is the half a partial read needs.
+  const helper = blankComments(functionBody(statusSource, 'SelectSerialStringBuf'));
+  assert.match(helper, /\bptrSerialString\s*=\s*SerialStringBuf\s*;/, 'the helper no longer points the read at SerialStringBuf');
+  assert.match(helper, /\bStringOffset\s*=\s*0\s*;/, 'the helper no longer rewinds the read');
+});

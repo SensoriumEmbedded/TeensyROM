@@ -190,13 +190,22 @@ FLASHMEM void WriteEEPROM()
 //One copy, because the two lines are the contract rather than an implementation detail
 //of any one handler.
 //
-//MakeBuildInfo is deliberately not in that class, and re-adding the call there for
-//symmetry is a regression rather than a tidy-up.  Its only C64 reader is Pg_InfoOther.asm,
-//which selects rsstSerialStringBuf by hand and so sets these same two values -- the call
-//would be dead on that path.  Its other callers are what make it harmful: SerUSBIO.ino's
-//VersionInfoToken is not debug-gated and can land while the C64 is mid-read with some
-//other source selected.  That read survives today because MakeBuildInfo only overwrites
-//the buffer's contents; selecting here would redirect and rewind the read as well.
+//All three handlers behind an rCtlMake*StrWAIT call it, MakeBuildInfo included, and in
+//none of them is it defense in depth for a hypothetical future caller -- it is what the
+//caller on the other side of the wait is already relying on.  Pg_InfoOther.asm used to
+//open-code the select for MakeBuildInfo, exactly as Pg_InstalledExt.asm did for
+//MakeExtHostStr; both pages now reach the row through PrintFileName, which selects
+//nothing.  Take this call out of any one of them and that page's row prints the tail of
+//whatever was read last.
+//
+//It is a main-loop write to state the ISR reads, which is a real window -- and not a new
+//one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
+//serves twenty of PrintFileName's twenty-three call sites.  MakeBuildInfo's other callers
+//(Teensy.ino, SerUSBIO.ino's 'f' and VersionInfoToken) read SerialStringBuf and never
+//ptrSerialString, and each already overwrites the buffer a C64 read would be walking --
+//SerUSBIO.ino says so itself: "Menu must be idle, interferes with any serialstring in
+//progress".  Redirecting a read whose contents are being replaced underneath it costs
+//that read nothing it had.
 FLASHMEM void SelectSerialStringBuf()
 {
    ptrSerialString = SerialStringBuf;
@@ -208,6 +217,10 @@ FLASHMEM void MakeBuildInfo()
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
    sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+
+   //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
+   //prints at column 0, so a 37 character cut would take most of it away.
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)

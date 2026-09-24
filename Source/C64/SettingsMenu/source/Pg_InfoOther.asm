@@ -44,17 +44,13 @@ InfoOtherMenu:
    ldy #19 ;col
    jsr PrintFileName
    
+   ;Build info from rCtlMakeInfoStrWAIT. This open-coded the select PrintFileName
+   ;does not do, because MakeBuildInfo did not leave its own string selected; now
+   ;that it does, the shared helper prints this row like every other one.
    lda #rCtlMakeInfoStrWAIT
-   sta wRegControl+IO1Port
-   jsr WaitForTRWaitMsg   ;moves cursor to upper right
    ldx #12 ;row
    ldy #0 ;col
-   clc
-   jsr SetCursor
-   lda TblEscC+EscMenuMiscColor
-   sta $0286  ;set text color
-   lda #rsstSerialStringBuf ; Build info from rCtlMakeInfoStrWAIT
-   jsr PrintSerialString
+   jsr PrintFileName
 
    lda #<MsgMachInfo1
    ldy #>MsgMachInfo1
