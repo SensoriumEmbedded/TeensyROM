@@ -15,10 +15,15 @@
 // constants, so a package that reaches the C64 has already been refused on the host
 // side if it was going to be refused at all. The one thing this cannot check is
 // whether the image is the host you meant, so it prints the descriptor it found.
+//
+// Without --out the file is named after that descriptor, reduced to filename characters
+// first: the name is twelve bytes the host author chose and is not a path, however much
+// "../../pwned" looks like one.
 import fs from 'node:fs';
 import path from 'node:path';
 import { decodeHex, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
-import { buildHostPackage, parseHostPackage, hostDescriptor } from './lib/extension.mjs';
+import { buildHostPackage, parseHostPackage, hostDescriptor,
+         hostFileStem, hostNameForDisplay } from './lib/extension.mjs';
 
 const args = process.argv.slice(2);
 function option(name, fallback = null) {
@@ -62,11 +67,32 @@ function main() {
   const id = hostDescriptor(pkg.subarray(header.headerBytes));
 
   const source = hexPath ?? imagePath;
-  const outPath = path.resolve(option('--out',
-    path.join(path.dirname(source), `${(id.name || 'HOST').toUpperCase()}.TRH`)));
+  const explicitOut = option('--out');
+  const stem = hostFileStem(id.name);
+  const shown = hostNameForDisplay(id.name);
+
+  let outPath;
+  if (explicitOut !== null) {
+    // An explicit path is the developer's own choice and is not second-guessed; CI passes
+    // one. Only the name the descriptor supplies is untrusted here.
+    outPath = path.resolve(explicitOut);
+  } else {
+    const dir = path.resolve(path.dirname(source));
+    outPath = path.resolve(path.join(dir, `${stem || 'HOST'}.TRH`));
+    // Checked rather than trusted to the sanitizer above: this is what still holds if the
+    // character policy is ever loosened, and it is the condition the traversal broke.
+    if (path.dirname(outPath) !== dir) {
+      throw new Error(`Refusing to write outside ${dir}: the descriptor name ` +
+        `"${shown}" does not name a file in it. Pass --out to choose the path yourself.`);
+    }
+    if (stem !== id.name.toUpperCase()) {
+      console.log(`Note: the descriptor name "${shown}" is not a filename; ` +
+        `writing ${stem || 'HOST'}.TRH rather than naming the file after it.`);
+    }
+  }
   fs.writeFileSync(outPath, pkg);
 
-  console.log(`Host "${id.name}" from ${source}`);
+  console.log(`Host "${shown}" from ${source}`);
   console.log(`  ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}`);
   console.log(`  payload ${header.payloadBytes} bytes, entry 0x${header.entry.toString(16)}`);
   console.log(`  wrote ${outPath} (${pkg.length} bytes)`);

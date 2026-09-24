@@ -14,7 +14,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
-         RAM2_RO_BYTES, SERVICE, hostSlotValid } from './lib/extension.mjs';
+         RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameDraws,
+         hostFileStem } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import { readSource } from './lib/source-text.mjs';
 
@@ -225,6 +226,33 @@ function checkServiceRegistry() {
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }
 
+// hostNameDraws() in tools/lib/extension.mjs is a hand mirror of nameByteDraws() in
+// VMBootImage.h. The firmware judges by it what a C64 will draw rather than execute; the
+// packager judges by it what may reach a terminal and what may become a filename. A
+// mirror that drifted would let the packager name a file with a byte the device refuses
+// to show, or print one the device would not -- so compare them over every byte, and
+// check the filename rule stays inside the display rule rather than beside it.
+function checkHostNamePolicy() {
+  const image = sourceOf('Source/Teensy/MinimalBoot/Common/VMBootImage.h');
+  const match = image.match(/return !\(c < (0x[0-9a-f]+) \|\| \(c >= (0x[0-9a-f]+) && c <= (0x[0-9a-f]+)\)\);/);
+  if (!match) throw new Error('cannot read the nameByteDraws() ranges from VMBootImage.h');
+  const [low, c1Low, c1High] = match.slice(1).map((word) => parseInt(word, 16));
+  const firmware = (c) => !(c < low || (c >= c1Low && c <= c1High));
+
+  for (let c = 0; c < 256; c++) {
+    if (firmware(c) !== hostNameDraws(c)) {
+      throw new Error(`nameByteDraws($${c.toString(16)}) is ${firmware(c)} in VMBootImage.h ` +
+        `but hostNameDraws in tools/lib/extension.mjs says ${hostNameDraws(c)}`);
+    }
+    // A byte the firmware will not draw must not survive into a filename either.
+    if (!firmware(c) && hostFileStem(String.fromCharCode(c)) !== '') {
+      throw new Error(`hostFileStem kept $${c.toString(16)}, which nameByteDraws rejects`);
+    }
+  }
+  console.log('PASS: hostNameDraws mirrors nameByteDraws in VMBootImage.h over all 256 bytes, ' +
+              'and hostFileStem stays inside it');
+}
+
 // hostSlotValid() in tools/lib/extension.mjs is a hand mirror of
 // vm_host_slot_valid() in VMHostABI.h. The packager refuses an image on the
 // strength of it and promises the device will enter one it accepts, so a
@@ -320,6 +348,7 @@ checkBootSlot();
 checkHostIdOffset();
 checkProtectedExtensions();
 checkEepromProtocol();
+checkHostNamePolicy();
 checkRam2Sizes();
 checkServiceRegistry();
 checkPublishedIncludes();

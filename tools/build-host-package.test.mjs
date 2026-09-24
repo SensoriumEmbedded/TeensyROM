@@ -80,6 +80,78 @@ test('a host image the minimal loader would not enter is refused before it is wr
   assert.equal(fs.existsSync(out), false, 'a refused package must not be written');
 });
 
+// The descriptor's twelve bytes are third-party. Without --out the packager names the
+// file after them, so they have to be treated as bytes rather than as a path fragment:
+// "../../pwned" is eleven of the twelve, and put the .TRH two directories above the one
+// the developer was looking in, on top of whatever was already there. The developer then
+// copies the file they expected -- stale or absent -- to the card.
+test('a descriptor name cannot steer the output path out of the source directory', () => {
+  const dir = sandbox();
+  const nested = path.join(dir, 'build', 'run-x');
+  fs.mkdirSync(nested, { recursive: true });
+  const imagePath = path.join(nested, 'host.bin');
+  fs.writeFileSync(imagePath, hostImage({ name: '../../pwned' }));
+
+  const result = run('--image', imagePath);
+  assert.equal(result.status, 0, result.stderr);
+
+  // Written where it belongs, under the name the bytes reduce to, and nothing escaped.
+  assert.equal(fs.existsSync(path.join(nested, 'PWNED.TRH')), true);
+  assert.equal(fs.existsSync(path.join(dir, 'PWNED.TRH')), false);
+  assert.equal(fs.existsSync(path.join(dir, 'build', 'PWNED.TRH')), false);
+
+  // And it says so, rather than handing back a differently-named file in silence.
+  assert.match(result.stdout, /is not a filename; writing PWNED\.TRH/);
+});
+
+test('separators, dots and control bytes do not survive into the filename', () => {
+  const cases = [
+    ['a/b/c', 'ABC.TRH'],
+    ['..', 'HOST.TRH'],
+    ['.hidden', 'HIDDEN.TRH'],
+    ['My Host!', 'MYHOST.TRH'],
+    // Only the ESC and the bracket go: "31m" are ordinary filename characters and stay,
+    // which is the point -- the rule drops what cannot be a filename, not what looks odd.
+    ['\x1b[31mred', '31MRED.TRH'],
+    ['///', 'HOST.TRH'],             // nothing survives: falls back rather than writing ".TRH"
+  ];
+  for (const [name, expected] of cases) {
+    const dir = sandbox();
+    const imagePath = path.join(dir, 'host.bin');
+    fs.writeFileSync(imagePath, hostImage({ name }));
+    const result = run('--image', imagePath);
+    assert.equal(result.status, 0, `${name}: ${result.stderr}`);
+    assert.equal(fs.existsSync(path.join(dir, expected)), true, `${name} -> ${expected}`);
+    // Every file written sits directly in the source directory, whatever the name said.
+    assert.deepEqual(fs.readdirSync(dir).filter((f) => f.endsWith('.TRH')), [expected]);
+  }
+});
+
+test('the printed descriptor name carries no escape sequence to the terminal', () => {
+  const dir = sandbox();
+  const imagePath = path.join(dir, 'host.bin');
+  fs.writeFileSync(imagePath, hostImage({ name: 'A\x1b[2JB' }));
+
+  const result = run('--image', imagePath);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Host "A\?\[2JB"/);
+  assert.equal(/[\u0000-\u001f\u007f-\u009f]/.test(result.stdout.replace(/\n/g, '')), false);
+});
+
+test('an explicit --out is the developer\'s own choice and is not second-guessed', () => {
+  // CI passes --out, and gating it on the descriptor would break that. Only the name the
+  // packager derives for itself is untrusted.
+  const dir = sandbox();
+  const imagePath = path.join(dir, 'host.bin');
+  fs.writeFileSync(imagePath, hostImage({ name: '../../pwned' }));
+  const out = path.join(dir, 'chosen', 'ANYWHERE.TRH');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+
+  const result = run('--image', imagePath, '--out', out);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.existsSync(out), true);
+});
+
 test('exactly one input is required', () => {
   assert.match(run().stderr, /exactly one of --hex .* or --image/);
   assert.match(run('--hex', 'a.hex', '--image', 'b.bin').stderr, /exactly one of --hex .* or --image/);
