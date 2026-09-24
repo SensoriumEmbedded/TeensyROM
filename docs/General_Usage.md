@@ -288,8 +288,10 @@
   * Connect the TeensyROM to your computer with a USB A to microB cable.
   * Plug the TeensyROM into your C64/128 and power it up to the main menu
   * Press the white button on the Teensy module itself, as shown in the app
+    * If TeensyROM is in its case, a straightened paperclip through the small access hole reaches the button — no need to open the case
   * The process only takes a few seconds to complete
     * ***Important*** You must leave your C64/128 powered up during the update
+      * This is electrically safe by design — the C64 just won't be usable again until the update finishes
   * You should see the app process through erasing and programming before your C64/128 reboots with the new version
 
 ### **Using the arduino environment** (for custom builds/code)
