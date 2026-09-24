@@ -575,7 +575,7 @@ C64 screen:
 | The same page naming the installed host out of the slot's own descriptor | yes — `TeensyROM  ABI 2  SERVICES $409F` |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
 | A module refused against a host whose descriptor does not publish its services | yes — `vm/hello` needs `VM_SERVICES`, the example host publishes none, and the launch never reached the extension image |
-| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover both the taken and the absent case, but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
 
 Treat the rows marked **no** as untested rather than as working.
 

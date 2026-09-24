@@ -35,6 +35,9 @@ inline std::string packageRoot, contentPath;
 inline uint8_t lastFailure;
 inline uint32_t lastFailureDetail;
 inline bool yieldRequested;
+// Counted by the exit stub below; make() clears them, so a host built after one
+// that lends an exit does not inherit its tally.
+inline uint32_t exitCalls, lastExitStatus;
 
 inline bool describe(const fs::path &path, VmFileInfo *info) {
     std::error_code error;
@@ -186,6 +189,8 @@ inline VmHost make(const std::string &root, const std::string &content,
     lastFailure = 0;
     lastFailureDetail = 0;
     yieldRequested = false;
+    exitCalls = 0;
+    lastExitStatus = ~0u;
     VmHost host{};
     host.abi = VM_ABI;
     host.bytes = sizeof(VmHost);
@@ -209,7 +214,6 @@ inline VmHost make(const std::string &root, const std::string &content,
     return host;
 }
 
-inline uint32_t exitCalls, lastExitStatus;
 inline void exitToMenu(uint32_t status) { ++exitCalls; lastExitStatus = status; }
 
 // The same host, grown by the one tail extension this loader publishes. The
@@ -224,8 +228,6 @@ inline VmHostExit makeWithExit(const std::string &root, const std::string &conte
     host.base.bytes = sizeof(VmHostExit);
     host.base.services = VM_SERVICES | VM_SERVICE_EXIT;
     host.exit_to_menu = exitToMenu;
-    exitCalls = 0;
-    lastExitStatus = ~0u;
     return host;
 }
 
