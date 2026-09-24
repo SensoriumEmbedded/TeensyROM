@@ -1286,12 +1286,15 @@ FLASHMEM void MakeExtHostStr()
    //displayName bounds the name to twelve drawn bytes, but abi and services are
    //uint32 fields the host writes about itself, so the line can still reach 48
    //characters. The row starts at column 3 of a 40 column screen, so it has 37 --
-   //the same bound MakeFilenameStr uses -- and a wider one runs onto the row below,
-   //which on the settings page carries the uninstall option and on the confirmation
-   //screen is blank. The prompt below it no longer moves with this length:
-   //Pg_InstalledExt.asm places it with SetCursor, because a 37 character line ends in
-   //the last column and the screen editor wraps the cursor there by itself, which a
-   //clamp measured in columns cannot prevent.
+   //the same bound MakeFilenameStr uses -- and a wider one spills its last 11
+   //characters onto the row below. That row is blank on both screens that draw this
+   //line: row 6 on the settings page, where the uninstall option is row 7, and row 7
+   //on the confirmation screen. So what the clamp buys is a line that stays on its
+   //own row, not a collision with something already drawn. The prompt below it no
+   //longer moves with this length either: Pg_InstalledExt.asm places it with
+   //SetCursor, because a 37 character line ends in the last column and the screen
+   //editor wraps the cursor there by itself, which a clamp measured in columns cannot
+   //prevent.
    const uint16_t MaxLength = 37;
    if (strlen(SerialStringBuf) > MaxLength)
    {  //Mark the cut rather than making it silently. What runs off the end is the

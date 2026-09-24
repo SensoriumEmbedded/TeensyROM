@@ -68,8 +68,8 @@ WaitInstalledExtMenuKey:
    ;to the next row on its own -- two returns from there land a row lower than two
    ;returns from a short name.  Measured on a TR+: "None installed." put this prompt
    ;on row 8 and a clamped "WIDEHOSTNAME  ABI 2  services $fffff>" put it on row 9.
-   ;A build with no extension loader says "No extension loader in this firmware",
-   ;which is 37 characters as well.
+   ;A build with no extension loader says "No extension loader in this firmware.",
+   ;which is 37 characters as well -- the trailing stop is the 37th.
    ldx #8 ;row
    ldy #0 ;col
    clc
@@ -90,12 +90,17 @@ WaitInstalledExtMenuKey:
 +++
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
-   ;Put the cursor back under the prompt before handing over: DisplayTime left it at
-   ;the clock, and the firmware's reply prints wherever it is.  SendMsgPrintfln leads
-   ;with a return, so row 9 puts that reply on row 10, and AnyKeyMsgWait's own leading
-   ;return puts the key prompt on row 11 -- which is where both landed when the prompt
-   ;text happened to end there.
-   ldx #9 ;row
+   ;Put the cursor below the prompt before handing over: DisplayTime left it at the
+   ;clock, and everything after this prints wherever it is -- WaitForTRDots puts a
+   ;dot per second at the cursor, and the firmware's reply follows them.
+   ;Row 9 is not free.  The prompt is 47 drawn characters from column 0, so it fills
+   ;row 8 and its last seven -- "to keep" -- are row 9 columns 0 to 6; a cursor there
+   ;spells the first dot over them.  Row 10 is free whatever the prompt is changed to
+   ;say, because the screen editor links at most two rows into one logical line, so a
+   ;prompt placed on row 8 can never reach past row 9.  From row 10 SendMsgPrintfln's
+   ;leading return puts the reply on row 11 and AnyKeyMsgWait's own leading return
+   ;puts the key prompt on row 12.
+   ldx #10 ;row
    ldy #0 ;col
    clc
    jsr SetCursor
