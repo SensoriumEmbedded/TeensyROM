@@ -999,9 +999,11 @@ FLASHMEM void WriteC64MemCommand()
    // Same shape as ReceiveFileData, two orders smaller: DMALength is two bytes rather than
    // four, so the per-byte timeout alone bounds this at 65535 * 500 mS -- 9.1 hours of a
    // board serving nothing, chosen by whoever sent the command. DMA is in the
-   // always-available tier (docs/ControlComms.md:53), so being busy does not shut it.
+   // always-available tier (docs/ControlComms.md:52), so being busy does not shut it -- and
+   // for the same reason every blocking path here, DrainCmdChannel included, is time the C64
+   // is not being served.
    const uint32_t Began = millis();
-   const uint32_t CeilingmS = SerialTimoutMillis + DMALength / ReceiveFloorBytesPer_mS();
+   const uint32_t CeilingmS = TransferCeilingmS(DMALength);
 
    for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
    {
