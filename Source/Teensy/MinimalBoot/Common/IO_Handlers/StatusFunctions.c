@@ -780,26 +780,43 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    memset(PageBuf, BytePat, TestPageSize);
    memset(ReadBuf, (uint8_t)~BytePat, TestPageSize);
 
+   //Both causes named, neither claimed: PerformDMA returns one bool and WaitForDMAState does
+   //not report which of its bounds fired, so a clocking bus that timed out reaches here too.
+   //Kept inside 40 columns -- these land on the C64 screen, this test has no serial half.
    if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
-      SendMsgPrintfln(" No write at $%04x: bus stalled", Address);
+      SendMsgPrintfln(" No write at $%04x: no clock or timeout", Address);
       return false;
    }
    if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
-      SendMsgPrintfln(" No read at $%04x: bus stalled", Address);
+      SendMsgPrintfln(" No read at $%04x: no clock or timeout", Address);
       return false;
    }
-   memcpy(PageBuf, ReadBuf, TestPageSize);
 
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++)
-      if (PageBuf[ByteNum] != BytePat)
+      if (ReadBuf[ByteNum] != BytePat)
       {
-         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
+         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, ReadBuf[ByteNum]);
          return false;
       }
    //SendMsgPrintf(" OK");
    return true;
+}
+
+//A stalled transfer follows the same channel rule as the rest of TestDMAPattern's output.
+//The screen half is gated on ToScreen, because the serial sweep ('z' in SerUSBIO.ino) runs
+//with the C64 busy elsewhere: there SendMsgPrintfln waits out the full 3-second
+//rsC64Message handshake nobody is going to answer, per transfer, and then prints
+//"Sout Timeout!" over the sweep's own output. Serial always gets the line.
+FLASHMEM void ReportPatternStall(bool ToScreen, uint16_t Pass, const char *Stage)
+{
+   //Inside 40 columns, and it leaves the cause to serial -- the on-screen caller follows a
+   //false return with " Failed, additional details on serial".
+   if(ToScreen) SendMsgPrintfln(" No %s, pass %u", Stage, Pass);
+   //Neither bound is distinguishable from here: PerformDMA returns one bool and
+   //WaitForDMAState does not report which of its ceilings fired, so name both.
+   Serial.printf("\n  no %s on pass %u: C64 bus not clocking, or DMA timed out\n", Stage, Pass);
 }
 
 FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, uint8_t ValB, uint16_t Passes, bool ToScreen)
@@ -807,7 +824,11 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    //Alternating ValA/ValB swings the data bus between DMA cycles, which a uniform fill never does.
    //   Pre-filling with PriorVal is what makes a dropped write visible - TestDMAPage() writing $ff
    //   over a page already holding $ff verifies clean either way.  PriorVal==ValA==ValB is a control.
-   uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize];
+   //Three buffers, and they stay three: PageBuf is what was written, PriorBuf is what the
+   //page held before the pattern write, ReadBuf is what came back after it. "Unchanged"
+   //below is ReadBuf against PriorBuf, so reading back over either of the other two makes
+   //that comparison answer itself instead of the page.
+   uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize], ReadBuf[TestPageSize];
    uint32_t BadBytes = 0, WorstPass = 0, Unchanged = 0, PrefillBad = 0;
    uint32_t BitFell[8] = {0}, BitRose[8] = {0};
    uint32_t PrefillFell = 0, PrefillRose = 0;
@@ -818,12 +839,12 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
       memset(PageBuf, PriorVal, TestPageSize);
       if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
       {
-         SendMsgPrintfln(" Bus stalled, pass %u prefill", Pass);
+         ReportPatternStall(ToScreen, Pass, "prefill write");
          return false;
       }
       if (!PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA()) //what the page really holds now
       {
-         SendMsgPrintfln(" Bus stalled, pass %u prefill read", Pass);
+         ReportPatternStall(ToScreen, Pass, "prefill read");
          return false;
       }
       //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
@@ -846,28 +867,27 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
          PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
       if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
       {
-         SendMsgPrintfln(" Bus stalled, pass %u write", Pass);
+         ReportPatternStall(ToScreen, Pass, "pattern write");
          return false;
       }
-      //Into PriorBuf, not back over PageBuf: reading into the buffer that already holds the
-      //expected pattern makes an aborted read compare equal on every byte, so the pass
-      //reports clean having read nothing.
-      if (!PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      //Into ReadBuf: not back over PageBuf, which already holds the expected pattern and
+      //would make an aborted read compare equal on every byte, and not over PriorBuf, which
+      //the Unchanged test below needs still holding the pre-write contents.
+      if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
       {
-         SendMsgPrintfln(" Bus stalled, pass %u read", Pass);
+         ReportPatternStall(ToScreen, Pass, "read");
          return false;
       }
-      memcpy(PageBuf, PriorBuf, TestPageSize);
 
       uint32_t PassBad = 0;
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
       {
          uint8_t Expected = (ByteNum & 1) ? ValB : ValA;
-         uint8_t Diff = PageBuf[ByteNum] ^ Expected;
+         uint8_t Diff = ReadBuf[ByteNum] ^ Expected;
          if(Diff == 0) continue;
          PassBad++;
          XorMask |= Diff;
-         if(PageBuf[ByteNum] == PriorBuf[ByteNum]) Unchanged++; //write never landed, vs a partial byte that landed mid-settle
+         if(ReadBuf[ByteNum] == PriorBuf[ByteNum]) Unchanged++; //write never landed, vs a partial byte that landed mid-settle
          for(uint8_t Bit = 0; Bit < 8; Bit++)
          {
             if(!(Diff & (1<<Bit))) continue;
