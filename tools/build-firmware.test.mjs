@@ -105,29 +105,6 @@ test('the known-argument sets name exactly the arguments the script reads', () =
   }
 });
 
-// A repeated option used to be accepted and then half-used: option() takes the first
-// occurrence, so `npm run build:tr-plus -- --target tr` built tr-plus, extension loader and
-// all, and exited 0 -- the same wrong-image-at-exit-0 shape the unknown-argument refusal was
-// added to close, reached through an argument the script does recognise.
-test('a repeated option is refused rather than resolved to one of its values', () => {
-  // The unusable first value goes first on purpose: if the refusal is ever lost, the value
-  // that wins is one the target check rejects anyway, so these two cases fail in a process
-  // spawn and the expensive case below never runs.
-  assert.match(build('--target', 'tr-minus', '--target', 'tr-plus').stderr,
-    /--target was given more than once/);
-  assert.match(build('--target', 'tr-minus', '--out', 'a', '--out', 'b').stderr,
-    /--out was given more than once/);
-  // Then the shape that actually reaches people, which a lost refusal answers with a build.
-  const result = build('--target', 'tr-plus', '--target', 'tr');
-  assert.equal(result.status, 1, result.stdout);
-  assert.match(result.stderr, /--target was given more than once/);
-  // A repeated bare flag cannot select a different image (flag() is args.includes), so it
-  // stays accepted; refusing it would break nothing but help nothing either. An unusable
-  // target keeps this case a refusal too, so it costs a spawn rather than a build.
-  assert.match(build('--target', 'tr-minus', '--no-extensions', '--no-extensions').stderr,
-    /Use --target tr or --target tr-plus/);
-});
-
 // The default itself, which no argument check can reach. The reservation line prints before
 // the first compile, so a stub SDK is enough to read it: the two files the "installed core
 // unchanged" guard hashes, and the tools directory the private copy symlinks. Every build
@@ -313,7 +290,7 @@ test('an option given twice is refused rather than resolved to one of them', () 
   // A repeated *flag* carries no value to lose, so it is left idempotent and still reaches
   // the refusal it was always going to reach, rather than being caught by the check above.
   assert.match(build('--target', 'tr', '--with-extensions', '--with-extensions').stderr,
-    /--with-extensions needs --target tr-plus/);
+    /--with-extensions no longer exists/);
 });
 
 // A --host-sketch build is not the shipping image -- the slot holds a program this repo
