@@ -6,9 +6,22 @@ sound and input. The firmware in this repository is the **loader**: it finds
 packages, validates them, reserves the memory, and carries bytes between the
 module and its C64 client. It knows nothing about what any extension does.
 
-This document is the whole contract. A module needs
-[`VMABI.h`](../../Source/Teensy/MinimalBoot/Common/VMABI.h) and nothing else
-from this repository to build.
+This document is the whole contract. A module builds against three files from
+this repository, all of them in [`vm/abi/`](.):
+
+- [`vm_abi.h`](vm_abi.h) — the types and constants, a shim over
+  [`VMABI.h`](../../Source/Teensy/MinimalBoot/Common/VMABI.h), which is the
+  header the firmware itself compiles and so the one that cannot drift from it.
+- [`module.ld`](module.ld) — the linker script. It places `.entry` first, sets
+  `ENTRY(vm_entry)`, and fixes the code and data windows to the addresses the
+  loader validates, so an image linked without it is refused rather than
+  mislinked.
+- [`vm_runtime.c`](vm_runtime.c) — weak `memset`, `memcpy`, `memmove`,
+  `memcmp`, `strlen` and `strcmp`. A freestanding module has no libc, and GCC
+  emits calls to these on its own for code that never names them — zeroing a
+  struct is a `memset`. Define your own to override any of them.
+
+Nothing else from this repository is needed, and nothing outside it is.
 
 > **Status.** The formats and the base profile described here are frozen; the
 > version marker is `VM_ABI = 2`. The launch path, the module loader and the
