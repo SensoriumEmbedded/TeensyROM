@@ -63,3 +63,4 @@ static struct {void write(int,int){}} EEPROM;
 static void delay(unsigned){}
 #define SetResetAssert ((void)0)
 #define REBOOT rebooted=true
+#define RebootTR() do { SetResetAssert; REBOOT; } while(0)
