@@ -1037,7 +1037,7 @@ FLASHMEM void WriteC64MemCommand()
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);
-      CmdChannel->println("C64 bus is not clocking, no transfer!");
+      CmdChannel->println("No transfer: C64 bus not clocking, or DMA timed out");
       return;
    }
    //StartTime = micros() - StartTime;
@@ -1084,7 +1084,7 @@ FLASHMEM void ReadC64MemCommand()
    if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);
-      CmdChannel->println("C64 bus is not clocking, no transfer!");
+      CmdChannel->println("No transfer: C64 bus not clocking, or DMA timed out");
       return;
    }
 
