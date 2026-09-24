@@ -54,7 +54,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
-| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Shared by `hostinstall.py`, `hostuninstall.py`, `hostcycle.py` and `hostenter.py`. |
+| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Shared by the `host*.py` scripts, and by `test_bounds.py`, which patches its timeouts to test them. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |

@@ -200,7 +200,7 @@ FLASHMEM void WriteEEPROM()
 //
 //It is a main-loop write to state the ISR reads, which is a real window -- and not a new
 //one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
-//serves twenty of PrintFileName's twenty-three call sites.  MakeBuildInfo's other callers
+//serves most of PrintFileName's call sites.  MakeBuildInfo's other callers
 //(Teensy.ino, SerUSBIO.ino's 'f' and VersionInfoToken) read SerialStringBuf and never
 //ptrSerialString, and each already overwrites the buffer a C64 read would be walking --
 //SerUSBIO.ino says so itself: "Menu must be idle, interferes with any serialstring in
@@ -1207,7 +1207,7 @@ FLASHMEM void MakeExtHostStr()
 {
    //No arm ends its line with \r, because this string is printed through
    //PrintFileName like every other dynamic settings row, and MakeFilenameStr -- which
-   //serves twenty of PrintFileName's twenty-two call sites -- does not end in one
+   //serves most of PrintFileName's call sites -- does not end in one
    //either. PrintFileName is built around that: it places the row with SetCursor and
    //leaves the cursor wherever the text stops. A return here put the uninstall
    //prompt a row lower, but only on the arms that carried one, which is how the

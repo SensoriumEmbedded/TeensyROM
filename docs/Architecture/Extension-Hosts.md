@@ -128,8 +128,8 @@ Two consequences of the overlay worth knowing before your first build:
 - **A prototype hoisted above its own constants will not compile.** The sketch
   preprocessor collects prototypes to the top of the concatenated file, so a
   helper whose signature names a `constexpr` defined further down fails with an
-  error that blames the definition's line. `Teensy.ino:41` and `VMHost.h:32`
-  document the same hazard.
+  error that blames the definition's line. `Teensy.ino` and `VMHost.h` each
+  carry a note about it.
 
 `--host-sketch` is refused rather than ignored where there is no extension slot to
 build into (`--target tr`, `--no-extensions`, `--skip-extension-build`): a flag
