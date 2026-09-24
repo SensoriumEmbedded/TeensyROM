@@ -49,21 +49,28 @@ void IOHandlerInit(uint8_t NewIOHandler)
    
    if (NewIOHandler>=IOH_Num_Handlers)
    {
-      Printf_dbg("***IOHandler out of range\n");
-      return;
+      //Rejecting the handler is right; returning early was not.  The handoff below is the only
+      //thing that ever releases the PRG-load handshake, and the C64's poll of rRegIOHSwapPoll
+      //(PRGLoadStartReloc.s) is a bare compare-and-loop with no timeout -- so skipping it left
+      //the C64 spinning on rihsBusy with no exit but a power cycle.  Fall through, don't return.
+      //Serial, not Printf_dbg: a release build compiles Printf_dbg to nothing, and this line is
+      //the only record that a handler index went out of range.
+      Serial.printf("***IOHandler out of range: %d\n", NewIOHandler);
    }
-   
-   Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
-   
-   if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
+   else
+   {
+      Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
 
-   Serial.flush();
-   CurrentIOHandler = NewIOHandler;
+      if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
+
+      Serial.flush();
+      CurrentIOHandler = NewIOHandler;
+   }
 
    //PRG-load handshake handoff (see HandshakeSnoop in IOH_TeensyROM.c):
    //if the handshake currently owns fBusSnoop, let its own completion-read do the handoff later;
    //otherwise (e.g. a cart loaded directly from the menu, no handshake involved) apply it now,
-   //since nothing else will.
+   //since nothing else will.  One exit, so a rejected handler releases it too.
    if (fBusSnoop == &HandshakeSnoop) HandshakeReady = true;
    else fBusSnoop = PendingfBusSnoop;
 }
