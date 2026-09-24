@@ -125,6 +125,14 @@ test('the installed host name is rendered in one place, by a buffer wide enough 
   // No site re-derives the buffer from the field, and none copies the name by hand.
   assert.deepEqual(scanTree(/char \w+\[\s*sizeof [\w.>:-]*\bname\s*\+\s*1\s*\]/g, () => true), []);
   assert.deepEqual(scanTree(/strcpy\(\s*\w*[Nn]ame\w*\s*,\s*"\(no descriptor\)"/g, () => true), []);
+
+  // The sites that read the descriptor in place rather than through displayName take
+  // their precision from the field too. A literal width is right only while it equals
+  // sizeof(VmHostId::name): widen the field and these messages clip the host's name
+  // while nameBytes and displayName track it, so the refusal a third party reads
+  // becomes the one place that disagrees with the field. Truncation, not overrun --
+  // which is why it would go unnoticed.
+  assert.deepEqual(scanTree(/%\.\d+s[^;]*?\bname\b/g, () => true), []);
 });
 
 test('the formatters that write the C64 message buffer are bounded', () => {

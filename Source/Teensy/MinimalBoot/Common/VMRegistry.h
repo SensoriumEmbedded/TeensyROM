@@ -122,9 +122,12 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     if(!VmBootImage::installed()){SendMsgPrintfln("No extension host installed");return true;}
     VmHostId hostId{};
     if(VmBootImage::identity(hostId)){
-        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%.12s host is ABI %lu, not %lu",hostId.name,
+        // Precision from the field, not a literal 12: these read the descriptor in place
+        // rather than through displayName's buffer, so the width has to track the field
+        // the same way nameBytes does. A literal here is what drifted last time.
+        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%.*s host is ABI %lu, not %lu",(int)sizeof hostId.name,hostId.name,
                         (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
-        if(image.required_services&~hostId.services){SendMsgPrintfln("%.12s host lacks service $%lx",hostId.name,
+        if(image.required_services&~hostId.services){SendMsgPrintfln("%.*s host lacks service $%lx",(int)sizeof hostId.name,hostId.name,
                         (unsigned long)(image.required_services&~hostId.services));return true;}}
     l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
