@@ -369,7 +369,7 @@ enum RegCtlCommands
    rCtlForceEthInitWAIT     = 53,
    rCtlExtPortCheckWAIT     = 54,
    rCtlExpPortDMAWAIT       = 55,
-   rCtlMakeExtHostStrWAIT   = 56, // installed host name and size, into SerialStringBuf
+   rCtlMakeExtHostStrWAIT   = 56, // installed host name, ABI and services, into SerialStringBuf
    rCtlUninstallExtHostWAIT = 57, // clear the host tag; reboots if there was one to clear
    
 };                               

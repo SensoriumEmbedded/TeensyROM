@@ -183,11 +183,24 @@ FLASHMEM void WriteEEPROM()
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
+//Every rCtlMake*StrWAIT handler ends here: the string it just built is left selected
+//and rewound.  PrintFileName on the C64 side jumps into PrintSerialStringLoaded, which
+//reads whichever source was selected last from wherever that read stopped -- so a
+//handler that builds SerialStringBuf and skips this prints nothing through it, and the
+//Installed Extensions page's blank row was exactly that.  One copy, because the two
+//lines are the contract rather than an implementation detail of any one handler.
+FLASHMEM void SelectSerialStringBuf()
+{
+   ptrSerialString = SerialStringBuf;
+   StringOffset = 0;
+}
+
 FLASHMEM void MakeBuildInfo()
 {
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
    sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
@@ -306,8 +319,7 @@ FLASHMEM void MakeFilenameStr()
 
    //Serial.printf("\nx%sx\n", SerialStringBuf);
    //set print buffer for PrintSerialString and reset counter
-   ptrSerialString = SerialStringBuf;
-   StringOffset = 0;
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void UpDirectory()
@@ -1160,26 +1172,28 @@ void DoHostUninstall();
 // there is nothing installed, which is what they say.
 FLASHMEM void MakeExtHostStr()
 {
+   //Every arm ends its line with \r.  The confirmation screen prints its prompt from
+   //wherever this string leaves the cursor, so an arm that omits it lands the prompt a
+   //row above the one the other arms put it on.
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
-   if (!VmBootImage::installed())
-   {
-      strcpy(SerialStringBuf, "None installed.");
-      return;
-   }
    VmHostId id{};
-   if (VmBootImage::identity(id))
+   if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.\r");
+   else if (VmBootImage::identity(id))
    {
       char Name[sizeof id.name + 1] = {0};
       memcpy(Name, id.name, sizeof id.name);
       //ABI and services come from the host itself, so a host from elsewhere
-      //describes itself here rather than being described by this firmware.
-      sprintf(SerialStringBuf, "%s  ABI %lu  services $%04lx\r",
-              Name, (unsigned long)id.abi, (unsigned long)id.services);
+      //describes itself here rather than being described by this firmware -- which
+      //is also why the write is bounded: the only variable-length part of this line
+      //is 12 bytes of third-party descriptor.
+      snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s  ABI %lu  services $%04lx\r",
+               Name, (unsigned long)id.abi, (unsigned long)id.services);
    }
    else strcpy(SerialStringBuf, "Installed, no descriptor.\r");
 #else
-   strcpy(SerialStringBuf, "No extension loader in this firmware.");
+   strcpy(SerialStringBuf, "No extension loader in this firmware.\r");
 #endif
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void UninstallExtHost()

@@ -222,7 +222,10 @@
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
 ### 0. Installed Extensions
-  * Placeholder: TR+ Runtime Firmware Extensions are not implemented yet, so the page has nothing to list
+  * Names the extension host in the firmware slot — its name, ABI version and service mask, read out of the slot's own descriptor
+  * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
+  * Uninstalling clears the tag that makes the slot bootable and reboots the TeensyROM; the host image stays in flash, unreferenced, until the next install overwrites it
+  * On a board or build with no extension loader, the page says so and `u` changes nothing
 
 ## Selecting and associating Special IO
   * What is it?
