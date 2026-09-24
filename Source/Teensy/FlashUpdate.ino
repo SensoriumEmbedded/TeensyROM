@@ -211,22 +211,6 @@ static const char *HostInstallWhy(VmInstallStatus status)
    return "refused";
 }
 
-// PerformDMA and CloseDMA are both `while (DMA_State != ...);` with no bound, and only
-// isrPHI2 advances DMA_State. With nothing clocking PHI2 neither one returns, and this
-// firmware has no watchdog to end it: the board sits in the main loop until someone pulls
-// its power, with the erase never started. That is reachable, because HostRemoveToken
-// arrives over the USB device port, and that port is also what powers the Teensy -- the
-// C64 whose screen it is about to blank may be switched off. isrPHI2 stamps LastCycCnt on
-// every rising edge, so a change in it is direct evidence that the handshake can finish.
-// 5 mS is ~5000 edges on a running machine, which is why a live C64 cannot read as dead.
-static bool C64IsClockingPHI2()
-{
-   const uint32_t Seen = LastCycCnt;
-   const uint32_t Began = millis();
-   while (millis() - Began < 5) if (LastCycCnt != Seen) return true;
-   return false;
-}
-
 // The install ends in a reboot either way, so its outcome travels in the
 // VmFail record the main image collects on the way back up.
 // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this

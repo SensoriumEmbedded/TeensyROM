@@ -166,13 +166,21 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
             EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #ifdef Fab04_FullDMACapable
+            // Same guard, and for the same reason, as the blank in StopServingTheC64:
+            // PerformDMA and CloseDMA never return with nothing clocking PHI2, and this
+            // path is reachable with the C64 switched off -- RemoteControl.ino's forced
+            // CRT launch calls HandleExecution over the USB port that powers the Teensy.
+            // Without the check the board wedges here instead of rebooting.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
-            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)            
-            uint8_t BlankD011 = 0x00;
-            PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-            CloseDMA();
+            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)
+            if (C64IsClockingPHI2())
+            {
+               uint8_t BlankD011 = 0x00;
+               PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+               CloseDMA();
+            }
 #endif
             RebootTR();
             

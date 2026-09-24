@@ -31,6 +31,26 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
+// The precondition for everything below it.  PerformDMA and CloseDMA are each a bare
+// `while (DMA_State != ...);`, and only isrPHI2 advances DMA_State, so with nothing
+// clocking PHI2 neither one ever returns.  There is no watchdog in this firmware to end
+// that: the board sits in its main loop until someone pulls its power.  Both blank-then-
+// reboot paths can be started while the C64 is off -- the host removal over the USB
+// device port, which is also what powers the Teensy, and a remote CRT launch through
+// RemoteControl.ino's HandleExecution -- so both ask this first.
+//
+// isrPHI2 stamps LastCycCnt from ARM_DWT_CYCCNT at its top, before any branch, so a
+// change in it is direct evidence that the handshake can complete.  5 mS is ~5000 edges
+// at the ~1 MHz PHI2 this board is built for, which is why a live C64 cannot read as
+// dead; a dead one costs 5 mS and the caller skips a blank nobody could see anyway.
+FLASHMEM bool C64IsClockingPHI2()
+{
+   const uint32_t Seen = LastCycCnt;
+   const uint32_t Began = millis();
+   while (millis() - Began < 5) if (LastCycCnt != Seen) return true;
+   return false;
+}
+
 FLASHMEM void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
