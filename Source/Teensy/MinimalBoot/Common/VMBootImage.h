@@ -72,9 +72,12 @@ static constexpr unsigned largest(unsigned a, unsigned b) { return a > b ? a : b
 //
 // Every source that exists goes through largest(), but nothing makes the next one: a
 // placeholder added to displayName and not added here leaves the constant behind, and
-// the only thing that catches it is the screen. It truncates rather than overruns --
-// displayName writes through snprintf, which is bounded by the caller's size -- so the
-// failure is a name that comes up short, not the char[13] strcpy this replaced.
+// the only thing that catches it is the screen. It truncates rather than overruns, but
+// not by one mechanism: the two placeholder branches go through snprintf, bounded by the
+// caller's size, while a real name goes through the loop below and is bounded by its own
+// `n + 1 < bytes`. That loop is the path nearly every host takes, so it is the one to
+// check before assuming a write here is bounded. Either way the failure is a name that
+// comes up short, not the char[13] strcpy this replaced.
 static constexpr unsigned nameBytes =
     largest(largest(sizeof(VmHostId::name) + 1, literalBytes(noDescriptor)),
             literalBytes(unnamedHost));

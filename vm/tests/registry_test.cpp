@@ -118,6 +118,41 @@ int main(int argc,char **argv){
         // No descriptor at all stays a different answer from a descriptor naming nothing.
         VmBootImage::displayName(shown,sizeof shown,nullptr);
         assert(!strcmp(shown,"(no descriptor)"));
+
+        // A buffer narrower than the source. Every caller in the tree passes nameBytes,
+        // so this is the case nothing else reaches -- and it is exactly what happens if
+        // a placeholder is added to displayName without widening nameBytes. The comment
+        // over nameBytes promises truncation rather than an overrun, by two different
+        // bounds: the loop's `n + 1 < bytes` for a real name, snprintf's for the two
+        // placeholders. Pinned here so the promise is checked rather than asserted.
+        // Canaries either side catch a write that lands outside the buffer at all.
+        {
+            char fenced[3+4+3];
+            const char *const front=fenced, *const back=fenced+3+4;
+            char *const narrow=fenced+3;
+
+            memset(fenced,'#',sizeof fenced);
+            memcpy(probe.name,"ABCDEFGHIJKL",12);
+            VmBootImage::displayName(narrow,4,&probe);
+            assert(!strcmp(narrow,"ABC"));                 //3 plus the terminator
+            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+
+            memset(fenced,'#',sizeof fenced);
+            memset(probe.name,0,12);                       //drives the (unnamed) branch
+            VmBootImage::displayName(narrow,4,&probe);
+            assert(strlen(narrow)<4);
+            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+
+            memset(fenced,'#',sizeof fenced);
+            VmBootImage::displayName(narrow,4,nullptr);    //and the (no descriptor) one
+            assert(strlen(narrow)<4);
+            assert(!memcmp(front,"###",3)&&!memcmp(back,"###",3));
+
+            // Zero is the caller having nothing to write into; it must not write anyway.
+            memset(fenced,'#',sizeof fenced);
+            VmBootImage::displayName(narrow,0,&probe);
+            assert(!memcmp(fenced,"##########",sizeof fenced));
+        }
     }
 
     // And the refusals carry the rendered name rather than the field, so nothing the
