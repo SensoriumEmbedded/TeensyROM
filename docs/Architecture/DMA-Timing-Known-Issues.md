@@ -108,9 +108,17 @@ C128 unreliability (see [Known-Issues.md](Known-Issues.md)'s "Large-CRT
 bank-swap DMA reliability" entry) through one shared root cause — unconfirmed,
 but the most direct link between the two mechanisms found so far.
 
-## Investigation
+## Validation
 
-### 3. NTSC-vs-PAL and C64-vs-C128 are confounded in the PR #21 data `[Investigation]`
+### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
+The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
+430 default is inherited from the old shared constant, not independently
+measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
+correctly, but not the analog margin (its buffers/bus loading are its own).
+
+## Closed
+
+### 3. NTSC-vs-PAL and C64-vs-C128 are confounded in the PR #21 data `[Closed]`
 The only "NTSC" characterization rig was a flat C128; the only "PAL" rig was a
 C64 (+Kawari, cross-checked against Ultimate). No NTSC-C64 or PAL-C128 data
 point exists. Can't yet tell whether the 410/430 cliff difference is a
@@ -137,7 +145,9 @@ NTSC default (430) — 13–25× fewer errors at the C128-specific value. Same
 direction as the tracker data, different mechanism/constant, independently
 pointing at C64-vs-C128 as a real, active variable rather than noise.
 
-### 4. Marginal partial-byte failure mode is intermittent and uncharacterized `[Investigation]`
+**Closed (2026-09-23):** Resolved by this week's U55 investigation. U55 (the chip whose F245/LS245 variant is the root cause -- see item #6) only exists in the C128's MMU/address-bus path, with no C64 equivalent, so a fault traceable to that one chip is definitionally a C128-specific hardware effect, not a video-standard/cycle-length effect. Converging evidence: every LS245 board tested passes clean and every F245 board fails, regardless of PAL vs NTSC (see item #2's Bill's-PAL-C128 data point) -- the video standard doesn't move the needle either way.
+
+### 4. Marginal partial-byte failure mode is intermittent and uncharacterized `[Closed]`
 The 430–450ns partial-byte error band went quiescent partway through the PR #21
 test session and could not be re-confirmed in a follow-up interleaved A/B
 (10 rounds, 410 vs 430, zero errors either arm — while 460 still reproduced as
@@ -145,15 +155,7 @@ a positive control). Unknown what gates it: thermal, uptime, VIC/screen state.
 No margin number here is fully trustworthy until this is understood, and no A/B
 against it is repeatable yet.
 
-## Validation
-
-### 2. PAL branch of the timing fix is unverified on real PAL hardware `[Validation]`
-The sweep that produced `Def_nS_DMADataHoldNTSC=410` was run on a C128; PAL's
-430 default is inherited from the old shared constant, not independently
-measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
-correctly, but not the analog margin (its buffers/bus loading are its own).
-
-## Closed
+**Closed (2026-09-23):** Reclassified and closed. This finding's original characterization rig was a C128 (kfox's own board, per item #14/#33's cross-references), not a C64 as earlier assumed -- putting it in scope for this week's work. The original mystery ("unknown what gates it: thermal, uptime, VIC/screen state") matches the shape of what item #16 nailed down: connector pressure, power-cycle state, and mechanical settling are the dominant driver of intermittent C128 partial-byte write faults. Not airtight -- kfox's board's own connector/U55 characteristics were never confirmed to match -- but a well-supported explanation for the band going quiescent unpredictably.
 
 ### 6. Original C128 PHI2-generation-delay theory still untested against hardware `[Closed]`
 Earlier research (RAD project postmortem) suggested the C64 has more delay
