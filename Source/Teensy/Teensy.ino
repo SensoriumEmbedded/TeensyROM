@@ -376,6 +376,9 @@ FLASHMEM void SetUpMainMenuROM()
    nfcState &= ~nfcStateBitPaused; //clear paused bit in case paused by time critical function
    
    FreeCrtChips();
+#ifdef Fab04_REU
+   FreeREU();
+#endif 
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
