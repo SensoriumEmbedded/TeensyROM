@@ -1223,7 +1223,16 @@ FLASHMEM void MakeExtHostStr()
    //the same bound MakeFilenameStr uses -- and a wider one wrapped onto the line
    //below, which on the confirmation screen is where the prompt goes.
    const uint16_t MaxLength = 37;
-   if (strlen(SerialStringBuf) > MaxLength) SerialStringBuf[MaxLength] = 0;
+   if (strlen(SerialStringBuf) > MaxLength)
+   {  //Mark the cut rather than making it silently. What runs off the end is the
+      //tail of "services $%04lx", so a quiet truncation reads as a valid, smaller
+      //bitmask -- wrong in the direction nobody checks, and services is what decides
+      //whether a module's requirements are met. MakeFilenameStr marks its own
+      //elision with "..>" mid-string; one '>' is the end-of-row version of that.
+      //strlen > MaxLength, so both indices are inside the string.
+      SerialStringBuf[MaxLength-1] = '>';
+      SerialStringBuf[MaxLength] = 0;
+   }
 
    SelectSerialStringBuf();
 }
