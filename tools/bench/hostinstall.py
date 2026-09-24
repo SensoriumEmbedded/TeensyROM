@@ -17,7 +17,8 @@ refusal case, and the C64 screen carries the reason.
 
 Past the refusal point the reboot is not the outcome either: an erase, verify or program
 that fails ($31-$34, $3f) reboots exactly as a good install does. Only the record saying
-the host was installed is a pass here; anything else exits non-zero.
+the host was installed is a pass here; anything else exits non-zero -- including a record
+that never arrives, which is an outcome nobody saw rather than a failure anybody did.
 
 Build the package with:  node tools/build-host-package.mjs --hex <firmware.hex>
 Remove one with:         hostuninstall.py
@@ -37,8 +38,10 @@ if not result.rebooted:
     show(result.screen)
     sys.exit(1)
 if not result.said(INSTALLED):
-    print(f'\nthe board rebooted but never said {INSTALLED!r}, so the slot was erased '
-          'and not written -- there is no host installed now:')
+    print(f'\nthe board rebooted but never said {INSTALLED!r}, so the install did not '
+          'report success. A record saying so names which step failed; no readable '
+          'record means the outcome was not observed. Either way the slot was erased '
+          'and nothing here has seen a host written to it. What the board did say:')
     show(result.screen)
     sys.exit(1)
 if result.image is None:

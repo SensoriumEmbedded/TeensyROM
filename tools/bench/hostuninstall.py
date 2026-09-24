@@ -17,8 +17,11 @@ follow it:
   * the port drops, the board reboots, and the record on the way back up says the host
     was removed: the slot was cleared;
   * the port drops and the board reboots saying anything else, or nothing readable at
-    all: the erase was attempted and did not clear the tag ($41), so the host is still
-    installed. This exits non-zero, because a reboot on its own is not the outcome;
+    all: the removal did not report success. A record saying so ($41) means the tag did
+    not clear; no readable record at all means the outcome was not observed, which is
+    not the same thing. Either way this exits non-zero, because a reboot on its own is
+    not the outcome. Run it again to find out which: with nothing installed it refuses
+    without rebooting, and that is the slot answering rather than the last run;
   * the board stays up: nothing was installed, and the C64 says so.
 
 Unlike launching an extension, none of this enters the extension image, so no part of it
@@ -37,8 +40,10 @@ if not result.rebooted:
     show(result.screen)
     sys.exit(1)
 if not result.said(REMOVED):
-    print(f'\nthe board rebooted but never said {REMOVED!r}, so the tag did not clear '
-          'and the host is still installed:')
+    print(f'\nthe board rebooted but never said {REMOVED!r}, so the removal did not '
+          'report success -- the tag may or may not have cleared, and nothing here has '
+          'seen which. Run this again: a refusal without a reboot means the slot is '
+          'clear after all. What the board did say:')
     show(result.screen)
     sys.exit(1)
 if result.image is None:

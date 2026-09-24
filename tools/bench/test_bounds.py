@@ -159,9 +159,10 @@ class ReadyBound(FakePty):
         self.original, hostops.READY_TIMEOUT = hostops.READY_TIMEOUT, 3
         self.addCleanup(setattr, hostops, 'READY_TIMEOUT', self.original)
 
-    def test_the_constant_the_scripts_advertise_is_the_one_ready_reads(self):
-        """Patching the module global is only a fair test of the bound if the function
-        reads it at call time rather than baking it into a default."""
+    def test_the_patch_these_tests_depend_on_is_the_one_the_scripts_read(self):
+        """A canary for the two tests below, which are only fair tests of the bound if
+        setUp's patch took: the scripts' own import is untouched, and hostops' copy --
+        the one _ready reads at call time -- is the shortened one."""
         self.assertEqual(READY_TIMEOUT, self.original)
         self.assertNotEqual(hostops.READY_TIMEOUT, self.original)
 
@@ -194,17 +195,26 @@ class ReadyBound(FakePty):
         started = time.time()
         try:
             _ready(link)
-        except SystemExit:
-            pass
+            gave_up = None
+        except SystemExit as stopped:
+            gave_up = str(stopped)
         took = time.time() - started
 
         self.assertLess(took, CHATTER_FOR - 1,
                         f'_ready() ran {took:.1f} s against a '
                         f'{hostops.READY_TIMEOUT} s deadline')
+        # Either answer is right -- the board did Ack, so taking it as ready is fair, and
+        # so is running out of deadline reading the banner behind the Ack. Pin which one
+        # it was anyway: without this the test passes on a SystemExit from anywhere,
+        # including a write that failed before the deadline was ever consulted.
+        if gave_up is not None:
+            self.assertIn('did not answer a version request', gave_up)
 
     def test_a_silent_board_still_fails_noisily(self):
         """The other direction of the same bound: capping the read must not turn a
-        board that never answers into one that passed."""
+        board that never answers into one that passed. The message names the deadline
+        it ran against, which is also how this pins _ready to the module global rather
+        than to a default argument baked in at import."""
         master, slave = self.pty_pair()
         del master
         link = self.link_to(slave)
@@ -215,6 +225,7 @@ class ReadyBound(FakePty):
         took = time.time() - started
 
         self.assertIn('did not answer a version request', str(stopped.exception))
+        self.assertIn(f'within {hostops.READY_TIMEOUT} s', str(stopped.exception))
         self.assertLess(took, hostops.READY_TIMEOUT + 6)
 
 

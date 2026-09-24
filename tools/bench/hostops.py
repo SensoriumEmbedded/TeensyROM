@@ -32,6 +32,10 @@ REBOOT_TIMEOUT = 120
 # a reboot -- the round trip runs six in a row -- so each one waits for a real answer
 # rather than treating an open port as a ready board.
 READY_TIMEOUT = 30
+# How long one attempt within that waits for the Ack saying the board heard the version
+# request. Short, because a board that is up answers it at once and one that is not needs
+# asking again rather than waiting on.
+ANSWER_TIMEOUT = 3
 # The firmware reports the outcome of both operations in the VmFail record the main image
 # prints on the way back up, and it has more ways to fail than to succeed: $31-$34 and $3f
 # for an install, $41 for a removal. So the check is for the one success phrase rather
@@ -87,14 +91,19 @@ def _screen_text(tr):
 
 def _ready(tr):
     """Returns once the board answers a version request, and raises by READY_TIMEOUT if
-    it never does. `total=` is what makes that deadline real: version()'s own timeout is
-    pushed out by every chunk that arrives, so a board printing steadily with gaps under
-    the idle window never lets version() return, and a deadline checked only afterwards
-    is never checked at all."""
+    it never does. Both of version()'s waits take what is left of that deadline, not just
+    the banner read: `total=` is what makes the deadline real, since version()'s own
+    timeout is pushed out by every chunk that arrives and a board printing steadily with
+    gaps under the idle window never lets version() return; and capping `timeout=` the
+    same way keeps the last attempt's Ack wait from running past the deadline it was
+    started under. What is left over is drain()'s fixed 0.3 s and status()'s one-second
+    read of a failure message, so the raise lands within about a second of READY_TIMEOUT
+    rather than on it."""
     deadline = time.time() + READY_TIMEOUT
     while True:
+        left = max(0.0, deadline - time.time())
         try:
-            tr.version(timeout=3, total=max(0.0, deadline - time.time()))
+            tr.version(timeout=min(ANSWER_TIMEOUT, left), total=left)
             return
         except (SystemExit, OSError):
             pass

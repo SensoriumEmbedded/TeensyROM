@@ -350,10 +350,21 @@ class Link:
         start = self.rd(2, 10)
         if len(start) < 2 or from_board(start) != DIR_START:
             raise SystemExit(f'listing of {path} did not start: {start!r}')
-        listing, marker, _ = self.raw(idle=0.5, timeout=30).partition(board_reply(DIR_END))
+        started = time.time()
+        # total= is passed rather than left to raw()'s default so that the bound the read
+        # ran under and the bound named below are the same value, not two copies of it.
+        listing, marker, _ = self.raw(idle=0.5, timeout=30,
+                                      total=READ_LIMIT_TOTAL).partition(board_reply(DIR_END))
         if not marker:
+            # raw() returns what it has when either bound expires, so the two ends look
+            # alike from here and only the clock tells them apart. Saying "the board went
+            # quiet" about a board that was still printing sends the next reader after
+            # the wrong fault.
             raise SystemExit(f'listing of {path} stopped before its end marker; '
-                             'the board went quiet part way through')
+                             + (f'the read hit its {READ_LIMIT_TOTAL:g} s cap with the '
+                                'board still printing'
+                                if time.time() - started >= READ_LIMIT_TOTAL
+                                else 'the board went quiet part way through'))
         return [json.loads(line) for line in listing.split(b'\r\n') if line.strip()]
 
     def reset(self):
