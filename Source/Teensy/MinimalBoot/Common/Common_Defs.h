@@ -79,9 +79,12 @@
 #define FWCheckToken      0x64E0  // Check firmware type
 #define FWMinimalToken    0x64E1  // Minimal firmware response
 #define FWFullToken       0x64E2  // Full firmware response
-#define HostRemoveToken   0x64E3  // Remove the installed extension host. USB device port
-                                  // only -- refused with FailToken on the USB host port
-                                  // and the TCP listener. Reboots where it is accepted.
+#define HostRemoveToken   0x64E3  // Remove the installed extension host. Extensions build
+                                  // only, and on the USB device port only -- the USB host
+                                  // port and the TCP listener get FailToken and erase
+                                  // nothing. Where it is accepted it ACKs first and then
+                                  // reboots only if a host was there to remove; over an
+                                  // already empty slot it ACKs, says so, and stays up.
 
 
 #define eepMagicNum         0xfeed6415 // 01: 6/22/23  net settings added 

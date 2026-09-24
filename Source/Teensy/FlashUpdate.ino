@@ -211,6 +211,22 @@ static const char *HostInstallWhy(VmInstallStatus status)
    return "refused";
 }
 
+// PerformDMA and CloseDMA are both `while (DMA_State != ...);` with no bound, and only
+// isrPHI2 advances DMA_State. With nothing clocking PHI2 neither one returns, and this
+// firmware has no watchdog to end it: the board sits in the main loop until someone pulls
+// its power, with the erase never started. That is reachable, because HostRemoveToken
+// arrives over the USB device port, and that port is also what powers the Teensy -- the
+// C64 whose screen it is about to blank may be switched off. isrPHI2 stamps LastCycCnt on
+// every rising edge, so a change in it is direct evidence that the handshake can finish.
+// 5 mS is ~5000 edges on a running machine, which is why a live C64 cannot read as dead.
+static bool C64IsClockingPHI2()
+{
+   const uint32_t Seen = LastCycCnt;
+   const uint32_t Began = millis();
+   while (millis() - Began < 5) if (LastCycCnt != Seen) return true;
+   return false;
+}
+
 // The install ends in a reboot either way, so its outcome travels in the
 // VmFail record the main image collects on the way back up.
 // The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this
@@ -221,12 +237,24 @@ static void StopServingTheC64()
    // Blank the screen while the bus is still ours to drive. DEN=0 stops VIC-II fetches,
    // so the frozen menu does not sit on screen for the whole erase -- and it has to
    // happen before the reset assert below, because after that there is no 6510 to run
-   // the DMA handshake. Unconditional: Common_Defs.h refuses an extensions build
-   // without Fab04_FullDMACapable, so the callers' messages can promise the blank
-   // rather than hedge about it.
-   uint8_t BlankD011 = 0x00;
-   PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-   CloseDMA();
+   // the DMA handshake. Common_Defs.h refuses an extensions build without
+   // Fab04_FullDMACapable, so the callers' messages can promise the blank on any board
+   // that can show one; the only case they cannot cover is a C64 that is not running,
+   // which has no screen to blank and no clock to blank it with. Skip it there rather
+   // than spin forever waiting for a handshake that cannot happen.
+   if (C64IsClockingPHI2())
+   {
+      // Long enough to read the two lines the callers just printed. The C64 writes
+      // rsContinue the instant PrintSerialString returns (MainMenu.asm, WaitForTRMain),
+      // and SendMsgSerialStringBuf returns on that -- so without a pause here the blank
+      // lands within a frame of the message appearing, and "Do not power off" is never
+      // legible. That warning guards the one action that can leave the slot half erased.
+      delay(2000);
+
+      uint8_t BlankD011 = 0x00;
+      PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+      CloseDMA();
+   }
 
    SetResetAssert;
    delay(20);

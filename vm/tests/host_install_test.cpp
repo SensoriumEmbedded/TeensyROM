@@ -223,9 +223,12 @@ int main(int argc, char **argv) {
         // says no, in the same state.
         //
         // That divergence is why DoHostUninstall reports !vm_host_installed() rather
-        // than the operation's status -- but nothing here checks that it does. This
-        // file does not compile FlashUpdate.ino, so that call site is covered by
-        // hostcycle.py against a board, not by this assert.
+        // than the operation's status -- and nothing checks that it does. This file does
+        // not compile FlashUpdate.ino, and hostcycle.py only ever removes from a healthy
+        // board, where both answers agree; reaching this state on hardware needs an erase
+        // that fails, which no bench step induces. Swap that call for the operation's
+        // status and every gate we have still passes. Until something pins it, the choice
+        // rests on this comment and the assert below, which pin the divergence only.
         FakeFlash flash = fresh(); flash.eraseFailAt = 0; flash.failFromOp = 1;
         const VmInstallResult got = vm_host_invalidate(flash);
         assert(!got && got.status == VmInstallStatus::EraseFailed);

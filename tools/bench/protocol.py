@@ -20,8 +20,10 @@ WRITE_C64_MEM = 0x64FB     # TR+ only
 POST_FILE = 0x64BB
 DELETE_FILE = 0x64CF
 GET_DIR_NDJSON = 0x64DE
-HOST_REMOVE = 0x64E3       # TR+ extensions build only. On the USB device port it ACKs and
-                           # then reboots; on the USB host port and the TCP listener it is
+HOST_REMOVE = 0x64E3       # TR+ extensions build only. On the USB device port it ACKs, and
+                           # then reboots only if a host was installed -- over an already
+                           # empty slot it ACKs and stays up, which is what hostcycle.py
+                           # asserts. On the USB host port and the TCP listener it is
                            # refused with FAIL + "Busy!" and nothing is erased.
 
 # Replies.
