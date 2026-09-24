@@ -94,9 +94,12 @@ MsgInstalledExtMenu:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
 
    !tx EscC,EscSourcesColor, " Uninstalling clears the tag that makes", ChrReturn
-   !tx EscC,EscSourcesColor, " the slot bootable. The host image stays", ChrReturn
-   !tx EscC,EscSourcesColor, " in flash, unreferenced, until the next", ChrReturn
-   !tx EscC,EscSourcesColor, " install overwrites it.", ChrReturn, ChrReturn
+   ;Keep every line below 40 visible columns. A line that fills the row exactly makes
+   ;the screen editor advance on its own, and the ChrReturn here then advances again --
+   ;which put a blank row in the middle of this sentence on a real screen.
+   !tx EscC,EscSourcesColor, " the slot bootable. The host image", ChrReturn
+   !tx EscC,EscSourcesColor, " stays in flash, unreferenced, until", ChrReturn
+   !tx EscC,EscSourcesColor, " the next install overwrites it.", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  " The TeensyROM reboots to do it.", ChrReturn
    !tx 0
 
