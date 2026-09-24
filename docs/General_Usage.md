@@ -222,7 +222,7 @@
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
 ### 0. Installed Extensions
-  * Names the extension host in the firmware slot — its name, ABI version and service mask, read out of the slot's own descriptor
+  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
   * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
   * Uninstalling clears the tag that makes the slot bootable and reboots the TeensyROM; the host image stays in flash, unreferenced, until the next install overwrites it
   * On a board or build with no extension loader, the page says so and `u` changes nothing

@@ -562,7 +562,7 @@ C64 screen:
 | Failure record written at `0x2027ff60` and collected by the main image | yes |
 | A guest fault under profile 0 collected as `$03` | yes — `udf` inside `vm_entry`, reproduced twice |
 | A guest write across the top 128 bytes — the `CrashReport` span, not the 32-byte record below it — then a normal return | yes — collected as `$00`, so the scribble was not promoted to `$03` |
-| The menu rendering a collected failure record on the C64 screen | no — the three record rows above were read over the main image's USB serial |
+| The menu rendering a collected *crash* record on the C64 screen | no — the three record rows above were read over the main image's USB serial. The install and removal records ($30/$40) take the same `VmFail::report()` path to the screen; this row is about the crash records only. |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |
@@ -571,8 +571,8 @@ C64 screen:
 | Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
 | Removing an installed host over USB, and the `$40` record it reports | yes |
 | A remove with nothing installed declining without touching flash | yes |
-| Removing a host from the C64 menu: Settings, Installed Extensions, `u`, `y` | yes |
-| The same page naming the installed host out of the slot's own descriptor | yes, as far as one host can show it — `TeensyROM  ABI 2  SERVICES $409F`. The slot held this firmware's own host, whose name, ABI and service mask are also this image's compiled-in constants (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`), so the run cannot separate a descriptor read from a constant printed. The host that would separate them — `Source/Teensy/ExampleHost`, which calls itself `Example` with no services — has been installed and entered, but never read on this page. |
+| Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
+| The same page naming the installed host out of the slot's own descriptor | yes, as far as one host can show it — `TeensyROM  ABI 2  services $409f`. The slot held this firmware's own host, whose name, ABI and service mask are also this image's compiled-in constants (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`), so the run cannot separate a descriptor read from a constant printed. The host that would separate them — `Source/Teensy/ExampleHost`, which calls itself `Example` with no services — has been installed and entered, but never read on this page. |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
 | A module refused against a host whose descriptor does not publish its services | yes — `vm/hello` needs `VM_SERVICES`, the example host publishes none, and the launch never reached the extension image |
 | `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
@@ -589,10 +589,11 @@ is not serviced while an extension runs.
 
 Installing and removing a host are main-image work and need no hand on the
 board at all. `tools/bench/hostcycle.py` drives a whole round trip over USB.
-The menu path was driven from the bench the same way, by putting keys in the
-C64's own keyboard buffer over DMA (`Link.key()` in `tools/bench/trlink.py`),
-which is what the settings menu reads through KERNAL GETIN at `$FFE4`. Neither
-is a test-only path — the firmware sees exactly what a person at the keyboard
-produces. Only the USB round trip is packaged as a script, though: nothing in
-`tools/bench` replays the menu sequence, so re-running that row means driving
-the keys again.
+The menu path was driven from the bench by putting keys in the C64's own
+keyboard buffer over DMA (`Link.key()` in `tools/bench/trlink.py`), which is
+what the settings menu reads through KERNAL GETIN at `$FFE4`. Neither is a
+test-only path: `hostcycle.py` sends the same USB device-port token any host
+tool sends, and the menu run gives the firmware exactly what a person at the
+keyboard produces. Only the USB round trip is packaged as a script,
+though: nothing in `tools/bench` replays the menu sequence, so re-running
+that row means driving the keys again.

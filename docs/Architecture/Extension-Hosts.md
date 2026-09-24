@@ -171,8 +171,9 @@ USB without touching the card:
 python3 tools/bench/hostinstall.py MYHOST.TRH
 ```
 
-Remove it from the C64 menu — Settings, Installed Extensions, `u`, `y` — or over
-USB with `python3 tools/bench/hostuninstall.py`. `tools/bench/hostcycle.py` runs
+Remove it from the C64 menu — `F8` for Settings, `0` for Installed
+Extensions, then `u` and `y` — or over USB with
+`python3 tools/bench/hostuninstall.py`. `tools/bench/hostcycle.py` runs
 the whole install/remove cycle unattended.
 
 USB removal is gated to the device port. The same `ProcessCommand` switch serves
