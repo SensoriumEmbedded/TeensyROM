@@ -61,7 +61,12 @@ bool NetListenEnable = false;
 //MenuSource[] elements carry two pointers, and one of the dereference sites is inside
 //isrPHI2, so an out-of-range index is a wild read, not a wrong menu entry.  Clamp where
 //the index is formed rather than at each use, and stay silent: ISR context cannot print.
-//Item 0 always exists (see RedirectEmptyDriveDirMenu).
+//Returning 0 is only safe because every loader leaves at least one item: DriveDirLoad.ino
+//substitutes an "<Empty>" entry when a directory scan finds none, and LoadDxxDirectory
+//(D64.ino) adds the up-directory entry before any early return, including its error
+//paths.  Those two are the invariant -- RedirectEmptyDriveDirMenu only covers
+//DriveDirMenu being NULL, which is a different condition.  If a future loader can leave
+//NumItemsFull at 0, the zero here becomes an out-of-range index and needs revisiting.
 inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
 {
    int32_t Idx = (int32_t)ItemOnPage + ((int32_t)IO1[rwRegPageNumber] - 1) * MaxItemsPerPage;
