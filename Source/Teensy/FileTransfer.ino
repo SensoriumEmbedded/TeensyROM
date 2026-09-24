@@ -103,10 +103,36 @@ FLASHMEM bool EnsureDirectory(const char* path, FS& fs)
     return result;
 }
 
-// The slowest link that still has to work, in bytes per millisecond. Two orders below what
-// USB serial or a 100 Mbit link sustains through an SD write, so a real transfer cannot
-// trip the deadline below it.
-#define ReceiveFloorBytesPer_mS  10
+// The slowest link that still has to work, in bytes per millisecond, and it is not the same
+// number on every channel. The USB device port moves ~670 bytes/mS (tools/bench/push.py:8,
+// "About 10 s for 6.7 MB"), so 10 leaves it 67x. The USB host port is a different story:
+// Teensy.ino:210 opens it at 115200 8N1, which is 11.52 bytes/mS at the wire, and a floor of
+// 10 would demand 87% of line rate for the whole transfer -- a sender with ordinary gaps in
+// it would fail a file that used to go through. So the device port keeps the tight floor and
+// everything else -- USB host, and the TCP listener -- gets one it cannot trip by pausing.
+//
+// The TCP side is far faster than 2 bytes/mS and would tolerate the tight floor too, but it
+// is not separable from the host port here without reaching for a symbol this file does not
+// have, and the bound it needs is against a peer sending nothing, not a slow one.
+uint32_t ReceiveFloorBytesPer_mS()
+{
+   return (CmdChannel == &Serial) ? 10 : 2;
+}
+
+// An abort partway through a transfer leaves the rest of the file in the channel, and
+// ProcessCommand scans what follows for tokens without alignment: over a few hundred KB of
+// file content a $64 lands every ~256 bytes, one byte away from DeleteFileToken and the
+// rest. The per-byte timeout could only reach this after 500 mS of silence, where a backlog
+// is the exception; the deadline below fires while the peer is still sending at full rate,
+// where it is the rule. So an abort takes its own bytes with it.
+void DrainCmdChannel()
+{
+   uint32_t Quiet = millis();
+   while (millis() - Quiet < SerialTimoutMillis)
+   {
+      if (CmdChannel->available()) { CmdChannel->read(); Quiet = millis(); }
+   }
+}
 
 FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
 {
@@ -123,7 +149,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
     // still buys days at this floor -- but a peer holding the board now has to deliver real
     // bytes to a real SD write to do it, which ends on its own when the card fills.
     const uint32_t Began = millis();
-    const uint32_t CeilingmS = SerialTimoutMillis + len / ReceiveFloorBytesPer_mS;
+    const uint32_t CeilingmS = SerialTimoutMillis + len / ReceiveFloorBytesPer_mS();
 
     while (bytenum < len)
     {
@@ -132,6 +158,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
             SendU16(FailToken);
             CmdChannel->printf("Too slow, %lu of %lu bytes\n", bytenum, len);
             file.close();
+            DrainCmdChannel();
             return false;
         }
         if (!SerialAvailabeTimeout())
@@ -139,6 +166,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
             SendU16(FailToken);
             CmdChannel->printf("Rec %lu of %lu bytes\n", bytenum, len);
             file.close();
+            DrainCmdChannel();
             return false;
         }
         file.write(byteIn = CmdChannel->read());
@@ -593,8 +621,25 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
     uint8_t chunk[64];
 
-    while (bytenum < len) 
+    // The same distinction the receive side draws, for the same reason. The 2 s below bounds
+    // a *pause* -- it is reset on every partial write -- so a peer that opens its window for
+    // one byte every 1.9 s never trips it and holds the board for len * 1.9 s. len here is
+    // the file's own size, which the peer picks by choosing what to ask for, so a few hundred
+    // MB on the card is days. The floor is the send side's, and the same per-channel split
+    // applies: availableForWrite is what this loop waits on, and on the 115200 host port that
+    // drains at 11.52 bytes/mS.
+    const uint32_t Began = millis();
+    const uint32_t CeilingmS = SerialTimoutMillis + len / ReceiveFloorBytesPer_mS();
+
+    while (bytenum < len)
     {
+        if (millis() - Began >= CeilingmS)
+        {
+            Printf_dbg("[SendFileData] Deadline - %lu/%lu bytes\n", bytenum, len);
+            SendU16(FailToken);
+            CmdChannel->print("SendFileData: too slow\n");
+            return false;
+        }
         uint32_t bytesToRead = sizeof(chunk);
         if (bytenum + bytesToRead > len) 
         {

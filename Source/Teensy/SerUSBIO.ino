@@ -996,12 +996,27 @@ FLASHMEM void WriteC64MemCommand()
        return;
    }
 
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   // Same shape as ReceiveFileData, two orders smaller: DMALength is two bytes rather than
+   // four, so the per-byte timeout alone bounds this at 65535 * 500 mS -- 9.1 hours of a
+   // board serving nothing, chosen by whoever sent the command. DMA is in the
+   // always-available tier (docs/ControlComms.md:53), so being busy does not shut it.
+   const uint32_t Began = millis();
+   const uint32_t CeilingmS = SerialTimoutMillis + DMALength / ReceiveFloorBytesPer_mS();
+
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
    {
+      if(millis() - Began >= CeilingmS)
+      {
+         SendU16(FailToken);
+         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, DMALength);
+         DrainCmdChannel();
+         return;
+      }
       if(!SerialAvailabeTimeout())
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
+         DrainCmdChannel();
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
