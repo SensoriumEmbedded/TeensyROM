@@ -1240,10 +1240,11 @@ FLASHMEM void MakeExtHostStr()
    //No arm ends its line with \r, because this string is printed through
    //PrintFileName like every other dynamic settings row, and MakeFilenameStr -- which
    //serves most of PrintFileName's call sites -- does not end in one
-   //either. PrintFileName is built around that: it places the row with SetCursor and
-   //leaves the cursor wherever the text stops. A return here put the uninstall
-   //prompt a row lower, but only on the arms that carried one, which is how the
-   //inconsistency showed up in the first place.
+   //either. PrintFileName places the row with SetCursor and leaves the cursor
+   //wherever the text stops, so a return here moves the cursor a caller may not be
+   //expecting to have moved. It used to move the uninstall prompt itself, on the arms
+   //that carried one; Pg_InstalledExt.asm now places that prompt with SetCursor, so
+   //this is a convention the rows share rather than the thing holding the prompt up.
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
    VmHostId id{};
    if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.");
@@ -1265,8 +1266,12 @@ FLASHMEM void MakeExtHostStr()
    //displayName bounds the name to twelve drawn bytes, but abi and services are
    //uint32 fields the host writes about itself, so the line can still reach 48
    //characters. The row starts at column 3 of a 40 column screen, so it has 37 --
-   //the same bound MakeFilenameStr uses -- and a wider one wrapped onto the line
-   //below, which on the confirmation screen is where the prompt goes.
+   //the same bound MakeFilenameStr uses -- and a wider one runs onto the row below,
+   //which on the settings page carries the uninstall option and on the confirmation
+   //screen is blank. The prompt below it no longer moves with this length:
+   //Pg_InstalledExt.asm places it with SetCursor, because a 37 character line ends in
+   //the last column and the screen editor wraps the cursor there by itself, which a
+   //clamp measured in columns cannot prevent.
    const uint16_t MaxLength = 37;
    if (strlen(SerialStringBuf) > MaxLength)
    {  //Mark the cut rather than making it silently. What runs off the end is the

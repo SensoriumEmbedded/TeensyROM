@@ -62,10 +62,27 @@ WaitInstalledExtMenuKey:
    ldx #6 ;row
    ldy #3 ;col
    jsr PrintFileName
+   ;Place every row below rather than counting returns from wherever the line above
+   ;stopped.  The host line is up to 37 characters starting at column 3, so the
+   ;longest of them ends in column 39, and the screen editor then wraps the cursor
+   ;to the next row on its own -- two returns from there land a row lower than two
+   ;returns from a short name.  Measured on a TR+: "None installed." put this prompt
+   ;on row 8 and a clamped "WIDEHOSTNAME  ABI 2  services $fffff>" put it on row 9.
+   ;A build with no extension loader says "No extension loader in this firmware",
+   ;which is 37 characters as well.
+   ldx #8 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
    lda #<MsgConfirmPrompt
    ldy #>MsgConfirmPrompt
    jsr PrintString
--  jsr GetIn
+   ;DisplayTime, as every other wait loop on this menu does.  PrintFileName's WAIT
+   ;writes "Waiting:" over the clock at row 1 column 29 and nothing takes it back,
+   ;so a bare GetIn loop leaves the board reading as busy for as long as the user
+   ;takes to answer.
+-  jsr DisplayTime
+   jsr GetIn
    beq -
    cmp #'y'
    beq +++
@@ -73,6 +90,15 @@ WaitInstalledExtMenuKey:
 +++
    lda TblEscC+EscSourcesColor
    sta $0286  ;set text color
+   ;Put the cursor back under the prompt before handing over: DisplayTime left it at
+   ;the clock, and the firmware's reply prints wherever it is.  SendMsgPrintfln leads
+   ;with a return, so row 9 puts that reply on row 10, and AnyKeyMsgWait's own leading
+   ;return puts the key prompt on row 11 -- which is where both landed when the prompt
+   ;text happened to end there.
+   ldx #9 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
    ;Does not return when there was a host to remove: the firmware holds the 6510
    ;in reset for the sector erase and reboots, so the C64 restarts into the main
    ;menu and the record is reported there. It does return when the slot was
@@ -107,5 +133,7 @@ MsgConfirmUninstall:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Uninstall extension host ", ChrRvsOff, ChrReturn, ChrReturn
    !tx 0
 MsgConfirmPrompt:
-   !tx ChrReturn, ChrReturn, EscC,EscOptionColor, " Remove it?  ", ChrRvsOn, "y", ChrRvsOff, " to remove, any other key to keep"
+   ;No leading returns: the caller places this with SetCursor, because where the
+   ;host line above it stops is not fixed.
+   !tx EscC,EscOptionColor, " Remove it?  ", ChrRvsOn, "y", ChrRvsOff, " to remove, any other key to keep"
    !tx 0
