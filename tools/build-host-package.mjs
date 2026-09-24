@@ -38,14 +38,23 @@ function option(name, fallback = null) {
 // packaged as the part would hold it rather than refused.
 export function hostImageFromHex(text) {
   const bytes = decodeHex(text);
-  const present = [...bytes.keys()].filter((a) => a >= VM_BASE && a < VM_LIMIT);
-  if (!present.length) {
+  // Walked rather than spread into Math.max. Math.max(...present) passes one argument per
+  // byte present, which crosses V8's argument limit somewhere above 120 KiB -- well inside
+  // a 384 KiB slot, and the example host is already past 80 KiB. It fails as "Maximum call
+  // stack size exceeded", which names nothing, and CI runs this on every tr-plus build, so
+  // the first sight of it would be an opaque failure on a hex that packages fine locally.
+  let top = -1;
+  for (const address of bytes.keys()) {
+    if (address >= VM_BASE && address < VM_LIMIT && address > top) top = address;
+  }
+  if (top < 0) {
     throw new Error('This hex carries nothing in the extension slot. Build it with ' +
       '--target tr-plus (and without --no-extensions) if you wanted a host in it.');
   }
-  const top = Math.max(...present);
   const image = Buffer.alloc(top - VM_BASE + 1, 0xff);
-  for (const address of present) image[address - VM_BASE] = bytes.get(address);
+  for (const [address, value] of bytes) {
+    if (address >= VM_BASE && address < VM_LIMIT) image[address - VM_BASE] = value;
+  }
   return image;
 }
 
