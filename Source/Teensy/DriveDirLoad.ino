@@ -602,10 +602,23 @@ void FreeDriveDirMenu()
    //free/clear prev loaded directory
    if(DriveDirMenu != NULL)
    {
-      Printf_dbg("Dir info removed\n"); 
+      Printf_dbg("Dir info removed\n");
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
       free(DriveDirMenu); DriveDirMenu = NULL;
    }
+   NumDrvDirMenuItems = 0;
+
+   //The allocation is gone but MenuSource still points into it and NumItemsFull still
+   //holds its count, which is exactly the pair MenuIdxFromRegs bounds against -- so
+   //until this runs, an index it calls in-range reaches freed memory, and isrPHI2
+   //dereferences it (rRegItemTypePlusIOH, rsstItemName).  Redirecting here rather than
+   //at the call sites because there are five of them: FileParsers.ino, SerUSBIO.ino's
+   //'x' command, IOH_REU.c and IOH_Swiftlink.c handler init, and this file's callers.
+   //Only the first two were repaired, and only on some paths.  Cheap wherever it lands:
+   //rWRegCurrMenuWAIT is set to rmtTeensy first, so MenuChange() takes its static-menu
+   //branch and does no SD/USB I/O.  Self-limiting too -- DriveDirMenu is already NULL
+   //here, and RedirectEmptyDriveDirMenu does nothing unless it is.
+   RedirectEmptyDriveDirMenu();
 }
 
 void FreeCrtChips()

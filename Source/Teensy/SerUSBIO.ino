@@ -351,7 +351,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
       case 'x': 
          { 
-            FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
+            FreeDriveDirMenu(); //drops back to the TR menu if we were on SD/USB (see FreeDriveDirMenu)
             
             uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
             CmdChannel->printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
