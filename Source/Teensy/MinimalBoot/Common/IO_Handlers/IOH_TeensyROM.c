@@ -60,6 +60,7 @@ uint8_t VmClaimedItems[(MaxMenuItems+7)/8];
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
+volatile bool BootComplete = false; //set by the menu once it finishes booting (rCtlBootComplete), cleared by SetUpMainMenuROM()
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -841,6 +842,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlNFCReEnableWAIT:
                   IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
+                  break;
+               case rCtlBootComplete:
+                  BootComplete = true;
                   break;
                case rCtlReturnToMainMenu:
                   BtnPressed = true;
