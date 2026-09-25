@@ -16,9 +16,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { decodeHex } from './lib/hex.mjs';
-import { findBoard, identify, boardKind } from './lib/trserial.mjs';
+import { findBoard, identify, boardKind, teensyTool } from './lib/trserial.mjs';
 
 // Refusals here are expected outcomes (wrong target, no board, no loader), so
 // report them as a message and an exit code rather than a stack trace.
@@ -65,6 +65,65 @@ function inspectHex(file) {
   return { kind: target?.[1] ?? null, id: target?.[0] ?? null, regions, bytes: addresses.length };
 }
 
+// macOS and Linux write with PJRC's teensy_loader_cli.
+function writeWithLoaderCli(file) {
+  let loader;
+  try { loader = execFileSync('command', ['-v', 'teensy_loader_cli'], { shell: true, encoding: 'utf8' }).trim(); }
+  catch { loader = ''; }
+  if (!loader) {
+    fail('teensy_loader_cli is not installed.\n' +
+      '  macOS:  brew install teensy_loader_cli\n' +
+      '  Linux:  https://www.pjrc.com/teensy/loader_cli.html');
+  }
+
+  // -w waits for the board to appear in HalfKay. TeensyROM exposes no HID
+  // rebootor, so -s (soft reboot) does not work on it and the button is the
+  // reliable way in; teensy_reboot is the alternative but needs the GUI loader.
+  console.log('\nWriting. Press the program button on the Teensy if it does not start within a few seconds.');
+  const write = spawnSync(loader, ['--mcu=TEENSY41', '-w', '-v', file], { stdio: 'inherit' });
+  if (write.status !== 0) fail(`teensy_loader_cli exited ${write.status}`);
+}
+
+// Windows: PJRC ships no teensy_loader_cli build there, but Teensyduino installs
+// teensy_post_compile, which is what the Arduino IDE uploads with. It hands the
+// hex to the Teensy Loader app and, with -reboot, asks the running board into
+// HalfKay; if the board does not go, the program button still works. Whether it
+// returns before or after the write, the board is watched until it has left
+// serial and come back, so the check below reads the new firmware.
+async function writeWithTeensyLoader(file, board) {
+  const postCompile = teensyTool('teensy_post_compile');
+  if (!postCompile) fail('Teensyduino is not installed: teensy_post_compile was not found in the Arduino data directory.');
+  const args = [
+    `-file=${path.basename(file, '.hex')}`,
+    `-path=${path.dirname(path.resolve(file))}`,
+    `-tools=${path.dirname(postCompile)}`,
+    '-board=TEENSY41',
+    '-reboot',
+  ];
+  if (board.location) args.push(`-port=${board.location}`);
+
+  console.log('\nWriting through the Teensy Loader. Press the program button on the Teensy if it does not start within a few seconds.');
+  let status = null;
+  spawn(postCompile, args, { stdio: 'inherit' }).on('exit', (code) => { status = code; });
+
+  let left = board.bootloader;
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (status !== null && status !== 0) fail(`teensy_post_compile exited ${status}`);
+    const now = findBoard();
+    if (!now?.port) left = true;
+    else if (left && status === 0) {
+      // The COM port comes back before the firmware answers on it; wait for a
+      // banner so the check below does not read the new board as unidentified.
+      const answering = Date.now() + 20000;
+      while (Date.now() < answering && !identify(now.port, 1500).version) { /* not answering yet */ }
+      return;
+    }
+  }
+  fail('The board did not come back within 2 minutes. Check the Teensy Loader window, then re-run with --check.');
+}
+
 const hexPath = value('--hex') ?? newestHex();
 if (!hexPath) fail('No hex found in build/firmware — build one first, or pass --hex <path>.');
 if (!fs.existsSync(hexPath)) fail(`No such hex: ${hexPath}`);
@@ -104,21 +163,8 @@ if (board.bootloader) {
 
 if (flag('--check')) { console.log('\n--check: nothing written.'); process.exit(0); }
 
-let loader;
-try { loader = execFileSync('command', ['-v', 'teensy_loader_cli'], { shell: true, encoding: 'utf8' }).trim(); }
-catch { loader = ''; }
-if (!loader) {
-  fail('teensy_loader_cli is not installed.\n' +
-    '  macOS:  brew install teensy_loader_cli\n' +
-    '  Linux:  https://www.pjrc.com/teensy/loader_cli.html');
-}
-
-// -w waits for the board to appear in HalfKay. TeensyROM exposes no HID
-// rebootor, so -s (soft reboot) does not work on it and the button is the
-// reliable way in; teensy_reboot is the alternative but needs the GUI loader.
-console.log('\nWriting. Press the program button on the Teensy if it does not start within a few seconds.');
-const write = spawnSync(loader, ['--mcu=TEENSY41', '-w', '-v', hexPath], { stdio: 'inherit' });
-if (write.status !== 0) fail(`teensy_loader_cli exited ${write.status}`);
+if (process.platform === 'win32') await writeWithTeensyLoader(hexPath, board);
+else writeWithLoaderCli(hexPath);
 
 // Confirm what is actually running, rather than trusting that the write took.
 // Note what this can and cannot tell you: the build timestamp comes from the

@@ -11,20 +11,29 @@ import path from 'node:path';
 
 import { defaultArduinoDataDir } from './toolchain.mjs';
 
-// The Teensyduino tool that knows which USB devices are Teensys. Optional: we
-// fall back to scanning /dev when it is not installed.
-function teensyPortsTool() {
+// A Teensyduino tool from the newest installed teensy-tools, or null when it is
+// not installed. Windows builds carry an .exe suffix.
+export function teensyTool(name) {
   const base = path.join(defaultArduinoDataDir(), 'packages/teensy/tools/teensy-tools');
   if (!fs.existsSync(base)) return null;
+  const file = process.platform === 'win32' ? `${name}.exe` : name;
   for (const version of fs.readdirSync(base).sort().reverse()) {
-    const tool = path.join(base, version, 'teensy_ports');
+    const tool = path.join(base, version, file);
     if (fs.existsSync(tool)) return tool;
   }
   return null;
 }
 
+// The Teensyduino tool that knows which USB devices are Teensys. Optional: we
+// fall back to scanning /dev when it is not installed.
+function teensyPortsTool() {
+  return teensyTool('teensy_ports');
+}
+
 // Returns { port, bootloader } for the attached board, or null when none is
 // found. `bootloader` means it is sitting in HalfKay with no serial device.
+// When teensy_ports found it, `location` is its USB location (usb:...), which
+// the Windows loader path passes on as -port.
 export function findBoard() {
   const tool = teensyPortsTool();
   if (tool) {
@@ -32,8 +41,9 @@ export function findBoard() {
     try { listing = execFileSync(tool, ['-L'], { encoding: 'utf8', timeout: 10000 }); } catch { listing = ''; }
     for (const line of listing.split('\n')) {
       if (/Bootloader/i.test(line)) return { port: null, bootloader: true };
-      const match = line.match(/(\/dev\/\S+)/);
-      if (match) return { port: match[1], bootloader: false };
+      // macOS and Linux list a /dev path; Windows lists a COM port.
+      const match = line.match(/(\/dev\/\S+)/) ?? line.match(/\b(COM\d+)\b/);
+      if (match) return { port: match[1], bootloader: false, location: line.trim().split(/\s+/)[0] };
     }
   }
   // macOS names the CDC device cu.usbmodem*; Linux names it ttyACM*.
@@ -46,6 +56,7 @@ export function findBoard() {
 // Writes `send` to the port, then collects whatever arrives until `ms` elapses.
 // Returns the raw bytes as a latin1 string; '' means the board said nothing.
 export function exchange(port, send, ms = 3000) {
+  if (process.platform === 'win32') return exchangeWindows(port, send, ms);
   const child = `
     import fs from 'node:fs';
     const fd = fs.openSync(${JSON.stringify(port)}, 'r+');
@@ -70,6 +81,29 @@ export function exchange(port, send, ms = 3000) {
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', child],
     { encoding: 'utf8', timeout: ms + 8000 });
   return result.stdout ?? '';
+}
+
+// Windows has no stty, and a COM port cannot be read as a file with a deadline.
+// PowerShell's SerialPort can, so the exchange runs there with the same timing
+// as above; the bytes travel base64 both ways so no console code page touches them.
+function exchangeWindows(port, send, ms) {
+  if (!/^COM\d+$/i.test(port)) return '';
+  const payload = Buffer.from(send ?? '', 'latin1').toString('base64');
+  const script = `
+    $sp = New-Object System.IO.Ports.SerialPort '${port}', 115200
+    $sp.DtrEnable = $true
+    $sp.Open()
+    $send = [Convert]::FromBase64String('${payload}')
+    Start-Sleep -Milliseconds 250
+    if ($send.Length) { $sp.Write($send, 0, $send.Length) }
+    Start-Sleep -Milliseconds ${Math.max(ms, 300) - 250}
+    $buf = New-Object byte[] $sp.BytesToRead
+    [void]$sp.Read($buf, 0, $buf.Length)
+    $sp.Close()
+    [Convert]::ToBase64String($buf)`;
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script],
+    { encoding: 'utf8', timeout: ms + 8000 });
+  return Buffer.from((result.stdout ?? '').trim(), 'base64').toString('latin1');
 }
 
 // TeensyROM answers 'dv' (VersionInfoToken) with a banner that names the build.
