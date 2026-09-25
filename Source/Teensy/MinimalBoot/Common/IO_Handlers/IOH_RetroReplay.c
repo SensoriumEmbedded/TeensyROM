@@ -52,7 +52,8 @@ stcIOHandlers IOHndlr_RetroReplay_REU =
 };
 
 extern volatile uint32_t CycleCountdown;
-extern uint8_t *lcl_LOROM_Image;           
+extern uint8_t *lcl_LOROM_Image;    
+extern uint8_t CurrentIOHandler;       
 
 #define RR_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
 
