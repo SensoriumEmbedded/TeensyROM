@@ -150,6 +150,36 @@ class LaunchOutcome(unittest.TestCase):
         self.assertTrue(hostops.finished_normally('Extension: module exited ($04)'))
 
 
+class RemovalOutcome(unittest.TestCase):
+    """Outcome.removed_cleanly() is what hostuninstall.py and hostcycle.py pass a removal
+    on. $40 alone is not enough: a sector that would not erase still reports it, with
+    the erase failure as the detail."""
+
+    def outcome(self, boot='', screen=''):
+        return hostops.Outcome(True, boot, screen, 'main')
+
+    def test_detail_zero_passes_from_either_side(self):
+        self.assertTrue(self.outcome(
+            boot='Extension boot: extension host removed (code $40, detail $0)\n')
+            .removed_cleanly())
+        self.assertTrue(self.outcome(
+            screen='Extension: EXTENSION HOST REMOVED ($40)').removed_cleanly())
+
+    def test_a_removal_that_left_a_sector_fails_from_either_side(self):
+        # $d is VmInstallStatus::EraseFailed.
+        self.assertFalse(self.outcome(
+            boot='Extension boot: extension host removed (code $40, detail $d)\n')
+            .removed_cleanly())
+        self.assertFalse(self.outcome(
+            screen='Extension: extension host removed ($40/$d)').removed_cleanly())
+
+    def test_a_failed_removal_fails(self):
+        self.assertFalse(self.outcome(
+            boot='Extension boot: host removal failed (code $41, detail $e)\n')
+            .removed_cleanly())
+        self.assertFalse(self.outcome().removed_cleanly())
+
+
 class ByteOrder(unittest.TestCase):
     def test_a_token_goes_out_most_significant_byte_first(self):
         self.assertEqual(to_board(0x64DE), b'\x64\xde')

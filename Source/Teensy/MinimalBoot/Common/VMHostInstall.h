@@ -164,6 +164,39 @@ static VmInstallResult vm_host_invalidate(Flash &flash) {
     return { VmInstallStatus::Ok, 0 };
 }
 
+// Removes the installed host: the slot stops reading as a host first, exactly
+// as an install begins, and then the rest of it is erased as well. A payload
+// left behind a cleared tag is no host to this firmware, but firmware that does
+// not reserve the slot -- anything built without the extension loader, every
+// release before it included -- sizes its update buffer by scanning down from
+// the top of flash for the first programmed word. The slot is the top of flash,
+// so those bytes would leave it no room to update itself.
+//
+// A tag that will not clear over a host stops here with the host intact. Past
+// that point a sector that will not erase is reported, and the ones after it are
+// still erased: the slot is no longer a host either way, and every sector
+// cleared is room a later update gets back.
+//
+// A tag that will not clear over bytes that are no host -- a failed install's
+// leftovers, or a tag the program only partly cleared -- has nothing left to
+// protect, so the slot is erased anyway. Sector 0 goes last there, after the
+// boot words in sector 1 that vm_host_slot_valid also reads, so a torn erase of
+// sector 0 cannot stand a tag back up over a bootable image.
+template<class Flash>
+static VmInstallResult vm_host_remove(Flash &flash) {
+    VmInstallResult first = vm_host_invalidate(flash);
+    const bool tagCleared = first || first.status == VmInstallStatus::EraseFailed;
+    if (!tagCleared) {
+        if (vm_host_installed(flash)) return first;
+        first = { VmInstallStatus::Ok, 0 };
+    }
+    for (uint32_t s = 1; s < VM_HOST_SECTORS; s++) {
+        if (!flash.erase(s) && first) first = { VmInstallStatus::EraseFailed, s };
+    }
+    if (!tagCleared && !flash.erase(0) && first) first = { VmInstallStatus::EraseFailed, 0 };
+    return first;
+}
+
 // Erases the slot and writes the package into it. The reader is seeked to the
 // payload itself, so where it was left does not matter; sector 0 is read last,
 // which is also the order it is written in.

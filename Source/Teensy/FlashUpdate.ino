@@ -348,39 +348,48 @@ void DoHostInstall(FS *sourceFS, const char *FilePathName)
    while (true) ;
 }
 
-// Removing a host is the install's own first step, on its own: clear the tag so the
-// slot stops reading as a host. The payload stays where it is, unreferenced, until
-// the next install overwrites it. Erasing the other 92 sectors to hide it would buy
-// nothing vm_host_slot_valid does not already decide, and would cost the C64 another
-// 45 seconds in reset for the privilege.
+// Removing a host opens the way an install does -- clear the tag so the slot stops
+// reading as a host -- and then erases the rest of the slot too. vm_host_slot_valid
+// would decide the same without it, but firmware without the extension loader does
+// not: it reserves only the top 256K, and a payload left directly below that is
+// where its update buffer search stops. See vm_host_remove().
+//
+// For the same reason this runs for a slot that holds anything, not only for a host:
+// an install that failed part way leaves bytes that are no host to this firmware and
+// are still in that search's way, and this is the one thing that clears them.
 void DoHostUninstall()
 {
-   if (!VmBootImage::installed())
+   const bool Installed = VmBootImage::installed();
+   if (!Installed && VmBootImage::blank())
    {
       SendMsgPrintfln("No extension host is installed.");
       return;
    }
 
-   VmHostId id{};
-   char HostName[VmBootImage::nameBytes];
-   VmBootImage::displayName(HostName, sizeof HostName, VmBootImage::identity(id) ? &id : nullptr);
-
    // Before the reset assert, for the reason DoHostInstall gives above.
-   const bool Warned = SendMsgPrintfln("Removing host %s.\r\nDo not power off. A moment,\r\nscreen will be blank.", HostName);
+   bool Warned;
+   if (Installed)
+   {
+      VmHostId id{};
+      char HostName[VmBootImage::nameBytes];
+      VmBootImage::displayName(HostName, sizeof HostName, VmBootImage::identity(id) ? &id : nullptr);
+      Warned = SendMsgPrintfln("Removing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+   }
+   else Warned = SendMsgPrintfln("Clearing the extension slot.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.");
 
    StopServingTheC64(Warned);
 
    VmSlotFlash slot;
-   const VmInstallResult done = vm_host_invalidate(slot);
+   const VmInstallResult done = vm_host_remove(slot);
 
-   // The tag is cleared before the sector is erased, so an erase that fails still leaves
+   // The tag is cleared before any sector is erased, so an erase that fails still leaves
    // a slot that no longer reads as a host. Removal is a question about the slot, not
    // about the last operation: reporting the status here would claim the host is still
    // installed while the next boot finds nothing, and the menu would agree with the boot
-   // rather than with the message. Ask the slot.
+   // rather than with the message. Ask the slot. The status still rides in the detail,
+   // so a removal that left some of the payload in flash says so.
    const bool gone = !vm_host_installed(slot);
-   VmFail::set(gone ? VmFail::Removed : VmFail::RemoveFailed,
-               gone ? 0 : (uint32_t)done.status);
+   VmFail::set(gone ? VmFail::Removed : VmFail::RemoveFailed, (uint32_t)done.status);
    RebootTR();
    while (true) ;
 }

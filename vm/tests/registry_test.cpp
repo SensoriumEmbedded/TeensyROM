@@ -52,8 +52,14 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("No extension host")!=std::string::npos);
 
+    // Blank means erased flash, not "no host": one programmed byte at the top of the
+    // slot is no host and still what a failed install leaves for uninstall to clear.
+    VmBootImage::erase();assert(VmBootImage::blank()&&!VmBootImage::installed());
+    VmBootImage::hostWindow[VM_HOST_SLOT_BYTES-1]=0x7f;
+    assert(!VmBootImage::blank()&&!VmBootImage::installed());
+
     VmBootImage::install(VM_HOST_SERVICES);
-    assert(VmBootImage::installed());
+    assert(VmBootImage::installed()&&!VmBootImage::blank());
     VmHostId read{};assert(VmBootImage::identity(read)&&read.services==VM_HOST_SERVICES);
 
     // A host that cannot serve what the module requires is refused here too,

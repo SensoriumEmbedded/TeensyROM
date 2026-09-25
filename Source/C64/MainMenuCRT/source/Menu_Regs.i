@@ -362,7 +362,7 @@
    rCtlExtPortCheckWAIT = 54
    rCtlExpPortDMAWAIT = 55
    rCtlMakeExtHostStrWAIT = 56 ; installed host name, ABI and services, into SerialStringBuf
-   rCtlUninstallExtHostWAIT = 57 ; clear the host tag; reboots if there was one to clear
+   rCtlUninstallExtHostWAIT = 57 ; erase the host slot; reboots unless it was already blank
 
 
 

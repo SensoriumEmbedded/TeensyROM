@@ -235,13 +235,112 @@ int main(int argc, char **argv) {
         assert(!vm_host_installed(flash));
     }
 
+    // Removal as the firmware performs it: the tag first, then the whole slot. Firmware
+    // without the extension loader sizes its update buffer by scanning down from the top
+    // of flash for the first programmed word, so a payload left behind the tag is room it
+    // does not have.
+    auto erased = [](const FakeFlash &flash, uint32_t skipSector = ~0u) {
+        for (uint32_t i = 0; i < VM_HOST_SLOT_BYTES; i++) {
+            if (i / VM_HOST_SECTOR_BYTES == skipSector) continue;
+            if (flash.cells[i] != 0xff) return false;
+        }
+        return true;
+    };
+    {   // the ordinary one: nothing of the host is left anywhere in the slot
+        FakeFlash flash = fresh();
+        const VmInstallResult got = vm_host_remove(flash);
+        assert(got && !vm_host_installed(flash) && erased(flash));
+    }
+    {   // a tag that will not clear touches nothing else, so the host is still whole
+        FakeFlash flash = fresh(); flash.programFailAt = 0;
+        const VmInstallResult got = vm_host_remove(flash);
+        assert(!got && got.status == VmInstallStatus::ProgramFailed);
+        assert(vm_host_installed(flash) && slot_is(flash, old_image));
+    }
+    {   // a sector that will not erase is named, and every other one is still cleared
+        FakeFlash flash = fresh(); flash.eraseFailAt = 5;
+        const VmInstallResult got = vm_host_remove(flash);
+        assert(!got && got.status == VmInstallStatus::EraseFailed && got.detail == 5);
+        assert(!vm_host_installed(flash) && erased(flash, 5));
+    }
+    {   // sector 0 itself, past its cleared tag: the rest of the slot still goes
+        FakeFlash flash = fresh(); flash.eraseFailAt = 0; flash.failFromOp = 1;
+        const VmInstallResult got = vm_host_remove(flash);
+        assert(!got && got.status == VmInstallStatus::EraseFailed && got.detail == 0);
+        assert(!vm_host_installed(flash) && erased(flash, 0));
+    }
+
+    // What a failed install leaves: no host, and not blank either. DoHostUninstall runs
+    // removal for any slot that is not blank, so these are removals it performs too.
+    {   // the whole-payload verify failure, whose un-commit clears only the tag
+        FakeFlash flash = fresh(); FakeReader r{&pkg};
+        VmTrhHeader h = good; h.payloadCrc ^= 1;
+        assert(!vm_host_install(flash, r, h, candidate, staging));
+        assert(!vm_host_installed(flash) && !erased(flash));
+        assert(vm_host_remove(flash) && erased(flash));
+    }
+    {   // and when the tag program fails over them, there is no host to keep whole,
+        // so the slot is erased anyway and the removal is clean
+        FakeFlash flash = fresh(); FakeReader r{&pkg};
+        VmTrhHeader h = good; h.payloadCrc ^= 1;
+        assert(!vm_host_install(flash, r, h, candidate, staging));
+        flash.programFailAt = 0; flash.failFromOp = flash.ops;
+        assert(vm_host_remove(flash) && erased(flash));
+    }
+    {   // a sector that will not erase there is still named
+        FakeFlash flash = fresh(); FakeReader r{&pkg};
+        VmTrhHeader h = good; h.payloadCrc ^= 1;
+        assert(!vm_host_install(flash, r, h, candidate, staging));
+        flash.programFailAt = 0; flash.eraseFailAt = 0; flash.failFromOp = flash.ops;
+        const VmInstallResult got = vm_host_remove(flash);
+        assert(!got && got.status == VmInstallStatus::EraseFailed && got.detail == 0);
+        assert(!vm_host_installed(flash) && erased(flash, 0));
+    }
+    long leftovers = 0;
+    for (bool fromTail : {false, true}) {   // and a power cut anywhere in an install
+        for (long budget = 0; budget < total; budget++) {
+            FakeFlash flash = fresh(); FakeReader r{&pkg};
+            flash.budget = budget;
+            flash.eraseFromTail = fromTail;
+            try { vm_host_install(flash, r, good, candidate, staging); assert(false); }
+            catch (const PowerCut &) {}
+            if (!vm_host_installed(flash) && !erased(flash)) leftovers++;
+            flash.budget = -1;
+            assert(vm_host_remove(flash) && erased(flash));
+        }
+    }
+    assert(leftovers > 0);
+
+    long removeOps = 0;
+    {
+        FakeFlash flash = fresh();
+        assert(vm_host_remove(flash));
+        removeOps = flash.ops;
+    }
+    assert(removeOps == VM_HOST_SECTORS + 1);
+    for (bool fromTail : {false, true}) {
+        for (long budget = 0; budget <= removeOps; budget++) {
+            FakeFlash flash = fresh();
+            flash.budget = budget;
+            flash.eraseFromTail = fromTail;
+            bool cut = false;
+            try { vm_host_remove(flash); }
+            catch (const PowerCut &) { cut = true; }
+            assert(cut == (budget < removeOps));
+            assert(!vm_host_installed(flash) || slot_is(flash, old_image));
+        }
+    }
+
     printf("PASS: TRH1 package header, %u single-bit corruptions, malformed-header cases and the "
            "payload floor from either side, "
            "scan refusing a non-bootable payload / short read / bad CRC / ABI mirror, a clean install, "
            "an un-commit after a whole-payload verify failure and the write failure reported when that "
            "un-commit cannot land, removal on its own with the tag clearing, refusing to clear, and "
-           "clearing over an erase that fails, "
+           "clearing over an erase that fails, removal erasing the whole slot past a tag that clears and "
+           "stopping at one that will not, with a power cut at each of its %ld operations leaving the slot "
+           "absent or the old host, the leftovers of a failed install cleared the same way (%ld of them "
+           "under a cut) and over a tag that will not clear, "
            "and a power cut at each of %ld operations, under a torn erase reaching either half of its "
            "sector, leaving the slot absent, the old host, or the new one\n",
-           VM_TRH_HEADER_BYTES, total);
+           VM_TRH_HEADER_BYTES, removeOps, leftovers, total);
 }

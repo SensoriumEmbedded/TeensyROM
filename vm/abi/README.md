@@ -6,6 +6,13 @@ sound and input. The firmware in this repository is the **loader**: it finds
 packages, validates them, reserves the memory, and carries bytes between the
 module and its C64 client. It knows nothing about what any extension does.
 
+A module runs under an extension host, and no firmware carries one. Install
+the stock host before launching anything: `npm run build:tr-plus` writes it as
+`build/firmware/TeensyROM+_<ver>_VMBoot.TRH`, and every CI run keeps one in its
+`firmware` artifact. Copy it to the card and select it in the menu, or push it
+over USB with `tools/bench/hostinstall.py`. Without one, a launch is refused
+with `No extension host installed`.
+
 This document is the whole contract. A module builds against three files from
 this repository, all of them in [`vm/abi/`](.):
 
@@ -480,16 +487,22 @@ writes no report, so it stays `$00` and stays silent.
 | `$33` | the slot did not read back as written (detail: CRC) |
 | `$34` | a page would not program (detail: offset) |
 | `$3f` | install refused for a reason the codes above do not name |
-| `$40` | the slot no longer reads as a host: removed |
+| `$40` | the slot no longer reads as a host: removed (detail: 0, or `VmInstallStatus` if part of the erase failed) |
 | `$41` | the tag would not clear (detail: `VmInstallStatus`) |
 
 The record is how installing and removing a host report as well, not just
 launching one. Both rewrite flash from the main image and reboot to do it, so
 neither can print its own outcome; `$30`..`$41` are what the board says on the
 way back up. `$40` is a question about the slot rather than about the erase —
-the tag is cleared before the sector behind it goes, so a sector erase that
-fails still leaves a slot that is no longer a host, and the board reports what
-the next boot will find rather than what the last operation returned.
+the tag is cleared before any sector goes, so a sector erase that fails still
+leaves a slot that is no longer a host, and the board reports what the next boot
+will find rather than what the last operation returned. Removal erases the whole
+slot, not only the tag: firmware without the extension loader does not reserve
+the slot, and sizes its update buffer from the top of flash down to the first
+programmed byte, so a payload left there would stop it updating itself. For
+the same reason removal runs for any slot that is not blank, not only for one
+holding a host: an install that failed part way leaves bytes that are no host,
+and clearing them reports `$40` like any other removal.
 
 The failure code a client reads from `$DFFB` is separate, and is the same value
 the record carries as its detail for `$20`: `$11` the image would not open, has
@@ -582,6 +595,13 @@ reading of this paragraph. Matching case-folded, as `hostops.Outcome.said` does,
 still costs nothing and covers a launched program that has switched charset --
 see the Limits note in `tools/bench/README.md`.
 
+The slot moved to `0x60760000`, and removal came to erase all of it, after most
+of these rows were run. The rows for installing and removing over USB, the
+blank-slot refusal, and the page naming the stock host were run again after
+both changes, along with a firmware update that left the installed host in
+place. The rest were run with the slot at `0x60280000` and have not been
+repeated; nothing on their paths changed apart from the slot address.
+
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
@@ -601,8 +621,10 @@ see the Limits note in `tools/bench/README.md`.
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |
 | Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
-| Removing an installed host over USB, and the `$40` record it reports | yes |
-| A remove with nothing installed declining without touching flash | yes |
+| Removing an installed host over USB, and the `$40` record it reports | yes — detail `$0`, every sector erased |
+| A firmware update leaving the installed host in place | yes |
+| A remove with the slot blank declining without touching flash | yes |
+| A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
 | Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
 | The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |

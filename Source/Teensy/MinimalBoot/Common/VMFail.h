@@ -58,7 +58,8 @@ enum : uint8_t {
     // Removal, which reboots for the same reason an install does: clearing the
     // tag takes a sector erase, and the menu runs from cartridge ROM this core
     // stops answering while that erase holds interrupts off.
-    Removed        = 0x40,  // slot no longer reads as a host (detail = 0)
+    Removed        = 0x40,  // slot no longer reads as a host (detail = 0, or the
+                            // VmInstallStatus of the part of the erase that failed)
     RemoveFailed   = 0x41,  // the tag would not clear (detail = VmInstallStatus)
     // For a host that is not this one. Every code above describes something this
     // repo's host does, so a third-party host finishing normally had nothing to

@@ -40,6 +40,20 @@ static inline bool installed() {
                  flash[0x1020 / 4], flash[0x1024 / 4]);
 }
 
+// True when every byte of the slot is erased. Not the same question as !installed():
+// an install that failed part way, a verify failure it un-committed, or a power cut
+// during either leaves bytes behind a slot that is no host. This firmware does not
+// mind them, but firmware without the extension loader sizes its update buffer by
+// scanning down from the top of flash for the first programmed word, and the slot is
+// the top of flash -- so uninstall clears whatever is here, not only a host.
+static inline bool blank() {
+    const auto flash = reinterpret_cast<const volatile uint32_t *>(window());
+    for (uint32_t i = 0; i < VM_HOST_SLOT_BYTES / 4; i++) {
+        if (flash[i] != 0xffffffffu) return false;
+    }
+    return true;
+}
+
 // False only when the slot holds no descriptor at all: a host built before it
 // existed reads as erased flash. That is "cannot say", not "provides nothing"
 // -- see tryLaunch, which proceeds on false and judges the rest.
@@ -160,6 +174,9 @@ static inline void displayName(char *out, size_t bytes, const VmHostId *id) {
 }
 
 #if !defined(__arm__)
+// The slot as erased flash reads, which the zero-filled buffer is not.
+inline void erase() { memset(hostWindow, 0xff, sizeof hostWindow); }
+
 // Writes what installed() and identity() read, so the layout stays beside the
 // code that reads it rather than in each test.
 inline void installWithoutDescriptor() {

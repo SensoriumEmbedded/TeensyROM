@@ -10,8 +10,8 @@ One normalising step, then five asserted ones -- the same numbers the run prints
                         Not asserted; either answer is a legitimate starting point
   1. remove again    -- must refuse without rebooting: nothing left to clear
   2. install         -- must reboot and report the host installed
-  3. remove          -- must reboot and report it removed
-  4. remove again    -- must refuse again: the tag really is gone, not just overwritten
+  3. remove          -- must reboot and report it removed, every sector erased
+  4. remove again    -- must refuse again: the slot is blank, not just untagged
   5. install         -- must reboot and report installed, leaving the board usable
 
 Steps 1 and 4 are the ones worth the extra minute. Without them an install that never
@@ -40,7 +40,7 @@ is running, reset it first.
 import sys
 import time
 
-from hostops import INSTALLED, REMOVED, install_host, remove_host, show
+from hostops import INSTALLED, Outcome, install_host, remove_host, show
 
 package = None
 for a in sys.argv[1:]:
@@ -56,13 +56,16 @@ step = 0
 
 def check(label, result, rebooted, phrase=None):
     """`phrase` is asserted only where a reboot carries it; see the note above on why a
-    decline cannot be checked that way."""
+    decline cannot be checked that way. It is a phrase for Outcome.said(), or a predicate
+    on the Outcome where the phrase alone is not the whole test."""
     global step
     step += 1
     why = []
     if result.rebooted != rebooted:
         why.append(f'expected rebooted={rebooted}, got {result.rebooted}')
-    elif phrase and not result.said(phrase):
+    elif callable(phrase) and not phrase(result):
+        why.append(f'the boot record did not pass {phrase.__name__}()')
+    elif isinstance(phrase, str) and not result.said(phrase):
         why.append(f'the boot record never said {phrase!r}')
     elif not rebooted and result.image != 'main':
         why.append(f'expected the board still on its main image, got {result.image!r}')
@@ -84,10 +87,10 @@ print(f'round trip with {package}; no button presses needed')
 first = remove_host()
 print(f'\n=== step 0: normalise -- slot was {"populated" if first.rebooted else "empty"} ===')
 
-check('remove with nothing installed refuses', remove_host(), False)
+check('remove with the slot blank refuses', remove_host(), False)
 check('install writes the slot', install_host(package), True, INSTALLED)
-check('remove clears the tag', remove_host(), True, REMOVED)
-check('the tag is gone, not just stale', remove_host(), False)
+check('remove erases the host', remove_host(), True, Outcome.removed_cleanly)
+check('the slot is blank, not just untagged', remove_host(), False)
 check('reinstall works after a removal', install_host(package), True, INSTALLED)
 
 mins = (time.time() - started) / 60

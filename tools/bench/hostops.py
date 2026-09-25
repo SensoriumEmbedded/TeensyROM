@@ -10,7 +10,7 @@ its reason in the VmFail record the main image prints on the way back up. `reboo
 the first fact the rest hangs off, but it is not the outcome: the firmware reboots for a
 failed install ($31-$34, $3f) and a failed removal ($41) exactly as it does for a good
 one. What separates them is the record, so a caller asks Outcome.said(INSTALLED) or
-said(REMOVED) rather than treating any reboot as a success.
+removed_cleanly() rather than treating any reboot as a success.
 
 Neither operation enters the extension image -- installing and removing are main-image
 work -- so neither needs a hand on the board. That is what lets hostcycle.py run a whole
@@ -24,8 +24,9 @@ import time
 from c64 import screen_rows
 from trlink import Link, answering_board, neighbours
 
-# The erase alone is allowed 45 s by the message the firmware prints, and the boot
-# follows it. Removal clears one sector and is much quicker, but shares the path.
+# Once the port drops: the boot, and whatever the board has left to do before it. The
+# erase itself happens with the port still up, so it is each operation's `settle` that
+# has to cover it, not this.
 REBOOT_TIMEOUT = 120
 # A board that has just come back spends a few seconds on NFC and the SD scan before it
 # answers commands, and the port is open for all of it. Every operation here can follow
@@ -43,7 +44,7 @@ ANSWER_TIMEOUT = 3
 # copy has never heard of then fails noisily instead of passing as "it rebooted, didn't
 # it". The strings are VmFail::describe()'s, in Source/Teensy/MinimalBoot/Common/VMFail.h.
 INSTALLED = 'extension host installed'   # VmFail::Installed, $30
-REMOVED = 'extension host removed'       # VmFail::Removed, $40
+REMOVED = 'extension host removed'       # VmFail::Removed, $40; see removed_cleanly()
 # A launch has more than one normal finish, so it gets a set rather than a phrase: the
 # module can be handed the machine and never come back ($00), ask to be finished with
 # through the exit service ($04), or -- for a host that is not this one -- hand the
@@ -98,7 +99,19 @@ class Outcome:
         self.image = image            # firmware name the board reported, or None
 
     def said(self, phrase):
-        return phrase.lower() in (self.boot + '\n' + self.screen).lower()
+        """`phrase` is one string, or a tuple of alternatives any one of which will do."""
+        text = (self.boot + '\n' + self.screen).lower()
+        phrases = (phrase,) if isinstance(phrase, str) else phrase
+        return any(p.lower() in text for p in phrases)
+
+    def removed_cleanly(self):
+        """said(REMOVED), and with $0 for the detail. $40 means the slot no longer reads as
+        a host, and a sector that would not erase still gets it -- with EraseFailed ($d)
+        as the detail and part of the payload still in flash, for firmware without the
+        extension loader to trip over. The record is printed in two places and either
+        will do: printBoot's serial line always names the detail, and the C64's line
+        leaves it off when it is zero."""
+        return self.said((f'{REMOVED} (code $40, detail $0)', f'{REMOVED} ($40)'))
 
     def __str__(self):
         return (self.boot + '\n' + self.screen).strip()
@@ -212,12 +225,14 @@ def install_host(local, remote=None, out=sys.stdout):
 
 
 def remove_host(out=sys.stdout):
-    """Clear the 4-byte tag so the slot stops reading as a host. The payload stays in
-    flash, unreferenced, until the next install overwrites it. rebooted=False means
-    there was nothing installed to clear."""
+    """Clear the 4-byte tag so the slot stops reading as a host, then erase the rest of
+    the slot. Runs for a slot holding anything, a failed install's leftovers included,
+    so rebooted=False means the slot was already blank."""
     def prepare(tr):
         tr.remove_host()
         if out:
-            print('accepted; the board reboots if it had a host to remove', file=out)
+            print('accepted; the board reboots if the slot held anything', file=out)
 
-    return run_step(prepare, 30, out)
+    # The same 45 s erase an install warns of, with the port up for all of it, and the
+    # same allowance install_host gives it.
+    return run_step(prepare, 60, out)

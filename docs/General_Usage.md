@@ -225,7 +225,9 @@
   * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
   * The firmware comes with no host installed, and runs exactly as it would without one. A host is an optional add-on distributed as a `.TRH` file: copy it to the SD card or USB drive and select it in the file browser to install it. A firmware update leaves the installed host in place
   * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
-  * Uninstalling clears the tag that makes the slot bootable and reboots the TeensyROM; the host image stays in flash, unreferenced, until the next install overwrites it
+  * Uninstalling erases the host from flash and reboots the TeensyROM
+  * `None installed; slot not blank.` means an install or an uninstall did not finish and left part of a host behind; `u` erases it the same way, and the report on the way back up says the host was removed
+  * Uninstall the host before loading a firmware without extension support, such as an older release: that firmware cannot update itself while a host is in flash. If one is already loaded, load a TeensyROM+ firmware with extension support using the TeensyLoader app, then uninstall
   * On a board or build with no extension loader, the page says so and `u` changes nothing
 
 ## Selecting and associating Special IO

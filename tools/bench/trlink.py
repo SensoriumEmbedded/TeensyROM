@@ -379,8 +379,8 @@ class Link:
         """Ask the board to remove its installed extension host. The firmware
         ACKs and flushes before it starts, because clearing the tag takes a
         sector erase it does not return from -- so the ACK means 'accepted',
-        not 'done'. A board with nothing installed ACKs too and stays up,
-        saying so on the C64; use answering_board() to tell the two apart.
+        not 'done'. A board whose slot is already blank ACKs too and stays
+        up, saying so on the C64; use answering_board() to tell the two apart.
 
         The firmware takes this command on the USB device port only. The same
         token over the USB host port or the TCP listener is refused with FAIL

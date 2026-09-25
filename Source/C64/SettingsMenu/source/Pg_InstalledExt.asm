@@ -104,10 +104,10 @@ WaitInstalledExtMenuKey:
    ldy #0 ;col
    clc
    jsr SetCursor
-   ;Does not return when there was a host to remove: the firmware holds the 6510
-   ;in reset for the sector erase and reboots, so the C64 restarts into the main
-   ;menu and the record is reported there. It does return when the slot was
-   ;already empty, and then the firmware's message is the whole answer.
+   ;Does not return when the slot held anything: the firmware holds the 6510 in
+   ;reset for the erase and reboots, so the C64 restarts into the main menu and
+   ;the record is reported there. It does return when the slot was already
+   ;blank, and then the firmware's message is the whole answer.
    lda #rCtlUninstallExtHostWAIT
    sta wRegControl+IO1Port
    jsr WaitForTRDots
@@ -124,15 +124,15 @@ MsgInstalledExtMenu:
    !tx ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
 
-   !tx EscC,EscSourcesColor, " Uninstalling clears the tag that makes", ChrReturn
+   !tx EscC,EscSourcesColor, " Uninstalling erases the host from", ChrReturn
    ;Keep every row below 40 visible columns -- a row, not an !tx line: what counts is
    ;everything drawn between two returns, and that can be spread over several directives.
    ;A row that fills all 40 makes the screen editor advance on its own, and the ChrReturn
    ;then advances again, which put a blank row in the middle of this sentence on a real
    ;screen.  tools/lib/c64-screen.test.mjs measures this for every C64 source.
-   !tx EscC,EscSourcesColor, " the slot bootable. The host image", ChrReturn
-   !tx EscC,EscSourcesColor, " stays in flash, unreferenced, until", ChrReturn
-   !tx EscC,EscSourcesColor, " the next install overwrites it.", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, " flash. Do it before loading firmware", ChrReturn
+   !tx EscC,EscSourcesColor, " without extensions, which cannot", ChrReturn
+   !tx EscC,EscSourcesColor, " update itself with a host in flash.", ChrReturn, ChrReturn
    !tx EscC,EscTimeColor,  " The TeensyROM reboots to do it.", ChrReturn
    !tx 0
 

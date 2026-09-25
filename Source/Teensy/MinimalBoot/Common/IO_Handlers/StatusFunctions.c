@@ -1267,7 +1267,10 @@ FLASHMEM void MakeExtHostStr()
    //this is a convention the rows share rather than the thing holding the prompt up.
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
    VmHostId id{};
-   if (!VmBootImage::installed()) strcpy(SerialStringBuf, "None installed.");
+   //"Not blank" is what an install that failed part way leaves: no host, but bytes in
+   //the slot that uninstalling clears. See VmBootImage::blank().
+   if (!VmBootImage::installed())
+      strcpy(SerialStringBuf, VmBootImage::blank() ? "None installed." : "None installed; slot not blank.");
    else if (VmBootImage::identity(id))
    {
       char Name[VmBootImage::nameBytes];
