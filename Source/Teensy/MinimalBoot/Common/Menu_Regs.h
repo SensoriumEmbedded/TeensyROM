@@ -372,6 +372,7 @@ enum RegCtlCommands
    rCtlExpPortDMAWAIT       = 55,
    rCtlMakeExtHostStrWAIT   = 56, // installed host name, ABI and services, into SerialStringBuf
    rCtlUninstallExtHostWAIT = 57, // erase the host slot; reboots unless it was already blank
+   rCtlBootComplete         = 58, // menu finished booting: sets BootComplete, reported by the version command
    
 };                               
                                  

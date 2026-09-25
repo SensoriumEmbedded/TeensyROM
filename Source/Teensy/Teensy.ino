@@ -365,6 +365,7 @@ void loop()
 
 FLASHMEM void SetUpMainMenuROM()
 {
+   BootComplete = false; //every path back to the menu comes through here; the menu sets it again once booted
    PendingfBusSnoop = fBusSnoop = NULL;
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;

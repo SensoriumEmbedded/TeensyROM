@@ -584,7 +584,7 @@ FLASHMEM void ProcessCommand()
             char BuildInfo[sizeof SerialStringBuf];
             MakeBuildInfo(BuildInfo, sizeof BuildInfo);
             SendU16(AckToken);
-            CmdChannel->printf("\n%s\n  %s0 Hz\n", BuildInfo, StrMachineInfo);
+            CmdChannel->printf("\n%s\n  %s0 Hz\n  Boot: %s\n", BuildInfo, StrMachineInfo, BootComplete ? "complete" : "in progress");
          }
          return;
       case FWCheckToken: //Check firmware type

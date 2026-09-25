@@ -222,6 +222,8 @@ smcTODbit
    ;inc BorderColorReg
    lda #ricmdNone
    sta rwRegIRQ_CMD+IO1Port
+   lda #rCtlBootComplete ;boot ends here in the launch, tell the Teensy
+   sta wRegControl+IO1Port
    jsr RunSelected  ;start TR selected app...
    ;prg/crt won't return from here, likely SID or error
    lda #rmtTeensy ; force back to TR menu
@@ -284,6 +286,10 @@ smcTODbit
 
    ;Display main menu and enter JS/key wait loop
    jsr ListMenuItems
+
+   ;boot finished, tell the Teensy (remote clients read it via the version command)
+   lda #rCtlBootComplete
+   sta wRegControl+IO1Port
    
 HighlightCurrent:   
    lda rwRegCursorItemOnPg+IO1Port 
