@@ -107,25 +107,45 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: npm run build:${{ matrix.target }} -- ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
 
-      # The extension loader ships with the TR+ and not with the TR, and neither hex says
-      # so in its name. build-host-package.mjs reads the extension slot out of the hex, so
-      # it answers the question directly: it packages a host from the TR+ build and refuses
-      # the TR build for carrying nothing there. A build that silently came out the other
-      # way round -- a TR+ without the loader, a TR with it -- fails here rather than on
-      # someone's cartridge.
-      - name: Check the loader is in the ${{ matrix.target }} image, or is not
+      # No firmware hex carries an extension host: a host is installed onto a board, never
+      # shipped inside its firmware. The hex is decoded and every byte in it must sit below
+      # the slot, rather than asking build-host-package.mjs to package one and reading its
+      # refusal as success -- that exits 1 for a slot holding a host it cannot package,
+      # too, which is exactly the hex this step exists to catch. The TR+ build packages the
+      # stock host beside its hex instead -- and builds it only when the loader is compiled
+      # in -- so exactly one .TRH there, and none beside the TR, is what a TR+ that lost
+      # the loader or a TR that gained it would break.
+      - name: Check the ${{ matrix.target }} hex carries no host, and what sits beside it
+        shell: bash
         run: |
-          hex=$(ls build/firmware/*.hex)
-          echo "checking $hex"
-          if [ "${{ matrix.target }}" = "tr-plus" ]; then
-            node tools/build-host-package.mjs --hex "$hex" --out build/firmware/host.TRH
-          else
-            if node tools/build-host-package.mjs --hex "$hex" --out /dev/null; then
-              echo "::error::the plain TR image carries an extension host; it has no DMA to run one"
-              exit 1
-            fi
-            echo "no extension slot content, as expected for --target tr"
+          shopt -s nullglob
+          hexes=(build/firmware/*.hex)
+          packages=(build/firmware/*.TRH)
+          if [ ${#hexes[@]} -ne 1 ]; then
+            echo "::error::expected one firmware hex, found ${#hexes[@]}: ${hexes[*]}"
+            exit 1
           fi
+          echo "checking ${hexes[0]}"
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import { decodeHex, VM_BASE } from "./tools/lib/hex.mjs";
+            let top = 0;
+            for (const address of decodeHex(fs.readFileSync(process.argv[1], "utf8")).keys()) {
+              if (address > top) top = address;
+            }
+            if (top >= VM_BASE) {
+              console.log(`::error::the firmware hex reaches 0x${top.toString(16)}, into the extension slot at 0x${VM_BASE.toString(16)}; hosts ship as .TRH packages`);
+              process.exit(1);
+            }
+            console.log(`hex tops out at 0x${top.toString(16)}, below the slot`);
+          ' "${hexes[0]}"
+          expected=0
+          if [ "${{ matrix.target }}" = "tr-plus" ]; then expected=1; fi
+          if [ ${#packages[@]} -ne $expected ]; then
+            echo "::error::expected $expected host package(s) beside the ${{ matrix.target }} hex, found ${#packages[@]}: ${packages[*]}"
+            exit 1
+          fi
+          echo "no host in the hex; ${#packages[@]} host package(s) beside it, as expected"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -138,49 +158,33 @@ jobs:
       # build compiles it: docs/Architecture/Extension-Hosts.md promises a reader that it
       # builds, and the globals it has to define come from sibling sources that are free
       # to change. Build it here so that promise fails in CI rather than in someone's
-      # first attempt at a host. Extension image only -- the other two are the same ones
-      # the "Build" step already built. --ccache is passed under that step's condition so
+      # first attempt at a host. --ccache is passed under that step's condition so
       # this compile can reuse the same cache; without it the extension image is a full
       # cold compile on every run.
       #
-      # After the upload rather than before, and writing outside build/firmware, for two
-      # separate reasons. A stale doc should fail the run without also costing it the
-      # firmware it did build, which an earlier step would, since the upload never runs.
-      # And EXAMPLE.TRH is a host that does nothing on purpose: shipped in the artifact
-      # beside the real host.TRH it is something a reader can copy to a card and install
-      # over a working extension slot.
+      # After the upload rather than before, for two separate reasons. A stale doc should
+      # fail the run without also costing it the firmware it did build, which an earlier
+      # step would, since the upload never runs. And the example's .TRH is a host that
+      # does nothing on purpose: shipped in the artifact beside the stock host it is
+      # something a reader can copy to a card and install over a working extension slot.
+      # A --host-sketch build compiles the host alone, so this costs one image, not three;
+      # it keeps build/firmware as its --out so --ccache finds the same build root.
       - name: Build the example third-party host
         if: matrix.target == 'tr-plus'
         # Named explicitly to get -o pipefail, which the default `bash -e` run shell does
         # not set. Nothing below pipes, which is the point: this step used to package
-        # through `tee`, and a pipeline reports its last command's status, so
-        # build-host-package.mjs could exit 1 and be stepped over. The pipe is gone and
-        # the guard stays, so the next one added here cannot hide a failure either.
+        # through `tee`, and a pipeline reports its last command's status, so a failed
+        # packaging could be stepped over. The pipe is gone and the guard stays, so the
+        # next one added here cannot hide a failure either.
         shell: bash
         run: |
-          npm run build:example-host -- --keep-work \
-            --skip-minimal-build --skip-teensy-build --skip-combine \
-            ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
-          # An array rather than `ls -t | head -1`, which cannot report either way that
-          # goes wrong. `head` exits 0 whether or not the glob matched, so a miss arrives
-          # as an empty --hex argument and surfaces three commands later as a
-          # missing-value error naming the wrong cause; and on two matches `-t` packages
-          # whichever is newer without saying it chose. Insisting on exactly one names
-          # the ambiguity instead of guessing past it.
-          shopt -s nullglob
-          hexes=(build/firmware/run-*/extension/ExampleHost.ino.hex)
-          if [ ${#hexes[@]} -ne 1 ]; then
-            echo "::error::expected one example-host extension image, found ${#hexes[@]}: ${hexes[*]}"
-            exit 1
-          fi
-          mkdir -p build/example-host
-          descriptor=$(node tools/build-host-package.mjs --hex "${hexes[0]}" \
-            --out build/example-host/EXAMPLE.TRH)
-          echo "$descriptor"
+          built=$(npm run build:example-host -- \
+            ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }})
+          echo "$built"
           # The descriptor is what the menu names the host by, and it is the one thing
           # packaging cannot check for itself. A host that built but published someone
           # else's identity would otherwise pass this step.
-          grep -q 'Host "Example"' <<<"$descriptor"
+          grep -q 'Host "Example"' <<<"$built"
 
   collect:
     needs: [build, tools]
@@ -208,4 +212,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/Release_v')
         uses: softprops/action-gh-release@v3
         with:
+          # The firmware only. The stock host's .TRH is in the build artifact for anyone
+          # testing modules, but a release does not offer an extension host until there is
+          # a module a user would install it for.
           files: build/firmware/*.hex

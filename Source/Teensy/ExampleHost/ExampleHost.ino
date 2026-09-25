@@ -12,11 +12,10 @@
 // Build and install:
 //
 //   node tools/build-firmware.mjs --target tr-plus --host-sketch Source/Teensy/ExampleHost
-//   node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_ExampleHost_full.hex
-//   python3 tools/bench/hostinstall.py build/firmware/EXAMPLE.TRH
+//   python3 tools/bench/hostinstall.py build/firmware/TeensyROM+_<ver>_ExampleHost.TRH
 //
-// A --host-sketch build is named for its sketch directory, not the shipping name, so
-// this hex cannot be mistaken for -- or overwrite -- the release image.
+// A --host-sketch build compiles the host alone and writes only its package, named for
+// its sketch directory. It installs onto a board running the stock firmware.
 //
 // What you should see: the Installed Extensions page names "Example", launching
 // an extension blinks the LED four times with the C64 held in reset, and the

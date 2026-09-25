@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
 // Node port of Source/Teensy/tools/Build-DualBoot.ps1. Builds the dual-boot TeensyROM
-// image (MinimalBoot at 0x60000000 + the main image at 0x60060000, combined into one hex;
-// for --target tr-plus the same hex also carries the extension host image at 0x60280000)
-// for one of two release targets:
+// image (MinimalBoot at 0x60000000 + the main image at 0x60060000, combined into one hex)
+// for one of two release targets. For --target tr-plus it also builds the stock extension
+// host and packages it as a .TRH beside the hex, never inside it: a host is something a
+// user installs onto a board, not part of the firmware a board ships with.
 //
 //   --target tr        plain TeensyROM (Fab 0.2/0.3). No extension loader: it needs the
 //                       full DMA only Fab 0.4 has.
@@ -27,13 +28,16 @@
 //            before the loader existed, from the stock linker scripts. It lands under
 //            TeensyROM+_<ver>_noext_full.hex, not the shipping name. Refused on --target
 //            tr, which never carries the loader.
-//   --host-sketch <dir>  put a different program in the extension slot. The directory
-//            holds exactly one .ino plus whatever else it needs, files only -- no
-//            subdirectories; those files are overlaid onto the MinimalBoot sketch, which
-//            is how the stock host is built too. This is the supported seam for a
+//   --host-sketch <dir>  build a different program for the extension slot, and only that.
+//            The directory holds exactly one .ino plus whatever else it needs, files only
+//            -- no subdirectories; those files are overlaid onto the MinimalBoot sketch,
+//            which is how the stock host is built too. This is the supported seam for a
 //            third-party extension host -- see docs/Architecture/Extension-Hosts.md.
-//            It lands under TeensyROM+_<ver>_<dir>_full.hex, not the shipping name: the
-//            slot holds a program this repo did not write.
+//            It writes TeensyROM+_<ver>_<dir>.TRH and no firmware hex: the minimal and
+//            main images are not built, because a host is installed onto a board running
+//            the stock firmware rather than shipped inside a firmware of its own.
+//            Packaging is the step after the combine, so with --skip-combine it builds
+//            the host image into the kept build root and writes no .TRH.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -60,7 +64,10 @@ import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mj
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
 import { definesMacro } from './lib/source-text.mjs';
-import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
+import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
+import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay,
+         HOST_SLOT_BYTES } from './lib/extension.mjs';
+import { hostImageFromHex } from './build-host-package.mjs';
 import {
   minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
   patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget,
@@ -138,6 +145,10 @@ if (hostSketchOption !== null && skipExtensionBuild) {
   throw new Error('--host-sketch and --skip-extension-build contradict each other');
 }
 const hostSketch = path.resolve(hostSketchOption ?? path.join(root, 'Source/Teensy/VMBoot'));
+// A third-party host is built on its own. The firmware around it would be the stock one,
+// byte for byte, so building it again here only produces a second copy of the release hex
+// under a name that suggests the two belong together.
+const hostOnly = hostSketchOption !== null;
 // The overlay is read here rather than where it is used, because the extension image is
 // built last: a host sketch that is a file, or holds no .ino or two, was otherwise refused
 // only after the minimal and main images had compiled, and a path that was not a directory
@@ -264,20 +275,29 @@ if (!fab04Features && fab04Active) {
   console.log(`Fab04_Features #define commented out in ${fab04CtlPath}`);
 }
 
-// --- Output path ---
+// --- Output paths ---
 // A --no-extensions TR+ is a materially different image from the shipping one. Its own
 // name keeps it from overwriting, or being published as, the build that carries the loader.
-// A --host-sketch TR+ is materially different in the same way and for a sharper reason: the
-// slot carries a program this repo did not write, and under the shipping name the two are
-// one `ls` apart. It takes the sketch directory's name, so `npm run build:example-host`
-// cannot leave an LED blinker sitting where the release hex goes, and so the --hex a host
-// author hands to build-host-package.mjs names the host they meant.
+// The host package is named for the sketch directory it was built from -- VMBoot for the
+// stock one -- so `npm run build:example-host` cannot leave an LED blinker sitting where the
+// stock host goes, and two hosts built into the same directory stay two files.
 const outputStem = target === 'tr-plus' ? `TeensyROM+_${trVersion}` : `TeensyROM_${trVersion}`;
-const hostMark = hostSketchOption === null ? '' : `_${path.basename(hostSketch)}`;
-const finalOutput = path.join(outDir,
-  `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}${hostMark}_full.hex`);
-if (!skipCombine && fs.existsSync(finalOutput) && !force) {
-  throw new Error(`${finalOutput} already exists. Re-run with --force to overwrite.`);
+const finalOutput = hostOnly ? null : path.join(outDir,
+  `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}_full.hex`);
+const hostOutput = withExtensions && !skipExtensionBuild
+  ? path.join(outDir, `${outputStem}_${path.basename(hostSketch)}.TRH`) : null;
+for (const output of [finalOutput, hostOutput]) {
+  if (output && !skipCombine && fs.existsSync(output) && !force) {
+    throw new Error(`${output} already exists. Re-run with --force to overwrite.`);
+  }
+}
+// Refused here rather than after the compiles: the combine needs both firmware images, and
+// the host is packaged after the combine, so a run that skipped one of them used to compile
+// the host for minutes and then throw it away along with the hex it could not make.
+if (!skipCombine && !hostOnly && (skipMinimalBuild || skipTeensyBuild)) {
+  throw new Error('Combining requires both firmware images; pass --skip-combine if skipping ' +
+    'one is intentional' + (withExtensions && !skipExtensionBuild
+      ? ', or --host-sketch Source/Teensy/VMBoot to build and package only the stock host' : ''));
 }
 
 // --- Locate the pinned Teensy core; never write to it ---
@@ -404,13 +424,13 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
 
 let minimalImage = null, teensyImage = null, extensionImage = null;
 
-if (withExtensions) {
+if (withExtensions && !hostOnly) {
   const budget = flashBudget();
   console.log(`\nReserving ${budget.extensionKB}K at 0x${VM_BASE.toString(16)} for the extension image.` +
     ` minimal ${budget.stockMinimalKB}K -> ${budget.minimalKB}K, main ${budget.stockMainKB}K -> ${budget.mainKB}K.`);
 }
 
-if (!skipMinimalBuild) {
+if (!skipMinimalBuild && !hostOnly) {
   minimalImage = build('minimal', {
     inoPath: path.join(root, 'Source/Teensy/MinimalBoot/MinimalBoot.ino'),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
@@ -421,7 +441,7 @@ if (!skipMinimalBuild) {
   });
 }
 
-if (!skipTeensyBuild) {
+if (!skipTeensyBuild && !hostOnly) {
   teensyImage = build('main', {
     inoPath: path.join(root, 'Source/Teensy/Teensy.ino'),
     fqbn: 'teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us',
@@ -485,18 +505,18 @@ if (installedCoreHashBefore !== installedCoreHashAfter) {
 }
 console.log('\nInstalled Teensy core unchanged (bootdata.c, imxrt1062_t41.ld hash match before/after).');
 
-if (!skipCombine) {
+if (!skipCombine && !hostOnly) {
   if (!minimalImage || !teensyImage) throw new Error('Combining requires both images; pass --skip-combine yourself if that is intentional');
-  if (withExtensions && !extensionImage) throw new Error('Combining an extension build requires the extension image; pass --skip-combine yourself if that is intentional');
   console.log('\n[combine] Combining hex images');
   let combined;
   if (withExtensions) {
     // combineHex refuses an overlap or an out-of-bounds byte outright, so a
     // mis-sized image is caught here rather than by corrupting its neighbour.
+    // The extension image is not one of them: the main image stops at the slot,
+    // and whatever is installed there is the board's, not the firmware's.
     const merged = combineHex([
       { name: 'minimal', text: read(minimalImage.hex), start: FLASH_BASE, end: MAIN_BASE },
       { name: 'main', text: read(teensyImage.hex), start: MAIN_BASE, end: VM_BASE },
-      { name: 'extension', text: read(extensionImage.hex), start: VM_BASE, end: VM_LIMIT },
     ]);
     for (const region of merged.regions) {
       const used = region.usedEnd - region.start, capacity = region.end - region.start;
@@ -519,8 +539,26 @@ if (!skipCombine) {
   }
 }
 
+// The host goes out the way a user receives one, as the package the menu installs. It is
+// read back through the device's own checks before it is written, so a host that would be
+// refused on the C64 fails the build instead -- the same thing build-host-package.mjs does
+// for a host built anywhere else.
+if (!skipCombine && extensionImage) {
+  console.log('\n[package] Packaging the extension host');
+  const pkg = buildHostPackage({ image: hostImageFromHex(read(extensionImage.hex)) });
+  const header = parseHostPackage(pkg);
+  const id = hostDescriptor(pkg.subarray(header.headerBytes));
+  write(hostOutput, pkg);
+  console.log(`  Host "${hostNameForDisplay(id.name)}", ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}`);
+  console.log(`  ${(header.payloadBytes / 1024).toFixed(1)}K of ${(HOST_SLOT_BYTES / 1024).toFixed(0)}K slot` +
+    ` (${(100 * header.payloadBytes / HOST_SLOT_BYTES).toFixed(1)}%)`);
+  console.log(`Packaged: ${hostOutput} (${pkg.length} bytes)`);
+}
+
 console.log(`\n=== BUILD COMPLETE (${target}) ===`);
-if (!skipCombine) console.log(`Output: ${finalOutput}`);
+if (!skipCombine) {
+  for (const output of [finalOutput, hostOutput]) if (output) console.log(`Output: ${output}`);
+}
 
 if (keepWork || skipCombine) {
   console.log(`Build files kept in ${runRoot}`);

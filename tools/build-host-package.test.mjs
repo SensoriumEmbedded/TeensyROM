@@ -15,7 +15,7 @@ const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build-ho
 const run = (...args) =>
   spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', timeout: 60_000 });
 
-// A combined firmware hex carries the extension image at VM_BASE among everything else,
+// A hex handed to --hex may hold bytes outside the slot as well as the image at VM_BASE,
 // so the fixture puts something below it too: lifting the slot out has to ignore that.
 function firmwareHex(image, { at = VM_BASE, alsoAtBase = true, gap = null } = {}) {
   const bytes = new Map();
@@ -29,7 +29,7 @@ function firmwareHex(image, { at = VM_BASE, alsoAtBase = true, gap = null } = {}
 
 const sandbox = () => fs.mkdtempSync(path.join(os.tmpdir(), 'trh-'));
 
-test('the extension image is lifted back out of a combined firmware hex', () => {
+test('the extension image is lifted out of a hex that holds more than the slot', () => {
   const image = hostImage();
   assert.deepEqual(hostImageFromHex(firmwareHex(image)), image);
 });
@@ -47,7 +47,7 @@ test('a hole in the slot reads as the 0xFF an erased part holds', () => {
   assert.equal(holed.subarray(gap.from, gap.to).compare(Buffer.alloc(gap.to - gap.from, 0xff)), 0);
 });
 
-test('a firmware hex with no extension slot is refused by name', () => {
+test('a hex with nothing in the extension slot, which is every firmware hex, is refused by name', () => {
   const bytes = new Map();
   for (let i = 0; i < 16; i++) bytes.set(0x60000000 + i, 0x11);
   assert.throws(() => hostImageFromHex(encodeHex(bytes)), /nothing in the extension slot/);

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Install an extension host from a .TRH package, over USB.   hostinstall.py <local.trh> [remote]
 
-  hostinstall.py build/firmware/TEENSYROM.TRH
+  hostinstall.py build/firmware/TeensyROM+_<ver>_VMBoot.TRH
 
 Pushes the package to the SD card and launches it, which is the same path as selecting it
 in the menu. Validation reads only, so a package this firmware will not take comes back as
@@ -20,7 +20,7 @@ that fails ($31-$34, $3f) reboots exactly as a good install does. Only the recor
 the host was installed is a pass here; anything else exits non-zero -- including a record
 that never arrives, which is an outcome nobody saw rather than a failure anybody did.
 
-Build the package with:  node tools/build-host-package.mjs --hex <firmware.hex>
+Build the package with:  npm run build:tr-plus   (writes the stock host's .TRH beside the hex)
 Remove one with:         hostuninstall.py
 """
 import os

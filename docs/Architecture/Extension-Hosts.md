@@ -2,9 +2,11 @@
 
 A TeensyROM+ extension host is a third firmware image. It lives in its own flash
 slot, it is installed and removed without reflashing the board, and while it runs
-it owns the machine. This repo ships one — the VM host in
-`Source/Teensy/VMBoot`, which loads and runs modules — but nothing about the slot
-is specific to it. A host is whatever program you put there.
+it owns the machine. No firmware hex carries one: a board runs exactly as it
+would without the slot until someone installs a host into it. This repo has one
+— the VM host in `Source/Teensy/VMBoot`, which loads and runs modules — and it is
+built and installed the same way yours is. Nothing about the slot is specific to
+it. A host is whatever program you put there.
 
 This document is the host side. The module side, for code that runs *under* this
 repo's VM host rather than replacing it, is [`vm/abi/README.md`](../../vm/abi/README.md).
@@ -117,6 +119,12 @@ host built without your own code.
 node tools/build-firmware.mjs --target tr-plus --host-sketch Source/Teensy/ExampleHost
 ```
 
+That builds the host and nothing else, and writes it as a package,
+`build/firmware/TeensyROM+_<ver>_ExampleHost.TRH`. The minimal and main images are
+not built: your host is installed onto a board running the stock firmware, so a
+firmware of your own around it would only be a second copy of the release under a
+name that suggests the two belong together.
+
 Two consequences of the overlay worth knowing before your first build:
 
 - **The sibling `Min_*.ino` files come along and are compiled.** They reference
@@ -145,24 +153,22 @@ example.
 
 ## Packaging and installing it
 
-The `.TRH` container is a 64-byte header plus the raw slot image.
+The `.TRH` container is a 64-byte header plus the raw slot image. A `--host-sketch`
+build writes one for you, named for the sketch directory it built:
+`TeensyROM+_<ver>_MyHost.TRH`. A host built some other way is packaged with
 
 ```
-node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_<ver>_MyHost_full.hex
+node tools/build-host-package.mjs --hex my-host.hex --out MYHOST.TRH
 node tools/build-host-package.mjs --image my-host.bin --out MYHOST.TRH
 ```
 
-A `--host-sketch` build is named for the sketch directory it built, so the hex is
-`TeensyROM+_<ver>_MyHost_full.hex` rather than the shipping `TeensyROM+_<ver>_full.hex`.
-That is deliberate: the slot holds a program this repo did not write, and under
-the shipping name the release image and yours are one `ls` apart.
-
-`--hex` lifts the extension image back out of a combined firmware's flash slot;
-`--image` takes raw `objcopy -O binary` output. Every check the device applies
-before it erases is applied here against the same constants, so a package that
-reaches the C64 has already been refused on this side if it was going to be
-refused at all. The one thing it cannot check is whether the image is the host you
-meant, so it prints the descriptor it found — read that line.
+`--hex` lifts the slot's bytes out of a hex linked for the slot; `--image` takes
+raw `objcopy -O binary` output. A firmware hex is refused — no firmware carries a
+host. Every check the device applies before it erases is applied at packaging time
+against the same constants, the build's own included, so a package that reaches the
+C64 has already been refused on this side if it was going to be refused at all. The
+one thing it cannot check is whether the image is the host you meant, so it prints
+the descriptor it found — read that line.
 
 Install it by copying the `.TRH` to the card and selecting it in the menu, or over
 USB without touching the card:
@@ -209,9 +215,11 @@ image is linked for the slot and passes `vm_host_slot_valid`.
 ## Running modules instead
 
 If what you want is code running *under* the stock host rather than a host of your
-own, you do not need any of the above. Write a module against
-[`vm/abi/README.md`](../../vm/abi/README.md), build it with
-`tools/build-extension.mjs`, and it runs on the host already installed:
+own, you do not need any of the above. Install the stock host — `npm run
+build:tr-plus` writes it as `build/firmware/TeensyROM+_<ver>_VMBoot.TRH`, and every
+CI run keeps one in its `firmware` artifact — then write a module against
+[`vm/abi/README.md`](../../vm/abi/README.md) and build it with
+`tools/build-extension.mjs`:
 
 ```
 node tools/build-extension.mjs --id HELLO --extensions hi \

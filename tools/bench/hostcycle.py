@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Install/remove round trip against a real board, unattended.   hostcycle.py <local.trh>
 
-  hostcycle.py build/firmware/TEENSYROM.TRH
+  hostcycle.py build/firmware/TeensyROM+_<ver>_VMBoot.TRH
 
 One normalising step, then five asserted ones -- the same numbers the run prints:
 

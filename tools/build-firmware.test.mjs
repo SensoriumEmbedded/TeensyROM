@@ -5,9 +5,9 @@
 //
 // That extensions are *on* by default for --target tr-plus is carried here by the
 // "extensions are on by default" test, which reads the reservation line the script prints
-// before any compile. The build workflow's "Check the loader is in the image, or is not"
-// step (.github/workflows/build.yml) asserts the same thing end to end, by running
-// build-host-package.mjs against each finished hex -- but only after a full compile of both
+// before any compile. The build workflow's "carries no host" step (.github/workflows/
+// build.yml) asserts the same thing end to end, by counting the host packages beside each
+// finished hex -- one for the TR+, none for the TR -- but only after a full compile of both
 // targets, so that is the slow net and this is the fast one. Common_Defs.h's #error is
 // not a net for this at all: it fires only on an extensions build *without*
 // Fab04_FullDMACapable, the opposite direction from a default that silently flipped off.
@@ -117,6 +117,9 @@ test('the known-argument sets name exactly the arguments the script reads', () =
 // and a copy in a test file is a place it does not list.
 const coreVersion = builderSource.match(/TEENSY_CORE_VERSION = '([\d.]+)'/)?.[1];
 assert.ok(coreVersion, 'TEENSY_CORE_VERSION not found in build-firmware.mjs');
+const trVersion = readSource(path.join(repoRoot, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h'))
+  .match(/#define\s+TRVersion\s+"([^"]+)"/)?.[1];
+assert.ok(trVersion, 'TRVersion not found in Common_Defs.h');
 
 function stubSdk() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-build-firmware-args-'));
@@ -296,28 +299,110 @@ test('an option given twice is refused rather than resolved to one of them', () 
     /--with-extensions no longer exists/);
 });
 
-// A --host-sketch build is not the shipping image -- the slot holds a program this repo
-// did not write -- and under the shipping name the two are one `ls` apart: an
-// `npm run build:example-host` would leave an LED blinker where the release hex goes, and
-// the --hex a host author hands to build-host-package.mjs would name the wrong thing. The
-// name is read off the refusal, which prints finalOutput before anything is copied or
-// compiled; the assertion is that the file the run claims is in its way is the marked one,
-// which a reverted stem could not produce.
-test('a --host-sketch build is named for its host, not for the shipping image', () => {
-  const repo = path.dirname(path.dirname(script));
-  const version = readSource(path.join(repo, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h'))
-    .match(/#define\s+TRVersion\s+"([^"]+)"/)[1];
+// A --host-sketch build is a host and nothing else. Building the minimal and main images
+// around it would produce the stock firmware byte for byte under a name that pairs it with
+// someone else's host -- the fork-and-ship shape this build no longer offers. The names are
+// read off the refusal, which prints each planned output before anything is copied or
+// compiled: the host package in the way is refused by its own name, and a firmware hex
+// already sitting there is not this build's to overwrite or to be stopped by.
+test('a --host-sketch build plans its host package and no firmware hex', () => {
   const dir = stubSdk();
   const out = path.join(dir, 'out');
   fs.mkdirSync(out, { recursive: true });
+  const attempt = () => spawnSync(process.execPath, [script, '--target', 'tr-plus',
+    '--arduino-data', path.join(dir, 'sdk'), '--out', out,
+    '--host-sketch', path.join(repoRoot, 'Source/Teensy/ExampleHost')],
+    { encoding: 'utf8', timeout: 20_000 });
   try {
-    fs.writeFileSync(path.join(out, `TeensyROM+_${version}_ExampleHost_full.hex`), '');
-    const result = spawnSync(process.execPath, [script, '--target', 'tr-plus',
-      '--arduino-data', path.join(dir, 'sdk'), '--out', out,
-      '--host-sketch', path.join(repo, 'Source/Teensy/ExampleHost')],
-      { encoding: 'utf8', timeout: 20_000 });
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_full.hex`), '');
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_ExampleHost_full.hex`), '');
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_ExampleHost.TRH`), '');
+    const result = attempt();
     assert.equal(result.status, 1, result.stdout + result.stderr);
-    assert.match(result.stderr, /TeensyROM\+_.*_ExampleHost_full\.hex already exists/);
+    assert.match(result.stderr, /TeensyROM\+_.*_ExampleHost\.TRH already exists/);
+    assert.doesNotMatch(result.stderr, /_full\.hex already exists/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The half of that the output names cannot show: that the two firmware images are not
+// compiled either. /bin/echo stands in for arduino-cli, so the first image the run starts is
+// the last -- its --show-properties answer has no build.flags.defs in it -- and the stub
+// core carries the two anchors the USB_DISABLED patches need to get that far.
+test('a --host-sketch build compiles the host and neither firmware image', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const core = path.join(dir, `sdk/packages/teensy/hardware/avr/${coreVersion}/cores/teensy4`);
+  fs.writeFileSync(path.join(core, 'yield.cpp'), 'if (Serial.available()) serialEvent();\n');
+  fs.writeFileSync(path.join(core, 'startup.c'), '{\n\t\tusb_isr();\n}\n');
+  try {
+    const result = spawnSync(process.execPath, [script, '--target', 'tr-plus',
+      '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
+      '--host-sketch', path.join(repoRoot, 'Source/Teensy/ExampleHost')],
+      { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /\[extension\] Building/);
+    assert.doesNotMatch(result.stdout, /\[(minimal|main)\] Building/);
+    assert.match(result.stderr, /build\.flags\.defs/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The stock host rides beside the shipping hex rather than inside it, under the name of the
+// sketch it was built from. Both outputs are checked before the first compile, so each is
+// refused by its own name; a build that skips the host plans no package and is not stopped
+// by one, and gets as far as the next refusal instead.
+test('a tr-plus build plans the stock host as its own .TRH beside the hex', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  const attempt = (...args) => spawnSync(process.execPath, [script, '--target', 'tr-plus',
+    '--arduino-data', path.join(dir, 'sdk'), '--out', out, ...args],
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+  const hex = path.join(out, `TeensyROM+_${trVersion}_full.hex`);
+  const host = path.join(out, `TeensyROM+_${trVersion}_VMBoot.TRH`);
+  try {
+    fs.writeFileSync(hex, '');
+    let result = attempt();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /TeensyROM\+_.*_full\.hex already exists/);
+    fs.rmSync(hex);
+
+    fs.writeFileSync(host, '');
+    result = attempt();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /TeensyROM\+_.*_VMBoot\.TRH already exists/);
+
+    result = attempt('--skip-extension-build', '--skip-minimal-build');
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /Combining requires both firmware images/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// Skipping a firmware image without --skip-combine can never produce the hex, and the host
+// is packaged after the combine. Refused before the first compile, rather than after minutes
+// of compiling a host that is then thrown away; the refusal names the way to get just that.
+test('a combine that cannot happen is refused before anything compiles', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  try {
+    for (const skip of ['--skip-minimal-build', '--skip-teensy-build']) {
+      const result = spawnSync(process.execPath, [script, '--target', 'tr-plus',
+        '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'), skip],
+        { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, /Combining requires both firmware images/);
+      assert.match(result.stderr, /--host-sketch Source\/Teensy\/VMBoot/);
+      assert.doesNotMatch(result.stdout, NO_BUILD_STARTED);
+    }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

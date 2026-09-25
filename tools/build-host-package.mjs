@@ -2,14 +2,19 @@
 //
 // Packages an extension host image into the .TRH container the device installs from.
 //
-//   node tools/build-host-package.mjs --hex build/firmware/TeensyROM+_0.8.0.11_full.hex
+//   node tools/build-host-package.mjs --hex my-host.hex --out MYHOST.TRH
 //   node tools/build-host-package.mjs --image my-host.bin --out MYHOST.TRH
 //
-// Two inputs, because there are two people doing this. --hex takes a combined TR+
-// firmware hex and lifts the extension image back out of its flash slot: that is the
-// host this firmware ships with, packaged so it can be installed onto another board
-// without reflashing it. --image takes the raw `objcopy -O binary` output a host
-// author has in hand before there is any firmware around it.
+// build-firmware.mjs already packages every host it builds, the stock one included, so
+// this is for a host that came out of some other build. Two inputs, because there are
+// two ways to have one. --hex takes a hex linked for the extension slot and lifts the
+// slot's bytes out of it, ignoring anything else it holds. --image takes the raw
+// `objcopy -O binary` output a host author has in hand without any hex around it.
+//
+// A firmware hex is not an input: no firmware carries a host, and this refuses one for
+// holding nothing in the slot. CI does not lean on that refusal to prove a release hex is
+// host-free -- it would also refuse a slot holding a host it cannot package -- and decodes
+// the hex itself instead (.github/workflows/build.yml).
 //
 // Every check the device applies before it erases is applied here, against the same
 // constants, so a package that reaches the C64 has already been refused on the host
@@ -46,8 +51,9 @@ export function hostImageFromHex(text) {
     if (address >= VM_BASE && address < VM_LIMIT && address > top) top = address;
   }
   if (top < 0) {
-    throw new Error('This hex carries nothing in the extension slot. Build it with ' +
-      '--target tr-plus (and without --no-extensions) if you wanted a host in it.');
+    throw new Error('This hex carries nothing in the extension slot. A firmware hex never ' +
+      'does: pass the extension image\'s own hex, or use the .TRH build-firmware.mjs wrote ' +
+      'beside the firmware.');
   }
   const image = Buffer.alloc(top - VM_BASE + 1, 0xff);
   for (const [address, value] of bytes) {
@@ -61,7 +67,7 @@ function main() {
   const hexPath = option('--hex');
   const imagePath = option('--image');
   if (!hexPath === !imagePath) {
-    throw new Error('Pass exactly one of --hex <firmware.hex> or --image <host.bin>');
+    throw new Error('Pass exactly one of --hex <host.hex> or --image <host.bin>');
   }
 
   const image = hexPath
