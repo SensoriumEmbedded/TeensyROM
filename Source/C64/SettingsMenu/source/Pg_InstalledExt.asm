@@ -19,9 +19,6 @@
 
 
 
-; Placeholder page -- lists/uninstalls TR+RFE extension slots once that mechanism exists.
-; See docs: TR+RFE proposal (project-pr20-review-checklist item #20, todo list items #12-18).
-
 InstalledExtMenu:
    jsr CommonInit ;print banner and common keys/page#
 
@@ -31,9 +28,19 @@ InstalledExtMenu:
 
    ;update static settings
 
-
 ShowInstalledExtSettings:
    ;update dynamic settings
+   ;The firmware answers this in every build: a build without the loader, and a
+   ;board with an empty slot, both say so here rather than leaving the row blank.
+   ;PrintFileName ends at PrintSerialStringLoaded and selects nothing, which is safe
+   ;because MakeExtHostStr calls SelectSerialStringBuf: it leaves the read pointed at
+   ;SerialStringBuf and rewound. A handler that only fills the buffer -- as this one
+   ;used to -- leaves the read where the banner's version string ended, and the row
+   ;comes out empty.
+   lda #rCtlMakeExtHostStrWAIT
+   ldx #5 ;row
+   ldy #3 ;col
+   jsr PrintFileName
 
 WaitInstalledExtMenuKey:
    ;main wait loop
@@ -41,15 +48,99 @@ WaitInstalledExtMenuKey:
    jsr GetIn
    beq WaitInstalledExtMenuKey
 
++  cmp #'u'  ;Uninstall the extension host
+   bne +
+   jsr PrintBanner
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   lda #<MsgConfirmUninstall
+   ldy #>MsgConfirmUninstall
+   jsr PrintString
+   ;Name the host being removed, so a confirmation is about a thing rather than
+   ;about a menu key.
+   lda #rCtlMakeExtHostStrWAIT
+   ldx #6 ;row
+   ldy #3 ;col
+   jsr PrintFileName
+   ;Place every row below rather than counting returns from wherever the line above
+   ;stopped.  The host line is up to 37 characters starting at column 3, so the
+   ;longest of them ends in column 39, and the screen editor then wraps the cursor
+   ;to the next row on its own -- two returns from there land a row lower than two
+   ;returns from a short name.  Measured on a TR+: "None installed." put this prompt
+   ;on row 8 and a clamped "WIDEHOSTNAME  ABI 2  services $fffff>" put it on row 9.
+   ;A build with no extension loader says "No extension loader in this firmware.",
+   ;which is 37 characters as well -- the trailing stop is the 37th.
+   ldx #8 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   lda #<MsgConfirmPrompt
+   ldy #>MsgConfirmPrompt
+   jsr PrintString
+   ;DisplayTime, as every other wait loop on this menu does.  PrintFileName's WAIT
+   ;writes "Waiting:" over the clock at row 1 column 29 and nothing takes it back,
+   ;so a bare GetIn loop leaves the board reading as busy for as long as the user
+   ;takes to answer.
+-  jsr DisplayTime
+   jsr GetIn
+   beq -
+   cmp #'y'
+   beq +++
+   jmp InstalledExtMenu ;anything but y backs out, including stop
++++
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   ;Put the cursor below the prompt before handing over: DisplayTime left it at the
+   ;clock, and everything after this prints wherever it is -- WaitForTRDots puts a
+   ;dot per second at the cursor, and the firmware's reply follows them.
+   ;Row 9 is not free.  The prompt is 47 drawn characters from column 0, so it fills
+   ;row 8 and its last seven -- "to keep" -- are row 9 columns 0 to 6; a cursor there
+   ;spells the first dot over them.  Row 10 is free whatever the prompt is changed to
+   ;say, because the screen editor links at most two rows into one logical line, so a
+   ;prompt placed on row 8 can never reach past row 9.  From row 10 SendMsgPrintfln's
+   ;leading return puts the reply on row 11 and AnyKeyMsgWait's own leading return
+   ;puts the key prompt on row 12.
+   ldx #10 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   ;Does not return when the slot held anything: the firmware holds the 6510 in
+   ;reset for the erase and reboots, so the C64 restarts into the main menu and
+   ;the record is reported there. It does return when the slot was already
+   ;blank, and then the firmware's message is the whole answer.
+   lda #rCtlUninstallExtHostWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   jsr AnyKeyMsgWait
+   jmp InstalledExtMenu ;force to reprint all
+
 +  jsr CheckCommonKeys ;won't return if page changed or exit
    jmp WaitInstalledExtMenuKey
 
 MsgInstalledExtMenu:
    !tx EscC,EscSourcesColor, ChrRvsOn, " Installed Extensions ", ChrReturn, ChrReturn
 
-   !tx EscC,EscTimeColor,  " Not yet implemented.", ChrReturn, ChrReturn
-   !tx EscC,EscSourcesColor, " Once TR+ Runtime Firmware Extensions ship,", ChrReturn
-   !tx EscC,EscSourcesColor, " each installed extension's name, version", ChrReturn
-   !tx EscC,EscSourcesColor, " and slot will be listed here, with an", ChrReturn
-   !tx EscC,EscSourcesColor, " option to uninstall.", ChrReturn
+   !tx EscC,EscTimeColor,  " Extension host in the firmware slot:", ChrReturn, ChrReturn
+   !tx ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
+
+   !tx EscC,EscSourcesColor, " Uninstalling erases the host from", ChrReturn
+   ;Keep every row below 40 visible columns -- a row, not an !tx line: what counts is
+   ;everything drawn between two returns, and that can be spread over several directives.
+   ;A row that fills all 40 makes the screen editor advance on its own, and the ChrReturn
+   ;then advances again, which put a blank row in the middle of this sentence on a real
+   ;screen.  tools/lib/c64-screen.test.mjs measures this for every C64 source.
+   !tx EscC,EscSourcesColor, " flash. Do it before loading firmware", ChrReturn
+   !tx EscC,EscSourcesColor, " without extensions, which cannot", ChrReturn
+   !tx EscC,EscSourcesColor, " update itself with a host in flash.", ChrReturn, ChrReturn
+   !tx EscC,EscTimeColor,  " The TeensyROM reboots to do it.", ChrReturn
+   !tx 0
+
+MsgConfirmUninstall:
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Uninstall extension host ", ChrRvsOff, ChrReturn, ChrReturn
+   !tx 0
+MsgConfirmPrompt:
+   ;No leading returns: the caller places this with SetCursor, because where the
+   ;host line above it stops is not fixed.
+   !tx EscC,EscOptionColor, " Remove it?  ", ChrRvsOn, "y", ChrRvsOff, " to remove, any other key to keep"
    !tx 0

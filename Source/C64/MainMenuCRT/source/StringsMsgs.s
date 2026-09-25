@@ -176,3 +176,4 @@ TblItemType: ;must match regItemTypes (rtNone, rtBin16k, etc) order!
    !tx 0, "8Lo"  ; rtBin8kLo     = 17  
    !tx 0, "128"  ; rtBinC128     = 18 
    !tx 0, "REU"  ; rtFileREU     = 19 
+   !tx 0, "THo"  ; rtFileTRH     = 20

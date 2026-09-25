@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "VMABI.h"
+#include "VMHostABI.h"
 
 // Why the last extension launch ended the way it did.
 //
@@ -13,11 +13,13 @@
 // Teensy's own CrashReport at the top of RAM2, which survives the soft reset.
 // The main image collects it on the way back up and shows it on the C64 menu.
 //
-// Registry-level failures never get this far: VmRegistry::tryLaunch runs in the
-// main image, where SendMsgPrintfln already works, and only reboots on success.
+// The host installer writes here too, from the main image. It has to reboot
+// whether it succeeded or not -- the C64 was held in reset and the FlexSPI LUT
+// re-initialises on the way back up -- so its outcome cannot be printed where
+// it happens either. Its codes start at 0x30.
 #ifndef MinimumBuild
 // Defined in FileParsers.ino, and declared the same way IOH_TeensyROM.c does.
-extern void SendMsgPrintfln(const char *Fmt, ...);
+extern bool SendMsgPrintfln(const char *Fmt, ...);
 #endif
 namespace VmFail {
 // One code per exit point, in the order they can be reached. Ok is written on
@@ -27,33 +29,49 @@ enum : uint8_t {
     // Stamped before the entry point is called, because after that the arena
     // it sits in belongs to the module. A fault inside vm_entry therefore
     // reads back as Ok rather than as Entered.
-    Ok            = 0x00,  // handed to the module; nothing refused it after
-    Entered       = 0x01,  // minimal is about to jump to the extension image
-    NoImage       = 0x02,  // ...but the top flash slot holds no valid image
-    Faulted       = 0x03,  // Ok, but the core recorded a fault (promoteFault)
-    SdInit        = 0x10,  // SD card would not initialise (detail = attempts)
-    LaunchRecord  = 0x11,  // /VMS/launch.vml missing, short or corrupt
-    Manifest      = 0x12,  // manifest.vmi unreadable or malformed
-    ManifestCrc   = 0x13,  // manifest changed since the main image preflighted it
-    ClientOpen    = 0x14,  // client cartridge would not open
-    ClientHeader  = 0x15,  // not a 16 KiB C64 EasyFlash cartridge
-    ClientBank    = 0x16,  // CHIP header or bank payload bad (detail = bank)
-    Descriptor    = 0x17,  // third CHIP is not a valid VMH1 descriptor
-    ClientCrc     = 0x18,  // client banks do not match the descriptor CRC
-    ModuleLoad    = 0x20,  // module image refused (detail = VMHost failure code)
+    Ok             = 0x00,  // handed to the module; nothing refused it after
+    Entered        = 0x01,  // minimal is about to jump to the extension image
+    NoImage        = 0x02,  // ...but the top flash slot holds no valid image
+    Faulted        = 0x03,  // Ok, but the core recorded a fault (promoteFault)
+    // Distinct from Ok, which also covers a module that never returned: this is
+    // the module asking to be finished with, through the exit service.
+    Exited         = 0x04,  // module called exit_to_menu (detail = its argument)
+    SdInit         = 0x10,  // SD card would not initialise (detail = attempts)
+    LaunchRecord   = 0x11,  // /VMS/launch.vml missing, short or corrupt
+    Manifest       = 0x12,  // manifest.vmi unreadable or malformed
+    ManifestCrc    = 0x13,  // manifest changed since the main image preflighted it
+    ClientOpen     = 0x14,  // client cartridge would not open
+    ClientHeader   = 0x15,  // not a 16 KiB C64 EasyFlash cartridge
+    ClientBank     = 0x16,  // CHIP header or bank payload bad (detail = bank)
+    Descriptor     = 0x17,  // third CHIP is not a valid VMH1 descriptor
+    ClientCrc      = 0x18,  // client banks do not match the descriptor CRC
+    ModuleLoad     = 0x20,  // module image refused (detail = VMHost failure code)
+    // The installer, which reboots on success as well as on failure. Installed
+    // is not Ok: captureHeld filters on code != Ok, and a success the menu
+    // never mentions looks from the couch like nothing happened.
+    Installed      = 0x30,  // host written and verified (detail = payload bytes)
+    InstallRead    = 0x31,  // package read failed mid-write (detail = offset)
+    InstallErase   = 0x32,  // a sector would not erase (detail = sector)
+    InstallVerify  = 0x33,  // slot did not read back as written (detail = CRC)
+    InstallProgram = 0x34,  // a page would not program (detail = offset)
+    InstallFailed  = 0x3f,  // refused for a reason the codes above do not name
+    // Removal, which reboots for the same reason an install does: clearing the
+    // tag takes a sector erase, and the menu runs from cartridge ROM this core
+    // stops answering while that erase holds interrupts off.
+    Removed        = 0x40,  // slot no longer reads as a host (detail = 0, or the
+                            // VmInstallStatus of the part of the erase that failed)
+    RemoveFailed   = 0x41,  // the tag would not clear (detail = VmInstallStatus)
+    // For a host that is not this one. Every code above describes something this
+    // repo's host does, so a third-party host finishing normally had nothing to
+    // stamp: Ok is filtered out by captureHeld, and Exited names a module it may
+    // not have. detail is the host's own, and the menu prints it verbatim.
+    HostReturned   = 0x50,  // a third-party host handed the machine back
 };
-// Padded to a cache line: the cache maintenance below works in 32-byte units,
-// and nothing else may share the line. crc comes last so that
-// vm_crc32(r, offsetof(Record, crc)) covers every other word, padding included.
-struct Record { uint32_t magic, code, detail; uint32_t reserved[4]; uint32_t crc; };
-static_assert(sizeof(Record)==32, "one cache line");
-enum : uint32_t { Magic = 0x3146564du };  // 'MVF1'
-// Fixed, not derived from the arena: profile 0 lends the guest all of RAM2, so
-// the record has to sit at one address whatever the profile. A guest that
-// overwrites it fails the magic/CRC gate in take() and reads as no record.
-static constexpr uint32_t base = 0x2027FF60u;
-static_assert(base % 32 == 0, "a cache line of its own");
-static_assert(base+sizeof(Record) == 0x2027FF80u, "directly below Teensy's CrashReport");
+// Layout, magic and address are the published host contract (VMHostABI.h), so
+// that a third-party host writes a record this image can read.
+using Record = VmFailRecord;
+enum : uint32_t { Magic = VM_FAIL_MAGIC };
+static constexpr uint32_t base = VM_FAIL_BASE;
 
 #if defined(__arm__)
 static inline Record *slot() { return reinterpret_cast<Record *>(base); }
@@ -69,14 +87,11 @@ static inline Record *slot() { return &hostSlot; }
 // core does for its own crash report in startup.c.
 static inline void set(uint8_t code, uint32_t detail = 0) {
     Record *r = slot();
-    *r = Record{ Magic, code, detail, {}, 0 };
-    r->crc = vm_crc32(r, offsetof(Record, crc));
+    vm_fail_fill(*r, code, detail);
     arm_dcache_flush_delete(r, sizeof *r);
 }
 
-static inline bool intact(const Record *r) {
-    return r->magic == Magic && r->crc == vm_crc32(r, offsetof(Record, crc));
-}
+static inline bool intact(const Record *r) { return vm_fail_intact(r); }
 
 // Reads the record and clears it, so a stale reason cannot be reported twice.
 static inline bool take(Record &out) {
@@ -103,21 +118,31 @@ static inline void promoteFault(bool faulted) {
 // Short enough for the C64's message window.
 static inline const char *describe(uint8_t code) {
     switch (code) {
-        case Ok:           return "handed off to client";
-        case Entered:      return "image did not start";
-        case NoImage:      return "no extension image installed";
-        case Faulted:      return "extension faulted";
-        case SdInit:       return "SD card init failed";
-        case LaunchRecord: return "launch record unreadable";
-        case Manifest:     return "manifest unreadable";
-        case ManifestCrc:  return "manifest changed";
-        case ClientOpen:   return "client CRT missing";
-        case ClientHeader: return "client CRT header bad";
-        case ClientBank:   return "client CRT bank bad";
-        case Descriptor:   return "client descriptor bad";
-        case ClientCrc:    return "client CRC mismatch";
-        case ModuleLoad:   return "module refused";
-        default:           return "unknown";
+        case Ok:             return "handed off to client";
+        case Exited:         return "module exited";
+        case Entered:        return "image did not start";
+        case NoImage:        return "no extension image installed";
+        case Faulted:        return "extension faulted";
+        case SdInit:         return "SD card init failed";
+        case LaunchRecord:   return "launch record unreadable";
+        case Manifest:       return "manifest unreadable";
+        case ManifestCrc:    return "manifest changed";
+        case ClientOpen:     return "client CRT missing";
+        case ClientHeader:   return "client CRT header bad";
+        case ClientBank:     return "client CRT bank bad";
+        case Descriptor:     return "client descriptor bad";
+        case ClientCrc:      return "client CRC mismatch";
+        case ModuleLoad:     return "module refused";
+        case Installed:      return "extension host installed";
+        case InstallRead:    return "host package read failed";
+        case InstallErase:   return "host install erase failed";
+        case InstallVerify:  return "host install verify failed";
+        case InstallProgram: return "host install write failed";
+        case InstallFailed:  return "host install failed";
+        case Removed:        return "extension host removed";
+        case RemoveFailed:   return "host removal failed";
+        case HostReturned:   return "extension host returned";
+        default:             return "unknown";
     }
 }
 

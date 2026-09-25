@@ -29,12 +29,9 @@ import time
 from c64 import KEYBUF, KEYCOUNT, PETSCII_Y, screen_rows
 from hexfile import UnsupportedRecord, build_stamp
 from protocol import FW_FULL, IMAGES
-from trlink import Link, neighbours, reconnect
+from trlink import Link, answering_board, neighbours
 
 CONFIRM_TIMEOUT, UPDATE_TIMEOUT, REBOOT_TIMEOUT = 30, 180, 90
-# One TR+ in an original C64, one sample: the port was down 1.34s, and the main
-# image gave its first clean firmware-check answer 5.37s after it came back.
-BOOT_WINDOW = 20
 MAIN_IMAGE = IMAGES[FW_FULL]
 SILENT = 'silent -- nothing answered the firmware check'
 
@@ -49,26 +46,6 @@ def wanted_stamp(path):
     if not stamp:
         return None, 'no single build stamp in the main image'
     return f'{stamp[0]}, {stamp[1]}', ''
-
-
-def answering_board(deadline, port, known):
-    """A (Link, image) for the rebooted board, with image None when nothing
-    answered within BOOT_WINDOW, or (None, None) when the port never came back.
-    `port` is the node the board was last talking on, which reconnect()
-    prefers, and `known` the nodes that were beside it before the reboot. The
-    port can drop a second time as the main image renames its USB device, so a
-    drop in the boot window means going back for the name it came up under."""
-    while time.time() < deadline:
-        tr = reconnect(timeout=deadline - time.time(), port=port, known=known)
-        if tr is None:
-            return None, None
-        print('--- boot output ---')
-        try:
-            return tr, tr.await_image(min(time.time() + BOOT_WINDOW, deadline))
-        except OSError:
-            port = tr.port
-            tr.close()
-    return None, None
 
 
 if len(sys.argv) < 2:
@@ -97,7 +74,10 @@ with Link() as tr:
             rows = screen_rows(tr.screen())
         except SystemExit:
             rows = []
-        if 'Y/N' in ''.join(rows):
+        # Case-folded: which case these glyphs carry depends on where the VIC is
+        # pointed, and the updater is a launched program that need not be in the
+        # charset the menu left behind. 'Y/N' and 'y/n' are the same prompt.
+        if 'y/n' in ''.join(rows).lower():
             print('prompt is up; answering Y')
             tr.poke(KEYBUF, [PETSCII_Y])
             tr.poke(KEYCOUNT, [1])

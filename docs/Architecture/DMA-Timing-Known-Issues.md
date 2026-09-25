@@ -49,7 +49,7 @@ Phi2 check in `DataPortWriteWaitDMA()` was taken out on purpose (comment:
 cause early exit"); a per-iteration `GP6_Phi2` read this early/tight could
 cut the hold *short* on a false read, trading one corruption mode for another.
 
-**Next step:** scope it. Only one call site (`DMAControl.ino:93`, inside
+**Next step:** scope it. Only one call site (`DMAControl.ino`, inside
 `DMAByte()`'s write branch), so no per-site ambiguity. Data bus alone isn't
 enough to read on a scope — persistence-mode capture just shows a noisy band
 (every transaction overlaid, DMA and non-DMA indistinguishable). Bracket the
@@ -72,11 +72,11 @@ overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
 `DataPortWriteWaitDMA()` have been switched over so far. Eight live call sites
 still use the coarser `WaitUntil_nS()`:
 
-- `DMAControl.ino:77` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
+- `DMAControl.ino` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
   DMA-assert path
-- `Common_Defs.h:435,457` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
+- `Common_Defs.h:482,504` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
   read/write helpers)
 - `IOH_REU.c:178` — `nS_DMAAssert`
 
@@ -648,7 +648,7 @@ flat noise. But mapping past 500 in finer steps found zero margin: te505 already
 usable improvement. The failure direction flips past te500 too (writing `$00` becomes the
 dominant failure, vs. writing `$FF` for every other result all session) — a qualitatively
 different symptom. This matches `nS_DMASetup`'s own firmware definition
-(`Common_Defs.h:379`, "delay from Phi2 falling to RW/Addr setup, just before rising edge")
+(`Common_Defs.h`, "delay from Phi2 falling to RW/Addr setup, just before rising edge")
 and a similar collapse already documented in that file's comments from an entirely
 different board/session (380 collapses, 440-450 clean, 465+ collapses) — strong evidence
 this is a genuine Phi2-low-phase-boundary effect, present identically on LS245 (which

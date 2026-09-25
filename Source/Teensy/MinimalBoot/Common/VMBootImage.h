@@ -1,43 +1,57 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-#include "VMABI.h"
+#include "VMHostABI.h"
 
-// base/limit must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs, which partitions
-// the combined hex -- tools/verify-extensions.mjs compares the two. The ordinary
-// images keep their upstream addresses. Only the extension image uses the
-// module-compatible RAM map.
+// The extension host's flash slot, as the ordinary images see it. The geometry
+// and the validity predicate are the published host contract (VMHostABI.h);
+// this adds the reads against real flash, the one way to render a descriptor's
+// name for a message, and the buffer that stands in for the slot on host
+// conformance builds.
+//
+// The ordinary images keep their upstream addresses. Only the extension image
+// uses the module-compatible RAM map.
 namespace VmBootImage {
-static constexpr uint32_t base = 0x60280000u;
-static constexpr uint32_t limit = 0x602e0000u;
+static constexpr uint32_t base = VM_HOST_SLOT_BASE;
+static constexpr uint32_t limit = VM_HOST_SLOT_LIMIT;
 
-// In the 0xFF fill between the FlexSPI config block and the image vector
-// table. extensionLinkerScript() in tools/lib/extension-image.mjs places
-// .vmhostid here; tools/verify-extensions.mjs compares the two.
-static constexpr uint32_t idOffset = 0x800u;
+static constexpr uint32_t idOffset = VM_HOST_ID_OFFSET;
 
 #if defined(__arm__)
 static inline const uint8_t *window() { return reinterpret_cast<const uint8_t *>(base); }
 #else
 // Host conformance builds have no flash behind `base`, so the slot they inspect
-// is an ordinary buffer, which install() below fills.
-alignas(uint32_t) inline uint8_t hostWindow[0x1028];
+// is an ordinary buffer, which install() below fills. Sized to the whole slot,
+// so it can stand in for the region an installer writes.
+alignas(uint32_t) inline uint8_t hostWindow[VM_HOST_SLOT_BYTES];
 static inline const uint8_t *window() { return hostWindow; }
 #endif
 
 static inline bool valid(uint32_t flashMagic, uint32_t vectorMagic,
                          uint32_t entry, uint32_t bootBase, uint32_t imageBytes) {
-    const uint32_t address = entry & ~1u;
-    return flashMagic == 0x42464346u && vectorMagic == 0x432000d1u &&
-           (entry & 1u) && address >= base + 0x1000u && address <= base + 0x3000u &&
-           bootBase == base && imageBytes > 0x1000u && imageBytes <= limit - base;
+    return vm_host_slot_valid(flashMagic, vectorMagic, entry, bootBase, imageBytes);
 }
 static inline bool installed() {
     const auto flash = reinterpret_cast<const volatile uint32_t *>(window());
     // BootData follows the eight-word image vector table.
     return valid(flash[0], flash[0x1000 / 4], flash[0x1004 / 4],
                  flash[0x1020 / 4], flash[0x1024 / 4]);
+}
+
+// True when every byte of the slot is erased. Not the same question as !installed():
+// an install that failed part way, a verify failure it un-committed, or a power cut
+// during either leaves bytes behind a slot that is no host. This firmware does not
+// mind them, but firmware without the extension loader sizes its update buffer by
+// scanning down from the top of flash for the first programmed word, and the slot is
+// the top of flash -- so uninstall clears whatever is here, not only a host.
+static inline bool blank() {
+    const auto flash = reinterpret_cast<const volatile uint32_t *>(window());
+    for (uint32_t i = 0; i < VM_HOST_SLOT_BYTES / 4; i++) {
+        if (flash[i] != 0xffffffffu) return false;
+    }
+    return true;
 }
 
 // False only when the slot holds no descriptor at all: a host built before it
@@ -51,7 +65,118 @@ static inline bool identity(VmHostId &out) {
     return true;
 }
 
+// The name a host message shows, for every message that shows one -- the install and
+// removal notices, the menu's host line and both launch refusals all come through here,
+// because copies of it are how the buffer sizes drifted apart in the first place, and
+// because a filter is only worth having where nothing can go round it.
+//
+// Takes the array rather than a pointer so that rewriting this as a `const char *`
+// fails to compile: `sizeof` a pointer is 4, which would quietly size nameBytes below
+// from the field alone and restore the char[13] that a strcpy of the placeholder used
+// to overrun by three.
+static constexpr char noDescriptor[] = "(no descriptor)";
+static constexpr char unnamedHost[] = "(unnamed)";
+template<unsigned N> static constexpr unsigned literalBytes(const char (&)[N]) { return N; }
+static constexpr unsigned largest(unsigned a, unsigned b) { return a > b ? a : b; }
+
+// Sized for whichever source is longest, because they are not the same length:
+// VmHostId::name is a fixed 12 bytes and need not be terminated, while the placeholders
+// are 15 and 9. A buffer sized from the field alone -- the obvious `sizeof id.name + 1`
+// -- is three bytes short of the longest.
+//
+// Every source that exists goes through largest(), but nothing makes the next one: a
+// placeholder added to displayName and not added here leaves the constant behind, and
+// the only thing that catches it is the screen. It truncates rather than overruns, but
+// not by one mechanism: the two placeholder branches go through snprintf, bounded by the
+// caller's size, while a real name goes through the loop below and is bounded by its own
+// `n + 1 < bytes`. That loop is the path nearly every host takes, so it is the one to
+// check before assuming a write here is bounded. Either way the failure is a name that
+// comes up short, not the char[13] strcpy this replaced.
+static constexpr unsigned nameBytes =
+    largest(largest(sizeof(VmHostId::name) + 1, literalBytes(noDescriptor)),
+            literalBytes(unnamedHost));
+
+// The descriptor's twelve bytes are third-party data: vm_host_scan checks the magic, the
+// ABI, the services, both CRCs and the boot words, and identity() checks only the magic,
+// so nothing upstream constrains their content. They are printed to a C64, which executes
+// control codes rather than drawing them -- and the removal notice they appear in is the
+// one carrying "do not power off" across a 45-second erase, so a name holding $93 (clear
+// screen) or $0d (return) takes that warning off the screen.
+//
+// The control ranges are $00-$1f and $80-$9f. IOH_Swiftlink.c settles it: all nineteen
+// control codes it names fall inside them -- return $0d, the charset pair $0e/$8e,
+// reverse $12/$92, clear $93, cursor $91 and its twelve colours -- and the only two it
+// names outside them are glyphs, space $20 and horizBar $60. So everything outside the
+// two ranges draws, including the graphics blocks a host author may have picked on
+// purpose. Judging this by isprint() instead would have cut $60-$7f and $a0-$ff, which
+// are those blocks.
+//
+// $22 is the exception that makes "draws" the wrong question. It draws, and it also
+// toggles the screen editor's quote mode ($d4) on its way through CHROUT; in quote mode
+// the *next* control code is drawn instead of executed. RETURN is what clears the flag,
+// and MakeExtHostStr ends its row without one on purpose (StatusFunctions.c), so an odd
+// number of quotes in a name outlives the row it was printed on. The next control code
+// after it is PrintBanner's ChrClear when the user presses `u` on the extensions page
+// (StringFunctions.asm MsgBanner1), which then draws as a glyph instead of clearing --
+// and the uninstall confirmation lands on top of the page it should have replaced, at
+// the moment it is asking whether to erase the slot. Same outcome as a $93 in the name,
+// reached one byte later, so it is the same class rather than a second one.
+//
+// tools/lib/c64-screen.mjs models the same rule for the C64 sources: a quote flips
+// `quoted`, and control codes are executed only `&& !quoted`.
+static constexpr unsigned char nameByteQuote = 0x22;
+
+// True when a byte can be handed to CHROUT without changing what a later byte does.
+// Deliberately not called "draws": $22 draws and is still not safe.
+static inline bool nameByteSafe(unsigned char c) {
+    return !(c < 0x20 || (c >= 0x80 && c <= 0x9f) || c == nameByteQuote);
+}
+
+// $20 and $a0 are the two blanks, space and shifted space. A name of nothing but these
+// passes nameByteSafe byte for byte and still reaches the screen as an empty row, which
+// during an erase is the same failure as a cleared one: nothing left to report.
+static inline bool nameByteBlank(unsigned char c) { return c == 0x20 || c == 0xa0; }
+
+// $3f, which draws in every charset. Substituted for a byte that would not draw.
+static constexpr char nameSubstitute = '?';
+
+// `bytes` is the caller's buffer, which is nameBytes wide if it wants any source whole;
+// every write is bounded by it, so a later edit to any source truncates rather than
+// running off the end. A byte that would not draw is substituted rather than dropped, so
+// a name that is entirely control codes still renders twelve visible characters someone
+// can read back and report -- dropping them would leave a blank where the host's identity
+// belongs, which is the failure this is here to prevent. The loop stops at the field's
+// first NUL and reads no more than its twelve bytes, which is what handles a name filling
+// the field with no terminator. A null `id` is identity() saying no: a host built before
+// the descriptor existed, whose name cannot be read rather than being blank.
+//
+// `named` is decided over the whole field and the write is bounded separately, because
+// they answer different questions: whether this descriptor names anything is a property
+// of the twelve bytes, while how much of it fits is a property of the caller's buffer.
+// Deciding both in one bounded loop makes a narrow buffer able to turn a host named
+// "   TR" into "(unnamed)" -- not a shortened name but a different one, and "(unnamed)"
+// mid-erase is the answer this function exists to keep honest. Every caller passes
+// nameBytes today, so that is a trap for the next one rather than a live bug.
+static inline void displayName(char *out, size_t bytes, const VmHostId *id) {
+    if (!bytes) return;
+    if (!id) { snprintf(out, bytes, "%s", noDescriptor); return; }
+
+    size_t n = 0;
+    bool named = false;
+    for (size_t i = 0; i < sizeof id->name; i++) {
+        const unsigned char c = (unsigned char)id->name[i];
+        if (!c) break;
+        if (!nameByteBlank(c)) named = true;
+        if (n + 1 < bytes) out[n++] = nameByteSafe(c) ? (char)c : nameSubstitute;
+    }
+    out[n] = 0;
+    if (!named) snprintf(out, bytes, "%s", unnamedHost);
+}
+
 #if !defined(__arm__)
+// The slot as erased flash reads, which the zero-filled buffer is not.
+inline void erase() { memset(hostWindow, 0xff, sizeof hostWindow); }
+
 // Writes what installed() and identity() read, so the layout stays beside the
 // code that reads it rather than in each test.
 inline void installWithoutDescriptor() {
@@ -66,9 +191,10 @@ inline void installWithoutDescriptor() {
     memset(hostWindow + idOffset, 0xff, sizeof(VmHostId));
 }
 
-inline void install(uint32_t services, uint32_t abi = VM_ABI) {
+inline void install(uint32_t services, uint32_t abi = VM_ABI, const char *name = "TeensyROM") {
     installWithoutDescriptor();
-    const VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), "TeensyROM", 0 };
+    VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), {}, 0 };
+    snprintf(id.name, sizeof id.name, "%s", name);
     memcpy(hostWindow + idOffset, &id, sizeof id);
 }
 #endif

@@ -6,9 +6,29 @@ sound and input. The firmware in this repository is the **loader**: it finds
 packages, validates them, reserves the memory, and carries bytes between the
 module and its C64 client. It knows nothing about what any extension does.
 
-This document is the whole contract. A module needs
-[`VMABI.h`](../../Source/Teensy/MinimalBoot/Common/VMABI.h) and nothing else
-from this repository to build.
+A module runs under an extension host, and no firmware carries one. Install
+the stock host before launching anything: `npm run build:tr-plus` writes it as
+`build/firmware/TeensyROM+_<ver>_VMBoot.TRH`, and every CI run keeps one in its
+`firmware` artifact. Copy it to the card and select it in the menu, or push it
+over USB with `tools/bench/hostinstall.py`. Without one, a launch is refused
+with `No extension host installed`.
+
+This document is the whole contract. A module builds against three files from
+this repository, all of them in [`vm/abi/`](.):
+
+- [`vm_abi.h`](vm_abi.h) — the types and constants, a shim over
+  [`VMABI.h`](../../Source/Teensy/MinimalBoot/Common/VMABI.h), which is the
+  header the firmware itself compiles and so the one that cannot drift from it.
+- [`module.ld`](module.ld) — the linker script. It places `.entry` first, sets
+  `ENTRY(vm_entry)`, and fixes the code and data windows to the addresses the
+  loader validates, so an image linked without it is refused rather than
+  mislinked.
+- [`vm_runtime.c`](vm_runtime.c) — weak `memset`, `memcpy`, `memmove`,
+  `memcmp`, `strlen` and `strcmp`. A freestanding module has no libc, and GCC
+  emits calls to these on its own for code that never names them — zeroing a
+  struct is a `memset`. Define your own to override any of them.
+
+Nothing else from this repository is needed, and nothing outside it is.
 
 > **Status.** The formats and the base profile described here are frozen; the
 > version marker is `VM_ABI = 2`. The launch path, the module loader and the
@@ -49,28 +69,87 @@ service quietly absent.
 That refusal is the negotiation. Build a capability behind its own bit, and on a
 host that lacks it, fall back and retry without it. One binary, two hosts.
 
-| Bit | Name | Provided by the loader |
-|----:|------|------------------------|
-| 1 | `VM_SERVICE_FILES` | yes |
-| 2 | `VM_SERVICE_CLOCK` | yes |
-| 4 | `VM_SERVICE_PACKETS` | yes |
-| 8 | `VM_SERVICE_WRITE` | yes |
-| 16 | `VM_SERVICE_GUEST_RAM` | yes |
-| 128 | `VM_SERVICE_RAM2_RO` | yes (memory profile 1) |
-| 32 | video transport | **reserved** |
-| 64 | indexed video | **reserved** |
-| 256 | indexed raster | **reserved** |
-| 512 | RAM1 auxiliary spans | **reserved** |
+### The registry
 
-The reserved bits are assigned to known out-of-tree extensions. The loader
-refuses them, but **no future loader release will reuse those numbers for
-anything else** — so an extension can define its own host tail and its own
-service bits without ever colliding with a TeensyROM change.
+Bits are handed out one host at a time, so two hosts can add callbacks without
+ever meaning different things by the same number. An assignment binds the
+number for good. It says nothing about who implements it.
+
+| Bit | Name | Assigned to | This loader |
+|----:|------|-------------|-------------|
+| 1 | `VM_SERVICE_FILES` | base profile | yes |
+| 2 | `VM_SERVICE_CLOCK` | base profile | yes |
+| 4 | `VM_SERVICE_PACKETS` | base profile | yes |
+| 8 | `VM_SERVICE_WRITE` | base profile | yes |
+| 16 | `VM_SERVICE_GUEST_RAM` | base profile | yes |
+| 128 | `VM_SERVICE_RAM2_RO` | this loader | yes (memory profile 1) |
+| 32 | video transport | Mean Hamster Software | no |
+| 64 | indexed video | Mean Hamster Software | no |
+| 256 | indexed raster | Mean Hamster Software | no |
+| 512 | RAM1 auxiliary spans | Mean Hamster Software | no |
+| 1024 | speech | Mean Hamster Software | no |
+| 2048 | SD root | Mean Hamster Software | no |
+| 4096 | desktop | Mean Hamster Software | no |
+| 8192 | firmware catalogue | Mean Hamster Software | no |
+| 16384 | `VM_SERVICE_EXIT` | this loader | yes |
+| 32768 | — | unassigned, on request | no |
+| 65536 | examples and conformance | this repository | no |
+| 1<<17 .. 1<<31 | — | unassigned | no |
+
+To claim a bit, open an issue naming the host and the callback it adds.
+
+An image requiring a bit this loader does not provide is **well formed**. The
+validator judges structure only; the refusal comes from a host, and names the
+bit — `TeensyROM host lacks service $10000`, not "failed validation". A host
+installed before it published a descriptor cannot be asked in advance, so it
+refuses after the reboot instead, as a `$20` record with detail `$11`
+(see [§7](#7-when-a-launch-fails)).
+
+So `tools/build-extension.mjs --services <mask>` will package a module asking
+for someone else's bit. It refuses only an *unassigned* number, which
+`--allow-unassigned-services` overrides while a claim is pending.
 
 Two rules keep that promise workable:
 
 1. **`VmHost` only ever grows at the tail.** Never insert, never reorder.
 2. **Capability, then fallback.** If a host rejects a bit, retry without it.
+
+### Tail extensions
+
+A bit that adds a callback adds it past the end of `VmHost`, in a struct whose
+first member *is* a `VmHost`. `VM_SERVICE_EXIT` is the first one:
+
+```c
+struct VmHostExit {
+    VmHost base;
+    void (*exit_to_menu)(uint32_t status);   // does not return
+};
+```
+
+The entry point is still handed a `VmHost *`. A module that asked for the bit
+casts up to reach the tail, and checks **both** halves before it does:
+
+```c
+if (host->bytes >= VM_HOST_EXIT_BYTES && (host->services & VM_SERVICE_EXIT))
+    ((const VmHostExit *)host)->exit_to_menu(0);
+```
+
+Both, because the two are independent: a host may grow its struct for one bit
+while lending none of the others, and a host may publish a bit it implements
+through some other means. `bytes` says how far the struct can be read; the
+service bit says whether the callback behind it is yours to call.
+
+Requiring the bit means the loader refuses the image outright where it is
+absent, so the check above cannot fail on this loader — it is written for the
+module that treats exit as optional and falls back to running until reset.
+
+The tail is a chain, not a set of alternatives. The *second* extension composes
+on `VmHostExit` — `struct VmHostNext { VmHostExit base; ... }` — and not on a
+bare `VmHost`, which would put its callback at offset 76, the offset
+`exit_to_menu` already occupies. Two extensions written that way cannot both
+exist in one host, and a module that checked `bytes` would be told the pointer
+was long enough to read the wrong function. Each new tail extends the longest
+one there is, and `VM_HOST_*_BYTES` grows with it.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
@@ -108,7 +187,7 @@ END
 Line 3 is a comma-separated list of file extensions this package claims, at most
 **7 characters in total** (`gb,gbc` fits). Extensions the stock menu owns are
 refused: `prg crt hex p00 sid kla koa ocp pic art aas hpi txt nfo md seq d64 d71
-d81 reu`.
+d81 reu trh`.
 
 ### engine.mvm — the MVM1 image
 
@@ -203,8 +282,10 @@ Then:
 6. The extension image loads the client cartridge into RAM as EasyFlash banks,
    loads the module, and calls its entry point.
 
-The extension image lives in its own flash slot at `0x60280000..0x602e0000`, so
-the main and minimal firmware images keep their own addresses.
+The extension image lives in its own flash slot at `0x60760000..0x607c0000`, at
+the top of flash just below the EEPROM emulation, so the main and minimal
+firmware images keep their own addresses and a firmware update leaves the
+installed host in place.
 
 ## 5. The runtime
 
@@ -389,6 +470,7 @@ writes no report, so it stays `$00` and stays silent.
 | `$01` | minimal jumped to the extension image and it did not start |
 | `$02` | the top flash slot holds no valid image |
 | `$03` | `$00` rewritten because the core reported a fault: the entry point crashed |
+| `$04` | the module called `exit_to_menu` (detail: its argument) |
 | `$10` | SD card would not initialise (detail: attempts) |
 | `$11` | `launch.vml` missing, short or corrupt |
 | `$12` | manifest unreadable or malformed |
@@ -399,6 +481,28 @@ writes no report, so it stays `$00` and stays silent.
 | `$17` | third CHIP is not a valid `VMH1` descriptor |
 | `$18` | client banks do not match the descriptor CRC |
 | `$20` | module image refused (detail: the host's failure code) |
+| `$30` | host written and verified (detail: payload bytes) |
+| `$31` | package read failed mid-write (detail: offset) |
+| `$32` | a slot sector would not erase (detail: sector) |
+| `$33` | the slot did not read back as written (detail: CRC) |
+| `$34` | a page would not program (detail: offset) |
+| `$3f` | install refused for a reason the codes above do not name |
+| `$40` | the slot no longer reads as a host: removed (detail: 0, or `VmInstallStatus` if part of the erase failed) |
+| `$41` | the tag would not clear (detail: `VmInstallStatus`) |
+
+The record is how installing and removing a host report as well, not just
+launching one. Both rewrite flash from the main image and reboot to do it, so
+neither can print its own outcome; `$30`..`$41` are what the board says on the
+way back up. `$40` is a question about the slot rather than about the erase —
+the tag is cleared before any sector goes, so a sector erase that fails still
+leaves a slot that is no longer a host, and the board reports what the next boot
+will find rather than what the last operation returned. Removal erases the whole
+slot, not only the tag: firmware without the extension loader does not reserve
+the slot, and sizes its update buffer from the top of flash down to the first
+programmed byte, so a payload left there would stop it updating itself. For
+the same reason removal runs for any slot that is not blank, not only for one
+holding a host: an install that failed part way leaves bytes that are no host,
+and clearing them reports `$40` like any other removal.
 
 The failure code a client reads from `$DFFB` is separate, and is the same value
 the record carries as its detail for `$20`: `$11` the image would not open, has
@@ -460,9 +564,11 @@ refusals as the target. Compile your module for the development machine and run
 it against that host to debug it, then cross-compile the identical source.
 
 `npm run verify:extensions` runs the whole loader suite this way in a few
-seconds: package format, file services, image validation, registry and
-preflight, menu-hook fall-through, failure reporting, and the reference module
-end to end.
+seconds: the published headers built with no path back into this repository,
+package format, file services, image validation, registry and preflight,
+menu-hook fall-through, loaded-listing invalidation, the packet scheduler,
+failure reporting, host-package installation under power loss, and the
+reference module end to end.
 
 A pass there says the formats and the contract hold. It says nothing about
 timing, the bus, or the C64 side — that needs the hardware.
@@ -472,9 +578,34 @@ timing, the bus, or the C64 side — that needs the hardware.
 On a TeensyROM+ with the reference extension, from the SD card through to the
 C64 screen:
 
+Strings quoted below are the bytes the firmware formats, and they are also what
+the screen shows -- quote and capture compare directly. Two stages swap letter
+case and cancel: the firmware converts ASCII to PETSCII as the C64 reads each
+byte out of `rwRegSerialString` (`ToPETSCII`, `IOH_TeensyROM.c:675`, table at
+`:107` -- `'A'` goes to 97 and `'a'` to 65), and CHROUT (`SendChar` = `$ffd2`)
+stores the screen code for that PETSCII byte in the charset the menu selects
+(`$d018` = `$17`, `MainMenu.asm`'s `TextScreenMemColor`), where the unshifted
+letters read lower case. Run the pair and `TeensyROM  ABI 2  services $409f` is
+on the screen as `TeensyROM  ABI 2  services $409f`; a dump through
+`tools/bench/c64.py`'s `petscii_row` reads it the same way. Leave either stage
+out of the model and it comes out `tEENSYrom  abi 2  SERVICES $409F`, which is
+the shape to distrust: it means one half of the pair was missed. Nothing tests
+this round trip, so check it against the source rather than against a previous
+reading of this paragraph. Matching case-folded, as `hostops.Outcome.said` does,
+still costs nothing and covers a launched program that has switched charset --
+see the Limits note in `tools/bench/README.md`.
+
+The slot moved to `0x60760000`, and removal came to erase all of it, after most
+of these rows were run. The rows for installing and removing over USB, the
+blank-slot refusal, and the page naming the stock host were run again after
+both changes, along with a firmware update that left the installed host in
+place. The rest were run with the slot at `0x60280000` and have not been
+repeated; nothing on their paths changed apart from the slot address.
+
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
+| The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
 | Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
@@ -483,16 +614,51 @@ C64 screen:
 | Failure record written at `0x2027ff60` and collected by the main image | yes |
 | A guest fault under profile 0 collected as `$03` | yes — `udf` inside `vm_entry`, reproduced twice |
 | A guest write across the top 128 bytes — the `CrashReport` span, not the 32-byte record below it — then a normal return | yes — collected as `$00`, so the scribble was not promoted to `$03` |
-| The menu rendering a collected failure record on the C64 screen | no — the three record rows above were read over the main image's USB serial |
+| The menu rendering a collected *crash* record on the C64 screen | no — the three record rows above were read over the main image's USB serial. The install and removal records ($30/$40) take the same `VmFail::report()` path to the screen; this row is about the crash records only. |
 | Input records (`$DFF4` = 3): joystick fire in the reference client reaches the module, which recolours its text | yes |
 | `quiet` and resume (`$DFF4` = 4 / 1) | **no** |
 | The client-side `extension failed` path | no |
 | Memory profile 1 (write-protected constants) | no |
 | PAL timing | no |
+| Installing a host from a `.TRH` over USB, and the `$30` record it reports | yes |
+| Removing an installed host over USB, and the `$40` record it reports | yes — detail `$0`, every sector erased |
+| A firmware update leaving the installed host in place | yes |
+| A remove with the slot blank declining without touching flash | yes |
+| A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
+| Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
+| The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
+| A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
+| A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is `VMRegistry.h:133` and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting nine ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
 
 Treat the rows marked **no** as untested rather than as working.
 
-A running extension is returned to the menu by the reset button, which the
-extension image services from `loop()`; `vm_entry` is called from `setup()`, so
-an entry point that never returns never reaches that service. The alternate
-button is not serviced while an extension runs.
+There are two ways out of a running extension, and only one of them has run on
+hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
+records `$04` and reboots into the menu. A module that did not is returned by
+the reset button, which the extension image services from `loop()`: `isrButton`
+(`ISRs.c`) only sets `BtnPressed`, and the reboot happens on the next pass of
+the loop. That works for a resident module, because `vm_entry` returned and the
+loop is running.
+
+It does not work for a module whose `vm_entry` never returns. `vm_entry` is
+called from `setup()`, by way of `VMHostBoot()` and `loadModule()`, so a module
+that hangs there hangs `setup()`: `loop()` is never reached, `BtnPressed` is set
+by the ISR and never acted on, and neither the menu button nor the C64 reset
+line brings the board back — both are wired to the same `isrButton`. The way
+out is to power the C64 off, which is also the board's only supply, since the
+Teensy's own 5V/USB connection is cut during assembly
+([`PCB/PCB_Assembly.md`](../../PCB/PCB_Assembly.md)). The alternate button is
+not serviced while an extension runs either: `isrSpecial` is left unattached in
+this image.
+
+Installing and removing a host are main-image work and need no hand on the
+board at all. `tools/bench/hostcycle.py` drives a whole round trip over USB.
+The menu path was driven from the bench by putting keys in the C64's own
+keyboard buffer over DMA (`Link.key()` in `tools/bench/trlink.py`), which is
+what the settings menu reads through KERNAL GETIN at `$FFE4`. Neither is a
+test-only path: `hostcycle.py` sends the same USB device-port token any host
+tool sends, and the menu run gives the firmware exactly what a person at the
+keyboard produces. Only the USB round trip is packaged as a script,
+though: nothing in `tools/bench` replays the menu sequence, so re-running
+that row means driving the keys again.

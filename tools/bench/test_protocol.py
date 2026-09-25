@@ -9,10 +9,14 @@ import pathlib
 import re
 import unittest
 
+import hostops
 import protocol
 from protocol import FIRMWARE_NAMES, from_board, to_board
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / 'Source' / 'Teensy'
+VMFAIL = SOURCE / 'MinimalBoot' / 'Common' / 'VMFail.h'
+# VmFail::describe()'s arms: `case Ok:  return "handed off to client";`
+DESCRIBE = re.compile(r'^\s*case\s+\w+:\s*return\s+"([^"]*)";', re.M)
 
 DEFINITIONS = (
     re.compile(r'^\s*#define\s+(\w+)\s+(0x[0-9A-Fa-f]+)\b', re.M),
@@ -57,6 +61,123 @@ class WireValues(unittest.TestCase):
                    for name, ours in FIRMWARE_NAMES.items()
                    if name in self.firmware and self.firmware[name] != {ours}}
         self.assertEqual(drifted, {})
+
+
+def firmware_phrases():
+    """Every string VmFail::describe() can return."""
+    return set(DESCRIBE.findall(VMFAIL.read_text(errors='replace')))
+
+
+def bench_phrases():
+    """{name: phrases} for every VmFail string hostops asserts on. Found by shape
+    rather than listed, so a new one is checked without being added here twice."""
+    found = {}
+    for name, value in vars(hostops).items():
+        if not name.isupper():
+            continue
+        if isinstance(value, str):
+            found[name] = (value,)
+        elif isinstance(value, tuple) and value and all(isinstance(v, str) for v in value):
+            found[name] = value
+    return found
+
+
+class FailPhrases(unittest.TestCase):
+    """The bench reads the VmFail record by matching describe()'s own words, so a
+    renamed string turns every assertion on it into a silent pass. hostops.py says
+    why the match is positive: after an install, a removal or a launch the failures
+    outnumber the successes, so an unrecognised record has to fail."""
+
+    def test_the_arms_this_reads_are_still_there_to_read(self):
+        # The control. Without it a describe() this regex stops matching leaves the
+        # test below comparing against an empty set, which passes for free.
+        phrases = firmware_phrases()
+        self.assertGreaterEqual(len(phrases), 20, f'{VMFAIL} parsed as {phrases}')
+        self.assertIn('handed off to client', phrases)
+
+    def test_every_phrase_we_assert_on_is_one_describe_can_return(self):
+        firmware = firmware_phrases()
+        drifted = {name: [p for p in phrases if p not in firmware]
+                   for name, phrases in bench_phrases().items()}
+        self.assertEqual({n: m for n, m in drifted.items() if m}, {},
+                         f'no longer returned by VmFail::describe() in {VMFAIL}')
+
+    def test_the_phrases_a_launch_may_end_on_are_the_three_we_expect(self):
+        # Pinned by name as well as by value: a code added to describe() that is a
+        # normal finish has to be added to FINISHED_NORMALLY by hand, and this is
+        # what makes that a decision rather than an omission.
+        self.assertEqual(hostops.FINISHED_NORMALLY,
+                         ('handed off to client', 'module exited',
+                          'extension host returned'))
+
+
+class LaunchOutcome(unittest.TestCase):
+    """hostops.finished_normally() is what decides exttest.py's exit status once the
+    main image has answered. A reboot is not the outcome: the extension image resets
+    back the same way whether the module finished or the loader gave up on it."""
+
+    BOOT = 'Extension boot: {} (code ${:02x}, detail $0)\n'
+
+    def normal(self, phrase):
+        return hostops.finished_normally(self.BOOT.format(phrase, 0))
+
+    def test_each_normal_finish_passes(self):
+        for phrase in hostops.FINISHED_NORMALLY:
+            with self.subTest(phrase=phrase):
+                self.assertTrue(self.normal(phrase))
+
+    def test_every_other_arm_of_describe_fails(self):
+        for phrase in sorted(firmware_phrases() - set(hostops.FINISHED_NORMALLY)):
+            with self.subTest(phrase=phrase):
+                self.assertFalse(self.normal(phrase))
+
+    def test_a_record_that_never_arrived_fails(self):
+        # The reason the match is positive. "Extension boot: no record" is what the
+        # main image prints when the slot held nothing readable, and a launch always
+        # leaves at least $01 -- so an absent record after one is a failure, not a
+        # quiet success.
+        self.assertFalse(hostops.finished_normally(
+            'Extension boot: no record ($00000000 at $2027ff60)\n'))
+        self.assertFalse(hostops.finished_normally(''))
+
+    def test_a_code_this_copy_has_never_heard_of_fails(self):
+        self.assertFalse(self.normal('unknown'))
+
+    def test_the_screen_half_matches_whatever_case_it_is_drawn_in(self):
+        # The record reaches the C64 too, through SendMsgPrintfln, and the case a
+        # glyph carries is a property of the screen rather than of the firmware.
+        self.assertTrue(hostops.finished_normally('Extension: MODULE EXITED ($04)'))
+        self.assertTrue(hostops.finished_normally('Extension: module exited ($04)'))
+
+
+class RemovalOutcome(unittest.TestCase):
+    """Outcome.removed_cleanly() is what hostuninstall.py and hostcycle.py pass a removal
+    on. $40 alone is not enough: a sector that would not erase still reports it, with
+    the erase failure as the detail."""
+
+    def outcome(self, boot='', screen=''):
+        return hostops.Outcome(True, boot, screen, 'main')
+
+    def test_detail_zero_passes_from_either_side(self):
+        self.assertTrue(self.outcome(
+            boot='Extension boot: extension host removed (code $40, detail $0)\n')
+            .removed_cleanly())
+        self.assertTrue(self.outcome(
+            screen='Extension: EXTENSION HOST REMOVED ($40)').removed_cleanly())
+
+    def test_a_removal_that_left_a_sector_fails_from_either_side(self):
+        # $d is VmInstallStatus::EraseFailed.
+        self.assertFalse(self.outcome(
+            boot='Extension boot: extension host removed (code $40, detail $d)\n')
+            .removed_cleanly())
+        self.assertFalse(self.outcome(
+            screen='Extension: extension host removed ($40/$d)').removed_cleanly())
+
+    def test_a_failed_removal_fails(self):
+        self.assertFalse(self.outcome(
+            boot='Extension boot: host removal failed (code $41, detail $e)\n')
+            .removed_cleanly())
+        self.assertFalse(self.outcome().removed_cleanly())
 
 
 class ByteOrder(unittest.TestCase):

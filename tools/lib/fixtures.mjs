@@ -8,15 +8,19 @@
 // format rather than a test-only imitation of it.
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildImage, buildManifest, buildClientCrt, CODE_BASE } from './extension.mjs';
+import { VM_BASE } from './hex.mjs';
+import { ABI, HOSTID_MAGIC, HOST_ID_OFFSET, HOST_SERVICES, buildHostPackage,
+         buildImage, buildManifest, buildClientCrt, BASE_SERVICES, CODE_BASE,
+         SERVICE_EXAMPLE } from './extension.mjs';
 
 export function packageFixture(root, {
   id = 'HELLO', extensions = 'hi', bank0 = Buffer.alloc(8192, 0x11), bank1 = Buffer.alloc(8192, 0x22),
+  requiredServices = BASE_SERVICES,
 } = {}) {
   const directory = path.join(root, 'VMS', id);
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(path.join(directory, 'engine.mvm'),
-    buildImage({ code: Buffer.from([0x70, 0x47]), entry: CODE_BASE | 1 }));
+    buildImage({ code: Buffer.from([0x70, 0x47]), entry: CODE_BASE | 1, requiredServices }));
   fs.writeFileSync(path.join(directory, 'manifest.vmi'), buildManifest({ id, extensions }));
   const client = buildClientCrt({ id, bank0, bank1 });
   fs.writeFileSync(path.join(directory, 'client.crt'), client);
@@ -25,9 +29,41 @@ export function packageFixture(root, {
   return root;
 }
 
-// Second package, so the tests can cover ambiguous and non-matching registries.
+// OTHER makes the registry ambiguous and non-matching; VENDOR requires
+// registry bit 16, which no host in these tests provides.
 export function registryFixture(root) {
   packageFixture(root);
   packageFixture(root, { id: 'OTHER', extensions: 'ot' });
+  packageFixture(root, { id: 'VENDOR', extensions: 'vn',
+                         requiredServices: BASE_SERVICES | SERVICE_EXAMPLE });
   return root;
+}
+
+// A minimal image that satisfies vm_host_slot_valid. The knobs are the ones
+// the packager's own unit tests vary; they live here so the image the native
+// installer test is fed and the image those tests corrupt are the same shape.
+export function hostImage({ bytes = 0x8000, declared = null, entry = VM_BASE + 0x2001,
+                            flashMagic = 0x42464346, abi = ABI, services = HOST_SERVICES,
+                            name = 'TestHost' } = {}) {
+  const image = Buffer.alloc(bytes, 0xa5);
+  const put = (offset, value) => image.writeUInt32LE(value >>> 0, offset);
+  put(0x0, flashMagic);
+  put(0x1000, 0x432000d1);
+  put(0x1004, entry);
+  put(0x1020, VM_BASE);
+  put(0x1024, declared ?? bytes);
+  put(HOST_ID_OFFSET, HOSTID_MAGIC);
+  put(HOST_ID_OFFSET + 4, abi);
+  put(HOST_ID_OFFSET + 8, services);
+  put(HOST_ID_OFFSET + 12, bytes);
+  image.fill(0, HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 32);
+  image.write(name, HOST_ID_OFFSET + 16, 'latin1');
+  return image;
+}
+
+// That image packaged as a .TRH on disk.
+export function hostPackageFixture(root, options = {}) {
+  const file = path.join(root, 'testhost.trh');
+  fs.writeFileSync(file, buildHostPackage({ image: hostImage(options) }));
+  return file;
 }

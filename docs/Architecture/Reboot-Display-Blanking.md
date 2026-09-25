@@ -1,10 +1,10 @@
 # Reboot-Time Screen Blanking
 
-`REBOOT` (`Common_Defs.h:492`) is a bare Cortex-M `SCB_AIRCR` software reset — a full MCU reset, GPIO/IOMUX included. The C64 keeps running on its own clock through the ~ms the Teensy takes to come back up, so a still-running C64 mid-fetch from cartridge space at that instant can see floating/indeterminate bus data. That's the source of "screen glitches on reboot."
+`REBOOT` (defined in `Common_Defs.h`) is a bare Cortex-M `SCB_AIRCR` software reset — a full MCU reset, GPIO/IOMUX included. The C64 keeps running on its own clock through the ~ms the Teensy takes to come back up, so a still-running C64 mid-fetch from cartridge space at that instant can see floating/indeterminate bus data. That's the source of "screen glitches on reboot."
 
 ## `RebootTR()`
 
-`RebootTR()` (`Common_Defs.h:497`, `do { SetResetAssert; REBOOT; } while(0)`) asserts the C64's own `/RESET` line before rebooting the Teensy, and is used at every real reboot site in the firmware — never call bare `REBOOT` directly. `do/while(0)`-wrapped because several call sites are unbraced (e.g. `if (x) REBOOT;`).
+`RebootTR()` (defined in `Common_Defs.h`, `do { SetResetAssert; REBOOT; } while(0)`) asserts the C64's own `/RESET` line before rebooting the Teensy, and is used at every real reboot site in the firmware — never call bare `REBOOT` directly. `do/while(0)`-wrapped because several call sites are unbraced (e.g. `if (x) REBOOT;`).
 
 Caveat: for the one case that's actually been hardware-tested against a reported glitch (below), this half turned out not to be load-bearing. It's kept anyway — harmless, and consistent across all call sites — but don't assume it's doing real work everywhere it's used just because it's present.
 

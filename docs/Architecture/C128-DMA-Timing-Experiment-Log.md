@@ -1065,7 +1065,7 @@ all session. A qualitatively different symptom, not a continuation of the same
 mechanism getting gradually worse.
 
 **Why this matters:** `nS_DMASetup` is defined in firmware
-(`Common_Defs.h:379`) as "delay from Phi2 falling to RW/Addr setup (just before
+(`Common_Defs.h`) as "delay from Phi2 falling to RW/Addr setup (just before
 rising edge)" — a value that by definition must complete before the next PHI2
 edge. `Common_Defs.h`'s own comments document a similar collapse from an entirely
 different board/session: *"380 collapses, 405-430 intermittent, 440-450 clean,
@@ -1129,7 +1129,7 @@ small-residual ballpark already characterized under the `te` sweep — `tw` isn'
 the driver of the everyday residual. `tw450` is a total, catastrophic collapse:
 37-56% bad across *every* pattern, including `$ff over $ff`, which had been
 perfectly clean every single time all session until now — a genuine hard wall,
-not a graded margin issue. This lines up almost exactly with `Common_Defs.h:387`'s
+not a graded margin issue. This lines up almost exactly with `Common_Defs.h`'s
 existing comment for the sibling (non-C128) constant: *"455+ overruns Phi2
 falling and collapses."* Good news for the current default (395): ~55ns of
 margin from that wall, unlike `te`'s knife-edge.
@@ -1138,7 +1138,7 @@ margin from that wall, unlike `te`'s knife-edge.
 
 | ty | `$ff over $00` | note |
 |---|---|---|
-| 280 | 241771 (94.5%) | catastrophic — matches `Common_Defs.h:384`'s "too soon = bad reads" comment exactly |
+| 280 | 241771 (94.5%) | catastrophic — matches `Common_Defs.h`'s "too soon = bad reads" comment exactly |
 | 320 | 1162 (0.45%) | |
 | 350 | 1183 (0.46%) | |
 | 375 (default) | 1062 (0.42%) | |

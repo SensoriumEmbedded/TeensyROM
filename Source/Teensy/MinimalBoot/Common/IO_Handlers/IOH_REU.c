@@ -66,8 +66,11 @@ stcIOHandlers IOHndlr_REU =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
-extern void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
-extern void CloseDMA();
+// Both return false when the bus stopped clocking mid-transfer.  The REU path ignores it:
+// its DMA is started by the C64 itself, so a bus that stops has taken the requester with
+// it and there is no one left to report to.
+extern bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
+extern bool CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 extern void EEPreadStr(uint16_t addr, char* buf);
 extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);

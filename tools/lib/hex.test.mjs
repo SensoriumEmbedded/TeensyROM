@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {combineHex,decodeHex,encodeHex,FLASH_BASE,MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
+import {combineHex,decodeHex,encodeHex,FLASH_BASE,FLASH_LIMIT,MAIN_BASE,VM_BASE,VM_LIMIT} from './hex.mjs';
 const image=(name,start,end)=>({name,start,end,text:encodeHex(new Map([[start,0x46],[start+1,0x43],[start+0x1010,0x23]]))});
-test('three disjoint images round-trip and leave stock updater staging space',()=>{
-  const images=[image('minimal',FLASH_BASE,MAIN_BASE),image('main',MAIN_BASE,VM_BASE),image('vm',VM_BASE,VM_LIMIT)];
-  const result=combineHex(images);assert.equal(decodeHex(result.hex).size,9);
-  assert.equal(result.regions.length,3);assert.ok(result.stagingBytes>result.imageSpan);
+test('two disjoint images round-trip and leave stock updater staging space',()=>{
+  const images=[image('minimal',FLASH_BASE,MAIN_BASE),image('main',MAIN_BASE,VM_BASE)];
+  const result=combineHex(images);assert.equal(decodeHex(result.hex).size,6);
+  assert.equal(result.regions.length,2);assert.ok(result.stagingBytes>result.imageSpan);
+});
+test('the extension slot is above everything a firmware hex may hold',()=>{
+  assert.equal(FLASH_LIMIT,VM_BASE);
+  assert.throws(()=>combineHex([image('minimal',FLASH_BASE,MAIN_BASE),image('vm',VM_BASE,VM_LIMIT)]),/staging/);
 });
 test('reject bad checksum, truncated image and data after EOF',()=>{
   const good=image('minimal',FLASH_BASE,MAIN_BASE).text;

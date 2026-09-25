@@ -40,7 +40,14 @@ stcIOHandlers IOHndlr_TeensyROM =
 int16_t SidSpeedAdjust = 0;
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
-volatile uint16_t StreamOffsetAddr, StringOffset = 0;
+//StreamOffsetAddr indexes XferImage/RAM_Image, both sized by uint32_t XferSize, and the
+//end-of-transfer tests are "++StreamOffsetAddr >= XferSize".  As a uint16_t it wrapped
+//before it could reach any XferSize >= 65536, so those tests never fired and the C64 was
+//never told the transfer had ended -- reachable with an ordinary >64KiB .txt/.seq, which
+//LoadFile admits up to RAM_ImageSize (128KiB).  StringOffset stays 16-bit: it indexes
+//strings bounded by MaxPathLength, and widening it would only cost DTCM.
+volatile uint32_t StreamOffsetAddr = 0;
+volatile uint16_t StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
 char SerialStringBuf[MaxPathLength+6] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
@@ -54,6 +61,49 @@ uint16_t NumItemsFull;  //Num Items in Current Menu
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
+
+//Both halves of a menu index come from the C64: the item byte it just wrote, and
+//rwRegPageNumber, which is stored raw.  Their product was never compared against
+//NumItemsFull, and page 0 makes it negative -- which this uint16_t turns into ~65500.
+//MenuSource[] elements carry two pointers, and one of the dereference sites is inside
+//isrPHI2, so an out-of-range index is a wild read, not a wrong menu entry.  Clamp where
+//the index is formed rather than at each use, and stay silent: ISR context cannot print.
+//Returning 0 is only safe because every loader leaves at least one item: DriveDirLoad.ino
+//substitutes an "<Empty>" entry when a directory scan finds none, and LoadDxxDirectory
+//(D64.ino) adds the up-directory entry before any early return, including its error
+//paths.  Those two are the invariant -- RedirectEmptyDriveDirMenu only covers
+//DriveDirMenu being NULL, which is a different condition.  If a future loader can leave
+//NumItemsFull at 0, the zero here becomes an out-of-range index and needs revisiting.
+//There is deliberately no NumItemsFull == 0 test below: with NumItemsFull 0 the third
+//term already catches every Idx >= 0 and the first catches every Idx < 0, so such a test
+//cannot change the result for any input, and returning 0 for an empty menu would be out
+//of range anyway.  The callers that cannot survive an empty menu guard themselves --
+//see Next/LastFileType in StatusFunctions.c.
+inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
+{
+   int32_t Idx = (int32_t)ItemOnPage + ((int32_t)IO1[rwRegPageNumber] - 1) * MaxItemsPerPage;
+   if (Idx < 0 || Idx >= (int32_t)NumItemsFull) return 0;
+   return (uint16_t)Idx;
+}
+
+//Clamping the index where it is formed is not the same as clamping it where it is used, and
+//the two are separated by whatever the C64 does in between.  The bound is a third C64-controlled
+//input alongside the item byte and the page byte: one write to rWRegCurrMenuWAIT swaps the menu,
+//and both NumItemsFull and MenuSource change while a formed SelItemFullIdx stays where it was.
+//Nothing re-checked it, so a 15-item menu's index 14 survived into a 10-item one and got
+//dereferenced -- twice from inside isrPHI2, where MenuSource[] elements hand out two pointers.
+//So re-check at the dereference, against the count in force now.  Answer NULL rather than
+//substituting item 0: a caller that cannot tell "out of range" from "the first item" acts on the
+//wrong file and says nothing.  SetMenu() (Teensy.ino) keeps the base and the count consistent
+//for this read.  Callers that form the index immediately above their own dereference are already
+//in range by MenuIdxFromRegs' construction and are left alone.
+inline StructMenuItem* MenuItemSel()
+{
+   const uint16_t Idx = SelItemFullIdx;   //one read: the ISR writes this too
+   if (MenuSource == NULL || Idx >= NumItemsFull) return NULL;  //covers NumItemsFull==0
+   return &MenuSource[Idx];
+}
+
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -205,8 +255,8 @@ extern char* StrSIDInfo;
 extern char* LatestSIDLoaded;
 extern char StrMachineInfo[];
 extern uint8_t nfcState;
-extern void SendMsgPrintfln(const char *Fmt, ...);
-extern void SendMsgPrintf(const char *Fmt, ...);
+extern bool SendMsgPrintfln(const char *Fmt, ...);
+extern bool SendMsgPrintf(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
@@ -286,9 +336,18 @@ bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
    return true;
 }
 
-FLASHMEM void GetCurrentFilePathName(char* FilePathName)
+FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
 {
-   char *LclFilename = MenuSource[SelItemFullIdx].Name;
+   const StructMenuItem* Item = MenuItemSel();
+   if (Item == NULL || Item->Name == NULL)
+   {  //Callers print this buffer and several then write it to EEPROM as a lasting file
+      //reference, so a path built from a stale selection has to be a visible refusal rather
+      //than a plausible name.  Same shape as the "TR:Dir not found" exit below.
+      snprintf(FilePathName, Size, "Sel out of range");
+      return;
+   }
+
+   char *LclFilename = Item->Name;
    char Rand[] = "?";
 
    if (IO1[rwRegScratch]) LclFilename = Rand; //random dir
@@ -308,22 +367,22 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName)
             if (++DirNum == sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]))
             {
                Printf_dbg("TR Dir not found\n"); //what now?
-               sprintf(FilePathName, "TR:Dir not found");
+               snprintf(FilePathName, Size, "TR:Dir not found");
                return;
             }
          }
          strcpy(DirName, TeensyROMMenu[DirNum].Name);
       }
 
-      sprintf(FilePathName, "TR:%s/%s", DirName, LclFilename);
+      snprintf(FilePathName, Size, "TR:%s/%s", DirName, LclFilename);
    }
    else
    {
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
 
-      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, LclFilename);  // at root
-      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
+      if (PathIsRoot()) snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);
+      else snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
    }
 }
 
@@ -585,21 +644,43 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rRegItemTypePlusIOH:
-            Data = MenuSource[SelItemFullIdx].ItemType;
-            if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+         {  //ISR context: cannot print, so an out-of-range selection reports the type that
+            //already means "not a valid item" (HandleExecution says so) rather than reading
+            //whatever sits past the end of the menu now in place.
+            const StructMenuItem* Item = MenuItemSel();
+            Data = (Item == NULL) ? rtNone : Item->ItemType;
+            if(Item != NULL && IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item->IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
             DataPortWriteWaitLog(Data);
+         }
             break;
          case rRegStreamData:
-            DataPortWriteWait(XferImage[StreamOffsetAddr]);
-            //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
+            //Same class as the StatusFunction[] guard: an index the C64 advances, with
+            //nothing checking it before the deref.  XferSize is 0 until an image is
+            //staged, so this also covers XferImage still being NULL at power-up.
+            //rRegStrAvailable only *tells* the C64 where the end is; it cannot stop it.
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
+            //inc on read, check for end.  Stops at XferSize rather than counting past it:
+            //the guard above makes running past harmless, but it is still a counter the
+            //C64 advances with nothing stopping it, and at uint32_t it would take 2^32
+            //reads to wrap back into the buffer instead of 2^16.
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
-            Data = ptrSerialString[StringOffset++];
+            //ptrSerialString is NULL until a selector is written below, and StringOffset
+            //only ever counted up -- a C64 reading past the terminator walked off the end
+            //of whichever string was selected, a byte per read.  Stop at the NUL instead.
+            Data = (ptrSerialString == NULL) ? 0 : ptrSerialString[StringOffset];
+            if (Data != 0) StringOffset++;
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          default: //used for all other IO1 reads
-            DataPortWriteWaitLog(IO1[Address]); //will read garbage if above IO1Size
+            //The ISR masks Address to 0..255 but IO1 is only IO1Size long, so DE68..DEFF
+            //used to hand the C64 heap past the allocation, a byte per read.  Zero is
+            //also the right answer for the one high register that lands here:
+            //rRegIOHSwapPoll reads rihsBusy (0x00) = keep polling, where garbage had a
+            //1-in-256 chance of reading as rihsReady.
+            DataPortWriteWaitLog(Address < IO1Size ? IO1[Address] : 0);
             break;
       }
    }
@@ -610,7 +691,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rwRegSelItemOnPage:
-            SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            SelItemFullIdx = MenuIdxFromRegs(Data);
          case rwRegStatus:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
@@ -732,19 +813,39 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  memcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength);
+               {  //This memcpy follows a pointer stored *in* the menu item, so an index past
+                  //the end of the menu copies 35 bytes from whatever a stray word happens to
+                  //point at -- and then hands them to the C64 a byte at a time.  ISR context
+                  //cannot print, so say it in the string itself, as "?Stat"/"?IOH" do.
+                  const StructMenuItem* Item = MenuItemSel();
+                  if (Item == NULL || Item->Name == NULL)
+                  {
+                     strcpy(SerialStringBuf, "?Item");
+                     ptrSerialString = SerialStringBuf;
+                     break;
+                  }
+                  memcpy(SerialStringBuf, Item->Name, MaxItemDispLength);
                   SerialStringBuf[MaxItemDispLength-1] = 0; //Trim to length, if needed
                   if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
-                      MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
+                      Item->ItemType > rtDirectory &&
                       IO1[rWRegCurrMenuWAIT] != rmtTeensy)
                   { // if not show ext, not dir or unknown, not a TR Menu: terminate before extension
                      char *pDot = strrchr(SerialStringBuf, '.'); //find last dot
                      if (pDot != NULL) *pDot = 0; //terminate there
                   }
                   ptrSerialString = SerialStringBuf;
+               }
                   break;
                case rsstNextIOHndlrName:
-                  ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
+               {  //Same range rule the other two IOHandler[] index sites apply
+                  //(IOHandlers.ino, Min_DriveDirLoad.ino).  This register is not only
+                  //written by the C64: it is also loaded raw from EEPROM (line ~516),
+                  //where a byte saved by a build with more handlers -- or a corrupt
+                  //cell -- reads past the table and derefs whatever is there as ->Name.
+                  const uint8_t NextIOH = IO1[rwRegNextIOHndlr];
+                  ptrSerialString = (NextIOH < IOH_Num_Handlers) ?
+                     IOHandler[NextIOH]->Name : (char*)"?IOH";
+               }
                   break;
                case rsstSerialStringBuf:
                   //assumes SerialStringBuf built first...(FWUpd msg or BuildInfo)
@@ -782,6 +883,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                      }
                      else ptrSerialString = DriveDirPath;
                   }
+                  break;
+               default:
+                  //An unhandled selector used to leave ptrSerialString pointing at
+                  //whatever the previous one selected, so the C64 silently read back a
+                  //stale string.  Say so instead -- same choice as "?Stat" above.
+                  ptrSerialString = (char*)"?SerStr";
                   break;
             }
             break;
@@ -888,6 +995,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlForceEthInitWAIT:
                   IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
                   break;
+               case rCtlMakeExtHostStrWAIT:
+                  IO1[rwRegStatus] = rsMakeExtHostStr; //work this in the main code
+                  break;
+               case rCtlUninstallExtHostWAIT:
+                  IO1[rwRegStatus] = rsUninstallExtHost; //work this in the main code
+                  break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
@@ -917,8 +1030,15 @@ void PollingHndlr_TeensyROM()
          IO1[rwRegStatus] = Queued;
       }
 #endif
-      if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
-      else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
+      //The null check is not redundant with the bounds check. A status code appended
+      //without its StatusFunction[] entry is now a build error (the count static_assert
+      //in StatusFunctions.c), but an entry written null, or a table reordered so a live
+      //code lands on a null slot, still gets here. That call faults the core and reboots
+      //it; the CrashReport the main image prints on the way back up (Teensy.ino) cannot
+      //say which status code got there. Landing it in "?Stat" costs one compare.
+      const uint8_t Status = IO1[rwRegStatus];
+      if (Status<rsNumStatusTypes && StatusFunction[Status]) StatusFunction[Status]();
+      else Serial.printf("?Stat: %02x\n", Status);
       Serial.flush();
       IO1[rwRegStatus] = rsReady;
    }

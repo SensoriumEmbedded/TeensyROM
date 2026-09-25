@@ -27,7 +27,13 @@
 
 FLASHMEM void SendStrPrintfln(const char *Msg)
 {
-   SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
+   SendMsgPrintfln("%s", Msg); //printf style, throws warning if used as callback in EthernetInit
+}
+
+FLASHMEM void TerminateSIDRecord(char* Record)
+{  //EEPROM may hold a record carrying neither terminator; SetLatestSIDLoaded keeps both fields below these
+   Record[MaxPathLength-2] = 0;
+   Record[MaxPathLength-1] = 0;
 }
 
 FLASHMEM void NetListenInit()
@@ -177,11 +183,44 @@ FLASHMEM void WriteEEPROM()
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
+//A handler whose string the C64 reads through the pre-selected contract ends here: what
+//it just built is left selected and rewound.  PrintFileName jumps into
+//PrintSerialStringLoaded, which reads whichever source was selected last from wherever
+//that read stopped, so a handler reached that way has to leave its own string selected.
+//One copy, because the two lines are the contract rather than an implementation detail
+//of any one handler.
+//
+//All three handlers behind an rCtlMake*StrWAIT call it, MakeBuildInfo included, and in
+//none of them is it defense in depth for a hypothetical future caller -- it is what the
+//caller on the other side of the wait is already relying on.  Pg_InfoOther.asm used to
+//open-code the select for MakeBuildInfo, exactly as Pg_InstalledExt.asm did for
+//MakeExtHostStr; both pages now reach the row through PrintFileName, which selects
+//nothing.  Take this call out of any one of them and that page's row prints the tail of
+//whatever was read last.
+//
+//It is a main-loop write to state the ISR reads, which is a real window -- and not a new
+//one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
+//serves most of PrintFileName's call sites.  MakeBuildInfo's other callers
+//(Teensy.ino, SerUSBIO.ino's 'f' and VersionInfoToken) read SerialStringBuf and never
+//ptrSerialString, and each already overwrites the buffer a C64 read would be walking --
+//SerUSBIO.ino says so itself: "Menu must be idle, interferes with any serialstring in
+//progress".  Redirecting a read whose contents are being replaced underneath it costs
+//that read nothing it had.
+FLASHMEM void SelectSerialStringBuf()
+{
+   ptrSerialString = SerialStringBuf;
+   StringOffset = 0;
+}
+
 FLASHMEM void MakeBuildInfo()
 {
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
    sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+
+   //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
+   //prints at column 0, so a 37 character cut would take most of it away.
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
@@ -213,9 +252,10 @@ FLASHMEM void MakeFilenameStr()
       {
          char SIDSourcePathName[MaxPathLength];
          EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
+         TerminateSIDRecord(SIDSourcePathName);
          char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
 
-         sprintf(SerialStringBuf, "%s:/%s/%s",
+         snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s:/%s/%s",
             (SIDSourcePathName[0] == rmtUSBDrive ? "USB" : (SIDSourcePathName[0] == rmtSD ? "SD" : "TR")),
             SIDSourcePathName+1, SIDName);
       }
@@ -299,8 +339,7 @@ FLASHMEM void MakeFilenameStr()
 
    //Serial.printf("\nx%sx\n", SerialStringBuf);
    //set print buffer for PrintSerialString and reset counter
-   ptrSerialString = SerialStringBuf;
-   StringOffset = 0;
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void UpDirectory()
@@ -330,7 +369,10 @@ FLASHMEM void SetCursorToItemNum(uint16_t ItemNum)
 
 FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   //An empty menu has no item to land on, and the wrap below counts against NumItemsFull
+   //rather than against MenuSource's real extent -- see LastFileType for what that costs.
+   if (NumItemsFull == 0) return;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
    do
    {
@@ -346,7 +388,12 @@ FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 
 FLASHMEM void LastFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   //Must come before the wrap below: NumItemsFull is uint16_t, so NumItemsFull-1 promotes
+   //to int, evaluates to -1, and converts back to 65535 -- an index 65535*sizeof(
+   //StructMenuItem) = 1,048,560 bytes past MenuSource, walked downward one entry per
+   //iteration until it reaches InitItemNum.
+   if (NumItemsFull == 0) return;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
 
    do
@@ -411,16 +458,16 @@ FLASHMEM void WriteNFCTagCheck()
       return;
    }
 
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
-   if (!IO1[rwRegScratch] && MenuSource[SelItemFullIdx].ItemType < rtFilePrg) //single file but not executable
+   if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType)) //single file, not storable
    {
       SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
       return;
    }
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    nfcState |= nfcStateBitDisabled; //keep if from triggering if re-using prev programmed tag
@@ -433,7 +480,7 @@ FLASHMEM void WriteNFCTag()
    //nfc polling not Enabled here
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
 
    SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
@@ -460,12 +507,12 @@ FLASHMEM void HotKeySetLaunch()
 
       HotKeyNumSL &= 0x7f;  // strip SL bit
       //get/print path+filename
-      SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+      SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
       IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-      GetCurrentFilePathName(PathFilename);
+      GetCurrentFilePathName(PathFilename, sizeof PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
-      if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+      if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
       {
          SendMsgPrintfln("Invalid File Type (%d)\r\rHot Key *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
          return;
@@ -496,10 +543,15 @@ FLASHMEM void KERNALPreStart()
    //Serial.println("Hi from KERNALPreStart");
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
+   //Nothing re-forms SelItemFullIdx in this function, so it is whatever the last menu change
+   //left behind; fall back to the stored handler when it no longer names an item -- and say
+   //so, because that fallback is otherwise indistinguishable from the ordinary IOH_None case.
+   const StructMenuItem* Item = MenuItemSel();
+   if (Item == NULL) Serial.printf("Menu sel out of range, using stored IO handler\n");
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       //Serial.println("IO Handler set by Teensy Menu\n");
-      NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc;
+      NextIOHndlr = Item->IOHndlrAssoc;
    }
 
    if (NextIOHndlr == IOH_KernalReplace)
@@ -524,11 +576,11 @@ FLASHMEM void TRPlusOnlyMsg()
 FLASHMEM void SetREUFile()
 {
    SendMsgPrintfln("Set REU File to preload\r  and/or uniquely save\r");
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_REU
@@ -565,11 +617,11 @@ FLASHMEM void SetKERNALBin()
 {
    SendMsgPrintfln("Set KERNAL Replace Binary\r");
 
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_KernalReplace
@@ -604,14 +656,14 @@ FLASHMEM void SetKERNALBin()
 
 FLASHMEM void SetAutoLaunch()
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
-   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
    {
       SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -641,6 +693,7 @@ FLASHMEM void LoadMainSIDforXfer()
    //Set XferImage and XferSize
 
    EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name from EEPROM
+   TerminateSIDRecord(LatestSIDLoaded);
    char* LatestSIDName = LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2;
    Printf_dbg("Sel SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
 
@@ -718,19 +771,52 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 
    //SendMsgPrintfln(" Testing $%02xxx w/ $%02x", (Address >> 8), BytePat);
    //PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+   //Read back into its own buffer, and check that both transfers happened. Reading into
+   //PageBuf made an abort indistinguishable from a pass: the buffer still held the pattern
+   //memset put there, so every byte compared equal and the page was reported good with
+   //nothing read from the C64 at all. A test that cannot fail is worse than no test.
+   uint8_t ReadBuf[TestPageSize];
+
    memset(PageBuf, BytePat, TestPageSize);
-   PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT); //Write the buffer
-   CloseDMA();
-   PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);  //Read back
-   CloseDMA();
+   memset(ReadBuf, (uint8_t)~BytePat, TestPageSize);
+
+   //Both causes named, neither claimed: PerformDMA returns one bool and WaitForDMAState does
+   //not report which of its bounds fired, so a clocking bus that timed out reaches here too.
+   //Kept inside 40 columns -- these land on the C64 screen, this test has no serial half.
+   if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendMsgPrintfln(" No write at $%04x: no clock or timeout", Address);
+      return false;
+   }
+   if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendMsgPrintfln(" No read at $%04x: no clock or timeout", Address);
+      return false;
+   }
+
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++)
-      if (PageBuf[ByteNum] != BytePat)
+      if (ReadBuf[ByteNum] != BytePat)
       {
-         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, PageBuf[ByteNum]);
+         SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", Address+ByteNum, BytePat, ReadBuf[ByteNum]);
          return false;
       }
    //SendMsgPrintf(" OK");
    return true;
+}
+
+//A stalled transfer follows the same channel rule as the rest of TestDMAPattern's output.
+//The screen half is gated on ToScreen, because the serial sweep ('z' in SerUSBIO.ino) runs
+//with the C64 busy elsewhere: there SendMsgPrintfln waits out the full 3-second
+//rsC64Message handshake nobody is going to answer, per transfer, and then prints
+//"Sout Timeout!" over the sweep's own output. Serial always gets the line.
+FLASHMEM void ReportPatternStall(bool ToScreen, uint16_t Pass, const char *Stage)
+{
+   //Inside 40 columns, and it leaves the cause to serial -- the on-screen caller follows a
+   //false return with " Failed, additional details on serial".
+   if(ToScreen) SendMsgPrintfln(" No %s, pass %u", Stage, Pass);
+   //Neither bound is distinguishable from here: PerformDMA returns one bool and
+   //WaitForDMAState does not report which of its ceilings fired, so name both.
+   Serial.printf("\n  no %s on pass %u: C64 bus not clocking, or DMA timed out\n", Stage, Pass);
 }
 
 FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, uint8_t ValB, uint16_t Passes, bool ToScreen)
@@ -738,7 +824,11 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    //Alternating ValA/ValB swings the data bus between DMA cycles, which a uniform fill never does.
    //   Pre-filling with PriorVal is what makes a dropped write visible - TestDMAPage() writing $ff
    //   over a page already holding $ff verifies clean either way.  PriorVal==ValA==ValB is a control.
-   uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize];
+   //Three buffers, and they stay three: PageBuf is what was written, PriorBuf is what the
+   //page held before the pattern write, ReadBuf is what came back after it. "Unchanged"
+   //below is ReadBuf against PriorBuf, so reading back over either of the other two makes
+   //that comparison answer itself instead of the page.
+   uint8_t PageBuf[TestPageSize], PriorBuf[TestPageSize], ReadBuf[TestPageSize];
    uint32_t BadBytes = 0, WorstPass = 0, Unchanged = 0, PrefillBad = 0;
    uint32_t BitFell[8] = {0}, BitRose[8] = {0};
    uint32_t PrefillFell = 0, PrefillRose = 0;
@@ -747,10 +837,16 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
    for(uint16_t Pass = 0; Pass < Passes; Pass++)
    {
       memset(PageBuf, PriorVal, TestPageSize);
-      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
-      PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT); //what the page really holds now
-      CloseDMA();
+      if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         ReportPatternStall(ToScreen, Pass, "prefill write");
+         return false;
+      }
+      if (!PerformDMA(DMA_READ, Address, PriorBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA()) //what the page really holds now
+      {
+         ReportPatternStall(ToScreen, Pass, "prefill read");
+         return false;
+      }
       //the prefill is a full-swing write too - $00 over $ff and back - so it needs the same
       //   partial-byte vs whole-byte detail as the pattern write, not just a count
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
@@ -769,20 +865,29 @@ FLASHMEM bool TestDMAPattern(uint16_t Address, uint8_t PriorVal, uint8_t ValA, u
 
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
          PageBuf[ByteNum] = (ByteNum & 1) ? ValB : ValA;
-      PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
-      PerformDMA(DMA_READ, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT);
-      CloseDMA();
+      if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         ReportPatternStall(ToScreen, Pass, "pattern write");
+         return false;
+      }
+      //Into ReadBuf: not back over PageBuf, which already holds the expected pattern and
+      //would make an aborted read compare equal on every byte, and not over PriorBuf, which
+      //the Unchanged test below needs still holding the pre-write contents.
+      if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
+      {
+         ReportPatternStall(ToScreen, Pass, "read");
+         return false;
+      }
 
       uint32_t PassBad = 0;
       for(uint16_t ByteNum = 0; ByteNum < TestPageSize; ByteNum++)
       {
          uint8_t Expected = (ByteNum & 1) ? ValB : ValA;
-         uint8_t Diff = PageBuf[ByteNum] ^ Expected;
+         uint8_t Diff = ReadBuf[ByteNum] ^ Expected;
          if(Diff == 0) continue;
          PassBad++;
          XorMask |= Diff;
-         if(PageBuf[ByteNum] == PriorBuf[ByteNum]) Unchanged++; //write never landed, vs a partial byte that landed mid-settle
+         if(ReadBuf[ByteNum] == PriorBuf[ByteNum]) Unchanged++; //write never landed, vs a partial byte that landed mid-settle
          for(uint8_t Bit = 0; Bit < 8; Bit++)
          {
             if(!(Diff & (1<<Bit))) continue;
@@ -1140,7 +1245,87 @@ FLASHMEM void ExtPortCheck()
    BtnPressed = false;  //in case of re-trigger/debounce
 }
 
-void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+// Defined in FlashUpdate.ino. Written out because the sketch preprocessor puts its
+// generated prototypes after the includes, and this file arrives through one.
+void DoHostUninstall();
+#endif
+
+// Both of these are compiled into every image, including the minimal one and a
+// build without the loader, because StatusFunction[] below is indexed by status
+// code: dropping an entry would shift every later one. Where there is no loader
+// there is nothing installed, which is what they say.
+FLASHMEM void MakeExtHostStr()
+{
+   //No arm ends its line with \r, because this string is printed through
+   //PrintFileName like every other dynamic settings row, and MakeFilenameStr -- which
+   //serves most of PrintFileName's call sites -- does not end in one
+   //either. PrintFileName places the row with SetCursor and leaves the cursor
+   //wherever the text stops, so a return here moves the cursor a caller may not be
+   //expecting to have moved. It used to move the uninstall prompt itself, on the arms
+   //that carried one; Pg_InstalledExt.asm now places that prompt with SetCursor, so
+   //this is a convention the rows share rather than the thing holding the prompt up.
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   VmHostId id{};
+   //"Not blank" is what an install that failed part way leaves: no host, but bytes in
+   //the slot that uninstalling clears. See VmBootImage::blank().
+   if (!VmBootImage::installed())
+      strcpy(SerialStringBuf, VmBootImage::blank() ? "None installed." : "None installed; slot not blank.");
+   else if (VmBootImage::identity(id))
+   {
+      char Name[VmBootImage::nameBytes];
+      VmBootImage::displayName(Name, sizeof Name, &id);
+      //ABI and services come from the host itself, so a host from elsewhere
+      //describes itself here rather than being described by this firmware -- which
+      //is also why the write is bounded: the only variable-length part of this line
+      //is 12 bytes of third-party descriptor.
+      snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s  ABI %lu  services $%04lx",
+               Name, (unsigned long)id.abi, (unsigned long)id.services);
+   }
+   else strcpy(SerialStringBuf, "Installed, no descriptor.");
+#else
+   strcpy(SerialStringBuf, "No extension loader in this firmware.");
+#endif
+   //displayName bounds the name to twelve drawn bytes, but abi and services are
+   //uint32 fields the host writes about itself, so the line can still reach 48
+   //characters. The row starts at column 3 of a 40 column screen, so it has 37 --
+   //the same bound MakeFilenameStr uses -- and a wider one spills its last 11
+   //characters onto the row below. That row is blank on both screens that draw this
+   //line: row 6 on the settings page, where the uninstall option is row 7, and row 7
+   //on the confirmation screen. So what the clamp buys is a line that stays on its
+   //own row, not a collision with something already drawn. The prompt below it no
+   //longer moves with this length either: Pg_InstalledExt.asm places it with
+   //SetCursor, because a 37 character line ends in the last column and the screen
+   //editor wraps the cursor there by itself, which a clamp measured in columns cannot
+   //prevent.
+   const uint16_t MaxLength = 37;
+   if (strlen(SerialStringBuf) > MaxLength)
+   {  //Mark the cut rather than making it silently. What runs off the end is the
+      //tail of "services $%04lx", so a quiet truncation reads as a valid, smaller
+      //bitmask -- wrong in the direction nobody checks, and services is what decides
+      //whether a module's requirements are met. MakeFilenameStr marks its own
+      //elision with "..>" mid-string; one '>' is the end-of-row version of that.
+      //strlen > MaxLength, so both indices are inside the string.
+      SerialStringBuf[MaxLength-1] = '>';
+      SerialStringBuf[MaxLength] = 0;
+   }
+
+   SelectSerialStringBuf();
+}
+
+FLASHMEM void UninstallExtHost()
+{
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   DoHostUninstall(); //does not return if there was a host to remove
+#else
+   SendMsgPrintfln("No extension loader in this firmware.");
+#endif
+}
+
+// Unbounded on purpose: the length comes from the initializer, so the static_assert
+// below can compare it against rsNumStatusTypes.  Written [rsNumStatusTypes] instead,
+// a short list zero-fills the tail and the count assert is a tautology.
+void (*StatusFunction[])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu
    &HandleExecution,     // rsStartItem
@@ -1174,4 +1359,11 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ForceEthInit,        // rsForceEthInit
    &ExtPortCheck,        // rsExtPortCheck
    &ExpPortDMA,          // rsExpPortDMA
+   &MakeExtHostStr,      // rsMakeExtHostStr
+   &UninstallExtHost,    // rsUninstallExtHost
 };
+//Same guard IOHandler[] already carries (IOHandlers.h).  A status code appended to
+//RegStatusTypes without its entry here is otherwise silent: the array zero-fills, the
+//build is clean, and the omission is only found by a C64 asking for that code.
+static_assert(sizeof(StatusFunction) / sizeof(StatusFunction[0]) == rsNumStatusTypes,
+              "StatusFunction[] / RegStatusTypes count mismatch");

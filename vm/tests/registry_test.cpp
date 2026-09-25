@@ -52,8 +52,14 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("No extension host")!=std::string::npos);
 
+    // Blank means erased flash, not "no host": one programmed byte at the top of the
+    // slot is no host and still what a failed install leaves for uninstall to clear.
+    VmBootImage::erase();assert(VmBootImage::blank()&&!VmBootImage::installed());
+    VmBootImage::hostWindow[VM_HOST_SLOT_BYTES-1]=0x7f;
+    assert(!VmBootImage::blank()&&!VmBootImage::installed());
+
     VmBootImage::install(VM_HOST_SERVICES);
-    assert(VmBootImage::installed());
+    assert(VmBootImage::installed()&&!VmBootImage::blank());
     VmHostId read{};assert(VmBootImage::identity(read)&&read.services==VM_HOST_SERVICES);
 
     // A host that cannot serve what the module requires is refused here too,
@@ -62,17 +68,146 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("lacks service")!=std::string::npos);
 
+    // A bit no host here serves is refused by its number, not as a malformed
+    // package: the image is well formed and only the host can say otherwise.
+    VmBootImage::install(VM_HOST_SERVICES);
+    assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&!rebooted);
+    assert(message.find("lacks service $10000")!=std::string::npos);
+
     // A host that speaks another ABI would refuse every module this image can
     // validate, so that is knowable here too.
     VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1);
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
     assert(message.find("is ABI")!=std::string::npos);
 
+    // The descriptor's name is third-party bytes on their way to a C64, which executes
+    // the control codes rather than drawing them. displayName substitutes; it never
+    // drops, so a name that is all control codes still renders something to report.
+    {
+        char shown[VmBootImage::nameBytes];
+        VmHostId probe{};
+
+        // A name filling all twelve bytes with no terminator still comes back whole.
+        memcpy(probe.name,"ABCDEFGHIJKL",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"ABCDEFGHIJKL"));
+
+        // $93 clears the screen and $0d ends the line early, taking the "do not power
+        // off" warning with it. One visible byte each, and the length is preserved.
+        memcpy(probe.name,"AB\x93\x0d""EF\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"AB??EF"));
+
+        // Every byte a control code: twelve substitutes, never an empty row.
+        memset(probe.name,0x93,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"????????????")&&strlen(shown)==12);
+
+        // $80-$9f is control as well, and $a0-$ff is not: graphics blocks draw, and so
+        // does horizBar $60, which is why the range stops at $7f rather than at ASCII.
+        memcpy(probe.name,"\x9b\xa6\xdb\x60\x00\x00\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"?\xa6\xdb\x60"));
+
+        // $22 draws, and CHROUT still toggles quote mode on it, which leaves the next
+        // control code drawn rather than executed. The host line ends without a RETURN to
+        // clear the flag, so an odd number of quotes survives it and disarms the ChrClear
+        // PrintBanner issues on `u` -- the uninstall confirmation then lands on top of the
+        // page it should have replaced. Substituted like any other byte that cannot be
+        // handed over safely; an even number would balance, but the filter does not count.
+        memcpy(probe.name,"A\x22""B\x22""C\x22""\x00\x00\x00\x00\x00\x00",12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"A?B?C?"));
+
+        // A name that is empty, or nothing but the two blanks, would reach the screen as
+        // no name at all -- during an erase that is the same failure as a cleared one.
+        memset(probe.name,0,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+        memset(probe.name,0x20,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+        memset(probe.name,0xa0,12);
+        VmBootImage::displayName(shown,sizeof shown,&probe);
+        assert(!strcmp(shown,"(unnamed)"));
+
+        // No descriptor at all stays a different answer from a descriptor naming nothing.
+        VmBootImage::displayName(shown,sizeof shown,nullptr);
+        assert(!strcmp(shown,"(no descriptor)"));
+
+        // A buffer narrower than the source. Every caller in the tree passes nameBytes,
+        // so this is the case nothing else reaches -- and it is exactly what happens if
+        // a placeholder is added to displayName without widening nameBytes. The comment
+        // over nameBytes promises truncation rather than an overrun, by two different
+        // bounds: the loop's `n + 1 < bytes` for a real name, snprintf's for the two
+        // placeholders. Pinned here so the promise is checked rather than asserted.
+        // Canaries either side catch a write that lands outside the buffer at all.
+        //
+        // Each case names the bytes it expects rather than a length. A length passes on a
+        // buffer that came back empty, and an empty name during an erase is the failure
+        // displayName exists to prevent -- so "shorter than the buffer" is the one answer
+        // that must not count as truncation. strcmp also stops at the first byte that
+        // differs, so an unterminated buffer fails the assert here rather than running the
+        // check off the end of the fence looking for a NUL that was never written.
+        {
+            //One place for the two widths, so a canary check cannot drift from the array.
+            constexpr size_t fenceBytes=3,narrowBytes=4;
+            char fenced[fenceBytes+narrowBytes+fenceBytes];
+            char *const narrow=fenced+fenceBytes;
+            auto unwritten=[](const char *p,size_t n){for(size_t i=0;i<n;i++)if(p[i]!='#')return false;return true;};
+            auto fence=[&]{memset(fenced,'#',sizeof fenced);};
+            auto fenceIntact=[&]{return unwritten(fenced,fenceBytes)&&unwritten(narrow+narrowBytes,fenceBytes);};
+
+            fence();
+            memcpy(probe.name,"ABCDEFGHIJKL",12);
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
+            assert(!strcmp(narrow,"ABC"));                 //3 plus the terminator
+            assert(fenceIntact());
+
+            // Blanks first, the only drawable byte past the cut. "Named" is a property of
+            // the field and "how much fits" is a property of the buffer, so deciding them
+            // together would answer "(unnamed)" for a host that has a name -- a different
+            // answer, not a shorter one, and the one this function exists to keep honest.
+            fence();
+            memcpy(probe.name,"   TR\x00\x00\x00\x00\x00\x00\x00",12);
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
+            assert(!strcmp(narrow,"   "));
+            assert(fenceIntact());
+
+            fence();
+            memset(probe.name,0,12);                       //drives the (unnamed) branch
+            VmBootImage::displayName(narrow,narrowBytes,&probe);
+            assert(!strcmp(narrow,"(un"));
+            assert(fenceIntact());
+
+            fence();
+            VmBootImage::displayName(narrow,narrowBytes,nullptr); //and the (no descriptor) one
+            assert(!strcmp(narrow,"(no"));                 //still a different answer at this width
+            assert(fenceIntact());
+
+            // Zero is the caller having nothing to write into; it must not write anyway.
+            fence();
+            VmBootImage::displayName(narrow,0,&probe);
+            assert(unwritten(fenced,sizeof fenced));
+        }
+    }
+
+    // And the refusals carry the rendered name rather than the field, so nothing the
+    // host supplies reaches the screen as a control code.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1,"A\x93""B");
+    message.clear();
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(message.find("A?B host is ABI")!=std::string::npos);
+    for(unsigned char c:message)assert(c=='\r'||c=='\n'||(c>=0x20&&c<0x80)||c>=0xa0);
+
     // A host image predating the descriptor cannot say what it provides, and
-    // that is not a refusal -- the launch proceeds as it did before.
+    // that is not a refusal -- the launch proceeds as it did before. An
+    // unserved bit rides through the same way; validation is not the gate.
     VmBootImage::installWithoutDescriptor();
     assert(VmBootImage::installed()&&!VmBootImage::identity(read));
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
+    rebooted=false;message.clear();
+    assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&rebooted&&message.empty());
 
     rebooted=false;marker.clear();
     VmBootImage::install(VM_HOST_SERVICES);
@@ -113,5 +248,7 @@ int main(int argc,char **argv){
 
     puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
          "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client, "
-         "extension cache answering Unknown when unscanned, errored or over the limit");
+         "extension cache answering Unknown when unscanned, errored or over the limit, "
+         "a service belonging to another host refused by its number, and the same module "
+         "reaching the reboot when the installed host cannot say what it provides");
 }

@@ -13,7 +13,7 @@ Toolchain: **ACME cross-assembler 0.97** for all `.asm`/`.s` files, except **TRC
 | Sub-project | `--project` name | What it is |
 |---|---|---|
 | `MainMenuCRT` | `MainMenuCRT` | The cartridge boot menu itself — see below |
-| `SettingsMenu` | `SettingsMenu` | F8-triggered 9-page settings/config menu — see below |
+| `SettingsMenu` | `SettingsMenu` | F8-triggered multi-page settings/config menu — see below |
 | `TRHelpScreens` | `TRHelpScreens` | In-menu help screens |
 | `TRExtPortCheck` | `TRExtPortCheck` | External port check utility |
 | `ExpansionPortTest` | `ExpansionPortTest` | Expansion port test (TR+ only) |
@@ -36,11 +36,13 @@ Files in `MainMenuCRT/source/`: `TeensyROMC64.asm` (171 lines), `MainMenu.asm` (
 - **`PRGLoadStartReloc.s`**: relocated into the cassette-buffer zero page (`$033c`, per `CommonDefs.i`) and executed from there while a `.PRG` streams in. Polls `rRegStrAvailable`/`rRegStreamData` (IO1 registers) to pull bytes from the Teensy, sets BASIC's end-of-program/variables pointers, signals the Teensy via `wRegControl = rCtlRunningPRG`, then re-enters BASIC warm-start (`jmp $a7ae`). Comments document a hardcoded startup delay to avoid a race condition, and address wrap-around handling during load.
 - Build order: the `MainMenuCRT` project compiles `MainMenu.asm` to `MainMenu.bin` first, then `TeensyROMC64.asm` (which embeds that binary) to produce the final headerless cartridge image — the one C64 build output that intentionally has **no PROGMEM header** (must land in RAM for ROM emulation, per `Source/C64/README.md`).
 
-## SettingsMenu — the 9-page settings framework
+## SettingsMenu — the multi-page settings framework
 
-`SettingsMenu.asm` (82 lines) is the driver: defines `NumPages = 9`, a jump table `tblSettingsPages`, and `!src`-includes the 9 page files in order. Each page is its own `.asm` with a `<Name>Menu:` entry label, its own init/key-wait loop, and message text. `_SettingsPageTemplate.asm` is the copy-paste starting point for a new page (currently still has leftover "Ethernet" naming from whatever page it was cloned from — a trap for anyone copying it without cleaning up). Shared logic (`CommonInit`, `CheckCommonKeys` — the F8→number page-dispatch — `DisplayTime`, `GetIn`, string helpers) lives once in `SupportFunctions.asm` and `StringFunctions.asm`, used by every page.
+`SettingsMenu.asm` is the driver: defines `NumPages`, a jump table `tblSettingsPages`, and `!src`-includes one file per page. Each page is its own `.asm` with a `<Name>Menu:` entry label, its own init/key-wait loop, and message text. `_SettingsPageTemplate.asm` is the copy-paste starting point for a new page (currently still has leftover "Ethernet" naming from whatever page it was cloned from — a trap for anyone copying it without cleaning up). Shared logic (`CommonInit`, `CheckCommonKeys` — the F8→number page-dispatch — `DisplayTime`, `GetIn`, string helpers) lives once in `SupportFunctions.asm` and `StringFunctions.asm`, used by every page.
 
-Page files (index → content, per the FW 0.8 layout): `Pg_Index.asm`, `Pg_TRSettings.asm` (TeensyROM General), `Pg_StartupOptions.asm`, `Pg_ColorConfig.asm` (Menu Colors), `Pg_MIDISettings.asm` (MIDI Message Filters), `Pg_EthernetSettings.asm`, `Pg_TimeRTCSettings.asm`, `Pg_InfoOther.asm` (Info: General), `Pg_InfoHotKey.asm` (Info: HotKeys).
+Page files (index → content, per the FW 0.8 layout): `Pg_Index.asm`, `Pg_TRSettings.asm` (TeensyROM General), `Pg_StartupOptions.asm`, `Pg_ColorConfig.asm` (Menu Colors), `Pg_MIDISettings.asm` (MIDI Message Filters), `Pg_TimeRTCSettings.asm` (Time Format/RTC), `Pg_InfoOther.asm` (Info: General), `Pg_EthernetSettings.asm` (Info: Ethernet), `Pg_InfoHotKey.asm` (Info: HotKeys), `Pg_InstalledExt.asm` (Installed Extensions — names the host in the firmware slot via `rCtlMakeExtHostStrWAIT`, and uninstalls it with `u` via `rCtlUninstallExtHostWAIT`).
+
+`CheckCommonKeys` maps keys `'1'`-`'9'` to page indices 0-8 by arithmetic on the digit run; the tenth page is reached with `'0'`, dispatched by its own branch to `PageIdxInstalledExt`.
 
 **When adding/moving a settings page, or documenting Settings Menu key sequences, verify the current page-index and in-page key bindings against these files directly** — this menu was rewritten once already (single-screen → 9-page) and stale key references in docs have been a recurring problem.
 

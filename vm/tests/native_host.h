@@ -35,6 +35,9 @@ inline std::string packageRoot, contentPath;
 inline uint8_t lastFailure;
 inline uint32_t lastFailureDetail;
 inline bool yieldRequested;
+// Counted by the exit stub below; make() clears them, so a host built after one
+// that lends an exit does not inherit its tally.
+inline uint32_t exitCalls, lastExitStatus;
 
 inline bool describe(const fs::path &path, VmFileInfo *info) {
     std::error_code error;
@@ -186,6 +189,8 @@ inline VmHost make(const std::string &root, const std::string &content,
     lastFailure = 0;
     lastFailureDetail = 0;
     yieldRequested = false;
+    exitCalls = 0;
+    lastExitStatus = ~0u;
     VmHost host{};
     host.abi = VM_ABI;
     host.bytes = sizeof(VmHost);
@@ -206,6 +211,23 @@ inline VmHost make(const std::string &root, const std::string &content,
     host.file_op = fileOp;
     host.should_yield = shouldYield;
     host.fail = fail;
+    return host;
+}
+
+inline void exitToMenu(uint32_t status) { ++exitCalls; lastExitStatus = status; }
+
+// The same host, grown by the one tail extension this loader publishes. The
+// firmware's exit_to_menu does not return; this one does, because a native test
+// has nowhere to go. A module must therefore not be written to depend on code
+// after the call being unreachable, and this stub is what keeps that honest.
+inline VmHostExit makeWithExit(const std::string &root, const std::string &content,
+                               uint8_t *workspace, uint32_t workspaceBytes,
+                               uint8_t *guest, uint32_t guestBytes) {
+    VmHostExit host{};
+    host.base = make(root, content, workspace, workspaceBytes, guest, guestBytes);
+    host.base.bytes = sizeof(VmHostExit);
+    host.base.services = VM_SERVICES | VM_SERVICE_EXIT;
+    host.exit_to_menu = exitToMenu;
     return host;
 }
 

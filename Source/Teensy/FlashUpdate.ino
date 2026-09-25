@@ -52,7 +52,15 @@
 //    https://namoseley.wordpress.com/2015/02/04/freescale-kinetis-mk20dx-series-flash-erasing/
 
 
-#define FLASH_RESERVE     (0x40000) // 256k reserved space at top of flash 
+#define FLASH_RESERVE_STOCK (0x40000) // 256k reserved space at top of flash 
+#ifdef VM_EXTENSIONS_ENABLED
+   // The extension host slot (VMHostABI.h) sits directly below those 256k. The updater
+   // stages into and erases everything under FLASH_RESERVE, so the slot is reserved too,
+   // or an update would erase the installed host. 640k in all; checked below.
+   #define FLASH_RESERVE     (FLASH_RESERVE_STOCK + VM_HOST_SLOT_BYTES)
+#else
+   #define FLASH_RESERVE     FLASH_RESERVE_STOCK
+#endif
 #ifdef Fab04_Features
    #define FLASH_ID         "fw_t41_teensyromplus_sensorium" // target ID to match, must be a unique to previous   
 #else
@@ -67,6 +75,14 @@ extern "C" {
   #include "Flash/FlashTxx.h"		// TLC/T3x/T4x/TMM flash primitives
   #include "Flash/FlashTxx.c"
 }
+
+#ifdef VM_EXTENSIONS_ENABLED
+   // FLASH_RESERVE covers the slot only if the slot ends exactly where the stock 256k
+   // begins. Moving the slot without that fails here, rather than leaving an updater that
+   // erases the installed host or a slot overlapping the EEPROM emulation.
+   static_assert(FLASH_BASE_ADDR + FLASH_SIZE - FLASH_RESERVE_STOCK == VM_HOST_SLOT_LIMIT,
+                 "the extension host slot must end where the stock flash reserve begins");
+#endif
 
 
 void DoFlashUpdate(FS *sourceFS, const char *FilePathName)
@@ -141,3 +157,240 @@ bool isFab2x()
    //fab 0.2x: 2230311 to 2296610 Highs, 1990311-2052164 Lows
    return(Highs>1000000 && Lows>1000000);
 }
+
+#ifdef VM_EXTENSIONS_ENABLED
+// Writing an extension host into the slot from a .TRH file on SD or USB.
+// VMHostInstall.h decides what happens in what order and is covered natively
+// by vm/tests/host_install_test.cpp; everything here is the device behind it.
+
+// The core's FlexSPI primitives hold interrupts off for one operation and
+// re-enable them on the way out, so nothing here may assume they stay off
+// across a call.
+struct VmSlotFlash
+{
+   bool erase(uint32_t sector)
+   {
+      if (sector >= VM_HOST_SECTORS) return false;
+
+      void *addr = (void *)(VM_HOST_SLOT_BASE + sector * VM_HOST_SECTOR_BYTES);
+      eepromemu_flash_erase_sector(addr);
+      arm_dcache_delete(addr, VM_HOST_SECTOR_BYTES);
+      return flash_sector_not_erased((uint32_t)addr) == 0;
+   }
+
+   bool program(uint32_t offset, const uint8_t *data, uint32_t n)
+   {
+      if (offset + n > VM_HOST_SLOT_BYTES) return false;
+
+      eepromemu_flash_write((void *)(VM_HOST_SLOT_BASE + offset), data, n);
+      return memcmp(map(offset), data, n) == 0;
+   }
+
+   // The slot is XIP and cacheable, so a read-back has to come from the part.
+   const uint8_t *map(uint32_t offset)
+   {
+      void *sector = (void *)(VM_HOST_SLOT_BASE + (offset & ~(VM_HOST_SECTOR_BYTES - 1)));
+      arm_dcache_delete(sector, VM_HOST_SECTOR_BYTES);
+      return (const uint8_t *)(VM_HOST_SLOT_BASE + offset);
+   }
+};
+
+struct VmTrhFile
+{
+   File file;
+
+   bool seek(uint32_t offset) { return file.seek(offset); }
+   bool read(void *dst, uint32_t n) { return file.read(dst, n) == (int)n; }
+};
+
+static const char *HostInstallWhy(VmInstallStatus status)
+{
+   switch (status)
+   {
+      case VmInstallStatus::Ok:             return "ok";
+      case VmInstallStatus::ShortFile:      return "file too short";
+      case VmInstallStatus::BadMagic:       return "not a TRH package";
+      case VmInstallStatus::BadFormat:      return "package format unsupported";
+      case VmInstallStatus::BadHeader:      return "package header bad";
+      case VmInstallStatus::BadHeaderCrc:   return "package header CRC bad";
+      case VmInstallStatus::WrongSlot:      return "package targets elsewhere";
+      case VmInstallStatus::BadLength:      return "package length wrong";
+      case VmInstallStatus::ReadError:      return "read error";
+      case VmInstallStatus::BadPayloadCrc:  return "payload CRC bad";
+      case VmInstallStatus::MirrorMismatch: return "header disagrees w/ image";
+      case VmInstallStatus::WrongAbi:       return "built for another ABI";
+      case VmInstallStatus::NotBootable:    return "image would not start";
+      case VmInstallStatus::EraseFailed:    return "erase failed";
+      case VmInstallStatus::ProgramFailed:  return "write failed";
+      case VmInstallStatus::VerifyFailed:   return "verify failed";
+   }
+   return "refused";
+}
+
+// The install ends in a reboot either way, so its outcome travels in the
+// VmFail record the main image collects on the way back up.
+// The C64 runs from cartridge ROM served by isrPHI2, and a sector erase stalls this
+// core for up to 400 mS with interrupts off. Stop the 6510 first, then stop answering
+// it. Both the install and the removal erase, so both come through here.
+// MessageSeen is what the caller's warning returned: true only if the C64 actually read
+// it. False means nothing was drawn, so there is nothing on screen to give time for.
+static void StopServingTheC64(bool MessageSeen)
+{
+   // Blank the screen while the bus is still ours to drive. DEN=0 stops VIC-II fetches,
+   // so the frozen menu does not sit on screen for the whole erase -- and it has to
+   // happen before the reset assert below, because after that there is no 6510 to run
+   // the DMA handshake. Common_Defs.h refuses an extensions build without
+   // Fab04_FullDMACapable, so the callers' messages can promise the blank on any board
+   // that can show one; the only case they cannot cover is a C64 that is not running,
+   // which has no screen to blank and no clock to blank it with. Skip it there rather
+   // than spend the DMA waits' own timeouts on a handshake that cannot happen -- on a bus
+   // that has already stopped WaitForDMAState ends them by itself (~20 mS), so most of what
+   // skipping saves is latency.  Not all of it: DMATransferISR's edge waits are unbounded
+   // (DMAControl.ino, "two of the three things"), so a transfer begun on a bus that stops
+   // part way through wedges the board, and not starting one is the only thing that helps.
+   if (C64IsClockingPHI2())
+   {
+      // Long enough to read the two lines the caller just printed -- but only when they
+      // were printed. The C64 writes rsContinue the instant PrintSerialString returns
+      // (MainMenu.asm, WaitForTRMain) and SendMsgSerialStringBuf returns on that, so
+      // without a pause the blank would land within a frame of the message appearing and
+      // "Do not power off" would never be legible. That warning guards the one action
+      // that can leave the slot half erased.
+      //
+      // WaitForTRMain is the only thing that answers, though, and the C64 is in it only
+      // while waiting on a command it issued itself. Reached over USB or TCP -- the
+      // HostRemoveToken path, where the C64 is sitting in its idle menu loop -- the send
+      // times out after 3 s and draws nothing, and pausing here would add two more
+      // seconds of a stale menu for a warning that does not exist. The operator on that
+      // path is at the computer, and the host tool tells them there.
+      if (MessageSeen) delay(2000);
+
+      uint8_t BlankD011 = 0x00;
+      PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+      CloseDMA();
+   }
+
+   SetResetAssert;
+   delay(20);
+   detachInterrupt(digitalPinToInterrupt(PHI2_PIN));
+   detachInterrupt(digitalPinToInterrupt(Menu_Btn_In_PIN));
+#ifdef Fab04_BiDirReset
+   detachInterrupt(digitalPinToInterrupt(BiDir_Reset_PIN));
+#endif
+   NVIC_DISABLE_IRQ(IRQ_ENET);
+   NVIC_DISABLE_IRQ(IRQ_PIT);
+}
+
+static uint8_t HostInstallCode(VmInstallStatus status)
+{
+   switch (status)
+   {
+      case VmInstallStatus::Ok:            return VmFail::Installed;
+      case VmInstallStatus::ReadError:     return VmFail::InstallRead;
+      case VmInstallStatus::EraseFailed:   return VmFail::InstallErase;
+      case VmInstallStatus::ProgramFailed: return VmFail::InstallProgram;
+      case VmInstallStatus::VerifyFailed:  return VmFail::InstallVerify;
+      default:                             return VmFail::InstallFailed;
+   }
+}
+
+void DoHostInstall(FS *sourceFS, const char *FilePathName)
+{
+   static uint8_t staging[VM_HOST_SECTOR_BYTES];
+
+   VmTrhFile package{sourceFS->open(FilePathName, FILE_READ)};
+   if (!package.file)
+   {
+      SendMsgPrintfln("%s\r\nwould not open", FilePathName);
+      return;
+   }
+
+   VmTrhHeader header;
+   VmHostCandidate candidate;
+   const uint32_t FileBytes = (uint32_t)package.file.size();
+
+   // The length is judged before the header is read: a file shorter than the
+   // header cannot supply one, and a short read there would otherwise blame
+   // the card for a file that is only too small.
+   VmInstallResult checked{VmInstallStatus::ShortFile, FileBytes};
+   if (FileBytes >= VM_TRH_HEADER_BYTES)
+   {
+      checked = package.read(&header, sizeof header)
+         ? vm_trh_valid(header, FileBytes)
+         : VmInstallResult{VmInstallStatus::ReadError, 0};
+   }
+   if (checked) checked = vm_host_scan(package, header, staging, candidate);
+
+   // Everything up to here only reads, so a refusal is an ordinary message
+   // with the C64 still running.
+   if (!checked)
+   {
+      package.file.close();
+      SendMsgPrintfln("Host package refused:\r\n%s ($%lx)",
+         HostInstallWhy(checked.status), (unsigned long)checked.detail);
+      return;
+   }
+
+   char HostName[VmBootImage::nameBytes];
+   VmBootImage::displayName(HostName, sizeof HostName, &candidate.id);
+
+   // Before the reset assert: on fab 0.4 that pulls the pin isrExtResetDetect
+   // watches, and the resulting BtnPressed ends the wait for the C64 to read.
+   const bool Warned = SendMsgPrintfln("Installing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+
+   StopServingTheC64(Warned);
+
+   VmSlotFlash slot;
+   const VmInstallResult done = vm_host_install(slot, package, header, candidate, staging);
+
+   VmFail::set(HostInstallCode(done.status), done.detail);
+   RebootTR();
+   while (true) ;
+}
+
+// Removing a host opens the way an install does -- clear the tag so the slot stops
+// reading as a host -- and then erases the rest of the slot too. vm_host_slot_valid
+// would decide the same without it, but firmware without the extension loader does
+// not: it reserves only the top 256K, and a payload left directly below that is
+// where its update buffer search stops. See vm_host_remove().
+//
+// For the same reason this runs for a slot that holds anything, not only for a host:
+// an install that failed part way leaves bytes that are no host to this firmware and
+// are still in that search's way, and this is the one thing that clears them.
+void DoHostUninstall()
+{
+   const bool Installed = VmBootImage::installed();
+   if (!Installed && VmBootImage::blank())
+   {
+      SendMsgPrintfln("No extension host is installed.");
+      return;
+   }
+
+   // Before the reset assert, for the reason DoHostInstall gives above.
+   bool Warned;
+   if (Installed)
+   {
+      VmHostId id{};
+      char HostName[VmBootImage::nameBytes];
+      VmBootImage::displayName(HostName, sizeof HostName, VmBootImage::identity(id) ? &id : nullptr);
+      Warned = SendMsgPrintfln("Removing host %s.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.", HostName);
+   }
+   else Warned = SendMsgPrintfln("Clearing the extension slot.\r\nDo not power off. Up to 45s,\r\nscreen will be blank.");
+
+   StopServingTheC64(Warned);
+
+   VmSlotFlash slot;
+   const VmInstallResult done = vm_host_remove(slot);
+
+   // The tag is cleared before any sector is erased, so an erase that fails still leaves
+   // a slot that no longer reads as a host. Removal is a question about the slot, not
+   // about the last operation: reporting the status here would claim the host is still
+   // installed while the next boot finds nothing, and the menu would agree with the boot
+   // rather than with the message. Ask the slot. The status still rides in the detail,
+   // so a removal that left some of the payload in flash says so.
+   const bool gone = !vm_host_installed(slot);
+   VmFail::set(gone ? VmFail::Removed : VmFail::RemoveFailed, (uint32_t)done.status);
+   RebootTR();
+   while (true) ;
+}
+#endif

@@ -379,7 +379,7 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
       for(uint16_t FNum=0; FNum<LocalNumItems; FNum++)
       {
          //Printf_dbg("%4d %2d %s\n", FNum, LocalDirMenu[FNum].ItemType, LocalDirMenu[FNum].Name);
-         if (LocalDirMenu[FNum].ItemType >= rtFilePrg && LocalDirMenu[FNum].ItemType != rtFileHex)
+         if (IsStorableLaunchType(LocalDirMenu[FNum].ItemType))
          {
             CleanLocalDirMenu[CleanLocalNumItems] = &LocalDirMenu[FNum];
             Printf_dbg("%4d %2d %s\n", CleanLocalNumItems, CleanLocalDirMenu[CleanLocalNumItems]->ItemType, CleanLocalDirMenu[CleanLocalNumItems]->Name);

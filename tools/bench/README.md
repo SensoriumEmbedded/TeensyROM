@@ -17,8 +17,7 @@ Which image is running decides how much of this works. The **main image**
 answers all of it. The **minimal image** answers reset, launch, version and the
 firmware check, and fails other commands with `Busy!`. The **extension image
 runs with USB disabled** and answers nothing at all, so a silent port after
-launching an extension is success, not a hang. (That image arrives with the
-extension loader, PR #31; the other two are here today.)
+launching an extension is success, not a hang.
 
 `probe.py` asks the board whether it is main or minimal, and reports silence
 otherwise -- which is the extension image or a hung board. On macOS the port
@@ -41,7 +40,11 @@ whatever node appeared beside it.
 | `fwupdate.py <hex> [remote]` | Push a hex to the SD card, launch it, answer the C64's Y/N prompt by DMA, echo the updater until the board reboots, then check that the board came back on the main image reporting the hex's build stamp. A file that is not Intel HEX is refused before anything is pushed; a hex this reader cannot fully decode is flashed and the board is still checked for the main image, without the stamp comparison. |
 | `push.py <local>=<remote> ...` | Copy files to the SD card. Deletes the target first; the firmware will not overwrite. |
 | `launch.py <path> [drive] [secs]` | Launch a file from the SD card and echo serial. |
-| `exttest.py <path>` | Launch an extension and report how it ended: still running, or reset to the menu with a failure record. |
+| `hostinstall.py <local.trh> [remote]` | Push a `.TRH` extension host package to the SD card and install it. A package the firmware refuses comes back with the C64 still running and nothing erased; one it takes reboots the board, and the install record is read off the boot output -- exiting non-zero unless that record says the host was installed, since a failed erase or program reboots the same way. `npm run build:tr-plus` writes the stock host's package as `build/firmware/TeensyROM+_<ver>_VMBoot.TRH`; a `--host-sketch` build writes its own the same way. |
+| `hostuninstall.py` | Remove the installed extension host: clear the tag so the slot stops reading as a host, then erase the rest of the slot, which reboots the board. Exits non-zero unless the record on the way back up says the host was removed with detail `$0` -- a failed erase reboots too, and a sector that would not erase still reports `$40`, with its status as the detail. A slot holding no host but not blank, which is what an install that failed part way leaves, is cleared the same way. With the slot already blank it says so and the board stays up. The firmware takes this command on the USB device port only; over the USB host port or the TCP listener it is refused with `Busy!`. |
+| `hostcycle.py <local.trh>` | The install/remove round trip end to end against a real board, asserted and unattended: remove, refuse a second remove, install, remove, refuse again, reinstall. Every step runs whatever the ones before it did; it exits non-zero at the end, listing each step whose outcome did not match. |
+| `exttest.py <path>` | Launch an extension and report how it ended, told apart by which image answers afterwards rather than by whether a serial node exists. No image answering is the success case for a resident module -- the main image's node goes away and the minimal image's usually stays behind, enumerated and serviced by nobody -- so look at the C64; the main image answering means the extension gave the machine back, and its record is printed *and read*, because a launch that faulted comes back the same way one that finished does; a port that never drops means nothing entered the image, and the screen carries the refusal. Exits 0 for a resident module or a record naming a normal finish (`hostops.FINISHED_NORMALLY`), and 1 for a launch nothing entered or a record that is a failure, absent, truncated or unrecognised -- the same positive match, and for the same reason, as `INSTALLED` and `REMOVED`. |
+| `hostenter.py <path> [phrase]` | The other shape from `exttest.py`, for a host that hands the machine back: launch, the port drops, the host runs and resets, and the main image prints its `VmFail` record on the way back up. With a `phrase` that record is the assertion; without one the run reports what it saw and asserts nothing, because a launch that failed after the jump reboots the same way a good one does. A host that stays resident never gives the main image's port back, and what that looks like here depends on whether minimal's orphan node stayed behind: with no node, `REBOOT_TIMEOUT` seconds and then `the board did not come back`; with one -- the usual case -- the screen read that follows fails instead, `no reply -- DMA read is not compiled into this image, or this is not the main image`, which names the wrong diagnosis for a host that is running exactly as intended. Use `exttest.py` for those; it treats no image answering as the success it is. |
 | `peek.py <hex addr> <len>` | Hex dump C64 memory. |
 | `screen.py` | The C64 text screen. |
 | `keypress.py [code]` | Put a key in the keyboard buffer (default `Y`; F1/F3/F5/F7 are `0x85`..`0x88`). |
@@ -50,6 +53,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
+| `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Also the phrases a reboot is judged by: `INSTALLED`, `REMOVED` and `FINISHED_NORMALLY`. Shared by the `host*.py` scripts and by `exttest.py`, whose exit status is `finished_normally()`'s answer, so a phrase edited here moves that verdict; and by `test_bounds.py`, which patches its timeouts to test them, and `test_protocol.py`, which pins the phrases against the firmware's own `VmFail::describe()`. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
@@ -73,7 +77,7 @@ The stamp is `SOURCE_DATE_EPOCH`, which the build sets to the HEAD commit time
 unless the environment already holds one, so it identifies a commit and not a
 build: commit before building if you want two runs told apart.
 
-Run the hello extension (`build/extensions/` comes with PR #31):
+Run the hello extension (`npm run build:hello` writes `build/extensions/`):
 
     python3 tools/bench/push.py build/extensions/HELLO.crt=/HELLO.crt \
         build/extensions/VMS/HELLO/manifest.vmi=/VMS/HELLO/manifest.vmi \
@@ -91,12 +95,28 @@ The fake board in `test_trlink.py` proves the framing and byte order, not what a
 board does. `test_protocol.py` checks every constant in `protocol.py` against the
 `Source/Teensy/` definition it came from, so a moved token fails a test rather
 than a board. The fake drops and re-publishes its pty, under a new name, for
-`fwupdate.py`'s post-reboot check; `exttest.py`'s own reconnect path still
-needs a real reset.
+`fwupdate.py`'s post-reboot check and for `exttest.py`'s:
+`test_trlink.ExtensionRun` runs `exttest.py` end to end across a real port
+drop, so the arm a reboot alone cannot classify -- finished, faulted, or no
+record at all -- is covered without hardware. Its other two arms are not, and
+need a board that sits still: a module that stays resident, and a launch the
+firmware refuses before the port ever drops.
 
-`screen.py`, `colors.py`, `exttest.py` and `fwupdate.py` read the screen through
-`petscii_row`, which decodes the uppercase/graphics charset. A C64 in the
-lower/uppercase charset shows its letters as `.`, which is also why `fwupdate.py`
-would miss the `Y/N` prompt there and time out rather than answer it.
+`screen.py`, `colors.py`, `exttest.py`, `fwupdate.py` and everything built on
+`hostops.py` -- `hostinstall.py`, `hostuninstall.py`, `hostcycle.py`,
+`hostenter.py` -- read the screen through `petscii_row`. Screen codes 1-26 are
+the unshifted letters and 65-90 the shifted ones, and which letters those are
+depends on where the VIC is pointed, so `petscii_row` takes a `charset`. It
+defaults to `LOWER_UPPER`, because that is where the menu puts the C64 at
+startup: `MainMenu.asm`'s `TextScreenMemColor` writes `#$17` to `$d018`. Pass
+`UPPER_GFX` for a screen a launched program has switched back to the power-on
+charset, where 65-90 are graphics and read as `.`.
+
+Both letter ranges decode, so a phrase asserted against the screen is no longer
+restricted to lower-case glyphs. Fold case anyway -- `hostops.Outcome.said` does,
+and `fwupdate.py` now does for its `Y/N` prompt -- since which case a glyph
+carries is a property of the screen, and a launched program need not stay in the
+charset the menu left behind. Nobody has read a real updater screen to settle
+which one it uses, so folding case is what makes that question not matter.
 
     python3 -m unittest discover -s tools/bench

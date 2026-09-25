@@ -90,7 +90,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    *GAME = CRT_Image[0x19];
    SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
-   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %.32s", (CRT_Image+0x20)); //the CRT Name field is 32 bytes and may fill them all
    return true;
 }
    
@@ -166,13 +166,37 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
             EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #ifdef Fab04_FullDMACapable
+            // Same guard, and for the same reason, as the blank in StopServingTheC64: this
+            // path is reached over USB as well as from the menu -- RemoteControl.ino's
+            // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
+            // though: that powers the board too, so there is nothing left to reach it.
+            // What is left is a C64 that still supplies 5 V but has stopped clocking.
+            //
+            // Against a bus that has already stopped, the check buys latency and not
+            // survival.  WaitForDMAState bounds the waits it runs itself -- 5 mS after the
+            // bus goes quiet, or the caller's ceiling while it is still clocking -- so
+            // PerformDMA and CloseDMA return false on their own, both return values are
+            // ignored here, and RebootTR() below runs either way.  Asking first costs
+            // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
+            // that could not have worked: each of the two waits pays 5 mS to notice the
+            // silence and another 5 mS inside AbortDMA.
+            //
+            // Against a bus that stops part way through, it is not only latency, which is
+            // why this is a check and not a deleted line.  DMATransferISR's edge waits have
+            // no bound at all -- see "two of the three things" over WaitForDMAState -- so a
+            // clock that dies while the ISR is inside one spins it forever at priority 16,
+            // thread mode never runs again, and RebootTR() is never reached.  Asking cannot
+            // close that window, only decline to open it on a bus that already reads dead.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
-            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)            
-            uint8_t BlankD011 = 0x00;
-            PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-            CloseDMA();
+            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)
+            if (C64IsClockingPHI2())
+            {
+               uint8_t BlankD011 = 0x00;
+               PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+               CloseDMA();
+            }
 #endif
             RebootTR();
             
@@ -237,7 +261,7 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
    strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendU16(BadSIDToken);
    SendMsgPrintfln("Error:");
-   SendMsgPrintfln(ErrMsg);
+   SendMsgPrintfln("%s", ErrMsg);
 }
 
 FLASHMEM void ParseSIDHeader(const char *filename)
@@ -511,11 +535,11 @@ void SendMsgFailed()
    SendMsgPrintf("Failed!");
 }
 
-void SendMsgPrintfln(const char *Fmt, ...)
+bool SendMsgPrintfln(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf - 2, Fmt, ap);  //-2: the shift below
    va_end(ap);
    
    //add \r\n to the beginning:
@@ -523,32 +547,47 @@ void SendMsgPrintfln(const char *Fmt, ...)
    SerialStringBuf[0] = '\r';
    SerialStringBuf[1] = '\n';
    
-   SendMsgSerialStringBuf();
+   return SendMsgSerialStringBuf();
 }
 
-void SendMsgPrintf(const char *Fmt, ...)
+bool SendMsgPrintf(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
-   SendMsgSerialStringBuf() ;
+   return SendMsgSerialStringBuf();
 }
 
-void SendMsgSerialStringBuf() 
+// true when the C64 actually read the message. The only code that answers rsC64Message is
+// WaitForTRMain (MainMenu.asm), and the C64 is in there only while waiting on a command it
+// issued itself -- so a message sent from a USB or TCP command path, with the C64 sitting
+// in its idle menu loop, is never drawn at all. Callers that pace themselves against the
+// reader need to know which happened rather than assume the message landed.
+bool SendMsgSerialStringBuf()
 {  //SerialStringBuf already populated
    Printf_dbg("%s<--", SerialStringBuf);
-   if(SendC64Msgs)
-   {
-      Serial.flush();
-      IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
-      uint32_t beginWait = millis();
-      //wait up to 3 sec for C64 to read message:
-      while (millis()-beginWait<3000 && !BtnPressed) if(IO1[rwRegStatus] == rsContinue) return;
-      Serial.printf("\nSout Timeout!\n"); 
-   }
-   else
+   if(!SendC64Msgs)
    {
       Printf_dbg("X");  //Indicates *not* sent to C64
+      return false;
    }
+
+   Serial.flush();
+   IO1[rwRegStatus] = rsC64Message; //tell C64 there's a message
+   uint32_t beginWait = millis();
+   //wait up to 3 sec for C64 to read message:
+   while (millis()-beginWait<3000 && !BtnPressed) if(IO1[rwRegStatus] == rsContinue) return true;
+   Serial.printf("\nSout Timeout!\n");
+
+   // Take the sentinel back. rsC64Message is ours, written above to get the C64's
+   // attention, and rwRegStatus is also what PollingHndlr_TeensyROM dispatches on -- so
+   // leaving it set makes the next poll read our own signal as a status code from the C64
+   // and index StatusFunction[] with 0xa5, past the end of a table of rsNumStatusTypes.
+   // The bounds check there makes that a "?Stat: a5" line instead of a wild call through
+   // whatever follows the table, but the line should not be reachable at all: nothing
+   // asked for a status. Only when it is still ours -- a code the C64 wrote in the
+   // meantime is its to be answered, not ours to discard.
+   if (IO1[rwRegStatus] == rsC64Message) IO1[rwRegStatus] = rsReady;
+   return false;
 }

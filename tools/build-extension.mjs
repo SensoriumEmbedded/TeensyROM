@@ -7,6 +7,9 @@
 //   node tools/build-extension.mjs --id HELLO --extensions hi \
 //        --source vm/hello/hello.cpp --client build/c64/vmhello.bin
 //
+// --services is the mask of service bits the module cannot run without,
+// defaulting to the base profile. See the registry in vm/abi/README.md.
+//
 // The image and cartridge formats live in tools/lib/extension.mjs; this script
 // only turns an ELF into the inputs that library wants, then reads its own
 // output back through the same validation the firmware applies.
@@ -15,26 +18,51 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { scanArgs } from './lib/cli-args.mjs';
 import {
   buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES, BASE_SERVICES,
+  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES,
+  BASE_SERVICES, ASSIGNED_SERVICES, HOST_SERVICES,
 } from './lib/extension.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const args = process.argv.slice(2);
-const option = (name, fallback) => { const i = args.indexOf(name); return i < 0 ? fallback : args[i + 1]; };
-const options = (name) => args.reduce((found, value, i) => (args[i - 1] === name ? [...found, value] : found), []);
+// package.json bakes --id, --extensions, --source and --client-source into build:hello, and
+// `npm run <script> -- ...` appends the caller's arguments after those, so the previous
+// first-wins indexOf() meant `npm run build:hello -- --id OTHER` built HELLO and exited 0.
+const { option, all, flag, given } = scanArgs(process.argv.slice(2), {
+  options: ['--id', '--extensions', '--client', '--client-source', '--out', '--services',
+            '--toolchain', '--arduino-data'],
+  repeatable: ['--source'],
+  flags: ['--keep', '--allow-unassigned-services'],
+});
 
 const id = option('--id');
 const extensions = option('--extensions');
-const sources = options('--source');
+const sources = all('--source');
 const clientBinary = option('--client');
 const clientSource = option('--client-source');
 const outRoot = path.resolve(option('--out', path.join(root, 'build/extensions')));
-const keep = args.includes('--keep');
+const keep = flag('--keep');
+const allowUnassignedServices = flag('--allow-unassigned-services');
 if (!id || !extensions || !sources.length) {
   throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...]\n' +
-                  '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]');
+                  '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]\n' +
+                  '    [--services <bits>] [--allow-unassigned-services]');
+}
+
+const SERVICE_MASK = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
+function parseServices(text) {
+  const value = SERVICE_MASK.test(text ?? '') ? Number(text) : NaN;
+  if (!Number.isInteger(value) || value > 0xffffffff) {
+    throw new Error(`--services wants one 32-bit mask such as 0x1001f, not ${text || 'a bare flag'}`);
+  }
+  return value >>> 0;
+}
+const requiredServices = given('--services') ? parseServices(option('--services')) : BASE_SERVICES;
+const beyondHost = (requiredServices & ~HOST_SERVICES) >>> 0;
+if (beyondHost) {
+  console.warn(`Note: this module requires services 0x${beyondHost.toString(16)}, which the TeensyROM ` +
+               'loader does not provide, so it refuses the module rather than launching it.');
 }
 if (clientBinary && clientSource) throw new Error('Pass either --client or --client-source, not both');
 
@@ -120,7 +148,7 @@ const code = binary('.text');
 const data = binary('.data');
 
 // --- Package ---------------------------------------------------------------
-const image = buildImage({ code, data, bssBytes, entry, requiredServices: BASE_SERVICES });
+const image = buildImage({ code, data, bssBytes, entry, requiredServices, allowUnassignedServices });
 // Read our own output back with the same checks the firmware applies, so a
 // packaging mistake fails here rather than on the C64.
 const header = parseImage(image);

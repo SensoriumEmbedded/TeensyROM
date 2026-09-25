@@ -22,6 +22,14 @@
 #include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
+FLASHMEM void SetLatestSIDLoaded(uint8_t Source, const char* Path, const char* Name)
+{  //source byte, then path and name, each terminated, packed into MaxPathLength
+   LatestSIDLoaded[0] = Source;
+   snprintf(LatestSIDLoaded + 1, MaxPathLength - 2, "%s", Path);
+   size_t NameOffset = strlen(LatestSIDLoaded + 1) + 2;
+   snprintf(LatestSIDLoaded + NameOffset, MaxPathLength - NameOffset, "%s", Name);
+}
+
 // A remote file command changed storage under a listing the C64 has already
 // painted. The C64 selects by item number and the firmware cannot repaint it,
 // so rebuilding at the command would resolve painted numbers against a list
@@ -47,11 +55,16 @@ FLASHMEM bool ApplyRemoteFileChanges()
 
    FS *sourceFS = &firstPartition;
    if (LoadedDevice == rmtSD) sourceFS = &SD;
-   LoadDirectory(sourceFS);
-   MenuSource = DriveDirMenu;
+   LoadDirectory(sourceFS); //publishes DriveDirMenu with its count
    IO1[rwRegCursorItemOnPg] = 0;
    SendMsgPrintfln("Files changed\r\nDirectory reloaded");
    return true;
+}
+
+void FullPathToSelected(char *Path, size_t Size, const char *Name)
+{
+   if (PathIsRoot()) snprintf(Path, Size, "/%s", Name);  // at root
+   else snprintf(Path, Size, "%s/%s", DriveDirPath, Name);
 }
 
 FLASHMEM void HandleExecution()
@@ -60,7 +73,14 @@ FLASHMEM void HandleExecution()
 
    if (ApplyRemoteFileChanges()) return;
 
-   StructMenuItem MenuSelCpy = MenuSource[SelItemFullIdx]; //local copy selected menu item to modify
+   const StructMenuItem* SelItem = MenuItemSel();
+   if (SelItem == NULL)
+   {  //the menu changed under the selection since the index was formed; this path goes on to
+      //open files, write EEPROM and swap IO handlers off the item it copies, so refuse loudly
+      SendMsgPrintfln("Selection is out of range\r\nfor the current menu");
+      return;
+   }
+   StructMenuItem MenuSelCpy = *SelItem; //local copy selected menu item to modify
 
 #ifdef VM_EXTENSIONS_ENABLED
    // Existing browser and item types are unchanged. Intercept only physical SD
@@ -94,12 +114,21 @@ FLASHMEM void HandleExecution()
          {
             char FullFilePath[MaxNamePathLength];
             
-            if (PathIsRoot()) sprintf(FullFilePath, "/%s", MenuSelCpy.Name);  // at root
-            else sprintf(FullFilePath, "%s/%s", DriveDirPath, MenuSelCpy.Name);
-
+            FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSelCpy.Name);
             DoFlashUpdate(sourceFS, FullFilePath);
             return;  //we're done here...
          }
+         
+#ifdef VM_EXTENSIONS_ENABLED
+         if (MenuSelCpy.ItemType == rtFileTRH)  //extension host install from package
+         {
+            char FullFilePath[MaxNamePathLength];
+            
+            FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSelCpy.Name);
+            DoHostInstall(sourceFS, FullFilePath);
+            return;  //we're done here...
+         }
+#endif
          
          if (MenuSelCpy.ItemType == rtDirectory)
          {  //edit path as needed and load the new directory from SD/USB
@@ -123,7 +152,8 @@ FLASHMEM void HandleExecution()
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected d64 name as a dir
             LoadDxxDirectory(sourceFS, MenuSelCpy.ItemType); 
             strcat(DriveDirPath, "*"); //mark to indicate d64 file instead of "real" dir
-            SetNumItems(NumDrvDirMenuItems);
+            SetMenu(DriveDirMenu, NumDrvDirMenuItems); //LoadDxxDirectory rebuilt the array
+
             return;  //we're done here...
          }
          
@@ -148,14 +178,13 @@ FLASHMEM void HandleExecution()
             if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
             else 
             {
-               MenuSource = (StructMenuItem*)MenuSelCpy.Code_Image;
-               SetNumItems(MenuSelCpy.Size/sizeof(StructMenuItem));
+               SetMenu((StructMenuItem*)MenuSelCpy.Code_Image, MenuSelCpy.Size/sizeof(StructMenuItem));
                strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             }
             return;
          }
          
-         SendMsgPrintfln(MenuSelCpy.Name); 
+         SendMsgPrintfln("%s", MenuSelCpy.Name);
          if (MenuSelCpy.ItemType == rtFileCrt)
          {  //load the CRT into RAM
             uint8_t EXROM;
@@ -214,16 +243,17 @@ FLASHMEM void HandleExecution()
    switch(MenuSelCpy.ItemType)
    {
       case rtFileSID:
+      {
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
          
          //save source/path/name for later use
-         LatestSIDLoaded[0] = IO1[rWRegCurrMenuWAIT]; //set source
-         if(LatestSIDLoaded[0] == rmtTeensy)
+         const char* SIDPath = DriveDirPath;
+         if(IO1[rWRegCurrMenuWAIT] == rmtTeensy)
          { // built-in SID
             //figure out what menu dir we're in
-            if (MenuSource == TeensyROMMenu) strcpy(LatestSIDLoaded + 1, "/"); //root
-            else
+            SIDPath = "/";
+            if (MenuSource != TeensyROMMenu)
             {
                //find sub-dir
                uint8_t DirNum = 0;
@@ -237,18 +267,15 @@ FLASHMEM void HandleExecution()
                      break;
                   }
                }
-               strcpy(LatestSIDLoaded + 1, TeensyROMMenu[DirNum].Name);
+               SIDPath = TeensyROMMenu[DirNum].Name;
             }
          }
-         else
-         { // from SD or USB
-            strcpy(LatestSIDLoaded + 1, DriveDirPath);
-         }
-         strcpy(LatestSIDLoaded + strlen(LatestSIDLoaded + 1) + 2, MenuSelCpy.Name);
+         SetLatestSIDLoaded(IO1[rWRegCurrMenuWAIT], SIDPath, MenuSelCpy.Name);
          Printf_dbg("Saved SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2);
                   
          ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
          break;
+      }
       case rtFileKla:
          XferImage = MenuSelCpy.Code_Image;
          XferSize = MenuSelCpy.Size;
@@ -339,17 +366,14 @@ void MenuChange()
    switch(IO1[rWRegCurrMenuWAIT])
    {
       case rmtTeensy:
-         MenuSource = TeensyROMMenu; 
-         SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
+         SetMenu(TeensyROMMenu, sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
          SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
-         MenuSource = DriveDirMenu; 
-         break;
+         break;              //LoadDirectory publishes DriveDirMenu with its count
       case rmtUSBDrive:
          LoadDirectory(&firstPartition);
-         MenuSource = DriveDirMenu; 
          break;
    }
    IO1[rwRegCursorItemOnPg] = 0;
@@ -360,8 +384,9 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
    char FullFilePath[MaxNamePathLength];
 
    //PathIsRoot() uses DriveDirPath directly
-   if (strlen(FilePath) == 1 && FilePath[0] == '/') sprintf(FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
+   //bounded: Name is malloc'd at the card's own length (SetDriveDirMenuNameType), not MaxItemNameLength
+   if (strlen(FilePath) == 1 && FilePath[0] == '/') snprintf(FullFilePath, sizeof FullFilePath, "%s%s", FilePath, MyMenuItem->Name);  // at root
+   else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", FilePath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
@@ -565,7 +590,10 @@ void LoadDirectory(FS *sourceFS)
       AddDirEntry("<Empty>");
    }
    
-   SetNumItems(NumDrvDirMenuItems);
+   //Publishes the base as well as the count: callers used to assign MenuSource themselves
+   //*after* this returned, leaving a window where the new count described a menu the base did
+   //not point at yet, and an IO1 read landing in it indexed the old menu by the new length.
+   SetMenu(DriveDirMenu, NumDrvDirMenuItems);
 }
 
 void AddDirEntry(const char *EntryString)
@@ -580,10 +608,23 @@ void FreeDriveDirMenu()
    //free/clear prev loaded directory
    if(DriveDirMenu != NULL)
    {
-      Printf_dbg("Dir info removed\n"); 
+      Printf_dbg("Dir info removed\n");
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
       free(DriveDirMenu); DriveDirMenu = NULL;
    }
+   NumDrvDirMenuItems = 0;
+
+   //The allocation is gone but MenuSource still points into it and NumItemsFull still
+   //holds its count, which is exactly the pair MenuIdxFromRegs bounds against -- so
+   //until this runs, an index it calls in-range reaches freed memory, and isrPHI2
+   //dereferences it (rRegItemTypePlusIOH, rsstItemName).  Redirecting here rather than
+   //at the call sites because there are five of them: FileParsers.ino, SerUSBIO.ino's
+   //'x' command, IOH_REU.c and IOH_Swiftlink.c handler init, and this file's callers.
+   //Only the first two were repaired, and only on some paths.  Cheap wherever it lands:
+   //rWRegCurrMenuWAIT is set to rmtTeensy first, so MenuChange() takes its static-menu
+   //branch and does no SD/USB I/O.  Self-limiting too -- DriveDirMenu is already NULL
+   //here, and RedirectEmptyDriveDirMenu does nothing unless it is.
+   RedirectEmptyDriveDirMenu();
 }
 
 void FreeCrtChips()

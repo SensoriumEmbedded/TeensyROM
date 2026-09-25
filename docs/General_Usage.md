@@ -125,15 +125,15 @@
 
 ## The Settings Menu 
   * (as of FW v0.8)
-  * Accessed via `F8` from the main menu. Organized into 9 indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
+  * Accessed via `F8` from the main menu. Organized into indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
   * Shared navigation, works from any page:
     * `CRSR Left/Right` Previous/Next page
-    * `1-9` Jump directly to a page (see page # below)
+    * `1-9`, `0` Jump directly to a page (see page # below)
     * `F1` Reboot TeensyROM (applies any power-up-only settings)
     * `Space Bar` Return to Main Menu
 
 ### 1. Index
-  * Lists all 9 pages below for quick-jump access
+  * Lists every page below for quick-jump access
 
 ### 2. Config: TeensyROM General
   * Emulation Selections:
@@ -220,6 +220,15 @@
 ### 9. Info: HotKeys
   * Shows the currently assigned file for each of the 5 programmable Hot Keys (#1-5)
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
+
+### 0. Installed Extensions
+  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
+  * The firmware comes with no host installed, and runs exactly as it would without one. A host is an optional add-on distributed as a `.TRH` file: copy it to the SD card or USB drive and select it in the file browser to install it. A firmware update leaves the installed host in place
+  * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
+  * Uninstalling erases the host from flash and reboots the TeensyROM
+  * `None installed; slot not blank.` means an install or an uninstall did not finish and left part of a host behind; `u` erases it the same way, and the report on the way back up says the host was removed
+  * Uninstall the host before loading a firmware without extension support, such as an older release: that firmware cannot update itself while a host is in flash. If one is already loaded, load a TeensyROM+ firmware with extension support using the TeensyLoader app, then uninstall
+  * On a board or build with no extension loader, the page says so and `u` changes nothing
 
 ## Selecting and associating Special IO
   * What is it?

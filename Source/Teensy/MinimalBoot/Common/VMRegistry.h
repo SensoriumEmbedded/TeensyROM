@@ -2,44 +2,33 @@
 #pragma once
 #include "VMABI.h"
 #include "VMBootImage.h"
+#include "VMHostABI.h"
 namespace VmRegistry {
-struct Manifest { char id[24],extension[8],module[32],client[32];uint32_t crc; };
-struct Launch { uint32_t magic,manifest_crc;char root[80],content[256];uint32_t crc; };
-static FLASHMEM bool component(const char *s) {
-    if(!*s || strstr(s,".."))return false;
-    for(;*s;s++)if(!((*s>='A'&&*s<='Z')||(*s>='a'&&*s<='z')||(*s>='0'&&*s<='9')||*s=='_'||*s=='-'||*s=='.'))return false;
-    return true;
-}
-static FLASHMEM bool absolute(const char *s,size_t cap){
-    if(!s||s[0]!='/'||!memchr(s,0,cap)||strstr(s,"..")||strchr(s,'\\'))return false;
-    return true;
-}
+// The record, the manifest and the path rules are the published host contract
+// (VMHostABI.h): the other side of the reboot may be a third-party host.
+using Manifest = VmManifest;
+using Launch = VmLaunchRecord;
+static FLASHMEM bool component(const char *s){return vm_path_component(s);}
+static FLASHMEM bool absolute(const char *s,size_t cap){return vm_path_absolute(s,cap);}
 // A bounded comma-separated extension list uses the existing manifest field;
 // e.g. gb,gbc. This is generic routing, not a VM-specific firmware exception.
 static FLASHMEM bool extensionMatches(const char *list,const char *ext){
-    const size_t n=strlen(ext);for(const char *p=list;*p;){const char *end=strchr(p,',');size_t len=end?size_t(end-p):strlen(p);
-        if(len==n&&!strncasecmp(p,ext,n))return true;if(!end)break;p=end+1;}return false;
+    const size_t n=strlen(ext);
+    for(const char *p=list;*p;){
+        const char *end=strchr(p,',');
+        size_t len=end?size_t(end-p):strlen(p);
+        if(len==n&&!strncasecmp(p,ext,n))return true;
+        if(!end)break;
+        p=end+1;
+    }
+    return false;
 }
-static FLASHMEM bool validExtensions(const char *list){
-    if(!*list||strlen(list)>7)return false;
-    static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu"};
-    for(const char *p=list;*p;){char ext[8]{};const char *end=strchr(p,',');size_t n=end?size_t(end-p):strlen(p);
-        if(!n||n>=sizeof ext)return false;memcpy(ext,p,n);if(!component(ext)||strchr(ext,'.'))return false;
-        for(const auto &protectedExt:protectedExtensions)if(!strcasecmp(ext,protectedExt))return false;
-        if(!end)return true;p=end+1;if(!*p)return false;}return false;
-}
+static FLASHMEM bool validExtensions(const char *list){return vm_manifest_extensions(list);}
 static FLASHMEM bool readManifest(const char *root,Manifest &m){
     char path[128],buf[192];if(!absolute(root,80)||snprintf(path,sizeof path,"%s/manifest.vmi",root)>=(int)sizeof path)return false;
     FsFile f=SD.sdfs.open(path,O_RDONLY);if(!f||f.isDirectory()||f.fileSize()>=sizeof buf){f.close();return false;}
     const uint32_t n=f.fileSize();const bool ok=f.read(buf,n)==(int)n;f.close();if(!ok)return false;buf[n]=0;
-    char *line[6],*p=buf;unsigned count=0;
-    while(*p&&count<6){line[count++]=p;while(*p&&*p!='\n'&&*p!='\r')p++;if(*p){*p++=0;while(*p=='\n'||*p=='\r')p++;}}
-    if(count!=6||*p||strcmp(line[0],"VM1")||strcmp(line[5],"END"))return false;
-    if(!component(line[1])||!validExtensions(line[2])||!component(line[3])||!component(line[4])||
-       strlen(line[1])>=sizeof m.id||strlen(line[2])>=sizeof m.extension||strlen(line[3])>=sizeof m.module||strlen(line[4])>=sizeof m.client)return false;
-    const char *id=strrchr(root,'/');if(!id||strcmp(id+1,line[1]))return false;
-    memset(&m,0,sizeof m);strcpy(m.id,line[1]);strcpy(m.extension,line[2]);strcpy(m.module,line[3]);strcpy(m.client,line[4]);
-    m.crc=vm_crc32(&m,offsetof(Manifest,crc));return true;
+    return vm_manifest_parse(buf,root,m);
 }
 // Registry limits are deliberate. Over-limit or ambiguous installs reject launch.
 static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch){
@@ -63,8 +52,7 @@ static FLASHMEM int find(const char *extension,const char *clientId,Launch &laun
 static FLASHMEM bool consume(Launch &l){
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_RDONLY);
     const bool ok=f&&!f.isDirectory()&&f.fileSize()==sizeof l&&f.read(&l,sizeof l)==sizeof l;f.close();
-    return ok&&l.magic==0x314c4d56&&l.crc==vm_crc32(&l,offsetof(Launch,crc))&&absolute(l.root,sizeof l.root)&&
-        (!l.content[0]||absolute(l.content,sizeof l.content));
+    return ok&&vm_launch_valid(l);
 }
 #ifndef MinimumBuild
 static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
@@ -141,16 +129,22 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     if(!VmBootImage::installed()){SendMsgPrintfln("No extension host installed");return true;}
     VmHostId hostId{};
     if(VmBootImage::identity(hostId)){
-        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%.12s host is ABI %lu, not %lu",hostId.name,
+        // Through displayName, like every other message that shows the name. These reach
+        // the same C64 screen, and reading the field in place put its raw bytes there:
+        // the width tracked the field but nothing stopped a control code, so a refusal
+        // could clear the screen it was printing on.
+        char hostName[VmBootImage::nameBytes];
+        VmBootImage::displayName(hostName,sizeof hostName,&hostId);
+        if(hostId.abi!=VM_ABI){SendMsgPrintfln("%s host is ABI %lu, not %lu",hostName,
                         (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
-        if(image.required_services&~hostId.services){SendMsgPrintfln("%.12s host lacks service $%lx",hostId.name,
+        if(image.required_services&~hostId.services){SendMsgPrintfln("%s host lacks service $%lx",hostName,
                         (unsigned long)(image.required_services&~hostId.services));return true;}}
-    l.magic=0x314c4d56;l.crc=vm_crc32(&l,offsetof(Launch,crc));
+    l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
     const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();
     Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return true;}
     // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
-    EEPwriteStr(eepAdCrtBootName,"@VM1");EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
+    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
     RebootTR();return true;
 }
 #endif

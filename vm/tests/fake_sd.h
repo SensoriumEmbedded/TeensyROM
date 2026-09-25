@@ -55,9 +55,9 @@ static bool rebooted;static std::string message,marker;
 // Varargs like the firmware's, so a test sees the message the C64 would, and
 // -Wformat checks the firmware's format strings against their arguments.
 __attribute__((format(printf,1,2)))
-static void SendMsgPrintfln(const char *fmt,...){
+static bool SendMsgPrintfln(const char *fmt,...){
     char buffer[160];va_list args;va_start(args,fmt);
-    vsnprintf(buffer,sizeof buffer,fmt,args);va_end(args);message=buffer;}
+    vsnprintf(buffer,sizeof buffer,fmt,args);va_end(args);message=buffer;return true;}
 static void EEPwriteStr(int,const char *m){marker=m;}
 static struct {void write(int,int){}} EEPROM;
 static void delay(unsigned){}
