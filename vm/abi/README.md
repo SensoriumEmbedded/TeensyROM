@@ -275,8 +275,10 @@ Then:
 6. The extension image loads the client cartridge into RAM as EasyFlash banks,
    loads the module, and calls its entry point.
 
-The extension image lives in its own flash slot at `0x60280000..0x602e0000`, so
-the main and minimal firmware images keep their own addresses.
+The extension image lives in its own flash slot at `0x60760000..0x607c0000`, at
+the top of flash just below the EEPROM emulation, so the main and minimal
+firmware images keep their own addresses and a firmware update leaves the
+installed host in place.
 
 ## 5. The runtime
 

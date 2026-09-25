@@ -52,7 +52,15 @@
 //    https://namoseley.wordpress.com/2015/02/04/freescale-kinetis-mk20dx-series-flash-erasing/
 
 
-#define FLASH_RESERVE     (0x40000) // 256k reserved space at top of flash 
+#define FLASH_RESERVE_STOCK (0x40000) // 256k reserved space at top of flash 
+#ifdef VM_EXTENSIONS_ENABLED
+   // The extension host slot (VMHostABI.h) sits directly below those 256k. The updater
+   // stages into and erases everything under FLASH_RESERVE, so the slot is reserved too,
+   // or an update would erase the installed host. 640k in all; checked below.
+   #define FLASH_RESERVE     (FLASH_RESERVE_STOCK + VM_HOST_SLOT_BYTES)
+#else
+   #define FLASH_RESERVE     FLASH_RESERVE_STOCK
+#endif
 #ifdef Fab04_Features
    #define FLASH_ID         "fw_t41_teensyromplus_sensorium" // target ID to match, must be a unique to previous   
 #else
@@ -67,6 +75,14 @@ extern "C" {
   #include "Flash/FlashTxx.h"		// TLC/T3x/T4x/TMM flash primitives
   #include "Flash/FlashTxx.c"
 }
+
+#ifdef VM_EXTENSIONS_ENABLED
+   // FLASH_RESERVE covers the slot only if the slot ends exactly where the stock 256k
+   // begins. Moving the slot without that fails here, rather than leaving an updater that
+   // erases the installed host or a slot overlapping the EEPROM emulation.
+   static_assert(FLASH_BASE_ADDR + FLASH_SIZE - FLASH_RESERVE_STOCK == VM_HOST_SLOT_LIMIT,
+                 "the extension host slot must end where the stock flash reserve begins");
+#endif
 
 
 void DoFlashUpdate(FS *sourceFS, const char *FilePathName)

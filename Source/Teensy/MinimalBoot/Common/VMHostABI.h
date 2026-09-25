@@ -41,10 +41,14 @@
 
 // ---------------------------------------------------------------- the slot
 
-// Must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs, which partitions the
-// combined hex; checkBootSlot() in tools/verify-extensions.mjs compares them.
-enum : uint32_t { VM_HOST_SLOT_BASE = 0x60280000u,
-                  VM_HOST_SLOT_LIMIT = 0x602e0000u,
+// The top of the flash map, directly below the Teensy core's EEPROM emulation
+// at 0x607c0000, and inside the range the firmware updater leaves alone
+// (FLASH_RESERVE in FlashUpdate.ino), so an installed host survives a firmware
+// update. Must match VM_BASE/VM_LIMIT in tools/lib/hex.mjs, which bounds the
+// firmware hex below it; checkBootSlot() in tools/verify-extensions.mjs
+// compares them.
+enum : uint32_t { VM_HOST_SLOT_BASE = 0x60760000u,
+                  VM_HOST_SLOT_LIMIT = 0x607c0000u,
                   VM_HOST_SLOT_BYTES = VM_HOST_SLOT_LIMIT - VM_HOST_SLOT_BASE,
                   // In the 0xFF fill between the FlexSPI configuration block
                   // and the image vector table, so the descriptor costs no

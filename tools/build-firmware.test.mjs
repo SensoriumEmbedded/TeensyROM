@@ -130,7 +130,7 @@ function stubSdk() {
   return dir;
 }
 
-const RESERVATION = /Reserving \d+K at 0x60280000/;
+const RESERVATION = /Reserving \d+K at 0x60760000/;
 
 test('extensions are on by default for tr-plus, and only there', {
   skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',

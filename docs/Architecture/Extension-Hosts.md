@@ -197,7 +197,7 @@ protocol, not just this token, is exposed to the LAN.
 
 | | |
 |---|---|
-| Flash slot | 384 KiB at `0x60280000` |
+| Flash slot | 384 KiB at `0x60760000`, the top of flash below the EEPROM emulation; firmware updates leave it alone |
 | ITCM | 96 KiB for host code (module code takes `0x00018000` up) |
 | DTCM | everything below `0x20014000`, heap capped at 16 KiB |
 | Stack | 48 KiB, shared |

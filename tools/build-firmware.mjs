@@ -532,7 +532,7 @@ if (!skipCombine && !hostOnly) {
   const finalKB = (fs.statSync(finalOutput).size / 1024).toFixed(2);
   console.log(`Combined: ${finalOutput} (${finalKB} KB)`);
 
-  const headroom = checkFlashHeadroom(root, finalOutput);
+  const headroom = checkFlashHeadroom(root, finalOutput, { extensions: withExtensions });
   console.log('\n' + formatFlashHeadroom(headroom));
   if (headroom.status === 'FAIL') {
     throw new Error('Flash headroom check failed (see above).');
