@@ -182,7 +182,8 @@ FLASHMEM void InitHndlr_RetroReplay_REU()
 {
   InitHndlr_RetroReplay();
   InitHndlr_REU();  // Initialize REU handler for REU compatibility 
-  fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU;  // replace handler with long/short press
+  if (NumREU_Banks != 0)  // If REU allocation successful
+     fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU;  // replace handler with long/short press
 } 
 
 // $deXX Handler -- REU Memory Map
@@ -208,10 +209,10 @@ void IO1Hndlr_RetroReplay(uint8_t Address, bool R_Wn)
                // additional global by using RR_StatusReg to flag *and* store first write. 
                if (RR_StatusReg == 0)  
                {
-//                  NoFreeze not implemented in known RR versions and setting to null breaks
-//                  combined long/short Freezer + REU button handler
-//                  If needed in future re-implemnt with a disabled check rather than setting NULL
-//                  if (Data & RR_ECR_NOFREEZ) fSpecialBtnChange = NULL; // Disable Freeze
+                  // NOFREEZ (not used by any known RR software): honored for plain RR only.
+                  // In RR+REU mode, NULL would break the combined long/short Freeze/Save-REU button handler.
+                  if ((CurrentIOHandler == IOH_RetroReplay) && (Data & RR_ECR_NOFREEZ))
+                     fSpecialBtnChange = NULL; // Disable Freeze
                   RR_StatusReg = (Data & ~RR_ECR_NOFREEZ);  //RR_StatusReg does not have NOFREEZ bit
                    
                }              

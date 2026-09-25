@@ -598,7 +598,7 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
 
    if (NumREU_Banks < MIN_REU_BANKS) // If REU is not 128k or larger
    {
-      Serial.printf("Unable to allocate minimum REU size of 128K\n",
+      Serial.printf("Unable to allocate minimum REU size of 128K\n"
                      "REU is disabled\n");
       FreeREU(); 
       return;

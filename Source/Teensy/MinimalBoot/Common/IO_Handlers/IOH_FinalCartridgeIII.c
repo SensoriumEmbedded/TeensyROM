@@ -132,8 +132,10 @@ void ProcessFC3ControlReg(uint8_t ControlReg)
 
 FLASHMEM void InitHndlr_FinalCartridgeIII()
 {
-   // Check for presense of "REU " in the REU range of every FC3 101% bank
-   FC3_101 = (memcmp("REU ", CrtChips[0].ChipROM + 0x1f00, 4) == 0);
+   // Check for presence of "REU " in the REU range of bank 0
+   // (every FC3 101% bank contains this text)
+   FC3_101 = (CrtChips[0].ROMSize >= 0x2000) &&
+             (memcmp("REU ", CrtChips[0].ChipROM + 0x1f00, 4) == 0);
 
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5   
    CycleCountdown = 0;
@@ -145,7 +147,8 @@ FLASHMEM void InitHndlr_FCIII_101_REU() // WITH TR+ REU
 {
    InitHndlr_FinalCartridgeIII();  // Initialize Final Cartridge III handler
    InitHndlr_REU();  // Initialize REU handler for REU compatibility
-   fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU; // replace handler with long/short press
+   if (NumREU_Banks != 0)  // If REU allocation successful
+      fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU; // replace handler with long/short press
 }
 
 // IO1: Mirrrors $1E00 to $1EFF of current ROM bank
