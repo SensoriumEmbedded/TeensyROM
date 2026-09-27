@@ -515,7 +515,7 @@ bool SendMsgPrintfln(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf - 2, Fmt, ap);  //-2: the shift below
    va_end(ap);
    
    //add \r\n to the beginning:
@@ -530,7 +530,7 @@ bool SendMsgPrintf(const char *Fmt, ...)
 {
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
    return SendMsgSerialStringBuf();
 }
