@@ -752,6 +752,21 @@ FLASHMEM void LoadMainSIDforXfer()
 
 #ifdef Fab04_FullDMACapable
 #define TestPageSize   256
+
+//One transfer and its release, for the on-screen DMA tests: false means it did not happen,
+//and the line naming it is already on the screen. Every value these tests report is read
+//through here or through TestDMAPattern's own check, so none of them can report the stale
+//contents of its own buffer as C64 memory.
+//Both causes named, neither claimed: PerformDMA returns one bool and WaitForDMAState does
+//not report which of its bounds fired, so a clocking bus that timed out reaches here too.
+//Kept inside 40 columns -- these land on the C64 screen, these tests have no serial half.
+FLASHMEM bool ScreenDMA(DMA_Trans_RnW RnW, uint16_t Address, uint8_t *Buffer, uint32_t Length)
+{
+   if (PerformDMA(RnW, Address, Buffer, Length, DMA_ADDR_INCREMENT) && CloseDMA()) return true;
+   SendMsgPrintfln(" No %s at $%04x: no clock or timeout", RnW == DMA_READ ? "read" : "write", Address);
+   return false;
+}
+
 FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
 {
    uint8_t PageBuf[TestPageSize];
@@ -767,19 +782,8 @@ FLASHMEM bool TestDMAPage(uint16_t Address, uint8_t BytePat)
    memset(PageBuf, BytePat, TestPageSize);
    memset(ReadBuf, (uint8_t)~BytePat, TestPageSize);
 
-   //Both causes named, neither claimed: PerformDMA returns one bool and WaitForDMAState does
-   //not report which of its bounds fired, so a clocking bus that timed out reaches here too.
-   //Kept inside 40 columns -- these land on the C64 screen, this test has no serial half.
-   if (!PerformDMA(DMA_WRITE, Address, PageBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
-   {
-      SendMsgPrintfln(" No write at $%04x: no clock or timeout", Address);
-      return false;
-   }
-   if (!PerformDMA(DMA_READ, Address, ReadBuf, TestPageSize, DMA_ADDR_INCREMENT) || !CloseDMA())
-   {
-      SendMsgPrintfln(" No read at $%04x: no clock or timeout", Address);
-      return false;
-   }
+   if (!ScreenDMA(DMA_WRITE, Address, PageBuf, TestPageSize)) return false;
+   if (!ScreenDMA(DMA_READ, Address, ReadBuf, TestPageSize)) return false;
 
    for(uint16_t ByteNum=0; ByteNum<TestPageSize; ByteNum++)
       if (ReadBuf[ByteNum] != BytePat)
@@ -953,31 +957,29 @@ FLASHMEM void ExpPortDMA()
    uint8_t OrigValues[16]; //Place to store RAM values for restoration later
    uint8_t FirstAddrBit =1; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
    //read/store original values:
+   //a failed read here returns before anything is written, so the restores below never
+   //   write back a value that was not read
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(DMA_READ, (1<<AddrBit), &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT);  //Read back
-      CloseDMA();
+      if (!ScreenDMA(DMA_READ, (1<<AddrBit), &OrigValues[AddrBit], 1)) return;  //Read back
    }
    //write address bit num as data:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
    {
-      PerformDMA(DMA_WRITE, (1<<AddrBit), &AddrBit, 1, DMA_ADDR_INCREMENT); //Write the buffer
-      CloseDMA();
+      if (!ScreenDMA(DMA_WRITE, (1<<AddrBit), &AddrBit, 1)) return; //Write the buffer
    }
    //read back for errors:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
       uint8_t ReadVal;
-      PerformDMA(DMA_READ, (1<<AddrBit), &ReadVal, 1, DMA_ADDR_INCREMENT);  //Read back
-      CloseDMA();
+      if (!ScreenDMA(DMA_READ, (1<<AddrBit), &ReadVal, 1)) return;  //Read back
       if (ReadVal != AddrBit)
       {
          //write back original values
          for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
          {
-            PerformDMA(DMA_WRITE, (1<<AddrBitA), &OrigValues[AddrBitA], 1, DMA_ADDR_INCREMENT); //Write the buffer
-            CloseDMA();
+            if (!ScreenDMA(DMA_WRITE, (1<<AddrBitA), &OrigValues[AddrBitA], 1)) break; //Write the buffer
          }
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit), AddrBit, ReadVal);
          return;
@@ -988,8 +990,7 @@ FLASHMEM void ExpPortDMA()
    //write back original values
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(DMA_WRITE, (1<<AddrBit), &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT); //Write the buffer
-      CloseDMA();
+      if (!ScreenDMA(DMA_WRITE, (1<<AddrBit), &OrigValues[AddrBit], 1)) return; //Write the buffer
    }
    SendMsgPrintf(" OK");
 
@@ -1003,31 +1004,29 @@ FLASHMEM void ExpPortDMA()
 
    FirstAddrBit =2; //skipping A0 as $0001 is CPU ROM switch control and not reliable as RAM
    //read/store original values:
+   //a failed read here returns before anything is written, so the restores below never
+   //   write back a value that was not read
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(DMA_READ, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT);  //Read back
-      CloseDMA();
+      if (!ScreenDMA(DMA_READ, (1<<AddrBit)-1, &OrigValues[AddrBit], 1)) return;  //Read back
    }
    //write address bit num as data:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    //for(uint8_t AddrBit=15; AddrBit>=FirstAddrBit; AddrBit--)
    {
-      PerformDMA(DMA_WRITE, (1<<AddrBit)-1, &AddrBit, 1, DMA_ADDR_INCREMENT); //Write the buffer
-      CloseDMA();
+      if (!ScreenDMA(DMA_WRITE, (1<<AddrBit)-1, &AddrBit, 1)) return; //Write the buffer
    }
    //read back for errors:
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
       uint8_t ReadVal;
-      PerformDMA(DMA_READ, (1<<AddrBit)-1, &ReadVal, 1, DMA_ADDR_INCREMENT);  //Read back
-      CloseDMA();
+      if (!ScreenDMA(DMA_READ, (1<<AddrBit)-1, &ReadVal, 1)) return;  //Read back
       if (ReadVal != AddrBit)
       {
          //write back original values
          for(uint8_t AddrBitA=0; AddrBitA<16; AddrBitA++)
          {
-            PerformDMA(DMA_WRITE, (1<<AddrBitA)-1, &OrigValues[AddrBitA], 1, DMA_ADDR_INCREMENT); //Write the buffer
-            CloseDMA();
+            if (!ScreenDMA(DMA_WRITE, (1<<AddrBitA)-1, &OrigValues[AddrBitA], 1)) break; //Write the buffer
          }
          SendMsgPrintfln(" Miscompare at $%04x: Exp $%02x, Rd $%02x", (1<<AddrBit)-1, AddrBit, ReadVal);
          return;
@@ -1037,8 +1036,7 @@ FLASHMEM void ExpPortDMA()
    //write back original values
    for(uint8_t AddrBit=FirstAddrBit; AddrBit<16; AddrBit++)
    {
-      PerformDMA(DMA_WRITE, (1<<AddrBit)-1, &OrigValues[AddrBit], 1, DMA_ADDR_INCREMENT); //Write the buffer
-      CloseDMA();
+      if (!ScreenDMA(DMA_WRITE, (1<<AddrBit)-1, &OrigValues[AddrBit], 1)) return; //Write the buffer
    }
    SendMsgPrintf(" OK");
 

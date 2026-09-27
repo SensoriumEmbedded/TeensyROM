@@ -36,14 +36,14 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
 // any branch, so a change in it is direct evidence that the handshake can complete.  5 mS is
 // ~5000 edges at the ~1 MHz PHI2 this board is built for, which is why a live C64 cannot read
 // as dead.  It is named rather than spelled three times because the three checks have to
-// agree: WaitForDMAState gives up on quiet, then AbortDMA re-tests the same quiet, and a
+// agree: WaitForDMAState gives up on quiet, then AbortDMAUnless re-tests the same quiet, and a
 // shorter window in the second would abandon a bus the first had just accepted.
 #define DMA_QUIET_mS  5
 
 // The handshake waits do not scale with anything: the safe-freeze sequence needs one
 // read cycle, and the ISR's own 5000-cycle read-loop timeout is ~5 mS at the ~1 MHz PHI2
 // this board is built for.  50 mS is ten times that, so it cannot fire on a bus that is
-// merely busy, and it still bounds the write case the ISR leaves open.  AbortDMA uses it
+// merely busy, and it still bounds the write case the ISR leaves open.  AbortDMAUnless uses it
 // too: the release it waits for is the same StartDisable -> DisableReady transition that
 // CloseDMA bounds with it, and two numbers for one transition is how they drift apart.
 #define DMA_HANDSHAKE_CEILING_mS  50
@@ -100,13 +100,25 @@ FLASHMEM bool C64IsClockingPHI2()
 // that: the alternative is not a clean release, it is holding /DMA asserted forever, which
 // freezes the C64 outright and takes the board with it.  Reaching this at all means the
 // controlled release has been refused for 50 mS, which is already a broken bus.
-static FLASHMEM void AbortDMA()
+//
+// Target is the state the caller was waiting for, and the decision to abort is taken against
+// it with interrupts masked.  isrPHI2 preempts thread mode, so a caller that tests DMA_State
+// and then writes StartDisable leaves a window in which the ISR can reach Target -- a transfer
+// that has landed -- only for the write to overwrite it, and a write the C64 took would be
+// reported as one it did not, which a host that retries then writes twice.  Returns true when
+// Target was already reached and nothing was aborted; false when the bus has been put back.
+static FLASHMEM bool AbortDMAUnless(uint8_t Target)
 {
+   __disable_irq();
+   const bool Reached = (DMA_State == Target);
+   if (!Reached) DMA_State = DMA_S_StartDisable;
+   __enable_irq();
+   if (Reached) return true;
+
    uint32_t Seen = LastCycCnt;
    uint32_t Quiet = millis();
    const uint32_t Began = Quiet;
 
-   DMA_State = DMA_S_StartDisable;
    while (DMA_State != DMA_S_DisableReady)
    {
       if (millis() - Began >= DMA_HANDSHAKE_CEILING_mS ||
@@ -129,11 +141,12 @@ static FLASHMEM void AbortDMA()
    SetAddrBufsIn;
    SetDataPortDirIn;
    SetDataBufIn;
+   return false;
 }
 
-// Two bounds here, and a third in AbortDMA, for three of the four things that can stop a
+// Two bounds here, and a third in AbortDMAUnless, for three of the four things that can stop a
 // wait from ever ending. Do not read the two below as covering the give-up path: this
-// function does not return until AbortDMA does, so AbortDMA carries its own ceiling for the
+// function does not return until AbortDMAUnless does, so it carries its own ceiling for the
 // same reason these exist, and the worst case a caller sees is CeilingmS plus that one.
 //
 // The fourth is not this function's to catch and is not caught: the bare edge waits have no
@@ -142,7 +155,7 @@ static FLASHMEM void AbortDMA()
 // and no bound anywhere can fire. They are in DMATransferISR ("Find phi2 falling"), which is
 // most of a long transfer, and in isrPHI2 itself (ISRs.c:148, "Re-align to phi2 falling"),
 // which every cycle passes through once a DMA start state is pending -- so it also sits in
-// front of the release AbortDMA asks for. Bounding them means putting a deadline in the
+// front of the release AbortDMAUnless asks for. Bounding them means putting a deadline in the
 // hottest path in the firmware, which wants a bus to test it on rather than a reviewer; it
 // is recorded, not fixed.
 //
@@ -167,16 +180,11 @@ static FLASHMEM bool WaitForDMAState(uint8_t Target, uint32_t CeilingmS)
 
    while (DMA_State != Target)
    {
-      // Re-read before giving up. isrPHI2 preempts thread mode, so it can reach Target
-      // between the loop's test and this one -- and aborting then would report a transfer
-      // that actually landed as one that did not, which for a write means a host that
-      // retries writes it twice. One volatile read is the whole of the window.
+      // Not a plain abort: isrPHI2 can reach Target after the loop's test, and AbortDMAUnless
+      // re-tests it under the same masked section that writes StartDisable, so a transfer
+      // that landed is reported as landed.
       if (millis() - Began >= CeilingmS || (LastCycCnt == Seen && millis() - Quiet >= DMA_QUIET_mS))
-      {
-         if (DMA_State == Target) return true;
-         AbortDMA();
-         return false;
-      }
+         return AbortDMAUnless(Target);
 
       if (LastCycCnt != Seen) { Seen = LastCycCnt; Quiet = millis(); } //bus is alive, keep waiting
    }
