@@ -43,7 +43,8 @@ Nothing else from this repository is needed, and nothing outside it is.
 `VmHost` is the table of services the loader lends a module. It grows only at
 its tail, and `host->bytes` says how far this host's copy actually runs. The
 loader implements the first 76 bytes of it — files, clock, packets, write and
-guest RAM — and stops.
+guest RAM — plus one 4-byte tail, the module exit (see "Tail extensions"
+below), and stops.
 
 A module asks for exactly what it needs and gets a straight answer:
 

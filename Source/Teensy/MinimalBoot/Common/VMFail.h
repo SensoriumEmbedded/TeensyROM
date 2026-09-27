@@ -24,7 +24,8 @@ extern bool SendMsgPrintfln(const char *Fmt, ...);
 namespace VmFail {
 // One code per exit point, in the order they can be reached. Ok is written on
 // the single path that hands the machine to the C64 client; anything the module
-// itself has to say after that travels over IO2 to the client, not through here.
+// itself has to say after that travels over IO2 to the client, not through here,
+// except the one status it passes to the exit service, which lands as Exited.
 enum : uint8_t {
     // Stamped before the entry point is called, because after that the arena
     // it sits in belongs to the module. A fault inside vm_entry therefore
