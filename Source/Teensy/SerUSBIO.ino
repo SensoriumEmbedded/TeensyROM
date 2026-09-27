@@ -274,7 +274,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             if(StartMicros>MaxMicros) MaxMicros=StartMicros;
             if(StartMicros<MinMicros) MinMicros=StartMicros;
             CmdChannel->printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
-            CmdChannel->flush();
+            FlushCmdChannel(CmdChannel);
             delay(10); //allow scope time to re-arm
          }
          CmdChannel->printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
@@ -792,6 +792,20 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
    return true;
 }
 
+FLASHMEM void FlushCmdChannel(Stream *Channel)
+{
+   // Only the USB device port has a flush that returns: usb_serial_class::flush() primes
+   // the IN endpoint and comes back ("TODO: actually wait for data to leave USB", says the
+   // core's own header), which is what send_now() does too.  The other two channels block
+   // with no deadline -- EthernetClient::flush() spins until the peer has ACKed every byte,
+   // USBSerialBase::flush() spins on `while (txstate & 3)` -- so a peer that stops ACKing
+   // stops loop() with it, including the IOH_TeensyROM handler that drives the C64 menu.
+   // Nothing is lost by skipping them: the bytes are already in a stack that delivers them
+   // without help (FNET's send buffer, USBSerial's tx queue pushed by its own txtimer), so
+   // the blocking flush buys only a delivery confirmation no caller here reads.
+   if (Channel == &Serial) Serial.send_now();
+}
+
 FLASHMEM void SendU16(uint16_t SendVal)
 {
    CmdChannel->write((uint8_t)(SendVal & 0xff));
@@ -955,12 +969,29 @@ FLASHMEM void WriteC64MemCommand()
        return;
    }
 
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   // Same shape as ReceiveFileData, two orders smaller: DMALength is two bytes rather than
+   // four, so the per-byte timeout alone bounds this at 65535 * 500 mS -- 9.1 hours of a
+   // board serving nothing, chosen by whoever sent the command. DMA is in the
+   // always-available tier (docs/ControlComms.md:52), so being busy does not shut it -- and
+   // for the same reason every blocking path here, DrainCmdChannel included, is time the C64
+   // is not being served.
+   const uint32_t Began = millis();
+   const uint32_t CeilingmS = TransferCeilingmS(DMALength);
+
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
    {
+      if(millis() - Began >= CeilingmS)
+      {
+         SendU16(FailToken);
+         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, DMALength);
+         DrainCmdChannel();
+         return;
+      }
       if(!SerialAvailabeTimeout())
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
+         DrainCmdChannel();
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
