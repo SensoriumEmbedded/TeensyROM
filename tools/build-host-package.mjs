@@ -26,6 +26,7 @@
 // "../../pwned" looks like one.
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { decodeHex, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor,
@@ -114,7 +115,7 @@ function main() {
     'tools/bench/hostinstall.py.');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     main();
   } catch (error) {

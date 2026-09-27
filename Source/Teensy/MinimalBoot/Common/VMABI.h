@@ -154,14 +154,17 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 //   14        this loader's module exit (VmHostExit, above)
 //   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
-//   17..31    unassigned
+//   17..19    unassigned
+//   20,21     Mean Hamster Software: bounded C64 transfer, CODE128 admission.
+//             See docs/Architecture/MPE-Packaged-Runtimes.md; not stock services.
+//   22..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
                   VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
                   VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
-                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000|0x100000|0x200000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
               "this loader must not claim a bit assigned to another host");

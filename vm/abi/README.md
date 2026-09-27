@@ -95,7 +95,10 @@ number for good. It says nothing about who implements it.
 | 16384 | `VM_SERVICE_EXIT` | this loader | yes |
 | 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
-| 1<<17 .. 1<<31 | — | unassigned | no |
+| 1<<17 .. 1<<19 | — | unassigned | no |
+| 1<<20 | bounded C64 transfer | Mean Hamster Software | no |
+| 1<<21 | CODE128 module admission | Mean Hamster Software | no |
+| 1<<22 .. 1<<31 | — | unassigned | no |
 
 To claim a bit, open an issue naming the host and the callback it adds.
 
