@@ -39,6 +39,18 @@ FLASHMEM bool SetLatestSIDLoaded(uint8_t Source, const char* Path, const char* N
    return false;
 }
 
+//DriveDirPath is MaxPathLength long and grows by the name of whatever the C64 opens, and a
+//card's directory names run to 255 characters -- so opening one at the root, or two shorter
+//ones in turn, ran it off the end.  True when Name plus Extra more characters still fit with
+//the terminator.  On false nothing is appended and the C64 is told: a cut-short path names a
+//different directory than the one selected, so refuse rather than truncate.
+bool DriveDirPathRoomFor(const char *Name, size_t Extra)
+{
+   if (strlen(DriveDirPath) + strlen(Name) + Extra < MaxPathLength) return true;
+   SendMsgPrintfln("Path too long to open:\r\n%s", Name);
+   return false;
+}
+
 // A remote file command changed storage under a listing the C64 has already
 // painted. The C64 selects by item number and the firmware cannot repaint it,
 // so rebuilding at the command would resolve painted numbers against a list
@@ -74,18 +86,6 @@ void FullPathToSelected(char *Path, size_t Size, const char *Name)
 {
    if (PathIsRoot()) snprintf(Path, Size, "/%s", Name);  // at root
    else snprintf(Path, Size, "%s/%s", DriveDirPath, Name);
-}
-
-//DriveDirPath is MaxPathLength long and grows by the name of whatever the C64 opens, and a
-//card's directory names run to 255 characters -- so opening one at the root, or two shorter
-//ones in turn, ran it off the end.  True when Name plus Extra more characters still fit with
-//the terminator.  On false nothing is appended and the C64 is told: a cut-short path names a
-//different directory than the one selected, so refuse rather than truncate.
-bool DriveDirPathRoomFor(const char *Name, size_t Extra)
-{
-   if (strlen(DriveDirPath) + strlen(Name) + Extra < MaxPathLength) return true;
-   SendMsgPrintfln("Path too long to open:\r\n%s", Name);
-   return false;
 }
 
 FLASHMEM void HandleExecution()
