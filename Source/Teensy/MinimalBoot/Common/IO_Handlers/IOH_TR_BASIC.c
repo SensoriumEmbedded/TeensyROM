@@ -46,6 +46,8 @@ uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
 uint8_t  TR_BASContRegAction, TR_BASStatRegVal, TR_BASStrAvailableRegVal;
+volatile bool TR_BASSaveOverflow = false; //set in the ISR when a save runs past RAM_Image
+volatile bool TR_BASNameOverflow = false; //set in the ISR when a file name runs past LSFileName
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -152,14 +154,19 @@ FLASHMEM FS *FSfromFileName(char** ptrptrLSFileName)
 }
 
 
-FLASHMEM void AddToRAM_Image(const char *ToAdd)
+// Returns false when the text did not fit; what fit was written and XferSize stops at the
+// end of the buffer.  The bound belongs here rather than only at the listing loop's margin
+// check: this function also appends a C64-supplied path when the listing header is built,
+// so a bound at one caller would leave the other open.
+FLASHMEM bool AddToRAM_Image(const char *ToAdd)
 {  //and convert to petscii
    uint32_t count = 0;
-   
+
    while(1)
    {
+      if (XferSize >= RAM_ImageSize) return false;
       RAM_Image[XferSize] = ToPETSCII(ToAdd[count]);
-      if (ToAdd[count] == 0) return;
+      if (ToAdd[count] == 0) return true;
       XferSize++; count++;
    }
 }
@@ -173,6 +180,12 @@ FLASHMEM uint8_t ContRegAction_LoadPrep()
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
    
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
+
+   //The name the C64 sent did not fit, so what is in the buffer is a prefix of it. Acting
+   //on a prefix opens a different file than the one named, which is the silent direction;
+   //FILE NOT FOUND is the true answer and the noisy one. Checked at all three users of
+   //the name, alongside the save path's own TR_BASSaveOverflow test.
+   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND;
 
    Printf_dbg("Load: %s\n", ptrLSFileName);
    File myFile = sourceFS->open(ptrLSFileName, FILE_READ);
@@ -233,7 +246,16 @@ FLASHMEM uint8_t ContRegAction_SaveFinish()
    
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
-   Printf_dbg("Save: %s\nSize: %d bytes\n", ptrLSFileName, StreamOffsetAddr);
+   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
+
+   if (TR_BASSaveOverflow)
+   {  //the C64 sent more than RAM_Image holds; the tail was dropped in the ISR, so
+      //writing what we have would silently save a truncated file
+      Printf_dbg("Save too large for RAM_Image\n");
+      return BAS_ERROR_OUT_OF_MEMORY;
+   }
+
+   Printf_dbg("Save: %s\nSize: %lu bytes\n", ptrLSFileName, (unsigned long)StreamOffsetAddr);
    sourceFS->remove(ptrLSFileName); //del prev version to overwrite!
    File myFile = sourceFS->open(ptrLSFileName, FILE_WRITE); //O_RDWR | O_CREAT <- doesn't reduce filesize if smaller 
       
@@ -264,6 +286,8 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
+   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
+
    if (ptrLSFileName[0] == 0) sprintf(ptrLSFileName, "/");  // default to root if zero len
    Printf_dbg("Dir: \"%s\"\n", ptrLSFileName);
 
@@ -281,24 +305,31 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
    AddToRAM_Image(ptrLSFileName);
    AddToRAM_Image("\"\r");
    
-   while (File entry = dir.openNextFile()) 
+   while (File entry = dir.openNextFile())
    {
       filename = entry.name();
-      
-      if (entry.isDirectory()) AddToRAM_Image(" /");
-      else AddToRAM_Image("  ");
-      
-      AddToRAM_Image(filename);
-      AddToRAM_Image("\r");
-      
-      Printf_dbg("%s\n", filename);
-      
-      entry.close();
-      if (XferSize >= RAM_ImageSize-80)
+
+      // Tested before the entry is appended, not after.  A FAT long file name can be 255
+      // characters, so an entry that starts inside the old 80-byte margin could still run
+      // off the end of RAM_Image within the same iteration -- the check only ever saw the
+      // damage on the pass after it happened.  300 covers the widest one entry can be
+      // (" /" + 255 + "\r") plus the notice below.
+      if (XferSize >= RAM_ImageSize-300)
       {
-         AddToRAM_Image("*** Too many files!\r");         
+         entry.close();
+         AddToRAM_Image("*** Too many files!\r");
          break;
       }
+
+      if (entry.isDirectory()) AddToRAM_Image(" /");
+      else AddToRAM_Image("  ");
+
+      AddToRAM_Image(filename);
+      AddToRAM_Image("\r");
+
+      Printf_dbg("%s\n", filename);
+
+      entry.close();
    }
    
    dir.close();
@@ -372,9 +403,15 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(TR_BASStatRegVal);
             break;
          case TR_BASStreamDataReg:
-            DataPortWriteWait(RAM_Image[StreamOffsetAddr]);
+            //Same guard as rRegStreamData in IOH_TeensyROM.c: nothing stopped the C64
+            //reading past the end, and the offset only counted
+            //up.  At uint16_t that wrapped inside RAM_Image and stayed contained; at
+            //uint32_t it would walk out of it, so the read is bounded and the offset now
+            //stops at XferSize instead of counting forever.
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? RAM_Image[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);
@@ -401,6 +438,8 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                case TR_BASCont_SendFN: //file name being sent next
                   FNCount = 0;
                   StreamOffsetAddr = 0; //initialize for file load/save
+                  TR_BASSaveOverflow = false; //clear with the offset it belongs to
+                  TR_BASNameOverflow = false; //clear with the count it belongs to
                   break;
                   
                //these commandd require action outside of interrupt: 
@@ -426,14 +465,33 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             if (Data & 0x80) Data &= 0x7f; //bit 7 is Cap in Graphics mode
             else if (Data & 0x40) Data |= 0x20;  //conv to lower case
          
-            LSFileName[FNCount++] = Data;
+            //Same shape, and the same reasoning, as the stream-data bound below: the C64
+            //decides how many bytes it sends and nothing here ever compared FNCount
+            //against the allocation, so writes past MaxPathLength landed in whatever
+            //malloc put after LSFileName.  Truncating quietly would be the wrong repair --
+            //these three callers open, remove and save by this name, so a shortened name
+            //is a *different* file than the C64 asked for.  Remember it instead and let
+            //the main loop refuse.
+            if (FNCount < MaxPathLength-1) LSFileName[FNCount++] = Data;
+            else
+            {
+               LSFileName[MaxPathLength-1] = 0; //keep it a terminated string for Printf_dbg
+               TR_BASNameOverflow = true;
+            }
             if (Data == 0)
             {
                Printf_dbg("Received FN: \"%s\"\n", LSFileName);
             }
             break;
          case TR_BASStreamDataReg: //receive save data
-            RAM_Image[StreamOffsetAddr++] = Data;
+            //The C64 decides how many bytes it sends; nothing here ever compared the
+            //count against RAM_Image.  While StreamOffsetAddr was uint16_t it wrapped at
+            //65536 and kept re-overwriting the front of a 128KiB buffer, which contained
+            //the damage by accident.  It is uint32_t now, so bound it for real.  Stop
+            //advancing as well as writing, so SaveFinish's write() length stays inside
+            //the buffer; the flag is how it learns the file was cut short.
+            if (StreamOffsetAddr < RAM_ImageSize) RAM_Image[StreamOffsetAddr++] = Data;
+            else TR_BASSaveOverflow = true;
             break;
       }
    } //write

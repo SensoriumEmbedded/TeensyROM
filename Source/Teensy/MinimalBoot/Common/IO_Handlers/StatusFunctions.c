@@ -27,7 +27,13 @@
 
 FLASHMEM void SendStrPrintfln(const char *Msg)
 {
-   SendMsgPrintfln(Msg); //printf style, throws warning if used as callback in EthernetInit
+   SendMsgPrintfln("%s", Msg); //printf style, throws warning if used as callback in EthernetInit
+}
+
+FLASHMEM void TerminateSIDRecord(char* Record)
+{  //EEPROM may hold a record carrying neither terminator; SetLatestSIDLoaded keeps both fields below these
+   Record[MaxPathLength-2] = 0;
+   Record[MaxPathLength-1] = 0;
 }
 
 FLASHMEM void NetListenInit()
@@ -254,9 +260,10 @@ FLASHMEM void MakeFilenameStr()
       {
          char SIDSourcePathName[MaxPathLength];
          EEPreadNBuf(eepAdDefaultSID, (uint8_t*)SIDSourcePathName, MaxPathLength); //load the source/path/name from EEPROM
+         TerminateSIDRecord(SIDSourcePathName);
          char* SIDName = SIDSourcePathName+strlen(SIDSourcePathName+1)+2;
 
-         sprintf(SerialStringBuf, "%s:/%s/%s",
+         snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s:/%s/%s",
             (SIDSourcePathName[0] == rmtUSBDrive ? "USB" : (SIDSourcePathName[0] == rmtSD ? "SD" : "TR")),
             SIDSourcePathName+1, SIDName);
       }
@@ -370,7 +377,10 @@ FLASHMEM void SetCursorToItemNum(uint16_t ItemNum)
 
 FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   //An empty menu has no item to land on, and the wrap below counts against NumItemsFull
+   //rather than against MenuSource's real extent -- see LastFileType for what that costs.
+   if (NumItemsFull == 0) return;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
    do
    {
@@ -386,7 +396,12 @@ FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 
 FLASHMEM void LastFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg] + (IO1[rwRegPageNumber]-1) * MaxItemsPerPage;
+   //Must come before the wrap below: NumItemsFull is uint16_t, so NumItemsFull-1 promotes
+   //to int, evaluates to -1, and converts back to 65535 -- an index 65535*sizeof(
+   //StructMenuItem) = 1,048,560 bytes past MenuSource, walked downward one entry per
+   //iteration until it reaches InitItemNum.
+   if (NumItemsFull == 0) return;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
 
    do
@@ -451,7 +466,7 @@ FLASHMEM void WriteNFCTagCheck()
       return;
    }
 
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType)) //single file, not storable
    {
@@ -460,7 +475,7 @@ FLASHMEM void WriteNFCTagCheck()
    }
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    nfcState |= nfcStateBitDisabled; //keep if from triggering if re-using prev programmed tag
@@ -473,7 +488,7 @@ FLASHMEM void WriteNFCTag()
    //nfc polling not Enabled here
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
 
    SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
@@ -500,9 +515,9 @@ FLASHMEM void HotKeySetLaunch()
 
       HotKeyNumSL &= 0x7f;  // strip SL bit
       //get/print path+filename
-      SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+      SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
       IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-      GetCurrentFilePathName(PathFilename);
+      GetCurrentFilePathName(PathFilename, sizeof PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
       if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
@@ -536,10 +551,15 @@ FLASHMEM void KERNALPreStart()
    //Serial.println("Hi from KERNALPreStart");
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
+   //Nothing re-forms SelItemFullIdx in this function, so it is whatever the last menu change
+   //left behind; fall back to the stored handler when it no longer names an item -- and say
+   //so, because that fallback is otherwise indistinguishable from the ordinary IOH_None case.
+   const StructMenuItem* Item = MenuItemSel();
+   if (Item == NULL) Serial.printf("Menu sel out of range, using stored IO handler\n");
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
    {
       //Serial.println("IO Handler set by Teensy Menu\n");
-      NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc;
+      NextIOHndlr = Item->IOHndlrAssoc;
    }
 
    if (NextIOHndlr == IOH_KernalReplace)
@@ -564,11 +584,11 @@ FLASHMEM void TRPlusOnlyMsg()
 FLASHMEM void SetREUFile()
 {
    SendMsgPrintfln("Set REU File to preload\r  and/or uniquely save\r");
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_REU
@@ -605,11 +625,11 @@ FLASHMEM void SetKERNALBin()
 {
    SendMsgPrintfln("Set KERNAL Replace Binary\r");
 
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_KernalReplace
@@ -644,11 +664,11 @@ FLASHMEM void SetKERNALBin()
 
 FLASHMEM void SetAutoLaunch()
 {
-   SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg);
+   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
@@ -681,6 +701,7 @@ FLASHMEM void LoadMainSIDforXfer()
    //Set XferImage and XferSize
 
    EEPreadNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //load the source/path/name from EEPROM
+   TerminateSIDRecord(LatestSIDLoaded);
    char* LatestSIDName = LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2;
    Printf_dbg("Sel SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDName);
 
@@ -1307,7 +1328,10 @@ FLASHMEM void UninstallExtHost()
 #endif
 }
 
-void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
+// Unbounded on purpose: the length comes from the initializer, so the static_assert
+// below can compare it against rsNumStatusTypes.  Written [rsNumStatusTypes] instead,
+// a short list zero-fills the tail and the count assert is a tautology.
+void (*StatusFunction[])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu
    &HandleExecution,     // rsStartItem
@@ -1344,3 +1368,8 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &MakeExtHostStr,      // rsMakeExtHostStr
    &UninstallExtHost,    // rsUninstallExtHost
 };
+//Same guard IOHandler[] already carries (IOHandlers.h).  A status code appended to
+//RegStatusTypes without its entry here is otherwise silent: the array zero-fills, the
+//build is clean, and the omission is only found by a C64 asking for that code.
+static_assert(sizeof(StatusFunction) / sizeof(StatusFunction[0]) == rsNumStatusTypes,
+              "StatusFunction[] / RegStatusTypes count mismatch");

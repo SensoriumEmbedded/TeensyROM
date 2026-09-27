@@ -263,10 +263,9 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       Printf_dbg("TR File Num = %d\n", MenuNum);
 
       //point to item # matching filename
-      MenuSource = DefTRMenu;
-      SetNumItems(NumMenuItems);
+      SetMenu(DefTRMenu, NumMenuItems);
       IO1[rwRegCursorItemOnPg] = MenuNum;
-      SelItemFullIdx = MenuNum;  //  "Select" item
+      SelItemFullIdx = MenuNum;  //  "Select" item, in range: FindTRMenuItem returned it
    }
    else
    {
@@ -275,8 +274,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       Printf_dbg("Dir Setup\n");
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
-      MenuSource = DriveDirMenu; 
-      SetNumItems(1); //sets # of menu items
+      SetMenu(DriveDirMenu, 1); //sets menu base and # of items together
       IO1[rwRegCursorItemOnPg] = 0;
       SelItemFullIdx = 0;  //  "Select" item
    }
@@ -286,7 +284,8 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
 
    if (DoCartDirect)
    {  //If a CRT, start and reset directly:
-      switch(MenuSource[SelItemFullIdx].ItemType)
+      const StructMenuItem* Item = MenuItemSel();
+      switch(Item == NULL ? rtNone : Item->ItemType) //no case for rtNone: falls to the menu launch below
       {
          case rtFileCrt:
          case rtBin16k:
