@@ -113,7 +113,8 @@ which is how the stock host is built too — so you inherit the pin definitions,
 the PHI2 ISR and the C64 bus machinery, and you replace the top-level program.
 A subdirectory is refused rather than skipped: the overlay copies files and does
 not descend, so a `src/` the build silently passed over would leave you holding a
-host built without your own code.
+host built without your own code. Hidden entries such as `.git/` are passed over:
+arduino-cli compiles nothing in them, so a host kept in its own repository builds.
 
 ```
 node tools/build-firmware.mjs --target tr-plus --host-sketch Source/Teensy/ExampleHost

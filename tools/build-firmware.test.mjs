@@ -271,6 +271,15 @@ test('every way a host sketch can be wrong is refused before an image is compile
     fs.rmSync(path.join(sketch, 'linked'));
     fs.symlinkSync(path.join(dir, 'gone'), path.join(sketch, 'dangling'));
     refused(attempt(), /may hold only files: the overlay does not descend into dangling/);
+    fs.rmSync(path.join(sketch, 'dangling'));
+
+    // A hidden directory is not a source directory -- arduino-cli compiles nothing in one --
+    // and a host kept in its own repository has .git/ at its root. Passed over, so the run
+    // gets past every refusal above: the private build root is made only after them.
+    fs.mkdirSync(path.join(sketch, '.git'));
+    const hidden = attempt();
+    assert.doesNotMatch(hidden.stderr, /may hold only files/);
+    assert.match(hidden.stdout, /Private build root:/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

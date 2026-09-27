@@ -30,7 +30,7 @@
 //            tr, which never carries the loader.
 //   --host-sketch <dir>  build a different program for the extension slot, and only that.
 //            The directory holds exactly one .ino plus whatever else it needs, files only
-//            -- no subdirectories; those files are overlaid onto the MinimalBoot sketch,
+//            -- no subdirectories, though hidden entries such as .git/ are passed over; those files are overlaid onto the MinimalBoot sketch,
 //            which is how the stock host is built too. This is the supported seam for a
 //            third-party extension host -- see docs/Architecture/Extension-Hosts.md.
 //            It writes TeensyROM+_<ver>_<dir>.TRH and no firmware hex: the minimal and
@@ -167,7 +167,10 @@ if (withExtensions && !skipExtensionBuild) {
   // Classified by stat rather than by dirent, so a symlink to a file still reads as the
   // file it points at -- copyFileSync follows it too. A symlink to a directory, and one
   // pointing at nothing, both land in notFiles and are refused with everything else.
-  const entries = fs.readdirSync(hostSketch).map((name) => {
+  // Hidden entries are left out before any of that: arduino-cli compiles none of them, so
+  // passing over one drops no source, and a host kept in its own repository has a .git/
+  // at its root that would otherwise refuse every build of it.
+  const entries = fs.readdirSync(hostSketch).filter((name) => !name.startsWith('.')).map((name) => {
     let stats = null;
     try { stats = fs.statSync(path.join(hostSketch, name)); } catch { /* dangling symlink */ }
     return { name, file: stats !== null && stats.isFile() };
