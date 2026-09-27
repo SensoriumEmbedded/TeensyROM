@@ -154,6 +154,38 @@ jobs:
             build/firmware/*.hex
             build/firmware/*.TRH
 
+      # Source/Teensy/ExampleHost is the third-party host story, and nothing else in the
+      # build compiles it: docs/Architecture/Extension-Hosts.md promises a reader that it
+      # builds, and the globals it has to define come from sibling sources that are free
+      # to change. Build it here so that promise fails in CI rather than in someone's
+      # first attempt at a host. --ccache is passed under that step's condition so
+      # this compile can reuse the same cache; without it the extension image is a full
+      # cold compile on every run.
+      #
+      # After the upload rather than before, for two separate reasons. A stale doc should
+      # fail the run without also costing it the firmware it did build, which an earlier
+      # step would, since the upload never runs. And the example's .TRH is a host that
+      # does nothing on purpose: shipped in the artifact beside the stock host it is
+      # something a reader can copy to a card and install over a working extension slot.
+      # A --host-sketch build compiles the host alone, so this costs one image, not three;
+      # it keeps build/firmware as its --out so --ccache finds the same build root.
+      - name: Build the example third-party host
+        if: matrix.target == 'tr-plus'
+        # Named explicitly to get -o pipefail, which the default `bash -e` run shell does
+        # not set. Nothing below pipes, which is the point: this step used to package
+        # through `tee`, and a pipeline reports its last command's status, so a failed
+        # packaging could be stepped over. The pipe is gone and the guard stays, so the
+        # next one added here cannot hide a failure either.
+        shell: bash
+        run: |
+          built=$(npm run build:example-host -- \
+            ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }})
+          echo "$built"
+          # The descriptor is what the menu names the host by, and it is the one thing
+          # packaging cannot check for itself. A host that built but published someone
+          # else's identity would otherwise pass this step.
+          grep -q 'Host "Example"' <<<"$built"
+
   collect:
     needs: [build, tools]
     runs-on: ubuntu-latest

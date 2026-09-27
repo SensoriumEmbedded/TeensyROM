@@ -36,6 +36,9 @@ Exit status, so this can gate a run rather than only narrate one:
 After a reset it presses F5 by DMA. That switches the menu to the SD drive, which
 makes the C64 ask the firmware for a directory, and that -- a WaitForTR* loop --
 is the only time it reads the message the loader left. Then it prints the screen.
+
+hostenter.py is the counterpart for a host that hands the machine back and lets
+you assert on the record; this one is for the hosts that stay resident.
 """
 import sys
 import time

@@ -102,12 +102,13 @@ class FailPhrases(unittest.TestCase):
         self.assertEqual({n: m for n, m in drifted.items() if m}, {},
                          f'no longer returned by VmFail::describe() in {VMFAIL}')
 
-    def test_the_phrases_a_launch_may_end_on_are_the_two_we_expect(self):
+    def test_the_phrases_a_launch_may_end_on_are_the_three_we_expect(self):
         # Pinned by name as well as by value: a code added to describe() that is a
         # normal finish has to be added to FINISHED_NORMALLY by hand, and this is
         # what makes that a decision rather than an omission.
         self.assertEqual(hostops.FINISHED_NORMALLY,
-                         ('handed off to client', 'module exited'))
+                         ('handed off to client', 'module exited',
+                          'extension host returned'))
 
 
 class LaunchOutcome(unittest.TestCase):

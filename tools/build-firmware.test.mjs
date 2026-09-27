@@ -200,19 +200,97 @@ test('a --no-extensions TR+ writes its own filename, not the shipping one', {
   }
 });
 
-// A check that finds nothing wrong would pass these runs just as well as one that refuses,
-// so each also asserts that no compile was started.
+// --host-sketch: the seam a third-party host is built through. Every case below is a
+// refusal rather than a silent fallback, because the fallback is this repo's own host --
+// a build that ignored the flag would ship the stock VM host under someone else's name
+// and pass every other check in this file.
+test('--host-sketch is refused where there is no extension slot to build into', () => {
+  assert.match(build('--target', 'tr', '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch needs --target tr-plus/);
+  assert.match(build('--target', 'tr-plus', '--no-extensions',
+    '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch has nothing to build with --no-extensions/);
+  assert.match(build('--target', 'tr-plus', '--skip-extension-build',
+    '--host-sketch', 'Source/Teensy/ExampleHost').stderr,
+    /--host-sketch and --skip-extension-build contradict each other/);
+});
+
+test('a host sketch directory that is not there is refused before anything is built', () => {
+  const result = build('--target', 'tr-plus', '--host-sketch', 'Source/Teensy/NoSuchHost');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Host sketch directory not found:.*NoSuchHost/);
+});
+
+// The extension image is built last, so a host sketch checked where it is used is checked
+// only after the minimal and main images have compiled -- minutes, for a typo. These runs
+// therefore pass no --skip-*-build: the assertion is the refusal *and* that no compile was
+// started, which is what fails if the checks drift back down to the overlay.
 const NO_BUILD_STARTED = /\[(minimal|main|extension)\] Building/;
 
-// `npm run <script> -- --out <mine>` appends the caller's argument after any the script
-// already passes, and reading an option with indexOf() took the first, so the override
-// lost silently.
+test('every way a host sketch can be wrong is refused before an image is compiled', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const sketch = path.join(dir, 'sketch');
+  fs.mkdirSync(sketch, { recursive: true });
+  const attempt = (target = sketch) => spawnSync(process.execPath, [script,
+    '--target', 'tr-plus', '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
+    '--host-sketch', target],
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+  const refused = (result, pattern) => {
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, pattern);
+    assert.doesNotMatch(result.stdout, NO_BUILD_STARTED);
+  };
+  try {
+    // Arduino takes the sketch directory name from its entry point, so there must be one.
+    refused(attempt(), /must hold exactly one \.ino .*found 0/);
+    fs.writeFileSync(path.join(sketch, 'One.ino'), '');
+    fs.writeFileSync(path.join(sketch, 'Two.ino'), '');
+    refused(attempt(), /must hold exactly one \.ino .*found 2/);
+    fs.rmSync(path.join(sketch, 'Two.ino'));
+
+    // A path that exists but is not a directory used to reach readdirSync and come back as
+    // an ENOTDIR stack trace, which is a crash report rather than a refusal.
+    refused(attempt(path.join(sketch, 'One.ino')), /Host sketch is not a directory/);
+
+    // A subdirectory is refused, not skipped. The overlay copies files and does not
+    // descend, so a src/ passed over silently builds a host without the caller's code --
+    // and where the subdirectory shadows one of MinimalBoot's own, builds cleanly.
+    fs.mkdirSync(path.join(sketch, 'src'));
+    fs.writeFileSync(path.join(sketch, 'src/lib.cpp'), '');
+    refused(attempt(), /may hold only files: the overlay does not descend into src/);
+    fs.rmSync(path.join(sketch, 'src'), { recursive: true });
+
+    // A symlink to a directory is the same hole wearing a different hat; a dangling one
+    // cannot be copied at all. Both land in the same refusal rather than in a stat throw.
+    const elsewhere = path.join(dir, 'elsewhere');
+    fs.mkdirSync(elsewhere);
+    fs.symlinkSync(elsewhere, path.join(sketch, 'linked'));
+    refused(attempt(), /may hold only files: the overlay does not descend into linked/);
+    fs.rmSync(path.join(sketch, 'linked'));
+    fs.symlinkSync(path.join(dir, 'gone'), path.join(sketch, 'dangling'));
+    refused(attempt(), /may hold only files: the overlay does not descend into dangling/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// `npm run <script> -- --host-sketch <mine>` appends the caller's argument after the one
+// package.json already passes, and reading an option with indexOf() took the first. So the
+// override lost silently and build:example-host built Source/Teensy/ExampleHost under the
+// caller's name -- the stock-host-under-your-name failure the refusals above exist for,
+// arriving through the documented way to run the build.
 test('an option given twice is refused rather than resolved to one of them', () => {
-  const twice = build('--target', 'tr-plus', '--target', 'tr');
+  const twice = build('--target', 'tr-plus',
+    '--host-sketch', 'Source/Teensy/ExampleHost', '--host-sketch', 'Source/Teensy/MyHost');
   assert.equal(twice.status, 1);
-  assert.match(twice.stderr, /--target given more than once/);
+  assert.match(twice.stderr, /--host-sketch given more than once/);
   // Named for the shape that produces it, because that is where a caller meets it.
   assert.match(twice.stderr, /npm run/);
+  // Not special to --host-sketch: the same first-wins read served every option here.
+  assert.match(build('--target', 'tr-plus', '--target', 'tr').stderr,
+    /--target given more than once/);
   assert.match(build('--target', 'tr-plus', '--out', 'a', '--out', 'b').stderr,
     /--out given more than once/);
   // A repeated *flag* carries no value to lose, so it is left idempotent and still reaches
@@ -221,7 +299,60 @@ test('an option given twice is refused rather than resolved to one of them', () 
     /--with-extensions no longer exists/);
 });
 
-// The stock host rides beside the shipping hex rather than inside it. Both outputs are checked before the first compile, so each is
+// A --host-sketch build is a host and nothing else. Building the minimal and main images
+// around it would produce the stock firmware byte for byte under a name that pairs it with
+// someone else's host -- the fork-and-ship shape this build no longer offers. The names are
+// read off the refusal, which prints each planned output before anything is copied or
+// compiled: the host package in the way is refused by its own name, and a firmware hex
+// already sitting there is not this build's to overwrite or to be stopped by.
+test('a --host-sketch build plans its host package and no firmware hex', () => {
+  const dir = stubSdk();
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  const attempt = () => spawnSync(process.execPath, [script, '--target', 'tr-plus',
+    '--arduino-data', path.join(dir, 'sdk'), '--out', out,
+    '--host-sketch', path.join(repoRoot, 'Source/Teensy/ExampleHost')],
+    { encoding: 'utf8', timeout: 20_000 });
+  try {
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_full.hex`), '');
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_ExampleHost_full.hex`), '');
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_ExampleHost.TRH`), '');
+    const result = attempt();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /TeensyROM\+_.*_ExampleHost\.TRH already exists/);
+    assert.doesNotMatch(result.stderr, /_full\.hex already exists/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The half of that the output names cannot show: that the two firmware images are not
+// compiled either. /bin/echo stands in for arduino-cli, so the first image the run starts is
+// the last -- its --show-properties answer has no build.flags.defs in it -- and the stub
+// core carries the two anchors the USB_DISABLED patches need to get that far.
+test('a --host-sketch build compiles the host and neither firmware image', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const core = path.join(dir, `sdk/packages/teensy/hardware/avr/${coreVersion}/cores/teensy4`);
+  fs.writeFileSync(path.join(core, 'yield.cpp'), 'if (Serial.available()) serialEvent();\n');
+  fs.writeFileSync(path.join(core, 'startup.c'), '{\n\t\tusb_isr();\n}\n');
+  try {
+    const result = spawnSync(process.execPath, [script, '--target', 'tr-plus',
+      '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
+      '--host-sketch', path.join(repoRoot, 'Source/Teensy/ExampleHost')],
+      { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /\[extension\] Building/);
+    assert.doesNotMatch(result.stdout, /\[(minimal|main)\] Building/);
+    assert.match(result.stderr, /build\.flags\.defs/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// The stock host rides beside the shipping hex rather than inside it, under the name of the
+// sketch it was built from. Both outputs are checked before the first compile, so each is
 // refused by its own name; a build that skips the host plans no package and is not stopped
 // by one, and gets as far as the next refusal instead.
 test('a tr-plus build plans the stock host as its own .TRH beside the hex', {
@@ -257,7 +388,7 @@ test('a tr-plus build plans the stock host as its own .TRH beside the hex', {
 
 // Skipping a firmware image without --skip-combine can never produce the hex, and the host
 // is packaged after the combine. Refused before the first compile, rather than after minutes
-// of compiling a host that is then thrown away.
+// of compiling a host that is then thrown away; the refusal names the way to get just that.
 test('a combine that cannot happen is refused before anything compiles', {
   skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
 }, () => {
@@ -269,9 +400,31 @@ test('a combine that cannot happen is refused before anything compiles', {
         { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
       assert.equal(result.status, 1, result.stdout + result.stderr);
       assert.match(result.stderr, /Combining requires both firmware images/);
+      assert.match(result.stderr, /--host-sketch Source\/Teensy\/VMBoot/);
       assert.doesNotMatch(result.stdout, NO_BUILD_STARTED);
     }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// The example host is documentation that compiles, so the four contract points it is
+// meant to demonstrate are asserted here rather than left to a reader to notice.
+test('the example host carries the four things a host owes', () => {
+  // Comments blanked, because the file explains the VM_BOOT_EXECUTE_MIN trap in prose and
+  // the assertion below is about what the code does, not about what it talks about.
+  const ino = readSource(path.join(repoRoot, 'Source/Teensy/ExampleHost/ExampleHost.ino'));
+  // 1. The descriptor, read out of flash by the main image without booting the host.
+  assert.match(ino, /section\("\.vmhostid"\)/);
+  assert.match(ino, /VmHostId vmHostId = \{ VM_HOSTID_MAGIC, VM_ABI/);
+  // 2. The marker, which is what authorizes a run. Testing the boot indicator instead is
+  // the trap: minimal has already replaced VM_BOOT_EXECUTE_MIN by the time a host sees it,
+  // so that test never passes, every launch falls through to the main app, and from the
+  // C64 that is indistinguishable from a host that failed.
+  assert.match(ino, /strcmp\(marker, VM_HOST_MARKER\)/);
+  assert.doesNotMatch(ino, /VM_BOOT_EXECUTE_MIN/);
+  // 3. The record the main image collects on the way back up, and 4. the boot indicator
+  // corrected before the reset that reads it.
+  assert.match(ino, /VmFail::set\(code, detail\)/);
+  assert.match(ino, /EEPROM\.write\(VM_EEP_BOOTIND_ADDR, VM_BOOT_FROM_MIN\)/);
 });

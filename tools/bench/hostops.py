@@ -46,14 +46,16 @@ ANSWER_TIMEOUT = 3
 INSTALLED = 'extension host installed'   # VmFail::Installed, $30
 REMOVED = 'extension host removed'       # VmFail::Removed, $40; see removed_cleanly()
 # A launch has more than one normal finish, so it gets a set rather than a phrase: the
-# module can be handed the machine and never come back ($00), or ask to be finished with
-# through the exit service ($04). Every other code printBoot can print after a launch is a
+# module can be handed the machine and never come back ($00), ask to be finished with
+# through the exit service ($04), or -- for a host that is not this one -- hand the
+# machine back itself ($50). Every other code printBoot can print after a launch is a
 # failure, so exttest.py checks for these positively for the same reason the two above
 # are checked positively: the failures outnumber the successes and a new one must not
 # arrive as a pass.
 FINISHED_NORMALLY = (
     'handed off to client',              # VmFail::Ok, $00
     'module exited',                     # VmFail::Exited, $04
+    'extension host returned',           # VmFail::HostReturned, $50
 )
 
 
@@ -164,7 +166,7 @@ def run_step(prepare, settle, out=sys.stdout):
     install or a removal, which is what the SystemExit says -- but it is also what a step
     that hands the machine to an extension image looks like when the image keeps it,
     since that image is built USB_DISABLED. A caller whose step can legitimately end with
-    the board gone has to say so itself.
+    the board gone has to say so itself; see hostenter.py.
 
     Public because install and removal are not the only things worth driving this way --
     anything that ends in a reboot has the same two shapes and the same trap, which is
