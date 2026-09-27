@@ -105,8 +105,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             //init buffer and Write
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) DMABuf[ByteNum] = ZeroMem ? 0 : (ByteNum & 0xff); //((ByteNum & 0xff)^((ByteNum>>8) & 0xff));
             uint32_t StartTime = micros();  
-            PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
-            CloseDMA();
+            if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+            {
+               Serial.println("DMA Write: no transfer, C64 bus not clocking or DMA timed out");
+               break;
+            }
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Write (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
          }
@@ -121,8 +124,13 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             bool ZeroMem = (CmdChannel->read() == '0'); //0 argument to comp mem to 0 instead of lower addr byte
 
             uint32_t StartTime = micros();  
-            PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT); 
-            CloseDMA();
+            //checked before comparing: after a 'u' DMABuf already holds the expected pattern,
+            //   so an unchecked failed read would compare equal and report "All Passed!"
+            if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+            {
+               Serial.println("DMA Read: no transfer, C64 bus not clocking or DMA timed out");
+               break;
+            }
             StartTime = micros() - StartTime;  
             Serial.printf("DMA Read  (%s) addr $%04x:$%04x (%lu Bytes) in %luuS\n", ZeroMem ? "$00" : "LSB", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
             for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
@@ -159,15 +167,25 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             for(uint32_t Address = 0; Address < 0xFFFF; Address+=BlockSize)
             {
                
-               PerformDMA(DMA_READ, Address, &DMABuf, 1, DMA_ADDR_INCREMENT);  //Read val
+               if (!PerformDMA(DMA_READ, Address, &DMABuf, 1, DMA_ADDR_INCREMENT))  //Read val
+               {  //nothing written yet, so nothing to restore
+                  Serial.printf("$%04x: no transfer, C64 bus not clocking or DMA timed out\n", Address);
+                  break;
+               }
                delay(1);
                InvVal = ~DMABuf;
-               PerformDMA(DMA_WRITE, Address, &InvVal, 1, DMA_ADDR_INCREMENT); //Write the inverse
+               bool Moved = PerformDMA(DMA_WRITE, Address, &InvVal, 1, DMA_ADDR_INCREMENT); //Write the inverse
                delay(1);
-               PerformDMA(DMA_READ, Address, &ReadBack, 1, DMA_ADDR_INCREMENT);  //Read back
+               Moved = Moved && PerformDMA(DMA_READ, Address, &ReadBack, 1, DMA_ADDR_INCREMENT);  //Read back
                delay(1);
-               PerformDMA(DMA_WRITE, Address, &DMABuf, 1, DMA_ADDR_INCREMENT); //Re-Write original to preserve
+               //attempted even after a failure above: the inverse may have landed
+               Moved = PerformDMA(DMA_WRITE, Address, &DMABuf, 1, DMA_ADDR_INCREMENT) && Moved; //Re-Write original to preserve
                delay(1);
+               if (!Moved)
+               {
+                  Serial.printf("$%04x: no transfer, C64 bus not clocking or DMA timed out\n", Address);
+                  break;
+               }
                
                //compare/print
                //Serial.printf("R $%02x  WI $%02x  RI $%02x  ", DMABuf, InvVal, ReadBack);

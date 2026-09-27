@@ -66,9 +66,11 @@ stcIOHandlers IOHndlr_REU =
   NULL,                //called at the end of EVERY c64 cycle
 };
 
-// Both return false when the bus stopped clocking mid-transfer.  The REU path ignores it:
-// its DMA is started by the C64 itself, so a bus that stops has taken the requester with
-// it and there is no one left to report to.
+// Both return false when the transfer did not happen: the bus stopped clocking, or a bus
+// that was still clocking did not complete the handshake or the transfer inside its ceiling
+// and the DMA was released.  In the second case the C64 is running and will read the REU's
+// status, so the buffered path (PollingHndlr_REU) checks each transfer: a failed one flags
+// Fault instead of Complete and does not write the unread buffer into REU memory.
 extern bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
 extern bool CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
@@ -736,24 +738,33 @@ FLASHMEM void PollingHndlr_REU()
       REURegs[REUReg_REUStartAddrHi], REURegs[REUReg_REUStartAddrMed], REURegs[REUReg_REUStartAddrLo], 
       REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
 
+   //false once any C64-side transfer fails: the buffer it was to fill holds whatever malloc
+   //   left there, so nothing is written to REU memory from it and the status says Fault
+   bool Moved = true;
+
    switch (REURegs[REUReg_Command] & REUReg_Command_TypeMask)
    {
       case REUReg_Command_TypeC2R:
-         PerformDMA(DMA_READ, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
-         ReadWriteREU(false, REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
+         Moved = PerformDMA(DMA_READ, C64Addr, REUBuf, REULength, FixC64Addr); //read C64 into buffer
+         if (Moved) ReadWriteREU(false, REUAddr, REUBuf, REULength, FixREUAddr);       //Write to REU
          break;
       case REUReg_Command_TypeR2C:
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr);      //read REU into buffer
-         PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
+         Moved = PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write to C64
          break;
       case REUReg_Command_TypeSwp:
       {  //read both and swap
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
-         PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
-         ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
-         
-         ReadWriteREU(false, REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
-         PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
+         Moved = PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf 
+         if (Moved)
+         {
+            ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf 
+
+            //C64 side first: if that write fails the REU is left untouched, rather than
+            //   holding the C64's data while the C64 still holds its own
+            Moved = PerformDMA(DMA_WRITE, C64Addr, REUBuf, REULength, FixC64Addr); //write REUBuf into C64
+            if (Moved) ReadWriteREU(false, REUAddr, C64Buf, REULength, FixREUAddr); //write C64Buf into REU
+         }
 
          free(C64Buf);
       }
@@ -763,10 +774,10 @@ FLASHMEM void PollingHndlr_REU()
       {  //read both and verify
          uint8_t *C64Buf = (uint8_t*)malloc(REULength); //allocate space
          uint32_t ByteNum = 0;
-         PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
+         Moved = PerformDMA(DMA_READ, C64Addr, C64Buf, REULength, FixC64Addr); //read C64 into C64Buf
          ReadWriteREU(true, REUAddr, REUBuf, REULength, FixREUAddr); //read REU into REUBuf
          
-         while (ByteNum < REULength)
+         while (Moved && ByteNum < REULength)
          {  //Compare the two buffers
             if(REUBuf[ByteNum] != C64Buf[ByteNum]) 
             {
@@ -796,7 +807,8 @@ FLASHMEM void PollingHndlr_REU()
    free(REUBuf);
       
 // Process Interrupt Mask Register
-   if ((REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
+   if (Moved &&
+       (REURegs[REUReg_InterruptMask] & REUReg_IntMask_Enable) &&
        (REURegs[REUReg_InterruptMask] & REUReg_IntMask_EndOfBlk))
    {
       REURegs[REUReg_Status] |= REUReg_Status_IntPend;
@@ -804,7 +816,8 @@ FLASHMEM void PollingHndlr_REU()
    }
 
 // Process Address Control Register
-   if ((REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
+   //   skipped when nothing moved: the registers still describe the transfer that was asked for
+   if (Moved && (REURegs[REUReg_Command] & REUReg_Command_AutoLoad) == 0)
    {  //autoload disabled
       if (!FixREUAddr)
       {  //not fixed address, show final count
@@ -826,7 +839,8 @@ FLASHMEM void PollingHndlr_REU()
    }
    
    REURegs[REUReg_Command] &= ~REUReg_Command_Execute;  //clear execution bit
-   REURegs[REUReg_Status] |= REUReg_Status_Complete;   //flag complete
+   if (Moved) REURegs[REUReg_Status] |= REUReg_Status_Complete;   //flag complete
+   else       REURegs[REUReg_Status] |= REUReg_Status_Fault;      //a C64-side transfer did not happen
    
    StartTime = micros() - StartTime;  
 

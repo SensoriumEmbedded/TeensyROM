@@ -178,7 +178,7 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             // ignored here, and RebootTR() below runs either way.  Asking first costs
             // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
             // that could not have worked: each of the two waits pays 5 mS to notice the
-            // silence and another 5 mS inside AbortDMA.
+            // silence and another 5 mS inside AbortDMAUnless.
             //
             // Against a bus that stops part way through, it is not only latency, which is
             // why this is a check and not a deleted line.  DMATransferISR's edge waits have
