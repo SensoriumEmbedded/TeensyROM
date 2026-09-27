@@ -222,7 +222,7 @@
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
 ### 0. Installed Extensions
-  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $009f`) -- or reports that nothing is installed
+  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
   * The firmware comes with no host installed, and runs exactly as it would without one. A host is an optional add-on distributed as a `.TRH` file: copy it to the SD card or USB drive and select it in the file browser to install it. A firmware update leaves the installed host in place
   * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
   * Uninstalling erases the host from flash and reboots the TeensyROM

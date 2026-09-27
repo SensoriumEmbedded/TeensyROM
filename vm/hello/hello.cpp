@@ -2,9 +2,10 @@
 //
 // Reference extension module: the smallest thing that proves the loader works.
 //
-// It validates the host, uses the file service to count the entries in its own
-// package directory, and publishes three lines of text for its C64 client to
-// put on screen. Pressing a button recolours them.
+// It validates the host, takes the exit service if the host lends one, uses the
+// file service to count the entries in its own package directory, and publishes
+// four lines of text for its C64 client to put on screen. Joystick fire
+// recolours them; up asks to be finished with, where the host allows it.
 //
 // Packet type 1 below is a private agreement between THIS module and
 // Source/C64/VMHello -- the host never looks inside a payload, it only frames
@@ -21,6 +22,12 @@ constexpr uint8_t kRows = 4, kColumns = 40;
 constexpr uint8_t kPacketText = 1;
 
 const VmHost *host;
+// Null unless the host lends an exit. Resolved once, in vm_entry, because the
+// answer cannot change afterwards and input() runs from the scheduler.
+const VmHostExit *exitHost;
+
+// What the client puts in VmInput::buttons. Bit 0 is joystick fire, bit 1 is up.
+constexpr uint8_t kFire = 1, kUp = 2;
 uint8_t screen[kRows][kColumns];   // PETSCII screen codes, space-filled
 uint8_t colour = 5;                // 5 = green
 uint8_t nextRow;                   // next line to publish
@@ -63,13 +70,19 @@ uint32_t countPackageEntries() {
 }
 
 void input(const VmInput *in) {
-    // Any button cycles the colour and asks for a full repaint.
+    // Edges only: a held button is not a new press.
     static uint8_t previous;
-    if (in->buttons && in->buttons != previous) {
+    const uint8_t pressed = uint8_t(in->buttons & ~previous);
+    previous = in->buttons;
+    // Up asks to be finished with. On a host that lends an exit this does not
+    // return -- the C64 is reset and the board reboots into the menu. On a host
+    // that does not, nothing happens and the reset button is still the way out,
+    // which is the fallback the ABI asks every optional service to have.
+    if ((pressed & kUp) && exitHost) exitHost->exit_to_menu(0);
+    if (pressed & kFire) {
         colour = uint8_t(colour == 15 ? 1 : colour + 1);
         repaint = true;
     }
-    previous = in->buttons;
 }
 
 void pump() {
@@ -107,11 +120,17 @@ VM_MODULE_ENTRY const VmModule *vm_entry(const VmHost *h) {
     if (!h || h->abi != VM_ABI || h->bytes < VM_HOST_BASE_BYTES) return nullptr;
     if ((h->services & VM_SERVICES) != VM_SERVICES) return nullptr;
     host = h;
+    // Both halves, because they are independent: a host may grow its struct for
+    // some other tail extension without lending this one, and `bytes` is what
+    // says how far the struct can be read at all.
+    exitHost = (h->bytes >= VM_HOST_EXIT_BYTES && (h->services & VM_SERVICE_EXIT))
+                   ? reinterpret_cast<const VmHostExit *>(h) : nullptr;
 
     for (uint8_t row = 0; row < kRows; ++row)
         for (uint8_t column = 0; column < kColumns; ++column) screen[row][column] = 32;
 
-    putText(0, 0, "HELLO WORLD FROM TEENSYROM");
+    putText(0, 0, exitHost ? "HELLO WORLD  JOY2 UP QUITS"
+                           : "HELLO WORLD FROM TEENSYROM");
     putText(1, 0, h->package_root);
     uint8_t column = putText(2, 0, "WORKSPACE ");
     column = putNumber(2, column, h->workspace_bytes);

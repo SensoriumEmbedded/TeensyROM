@@ -45,14 +45,15 @@ ANSWER_TIMEOUT = 3
 # it". The strings are VmFail::describe()'s, in Source/Teensy/MinimalBoot/Common/VMFail.h.
 INSTALLED = 'extension host installed'   # VmFail::Installed, $30
 REMOVED = 'extension host removed'       # VmFail::Removed, $40; see removed_cleanly()
-# A launch's normal finish is the module being handed the machine ($00). It is a set
-# rather than a phrase because a host service that lets a module finish adds a second.
-# Every other code printBoot can print after a launch is a
+# A launch has more than one normal finish, so it gets a set rather than a phrase: the
+# module can be handed the machine and never come back ($00), or ask to be finished with
+# through the exit service ($04). Every other code printBoot can print after a launch is a
 # failure, so exttest.py checks for these positively for the same reason the two above
 # are checked positively: the failures outnumber the successes and a new one must not
 # arrive as a pass.
 FINISHED_NORMALLY = (
     'handed off to client',              # VmFail::Ok, $00
+    'module exited',                     # VmFail::Exited, $04
 )
 
 

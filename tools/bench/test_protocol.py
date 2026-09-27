@@ -102,12 +102,12 @@ class FailPhrases(unittest.TestCase):
         self.assertEqual({n: m for n, m in drifted.items() if m}, {},
                          f'no longer returned by VmFail::describe() in {VMFAIL}')
 
-    def test_the_phrases_a_launch_may_end_on_are_the_one_we_expect(self):
+    def test_the_phrases_a_launch_may_end_on_are_the_two_we_expect(self):
         # Pinned by name as well as by value: a code added to describe() that is a
         # normal finish has to be added to FINISHED_NORMALLY by hand, and this is
         # what makes that a decision rather than an omission.
         self.assertEqual(hostops.FINISHED_NORMALLY,
-                         ('handed off to client',))
+                         ('handed off to client', 'module exited'))
 
 
 class LaunchOutcome(unittest.TestCase):
@@ -145,8 +145,8 @@ class LaunchOutcome(unittest.TestCase):
     def test_the_screen_half_matches_whatever_case_it_is_drawn_in(self):
         # The record reaches the C64 too, through SendMsgPrintfln, and the case a
         # glyph carries is a property of the screen rather than of the firmware.
-        self.assertTrue(hostops.finished_normally('Extension: HANDED OFF TO CLIENT ($00)'))
-        self.assertTrue(hostops.finished_normally('Extension: handed off to client ($00)'))
+        self.assertTrue(hostops.finished_normally('Extension: MODULE EXITED ($04)'))
+        self.assertTrue(hostops.finished_normally('Extension: module exited ($04)'))
 
 
 class RemovalOutcome(unittest.TestCase):

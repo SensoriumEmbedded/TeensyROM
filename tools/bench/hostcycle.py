@@ -32,7 +32,7 @@ taken. The step after it carries the rest: an install that follows a refused rem
 nothing to overwrite.
 
 None of this enters the extension image, so none of it needs a hand on the board -- that
-is the whole point. Running a module still does.
+is the whole point. Running a module still does, until the client calls the exit service.
 
 The board must be on its main image (not in an extension) when this starts. If a module
 is running, reset it first.

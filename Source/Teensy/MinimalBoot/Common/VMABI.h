@@ -106,6 +106,23 @@ static constexpr uint32_t VM_HOST_BASE_BYTES=sizeof(VmHost);
 // an older copy of this header must keep working against a newer firmware.
 static_assert(sizeof(VmHost)==76, "ABI 2 base host layout is frozen");
 #endif
+// The first tail extension, service bit 14. The extension image has no USB and
+// the module table is frozen without a "done" callback, so before this a module
+// could only be got out of by faulting or by someone reaching for the board. A
+// module checks BOTH host->bytes >= VM_HOST_EXIT_BYTES and services &
+// VM_SERVICE_EXIT before casting: bits and layout are independent, and a host
+// may grow its struct without lending this.
+struct VmHostExit {
+    VmHost base;
+    // Does not return. Records Exited with `status` as the detail, then resets the
+    // C64 and reboots into the menu; the main image prints the record on the way
+    // back up, which is how a status reaches anything off the board.
+    void (*exit_to_menu)(uint32_t status);
+};
+static constexpr uint32_t VM_HOST_EXIT_BYTES=sizeof(VmHostExit);
+#if defined(__arm__)
+static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
+#endif
 struct VmModule {
     uint32_t abi, bytes;
     // pump is permitted while awaiting ACK; it must not alter frozen output.
@@ -134,15 +151,16 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 //   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
 //             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
 //             desktop, firmware catalogue
-//   14,15     unassigned, available on request
+//   14        this loader's module exit (VmHostExit, above)
+//   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
 //   17..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
-                  VM_SERVICE_RAM2_RO=128,
+                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
                   VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,

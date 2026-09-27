@@ -571,7 +571,7 @@ class ExtensionRun(unittest.TestCase):
     makes it read the record off IO1, and the fake board prints the record on
     serial, where answering_board() picks it up either way."""
 
-    NORMAL = b'Extension boot: handed off to client (code $00, detail $0)\n'
+    NORMAL = b'Extension boot: module exited (code $04, detail $0)\n'
     FAULTED = b'Extension boot: extension faulted (code $03, detail $0)\n'
 
     def setUp(self):
@@ -597,7 +597,7 @@ class ExtensionRun(unittest.TestCase):
         out = self.launch(self.NORMAL)
         self.assertEqual(self.board.launched, ['/HELLO.crt'])
         self.assertIn('gave up the machine', out.stdout)
-        self.assertIn('handed off to client', out.stdout)
+        self.assertIn('module exited', out.stdout)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
 
     def test_a_launch_that_faulted_is_not(self):

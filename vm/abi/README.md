@@ -91,7 +91,8 @@ number for good. It says nothing about who implements it.
 | 2048 | SD root | Mean Hamster Software | no |
 | 4096 | desktop | Mean Hamster Software | no |
 | 8192 | firmware catalogue | Mean Hamster Software | no |
-| 16384, 32768 | — | unassigned, on request | no |
+| 16384 | `VM_SERVICE_EXIT` | this loader | yes |
+| 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
 | 1<<17 .. 1<<31 | — | unassigned | no |
 
@@ -112,6 +113,43 @@ Two rules keep that promise workable:
 
 1. **`VmHost` only ever grows at the tail.** Never insert, never reorder.
 2. **Capability, then fallback.** If a host rejects a bit, retry without it.
+
+### Tail extensions
+
+A bit that adds a callback adds it past the end of `VmHost`, in a struct whose
+first member *is* a `VmHost`. `VM_SERVICE_EXIT` is the first one:
+
+```c
+struct VmHostExit {
+    VmHost base;
+    void (*exit_to_menu)(uint32_t status);   // does not return
+};
+```
+
+The entry point is still handed a `VmHost *`. A module that asked for the bit
+casts up to reach the tail, and checks **both** halves before it does:
+
+```c
+if (host->bytes >= VM_HOST_EXIT_BYTES && (host->services & VM_SERVICE_EXIT))
+    ((const VmHostExit *)host)->exit_to_menu(0);
+```
+
+Both, because the two are independent: a host may grow its struct for one bit
+while lending none of the others, and a host may publish a bit it implements
+through some other means. `bytes` says how far the struct can be read; the
+service bit says whether the callback behind it is yours to call.
+
+Requiring the bit means the loader refuses the image outright where it is
+absent, so the check above cannot fail on this loader — it is written for the
+module that treats exit as optional and falls back to running until reset.
+
+The tail is a chain, not a set of alternatives. The *second* extension composes
+on `VmHostExit` — `struct VmHostNext { VmHostExit base; ... }` — and not on a
+bare `VmHost`, which would put its callback at offset 76, the offset
+`exit_to_menu` already occupies. Two extensions written that way cannot both
+exist in one host, and a module that checked `bytes` would be told the pointer
+was long enough to read the wrong function. Each new tail extends the longest
+one there is, and `VM_HOST_*_BYTES` grows with it.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
@@ -432,6 +470,7 @@ writes no report, so it stays `$00` and stays silent.
 | `$01` | minimal jumped to the extension image and it did not start |
 | `$02` | the top flash slot holds no valid image |
 | `$03` | `$00` rewritten because the core reported a fault: the entry point crashed |
+| `$04` | the module called `exit_to_menu` (detail: its argument) |
 | `$10` | SD card would not initialise (detail: attempts) |
 | `$11` | `launch.vml` missing, short or corrupt |
 | `$12` | manifest unreadable or malformed |
@@ -546,8 +585,8 @@ byte out of `rwRegSerialString` (`ToPETSCII`, `IOH_TeensyROM.c:675`, table at
 `:107` -- `'A'` goes to 97 and `'a'` to 65), and CHROUT (`SendChar` = `$ffd2`)
 stores the screen code for that PETSCII byte in the charset the menu selects
 (`$d018` = `$17`, `MainMenu.asm`'s `TextScreenMemColor`), where the unshifted
-letters read lower case. Run the pair and `TeensyROM  ABI 2  services $009f` is
-on the screen as `TeensyROM  ABI 2  services $009f`; a dump through
+letters read lower case. Run the pair and `TeensyROM  ABI 2  services $409f` is
+on the screen as `TeensyROM  ABI 2  services $409f`; a dump through
 `tools/bench/c64.py`'s `petscii_row` reads it the same way. Leave either stage
 out of the model and it comes out `tEENSYrom  abi 2  SERVICES $409F`, which is
 the shape to distrust: it means one half of the pair was missed. Nothing tests
@@ -587,12 +626,16 @@ repeated; nothing on their paths changed apart from the slot address.
 | A remove with the slot blank declining without touching flash | yes |
 | A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
 | Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
-| The same page naming the installed host out of the slot's own descriptor | partly — with its own host in the slot the page shows `TeensyROM  ABI 2  services $009f`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are the same, so this run cannot show that the line came from the slot rather than from them; that needs a different host installed, which only the stacked third-party-host change provides. |
+| The same page naming the installed host out of the slot's own descriptor | partly — with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are the same, so this run cannot show that the line came from the slot rather than from them; that needs a different host installed, which only the stacked third-party-host change provides. |
 | A module refused against a host whose descriptor does not publish its services | no — it needs a host publishing fewer services than a module requires, and the stock host publishes all of them. Covered natively by the registry tests. |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
 
 Treat the rows marked **no** as untested rather than as working.
 
-A running extension is returned to the menu by the reset button, which the extension image services from `loop()`: `isrButton`
+There are two ways out of a running extension, and only one of them has run on
+hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
+records `$04` and reboots into the menu. A module that did not is returned by
+the reset button, which the extension image services from `loop()`: `isrButton`
 (`ISRs.c`) only sets `BtnPressed`, and the reboot happens on the next pass of
 the loop. That works for a resident module, because `vm_entry` returned and the
 loop is running.
