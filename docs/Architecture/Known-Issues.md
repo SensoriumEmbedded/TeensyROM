@@ -2,19 +2,15 @@
 
 Concrete, scoped findings surfaced during architecture walkthroughs — real issues with a known cause and (usually) a designed fix, deliberately queued rather than acted on immediately. Distinct from [Constraints.md](Constraints.md), which documents permanent rules; this file is a to-do list and should shrink as items get resolved (move resolved items out rather than leaving them marked done).
 
-## Summary (updated 2026-09-19)
+## Summary (updated 2026-09-27)
 
 Detail for every item below is in its own full section further down — search this file for a distinctive word/name from the bullet to jump to it.
 
 **Memory-safety bugs (buffer/stack overflow):**
-- `nfcReadTagLaunch()` — 256-byte `TagData` overflow on a malformed NFC tag [HIGH PRIORITY]
 - `nfcReadTagLaunch()` — 16KB `CleanLocalDirMenu[]` stack array, likely root cause of the documented NFC large-directory crash [HIGH PRIORITY]
-- `DriveDirPath` (256 bytes) — overflowed by two independent normal-use paths (remote-launch protocol, ordinary deep menu browsing) [HIGH PRIORITY]
 - `Min_SerUSBIO.ino LaunchFile()` — overflows the `eepAdCrtBootName` EEPROM field into adjacent EEPROM, persists across reboot [HIGH PRIORITY]
 - `sprintf`/`vsprintf`-into-fixed-buffer pattern — the instances found so far are fixed or assessed; full codebase sweep not yet done
-- `IOH_TR_BASIC.c` ISR-path handler — two unbounded writes (`LSFileName`, `RAM_Image`) trusting C64-side byte counts
 - Debug-only `'y'` serial command — unbounded read into a 100-byte buffer (low priority, narrowly gated)
-- `LoadDxxDirectory()` — no cycle detection / entry-count bound on D64/D71/D81 track/sector chain
 - `DownloadFile()` — writes an over-length HTTP chunk to disk before validating it against `Content-Length`
 
 **RAM1 savings:**
@@ -26,6 +22,13 @@ Detail for every item below is in its own full section further down — search t
 - Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
 - `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
+
+**Fixed since last summary (2026-09-27, not open work — kept for context):**
+- `nfcReadTagLaunch()`'s 256-byte `TagData` stack buffer — the page-read loop refuses a tag whose declared length would run the next 16-byte block past the buffer, and the two payload-offset walks and the "random launch" `strcat` are each bounded against how much was actually read (`CharNum`), not the tag's own claimed lengths
+- `DriveDirPath` — `RemoteLaunch()` refuses a launch path that would not fit before touching any state, and `HandleExecution()`'s directory-descent `strcat`s go through `DriveDirPathRoomFor()`, which refuses (rather than truncates) an append that would overflow it
+- `IOH_TR_BASIC.c`'s ISR-path `LSFileName`/`RAM_Image` writes — both stop at their buffer's end; an incomplete name (`TR_BASNameIncomplete`) or an oversized save (`TR_BASSaveOverflow`) is refused with `BAS_ERROR_FILE_NOT_FOUND`/`BAS_ERROR_OUT_OF_MEMORY` rather than acted on as a truncated prefix
+- `LoadDxxDirectory()` — the track/sector walk stops after `MaxDxxDirSectors` (64) links and once `NumDrvDirMenuItems` reaches `MaxMenuItems`, and a failed per-entry `malloc` ends the listing instead of writing through `NULL`
+- `GetCurrentFilePathName()` and `SetLatestSIDLoaded()` now report whether the path they built actually fit, and every caller that would otherwise store, mount, or write a cut-short path (hot keys, auto-launch, REU/KERNAL file selection, NFC tag writes, the background-SID record, Dxx mounting) refuses instead
 
 **Fixed since last summary (2026-09-22, not open work — kept for context):**
 - Unbounded `vsprintf` into `SerialStringBuf` — both message formatters and the minimal image's own copy now use `vsnprintf`, and the CRT "Name" field is read as `%.32s` so a name filling all 32 bytes cannot run off the 64-byte header buffer it sits at the end of
@@ -84,7 +87,9 @@ Telling contrast: `nfcWriteTag()` (same file, line 429-436) explicitly checks `i
 
 A second, smaller instance of the same gap: the "random launch" handling (line 391) does `strcat((char*)pDataStart, CleanLocalDirMenu[...]->Name)`, appending an arbitrary filename (FAT32, up to 255 chars) into whatever's left in the same `TagData` buffer, also with no bound check against remaining space.
 
-**Status:** deferred — confirmed, high priority given realistic trigger path, not yet fixed (2026-08-12).
+**Fixed (2026-09-27):** the page-read loop now refuses before each 16-byte block if `CharNum + 16 >= sizeof TagData`; the two payload-offset walks (`pDataStart += 2 + ...`) each check the result stays within `TagData + CharNum` (what was actually read, not `messageLength`'s claim) before dereferencing it; and the "random launch" `strcat` is refused if the picked name would not fit in what remains of `TagData`. The 16KB `CleanLocalDirMenu[]` stack array below is a separate, still-open issue.
+
+**Status:** fixed (2026-09-27).
 
 ## HIGH PRIORITY: `DriveDirPath` (256 bytes) has no length enforcement anywhere it's written, and two different normal-use paths can overflow it
 
@@ -95,7 +100,9 @@ A second, smaller instance of the same gap: the "random launch" handling (line 3
 
 Both point at the same underlying gap — nothing enforces `DriveDirPath`'s 256-byte limit at any write site — so a fix should address the buffer discipline generally rather than patching each call site individually.
 
-**Status:** deferred — confirmed via two independent paths, high priority, not yet fixed (2026-08-12).
+**Fixed (2026-09-27):** `RemoteLaunch()` now refuses (`strlen(FileNamePath) >= MaxPathLength`) before touching any state if the incoming path can't fit, and builds the split in a local `LaunchDir[MaxPathLength]` that's only published to `DriveDirPath` once the launch actually goes ahead. `HandleExecution()`'s directory-descent `strcat`s (menu browsing, D64/D71/D81 mounting) each go through the new `DriveDirPathRoomFor()` helper, which refuses the append — rather than truncating it — if it would overflow.
+
+**Status:** fixed (2026-09-27).
 
 ## Low priority: `LoadCRT()`'s root-level-file path split is duplicated (unfixed) in two more places
 
@@ -202,7 +209,9 @@ No bound against the 100-byte `Filename[]` at all — worse than most other find
 
 Walks a directory track/sector chain read directly from the disk-image file (`Track = NextTrack; Sector = NextSect;`, values read from file data) with no cycle detection, and writes `DriveDirMenu[NumDrvDirMenuItems]` with no check against `MaxMenuItems` before incrementing. A malformed or circular chain in a corrupted/crafted D64/D71/D81 image could grow `NumDrvDirMenuItems` indefinitely. Also no NULL-check on the per-entry `malloc(DxxFNB_Bytes)` (line 143) before the following `memcpy` into it. Same general category as other malformed-file scenarios already waved off this session — flagging in case the entry-count angle (unbounded growth, not just a single bad index) changes the calculus. `LoadDxxFile()` (the sibling that actually loads file contents) is unaffected — it's naturally self-bounding via its `Size + 254 > RAM_ImageSize` check regardless of chain behavior.
 
-**Status:** deferred — flagged, not yet assessed (2026-08-12).
+**Fixed (2026-09-27):** the chain walk now stops after `MaxDxxDirSectors` (64 — a real directory is at most 37 sectors) links and also stops once `NumDrvDirMenuItems` reaches `MaxMenuItems`; a failed per-entry `malloc` ends the listing (and the outer walk) rather than writing the name through the `NULL` it got back.
+
+**Status:** fixed (2026-09-27).
 
 ## `DownloadFile()` writes an over-length HTTP response chunk before validating it
 
@@ -263,7 +272,9 @@ Two writes into fixed-size buffers with no bounds check against the C64-side-con
 
 Both depend entirely on the C64-side `TRCustomBasicCommands` assembly code behaving itself and never streaming more bytes than the Teensy side expects — nothing on the Teensy side enforces the limit. Noted separately from the `Serial.write()` finding in this same file (see below) since this is a memory-safety/buffer-overflow concern from data volume, not a timing concern — the "BASIC interpreter overhead paces this" reasoning that resolved the `Serial.write()` question doesn't obviously extend to whether the *byte count* itself could ever exceed the buffer.
 
-**Status:** deferred — flagged, not yet assessed how to fix or whether real-world usage can trigger it (2026-08-12).
+**Fixed (2026-09-27):** both writes now stop at their buffer's end instead of running past it. `LSFileName` accepts up to 255 characters plus a terminating NUL (exactly `MaxPathLength`); a name that doesn't terminate inside that space leaves `TR_BASNameIncomplete` set, and all three users of the name (`ContRegAction_LoadPrep`/`SaveFinish`/`DirPrep`) refuse it with `BAS_ERROR_FILE_NOT_FOUND` rather than acting on the prefix that fit. `RAM_Image` stops advancing once `StreamOffsetAddr` reaches `RAM_ImageSize`, setting `TR_BASSaveOverflow`; `ContRegAction_SaveFinish` refuses to write a save flagged this way (`BAS_ERROR_OUT_OF_MEMORY`) rather than persist a silently truncated file.
+
+**Status:** fixed (2026-09-27).
 
 ## Documented exception: `Serial.write()` inside the ISR-path `IO1Hndlr_TR_BASIC`
 
