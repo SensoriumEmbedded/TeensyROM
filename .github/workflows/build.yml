@@ -107,10 +107,52 @@ jobs:
       - name: Build ${{ matrix.target }}
         run: npm run build:${{ matrix.target }} -- ${{ env.USE_CCACHE == 'true' && '--ccache' || '' }}
 
+      # No firmware hex carries an extension host: a host is installed onto a board, never
+      # shipped inside its firmware. The hex is decoded and every byte in it must sit below
+      # the slot, rather than asking build-host-package.mjs to package one and reading its
+      # refusal as success -- that exits 1 for a slot holding a host it cannot package,
+      # too, which is exactly the hex this step exists to catch. The TR+ build packages the
+      # stock host beside its hex instead -- and builds it only when the loader is compiled
+      # in -- so exactly one .TRH there, and none beside the TR, is what a TR+ that lost
+      # the loader or a TR that gained it would break.
+      - name: Check the ${{ matrix.target }} hex carries no host, and what sits beside it
+        shell: bash
+        run: |
+          shopt -s nullglob
+          hexes=(build/firmware/*.hex)
+          packages=(build/firmware/*.TRH)
+          if [ ${#hexes[@]} -ne 1 ]; then
+            echo "::error::expected one firmware hex, found ${#hexes[@]}: ${hexes[*]}"
+            exit 1
+          fi
+          echo "checking ${hexes[0]}"
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import { decodeHex, VM_BASE } from "./tools/lib/hex.mjs";
+            let top = 0;
+            for (const address of decodeHex(fs.readFileSync(process.argv[1], "utf8")).keys()) {
+              if (address > top) top = address;
+            }
+            if (top >= VM_BASE) {
+              console.log(`::error::the firmware hex reaches 0x${top.toString(16)}, into the extension slot at 0x${VM_BASE.toString(16)}; hosts ship as .TRH packages`);
+              process.exit(1);
+            }
+            console.log(`hex tops out at 0x${top.toString(16)}, below the slot`);
+          ' "${hexes[0]}"
+          expected=0
+          if [ "${{ matrix.target }}" = "tr-plus" ]; then expected=1; fi
+          if [ ${#packages[@]} -ne $expected ]; then
+            echo "::error::expected $expected host package(s) beside the ${{ matrix.target }} hex, found ${#packages[@]}: ${packages[*]}"
+            exit 1
+          fi
+          echo "no host in the hex; ${#packages[@]} host package(s) beside it, as expected"
+
       - uses: actions/upload-artifact@v7
         with:
           name: firmware-${{ matrix.target }}
-          path: build/firmware/*.hex
+          path: |
+            build/firmware/*.hex
+            build/firmware/*.TRH
 
   collect:
     needs: [build, tools]
@@ -138,4 +180,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/Release_v')
         uses: softprops/action-gh-release@v3
         with:
+          # The firmware only. The stock host's .TRH is in the build artifact for anyone
+          # testing modules, but a release does not offer an extension host until there is
+          # a module a user would install it for.
           files: build/firmware/*.hex

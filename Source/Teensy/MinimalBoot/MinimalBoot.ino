@@ -151,7 +151,7 @@ void setup()
 #ifdef VM_EXTENSIONS_ENABLED
    char vmMarker[5]{};
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
-   if (!strcmp(vmMarker, "@VM1")) {
+   if (!strcmp(vmMarker, VM_HOST_MARKER)) {
       // Consume the request before entering the other image. Reset, load
       // failure and the menu button all return to the menu without autolaunch.
       EEPROM.write(eepAdMinBootInd, MinBootInd_FromMin);

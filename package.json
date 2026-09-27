@@ -13,6 +13,7 @@
     "flash": "node tools/flash-firmware.mjs",
     "test": "node --test \"Source/Teensy/tests/**/*.test.js\" \"tools/**/*.test.mjs\"",
     "verify:extensions": "node tools/verify-extensions.mjs",
+    "build:host-package": "node tools/build-host-package.mjs",
     "build:hello": "node tools/build-extension.mjs --id HELLO --extensions hi --source vm/hello/hello.cpp --client-source Source/C64/VMHello/vmhello.a"
   }
 }

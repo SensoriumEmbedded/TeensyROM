@@ -17,6 +17,14 @@
    #define Fab04_DebugSignals         //For debug only
 #endif
 
+// The extension loader rides with the Fab 0.4 feature set: DoHostInstall blanks the screen
+// through the full DMA Fab04_FullDMACapable gates, and tools/build-firmware.mjs only turns
+// extensions on for --target tr-plus. If those two ever come apart, stop here rather than
+// ship a build that freezes the menu for a 45 second erase it cannot blank.
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(Fab04_FullDMACapable)
+   #error "VM_EXTENSIONS_ENABLED requires the Fab 0.4 features; build with --target tr-plus"
+#endif
+
 //fab 0.3 uses different debug signal and direct data buffer dir control
 // enabling this on a fab 0.2x PBC could cause damage to your C64!
   // #define DbgFab0_3plus     //Only for fab 0.3 PCB! 
@@ -71,6 +79,12 @@
 #define FWCheckToken      0x64E0  // Check firmware type
 #define FWMinimalToken    0x64E1  // Minimal firmware response
 #define FWFullToken       0x64E2  // Full firmware response
+#define HostRemoveToken   0x64E3  // Remove the installed extension host. Extensions build
+                                  // only, and on the USB device port only -- the USB host
+                                  // port and the TCP listener get FailToken and erase
+                                  // nothing. Where it is accepted it ACKs first and then
+                                  // reboots only if a host was there to remove; over an
+                                  // already empty slot it ACKs, says so, and stays up.
 
 
 #define eepMagicNum         0xfeed6415 // 01: 6/22/23  net settings added 

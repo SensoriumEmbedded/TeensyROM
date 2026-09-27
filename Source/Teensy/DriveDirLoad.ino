@@ -54,6 +54,12 @@ FLASHMEM bool ApplyRemoteFileChanges()
    return true;
 }
 
+void FullPathToSelected(char *Path, size_t Size, const char *Name)
+{
+   if (PathIsRoot()) snprintf(Path, Size, "/%s", Name);  // at root
+   else snprintf(Path, Size, "%s/%s", DriveDirPath, Name);
+}
+
 FLASHMEM void HandleExecution()
 {
    IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
@@ -100,6 +106,17 @@ FLASHMEM void HandleExecution()
             DoFlashUpdate(sourceFS, FullFilePath);
             return;  //we're done here...
          }
+         
+#ifdef VM_EXTENSIONS_ENABLED
+         if (MenuSelCpy.ItemType == rtFileTRH)  //extension host install from package
+         {
+            char FullFilePath[MaxNamePathLength];
+            
+            FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSelCpy.Name);
+            DoHostInstall(sourceFS, FullFilePath);
+            return;  //we're done here...
+         }
+#endif
          
          if (MenuSelCpy.ItemType == rtDirectory)
          {  //edit path as needed and load the new directory from SD/USB

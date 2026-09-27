@@ -622,6 +622,33 @@ FLASHMEM void ProcessCommand()
          if(SetColorRef()) SendU16(AckToken);
          else SendU16(FailToken);
          break;
+      case HostRemoveToken: //Remove the installed extension host
+         // Erasing flash is a device-port operation.  ProcessCommand serves whichever
+         // channel ServiceSerial was last handed, and that is three of them: the USB
+         // device port, the USB host port (rpud2TRContEnabled), and the TCP listener on
+         // port 2112 (NetListenEnable).  Without this gate two bytes from anywhere on
+         // the LAN clear the host slot and reboot the board, unauthenticated.  The
+         // refusal is the one an unavailable command already gets, which also keeps the
+         // #else arm's build-identifying message off every channel but the device port.
+         if(CmdChannel != &Serial)
+         {
+            SendU16(FailToken);
+            CmdChannel->print("Busy!\n");
+            break;
+         }
+#ifdef VM_EXTENSIONS_ENABLED
+         // The ACK goes out and is flushed first: DoHostUninstall does not return
+         // when it gets as far as clearing the tag, so an ACK sent after it never
+         // leaves. A caller that gets the ACK and then silence is the success case,
+         // and the outcome arrives in the record the reboot prints.
+         SendU16(AckToken);
+         FlushCmdChannel(CmdChannel);
+         DoHostUninstall();
+#else
+         SendU16(FailToken);
+         CmdChannel->print("No extension loader in this firmware\n");
+#endif
+         break;
       case DebugToken: //'dg'Test/debug
          //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
          //Printf_dbg("isFab2x: %d\n", isFab2x()); 
@@ -790,6 +817,20 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
       *InVal += (ByteIn << (ByteNum*8));
    }
    return true;
+}
+
+FLASHMEM void FlushCmdChannel(Stream *Channel)
+{
+   // Only the USB device port has a flush that returns: usb_serial_class::flush() primes
+   // the IN endpoint and comes back ("TODO: actually wait for data to leave USB", says the
+   // core's own header), which is what send_now() does too.  The other two channels block
+   // with no deadline -- EthernetClient::flush() spins until the peer has ACKed every byte,
+   // USBSerialBase::flush() spins on `while (txstate & 3)` -- so a peer that stops ACKing
+   // stops loop() with it, including the IOH_TeensyROM handler that drives the C64 menu.
+   // Nothing is lost by skipping them: the bytes are already in a stack that delivers them
+   // without help (FNET's send buffer, USBSerial's tx queue pushed by its own txtimer), so
+   // the blocking flush buys only a delivery confirmation no caller here reads.
+   if (Channel == &Serial) Serial.send_now();
 }
 
 FLASHMEM void SendU16(uint16_t SendVal)

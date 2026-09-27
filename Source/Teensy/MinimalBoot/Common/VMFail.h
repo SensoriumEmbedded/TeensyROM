@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include "VMABI.h"
+#include "VMHostABI.h"
 
 // Why the last extension launch ended the way it did.
 //
@@ -13,11 +13,13 @@
 // Teensy's own CrashReport at the top of RAM2, which survives the soft reset.
 // The main image collects it on the way back up and shows it on the C64 menu.
 //
-// Registry-level failures never get this far: VmRegistry::tryLaunch runs in the
-// main image, where SendMsgPrintfln already works, and only reboots on success.
+// The host installer writes here too, from the main image. It has to reboot
+// whether it succeeded or not -- the C64 was held in reset and the FlexSPI LUT
+// re-initialises on the way back up -- so its outcome cannot be printed where
+// it happens either. Its codes start at 0x30.
 #ifndef MinimumBuild
 // Defined in FileParsers.ino, and declared the same way IOH_TeensyROM.c does.
-extern void SendMsgPrintfln(const char *Fmt, ...);
+extern bool SendMsgPrintfln(const char *Fmt, ...);
 #endif
 namespace VmFail {
 // One code per exit point, in the order they can be reached. Ok is written on
@@ -41,19 +43,27 @@ enum : uint8_t {
     Descriptor    = 0x17,  // third CHIP is not a valid VMH1 descriptor
     ClientCrc     = 0x18,  // client banks do not match the descriptor CRC
     ModuleLoad    = 0x20,  // module image refused (detail = VMHost failure code)
+    // The installer, which reboots on success as well as on failure. Installed
+    // is not Ok: captureHeld filters on code != Ok, and a success the menu
+    // never mentions looks from the couch like nothing happened.
+    Installed      = 0x30,  // host written and verified (detail = payload bytes)
+    InstallRead    = 0x31,  // package read failed mid-write (detail = offset)
+    InstallErase   = 0x32,  // a sector would not erase (detail = sector)
+    InstallVerify  = 0x33,  // slot did not read back as written (detail = CRC)
+    InstallProgram = 0x34,  // a page would not program (detail = offset)
+    InstallFailed  = 0x3f,  // refused for a reason the codes above do not name
+    // Removal, which reboots for the same reason an install does: clearing the
+    // tag takes a sector erase, and the menu runs from cartridge ROM this core
+    // stops answering while that erase holds interrupts off.
+    Removed        = 0x40,  // slot no longer reads as a host (detail = 0, or the
+                            // VmInstallStatus of the part of the erase that failed)
+    RemoveFailed   = 0x41,  // the tag would not clear (detail = VmInstallStatus)
 };
-// Padded to a cache line: the cache maintenance below works in 32-byte units,
-// and nothing else may share the line. crc comes last so that
-// vm_crc32(r, offsetof(Record, crc)) covers every other word, padding included.
-struct Record { uint32_t magic, code, detail; uint32_t reserved[4]; uint32_t crc; };
-static_assert(sizeof(Record)==32, "one cache line");
-enum : uint32_t { Magic = 0x3146564du };  // 'MVF1'
-// Fixed, not derived from the arena: profile 0 lends the guest all of RAM2, so
-// the record has to sit at one address whatever the profile. A guest that
-// overwrites it fails the magic/CRC gate in take() and reads as no record.
-static constexpr uint32_t base = 0x2027FF60u;
-static_assert(base % 32 == 0, "a cache line of its own");
-static_assert(base+sizeof(Record) == 0x2027FF80u, "directly below Teensy's CrashReport");
+// Layout, magic and address are the published host contract (VMHostABI.h), so
+// that a third-party host writes a record this image can read.
+using Record = VmFailRecord;
+enum : uint32_t { Magic = VM_FAIL_MAGIC };
+static constexpr uint32_t base = VM_FAIL_BASE;
 
 #if defined(__arm__)
 static inline Record *slot() { return reinterpret_cast<Record *>(base); }
@@ -69,14 +79,11 @@ static inline Record *slot() { return &hostSlot; }
 // core does for its own crash report in startup.c.
 static inline void set(uint8_t code, uint32_t detail = 0) {
     Record *r = slot();
-    *r = Record{ Magic, code, detail, {}, 0 };
-    r->crc = vm_crc32(r, offsetof(Record, crc));
+    vm_fail_fill(*r, code, detail);
     arm_dcache_flush_delete(r, sizeof *r);
 }
 
-static inline bool intact(const Record *r) {
-    return r->magic == Magic && r->crc == vm_crc32(r, offsetof(Record, crc));
-}
+static inline bool intact(const Record *r) { return vm_fail_intact(r); }
 
 // Reads the record and clears it, so a stale reason cannot be reported twice.
 static inline bool take(Record &out) {
@@ -117,6 +124,14 @@ static inline const char *describe(uint8_t code) {
         case Descriptor:   return "client descriptor bad";
         case ClientCrc:    return "client CRC mismatch";
         case ModuleLoad:   return "module refused";
+        case Installed:      return "extension host installed";
+        case InstallRead:    return "host package read failed";
+        case InstallErase:   return "host install erase failed";
+        case InstallVerify:  return "host install verify failed";
+        case InstallProgram: return "host install write failed";
+        case InstallFailed:  return "host install failed";
+        case Removed:        return "extension host removed";
+        case RemoveFailed:   return "host removal failed";
         default:           return "unknown";
     }
 }

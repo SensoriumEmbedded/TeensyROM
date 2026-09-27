@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 #include "Common/VMFiles.h"
-#include "Common/VMImageLoad.h"
+#include "Common/VMHostABI.h"
 #include "Common/VMFail.h"
 //
 // The extension image's runtime: reserve the module's memory, load and validate
 // the module, and carry packets between it and the C64 client.
 //
 // The client link is ordinary EasyFlash IO2 register traffic -- the base profile
-// never becomes bus master. Nothing here needs DMA, so the loader runs on
-// TeensyROM hardware that cannot do full bus mastering at all.
+// never becomes bus master, and nothing in this runtime needs DMA. The loader is
+// still built only for --target tr-plus: installing it (DoHostInstall) blanks the
+// screen through the full DMA only Fab 0.4 has, and Common_Defs.h stops the compile
+// if VM_EXTENSIONS_ENABLED ever reaches a build without Fab04_FullDMACapable.
 namespace VmRuntime {
 using namespace VmFiles;
 static VmRegistry::Launch launch;
@@ -33,22 +35,6 @@ static void moduleFail(uint8_t error, uint32_t detail);
 __attribute__((used, section(".vmhostid")))
 const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, providedServices,
                             sizeof(VmHost), "TeensyROM", 0 };
-
-static void codeAccess(bool loading) {
-    // Core region 1 makes all ITCM read-only. A higher-priority region grants
-    // only the module window RW+XN while loading, then restores RO+execute.
-    // Modules are trusted local code: this catches mistakes, not attacks.
-    uint32_t mask; __asm__ volatile("mrs %0, primask":"=r"(mask)); __disable_irq();
-    __asm__ volatile("dsb":::"memory"); SCB_MPU_CTRL = 0;
-    // 96 KiB window: 32 KiB at 0x18000, then 64 KiB at 0x20000.
-    for (unsigned i = 0; i < 2; i++) {
-        SCB_MPU_RBAR = (i ? 0x20000u : 0x18000u) | SCB_MPU_RBAR_VALID | (11 + i);
-        SCB_MPU_RASR = SCB_MPU_RASR_TEX(1) | SCB_MPU_RASR_AP(loading ? 3 : 7) |
-            (loading ? SCB_MPU_RASR_XN : 0) | SCB_MPU_RASR_SIZE(i ? 15 : 14) | SCB_MPU_RASR_ENABLE;
-    }
-    SCB_MPU_CTRL = SCB_MPU_CTRL_ENABLE; __asm__ volatile("dsb\nisb":::"memory");
-    if (!mask) __enable_irq();
-}
 
 static void constantAccess(bool protect) {
     // Profile 1 only. Region 13: subregions 2..6 of the aligned 128 KiB RAM2
@@ -75,7 +61,7 @@ static bool loadModule() {
     char path[128]; snprintf(path, sizeof path, "%s/%s", launch.root, manifest.module);
     FsFile f = SD.sdfs.open(path, O_RDONLY); VmImageHeader h{};
     if (!f || f.isDirectory() || f.fileSize() > UINT32_MAX || f.read(&h, sizeof h) != sizeof h ||
-        !vm_valid_header(h, f.fileSize()) || (h.required_services & ~providedServices)) {
+        !vm_valid_header(h, f.fileSize()) || !vm_host_serves(h, providedServices)) {
         // An image wanting a service this build does not provide is refused
         // here, whole. It is never loaded with the service quietly missing.
         f.close(); failure = 0x11; return false;
@@ -85,9 +71,9 @@ static bool loadModule() {
     auto data = (uint8_t *)VM_DATA_BASE;
     auto ro = (uint8_t *)VM_RAM2_RO_BASE;
     constantAccess(false);
-    codeAccess(true);
+    vm_host_code_window(true);
     const bool loaded = vm_load_payload(h, f, code, data, ro, failure);
-    f.close(); codeAccess(false);
+    f.close(); vm_host_code_window(false);
     if (!loaded) return false;
     if (h.reserved[0] == VM_PROFILE_RAM2_RO) constantAccess(true);
     __asm__ volatile("dsb\nisb":::"memory");
@@ -100,15 +86,7 @@ static bool loadModule() {
     // inside the arena the module is about to own (VMFail.h).
     VmFail::set(VmFail::Ok);
     module = reinterpret_cast<VmEntry>(h.entry)(&host);
-    // Native modules are trusted, but a corrupt table is a mistake worth
-    // catching before we start calling through it.
-    const uintptr_t end = VM_CODE_BASE + h.code_bytes;
-    auto codePointer = [end](uintptr_t p) { return (p & 1) && (p & ~1u) >= VM_CODE_BASE && (p & ~1u) < end; };
-    const uintptr_t p = (uintptr_t)module;
-    if (p < VM_CODE_BASE || p > VM_CODE_LIMIT - sizeof(VmModule) || module->abi != VM_ABI ||
-        module->bytes != sizeof(VmModule) || !codePointer((uintptr_t)module->input) ||
-        !codePointer((uintptr_t)module->pump) || !codePointer((uintptr_t)module->packet) ||
-        !codePointer((uintptr_t)module->ack)) {
+    if (!vm_module_table_valid(module, h.code_bytes)) {
         if (!failure) failure = 0x14; module = nullptr; return false;
     }
     return true;
@@ -125,6 +103,7 @@ static void moduleFail(uint8_t error, uint32_t detail) {
     EZFlashRAM[0xf8] = detail; EZFlashRAM[0xf9] = detail >> 8; EZFlashRAM[0xfa] = detail >> 16;
     fail(error ? error : 0x16);
 }
+
 }  // namespace VmRuntime
 
 // Called only by the stock EasyFlash IO2 handler. No file or module code runs

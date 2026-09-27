@@ -11,15 +11,22 @@
 //     usable             = FLASH_SIZE - FLASH_RESERVE
 //     steady-state limit = usable / 2
 //
-// FLASH_SIZE and FLASH_RESERVE are read directly from FlashTxx.h and FlashUpdate.ino, so
-// this check tracks those constants automatically if they ever change.
+// FLASH_SIZE and FLASH_RESERVE_STOCK are read directly from FlashTxx.h and FlashUpdate.ino,
+// so this check tracks those constants automatically if they ever change. A TR+ built with
+// the extension loader reserves the extension host slot as well, which FlashUpdate.ino
+// derives from the slot's size and static_asserts against its address; the slot's size
+// comes from hex.mjs here, which verify-extensions.mjs holds to VMHostABI.h.
 import fs from 'node:fs';
+import { VM_BASE, VM_LIMIT } from './hex.mjs';
 
+// A file that is there but no longer declares the name is refused rather than answered with
+// the fallback: that is what a rename looks like, and the fallback would go on checking
+// against a reserve the firmware no longer has.
 function readDefine(filePath, name, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   const text = fs.readFileSync(filePath, 'utf8');
   const match = text.match(new RegExp(`^\\s*#define\\s+${name}\\s+\\(?(0x[0-9A-Fa-f]+|\\d+)\\)?`, 'm'));
-  if (!match) return fallback;
+  if (!match) throw new Error(`${filePath} no longer #defines ${name} as a number`);
   return match[1].startsWith('0x') ? parseInt(match[1], 16) : parseInt(match[1], 10);
 }
 
@@ -53,13 +60,15 @@ function hexImageExtent(hexPath) {
   return { lines, min, max, size: max - min };
 }
 
-// root: repo root. hexPath: the combined "_full.hex" to check.
-export function checkFlashHeadroom(root, hexPath) {
+// root: repo root. hexPath: the combined "_full.hex" to check. extensions: the hex was built
+// with the extension loader, whose updater also reserves the host slot.
+export function checkFlashHeadroom(root, hexPath, { extensions = false } = {}) {
   const flashTxxH = `${root}/Source/Teensy/Flash/FlashTxx.h`;
   const flashUpdateIno = `${root}/Source/Teensy/FlashUpdate.ino`;
 
   const flashSize = readDefine(flashTxxH, 'FLASH_SIZE', 0x800000);
-  const flashReserve = readDefine(flashUpdateIno, 'FLASH_RESERVE', 0x40000);
+  const flashReserve = readDefine(flashUpdateIno, 'FLASH_RESERVE_STOCK', 0x40000) +
+    (extensions ? VM_LIMIT - VM_BASE : 0);
   const usable = flashSize - flashReserve;
   const steadyStateMax = Math.floor(usable / 2);
 

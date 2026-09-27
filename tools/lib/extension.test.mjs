@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
   CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
+  ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
+  buildHostPackage, parseHostPackage, hostSlotValid,
+  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
 } from './extension.mjs';
+import { hostImage } from './fixtures.mjs';
+import { VM_BASE } from './hex.mjs';
 
 const thumbReturn = Buffer.from([0x70, 0x47]);  // bx lr
 const image = (overrides = {}) => buildImage({ code: thumbReturn, entry: CODE_BASE | 1, ...overrides });
@@ -51,7 +57,7 @@ test('a header the loader would refuse is refused by the parser, not just a bad 
   };
   assert.throws(() => parseImage(restamped(14, 1)), /Reserved header words/);
   assert.throws(() => parseImage(restamped(6, CODE_BASE)), /outside the module code window/);
-  assert.throws(() => parseImage(restamped(9, BASE_SERVICES | 32)), /base profile does not provide/);
+  assert.equal(parseImage(restamped(9, BASE_SERVICES | 0x10000)).requiredServices, BASE_SERVICES | 0x10000);
   assert.throws(() => parseImage(restamped(12, 2)), /Unknown memory profile 2/);
   assert.throws(() => parseImage(restamped(12, PROFILE_RAM2_RO)), /Profile 1 needs/);
 });
@@ -62,9 +68,28 @@ test('entry points the loader would refuse are refused at build time', () => {
   assert.throws(() => image({ entry: (CODE_BASE - 2) | 1 }), /outside the module code window/);
 });
 
-test('an image cannot ask for more than the base profile provides', () => {
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | 32 }), /base profile does not provide/);
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | 512 }), /base profile does not provide/);
+test('a service assigned to another host packages and round trips through the parser', () => {
+  for (const bit of [32, 512, 0x10000]) {
+    assert.equal(parseImage(image({ requiredServices: BASE_SERVICES | bit })).requiredServices,
+                 BASE_SERVICES | bit);
+  }
+  // The static_assert in VMABI.h, mirrored: no bit is both served and assigned.
+  assert.equal(HOST_SERVICES & ASSIGNED_SERVICES, 0);
+});
+
+test('the mask --services offers as an example is one a module could really ship', () => {
+  const source = fs.readFileSync(new URL('../build-extension.mjs', import.meta.url), 'utf8');
+  const example = source.match(/--services wants one 32-bit mask such as (0x[0-9a-fA-F]+)/);
+  assert.ok(example, 'build-extension.mjs no longer offers an example mask');
+  assert.equal(Number(example[1]), BASE_SERVICES | SERVICE_EXAMPLE);
+});
+
+test('an unassigned service bit is refused at build time, and only there', () => {
+  const unclaimed = 1 << 20;
+  assert.equal(unclaimed & UNASSIGNED_SERVICES, unclaimed);
+  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x100000/);
+  const forced = image({ requiredServices: BASE_SERVICES | unclaimed, allowUnassignedServices: true });
+  assert.equal(parseImage(forced).requiredServices, BASE_SERVICES | unclaimed);
 });
 
 test('the RAM2 read-only profile and the legacy profile stay consistent', () => {
@@ -138,4 +163,78 @@ test('short client banks are padded rather than shifting the descriptor', () => 
   assert.equal(crt.length, CLIENT_BYTES);
   assert.equal(crt.subarray(DESCRIPTOR_OFFSET, DESCRIPTOR_OFFSET + 4).toString('latin1'), 'VMH1');
   assert.equal(crt[83], 0, 'unused bank space is zero filled');
+});
+
+test('a host package round-trips and leaves the image byte-identical', () => {
+  const image = hostImage();
+  const pkg = buildHostPackage({ image });
+  const header = parseHostPackage(pkg);
+  assert.equal(pkg.length, HOST_PACKAGE_HEADER_BYTES + image.length);
+  assert.ok(pkg.subarray(HOST_PACKAGE_HEADER_BYTES).equals(image), 'payload is what objcopy produced');
+  assert.equal(header.name, 'TestHost');
+  assert.equal(header.abi, ABI);
+  assert.equal(header.targetBase, VM_BASE);
+});
+
+test('an image short of the length it declares is padded with the 0xFF an erased page holds', () => {
+  const image = hostImage({ bytes: 0x8000, declared: 0x8000 + 0xc00 });
+  const pkg = buildHostPackage({ image });
+  assert.equal(parseHostPackage(pkg).payloadBytes, 0x8000 + 0xc00);
+  assert.ok(pkg.subarray(HOST_PACKAGE_HEADER_BYTES + 0x8000).every((b) => b === 0xff));
+});
+
+test('an image the minimal loader would not enter is refused before it can be installed', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ flashMagic: 0 }) }), /would not be entered|fails the checks/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ entry: VM_BASE + 0x2000 }) }), /fails the checks/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ entry: VM_BASE + 0x9001 }) }), /fails the checks/);
+});
+
+test('an image longer than the slot, or shorter than it claims, is refused', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ bytes: HOST_SLOT_BYTES + 0x1000 }) }), /slot is/);
+  assert.throws(() => buildHostPackage({ image: hostImage({ bytes: 0x8000, declared: 0x4000 }) }), /declares 16384 bytes/);
+  // The declared length sizes the 0xFF pad, so it has to be bounded before it
+  // is padded to -- not after, where a garbage word is an allocation first.
+  // The refusal alone does not show that: padding first reaches the same
+  // refusal, just 4 GB later, and Buffer.alloc does not refuse a length that
+  // size. So the allocation is what is watched, and refused if it is oversized.
+  const realAlloc = Buffer.alloc;
+  Buffer.alloc = (size, ...rest) => {
+    if (size > HOST_SLOT_BYTES) throw new Error(`padded to ${size} bytes before the length was bounded`);
+    return realAlloc(size, ...rest);
+  };
+  try {
+    assert.throws(() => buildHostPackage({ image: hostImage({ declared: 0xfffffff0 }) }), /fails the checks/);
+  } finally {
+    Buffer.alloc = realAlloc;
+  }
+});
+
+test('a host carrying another ABI is refused rather than installed and rejected on target', () => {
+  assert.throws(() => buildHostPackage({ image: hostImage({ abi: ABI + 1 }) }), /ABI/);
+});
+
+test('corrupting any header byte, or the payload at either end, is caught', () => {
+  // The whole header, as host_install_test.cpp sweeps it, rather than a sample
+  // of it. Sweeping the payload too is the same property but thirty seconds of
+  // CRC, so it is sampled and the name says so.
+  const pkg = buildHostPackage({ image: hostImage() });
+  const positions = [...Array(HOST_PACKAGE_HEADER_BYTES).keys()]
+    .concat([HOST_PACKAGE_HEADER_BYTES,                        // the payload's first byte
+             HOST_PACKAGE_HEADER_BYTES + HOST_ID_OFFSET,       // its MVH2 descriptor
+             pkg.length - 1]);
+  for (const at of positions) {
+    const bad = Buffer.from(pkg);
+    bad[at] ^= 0x80;
+    assert.throws(() => parseHostPackage(bad), new RegExp('.'), `corruption at ${at} went unnoticed`);
+  }
+});
+
+test('hostSlotValid agrees with the five words the minimal image reads', () => {
+  const ok = { flashMagic: 0x42464346, vectorMagic: 0x432000d1, entry: VM_BASE + 0x1001,
+               bootBase: VM_BASE, imageBytes: 0x8000 };
+  assert.ok(hostSlotValid(ok));
+  assert.ok(!hostSlotValid({ ...ok, entry: VM_BASE + 0x1000 }), 'a non-Thumb entry is refused');
+  assert.ok(!hostSlotValid({ ...ok, bootBase: 0 }));
+  assert.ok(!hostSlotValid({ ...ok, imageBytes: HOST_SLOT_BYTES + 1 }));
+  assert.ok(!hostSlotValid({ ...ok, imageBytes: 0x1000 }));
 });

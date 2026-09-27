@@ -172,7 +172,7 @@ void setup()
    // which is why the extension cannot simply run in the ordinary minimal image.
    char vmMarker[5]{};
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
-   if (!strcmp(vmMarker, "@VM1"))
+   if (!strcmp(vmMarker, VM_HOST_MARKER))
    {
       if (!VMHostBoot()) { RebootToMenu(); }
       BtnPressed = false;
