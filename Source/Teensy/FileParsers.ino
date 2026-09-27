@@ -166,13 +166,36 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             EEPwriteStr(eepAdCrtBootName, FullFilePath);
             EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
 #ifdef Fab04_FullDMACapable
+            // Asked first because this path is reached over USB as well as from the menu -- RemoteControl.ino's
+            // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
+            // though: that powers the board too, so there is nothing left to reach it.
+            // What is left is a C64 that still supplies 5 V but has stopped clocking.
+            //
+            // Against a bus that has already stopped, the check buys latency and not
+            // survival.  WaitForDMAState bounds the waits it runs itself -- 5 mS after the
+            // bus goes quiet, or the caller's ceiling while it is still clocking -- so
+            // PerformDMA and CloseDMA return false on their own, both return values are
+            // ignored here, and RebootTR() below runs either way.  Asking first costs
+            // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
+            // that could not have worked: each of the two waits pays 5 mS to notice the
+            // silence and another 5 mS inside AbortDMA.
+            //
+            // Against a bus that stops part way through, it is not only latency, which is
+            // why this is a check and not a deleted line.  DMATransferISR's edge waits have
+            // no bound at all -- see the fourth case named over WaitForDMAState -- so a
+            // clock that dies while the ISR is inside one spins it forever at priority 16,
+            // thread mode never runs again, and RebootTR() is never reached.  Asking cannot
+            // close that window, only decline to open it on a bus that already reads dead.
             // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
             //robust for the large majority of real CRT files, with one narrow, named exception:
             //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
-            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)            
-            uint8_t BlankD011 = 0x00;
-            PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-            CloseDMA();
+            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)
+            if (C64IsClockingPHI2())
+            {
+               uint8_t BlankD011 = 0x00;
+               PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+               CloseDMA();
+            }
 #endif
             RebootTR();
             
