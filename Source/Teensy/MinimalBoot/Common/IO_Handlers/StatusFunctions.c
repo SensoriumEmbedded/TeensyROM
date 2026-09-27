@@ -195,32 +195,33 @@ FLASHMEM void WriteEEPROM()
 //one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
 //serves most of PrintFileName's call sites.  That is why it belongs only on the C64's own
 //path, where the C64 has just asked for this string and is waiting on it.  Anywhere else
-//it redirects whatever read the C64 has in progress -- a menu item name, a path -- which
-//is not in SerialStringBuf at all, so overwriting the buffer alone would not have touched
-//it.  MakeBuildInfo has callers of that kind (Teensy.ino, SerUSBIO.ino's 'f' and
-//VersionInfoToken, which reach it asynchronously to the C64) and so selects nothing
-//itself; the C64 reaches it through MakeBuildInfoStr.
+//it redirects whatever read the C64 has in progress -- a menu item name, a path -- to
+//offset 0 of a string it never asked for.
 FLASHMEM void SelectSerialStringBuf()
 {
    ptrSerialString = SerialStringBuf;
    StringOffset = 0;
 }
 
-FLASHMEM void MakeBuildInfo()
+//Builds into the caller's buffer.  The C64 reads SerialStringBuf one byte per access
+//from the ISR -- directory names are copied into it for that -- so a caller reached
+//from USB, asynchronously to the C64, must not build there: VersionInfoToken did, and a
+//companion app's version query landed in the middle of the file names on screen.
+FLASHMEM void MakeBuildInfo(char *Buf, size_t Size)
 {
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
-   sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
 
    //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
    //prints at column 0, so a 37 character cut would take most of it away.
 }
 
-//rsMakeBuildCPUInfoStr: the C64's route to MakeBuildInfo, which leaves the string
-//selected for it.  See SelectSerialStringBuf for why MakeBuildInfo itself does not.
+//rsMakeBuildCPUInfoStr: the C64 asked for the build info, so build it where the C64
+//reads and leave it selected.
 FLASHMEM void MakeBuildInfoStr()
 {
-   MakeBuildInfo();
+   MakeBuildInfo(SerialStringBuf, sizeof SerialStringBuf);
    SelectSerialStringBuf();
 }
 

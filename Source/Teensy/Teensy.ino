@@ -186,8 +186,9 @@ void setup()
    LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
 
-   MakeBuildInfo();
-   Serial.printf("\n%s\n%s is on-line\n", SerialStringBuf, strVersionNumber);
+   char BuildInfo[sizeof SerialStringBuf];
+   MakeBuildInfo(BuildInfo, sizeof BuildInfo);
+   Serial.printf("\n%s\n%s is on-line\n", BuildInfo, strVersionNumber);
    //USB is up by here. Not gated on a host listening: printing is what clears
    //the report, and minimal's promoteFault() promotes a stale one to $03 on
    //the next extension launch.

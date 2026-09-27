@@ -182,6 +182,16 @@ test('only the C64 status dispatch selects the C64 string read', () => {
     .filter(site => !site.startsWith(`${statusFile}:`) && !site.startsWith(`${c64Dispatch}:`));
   assert.deepEqual(directSelects, [], 'the C64 string read is selected outside the C64 dispatch');
 
+  // Moving the read is half of it; writing the buffer under it is the other. The C64 reads
+  // directory names out of SerialStringBuf, and VersionInfoToken built the build info there,
+  // so a version query from USB spliced build info into file names mid-read -- seen on the
+  // bench TR+. Only the C64's own handler builds it there; every other caller brings a buffer.
+  const buildsIntoC64Buffer = scanTree(/\bMakeBuildInfo\s*\(\s*SerialStringBuf\b/g, () => true)
+    .filter(site => !site.startsWith(`${statusFile}:`));
+  assert.deepEqual(buildsIntoC64Buffer, [], 'build info is built into the C64 string buffer outside its handler');
+  assert.match(functionBody(statusSource, 'MakeBuildInfo'), /snprintf\(\s*Buf\s*,/,
+    'MakeBuildInfo no longer builds into the buffer its caller passes');
+
   const selecting = [...statusSource.matchAll(/^[^\n]*\bvoid\s+(\w+)\s*\([^)]*\)\s*$/gm)]
     .map(({ 1: fn }) => fn)
     .filter(fn => fn !== 'SelectSerialStringBuf')
