@@ -174,6 +174,14 @@ test('only the C64 status dispatch selects the C64 string read', () => {
     .filter(site => !site.startsWith(`${statusFile}:`));
   assert.deepEqual(elsewhere, [], 'SelectSerialStringBuf is called outside StatusFunctions.c');
 
+  // A select need not go through the helper: writing the pointer or the read offset directly
+  // does the same thing. Those writes belong to the helper and to the C64's own register
+  // dispatch in IOH_TeensyROM.c, and nowhere else.
+  const c64Dispatch = path.normalize('MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c');
+  const directSelects = scanTree(/\b(?:ptrSerialString|StringOffset)\s*=(?!=)/g, () => true)
+    .filter(site => !site.startsWith(`${statusFile}:`) && !site.startsWith(`${c64Dispatch}:`));
+  assert.deepEqual(directSelects, [], 'the C64 string read is selected outside the C64 dispatch');
+
   const selecting = [...statusSource.matchAll(/^[^\n]*\bvoid\s+(\w+)\s*\([^)]*\)\s*$/gm)]
     .map(({ 1: fn }) => fn)
     .filter(fn => fn !== 'SelectSerialStringBuf')
