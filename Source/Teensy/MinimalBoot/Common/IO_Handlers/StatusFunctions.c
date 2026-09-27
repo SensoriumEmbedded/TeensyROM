@@ -184,22 +184,22 @@ FLASHMEM void WriteEEPROM()
 //One copy, because the two lines are the contract rather than an implementation detail
 //of any one handler.
 //
-//All three handlers behind an rCtlMake*StrWAIT call it, MakeBuildInfo included, and in
-//none of them is it defense in depth for a hypothetical future caller -- it is what the
-//caller on the other side of the wait is already relying on.  Pg_InfoOther.asm used to
-//open-code the select for MakeBuildInfo, exactly as Pg_InstalledExt.asm did for
-//MakeExtHostStr; both pages now reach the row through PrintFileName, which selects
-//nothing.  Take this call out of any one of them and that page's row prints the tail of
-//whatever was read last.
+//All three handlers behind an rCtlMake*StrWAIT call it, and in none of them is it
+//defense in depth for a hypothetical future caller -- it is what the caller on the other
+//side of the wait is already relying on.  Pg_InfoOther.asm used to open-code the select
+//for the build info row, exactly as Pg_InstalledExt.asm did for MakeExtHostStr; both
+//pages now reach the row through PrintFileName, which selects nothing.  Take this call
+//out of any one of them and that page's row prints the tail of whatever was read last.
 //
 //It is a main-loop write to state the ISR reads, which is a real window -- and not a new
 //one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
-//serves most of PrintFileName's call sites.  MakeBuildInfo's other callers
-//(Teensy.ino, SerUSBIO.ino's 'f' and VersionInfoToken) read SerialStringBuf and never
-//ptrSerialString, and each already overwrites the buffer a C64 read would be walking --
-//SerUSBIO.ino says so itself: "Menu must be idle, interferes with any serialstring in
-//progress".  Redirecting a read whose contents are being replaced underneath it costs
-//that read nothing it had.
+//serves most of PrintFileName's call sites.  That is why it belongs only on the C64's own
+//path, where the C64 has just asked for this string and is waiting on it.  Anywhere else
+//it redirects whatever read the C64 has in progress -- a menu item name, a path -- which
+//is not in SerialStringBuf at all, so overwriting the buffer alone would not have touched
+//it.  MakeBuildInfo has callers of that kind (Teensy.ino, SerUSBIO.ino's 'f' and
+//VersionInfoToken, which reach it asynchronously to the C64) and so selects nothing
+//itself; the C64 reaches it through MakeBuildInfoStr.
 FLASHMEM void SelectSerialStringBuf()
 {
    ptrSerialString = SerialStringBuf;
@@ -214,6 +214,13 @@ FLASHMEM void MakeBuildInfo()
 
    //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
    //prints at column 0, so a 37 character cut would take most of it away.
+}
+
+//rsMakeBuildCPUInfoStr: the C64's route to MakeBuildInfo, which leaves the string
+//selected for it.  See SelectSerialStringBuf for why MakeBuildInfo itself does not.
+FLASHMEM void MakeBuildInfoStr()
+{
+   MakeBuildInfo();
    SelectSerialStringBuf();
 }
 
@@ -1257,7 +1264,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &C64TODfromRTC,       // rsC64TODfromRTC
    &IOHandlerSelectInit, // rsIOHWSelInit
    &WriteEEPROM,         // rsWriteEEPROM
-   &MakeBuildInfo,       // rsMakeBuildCPUInfoStr
+   &MakeBuildInfoStr,    // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
    &SearchForLetter,     // rsSearchForLetter
    &LoadMainSIDforXfer,  // rsLoadSIDforXfer

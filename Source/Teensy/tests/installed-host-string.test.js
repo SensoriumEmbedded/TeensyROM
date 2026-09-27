@@ -154,3 +154,29 @@ test('every rCtlMake*StrWAIT handler leaves the C64 string read selected and rew
   assert.match(helper, /\bptrSerialString\s*=\s*SerialStringBuf\s*;/, 'the helper no longer points the read at SerialStringBuf');
   assert.match(helper, /\bStringOffset\s*=\s*0\s*;/, 'the helper no longer rewinds the read');
 });
+
+test('only the C64 status dispatch selects the C64 string read', () => {
+  // ptrSerialString and StringOffset are one read shared by every string the C64 pulls
+  // through rwRegSerialString -- menu names and paths, not only SerialStringBuf. A
+  // select reached from USB lands asynchronously to whatever the C64 is part-way through
+  // reading and garbles it. MakeBuildInfo selected for its own sake and is also called
+  // by VersionInfoToken and the 'f' command, so a companion-app version query could cut
+  // into a menu redraw. A selecting function is therefore a StatusFunction[] entry that
+  // nothing calls by name.
+  const statusText = read('MinimalBoot/Common/IO_Handlers/StatusFunctions.c');
+  const statusSource = blankComments(statusText);
+  const handlers = new Set([...statusText.matchAll(/&(\w+)\s*,\s*\/\/\s*rs\w+/g)].map(({ 1: fn }) => fn));
+
+  const selecting = [...statusSource.matchAll(/^[^\n]*\bvoid\s+(\w+)\s*\([^)]*\)\s*$/gm)]
+    .map(({ 1: fn }) => fn)
+    .filter(fn => fn !== 'SelectSerialStringBuf')
+    .filter(fn => /\bSelectSerialStringBuf\s*\(\s*\)\s*;/.test(functionBody(statusSource, fn)));
+  assert.deepEqual(selecting.sort(), ['MakeBuildInfoStr', 'MakeExtHostStr', 'MakeFilenameStr']);
+
+  for (const fn of selecting) {
+    assert.ok(handlers.has(fn), `${fn} selects the C64 string read but is not a StatusFunction[] entry`);
+    // The definition matches too, as `void fn(`; the table entry, `&fn,`, does not.
+    const calls = scanTree(new RegExp(`(?:\\bvoid\\s+)?\\b${fn}\\s*\\(`, 'g'), text => !text.startsWith('void'));
+    assert.deepEqual(calls, [], `${fn} selects the C64 string read and is called outside the status dispatch`);
+  }
+});

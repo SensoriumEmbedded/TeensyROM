@@ -45,8 +45,8 @@ InfoOtherMenu:
    jsr PrintFileName
    
    ;Build info from rCtlMakeInfoStrWAIT. This open-coded the select PrintFileName
-   ;does not do, because MakeBuildInfo did not leave its own string selected; now
-   ;that it does, the shared helper prints this row like every other one.
+   ;does not do, because the rsMakeBuildCPUInfoStr handler did not leave its string
+   ;selected; now that it does, the shared helper prints this row like every other one.
    lda #rCtlMakeInfoStrWAIT
    ldx #12 ;row
    ldy #0 ;col
