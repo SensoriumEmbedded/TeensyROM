@@ -229,7 +229,6 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
    FreeSwiftlinkBuffs();
-   InitDriveDirMenu();
 
    if (MenuSourceID == rmtTeensy)
    {
@@ -272,6 +271,10 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       // Set up DriveDirMenu to point to file to load
       //    without doing LoadDirectory(&SD/&firstPartition);
       Printf_dbg("Dir Setup\n");
+      //Only this branch rebuilds DriveDirMenu, so only it clears the old listing: done
+      //above both branches, the TR branch's "No TR Dir"/"No TR File" returns left a C64
+      //still showing that listing over freed names.  The SetMenu below reopens the menu.
+      InitDriveDirMenu();
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
       SetMenu(DriveDirMenu, 1); //sets menu base and # of items together

@@ -47,7 +47,11 @@ extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
 uint8_t  TR_BASContRegAction, TR_BASStatRegVal, TR_BASStrAvailableRegVal;
 volatile bool TR_BASSaveOverflow = false; //set in the ISR when a save runs past RAM_Image
-volatile bool TR_BASNameOverflow = false; //set in the ISR when a file name runs past LSFileName
+//True until the ISR has stored a file name's terminating NUL inside LSFileName: set at
+//handler init and at TR_BASCont_SendFN, cleared only by the NUL, and set again when the
+//C64 sends more bytes than LSFileName holds.  A name that never terminated is a prefix
+//of what the C64 meant (or no name at all), so the three users refuse it.
+volatile bool TR_BASNameIncomplete = true;
 
 enum TR_BASregsMatching  //synch with TRCustomBasicCommands\source\main.asm
 {
@@ -176,16 +180,17 @@ FLASHMEM uint8_t ContRegAction_LoadPrep()
 { //load file into RAM, returns TR_BASStatRegVal                
    //check that file exists & load into RAM_Image
    
+   //The name the C64 sent did not terminate inside LSFileName, so what is in the buffer is
+   //a prefix of it. Acting on a prefix opens a different file than the one named, which is
+   //the silent direction; FILE NOT FOUND is the true answer and the noisy one. Checked at
+   //all three users of the name, before FSfromFileName reads it, alongside the save path's
+   //own TR_BASSaveOverflow test.
+   if (TR_BASNameIncomplete) return BAS_ERROR_FILE_NOT_FOUND;
+
    char* ptrLSFileName = (char*)LSFileName; //local pointer
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
-   
-   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
-   //The name the C64 sent did not fit, so what is in the buffer is a prefix of it. Acting
-   //on a prefix opens a different file than the one named, which is the silent direction;
-   //FILE NOT FOUND is the true answer and the noisy one. Checked at all three users of
-   //the name, alongside the save path's own TR_BASSaveOverflow test.
-   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND;
+   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
    Printf_dbg("Load: %s\n", ptrLSFileName);
    File myFile = sourceFS->open(ptrLSFileName, FILE_READ);
@@ -241,12 +246,12 @@ FLASHMEM uint8_t ContRegAction_SaveFinish()
 {  //file was transferred to RAM_Image[], size=StreamOffsetAddr  
    //save file from RAM, returns TR_BASStatRegVal                
 
+   if (TR_BASNameIncomplete) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
+
    char* ptrLSFileName = (char*)LSFileName; //local pointer
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
-   
-   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
-   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
+   if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
    if (TR_BASSaveOverflow)
    {  //the C64 sent more than RAM_Image holds; the tail was dropped in the ISR, so
@@ -282,11 +287,11 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
 { //load dir into RAM, returns TR_BASStatRegVal                
    //check that dir exists & load into RAM_Image
    
+   if (TR_BASNameIncomplete) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
+
    char* ptrLSFileName = (char*)LSFileName; //local pointer
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
-
-   if (TR_BASNameOverflow) return BAS_ERROR_FILE_NOT_FOUND; //see the load path above
 
    if (ptrLSFileName[0] == 0) sprintf(ptrLSFileName, "/");  // default to root if zero len
    Printf_dbg("Dir: \"%s\"\n", ptrLSFileName);
@@ -373,8 +378,9 @@ FLASHMEM uint8_t ContRegAction_TISet()
 FLASHMEM void InitHndlr_TR_BASIC()
 {
    if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
-   if (LSFileName == NULL) LSFileName = (uint8_t*)malloc(MaxPathLength);
-   
+   if (LSFileName == NULL) LSFileName = (uint8_t*)calloc(MaxPathLength, 1); //starts terminated
+   TR_BASNameIncomplete = true; //no name received yet
+
    RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
  
    TR_BASStatRegVal = TR_BASStat_Ready;
@@ -439,7 +445,8 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
                   FNCount = 0;
                   StreamOffsetAddr = 0; //initialize for file load/save
                   TR_BASSaveOverflow = false; //clear with the offset it belongs to
-                  TR_BASNameOverflow = false; //clear with the count it belongs to
+                  TR_BASNameIncomplete = true; //until this name's NUL arrives
+                  if (LSFileName != NULL) LSFileName[0] = 0; //no stale name survives a short send
                   break;
                   
                //these commandd require action outside of interrupt: 
@@ -472,13 +479,20 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             //these three callers open, remove and save by this name, so a shortened name
             //is a *different* file than the C64 asked for.  Remember it instead and let
             //the main loop refuse.
-            if (FNCount < MaxPathLength-1) LSFileName[FNCount++] = Data;
-            else
+            //The name is complete only when its NUL lands inside the buffer: 255 characters
+            //plus the NUL (BASIC's longest string) fill it exactly and are accepted.  The
+            //buffer stays terminated after every byte, so a sender that stops without a NUL
+            //leaves a string the main loop can still read safely -- and refuses.
+            if (LSFileName == NULL) TR_BASNameIncomplete = true; //alloc failed at init
+            else if (FNCount < MaxPathLength)
             {
-               LSFileName[MaxPathLength-1] = 0; //keep it a terminated string for Printf_dbg
-               TR_BASNameOverflow = true;
+               LSFileName[FNCount++] = Data;
+               if (Data == 0) TR_BASNameIncomplete = false;
+               else if (FNCount < MaxPathLength) LSFileName[FNCount] = 0;
+               else LSFileName[MaxPathLength-1] = 0; //256th byte was not the NUL: no room left
             }
-            if (Data == 0)
+            else TR_BASNameIncomplete = true; //bytes past a full buffer: not the name we hold
+            if (Data == 0 && LSFileName != NULL)
             {
                Printf_dbg("Received FN: \"%s\"\n", LSFileName);
             }

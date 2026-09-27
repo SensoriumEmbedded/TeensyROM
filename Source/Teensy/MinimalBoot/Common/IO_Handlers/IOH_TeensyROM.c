@@ -336,7 +336,11 @@ bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
    return true;
 }
 
-FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
+//False when there is no complete path to give: the selection is out of range, the TR
+//directory was not found, or the path did not fit in Size.  The buffer still holds
+//something printable, but callers that store it (EEPROM, an NFC tag, a mount) must not:
+//a truncated path is a different file, or none, and the store would report success.
+FLASHMEM bool GetCurrentFilePathName(char* FilePathName, size_t Size)
 {
    const StructMenuItem* Item = MenuItemSel();
    if (Item == NULL || Item->Name == NULL)
@@ -344,13 +348,14 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
       //reference, so a path built from a stale selection has to be a visible refusal rather
       //than a plausible name.  Same shape as the "TR:Dir not found" exit below.
       snprintf(FilePathName, Size, "Sel out of range");
-      return;
+      return false;
    }
 
    char *LclFilename = Item->Name;
    char Rand[] = "?";
 
    if (IO1[rwRegScratch]) LclFilename = Rand; //random dir
+   int Len = -1;
 
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy)
    {
@@ -368,22 +373,23 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName, size_t Size)
             {
                Printf_dbg("TR Dir not found\n"); //what now?
                snprintf(FilePathName, Size, "TR:Dir not found");
-               return;
+               return false;
             }
          }
          strcpy(DirName, TeensyROMMenu[DirNum].Name);
       }
 
-      snprintf(FilePathName, Size, "TR:%s/%s", DirName, LclFilename);
+      Len = snprintf(FilePathName, Size, "TR:%s/%s", DirName, LclFilename);
    }
    else
    {
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
 
-      if (PathIsRoot()) snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);
-      else snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
+      if (PathIsRoot()) Len = snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);
+      else Len = snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
    }
+   return Len >= 0 && (size_t)Len < Size;
 }
 
 FLASHMEM int16_t FindTRMenuItem(StructMenuItem* MyMenu, uint16_t NumEntries, char* EntryName)
@@ -824,8 +830,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                      ptrSerialString = SerialStringBuf;
                      break;
                   }
-                  memcpy(SerialStringBuf, Item->Name, MaxItemDispLength);
-                  SerialStringBuf[MaxItemDispLength-1] = 0; //Trim to length, if needed
+                  //bounded by the name's own NUL too: card names are malloc'd at strlen+1,
+                  //so a fixed-length copy read past a short name's allocation
+                  strlcpy(SerialStringBuf, Item->Name, MaxItemDispLength); //Trim to length, if needed
                   if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
                       Item->ItemType > rtDirectory &&
                       IO1[rWRegCurrMenuWAIT] != rmtTeensy)

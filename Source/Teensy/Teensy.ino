@@ -501,10 +501,18 @@ FLASHMEM void SetEEPDefaults()
 //whose gap is safe: drop the count to zero (MenuItemSel() then answers NULL), move the base,
 //then publish the real count.  The barriers keep the compiler from reordering the three
 //stores; isrPHI2 cannot preempt itself, so the reader needs nothing further.
-void SetMenu(StructMenuItem* Source, uint16_t NumItems)
+//The "shut" half on its own, for code about to free or rewrite the entries the current menu
+//points at (InitDriveDirMenu, FreeDriveDirMenu).  Leaves the menu empty: whoever rebuilds it
+//reopens it through SetMenu.
+void CloseMenu()
 {
    NumItemsFull = 0;                //shut: every menu deref answers NULL from here
    asm volatile("" ::: "memory");
+}
+
+void SetMenu(StructMenuItem* Source, uint16_t NumItems)
+{
+   CloseMenu();
    MenuSource = Source;
    //The index was clamped against the count of the moment it was formed, which is not this
    //moment.  A menu that shrank under it leaves it pointing past the new end.

@@ -211,6 +211,7 @@ uint32_t* BigBuf = NULL;
 #define MaxItemNameLength   100
 #define MaxPathLength       256
 #define MaxNamePathLength   (MaxPathLength+MaxItemNameLength+2)
+#define SIDRecordUnstorable 0xff  //LatestSIDLoaded source byte: path did not fit (no RegMenuTypes value)
 #define MaxMenuItems        4000  //(Max Pages * MaxItemsPerPage) = 255 * 19 = 4845 max to keep page # 8-bit
 #define SerialTimoutMillis  500
 #define UpDirString         "/.. <Up Dir>"

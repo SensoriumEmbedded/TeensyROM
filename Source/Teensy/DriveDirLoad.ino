@@ -22,12 +22,21 @@
 #include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
-FLASHMEM void SetLatestSIDLoaded(uint8_t Source, const char* Path, const char* Name)
+//False when path and name do not both fit.  The record is then marked with a source byte no
+//menu uses (SIDRecordUnstorable), so SetBackgroundSID refuses it rather than storing a cut-
+//short path as the power-up SID.
+FLASHMEM bool SetLatestSIDLoaded(uint8_t Source, const char* Path, const char* Name)
 {  //source byte, then path and name, each terminated, packed into MaxPathLength
    LatestSIDLoaded[0] = Source;
-   snprintf(LatestSIDLoaded + 1, MaxPathLength - 2, "%s", Path);
+   int PathLen = snprintf(LatestSIDLoaded + 1, MaxPathLength - 2, "%s", Path);
    size_t NameOffset = strlen(LatestSIDLoaded + 1) + 2;
-   snprintf(LatestSIDLoaded + NameOffset, MaxPathLength - NameOffset, "%s", Name);
+   int NameLen = snprintf(LatestSIDLoaded + NameOffset, MaxPathLength - NameOffset, "%s", Name);
+   if (PathLen >= 0 && PathLen < MaxPathLength - 2 &&
+       NameLen >= 0 && (size_t)NameLen < MaxPathLength - NameOffset) return true;
+
+   LatestSIDLoaded[0] = SIDRecordUnstorable;
+   LatestSIDLoaded[1] = LatestSIDLoaded[2] = 0;
+   return false;
 }
 
 // A remote file command changed storage under a listing the C64 has already
@@ -270,7 +279,8 @@ FLASHMEM void HandleExecution()
                SIDPath = TeensyROMMenu[DirNum].Name;
             }
          }
-         SetLatestSIDLoaded(IO1[rWRegCurrMenuWAIT], SIDPath, MenuSelCpy.Name);
+         if (!SetLatestSIDLoaded(IO1[rWRegCurrMenuWAIT], SIDPath, MenuSelCpy.Name))
+            Serial.printf("SID path too long to keep as background SID\n");
          Printf_dbg("Saved SID: %d %s / %s\n", LatestSIDLoaded[0], LatestSIDLoaded+1, LatestSIDLoaded+strlen(LatestSIDLoaded+1)+2);
                   
          ParseSIDHeader(MenuSelCpy.Name); //Parse SID File & set up to transfer to C64 RAM
@@ -500,7 +510,10 @@ void InitDriveDirMenu()
    }
    else
    {
-      //free/clear prev loaded directory
+      //free/clear prev loaded directory -- shut the menu first if it is this array, or an
+      //IO1 read resolves an index against the old count and follows a freed Name.  The
+      //rebuild reopens it through SetMenu.
+      if (MenuSource == DriveDirMenu) CloseMenu();
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
    }
    NumDrvDirMenuItems = 0;
@@ -609,15 +622,17 @@ void FreeDriveDirMenu()
    if(DriveDirMenu != NULL)
    {
       Printf_dbg("Dir info removed\n");
+      //Shut before the first free: MenuSource and NumItemsFull are exactly the pair
+      //MenuIdxFromRegs bounds against, so while they still describe this array an index
+      //it calls in-range reaches freed memory, and isrPHI2 dereferences it
+      //(rRegItemTypePlusIOH, rsstItemName).  The redirect below reopens a menu.
+      if (MenuSource == DriveDirMenu) CloseMenu();
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
       free(DriveDirMenu); DriveDirMenu = NULL;
    }
    NumDrvDirMenuItems = 0;
 
-   //The allocation is gone but MenuSource still points into it and NumItemsFull still
-   //holds its count, which is exactly the pair MenuIdxFromRegs bounds against -- so
-   //until this runs, an index it calls in-range reaches freed memory, and isrPHI2
-   //dereferences it (rRegItemTypePlusIOH, rsstItemName).  Redirecting here rather than
+   //MenuSource still points at the freed allocation.  Redirecting here rather than
    //at the call sites because there are five of them: FileParsers.ino, SerUSBIO.ino's
    //'x' command, IOH_REU.c and IOH_Swiftlink.c handler init, and this file's callers.
    //Only the first two were repaired, and only on some paths.  Cheap wherever it lands:

@@ -51,8 +51,13 @@ FLASHMEM void MountDxxFile()
    //get/print path+filename
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-   GetCurrentFilePathName(DxxPathFilename, sizeof DxxPathFilename);
+   const bool PathFits = GetCurrentFilePathName(DxxPathFilename, sizeof DxxPathFilename);
    SendMsgPrintfln("%s\r", DxxPathFilename);
+   if (!PathFits)
+   {  //mounting a cut-short path mounts a different image, or none
+      SendMsgPrintfln("Path incomplete or too long\r");
+      return;
+   }
    
    //check for Dxx file type
    if (MenuSource[SelItemFullIdx].ItemType != rtD64 &&

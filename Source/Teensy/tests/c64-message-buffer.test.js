@@ -52,7 +52,7 @@ const scanSource = (file) =>
 // with a bounded call went unexamined, and `^\s+` also missed `if (x) NAME(...)` and
 // any call at column zero. `\s+` here spans newlines, so a definition that carries its
 // return type on the line above is excluded too.
-const callsTo = (name) => new RegExp(String.raw`(?<!\bvoid\s+)\b${name}\([^;]*\);`, 'g');
+const callsTo = (name) => new RegExp(String.raw`(?<!\b(?:void|bool)\s+)\b${name}\([^;]*\);`, 'g');
 
 // Every firmware source, not a list of the files that happen to call it today:
 // a hard-coded list lets the next call site through in silence.
@@ -82,7 +82,7 @@ test('the scan still sees a call wrapped after its open paren', () => {
 
 test('the current path and filename is built inside the buffer the caller owns', () => {
   const handler = read('MinimalBoot/Common/IO_Handlers/IOH_TeensyROM.c');
-  assert.match(handler, /void GetCurrentFilePathName\(char\* FilePathName, size_t Size\)/);
+  assert.match(handler, /bool GetCurrentFilePathName\(char\* FilePathName, size_t Size\)/);
   assert.doesNotMatch(handler, /\bsprintf\(FilePathName/);
 
   // The definition lives in the tree too, and `[^;]*` runs from its parameter list to
@@ -90,13 +90,18 @@ test('the current path and filename is built inside the buffer the caller owns',
   // definition, and whether that looks like an unbounded call depends on what its first
   // statement happens to end in. It ended in `];` until the body started with
   // `MenuItemSel();`, at which point the definition began reporting itself. callsTo
-  // drops it by the `void` in front of its name, which no call can have.
+  // drops it by the return type in front of its name, which no call can have.
   //
   // Bounded: this reads the size argument's spelling, not the buffer it belongs to, so
   // `sizeof` of the wrong variable passes. The destination-to-size pairing is not what
   // this gate proves.
   assert.deepEqual(scanTree(callsTo('GetCurrentFilePathName'),
                             (call) => !/,\s*sizeof \w+\);$/.test(call)), []);
+
+  // A path that did not fit comes back false, and every caller stores what it gets (EEPROM,
+  // an NFC tag, a mount), so none may discard the answer: a statement that is only the call
+  // throws it away.
+  assert.deepEqual(scanTree(/^[ \t]*GetCurrentFilePathName\([^;]*\);/gm, () => true), []);
 });
 
 test('the path handed to a device-writing item type is built inside its caller\'s buffer', () => {

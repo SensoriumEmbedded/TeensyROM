@@ -475,8 +475,13 @@ FLASHMEM void WriteNFCTagCheck()
    }
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
+   if (!PathFits)
+   {  //a tag holding a cut-short path launches a different file, or none
+      SendMsgPrintfln(" Path incomplete or too long\r");
+      return;
+   }
 
    nfcState |= nfcStateBitDisabled; //keep if from triggering if re-using prev programmed tag
    IO1[rRegLastHourBCD] = 0xff; //checks look good!
@@ -488,7 +493,12 @@ FLASHMEM void WriteNFCTag()
    //nfc polling not Enabled here
 
    char PathMsg[MaxPathLength];
-   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   if (!PathFits)
+   {  //WriteNFCTagCheck refuses this; the selection changed in between
+      SendMsgPrintfln("Path incomplete or too long\r  Tag *not* written\r");
+      return;
+   }
 
    SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
@@ -517,7 +527,7 @@ FLASHMEM void HotKeySetLaunch()
       //get/print path+filename
       SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
       IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, also indicates success of this function
-      GetCurrentFilePathName(PathFilename, sizeof PathFilename);
+      const bool PathFits = GetCurrentFilePathName(PathFilename, sizeof PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
       if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
@@ -526,6 +536,11 @@ FLASHMEM void HotKeySetLaunch()
          return;
       }
 
+      if (!PathFits)
+      {  //a stored prefix is a different file, or none -- refuse rather than report success
+         SendMsgPrintfln("Path incomplete or too long\r\rHot Key *not* updated\r");
+         return;
+      }
       EEPwriteStr(eepAdHotKeyPaths+HotKeyNumSL*MaxPathLength, PathFilename);  //set autolaunch in EEPROM:
       SendMsgPrintfln("Hot Key updated\r");
    }
@@ -588,7 +603,7 @@ FLASHMEM void SetREUFile()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_REU
@@ -612,11 +627,18 @@ FLASHMEM void SetREUFile()
    //   return;
    //}
 
+   if (!PathFits)
+   {  //a stored prefix is a different file, or none -- refuse rather than report success
+      SendMsgPrintfln("Path incomplete or too long\r  *not* updated\r");
+      return;
+   }
+
    SendMsgPrintfln("REU File selection updated.\r");
 
    EEPwriteStr(eepAdREUFilename, PathMsg);  //set REU path/file in EEPROM
 
 #else
+   (void)PathFits; //nothing stored on this build
    TRPlusOnlyMsg();
 #endif
 }
@@ -629,7 +651,7 @@ FLASHMEM void SetKERNALBin()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
 #ifdef Fab04_KernalReplace
@@ -653,11 +675,18 @@ FLASHMEM void SetKERNALBin()
    //   return;
    //}
 
+   if (!PathFits)
+   {  //a stored prefix is a different file, or none -- refuse rather than report success
+      SendMsgPrintfln("Path incomplete or too long\r  *not* updated\r");
+      return;
+   }
+
    SendMsgPrintfln("KERNAL Binary selection updated:\r  * Enable via Settings menu/Special IO\r");
 
    EEPwriteStr(eepAdKERNALBinName, PathMsg);  //set Kernal path in EEPROM
 
 #else
+   (void)PathFits; //nothing stored on this build
    TRPlusOnlyMsg();
 #endif
 }
@@ -668,12 +697,18 @@ FLASHMEM void SetAutoLaunch()
 
    char PathMsg[MaxPathLength];
    IO1[rwRegScratch] = 0;
-   GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
    if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
    {
       SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
+      return;
+   }
+
+   if (!PathFits)
+   {  //a stored prefix is a different file, or none -- refuse rather than report success
+      SendMsgPrintfln("Path incomplete or too long\r\rAuto Launch *not* updated\r");
       return;
    }
 
@@ -691,6 +726,11 @@ FLASHMEM void ClearAutoLaunch()
 
 FLASHMEM void SetBackgroundSID()
 {
+   if (LatestSIDLoaded[0] == SIDRecordUnstorable)
+   {  //SetLatestSIDLoaded could not fit its path: storing it would name a different file
+      SendMsgPrintfln("SID path too long,\r  background SID *not* set\r");
+      return;
+   }
    EEPwriteNBuf(eepAdDefaultSID, (uint8_t*)LatestSIDLoaded, MaxPathLength); //write the source/path/name to EEPROM
 }
 
