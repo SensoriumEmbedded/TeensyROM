@@ -167,6 +167,13 @@ test('only the C64 status dispatch selects the C64 string read', () => {
   const statusSource = blankComments(statusText);
   const handlers = new Set([...statusText.matchAll(/&(\w+)\s*,\s*\/\/\s*rs\w+/g)].map(({ 1: fn }) => fn));
 
+  // The per-function check below reads StatusFunctions.c only, so a select added to a USB
+  // handler in another file would pass it; no other file may call the helper at all.
+  const statusFile = path.normalize('MinimalBoot/Common/IO_Handlers/StatusFunctions.c');
+  const elsewhere = scanTree(/\bSelectSerialStringBuf\s*\(/g, () => true)
+    .filter(site => !site.startsWith(`${statusFile}:`));
+  assert.deepEqual(elsewhere, [], 'SelectSerialStringBuf is called outside StatusFunctions.c');
+
   const selecting = [...statusSource.matchAll(/^[^\n]*\bvoid\s+(\w+)\s*\([^)]*\)\s*$/gm)]
     .map(({ 1: fn }) => fn)
     .filter(fn => fn !== 'SelectSerialStringBuf')
