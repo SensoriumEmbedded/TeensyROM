@@ -76,6 +76,18 @@ void FullPathToSelected(char *Path, size_t Size, const char *Name)
    else snprintf(Path, Size, "%s/%s", DriveDirPath, Name);
 }
 
+//DriveDirPath is MaxPathLength long and grows by the name of whatever the C64 opens, and a
+//card's directory names run to 255 characters -- so opening one at the root, or two shorter
+//ones in turn, ran it off the end.  True when Name plus Extra more characters still fit with
+//the terminator.  On false nothing is appended and the C64 is told: a cut-short path names a
+//different directory than the one selected, so refuse rather than truncate.
+bool DriveDirPathRoomFor(const char *Name, size_t Extra)
+{
+   if (strlen(DriveDirPath) + strlen(Name) + Extra < MaxPathLength) return true;
+   SendMsgPrintfln("Path too long to open:\r\n%s", Name);
+   return false;
+}
+
 FLASHMEM void HandleExecution()
 {
    IO1[rRegStrAvailable] = 0;    // default transfer start flag to stop in case of previous abort (such as text read abort)
@@ -148,6 +160,7 @@ FLASHMEM void HandleExecution()
                return;  //we're done here...
             }
             
+            if (!DriveDirPathRoomFor(MenuSelCpy.Name, 0)) return;
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             LoadDirectory(sourceFS); 
             return;  //we're done here...
@@ -157,6 +170,7 @@ FLASHMEM void HandleExecution()
              MenuSelCpy.ItemType == rtD71 ||
              MenuSelCpy.ItemType == rtD81)
          {  //edit path as needed and load the new directory from SD/USB
+            if (!DriveDirPathRoomFor(MenuSelCpy.Name, 2)) return; //the "/" before, the "*" after
             strcat(DriveDirPath, "/"); 
             strcat(DriveDirPath, MenuSelCpy.Name); //append selected d64 name as a dir
             LoadDxxDirectory(sourceFS, MenuSelCpy.ItemType); 
@@ -187,6 +201,7 @@ FLASHMEM void HandleExecution()
             if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
             else 
             {
+               if (!DriveDirPathRoomFor(MenuSelCpy.Name, 0)) return; //built-in names: fits today
                SetMenu((StructMenuItem*)MenuSelCpy.Code_Image, MenuSelCpy.Size/sizeof(StructMenuItem));
                strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             }
@@ -562,15 +577,23 @@ void LoadDirectory(FS *sourceFS)
       //uint8_t hidey = entry.isHidden(); //check for hidden files? not in library
       filename = entry.name();
       if (entry.isDirectory())
-      {
-         DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+2);
-         DriveDirMenu[NumDrvDirMenuItems].Name[0] = '/';
-         strcpy(DriveDirMenu[NumDrvDirMenuItems].Name+1, filename);
+      {  //a card of many long directory names runs RAM2 out; end the listing there, as the
+         //file branch below does, rather than writing the name through NULL
+         char *DirName = (char*)malloc(strlen(filename)+2);
+         if (DirName == NULL)
+         {
+            Serial.println("Out of mem!");
+            entry.close();
+            break;
+         }
+         DirName[0] = '/';
+         strcpy(DirName+1, filename);
+         DriveDirMenu[NumDrvDirMenuItems].Name = DirName;
          DriveDirMenu[NumDrvDirMenuItems].ItemType = rtDirectory;
       }
       else //it's a file. copy name and get item type from extension
       {
-         if (!SetDriveDirMenuNameType(NumDrvDirMenuItems, filename)) break;
+         if (!SetDriveDirMenuNameType(NumDrvDirMenuItems, filename)) { entry.close(); break; }
       }
       
       //Serial.printf("%d- %s\n", NumDrvDirMenuItems, DriveDirMenu[NumDrvDirMenuItems].Name); 
@@ -610,9 +633,16 @@ void LoadDirectory(FS *sourceFS)
 }
 
 void AddDirEntry(const char *EntryString)
-{
-   DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(EntryString)+1);
-   strcpy(DriveDirMenu[NumDrvDirMenuItems].Name, EntryString);
+{  //the entry is left out, not written through NULL or past the array, when it cannot be stored
+   if (NumDrvDirMenuItems >= MaxMenuItems) return;
+   char *Name = (char*)malloc(strlen(EntryString)+1);
+   if (Name == NULL)
+   {
+      Serial.println("Out of mem!");
+      return;
+   }
+   strcpy(Name, EntryString);
+   DriveDirMenu[NumDrvDirMenuItems].Name = Name;
    NumDrvDirMenuItems++;
 }
 
