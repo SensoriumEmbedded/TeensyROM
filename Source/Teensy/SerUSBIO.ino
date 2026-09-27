@@ -970,10 +970,25 @@ FLASHMEM void WriteC64MemCommand()
       DMABuf[ByteNum] = CmdChannel->read();
    }
    
-   //uint32_t StartTime = micros();  
-   PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
-   CloseDMA();
-   //StartTime = micros() - StartTime;  
+   //uint32_t StartTime = micros();
+   // Short-circuit: a failed PerformDMA has already released the bus, and calling CloseDMA
+   // after it would only spend the stall window a second time.  A C64 that is switched off
+   // is not the case this catches -- it powers the board too, so no command arrives to be
+   // answered.  What is left is a C64 that still supplies 5 V but has stopped clocking, and
+   // the checked return below is the whole of what catches it here: on a bus that has
+   // already stopped WaitForDMAState ends each wait itself and PerformDMA reports the
+   // failure.  A bus that stops part way through a transfer is caught by nothing at all --
+   // DMATransferISR's edge waits are unbounded, see the fourth case named over WaitForDMAState in
+   // DMAControl.ino.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
+   // lives where the wait is -- so a new remote command is covered by checking this return
+   // and by nothing else.
+   if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendU16(FailToken);
+      CmdChannel->println("No transfer: C64 bus not clocking, or DMA timed out");
+      return;
+   }
+   //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
    //CmdChannel->printf
@@ -1010,11 +1025,18 @@ FLASHMEM void ReadC64MemCommand()
        return;
    }
    
-   //uint32_t StartTime = micros();  
-   PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT);
-   CloseDMA();
+   //uint32_t StartTime = micros();
+   // Same reach as the write above.  Checked here for the second reason too: DMABuf is
+   // RAM_Image, which holds whatever the last operation left in it, so acking a transfer
+   // that did not happen would send that back as the contents of C64 memory.
+   if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
+   {
+      SendU16(FailToken);
+      CmdChannel->println("No transfer: C64 bus not clocking, or DMA timed out");
+      return;
+   }
 
-   //StartTime = micros() - StartTime;  
+   //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
    for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
