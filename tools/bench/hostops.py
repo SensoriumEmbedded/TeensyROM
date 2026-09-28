@@ -230,8 +230,9 @@ def install_host(local, remote=None, out=sys.stdout):
 def remove_host(out=sys.stdout):
     """Clear the 4-byte tag so the slot stops reading as a host, then erase the rest of
     the slot, asked for from the C64's own menu (Link.remove_host). Runs for a slot
-    holding anything, a failed install's leftovers included, so rebooted=False means the
-    slot was already blank -- and then the C64 says NOT_INSTALLED."""
+    holding anything, a failed install's leftovers included, so rebooted=False means
+    nothing was erased: the slot was already blank if the C64 says NOT_INSTALLED, and
+    firmware without the extension loader says that instead."""
     def prepare(tr):
         tr.remove_host()
         if out:

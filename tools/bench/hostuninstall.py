@@ -31,14 +31,19 @@ needs a hand on the board.
 """
 import sys
 
-from hostops import REMOVED, remove_host, show
+from hostops import NOT_INSTALLED, REMOVED, remove_host, show
 
 if [a for a in sys.argv[1:] if not a.startswith('--')]:
     raise SystemExit(__doc__)
 
 result = remove_host()
 if not result.rebooted:
-    print('\nthe board is still up, so the slot was already blank:')
+    # Firmware without the extension loader stays up too, saying so instead.
+    if result.said(NOT_INSTALLED):
+        print('\nthe board is still up, and says the slot was already blank:')
+    else:
+        print('\nthe board is still up but did not say the slot was blank, so nothing '
+              'was erased and the reason is on the screen:')
     show(result.screen)
     sys.exit(1)
 if not result.said(REMOVED):
