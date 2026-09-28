@@ -30,27 +30,39 @@ function teensyPortsTool() {
   return teensyTool('teensy_ports');
 }
 
-// Returns { port, bootloader } for the attached board, or null when none is
-// found. `bootloader` means it is sitting in HalfKay with no serial device.
-// When teensy_ports found it, `location` is its USB location (usb:...), which
-// the Windows loader path passes on as -port.
-export function findBoard() {
+// Every attached board, in teensy_ports order, as { port, bootloader, location,
+// label }. `bootloader` means it is sitting in HalfKay with no serial device, so
+// `port` is null. `location` is its USB location (usb:...) and `label` the rest
+// of its teensy_ports line; together they are what teensy_post_compile needs to
+// pick one board out of several. Both are null on the /dev fallback.
+export function findBoards() {
   const tool = teensyPortsTool();
   if (tool) {
     let listing = '';
     try { listing = execFileSync(tool, ['-L'], { encoding: 'utf8', timeout: 10000 }); } catch { listing = ''; }
-    for (const line of listing.split('\n')) {
-      if (/Bootloader/i.test(line)) return { port: null, bootloader: true };
-      // macOS and Linux list a /dev path; Windows lists a COM port.
-      const match = line.match(/(\/dev\/\S+)/) ?? line.match(/\b(COM\d+)\b/);
-      if (match) return { port: match[1], bootloader: false, location: line.trim().split(/\s+/)[0] };
-    }
+    const boards = parsePortListing(listing);
+    if (boards.length) return boards;
   }
   // macOS names the CDC device cu.usbmodem*; Linux names it ttyACM*.
   const devices = fs.existsSync('/dev')
     ? fs.readdirSync('/dev').filter((name) => name.startsWith('cu.usbmodem') || name.startsWith('ttyACM')).sort()
     : [];
-  return devices.length ? { port: `/dev/${devices[0]}`, bootloader: false } : null;
+  return devices.map((name) => ({ port: `/dev/${name}`, bootloader: false, location: null, label: null }));
+}
+
+// One board per line of `teensy_ports -L`, e.g.
+//   usb:80000/1/0/5/3/3 COM12 (Teensy 4.1) Serial+MIDI
+// macOS and Linux list a /dev path where Windows lists a COM port.
+export function parsePortListing(listing) {
+  const boards = [];
+  for (const line of listing.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)) {
+    const location = line.split(/\s+/)[0];
+    const label = line.slice(location.length).trim();
+    if (/Bootloader/i.test(line)) { boards.push({ port: null, bootloader: true, location, label }); continue; }
+    const match = line.match(/(\/dev\/\S+)/) ?? line.match(/\b(COM\d+)\b/);
+    if (match) boards.push({ port: match[1], bootloader: false, location, label });
+  }
+  return boards;
 }
 
 // Writes `send` to the port, then collects whatever arrives until `ms` elapses.
@@ -83,36 +95,51 @@ export function exchange(port, send, ms = 3000) {
   return result.stdout ?? '';
 }
 
-// Windows has no stty, and a COM port cannot be read as a file with a deadline.
-// PowerShell's SerialPort can, so the exchange runs there with the same timing
-// as above; the bytes travel base64 both ways so no console code page touches them.
+// Windows has no stty, but the COM port opens as a file (\\.\COMn) and the
+// same child-and-deadline approach works, with two changes the Windows serial
+// driver forces. The request goes out before anything reads: a synchronous
+// read waiting on the handle holds up a write queued behind it. And the child
+// reads one byte at a time and passes each straight to stdout, because a read
+// blocks until a byte comes and the child only ever ends by being killed, so
+// whatever it has passed on by then is the answer.
 function exchangeWindows(port, send, ms) {
   if (!/^COM\d+$/i.test(port)) return '';
-  const payload = Buffer.from(send ?? '', 'latin1').toString('base64');
-  const script = `
-    $sp = New-Object System.IO.Ports.SerialPort '${port}', 115200
-    $sp.DtrEnable = $true
-    $sp.Open()
-    $send = [Convert]::FromBase64String('${payload}')
-    Start-Sleep -Milliseconds 250
-    if ($send.Length) { $sp.Write($send, 0, $send.Length) }
-    Start-Sleep -Milliseconds ${Math.max(ms, 300) - 250}
-    $buf = New-Object byte[] $sp.BytesToRead
-    [void]$sp.Read($buf, 0, $buf.Length)
-    $sp.Close()
-    [Convert]::ToBase64String($buf)`;
-  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script],
-    { encoding: 'utf8', timeout: ms + 8000 });
-  return Buffer.from((result.stdout ?? '').trim(), 'base64').toString('latin1');
+  const child = `
+    import fs from 'node:fs';
+    const fd = fs.openSync(${JSON.stringify(`\\\\.\\${port}`)}, 'r+');
+    const send = Buffer.from(${JSON.stringify(send ?? '')}, 'latin1');
+    if (send.length) fs.writeSync(fd, send);
+    const one = Buffer.alloc(1);
+    const nap = new Int32Array(new SharedArrayBuffer(4));
+    for (;;) {
+      // A previous user of the port can leave its read timeouts set so a read
+      // returns nothing at once instead of waiting; nap then, rather than spin.
+      if (fs.readSync(fd, one, 0, 1, null) === 1) fs.writeSync(1, one);
+      else Atomics.wait(nap, 0, 0, 5);
+    }`;
+  // The allowance on top of ms covers the child's own start-up, so the port is
+  // listened to for about as long as on POSIX.
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', child],
+    { encoding: 'latin1', timeout: Math.max(ms, 300) + 200 });
+  return result.stdout ?? '';
 }
 
-// TeensyROM answers 'dv' (VersionInfoToken) with a banner that names the build.
-// Returns { version, built, raw } with nulls for anything that did not appear.
+// TeensyROM answers 'dv' (VersionInfoToken) with a banner that names the build
+// and the chip ("UID: 14470230", burned in at the factory, so it tells two
+// boards of the same type apart). Returns { version, built, uid, minimal, raw }
+// with nulls for anything that did not appear. `minimal` means MinimalBoot answered
+// ("FW: TeensyROM v0.8.0.11(minimal)"), as it does for a moment after every
+// reset and write before it hands over to the full firmware; the build it
+// names is MinimalBoot's own.
 export function identify(port, ms = 3000) {
-  const raw = exchange(port, '\x64\x76', ms);
+  return parseBanner(exchange(port, '\x64\x76', ms));
+}
+
+export function parseBanner(raw) {
   const version = raw.match(/TeensyROM\+? v[\d.]+/)?.[0] ?? null;
   const built = raw.match(/([A-Z][a-z]{2} [ \d]\d \d{4}), (\d\d:\d\d:\d\d)/);
-  return { version, built: built ? `${built[1]}, ${built[2]}` : null, raw };
+  const uid = raw.match(/UID:\s*(\d+)/)?.[1] ?? null;
+  return { version, built: built ? `${built[1]}, ${built[2]}` : null, uid, minimal: /\(minimal\)/.test(raw), raw };
 }
 
 // Which cartridge a banner belongs to. The '+' is the whole distinction, and
