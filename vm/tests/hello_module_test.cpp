@@ -18,6 +18,32 @@ static std::string textOf(const VmPacket &packet) {
     return out;
 }
 
+// A host the module must not take the exit on, checked the same way wherever it
+// comes from. Two witnesses: exitCalls for the callback, and the banner for what
+// vm_entry resolved -- a module that resolved an exit and never called it would
+// satisfy the counter on its own.
+//
+// input() keeps its edge state in a static, so the release goes first. On the
+// board that state starts clean because vm_load_payload() zeroes .bss; a second
+// vm_entry in one native process does not.
+static void assertDeclinesExit(const VmModule *loaded, VmPacket &packet) {
+    const VmInput released{ 0, 0, 0, 0x81 }, up{ 2, 0, 0, 0x81 }, press{ 1, 0, 0, 0x81 };
+    assert(loaded);
+    while (loaded->packet(&packet)) loaded->ack();   // nothing outstanding
+    loaded->input(&released);
+    loaded->input(&up);
+    assert(!loaded->packet(&packet));   // not a fault, and not a repaint
+    assert(VmNativeHost::exitCalls == 0);
+    assert(!VmNativeHost::lastFailure);
+    // Fire repaints from row zero, which is where the banner lives.
+    loaded->input(&released);
+    loaded->input(&press);
+    assert(loaded->packet(&packet) && packet.payload[0] == 0);
+    assert(textOf(packet) == "HELLO WORLD FROM TEENSYROM");
+    assert(VmNativeHost::exitCalls == 0 && !VmNativeHost::lastFailure);
+    loaded->ack();
+}
+
 int main(int argc, char **argv) {
     assert(argc == 2);
     const fs::path sandbox = argv[1];
@@ -92,7 +118,7 @@ int main(int argc, char **argv) {
     assert(lines[3] == "PACKAGE FILES 3");
 
     // Input recolours and forces a repaint from row zero.
-    VmInput press{ 1, 0, 0, 0x81 };
+    VmInput press{ 1, 0, 0, 0x81 }, up{ 2, 0, 0, 0x81 }, released{ 0, 0, 0, 0x81 };
     loaded->input(&press);
     for (int row = 0; row < 4; ++row) {
         assert(loaded->packet(&packet));
@@ -105,6 +131,65 @@ int main(int argc, char **argv) {
     assert(!loaded->packet(&packet));
     assert(!VmNativeHost::lastFailure);
 
+    // Up on a host that lends no exit does nothing at all. That is the fallback
+    // half of "capability, then fallback", and it is the state make() builds:
+    // neither the bit nor the tail.
+    assert(host.bytes == sizeof(VmHost) && !(host.services & VM_SERVICE_EXIT));
+    assertDeclinesExit(loaded, packet);
+
+    // On a host that does lend one, up takes it.
+    {
+        VmHostExit exitHost = VmNativeHost::makeWithExit(root, "", workspace.data(),
+            uint32_t(workspace.size()), guest.data(), uint32_t(guest.size()));
+        const VmModule *withExit = vm_entry(&exitHost.base);
+        assert(withExit && !VmNativeHost::lastFailure);
+        assert(VmNativeHost::exitCalls == 0);
+        withExit->input(&released);          // establish the edge from a clean state
+        withExit->input(&up);
+        assert(VmNativeHost::exitCalls == 1 && VmNativeHost::lastExitStatus == 0);
+        // Held, not pressed again: one exit per edge, so a module that survived
+        // the call does not ask twice.
+        withExit->input(&up);
+        assert(VmNativeHost::exitCalls == 1);
+        // Fire still recolours on the same host: taking the exit did not replace
+        // the rest of the module's input handling. Row zero carries the banner
+        // vm_entry writes when it resolved one.
+        withExit->input(&released);
+        withExit->input(&press);
+        assert(withExit->packet(&packet) && packet.payload[0] == 0);
+        assert(textOf(packet) == "HELLO WORLD  JOY2 UP QUITS");
+        assert(VmNativeHost::exitCalls == 1);
+        withExit->ack();
+    }
+
+    // `bytes` and the service bit are independent (vm/abi/README.md, "Tail
+    // extensions"), and a host holding one without the other is the only thing
+    // that tells a module checking both from one checking either alone. With
+    // them both present or both absent, all three behave identically.
+    {
+        // Grown for a tail extension, lending none of it. exit_to_menu stays
+        // wired so a module that skipped the service-bit check is counted here
+        // rather than jumping somewhere undefined.
+        VmHostExit grown = VmNativeHost::makeWithExit(root, "", workspace.data(),
+            uint32_t(workspace.size()), guest.data(), uint32_t(guest.size()));
+        grown.base.services &= ~uint32_t(VM_SERVICE_EXIT);
+        assert(grown.base.bytes >= VM_HOST_EXIT_BYTES);
+        assertDeclinesExit(vm_entry(&grown.base), packet);
+    }
+    {
+        // The bit, published by a host whose struct stops at the base profile:
+        // it serves the exit some other way, and the tail is not this module's
+        // to read. The callback sits behind `bytes` for the same reason as
+        // above -- a module reading past it is counted, not left undefined.
+        VmHostExit elsewhere = VmNativeHost::makeWithExit(root, "", workspace.data(),
+            uint32_t(workspace.size()), guest.data(), uint32_t(guest.size()));
+        elsewhere.base.bytes = VM_HOST_BASE_BYTES;
+        assert(elsewhere.base.services & VM_SERVICE_EXIT);
+        assertDeclinesExit(vm_entry(&elsewhere.base), packet);
+    }
+
     printf("PASS: hello module loads on a base-profile host, rejects three bad hosts, "
-           "publishes %zu ACK-gated lines, walks its package directory and repaints on input\n", lines.size());
+           "publishes %zu ACK-gated lines, walks its package directory, repaints on input, takes "
+           "the exit service on one edge where a host lends both the bit and the tail, and declines "
+           "it where either one is missing\n", lines.size());
 }

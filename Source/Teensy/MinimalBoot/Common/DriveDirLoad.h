@@ -214,6 +214,33 @@ struct StructCrtChip
       "d71",  rtD71,
       "d81",  rtD81,
       "reu",  rtFileREU,
+#ifdef VM_EXTENSIONS_ENABLED
+      "trh",  rtFileTRH,
+#endif
       //"c64",  rtFilePrg,  //makefile output, not always prg...
 };
+
+   // Item types above rtFilePrg that rewrite the Teensy instead of loading
+   // something for the C64. A file the user did not name -- nfcScan.ino picks
+   // one at random out of the directory a tag points at -- must never be one.
+   inline bool IsDeviceWriteType(uint8_t ItemType)
+   {
+      return ItemType == rtFileHex
+#ifdef VM_EXTENSIONS_ENABLED
+          || ItemType == rtFileTRH
+#endif
+         ;
+   }
+
+   // What may be stored as a lasting reference to launch later: an autolaunch name, a hot
+   // key, an NFC tag.  Narrower than "executable", because the two are not the same
+   // question.  Writing the device is a fine thing to choose from the menu once and never
+   // a fine thing to repeat unattended: the write ends in a reboot, the reboot reads the
+   // same stored reference, and it writes again, with no pass through the menu that could
+   // clear it.  The type test on its own answers the wrong question -- it rejects types
+   // *below* rtFilePrg, and every device-write type is above it.
+   inline bool IsStorableLaunchType(uint8_t ItemType)
+   {
+      return ItemType >= rtFilePrg && !IsDeviceWriteType(ItemType);
+   }
 #endif

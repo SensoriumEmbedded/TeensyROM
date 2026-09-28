@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Install/remove round trip against a real board, unattended.   hostcycle.py <local.trh>
+
+  hostcycle.py build/firmware/TeensyROM+_<ver>_VMBoot.TRH
+
+One normalising step, then five asserted ones -- the same numbers the run prints:
+
+  0. remove          -- normalise: whatever was there, the slot is empty after this.
+                        Not asserted; either answer is a legitimate starting point
+  1. remove again    -- must refuse without rebooting: nothing left to clear
+  2. install         -- must reboot and report the host installed
+  3. remove          -- must reboot and report it removed, every sector erased
+  4. remove again    -- must refuse again: the slot is blank, not just untagged
+  5. install         -- must reboot and report installed, leaving the board usable
+
+Steps 1 and 4 are the ones worth the extra minute. Without them an install that never
+wrote and a removal that never cleared both still "pass": every reboot looks alike from
+here, and the board's own report is the only witness. Asking a second time makes the
+board answer from flash rather than from what it just did.
+
+The two kinds of step answer in different places. A step that writes flash reboots, and
+the main image prints its VmFail record over serial on the way back up -- that text is
+the assertion. A removal that declines writes nothing and says so to the C64 instead:
+removal runs from the C64's own menu, so the C64 is waiting to read it, and the
+assertion is that NOT_INSTALLED is on the screen with the board still up on its main
+image. The step after it carries the rest: an install that follows a refused remove had
+nothing to overwrite.
+
+None of this enters the extension image, so none of it needs a hand on the board -- that
+is the whole point. Running a module still does, until the client calls the exit service.
+
+The board must be on its main image (not in an extension) when this starts. If a module
+is running, reset it first.
+"""
+import sys
+import time
+
+from hostops import INSTALLED, NOT_INSTALLED, Outcome, install_host, remove_host, show
+
+package = None
+for a in sys.argv[1:]:
+    if a.startswith('--'):
+        raise SystemExit(__doc__)
+    package = a
+if package is None:
+    raise SystemExit(__doc__)
+
+failures = []
+step = 0
+
+
+def check(label, result, rebooted, phrase=None):
+    """`phrase` is a phrase for Outcome.said(), which reads the boot output and the C64
+    screen, or a predicate on the Outcome where the phrase alone is not the whole test."""
+    global step
+    step += 1
+    why = []
+    if result.rebooted != rebooted:
+        why.append(f'expected rebooted={rebooted}, got {result.rebooted}')
+    elif callable(phrase) and not phrase(result):
+        why.append(f'the boot record did not pass {phrase.__name__}()')
+    elif isinstance(phrase, str) and not result.said(phrase):
+        why.append(f'the board never said {phrase!r}')
+    elif not rebooted and result.image != 'main':
+        why.append(f'expected the board still on its main image, got {result.image!r}')
+    print(f'\n=== step {step}: {label} -- {"FAIL" if why else "PASS"} ===')
+    if why:
+        for w in why:
+            print(f'  {w}')
+        print('  --- what it did say ---')
+        show(result.screen)
+        failures.append(f'step {step} ({label}): ' + '; '.join(why))
+    return not why
+
+
+started = time.time()
+print(f'round trip with {package}; no button presses needed')
+
+# Whatever state the board was left in, clear it -- and accept either answer, because
+# "already empty" is a legitimate starting point rather than a failure.
+first = remove_host()
+print(f'\n=== step 0: normalise -- slot was {"populated" if first.rebooted else "empty"} ===')
+
+check('remove with the slot blank refuses', remove_host(), False, NOT_INSTALLED)
+check('install writes the slot', install_host(package), True, INSTALLED)
+check('remove erases the host', remove_host(), True, Outcome.removed_cleanly)
+check('the slot is blank, not just untagged', remove_host(), False, NOT_INSTALLED)
+check('reinstall works after a removal', install_host(package), True, INSTALLED)
+
+mins = (time.time() - started) / 60
+print(f'\n{"=" * 60}')
+if failures:
+    print(f'FAILED after {mins:.1f} min')
+    for f in failures:
+        print(f'  {f}')
+    sys.exit(1)
+print(f'PASSED: 5/5 steps in {mins:.1f} min. A host is installed and the board is usable.')

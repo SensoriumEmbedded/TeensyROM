@@ -177,11 +177,52 @@ FLASHMEM void WriteEEPROM()
    EEPROM.write(eepAddrToWrite, eepDataToWrite);
 }
 
-FLASHMEM void MakeBuildInfo()
+//A handler whose string the C64 reads through the pre-selected contract ends here: what
+//it just built is left selected and rewound.  PrintFileName jumps into
+//PrintSerialStringLoaded, which reads whichever source was selected last from wherever
+//that read stopped, so a handler reached that way has to leave its own string selected.
+//One copy, because the two lines are the contract rather than an implementation detail
+//of any one handler.
+//
+//All three handlers behind an rCtlMake*StrWAIT call it, and in none of them is it
+//defense in depth for a hypothetical future caller -- it is what the caller on the other
+//side of the wait is already relying on.  Pg_InfoOther.asm used to open-code the select
+//for the build info row, exactly as Pg_InstalledExt.asm did for MakeExtHostStr; both
+//pages now reach the row through PrintFileName, which selects nothing.  Take this call
+//out of any one of them and that page's row prints the tail of whatever was read last.
+//
+//It is a main-loop write to state the ISR reads, which is a real window -- and not a new
+//one: MakeFilenameStr has closed this way for as long as it has existed, on the path that
+//serves most of PrintFileName's call sites.  That is why it belongs only on the C64's own
+//path, where the C64 has just asked for this string and is waiting on it.  Anywhere else
+//it redirects whatever read the C64 has in progress -- a menu item name, a path -- to
+//offset 0 of a string it never asked for.
+FLASHMEM void SelectSerialStringBuf()
+{
+   ptrSerialString = SerialStringBuf;
+   StringOffset = 0;
+}
+
+//Builds into the caller's buffer.  The C64 reads SerialStringBuf one byte per access
+//from the ISR -- directory names are copied into it for that -- so a caller reached
+//from USB, asynchronously to the C64, must not build there: VersionInfoToken did, and a
+//companion app's version query landed in the middle of the file names on screen.
+FLASHMEM void MakeBuildInfo(char *Buf, size_t Size)
 {
    uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
    if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
-   sprintf(SerialStringBuf, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+
+   //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
+   //prints at column 0, so a 37 character cut would take most of it away.
+}
+
+//rsMakeBuildCPUInfoStr: the C64 asked for the build info, so build it where the C64
+//reads and leave it selected.
+FLASHMEM void MakeBuildInfoStr()
+{
+   MakeBuildInfo(SerialStringBuf, sizeof SerialStringBuf);
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void MakeIPSSBfromIP(IPAddress ip)
@@ -299,8 +340,7 @@ FLASHMEM void MakeFilenameStr()
 
    //Serial.printf("\nx%sx\n", SerialStringBuf);
    //set print buffer for PrintSerialString and reset counter
-   ptrSerialString = SerialStringBuf;
-   StringOffset = 0;
+   SelectSerialStringBuf();
 }
 
 FLASHMEM void UpDirectory()
@@ -413,7 +453,7 @@ FLASHMEM void WriteNFCTagCheck()
 
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
 
-   if (!IO1[rwRegScratch] && MenuSource[SelItemFullIdx].ItemType < rtFilePrg) //single file but not executable
+   if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType)) //single file, not storable
    {
       SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -465,7 +505,7 @@ FLASHMEM void HotKeySetLaunch()
       GetCurrentFilePathName(PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
-      if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+      if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
       {
          SendMsgPrintfln("Invalid File Type (%d)\r\rHot Key *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
          return;
@@ -611,7 +651,7 @@ FLASHMEM void SetAutoLaunch()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
-   if(MenuSource[SelItemFullIdx].ItemType < rtFilePrg)
+   if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
    {
       SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -1140,6 +1180,83 @@ FLASHMEM void ExtPortCheck()
    BtnPressed = false;  //in case of re-trigger/debounce
 }
 
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+// Defined in FlashUpdate.ino. Written out because the sketch preprocessor puts its
+// generated prototypes after the includes, and this file arrives through one.
+void DoHostUninstall();
+#endif
+
+// Both of these are compiled into every image, including the minimal one and a
+// build without the loader, because StatusFunction[] below is indexed by status
+// code: dropping an entry would shift every later one. Where there is no loader
+// there is nothing installed, which is what they say.
+FLASHMEM void MakeExtHostStr()
+{
+   //No arm ends its line with \r, because this string is printed through
+   //PrintFileName like every other dynamic settings row, and MakeFilenameStr -- which
+   //serves most of PrintFileName's call sites -- does not end in one
+   //either. PrintFileName places the row with SetCursor and leaves the cursor
+   //wherever the text stops, so a return here moves the cursor a caller may not be
+   //expecting to have moved. It used to move the uninstall prompt itself, on the arms
+   //that carried one; Pg_InstalledExt.asm now places that prompt with SetCursor, so
+   //this is a convention the rows share rather than the thing holding the prompt up.
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   VmHostId id{};
+   //"Not blank" is what an install that failed part way leaves: no host, but bytes in
+   //the slot that uninstalling clears. See VmBootImage::blank().
+   if (!VmBootImage::installed())
+      strcpy(SerialStringBuf, VmBootImage::blank() ? "None installed." : "None installed; slot not blank.");
+   else if (VmBootImage::identity(id))
+   {
+      char Name[VmBootImage::nameBytes];
+      VmBootImage::displayName(Name, sizeof Name, &id);
+      //ABI and services come from the host itself, so a host from elsewhere
+      //describes itself here rather than being described by this firmware -- which
+      //is also why the write is bounded: the only variable-length part of this line
+      //is 12 bytes of third-party descriptor.
+      snprintf(SerialStringBuf, sizeof SerialStringBuf, "%s  ABI %lu  services $%04lx",
+               Name, (unsigned long)id.abi, (unsigned long)id.services);
+   }
+   else strcpy(SerialStringBuf, "Installed, no descriptor.");
+#else
+   strcpy(SerialStringBuf, "No extension loader in this firmware.");
+#endif
+   //displayName bounds the name to twelve drawn bytes, but abi and services are
+   //uint32 fields the host writes about itself, so the line can still reach 48
+   //characters. The row starts at column 3 of a 40 column screen, so it has 37 --
+   //the same bound MakeFilenameStr uses -- and a wider one spills its last 11
+   //characters onto the row below. That row is blank on both screens that draw this
+   //line: row 6 on the settings page, where the uninstall option is row 7, and row 7
+   //on the confirmation screen. So what the clamp buys is a line that stays on its
+   //own row, not a collision with something already drawn. The prompt below it no
+   //longer moves with this length either: Pg_InstalledExt.asm places it with
+   //SetCursor, because a 37 character line ends in the last column and the screen
+   //editor wraps the cursor there by itself, which a clamp measured in columns cannot
+   //prevent.
+   const uint16_t MaxLength = 37;
+   if (strlen(SerialStringBuf) > MaxLength)
+   {  //Mark the cut rather than making it silently. What runs off the end is the
+      //tail of "services $%04lx", so a quiet truncation reads as a valid, smaller
+      //bitmask -- wrong in the direction nobody checks, and services is what decides
+      //whether a module's requirements are met. MakeFilenameStr marks its own
+      //elision with "..>" mid-string; one '>' is the end-of-row version of that.
+      //strlen > MaxLength, so both indices are inside the string.
+      SerialStringBuf[MaxLength-1] = '>';
+      SerialStringBuf[MaxLength] = 0;
+   }
+
+   SelectSerialStringBuf();
+}
+
+FLASHMEM void UninstallExtHost()
+{
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   DoHostUninstall(); //does not return if there was a host to remove
+#else
+   SendMsgPrintfln("No extension loader in this firmware.");
+#endif
+}
+
 void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu
@@ -1148,7 +1265,7 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &C64TODfromRTC,       // rsC64TODfromRTC
    &IOHandlerSelectInit, // rsIOHWSelInit
    &WriteEEPROM,         // rsWriteEEPROM
-   &MakeBuildInfo,       // rsMakeBuildCPUInfoStr
+   &MakeBuildInfoStr,    // rsMakeBuildCPUInfoStr
    &UpDirectory,         // rsUpDirectory
    &SearchForLetter,     // rsSearchForLetter
    &LoadMainSIDforXfer,  // rsLoadSIDforXfer
@@ -1174,4 +1291,6 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ForceEthInit,        // rsForceEthInit
    &ExtPortCheck,        // rsExtPortCheck
    &ExpPortDMA,          // rsExpPortDMA
+   &MakeExtHostStr,      // rsMakeExtHostStr
+   &UninstallExtHost,    // rsUninstallExtHost
 };

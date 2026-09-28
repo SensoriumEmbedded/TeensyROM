@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
-export const FLASH_BASE=0x60000000, FLASH_LIMIT=0x607c0000;
-export const MAIN_BASE=0x60060000, VM_BASE=0x60280000, VM_LIMIT=0x602e0000;
+// The extension slot is the top of the TR+ flash map below the Teensy core's EEPROM
+// emulation (0x607c0000) and restore program. The firmware updater never stages into or
+// erases anything from VM_BASE up (FLASH_RESERVE in FlashUpdate.ino), so an installed host
+// survives an update, and FLASH_LIMIT -- the top of what a firmware hex may occupy -- is
+// the bottom of the slot.
+export const FLASH_BASE=0x60000000, FLASH_LIMIT=0x60760000;
+export const MAIN_BASE=0x60060000, VM_BASE=0x60760000, VM_LIMIT=0x607c0000;
 export function decodeHex(text){
   const bytes=new Map();let base=0,eof=false;
   for(const line of text.trim().split(/\r?\n/)){

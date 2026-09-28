@@ -46,6 +46,7 @@ int firmware_buffer_init( uint32_t *buffer_addr, uint32_t *buffer_size )
   // start at bottom of FLASH_RESERVE and work down until non-erased flash found
   //0x60000000 + 0x800000 - 0x4000 - 4 = 607FBFFC (607fc000-4)   original FLASH_RESERVE was 0x4000 (4k)
   //0x60000000 + 0x800000 - 0x40000 - 4 = 607BFFFC (607c0000-4)  increased to 0x40000 (256k)
+  //0x60000000 + 0x800000 - 0xA0000 - 4 = 6075FFFC (60760000-4)  TR+ extensions: 0xA0000 (640k), covers the host slot
   *buffer_addr = FLASH_BASE_ADDR + FLASH_SIZE - FLASH_RESERVE - 4;
   
   while (*buffer_addr > 0 && *((uint32_t *)*buffer_addr) == 0xFFFFFFFF) *buffer_addr -= 4;

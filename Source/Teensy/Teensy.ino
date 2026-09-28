@@ -38,6 +38,12 @@
 #ifdef VM_EXTENSIONS_ENABLED
    // Before IOHandlers.h: PollingHndlr_TeensyROM is where the record is shown.
    #include "MinimalBoot/Common/VMFail.h"
+   // Here rather than in FlashUpdate.ino, where DoHostInstall lives: the sketch
+   // preprocessor hoists its prototypes above every include below this point.
+   #include "MinimalBoot/Common/VMHostInstall.h"
+   // What DoHostUninstall reads to name the host it is about to remove, and to
+   // tell a blank slot, which it leaves alone, from one it has to erase.
+   #include "MinimalBoot/Common/VMBootImage.h"
 #endif
 #include "MinimalBoot/Common/IOHandlers.h"
 
@@ -180,8 +186,9 @@ void setup()
    LatestSIDLoaded = (char*)malloc(MaxPathLength); //Last loaded Source/SID path/filename
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
 
-   MakeBuildInfo();
-   Serial.printf("\n%s\n%s is on-line\n", SerialStringBuf, strVersionNumber);
+   char BuildInfo[sizeof SerialStringBuf];
+   MakeBuildInfo(BuildInfo, sizeof BuildInfo);
+   Serial.printf("\n%s\n%s is on-line\n", BuildInfo, strVersionNumber);
    //USB is up by here. Not gated on a host listening: printing is what clears
    //the report, and minimal's promoteFault() promotes a stale one to $03 on
    //the next extension launch.

@@ -19,7 +19,7 @@ FLASHMEM void runVMApp()
    // ResetHandler installs its own FlexRAM map, stack, vectors and MPU.
    disableCache();
    ((pFunction)entry)();
-   REBOOT;
+   RebootTR();
 }
 #endif
 

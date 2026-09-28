@@ -199,16 +199,25 @@ crcNext:
         rts
 
 ; ---- Input ----------------------------------------------------------------
-; Joystick port 2 fire, reported only when it changes.
+; Joystick port 2, reported only when it changes: fire in bit 0, up in bit 1.
+; What the two mean is between this client and vm/hello -- the host only carries
+; the byte. Here fire recolours and up asks the module to finish, which it can
+; only honour on a host that lends an exit.
 pollInput:
+        ldx #0
         lda $DC00
         and #$10
-        beq pressed
-        lda #0
-        beq store                ; always taken
-pressed:
-        lda #1
-store:
+        bne notFire
+        inx                      ; bit 0: fire
+notFire:
+        lda $DC00
+        and #$01
+        bne notUp
+        txa
+        ora #2                   ; bit 1: up
+        tax
+notUp:
+        txa
         cmp lastbtn
         beq inputDone
         sta lastbtn

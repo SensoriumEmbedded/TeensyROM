@@ -64,7 +64,10 @@ tblSettingsPages:
    !word InfoOtherMenu
    !word EthernetMenu
    !word InfoHotKeyMenu
+tblPageInstalledExt:
    !word InstalledExtMenu
+
+PageIdxInstalledExt = (tblPageInstalledExt - tblSettingsPages) / 2
 
    ;settings pages:
    !src "source/Pg_Index.asm"

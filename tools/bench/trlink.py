@@ -28,9 +28,11 @@ import sys
 import termios
 import time
 
-from c64 import KEYBUF, KEYCOUNT, SCREEN_BYTES, SCREEN_RAM
+from c64 import (F8, KEYBUF, KEYCOUNT, PETSCII_U, PETSCII_Y, SCREEN_BYTES,
+                 SCREEN_RAM, screen_rows)
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
-                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON, IMAGES,
+                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON,
+                      IMAGES,
                       LAUNCH_FILE, POST_FILE, READ_C64_MEM, RESET_C64,
                       VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
                       to_board)
@@ -41,7 +43,16 @@ PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
 REPLY_BYTES = 2
 READ_TICK = 0.2
 ASK_AGAIN_AFTER = 2.0
+# Two bounds per operation, because one of them moves. wr()'s stall is reset by every
+# partial write and raw()'s idle by every chunk that arrives, so each bounds a *pause*
+# and neither bounds the operation: a board taking one byte a second, or printing one
+# line every 100 ms, never trips either. The _LIMIT_TOTAL pair is the deadline that does
+# not move. Both are sized for the largest thing this tool does -- pushing a firmware hex
+# of a few MB, and reading a 1000-entry directory listing -- at rates well below what USB
+# serial gives, so a healthy transfer has no reason to reach them.
 WRITE_STALL_LIMIT = 30.0
+WRITE_LIMIT_TOTAL = 300.0
+READ_LIMIT_TOTAL = 120.0
 
 
 def ports(beside=None):
@@ -137,18 +148,27 @@ class Link:
                     pass
         return buf
 
-    def wr(self, data, stall=WRITE_STALL_LIMIT):
-        """Raises SystemExit when the board has taken nothing for `stall` seconds."""
-        view, off, deadline = memoryview(data), 0, time.time() + stall
+    def wr(self, data, stall=WRITE_STALL_LIMIT, total=WRITE_LIMIT_TOTAL):
+        """Raises SystemExit when the board has taken nothing for `stall` seconds, or
+        when the whole write has run `total` seconds. Both are needed: every partial
+        write pushes `stall` out again, so it bounds a pause and not the transfer, and
+        a board accepting a byte at a time never trips it."""
+        view, off = memoryview(data), 0
+        stall_by, done_by = time.time() + stall, time.time() + total
         while off < len(view):
             try:
                 off += os.write(self.fd, view[off:off + 2048])
-                deadline = time.time() + stall
+                stall_by = time.time() + stall
             except BlockingIOError:
-                if time.time() >= deadline:
+                if time.time() >= stall_by:
                     raise SystemExit(f'{self.port}: board stopped reading after '
                                      f'{off} of {len(view)} bytes')
                 time.sleep(0.002)
+            # `off < len(view)` matters: a transfer that lands on the last byte exactly
+            # at the deadline delivered everything, and must return rather than raise.
+            if off < len(view) and time.time() >= done_by:
+                raise SystemExit(f'{self.port}: write did not finish within {total:g} s '
+                                 f'({off} of {len(view)} bytes went)')
 
     def drain(self, secs=0.4):
         end = time.time() + secs
@@ -176,12 +196,20 @@ class Link:
                 return True
         return False
 
-    def raw(self, idle=0.3, timeout=5):
+    def raw(self, idle=0.3, timeout=5, total=READ_LIMIT_TOTAL):
         """Whatever the board sends next: waits `timeout` for the first byte,
-        then until the port has been quiet for `idle` seconds. Stops early if
-        the port drops, which is what a reset looks like from here."""
+        then until the port has been quiet for `idle` seconds, and never longer
+        than `total` seconds in all. Stops early if the port drops, which is
+        what a reset looks like from here.
+
+        `total` is the only bound that holds. Every chunk that arrives pushes
+        the idle deadline out again, so a board printing steadily with gaps
+        under `idle` extends it for as long as it keeps printing -- and `out`
+        grows for exactly as long. A caller with its own deadline should pass
+        what is left of it rather than trust `timeout`."""
         out, deadline = b'', time.time() + timeout
-        while time.time() < deadline:
+        limit = time.time() + total
+        while time.time() < min(deadline, limit):
             if select.select([self.fd], [], [], 0.05)[0]:
                 try:
                     chunk = os.read(self.fd, 4096)
@@ -194,8 +222,8 @@ class Link:
                 out, deadline = out + chunk, time.time() + idle
         return out
 
-    def text(self, idle=0.3, timeout=5):
-        return self.raw(idle, timeout).decode('latin1', 'replace')
+    def text(self, idle=0.3, timeout=5, total=READ_LIMIT_TOTAL):
+        return self.raw(idle, timeout, total).decode('latin1', 'replace')
 
     def status(self, timeout=10):
         """Reads a 16-bit reply: (value, text). A failure carries its message."""
@@ -248,12 +276,14 @@ class Link:
         echo(seen[shown:], out)
         return None
 
-    def version(self, timeout=5):
-        """The build banner. Both the main and the minimal image answer this."""
+    def version(self, timeout=5, total=READ_LIMIT_TOTAL):
+        """The build banner. Both the main and the minimal image answer this.
+        `total` caps the whole read of the banner: `timeout` alone does not,
+        because a board that keeps printing keeps pushing it out."""
         self.drain(0.3)
         self.wr(to_board(VERSION_INFO))
         self.ack('version', timeout)
-        return self.text(timeout=timeout).strip()
+        return self.text(timeout=timeout, total=total).strip()
 
     def peek(self, addr, length):
         self.drain(0.3)
@@ -321,10 +351,21 @@ class Link:
         start = self.rd(2, 10)
         if len(start) < 2 or from_board(start) != DIR_START:
             raise SystemExit(f'listing of {path} did not start: {start!r}')
-        listing, marker, _ = self.raw(idle=0.5, timeout=30).partition(board_reply(DIR_END))
+        started = time.time()
+        # total= is passed rather than left to raw()'s default so that the bound the read
+        # ran under and the bound named below are the same value, not two copies of it.
+        listing, marker, _ = self.raw(idle=0.5, timeout=30,
+                                      total=READ_LIMIT_TOTAL).partition(board_reply(DIR_END))
         if not marker:
+            # raw() returns what it has when either bound expires, so the two ends look
+            # alike from here and only the clock tells them apart. Saying "the board went
+            # quiet" about a board that was still printing sends the next reader after
+            # the wrong fault.
             raise SystemExit(f'listing of {path} stopped before its end marker; '
-                             'the board went quiet part way through')
+                             + (f'the read hit its {READ_LIMIT_TOTAL:g} s cap with the '
+                                'board still printing'
+                                if time.time() - started >= READ_LIMIT_TOTAL
+                                else 'the board went quiet part way through'))
         return [json.loads(line) for line in listing.split(b'\r\n') if line.strip()]
 
     def reset(self):
@@ -334,6 +375,51 @@ class Link:
         self.drain(0.4)
         self.wr(to_board(RESET_C64))
         return self.text().strip()
+
+    def wait_for(self, phrase, timeout):
+        """Waits until `phrase` is on the C64 screen, case-folded because which case a
+        glyph carries is a property of the screen, and raises SystemExit with the screen
+        if it never is. A read the board refuses -- the C64 is still coming out of reset
+        -- counts as not yet."""
+        deadline = time.time() + timeout
+        rows = []
+        while True:
+            try:
+                rows = screen_rows(self.screen())
+            except SystemExit:
+                rows = []
+            if phrase.lower() in '\n'.join(rows).lower():
+                return
+            if time.time() >= deadline:
+                shown = '\n'.join(f'{n:2d} |{r}|' for n, r in enumerate(rows) if r.strip())
+                raise SystemExit(f'{phrase!r} never appeared on the C64 screen within '
+                                 f'{timeout} s. What it showed:\n{shown or "(unreadable)"}')
+            time.sleep(1)
+
+    def remove_host(self):
+        """Removes the installed extension host the way a user does, from the C64: reset
+        to the menu, then F8 for Settings, 0 for Installed Extensions, u, and y at the
+        confirmation. There is no command for this over the wire, so the removal only
+        ever runs when the C64 asked for it, and its messages are ones the C64 is
+        waiting to read. Returns once the y is queued; what follows is the board's. A
+        slot holding anything reboots it, with the outcome in the record the main image
+        prints on the way back up. A blank slot does not, and the C64 says so."""
+        # Every key waits for the screen that reads it, and goes in once: a key queued
+        # before the menu is up is lost to the KERNAL clearing its buffer at startup, and
+        # a second 'u' would answer the confirmation.
+        self.reset()
+        self.wait_for('F1 Teensy Mem', 20)
+        self.key(F8)
+        # No screen reads while Settings loads. Polling through it left the C64 at
+        # BASIC's READY every time on the bench TR+, where 2 s without a read let it
+        # come up.
+        time.sleep(3)
+        self.wait_for('Config/Info Page Index', 20)
+        self.key(ord('0'))
+        self.wait_for('Extension host in the firmware slot', 10)
+        self.key(PETSCII_U)
+        self.wait_for('Remove it?', 10)
+        self.key(PETSCII_Y)
 
     def launch(self, path, drive=DRIVE_SD):
         self.drain(0.6)
@@ -373,3 +459,33 @@ def reconnect(timeout=60, interval=0.05, port=None, known=None):
                 pass
         time.sleep(interval)
     return None
+
+
+# One TR+ in an original C64, one sample: the port was down 1.34s, and the main
+# image gave its first clean firmware-check answer 5.37s after it came back.
+BOOT_WINDOW = 20
+
+
+def answering_board(deadline, port, known, boot_window=BOOT_WINDOW, out=sys.stdout):
+    """A (Link, image) for a rebooted board, with image None when nothing
+    answered within `boot_window`, or (None, None) when the port never came
+    back. `port` is the node the board was last talking on, which reconnect()
+    prefers, and `known` the nodes that were beside it before the reboot -- both
+    sampled BEFORE whatever caused the reboot.
+
+    The port can drop a second time as the main image renames its USB device, so
+    a drop inside the boot window means going back for the name it came up
+    under. Anything that reboots the board wants this rather than a bare
+    reconnect(), which hands back a Link to the node about to disappear."""
+    while time.time() < deadline:
+        tr = reconnect(timeout=deadline - time.time(), port=port, known=known)
+        if tr is None:
+            return None, None
+        print('--- boot output ---', file=out)
+        try:
+            return tr, tr.await_image(min(time.time() + boot_window, deadline), out)
+        except OSError:
+            port = tr.port
+            tr.close()
+    return None, None
+

@@ -205,8 +205,8 @@ extern char* StrSIDInfo;
 extern char* LatestSIDLoaded;
 extern char StrMachineInfo[];
 extern uint8_t nfcState;
-extern void SendMsgPrintfln(const char *Fmt, ...);
-extern void SendMsgPrintf(const char *Fmt, ...);
+extern bool SendMsgPrintfln(const char *Fmt, ...);
+extern bool SendMsgPrintf(const char *Fmt, ...);
 extern void nfcWriteTag(const char* TxtMsg);
 extern void nfcInit();
 extern void EEPreadNBuf(uint16_t addr, uint8_t* buf, uint16_t len);
@@ -887,6 +887,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlForceEthInitWAIT:
                   IO1[rwRegStatus] = rsForceEthInit; //work this in the main code
+                  break;
+               case rCtlMakeExtHostStrWAIT:
+                  IO1[rwRegStatus] = rsMakeExtHostStr; //work this in the main code
+                  break;
+               case rCtlUninstallExtHostWAIT:
+                  IO1[rwRegStatus] = rsUninstallExtHost; //work this in the main code
                   break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use

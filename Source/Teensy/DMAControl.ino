@@ -31,6 +31,30 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    SetDataBufIn;     //then set buffer dir to input
 }
 
+// How long LastCycCnt may sit still before the bus counts as not clocking.  isrPHI2 stamps
+// it from ARM_DWT_CYCCNT at its top, before any branch, so a change in it is direct evidence
+// that a DMA handshake can complete.  5 mS is ~5000 edges at the ~1 MHz PHI2 this board is
+// built for, which is why a live C64 cannot read as dead.
+#define DMA_QUIET_mS  5
+
+// Asked by the callers that have something better to do than attempt a transfer -- the
+// blank-then-reboot paths skip a blank nobody could see.  PerformDMA and CloseDMA wait on
+// the handshake with no bound, so a transfer started on a bus that is not clocking never
+// returns; declining to start one is the only protection those paths have.
+//
+// What this does not guard is a C64 that is switched off.  The cartridge port is this
+// board's only supply -- PCB/PCB_Assembly.md has the Teensy's USB 5 V trace cut during
+// assembly so the two cannot back-feed -- so a C64 that is off takes the Teensy with it.
+// The state this is for is a C64 still supplying 5 V that has stopped clocking: a fault, or
+// the moment either side of the power switch.
+FLASHMEM bool C64IsClockingPHI2()
+{
+   const uint32_t Seen = LastCycCnt;
+   const uint32_t Began = millis();
+   while (millis() - Began < DMA_QUIET_mS) if (LastCycCnt != Seen) return true;
+   return false;
+}
+
 FLASHMEM void PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer

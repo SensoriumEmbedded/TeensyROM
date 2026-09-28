@@ -25,11 +25,11 @@
 // refusal is the negotiation: build the capability behind a service bit, retry
 // without it, and one module binary runs on both hosts.
 //
-// Service bits 0..4 below are the base profile; bit 7 is this loader's
-// optional RAM2 memory profile. Neither set will change meaning. The bits
-// listed as reserved are assigned to known out-of-tree extensions so the two
-// sides cannot collide; the loader rejects them, but no future loader release
-// will reuse the numbers for something else.
+// Service bits 0..4 below are the base profile and will not change meaning;
+// bit 7 is this loader's optional RAM2 memory profile. The registry below
+// hands out the rest one host at a time, so two hosts cannot pick the same
+// number; an assignment binds the number for good and says nothing about which
+// host implements it.
 enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
@@ -60,16 +60,6 @@ struct VmImageHeader {
     uint32_t reserved[4];
 };
 static_assert(sizeof(VmImageHeader)==64, "MVM1 image header");
-// Stamped into the extension image at a fixed offset, so the main image can
-// read the installed host's ABI and services without booting it. services is
-// the host's providedServices; name is for the refusal message.
-struct VmHostId {
-    uint32_t magic, abi, services, host_bytes;
-    char name[12];
-    uint32_t reserved;
-};
-static_assert(sizeof(VmHostId)==32, "MVH2 host descriptor");
-enum : uint32_t { VM_HOSTID_MAGIC=0x3248564du };  // 'MVH2'
 struct VmFileInfo { uint32_t bytes; uint8_t directory; char name[96]; uint8_t attributes; uint16_t date,time; };
 struct VmInput { uint8_t buttons, display, overflow, protocol; };
 struct VmPacket { uint8_t type, flags, length, reserved; uint8_t payload[228]; };
@@ -116,6 +106,23 @@ static constexpr uint32_t VM_HOST_BASE_BYTES=sizeof(VmHost);
 // an older copy of this header must keep working against a newer firmware.
 static_assert(sizeof(VmHost)==76, "ABI 2 base host layout is frozen");
 #endif
+// The first tail extension, service bit 14. The extension image has no USB and
+// the module table is frozen without a "done" callback, so before this a module
+// could only be got out of by faulting or by someone reaching for the board. A
+// module checks BOTH host->bytes >= VM_HOST_EXIT_BYTES and services &
+// VM_SERVICE_EXIT before casting: bits and layout are independent, and a host
+// may grow its struct without lending this.
+struct VmHostExit {
+    VmHost base;
+    // Does not return. Records Exited with `status` as the detail, then resets the
+    // C64 and reboots into the menu; the main image prints the record on the way
+    // back up, which is how a status reaches anything off the board.
+    void (*exit_to_menu)(uint32_t status);
+};
+static constexpr uint32_t VM_HOST_EXIT_BYTES=sizeof(VmHostExit);
+#if defined(__arm__)
+static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
+#endif
 struct VmModule {
     uint32_t abi, bytes;
     // pump is permitted while awaiting ACK; it must not alter frozen output.
@@ -136,18 +143,28 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 #else
 #define VM_MODULE_ENTRY extern "C" __attribute__((used))
 #endif
+// Service registry. To claim a bit, open an issue naming the host and the
+// callback it adds; tools/lib/extension.mjs refuses to package a module
+// requiring an unassigned one.
+//   0..4      base profile, below
+//   7         this loader's optional RAM2 memory profile
+//   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
+//             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
+//             desktop, firmware catalogue
+//   14        this loader's module exit (VmHostExit, above)
+//   15        unassigned, available on request
+//   16        TeensyROM's own examples and conformance fixtures
+//   17..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
-                  VM_SERVICE_RAM2_RO=128,
+                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO,
-                  VM_KNOWN_SERVICES=VM_HOST_SERVICES,
-                  // Assigned to out-of-tree extensions; never reused here.
-                  // 32 video, 64 indexed video, 256 indexed raster, 512 RAM1 aux.
-                  VM_SERVICES_RESERVED=32|64|256|512,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
-static_assert((VM_KNOWN_SERVICES&VM_SERVICES_RESERVED)==0, "reserved service bits stay unimplemented");
+static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
+              "this loader must not claim a bit assigned to another host");
 static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     auto p=static_cast<const uint8_t *>(data); uint32_t c=~0u;
     while(size--) { c^=*p++; for(unsigned b=0;b<8;b++) c=(c>>1)^((0u-(c&1))&0xedb88320u); }
@@ -156,6 +173,10 @@ static inline uint32_t vm_crc32(const void *data, uint32_t size) {
 static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserved[1];}
 static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
+// Structure and self-consistency only. Whether a host can serve what an image
+// requires is vm_host_serves() in VMHostABI.h, which a host owes before it
+// loads. Bit 7 is judged here because it has to agree with the memory profile
+// in reserved[0].
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
     if(h.reserved[2]||h.reserved[3])return false;
     if(h.reserved[0]==VM_PROFILE_LEGACY){
@@ -166,7 +187,7 @@ static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) 
     if(h.magic!=VM_IMAGE_MAGIC || h.abi!=VM_ABI || h.header_bytes!=sizeof h ||
        h.code_base!=VM_CODE_BASE || h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
        h.code_bytes>VM_CODE_LIMIT-VM_CODE_BASE || h.data_bytes>VM_DATA_BYTES ||
-       h.bss_bytes>VM_DATA_BYTES-h.data_bytes || (h.required_services&~VM_KNOWN_SERVICES) ||
+       h.bss_bytes>VM_DATA_BYTES-h.data_bytes ||
        file_bytes!=sizeof h+vm_image_payload_bytes(h) || !(h.entry&1) ||
        (h.entry&~1u)<VM_CODE_BASE || (h.entry&~1u)>=VM_CODE_BASE+h.code_bytes) return false;
     VmImageHeader check=h; check.header_crc=0;

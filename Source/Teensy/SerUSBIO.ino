@@ -303,11 +303,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          
    // f, x
    #ifdef Dbg_SerMem 
-      case 'f': //show build info+free mem.  Menu must be idle, interferes with any serialstring in progress
+      case 'f': //show build info+free mem
          {
-            MakeBuildInfo();
+            char BuildInfo[sizeof SerialStringBuf];
+            MakeBuildInfo(BuildInfo, sizeof BuildInfo);
             CmdChannel->println("\n***** Build & Mem info *****");
-            CmdChannel->println(SerialStringBuf);
+            CmdChannel->println(BuildInfo);
             CmdChannel->printf("RAM2 Bytes Free: %lu (%luK)\n\n", RAM2BytesFree(), RAM2BytesFree()/1024);
             memInfo();
             getFreeITCM();
@@ -561,9 +562,12 @@ FLASHMEM void ProcessCommand()
          SendU16(AckToken);
          return;
       case VersionInfoToken: //Version Info
-         MakeBuildInfo();
-         SendU16(AckToken);
-         CmdChannel->printf("\n%s\n  %s0 Hz\n", SerialStringBuf, StrMachineInfo);
+         {
+            char BuildInfo[sizeof SerialStringBuf];
+            MakeBuildInfo(BuildInfo, sizeof BuildInfo);
+            SendU16(AckToken);
+            CmdChannel->printf("\n%s\n  %s0 Hz\n", BuildInfo, StrMachineInfo);
+         }
          return;
       case FWCheckToken: //Check firmware type
          SendU16(FWFullToken);

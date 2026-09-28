@@ -7,6 +7,8 @@
 // A package is a directory /VMS/<id> on the SD card holding exactly three
 // files: manifest.vmi, the module image, and the C64 client cartridge.
 
+import { VM_BASE, VM_LIMIT } from './hex.mjs';
+
 export const IMAGE_MAGIC = 0x314d564d;  // 'MVM1'
 export const ABI = 2;
 export const CODE_BASE = 0x18000, CODE_LIMIT = 0x30000;
@@ -22,9 +24,16 @@ export const RAM2_RO_BYTES = 80 * 1024;
 export const PROFILE_LEGACY = 0, PROFILE_RAM2_RO = 1;
 export const SERVICE = {
   FILES: 1, CLOCK: 2, PACKETS: 4, WRITE: 8, GUEST_RAM: 16, RAM2_RO: 128,
+  EXIT: 16384,
 };
 export const BASE_SERVICES = SERVICE.FILES | SERVICE.CLOCK | SERVICE.PACKETS | SERVICE.WRITE | SERVICE.GUEST_RAM;
-export const KNOWN_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO;
+export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT;
+// The service registry from VMABI.h. checkServiceRegistry in
+// tools/verify-extensions.mjs holds these in step with VM_SERVICES_ASSIGNED.
+export const SERVICE_EXAMPLE = 0x10000;  // registry bit 16, this repository's own examples
+export const ASSIGNED_SERVICES = 32 | 64 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | SERVICE_EXAMPLE;
+export const UNASSIGNED_SERVICES = ~(HOST_SERVICES | ASSIGNED_SERVICES) >>> 0;
+const unassignedServices = (requiredServices) => (requiredServices & UNASSIGNED_SERVICES) >>> 0;
 export const CLIENT_BYTES = 0x6070;
 export const DESCRIPTOR_OFFSET = 0x4070;
 
@@ -41,7 +50,7 @@ export function crc32(bytes) {
 // The 64-byte MVM1 header, followed by .text, then .data, then (profile 1 only)
 // the RAM2 constants. bss is not stored; the loader zeroes it after the copy.
 export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
-                             requiredServices = BASE_SERVICES,
+                             requiredServices = BASE_SERVICES, allowUnassignedServices = false,
                              profile = PROFILE_LEGACY, readOnly = Buffer.alloc(0) }) {
   if (!code?.length) throw new Error('Module image has no code');
   if (code.length > CODE_LIMIT - CODE_BASE) throw new Error(`Module code is ${code.length} bytes, window is ${CODE_LIMIT - CODE_BASE}`);
@@ -51,8 +60,10 @@ export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
   if ((entry & ~1) < CODE_BASE || (entry & ~1) >= CODE_BASE + code.length) {
     throw new Error(`Entry 0x${entry.toString(16)} falls outside the module code window`);
   }
-  if (requiredServices & ~KNOWN_SERVICES) {
-    throw new Error(`Image requires services 0x${(requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
+  const unassigned = unassignedServices(requiredServices);
+  if (unassigned && !allowUnassignedServices) {
+    throw new Error(`Image requires unassigned services 0x${unassigned.toString(16)}; claim the bits in the registry in ` +
+                    'Source/Teensy/MinimalBoot/Common/VMABI.h, or pass --allow-unassigned-services to build anyway');
   }
   if (profile === PROFILE_RAM2_RO) {
     if (!readOnly.length || readOnly.length > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);
@@ -103,9 +114,6 @@ export function parseImage(image) {
   if (!(header.entry & 1) || (header.entry & ~1) < CODE_BASE || (header.entry & ~1) >= CODE_BASE + header.codeBytes) {
     throw new Error(`Entry 0x${header.entry.toString(16)} falls outside the module code window`);
   }
-  if (header.requiredServices & ~KNOWN_SERVICES) {
-    throw new Error(`Image requires services 0x${(header.requiredServices & ~KNOWN_SERVICES).toString(16)} that the base profile does not provide`);
-  }
   if (header.profile === PROFILE_RAM2_RO) {
     if (!header.readOnlyBytes || header.readOnlyBytes > RAM2_RO_BYTES) throw new Error(`Profile 1 needs 1..${RAM2_RO_BYTES / 1024} KiB of RAM2 constants`);
     if (!(header.requiredServices & SERVICE.RAM2_RO)) throw new Error('Profile 1 must require VM_SERVICE_RAM2_RO');
@@ -124,7 +132,7 @@ export function parseImage(image) {
 const NAME = /^[A-Za-z0-9_.-]+$/;
 // Extensions the stock menu owns. A package may not claim any of them.
 export const PROTECTED_EXTENSIONS = ['prg', 'crt', 'hex', 'p00', 'sid', 'kla', 'koa', 'ocp',
-  'pic', 'art', 'aas', 'hpi', 'txt', 'nfo', 'md', 'seq', 'd64', 'd71', 'd81', 'reu'];
+  'pic', 'art', 'aas', 'hpi', 'txt', 'nfo', 'md', 'seq', 'd64', 'd71', 'd81', 'reu', 'trh'];
 
 // Six ASCII lines, newline terminated. The firmware parser is strict about all
 // six, so build it here rather than by hand.
@@ -187,4 +195,156 @@ export function buildClientCrt({ id, bank0, bank1, name = id }) {
     throw new Error('Descriptor did not land at its fixed offset');
   }
   return crt;
+}
+
+// A host image arrives on the SD card as a 64-byte header followed by the raw
+// slot image, byte-identical to what `objcopy -O binary` produced. The header
+// is a separate container rather than a field inside the image because the
+// image's own descriptor sits at HOST_ID_OFFSET, inside the region a CRC would
+// have to cover; both writer and reader would have to stream around the hole.
+export const HOST_PACKAGE_MAGIC = 0x31485254;  // 'TRH1'
+export const HOST_PACKAGE_FORMAT = 1;
+export const HOST_PACKAGE_HEADER_BYTES = 64;
+export const HOST_SLOT_BYTES = VM_LIMIT - VM_BASE;
+export const HOST_ID_OFFSET = 0x800;
+// The device reads the boot words out of the second 4 KiB sector, so a payload
+// that stops inside it is judged on whatever the first sector left in the
+// staging buffer. VM_HOST_MIN_PAYLOAD_BYTES in VMHostInstall.h is the same bound.
+export const HOST_MIN_PAYLOAD_BYTES = 0x2000;
+export const HOSTID_MAGIC = 0x3248564d;  // 'MVH2'
+
+// The five words vm_host_slot_valid() in VMHostABI.h gates on.
+const BOOT_WORD = { flashMagic: 0x0, vectorMagic: 0x1000, entry: 0x1004,
+                    bootBase: 0x1020, imageBytes: 0x1024 };
+
+export function hostBootWords(payload) {
+  const at = (offset) => payload.readUInt32LE(offset);
+  return Object.fromEntries(Object.entries(BOOT_WORD).map(([name, offset]) => [name, at(offset)]));
+}
+
+export function hostDescriptor(payload) {
+  const field = (i) => payload.readUInt32LE(HOST_ID_OFFSET + i * 4);
+  return { magic: field(0), abi: field(1), services: field(2), hostBytes: field(3),
+           name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
+}
+
+// A hand mirror of nameByteSafe() in VMBootImage.h, which the firmware uses to keep a
+// third-party descriptor's bytes from reaching a C64 as control codes. The same two
+// ranges serve a terminal: $00-$1f and $80-$9f are also C0 and C1, so $1b cannot start an
+// escape sequence here for the same reason $93 cannot clear a screen there. $22 is out
+// for a reason that is specific to the C64 -- it toggles the screen editor's quote mode
+// and disarms the next control code, which VMBootImage.h explains -- and is carried here
+// because the two predicates have to agree byte for byte, not because a terminal minds a
+// quote. One predicate rather than two, because two would drift --
+// checkHostNamePolicy() in tools/verify-extensions.mjs compares this against the header.
+export function hostNameSafe(byte) {
+  return !(byte < 0x20 || (byte >= 0x80 && byte <= 0x9f) || byte === 0x22);
+}
+
+// What the packager prints for a descriptor name: the substitution displayName() makes
+// for the C64, on a different renderer for the same reason.
+export function hostNameForDisplay(name) {
+  return [...Buffer.from(name, 'latin1')]
+    .map((c) => (hostNameSafe(c) ? String.fromCharCode(c) : '?')).join('');
+}
+
+// The stem of the .TRH the packager writes when it is given no --out. Built from the
+// descriptor's bytes rather than treated as a path fragment: the twelve bytes are
+// third-party, and a name of "../../pwned" would otherwise put the file two directories
+// above the one the developer is looking in, on top of whatever is already there.
+//
+// Deliberately narrower than hostNameSafe. That predicate answers "can a C64 be handed
+// this", and $2f can be, while being a path separator; this answers "is this one ordinary
+// filename component", which is the stricter question. An allowlist is what
+// makes it stricter by construction: a separator, a `..`, a leading dot, a NUL and every
+// non-printable byte are out because they were never in, rather than because a denylist
+// remembered them. Returns '' when nothing survives, which the caller reports rather than
+// papering over.
+export function hostFileStem(name) {
+  return [...Buffer.from(name, 'latin1')]
+    .filter((c) => hostNameSafe(c))
+    .map((c) => String.fromCharCode(c).toUpperCase())
+    .filter((ch) => /[A-Z0-9_-]/.test(ch)).join('');
+}
+
+// A hand mirror of vm_host_slot_valid() in VMHostABI.h. checkHostSlotPredicate()
+// in tools/verify-extensions.mjs compares the two verdict by verdict.
+export function hostSlotValid({ flashMagic, vectorMagic, entry, bootBase, imageBytes }) {
+  const address = entry & ~1;
+  return flashMagic === 0x42464346 && vectorMagic === 0x432000d1 && (entry & 1) !== 0 &&
+         address >= VM_BASE + 0x1000 && address <= VM_BASE + 0x3000 &&
+         bootBase === VM_BASE && imageBytes > 0x1000 && imageBytes <= HOST_SLOT_BYTES;
+}
+
+// `image` is the raw binary. _flashimagelen counts .text.csf, which objcopy
+// drops when the linker emits it as SHT_NOBITS, so a short image is padded
+// with the 0xFF an erased page already holds rather than refused.
+export function buildHostPackage({ image }) {
+  if (image.length < HOST_MIN_PAYLOAD_BYTES) throw new Error(`Host image is ${image.length} bytes, too short to hold its own vector table`);
+  if (image.length > HOST_SLOT_BYTES) throw new Error(`Host image is ${image.length} bytes, slot is ${HOST_SLOT_BYTES}`);
+
+  const boot = hostBootWords(image);
+  if (boot.imageBytes < image.length) {
+    throw new Error(`Host image declares ${boot.imageBytes} bytes but the file is ${image.length}`);
+  }
+  // Before the pad, not after: the length below is a word read out of the image,
+  // so a garbage one would otherwise size an allocation before anything bounded it.
+  if (!hostSlotValid(boot)) {
+    throw new Error('Host image fails the checks the minimal image applies before it will jump; ' +
+                    'it would install and then read as no host at all');
+  }
+  const payload = boot.imageBytes === image.length ? image
+    : Buffer.concat([image, Buffer.alloc(boot.imageBytes - image.length, 0xff)]);
+  const id = hostDescriptor(payload);
+  if (id.magic !== HOSTID_MAGIC) throw new Error(`No MVH2 host descriptor at 0x${HOST_ID_OFFSET.toString(16)}`);
+  if (id.abi !== ABI) throw new Error(`Host is ABI ${id.abi}, loader is ABI ${ABI}`);
+
+  const header = Buffer.alloc(HOST_PACKAGE_HEADER_BYTES);
+  const fields = [HOST_PACKAGE_MAGIC, HOST_PACKAGE_FORMAT, HOST_PACKAGE_HEADER_BYTES, VM_BASE,
+                  HOST_SLOT_BYTES, payload.length, boot.imageBytes, boot.entry,
+                  id.abi, id.services, crc32(payload), 0, 0, 0, 0, 0];
+  fields.forEach((value, i) => header.writeUInt32LE(value >>> 0, i * 4));
+  header.writeUInt32LE(crc32(header), 44);
+  return Buffer.concat([header, payload]);
+}
+
+// Reads back what buildHostPackage wrote, applying the checks the device
+// applies before it erases.
+export function parseHostPackage(pkg) {
+  if (pkg.length < HOST_PACKAGE_HEADER_BYTES) throw new Error('Package is shorter than its header');
+  const field = (i) => pkg.readUInt32LE(i * 4);
+  const header = {
+    magic: field(0), format: field(1), headerBytes: field(2), targetBase: field(3),
+    targetBytes: field(4), payloadBytes: field(5), imageBytes: field(6), entry: field(7),
+    abi: field(8), services: field(9), payloadCrc: field(10), headerCrc: field(11),
+  };
+  if (header.magic !== HOST_PACKAGE_MAGIC) throw new Error('Not a TRH1 host package');
+  if (header.format !== HOST_PACKAGE_FORMAT) throw new Error(`Package is format ${header.format}, this reader is ${HOST_PACKAGE_FORMAT}`);
+  if (header.headerBytes !== HOST_PACKAGE_HEADER_BYTES) throw new Error('Unexpected header length');
+  if (header.targetBase !== VM_BASE || header.targetBytes !== HOST_SLOT_BYTES) {
+    throw new Error('Package was built for a different slot');
+  }
+  const zeroed = Buffer.from(pkg.subarray(0, HOST_PACKAGE_HEADER_BYTES));
+  zeroed.writeUInt32LE(0, 44);
+  if (crc32(zeroed) !== header.headerCrc) throw new Error('Package header CRC mismatch');
+  for (let i = 12; i < 16; i++) if (field(i)) throw new Error('Reserved header words must be zero');
+  if (header.payloadBytes < HOST_MIN_PAYLOAD_BYTES || header.payloadBytes > HOST_SLOT_BYTES) {
+    throw new Error(`Package payload is ${header.payloadBytes} bytes, wanted ${HOST_MIN_PAYLOAD_BYTES}..${HOST_SLOT_BYTES}`);
+  }
+  if (pkg.length !== HOST_PACKAGE_HEADER_BYTES + header.payloadBytes) {
+    throw new Error(`Package is ${pkg.length} bytes, header describes ${HOST_PACKAGE_HEADER_BYTES + header.payloadBytes}`);
+  }
+  const payload = pkg.subarray(HOST_PACKAGE_HEADER_BYTES);
+  if (crc32(payload) !== header.payloadCrc) throw new Error('Package payload CRC mismatch');
+
+  const boot = hostBootWords(payload);
+  const id = hostDescriptor(payload);
+  if (header.imageBytes !== boot.imageBytes) throw new Error(`Header says ${header.imageBytes} image bytes, image says ${boot.imageBytes}`);
+  if (header.entry !== boot.entry) throw new Error('Header entry does not match the image vector table');
+  if (header.abi !== id.abi) throw new Error(`Header says ABI ${header.abi}, descriptor says ABI ${id.abi}`);
+  if (header.services !== id.services) throw new Error('Header services do not match the descriptor');
+  if (header.payloadBytes !== boot.imageBytes) throw new Error('Payload is not the length the image declares');
+  if (!hostSlotValid(boot)) throw new Error('Package payload would not be entered by the minimal image');
+  if (id.magic !== HOSTID_MAGIC) throw new Error('Payload carries no MVH2 host descriptor');
+  return { ...header, name: id.name };
 }
