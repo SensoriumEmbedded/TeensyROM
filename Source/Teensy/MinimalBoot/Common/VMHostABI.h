@@ -27,8 +27,8 @@
 // headers above; strings.h is there for strcasecmp, which is POSIX rather
 // than C, so a toolchain without it needs its own shim.
 
-// Placement. The extension image has only 96 KiB of ITCM, so TeensyROM keeps
-// the larger pure helpers in flash; FLASHMEM is the Teensy core's attribute
+// Placement. The stock host links its code into 64 KiB of ITCM, so TeensyROM
+// keeps the larger pure helpers in flash; FLASHMEM is the Teensy core's attribute
 // for that, and it must already be defined when this header is included to be
 // picked up. Define VM_HOST_TEXT yourself to choose otherwise.
 #ifndef VM_HOST_TEXT

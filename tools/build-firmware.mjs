@@ -38,6 +38,9 @@
 //            the stock firmware rather than shipped inside a firmware of its own.
 //            Packaging is the step after the combine, so with --skip-combine it builds
 //            the host image into the kept build root and writes no .TRH.
+//   --host-code-kib 64|96  with --host-sketch only: how much ITCM the host's code may
+//            fill. The default, 64, is what the stock host is linked at. 96 lets a
+//            third-party host's code grow up to the module window at 0x18000.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -70,7 +73,7 @@ import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay,
 import { hostImageFromHex } from './build-host-package.mjs';
 import {
   minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
-  patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget,
+  patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget, HOST_CODE_KIB, DEFAULT_HOST_CODE_KIB,
 } from './lib/extension-image.mjs';
 
 const TEENSY_CORE_VERSION = '1.61.0';
@@ -86,7 +89,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // HELLO and exited 0 for the same first-wins reason this scan was written to stop. That
 // file carries the reasoning; this one just says which arguments it takes.
 const { option, flag } = scanArgs(process.argv.slice(2), {
-  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch'],
+  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch', '--host-code-kib'],
   flags: [
     '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
     '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
@@ -136,6 +139,14 @@ const skipExtensionBuild = flag('--skip-extension-build');
 // where the extension image is not built at all, rather than ignored: a flag that
 // silently does nothing here ships the stock host under the caller's own name.
 const hostSketchOption = option('--host-sketch', null);
+const hostCodeOption = option('--host-code-kib', null);
+if (hostCodeOption !== null && hostSketchOption === null) {
+  throw new Error('--host-code-kib requires an explicit --host-sketch');
+}
+if (hostCodeOption !== null && !HOST_CODE_KIB.map(String).includes(hostCodeOption)) {
+  throw new Error('--host-code-kib must be 64 or 96');
+}
+const hostCodeKiB = hostCodeOption === null ? DEFAULT_HOST_CODE_KIB : Number(hostCodeOption);
 if (hostSketchOption !== null && !withExtensions) {
   throw new Error(fab04Features
     ? '--host-sketch has nothing to build with --no-extensions'
@@ -492,7 +503,7 @@ if (withExtensions && !skipExtensionBuild) {
     inoPath: path.join(sketch, hostEntryIno),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
     elfStem,
-    ld: extensionLinkerScript(linkers),
+    ld: extensionLinkerScript(linkers, hostCodeKiB),
     bootdata: extensionBootdata(linkers),
     usbType: 'USB_DISABLED',
     extraDefs: ' -DVM_HOST_PROFILE',

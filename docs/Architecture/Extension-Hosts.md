@@ -26,13 +26,18 @@ turns a layout regression into a link error rather than a hang on hardware:
 
 | Assert | What it catches |
 |---|---|
-| `_etext <= 0x18000` | host code growing into the module's ITCM window |
+| `_etext <= 0x10000` | host code outgrowing its 64 KiB of ITCM (`0x18000` with `--host-code-kib 96`) |
 | `_heap_end <= _vm_data_start` | host heap growing into the module's DTCM window |
 | `_estack - _vm_data_end >= 49152` | the shared stack falling below 48 KiB |
 | `SIZEOF(.bss.dma) == 0` | host globals landing in the guest's RAM2 arena |
 | `SIZEOF(.bss.extram) == 0` | a host that needs PSRAM, which the map does not reserve |
 
 Those hold for your host too, because your host is built with the same script.
+
+The script also places the `.text` of the SdFat, SD and SPI libraries in flash
+rather than ITCM, which is what fits the stock host in 64 KiB. A host that needs
+more ITCM can pass `--host-code-kib 96` with `--host-sketch`, which lets its code
+grow up to the module window at `0x18000`.
 
 ## The four things a host owes
 
@@ -194,7 +199,7 @@ the whole command protocol is exposed to the LAN, unauthenticated.
 | | |
 |---|---|
 | Flash slot | 384 KiB at `0x60760000`, the top of flash below the EEPROM emulation; firmware updates leave it alone |
-| ITCM | 96 KiB for host code (module code takes `0x00018000` up) |
+| ITCM | 64 KiB for host code, or 96 KiB with `--host-code-kib 96` (module code takes `0x00018000` up) |
 | DTCM | everything below `0x20014000`, heap capped at 16 KiB |
 | Stack | 48 KiB, shared |
 | RAM2 | 512 KiB — the guest arena; **your globals may not land here** |
