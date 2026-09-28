@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeHex, FLASH_BASE, MAIN_BASE } from './hex.mjs';
-import { inspectImage, planFlash, sameBoard, describeBoard, Refusal } from './flash-plan.mjs';
+import { inspectImage, planFlash, sameBoard, findWritten, answerComplete, answerProblems, describeBoard, Refusal } from './flash-plan.mjs';
 
 // Boards as flash-firmware.mjs hands them over, already identified.
 const tr = (port, uid, extra = {}) => ({ port, bootloader: false, location: `usb:${port}`, label: `${port} (Teensy 4.1) Serial+MIDI`,
@@ -11,8 +11,8 @@ const trPlus = (port, uid, extra = {}) => tr(port, uid, { version: 'TeensyROM+ v
 const silent = (port) => tr(port, null, { version: null, built: null, kind: null });
 const waiting = (location) => ({ port: null, bootloader: true, location, label: '(Teensy 4.1) Bootloader',
   version: null, built: null, uid: null, kind: null });
-const trImage = { path: 'TeensyROM.hex', kind: 'tr', stamp: 'Sep 25 2026, 03:03:51' };
-const plusImage = { path: 'TeensyROM+.hex', kind: 'tr-plus', stamp: 'Sep 25 2026, 03:03:51' };
+const trImage = { path: 'TeensyROM.hex', kind: 'tr', stamp: 'Sep 25 2026, 03:03:51', reportsUid: true };
+const plusImage = { path: 'TeensyROM+.hex', kind: 'tr-plus', stamp: 'Sep 25 2026, 03:03:51', reportsUid: true };
 
 const targets = (plan) => plan.writes.map(({ board, image }) => `${board.port ?? board.location}<-${image.kind}`);
 const refuses = (options, pattern) => assert.throws(() => planFlash(options), (error) => error instanceof Refusal && pattern.test(error.message));
@@ -130,6 +130,61 @@ test('the same board is recognised across a reboot by its USB location, even on 
   assert.ok(!sameBoard({ port: null, location: null }, { port: null, location: null }));
 });
 
+test('after a write the board is found by USB location, or on the /dev fallback as the one device listed', () => {
+  const written = { port: 'COM12', location: 'usb:1' };
+  assert.equal(findWritten([{ port: 'COM4', location: 'usb:2' }, { port: 'COM13', location: 'usb:1' }], written)?.port, 'COM13');
+  assert.equal(findWritten([{ port: 'COM4', location: 'usb:2' }], written), undefined);
+  // The fallback lists one device with no location, and Linux may renumber it.
+  const acm = { port: '/dev/ttyACM0', location: null };
+  assert.equal(findWritten([{ port: '/dev/ttyACM1', location: null }], acm)?.port, '/dev/ttyACM1');
+  assert.equal(findWritten([], acm), undefined);
+  assert.equal(findWritten([{ port: '/dev/ttyACM1', location: null }, { port: '/dev/ttyACM2', location: null }], acm), undefined);
+  // A board known by location is never swapped for another that happens to be alone.
+  assert.equal(findWritten([{ port: 'COM4', location: 'usb:2' }], { port: null, bootloader: true, location: 'usb:1' }), undefined);
+});
+
+// The written board's answer, as flash-firmware.mjs passes it: a version reply plus port and kind.
+const answer = (extra = {}) => ({ port: 'COM12', version: 'TeensyROM v0.8.0.11', built: 'Sep 25 2026, 03:03:51',
+  uid: '14470230', minimal: false, kind: 'tr', ...extra });
+
+test('an answer is complete once it carries the date and chip ID the image prints', () => {
+  assert.ok(answerComplete(trImage, answer()));
+  assert.ok(!answerComplete(trImage, answer({ built: null })));
+  assert.ok(!answerComplete(trImage, answer({ uid: null })));
+  assert.ok(!answerComplete(trImage, answer({ minimal: true })));
+  assert.ok(!answerComplete(trImage, answer({ version: null })));
+  // An image with no stamp or no chip ID in its reply asks for neither.
+  assert.ok(answerComplete({ kind: 'tr', stamp: null, reportsUid: false }, answer({ built: null, uid: null })));
+});
+
+test('the written board passes when it answers as itself, running the image', () => {
+  assert.deepEqual(answerProblems(tr('COM12', '14470230'), trImage, answer()), []);
+});
+
+test('a chip ID is required when the image prints one, and must match the one reported before', () => {
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ uid: '19277260' })).join(), /answers as chip 19277260, not 14470230/);
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ uid: null })).join(), /no chip ID, and the image reports one/);
+  // Nothing to compare with before the write: waiting in the bootloader, silent, or firmware too old to print one.
+  assert.deepEqual(answerProblems(waiting('usb:1'), trImage, answer()), []);
+  assert.deepEqual(answerProblems(tr('COM12', null), trImage, answer()), []);
+  assert.match(answerProblems(waiting('usb:1'), trImage, answer({ uid: null })).join(), /no chip ID/);
+  // Written with an image too old to print one: none is expected, even from a board that had one.
+  assert.deepEqual(answerProblems(tr('COM12', '14470230'), { ...trImage, reportsUid: false }, answer({ uid: null })), []);
+});
+
+test('the build date must be the image\'s, and a reply without one fails when the image has one', () => {
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ built: 'Sep 23 2026, 22:45:10' })).join(),
+    /runs the build from Sep 23 2026, 22:45:10, not the image's Sep 25 2026, 03:03:51/);
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ built: null })).join(), /\(no date in its reply\)/);
+  assert.deepEqual(answerProblems(tr('COM12', '14470230'), { ...trImage, stamp: null }, answer({ built: null })), []);
+});
+
+test('the wrong type, or a board left in MinimalBoot, fails the check', () => {
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ version: 'TeensyROM+ v0.8.0.11', kind: 'tr-plus' })).join(),
+    /reports TeensyROM\+ v0\.8\.0\.11, not TeensyROM/);
+  assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ minimal: true })).join(), /still in MinimalBoot/);
+});
+
 // A hex with the given strings placed at the given addresses.
 function hexWith(strings) {
   const bytes = new Map();
@@ -152,6 +207,11 @@ test('a plain TeensyROM image is told apart from the v3 and the TR+ ids', () => 
   assert.equal(inspectImage(hexWith([[MAIN_BASE, 'fw_t41_teensyrom_sensorium_v3']])).kind, 'tr');
   assert.equal(inspectImage(hexWith([[MAIN_BASE, 'fw_t41_teensyrom_sensorium\0']])).kind, 'tr');
   assert.equal(inspectImage(hexWith([[MAIN_BASE, 'no target here']])).kind, null);
+});
+
+test('an image says whether its version reply carries a chip ID, from the main firmware alone', () => {
+  assert.equal(inspectImage(hexWith([[MAIN_BASE, 'Teensy: %luMHz  %.1fC  UID: %lu\r']])).reportsUid, true);
+  assert.equal(inspectImage(hexWith([[FLASH_BASE, 'UID: %lu'], [MAIN_BASE, '  FW: %s\r\n']])).reportsUid, false);
 });
 
 test('no stamp is claimed when the main image has none, or more than one', () => {

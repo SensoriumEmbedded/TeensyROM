@@ -43,7 +43,9 @@ to whichever board it finds in the bootloader.
 That choice decides the write on Windows. On macOS and Linux, `teensy_loader_cli` writes
 whichever board enters the bootloader first, which is the one whose program button you
 press, so with several boards attached press the button on the board the tool names.
-Without Teensyduino's `teensy_ports` there, the tool sees only the first serial device.
+Without Teensyduino's `teensy_ports` there, the tool sees only the first serial device,
+and after the write it takes the one device it finds as the written board, whatever that
+device is now called; the checks on its answer confirm it.
 
 `--all` writes each attached board with the image for its type, one at a time, and stops
 at the first failure. Without `--hex` it takes the newest TeensyROM and the newest
@@ -72,9 +74,13 @@ After each write the board shows up for a moment as MinimalBoot, on a COM port o
 before the main firmware starts. The tool waits for the main firmware to answer, then
 checks that:
 
-- the written board answers with its own chip ID;
-- it runs the build date recorded in the image;
+- the written board answers with the build date recorded in the image;
+- it answers with a chip ID when the image's firmware reports one, the same as before if
+  it reported one then;
 - every other board still reports what it did before.
+
+A reply missing the date or the chip ID is asked for again, for up to 20 seconds, before
+the check fails.
 
 On Windows it then closes the Teensy Loader, whether the run succeeded or failed, so the
 image cannot be written to another board later by a stray press of a program button. It

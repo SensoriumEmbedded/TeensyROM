@@ -23,10 +23,11 @@ const TIME = /\d\d:\d\d:\d\d/g;                 // __TIME__
 
 // Reads a hex's text: which cartridge it is built for, the flash regions it
 // covers (a three-image build has a gap, which is expected, and is why this
-// reports regions rather than one span), and the build stamp the running
-// firmware will print in its version reply. The stamp is taken from the main
-// image alone: MinimalBoot carries its own, which differs from the main one's
-// in a build whose date is not pinned.
+// reports regions rather than one span), the build stamp the running firmware
+// will print in its version reply, and whether that reply carries a chip ID
+// (the format string MakeBuildInfo prints it with; older firmware has none).
+// Both are taken from the main image alone: MinimalBoot carries its own, whose
+// stamp differs from the main one's in a build whose date is not pinned.
 export function inspectImage(hexText) {
   const bytes = decodeHex(hexText);
   const addresses = [...bytes.keys()].sort((a, b) => a - b);
@@ -44,7 +45,8 @@ export function inspectImage(hexText) {
   const main = text(addresses.filter((a) => a >= MAIN_BASE && a < VM_BASE));
   const dates = new Set(main.match(DATE)), times = new Set(main.match(TIME));
   const stamp = dates.size === 1 && times.size === 1 ? `${[...dates][0]}, ${[...times][0]}` : null;
-  return { kind: target?.[1] ?? null, id: target?.[0] ?? null, regions, bytes: addresses.length, stamp };
+  const reportsUid = main.includes('UID: %lu');
+  return { kind: target?.[1] ?? null, id: target?.[0] ?? null, regions, bytes: addresses.length, stamp, reportsUid };
 }
 
 // One line per board, the same wherever a board is named.
@@ -62,6 +64,44 @@ export function describeBoard(board) {
 export function sameBoard(a, b) {
   if (a.location && b.location) return a.location === b.location;
   return Boolean(a.port && b.port) && a.port.toLowerCase() === b.port.toLowerCase();
+}
+
+// The written board in a listing taken after the write. The /dev fallback
+// (no teensy_ports) gives no location, and its device name need not survive the
+// reboot (Linux can bring ttyACM0 back as ttyACM1), but it lists one device at
+// most, so there that device is taken; the checks on its answer confirm it.
+export function findWritten(listing, board) {
+  const found = listing.find((b) => b.port && sameBoard(b, board));
+  if (found) return found;
+  const [only, ...more] = listing;
+  return !board.location && only?.port && !only.location && !more.length ? only : undefined;
+}
+
+// The main firmware prints its build date and chip ID with its version, so a
+// reply missing one that the image prints was read short, or comes from other
+// firmware than the image's. `answer` is a version reply (see parseBanner) with
+// its port and kind added.
+export function answerComplete(image, answer) {
+  return Boolean(answer.version) && !answer.minimal &&
+    (!image.stamp || Boolean(answer.built)) && (!image.reportsUid || Boolean(answer.uid));
+}
+
+// What is wrong with the written board's answer after a write; nothing when it
+// is the board that was written, running the image. The chip ID must match the
+// one the board reported before, when it reported one. Firmware too old to
+// print it, a board that did not answer, and one in the bootloader give nothing
+// to compare; that board is then known only by where it is attached.
+export function answerProblems(board, image, answer) {
+  const { port } = answer;
+  const problems = [];
+  if (answer.minimal) problems.push(`${port} is still in MinimalBoot: the full firmware did not start`);
+  if (answer.uid && board.uid && answer.uid !== board.uid) problems.push(`${port} answers as chip ${answer.uid}, not ${board.uid}`);
+  if (!answer.uid && image.reportsUid) problems.push(`${port} answers with no chip ID, and the image reports one`);
+  if (answer.kind !== image.kind) problems.push(`${port} reports ${answer.version ?? 'nothing'}, not ${LABEL[image.kind]}`);
+  if (image.stamp && answer.built !== image.stamp) {
+    problems.push(`${port} runs the build from ${answer.built ?? '(no date in its reply)'}, not the image's ${image.stamp}`);
+  }
+  return problems;
 }
 
 // Boards: [{ port, bootloader, location, label, version, built, uid, kind }],

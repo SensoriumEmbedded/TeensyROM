@@ -23,7 +23,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { findBoards, identify, boardKind, teensyTool } from './lib/trserial.mjs';
-import { inspectImage, planFlash, describeBoard, sameBoard, Refusal, LABEL } from './lib/flash-plan.mjs';
+import { inspectImage, planFlash, describeBoard, sameBoard, findWritten, answerComplete, answerProblems, Refusal, LABEL }
+  from './lib/flash-plan.mjs';
 
 // Set once a write has begun. From then on the Teensy Loader may be holding the
 // image in Auto mode, so a failure closes it too (see closeTeensyLoader).
@@ -78,8 +79,10 @@ Which board is written:
     own it is written on the image's word. Beside another board the tool refuses,
     because the Teensy Loader writes to whichever board it finds there.
 
-After each write the board must come back with its own chip ID, running the
-image's build date, and every other board must still report what it did before.
+After each write the board must come back running the image's build date and,
+when the image's firmware reports a chip ID, answering with one: the same as
+before, if it reported one then. Every other board must still report what it
+did before.
 TeensyROM settings survive: a USB write leaves the flash that holds them alone.
 
 Writing: on Windows through the Teensy Loader that Teensyduino installs, with
@@ -223,7 +226,9 @@ async function writeWithTeensyLoader(file, board) {
   console.log('\nWriting through the Teensy Loader. Press the program button on the Teensy if it does not start within a few seconds.');
   let status = null;
   writing = true;
-  spawn(postCompile, args, { stdio: 'inherit' }).on('exit', (code) => { status = code; });
+  spawn(postCompile, args, { stdio: 'inherit' })
+    .on('error', (error) => fail(`Could not start teensy_post_compile: ${error.message}`))
+    .on('exit', (code) => { status = code; });
 
   let left = board.bootloader;
   let strayed = 0;
@@ -257,54 +262,53 @@ async function writeWithTeensyLoader(file, board) {
   fail('The board did not come back within 2 minutes. Check the Teensy Loader window, then re-run with --check.');
 }
 
-// The written board once its main firmware is back on serial and answering.
-// After a write the board shows up first as MinimalBoot, on a COM port of its
-// own, which hands over to the main firmware without answering; the main
+// The written board once its main firmware is back on serial and has answered
+// in full. After a write the board shows up first as MinimalBoot, on a COM port
+// of its own, which hands over to the main firmware without answering; the main
 // firmware's port then comes back before it answers. A board that stays in
 // MinimalBoot (as it does to run a large cartridge image) answers with
-// MinimalBoot's own build, so only a main-firmware answer counts. If MinimalBoot
-// is all that has answered after 20 s, that answer is returned for the check to
-// report; if nothing has, null.
-async function waitForBoard(board) {
+// MinimalBoot's own build, so only a main-firmware answer counts, and it is
+// asked again until it carries all the image's firmware prints (answerComplete).
+// After 20 s the last answer is returned for the check to report, a
+// main-firmware one before a MinimalBoot one; if nothing has answered, null.
+async function waitForBoard(board, image) {
   const deadline = Date.now() + 20000;
-  let minimal = null;
+  let last = null;
   while (Date.now() < deadline) {
-    const back = findBoards().find((b) => b.port && sameBoard(b, board));
+    const back = findWritten(findBoards(), board);
     if (back) {
       const info = identify(back.port, 1500);
-      if (info.version && !info.minimal) return { back, info };
-      if (info.minimal) minimal = { back, info };
+      if (info.version && !info.minimal) {
+        if (answerComplete(image, info)) return { back, info };
+        last = { back, info };
+      } else if (info.minimal && !last) {
+        last = { back, info };
+      }
     } else {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-  return minimal;
+  return last;
 }
 
 // Confirm what is actually running, rather than trusting that the write took:
-// the written board must answer with its own chip ID and the image's build
-// date, and every other board must be as it was. Note what the date can and
-// cannot tell you: it comes from the HEAD commit (see sourceDateEpoch in
-// build-firmware.mjs), not from the moment of compilation, so it tells one
-// commit's firmware from another's but says nothing about a rebuild of
-// uncommitted edits. Commit first if you need the banner to prove which build
-// is on the board. Returns the written board as it now reports itself, or null
-// when it has not come back yet.
+// the written board must answer with the image's build date and its chip ID
+// (see answerProblems), and every other board must be as it was. Note what the
+// date can and cannot tell you: it comes from the HEAD commit (see
+// sourceDateEpoch in build-firmware.mjs), not from the moment of compilation,
+// so it tells one commit's firmware from another's but says nothing about a
+// rebuild of uncommitted edits. Commit first if you need the banner to prove
+// which build is on the board. Returns the written board as it now reports
+// itself, or null when it has not come back yet.
 async function checkAfterWrite(board, image, others) {
-  const answered = await waitForBoard(board);
+  const answered = await waitForBoard(board, image);
   if (!answered) {
     console.log('\nWritten, but the board has not answered since — re-run with --check to confirm.');
     return null;
   }
   const { back, info } = answered;
   const now = findBoards();
-  const problems = [];
-  if (info.minimal) problems.push(`${back.port} is still in MinimalBoot: the full firmware did not start within 20 s`);
-  if (board.uid && info.uid !== board.uid) problems.push(`${back.port} answers as chip ${info.uid ?? '(none)'}, not ${board.uid}`);
-  if (boardKind(info.version) !== image.kind) problems.push(`${back.port} reports ${info.version ?? 'nothing'}, not ${LABEL[image.kind]}`);
-  if (image.stamp && info.built && info.built !== image.stamp) {
-    problems.push(`${back.port} runs the build from ${info.built}, not the image's ${image.stamp}`);
-  }
+  const problems = answerProblems(board, image, { ...info, port: back.port, kind: boardKind(info.version) });
   for (const other of others) {
     const current = now.find((b) => b.port && sameBoard(b, other));
     const after = current ? identify(current.port) : {};
