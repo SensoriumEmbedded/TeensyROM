@@ -28,7 +28,9 @@ test('one board of the other type is refused, as before', () => {
 });
 
 test('one board in the bootloader, or one that does not answer, is written with a note, as before', () => {
-  assert.deepEqual(targets(planFlash({ boards: [waiting('usb:1')], images: [trImage] })), ['usb:1<-tr']);
+  const halted = planFlash({ boards: [waiting('usb:1')], images: [trImage] });
+  assert.deepEqual(targets(halted), ['usb:1<-tr']);
+  assert.match(halted.notes.join(), /in the bootloader, so the image's own target is all there is to go on/);
   const plan = planFlash({ boards: [silent('COM12')], images: [trImage] });
   assert.deepEqual(targets(plan), ['COM12<-tr']);
   assert.match(plan.notes.join(), /could not be confirmed/);
@@ -52,6 +54,7 @@ test('--uid and --port must name an attached board, and still get the type check
   refuses({ boards, images: [trImage], uid: '999' }, /No attached board has chip ID 999/);
   refuses({ boards, images: [trImage], port: 'COM9' }, /No attached board is on COM9/);
   refuses({ boards, images: [trImage], uid: '19277260' }, /COM4 is a TeensyROM\+ and that image is built for TeensyROM\b/);
+  refuses({ boards, images: [trImage], port: 'COM4' }, /COM4 is a TeensyROM\+ and that image is built for TeensyROM\b/);
   refuses({ boards, images: [trImage], uid: '19277260', port: 'COM4' }, /--uid or --port, not both/);
 });
 
@@ -67,6 +70,7 @@ test('a board waiting in the bootloader beside another board is refused, however
   const boards = [trPlus('COM4', '19277260'), waiting('usb:2')];
   refuses({ boards, images: [plusImage] }, /waiting in the bootloader/);
   refuses({ boards, images: [plusImage], uid: '19277260' }, /waiting in the bootloader/);
+  refuses({ boards, images: [plusImage], port: 'COM4' }, /waiting in the bootloader/);
   refuses({ boards, images: [plusImage, trImage], all: true }, /--all needs every board running/);
 });
 
@@ -100,9 +104,14 @@ test('--all refuses two images of one type, --uid or --port, and a plan with not
   refuses({ boards: [tr('COM12', '2')], images: [plusImage], all: true }, /Nothing to write/);
 });
 
-test('--all warns when the images come from different commits', () => {
-  const plan = planFlash({ boards: [trPlus('COM4', '1'), tr('COM12', '2')], images: [trImage, { ...plusImage, stamp: 'Sep 23 2026, 22:45:10' }], all: true });
-  assert.match(plan.notes.join(), /different build dates \(Sep 25 2026, 03:03:51 \/ Sep 23 2026, 22:45:10\)/);
+test('--all warns when the images it writes come from different commits', () => {
+  const older = { ...plusImage, stamp: 'Sep 23 2026, 22:45:10' };
+  const plan = planFlash({ boards: [trPlus('COM4', '1'), tr('COM12', '2')], images: [trImage, older], all: true });
+  assert.match(plan.notes.join(), /different build dates \(Sep 23 2026, 22:45:10 \/ Sep 25 2026, 03:03:51\)/);
+  // Not for an image no attached board gets, nor for one whose date could not be read.
+  assert.doesNotMatch(planFlash({ boards: [tr('COM12', '2')], images: [trImage, older], all: true }).notes.join(), /WARNING/);
+  assert.doesNotMatch(planFlash({ boards: [trPlus('COM4', '1'), tr('COM12', '2')], images: [trImage, { ...plusImage, stamp: null }], all: true })
+    .notes.join(), /WARNING/);
 });
 
 test('a board answering from MinimalBoot is marked as such wherever it is named', () => {

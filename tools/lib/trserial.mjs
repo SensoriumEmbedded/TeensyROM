@@ -34,7 +34,8 @@ function teensyPortsTool() {
 // label }. `bootloader` means it is sitting in HalfKay with no serial device, so
 // `port` is null. `location` is its USB location (usb:...) and `label` the rest
 // of its teensy_ports line; together they are what teensy_post_compile needs to
-// pick one board out of several. Both are null on the /dev fallback.
+// pick one board out of several. Both are null on the /dev fallback, which
+// finds one board at most.
 export function findBoards() {
   const tool = teensyPortsTool();
   if (tool) {
@@ -43,11 +44,13 @@ export function findBoards() {
     const boards = parsePortListing(listing);
     if (boards.length) return boards;
   }
-  // macOS names the CDC device cu.usbmodem*; Linux names it ttyACM*.
-  const devices = fs.existsSync('/dev')
-    ? fs.readdirSync('/dev').filter((name) => name.startsWith('cu.usbmodem') || name.startsWith('ttyACM')).sort()
-    : [];
-  return devices.map((name) => ({ port: `/dev/${name}`, bootloader: false, location: null, label: null }));
+  // macOS names the CDC device cu.usbmodem*; Linux names it ttyACM*. Without
+  // teensy_ports nothing tells a Teensy from any other USB serial device, and
+  // opening one can reset it (an Arduino, say), so only the first is taken, as
+  // before; telling several boards apart needs teensy_ports (Teensyduino).
+  if (process.platform === 'win32' || !fs.existsSync('/dev')) return [];
+  const devices = fs.readdirSync('/dev').filter((name) => name.startsWith('cu.usbmodem') || name.startsWith('ttyACM')).sort();
+  return devices.slice(0, 1).map((name) => ({ port: `/dev/${name}`, bootloader: false, location: null, label: null }));
 }
 
 // One board per line of `teensy_ports -L`, e.g.
@@ -128,9 +131,9 @@ function exchangeWindows(port, send, ms) {
 // and the chip ("UID: 14470230", burned in at the factory, so it tells two
 // boards of the same type apart). Returns { version, built, uid, minimal, raw }
 // with nulls for anything that did not appear. `minimal` means MinimalBoot answered
-// ("FW: TeensyROM v0.8.0.11(minimal)"), as it does for a moment after every
-// reset and write before it hands over to the full firmware; the build it
-// names is MinimalBoot's own.
+// ("FW: TeensyROM v0.8.0.11(minimal)"). It stays in charge, instead of handing
+// over to the main firmware, to run a large cartridge image, and the build it
+// names is its own.
 export function identify(port, ms = 3000) {
   return parseBanner(exchange(port, '\x64\x76', ms));
 }

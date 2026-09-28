@@ -148,7 +148,8 @@ function planAll(boards, images, { uid, port }) {
     else writes.push({ board, image });
   }
   if (!writes.length) throw new Refusal('Nothing to write: none of the attached boards matches an image.');
-  const stamps = new Set(images.map((image) => image.stamp));
+  // Only the images that will be written, and only those whose date could be read.
+  const stamps = new Set(writes.map(({ image }) => image.stamp).filter(Boolean));
   if (stamps.size > 1) {
     notes.push(`WARNING: the images carry different build dates (${[...stamps].join(' / ')}), so they come from different commits.`);
   }

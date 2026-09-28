@@ -25,9 +25,20 @@ import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { findBoards, identify, boardKind, teensyTool } from './lib/trserial.mjs';
 import { inspectImage, planFlash, describeBoard, sameBoard, Refusal, LABEL } from './lib/flash-plan.mjs';
 
+// Set once a write has begun. From then on the Teensy Loader may be holding the
+// image in Auto mode, so a failure closes it too (see closeTeensyLoader).
+let writing = false;
+
 // Refusals here are expected outcomes (wrong target, no board, no loader), so
 // report them as a message and an exit code rather than a stack trace.
-function fail(message) { console.error(`\n${message}`); process.exit(1); }
+function fail(message) {
+  if (writing && process.platform === 'win32') {
+    closeTeensyLoader();
+    message += '\nClosed the Teensy Loader, so it cannot write this image to a board later.';
+  }
+  console.error(`\n${message}`);
+  process.exit(1);
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Repo-relative, or the absolute path for an image outside the repo.
@@ -58,11 +69,11 @@ Options:
   --help, -h        Show this help.
 
 Which board is written:
-  - One board attached: that board.
   - --uid or --port: that board.
+  - Otherwise, with one board attached: that board.
   - Otherwise, the one board whose type matches the image. If two boards match,
-    none does, or a board does not answer, the tool lists what is attached and
-    stops; name the board with --uid.
+    or one does not answer, the tool lists what is attached and stops; name the
+    board with --uid. If none matches, the image is for the other cartridge type.
   - A board already waiting in the bootloader cannot be asked what it is. On its
     own it is written on the image's word. Beside another board the tool refuses,
     because the Teensy Loader writes to whichever board it finds there.
@@ -79,13 +90,14 @@ button is what chooses the board, so press the right one.
 Examples:
   node tools/flash-firmware.mjs --check
       list the attached boards and the image that would be written
-  node tools/flash-firmware.mjs --hex build/firmware/TeensyROM+_0.8.0.11_full.hex
+  node tools/flash-firmware.mjs --hex build/firmware/TeensyROM+_<version>_full.hex
       one board, or a TeensyROM beside a TeensyROM+: the TeensyROM+ is written
-  node tools/flash-firmware.mjs --hex build/firmware/TeensyROM+_0.8.0.11_full.hex --uid 19277260
+  node tools/flash-firmware.mjs --hex build/firmware/TeensyROM+_<version>_full.hex --uid <chip ID>
       two TeensyROM+ boards: name the one to write
   node tools/flash-firmware.mjs --all
       a TeensyROM and a TeensyROM+: each gets the newest image built for it
-  node tools/flash-firmware.mjs --all --hex build/firmware/TeensyROM_0.8.0.11_full.hex --hex build/firmware/TeensyROM+_0.8.0.11_full.hex`;
+  node tools/flash-firmware.mjs --all --hex <TeensyROM image> --hex <TeensyROM+ image>
+      the same, with the two images named`;
 
 function parseArgs(argv) {
   const opts = { hex: [], uid: null, port: null, all: false, check: false, help: false };
@@ -117,14 +129,18 @@ function builtHexes() {
 
 function readImage(file) {
   if (!fs.existsSync(file)) fail(`No such hex: ${file}`);
-  return { path: file, ...inspectImage(fs.readFileSync(file, 'utf8')) };
+  try { return { path: file, ...inspectImage(fs.readFileSync(file, 'utf8')) }; }
+  catch (error) { fail(`${shown(file)} is not a readable Intel HEX file: ${error.message}`); }
 }
 
-// The newest image of each cartridge type, for --all with no --hex.
+// The newest image of each cartridge type, for --all with no --hex. A file that
+// is not a readable image is passed over rather than stopping the run.
 function newestImagePerKind() {
   const images = [];
   for (const file of builtHexes()) {
-    const image = readImage(file);
+    let image;
+    try { image = { path: file, ...inspectImage(fs.readFileSync(file, 'utf8')) }; }
+    catch { console.log(`Skipping ${shown(file)}: not a readable Intel HEX file`); continue; }
     if (image.kind && !images.some((i) => i.kind === image.kind)) images.push(image);
   }
   return images;
@@ -189,7 +205,7 @@ async function writeWithTeensyLoader(file, board) {
   const postCompile = teensyTool('teensy_post_compile');
   if (!postCompile) fail('Teensyduino is not installed: teensy_post_compile was not found in the Arduino data directory.');
   const args = [
-    `-file=${path.basename(file, '.hex')}`,
+    `-file=${path.basename(file, path.extname(file))}`,
     `-path=${path.dirname(path.resolve(file))}`,
     `-tools=${path.dirname(postCompile)}`,
     '-board=TEENSY41',
@@ -206,6 +222,7 @@ async function writeWithTeensyLoader(file, board) {
 
   console.log('\nWriting through the Teensy Loader. Press the program button on the Teensy if it does not start within a few seconds.');
   let status = null;
+  writing = true;
   spawn(postCompile, args, { stdio: 'inherit' }).on('exit', (code) => { status = code; });
 
   let left = board.bootloader;
@@ -219,16 +236,16 @@ async function writeWithTeensyLoader(file, board) {
     const target = now.find((b) => b.port && sameBoard(b, board));
     // A board in the bootloader while the target is still running, or two of
     // them at once, means the reboot reached another board, and the Teensy
-    // Loader is about to write this image to it. Closing the loader stops that
-    // if it has not begun; that board then waits in the bootloader, unharmed.
+    // Loader is about to write this image to it, or has begun. Closing the
+    // loader stops that if it has not begun; either way that board keeps its
+    // bootloader and can be written again.
     // Two sightings in a row, so a listing caught mid-re-enumeration cannot
     // stop a write that is going to the right board.
     strayed = (target && waiting) || waiting > 1 ? strayed + 1 : 0;
     if (strayed >= 2) {
-      closeTeensyLoader();
       fail(`STOPPED: another board went into the bootloader instead of ${board.port ?? 'the one being written'}, so this\n` +
-        'image could reach it. The Teensy Loader is closed.\n' +
-        'That board keeps its bootloader and cannot be harmed by a failed write. To put it right:\n' +
+        'image may have reached it.\n' +
+        'That board keeps its bootloader, so it can always be written again. To put it right:\n' +
         '  1. Unplug every other board.\n' +
         '  2. If it is still waiting in the bootloader, run this tool with the image built for THAT board;\n' +
         '     a board in the bootloader is written on the image\'s word, so pick the image with care.\n' +
@@ -240,11 +257,14 @@ async function writeWithTeensyLoader(file, board) {
   fail('The board did not come back within 2 minutes. Check the Teensy Loader window, then re-run with --check.');
 }
 
-// The written board once its full firmware is back on serial and answering.
-// The COM port comes back before the firmware answers on it, and MinimalBoot
-// answers first on a port of its own, naming its own build, so this waits for
-// the full firmware's banner. If only MinimalBoot has answered after 20 s, that
-// answer is returned for the check to report; if nothing has, null.
+// The written board once its main firmware is back on serial and answering.
+// After a write the board shows up first as MinimalBoot, on a COM port of its
+// own, which hands over to the main firmware without answering; the main
+// firmware's port then comes back before it answers. A board that stays in
+// MinimalBoot (as it does to run a large cartridge image) answers with
+// MinimalBoot's own build, so only a main-firmware answer counts. If MinimalBoot
+// is all that has answered after 20 s, that answer is returned for the check to
+// report; if nothing has, null.
 async function waitForBoard(board) {
   const deadline = Date.now() + 20000;
   let minimal = null;
@@ -273,7 +293,7 @@ async function waitForBoard(board) {
 async function checkAfterWrite(board, image, others) {
   const answered = await waitForBoard(board);
   if (!answered) {
-    console.log('\nWritten. Board has not re-enumerated yet — re-run with --check to confirm.');
+    console.log('\nWritten, but the board has not answered since — re-run with --check to confirm.');
     return null;
   }
   const { back, info } = answered;
@@ -314,6 +334,13 @@ const images = opts.hex.length ? opts.hex.map(readImage)
   : builtHexes().slice(0, 1).map(readImage);
 if (!images.length && !opts.check) fail('No hex found in build/firmware — build one first, or pass --hex <path>.');
 for (const image of images) printImage(image);
+
+// On Windows both finding the boards and writing go through Teensyduino's tools;
+// without them every board would look absent.
+if (process.platform === 'win32' && !(teensyTool('teensy_ports') && teensyTool('teensy_post_compile'))) {
+  fail('Teensyduino is not installed: teensy_ports and teensy_post_compile were not found in the Arduino data directory.\n' +
+    'Install the Teensy core through the Arduino Boards Manager or Teensyduino, or set ARDUINO_DIRECTORIES_DATA if it lives elsewhere.');
+}
 
 const boards = identifyBoards(findBoards());
 if (!boards.length) fail('No Teensy found on USB. Is the cartridge plugged in?');
