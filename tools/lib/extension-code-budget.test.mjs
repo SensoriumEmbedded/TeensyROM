@@ -24,11 +24,41 @@ test('no host code budget reaches into the module code window', () => {
   for (const kib of HOST_CODE_KIB) assert.ok(kib * 1024 <= CODE_BASE, `${kib} KiB`);
 });
 
+// ld matches a file-name pattern with fnmatch(pattern, name, 0): '*', '?', '[...]', and
+// '\' escaping the next character, inside a bracket or out.
+function fnmatchRegExp(pattern) {
+  const escape = (c) => c.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
+  let source = '';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '*') source += '.*';
+    else if (c === '?') source += '.';
+    else if (c === '\\') source += escape(pattern[++i]);
+    else if (c !== '[') source += escape(c);
+    else {
+      let members = '';
+      for (i++; pattern[i] !== ']'; i++) members += escape(pattern[pattern[i] === '\\' ? ++i : i]);
+      source += `[${members}]`;
+    }
+  }
+  return new RegExp(`^${source}$`);
+}
+
+const flashTextPatterns = (ld) =>
+  [...progmemBlock(ld).matchAll(/^\t\t(\S+)\(\.text\*\)$/gm)].map((match) => fnmatchRegExp(match[1]));
+const placedInFlash = (patterns, objectPath) => patterns.some((pattern) => pattern.test(objectPath));
+
 // ld gives an input section to the first output section that names it, so a library
 // pattern outside .text.progmem, or after it, leaves that code in ITCM.
-test('the SD card libraries run from flash, matched by their library directory', () => {
-  const progmem = progmemBlock(extensionLinkerScript(linkers));
+test('the SD card libraries run from flash, on either path separator', () => {
+  const patterns = flashTextPatterns(extensionLinkerScript(linkers));
   for (const library of ['SdFat', 'SD', 'SPI']) {
-    assert.ok(progmem.includes(`*/libraries/${library}/*(.text*)`), library);
+    for (const objectPath of [`/b/ext/libraries/${library}/src/x.cpp.o`, `C:\\b\\ext\\libraries\\${library}\\src\\x.cpp.o`]) {
+      assert.ok(placedInFlash(patterns, objectPath), objectPath);
+    }
+  }
+  for (const objectPath of ['/b/ext/libraries/SdFatX/x.cpp.o', '/b/ext/libraries/SPIFlash/x.cpp.o',
+    'C:\\b\\ext\\sketch\\VMBoot.ino.cpp.o', '/b/ext/sketch/VMBoot.ino.cpp.o', 'core.a']) {
+    assert.ok(!placedInFlash(patterns, objectPath), objectPath);
   }
 });

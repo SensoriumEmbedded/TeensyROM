@@ -64,6 +64,8 @@ export const DEFAULT_HOST_CODE_KIB = 64;
 // stock host in 64 KiB. Matched by their arduino-cli build path. Only .text
 // moves: a function the library itself marks FASTRUN stays in ITCM.
 const FLASH_RESIDENT_LIBRARIES = ['SdFat', 'SD', 'SPI'];
+// ld matches object paths literally, and arduino-cli writes them with '\' on Windows.
+const PATH_SEPARATOR = '[/\\\\]';
 
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
 // its heap capped, with five ASSERTs that turn a host/module layout regression
@@ -76,7 +78,8 @@ export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_K
   // .text.progmem precedes .text.itcm, so ld places these here before
   // .text.itcm's own *(.text*) can claim them.
   ld = replaceOnce(ld, '\t\t*(.progmem*)\n', '\t\t*(.progmem*)\n' +
-    FLASH_RESIDENT_LIBRARIES.map((name) => `\t\t*/libraries/${name}/*(.text*)\n`).join(''));
+    FLASH_RESIDENT_LIBRARIES.map((name) =>
+      `\t\t*${PATH_SEPARATOR}libraries${PATH_SEPARATOR}${name}${PATH_SEPARATOR}*(.text*)\n`).join(''));
   // Pin the host to six 32 KiB ITCM blocks, so the module window at 0x18000
   // cannot be pushed around by a change in host code size.
   ld = replaceOnce(ld, '_itcm_block_count = (SIZEOF(.text.itcm) + SIZEOF(.ARM.exidx) + 0x7FFF) >> 15;',
