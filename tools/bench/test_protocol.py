@@ -68,12 +68,16 @@ def firmware_phrases():
     return set(DESCRIBE.findall(VMFAIL.read_text(errors='replace')))
 
 
+# hostops strings that are not VmFail records, each checked below against its own source.
+NOT_VMFAIL = {'NOT_INSTALLED'}
+
+
 def bench_phrases():
     """{name: phrases} for every VmFail string hostops asserts on. Found by shape
     rather than listed, so a new one is checked without being added here twice."""
     found = {}
     for name, value in vars(hostops).items():
-        if not name.isupper():
+        if not name.isupper() or name in NOT_VMFAIL:
             continue
         if isinstance(value, str):
             found[name] = (value,)
@@ -94,6 +98,14 @@ class FailPhrases(unittest.TestCase):
         phrases = firmware_phrases()
         self.assertGreaterEqual(len(phrases), 20, f'{VMFAIL} parsed as {phrases}')
         self.assertIn('handed off to client', phrases)
+
+    def test_the_blank_slot_message_is_the_one_the_uninstall_sends(self):
+        # A removal over a blank slot has no record to read, so hostcycle.py reads this
+        # off the C64 screen instead; a reworded message would fail every decline step.
+        source = (SOURCE / 'FlashUpdate.ino').read_text(errors='replace')
+        self.assertIn(f'SendMsgPrintfln("{hostops.NOT_INSTALLED}', source)
+        self.assertEqual(NOT_VMFAIL, {n for n, v in vars(hostops).items()
+                                      if n.isupper() and v == hostops.NOT_INSTALLED})
 
     def test_every_phrase_we_assert_on_is_one_describe_can_return(self):
         firmware = firmware_phrases()

@@ -45,6 +45,9 @@ ANSWER_TIMEOUT = 3
 # it". The strings are VmFail::describe()'s, in Source/Teensy/MinimalBoot/Common/VMFail.h.
 INSTALLED = 'extension host installed'   # VmFail::Installed, $30
 REMOVED = 'extension host removed'       # VmFail::Removed, $40; see removed_cleanly()
+# A removal over a blank slot writes nothing and does not reboot, so it has no record;
+# DoHostUninstall says this to the C64 instead, in FlashUpdate.ino.
+NOT_INSTALLED = 'No extension host is installed'
 # A launch has more than one normal finish, so it gets a set rather than a phrase: the
 # module can be handed the machine and never come back ($00), ask to be finished with
 # through the exit service ($04), or -- for a host that is not this one -- hand the
@@ -226,12 +229,14 @@ def install_host(local, remote=None, out=sys.stdout):
 
 def remove_host(out=sys.stdout):
     """Clear the 4-byte tag so the slot stops reading as a host, then erase the rest of
-    the slot. Runs for a slot holding anything, a failed install's leftovers included,
-    so rebooted=False means the slot was already blank."""
+    the slot, asked for from the C64's own menu (Link.remove_host). Runs for a slot
+    holding anything, a failed install's leftovers included, so rebooted=False means the
+    slot was already blank -- and then the C64 says NOT_INSTALLED."""
     def prepare(tr):
         tr.remove_host()
         if out:
-            print('accepted; the board reboots if the slot held anything', file=out)
+            print('confirmed on the C64; the board reboots if the slot held anything',
+                  file=out)
 
     # The same 45 s erase an install warns of, with the port up for all of it, and the
     # same allowance install_host gives it.

@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Remove the installed extension host, over the USB device port.   hostuninstall.py
+"""Remove the installed extension host, from the C64's menu.   hostuninstall.py
 
 Removal opens the way an install does -- clear the 4-byte tag so the slot stops reading as
 a host -- and then erases the rest of the slot, so nothing of the host is left for firmware
 without the extension loader to trip over.
 
-The firmware takes this command on the USB device port only -- the same token over the
-USB host port or the TCP listener is refused with "Busy!".
-
-That gate covers this token, not flash in general: LaunchFileToken is served on every
-channel, ahead of the gate, and launching a .TRH still reaches DoHostInstall (which
-erases and programs this same slot) and a .hex still reaches DoFlashUpdate. Do not read
-the refusal here as the LAN being unable to write flash.
-
-The firmware ACKs and flushes before it starts, because clearing the tag takes a sector
-erase it does not return from -- so the ACK means accepted, not done. Four things can
-follow it:
+There is no removal command over the wire. This resets the C64 to the menu and presses
+what a user would -- F8 for Settings, 0 for Installed Extensions, u, then y -- by DMA, so
+the removal runs on the C64's own request and every message it sends is one the C64 is
+waiting to read. Four things can follow the y:
 
   * the port drops, the board reboots, and the record on the way back up says the host
     was removed with detail $0: every sector of the slot was erased;

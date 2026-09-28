@@ -19,16 +19,12 @@ wrote and a removal that never cleared both still "pass": every reboot looks ali
 here, and the board's own report is the only witness. Asking a second time makes the
 board answer from flash rather than from what it just did.
 
-The two kinds of step are checked differently, because the board has two ways of
-answering. A step that writes flash reboots, and the main image prints its VmFail record
-over serial on the way back up -- that text is the assertion. A step that declines has
-nothing to say over serial at all: SendMsgPrintfln addresses the C64, and on this path the
-C64 never reads it. The only code that answers is WaitForTRMain, which the C64 is in only
-while waiting on a command it issued itself -- a step driven from here leaves it in its
-idle menu loop, so the send times out after 3 s and the text is never drawn. A decline is
-checked by what it did instead -- the firmware ACKed, the port stayed up, and the board
-is still answering on its main image, which together hold only if the early return was
-taken. The step after it carries the rest: an install that follows a refused remove had
+The two kinds of step answer in different places. A step that writes flash reboots, and
+the main image prints its VmFail record over serial on the way back up -- that text is
+the assertion. A removal that declines writes nothing and says so to the C64 instead:
+removal runs from the C64's own menu, so the C64 is waiting to read it, and the
+assertion is that NOT_INSTALLED is on the screen with the board still up on its main
+image. The step after it carries the rest: an install that follows a refused remove had
 nothing to overwrite.
 
 None of this enters the extension image, so none of it needs a hand on the board -- that
@@ -40,7 +36,7 @@ is running, reset it first.
 import sys
 import time
 
-from hostops import INSTALLED, Outcome, install_host, remove_host, show
+from hostops import INSTALLED, NOT_INSTALLED, Outcome, install_host, remove_host, show
 
 package = None
 for a in sys.argv[1:]:
@@ -55,9 +51,8 @@ step = 0
 
 
 def check(label, result, rebooted, phrase=None):
-    """`phrase` is asserted only where a reboot carries it; see the note above on why a
-    decline cannot be checked that way. It is a phrase for Outcome.said(), or a predicate
-    on the Outcome where the phrase alone is not the whole test."""
+    """`phrase` is a phrase for Outcome.said(), which reads the boot output and the C64
+    screen, or a predicate on the Outcome where the phrase alone is not the whole test."""
     global step
     step += 1
     why = []
@@ -66,7 +61,7 @@ def check(label, result, rebooted, phrase=None):
     elif callable(phrase) and not phrase(result):
         why.append(f'the boot record did not pass {phrase.__name__}()')
     elif isinstance(phrase, str) and not result.said(phrase):
-        why.append(f'the boot record never said {phrase!r}')
+        why.append(f'the board never said {phrase!r}')
     elif not rebooted and result.image != 'main':
         why.append(f'expected the board still on its main image, got {result.image!r}')
     print(f'\n=== step {step}: {label} -- {"FAIL" if why else "PASS"} ===')
@@ -87,10 +82,10 @@ print(f'round trip with {package}; no button presses needed')
 first = remove_host()
 print(f'\n=== step 0: normalise -- slot was {"populated" if first.rebooted else "empty"} ===')
 
-check('remove with the slot blank refuses', remove_host(), False)
+check('remove with the slot blank refuses', remove_host(), False, NOT_INSTALLED)
 check('install writes the slot', install_host(package), True, INSTALLED)
 check('remove erases the host', remove_host(), True, Outcome.removed_cleanly)
-check('the slot is blank, not just untagged', remove_host(), False)
+check('the slot is blank, not just untagged', remove_host(), False, NOT_INSTALLED)
 check('reinstall works after a removal', install_host(package), True, INSTALLED)
 
 mins = (time.time() - started) / 60

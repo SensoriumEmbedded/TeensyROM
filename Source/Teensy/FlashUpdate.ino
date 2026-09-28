@@ -255,11 +255,10 @@ static void StopServingTheC64(bool MessageSeen)
       // that can leave the slot half erased.
       //
       // WaitForTRMain is the only thing that answers, though, and the C64 is in it only
-      // while waiting on a command it issued itself. Reached over USB or TCP -- the
-      // HostRemoveToken path, where the C64 is sitting in its idle menu loop -- the send
-      // times out after 3 s and draws nothing, and pausing here would add two more
-      // seconds of a stale menu for a warning that does not exist. The operator on that
-      // path is at the computer, and the host tool tells them there.
+      // while waiting on a command it issued itself. Both callers are reached that way
+      // -- a launch over USB or TCP included, which the C64 runs from its own idle loop
+      // -- so a send that times out means the C64 never read it, and pausing would only
+      // add two more seconds of a stale menu for a warning that is not on screen.
       if (MessageSeen) delay(2000);
 
       uint8_t BlankD011 = 0x00;

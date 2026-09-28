@@ -179,20 +179,15 @@ python3 tools/bench/hostinstall.py MYHOST.TRH
 ```
 
 Remove it from the C64 menu — `F8` for Settings, `0` for Installed
-Extensions, then `u` and `y` — or over USB with
-`python3 tools/bench/hostuninstall.py`. `tools/bench/hostcycle.py` runs
-the whole install/remove cycle unattended.
+Extensions, then `u` and `y`. There is no removal command over the wire;
+`python3 tools/bench/hostuninstall.py` presses those same keys by DMA, and
+`tools/bench/hostcycle.py` runs the whole install/remove cycle unattended.
 
-USB removal is gated to the device port. The same `ProcessCommand` switch serves
-the TCP listener on port 2112 and a USB host serial port, and an ungated
-flash-erase token there is two unauthenticated bytes from anywhere on the LAN.
-
-That gate is on the removal token alone. `LaunchFileToken` is handled in the
-switch that runs *before* it, on every channel, and a launch still routes a
-`.TRH` to `DoHostInstall` — which erases and programs this same slot — and a
-`.hex` to `DoFlashUpdate`. So the install direction remains reachable from the
-listener, and a board with `NetListenEnable` set is one where the whole command
-protocol, not just this token, is exposed to the LAN.
+The install direction is reachable over the wire. `LaunchFileToken` is served on
+every channel, the TCP listener on port 2112 included, and a launched `.TRH`
+reaches `DoHostInstall` — which erases and programs the slot — as a launched
+`.hex` reaches `DoFlashUpdate`. A board with `NetListenEnable` set is one where
+the whole command protocol is exposed to the LAN, unauthenticated.
 
 ## What you get to use
 

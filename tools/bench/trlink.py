@@ -28,9 +28,10 @@ import sys
 import termios
 import time
 
-from c64 import KEYBUF, KEYCOUNT, SCREEN_BYTES, SCREEN_RAM
+from c64 import (F8, KEYBUF, KEYCOUNT, PETSCII_U, PETSCII_Y, SCREEN_BYTES,
+                 SCREEN_RAM, screen_rows)
 from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
-                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON, HOST_REMOVE,
+                      DRIVE_SD, FAIL, FW_CHECK, GET_DIR_NDJSON,
                       IMAGES,
                       LAUNCH_FILE, POST_FILE, READ_C64_MEM, RESET_C64,
                       VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
@@ -375,21 +376,50 @@ class Link:
         self.wr(to_board(RESET_C64))
         return self.text().strip()
 
-    def remove_host(self):
-        """Ask the board to remove its installed extension host. The firmware
-        ACKs and flushes before it starts, because clearing the tag takes a
-        sector erase it does not return from -- so the ACK means 'accepted',
-        not 'done'. A board whose slot is already blank ACKs too and stays
-        up, saying so on the C64; use answering_board() to tell the two apart.
+    def wait_for(self, phrase, timeout):
+        """Waits until `phrase` is on the C64 screen, case-folded because which case a
+        glyph carries is a property of the screen, and raises SystemExit with the screen
+        if it never is. A read the board refuses -- the C64 is still coming out of reset
+        -- counts as not yet."""
+        deadline = time.time() + timeout
+        rows = []
+        while True:
+            try:
+                rows = screen_rows(self.screen())
+            except SystemExit:
+                rows = []
+            if phrase.lower() in '\n'.join(rows).lower():
+                return
+            if time.time() >= deadline:
+                shown = '\n'.join(f'{n:2d} |{r}|' for n, r in enumerate(rows) if r.strip())
+                raise SystemExit(f'{phrase!r} never appeared on the C64 screen within '
+                                 f'{timeout} s. What it showed:\n{shown or "(unreadable)"}')
+            time.sleep(1)
 
-        The firmware takes this command on the USB device port only. The same
-        token over the USB host port or the TCP listener is refused with FAIL
-        and 'Busy!'. That is this token only, not flash in general: launch()
-        below is served on every channel and a .TRH launched through it still
-        reaches DoHostInstall, which erases and programs this same slot."""
-        self.drain(0.4)
-        self.wr(to_board(HOST_REMOVE))
-        self.ack('host remove', 5)
+    def remove_host(self):
+        """Removes the installed extension host the way a user does, from the C64: reset
+        to the menu, then F8 for Settings, 0 for Installed Extensions, u, and y at the
+        confirmation. There is no command for this over the wire, so the removal only
+        ever runs when the C64 asked for it, and its messages are ones the C64 is
+        waiting to read. Returns once the y is queued; what follows is the board's. A
+        slot holding anything reboots it, with the outcome in the record the main image
+        prints on the way back up. A blank slot does not, and the C64 says so."""
+        # Every key waits for the screen that reads it, and goes in once: a key queued
+        # before the menu is up is lost to the KERNAL clearing its buffer at startup, and
+        # a second 'u' would answer the confirmation.
+        self.reset()
+        self.wait_for('F1 Teensy Mem', 20)
+        self.key(F8)
+        # No screen reads while Settings loads. Polling through it left the C64 at
+        # BASIC's READY every time on the bench TR+, where 2 s without a read let it
+        # come up.
+        time.sleep(3)
+        self.wait_for('Config/Info Page Index', 20)
+        self.key(ord('0'))
+        self.wait_for('Extension host in the firmware slot', 10)
+        self.key(PETSCII_U)
+        self.wait_for('Remove it?', 10)
+        self.key(PETSCII_Y)
 
     def launch(self, path, drive=DRIVE_SD):
         self.drain(0.6)
