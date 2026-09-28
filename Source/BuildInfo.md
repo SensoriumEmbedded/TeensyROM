@@ -24,7 +24,8 @@
      * `npm run build:tr` for plain TeensyROM, `npm run build:tr-plus` for TeensyROM+
      * Requires Node.js (`.nvmrc` pins the version) and no other dependencies; downloads a pinned, checksummed `arduino-cli` on first run if one isn't already on `PATH`
      * `npm test` runs the build tooling's own tests
-     * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works
+     * `npm run flash` writes the result to a TeensyROM over USB, checking first that the image is built for that cartridge (`npm run flash -- --help` for the options)
+     * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works, and the [build skill](/.claude/skills/teensyrom-build/SKILL.md) for step-by-step use
    
 ### Latest Support tool/lib versions as of FW v0.8 on 2026/08/02
    * Arduino IDE 2.3.10
