@@ -22,9 +22,10 @@ waiting to read. Four things can follow the y:
   * the board reboots saying the host was removed, but with a detail: the slot no longer
     reads as a host and a sector would not erase. That exits non-zero too, because
     what is left is what firmware without the extension loader trips over;
-  * the board stays up: the slot was already blank, and the C64 says so. A slot that holds
-    no host but is not blank -- what an install that failed part way leaves -- is cleared
-    like a host would be.
+  * the board stays up: nothing was erased. The slot was already blank if the C64 says
+    so; firmware without the extension loader stays up too, saying that instead. A slot
+    that holds no host but is not blank -- what an install that failed part way leaves --
+    is cleared like a host would be.
 
 Unlike launching an extension, none of this enters the extension image, so no part of it
 needs a hand on the board.
