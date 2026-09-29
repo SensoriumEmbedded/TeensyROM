@@ -11,9 +11,9 @@ const progmemBlock = (ld) => ld.slice(ld.indexOf('.text.progmem : {'), ld.indexO
 test('the stock host is linked at 64 KiB, and 96 KiB moves only its code ceiling', () => {
   const stock = extensionLinkerScript(linkers);
   assert.equal(stock, extensionLinkerScript(linkers, 64));
-  assert.match(stock, /ASSERT\(_etext <= 0x10000,/);
+  assert.match(stock, /ASSERT\(__exidx_end <= 0x10000,/);
   assert.equal(extensionLinkerScript(linkers, 96), stock.replace(
-    '_etext <= 0x10000, "Host code exceeds its 64 KiB', '_etext <= 0x18000, "Host code exceeds its 96 KiB'));
+    '__exidx_end <= 0x10000, "Host code exceeds its 64 KiB', '__exidx_end <= 0x18000, "Host code exceeds its 96 KiB'));
   assert.match(stock, /_itcm_block_count = 6;/);
   for (const invalid of [0, 32, 65, 128, '64', NaN]) {
     assert.throws(() => extensionLinkerScript(linkers, invalid), /64 or 96/);

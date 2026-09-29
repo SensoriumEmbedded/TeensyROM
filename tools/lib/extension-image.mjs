@@ -96,10 +96,13 @@ export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_K
     `		. = ORIGIN(FLASH) + 0x800;
 		KEEP(*(.vmhostid))
 		. = ORIGIN(FLASH) + 0x1000;`);
+  // The code bound is on __exidx_end, the end of .ARM.exidx, which is the last
+  // output section in ITCM. _etext stops short of it: it leaves out the orphan
+  // .fini that ld places between .text.itcm and .ARM.exidx, 4 bytes in practice.
   ld = replaceOnce(ld, '_teensy_model_identifier = 0x25;',
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;
-      ASSERT(_etext <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget")
+      ASSERT(__exidx_end <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget")
       ASSERT(_heap_end <= _vm_data_start, "Host heap overlaps the module DTCM window")
       ASSERT(_estack - _vm_data_end >= 49152, "Shared stack below 48 KiB")
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap the guest RAM2 arena")

@@ -26,7 +26,7 @@ turns a layout regression into a link error rather than a hang on hardware:
 
 | Assert | What it catches |
 |---|---|
-| `_etext <= 0x10000` | host code outgrowing its 64 KiB of ITCM (`0x18000` with `--host-code-kib 96`) |
+| `__exidx_end <= 0x10000` | host code outgrowing its 64 KiB of ITCM (`0x18000` with `--host-code-kib 96`) |
 | `_heap_end <= _vm_data_start` | host heap growing into the module's DTCM window |
 | `_estack - _vm_data_end >= 49152` | the shared stack falling below 48 KiB |
 | `SIZEOF(.bss.dma) == 0` | host globals landing in the guest's RAM2 arena |
