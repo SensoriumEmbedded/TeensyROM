@@ -25,6 +25,10 @@ import path from 'node:path';
 
 export const COLUMNS = 40;
 
+// A checkout with core.autocrlf=true has CRLF sources, and a bare split('\n') leaves the \r on
+// every line, where `.` will not match it and the `$` anchors are never reached.
+const splitLines = (text) => text.split(/\r?\n/);
+
 // ACME `NAME = expr` lines, across every file given, so an expression like `EscArgSpaces+2`
 // or `OptionColor = ChrYellow` resolves. Repeated passes because the definitions are spread
 // over several files and refer to each other; four is well past the deepest chain in tree.
@@ -33,7 +37,7 @@ export function loadSymbols(files) {
   const define = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+?)\s*(?:;.*)?$/;
   for (let pass = 0; pass < 4; pass++) {
     for (const file of files) {
-      for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      for (const line of splitLines(fs.readFileSync(file, 'utf8'))) {
         const match = define.exec(line);
         if (!match || symbols.has(match[1])) continue;
         const value = evaluate(match[2], symbols);
@@ -158,7 +162,7 @@ export function scanSource(file, text, symbols) {
   const escC = symbols.get('EscC') ?? 0x01;
   const argMask = symbols.get('EscArgMask') ?? 0xc0;
   const argSpaces = symbols.get('EscArgSpaces') ?? 0x80;
-  const lines = text.split('\n');
+  const lines = splitLines(text);
   const hits = [];
   const unresolved = new Set();
   let stream = [];

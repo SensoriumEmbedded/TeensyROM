@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanSource, scanTree, loadSymbols, acmeSources, COLUMNS } from './c64-screen.mjs';
@@ -109,4 +111,25 @@ test('the sweep reaches the .s and .i sources a *.asm glob would miss', () => {
   const files = acmeSources(C64_DIR).map((f) => path.relative(C64_DIR, f));
   assert.ok(files.some((f) => f.endsWith('.s')), 'expected at least one .s source');
   assert.ok(loadSymbols(acmeSources(C64_DIR)).get('EscC') === 0x01, 'EscC must resolve from the tree');
+});
+
+// A checkout with core.autocrlf=true has CRLF in every source. The symbols must still resolve
+// and the scan must still measure rows, or the whole sweep goes quiet on such a machine.
+test('CRLF sources resolve their symbols and are scanned like LF ones', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'c64-screen-crlf-'));
+  try {
+    const file = path.join(dir, 'defs.i');
+    // A trailing comment is what defeats the define regex: `.` in `;.*` stops at the \r.
+    fs.writeFileSync(file, `${DEFS.replace(/$/gm, ' ; commented')}\n`.replace(/\n/g, '\r\n'));
+    const loaded = loadSymbols([file]);
+    assert.equal(loaded.get('EscC'), 0x01);
+    assert.equal(loaded.get('ChrClear'), 147);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const body = `   !tx ChrReturn\n   !tx "${'x'.repeat(40)}", ChrReturn`;
+  const { hits, unresolved } = scanSource('test.asm', `${DEFS}\nMsg:\n${body}\n   !tx 0\n`.replace(/\n/g, '\r\n'), symbols());
+  assert.deepEqual(unresolved, []);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].source, '!tx "' + 'x'.repeat(40) + '", ChrReturn');
 });
