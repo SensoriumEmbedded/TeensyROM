@@ -21,34 +21,54 @@
 
 //  Supports 
 //    Final Cartridge III
-//    Final Cartridge III 101%   Except for REQ compatibility
-//    Final Cartridge III+       w/256k ROM - adds additonal apps
+//    Final Cartridge III 101% - with TR+ REU or External REU
+//    Final Cartridge III+     - 250k ROM
 
 // NOTE:
-// FC3 101% uses I/O2 except for $DF00 - $DF1F, which allows for REU
-// compatibility. I don't see a straightforward way of implementing 
-// a partial use of I/O2 within the TeensyROM structure.
+// FCIII handler has three possible "modes"
+// - FCIII or FCIII+: All of IO2 belongs to Final Cartridge -- NO REU support
+// - FCIII 101% with possible external REU: FC3-101% skips first 32 bytes of IO2
+// - FCIII 101% with TR+ REU: FC3-101% passes first 32 bytes of IO2 to TR+ REU
+// The first two scenarios are addressed in IO2Hndlr_FinalCartridgeIII()
+// The third scenario is addressed in IO2Hndlr_FCIII_101_REU()
 
 void InitHndlr_FinalCartridgeIII();                           
 void IO1Hndlr_FinalCartridgeIII(uint8_t Address, bool R_Wn);  
 void IO2Hndlr_FinalCartridgeIII(uint8_t Address, bool R_Wn);  
 void CycleHndlr_FinalCartridgeIII(bool R_Wn);
 
+void InitHndlr_FCIII_101_REU();
+void IO2Hndlr_FCIII_101_REU(uint8_t Address, bool R_Wn); 
+
+// Final Cartridge III, III+ and 101% without TR+ REU 
 stcIOHandlers IOHndlr_FinalCartridgeIII =
 {
-  "FinalCartridgeIII",            //Name of handler, IOHNameLength max
-  &InitHndlr_FinalCartridgeIII,   //Called once at handler startup
-  &IO1Hndlr_FinalCartridgeIII,    //IO1 R/W handler
-  &IO2Hndlr_FinalCartridgeIII,    //IO2 R/W handler
-  NULL,                           //ROML Read handler, in addition to any ROM data sent
-  NULL,                           //ROMH Read handler, in addition to any ROM data sent
-  NULL,                           //Polled in main routine
-  CycleHndlr_FinalCartridgeIII,   //called at the end of EVERY c64 cycle
+  "FinalCartridgeIII",            // Name of handler, IOHNameLength max
+  &InitHndlr_FinalCartridgeIII,   // Called once at handler startup
+  &IO1Hndlr_FinalCartridgeIII,    // IO1 R/W handler
+  &IO2Hndlr_FinalCartridgeIII,    // IO2 R/W handler
+  NULL,                           // ROML Read handler, in addition to any ROM data sent
+  NULL,                           // ROMH Read handler, in addition to any ROM data sent
+  NULL,                           // Polled in main routine
+  CycleHndlr_FinalCartridgeIII,   // called at the end of EVERY c64 cycle
 };
+
+// Final Cartridge III 101% with TR+ REU 
+stcIOHandlers IOHndlr_FCIII_101_REU =  
+{
+  "FC3_101_REU",                  // Name of handler, IOHNameLength max 
+  &InitHndlr_FCIII_101_REU,       // Called at handler start. Adds TR+ REU 
+  &IO1Hndlr_FinalCartridgeIII,    // IO1 R/W handler
+  &IO2Hndlr_FCIII_101_REU,        // IO2 R/W handler adds TR+ REU
+  NULL,                           // ROML Read handler, in addition to any ROM data sent
+  NULL,                           // ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_REU,              // Polled in main routine
+  &CycleHndlr_FinalCartridgeIII,  // called at the end of EVERY c64 cycle
+};  
 
 extern volatile uint8_t EmulateVicCycles;
 extern volatile uint32_t CycleCountdown;
-
+static bool FC3_101 = false;
 #define FC3_ControlReg RR_StatusReg //reused global: keep track of FC3_CR_HIDDEN
 
 // REFERENCES
@@ -112,11 +132,24 @@ void ProcessFC3ControlReg(uint8_t ControlReg)
 
 FLASHMEM void InitHndlr_FinalCartridgeIII()
 {
+   // Check for presence of "REU " in the REU range of bank 0
+   // (every FC3 101% bank contains this text)
+   FC3_101 = (CrtChips[0].ROMSize >= 0x2000) &&
+             (memcmp("REU ", CrtChips[0].ChipROM + 0x1f00, 4) == 0);
+
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5   
    CycleCountdown = 0;
    FC3_ControlReg = 0;
    ProcessFC3ControlReg(0);  // HW power-on reset  
 }    
+
+FLASHMEM void InitHndlr_FCIII_101_REU() // WITH TR+ REU
+{
+   InitHndlr_FinalCartridgeIII();  // Initialize Final Cartridge III handler
+   InitHndlr_REU();  // Initialize REU handler for REU compatibility
+   if (NumREU_Banks != 0)  // If REU allocation successful
+      fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU; // replace handler with long/short press
+}
 
 // IO1: Mirrrors $1E00 to $1EFF of current ROM bank
 void IO1Hndlr_FinalCartridgeIII(uint8_t Address, bool R_Wn)
@@ -125,20 +158,47 @@ void IO1Hndlr_FinalCartridgeIII(uint8_t Address, bool R_Wn)
    	  DataPortWriteWaitLog(LOROM_Image[0x1e00 + Address]); 
 }
 
+// FC3 101% with TR+ REU: if adddress is in REU range let REU handle, 
+// Otherwise pass to Standard Final Cartridge III I/O2 handler
+void IO2Hndlr_FCIII_101_REU(uint8_t Address, bool R_Wn)
+{
+   if (Address <= 0x1f) 
+      IO2Hndlr_REU(Address, R_Wn);
+   else  
+   {
+      if (R_Wn) // IO2 Read 
+      { 
+         DataPortWriteWaitLog(LOROM_Image[0x1f00+Address]); 
+      }
+      else  // Write to ControlReg @ $1FFF if FC3_CR_HIDDEN not set
+      {  
+         if ((Address == 0xFF) && !(FC3_ControlReg & FC3_CR_HIDDEN))  
+         {
+            FC3_ControlReg = DataPortWaitRead();
+            ProcessFC3ControlReg(FC3_ControlReg);
+         } 
+      }
+   } 
+}
+
 // IO2: Mirrors $1F00 to $1FFF of current ROM bank
 void IO2Hndlr_FinalCartridgeIII(uint8_t Address, bool R_Wn)
 {
-   if (R_Wn) // IO2 Read 
-   { 
-      DataPortWriteWaitLog(LOROM_Image[0x1f00+Address]); 
-   }
-   else  // Write to ControlReg @ $1FFF if FC3_CR_HIDDEN not set
-   {  
-      if ((Address == 0xFF) && !(FC3_ControlReg & FC3_CR_HIDDEN))  
-      {
-         FC3_ControlReg = DataPortWaitRead();
-         ProcessFC3ControlReg(FC3_ControlReg);
-      } 
+   // If NOT (First 32 bytes && FC3_101) perform IO2 r/w, 
+   if (!((Address <= 0x1f) && (FC3_101)))
+   {
+      if (R_Wn) // IO2 Read 
+      { 
+         DataPortWriteWaitLog(LOROM_Image[0x1f00+Address]); 
+      }
+      else  // Write to ControlReg @ $1FFF if FC3_CR_HIDDEN not set
+      {  
+         if ((Address == 0xFF) && !(FC3_ControlReg & FC3_CR_HIDDEN))  
+         {
+            FC3_ControlReg = DataPortWaitRead();
+            ProcessFC3ControlReg(FC3_ControlReg);
+         } 
+      }
    }
 }
 

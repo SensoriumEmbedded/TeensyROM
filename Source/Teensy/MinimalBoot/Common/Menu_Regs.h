@@ -441,6 +441,8 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
       IOH_RetroReplay,
       IOH_FinalCartridgeIII,
       IOH_ActionReplay,
+      IOH_RetroReplay_REU,
+      IOH_FCIII_101_REU,
    #endif
       IOH_ASID,
       IOH_TR_BASIC,
