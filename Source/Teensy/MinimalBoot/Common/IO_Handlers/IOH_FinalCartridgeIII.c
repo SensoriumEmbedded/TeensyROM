@@ -147,8 +147,7 @@ FLASHMEM void InitHndlr_FCIII_101_REU() // WITH TR+ REU
 {
    InitHndlr_FinalCartridgeIII();  // Initialize Final Cartridge III handler
    InitHndlr_REU();  // Initialize REU handler for REU compatibility
-   if (NumREU_Banks != 0)  // If REU allocation successful
-      fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU; // replace handler with long/short press
+   BindFreezeCRT_REU();
 }
 
 // IO1: Mirrrors $1E00 to $1EFF of current ROM bank

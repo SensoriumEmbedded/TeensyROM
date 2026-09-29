@@ -157,36 +157,45 @@ FLASHMEM void InitHndlr_RetroReplay()
 }   
 
 // Button handler active ONLY when REU is also active
+#define LongPress_mS 700
+static uint32_t FrzREU_StartCyc, FrzREU_StartMs;
+static bool FrzREU_PressSeen = false;
+
 FLASHMEM void SpecialBtn_FreezeCRT_REU(bool Up_nDn)
 {
-   #define LongPress_mS 700
-   static uint32_t StartTime;
-   static bool PressSeen = false;
-
    if (Up_nDn == false)                      // if button pressed
    {
-      StartTime = millis();
-      PressSeen = true; 
-   }   
-   else if (PressSeen)             // button released, after a press we saw
+      FrzREU_StartCyc = ARM_DWT_CYCCNT;  // keeps counting while an REU transfer holds the ISR; millis() doesn't
+      FrzREU_StartMs = millis();         // backstop for holds past CYCCNT's ~5.3 s wrap at 816 MHz
+      FrzREU_PressSeen = true;
+   }
+   else if (FrzREU_PressSeen)             // button released, after a press we saw
    {
-      PressSeen = false;
-      if (millis() - StartTime < LongPress_mS)
-         CycleCountdown = CycCntFreeze;   // short press: freeze
-      else
+      FrzREU_PressSeen = false;
+      bool LongPress = (ARM_DWT_CYCCNT - FrzREU_StartCyc >= (F_CPU_ACTUAL / 1000) * LongPress_mS) ||
+                       (millis() - FrzREU_StartMs >= LongPress_mS);
+      if (LongPress)
          Save_REU();                      // long press: save REU
+      else
+         CycleCountdown = CycCntFreeze;   // short press: freeze
    }
    // else: release with no matching press - ignore
 }
 
+// Must run after InitHndlr_REU(): binds only if the REU came up
+FLASHMEM void BindFreezeCRT_REU()
+{
+   if (NumREU_Banks == 0) return;   // no REU: keep the cart's own freeze button
+   FrzREU_PressSeen = false;        // drop a press whose release went to an earlier handler
+   fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU;
+}
 
 FLASHMEM void InitHndlr_RetroReplay_REU()
 {
   InitHndlr_RetroReplay();
-  InitHndlr_REU();  // Initialize REU handler for REU compatibility 
-  if (NumREU_Banks != 0)  // If REU allocation successful
-     fSpecialBtnChange = &SpecialBtn_FreezeCRT_REU;  // replace handler with long/short press
-} 
+  InitHndlr_REU();  // Initialize REU handler for REU compatibility
+  BindFreezeCRT_REU();
+}
 
 // $deXX Handler -- REU Memory Map
 // $de02-$deff contains mirrored $9e02-$9eff of selected bank 
