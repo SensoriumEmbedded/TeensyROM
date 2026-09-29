@@ -2,6 +2,8 @@
 
 Two independent toolchains, run in a fixed order. Canonical instructions (prefer these over this doc for exact commands/paths): [Source/BuildInfo.md](/Source/BuildInfo.md) and [Source/C64/README.md](/Source/C64/README.md) for the C64 side; for the Teensy side, `npm run build:tr` / `npm run build:tr-plus` (see [Dual-boot linking](#dual-boot-linking-toolsbuild-firmwaremjs) below).
 
+Step by step (which command to run when, the options, flashing boards over USB, recovering from a failure): the build skill, [.claude/skills/teensyrom-build/SKILL.md](/.claude/skills/teensyrom-build/SKILL.md). It is plain Markdown, readable without Claude Code.
+
 ## Build order (matters)
 
 1. **C64 side first** — `npm run build:c64` (`tools/build-c64.mjs`, optionally `--project <name>`) assembles all 6502 sources and writes the generated headers into `Source/Teensy/TRMenuFiles/ROMs/`.
