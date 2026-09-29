@@ -84,7 +84,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    // FinalCartridge III is REU compatible. This is indicated by CRT subtype bit = 1 
    //  https://1541u-documentation.readthedocs.io/en/latest/howto/cartridges.html
 
-   if (true)  // Replace with control flag as determined by repository owner 
+   if (!(IO1[rwRegPwrUpDefaults3] & rpud3FreezerREUDisable))  // unless disabled in TR settings
    {
       if ((HWType == Cart_RetroReplay) ||                                   // All RetroReplay or 
          ((HWType == Cart_FinalCartridgeIII) && (*(CRT_Image+0x1A) == 1 ))) // FCIII with REU subtype bit set (101%)
