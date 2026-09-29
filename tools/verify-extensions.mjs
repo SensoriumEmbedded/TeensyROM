@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
 import { ASSIGNED_SERVICES, BASE_SERVICES, CODE_BASE, CODE_BASE_128K, CODE_BASES, CODE_LIMIT,
-         DATA_BASE, DATA_BYTES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
+         DATA_BASE, DATA_BYTES, MODULE_SCRIPTS, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
          RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameSafe,
          hostFileStem } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
@@ -246,10 +246,19 @@ function checkModuleScripts() {
     }
     return text.replace(code, 'CODE').replace(bound[0], 'BOUND').replace(/\s+/g, ' ').trim();
   };
-  if (window('vm/abi/module.ld', CODE_BASE) !== window('vm/abi/module128.ld', CODE_BASE_128K)) {
-    throw new Error('vm/abi/module.ld and vm/abi/module128.ld differ outside their CODE region and its ASSERT');
+  // MODULE_SCRIPTS is the table build-extension.mjs picks --code-kib from, so
+  // checking it here checks what the packager offers: one script per base the
+  // ABI accepts, each opening the base it is listed under.
+  const listed = [...MODULE_SCRIPTS.keys()];
+  if (listed.length !== CODE_BASES.length || listed.some((base) => !CODE_BASES.includes(base))) {
+    throw new Error(`MODULE_SCRIPTS lists ${listed.map((b) => `0x${b.toString(16)}`).join(', ')}, ` +
+                    `but CODE_BASES is ${CODE_BASES.map((b) => `0x${b.toString(16)}`).join(', ')}`);
   }
-  console.log(`PASS: both module linker scripts bound their own window and end at 0x${CODE_LIMIT.toString(16)}`);
+  const shapes = [...MODULE_SCRIPTS].map(([base, file]) => window(file, base));
+  if (new Set(shapes).size !== 1) {
+    throw new Error(`${[...MODULE_SCRIPTS.values()].join(' and ')} differ outside their CODE region and its ASSERT`);
+  }
+  console.log(`PASS: ${MODULE_SCRIPTS.size} module linker scripts, one per code base, bound their own window to 0x${CODE_LIMIT.toString(16)}`);
 }
 
 // The EEPROM addresses and boot-indicator values a host needs are duplicated

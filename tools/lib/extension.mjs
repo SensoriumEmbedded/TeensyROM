@@ -15,6 +15,10 @@ export const ABI = 2;
 // takes; CODE_BASE_128K needs a host whose code_floor is at or below it.
 export const CODE_BASE = 0x18000, CODE_BASE_128K = 0x10000, CODE_LIMIT = 0x30000;
 export const CODE_BASES = [CODE_BASE, CODE_BASE_128K];
+// The published linker script that opens each base. A window's size is
+// CODE_LIMIT - base, which is what --code-kib names.
+export const MODULE_SCRIPTS = new Map([[CODE_BASE, 'vm/abi/module.ld'],
+                                       [CODE_BASE_128K, 'vm/abi/module128.ld']]);
 export const DATA_BASE = 0x20014000, DATA_LIMIT = 0x20044000;
 export const DATA_BYTES = DATA_LIMIT - DATA_BASE;
 // Profile 0 lends the guest all of RAM2. Profile 1 holds back the top 16 KiB,
