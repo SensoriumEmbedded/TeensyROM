@@ -23,6 +23,9 @@ this repository, all of them in [`vm/abi/`](.):
   `ENTRY(vm_entry)`, and fixes the code and data windows to the addresses the
   loader validates, so an image linked without it is refused rather than
   mislinked.
+- [`module128.ld`](module128.ld) — the same script for the 128 KiB code
+  window. Use it only if your module needs the space: it links at `0x10000`,
+  which a host whose own code reaches past there will refuse.
 - [`vm_runtime.c`](vm_runtime.c) — weak `memset`, `memcpy`, `memmove`,
   `memcmp`, `strlen` and `strcmp`. A freestanding module has no libc, and GCC
   emits calls to these on its own for code that never names them — zeroing a
@@ -528,6 +531,9 @@ and reads its own output back through the firmware's validation before writing
 it. It finds the ARM toolchain from `--toolchain`, then `PATH`, then the Teensy
 core's own bundled copy — the same compiler the firmware is built with.
 
+`--code-kib 128` builds against the larger window instead, linking with
+`module128.ld` and reporting the base it used. The default is 96.
+
 Building by hand, if you need to:
 
 ```
@@ -540,11 +546,16 @@ arm-none-eabi-g++ -nostdlib -Wl,--gc-sections -T vm/abi/module.ld \
     hello.o vm_runtime.o -o hello.elf
 ```
 
+Swap in `vm/abi/module128.ld` for the 128 KiB window.
+
 The float ABI must match: Cortex-M7 with the double-precision FPU. A module
 built for a different one links cleanly and then faults on target.
 
-`module.ld` asserts the 96 KiB code limit and the 192 KiB data limit at link
-time, so an overflow is a linker error rather than a boot failure.
+Each script asserts its own code limit and the 192 KiB data limit at link time,
+so an overflow is a linker error rather than a boot failure. `module128.ld` is
+the same script opening 128 KiB at `0x10000` instead of 96 KiB at `0x18000`;
+`--code-kib 128` is how the packager chooses it. Prefer the default unless the
+module needs the room, because the wider window is the one a host can refuse.
 
 There is no libc, no heap and no static constructors. Keep state in `.data` and
 `.bss` and initialise it in `vm_entry`.
@@ -609,7 +620,8 @@ repeated; nothing on their paths changed apart from the slot address.
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
 | The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
-| Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes |
+| Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes — linked at `0x18000` |
+| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
@@ -632,7 +644,7 @@ repeated; nothing on their paths changed apart from the slot address.
 | The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
 | A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting nine ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
-| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | yes — `vm/hello` takes it on joystick-2 up, and the board comes back to the menu with exit record `$04`. The native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other). |
 
 Treat the rows marked **no** as untested rather than as working.
 

@@ -238,3 +238,7 @@ node tools/build-extension.mjs --id HELLO --extensions hi \
 
 `vm/hello/hello.cpp` is the reference module, and `vm/tests/` builds and runs it
 against a native fake host on every `npm run verify:extensions`.
+
+Add `--code-kib 128` if the module needs more than 96 KiB of code. That links it
+at `0x10000`, which the stock host takes and a host with more of its own code may
+not; the refusal names both addresses at preflight, before the reboot.
