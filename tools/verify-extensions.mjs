@@ -13,7 +13,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hostPackageFixture, registryFixture } from './lib/fixtures.mjs';
-import { ASSIGNED_SERVICES, BASE_SERVICES, PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
+import { ASSIGNED_SERVICES, BASE_SERVICES, CODE_BASE, CODE_BASE_128K, CODE_BASES, CODE_LIMIT,
+         PROTECTED_EXTENSIONS, RAM_BYTES, RAM_RESERVED_BYTES,
          RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameSafe,
          hostFileStem } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
@@ -58,15 +59,32 @@ const sourceOf = (file) => readSource(path.join(root, file));
 const MENU_TABLE = 'Source/Teensy/MinimalBoot/Common/DriveDirLoad.h';
 const HOST_README = 'vm/abi/README.md';
 
-// vm_host_serves() is the last refusal on a launch that reached the host
-// without a preflight -- a host installed before descriptors existed cannot be
-// asked in advance. No native test compiles VMHost.h, so read the call.
+// vm_host_serves() and vm_host_takes_code() are the last refusals on a launch
+// that reached the host without a preflight -- a host installed before
+// descriptors existed cannot be asked in advance. No native test compiles
+// VMHost.h, so read the calls. The copy destination and the module table are
+// read the same way: both have to follow the image's own base, and getting
+// either wrong writes over host code rather than failing a check.
 function checkHostAdmission() {
   const host = sourceOf('Source/Teensy/MinimalBoot/VMHost.h');
-  if (!/!vm_host_serves\(h, providedServices\)/.test(host)) {
-    throw new Error('VMHost.h loadModule() no longer refuses an image whose services it cannot provide');
+  for (const [pattern, lost] of [
+    [/!vm_host_serves\(h, providedServices\)/, 'refuses an image whose services it cannot provide'],
+    [/!vm_host_takes_code\(h, VM_HOST_CODE_FLOOR\)/, 'refuses an image whose code starts below its own'],
+    [/auto code = \(uint8_t \*\)h\.code_base;/, 'copies the payload to the image\'s own code base'],
+    [/vm_host_code_window\(h\.code_base, true\)/, 'opens the window at the image\'s own code base'],
+    [/vm_module_table_valid\(module, h\.code_base, h\.code_bytes\)/, 'bounds the module table by the image\'s own code base'],
+    // Publishing 0 here would read as the narrow base and refuse every wide
+    // module. Safe, and silent: the preflight would decline what this host can
+    // take, with nothing to show the descriptor is the reason.
+    [/"TeensyROM", VM_HOST_CODE_FLOOR \}/, 'publishes its own code floor in the descriptor'],
+  ]) {
+    if (!pattern.test(host)) throw new Error(`VMHost.h loadModule() no longer ${lost}`);
   }
-  console.log('PASS: the extension image refuses a module it cannot serve, via vm_host_serves');
+  // The same, for the descriptor a third-party host starts from.
+  if (!/"Example", VM_HOST_CODE_FLOOR \}/.test(sourceOf('Source/Teensy/ExampleHost/ExampleHost.ino'))) {
+    throw new Error('ExampleHost.ino no longer publishes its own code floor in the descriptor');
+  }
+  console.log('PASS: the extension image refuses what it cannot serve or take, and loads at the image\'s own base');
 }
 
 // The flash slot the extension image is linked into is written down twice: in
@@ -158,6 +176,34 @@ function checkRam2Sizes() {
     }
   }
   console.log('PASS: tools/lib/extension.mjs RAM2 sizes match VM_RAM_* in VMABI.h');
+}
+
+// The code bases and the limit, which the packager writes into a header and
+// vm_valid_header bounds against -- the values, and the set of bases too, since
+// CODE_BASES is what buildImage and parseImage gate on. A base on one side and
+// not the other would be built here and refused on target, or the reverse.
+function checkCodeWindows() {
+  const header = sourceOf(MODULE_ABI);
+  const declaredHex = (name) => {
+    const match = header.match(new RegExp(`\\b${name}\\s*=\\s*0x([0-9a-fA-F]+)`));
+    if (!match) throw new Error(`VMABI.h no longer defines ${name} as a hex literal`);
+    return parseInt(match[1], 16);
+  };
+  for (const [name, mirrored] of [['VM_CODE_BASE', CODE_BASE],
+                                  ['VM_CODE_BASE_128K', CODE_BASE_128K],
+                                  ['VM_CODE_LIMIT', CODE_LIMIT]]) {
+    const declared = declaredHex(name);
+    if (declared !== mirrored) {
+      throw new Error(`${name} is 0x${declared.toString(16)} in VMABI.h, but tools/lib/extension.mjs mirrors it as 0x${mirrored.toString(16)}`);
+    }
+  }
+  const accepted = [...header.matchAll(/h\.code_base\s*!=\s*(VM_CODE_\w+)/g)].map((m) => declaredHex(m[1]));
+  if (!accepted.length) throw new Error('VMABI.h vm_valid_header no longer tests h.code_base against named VM_CODE_* bases');
+  const only = (a, b, side) => a.filter((v) => !b.includes(v)).map((v) => `0x${v.toString(16)} only in ${side}`);
+  const drift = [...only(accepted, CODE_BASES, 'VMABI.h vm_valid_header'),
+                 ...only(CODE_BASES, accepted, 'CODE_BASES in tools/lib/extension.mjs')];
+  if (drift.length) throw new Error(`the module code bases have drifted: ${drift.join('; ')}`);
+  console.log(`PASS: tools/lib/extension.mjs code windows and its ${CODE_BASES.length} code bases match VM_CODE_* in VMABI.h`);
 }
 
 // The EEPROM addresses and boot-indicator values a host needs are duplicated
@@ -360,6 +406,7 @@ checkProtectedExtensions();
 checkEepromProtocol();
 checkHostNamePolicy();
 checkRam2Sizes();
+checkCodeWindows();
 checkServiceRegistry();
 checkPublishedIncludes();
 checkPublishedHeadersStandalone();

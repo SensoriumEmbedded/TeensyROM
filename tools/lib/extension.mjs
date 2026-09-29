@@ -11,7 +11,10 @@ import { VM_BASE, VM_LIMIT } from './hex.mjs';
 
 export const IMAGE_MAGIC = 0x314d564d;  // 'MVM1'
 export const ABI = 2;
-export const CODE_BASE = 0x18000, CODE_LIMIT = 0x30000;
+// The two code bases vm_valid_header accepts. CODE_BASE is the one every host
+// takes; CODE_BASE_128K needs a host whose code_floor is at or below it.
+export const CODE_BASE = 0x18000, CODE_BASE_128K = 0x10000, CODE_LIMIT = 0x30000;
+export const CODE_BASES = [CODE_BASE, CODE_BASE_128K];
 export const DATA_BASE = 0x20014000, DATA_LIMIT = 0x20044000;
 export const DATA_BYTES = DATA_LIMIT - DATA_BASE;
 // Profile 0 lends the guest all of RAM2. Profile 1 holds back the top 16 KiB,
@@ -51,13 +54,15 @@ export function crc32(bytes) {
 // the RAM2 constants. bss is not stored; the loader zeroes it after the copy.
 export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
                              requiredServices = BASE_SERVICES, allowUnassignedServices = false,
-                             profile = PROFILE_LEGACY, readOnly = Buffer.alloc(0) }) {
+                             profile = PROFILE_LEGACY, readOnly = Buffer.alloc(0),
+                             codeBase = CODE_BASE }) {
   if (!code?.length) throw new Error('Module image has no code');
-  if (code.length > CODE_LIMIT - CODE_BASE) throw new Error(`Module code is ${code.length} bytes, window is ${CODE_LIMIT - CODE_BASE}`);
+  if (!CODE_BASES.includes(codeBase)) throw new Error(`Code base 0x${codeBase.toString(16)} is not one the loader accepts`);
+  if (code.length > CODE_LIMIT - codeBase) throw new Error(`Module code is ${code.length} bytes, window is ${CODE_LIMIT - codeBase}`);
   if (data.length > DATA_BYTES) throw new Error('Module .data exceeds the DTCM window');
   if (data.length + bssBytes > DATA_BYTES) throw new Error(`Module .data + .bss is ${data.length + bssBytes} bytes, window is ${DATA_BYTES}`);
   if (!(entry & 1)) throw new Error(`Entry 0x${entry.toString(16)} has no Thumb bit; the module entry must be Thumb code`);
-  if ((entry & ~1) < CODE_BASE || (entry & ~1) >= CODE_BASE + code.length) {
+  if ((entry & ~1) < codeBase || (entry & ~1) >= codeBase + code.length) {
     throw new Error(`Entry 0x${entry.toString(16)} falls outside the module code window`);
   }
   const unassigned = unassignedServices(requiredServices);
@@ -78,7 +83,7 @@ export function buildImage({ code, data = Buffer.alloc(0), bssBytes = 0, entry,
   const payload = Buffer.concat([code, data, readOnly]);
   const header = Buffer.alloc(64);
   const fields = [IMAGE_MAGIC, ABI, 64, code.length, data.length, bssBytes,
-                  entry, CODE_BASE, DATA_BASE, requiredServices, crc32(payload), 0,
+                  entry, codeBase, DATA_BASE, requiredServices, crc32(payload), 0,
                   profile, readOnly.length, 0, 0];
   fields.forEach((value, i) => header.writeUInt32LE(value >>> 0, i * 4));
   header.writeUInt32LE(crc32(header), 44);  // header_crc, over the header with the field zeroed
@@ -100,18 +105,18 @@ export function parseImage(image) {
   if (header.magic !== IMAGE_MAGIC) throw new Error('Not an MVM1 image');
   if (header.abi !== ABI) throw new Error(`Image is ABI ${header.abi}, loader is ABI ${ABI}`);
   if (header.headerBytes !== 64) throw new Error('Unexpected header length');
-  if (header.codeBase !== CODE_BASE || header.ramBase !== DATA_BASE) throw new Error('Image was linked for a different memory map');
+  if (!CODE_BASES.includes(header.codeBase) || header.ramBase !== DATA_BASE) throw new Error('Image was linked for a different memory map');
   const zeroed = Buffer.from(image.subarray(0, 64));
   zeroed.writeUInt32LE(0, 44);
   if (crc32(zeroed) !== header.headerCrc) throw new Error('Image header CRC mismatch');
   if (field(14) || field(15)) throw new Error('Reserved header words must be zero');
-  if (!header.codeBytes || header.codeBytes > CODE_LIMIT - CODE_BASE) {
-    throw new Error(`Module code is ${header.codeBytes} bytes, window is ${CODE_LIMIT - CODE_BASE}`);
+  if (!header.codeBytes || header.codeBytes > CODE_LIMIT - header.codeBase) {
+    throw new Error(`Module code is ${header.codeBytes} bytes, window is ${CODE_LIMIT - header.codeBase}`);
   }
   if (header.dataBytes > DATA_BYTES || header.bssBytes > DATA_BYTES - header.dataBytes) {
     throw new Error(`Module .data + .bss is ${header.dataBytes + header.bssBytes} bytes, window is ${DATA_BYTES}`);
   }
-  if (!(header.entry & 1) || (header.entry & ~1) < CODE_BASE || (header.entry & ~1) >= CODE_BASE + header.codeBytes) {
+  if (!(header.entry & 1) || (header.entry & ~1) < header.codeBase || (header.entry & ~1) >= header.codeBase + header.codeBytes) {
     throw new Error(`Entry 0x${header.entry.toString(16)} falls outside the module code window`);
   }
   if (header.profile === PROFILE_RAM2_RO) {

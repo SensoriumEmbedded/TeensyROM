@@ -131,7 +131,12 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
         if(hostId.abi!=VM_ABI){SendMsgPrintfln("%s host is ABI %lu, not %lu",hostName,
                         (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
         if(image.required_services&~hostId.services){SendMsgPrintfln("%s host lacks service $%lx",hostName,
-                        (unsigned long)(image.required_services&~hostId.services));return true;}}
+                        (unsigned long)(image.required_services&~hostId.services));return true;}
+        // Says the number rather than a capability, because that is what the module
+        // asked for and what a rebuild would have to change.
+        if(!vm_host_takes_code(image,hostId.code_floor)){SendMsgPrintfln("%s host needs code at $%lx, not $%lx",hostName,
+                        (unsigned long)vm_host_code_floor(hostId.code_floor),
+                        (unsigned long)image.code_base);return true;}}
     l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
     const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();

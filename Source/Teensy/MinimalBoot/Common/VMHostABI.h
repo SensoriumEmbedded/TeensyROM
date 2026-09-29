@@ -72,10 +72,16 @@ static inline bool vm_host_slot_valid(uint32_t flashMagic, uint32_t vectorMagic,
 // Stamped into the image at VM_HOST_ID_OFFSET so the main image can read what
 // the installed host provides without booting it. services is the host's
 // provided set; name is for the refusal message on the C64.
+//
+// code_floor is the lowest code base this host can take, which is where its own
+// code ends. Set it to VM_HOST_CODE_FLOOR rather than a literal: that resolves
+// to the link's own __exidx_end, so the descriptor cannot claim room the host
+// is occupying. Zero reads as VM_CODE_BASE, so a host that never set it is
+// offered only the window every host has.
 struct VmHostId {
     uint32_t magic, abi, services, host_bytes;
     char name[12];
-    uint32_t reserved;
+    uint32_t code_floor;
 };
 static_assert(sizeof(VmHostId)==32, "MVH2 host descriptor");
 enum : uint32_t { VM_HOSTID_MAGIC = 0x3248564du };  // 'MVH2'
@@ -221,19 +227,60 @@ static inline bool vm_host_serves(const VmImageHeader &h, uint32_t provided) {
     return (h.required_services & ~provided) == 0;
 }
 
+// The end of .ARM.exidx, the last output section in ITCM, so the first address
+// a module could have. _etext stops short of it: it leaves out the orphan
+// .fini ld places between .text.itcm and .ARM.exidx. A host's code_floor takes
+// its value from this symbol rather than a literal, so the descriptor cannot
+// claim room the link is using.
+#if defined(__arm__)
+extern "C" const char __exidx_end[];
+#define VM_HOST_CODE_FLOOR ((uint32_t)(uintptr_t)__exidx_end)
+#endif
+
+// Zero means the host never stated one, which is every host built before the
+// field existed, so it reads as the base they all accept.
+static inline uint32_t vm_host_code_floor(uint32_t stated) {
+    return stated ? stated : uint32_t(VM_CODE_BASE);
+}
+
+// The other half of what a host owes before it loads: the image's code has to
+// start at or above where the host's own ends. h must have passed
+// vm_valid_header, which is what bounds code_base to the two legal values.
+static inline bool vm_host_takes_code(const VmImageHeader &h, uint32_t stated_floor) {
+    return h.code_base >= vm_host_code_floor(stated_floor);
+}
+
+// The window takes two MPU regions, not one, because a region must be aligned
+// to its own size and a 128 KiB region cannot start at 0x10000. Splitting at
+// 0x20000 gives both bases a legal pair: 32K@0x18000 or 64K@0x10000, then
+// 64K@0x20000 either way. A base outside the two vm_valid_header allows would
+// not have that property, and the MPU would silently round it down over host
+// code rather than refuse it.
+enum : uint32_t { VM_CODE_SPLIT = 0x20000 };
+struct VmCodeRegion { uint32_t base, bytes; };
+static inline VmCodeRegion vm_code_window_region(uint32_t code_base, unsigned index) {
+    return index ? VmCodeRegion{ VM_CODE_SPLIT, VM_CODE_LIMIT - VM_CODE_SPLIT }
+                 : VmCodeRegion{ code_base, VM_CODE_SPLIT - code_base };
+}
+// RASR SIZE encodes 2^(field+1) bytes, and 4 is the 32-byte floor the MPU has.
+static inline unsigned vm_mpu_size_field(uint32_t bytes) {
+    unsigned n = 4; while (n < 31 && (2u << n) < bytes) n++; return n;
+}
+
 // The module's ITCM window is read-only at entry, because the core's MPU
 // region 1 covers all of ITCM, so the payload copy faults without this. Call
 // with true before copying code and false after, which also restores execute
 // permission.
 #if defined(__arm__)
-static inline void vm_host_code_window(bool writable) {
+static inline void vm_host_code_window(uint32_t code_base, bool writable) {
     uint32_t mask; __asm__ volatile("mrs %0, primask":"=r"(mask)); __disable_irq();
     __asm__ volatile("dsb":::"memory"); SCB_MPU_CTRL = 0;
-    // 96 KiB window: 32 KiB at 0x18000, then 64 KiB at 0x20000.
     for (unsigned i = 0; i < 2; i++) {
-        SCB_MPU_RBAR = (i ? 0x20000u : 0x18000u) | SCB_MPU_RBAR_VALID | (11 + i);
+        const VmCodeRegion r = vm_code_window_region(code_base, i);
+        SCB_MPU_RBAR = r.base | SCB_MPU_RBAR_VALID | (11 + i);
         SCB_MPU_RASR = SCB_MPU_RASR_TEX(1) | SCB_MPU_RASR_AP(writable ? 3 : 7) |
-            (writable ? SCB_MPU_RASR_XN : 0) | SCB_MPU_RASR_SIZE(i ? 15 : 14) | SCB_MPU_RASR_ENABLE;
+            (writable ? SCB_MPU_RASR_XN : 0) |
+            SCB_MPU_RASR_SIZE(vm_mpu_size_field(r.bytes)) | SCB_MPU_RASR_ENABLE;
     }
     SCB_MPU_CTRL = SCB_MPU_CTRL_ENABLE; __asm__ volatile("dsb\nisb":::"memory");
     if (!mask) __enable_irq();
@@ -261,11 +308,11 @@ template<class Reader> static bool vm_load_payload(const VmImageHeader &h,Reader
 
 // The table vm_entry returned. Every pointer in it must lie inside the code
 // actually loaded.
-static inline bool vm_module_table_valid(const VmModule *module, uint32_t code_bytes) {
-    const uintptr_t end = VM_CODE_BASE + code_bytes;
-    auto codePointer = [end](uintptr_t p) { return (p & 1) && (p & ~1u) >= VM_CODE_BASE && (p & ~1u) < end; };
+static inline bool vm_module_table_valid(const VmModule *module, uint32_t code_base, uint32_t code_bytes) {
+    const uintptr_t end = code_base + code_bytes;
+    auto codePointer = [=](uintptr_t p) { return (p & 1) && (p & ~1u) >= code_base && (p & ~1u) < end; };
     const uintptr_t p = (uintptr_t)module;
-    return p >= VM_CODE_BASE && p <= VM_CODE_LIMIT - sizeof(VmModule) && module->abi == VM_ABI &&
+    return p >= code_base && p <= VM_CODE_LIMIT - sizeof(VmModule) && module->abi == VM_ABI &&
            module->bytes == sizeof(VmModule) && codePointer((uintptr_t)module->input) &&
            codePointer((uintptr_t)module->pump) && codePointer((uintptr_t)module->packet) &&
            codePointer((uintptr_t)module->ack);

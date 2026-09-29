@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
+  CODE_BASE, CODE_BASE_128K, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
   ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
   buildHostPackage, parseHostPackage, hostSlotValid,
@@ -237,4 +237,35 @@ test('hostSlotValid agrees with the five words the minimal image reads', () => {
   assert.ok(!hostSlotValid({ ...ok, bootBase: 0 }));
   assert.ok(!hostSlotValid({ ...ok, imageBytes: HOST_SLOT_BYTES + 1 }));
   assert.ok(!hostSlotValid({ ...ok, imageBytes: 0x1000 }));
+});
+
+test('the lower code base round trips, and every bound moves with it', () => {
+  const wide = image({ codeBase: CODE_BASE_128K, entry: CODE_BASE_128K | 1 });
+  const header = parseImage(wide);
+  assert.equal(header.codeBase, CODE_BASE_128K);
+  assert.equal(header.entry, CODE_BASE_128K | 1);
+
+  // The extra 32 KiB is reachable only from the lower base.
+  const wideCode = Buffer.alloc(CODE_LIMIT - CODE_BASE_128K);
+  assert.equal(parseImage(buildImage({ code: wideCode, entry: CODE_BASE_128K | 1, codeBase: CODE_BASE_128K })).codeBytes,
+    CODE_LIMIT - CODE_BASE_128K);
+  assert.throws(() => buildImage({ code: wideCode, entry: CODE_BASE | 1 }),
+    new RegExp(`window is ${CODE_LIMIT - CODE_BASE}`));
+
+  // Entry is bounded by the image's own base, in both directions.
+  assert.throws(() => buildImage({ code: thumbReturn, entry: CODE_BASE | 1, codeBase: CODE_BASE_128K }),
+    /falls outside the module code window/);
+  assert.throws(() => buildImage({ code: thumbReturn, entry: CODE_BASE_128K | 1 }),
+    /falls outside the module code window/);
+});
+
+test('a code base the loader does not accept is refused by the writer and the reader', () => {
+  for (const codeBase of [0, 0x10001, 0x14000, 0x18001, 0x20000]) {
+    assert.throws(() => buildImage({ code: thumbReturn, entry: codeBase | 1, codeBase }),
+      /is not one the loader accepts/);
+  }
+  // Restamping a legal image to an illegal base is caught on the way back in.
+  const forged = Buffer.from(image());
+  forged.writeUInt32LE(0x14000, 28);
+  assert.throws(() => parseImage(forged), /linked for a different memory map/);
 });

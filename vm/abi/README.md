@@ -200,11 +200,11 @@ only) the RAM2 constants. `.bss` is not stored; the loader zeroes it.
 | 0 | `magic` | `0x314d564d` (`MVM1`) |
 | 4 | `abi` | 2 |
 | 8 | `header_bytes` | 64 |
-| 12 | `code_bytes` | ≤ 96 KiB |
+| 12 | `code_bytes` | ≤ `0x30000 - code_base`: 96 KiB, or 128 KiB at the lower base |
 | 16 | `data_bytes` | |
 | 20 | `bss_bytes` | `data_bytes + bss_bytes` ≤ 192 KiB |
 | 24 | `entry` | Thumb bit set; inside the code window |
-| 28 | `code_base` | `0x00018000` |
+| 28 | `code_base` | `0x00018000`, or `0x00010000` on a host whose code ends there |
 | 32 | `ram_base` | `0x20014000` |
 | 36 | `required_services` | see §2 |
 | 40 | `payload_crc` | CRC32 of everything after the header |
@@ -294,7 +294,8 @@ installed host in place.
 
 | Region | Address | Size | Owner |
 |--------|---------|-----:|-------|
-| ITCM | `0x00000000` | 96 KiB | host code |
+| ITCM | `0x00000000` | 64 or 96 KiB | host code, bounded at link by `__exidx_end` |
+| ITCM | `0x00010000` | 32 KiB | **module code** when the host stops below it, else host code |
 | ITCM | `0x00018000` | 96 KiB | **module code** |
 | DTCM | below `0x20014000` | — | host state and heap |
 | DTCM | `0x20014000` | 192 KiB | **module `.data`, `.bss`, then workspace** |
@@ -507,7 +508,8 @@ and clearing them reports `$40` like any other removal.
 
 The failure code a client reads from `$DFFB` is separate, and is the same value
 the record carries as its detail for `$20`: `$11` the image would not open, has
-a bad header, or requires a service this host does not provide; `$14` the
+a bad header, requires a service this host does not provide, or links its code
+below this host's code floor; `$14` the
 returned `VmModule` table failed validation; `$15` the module published a
 malformed packet; `$16` the module reported an error without giving a code.
 Other values come from the image loader's own bounds and CRC checks.

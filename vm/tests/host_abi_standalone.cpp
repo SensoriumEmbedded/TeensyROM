@@ -105,7 +105,43 @@ int main() {
     CountingReader reader;
     assert(!vm_load_payload(image, reader, code, data, nullptr, failure));
     assert(failure == 0x13 && reads == 1);
-    assert(!vm_module_table_valid(reinterpret_cast<const VmModule *>(VM_DATA_BASE), 4));
+    assert(!vm_module_table_valid(reinterpret_cast<const VmModule *>(VM_DATA_BASE), VM_CODE_BASE, 4));
+
+    // The code floor. Zero is a host that never stated one, and reads as the
+    // base every host accepts rather than as "anything goes".
+    VmImageHeader narrow{}, wide{};
+    narrow.code_base = VM_CODE_BASE;
+    wide.code_base = VM_CODE_BASE_128K;
+    assert(vm_host_code_floor(0) == VM_CODE_BASE);
+    assert(vm_host_code_floor(0xdd1cu) == 0xdd1cu);
+    assert(vm_host_takes_code(narrow, 0) && !vm_host_takes_code(wide, 0));
+    assert(vm_host_takes_code(narrow, VM_CODE_BASE) && !vm_host_takes_code(wide, VM_CODE_BASE));
+    // A real 64 KiB link ends short of the wide base, so it takes both.
+    assert(vm_host_takes_code(narrow, 0xdd1cu) && vm_host_takes_code(wide, 0xdd1cu));
+    assert(vm_host_takes_code(narrow, VM_CODE_BASE_128K) && vm_host_takes_code(wide, VM_CODE_BASE_128K));
+    // A host whose code runs past the narrow base can take neither. The link
+    // ASSERT stops that being built; the predicate still has to answer safely.
+    assert(!vm_host_takes_code(narrow, VM_CODE_BASE + 1) && !vm_host_takes_code(wide, VM_CODE_BASE + 1));
+
+    // Both windows split into MPU-legal regions: each a power of two, each
+    // based on a multiple of its own size, together covering the window with
+    // no gap. A base the validator does not allow would break this, which is
+    // why it allows exactly two.
+    const uint32_t bases[2] = { VM_CODE_BASE, VM_CODE_BASE_128K };
+    for (uint32_t base : bases) {
+        uint32_t next = base;
+        for (unsigned i = 0; i < 2; i++) {
+            const VmCodeRegion r = vm_code_window_region(base, i);
+            assert(r.base == next && r.bytes >= 32);
+            assert((r.bytes & (r.bytes - 1)) == 0);
+            assert(r.base % r.bytes == 0);
+            assert((2u << vm_mpu_size_field(r.bytes)) == r.bytes);
+            next = r.base + r.bytes;
+        }
+        assert(next == VM_CODE_LIMIT);
+    }
+    assert(vm_mpu_size_field(32) == 4 && vm_mpu_size_field(0x8000) == 14 &&
+           vm_mpu_size_field(0x10000) == 15);
 
     printSlotVerdicts();
     puts("PASS: the published host contract compiles and runs with no TeensyROM include path");

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
-// The third flash image. An extension module needs 96 KiB of ITCM and 192 KiB
-// of DTCM at fixed addresses, which the ordinary minimal image cannot give it
-// while still holding a megabyte of cartridge. So the loader builds a separate
-// image with that memory map and boots into it, and the other two images shrink
-// to make room.
+// The third flash image. An extension module needs 96 or 128 KiB of ITCM and
+// 192 KiB of DTCM at fixed addresses, which the ordinary minimal image cannot
+// give it while still holding a megabyte of cartridge. So the loader builds a
+// separate image with that memory map and boots into it, and the other two
+// images shrink to make room.
 //
 // Nothing here generates code or rewrites a source file: it edits the stock
 // Teensy linker script and bootdata, and every edit must match exactly once.
