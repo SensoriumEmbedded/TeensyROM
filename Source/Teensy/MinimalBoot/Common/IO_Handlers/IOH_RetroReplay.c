@@ -151,6 +151,7 @@ FLASHMEM void InitHndlr_RetroReplay()
   LOROM_Image = NULL; 
    
   CycleCountdown = 0;
+  RR_StatusReg = 0;  // shared with FC3 as FC3_ControlReg; stale bits would block the one-time $DE01 write
    
   ProcessRRControlReg(0);  // Initialize Control    
 }   

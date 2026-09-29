@@ -614,6 +614,7 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
    else                    REURegs[REUReg_Status] &= ~REUReg_Status_256kChips;
 
    fSpecialBtnChange = &SpecialBtn_REU;  //REU RAM is ready; enable button now so a failed/missing preload below doesn't skip it
+   Serial.printf("REU Size: %luK bytes\n", (uint32_t)REU_Size / 1024);
 
    //pre-load REU into RAM here:
    char Filename[MaxPathLength];
