@@ -636,19 +636,12 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
    }
    
    if (LoadFile.size() > REU_Size)
-   {
-      Serial.println("Too Large!");
-      LoadFile.close();
-      return;
-   }
+      Serial.printf("Too Large! Loading first %luK\n", (uint32_t)REU_Size/1024);
 
    //uint32_t StartmS = millis();
    uint32_t CharNum = 0;
-   while (LoadFile.available())
-   {
-       REU_RAM_WRITE(CharNum, LoadFile.read());
-       CharNum++;
-   }
+   for (uint8_t Bank = 0; Bank < NumREU_Banks && LoadFile.available(); Bank++)
+      CharNum += LoadFile.read(REU_Bank[Bank], REU_RAM_Bank_Size);
    //Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
    Serial.printf("Read %lu Bytes into REU\n", CharNum);
    LoadFile.close();
