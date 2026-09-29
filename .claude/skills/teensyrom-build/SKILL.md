@@ -46,6 +46,19 @@ Step 2 builds one cartridge type per run. Build both when both kinds of board ne
   commit, so `build/firmware` can hold an older build under the current name, and the
   flasher takes the newest file of either type. Check the build date it prints.
 
+## After a build (for agents)
+
+- The person does not see the build's output, only your reply. Show them its memory
+  report verbatim, in a code block: for each image built (`[minimal]`, `[main]`, and
+  `[extension]` when there is one), the `[name] Building` line, the
+  `Memory Usage on Teensy 4.1` block under it and the `Hex:` line. Do this after every
+  build, a successful one included, and do not summarize or reformat the numbers.
+- Put it in your final reply for the task, even when you already showed it partway
+  through (before flashing, say): messages between tool calls can be collapsed out of
+  sight, and the final reply is the one the person reads.
+- A build that failed before linking has no report for that image; say so, and show the
+  error instead.
+
 ## On real hardware (for agents)
 
 - Flashing changes a physical board. Say which board gets which image, and wait for the
