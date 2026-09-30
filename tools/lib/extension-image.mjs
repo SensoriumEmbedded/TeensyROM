@@ -70,9 +70,9 @@ export const DEFAULT_HOST_CODE_KIB = 64;
 // cache miss inside that would hold off isrPHI2.
 const FLASH_RESIDENT_LIBRARIES = { SdFat: ['SdioTeensy.cpp.o'], SD: [], SPI: [] };
 // ld matches object paths literally, and arduino-cli writes them with '\' on Windows.
-// The escaped '\' comes first: libiberty's fnmatch, which ld uses wherever there is
-// no glibc, reads an escape while skipping the rest of a class that matched, so in
-// '[/\\]' a '/' match would swallow the ']'.
+// The escaped '\' comes first: libiberty's fnmatch, which ld links where the host C
+// library has none (MinGW), reads an escape while skipping the rest of a class that
+// matched, so in '[/\\]' a '/' match would swallow the ']'.
 const PATH_SEPARATOR = '[\\\\/]';
 
 // The extension image: relocated to its own slot, its ITCM footprint pinned and

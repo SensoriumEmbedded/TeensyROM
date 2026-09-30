@@ -46,8 +46,8 @@ function fnmatchRegExp(pattern) {
   return new RegExp(`^${source}$`);
 }
 
-// libiberty's, which ld links wherever there is no glibc (MinGW, for one), transcribed
-// from its fnmatch.c. It differs once a class has matched: skipping the rest of the
+// libiberty's, which ld links where the host C library has no fnmatch (MinGW),
+// transcribed from its fnmatch.c. It differs once a class has matched: skipping the rest of the
 // class, it reads '\' as an escape, so '[/\\]' matching '/' skips past the ']'.
 function libibertyFnmatch(pattern, name) {
   const match = (p, n) => {
@@ -58,9 +58,11 @@ function libibertyFnmatch(pattern, name) {
       } else if (c === '\\') {
         if (name[n++] !== pattern[p++]) return false;
       } else if (c === '*') {
-        for (; pattern[p] === '?' || pattern[p] === '*'; p++) if (pattern[p] === '?' && n++ >= name.length) return false;
-        if (p === pattern.length) return true;
-        for (let rest = n; rest <= name.length; rest++) if (match(p, rest)) return true;
+        // As libiberty has it, every '?' or '*' after the first steps over a character.
+        for (c = pattern[p++]; c === '?' || c === '*'; c = pattern[p++], n++) if (c === '?' && n >= name.length) return false;
+        if (c === undefined) return true;
+        p--;
+        for (let rest = n; rest < name.length; rest++) if (match(p, rest)) return true;
         return false;
       } else if (c === '[') {
         if (n >= name.length) return false;
@@ -129,6 +131,9 @@ test('the SD card libraries run from flash but for the SDIO driver, on either pa
 test('the two readings part on the order of a class, which is why the escaped \\ comes first', () => {
   assert.deepEqual([libibertyFnmatch('*[/\\\\]x', '/a/x'), fnmatchRegExp('*[/\\\\]x').test('/a/x')], [false, true]);
   assert.deepEqual([libibertyFnmatch('*[\\\\/]x', '/a/x'), fnmatchRegExp('*[\\\\/]x').test('/a/x')], [true, true]);
+  // And on a run of stars, each after the first of which libiberty spends on a character.
+  assert.deepEqual([libibertyFnmatch('a**b', 'ab'), libibertyFnmatch('a**b', 'axb'), fnmatchRegExp('a**b').test('ab')],
+    [false, true, true]);
 });
 
 test('a CRLF checkout of the stock linker files edits the same as an LF one', () => {
