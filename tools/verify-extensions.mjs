@@ -18,7 +18,7 @@ import { ASSIGNED_SERVICES, BASE_SERVICES, CODE_BASE, CODE_BASE_128K, CODE_BASES
          RAM2_RO_BYTES, SERVICE, hostSlotValid, hostNameSafe,
          hostFileStem } from './lib/extension.mjs';
 import { VM_BASE, VM_LIMIT } from './lib/hex.mjs';
-import { readSource } from './lib/source-text.mjs';
+import { readSource, readText } from './lib/source-text.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -126,7 +126,7 @@ function checkProtectedExtensions() {
     'Ext_ItemType_Assoc[]=', '};', 'DriveDirLoad.h'));
   const firmware = quoted(between(sourceOf(HOST_ABI),
     'protectedExtensions[][4]=', '};', 'VMHostABI.h'));
-  const published = between(fs.readFileSync(path.join(root, HOST_README), 'utf8'),
+  const published = between(readText(path.join(root, HOST_README)),
     'Extensions the stock menu owns are\nrefused: `', '`', 'vm/abi/README.md').split(/\s+/);
 
   for (const [label, list] of [['VMHostABI.h protectedExtensions', firmware],
@@ -149,7 +149,7 @@ function checkProtectedExtensions() {
 // disables the refusal.
 function checkHostIdOffset() {
   const header = sourceOf(HOST_ABI);
-  const image = fs.readFileSync(path.join(root, 'tools/lib/extension-image.mjs'), 'utf8');
+  const image = readText(path.join(root, 'tools/lib/extension-image.mjs'));
   const declared = header.match(/VM_HOST_ID_OFFSET = (0x[0-9a-fA-F]+)u?/);
   if (!declared) throw new Error('VMHostABI.h no longer declares VM_HOST_ID_OFFSET');
   const placed = image.match(/\. = ORIGIN\(FLASH\) \+ (0x[0-9a-fA-F]+);\s*KEEP\(\*\(\.vmhostid\)\)/);
