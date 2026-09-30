@@ -7,20 +7,20 @@ Needs acme on PATH and the C64 at the menu. Loads spanclient.a (IRQs off, a loop
 that writes or only reads, and an NMI that counts), measures, then resets the C64.
 """
 import os, statistics, subprocess, sys, tempfile, time
-from protocol import ACK, DRIVE_SD, READ_C64_MEM, WRITE_C64_SPANS, to_board
+from protocol import ACK, DRIVE_SD, READ_C64_MEM, WRITE_C64_MEM, WRITE_C64_SPANS, to_board
 from trlink import Link
 
-MODE, TICKS, READY = 0xC100, 0xC101, 0xC104
+MODE, TICKS, READY, PROBE = 0xC100, 0xC101, 0xC104, 0xC105
 D011, CIA2_TA, CIA2_ICR, CIA2_CRA = 0xD011, 0xDD04, 0xDD0D, 0xDD0E
 BLOCK = 0x4000
 PERIOD = int(sys.argv[1]) if len(sys.argv) > 1 else 200
 failed = []
 
 
-def spans(tr, runs, payload, slice_bytes=0, gap_us=0):
+def spans(tr, runs, payload, slice_bytes=0, gap_us=0, flags=0):
     """One job: (acked, reply text, seconds from send to the final reply)."""
     began = time.perf_counter()
-    tr.wr(to_board(WRITE_C64_SPANS) + bytes([0, slice_bytes, gap_us, len(runs)])
+    tr.wr(to_board(WRITE_C64_SPANS) + bytes([flags, slice_bytes, gap_us, len(runs)])
           + b''.join(to_board(addr) + to_board(length) for addr, length in runs))
     value, text = tr.status(10)
     if value == ACK:
@@ -84,6 +84,15 @@ def integrity(tr):
     if ok or not answered:
         failed.append('2033 one-byte slices were not refused cleanly')
     print(f'  slice   1: refused before the payload ("{text}"), board {"answering" if answered else "SILENT"}')
+    # A refused span list must be discarded, not parsed: this one holds a whole WriteC64Mem of $77 to PROBE.
+    tr.poke(PROBE, [0])
+    trap = [(WRITE_C64_MEM, PROBE), (1, 0x7700)] + [(0x0400, 1)] * 62
+    ok, text, _ = spans(tr, trap, b'', flags=1)
+    time.sleep(0.5)
+    clean = not ok and tr.peek(PROBE, 1)[0] == 0
+    if not clean:
+        failed.append('a refused span list was parsed as a command')
+    print(f'  flags 1: refused ("{text}"), its span list {"discarded" if clean else "PARSED AS A COMMAND"}')
 
 
 def per_slice(tr, label):
