@@ -557,6 +557,9 @@ FLASHMEM void ProcessCommand()
       case WriteC64MemToken: //Write to C64 mem via DMA
          WriteC64MemCommand();
          return;
+      case WriteC64SpansToken: //Write C64 mem spans via DMA, sliced
+         WriteC64SpansCommand();
+         return;
       case ReadC64MemToken: //Write to C64 mem via DMA
          ReadC64MemCommand();
          return;
@@ -1012,6 +1015,84 @@ FLASHMEM void WriteC64MemCommand()
    //CmdChannel->printf
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
+}
+
+// Throws away what a refused sender is still sending, so it is not parsed as commands.  Capped,
+// since a peer that keeps sending would otherwise hold it open.
+FLASHMEM void DiscardCmdInput()
+{
+   const uint32_t Began = millis();
+   uint32_t Quiet = Began;
+   while (millis() - Quiet < SerialTimoutMillis && millis() - Began < SerialTimoutMillis * 4)
+      if (CmdChannel->available()) { CmdChannel->read(); Quiet = millis(); }
+}
+
+// One deadline for all Len bytes: SerialAvailabeTimeout bounds each byte, which otherwise leaves
+// Len of those waits for the peer to spend with the C64 unserved.  2 bytes/mS is under every
+// channel's rate, the 115200 baud USB host port included.  On false a FailToken has gone out.
+FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len)
+{
+   const uint32_t Began = millis(), CeilingmS = SerialTimoutMillis * 10 + Len / 2;
+   for (uint32_t ByteNum = 0; ByteNum < Len; ByteNum++)
+   {
+      if (millis() - Began >= CeilingmS)
+      {
+         SendU16(FailToken);
+         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, Len);
+         DiscardCmdInput();
+         return false;
+      }
+      if (!SerialAvailabeTimeout()) return false;
+      Buf[ByteNum] = CmdChannel->read();
+   }
+   return true;
+}
+
+FLASHMEM void RefuseSpans(const char *Why)
+{
+   SendU16(FailToken);
+   CmdChannel->println(Why);
+   DiscardCmdInput();
+}
+
+// Command:
+// Write up to 64 C64 memory spans by DMA, sliced so that no one halt outlasts what the C64 can take
+//
+// Workflow:
+// Receive <-- WriteC64SpansToken (0x64FC)
+// Receive <-- Flags (0), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
+// Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }
+// Receive <-- Data bytes for every span, in span order
+// TR+ Performs DMA writes
+// Send --> AckToken 0x64CC once every span has landed, 0x9b7f and the reason on Fail
+FLASHMEM void WriteC64SpansCommand()
+{
+   static const char *const Why[] = {"", "Want 1 to 64 spans", "Empty span", "Span runs past $FFFF",
+                                     "Span touches $DE00-$DFFF", "Spans exceed the buffer"};
+   uint8_t Head[4], List[C64SpansMax * 4];
+   C64Span Spans[C64SpansMax];
+   uint32_t Total;
+
+   if (!ReceiveSpanBytes(Head, sizeof Head)) return;
+   const uint32_t Count = Head[3];
+   if (Head[0]) return RefuseSpans("Flags must be 0");
+   if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount]);
+   if (!ReceiveSpanBytes(List, Count * 4)) return;
+   for (uint32_t Num = 0; Num < Count; Num++)
+      Spans[Num] = { (uint16_t)(List[Num*4] << 8 | List[Num*4+1]), (uint16_t)(List[Num*4+2] << 8 | List[Num*4+3]) };
+
+   const C64SpansCheck Check = CheckC64Spans(Spans, Count, RAM_ImageSize, &Total);
+   if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check]);
+   if (!ReceiveSpanBytes(RAM_Image, Total)) return;
+
+   const uint32_t Landed = WriteC64Spans(Spans, Count, RAM_Image, Head[1], Head[2]);
+   if (Landed != Total)
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("Stopped at %lu of %lu bytes: C64 bus not clocking, or DMA timed out\n", Landed, Total);
+      return;
+   }
+   SendU16(AckToken);
 }
 
 // Command: 

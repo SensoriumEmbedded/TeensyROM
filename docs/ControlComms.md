@@ -49,7 +49,7 @@ The TeensyROM divides commands into two availability tiers:
 #### Always-Available Commands
 These commands are processed regardless of what handler is active, even if the TeensyROM is "busy":
   * Core control (LaunchFile, ResetC64, VersionInfo, FWCheck)
-  * DMA memory access (WriteC64Mem, ReadC64Mem) — TR+ only
+  * DMA memory access (WriteC64Mem, WriteC64Spans, ReadC64Mem) — TR+ only
   * C64 pause control (C64PauseOn, C64PauseOff)
 
 #### Conditionally-Available Commands
@@ -109,6 +109,7 @@ TeensyROM uses a dual-firmware system for large cartridge support:
 |*C64PauseOnToken   | 0x6431  | Pause C64 via DMA |
 |*C64PauseOffToken  | 0x6430  | Resume C64 (un-pause) |
 |*WriteC64MemToken  | 0x64FB  | Write sequential C64 memory segment via DMA (TR+ Only)|
+|*WriteC64SpansToken | 0x64FC | Write up to 64 C64 memory spans via DMA, in slices (TR+ Only)|
 |*ReadC64MemToken   | 0x64FD  | Read sequential C64 memory segment via DMA (TR+ Only)|
 |DebugToken        | 0x6467  | Internal debug use only |
 
@@ -415,6 +416,25 @@ Writes a sequential C64 memory segment with supplied data.
 | Send | `AckToken 0x64CC` on success, `FailToken 0x9B7F` on fail |
  
 **Handler:** `WriteC64MemCommand()`
+ 
+---
+
+### Write C64 Memory Spans (TR+ Only)
+Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice bytes*, with the bus released and the 6510 running for *gap* µs between slices, so no single halt is longer than the C64's own code can absorb: a CIA timer that underflows twice inside one halt raises one NMI, not two. Both numbers are the sender's, because only it knows the C64 code it is writing to. Slices start promptly only while the C64 is writing to memory; a loop that only reads waits for a badline, or for 5,000 cycles with the screen blanked.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `WriteC64SpansToken` — `0x64FC` |
+| Receive | Flags (`0`), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
+| Receive | Span count × { C64 address (Hi, Low), length (Hi, Low) } |
+| Receive | Data bytes for every span, in span order |
+| — | TR+ performs the DMA writes |
+| Send | `AckToken 0x64CC` once every span has landed; `FailToken 0x9B7F` and a line of text otherwise |
+
+Spans are refused before any DMA if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed the receive buffer. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
+
+**Handler:** `WriteC64SpansCommand()`
  
 ---
  

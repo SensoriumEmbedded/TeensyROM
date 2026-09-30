@@ -71,6 +71,7 @@
 #define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
 #define WriteC64MemToken  0x64FB
+#define WriteC64SpansToken 0x64FC
 #define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
