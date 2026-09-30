@@ -1033,11 +1033,14 @@ FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
 }
 
 // After is what the sender goes on to send without waiting for a reply.  On false a FailToken
-// has gone out.
-FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t After, uint32_t Began, uint32_t Bytes)
+// has gone out.  Patient waits out a pause under the command's deadline alone, rather than
+// SerialAvailabeTimeout's per byte.
+FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t After, uint32_t Began, uint32_t Bytes,
+                               bool Patient = false)
 {
    for (uint32_t ByteNum = 0; ByteNum < Len; ByteNum++)
    {
+      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes));
       if (millis() - Began >= SpansCeilingmS(Bytes))
       {
          SendU16(FailToken);
@@ -1094,7 +1097,10 @@ FLASHMEM void WriteC64SpansCommand()
       return;
    }
    SendU16(AckToken);
-   if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List)) return;
+   // Until the count arrives the list it announces could be any length, so a header that fails leaves
+   // the most to discard -- and a discard runs on while bytes keep coming, the sender's next command
+   // among them.  So the header alone waits out a stall.
+   if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List, true)) return;
    const uint32_t Count = Head[3];
    if (Head[0]) return RefuseSpans("Flags must be 0", Count * 4, Began);
    if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount], Count * 4, Began);

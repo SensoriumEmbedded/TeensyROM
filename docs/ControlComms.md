@@ -434,6 +434,8 @@ Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice
 | — | TR+ performs the DMA writes |
 | Send | `AckToken 0x64CC` once every span has landed; `FailToken 0x9B7F` and a line of text otherwise |
 
+After a `FailToken`, the board goes on discarding what the sender still owes, up to the rest of the span list and payload, and stops once it has it all or a second passes with nothing arriving. Wait for that second of quiet before sending the next command, or the board may discard it too.
+
 Firmware that predates this command answers the token with `Unk cmd: 0x64fc`, or with `Busy!` from the minimal image, rather than an `AckToken`, and would read anything sent after it as commands of its own. A sender that waits for the first `AckToken` stops there.
 
 Spans are refused, before any payload is sent, if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed 64 KiB or 1,024 slices. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
