@@ -92,7 +92,7 @@ number for good. It says nothing about who implements it.
 | 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
 | 1<<17 .. 1<<19 | — | unassigned | no |
-| 1<<20 | bounded C64 transfer | this loader | not yet |
+| 1<<20 | `VM_SERVICE_C64_DMA` | this loader | yes, on a TR+ |
 | 1<<21 .. 1<<31 | — | unassigned | no |
 
 To claim a bit, open an issue naming the host and the callback it adds.
@@ -422,6 +422,7 @@ bank switch. Until then the window is an ordinary EasyFlash register area.
 | Address | Direction | Meaning |
 |--------:|:---------:|---------|
 | `$DF00..$DFEF` | read | the published packet |
+| `$DFF0` | write | grant: start the C64 transfer slice now waiting (bit 20) |
 | `$DFF4` | write | command: `1` run, `3` input ready, `4` quiet |
 | `$DFF5` | read | status: `2` running, `$12` quiet, `$E0` failed |
 | `$DFF6` | write | acknowledge: the sequence number you consumed |
@@ -637,10 +638,10 @@ byte out of `rwRegSerialString` (`ToPETSCII`, `IOH_TeensyROM.c:675`, table at
 `:107` -- `'A'` goes to 97 and `'a'` to 65), and CHROUT (`SendChar` = `$ffd2`)
 stores the screen code for that PETSCII byte in the charset the menu selects
 (`$d018` = `$17`, `MainMenu.asm`'s `TextScreenMemColor`), where the unshifted
-letters read lower case. Run the pair and `TeensyROM  ABI 2  services $409f` is
-on the screen as `TeensyROM  ABI 2  services $409f`; a dump through
+letters read lower case. Run the pair and `TeensyROM  ABI 2  services $10409f` is
+on the screen as `TeensyROM  ABI 2  services $10409f`; a dump through
 `tools/bench/c64.py`'s `petscii_row` reads it the same way. Leave either stage
-out of the model and it comes out `tEENSYrom  abi 2  SERVICES $409F`, which is
+out of the model and it comes out `tEENSYrom  abi 2  SERVICES $10409F`, which is
 the shape to distrust: it means one half of the pair was missed. Nothing tests
 this round trip, so check it against the source rather than against a previous
 reading of this paragraph. Matching case-folded, as `hostops.Outcome.said` does,

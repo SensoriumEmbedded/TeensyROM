@@ -7,6 +7,7 @@
 #include <cstring>
 #include <initializer_list>
 #include "../abi/vm_abi.h"
+#include "../../Source/Teensy/MinimalBoot/Common/C64Spans.h"
 
 static uint8_t EZFlashRAM[256];
 static uint32_t now;
@@ -28,6 +29,8 @@ static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZF
 #include "../../Source/Teensy/MinimalBoot/VMHostWire.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostCommand.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostYield.h"
+static int32_t grantedSlice(uint16_t, const uint8_t *, uint32_t, uint32_t) { return 1; }
+#include "../../Source/Teensy/MinimalBoot/VMHostTransfer.h"
 }
 #include "../../Source/Teensy/MinimalBoot/VMHostPoll.h"
 

@@ -147,8 +147,8 @@ struct VmHostC64Dma {
     uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
     // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
     // c64_write issued (a refusal issues none). A job ends NO_GRANT when a slice waits
-    // VM_C64_GRANT_MS for its grant, and BUS_FAILED when the bus is not given back; the slices
-    // before it have landed. Nothing else bounds how long it runs: it goes as fast as its
+    // VM_C64_GRANT_MS for its grant, and BUS_FAILED when a slice does not complete or the bus
+    // is not given back after it; the slices before that one have landed. Nothing else bounds how long it runs: it goes as fast as its
     // client grants, so up to VM_C64_SLICES_MAX times VM_C64_GRANT_MS.
     int32_t (*c64_status)(uint32_t ticket);
 };
@@ -189,16 +189,15 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 //   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
 //   17..19    unassigned
-//   20        TeensyROM's bounded C64 transfer; assigned to this loader, not
-//             yet served
+//   20        this loader's C64 transfer (VmHostC64Dma, above), TR+ only
 //   21..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
-                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
+                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384, VM_SERVICE_C64_DMA=0x100000,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
-                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000|0x100000,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT|VM_SERVICE_C64_DMA,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
               "a bit this loader serves must leave VM_SERVICES_ASSIGNED");

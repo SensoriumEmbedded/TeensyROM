@@ -219,10 +219,9 @@ static FLASHMEM uint32_t DMATransferCeilingmS(uint32_t Length)
    return DMA_HANDSHAKE_CEILING_mS + (Length * 4) / 1000;
 }
 
-// false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
-// that only drive the bus may ignore it; a caller that reports a value to someone else has
-// to check, or it reports the stale contents of its own buffer as C64 memory.
-FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+// PerformDMA in two halves, for a start made in between by someone else: the extension
+// image's IO2 handler sets DMA_S_StartAsynch on the cycle its C64 client asks for it.
+FLASHMEM void SetUpDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
@@ -231,16 +230,28 @@ FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
    DMA_Buffer = Buffer;
    DMA_Length = Length;
    DMA_FixC64Addr = FixC64Addr;
+}
 
-   DMA_State = DMA_S_StartAsynch;
+FLASHMEM bool FinishDMA()
+{
    if (!WaitForDMAState(DMA_S_TransferReady, DMA_HANDSHAKE_CEILING_mS)) return false;
    DMA_State = DMA_S_TransferExecuting;
-   if (!WaitForDMAState(DMA_S_TransferComplete, DMATransferCeilingmS(Length))) return false;
+   if (!WaitForDMAState(DMA_S_TransferComplete, DMATransferCeilingmS(DMA_Length))) return false;
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
-   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length, DMACycleCount);
+   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (DMA_RnW ? "Read":"Write"), DMA_StartAddr, DMA_StartAddr+DMA_Length-1, DMA_Length, DMACycleCount);
    return true;
+}
+
+// false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
+// that only drive the bus may ignore it; a caller that reports a value to someone else has
+// to check, or it reports the stale contents of its own buffer as C64 memory.
+FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+{
+   SetUpDMA(RnW, StartAddr, Buffer, Length, FixC64Addr);
+   DMA_State = DMA_S_StartAsynch;
+   return FinishDMA();
 }
 
 FLASHMEM bool CloseDMA()

@@ -69,7 +69,7 @@ test('entry points the loader would refuse are refused at build time', () => {
 });
 
 test('a service assigned but not served here packages and round trips through the parser', () => {
-  for (const bit of [32, 512, 0x10000, 0x100000]) {
+  for (const bit of [32, 512, 0x10000]) {
     assert.equal(parseImage(image({ requiredServices: BASE_SERVICES | bit })).requiredServices,
                  BASE_SERVICES | bit);
   }
