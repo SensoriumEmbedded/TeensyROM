@@ -58,6 +58,9 @@ int main() {
     assert(moduleWindow(VM_CODE_LIMIT - 1, 1) && !moduleWindow(VM_CODE_LIMIT - 1, 2));
     assert(!moduleWindow(VM_DATA_LIMIT - 8, 16) && !moduleWindow(VM_RAM_LIMIT - 8, 0xBE00));
     assert(!moduleWindow(0x10000000, 1) && !moduleWindow(VM_DATA_BASE - 1, 2));
+    moduleRamLimit = VM_RAM_LIMIT - VM_RAM_RESERVED_BYTES;                  // profile 1
+    assert(moduleWindow(VM_RAM2_RO_BASE, VM_RAM2_RO_BYTES) && !moduleWindow(VM_RAM2_RO_BASE, VM_RAM2_RO_BYTES + 1));
+    moduleRamLimit = VM_RAM_LIMIT;
     const VmC64Span io[] = { { bytes, 0xDDF8, 16 } }, wraps[] = { { bytes, 0xFFF8, 16 } };
     assert(!c64Write(io, 1, 0, 0) && !c64Write(wraps, 1, 0, 0));
     const VmC64Span big[] = { { bytes, 0x0000, 0xC000 } };

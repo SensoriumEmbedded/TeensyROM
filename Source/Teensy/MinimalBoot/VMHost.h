@@ -103,6 +103,7 @@ static bool loadModule() {
     f.close(); vm_host_code_window(h.code_base, false);
     if (!loaded) return false;
     if (h.reserved[0] == VM_PROFILE_RAM2_RO) constantAccess(true);
+    moduleRamLimit = h.reserved[0] == VM_PROFILE_RAM2_RO ? VM_RAM_LIMIT - VM_RAM_RESERVED_BYTES : VM_RAM_LIMIT;
     __asm__ volatile("dsb\nisb":::"memory");
     const uint32_t used = (h.data_bytes + h.bss_bytes + 31u) & ~31u;
     host = { { { VM_ABI, sizeof(VmHostC64Dma), providedServices, data + used, VM_DATA_BYTES - used,

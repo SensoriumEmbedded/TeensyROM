@@ -10,10 +10,11 @@ static bool sourceReadable(const uint8_t *source, uint32_t bytes);
 
 // Whether [address, address + bytes) lies wholly inside one window a module is lent -- its code,
 // its data or RAM2 -- and so can be read from DMATransferISR, which would otherwise fault there
-// with the C64's bus still driven.
+// with the C64's bus still driven. RAM2's ends below the host's reserve on profile 1.
+static uintptr_t moduleRamLimit = VM_RAM_LIMIT;
 static bool moduleWindow(uintptr_t address, uint32_t bytes) {
     const uintptr_t windows[][2] = { { VM_CODE_BASE, VM_CODE_LIMIT }, { VM_DATA_BASE, VM_DATA_LIMIT },
-                                     { VM_RAM_BASE, VM_RAM_LIMIT } };
+                                     { VM_RAM_BASE, moduleRamLimit } };
     for (const auto &w : windows) if (address >= w[0] && address < w[1] && bytes <= w[1] - address) return true;
     return false;
 }
