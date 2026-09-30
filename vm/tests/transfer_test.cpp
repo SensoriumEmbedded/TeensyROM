@@ -58,6 +58,10 @@ int main() {
     assert(moduleWindow(VM_CODE_LIMIT - 1, 1) && !moduleWindow(VM_CODE_LIMIT - 1, 2));
     assert(!moduleWindow(VM_DATA_LIMIT - 8, 16) && !moduleWindow(VM_RAM_LIMIT - 8, 0xBE00));
     assert(!moduleWindow(0x10000000, 1) && !moduleWindow(VM_DATA_BASE - 1, 2));
+    assert(!moduleWindow(VM_CODE_BASE - 1, 1));                             // the host's own code
+    moduleCodeBase = VM_CODE_BASE - 0x8000;                                 // an image linked lower
+    assert(moduleWindow(VM_CODE_BASE - 0x8000, 0x8000) && !moduleWindow(VM_CODE_BASE - 0x8001, 1));
+    moduleCodeBase = VM_CODE_BASE;
     moduleRamLimit = VM_RAM_LIMIT - VM_RAM_RESERVED_BYTES;                  // profile 1
     assert(moduleWindow(VM_RAM2_RO_BASE, VM_RAM2_RO_BYTES) && !moduleWindow(VM_RAM2_RO_BASE, VM_RAM2_RO_BYTES + 1));
     moduleRamLimit = VM_RAM_LIMIT;

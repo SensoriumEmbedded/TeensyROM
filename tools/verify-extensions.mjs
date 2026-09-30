@@ -82,11 +82,15 @@ function checkHostAdmission() {
   ]) {
     if (!pattern.test(host)) throw new Error(`VMHost.h loadModule() no longer ${lost}`);
   }
+  // moduleWindow() is tested natively against moduleCodeBase; only the loader sets it.
+  if (!/moduleCodeBase = h\.code_base;/.test(host)) {
+    throw new Error('VMHost.h loadModule() no longer sets the bit 20 source window from the image\'s code_base');
+  }
   // The same, for the descriptor a third-party host starts from.
   if (!/"Example", VM_HOST_CODE_FLOOR \}/.test(sourceOf('Source/Teensy/ExampleHost/ExampleHost.ino'))) {
     throw new Error('ExampleHost.ino no longer publishes its own code floor in the descriptor');
   }
-  console.log('PASS: the extension image refuses what it cannot serve or take, and loads at the image\'s own base');
+  console.log('PASS: the extension image refuses what it cannot serve or take, loads at the image\'s own base, and lends bit 20 its code window');
 }
 
 // The flash slot the extension image is linked into is written down twice: in
