@@ -146,8 +146,10 @@ struct VmHostC64Dma {
     // job ends.
     uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
     // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
-    // c64_write answered. A job ends NO_GRANT when a slice waits VM_C64_GRANT_MS for its grant,
-    // and BUS_FAILED when the bus is not given back; the slices before it have landed.
+    // c64_write issued (a refusal issues none). A job ends NO_GRANT when a slice waits
+    // VM_C64_GRANT_MS for its grant, and BUS_FAILED when the bus is not given back; the slices
+    // before it have landed. Nothing else bounds how long it runs: it goes as fast as its
+    // client grants, so up to VM_C64_SLICES_MAX times VM_C64_GRANT_MS.
     int32_t (*c64_status)(uint32_t ticket);
 };
 static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);

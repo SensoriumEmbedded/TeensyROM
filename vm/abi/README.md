@@ -166,9 +166,10 @@ struct VmHostC64Dma {
 ```
 
 `c64_write` starts a job and answers its ticket, or `0` when it refuses the job
-whole; the conditions are in `VMABI.h`, and a refused job writes nothing. One
-job runs at a time. `c64_status` answers `VM_C64_PENDING` until it ends, then
-`VM_C64_DONE`, `VM_C64_NO_GRANT` or `VM_C64_BUS_FAILED`. The job runs in the
+whole; the conditions are in `VMABI.h`, and a refused job writes nothing and
+leaves the last ticket as it was. One job runs at a time. `c64_status` answers
+`VM_C64_PENDING` until it ends, then `VM_C64_DONE`, `VM_C64_NO_GRANT` or
+`VM_C64_BUS_FAILED`. The job runs in the
 module's own turn, between `pump` calls, so a module polls the ticket from
 `pump` and leaves the sources alone until it ends.
 
@@ -179,7 +180,9 @@ where the client chose to let it: a client that counts timer interrupts, for
 instance, grants from the handler a slice shorter than the time left to the
 next interrupt, and loses none. A slice that waits `VM_C64_GRANT_MS` for its
 grant ends the job with `VM_C64_NO_GRANT`; a client that grants nothing is
-refused, not hung.
+refused, not hung. Nothing else times a job: one granted once a frame takes a
+frame per slice, and the longest a job that keeps being granted can run is
+`VM_C64_SLICES_MAX` times `VM_C64_GRANT_MS`, about 100 s.
 
 A slice writes wherever the C64's memory map puts its addresses at the moment
 of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM
