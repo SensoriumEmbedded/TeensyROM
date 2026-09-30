@@ -195,14 +195,20 @@ left of the period when the handler reaches its grant:
 slice_bytes <= (latch + 1) - cycles from the underflow to the grant - margin
 ```
 
-`latch + 1` is the timer's period. The cycles to the grant include the 7 the
-6510 takes to enter the interrupt, what is left of the instruction it was in,
-and the KERNAL's 7-cycle NMI entry for a client that goes through it. The margin
-is for what the VIC steals during the slice, up to about 40 cycles on a badline
-with the screen on. All three are counts of cycles, so PAL and NTSC need no
-separate value; recompute the size whenever the latch changes. The bench client
-in `tools/bench/grants` reaches its grant about 55 cycles after the underflow,
-and in a 200-cycle period its check passes slices of 140 bytes and never 150.
+`latch + 1` is the timer's period. The cycles to the grant are the handler's
+own, up to the grant's write, plus one for the CIA to raise the interrupt, what
+is left of the instruction it arrives in, the 7 the 6510 takes to enter it, and
+the KERNAL's 7-cycle NMI entry for a client that goes through it. The margin is
+for what the VIC steals during the slice: about 40 cycles for each badline it
+crosses with the screen on, and up to about 19 more on every line with eight
+sprites showing. Too small a margin makes the next interrupt late, and too small
+by more than a period loses it. These are all counts of cycles, so one size
+serves PAL and NTSC, except that a long slice crosses badlines at each
+standard's own line length. Recompute the size whenever the latch changes. The
+bench client in `tools/bench/grants` reaches its grant 55 to 60 cycles after the
+underflow and keeps no margin for the VIC: in a 200-cycle period its check
+passes slices of 140 bytes and never 150, so a badline under a slice can make
+the next tick late, though its runs lost none.
 
 A slice waits for its grant only during the host's turns for the job, which
 alternate with the module's own; a grant in between starts nothing, and the
