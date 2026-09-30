@@ -133,7 +133,9 @@ static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 // bus, one slice per grant. The client grants each slice by writing $DFF0, and the slice
 // starts as that write completes and holds the C64 off the bus for about slice_bytes cycles plus
 // what the VIC steals, so a client grants where it can afford that -- from a timer
-// interrupt's handler, say, for a slice shorter than the time to the next one. A slice
+// interrupt's handler, say, for a slice shorter than the time to the next one: slice_bytes
+// at most the timer's latch + 1, less the cycles from its underflow to the grant, less a
+// margin for what the VIC steals (vm/abi/README.md, "The C64 transfer tail"). A slice
 // lands wherever the C64's memory map puts that address at the moment it is granted. The bus
 // is timed for the machine the C64 menu last reported, or for PAL when a launch comes before
 // the menu has reported one, and PAL timing can corrupt bytes on an NTSC machine.

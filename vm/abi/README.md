@@ -188,6 +188,22 @@ crashes. And grant only a slice that ends before the next interrupt comes due,
 or that interrupt is late, and several merge into one under a slice longer than
 their period; a client that counts timer ticks can read the timer to decide.
 
+For a client granting from a CIA timer's interrupt, size the slice to what is
+left of the period when the handler reaches its grant:
+
+```
+slice_bytes <= (latch + 1) - cycles from the underflow to the grant - margin
+```
+
+`latch + 1` is the timer's period. The cycles to the grant include the 7 the
+6510 takes to enter the interrupt, what is left of the instruction it was in,
+and the KERNAL's 7-cycle NMI entry for a client that goes through it. The margin
+is for what the VIC steals during the slice, up to about 40 cycles on a badline
+with the screen on. All three are counts of cycles, so PAL and NTSC need no
+separate value; recompute the size whenever the latch changes. The bench client
+in `tools/bench/grants` reaches its grant about 55 cycles after the underflow,
+and in a 200-cycle period its check passes slices of 140 bytes and never 150.
+
 A slice waits for its grant only during the host's turns for the job, which
 alternate with the module's own; a grant in between starts nothing, and the
 client grants again next time. How many grants land depends on how long the
