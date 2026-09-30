@@ -88,7 +88,7 @@ TeensyROM uses a dual-firmware system for large cartridge support:
 After a reset, and after anything else that brings the C64 back to the TeensyROM menu (including a reboot out of Minimal FW), the menu boots before it takes commands reliably. How long that takes depends on the setup: NFC, the SD card or USB drive, loading the startup SID, the network time sync, the TCP listener. It can be under a second, or tens of seconds when DHCP has no network to answer it. A command sent in the middle of the boot can be delayed or lost.
 
 Full FW reports where the boot is as the last line of the [Version Info](#version-info) reply:
-  * `Boot: in progress`: from every return to the menu until the menu has listed its items. A boot that runs a pending remote launch sets it just before the launch starts.
+  * `Boot: in progress`: from every return to the menu until the menu has listed its items. A boot that runs a pending remote launch ends as the launch starts. A cartridge the TeensyROM starts without the menu (an autolaunch, or a launch sent while in Minimal FW) reads `complete` from the moment it starts.
   * `Boot: complete`: the menu has finished booting. It stays set while a launched program runs, until the next return to the menu.
   * No `Boot:` line: Minimal FW, or firmware from before this line was added.
 
