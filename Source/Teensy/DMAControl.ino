@@ -238,6 +238,29 @@ FLASHMEM bool CloseDMA()
    return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
 }
 
+// Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
+// giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
+// its C64 code can take, and how long its interrupt handler needs to run between them.  Stops
+// at the first slice that does not land, with the bus released; returns the bytes written.
+FLASHMEM uint32_t WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Payload, uint32_t SliceBytes, uint32_t GapuS)
+{
+   uint32_t Landed = 0;
+   for (uint32_t Num = 0; Num < Count; Num++)
+   {
+      for (uint32_t Done = 0; Done < Spans[Num].Len; )
+      {
+         uint32_t Slice = Spans[Num].Len - Done;
+         if (SliceBytes && Slice > SliceBytes) Slice = SliceBytes;
+         if (Landed) delayMicroseconds(GapuS);
+         if (!PerformDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + Landed, Slice, DMA_ADDR_INCREMENT) || !CloseDMA())
+            return Landed;
+         Done += Slice;
+         Landed += Slice;
+      }
+   }
+   return Landed;
+}
+
 //__attribute__((always_inline)) inline bool DMAByte()
 bool DMAByte(uint8_t *Data)
 {  //verifies Bus Available and sends/receives a byte to/from DMA_Buffer[DMA_Count]
