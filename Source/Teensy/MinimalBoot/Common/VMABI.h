@@ -129,6 +129,34 @@ static constexpr uint32_t VM_HOST_EXIT_BYTES=sizeof(VmHostExit);
 #if defined(__arm__)
 static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 #endif
+// Service bit 20, composed on VmHostExit: writes module memory into C64 RAM by mastering the
+// bus, one slice per grant. The client grants each slice by writing $DFF0, and the slice
+// starts as that write completes and holds the C64 off the bus for about slice_bytes cycles plus
+// what the VIC steals, so a client grants where it can afford that -- from a timer
+// interrupt's handler, say, for a slice shorter than the time to the next one. A slice
+// lands wherever the C64's memory map puts that address at the moment it is granted.
+struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
+struct VmHostC64Dma {
+    VmHostExit base;
+    // Starts writing each span's bytes, in span order, slice_bytes at a time (0 for a span
+    // per slice), and answers the job's ticket. 0 refuses the job whole: flags other than 0,
+    // a job still pending, no spans or more than VM_C64_SPANS_MAX, a null source, a span that
+    // is empty, runs past $FFFF or touches $DE00..$DFFF, or more than VM_C64_SLICES_MAX
+    // slices in all. The sources are read as each slice goes, so leave them alone until the
+    // job ends.
+    uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
+    // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
+    // c64_write answered. A job ends NO_GRANT when a slice waits VM_C64_GRANT_MS for its grant,
+    // and BUS_FAILED when the bus is not given back; the slices before it have landed.
+    int32_t (*c64_status)(uint32_t ticket);
+};
+static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);
+enum : uint32_t { VM_C64_SPANS_MAX=64, VM_C64_SLICES_MAX=1024, VM_C64_GRANT_MS=100 };
+enum : int32_t { VM_C64_PENDING=0, VM_C64_DONE=1, VM_C64_NO_GRANT=-1, VM_C64_BUS_FAILED=-2,
+                 VM_C64_UNKNOWN=-3 };
+#if defined(__arm__)
+static_assert(sizeof(VmC64Span)==8&&sizeof(VmHostC64Dma)==88, "ABI 2 C64 transfer tail layout is frozen");
+#endif
 struct VmModule {
     uint32_t abi, bytes;
     // pump is permitted while awaiting ACK; it must not alter frozen output.

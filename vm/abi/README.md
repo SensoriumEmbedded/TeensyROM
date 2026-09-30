@@ -150,6 +150,42 @@ exist in one host, and a module that checked `bytes` would be told the pointer
 was long enough to read the wrong function. Each new tail extends the longest
 one there is, and `VM_HOST_*_BYTES` grows with it.
 
+### The C64 transfer tail
+
+Bit 20 is the second, on `VmHostExit`. It writes module memory into C64 RAM by
+taking the bus, which only a TR+ can do:
+
+```c
+struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
+struct VmHostC64Dma {
+    VmHostExit base;
+    uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count,
+                          uint32_t slice_bytes, uint32_t flags);
+    int32_t (*c64_status)(uint32_t ticket);
+};
+```
+
+`c64_write` starts a job and answers its ticket, or `0` when it refuses the job
+whole; the conditions are in `VMABI.h`, and a refused job writes nothing. One
+job runs at a time. `c64_status` answers `VM_C64_PENDING` until it ends, then
+`VM_C64_DONE`, `VM_C64_NO_GRANT` or `VM_C64_BUS_FAILED`. The job runs in the
+module's own turn, between `pump` calls, so a module polls the ticket from
+`pump` and leaves the sources alone until it ends.
+
+**The client grants every slice.** A slice starts as the client's write to
+`$DFF0` completes, and holds the CPU off the bus for about `slice_bytes`
+cycles, plus any the VIC takes. Nothing else starts one, so a transfer lands
+where the client chose to let it: a client that counts timer interrupts, for
+instance, grants from the handler a slice shorter than the time left to the
+next interrupt, and loses none. A slice that waits `VM_C64_GRANT_MS` for its
+grant ends the job with `VM_C64_NO_GRANT`; a client that grants nothing is
+refused, not hung.
+
+A slice writes wherever the C64's memory map puts its addresses at the moment
+of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM
+the C64 cannot read until it banks the ROM out. `$DE00..$DFFF`, the cartridge's
+own registers, is refused.
+
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
 write-protected constants loaded from the image and holds back the reserved top
