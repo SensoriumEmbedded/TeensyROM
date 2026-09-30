@@ -185,10 +185,13 @@ alternate with the module's own; a grant in between starts nothing, and the
 client grants again next time. How many grants land depends on how long the
 module's turns are: a module that yields when `should_yield` says to leaves a
 slice armed about half the time, and one that overruns its turn leaves it
-armed less. A grant at a fixed rate can also fall into step with the turns,
-and then lands rarely. A slice that has waited `VM_C64_GRANT_MS` of those turns
-with no grant written at all ends the job with `VM_C64_NO_GRANT`: a client that
-grants nothing is refused, not hung. Nothing else times a job.
+armed less. A grant at a fixed rate can also fall into step with the turns and
+then land rarely, or, in exact step, never: the job stays pending, and there is
+no cancelling it, so a client should not grant only at one fixed point in its
+frame. A slice that has waited `VM_C64_GRANT_MS` of those turns with no grant
+written ends the job with `VM_C64_NO_GRANT` (a grant written just before the job
+began can count once): a client that grants nothing is refused, not hung.
+Nothing else times a job.
 
 A slice writes wherever the C64's memory map puts its addresses at the moment
 of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM

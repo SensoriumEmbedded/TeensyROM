@@ -148,9 +148,10 @@ struct VmHostC64Dma {
     // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
     // c64_write issued (a refusal issues none). A slice waits for its grant only during the
     // host's turns for the job, and a grant between them starts nothing. A job ends NO_GRANT
-    // when a slice has waited VM_C64_GRANT_MS of those turns with no grant written at all,
-    // and BUS_FAILED when a slice does not complete or the bus is not given back after it; the
-    // slices before that one have landed. Nothing else bounds how long a job runs.
+    // when a slice has waited VM_C64_GRANT_MS of those turns with no grant written (one written
+    // before the job began can count once), and BUS_FAILED when a slice does not complete or
+    // the bus is not given back after it; the slices before that one have landed. Nothing
+    // else bounds how long a job runs: grants that all fall between turns keep it pending.
     int32_t (*c64_status)(uint32_t ticket);
 };
 static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);
