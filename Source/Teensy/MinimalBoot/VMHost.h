@@ -78,6 +78,7 @@ static int32_t grantedSlice(uint16_t address, const uint8_t *source, uint32_t by
     if (!granted) return SliceWaiting;
     return FinishDMA() && CloseDMA() ? SliceLanded : VM_C64_BUS_FAILED;
 }
+static bool sourceReadable(const uint8_t *source, uint32_t bytes) { return moduleWindow(uintptr_t(source), bytes); }
 
 static bool loadModule() {
     char path[128]; snprintf(path, sizeof path, "%s/%s", launch.root, manifest.module);

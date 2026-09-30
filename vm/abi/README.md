@@ -178,11 +178,14 @@ module's own turn, between `pump` calls, so a module polls the ticket from
 cycles, plus any the VIC takes. Nothing else starts one, so a transfer lands
 where the client chose to let it: a client that counts timer interrupts, for
 instance, grants from the handler a slice shorter than the time left to the
-next interrupt, and loses none. A slice that waits `VM_C64_GRANT_MS` for its
-grant ends the job with `VM_C64_NO_GRANT`; a client that grants nothing is
-refused, not hung. Nothing else times a job: one granted once a frame takes a
-frame per slice, and the longest a job that keeps being granted can run is
-`VM_C64_SLICES_MAX` times `VM_C64_GRANT_MS`, about 100 s.
+next interrupt, and loses none.
+
+A slice waits for its grant only during the host's turns for the job, which
+alternate with the module's own; a grant in between starts nothing, and the
+client grants again next time. So a client granting once a frame gets a slice
+every frame or two, not every frame. A slice that has waited `VM_C64_GRANT_MS`
+of those turns ungranted ends the job with `VM_C64_NO_GRANT`: a client that
+grants nothing is refused, not hung. Nothing else times a job.
 
 A slice writes wherever the C64's memory map puts its addresses at the moment
 of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM

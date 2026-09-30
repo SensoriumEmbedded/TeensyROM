@@ -140,16 +140,17 @@ struct VmHostC64Dma {
     VmHostExit base;
     // Starts writing each span's bytes, in span order, slice_bytes at a time (0 for a span
     // per slice), and answers the job's ticket. 0 refuses the job whole: flags other than 0,
-    // a job still pending, no spans or more than VM_C64_SPANS_MAX, a null source, a span that
-    // is empty, runs past $FFFF or touches $DE00..$DFFF, or more than VM_C64_SLICES_MAX
-    // slices in all. The sources are read as each slice goes, so leave them alone until the
-    // job ends.
+    // a job still pending, no spans or more than VM_C64_SPANS_MAX, a source that does not lie
+    // wholly inside the module's code, data or RAM2 window, a span that is empty, runs past
+    // $FFFF or touches $DE00..$DFFF, or more than VM_C64_SLICES_MAX slices in all. The
+    // sources are read as each slice goes, so leave them alone until the job ends.
     uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
     // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
-    // c64_write issued (a refusal issues none). A job ends NO_GRANT when a slice waits
-    // VM_C64_GRANT_MS for its grant, and BUS_FAILED when a slice does not complete or the bus
-    // is not given back after it; the slices before that one have landed. Nothing else bounds how long it runs: it goes as fast as its
-    // client grants, so up to VM_C64_SLICES_MAX times VM_C64_GRANT_MS.
+    // c64_write issued (a refusal issues none). A slice waits for its grant only during the
+    // host's turns for the job, and a grant between them starts nothing. A job ends NO_GRANT
+    // when a slice has waited VM_C64_GRANT_MS of those turns ungranted, and BUS_FAILED when a
+    // slice does not complete or the bus is not given back after it; the slices before that
+    // one have landed. Nothing else bounds how long a job runs.
     int32_t (*c64_status)(uint32_t ticket);
 };
 static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);
