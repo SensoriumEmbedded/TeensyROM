@@ -32,15 +32,6 @@ const repoRoot = path.dirname(path.dirname(script));
 const build = (...args) =>
   spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', timeout: 20_000 });
 
-test('custom host code budget cannot silently change the stock host', () => {
-  assert.match(build('--target', 'tr-plus', '--host-code-kib', '64').stderr,
-    /requires an explicit --host-sketch/);
-  for (const value of ['32', '128', '64junk']) {
-    assert.match(build('--target', 'tr-plus', '--host-sketch', 'Source/Teensy/ExampleHost',
-      '--host-code-kib', value).stderr, /must be 64 or 96/);
-  }
-});
-
 test('extensions are refused on a target whose DMA cannot blank the screen', () => {
   const result = build('--target', 'tr', '--with-extensions');
   assert.equal(result.status, 1);

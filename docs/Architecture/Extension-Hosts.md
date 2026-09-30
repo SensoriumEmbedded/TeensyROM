@@ -34,11 +34,6 @@ turns a layout regression into a link error rather than a hang on hardware:
 
 Those hold for your host too, because your host is built with the same script.
 
-A third-party host may pass `--host-code-kib 64` with `--host-sketch` to enforce
-a smaller host ITCM ceiling while retaining the physical memory map. The
-default is 96 KiB. See [MPE packaged runtimes](MPE-Packaged-Runtimes.md) for the
-package-owned renderer use case and its separate module-ABI requirements.
-
 ## The four things a host owes
 
 Everything else is your program. These four are what make it a host.

@@ -57,8 +57,7 @@ export function mainLinkerScript(linkers) {
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
 // its heap capped, with five ASSERTs that turn a host/module layout regression
 // into a link error instead of a hang on hardware.
-export function extensionLinkerScript(linkers, hostCodeKiB = 96) {
-  assert([64, 96].includes(hostCodeKiB), 'Host code budget must be 64 or 96 KiB');
+export function extensionLinkerScript(linkers) {
   let ld = read(path.join(linkers, 'imxrt1062_t41.ld.orig'));
   ld = replaceOnce(ld, `ORIGIN = 0x${FLASH_BASE.toString(16)}, LENGTH = ${STOCK_MINIMAL_KB}K`,
     `ORIGIN = 0x${VM_BASE.toString(16)}, LENGTH = ${flashBudget().extensionKB}K`);
@@ -81,7 +80,7 @@ export function extensionLinkerScript(linkers, hostCodeKiB = 96) {
   ld = replaceOnce(ld, '_teensy_model_identifier = 0x25;',
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;
-      ASSERT(_etext <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code overlaps the module ITCM window")
+      ASSERT(_etext <= 0x18000, "Host code overlaps the module ITCM window")
       ASSERT(_heap_end <= _vm_data_start, "Host heap overlaps the module DTCM window")
       ASSERT(_estack - _vm_data_end >= 49152, "Shared stack below 48 KiB")
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap the guest RAM2 arena")

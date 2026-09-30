@@ -85,9 +85,9 @@ test('the mask --services offers as an example is one a module could really ship
 });
 
 test('an unassigned service bit is refused at build time, and only there', () => {
-  const unclaimed = 1 << 22;
+  const unclaimed = 1 << 20;
   assert.equal(unclaimed & UNASSIGNED_SERVICES, unclaimed);
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x400000/);
+  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x100000/);
   const forced = image({ requiredServices: BASE_SERVICES | unclaimed, allowUnassignedServices: true });
   assert.equal(parseImage(forced).requiredServices, BASE_SERVICES | unclaimed);
 });

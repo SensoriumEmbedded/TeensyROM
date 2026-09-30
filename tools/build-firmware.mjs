@@ -86,7 +86,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // HELLO and exited 0 for the same first-wins reason this scan was written to stop. That
 // file carries the reasoning; this one just says which arguments it takes.
 const { option, flag } = scanArgs(process.argv.slice(2), {
-  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch', '--host-code-kib'],
+  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch'],
   flags: [
     '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
     '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
@@ -136,14 +136,6 @@ const skipExtensionBuild = flag('--skip-extension-build');
 // where the extension image is not built at all, rather than ignored: a flag that
 // silently does nothing here ships the stock host under the caller's own name.
 const hostSketchOption = option('--host-sketch', null);
-const hostCodeOption = option('--host-code-kib', null);
-if (hostCodeOption !== null && hostSketchOption === null) {
-  throw new Error('--host-code-kib requires an explicit --host-sketch');
-}
-if (hostCodeOption !== null && !['64', '96'].includes(hostCodeOption)) {
-  throw new Error('--host-code-kib must be 64 or 96');
-}
-const hostCodeKiB = Number(hostCodeOption ?? 96);
 if (hostSketchOption !== null && !withExtensions) {
   throw new Error(fab04Features
     ? '--host-sketch has nothing to build with --no-extensions'
@@ -500,7 +492,7 @@ if (withExtensions && !skipExtensionBuild) {
     inoPath: path.join(sketch, hostEntryIno),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
     elfStem,
-    ld: extensionLinkerScript(linkers, hostCodeKiB),
+    ld: extensionLinkerScript(linkers),
     bootdata: extensionBootdata(linkers),
     usbType: 'USB_DISABLED',
     extraDefs: ' -DVM_HOST_PROFILE',
