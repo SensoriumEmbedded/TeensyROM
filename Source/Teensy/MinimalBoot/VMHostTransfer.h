@@ -40,11 +40,12 @@ static uint32_t c64Write(const VmC64Span *spans, uint32_t count, uint32_t sliceB
 
 static int32_t c64Status(uint32_t ticket) { return ticket && ticket == jobTicket ? jobStatus : VM_C64_UNKNOWN; }
 
-// Writes granted slices for up to 1.5 mS, a turn of its own, so a transfer cannot starve the
-// module or the client's input. A slice is armed only inside it, so a grant between turns
-// starts nothing, but it does show the client is granting: VM_C64_GRANT_MS counts only armed
-// time since the last grant of either kind, so grants that fall into step with the turns
-// slow a job without failing it.
+// Writes granted slices in a turn of its own that starts no slice after 1.5 mS, so a transfer
+// cannot starve the module or the client's input; a slice already granted runs to its end, so
+// a large slice_bytes, or 0 on a large span, lengthens the turn. A slice is armed only inside
+// it, so a grant between turns starts nothing, but it does show the client is granting:
+// VM_C64_GRANT_MS counts only armed time since the last grant of either kind, so grants that
+// fall into step with the turns slow a job without failing it.
 static void c64Step() {
     const uint32_t until = micros() + 1500;
     while (jobStatus == VM_C64_PENDING) {

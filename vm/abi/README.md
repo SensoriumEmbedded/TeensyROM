@@ -180,11 +180,13 @@ where the client chose to let it: a client that counts timer interrupts, for
 instance, grants from the handler a slice shorter than the time left to the
 next interrupt, and loses none.
 
-Grant as the handler's last act before its `RTI`, and only a slice that ends
-before the next interrupt comes due; a client that counts timer ticks can read
-the timer to decide. Otherwise that interrupt is taken inside the handler,
-ahead of its `RTI`, and a handler interrupted that way every time nests deeper
-until the stack wraps and the C64 crashes.
+Grant as the handler's last act before its `RTI`. An interrupt that comes due
+during a slice is taken when the instruction under way ends, so after a grant
+followed by anything else it is taken inside the handler, and a handler
+interrupted that way every time nests deeper until the stack wraps and the C64
+crashes. And grant only a slice that ends before the next interrupt comes due,
+or that interrupt is late, and several merge into one under a slice longer than
+their period; a client that counts timer ticks can read the timer to decide.
 
 A slice waits for its grant only during the host's turns for the job, which
 alternate with the module's own; a grant in between starts nothing, and the
@@ -202,7 +204,10 @@ Nothing else times a job.
 A slice writes wherever the C64's memory map puts its addresses at the moment
 of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM
 the C64 cannot read until it banks the ROM out. `$DE00..$DFFF`, the cartridge's
-own registers, is refused.
+own registers, is refused. The bus is timed for the machine the C64 menu last
+reported. A launch that comes before the menu has reported one, such as an
+autolaunch at power-up, gets PAL timing, as the main image does until then, and
+on an NTSC machine that timing can corrupt bytes.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
@@ -699,11 +704,11 @@ were run again; the others were not.
 | A remove with the slot blank declining without touching flash | yes |
 | A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
 | Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
-| The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
+| The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) were `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
 | A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting ten ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
 | `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | yes — `tools/bench/grants` leaves through it on every row, and the main image prints `$04` with the module's status as the detail |
-| Service bit 20: a C64 write the client grants slice by slice | yes — `tools/bench/grants.py` on an NTSC C64 whose client grants from a CIA2 timer NMI every 200 cycles: slices of 32 to 140 bytes land intact (the client's sum over the 4 KiB written matches) and no NMI is lost; a slice too long to end before the next tick is never granted, and its job ends `VM_C64_NO_GRANT`, as does a client that never grants |
+| Service bit 20: a C64 write the client grants slice by slice | yes — `tools/bench/grants.py` on a C64 run as NTSC and then as PAL, whose client grants from a CIA2 timer NMI every 200 cycles: with slices of 32 to 140 bytes no NMI is lost and the last job's 4 KiB lands intact (the client's sum over it matches); a slice too long to end before the next tick is never granted, and its job ends `VM_C64_NO_GRANT`, as does a client that never grants |
 
 Treat the rows marked **no** as untested rather than as working.
 

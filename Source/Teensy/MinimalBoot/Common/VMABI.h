@@ -134,7 +134,9 @@ static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 // starts as that write completes and holds the C64 off the bus for about slice_bytes cycles plus
 // what the VIC steals, so a client grants where it can afford that -- from a timer
 // interrupt's handler, say, for a slice shorter than the time to the next one. A slice
-// lands wherever the C64's memory map puts that address at the moment it is granted.
+// lands wherever the C64's memory map puts that address at the moment it is granted. The bus
+// is timed for the machine the C64 menu last reported, or for PAL when a launch comes before
+// the menu has reported one, and PAL timing can corrupt bytes on an NTSC machine.
 struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
 struct VmHostC64Dma {
     VmHostExit base;
@@ -142,7 +144,7 @@ struct VmHostC64Dma {
     // per slice), and answers the job's ticket. 0 refuses the job whole: flags other than 0,
     // a job still pending, no spans or more than VM_C64_SPANS_MAX, a source that does not lie
     // wholly inside the module's code, data or RAM2 window, a span that is empty, runs past
-    // $FFFF or touches $DE00..$DFFF, or more than VM_C64_SLICES_MAX slices in all. The
+    // $FFFF or touches $DE00..$DFFF, more than 64 KiB or VM_C64_SLICES_MAX slices in all. The
     // sources are read as each slice goes, so leave them alone until the job ends.
     uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
     // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one

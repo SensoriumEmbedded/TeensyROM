@@ -9,7 +9,7 @@ from its handler; the module writes 4 KiB to $4000 over and over for 1.5 s and e
 its job count and the ticks the client lost, which the main image prints on the way back.
 The client grants a slice only when it will end before the next tick, so a slice too long
 for the period is never granted and its row ends VM_C64_NO_GRANT; that is reported, not
-failed. The client sums what it holds at $4000 at the end, so a write that did not land fails
+failed. The client sums what it holds at $4000 at the end, so a last job that did not land fails
 the row. The first row asks the client never to grant, and expects the write to fail for that.
 
 Needs acme on PATH, a host serving bit 20 installed, and the C64 at the menu. Every launch

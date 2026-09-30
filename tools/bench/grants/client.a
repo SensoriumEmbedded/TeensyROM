@@ -8,11 +8,11 @@
 ;
 ; A packet from the module is a question: payload[0] is its number, payload[1] 1 to grant
 ; from here on and 0 not to, payload[2..3] the slice size. A slice is granted only when it
-; ends before the next tick comes due: one that did not would let that tick in ahead of this
-; handler's RTI, and a handler interrupted every time nests deeper until the stack wraps. The answer is an input record whose buttons and display bytes
-; are the ticks lost since the client started, low byte first, and whose overflow byte is
-; the question's number. Question 3 is answered with a sum over $4000..$4FFF instead, the
-; bytes the module wrote: s1 += byte and s2 += s1, each modulo 256, as buttons and display.
+; ends before the next tick comes due, so that no tick is late. The answer is an input
+; record whose buttons and display bytes are the ticks lost since the client started, low
+; byte first, and whose overflow byte is the question's number. Question 3 is answered
+; with a sum over $4000..$4FFF instead, the bytes the module wrote: s1 += byte and s2 += s1,
+; each modulo 256, as buttons and display.
 
 HOSTBANK = 58
 PACKET   = $DF00
