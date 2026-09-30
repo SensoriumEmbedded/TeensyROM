@@ -428,11 +428,12 @@ Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice
 | Receive | `WriteC64SpansToken` — `0x64FC` |
 | Receive | Flags (`0`), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
 | Receive | Span count × { C64 address (Hi, Low), length (Hi, Low) } |
-| Receive | Data bytes for every span, in span order |
+| Send | `AckToken 0x64CC` if the spans are accepted; `FailToken 0x9B7F` and a line of text if not |
+| Receive | Data bytes for every span, in span order — send these only after the `AckToken` |
 | — | TR+ performs the DMA writes |
 | Send | `AckToken 0x64CC` once every span has landed; `FailToken 0x9B7F` and a line of text otherwise |
 
-Spans are refused before any DMA if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed the receive buffer. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
+Spans are refused, before any payload is sent, if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed 64 KiB or 1,024 slices. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
 
 **Handler:** `WriteC64SpansCommand()`
  

@@ -4,7 +4,7 @@
 #include "../../Source/Teensy/MinimalBoot/Common/C64Spans.h"
 
 using C = C64SpansCheck;
-static C check(const C64Span *s, uint32_t n, uint32_t buffer = 0x10000) { uint32_t total = 0; return CheckC64Spans(s, n, buffer, &total); }
+static C check(const C64Span *s, uint32_t n, uint32_t buffer = 0x10000, uint32_t slice = 0) { uint32_t total = 0; return CheckC64Spans(s, n, slice, buffer, &total); }
 static C one(uint16_t addr, uint16_t len, uint32_t buffer = 0x10000) { const C64Span s{addr, len}; return check(&s, 1, buffer); }
 
 int main() {
@@ -29,8 +29,14 @@ int main() {
 
     const C64Span pair[] = {{0x0400, 1000}, {0xD800, 1000}};
     uint32_t total = 0;
-    assert(CheckC64Spans(pair, 2, 2000, &total) == C::OK && total == 2000);
-    assert(CheckC64Spans(pair, 2, 1999, &total) == C::TooBig);
+    assert(CheckC64Spans(pair, 2, 0, 2000, &total) == C::OK && total == 2000);
+    assert(CheckC64Spans(pair, 2, 0, 1999, &total) == C::TooBig);
+
+    const C64Span big{0x0400, 0x8000};
+    assert(check(&big, 1, 0x10000, 32) == C::OK);                        // exactly 1024 slices
+    assert(check(&big, 1, 0x10000, 31) == C::TooManySlices);
+    const C64Span ragged{0x0400, 0x8001};                                   // a 1-byte last slice counts
+    assert(check(&ragged, 1, 0x10000, 32) == C::TooManySlices);
     const C64Span late[] = {{0x0400, 1}, {0xDE80, 1}};
     assert(check(late, 2) == C::HitsIO);
     return 0;
