@@ -82,6 +82,21 @@ TeensyROM uses a dual-firmware system for large cartridge support:
   * **Larger memory footprint** limits maximum cartridge size (~650 KB before switch to Minimal FW)
 
 ---
+
+### Knowing When the Menu Has Booted
+
+After a reset, and after anything else that brings the C64 back to the TeensyROM menu (including a reboot out of Minimal FW), the menu boots before it takes commands reliably. How long that takes depends on the setup: NFC, the SD card or USB drive, loading the startup SID, the network time sync, the TCP listener. It can be under a second, or tens of seconds when DHCP has no network to answer it. A command sent in the middle of the boot can be delayed or lost.
+
+Full FW reports where the boot is as the last line of the [Version Info](#version-info) reply:
+  * `Boot: in progress`: from every return to the menu until the menu has listed its items. A boot that runs a pending remote launch sets it just before the launch starts.
+  * `Boot: complete`: the menu has finished booting. It stays set while a launched program runs, until the next return to the menu.
+  * No `Boot:` line: Minimal FW, or firmware from before this line was added.
+
+To wait for the menu, poll Version Info until it says `Boot: complete`, one request at a time, not back to back. `GoodSIDToken` (`0x9B81`) is not a ready signal: the menu sends it when it loads its startup SID, part way through the boot. Over TCP, the listener only starts near the end of the boot, so after a reboot the first reply usually already says `complete`.
+
+A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn't clear the flag.
+
+---
  
 ## Tokens
 
@@ -180,6 +195,7 @@ Retrieves firmware version and build information from the TeensyROM.
       Jul 27 2026, 09:41:32
   Teensy: 816MHz  59.1C  UID: 19307720
   C128  NTSC Vid  60 Hz
+  Boot: complete
 ```
 
 **Example output (minimal FW):**
@@ -189,7 +205,7 @@ Retrieves firmware version and build information from the TeensyROM.
   Teensy: 816MHz  59.1C  UID: 19307720
 ```
 
-**Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string. Full FW (only) appends a fourth line with the detected machine info (C64/C128, NTSC/PAL, TOD Hz)
+**Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string. Full FW (only) appends a fourth line with the detected machine info (C64/C128, NTSC/PAL, TOD Hz), and a fifth with the menu's boot state, `Boot: in progress` or `Boot: complete` (see [Knowing When the Menu Has Booted](#knowing-when-the-menu-has-booted)).
 
 ---
 
