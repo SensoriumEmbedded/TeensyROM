@@ -84,18 +84,13 @@ number for good. It says nothing about who implements it.
 | 8 | `VM_SERVICE_WRITE` | base profile | yes |
 | 16 | `VM_SERVICE_GUEST_RAM` | base profile | yes |
 | 128 | `VM_SERVICE_RAM2_RO` | this loader | yes (memory profile 1) |
-| 32 | video transport | Mean Hamster Software | no |
-| 64 | indexed video | Mean Hamster Software | no |
-| 256 | indexed raster | Mean Hamster Software | no |
-| 512 | RAM1 auxiliary spans | Mean Hamster Software | no |
-| 1024 | speech | Mean Hamster Software | no |
-| 2048 | SD root | Mean Hamster Software | no |
-| 4096 | desktop | Mean Hamster Software | no |
-| 8192 | firmware catalogue | Mean Hamster Software | no |
+| 32, 64, 256 .. 8192 | — | reserved, out of tree | no |
 | 16384 | `VM_SERVICE_EXIT` | this loader | yes |
 | 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
-| 1<<17 .. 1<<31 | — | unassigned | no |
+| 1<<17 .. 1<<19 | — | unassigned | no |
+| 1<<20 | bounded C64 transfer | this loader | not yet |
+| 1<<21 .. 1<<31 | — | unassigned | no |
 
 To claim a bit, open an issue naming the host and the callback it adds.
 

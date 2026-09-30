@@ -68,8 +68,8 @@ test('entry points the loader would refuse are refused at build time', () => {
   assert.throws(() => image({ entry: (CODE_BASE - 2) | 1 }), /outside the module code window/);
 });
 
-test('a service assigned to another host packages and round trips through the parser', () => {
-  for (const bit of [32, 512, 0x10000]) {
+test('a service assigned but not served here packages and round trips through the parser', () => {
+  for (const bit of [32, 512, 0x10000, 0x100000]) {
     assert.equal(parseImage(image({ requiredServices: BASE_SERVICES | bit })).requiredServices,
                  BASE_SERVICES | bit);
   }
@@ -85,9 +85,9 @@ test('the mask --services offers as an example is one a module could really ship
 });
 
 test('an unassigned service bit is refused at build time, and only there', () => {
-  const unclaimed = 1 << 20;
+  const unclaimed = 1 << 21;
   assert.equal(unclaimed & UNASSIGNED_SERVICES, unclaimed);
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x100000/);
+  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x200000/);
   const forced = image({ requiredServices: BASE_SERVICES | unclaimed, allowUnassignedServices: true });
   assert.equal(parseImage(forced).requiredServices, BASE_SERVICES | unclaimed);
 });
