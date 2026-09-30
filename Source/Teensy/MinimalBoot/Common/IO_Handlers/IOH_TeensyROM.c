@@ -38,6 +38,7 @@ stcIOHandlers IOHndlr_TeensyROM =
 };
 
 int16_t SidSpeedAdjust = 0;
+bool    VidStdReported = false; //MainMenu.asm has written wRegVid_TOD_Clks; before that it reads PAL
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
@@ -611,6 +612,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             break;
          case wRegVid_TOD_Clks:
             IO1[wRegVid_TOD_Clks]=Data;
+            VidStdReported = true;
             SetVideoStdTiming(); //make NTSC/PAL/C128 specific timing tweaks upon discovery
             break;
          case rwRegPageNumber:

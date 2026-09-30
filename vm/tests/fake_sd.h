@@ -60,7 +60,7 @@ static bool SendMsgPrintfln(const char *fmt,...){
     vsnprintf(buffer,sizeof buffer,fmt,args);va_end(args);message=buffer;return true;}
 static void EEPwriteStr(int,const char *m){marker=m;}
 static uint8_t io1[256];static volatile uint8_t *IO1=io1;
-static int machineAt=-1;static uint8_t machine[2];
+static bool VidStdReported;static int machineAt=-1;static uint8_t machine[2];
 static void EEPwriteNBuf(int at,const uint8_t *b,int n){assert(n==2);machineAt=at;memcpy(machine,b,2);}
 static struct {void write(int,int){}} EEPROM;
 static void delay(unsigned){}
