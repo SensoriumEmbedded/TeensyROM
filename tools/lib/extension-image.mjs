@@ -13,7 +13,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './hex.mjs';
 
-const read = (p) => fs.readFileSync(p, 'utf8');
+// A Windows checkout with core.autocrlf gives these CRLF line endings, which no
+// anchor below would match.
+const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
 // An anchor that has drifted would otherwise drop its replacement silently --
 // worst of all for the ASSERTs below, where a miss removes the entire safety
@@ -65,7 +67,10 @@ export const DEFAULT_HOST_CODE_KIB = 64;
 // moves: a function the library itself marks FASTRUN stays in ITCM.
 const FLASH_RESIDENT_LIBRARIES = ['SdFat', 'SD', 'SPI'];
 // ld matches object paths literally, and arduino-cli writes them with '\' on Windows.
-const PATH_SEPARATOR = '[/\\\\]';
+// The escaped '\' comes first: libiberty's fnmatch, which ld uses wherever there is
+// no glibc, reads an escape while skipping the rest of a class that matched, so in
+// '[/\\]' a '/' match would swallow the ']'.
+const PATH_SEPARATOR = '[\\\\/]';
 
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
 // its heap capped, with five ASSERTs that turn a host/module layout regression

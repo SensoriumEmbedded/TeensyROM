@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import {extensionLinkerScript, HOST_CODE_KIB} from './extension-image.mjs';
+import {extensionLinkerScript, extensionBootdata, minimalLinkerScript, mainLinkerScript, HOST_CODE_KIB} from './extension-image.mjs';
 import {CODE_BASE} from './extension.mjs';
 
 const linkers = path.resolve(import.meta.dirname, '../BootLinkerFiles');
@@ -25,7 +27,7 @@ test('no host code budget reaches into the module code window', () => {
 });
 
 // ld matches a file-name pattern with fnmatch(pattern, name, 0): '*', '?', '[...]', and
-// '\' escaping the next character, inside a bracket or out.
+// '\' escaping the next character, inside a bracket or out. This is glibc's reading.
 function fnmatchRegExp(pattern) {
   const escape = (c) => c.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
   let source = '';
@@ -44,9 +46,65 @@ function fnmatchRegExp(pattern) {
   return new RegExp(`^${source}$`);
 }
 
-const flashTextPatterns = (ld) =>
-  [...progmemBlock(ld).matchAll(/^\t\t(\S+)\(\.text\*\)$/gm)].map((match) => fnmatchRegExp(match[1]));
-const placedInFlash = (patterns, objectPath) => patterns.some((pattern) => pattern.test(objectPath));
+// libiberty's, which ld links wherever there is no glibc (MinGW, for one), transcribed
+// from its fnmatch.c. It differs once a class has matched: skipping the rest of the
+// class, it reads '\' as an escape, so '[/\\]' matching '/' skips past the ']'.
+function libibertyFnmatch(pattern, name) {
+  const match = (p, n) => {
+    while (p < pattern.length) {
+      let c = pattern[p++];
+      if (c === '?') {
+        if (n++ >= name.length) return false;
+      } else if (c === '\\') {
+        if (name[n++] !== pattern[p++]) return false;
+      } else if (c === '*') {
+        for (; pattern[p] === '?' || pattern[p] === '*'; p++) if (pattern[p] === '?' && n++ >= name.length) return false;
+        if (p === pattern.length) return true;
+        for (let rest = n; rest <= name.length; rest++) if (match(p, rest)) return true;
+        return false;
+      } else if (c === '[') {
+        if (n >= name.length) return false;
+        const not = pattern[p] === '!' || pattern[p] === '^';
+        if (not) p++;
+        let matched = false;
+        c = pattern[p++];
+        for (;;) {
+          let start = c, end = c;
+          if (c === '\\') { if (p >= pattern.length) return false; start = end = pattern[p++]; }
+          if (c === undefined) return false;
+          c = pattern[p++];
+          if (c === '-' && pattern[p] !== ']') {
+            end = pattern[p++];
+            if (end === '\\') end = pattern[p++];
+            if (end === undefined) return false;
+            c = pattern[p++];
+          }
+          if (name[n] >= start && name[n] <= end) { matched = true; break; }
+          if (c === ']') break;
+        }
+        if (matched) {
+          while (c !== ']') {
+            if (c === undefined) return false;
+            c = pattern[p++];
+            if (c === '\\') { if (p >= pattern.length) return false; p++; }
+          }
+        }
+        if (matched === not) return false;
+        n++;
+      } else if (name[n++] !== c) {
+        return false;
+      }
+    }
+    return n === name.length;
+  };
+  return match(0, 0);
+}
+
+const flashTextPatterns = (ld) => [...progmemBlock(ld).matchAll(/^\t\t(\S+)\(\.text\*\)$/gm)].map((match) => match[1]);
+// Under each reading, glibc's then libiberty's.
+const placedInFlash = (patterns, objectPath) =>
+  [(pattern) => fnmatchRegExp(pattern).test(objectPath), (pattern) => libibertyFnmatch(pattern, objectPath)]
+    .map((matches) => patterns.some(matches));
 
 // ld gives an input section to the first output section that names it, so a library
 // pattern outside .text.progmem, or after it, leaves that code in ITCM.
@@ -54,11 +112,30 @@ test('the SD card libraries run from flash, on either path separator', () => {
   const patterns = flashTextPatterns(extensionLinkerScript(linkers));
   for (const library of ['SdFat', 'SD', 'SPI']) {
     for (const objectPath of [`/b/ext/libraries/${library}/src/x.cpp.o`, `C:\\b\\ext\\libraries\\${library}\\src\\x.cpp.o`]) {
-      assert.ok(placedInFlash(patterns, objectPath), objectPath);
+      assert.deepEqual(placedInFlash(patterns, objectPath), [true, true], objectPath);
     }
   }
   for (const objectPath of ['/b/ext/libraries/SdFatX/x.cpp.o', '/b/ext/libraries/SPIFlash/x.cpp.o',
     'C:\\b\\ext\\sketch\\VMBoot.ino.cpp.o', '/b/ext/sketch/VMBoot.ino.cpp.o', 'core.a']) {
-    assert.ok(!placedInFlash(patterns, objectPath), objectPath);
+    assert.deepEqual(placedInFlash(patterns, objectPath), [false, false], objectPath);
+  }
+});
+
+test('the two readings part on the order of a class, which is why the escaped \\ comes first', () => {
+  assert.deepEqual([libibertyFnmatch('*[/\\\\]x', '/a/x'), fnmatchRegExp('*[/\\\\]x').test('/a/x')], [false, true]);
+  assert.deepEqual([libibertyFnmatch('*[\\\\/]x', '/a/x'), fnmatchRegExp('*[\\\\/]x').test('/a/x')], [true, true]);
+});
+
+test('a CRLF checkout of the stock linker files edits the same as an LF one', () => {
+  const crlf = fs.mkdtempSync(path.join(os.tmpdir(), 'crlf-linkers-'));
+  try {
+    for (const name of fs.readdirSync(linkers)) {
+      fs.writeFileSync(path.join(crlf, name), fs.readFileSync(path.join(linkers, name), 'utf8').replace(/\r?\n/g, '\r\n'));
+    }
+    for (const edit of [extensionLinkerScript, extensionBootdata, minimalLinkerScript, mainLinkerScript]) {
+      assert.equal(edit(crlf), edit(linkers), edit.name);
+    }
+  } finally {
+    fs.rmSync(crlf, { recursive: true, force: true });
   }
 });
