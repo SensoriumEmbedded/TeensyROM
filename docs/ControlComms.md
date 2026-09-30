@@ -415,6 +415,8 @@ Writes a sequential C64 memory segment with supplied data.
 | — | TR+ performs DMA write |
 | Send | `AckToken 0x64CC` on success, `FailToken 0x9B7F` on fail |
  
+The data is staged in a buffer of its own, so a write never touches a running cartridge's ROM or REU emulation's memory. That buffer comes from the heap, which a large cartridge or REU emulation can have used up, and then the write is refused with `No memory to stage <n> bytes` and its data bytes are discarded. Write C64 Memory Spans and Read C64 Memory stage their data the same way, and are refused the same way, before any data is sent.
+
 **Handler:** `WriteC64MemCommand()`
  
 ---
