@@ -1017,14 +1017,14 @@ FLASHMEM void WriteC64MemCommand()
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
 }
 
-// Throws away what a refused sender is still sending, so it is not parsed as commands.  Capped,
-// since a peer that keeps sending would otherwise hold it open.
-FLASHMEM void DiscardCmdInput()
+// Throws away the Bytes a failed sender still owes, so they are not parsed as commands.  Quiet
+// longer than a TCP retransmit, or the deadline a receive of that many would have, ends it.
+FLASHMEM void DiscardCmdInput(uint32_t Bytes)
 {
-   const uint32_t Began = millis();
+   const uint32_t Began = millis(), CeilingmS = SerialTimoutMillis * 10 + Bytes / 2;
    uint32_t Quiet = Began;
-   while (millis() - Quiet < SerialTimoutMillis && millis() - Began < SerialTimoutMillis * 4)
-      if (CmdChannel->available()) { CmdChannel->read(); Quiet = millis(); }
+   while (Bytes && millis() - Quiet < SerialTimoutMillis * 4 && millis() - Began < CeilingmS)
+      if (CmdChannel->available()) { CmdChannel->read(); Bytes--; Quiet = millis(); }
 }
 
 // One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
@@ -1039,20 +1039,20 @@ FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t Began, uint3
       {
          SendU16(FailToken);
          CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, Len);
-         DiscardCmdInput();
+         DiscardCmdInput(Len - ByteNum);
          return false;
       }
-      if (!SerialAvailabeTimeout()) return false;
+      if (!SerialAvailabeTimeout()) { DiscardCmdInput(Len - ByteNum); return false; }
       Buf[ByteNum] = CmdChannel->read();
    }
    return true;
 }
 
-FLASHMEM void RefuseSpans(const char *Why)
+FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed)
 {
    SendU16(FailToken);
    CmdChannel->println(Why);
-   DiscardCmdInput();
+   DiscardCmdInput(Owed);
 }
 
 // Command:
@@ -1079,15 +1079,15 @@ FLASHMEM void WriteC64SpansCommand()
 
    if (!ReceiveSpanBytes(Head, sizeof Head, Began, sizeof List)) return;
    const uint32_t Count = Head[3];
-   if (Head[0]) return RefuseSpans("Flags must be 0");
-   if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount]);
+   if (Head[0]) return RefuseSpans("Flags must be 0", Count * 4);
+   if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount], Count * 4);
    if (!ReceiveSpanBytes(List, Count * 4, Began, sizeof List)) return;
    for (uint32_t Num = 0; Num < Count; Num++)
       Spans[Num] = { (uint16_t)(List[Num*4] << 8 | List[Num*4+1]), (uint16_t)(List[Num*4+2] << 8 | List[Num*4+3]) };
 
    // WriteC64Mem's reach, into the same buffer.
    const C64SpansCheck Check = CheckC64Spans(Spans, Count, Head[1], 0x10000, &Total);
-   if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check]);
+   if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check], 0);
    SendU16(AckToken);
    if (!ReceiveSpanBytes(RAM_Image, Total, Began, sizeof List + Total)) return;
 

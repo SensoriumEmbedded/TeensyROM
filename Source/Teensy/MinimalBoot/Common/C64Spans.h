@@ -6,7 +6,7 @@
 struct C64Span { uint16_t Addr, Len; };
 
 // A slice can wait ~5 mS to start (a C64 loop that only reads, screen blanked), so the slice
-// cap is what bounds how long one job can hold the board.
+// cap keeps a job that plays by the rules to about 5 S.
 enum : uint32_t { C64SpansMax = 64, C64SlicesMax = 1024 };
 
 enum class C64SpansCheck : uint8_t { OK, BadCount, EmptySpan, Wraps, HitsIO, TooBig, TooManySlices };
