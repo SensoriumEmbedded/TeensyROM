@@ -134,11 +134,11 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
                         (unsigned long)(image.required_services&~hostId.services));return true;}
         // Says the number rather than a capability, because that is what the module
         // asked for and what a rebuild would have to change. A host that states no
-        // floor is most often one installed before the field, and a newer build of
-        // it may well take the module, which the number alone would not say.
+        // floor is told apart, since it is most often one installed before the
+        // field rather than one whose code fills the window.
         if(!vm_host_takes_code(image,hostId.code_floor)){
-            if(!hostId.code_floor)SendMsgPrintfln("%s host states no code floor; update it to take $%lx",hostName,
-                        (unsigned long)image.code_base);
+            if(!hostId.code_floor)SendMsgPrintfln("%s host states no code floor, so takes $%lx only",hostName,
+                        (unsigned long)VM_CODE_BASE);
             else SendMsgPrintfln("%s host needs code at $%lx, not $%lx",hostName,
                         (unsigned long)vm_host_code_floor(hostId.code_floor),(unsigned long)image.code_base);
             return true;}}

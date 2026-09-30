@@ -122,7 +122,7 @@ export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_K
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;
       ASSERT(__exidx_end <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget${
-        hostCodeKiB === DEFAULT_HOST_CODE_KIB ? '; a host that needs more can build with --host-code-kib 96' : ''}")
+        hostCodeKiB === DEFAULT_HOST_CODE_KIB ? '; a --host-sketch host that needs more can build with --host-code-kib 96' : ''}")
       ASSERT(_heap_end <= _vm_data_start, "Host heap overlaps the module DTCM window")
       ASSERT(_estack - _vm_data_end >= 49152, "Shared stack below 48 KiB")
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap the guest RAM2 arena")

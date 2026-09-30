@@ -15,7 +15,7 @@ test('the stock host is linked at 64 KiB, and 96 KiB moves only its code ceiling
   assert.equal(stock, extensionLinkerScript(linkers, 64));
   assert.match(stock, /ASSERT\(__exidx_end <= 0x10000,/);
   assert.equal(extensionLinkerScript(linkers, 96), stock.replace(
-    '__exidx_end <= 0x10000, "Host code exceeds its 64 KiB ITCM budget; a host that needs more can build with --host-code-kib 96"',
+    '__exidx_end <= 0x10000, "Host code exceeds its 64 KiB ITCM budget; a --host-sketch host that needs more can build with --host-code-kib 96"',
     '__exidx_end <= 0x18000, "Host code exceeds its 96 KiB ITCM budget"'));
   assert.match(stock, /_itcm_block_count = 6;/);
   for (const invalid of [0, 32, 65, 128, '64', NaN]) {
