@@ -184,7 +184,7 @@ FLASHMEM ATRespCode AT_DT(char* CmdArg)
    if (cmdlen) if (CmdArg[cmdlen-1]=='\"') CmdArg[cmdlen-1]=0; //Remove trailing quote
    
    char Buf[100];
-   sprintf(Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);
+   snprintf(Buf, sizeof Buf, "Trying \"%s\"\r\n on port %d...", CmdArg, Port);
    AddVerboseToPETSCIIStrToRxQueueLN(Buf);
    FlushRxQueue();
    //Printf_dbg_sw("Host name: %s  Port: %d\n", CmdArg, Port);

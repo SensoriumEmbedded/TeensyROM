@@ -189,6 +189,16 @@ void EEPRemoteLaunch(uint16_t eepAdNameToLaunch)
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
 {  //assumes file exists & TR is not "busy" (Handler active)
    
+   //Callers hand over up to MaxNamePathLength (the USB/TCP launch command) or more (a browser
+   //"lcl:" link joined onto the download path), and all of it was strcpy'd into DriveDirPath,
+   //which is MaxPathLength.  Refuse before anything changes: a cut-short path launches a
+   //different file than the one named.
+   if (strlen(FileNamePath) >= MaxPathLength)
+   {
+      Serial.printf("Remote launch path too long (%u chars)\n", (unsigned)strlen(FileNamePath));
+      return;
+   }
+
    //Printf_dbg("Launching: SrcID%d DoCRT%d \"%s\"\n", MenuSourceID, DoCartDirect, FileNamePath);
    RemoteLaunched = true;
    //Set selected drive
@@ -207,23 +217,26 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
 
    if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
    
-   //set path & filename
-   strcpy(DriveDirPath, FileNamePath);
-   char* ptrFilename = strrchr(DriveDirPath, '/'); //pointer file name, find last slash
+   //set path & filename.  Split in a local copy and published to DriveDirPath only once the
+   //launch goes ahead: the TR branch's "No TR Dir"/"No TR File" returns used to leave
+   //DriveDirPath naming the requested directory while the C64 still showed its old listing.
+   char LaunchDir[MaxPathLength];
+   strcpy(LaunchDir, FileNamePath); //fits: checked above
+   char* ptrFilename = strrchr(LaunchDir, '/'); //pointer file name, find last slash
    if (ptrFilename == NULL) 
    {  //no path:
-      strcpy(DriveDirPath, "/");
+      strcpy(LaunchDir, "/");
       ptrFilename = (char*)FileNamePath; 
    }
    else
    {  //separate path/filename
-      *ptrFilename = 0; //terminate DriveDirPath
+      *ptrFilename = 0; //terminate LaunchDir
       ptrFilename++; //inc to point to filename
-      if (!DriveDirPath[0]) //root-level file: the only slash was the leading one, DriveDirPath is now empty
+      if (!LaunchDir[0]) //root-level file: the only slash was the leading one, LaunchDir is now empty
       {
-         strcpy(DriveDirPath, "/"); //restore the leading slash
+         strcpy(LaunchDir, "/"); //restore the leading slash
          ptrFilename = (char*)FileNamePath + 1; //re-point into the untouched source string (past its leading slash) --
-      }                                          //DriveDirPath's buffer can't hold both "/" and the filename starting at index 1
+      }                                          //LaunchDir's buffer can't hold both "/" and the filename starting at index 1
    }
    
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
@@ -232,7 +245,6 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    FreeREU();
 #endif   
    FreeSwiftlinkBuffs();
-   InitDriveDirMenu();
 
    if (MenuSourceID == rmtTeensy)
    {
@@ -241,12 +253,12 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       StructMenuItem* DefTRMenu = TeensyROMMenu;  //default to root menu
       uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
       
-      if(strcmp(DriveDirPath, "/") !=0 )
+      if(strcmp(LaunchDir, "/") !=0 )
       {//find dir menu
-         MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, DriveDirPath);
+         MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, LaunchDir);
          if(MenuNum<0)
          {
-            Printf_dbg("No TR Dir \"%s\"\n", DriveDirPath);
+            Printf_dbg("No TR Dir \"%s\"\n", LaunchDir);
             //Somehow notify user?  
             return;
          }
@@ -266,30 +278,39 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       Printf_dbg("TR File Num = %d\n", MenuNum);
 
       //point to item # matching filename
-      MenuSource = DefTRMenu;
-      SetNumItems(NumMenuItems);
+      SetMenu(DefTRMenu, NumMenuItems);
       IO1[rwRegCursorItemOnPg] = MenuNum;
-      SelItemFullIdx = MenuNum;  //  "Select" item
+      SelItemFullIdx = MenuNum;  //  "Select" item, in range: FindTRMenuItem returned it
    }
    else
    {
       // Set up DriveDirMenu to point to file to load
       //    without doing LoadDirectory(&SD/&firstPartition);
       Printf_dbg("Dir Setup\n");
-      SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
+      //Only this branch rebuilds DriveDirMenu, so only it clears the old listing: done
+      //above both branches, the TR branch's "No TR Dir"/"No TR File" returns left a C64
+      //still showing that listing over freed names.  The SetMenu below reopens the menu.
+      InitDriveDirMenu();
+      if (!SetDriveDirMenuNameType(0, ptrFilename))
+      {  //out of memory: an item whose Name is NULL would be dereferenced by the launch below
+         Serial.printf("Remote launch: out of memory\n");
+         return;
+      }
       NumDrvDirMenuItems = 1;
-      MenuSource = DriveDirMenu; 
-      SetNumItems(1); //sets # of menu items
+      SetMenu(DriveDirMenu, 1); //sets menu base and # of items together
       IO1[rwRegCursorItemOnPg] = 0;
       SelItemFullIdx = 0;  //  "Select" item
    }
    
+   strcpy(DriveDirPath, LaunchDir); //the launch goes ahead: publish its directory
+
    //Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
    Serial.printf("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
 
    if (DoCartDirect)
    {  //If a CRT, start and reset directly:
-      switch(MenuSource[SelItemFullIdx].ItemType)
+      const StructMenuItem* Item = MenuItemSel();
+      switch(Item == NULL ? rtNone : Item->ItemType) //no case for rtNone: falls to the menu launch below
       {
          case rtFileCrt:
          case rtBin16k:
