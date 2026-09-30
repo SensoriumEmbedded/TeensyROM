@@ -63,9 +63,12 @@ export const HOST_CODE_KIB = [64, 96];
 export const DEFAULT_HOST_CODE_KIB = 64;
 
 // Libraries whose code runs from flash rather than ITCM, which is what fits the
-// stock host in 64 KiB. Matched by their arduino-cli build path. Only .text
-// moves: a function the library itself marks FASTRUN stays in ITCM.
-const FLASH_RESIDENT_LIBRARIES = ['SdFat', 'SD', 'SPI'];
+// stock host in 64 KiB, each with the object files of its own that stay. Matched
+// by their arduino-cli build path. Only .text moves: a function the library itself
+// marks FASTRUN stays in ITCM. SdFat's SDIO driver stays whole, because
+// SdioCard::readData masks interrupts around its SDHC_PROCTL writes, and a flash
+// cache miss inside that would hold off isrPHI2.
+const FLASH_RESIDENT_LIBRARIES = { SdFat: ['SdioTeensy.cpp.o'], SD: [], SPI: [] };
 // ld matches object paths literally, and arduino-cli writes them with '\' on Windows.
 // The escaped '\' comes first: libiberty's fnmatch, which ld uses wherever there is
 // no glibc, reads an escape while skipping the rest of a class that matched, so in
@@ -83,8 +86,10 @@ export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_K
   // .text.progmem precedes .text.itcm, so ld places these here before
   // .text.itcm's own *(.text*) can claim them.
   ld = replaceOnce(ld, '\t\t*(.progmem*)\n', '\t\t*(.progmem*)\n' +
-    FLASH_RESIDENT_LIBRARIES.map((name) =>
-      `\t\t*${PATH_SEPARATOR}libraries${PATH_SEPARATOR}${name}${PATH_SEPARATOR}*(.text*)\n`).join(''));
+    Object.entries(FLASH_RESIDENT_LIBRARIES).map(([name, staying]) =>
+      `\t\t*${PATH_SEPARATOR}libraries${PATH_SEPARATOR}${name}${PATH_SEPARATOR}*(` +
+      (staying.length ? `EXCLUDE_FILE(${staying.map((file) => `*${PATH_SEPARATOR}${file}`).join(' ')}) ` : '') +
+      '.text*)\n').join(''));
   // Pin the host to six 32 KiB ITCM blocks, so the module window at 0x18000
   // cannot be pushed around by a change in host code size.
   ld = replaceOnce(ld, '_itcm_block_count = (SIZEOF(.text.itcm) + SIZEOF(.ARM.exidx) + 0x7FFF) >> 15;',

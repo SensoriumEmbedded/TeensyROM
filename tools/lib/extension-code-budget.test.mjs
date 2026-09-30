@@ -100,15 +100,18 @@ function libibertyFnmatch(pattern, name) {
   return match(0, 0);
 }
 
-const flashTextPatterns = (ld) => [...progmemBlock(ld).matchAll(/^\t\t(\S+)\(\.text\*\)$/gm)].map((match) => match[1]);
+// Each line's file pattern, and the files its EXCLUDE_FILE leaves in ITCM.
+const flashTextPatterns = (ld) =>
+  [...progmemBlock(ld).matchAll(/^\t\t(\S+)\((?:EXCLUDE_FILE\(([^)]*)\) )?\.text\*\)$/gm)]
+    .map((match) => ({ file: match[1], staying: match[2]?.split(' ') ?? [] }));
 // Under each reading, glibc's then libiberty's.
 const placedInFlash = (patterns, objectPath) =>
   [(pattern) => fnmatchRegExp(pattern).test(objectPath), (pattern) => libibertyFnmatch(pattern, objectPath)]
-    .map((matches) => patterns.some(matches));
+    .map((matches) => patterns.some(({ file, staying }) => matches(file) && !staying.some(matches)));
 
 // ld gives an input section to the first output section that names it, so a library
 // pattern outside .text.progmem, or after it, leaves that code in ITCM.
-test('the SD card libraries run from flash, on either path separator', () => {
+test('the SD card libraries run from flash but for the SDIO driver, on either path separator', () => {
   const patterns = flashTextPatterns(extensionLinkerScript(linkers));
   for (const library of ['SdFat', 'SD', 'SPI']) {
     for (const objectPath of [`/b/ext/libraries/${library}/src/x.cpp.o`, `C:\\b\\ext\\libraries\\${library}\\src\\x.cpp.o`]) {
@@ -116,7 +119,9 @@ test('the SD card libraries run from flash, on either path separator', () => {
     }
   }
   for (const objectPath of ['/b/ext/libraries/SdFatX/x.cpp.o', '/b/ext/libraries/SPIFlash/x.cpp.o',
-    'C:\\b\\ext\\sketch\\VMBoot.ino.cpp.o', '/b/ext/sketch/VMBoot.ino.cpp.o', 'core.a']) {
+    'C:\\b\\ext\\sketch\\VMBoot.ino.cpp.o', '/b/ext/sketch/VMBoot.ino.cpp.o', 'core.a',
+    // SdioCard::readData masks interrupts, so the SDIO driver stays in ITCM.
+    '/b/ext/libraries/SdFat/SdCard/SdioTeensy.cpp.o', 'C:\\b\\ext\\libraries\\SdFat\\SdCard\\SdioTeensy.cpp.o']) {
     assert.deepEqual(placedInFlash(patterns, objectPath), [false, false], objectPath);
   }
 });
