@@ -19,7 +19,7 @@ Base address `IO1Port = $de00` (`c64defs.i`); everything else is an offset from 
 - An IRQ command channel: `wRegIRQ_ACK` / `rwRegIRQ_CMD` with `enum RegIRQCommands` (e.g. `ricmdLaunch`, `ricmdSIDPause`) — this is what `RemoteControl.ino`'s `DoC64IRQ()` drives from the Teensy side
 - `IO2Scratch = $7f` — used by the Expansion Port test app only
 
-**How the two protocols connect:** an external host command (below) typically causes the Teensy to twiddle one of these registers or fire an IRQ, which the running C64 program observes and reacts to. Example: a host `LaunchFileToken` causes the Teensy to eventually drive `ricmdLaunch` / `rCtlRunningPRG` at this register layer — the C64 code never sees the external protocol directly, only its effects here.
+**How the two protocols connect:** an external host command (below) typically causes the Teensy to twiddle one of these registers or fire an IRQ, which the running C64 program observes and reacts to. Example: a host `LaunchFileToken` causes the Teensy to eventually drive `ricmdLaunch` / `rCtlRunningPRG` at this register layer — the C64 code never sees the external protocol directly, only its effects here. It also runs the other way: once the menu has booted it writes `rCtlBootComplete` to `wRegControl`, and the host reads that as the Version Info reply's `Boot:` line (`SetUpMainMenuROM()` clears it on every return to the menu).
 
 ## 2. External host protocol (PC/mobile apps ↔ TeensyROM, off-board)
 
