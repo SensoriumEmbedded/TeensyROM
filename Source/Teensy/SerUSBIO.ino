@@ -1063,6 +1063,7 @@ FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
 //
 // Workflow:
 // Receive <-- WriteC64SpansToken (0x64FC)
+// Send --> AckToken 0x64CC
 // Receive <-- Flags (0), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
 // Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }
 // Send --> AckToken 0x64CC if the spans are accepted, 0x9b7f and the reason if not
@@ -1070,7 +1071,9 @@ FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
 // TR+ Performs DMA writes
 // Send --> AckToken 0x64CC once every span has landed, 0x9b7f and the reason on Fail
 //
-// The sender waits for the first reply, so a refused payload is never sent to be misread as commands.
+// The sender waits for each reply before sending more.  Waiting on the first is what keeps firmware
+// without this command, which answers "Unk cmd" or "Busy!", from reading the header and span list as
+// commands of its own; waiting on the second keeps a refused payload from being read the same way.
 FLASHMEM void WriteC64SpansCommand()
 {
    static const char *const Why[] = {"", "Want 1 to 64 spans", "Empty span", "Span runs past $FFFF",
@@ -1080,6 +1083,7 @@ FLASHMEM void WriteC64SpansCommand()
    uint32_t Total, Landed;
    const uint32_t Began = millis();
 
+   SendU16(AckToken);
    if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List)) return;
    const uint32_t Count = Head[3];
    if (Head[0]) return RefuseSpans("Flags must be 0", Count * 4, Began);

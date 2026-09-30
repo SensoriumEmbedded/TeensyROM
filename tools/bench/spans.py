@@ -7,7 +7,7 @@ Needs acme on PATH and the C64 at the menu. Loads spanclient.a (IRQs off, a loop
 that writes or only reads, and an NMI that counts), measures, then resets the C64.
 """
 import os, statistics, subprocess, sys, tempfile, time
-from protocol import ACK, DRIVE_SD, READ_C64_MEM, WRITE_C64_MEM, WRITE_C64_SPANS, to_board
+from protocol import ACK, DRIVE_SD, FAIL, READ_C64_MEM, WRITE_C64_MEM, WRITE_C64_SPANS, to_board
 from trlink import Link
 
 MODE, TICKS, READY, PROBE = 0xC100, 0xC101, 0xC104, 0xC105
@@ -20,9 +20,14 @@ failed = []
 def spans(tr, runs, payload, slice_bytes=0, gap_us=0, flags=0):
     """One job: (acked, reply text, seconds from send to the final reply)."""
     began = time.perf_counter()
-    tr.wr(to_board(WRITE_C64_SPANS) + bytes([flags, slice_bytes, gap_us, len(runs)])
-          + b''.join(to_board(addr) + to_board(length) for addr, length in runs))
+    tr.wr(to_board(WRITE_C64_SPANS))
     value, text = tr.status(10)
+    if value not in (ACK, FAIL, None):
+        text = f'answered 0x{value:04X}, not an AckToken -- the command is not in this firmware'
+    if value == ACK:
+        tr.wr(bytes([flags, slice_bytes, gap_us, len(runs)])
+              + b''.join(to_board(addr) + to_board(length) for addr, length in runs))
+        value, text = tr.status(10)
     if value == ACK:
         tr.wr(payload)
         value, text = tr.status(30)
