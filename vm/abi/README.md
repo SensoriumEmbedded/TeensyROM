@@ -629,7 +629,7 @@ were run again; the others were not.
 | Launch record, manifest and client validation in the extension image | yes |
 | The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
 | Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes — linked at `0x18000` |
-| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes — a module with 101 KiB of code, more than the `0x18000` window holds, runs under the stock host (floor `0xf00c`), reads the card, and returns to the menu on joystick-2 up. It and an 876-byte module at `0x10000` are refused on screen by a host with no code floor, `TeensyROM host states no code floor, so takes $18000 only`, with the board left at the menu. |
+| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes — a module with 101 KiB of code, more than the `0x18000` window holds, runs under the stock host (floor `0xf00c`), reads the card, and returns to the menu on joystick-2 up. It and an 876-byte module at `0x10000` are refused on screen by a host with no code floor, `TeensyROM host states no code floor, so takes $18000 only`, with the board left at the menu. The refusal by a host that states a floor above `0x10000` (`host needs code at …`) is covered by `registry_test` only. |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |

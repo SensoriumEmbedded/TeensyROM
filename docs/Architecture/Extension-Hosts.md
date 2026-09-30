@@ -72,11 +72,13 @@ offered only the 96 KiB window.
 A floor is a promise about your loader as well as your link: that it copies the
 module to the image's own `code_base`, opens the MPU window there, and checks the
 module table against it, as `loadModule` in `VMHost.h` does. A host whose loader
-uses a fixed base, or that loads no modules, leaves the field at 0. Given a floor,
-such a host would be handed a module linked at `0x10000` and load it in the wrong
-place; at 0 the launch refuses it with `<name> host states no code floor, so takes
+uses a fixed base leaves the field at 0. Given a floor, such a host would be
+handed a module linked at `0x10000` and load it in the wrong place; at 0 the
+launch refuses it with `<name> host states no code floor, so takes
 $18000 only`. A stock host installed before the field existed reads the same
 way, and reinstalling it from a current firmware package gives it a floor.
+`ExampleHost` loads no modules and publishes its floor all the same, so a loader
+you add to it has to honour `code_base`, or the field has to go to 0.
 
 A host with no descriptor still runs. The Installed Extensions page says
 `Installed, no descriptor.` rather than naming it.
@@ -254,4 +256,4 @@ against a native fake host on every `npm run verify:extensions`.
 
 Add `--code-kib 128` if the module needs more than 96 KiB of code. That links it
 at `0x10000`, which the stock host takes and a host with more of its own code may
-not; the refusal names both addresses at preflight, before the reboot.
+not; the preflight refuses it on screen, before the reboot, and says why.
