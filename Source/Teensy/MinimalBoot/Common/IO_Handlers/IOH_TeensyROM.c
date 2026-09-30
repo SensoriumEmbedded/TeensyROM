@@ -60,7 +60,7 @@ uint8_t VmClaimedItems[(MaxMenuItems+7)/8];
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
-volatile bool BootComplete = false; //set by the menu once it finishes booting (rCtlBootComplete), cleared by SetUpMainMenuROM()
+volatile bool BootComplete = false; //set by the menu when its boot ends (rCtlBootComplete) or when a cart starts, cleared by SetUpMainMenuROM()
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -844,7 +844,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
                   break;
                case rCtlBootComplete:
-                  BootComplete = true;
+                  if (!doReset) BootComplete = true; //ignored while a reset is pending: the old menu may still be finishing its boot
                   break;
                case rCtlReturnToMainMenu:
                   BtnPressed = true;

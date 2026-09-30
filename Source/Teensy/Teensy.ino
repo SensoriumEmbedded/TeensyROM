@@ -367,7 +367,6 @@ void loop()
 
 FLASHMEM void SetUpMainMenuROM()
 {
-   BootComplete = false; //every path back to the menu comes through here; the menu sets it again once booted
    PendingfBusSnoop = fBusSnoop = NULL;
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;
@@ -419,6 +418,9 @@ FLASHMEM void SetUpMainMenuROM()
    
    isFrozen = false;
    doReset = true;
+   //Every path back to the menu comes through here. Cleared after doReset is set: the old menu runs until
+   //  the loop asserts /RESET, and the IO handler ignores its rCtlBootComplete from here until the reset is done.
+   BootComplete = false;
 }
 
 FLASHMEM void PadSpace(char* StrToPad, uint8_t PadToLength)

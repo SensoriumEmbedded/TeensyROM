@@ -222,7 +222,9 @@ smcTODbit
    ;inc BorderColorReg
    lda #ricmdNone
    sta rwRegIRQ_CMD+IO1Port
-   lda #rCtlBootComplete ;boot ends here in the launch, tell the Teensy
+   ;boot ends here in the launch, tell the Teensy. Not deferred to the return: a launch that comes back
+   ;(SID, text, picture, error) first waits in its own page, which takes remote commands, until a key
+   lda #rCtlBootComplete
    sta wRegControl+IO1Port
    jsr RunSelected  ;start TR selected app...
    ;prg/crt won't return from here, likely SID or error
