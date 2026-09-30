@@ -33,6 +33,7 @@
 #include "MinimalBoot/Common/Common_Defs.h"
 #include "MinimalBoot/Common/Menu_Regs.h"
 #include "MinimalBoot/Common/C64Spans.h"
+#include "MinimalBoot/Common/DMAControl.c"
 #include "MinimalBoot/Common/DriveDirLoad.h"
 #include "LoadedListing.h"
 #include "MainMenuItems.h"

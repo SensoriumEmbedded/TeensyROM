@@ -2,6 +2,17 @@
 
 #ifdef Fab04_FullDMACapable
 
+enum DMA_Trans_RnW
+{
+   DMA_READ =  true,
+   DMA_WRITE = false
+};
+enum DMA_Addr_Mode
+{
+   DMA_ADDR_FIXED     = true,  //same address every byte (e.g. a hardware register)
+   DMA_ADDR_INCREMENT = false  //address advances per byte (normal block transfer)
+};
+
 bool DMA_RnW, DMA_FixC64Addr;
 uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
