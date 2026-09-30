@@ -72,6 +72,8 @@ function checkHostAdmission() {
     [/!vm_host_takes_code\(h, VM_HOST_CODE_FLOOR\)/, 'refuses an image whose code starts below its own'],
     [/auto code = \(uint8_t \*\)h\.code_base;/, 'copies the payload to the image\'s own code base'],
     [/vm_host_code_window\(h\.code_base, true\)/, 'opens the window at the image\'s own code base'],
+    [/vm_load_payload\(h, f, code, data, ro, failure\)/, 'copies the payload through that code pointer'],
+    [/vm_host_code_window\(h\.code_base, false\)/, 'closes the window it opened'],
     [/vm_module_table_valid\(module, h\.code_base, h\.code_bytes\)/, 'bounds the module table by the image\'s own code base'],
     // Publishing 0 here would read as the narrow base and refuse every wide
     // module. Safe, and silent: the preflight would decline what this host can
@@ -184,9 +186,10 @@ function checkRam2Sizes() {
 // not the other would be built here and refused on target, or the reverse.
 function checkCodeWindows() {
   const header = sourceOf(MODULE_ABI);
+  // The whole initializer, so `= 0x18000 + 4` is refused rather than read as its first term.
   const declaredHex = (name) => {
-    const match = header.match(new RegExp(`\\b${name}\\s*=\\s*0x([0-9a-fA-F]+)`));
-    if (!match) throw new Error(`VMABI.h no longer defines ${name} as a hex literal`);
+    const match = header.match(new RegExp(`\\b${name}\\s*=\\s*0x([0-9a-fA-F]+)u?\\s*[,}]`));
+    if (!match) throw new Error(`VMABI.h no longer defines ${name} as a plain hex literal`);
     return parseInt(match[1], 16);
   };
   for (const [name, mirrored] of [['VM_CODE_BASE', CODE_BASE],
