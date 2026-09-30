@@ -24,6 +24,8 @@
 #include "Common/Common_Defs.h"
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
+#include "Common/C64Spans.h"
+#include "Common/DMAControl.c"
 #include "Common/IOHandlers.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
