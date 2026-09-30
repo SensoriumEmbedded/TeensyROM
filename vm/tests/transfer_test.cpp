@@ -16,10 +16,12 @@ static std::vector<Asked> asked;
 static int32_t answer = 1;       // what the bus does with the next slice
 static uint32_t costs = 100;     // uS a slice takes, granted or not
 static uint32_t grantEvery, grantBase;   // when set, the client grants at grantBase + n * grantEvery
+static uint32_t heardUntil;              // the grants before this have been answered for
 
 static uint8_t bytes[0x10000];
 
 namespace VmRuntime {
+#include "../../Source/Teensy/MinimalBoot/VMHostTransfer.h"
 // Stands in for moduleWindow(), which the test holds to its rules directly: here the module's
 // memory is `bytes`.
 static bool sourceReadable(const uint8_t *source, uint32_t n) {
@@ -28,14 +30,15 @@ static bool sourceReadable(const uint8_t *source, uint32_t n) {
 static int32_t grantedSlice(uint16_t address, const uint8_t *source, uint32_t bytes, uint32_t until) {
     asked.push_back({ address, source, bytes });
     if (grantEvery) {   // and a grant lands only while a slice waits for it, as VMHostIO2 has it
-        const uint32_t next = grantBase + (now - grantBase + grantEvery - 1) / grantEvery * grantEvery;
-        if (int32_t(next - until) >= 0) { now = until; return 0; }
-        now = next + costs; return 1;
+        auto from = [](uint32_t t) { return grantBase + (t - grantBase + grantEvery - 1) / grantEvery * grantEvery; };
+        const bool missed = int32_t(from(heardUntil) - now) < 0;   // one came with nothing armed
+        const uint32_t next = from(now);
+        if (int32_t(next - until) >= 0) { now = heardUntil = until; return missed ? SliceMissed : SliceWaiting; }
+        now = heardUntil = next + costs; return SliceLanded;
     }
     now += answer ? costs : until - now;   // a slice that is never granted waits its whole turn
     return answer;
 }
-#include "../../Source/Teensy/MinimalBoot/VMHostTransfer.h"
 }
 using namespace VmRuntime;
 
@@ -99,16 +102,25 @@ int main() {
     for (const auto &a : asked) assert(a.address == 0x4000 && a.bytes == 16);   // always the same slice
     // A grant that comes in time resets the wait: five slices granted 60 mS apart take 240 mS,
     // and are not a failure.
-    answer = 1; grantEvery = VM_C64_GRANT_MS * 600u; grantBase = now;
+    answer = 1; grantEvery = VM_C64_GRANT_MS * 600u; grantBase = heardUntil = now;
     const uint32_t slow = c64Write(two, 2, 4, 0), started = now;
     for (int turn = 0; turn < 1000 && c64Status(slow) == VM_C64_PENDING; turn++) c64Step();
     assert(c64Status(slow) == VM_C64_DONE && now - started >= 4 * grantEvery);
     // Grants that come during the module's turns start nothing, and that time is not waiting:
     // with 8.5 mS turns between steps, a grant every 17 mS lands two slices 119 mS apart.
-    grantEvery = 17000; grantBase = now;
+    grantEvery = 17000; grantBase = heardUntil = now;
     const uint32_t busy = c64Write(two, 2, 4, 0), from = now;
     for (int turn = 0; turn < 1000 && c64Status(busy) == VM_C64_PENDING; turn++) { c64Step(); now += 8500; }
     assert(c64Status(busy) == VM_C64_DONE && now - from > VM_C64_GRANT_MS * 1000u);
+    // Grants in step with the turns, every one between two of them: the job waits, and is not
+    // refused for it, for as long as the client goes on granting. Then one lands.
+    grantEvery = 20000; grantBase = now - 10000; heardUntil = now;
+    const uint32_t locked = c64Write(one, 1, 0, 0);
+    for (int turn = 0; turn < 200; turn++) { c64Step(); now += 18500; }
+    assert(c64Status(locked) == VM_C64_PENDING);
+    grantBase = heardUntil = now;
+    c64Step();
+    assert(c64Status(locked) == VM_C64_DONE);
     grantEvery = 0;
 
     // A slice the bus does not complete ends the job there, and nothing more is asked of it.
@@ -119,7 +131,7 @@ int main() {
     answer = 1;
     assert(c64Write(two, 2, 4, 0));
     puts("PASS: service bit 20's job; eight refusals before the bus, the module windows a source must lie in, slices in span order from each span's own "
-         "source, a span per grant, tickets, the 1.5 mS turn, a client that never grants, one that grants slowly or between turns, "
+         "source, a span per grant, tickets, the 1.5 mS turn, a client that never grants, one that grants slowly, between turns or in step with them, "
          "and a slice the bus fails");
     return 0;
 }

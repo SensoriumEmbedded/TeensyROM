@@ -170,7 +170,7 @@ whole; the conditions are in `VMABI.h`, and a refused job writes nothing and
 leaves the last ticket as it was. One job runs at a time. `c64_status` answers
 `VM_C64_PENDING` until it ends, then `VM_C64_DONE`, `VM_C64_NO_GRANT` or
 `VM_C64_BUS_FAILED`. The job runs in the
-module's own turn, between `pump` calls, so a module polls the ticket from
+host's own turn, between `pump` calls, so a module polls the ticket from
 `pump` and leaves the sources alone until it ends.
 
 **The client grants every slice.** A slice starts as the client's write to
@@ -182,9 +182,12 @@ next interrupt, and loses none.
 
 A slice waits for its grant only during the host's turns for the job, which
 alternate with the module's own; a grant in between starts nothing, and the
-client grants again next time. So a client granting once a frame gets a slice
-every frame or two, not every frame. A slice that has waited `VM_C64_GRANT_MS`
-of those turns ungranted ends the job with `VM_C64_NO_GRANT`: a client that
+client grants again next time. How many grants land depends on how long the
+module's turns are: a module that yields when `should_yield` says to leaves a
+slice armed about half the time, and one that overruns its turn leaves it
+armed less. A grant at a fixed rate can also fall into step with the turns,
+and then lands rarely. A slice that has waited `VM_C64_GRANT_MS` of those turns
+with no grant written at all ends the job with `VM_C64_NO_GRANT`: a client that
 grants nothing is refused, not hung. Nothing else times a job.
 
 A slice writes wherever the C64's memory map puts its addresses at the moment

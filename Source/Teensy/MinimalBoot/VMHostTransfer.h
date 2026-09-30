@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Service bit 20's write job, included inside namespace VmRuntime by both the firmware and the
 // transfer test so neither can drift from the other. The platform supplies grantedSlice(),
-// which stages one slice, waits until `until` for the client to grant it and then writes it.
+// which stages one slice, waits until `until` for the client to grant it and then writes it:
+// SliceMissed when it was not granted but the client wrote a grant while nothing was armed.
 // It also supplies sourceReadable(), which is moduleWindow() on the real address.
-enum : int32_t { SliceWaiting = 0, SliceLanded = 1 };
+enum : int32_t { SliceWaiting = 0, SliceLanded = 1, SliceMissed = 2 };
 static int32_t grantedSlice(uint16_t address, const uint8_t *source, uint32_t bytes, uint32_t until);
 static bool sourceReadable(const uint8_t *source, uint32_t bytes);
 
@@ -40,7 +41,9 @@ static int32_t c64Status(uint32_t ticket) { return ticket && ticket == jobTicket
 
 // Writes granted slices for up to 1.5 mS, a turn of its own, so a transfer cannot starve the
 // module or the client's input. A slice is armed only inside it, so a grant between turns
-// starts nothing, and VM_C64_GRANT_MS counts only the time a slice was armed.
+// starts nothing, but it does show the client is granting: VM_C64_GRANT_MS counts only armed
+// time since the last grant of either kind, so grants that fall into step with the turns
+// slow a job without failing it.
 static void c64Step() {
     const uint32_t until = micros() + 1500;
     while (jobStatus == VM_C64_PENDING) {
@@ -51,6 +54,7 @@ static void c64Step() {
         if (!jobAsking) { jobAsking = true; jobWaited = 0; }
         const uint32_t asked = micros();
         const int32_t result = grantedSlice(jobSpans[jobSpan].Addr + jobDone, jobSources[jobSpan] + jobDone, slice, until);
+        if (result == SliceMissed) { jobWaited = 0; return; }
         if (result == SliceWaiting) {
             jobWaited += micros() - asked;
             if (jobWaited >= VM_C64_GRANT_MS * 1000u) jobStatus = VM_C64_NO_GRANT;
