@@ -241,7 +241,9 @@ FLASHMEM bool CloseDMA()
 // Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
 // giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
 // its C64 code can take, and how long its interrupt handler needs to run between them.  Stops
-// at the first slice that does not land, with the bus released; returns the bytes written.
+// at the first slice that does not land, with the bus released.  Returns the bytes of every
+// slice that finished, even one whose CloseDMA then failed; a slice aborted mid-transfer may
+// have partly landed and is not counted.
 FLASHMEM uint32_t WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Payload, uint32_t SliceBytes, uint32_t GapuS)
 {
    uint32_t Landed = 0;
@@ -252,10 +254,11 @@ FLASHMEM uint32_t WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *P
          uint32_t Slice = Spans[Num].Len - Done;
          if (SliceBytes && Slice > SliceBytes) Slice = SliceBytes;
          if (Landed) delayMicroseconds(GapuS);
-         if (!PerformDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + Landed, Slice, DMA_ADDR_INCREMENT) || !CloseDMA())
+         if (!PerformDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + Landed, Slice, DMA_ADDR_INCREMENT))
             return Landed;
          Done += Slice;
          Landed += Slice;
+         if (!CloseDMA()) return Landed;
       }
    }
    return Landed;
