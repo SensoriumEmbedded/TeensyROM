@@ -6,7 +6,7 @@
 // Its content file holds the slice size, low byte first, and whether the client should grant
 // (1) or never grant (0). The exit status is jobs << 16 | ticks lost, or, when a write
 // failed, 0x80000000 | the c64_status it failed with, or 0x800000EE when what the C64 holds
-// at the end is not what was written. So that a run that stops still comes back to say where,
+// at the end is not what the last job wrote. So that a run that stops still comes back to say where,
 // a job pending over a second exits 0xE0000000 | jobs, and a question left unanswered for two
 // seconds 0xD0000000 | jobs << 8 | its state.
 //
@@ -27,7 +27,24 @@ enum : uint8_t { Ask1, Wait1, Run, Ask2, Wait2, Ask3, Wait3 } state;
 bool awaitingAck;
 uint16_t lostBefore, lostAfter;
 uint8_t sum1, sum2;
+uint16_t seed;
 uint32_t runStarted, ticket, jobs, jobStarted, asked;
+
+// A pattern for each job whose sum is neither zero, what the client's cleared $4000..$4FFF
+// sums to, nor the job before's, so the sum the client takes at the end shows the last job
+// landed.
+void nextPattern() {
+    const uint8_t last1 = sum1, last2 = sum2;
+    do {
+        uint16_t x = seed++;
+        sum1 = sum2 = 0;
+        for (uint32_t n = 0; n < kBytes; n++) {
+            x = uint16_t(x * 25173u + 13849u);
+            pattern[n] = uint8_t(x >> 8);
+            sum1 = uint8_t(sum1 + pattern[n]); sum2 = uint8_t(sum2 + sum1);
+        }
+    } while ((!sum1 && !sum2) || (sum1 == last1 && sum2 == last2));
+}
 
 void finish(uint32_t status) { host->base.exit_to_menu(status); }
 uint32_t now() { return host->base.base.micros_now(); }
@@ -55,6 +72,7 @@ void pump() {
         ticket = 0; jobs++;
     }
     if (host->base.base.micros_now() - runStarted >= kRunMicros) { state = Ask2; return; }
+    nextPattern();
     ticket = host->c64_write(&span, 1, sliceBytes, 0);
     jobStarted = now();
     if (!ticket) finish(0x80000000u);
@@ -91,13 +109,6 @@ VM_MODULE_ENTRY const VmModule *vm_entry(const VmHost *h) {
     if (file) { h->read(file, 0, config, sizeof config); h->close(file); }
     sliceBytes = uint16_t(config[0] | config[1] << 8);
     grant = config[2];
-    // The client clears $4000..$4FFF when it starts, so a run whose writes never landed sums
-    // to zero; this sums to something else at every slice size up to 1023.
-    uint16_t x = uint16_t(sliceBytes << 1 | grant);
-    for (uint32_t n = 0; n < kBytes; n++) {
-        x = uint16_t(x * 25173u + 13849u);
-        pattern[n] = uint8_t(x >> 8);
-        sum1 = uint8_t(sum1 + pattern[n]); sum2 = uint8_t(sum2 + sum1);
-    }
+    seed = uint16_t(sliceBytes << 1 | grant);
     return &module;
 }
