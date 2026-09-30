@@ -68,7 +68,7 @@ import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
 import { definesMacro } from './lib/source-text.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
-import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay,
+import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
          HOST_SLOT_BYTES } from './lib/extension.mjs';
 import { hostImageFromHex } from './build-host-package.mjs';
 import {
@@ -570,7 +570,8 @@ if (!skipCombine && extensionImage) {
   const header = parseHostPackage(pkg);
   const id = hostDescriptor(pkg.subarray(header.headerBytes));
   write(hostOutput, pkg);
-  console.log(`  Host "${hostNameForDisplay(id.name)}", ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}`);
+  console.log(`  Host "${hostNameForDisplay(id.name)}", ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}, ` +
+    describeCodeFloor(id.codeFloor));
   console.log(`  ${(header.payloadBytes / 1024).toFixed(1)}K of ${(HOST_SLOT_BYTES / 1024).toFixed(0)}K slot` +
     ` (${(100 * header.payloadBytes / HOST_SLOT_BYTES).toFixed(1)}%)`);
   console.log(`Packaged: ${hostOutput} (${pkg.length} bytes)`);

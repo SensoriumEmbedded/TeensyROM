@@ -8,7 +8,7 @@ import {
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
   ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
   buildHostPackage, parseHostPackage, hostSlotValid,
-  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
+  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI, hostDescriptor, describeCodeFloor,
 } from './extension.mjs';
 import { hostImage } from './fixtures.mjs';
 import { VM_BASE } from './hex.mjs';
@@ -268,4 +268,12 @@ test('a code base the loader does not accept is refused by the writer and the re
   const forged = Buffer.from(image());
   forged.writeUInt32LE(0x14000, 28);
   assert.throws(() => parseImage(forged), /linked for a different memory map/);
+});
+
+test('a host descriptor reads its code floor, and a host line says what zero means', () => {
+  const payload = hostImage();
+  payload.writeUInt32LE(0xf00c, HOST_ID_OFFSET + 28);
+  assert.equal(hostDescriptor(payload).codeFloor, 0xf00c);
+  assert.equal(describeCodeFloor(0xf00c), 'code floor 0xf00c');
+  assert.equal(describeCodeFloor(0), 'no code floor, so modules at 0x18000 only');
 });

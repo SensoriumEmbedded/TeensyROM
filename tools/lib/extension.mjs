@@ -234,8 +234,14 @@ export function hostBootWords(payload) {
 export function hostDescriptor(payload) {
   const field = (i) => payload.readUInt32LE(HOST_ID_OFFSET + i * 4);
   return { magic: field(0), abi: field(1), services: field(2), hostBytes: field(3),
-           name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, '') };
+           name: payload.subarray(HOST_ID_OFFSET + 16, HOST_ID_OFFSET + 28).toString('latin1').replace(/\0.*$/, ''),
+           codeFloor: field(7) };
 }
+
+// The descriptor's code_floor as a host line shows it. Zero is what a host built
+// before the field left, and the loader reads it as CODE_BASE.
+export const describeCodeFloor = (codeFloor) =>
+  codeFloor ? `code floor 0x${codeFloor.toString(16)}` : `no code floor, so modules at 0x${CODE_BASE.toString(16)} only`;
 
 // A hand mirror of nameByteSafe() in VMBootImage.h, which the firmware uses to keep a
 // third-party descriptor's bytes from reaching a C64 as control codes. The same two
