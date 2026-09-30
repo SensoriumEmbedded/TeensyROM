@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {extensionLinkerScript, extensionBootdata, minimalLinkerScript, mainLinkerScript, HOST_CODE_KIB} from './extension-image.mjs';
+import {extensionLinkerScript, extensionBootdata, flashResidentLibraryAround, minimalLinkerScript, mainLinkerScript, HOST_CODE_KIB} from './extension-image.mjs';
 import {CODE_BASE} from './extension.mjs';
 
 const linkers = path.resolve(import.meta.dirname, '../BootLinkerFiles');
@@ -15,7 +15,8 @@ test('the stock host is linked at 64 KiB, and 96 KiB moves only its code ceiling
   assert.equal(stock, extensionLinkerScript(linkers, 64));
   assert.match(stock, /ASSERT\(__exidx_end <= 0x10000,/);
   assert.equal(extensionLinkerScript(linkers, 96), stock.replace(
-    '__exidx_end <= 0x10000, "Host code exceeds its 64 KiB', '__exidx_end <= 0x18000, "Host code exceeds its 96 KiB'));
+    '__exidx_end <= 0x10000, "Host code exceeds its 64 KiB ITCM budget; a host that needs more can build with --host-code-kib 96"',
+    '__exidx_end <= 0x18000, "Host code exceeds its 96 KiB ITCM budget"'));
   assert.match(stock, /_itcm_block_count = 6;/);
   for (const invalid of [0, 32, 65, 128, '64', NaN]) {
     assert.throws(() => extensionLinkerScript(linkers, invalid), /64 or 96/);
@@ -147,5 +148,15 @@ test('a CRLF checkout of the stock linker files edits the same as an LF one', ()
     }
   } finally {
     fs.rmSync(crlf, { recursive: true, force: true });
+  }
+});
+
+test('a build directory inside a flash-resident library is named, since its sketch would match', () => {
+  const patterns = flashTextPatterns(extensionLinkerScript(linkers));
+  for (const [dir, library] of [['/x/libraries/SD/out', 'SD'], ['/x/libraries/SdFat/b', 'SdFat'], ['/x/libraries/SPI', 'SPI'],
+                                ['/x/libraries/SDX/out', undefined], ['/x/libs/SD/out', undefined], ['/x/out', undefined]]) {
+    assert.equal(flashResidentLibraryAround(dir), library, dir);
+    const inFlash = library !== undefined;
+    assert.deepEqual(placedInFlash(patterns, path.join(dir, 'extension/sketch/VMBoot.ino.cpp.o')), [inFlash, inFlash], dir);
   }
 });

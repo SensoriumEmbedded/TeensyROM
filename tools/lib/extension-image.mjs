@@ -75,6 +75,15 @@ const FLASH_RESIDENT_LIBRARIES = { SdFat: ['SdioTeensy.cpp.o'], SD: [], SPI: [] 
 // matched, so in '[/\\]' a '/' match would swallow the ']'.
 const PATH_SEPARATOR = '[\\\\/]';
 
+// The flash-resident library a directory lies inside, if any. Everything built
+// there matches that library's pattern above, the sketch's own IO handlers among
+// it, so a build directory inside one would run them from flash.
+export function flashResidentLibraryAround(dir) {
+  const parts = path.resolve(dir).split(/[\\/]/);
+  return Object.keys(FLASH_RESIDENT_LIBRARIES).find((name) =>
+    parts.some((part, i) => part === 'libraries' && parts[i + 1] === name));
+}
+
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
 // its heap capped, with five ASSERTs that turn a host/module layout regression
 // into a link error instead of a hang on hardware.
@@ -112,7 +121,8 @@ export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_K
   ld = replaceOnce(ld, '_teensy_model_identifier = 0x25;',
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;
-      ASSERT(__exidx_end <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget")
+      ASSERT(__exidx_end <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget${
+        hostCodeKiB === DEFAULT_HOST_CODE_KIB ? '; a host that needs more can build with --host-code-kib 96' : ''}")
       ASSERT(_heap_end <= _vm_data_start, "Host heap overlaps the module DTCM window")
       ASSERT(_estack - _vm_data_end >= 49152, "Shared stack below 48 KiB")
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap the guest RAM2 arena")

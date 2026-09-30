@@ -72,7 +72,7 @@ import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay,
          HOST_SLOT_BYTES } from './lib/extension.mjs';
 import { hostImageFromHex } from './build-host-package.mjs';
 import {
-  minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
+  minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, flashResidentLibraryAround, VM_EXTENSIONS_DEFINE,
   patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget, HOST_CODE_KIB, DEFAULT_HOST_CODE_KIB,
 } from './lib/extension-image.mjs';
 
@@ -324,6 +324,13 @@ const guardedFiles = ['bootdata.c', 'imxrt1062_t41.ld'].map((f) => path.join(ins
 const hashGuardedFiles = () => guardedFiles.map((f) => sha256(fs.readFileSync(f))).join(',');
 const installedCoreHashBefore = hashGuardedFiles();
 
+// The extension host's linker script runs from flash whatever lies inside a
+// libraries/<name> directory it names, so a build there would move the sketch too.
+const aroundLibrary = withExtensions && !skipExtensionBuild && flashResidentLibraryAround(outDir);
+if (aroundLibrary) {
+  throw new Error(`--out ${outDir} lies inside a libraries/${aroundLibrary} directory, where the extension host's ` +
+                  'linker script would run the sketch from flash; build somewhere else');
+}
 fs.mkdirSync(outDir, { recursive: true });
 let runRoot;
 if (useCcache) {
