@@ -249,7 +249,10 @@ an ordinary cartridge. A cartridge without a valid `VMH1` at `0x4070` is parsed
 by the stock cartridge path exactly as before, whatever its size.
 
 Build all three with [`tools/lib/extension.mjs`](../../tools/lib/extension.mjs)
-rather than by hand; it enforces every rule above at write time.
+rather than by hand; it enforces at write time every rule above that the bytes
+can show. That a module was linked for the code base its header names shows only
+in the ELF, which [`tools/build-extension.mjs`](../../tools/build-extension.mjs)
+checks.
 
 ## 4. Launching
 
@@ -275,8 +278,9 @@ Then:
 1. `preflight` re-validates the module image and the client cartridge in full,
    including both CRCs. A failure reports on screen and does **not** reboot.
 2. The installed extension image is read out of its flash slot. An empty slot,
-   a host that speaks another ABI, and a host missing a bit the module asked for
-   in `required_services` each report on screen and do **not** reboot. A host
+   a host that speaks another ABI, a host missing a bit the module asked for in
+   `required_services`, and a host whose code floor lies above the module's code
+   base each report on screen and do **not** reboot. A host
    built before that descriptor existed cannot say what it provides, so its
    launch proceeds and the refusal happens after the reboot as it always did.
 3. A `launch.vml` record is written to `/VMS` and read back to confirm.
@@ -614,14 +618,18 @@ of these rows were run. The rows for installing and removing over USB, the
 blank-slot refusal, and the page naming the stock host were run again after
 both changes, along with a firmware update that left the installed host in
 place. The rest were run with the slot at `0x60280000` and have not been
-repeated; nothing on their paths changed apart from the slot address.
+repeated; nothing on their paths changed apart from the slot address. The host
+then moved to 64 KiB of ITCM, with SdFat, SD and SPI running from flash apart
+from the SDIO driver. On that host the rows for modules at `0x18000` and at
+`0x10000`, for `exit_to_menu`, and for a refusal by a host with no code floor
+were run again; the others were not.
 
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
 | The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
 | Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes — linked at `0x18000` |
-| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes |
+| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes — a module with 101 KiB of code, more than the `0x18000` window holds, runs under the stock host (floor `0xf00c`), reads the card, and returns to the menu on joystick-2 up. It and an 876-byte module at `0x10000` are refused on screen by a host with no code floor, `TeensyROM host states no code floor, so takes $18000 only`, with the board left at the menu. |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
@@ -643,17 +651,16 @@ repeated; nothing on their paths changed apart from the slot address.
 | Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
 | The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
-| A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting nine ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
+| A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting ten ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
 | `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | yes — `vm/hello` takes it on joystick-2 up, and the board comes back to the menu with exit record `$04`. The native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other). |
 
 Treat the rows marked **no** as untested rather than as working.
 
-There are two ways out of a running extension, and only one of them has run on
-hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
-records `$04` and reboots into the menu. A module that did not is returned by
-the reset button, which the extension image services from `loop()`: `isrButton`
-(`ISRs.c`) only sets `BtnPressed`, and the reboot happens on the next pass of
-the loop. That works for a resident module, because `vm_entry` returned and the
+There are two ways out of a running extension, and both have run on hardware.
+A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which records `$04`
+and reboots into the menu. A module that did not is returned by the reset
+button, which the extension image services from `loop()`: `isrButton` (`ISRs.c`)
+only sets `BtnPressed`, and the reboot happens on the next pass of the loop. That works for a resident module, because `vm_entry` returned and the
 loop is running.
 
 It does not work for a module whose `vm_entry` never returns. `vm_entry` is

@@ -35,7 +35,11 @@ turns a layout regression into a link error rather than a hang on hardware:
 Those hold for your host too, because your host is built with the same script.
 
 The script also places the `.text` of the SdFat, SD and SPI libraries in flash
-rather than ITCM, which is what fits the stock host in 64 KiB. A host that needs
+rather than ITCM, which is what fits the stock host in 64 KiB. SdFat's SDIO
+driver, `SdioTeensy.cpp`, stays in ITCM: `SdioCard::readData` masks interrupts,
+and a flash cache miss there would hold off `isrPHI2`. The libraries are matched
+by their build path, so the build refuses an `--out` inside a `libraries/SdFat`,
+`libraries/SD` or `libraries/SPI` directory. A host that needs
 more ITCM can pass `--host-code-kib 96` with `--host-sketch`, which lets its code
 grow up to the module window at `0x18000`. That trade is the module's 32 KiB: a
 host linked at 64 KiB can take a module linked at `0x10000`; one linked at
@@ -64,6 +68,15 @@ your own code ends. Write `VM_HOST_CODE_FLOOR` rather than a number: it resolves
 to your link's `__exidx_end`, so the descriptor cannot claim room you are using.
 Zero reads as `0x18000`, the base every host accepts, so a host that omits it is
 offered only the 96 KiB window.
+
+A floor is a promise about your loader as well as your link: that it copies the
+module to the image's own `code_base`, opens the MPU window there, and checks the
+module table against it, as `loadModule` in `VMHost.h` does. A host whose loader
+uses a fixed base, or that loads no modules, leaves the field at 0. Given a floor,
+such a host would be handed a module linked at `0x10000` and load it in the wrong
+place; at 0 the launch refuses it with `<name> host states no code floor, so takes
+$18000 only`. A stock host installed before the field existed reads the same
+way, and reinstalling it from a current firmware package gives it a floor.
 
 A host with no descriptor still runs. The Installed Extensions page says
 `Installed, no descriptor.` rather than naming it.
