@@ -91,10 +91,12 @@ VM_MODULE_ENTRY const VmModule *vm_entry(const VmHost *h) {
     if (file) { h->read(file, 0, config, sizeof config); h->close(file); }
     sliceBytes = uint16_t(config[0] | config[1] << 8);
     grant = config[2];
-    // Different at every slice size, so a run whose writes never landed cannot pass for one
-    // that did.
+    // The client clears $4000..$4FFF when it starts, so a run whose writes never landed sums
+    // to zero; this sums to something else at every slice size up to 1023.
+    uint16_t x = uint16_t(sliceBytes << 1 | grant);
     for (uint32_t n = 0; n < kBytes; n++) {
-        pattern[n] = uint8_t(n ^ n >> 8 ^ sliceBytes ^ grant << 7);
+        x = uint16_t(x * 25173u + 13849u);
+        pattern[n] = uint8_t(x >> 8);
         sum1 = uint8_t(sum1 + pattern[n]); sum2 = uint8_t(sum2 + sum1);
     }
     return &module;

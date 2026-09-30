@@ -65,6 +65,19 @@ coldstart:
         sta $0318
         lda #>nmi
         sta $0319
+        lda #0                   ; clear what the module writes, which a reset leaves as it was
+        sta $FB
+        tay
+        ldx #$40
+        stx $FC
+        ldx #16
+clear:
+        sta ($FB), y
+        iny
+        bne clear
+        inc $FC
+        dex
+        bne clear
 
         lda #<(PERIOD - 1)
         sta $DD04
