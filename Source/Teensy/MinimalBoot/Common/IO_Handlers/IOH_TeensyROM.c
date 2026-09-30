@@ -51,6 +51,11 @@ volatile uint16_t eepAddrToWrite;
 StructMenuItem *MenuSource;
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+// One bit per DriveDirMenu item, set by MarkVmClaimed: a /VMS package claims the file's
+// extension. Kept here so rRegItemTypePlusIOH reads a bit, not the registry.
+uint8_t VmClaimedItems[(MaxMenuItems+7)/8];
+#endif
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
@@ -587,6 +592,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
          case rRegItemTypePlusIOH:
             Data = MenuSource[SelItemFullIdx].ItemType;
             if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+            if(IO1[rWRegCurrMenuWAIT] == rmtSD && VmClaimedItems[SelItemFullIdx/8] & (1 << SelItemFullIdx%8)) Data |= 0x40; //bit 6: show rsstItemExt as the type
+#endif
             DataPortWriteWaitLog(Data);
             break;
          case rRegStreamData:
@@ -743,6 +751,17 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   }
                   ptrSerialString = SerialStringBuf;
                   break;
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+               case rsstItemExt: //up to 3 chars after the last dot, like the TblItemType labels
+               {
+                  const char *Ext = strrchr(MenuSource[SelItemFullIdx].Name, '.');
+                  uint8_t Len = 0;
+                  if (Ext) while (Len < 3 && Ext[Len+1]) { SerialStringBuf[Len] = Ext[Len+1]; Len++; }
+                  SerialStringBuf[Len] = 0;
+                  ptrSerialString = SerialStringBuf;
+               }
+                  break;
+#endif
                case rsstNextIOHndlrName:
                   ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
                   break;

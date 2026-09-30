@@ -42,7 +42,7 @@ enum IO1_Registers  //offset from 0xDE00
    rRegNumItemsOnPage  = 13 , // Item sel/info: num items on current menu page
    rwRegPageNumber     = 14 , // Item sel/info: (one based) current page number
    rRegNumPages        = 15 , // Item sel/info: total number of pages
-   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu), bit 6 that a /VMS package claims it (rsstItemExt) 
    rwRegMIDISettings   = 17 , // EEPROM stored: MIDI Settings reg, see RegMIDISettingsMasks
    rwRegMIDISettings2  = 18 , // EEPROM stored: MIDI Settings reg #2, see RegMIDISettingsMasks2
    rwRegPwrUpDefaults  = 19 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
@@ -176,6 +176,7 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
    rsstSIDSpeed        = 7,  // Current SID playback speed
    rsstSIDSpeedCtlType = 8,  // Current SID Speed Control Type (Log/Lin)
+   rsstItemExt         = 9,  // Extension of selected item, the type shown when a /VMS package claims it
 };
 
 enum RegVidTODClksMasks

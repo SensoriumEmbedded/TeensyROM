@@ -278,6 +278,9 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       Printf_dbg("Dir Setup\n");
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
+#ifdef VM_EXTENSIONS_ENABLED
+      MarkVmClaimed();
+#endif
       MenuSource = DriveDirMenu; 
       SetNumItems(1); //sets # of menu items
       IO1[rwRegCursorItemOnPg] = 0;

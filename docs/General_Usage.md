@@ -55,6 +55,7 @@
       * Optionally, the time can be automatically synced via Ethernet on startup (see settings).
       * If neither of these are available, time can be set manually in the settings menu, or just let it start at midnight.
     * **File type** is to the right of each file/dir displayed. If "Unk" (unknown) then it is not a recognized/supported file type.
+      * A file on the SD card whose extension an installed extension package (in `/VMS`) claims shows the first three characters of its own extension instead, such as "MPE".
       * **'+'** in front of file type means it is pre-associated with [Special IO](#selecting-and-associating-special-io) emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
