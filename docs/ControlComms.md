@@ -426,7 +426,7 @@ Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice
 | Direction | Data |
 |---|---|
 | Receive | `WriteC64SpansToken` — `0x64FC` |
-| Send | `AckToken 0x64CC` — send nothing more until it arrives |
+| Send | `AckToken 0x64CC` — send nothing more until it arrives; `FailToken 0x9B7F` and a line of text while REU emulation is running or the C64 is paused |
 | Receive | Flags (`0`), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
 | Receive | Span count × { C64 address (Hi, Low), length (Hi, Low) } |
 | Send | `AckToken 0x64CC` if the spans are accepted; `FailToken 0x9B7F` and a line of text if not |

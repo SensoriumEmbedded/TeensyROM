@@ -1063,7 +1063,7 @@ FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
 //
 // Workflow:
 // Receive <-- WriteC64SpansToken (0x64FC)
-// Send --> AckToken 0x64CC
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason while another DMA user holds the bus
 // Receive <-- Flags (0), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
 // Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }
 // Send --> AckToken 0x64CC if the spans are accepted, 0x9b7f and the reason if not
@@ -1083,6 +1083,16 @@ FLASHMEM void WriteC64SpansCommand()
    uint32_t Total, Landed;
    const uint32_t Began = millis();
 
+   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation
+   // starts a transfer from the PHI2 interrupt and runs it from the main loop, which a job holds,
+   // and the job's next DMA overwrites its state; a paused C64 would be resumed by the first slice.
+   const char *Busy = CurrentIOHandler == IOH_REU ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
+   if (Busy)
+   {
+      SendU16(FailToken);
+      CmdChannel->println(Busy);
+      return;
+   }
    SendU16(AckToken);
    if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List)) return;
    const uint32_t Count = Head[3];
