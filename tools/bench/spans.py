@@ -41,9 +41,9 @@ def ticks(tr):
     """The NMI count and when it was read. Not peek(): its 0.3 s drain would sit between the two."""
     tr.wr(to_board(READ_C64_MEM) + to_board(TICKS) + to_board(2))
     value, _ = tr.status(6)
-    low, high = tr.rd(2, 5)
     if value != ACK:
         raise SystemExit('NMI count read refused')
+    low, high = tr.rd(2, 5)
     return low | high << 8, time.perf_counter()
 
 
@@ -134,20 +134,22 @@ def nmi_loss(tr, gap_us):
 
 
 with Link() as tr:
-    start_client(tr)
-    print('Integrity across slice boundaries, screen on, loop writing:')
-    integrity(tr)
-    print('What a slice costs:')
-    per_slice(tr, 'loop writing, screen on')
-    tr.poke(MODE, [1])
-    per_slice(tr, 'loop only reading, screen on')
-    tr.poke(D011, [0x0B])
-    per_slice(tr, 'loop only reading, screen blanked')
-    tr.poke(D011, [0x1B])
-    tr.poke(MODE, [0])
-    print('Timer NMIs lost to halts, loop writing:')
-    nmi_loss(tr, 40)
-    tr.reset()
+    try:
+        start_client(tr)
+        print('Integrity across slice boundaries, screen on, loop writing:')
+        integrity(tr)
+        print('What a slice costs:')
+        per_slice(tr, 'loop writing, screen on')
+        tr.poke(MODE, [1])
+        per_slice(tr, 'loop only reading, screen on')
+        tr.poke(D011, [0x0B])
+        per_slice(tr, 'loop only reading, screen blanked')
+        tr.poke(D011, [0x1B])
+        tr.poke(MODE, [0])
+        print('Timer NMIs lost to halts, loop writing:')
+        nmi_loss(tr, 40)
+    finally:
+        tr.reset()
 
 if failed:
     raise SystemExit('FAILED: ' + '; '.join(failed))
