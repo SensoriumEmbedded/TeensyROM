@@ -60,6 +60,36 @@
 
 #define IOHNameLength 20  //limited by display location on C64
 
+//The bus timing for a wRegVid_TOD_Clks value (RegVidTODClksMasks).  The main image has it from
+//   MainMenu.asm; the extension image, from what the main image left it (VM_EEP_MACHINE_ADDR).
+//   Called from the IO1 handler, do not FLASHMEM
+void SetVideoStdDMATiming(uint8_t VidTODClks)
+{
+   if (VidTODClks & rvtcNTSC)
+   {
+      nS_MaxAdj = Def_nS_MaxAdjNTSC;
+      if (VidTODClks & rvtcC128)
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC128;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC128;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC128;
+      }
+      else
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
+      }
+   }
+   else
+   {  //PAL C128 has no measured set of its own yet
+      nS_MaxAdj       = Def_nS_MaxAdjPAL;
+      nS_DMASetup     = Def_nS_DMASetupPAL;
+      nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+      nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+   }
+}
+
 struct stcIOHandlers
 {
   char Name[IOHNameLength];                        //Name of handler

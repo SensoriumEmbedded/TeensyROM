@@ -291,7 +291,17 @@ function checkEepromProtocol() {
     const b = parseInt(read(host, name, published), radix);
     if (a !== b) throw new Error(`EEPROM ${name} is ${a} in Common_Defs.h but ${b} in VMHostABI.h`);
   }
-  console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h');
+  const regs = sourceOf('Source/Teensy/MinimalBoot/Common/Menu_Regs.h');
+  for (const [internal, published] of [['rvtcNTSC', 'VM_MACHINE_NTSC'], ['rvtc60Hz', 'VM_MACHINE_60HZ'],
+                                       ['rvtcC128', 'VM_MACHINE_C128']]) {
+    const a = regs.match(new RegExp(`\\b${internal}\\s*=\\s*0b([01]+)`));
+    const b = host.match(new RegExp(`\\b${published} = (\\d+)`));
+    if (!a || !b) throw new Error(`cannot read ${a ? published + ' from VMHostABI.h' : internal + ' from Menu_Regs.h'}`);
+    if (parseInt(a[1], 2) !== Number(b[1])) {
+      throw new Error(`${internal} is ${parseInt(a[1], 2)} in Menu_Regs.h but ${published} is ${b[1]} in VMHostABI.h`);
+    }
+  }
+  console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h and Menu_Regs.h');
 }
 
 // The packager mirrors both the registry and the base profile, and subtracts

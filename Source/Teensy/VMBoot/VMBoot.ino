@@ -174,6 +174,10 @@ void setup()
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
    if (!strcmp(vmMarker, VM_HOST_MARKER))
    {
+      uint8_t machine[2];
+      EEPreadNBuf(VM_EEP_MACHINE_ADDR, machine, 2);
+      const int Machine = vm_launch_machine(machine);
+      if (Machine >= 0) SetVideoStdDMATiming(Machine);  //else the PAL set, as the main image before its menu reports
       if (!VMHostBoot()) { RebootToMenu(); }
       BtnPressed = false;
       return;

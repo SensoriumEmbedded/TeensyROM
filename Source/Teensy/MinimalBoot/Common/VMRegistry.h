@@ -147,7 +147,9 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();
     Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return true;}
     // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
-    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
+    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);
+    const uint8_t vid=IO1[wRegVid_TOD_Clks]&7,machine[2]={vid,uint8_t(~vid)};
+    EEPwriteNBuf(VM_EEP_MACHINE_ADDR,machine,2);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
     RebootTR();return true;
 }
 #endif

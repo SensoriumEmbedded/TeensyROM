@@ -99,6 +99,16 @@ enum : uint32_t { VM_HOSTID_MAGIC = 0x3248564du };  // 'MVH2'
 enum : uint32_t { VM_EEP_MAGIC = 0xfeed6415u };
 enum : int { VM_EEP_MAGIC_ADDR = 0, VM_EEP_BOOTNAME_ADDR = 1919, VM_EEP_BOOTIND_ADDR = 2175 };
 
+// Past the marker's NUL, the main image leaves the machine the C64 menu reported and then its
+// complement, so a host that masters the bus can time it for that machine. Menu_Regs.h's
+// RegVidTODClksMasks, duplicated. vm_launch_machine() answers -1 where a main image left
+// none, and a host then has no way to know.
+enum : uint8_t { VM_MACHINE_NTSC = 1, VM_MACHINE_60HZ = 2, VM_MACHINE_C128 = 4 };
+enum : int { VM_EEP_MACHINE_ADDR = VM_EEP_BOOTNAME_ADDR + sizeof(VM_HOST_MARKER) };
+static inline int vm_launch_machine(const uint8_t pair[2]) {
+    return (pair[0] ^ pair[1]) == 0xff && pair[0] < 8 ? pair[0] : -1;
+}
+
 // The boot indicator, which the main image reads on the way back. A host must
 // leave VM_BOOT_FROM_MIN behind when it resets to the menu; VM_BOOT_SKIP_MIN
 // reads there as a cold power up and re-runs the user's autolaunch file.

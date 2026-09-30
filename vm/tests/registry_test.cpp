@@ -221,7 +221,13 @@ int main(int argc,char **argv){
     // unserved bit rides through the same way; validation is not the gate.
     VmBootImage::installWithoutDescriptor();
     assert(VmBootImage::installed()&&!VmBootImage::identity(read));
+    io1[wRegVid_TOD_Clks]=0x80|VM_MACHINE_NTSC|VM_MACHINE_C128;
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
+    // The machine the menu reported rides past the marker, and nothing else of that register.
+    assert(machineAt==VM_EEP_MACHINE_ADDR&&vm_launch_machine(machine)==(VM_MACHINE_NTSC|VM_MACHINE_C128));
+    // What a main image that left none leaves there is the tail of an older path, or zeroes.
+    const uint8_t text[2]={'r','t'},zero[2]={0,0},wide[2]={8,0xf7};
+    assert(vm_launch_machine(text)==-1&&vm_launch_machine(zero)==-1&&vm_launch_machine(wide)==-1);
     rebooted=false;message.clear();
     assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&rebooted&&message.empty());
 
