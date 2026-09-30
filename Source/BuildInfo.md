@@ -35,7 +35,7 @@
      * SD at version 2.0.0
      * SdFat at version 2.1.2
      * SPI at version 1.0
-     * USBHost_t36 at version 0.2
+     * USBHost_t36 at version 0.2 — vendored in [Source/Teensy/src/USBHost_t36](/Source/Teensy/src/USBHost_t36/README.md), pinned to upstream commit f943c4b; Teensyduino's bundled copy is not used
      * NativeEthernet at version 1.0.5
      * FNET at version 0.1.3
      * EEPROM at version 2.0
