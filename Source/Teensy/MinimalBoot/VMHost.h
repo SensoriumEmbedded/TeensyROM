@@ -7,16 +7,16 @@
 // The extension image's runtime: reserve the module's memory, load and validate
 // the module, and carry packets between it and the C64 client.
 //
-// The client link is ordinary EasyFlash IO2 register traffic -- the base profile
-// never becomes bus master, and nothing in this runtime needs DMA. The loader is
-// still built only for --target tr-plus: installing it (DoHostInstall) blanks the
-// screen through the full DMA only Fab 0.4 has, and Common_Defs.h stops the compile
-// if VM_EXTENSIONS_ENABLED ever reaches a build without Fab04_FullDMACapable.
+// The client link is ordinary EasyFlash IO2 register traffic; the base profile
+// never becomes bus master. Service bit 20 does, through the full DMA only Fab 0.4
+// has -- as does installing the loader (DoHostInstall), which blanks the screen with
+// it -- so the loader is built only for --target tr-plus, and Common_Defs.h stops the
+// compile if VM_EXTENSIONS_ENABLED ever reaches a build without Fab04_FullDMACapable.
 namespace VmRuntime {
 using namespace VmFiles;
 static VmRegistry::Launch launch;
 static VmRegistry::Manifest manifest;
-static VmHostExit host;
+static VmHostC64Dma host;
 static const VmModule *module;
 static VmPacket packet;
 static uint8_t sequence;
@@ -40,7 +40,7 @@ namespace VmRuntime {
 // back out of flash by VmBootImage::identity() in the main image.
 __attribute__((used, section(".vmhostid")))
 const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, providedServices,
-                            sizeof(VmHostExit), "TeensyROM", VM_HOST_CODE_FLOOR };
+                            sizeof(VmHostC64Dma), "TeensyROM", VM_HOST_CODE_FLOOR };
 
 static void constantAccess(bool protect) {
     // Profile 1 only. Region 13: subregions 2..6 of the aligned 128 KiB RAM2
@@ -62,6 +62,23 @@ static void constantAccess(bool protect) {
 
 static uint32_t timeNow() { return micros(); }
 #include "VMHostYield.h"
+
+#include "VMHostTransfer.h"
+static_assert(uint32_t(VM_C64_SPANS_MAX) == uint32_t(C64SpansMax) && uint32_t(VM_C64_SLICES_MAX) == uint32_t(C64SlicesMax),
+              "VMABI.h publishes the span limits C64Spans.h enforces");
+// Service bit 20. A slice is staged here and started by the client: VMHostIO2 turns its write
+// to $DFF0 into DMA_S_StartAsynch, but only while a slice is armed, so a grant nobody asked for
+// starts nothing; it is noted, so the job knows its client is still granting.
+static volatile bool grantArmed, grantMissed;
+static int32_t grantedSlice(uint16_t address, const uint8_t *source, uint32_t bytes, uint32_t until) {
+    SetUpDMA(DMA_WRITE, address, const_cast<uint8_t *>(source), bytes, DMA_ADDR_INCREMENT);
+    grantArmed = true;
+    while (grantArmed && int32_t(micros() - until) < 0) ;
+    __disable_irq(); const bool granted = !grantArmed, missed = grantMissed; grantArmed = grantMissed = false; __enable_irq();
+    if (!granted) return missed ? SliceMissed : SliceWaiting;
+    return FinishDMA() && CloseDMA() ? SliceLanded : VM_C64_BUS_FAILED;
+}
+static bool sourceReadable(const uint8_t *source, uint32_t bytes) { return moduleWindow(uintptr_t(source), bytes); }
 
 static bool loadModule() {
     char path[128]; snprintf(path, sizeof path, "%s/%s", launch.root, manifest.module);
@@ -86,17 +103,20 @@ static bool loadModule() {
     f.close(); vm_host_code_window(h.code_base, false);
     if (!loaded) return false;
     if (h.reserved[0] == VM_PROFILE_RAM2_RO) constantAccess(true);
+    moduleCodeBase = h.code_base;
+    moduleRamLimit = h.reserved[0] == VM_PROFILE_RAM2_RO ? VM_RAM_LIMIT - VM_RAM_RESERVED_BYTES : VM_RAM_LIMIT;
     __asm__ volatile("dsb\nisb":::"memory");
     const uint32_t used = (h.data_bytes + h.bss_bytes + 31u) & ~31u;
-    host = { { VM_ABI, sizeof(VmHostExit), providedServices, data + used, VM_DATA_BYTES - used,
-             launch.root, launch.content, timeNow, openFile, readFile, nextFile, closeFile,
-             (uint8_t *)VM_RAM_BASE, vm_image_guest_bytes(h), openFlags, writeFile, fileOp,
+    host = { { { VM_ABI, sizeof(VmHostC64Dma), providedServices, data + used, VM_DATA_BYTES - used,
+               launch.root, launch.content, timeNow, openFile, readFile, nextFile, closeFile,
+               (uint8_t *)VM_RAM_BASE, vm_image_guest_bytes(h), openFlags, writeFile, fileOp,
                shouldYield, moduleFail },
-             exitToMenu };
+             exitToMenu },
+             c64Write, c64Status };
     // Before the call, not after: on profile 0 the record's cache line is
     // inside the arena the module is about to own (VMFail.h).
     VmFail::set(VmFail::Ok);
-    module = reinterpret_cast<VmEntry>(h.entry)(&host.base);
+    module = reinterpret_cast<VmEntry>(h.entry)(&host.base.base);
     if (!vm_module_table_valid(module, h.code_base, h.code_bytes)) {
         if (!failure) failure = 0x14; module = nullptr; return false;
     }
@@ -138,6 +158,10 @@ bool VMHostIO2(uint8_t address, bool read) {
     TraceLogAddValidData(value);
     if (address == 0xf6 || (address >= 0xf8 && address <= 0xfb) || address >= 0xfd) EZFlashRAM[address] = value;
     if (address == 0xf4) { EZFlashRAM[address] = value; commandWrite(value); }
+    if (address == 0xf0) {
+        if (grantArmed) { grantArmed = false; DMA_State = DMA_S_StartAsynch; }
+        else grantMissed = true;
+    }
     return true;
 }
 

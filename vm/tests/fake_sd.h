@@ -12,7 +12,7 @@
 namespace fs=std::filesystem;
 #define FLASHMEM
 enum { O_RDONLY=1,O_WRONLY=2,O_RDWR=3,O_CREAT=4,O_EXCL=8,O_TRUNC=16,T_WRITE=1,
- rmtSD=1,eepAdCrtBootName=100,eepAdMinBootInd=2,MinBootInd_ExecuteMin=1 };
+ rmtSD=1,eepAdCrtBootName=100,eepAdMinBootInd=2,MinBootInd_ExecuteMin=1,wRegVid_TOD_Clks=36 };
 static fs::path base;static bool failWrite,failFlush,failDirError;
 static unsigned vmsOpens;   // how often the registry actually scanned /VMS
 struct FsFile {
@@ -59,6 +59,9 @@ static bool SendMsgPrintfln(const char *fmt,...){
     char buffer[160];va_list args;va_start(args,fmt);
     vsnprintf(buffer,sizeof buffer,fmt,args);va_end(args);message=buffer;return true;}
 static void EEPwriteStr(int,const char *m){marker=m;}
+static uint8_t io1[256];static volatile uint8_t *IO1=io1;
+static bool VidStdReported;static int machineAt=-1;static uint8_t machine[2];
+static void EEPwriteNBuf(int at,const uint8_t *b,int n){assert(n==2);machineAt=at;memcpy(machine,b,2);}
 static struct {void write(int,int){}} EEPROM;
 static void delay(unsigned){}
 #define SetResetAssert ((void)0)

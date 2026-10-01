@@ -129,6 +129,42 @@ static constexpr uint32_t VM_HOST_EXIT_BYTES=sizeof(VmHostExit);
 #if defined(__arm__)
 static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 #endif
+// Service bit 20, composed on VmHostExit: writes module memory into C64 RAM by mastering the
+// bus, one slice per grant. The client grants each slice by writing $DFF0, and the slice
+// starts as that write completes and holds the C64 off the bus for about slice_bytes cycles plus
+// what the VIC steals, so a client grants where it can afford that -- from a timer
+// interrupt's handler, say, for a slice shorter than the time to the next one: slice_bytes
+// at most the timer's latch + 1, less the cycles from its underflow to the grant, less a
+// margin for what the VIC steals (vm/abi/README.md, "The C64 transfer tail"). A slice
+// lands wherever the C64's memory map puts that address at the moment it is granted. The bus
+// is timed for the machine the C64 menu last reported, or for PAL when a launch comes before
+// the menu has reported one, and PAL timing can corrupt bytes on an NTSC machine.
+struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
+struct VmHostC64Dma {
+    VmHostExit base;
+    // Starts writing each span's bytes, in span order, slice_bytes at a time (0 for a span
+    // per slice), and answers the job's ticket. 0 refuses the job whole: flags other than 0,
+    // a job still pending, no spans or more than VM_C64_SPANS_MAX, a source that does not lie
+    // wholly inside the module's code, data or RAM2 window, a span that is empty, runs past
+    // $FFFF or touches $DE00..$DFFF, more than 64 KiB or VM_C64_SLICES_MAX slices in all. The
+    // sources are read as each slice goes, so leave them alone until the job ends.
+    uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
+    // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
+    // c64_write issued (a refusal issues none). A slice waits for its grant only during the
+    // host's turns for the job, and a grant between them starts nothing. A job ends NO_GRANT
+    // when a slice has waited VM_C64_GRANT_MS of those turns with no grant written (one written
+    // before the job began can count once), and BUS_FAILED when a slice does not complete or
+    // the bus is not given back after it; the slices before that one have landed. Nothing
+    // else bounds how long a job runs: grants that all fall between turns keep it pending.
+    int32_t (*c64_status)(uint32_t ticket);
+};
+static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);
+enum : uint32_t { VM_C64_SPANS_MAX=64, VM_C64_SLICES_MAX=1024, VM_C64_GRANT_MS=100 };
+enum : int32_t { VM_C64_PENDING=0, VM_C64_DONE=1, VM_C64_NO_GRANT=-1, VM_C64_BUS_FAILED=-2,
+                 VM_C64_UNKNOWN=-3 };
+#if defined(__arm__)
+static_assert(sizeof(VmC64Span)==8&&sizeof(VmHostC64Dma)==88, "ABI 2 C64 transfer tail layout is frozen");
+#endif
 struct VmModule {
     uint32_t abi, bytes;
     // pump is permitted while awaiting ACK; it must not alter frozen output.
@@ -159,16 +195,15 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 //   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
 //   17..19    unassigned
-//   20        TeensyROM's bounded C64 transfer; assigned to this loader, not
-//             yet served
+//   20        this loader's C64 transfer (VmHostC64Dma, above), TR+ only
 //   21..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
-                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
+                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384, VM_SERVICE_C64_DMA=0x100000,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
-                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000|0x100000,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT|VM_SERVICE_C64_DMA,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
               "a bit this loader serves must leave VM_SERVICES_ASSIGNED");

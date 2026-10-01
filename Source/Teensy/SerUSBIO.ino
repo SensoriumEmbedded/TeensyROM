@@ -1021,7 +1021,7 @@ FLASHMEM void WriteC64MemCommand()
    // already stopped WaitForDMAState ends each wait itself and PerformDMA reports the
    // failure.  A bus that stops part way through a transfer is caught by nothing at all --
    // DMATransferISR's edge waits are unbounded, see the fourth case named over WaitForDMAState in
-   // DMAControl.ino.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
+   // DMAControl.c.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
    // lives where the wait is -- so a new remote command is covered by checking this return
    // and by nothing else.
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
