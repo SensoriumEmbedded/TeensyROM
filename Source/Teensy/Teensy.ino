@@ -22,7 +22,7 @@
 
 
 #include <SD.h>
-#include <USBHost_t36.h>
+#include "src/USBHost_t36/USBHost_t36.h"  // vendored/pinned, not the Teensyduino copy -- see src/USBHost_t36/README.md
 #include <SPI.h>
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>

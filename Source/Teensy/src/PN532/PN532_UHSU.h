@@ -4,7 +4,7 @@
 
 #include "PN532Interface.h"
 #include "Arduino.h"
-#include "USBHost_t36.h"
+#include "../USBHost_t36/USBHost_t36.h"  // the vendored copy; a bare "USBHost_t36.h" pulls in Teensyduino's
 
 
 #define PN532_HSU_READ_TIMEOUT     (1000)
