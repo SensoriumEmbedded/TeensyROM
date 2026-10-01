@@ -68,14 +68,14 @@ static_assert(uint32_t(VM_C64_SPANS_MAX) == uint32_t(C64SpansMax) && uint32_t(VM
               "VMABI.h publishes the span limits C64Spans.h enforces");
 // Service bit 20. A slice is staged here and started by the client: VMHostIO2 turns its write
 // to $DFF0 into DMA_S_StartAsynch, but only while a slice is armed, so a grant nobody asked for
-// starts nothing; it is noted, so the job knows its client is still granting.
-static volatile bool grantArmed, grantMissed;
+// starts nothing.
+static volatile bool grantArmed;
 static int32_t grantedSlice(uint16_t address, const uint8_t *source, uint32_t bytes, uint32_t until) {
     SetUpDMA(DMA_WRITE, address, const_cast<uint8_t *>(source), bytes, DMA_ADDR_INCREMENT);
     grantArmed = true;
     while (grantArmed && int32_t(micros() - until) < 0) ;
-    __disable_irq(); const bool granted = !grantArmed, missed = grantMissed; grantArmed = grantMissed = false; __enable_irq();
-    if (!granted) return missed ? SliceMissed : SliceWaiting;
+    __disable_irq(); const bool granted = !grantArmed; grantArmed = false; __enable_irq();
+    if (!granted) return SliceWaiting;
     return FinishDMA() && CloseDMA() ? SliceLanded : VM_C64_BUS_FAILED;
 }
 static bool sourceReadable(const uint8_t *source, uint32_t bytes) { return moduleWindow(uintptr_t(source), bytes); }
@@ -158,10 +158,7 @@ bool VMHostIO2(uint8_t address, bool read) {
     TraceLogAddValidData(value);
     if (address == 0xf6 || (address >= 0xf8 && address <= 0xfb) || address >= 0xfd) EZFlashRAM[address] = value;
     if (address == 0xf4) { EZFlashRAM[address] = value; commandWrite(value); }
-    if (address == 0xf0) {
-        if (grantArmed) { grantArmed = false; DMA_State = DMA_S_StartAsynch; }
-        else grantMissed = true;
-    }
+    if (address == 0xf0 && grantArmed) { grantArmed = false; DMA_State = DMA_S_StartAsynch; }
     return true;
 }
 
