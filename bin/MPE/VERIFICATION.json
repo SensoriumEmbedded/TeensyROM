@@ -1,0 +1,34 @@
+{
+  "hostSha256": "3883fab8ad17461d677ab40331cbcc7b8dc8f83e152d38c415952c507b864f73",
+  "testedFirmwareCommit": "018641a1fce70eba94c49c940ae677758cde0288",
+  "imageBytes": 322560,
+  "descriptor": {
+    "magic": 843601485,
+    "abi": 2,
+    "services": 32,
+    "hostBytes": 76,
+    "name": "MHS MPE",
+    "codeFloor": 32244
+  },
+  "software": {
+    "passed": true,
+    "stockPreflight": true,
+    "registrationAndMgc1Checks": true,
+    "desktopControl": true,
+    "syntheticDemo": true,
+    "emittedC64Receiver": true,
+    "pinnedEngineAdmissionCount": 14,
+    "monkeyPalNtscTransportSaveInput": true,
+    "desktopNativeAppAndStorageNetworkServices": true
+  },
+  "hardware": {
+    "ownerReportedWorking": true,
+    "date": "2026-10-01",
+    "machine": "NTSC C64",
+    "sid": "SIDKick Pico",
+    "scope": "The delivered stock text firmware, full MPE host and HamsterOS/Doom setup described in the installation and cartridge Menu/reset return instructions, on the owner's usual NTSC C64 with SIDKick Pico",
+    "artifactBinding": "Delivered card files were read back and SHA-256 verified; installed board slot was not read back",
+    "optionalUsbEthernetResultsEnumerated": false,
+    "completeGameAcceptance": false
+  }
+}

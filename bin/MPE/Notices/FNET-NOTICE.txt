@@ -1,0 +1,4 @@
+FNET TCP/IP stack
+Copyright 2008-2018 Andrey Butok and FNET Community
+Licensed under Apache License 2.0; see FNET-Apache-2.0.txt.
+This host uses a storage/network-focused adaptation with TLS disabled.
