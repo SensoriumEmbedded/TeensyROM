@@ -400,8 +400,8 @@ enum regItemTypes //synch with TblItemType
    rtFileREU     = 19,
    rtFileTRH     = 20,
 
-   //127 max, bit 7 used to indicate assigned IOH to TR
-   //TblItemType mult by 4 further limits to 63 max!
+   //63 max: rRegItemTypePlusIOH uses bit 7 (assigned IOH) and bit 6 (/VMS claim),
+   //and TblItemType's mult by 4 limits it to 63 as well
 };
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
