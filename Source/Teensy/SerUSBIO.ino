@@ -951,6 +951,17 @@ FLASHMEM void  getFreeITCM()
 }
 
 #ifdef Fab04_FullDMACapable
+// Staging for one remote DMA command, from the heap and freed when the command returns.  Not
+// RAM_Image, which can be holding a running cartridge's ROM or REU emulation's banks.  Those
+// take heap too, REU emulation up to 512 KiB of it, so an allocation can fail, and the command
+// then refuses.
+struct DMAStage
+{
+   uint8_t *const Buf;
+   explicit DMAStage(uint32_t Len) : Buf((uint8_t *)malloc(Len ? Len : 1)) {}
+   ~DMAStage() { free(Buf); }
+};
+
 // Command: 
 // Write sequential C64 memory segment with supplied data
 // 
@@ -964,7 +975,7 @@ FLASHMEM void  getFreeITCM()
 FLASHMEM void WriteC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+   const uint32_t Began = millis();
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -978,6 +989,16 @@ FLASHMEM void WriteC64MemCommand()
        SendU16(FailToken);
        CmdChannel->println("Error receiving length!");
        return;
+   }
+
+   DMAStage Stage(DMALength);
+   uint8_t *DMABuf = Stage.Buf;
+   if (!DMABuf)
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
+      DiscardCmdInput(DMALength, Began, DMALength);  // sent unprompted, and not to be read as commands
+      return;
    }
 
    for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
@@ -1108,13 +1129,15 @@ FLASHMEM void WriteC64SpansCommand()
    for (uint32_t Num = 0; Num < Count; Num++)
       Spans[Num] = { (uint16_t)(List[Num*4] << 8 | List[Num*4+1]), (uint16_t)(List[Num*4+2] << 8 | List[Num*4+3]) };
 
-   // WriteC64Mem's reach, into the same buffer.
+   // WriteC64Mem's reach.
    const C64SpansCheck Check = CheckC64Spans(Spans, Count, Head[1], 0x10000, &Total);
    if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check], 0, Began);
+   DMAStage Stage(Total);
+   if (!Stage.Buf) return RefuseSpans("No memory to stage the payload", 0, Began);
    SendU16(AckToken);
-   if (!ReceiveSpanBytes(RAM_Image, Total, 0, Began, sizeof List + Total)) return;
+   if (!ReceiveSpanBytes(Stage.Buf, Total, 0, Began, sizeof List + Total)) return;
 
-   if (!WriteC64Spans(Spans, Count, RAM_Image, Head[1], Head[2], &Landed))
+   if (!WriteC64Spans(Spans, Count, Stage.Buf, Head[1], Head[2], &Landed))
    {
       SendU16(FailToken);
       CmdChannel->printf("Stopped at %lu of %lu bytes: C64 bus not clocking, or DMA timed out\n", Landed, Total);
@@ -1136,7 +1159,6 @@ FLASHMEM void WriteC64SpansCommand()
 FLASHMEM void ReadC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -1151,11 +1173,20 @@ FLASHMEM void ReadC64MemCommand()
        CmdChannel->println("Error receiving length!");
        return;
    }
+
+   DMAStage Stage(DMALength);
+   uint8_t *DMABuf = Stage.Buf;
+   if (!DMABuf)
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
+      return;
+   }
    
    //uint32_t StartTime = micros();
-   // Same reach as the write above.  Checked here for the second reason too: DMABuf is
-   // RAM_Image, which holds whatever the last operation left in it, so acking a transfer
-   // that did not happen would send that back as the contents of C64 memory.
+   // Same reach as the write above.  Checked here for the second reason too: DMABuf holds
+   // whatever the heap last had there, so acking a transfer that did not happen would send
+   // that back as the contents of C64 memory.
    if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);
