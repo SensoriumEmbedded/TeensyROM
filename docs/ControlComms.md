@@ -440,6 +440,12 @@ Firmware that predates this command answers the token with `Unk cmd: 0x64fc`, or
 
 Spans are refused, before any payload is sent, if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed 64 KiB or 1,024 slices. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
 
+**Choosing slice bytes and gap.** Two allowances, both measured on an NTSC C128 in C64 mode running v0.8.0.13 with the C64 loop writing to memory:
+  * *Per-slice overhead.* A slice halts the 6510 for longer than its byte count. Fitting lost NMIs against slice size gives about 70–80 cycles per slice on top of its bytes, so size a slice about 100 bytes shorter than the interval it must fit inside. With a CIA2 NMI every 200 cycles and a 40 µs gap, a 4 KiB job lost 21 NMIs written whole, 8.2 at slice 200, 3.5 at slice 140, 0.5 at slice 100, and none at slice 32 or below.
+  * *Minimum gap.* The gap is the C64's only time to run between slices, and its interrupt handler has to finish in it. Below about 20 µs, an NMI that arrives during a halt is still being serviced when the next slice starts. At slice 100 the same job lost 11–13 NMIs with gaps of 0–10 µs, 0.6 at 20 µs, and none at 100 µs.
+
+Smaller slices and longer gaps make the job slower: that 4 KiB took 6.3 mS as one `WriteC64Mem`, 14.9 mS at slice 32 and 37 mS at slice 8, all with a 40 µs gap. A raster split rewriting screen and colour RAM (2 × 1,000 bytes) ran its IRQs up to 18 lines late against `WriteC64Mem`, and at most 1 line late at slice 32 / gap 40 µs.
+
 **Handler:** `WriteC64SpansCommand()`
  
 ---
