@@ -38,7 +38,7 @@ export const HOST_SERVICES = BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT;
 // The service registry from VMABI.h. checkServiceRegistry in
 // tools/verify-extensions.mjs holds these in step with VM_SERVICES_ASSIGNED.
 export const SERVICE_EXAMPLE = 0x10000;  // registry bit 16, this repository's own examples
-export const ASSIGNED_SERVICES = 32 | 64 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | SERVICE_EXAMPLE;
+export const ASSIGNED_SERVICES = 32 | 64 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | SERVICE_EXAMPLE | 0x100000;
 export const UNASSIGNED_SERVICES = ~(HOST_SERVICES | ASSIGNED_SERVICES) >>> 0;
 const unassignedServices = (requiredServices) => (requiredServices & UNASSIGNED_SERVICES) >>> 0;
 export const CLIENT_BYTES = 0x6070;

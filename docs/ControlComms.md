@@ -49,7 +49,7 @@ The TeensyROM divides commands into two availability tiers:
 #### Always-Available Commands
 These commands are processed regardless of what handler is active, even if the TeensyROM is "busy":
   * Core control (LaunchFile, ResetC64, VersionInfo, FWCheck)
-  * DMA memory access (WriteC64Mem, ReadC64Mem) — TR+ only
+  * DMA memory access (WriteC64Mem, WriteC64Spans, ReadC64Mem) — TR+ only
   * C64 pause control (C64PauseOn, C64PauseOff)
 
 #### Conditionally-Available Commands
@@ -109,6 +109,7 @@ TeensyROM uses a dual-firmware system for large cartridge support:
 |*C64PauseOnToken   | 0x6431  | Pause C64 via DMA |
 |*C64PauseOffToken  | 0x6430  | Resume C64 (un-pause) |
 |*WriteC64MemToken  | 0x64FB  | Write sequential C64 memory segment via DMA (TR+ Only)|
+|*WriteC64SpansToken | 0x64FC | Write up to 64 C64 memory spans via DMA, in slices (TR+ Only)|
 |*ReadC64MemToken   | 0x64FD  | Read sequential C64 memory segment via DMA (TR+ Only)|
 |DebugToken        | 0x6467  | Internal debug use only |
 
@@ -415,6 +416,37 @@ Writes a sequential C64 memory segment with supplied data.
 | Send | `AckToken 0x64CC` on success, `FailToken 0x9B7F` on fail |
  
 **Handler:** `WriteC64MemCommand()`
+ 
+---
+
+### Write C64 Memory Spans (TR+ Only)
+Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice bytes*, with the bus released and the 6510 running for *gap* µs between slices, so no single halt is longer than the C64's own code can absorb: a CIA timer that underflows twice inside one halt raises one NMI, not two. Both numbers are the sender's, because only it knows the C64 code it is writing to. Slices start promptly only while the C64 is writing to memory; a loop that only reads waits for a badline, or for 5,000 cycles with the screen blanked.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `WriteC64SpansToken` — `0x64FC` |
+| Send | `AckToken 0x64CC` — send nothing more until it arrives; `FailToken 0x9B7F` and a line of text while REU emulation is running or the C64 is paused |
+| Receive | Flags (`0`), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
+| Receive | Span count × { C64 address (Hi, Low), length (Hi, Low) } |
+| Send | `AckToken 0x64CC` if the spans are accepted; `FailToken 0x9B7F` and a line of text if not |
+| Receive | Data bytes for every span, in span order — send these only after the `AckToken` |
+| — | TR+ performs the DMA writes |
+| Send | `AckToken 0x64CC` once every span has landed; `FailToken 0x9B7F` and a line of text otherwise |
+
+After a `FailToken`, the board goes on discarding what the sender still owes, up to the rest of the span list and payload, and stops once it has it all or a second passes with nothing arriving. Wait for that second of quiet before sending the next command, or the board may discard it too.
+
+Firmware that predates this command answers the token with `Unk cmd: 0x64fc`, or with `Busy!` from the minimal image, rather than an `AckToken`, and would read anything sent after it as commands of its own. A sender that waits for the first `AckToken` stops there.
+
+Spans are refused, before any payload is sent, if one is empty, runs past `$FFFF`, or touches `$DE00`–`$DFFF` (this cartridge's own IO), or if together they exceed 64 KiB or 1,024 slices. A slice that fails stops the job with the bus released, and the reply says how many bytes had landed.
+
+**Choosing slice bytes and gap.** Two allowances, both measured on an NTSC C128 in C64 mode running v0.8.0.13 with the C64 loop writing to memory:
+  * *Per-slice overhead.* A slice halts the 6510 for longer than its byte count. Fitting lost NMIs against slice size gives about 70–80 cycles per slice on top of its bytes, so size a slice about 100 bytes shorter than the interval it must fit inside. With a CIA2 NMI every 200 cycles and a 40 µs gap, a 4 KiB job lost 21 NMIs written whole, 8.2 at slice 200, 3.5 at slice 140, 0.5 at slice 100, and none at slice 32 or below.
+  * *Minimum gap.* The gap is the C64's only time to run between slices, and its interrupt handler has to finish in it. Below about 20 µs, an NMI that arrives during a halt is still being serviced when the next slice starts. At slice 100 the same job lost 11–13 NMIs with gaps of 0–10 µs, 0.6 at 20 µs, and none at 100 µs.
+
+Smaller slices and longer gaps make the job slower: that 4 KiB took 6.3 mS as one `WriteC64Mem`, 14.9 mS at slice 32 and 37 mS at slice 8, all with a 40 µs gap. A raster split rewriting screen and colour RAM (2 × 1,000 bytes) ran its IRQs up to 18 lines late against `WriteC64Mem`, and at most 1 line late at slice 32 / gap 40 µs.
+
+**Handler:** `WriteC64SpansCommand()`
  
 ---
  

@@ -154,23 +154,24 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 // requiring an unassigned one.
 //   0..4      base profile, below
 //   7         this loader's optional RAM2 memory profile
-//   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
-//             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
-//             desktop, firmware catalogue
+//   5,6,8..13 reserved, assigned out of tree
 //   14        this loader's module exit (VmHostExit, above)
 //   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
-//   17..31    unassigned
+//   17..19    unassigned
+//   20        TeensyROM's bounded C64 transfer; assigned to this loader, not
+//             yet served
+//   21..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
                   VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
                   VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
-                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
+                  VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000|0x100000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
-              "this loader must not claim a bit assigned to another host");
+              "a bit this loader serves must leave VM_SERVICES_ASSIGNED");
 static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     auto p=static_cast<const uint8_t *>(data); uint32_t c=~0u;
     while(size--) { c^=*p++; for(unsigned b=0;b<8;b++) c=(c>>1)^((0u-(c&1))&0xedb88320u); }

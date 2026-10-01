@@ -16,6 +16,7 @@ VERSION_INFO = 0x6476
 FW_CHECK = 0x64E0
 READ_C64_MEM = 0x64FD      # TR+ only: needs Fab04_FullDMACapable
 WRITE_C64_MEM = 0x64FB     # TR+ only
+WRITE_C64_SPANS = 0x64FC   # TR+ only
 # Refused with FAIL + "Busy!" unless the board is sitting at its own menu:
 POST_FILE = 0x64BB
 DELETE_FILE = 0x64CF
@@ -44,6 +45,7 @@ FIRMWARE_NAMES = {
     'FWCheckToken': FW_CHECK,
     'ReadC64MemToken': READ_C64_MEM,
     'WriteC64MemToken': WRITE_C64_MEM,
+    'WriteC64SpansToken': WRITE_C64_SPANS,
     'PostFileToken': POST_FILE,
     'DeleteFileToken': DELETE_FILE,
     'GetDirNDJSONToken': GET_DIR_NDJSON,

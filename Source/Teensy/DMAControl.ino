@@ -238,6 +238,40 @@ FLASHMEM bool CloseDMA()
    return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
 }
 
+// A slice on a live C64 starts within DMA_TIMEOUT_CYCLES (~5 mS), so this holds a job to about
+// what its slice cap allows even on a bus that makes every handshake run to its own ceiling.
+#define DMA_SPANS_CEILING_mS  (C64SlicesMax * 5 + 1000)
+
+// Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
+// giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
+// its C64 code can take, and how long its interrupt handler needs to run between them.  Stops
+// at the first slice or release that fails, or at DMA_SPANS_CEILING_mS, with the bus released, and
+// returns false.  *Landed
+// counts every slice that finished, even one whose CloseDMA then failed; a slice aborted
+// mid-transfer may have partly landed and is not counted.
+FLASHMEM bool WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Payload, uint32_t SliceBytes, uint32_t GapuS,
+                            uint32_t *Landed)
+{
+   const uint32_t Began = millis();
+   *Landed = 0;
+   for (uint32_t Num = 0; Num < Count; Num++)
+   {
+      for (uint32_t Done = 0; Done < Spans[Num].Len; )
+      {
+         uint32_t Slice = Spans[Num].Len - Done;
+         if (SliceBytes && Slice > SliceBytes) Slice = SliceBytes;
+         if (*Landed) delayMicroseconds(GapuS);
+         if (millis() - Began >= DMA_SPANS_CEILING_mS) return false;
+         if (!PerformDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + *Landed, Slice, DMA_ADDR_INCREMENT))
+            return false;
+         Done += Slice;
+         *Landed += Slice;
+         if (!CloseDMA()) return false;
+      }
+   }
+   return true;
+}
+
 //__attribute__((always_inline)) inline bool DMAByte()
 bool DMAByte(uint8_t *Data)
 {  //verifies Bus Available and sends/receives a byte to/from DMA_Buffer[DMA_Count]
