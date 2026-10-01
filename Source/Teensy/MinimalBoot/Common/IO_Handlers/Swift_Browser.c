@@ -1090,6 +1090,11 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
       File dir = sourceFS->open(FileNamePath);
       while (File entry = dir.openNextFile()) 
       {
+         if (IsDotfile(entry.name()))
+         {
+            entry.close();
+            continue;
+         }
          AddRawStrToRxQueue("<li>"); //return and bullet
          Empty = false;
          if (entry.isDirectory())
