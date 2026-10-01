@@ -74,6 +74,22 @@ int main(int argc,char **argv){
     assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&!rebooted);
     assert(message.find("lacks service $10000")!=std::string::npos);
 
+    // A host whose own code fills the lower window cannot take a module linked
+    // there. Stating no floor means the same thing, because that is what every
+    // host built before the field said, but it is told apart as that.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI,"TeensyROM",VM_CODE_BASE);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&!rebooted);
+    assert(message.find("needs code at $18000, not $10000")!=std::string::npos);
+    VmBootImage::install(VM_HOST_SERVICES);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&!rebooted);
+    assert(message.find("TeensyROM host states no code floor, so takes $18000 only")!=std::string::npos);
+
+    // A host linked clear of it takes the same module through to the reboot,
+    // and still takes one at the base every host accepts.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI,"TeensyROM",0xdd1c);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&rebooted);rebooted=false;
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);rebooted=false;
+
     // A host that speaks another ABI would refuse every module this image can
     // validate, so that is knowable here too.
     VmBootImage::install(VM_HOST_SERVICES,VM_ABI+1);
@@ -249,6 +265,6 @@ int main(int argc,char **argv){
     puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
          "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client, "
          "extension cache answering Unknown when unscanned, errored or over the limit, "
-         "a service belonging to another host refused by its number, and the same module "
+         "a service belonging to another host refused by its number, a module linked at the lower code base refused by a host that fills it and launched by one that does not, and the same module "
          "reaching the reboot when the installed host cannot say what it provides");
 }

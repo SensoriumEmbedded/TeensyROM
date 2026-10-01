@@ -59,7 +59,7 @@ Stream *CmdChannel = &Serial;
 // 0 for the same reason -- there is no VmHost table to describe the size of.
 // `name` is 12 bytes and need not be terminated.
 __attribute__((used, section(".vmhostid")))
-const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, 0, 0, "Example", 0 };
+const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, 0, 0, "Example", VM_HOST_CODE_FLOOR };
 
 // The detail this host reports alongside its status code. Free for a host's own
 // use -- the menu prints whatever is here and attaches no meaning to it.

@@ -29,7 +29,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { decodeHex, VM_BASE, VM_LIMIT } from './lib/hex.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
-import { buildHostPackage, parseHostPackage, hostDescriptor,
+import { buildHostPackage, parseHostPackage, hostDescriptor, describeCodeFloor,
          hostFileStem, hostNameForDisplay } from './lib/extension.mjs';
 
 // Scanned inside main(), not at module scope: this file also exports hostImageFromHex, and
@@ -108,7 +108,7 @@ function main() {
   fs.writeFileSync(outPath, pkg);
 
   console.log(`Host "${shown}" from ${source}`);
-  console.log(`  ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}`);
+  console.log(`  ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}, ${describeCodeFloor(id.codeFloor)}`);
   console.log(`  payload ${header.payloadBytes} bytes, entry 0x${header.entry.toString(16)}`);
   console.log(`  wrote ${outPath} (${pkg.length} bytes)`);
   console.log('Copy it to the card and select it in the menu, or push it over USB with ' +

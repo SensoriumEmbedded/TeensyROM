@@ -101,6 +101,11 @@
 #define Cart_MagicDesk2              79  //Remove?
 #define Cart_MagicDesk2b             85  //Supported
 
+// Alternate Handlers adding TR+ REU to Known/public Cartridge HW types
+// Reserved range is currently 200 to 300  
+#define Cart_FCIII_101_REU          203 // Supported on v0.4
+#define Cart_RetroReplay_REU        236 // Supported on v0.4
+
 // IO handlers only
 #define Cart_DigiMax               -100 
 #define Cart_DQBB                  -101 
@@ -145,10 +150,12 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
    (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
 #ifdef Fab04_Freezers
-   (uint16_t)Cart_SuperSnapshotV5, IOH_SuperSnapshotV5,
-   (uint16_t)Cart_RetroReplay,     IOH_RetroReplay,
-   (uint16_t)Cart_FinalCartridgeIII,IOH_FinalCartridgeIII,
-   (uint16_t)Cart_ActionReplay,    IOH_ActionReplay,
+   (uint16_t)Cart_SuperSnapshotV5,   IOH_SuperSnapshotV5,
+   (uint16_t)Cart_RetroReplay,       IOH_RetroReplay,
+   (uint16_t)Cart_FinalCartridgeIII, IOH_FinalCartridgeIII,
+   (uint16_t)Cart_ActionReplay,      IOH_ActionReplay,
+   (uint16_t)Cart_RetroReplay_REU,   IOH_RetroReplay_REU,
+   (uint16_t)Cart_FCIII_101_REU,     IOH_FCIII_101_REU,
 #endif
 #endif
 

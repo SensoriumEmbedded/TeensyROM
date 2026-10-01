@@ -133,6 +133,8 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
       &IOHndlr_RetroReplay,        //IOH_RetroReplay
       &IOHndlr_FinalCartridgeIII,  //IOH_FinalCartridgeIII
       &IOHndlr_ActionReplay,       //IOH_ActionReplay
+      &IOHndlr_RetroReplay_REU,    //IOH_RetroReplay_REU
+      &IOHndlr_FCIII_101_REU,      //IOH_FCIII_101_REU 
    #endif
       &IOHndlr_ASID,               //IOH_ASID,
       &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,

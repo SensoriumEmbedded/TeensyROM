@@ -219,7 +219,8 @@
 ;enum RegPowerUpDefaultMasks3
 ;eepAdPwrUpDefaults3, rwRegPwrUpDefaults3
    rpud3ResetDetectDisable = 0b10000000 ; bit 7, 1=External Reset Detect Disabled (0=enabled/default)
-; bits 6:0 unused
+   rpud3FreezerREUDisable = 0b01000000 ; bit 6, 1=TR+ REU not added to RetroReplay/FC3 101% (0=added/default)
+; bits 5:0 unused
 
 
 ;enum RegMIDISettingsMasks

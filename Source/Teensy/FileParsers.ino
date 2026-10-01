@@ -17,7 +17,7 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
+uint8_t *ptrRAM_ImageEnd = NULL; // Made global for REU access 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
@@ -76,6 +76,26 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    uint16_t HWType = toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
    
+
+#ifdef Fab04_Freezers
+   // Create pseudo-CRT number (real HWType + 200) to select dual REU & CRT handler
+
+   // All versions RetroReplay are REU compatible, but only the 101% version of 
+   // FinalCartridge III is REU compatible. This is indicated by CRT subtype bit = 1 
+   //  https://1541u-documentation.readthedocs.io/en/latest/howto/cartridges.html
+
+   if (!(IO1[rwRegPwrUpDefaults3] & rpud3FreezerREUDisable))  // unless disabled in TR settings
+   {
+      if ((HWType == Cart_RetroReplay) ||                                   // All RetroReplay or 
+         ((HWType == Cart_FinalCartridgeIII) && (*(CRT_Image+0x1A) == 1 ))) // FCIII with REU subtype bit set (101%)
+         
+      {
+         HWType += 200; // offset to indicate REU compatible CRT version
+         SendMsgPrintfln("Using dual REU + Freezer HW Type: %d",(int16_t)HWType);   
+      }
+   }   
+#endif   
+
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
       if (!AssocHWID_IOH(HWType))
@@ -96,8 +116,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    
 bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)   
 {
-   static uint8_t *ptrRAM_ImageEnd = NULL;
-   
+ 
    if (memcmp(ChipHeader, "CHIP", 4)!=0)
    {
       SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
@@ -447,7 +466,8 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    
 #ifdef Fab04_Freezers
    if (IO1[rwRegNextIOHndlr] == IOH_SuperSnapshotV5 ||
-       IO1[rwRegNextIOHndlr] == IOH_FinalCartridgeIII)
+       IO1[rwRegNextIOHndlr] == IOH_FinalCartridgeIII ||
+       IO1[rwRegNextIOHndlr] == IOH_FCIII_101_REU)
    {  //EXROM==1 && GAME==1, Addr==$8000, Size==$4000
       MyMenuItem->ItemType = rtBin8kLo; //set in IOH handler, using Lo here to not enable VIC cycle
       SendMsgPrintfln("SSv5/FCIII config");

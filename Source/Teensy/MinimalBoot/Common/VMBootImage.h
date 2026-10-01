@@ -188,9 +188,10 @@ inline void installWithoutDescriptor() {
     memset(hostWindow + idOffset, 0xff, sizeof(VmHostId));
 }
 
-inline void install(uint32_t services, uint32_t abi = VM_ABI, const char *name = "TeensyROM") {
+inline void install(uint32_t services, uint32_t abi = VM_ABI, const char *name = "TeensyROM",
+                    uint32_t codeFloor = 0) {
     installWithoutDescriptor();
-    VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), {}, 0 };
+    VmHostId id = { VM_HOSTID_MAGIC, abi, services, sizeof(VmHost), {}, codeFloor };
     snprintf(id.name, sizeof id.name, "%s", name);
     memcpy(hostWindow + idOffset, &id, sizeof id);
 }

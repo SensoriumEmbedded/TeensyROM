@@ -228,6 +228,9 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
+#ifdef Fab04_REU
+   FreeREU();
+#endif   
    FreeSwiftlinkBuffs();
    InitDriveDirMenu();
 

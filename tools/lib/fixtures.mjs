@@ -11,16 +11,16 @@ import path from 'node:path';
 import { VM_BASE } from './hex.mjs';
 import { ABI, HOSTID_MAGIC, HOST_ID_OFFSET, HOST_SERVICES, buildHostPackage,
          buildImage, buildManifest, buildClientCrt, BASE_SERVICES, CODE_BASE,
-         SERVICE_EXAMPLE } from './extension.mjs';
+         CODE_BASE_128K, SERVICE_EXAMPLE } from './extension.mjs';
 
 export function packageFixture(root, {
   id = 'HELLO', extensions = 'hi', bank0 = Buffer.alloc(8192, 0x11), bank1 = Buffer.alloc(8192, 0x22),
-  requiredServices = BASE_SERVICES,
+  requiredServices = BASE_SERVICES, codeBase = CODE_BASE,
 } = {}) {
   const directory = path.join(root, 'VMS', id);
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(path.join(directory, 'engine.mvm'),
-    buildImage({ code: Buffer.from([0x70, 0x47]), entry: CODE_BASE | 1, requiredServices }));
+    buildImage({ code: Buffer.from([0x70, 0x47]), entry: codeBase | 1, requiredServices, codeBase }));
   fs.writeFileSync(path.join(directory, 'manifest.vmi'), buildManifest({ id, extensions }));
   const client = buildClientCrt({ id, bank0, bank1 });
   fs.writeFileSync(path.join(directory, 'client.crt'), client);
@@ -30,12 +30,14 @@ export function packageFixture(root, {
 }
 
 // OTHER makes the registry ambiguous and non-matching; VENDOR requires
-// registry bit 16, which no host in these tests provides.
+// registry bit 16, which no host in these tests provides; WIDE links at the
+// lower code base, which a host has to leave free.
 export function registryFixture(root) {
   packageFixture(root);
   packageFixture(root, { id: 'OTHER', extensions: 'ot' });
   packageFixture(root, { id: 'VENDOR', extensions: 'vn',
                          requiredServices: BASE_SERVICES | SERVICE_EXAMPLE });
+  packageFixture(root, { id: 'WIDE', extensions: 'wd', codeBase: CODE_BASE_128K });
   return root;
 }
 
