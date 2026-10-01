@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-import { blankComments, definesMacro, withoutComments } from './source-text.mjs';
+import { blankComments, definesMacro, readSource, readText, withoutComments } from './source-text.mjs';
 
 const DECLARATION = /VM_HOST_SLOT_BASE = (0x[0-9a-fA-F]+)u?/;
 const INCLUDE = /^[ \t]*#[ \t]*include[ \t]*([<"][^>"\n]*[>"])/gm;
@@ -75,5 +78,17 @@ test('a define that is only mentioned, or only nearly named, is not recognised',
     '// pass --yes to have the builder comment out #define Fab04_Features for you',
   ]) {
     assert.equal(definesMacro(source, 'Fab04_Features'), false, JSON.stringify(source));
+  }
+});
+
+test('a CRLF file reads as the LF one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crlf-source-'));
+  try {
+    const file = path.join(dir, 'x.h');
+    fs.writeFileSync(file, 'owned are\r\nrefused: // note\r\nint x;\r\n');
+    assert.equal(readText(file), 'owned are\nrefused: // note\nint x;\n');
+    assert.equal(readSource(file), 'owned are\nrefused: \nint x;\n');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });

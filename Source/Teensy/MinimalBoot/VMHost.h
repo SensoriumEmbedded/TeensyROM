@@ -40,7 +40,7 @@ namespace VmRuntime {
 // back out of flash by VmBootImage::identity() in the main image.
 __attribute__((used, section(".vmhostid")))
 const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, providedServices,
-                            sizeof(VmHostExit), "TeensyROM", 0 };
+                            sizeof(VmHostExit), "TeensyROM", VM_HOST_CODE_FLOOR };
 
 static void constantAccess(bool protect) {
     // Profile 1 only. Region 13: subregions 2..6 of the aligned 128 KiB RAM2
@@ -67,19 +67,23 @@ static bool loadModule() {
     char path[128]; snprintf(path, sizeof path, "%s/%s", launch.root, manifest.module);
     FsFile f = SD.sdfs.open(path, O_RDONLY); VmImageHeader h{};
     if (!f || f.isDirectory() || f.fileSize() > UINT32_MAX || f.read(&h, sizeof h) != sizeof h ||
-        !vm_valid_header(h, f.fileSize()) || !vm_host_serves(h, providedServices)) {
-        // An image wanting a service this build does not provide is refused
-        // here, whole. It is never loaded with the service quietly missing.
+        !vm_valid_header(h, f.fileSize()) || !vm_host_serves(h, providedServices) ||
+        !vm_host_takes_code(h, VM_HOST_CODE_FLOOR)) {
+        // An image wanting a service this build does not provide, or code
+        // lower than this link leaves free, is refused here, whole. It is
+        // never loaded with the service quietly missing or over host code.
+        // The floor comes from the same symbol the descriptor published, so
+        // the preflight and this cannot disagree.
         f.close(); failure = 0x11; return false;
     }
     // Bounds, profile and imports are all checked before any module memory is written.
-    auto code = (uint8_t *)VM_CODE_BASE;
+    auto code = (uint8_t *)h.code_base;
     auto data = (uint8_t *)VM_DATA_BASE;
     auto ro = (uint8_t *)VM_RAM2_RO_BASE;
     constantAccess(false);
-    vm_host_code_window(true);
+    vm_host_code_window(h.code_base, true);
     const bool loaded = vm_load_payload(h, f, code, data, ro, failure);
-    f.close(); vm_host_code_window(false);
+    f.close(); vm_host_code_window(h.code_base, false);
     if (!loaded) return false;
     if (h.reserved[0] == VM_PROFILE_RAM2_RO) constantAccess(true);
     __asm__ volatile("dsb\nisb":::"memory");
@@ -93,7 +97,7 @@ static bool loadModule() {
     // inside the arena the module is about to own (VMFail.h).
     VmFail::set(VmFail::Ok);
     module = reinterpret_cast<VmEntry>(h.entry)(&host.base);
-    if (!vm_module_table_valid(module, h.code_bytes)) {
+    if (!vm_module_table_valid(module, h.code_base, h.code_bytes)) {
         if (!failure) failure = 0x14; module = nullptr; return false;
     }
     return true;

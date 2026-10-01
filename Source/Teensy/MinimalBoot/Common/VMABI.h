@@ -30,7 +30,13 @@
 // hands out the rest one host at a time, so two hosts cannot pick the same
 // number; an assignment binds the number for good and says nothing about which
 // host implements it.
-enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
+// A module links at one of two code bases. VM_CODE_BASE is the one every host
+// accepts; VM_CODE_BASE_128K needs a host whose own code ends at or below it,
+// which VmHostId::code_floor states. Both are MPU-legal: the window each opens
+// splits into two power-of-two regions aligned to their own size, which an
+// arbitrary base would not.
+enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_BASE_128K = 0x10000,
+                  VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
                   VM_RAM_BASE = 0x20200000,
@@ -175,7 +181,8 @@ static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserv
 static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
 // Structure and self-consistency only. Whether a host can serve what an image
-// requires is vm_host_serves() in VMHostABI.h, which a host owes before it
+// requires is vm_host_serves() in VMHostABI.h, and whether it can take the
+// image's code base is vm_host_takes_code() there; a host owes both before it
 // loads. Bit 7 is judged here because it has to agree with the memory profile
 // in reserved[0].
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
@@ -185,12 +192,13 @@ static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) 
     }else if(h.reserved[0]==VM_PROFILE_RAM2_RO){
         if(!(h.required_services&VM_SERVICE_RAM2_RO)||!h.reserved[1]||h.reserved[1]>VM_RAM2_RO_BYTES)return false;
     }else return false;
+    if(h.code_base!=VM_CODE_BASE && h.code_base!=VM_CODE_BASE_128K)return false;
     if(h.magic!=VM_IMAGE_MAGIC || h.abi!=VM_ABI || h.header_bytes!=sizeof h ||
-       h.code_base!=VM_CODE_BASE || h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
-       h.code_bytes>VM_CODE_LIMIT-VM_CODE_BASE || h.data_bytes>VM_DATA_BYTES ||
+       h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
+       h.code_bytes>VM_CODE_LIMIT-h.code_base || h.data_bytes>VM_DATA_BYTES ||
        h.bss_bytes>VM_DATA_BYTES-h.data_bytes ||
        file_bytes!=sizeof h+vm_image_payload_bytes(h) || !(h.entry&1) ||
-       (h.entry&~1u)<VM_CODE_BASE || (h.entry&~1u)>=VM_CODE_BASE+h.code_bytes) return false;
+       (h.entry&~1u)<h.code_base || (h.entry&~1u)>=h.code_base+h.code_bytes) return false;
     VmImageHeader check=h; check.header_crc=0;
     return vm_crc32(&check,sizeof check)==h.header_crc;
 }
