@@ -224,14 +224,14 @@
   * Shows the currently assigned file for each of the 5 programmable Hot Keys (#1-5)
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
-### 0. Installed Extensions
-  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
-  * The firmware comes with no host installed, and runs exactly as it would without one. A host is an optional add-on distributed as a `.TRH` file: copy it to the SD card or USB drive and select it in the file browser to install it. A firmware update leaves the installed host in place
-  * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
-  * Uninstalling erases the host from flash and reboots the TeensyROM
-  * `None installed; slot not blank.` means an install or an uninstall did not finish and left part of a host behind; `u` erases it the same way, and the report on the way back up says the host was removed
-  * Uninstall the host before loading a firmware without extension support, such as an older release: that firmware cannot update itself while a host is in flash. If one is already loaded, load a TeensyROM+ firmware with extension support using the TeensyLoader app, then uninstall
-  * On a board or build with no extension loader, the page says so and `u` changes nothing
+### 0. Installed Extension **(TR+ only)**
+  * Shows the name of the installed extension, or "None installed"
+    * Extensions are optional add-ons, distributed as `.TRH` files. TeensyROM works normally without one
+    * To install: copy the `.TRH` file to SD or USB and select it in the file browser
+    * Firmware updates keep the installed extension
+  * `u` Uninstall the extension (`y` to confirm). TeensyROM restarts afterwards
+    * Also use `u` if the page says `None installed; slot not blank.` That means an earlier install or uninstall didn't finish
+  * ***Important*** Uninstall any extension before loading an older firmware without extension support. That firmware can't update itself while an extension is installed
 
 ## Selecting and associating Special IO
   * What is it?
