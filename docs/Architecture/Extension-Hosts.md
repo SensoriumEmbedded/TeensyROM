@@ -18,7 +18,7 @@ exists so that the four things a host actually owes can each be pointed at.
 ## Why a host is a separate image at all
 
 Not for isolation, and not for features — for the memory map. A module needs
-96 KiB of ITCM and 192 KiB of DTCM at *fixed* addresses, and the ordinary minimal
+96 or 128 KiB of ITCM and 192 KiB of DTCM at *fixed* addresses, and the ordinary minimal
 image cannot give it those while still holding a megabyte of cartridge. So the
 build produces a third image with that map and the other two shrink to make room.
 `tools/lib/extension-image.mjs` generates the linker script that does it, and
@@ -26,13 +26,24 @@ turns a layout regression into a link error rather than a hang on hardware:
 
 | Assert | What it catches |
 |---|---|
-| `_etext <= 0x18000` | host code growing into the module's ITCM window |
+| `__exidx_end <= 0x10000` | host code outgrowing its 64 KiB of ITCM (`0x18000` with `--host-code-kib 96`) |
 | `_heap_end <= _vm_data_start` | host heap growing into the module's DTCM window |
 | `_estack - _vm_data_end >= 49152` | the shared stack falling below 48 KiB |
 | `SIZEOF(.bss.dma) == 0` | host globals landing in the guest's RAM2 arena |
 | `SIZEOF(.bss.extram) == 0` | a host that needs PSRAM, which the map does not reserve |
 
 Those hold for your host too, because your host is built with the same script.
+
+The script also places the `.text` of the SdFat, SD and SPI libraries in flash
+rather than ITCM, which is what fits the stock host in 64 KiB. SdFat's SDIO
+driver, `SdioTeensy.cpp`, stays in ITCM: `SdioCard::readData` masks interrupts,
+and a flash cache miss there would hold off `isrPHI2`. The libraries are matched
+by their build path, so the build refuses an `--out` inside a `libraries/SdFat`,
+`libraries/SD` or `libraries/SPI` directory. A host that needs
+more ITCM can pass `--host-code-kib 96` with `--host-sketch`, which lets its code
+grow up to the module window at `0x18000`. That trade is the module's 32 KiB: a
+host linked at 64 KiB can take a module linked at `0x10000`; one linked at
+96 KiB can too, but only if its own code still ends at or below `0x10000`.
 
 ## The four things a host owes
 
@@ -42,7 +53,7 @@ Everything else is your program. These four are what make it a host.
 
 ```c
 __attribute__((used, section(".vmhostid")))
-const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, 0, 0, "Example", 0 };
+const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, 0, 0, "Example", VM_HOST_CODE_FLOOR };
 ```
 
 The main image reads this out of flash *without booting your host*, to name it on
@@ -51,6 +62,23 @@ exist. The linker script places the section; nothing in your code picks the
 address. `name` is 12 bytes and need not be terminated. `services` is a bitmask of
 the module services you provide — `0` is legal and means a module asking for any
 service is refused against your host rather than crashing inside it.
+
+The last field is `code_floor`, the lowest code base you can take, which is where
+your own code ends. Write `VM_HOST_CODE_FLOOR` rather than a number: it resolves
+to your link's `__exidx_end`, so the descriptor cannot claim room you are using.
+Zero reads as `0x18000`, the base every host accepts, so a host that omits it is
+offered only the 96 KiB window.
+
+A floor is a promise about your loader as well as your link: that it copies the
+module to the image's own `code_base`, opens the MPU window there, and checks the
+module table against it, as `loadModule` in `VMHost.h` does. A host whose loader
+uses a fixed base leaves the field at 0. Given a floor, such a host would be
+handed a module linked at `0x10000` and load it in the wrong place; at 0 the
+launch refuses it with `<name> host states no code floor, so takes
+$18000 only`. A stock host installed before the field existed reads the same
+way, and reinstalling it from a current firmware package gives it a floor.
+`ExampleHost` loads no modules and publishes its floor all the same, so a loader
+you add to it has to honour `code_base`, or the field has to go to 0.
 
 A host with no descriptor still runs. The Installed Extensions page says
 `Installed, no descriptor.` rather than naming it.
@@ -194,7 +222,7 @@ the whole command protocol is exposed to the LAN, unauthenticated.
 | | |
 |---|---|
 | Flash slot | 384 KiB at `0x60760000`, the top of flash below the EEPROM emulation; firmware updates leave it alone |
-| ITCM | 96 KiB for host code (module code takes `0x00018000` up) |
+| ITCM | 64 KiB for host code, or 96 KiB with `--host-code-kib 96`. Module code takes `0x00018000` up, and `0x00010000` up from a host that stopped at 64 KiB |
 | DTCM | everything below `0x20014000`, heap capped at 16 KiB |
 | Stack | 48 KiB, shared |
 | RAM2 | 512 KiB — the guest arena; **your globals may not land here** |
@@ -202,7 +230,8 @@ the whole command protocol is exposed to the LAN, unauthenticated.
 | USB | none: the image is built `USB_DISABLED` |
 
 If you are not running modules, the ITCM and DTCM windows reserved for them are
-still reserved — the linker script is the same one. That is 96 KiB of ITCM and
+still reserved — the linker script is the same one. That is 96 KiB of ITCM (128
+with the default 64 KiB host budget) and
 192 KiB of DTCM your host cannot use, in exchange for a module ABI you are not
 using either. A host that will never load a module could generate a different
 script; nothing in the loader requires the module windows to exist, only that the
@@ -224,3 +253,7 @@ node tools/build-extension.mjs --id HELLO --extensions hi \
 
 `vm/hello/hello.cpp` is the reference module, and `vm/tests/` builds and runs it
 against a native fake host on every `npm run verify:extensions`.
+
+Add `--code-kib 128` if the module needs more than 96 KiB of code. That links it
+at `0x10000`, which the stock host takes and a host with more of its own code may
+not; the preflight refuses it on screen, before the reboot, and says why.
