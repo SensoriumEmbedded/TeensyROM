@@ -39,7 +39,8 @@ FLASHMEM bool ApplyRemoteFileChanges()
    // Extension routing reads a table built from /VMS, not from the listing, so
    // rebuilding it changes nothing the C64 has painted and needs no reprint.
    // LoadDirectory does it for us when the listing is being rebuilt anyway.
-   if (RemoteChangedSDCard && !Reload && LoadedDevice == rmtSD) VmRegistry::refresh(true);
+   // The type column does read the table, so its marks are rebuilt with it.
+   if (RemoteChangedSDCard && !Reload && LoadedDevice == rmtSD) { VmRegistry::refresh(true); MarkVmClaimed(); }
    RemoteChangedSDCard = false;
 #endif
 
@@ -53,6 +54,23 @@ FLASHMEM bool ApplyRemoteFileChanges()
    SendMsgPrintfln("Files changed\r\nDirectory reloaded");
    return true;
 }
+
+#ifdef VM_EXTENSIONS_ENABLED
+// Which unknown files in DriveDirMenu a /VMS package claims, so the menu shows
+// their own extension as the type, not "Unk". The table only knows SD, and the
+// entries of a disk image (a path ending in '*') are not files HandleExecution
+// routes, so neither gets a mark.
+FLASHMEM void MarkVmClaimed()
+{
+   memset(VmClaimedItems, 0, sizeof VmClaimedItems);
+   const size_t PathLen = strlen(DriveDirPath);
+   if (!PathLen || DriveDirPath[PathLen-1] == '*') return;
+   for (uint16_t Num = 0; Num < NumDrvDirMenuItems; Num++)
+      if (DriveDirMenu[Num].ItemType == rtUnknown &&
+          VmRegistry::associated(DriveDirMenu[Num].Name) == VmRegistry::Associated)
+         VmClaimedItems[Num/8] |= 1 << Num%8;
+}
+#endif
 
 void FullPathToSelected(char *Path, size_t Size, const char *Name)
 {
@@ -496,6 +514,9 @@ void InitDriveDirMenu()
       for(uint16_t Num=0; Num < NumDrvDirMenuItems; Num++) free(DriveDirMenu[Num].Name);
    }
    NumDrvDirMenuItems = 0;
+#ifdef VM_EXTENSIONS_ENABLED
+   memset(VmClaimedItems, 0, sizeof VmClaimedItems);
+#endif
 }
 
 bool SetDriveDirMenuNameType(uint16_t ItemNum, const char *filename)
@@ -581,6 +602,9 @@ void LoadDirectory(FS *sourceFS)
       DriveDirMenu[0].ItemType = rtNone;
       AddDirEntry("<Empty>");
    }
+#ifdef VM_EXTENSIONS_ENABLED
+   MarkVmClaimed(); //after the sort, which moves items but not their marks
+#endif
    
    SetNumItems(NumDrvDirMenuItems);
 }

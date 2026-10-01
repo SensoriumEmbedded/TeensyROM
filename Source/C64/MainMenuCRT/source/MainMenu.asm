@@ -651,8 +651,13 @@ nextLine
    ldy #>MsgHasHandler
    jsr PrintString
 ; print 4(3) char type
++  bit rRegItemTypePlusIOH+IO1Port ;bit 6 (V): a /VMS package claims it, show its own extension
+   bvc +
+   lda #rsstItemExt
+   jsr PrintSerialString
+   jmp MenuLineDone
 +  lda rRegItemTypePlusIOH+IO1Port 
-   and #$7f  ;bit 7 indicates an assigned IOHandler, don't care
+   and #$3f  ;bits 7 and 6 are flags, don't care
 ;prints 4 chars from a table of continuous 4 char sets (no termination)
 ;acc=index to item# (63 max)
    asl
@@ -756,7 +761,7 @@ SelectItem:
 
 RunSelected:   
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
-   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
+   and #$3f  ;bits 7 and 6 are flags (assigned IOHandler, /VMS claim), we don't care here
    cmp #rtDirectory  ;check for dir selected
    beq DirUpdate 
    cmp #rtD64  ;check for D64 file selected
@@ -1195,7 +1200,7 @@ CtlWaitReprint
    sta $0286  ;set text color
    jsr WaitForTRDots
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
-   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
+   and #$3f  ;bits 7 and 6 are flags (assigned IOHandler, /VMS claim), we don't care here
    jmp LoadViewKoala
    
 +  cmp #'+'
