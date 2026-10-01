@@ -124,9 +124,11 @@ int main() {
     int turns = 0;
     for (; turns < 200 && c64Status(locked) == VM_C64_PENDING; turns++) { c64Step(); now += 18500; }
     assert(c64Status(locked) == VM_C64_NO_GRANT && turns == (VM_C64_GRANT_MS * 1000u + 1499) / 1500);
-    grantEvery = 0;
-    assert(c64Write(one, 1, 0, 0));
-    run();
+    grantEvery = 0; answer = 0;
+    const uint32_t after = c64Write(one, 1, 0, 0);
+    c64Step();
+    assert(c64Status(after) == VM_C64_PENDING);   // the next job's wait starts from nothing
+    answer = 1; run();
 
     // A slice the bus does not complete ends the job there, and nothing more is asked of it.
     asked.clear(); answer = VM_C64_BUS_FAILED;
