@@ -99,6 +99,15 @@ in a relaunch loop. Testing for `VM_BOOT_EXECUTE_MIN` therefore never passes, an
 every launch falls through to the main app, which from the C64 looks exactly like
 a host that failed.
 
+Past the marker's terminator, at `VM_EEP_MACHINE_ADDR`, the main image leaves the
+machine the C64 menu reported -- `VM_MACHINE_NTSC`, `VM_MACHINE_60HZ`,
+`VM_MACHINE_C128` -- followed by its complement. A host that drives the bus itself
+needs it to pick its timing, because this image boots without the menu that
+measured it. `vm_launch_machine()` reads the pair, and answers `-1` for a main
+image that did not leave one, or for a launch at power-up that came before the
+menu reported. A main image predating the pair does not clear it, so after a
+downgrade it can be one a newer image left.
+
 ### 3. The record
 
 Your host is built `USB_DISABLED`, because the USB stack's buffers live in DMAMEM

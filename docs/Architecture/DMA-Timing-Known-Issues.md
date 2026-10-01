@@ -4,7 +4,7 @@ Tracking list for the `DMA_Timing` branch, started after merging PR #21 (NTSC DM
 write-hold fix + `TestDMAPattern()`). Covers what's still open in the DMA path,
 not just what PR #21 fixed.
 
-This is about TR+'s true bus-mastering DMA (`DMAControl.ino`'s `PerformDMA()`/
+This is about TR+'s true bus-mastering DMA (`DMAControl.c`'s `PerformDMA()`/
 `DMAByte()` — real REU, Kernal Replace, freezer carts, remote
 `WriteC64Mem`/`ReadC64Mem`), **not** the DMA-line-assert-only pause used by the
 >850KB CRT bank-swap mechanism (see [Known-Issues.md](Known-Issues.md)'s
@@ -49,7 +49,7 @@ Phi2 check in `DataPortWriteWaitDMA()` was taken out on purpose (comment:
 cause early exit"); a per-iteration `GP6_Phi2` read this early/tight could
 cut the hold *short* on a false read, trading one corruption mode for another.
 
-**Next step:** scope it. Only one call site (`DMAControl.ino`, inside
+**Next step:** scope it. Only one call site (`DMAControl.c`, inside
 `DMAByte()`'s write branch), so no per-site ambiguity. Data bus alone isn't
 enough to read on a scope — persistence-mode capture just shows a noisy band
 (every transaction overlaid, DMA and non-DMA indistinguishable). Bracket the
@@ -59,7 +59,7 @@ SetDebugAssert;
 WaitUntil_nS_fine(nS_DMADataHold);
 SetDebugDeassert;
 ```
-in `DataPortWriteWaitDMA()` ([DMAControl.ino:28](../../Source/Teensy/DMAControl.ino)) — pin 52 on this TR+ build
+in `DataPortWriteWaitDMA()` ([DMAControl.c:38](../../Source/Teensy/MinimalBoot/Common/DMAControl.c)) — pin 52 on this TR+ build
 (`Fab04_DebugSignals`). Phi2 on one channel, that pulse on another: the gap
 between the pulse's falling edge and Phi2's next falling edge is the real
 margin, and tells you how early in the wait it'd be safe to start polling
@@ -72,7 +72,7 @@ overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
 `DataPortWriteWaitDMA()` have been switched over so far. Eight live call sites
 still use the coarser `WaitUntil_nS()`:
 
-- `DMAControl.ino` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
+- `DMAControl.c` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
   DMA-assert path
@@ -80,7 +80,7 @@ still use the coarser `WaitUntil_nS()`:
   read/write helpers)
 - `IOH_REU.c:178` — `nS_DMAAssert`
 
-(`DMAControl.ino:70`'s BA-transition wait is no longer on this list — the
+(`DMAByte()`'s BA-transition wait is no longer on this list — the
 `C128-DMA-Timing` import hoisted it to the same manual pattern as the
 already-fixed data-setup/hold waits, and gave it a name, `nS_DMABAWait`. Not
 using the `WaitUntil_nS_fine()` macro itself, so still worth a small follow-up

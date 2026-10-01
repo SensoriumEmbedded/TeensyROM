@@ -71,6 +71,7 @@
 #define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
 #define WriteC64MemToken  0x64FB
+#define WriteC64SpansToken 0x64FC
 #define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
@@ -321,19 +322,6 @@ const uint8_t OutputPins[] = {
    #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
    #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
 
-   //Here, not DMAControl.ino: IOHandlers.h (included above, from Teensy.ino) pulls in
-   //   IOH_REU.c/StatusFunctions.c, which reference these, before DMAControl.ino's own
-   //   content is reached in the concatenated sketch.
-   enum DMA_Trans_RnW
-   {
-      DMA_READ =  true,
-      DMA_WRITE = false
-   };
-   enum DMA_Addr_Mode
-   {
-      DMA_ADDR_FIXED     = true,  //same address every byte (e.g. a hardware register)
-      DMA_ADDR_INCREMENT = false  //address advances per byte (normal block transfer)
-   };
 #endif
 
 //N parenthesized - an unparenthesized N silently only multiplies the last term of an

@@ -10,6 +10,7 @@ void VMHostPoll() {
         EZFlashRAM[0xf5] = 2;
     }
     if (!started || failure || !module) return;
+    c64Step();   // service bit 20's job, in a turn of its own before the module's
     if (inputPending) {
         VmInput in{ input.buttons, input.display, input.overflow, input.protocol };
         inputPending = false;

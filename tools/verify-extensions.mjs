@@ -82,11 +82,15 @@ function checkHostAdmission() {
   ]) {
     if (!pattern.test(host)) throw new Error(`VMHost.h loadModule() no longer ${lost}`);
   }
+  // moduleWindow() is tested natively against moduleCodeBase; only the loader sets it.
+  if (!/moduleCodeBase = h\.code_base;/.test(host)) {
+    throw new Error('VMHost.h loadModule() no longer sets the bit 20 source window from the image\'s code_base');
+  }
   // The same, for the descriptor a third-party host starts from.
   if (!/"Example", VM_HOST_CODE_FLOOR \}/.test(sourceOf('Source/Teensy/ExampleHost/ExampleHost.ino'))) {
     throw new Error('ExampleHost.ino no longer publishes its own code floor in the descriptor');
   }
-  console.log('PASS: the extension image refuses what it cannot serve or take, and loads at the image\'s own base');
+  console.log('PASS: the extension image refuses what it cannot serve or take, loads at the image\'s own base, and lends bit 20 its code window');
 }
 
 // The flash slot the extension image is linked into is written down twice: in
@@ -291,7 +295,17 @@ function checkEepromProtocol() {
     const b = parseInt(read(host, name, published), radix);
     if (a !== b) throw new Error(`EEPROM ${name} is ${a} in Common_Defs.h but ${b} in VMHostABI.h`);
   }
-  console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h');
+  const regs = sourceOf('Source/Teensy/MinimalBoot/Common/Menu_Regs.h');
+  for (const [internal, published] of [['rvtcNTSC', 'VM_MACHINE_NTSC'], ['rvtc60Hz', 'VM_MACHINE_60HZ'],
+                                       ['rvtcC128', 'VM_MACHINE_C128']]) {
+    const a = regs.match(new RegExp(`\\b${internal}\\s*=\\s*0b([01]+)`));
+    const b = host.match(new RegExp(`\\b${published} = (\\d+)`));
+    if (!a || !b) throw new Error(`cannot read ${a ? published + ' from VMHostABI.h' : internal + ' from Menu_Regs.h'}`);
+    if (parseInt(a[1], 2) !== Number(b[1])) {
+      throw new Error(`${internal} is ${parseInt(a[1], 2)} in Menu_Regs.h but ${published} is ${b[1]} in VMHostABI.h`);
+    }
+  }
+  console.log('PASS: VMHostABI.h EEPROM protocol matches Common_Defs.h and Menu_Regs.h');
 }
 
 // The packager mirrors both the registry and the base profile, and subtracts
@@ -311,7 +325,8 @@ function checkServiceRegistry() {
                                   ['VM_SERVICE_WRITE', SERVICE.WRITE],
                                   ['VM_SERVICE_GUEST_RAM', SERVICE.GUEST_RAM],
                                   ['VM_SERVICE_RAM2_RO', SERVICE.RAM2_RO],
-                                  ['VM_SERVICE_EXIT', SERVICE.EXIT]]) {
+                                  ['VM_SERVICE_EXIT', SERVICE.EXIT],
+                                  ['VM_SERVICE_C64_DMA', SERVICE.C64_DMA]]) {
     const declared = orList(name);
     if (declared !== mirrored) {
       throw new Error(`${name} is 0x${declared.toString(16)} in VMABI.h, but ` +
@@ -323,9 +338,9 @@ function checkServiceRegistry() {
   // compare the expression against the one extension.mjs derives.
   const hostServices = header.match(/\bVM_HOST_SERVICES\s*=\s*([^,}]+?)\s*,/);
   if (!hostServices) throw new Error('VMABI.h no longer defines VM_HOST_SERVICES');
-  if (hostServices[1] !== 'VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT') {
+  if (hostServices[1] !== 'VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT|VM_SERVICE_C64_DMA') {
     throw new Error(`VM_HOST_SERVICES is ${hostServices[1]} in VMABI.h, but tools/lib/extension.mjs ` +
-                    'derives HOST_SERVICES as BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT');
+                    'derives HOST_SERVICES as BASE_SERVICES | SERVICE.RAM2_RO | SERVICE.EXIT | SERVICE.C64_DMA');
   }
   console.log('PASS: the service registry and base profile in tools/lib/extension.mjs match VMABI.h');
 }
@@ -486,7 +501,9 @@ native('scheduler_test');
 native('fail_test');
 native('hello_module_test', [sandbox('hello-sandbox-')]);
 native('host_install_test', [hostPackageFixture(sandbox('host-package-'))]);
+native('c64spans_test');
+native('transfer_test');
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
-console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, packet scheduler, failure reporting, host-package installation, reference module)');
+console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, packet scheduler, failure reporting, host-package installation, reference module, C64 span rules)');
