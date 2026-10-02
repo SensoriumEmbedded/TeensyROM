@@ -13,6 +13,10 @@ A handful of other new hardware additions round out the TR+ feature set.
 
 ## TR+ Specific Additions
 
+ * **[TR Host Extensions](TR_Host_Extensions.md)** — write and experiment with your own TeensyROM firmware as a `.TRH` extension, installed alongside the core firmware without modifying it
+   * Install or remove an extension right from the TeensyROM menu; firmware updates keep it in place
+   * The first extension, the [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-engine), lets your C64 play games never released for it: NES, Game Boy, Doom, classic point-and-click adventures and more
+   * Envisioned and implemented by [Kelly Fox](https://github.com/kfox); MPE by [John Swiderski](https://github.com/ziggystar12)
  * **Kernal Replacement** — load a custom KERNAL ROM image, with no other hardware additions or modification.
    * Select any KERNAL image right from the SD/USB file browser (`<Shift-K>`); your choice is remembered in EEPROM
    * Once enabled in Special IO, it takes effect through the normal "Exit to BASIC" (F2) path or when launching a PRG
@@ -20,8 +24,10 @@ A handful of other new hardware additions round out the TR+ feature set.
    * Pre-load an REU image from a binary file on SD/USB (`<Shift-R>` for any file, or just select it directly if it has an `.reu` extension)
    * While REU is running as the active Special IO, save its current contents with a single button press — never overwrites, each save gets its own auto-numbered filename
    * Validated against real hardware compatibility tools (REU-Checker, CMD 1750/1750XL REU Test) included right in the Test+Diags menu
- * **Freezer Cartridge Support** — Action Replay and Super Snapshot V5 (PAL and NTSC) emulated natively
+ * **Freezer Cartridge Support** — Action Replay, Retro Replay, Final Cartridge III and Super Snapshot V5 emulated natively
    * Enter freezer on demand via the new 'Alt' button
+   * Retro Replay and Final Cartridge III 101% can also run with the TR+ REU alongside them (on by default, see Settings)
+   * Freezer contributions by [Paul Harker (LessPaul)](https://github.com/LessPaul)
  * **Remote DMA Memory Access** — `WriteC64Mem` and `ReadC64Mem` give an external app direct, real-time read/write access to C64 memory over Serial or Ethernet
    * This is the TR+ engine behind [c64cast](https://github.com/kfox/c64cast) — streaming video, and a lot more, straight through your C64
  * **Battery-Backed Real-Time Clock** — a built-in CR1225 coin-cell holder means TR+ remembers/displays the correct time through power cycles, no soldering required
@@ -40,7 +46,7 @@ A handful of other new hardware additions round out the TR+ feature set.
 
 ## Using TR+ with a Commodore 64 Ultimate / Ultimate64
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
 
 ## Q&A
 

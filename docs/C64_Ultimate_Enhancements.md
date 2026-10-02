@@ -88,9 +88,19 @@ Explore the internet from your C64 with optimized web access:
 
 For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
+## Host Extensions (TR+)
+
+Go beyond the C64 software library with TeensyROM+ Host Extensions: add-on firmware that installs alongside the core TeensyROM firmware, right from the TeensyROM menu:
+
+- **Play Games Never Released for the C64**: The [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-engine) runs NES, Game Boy, Doom, classic point-and-click adventures and more
+- **Easy Install and Removal**: Select a `.TRH` file from SD or USB to install, and uninstall anytime from the Settings menu
+- **Open to Experimenters**: Write and test your own TeensyROM firmware as an extension, without modifying the core firmware
+
+For more information: [TR Host Extensions Guide](/docs/TR_Host_Extensions.md)
+
 ## TR+ Compatibility Note
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Freezer Cartridge Support, REU, KERNAL Replacement, and more). It's safe to leave these set regardless.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, KERNAL Replacement, and more). It's safe to leave these set regardless.
 
 For more information: [TR+ New Features Guide](/docs/TR+NewFeatures.md)
 

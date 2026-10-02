@@ -3,27 +3,32 @@
 ***Connect your Commodore to the 21st century***
 
 **Features include:**
-* **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
-* **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
-* **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
-* **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
-* **Remote Control** your C64 using 
-  * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
-  * The feature rich (and cross-platform) [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) and [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
-* SID File Player with voice muting and speed control 
-* Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
-* Lots of games, utilities, pics, and music built-in: no external media required to get started!
-* [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
-* **C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
-* **TeensyROM+ (PCB v0.4)** adds many additional features, **[see this document](docs/TR+NewFeatures.md)** for more details.
+* **TeensyROM+ (PCB v0.4)** is the latest TeensyROM revision — **[see this document](docs/TR+NewFeatures.md)** for additional details:
+  * **[TR Host Extensions](docs/TR_Host_Extensions.md)** — Allows others to write and experiment with TR firmware as a .TRH extension, installed alongside the core firmware without modifying it. Envisioned and implemented by [Kelly Fox](https://github.com/kfox) — a huge thank you!
+    * [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-engine) is the first TRH extension, letting your C64 play games never released for it: NES, Game Boy, Doom, classic point-and-click adventures and more. Thank you to [John Swiderski](https://github.com/ziggystar12) for the incredible work and inspiration
   * **Kernal Replacement** — load a custom KERNAL ROM image, with no hardware modification.
   * **512KB REU (RAM Expansion Unit)** — a real REU your C64 software can detect and use
-  * **Freezer Cartridge Support** — Action Replay and Super Snapshot V5 (PAL and NTSC) emulated natively
+    * Now also works alongside the Retro Replay and Final Cartridge III 101% freezers
+  * **Freezer Cartridge Support** — Action Replay, Retro Replay, Final Cartridge III and Super Snapshot V5 emulated natively. Thank you to [Paul Harker (LessPaul)](https://github.com/LessPaul) for the freezer contributions!
   * **Remote DMA Memory Access** — give an external app Serial or Ethernet read/write access to C64 memory
     * Supported by [c64cast](https://github.com/kfox/c64cast) — streaming video, audio, visualizations and much more
   * **Battery-Backed Real-Time Clock** — a built-in coin-cell holder: TR+ can remember the correct time through power cycles
   * **External Reset Detect** — press an external reset (C64U button, User port, etc) returns you to the TR menu
   * **Programmable Alternate Button** — the "Alt" button is assignable to whatever's most useful
+* All TeensyROM versions:
+  * **ROM emulator**: The perfect way to play CRT files, such as the highly recommended [OneLoad64](https://www.youtube.com/watch?v=lz0CJbkplj0) collection.
+  * **Instant loader**: [Immediately load/run](docs/General_Usage.md) program (PRG) files
+  * **MIDI USB Host & Device, custom ASID Player**: Use a [MIDI keyboard, DAW](docs/MIDI_Usage.md), or [ASID source](docs/ASID_Player.md) to play your SID chip.
+  * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
+  * **Remote Control** your C64 using 
+    * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
+    * The feature rich (and cross-platform) [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) and [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
+  * SID File Player with voice muting and speed control 
+  * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
+  * Lots of games, utilities, pics, and music built-in: no external media required to get started!
+  * [**Multiple Hardware Interfaces:**](media/TR_Connections.png) SD card, USB Drive, USB Device and host Ports, Ethernet Port
+
+**C64 Ultimate user?**  See [this list](docs/C64_Ultimate_Enhancements.md) of enhancements the TR brings to your C64U 
 
 *Design by Travis S/Sensorium ([e-mail](mailto:travis@sensoriumembedded.com))* 
 
@@ -88,6 +93,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
     * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
+    * **[TR Host Extensions (TR+ only)](docs/TR_Host_Extensions.md)**
     * **[USB/Ethernet Remote Command Protocol](docs/ControlComms.md)**
   * **SW Release notes/development**
     * **[Firmware Release history](bin/TeensyROM/FW_Release_History.md)**
@@ -129,8 +135,9 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 ## Inspiration and Thank-Yous:
 * [**Heather S**](https://www.instagram.com/dalliancecreations/): Loving wife, continuous encourager, saintly patience
 * [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, remote controls via [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web), [UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
-* [**Kelly Fox**](https://github.com/kfox): TR+ contributions (build system and much more), [c64cast](https://github.com/kfox/c64cast)
-* [**LessPaul**](https://github.com/LessPaul): Freezer cartridge contributions
+* [**Kelly Fox**](https://github.com/kfox): TR+ contributions ([Host Extensions](docs/TR_Host_Extensions.md), build system and much more), [c64cast](https://github.com/kfox/c64cast)
+* [**John Swiderski**](https://github.com/ziggystar12) of Mean Hamster Software: [MPE](https://meanhamster.com/games/mpe-power-engine), the first TR Host Extension, and the inspiration behind them
+* [**Paul Harker aka LessPaul**](https://github.com/LessPaul): Freezer cartridge contributions (Action Replay, Retro Replay, Final Cartridge III, Super Snapshot V5)
 * [**Avrilcadabra**](https://www.youtube.com/@avrilcadabra): Musician, experimenter, provider of ideas and feedback 
 * [**Paul D aka Digitalman**](https://www.youtube.com/@digitalman4404): Thought provoker, promoter, Maker, and tester extraordinaire
 * [**Stefan Wessels**](https://github.com/StewBC): Cartridge case design

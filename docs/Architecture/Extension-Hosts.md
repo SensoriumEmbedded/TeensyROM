@@ -57,7 +57,7 @@ const VmHostId vmHostId = { VM_HOSTID_MAGIC, VM_ABI, 0, 0, "Example", VM_HOST_CO
 ```
 
 The main image reads this out of flash *without booting your host*, to name it on
-the Installed Extensions page and to decide whether a module's required services
+the Installed Extension page and to decide whether a module's required services
 exist. The linker script places the section; nothing in your code picks the
 address. `name` is 12 bytes and need not be terminated. `services` is a bitmask of
 the module services you provide — `0` is legal and means a module asking for any
@@ -80,7 +80,7 @@ way, and reinstalling it from a current firmware package gives it a floor.
 `ExampleHost` loads no modules and publishes its floor all the same, so a loader
 you add to it has to honour `code_base`, or the field has to go to 0.
 
-A host with no descriptor still runs. The Installed Extensions page says
+A host with no descriptor still runs. The Installed Extension page says
 `Installed, no descriptor.` rather than naming it.
 
 ### 2. The marker

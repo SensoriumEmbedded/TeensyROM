@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="504" viewBox="0 0 680 504" role="img" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>TeensyROM host extension components</title>
+  <desc>The C64 connects through the cartridge port to the TeensyROM+, whose flash holds the minimal boot image, the main TeensyROM firmware, and one extension slot. The SD card holds the registration folder used by the main firmware, plus the .TRH file and game files used by the extension.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .t { font-size: 14px; font-weight: 600; }
+      .s { font-size: 12px; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="680" height="504" rx="12" fill="#FFFFFF"/>
+
+  <rect x="40" y="30" width="330" height="56" rx="8" fill="#FFFFFF" stroke="#888780"/>
+  <text class="t" x="205" y="48" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Commodore 64</text>
+  <text class="s" x="205" y="68" text-anchor="middle" dominant-baseline="central" fill="#5F5E5A">screen, keyboard, bus</text>
+
+  <rect x="440" y="41" width="14" height="14" rx="3" fill="#EEEDFE" stroke="#534AB7"/>
+  <text class="s" x="462" y="48" dominant-baseline="central" fill="#444441">Core TeensyROM firmware</text>
+  <rect x="440" y="65" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56"/>
+  <text class="s" x="462" y="72" dominant-baseline="central" fill="#444441">Host extension</text>
+
+  <line x1="205" y1="89" x2="205" y2="117" stroke="#5F5E5A" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="s" x="215" y="103" dominant-baseline="central" fill="#5F5E5A">cartridge port</text>
+
+  <rect x="40" y="120" width="330" height="362" rx="20" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text class="t" x="60" y="144" dominant-baseline="central" fill="#444441">TeensyROM+</text>
+  <text class="s" x="60" y="162" dominant-baseline="central" fill="#5F5E5A">Teensy 4.1 flash</text>
+
+  <rect x="60" y="178" width="290" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+  <text class="t" x="205" y="196" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Minimal boot</text>
+  <text class="s" x="205" y="216" text-anchor="middle" dominant-baseline="central" fill="#534AB7">starts main or extension</text>
+
+  <rect x="60" y="250" width="290" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7"/>
+  <text class="t" x="205" y="268" text-anchor="middle" dominant-baseline="central" fill="#3C3489">Main firmware</text>
+  <text class="s" x="205" y="288" text-anchor="middle" dominant-baseline="central" fill="#534AB7">TR menu and features</text>
+
+  <rect x="60" y="322" width="290" height="140" rx="8" fill="#E1F5EE" stroke="#0F6E56"/>
+  <text class="t" x="205" y="382" text-anchor="middle" dominant-baseline="central" fill="#085041">Extension slot</text>
+  <text class="s" x="205" y="402" text-anchor="middle" dominant-baseline="central" fill="#0F6E56">one .TRH, e.g. MPE</text>
+
+  <rect x="420" y="200" width="220" height="282" rx="20" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text class="t" x="440" y="224" dominant-baseline="central" fill="#444441">SD card</text>
+
+  <rect x="440" y="250" width="180" height="56" rx="8" fill="#FFFFFF" stroke="#888780"/>
+  <text class="t" x="530" y="268" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Registration</text>
+  <text class="s" x="530" y="288" text-anchor="middle" dominant-baseline="central" fill="#5F5E5A">which files go where</text>
+
+  <rect x="440" y="322" width="180" height="56" rx="8" fill="#FFFFFF" stroke="#888780"/>
+  <text class="t" x="530" y="340" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">.TRH file</text>
+  <text class="s" x="530" y="360" text-anchor="middle" dominant-baseline="central" fill="#5F5E5A">installs into slot</text>
+
+  <rect x="440" y="406" width="180" height="56" rx="8" fill="#FFFFFF" stroke="#888780"/>
+  <text class="t" x="530" y="424" text-anchor="middle" dominant-baseline="central" fill="#2C2C2A">Game files</text>
+  <text class="s" x="530" y="444" text-anchor="middle" dominant-baseline="central" fill="#5F5E5A">.mpe, .nes, .gb</text>
+
+  <line x1="438" y1="278" x2="353" y2="278" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="438" y1="350" x2="353" y2="350" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="438" y1="434" x2="353" y2="434" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

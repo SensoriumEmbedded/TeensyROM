@@ -91,7 +91,7 @@
         * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon, GMod2
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay, Magic Desk 2
         * Ethernet (Swiftlink/Turbo-232), MIDI (Passport, Datel, Sequential, & Namesoft)
-        * Action Replay, Super Snapshot V5 (freezer carts, **TR+ only**)
+        * Action Replay, Retro Replay, Final Cartridge III, Super Snapshot V5 (freezer carts, **TR+ only**)
       * Additional CRT support info
         * Files larger than 850KB will automatically employ a bank-swap scheme 
           * These files must be run from an SD Card (not USB Stick)
@@ -228,6 +228,7 @@
 ### 0. Installed Extension **(TR+ only)**
   * Shows the name of the installed extension, or "None installed"
     * Extensions are optional add-ons, distributed as `.TRH` files. TeensyROM works normally without one
+    * See [TR Host Extensions](TR_Host_Extensions.md) for what they are and how to get them
     * To install: copy the `.TRH` file to SD or USB and select it in the file browser
     * Firmware updates keep the installed extension
   * `u` Uninstall the extension (`y` to confirm). TeensyROM restarts afterwards
