@@ -250,4 +250,12 @@ struct StructCrtChip
    {
       return ItemType >= rtFilePrg && !IsDeviceWriteType(ItemType);
    }
+
+   // Directory entries kept out of every listing of USB/SD media.  A card or stick
+   // that has been in a Mac comes back with .DS_Store, .Trashes, .Spotlight-V100
+   // and a ._ twin of every file it touched -- and a ._game.prg is typed as a .prg.
+   inline bool IsDotfile(const char *Name)
+   {
+      return Name[0] == '.';
+   }
 #endif

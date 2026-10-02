@@ -284,6 +284,11 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
    while (File entry = dir.openNextFile()) 
    {
       filename = entry.name();
+      if (IsDotfile(filename))
+      {
+         entry.close();
+         continue;
+      }
       
       if (entry.isDirectory()) AddToRAM_Image(" /");
       else AddToRAM_Image("  ");

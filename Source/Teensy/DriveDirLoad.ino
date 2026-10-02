@@ -562,6 +562,11 @@ void LoadDirectory(FS *sourceFS)
    {
       //uint8_t hidey = entry.isHidden(); //check for hidden files? not in library
       filename = entry.name();
+      if (IsDotfile(filename))
+      {
+         entry.close();
+         continue;
+      }
       if (entry.isDirectory())
       {
          DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(strlen(filename)+2);
