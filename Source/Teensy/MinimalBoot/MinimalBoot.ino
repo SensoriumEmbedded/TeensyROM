@@ -173,8 +173,7 @@ void setup()
 
    //C64 held in reset since SetResetAssert above.  Only nS_MaxAdj matters here: this image does no
    //  DMA transfers, so it never needs C64/C128.  Timed here rather than handed over by the main image.
-   MeasuredVidStd = MeasureVideoStd();
-   if (MeasuredVidStd != 0xff) SetVideoStdDMATiming(MeasuredVidStd);
+   if (TimeVideoStdAtBoot() != 0xff) SetVideoStdDMATiming(MeasuredVidStd);
 
 #ifdef FeatTCPListen
    if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
@@ -229,6 +228,8 @@ void setup()
      
 void loop()
 {
+   FollowVideoStd(); //a C64U switches standard after the reset is released, and can switch live
+
    if (BtnPressed)
    {
       //Serial.print("Button detected (minimal)\n");
@@ -254,6 +255,7 @@ void loop()
 #endif      
       doReset=false;
       BtnPressed = false;
+      Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
 
 #ifdef DbgSignalSenseReset
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );

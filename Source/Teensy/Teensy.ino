@@ -179,10 +179,10 @@ void setup()
    SetUpMainMenuROM();
    //C64 held in reset since SetResetAssert above, and ahead of any autolaunch: a cart started without
    //  the menu gets the right timing from its first cycle.  C64/C128 waits for the menu's report.
-   MeasuredVidStd = MeasureVideoStd();
-   if (MeasuredVidStd != 0xff)
+   if (TimeVideoStdAtBoot() != 0xff)
    {
       IO1[wRegVid_TOD_Clks] = MeasuredVidStd;
+      VidTODClksKnown = rvtcNTSC; //the menu's report adds C64/C128 and 50/60Hz, and doesn't override this
       SetVideoStdDMATiming(MeasuredVidStd);
    }
    MenuChange(); //set up drive path, menu source/size
@@ -259,6 +259,25 @@ void setup()
      
 void loop()
 {
+   bool RecheckNow = false;
+   if (VidStdMenuMismatch != 0xff)
+   {  //caught in the IO1 handler
+      Serial.printf("Menu reported %s, PHI2 timed %s: re-checking\n", (VidStdMenuMismatch & rvtcNTSC) ? "NTSC" : "PAL",
+         (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL");
+      VidStdMenuMismatch = 0xff;
+      RecheckNow = true;
+   }
+   const uint8_t NewVidStd = RecheckVideoStd(RecheckNow);
+   if (NewVidStd != 0xff)
+   {  //the menu's report is merged into the same register from the IO1 handler, so this update can't be interrupted
+      __disable_irq();
+      IO1[wRegVid_TOD_Clks] = (uint8_t)((IO1[wRegVid_TOD_Clks] & ~rvtcNTSC) | NewVidStd);
+      VidTODClksKnown |= rvtcNTSC;
+      SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
+      __enable_irq();
+      if (VidTODClksKnown & rvtcC128) SetMachineInfoStr(); //the menu has reported, so the string exists: keep it current
+   }
+
    if (BtnPressed)
    {
       CmdChannel->print("Button detected\n"); 
@@ -311,6 +330,7 @@ void loop()
 #endif      
       doReset=false;
       BtnPressed = false;
+      Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
 
 #ifdef DbgSignalSenseReset
       delay(50); 

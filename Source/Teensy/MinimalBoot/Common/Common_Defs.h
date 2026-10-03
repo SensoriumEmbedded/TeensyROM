@@ -403,9 +403,9 @@ const uint8_t OutputPins[] = {
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-//PAL defaults until MeasureVideoStd() (MachineDetect.h) times PHI2 at boot with the C64 held in reset;
-//   they only stay if the bus isn't clocking then.  MaxAdj has to default to PAL: NTSC's 993 is under
-//   PAL's 1015nS cycle, so a PAL machine would re-adjust on every interrupt.
+//PAL defaults until PHI2 is timed at boot with the C64 held in reset (MachineDetect.h), and re-timed
+//   from loop() to follow a later change.  MaxAdj has to default to PAL: NTSC's 993 is under PAL's
+//   1015nS cycle, so a PAL machine would re-adjust on every interrupt.
 //C64/C128 still comes from the menu's wRegVid_TOD_Clks write, so a CRT started without the menu
 //   (Teensy.ino -> RemoteLaunch w/ DoCartDirect) gets the non-C128 set for its standard.  Only DMA
 //   transfers use it there: Write/ReadC64MemToken, which ProcessCommand() answers ahead of the busy check.

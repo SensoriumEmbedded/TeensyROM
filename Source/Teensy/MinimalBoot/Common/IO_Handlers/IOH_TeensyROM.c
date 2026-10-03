@@ -38,7 +38,8 @@ stcIOHandlers IOHndlr_TeensyROM =
 };
 
 int16_t SidSpeedAdjust = 0;
-bool    VidStdReported = false; //MainMenu.asm has written wRegVid_TOD_Clks; before that it reads PAL
+uint8_t VidTODClksKnown = 0; //bits of IO1[wRegVid_TOD_Clks] that are known: rvtcNTSC once PHI2 is timed at boot, all three once MainMenu.asm reports
+volatile uint8_t VidStdMenuMismatch = 0xff; //the menu's report when its PAL/NTSC disagreed with the timed one, for loop() to log and re-check
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
@@ -552,14 +553,17 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
-void SetVideoStdTiming()
-{  //from the machine type MainMenu.asm reported in IO1[wRegVid_TOD_Clks]; also used by the td serial command
-   //called from IO1 handler, do not FLASHMEM
-   SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
-
+void SetMachineInfoStr()
+{  //called from IO1 handler, do not FLASHMEM
    sprintf(StrMachineInfo, "C%d  %s Vid  %s", (IO1[wRegVid_TOD_Clks] & rvtcC128) ? 128 : 64,
       (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
       (IO1[wRegVid_TOD_Clks] & rvtc60Hz) ? "6" : "5");
+}
+
+void SetVideoStdTiming()
+{  //from the machine in IO1[wRegVid_TOD_Clks], unconditionally; used by the td serial command
+   SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
+   SetMachineInfoStr();
 }
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -620,10 +624,23 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             else SetExROMDeassert;  //rtBin8kHi or None
             break;
          case wRegVid_TOD_Clks:
-            IO1[wRegVid_TOD_Clks]=Data;
-            VidStdReported = true;
-            SetVideoStdTiming(); //make NTSC/PAL/C128 specific timing tweaks upon discovery
+         {  //MainMenu.asm reports all three bits.  PAL/NTSC timed from PHI2 wins: the menu's comes from the TOD
+            //   clock against the CPU clock, and a dead TOD reads as NTSC.  A disagreement makes loop() re-time
+            //   it straight away, in case the machine changed standard since the last reading.
+            uint8_t Merged = Data & (rvtcNTSC | rvtc60Hz | rvtcC128);
+            if (VidTODClksKnown & rvtcNTSC)
+            {
+               if ((Merged ^ IO1[wRegVid_TOD_Clks]) & rvtcNTSC) VidStdMenuMismatch = Data;
+               Merged = (uint8_t)((Merged & ~rvtcNTSC) | (IO1[wRegVid_TOD_Clks] & rvtcNTSC));
+            }
+            IO1[wRegVid_TOD_Clks] = Merged;
+            VidTODClksKnown = rvtcNTSC | rvtc60Hz | rvtcC128;
+            //Re-applied only on a change: keeps 't' timing tweaks across menu restarts, and the timing
+            //   steady under a DMA already in flight
+            if ((Merged ^ TimingVidTODClks) & (rvtcNTSC | rvtcC128)) SetVideoStdDMATiming(Merged);
+            SetMachineInfoStr();
             break;
+         }
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
