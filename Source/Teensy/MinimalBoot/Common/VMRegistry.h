@@ -99,6 +99,13 @@ static FLASHMEM Association associated(const char *name){
     for(unsigned i=0;i<extensionCount;i++)if(extensionMatches(extensions[i],ext+1))return Associated;
     return NotAssociated;
 }
+// A packaged .crt carries the generic client descriptor in its third CHIP, after the 16 KiB boot bank.
+// True when d[] holds one; it is not validated past the magic.
+static FLASHMEM bool clientDescriptor(const char *path,uint8_t d[128]){
+    FsFile f=SD.sdfs.open(path,O_RDONLY);
+    const bool ok=f&&f.seekSet(0x4070)&&f.read(d,128)==128;f.close();
+    return ok&&!memcmp(d,"VMH1",4);
+}
 static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *name){
     if(source!=rmtSD)return false;
     const char *ext=strrchr(name,'.');if(!ext)return false;ext++;
@@ -106,10 +113,7 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     if(snprintf(selected,sizeof selected,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)sizeof selected){SendMsgPrintfln("VM path too long");return true;}
     char id[24]{};const char *clientId=nullptr;
     if(!strcasecmp(ext,"crt")){
-        // Generic descriptor occupies the third CHIP, after the 16 KiB boot bank.
-        uint8_t d[128];FsFile f=SD.sdfs.open(selected,O_RDONLY);
-        const bool ok=f&&f.seekSet(0x4070)&&f.read(d,sizeof d)==sizeof d;f.close();
-        if(!ok||memcmp(d,"VMH1",4))return false;
+        uint8_t d[128];if(!clientDescriptor(selected,d))return false;
         if(d[4]!=VM_ABI||!memchr(d+16,0,24)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){SendMsgPrintfln("Invalid VM client");return true;}
         strcpy(id,(char *)d+16);clientId=id;
     }
