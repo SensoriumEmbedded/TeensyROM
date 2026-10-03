@@ -149,7 +149,7 @@
     * `d/D` Increment/Decrement Joystick 2 repeat speed for menu navigation
     * `e` Toggle Show File Extensions
     * `f` Toggle External Reset Detect **(TR+ only)**: when on (default), an external reset (C64 reset button, User port, etc.) returns to the TeensyROM menu, as if the TR menu button was pressed
-    * `g` Toggle TR+ REU with RetroReplay and Final Cartridge III 101% **(TR+ only)**
+    * `g` Toggle TR+ REU with RetroReplay, SuperSnapshotV5, and Final Cartridge III 101% **(TR+ only)**
       * On (default): those carts launch with the TR+ REU alongside them. A short press of the Special button freezes; holding it 700 ms or longer saves the REU image
       * Off: they launch as the plain cartridge, with no TR+ REU
       * Only FC3 CRTs flagged as the REU-compatible 101% version (CRT subtype 1) get the REU

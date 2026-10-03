@@ -8,7 +8,7 @@
     * [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-engine) is the first TRH extension, letting your C64 play games never released for it: NES, Game Boy, Doom, classic point-and-click adventures and more. Thank you to [John Swiderski](https://github.com/ziggystar12) for the incredible work and inspiration
   * **Kernal Replacement** — load a custom KERNAL ROM image, with no hardware modification.
   * **512KB REU (RAM Expansion Unit)** — a real REU your C64 software can detect and use
-    * Now also works alongside the Retro Replay and Final Cartridge III 101% freezers
+    * Now also works alongside the Retro Replay, Super Snapshot V5, and Final Cartridge III 101% freezers
   * **Freezer Cartridge Support** — Action Replay, Retro Replay, Final Cartridge III and Super Snapshot V5 emulated natively. Thank you to [Paul Harker (LessPaul)](https://github.com/LessPaul) for the freezer contributions!
   * **Remote DMA Memory Access** — give an external app Serial or Ethernet read/write access to C64 memory
     * Supported by [c64cast](https://github.com/kfox/c64cast) — streaming video, audio, visualizations and much more

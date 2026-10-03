@@ -18,12 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-//IO Handler for SuperSnapshotV5 
+//IO Handler for SuperSnapshotV5
 
 void InitHndlr_SuperSnapshotV5();                           
 void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn);  
 void ROMLHndlr_SuperSnapshotV5(uint32_t Address, bool R_Wn);
 void CycleHndlr_SuperSnapshotV5(bool R_Wn);
+void InitHndlr_SuperSnapshotV5_REU();
 
 stcIOHandlers IOHndlr_SuperSnapshotV5 =
 {
@@ -37,6 +38,19 @@ stcIOHandlers IOHndlr_SuperSnapshotV5 =
   CycleHndlr_SuperSnapshotV5, //called at the end of EVERY c64 cycle
 };
 
+stcIOHandlers IOHndlr_SuperSnapshotV5_REU =
+{
+  "SuperSnapshotV5_REU",           //Name of handler, IOHNameLength max
+  &InitHndlr_SuperSnapshotV5_REU,  //Called once at handler startup
+  &IO1Hndlr_SuperSnapshotV5,       //IO1 R/W handler
+  &IO2Hndlr_REU,                   //IO2 R/W handler for REU compatibility 
+  &ROMLHndlr_SuperSnapshotV5,      //ROML Read handler, in addition to any ROM data sent
+  NULL,                            //ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_REU,               //Polled in main routine
+  CycleHndlr_SuperSnapshotV5,      //called at the end of EVERY c64 cycle
+};
+
+extern void BindFreezeCRT_REU();  // Button handler w/REU
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 extern uint16_t LOROM_Mask;
 extern uint8_t* TgetQueue;
@@ -101,7 +115,7 @@ void ProcessControlReg(uint8_t ControlReg)
    }   
 }
 
-void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
+FLASHMEM void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
 {
    if(Up_nDn) 
    {  //on button release
@@ -111,23 +125,15 @@ void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
 
 //__________________________________________________________________________________
 
-void InitHndlr_SuperSnapshotV5()
+FLASHMEM void InitHndlr_SuperSnapshotV5()
 {
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5;
    
    SSv5_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k RAM
-   //if(SSv5_RAM_Buf == NULL)
-   //{
-   //   Serial.println("SS5 OOM");
-   //   REBOOT;
-   //}
-
    // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
-   LOROM_Image = NULL; 
-   
+   LOROM_Image = NULL;   
    CycleCountdown = 0;
-   
    ProcessControlReg(0);
    //BankNum = 0;
    //lcl_LOROM_Image = SSv5_RAM_Buf;
@@ -137,6 +143,13 @@ void InitHndlr_SuperSnapshotV5()
    
    Printf_dbg("SSv5, 8kHi mode");
 }   
+
+FLASHMEM void InitHndlr_SuperSnapshotV5_REU()
+{
+  InitHndlr_SuperSnapshotV5();
+  InitHndlr_REU();  // Initialize REU handler for REU compatibility
+  BindFreezeCRT_REU();
+}
 
 void IO1Hndlr_SuperSnapshotV5(uint8_t Address, bool R_Wn)
 {

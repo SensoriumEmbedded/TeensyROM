@@ -104,6 +104,7 @@
 // Alternate Handlers adding TR+ REU to Known/public Cartridge HW types
 // Reserved range is currently 200 to 300  
 #define Cart_FCIII_101_REU          203 // Supported on v0.4
+#define Cart_SuperSnapshotV5_REU    220 // Supported on v0.4
 #define Cart_RetroReplay_REU        236 // Supported on v0.4
 
 // IO handlers only
@@ -156,6 +157,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_ActionReplay,      IOH_ActionReplay,
    (uint16_t)Cart_RetroReplay_REU,   IOH_RetroReplay_REU,
    (uint16_t)Cart_FCIII_101_REU,     IOH_FCIII_101_REU,
+   (uint16_t)Cart_SuperSnapshotV5_REU, IOH_SuperSnapshotV5_REU,
 #endif
 #endif
 

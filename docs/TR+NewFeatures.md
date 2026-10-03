@@ -26,7 +26,7 @@ A handful of other new hardware additions round out the TR+ feature set.
    * Validated against real hardware compatibility tools (REU-Checker, CMD 1750/1750XL REU Test) included right in the Test+Diags menu
  * **Freezer Cartridge Support** — Action Replay, Retro Replay, Final Cartridge III and Super Snapshot V5 emulated natively
    * Enter freezer on demand via the new 'Alt' button
-   * Retro Replay and Final Cartridge III 101% can also run with the TR+ REU alongside them (on by default, see Settings)
+   * Retro Replay, Super Snapshot V5, and Final Cartridge III 101% can also run with the TR+ REU alongside them (on by default, see Settings)
    * Freezer contributions by [Paul Harker (LessPaul)](https://github.com/LessPaul)
  * **Remote DMA Memory Access** — `WriteC64Mem` and `ReadC64Mem` give an external app direct, real-time read/write access to C64 memory over Serial or Ethernet
    * This is the TR+ engine behind [c64cast](https://github.com/kfox/c64cast) — streaming video, and a lot more, straight through your C64

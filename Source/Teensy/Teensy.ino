@@ -457,7 +457,7 @@ FLASHMEM void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
-   EEPROM.write(eepAdPwrUpDefaults3, 0x00); //default: Reset Detect enabled, TR+ REU with RR/FC3-101% enabled, see bit mask defs RegPowerUpDefaultMasks3
+   EEPROM.write(eepAdPwrUpDefaults3, 0x00); //default: Reset Detect enabled, TR+ REU with SSv5/RR/FC3-101% enabled, see bit mask defs RegPowerUpDefaultMasks3
    EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();
