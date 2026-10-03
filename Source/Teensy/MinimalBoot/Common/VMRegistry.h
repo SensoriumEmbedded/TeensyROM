@@ -152,8 +152,8 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return true;}
     // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
     EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);
-    // C64/C128 is only known once the menu has reported, and a launch at power-up comes before that:
-    // then the pair is left invalid rather than hand over a guess.
+    // C64/C128 is only known once the menu has reported. A launch made before that is sent through the
+    // menu first (RemoteLaunch), so the pair is only left invalid, rather than hand over a guess, if not.
     const uint8_t vid=IO1[wRegVid_TOD_Clks]&7,machine[2]={vid,uint8_t((VidTODClksKnown&rvtcC128)?~vid:vid)};
     EEPwriteNBuf(VM_EEP_MACHINE_ADDR,machine,2);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
     RebootTR();return true;
