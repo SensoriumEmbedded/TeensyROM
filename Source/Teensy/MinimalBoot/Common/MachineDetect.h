@@ -12,7 +12,7 @@
 //   in reset or early in its boot (see DMA-Timing-Known-Issues.md #1).
 
 #define Phi2BootPeriods    1024     //PHI2 periods timed in setup(), ~1mS
-#define Phi2CheckPeriods   32       //...and per re-check from loop(), ~35uS: still >10x the margin to the split
+#define Phi2CheckPeriods   32       //...and per re-check from loop(), ~35uS
 #define Phi2CheckBurst_mS  10       //after a reset release, re-check this often...
 #define Phi2BurstFor_mS    2000     //   ...for this long, to follow a C64U's switch before it starts its CPU
 #define Phi2CheckSlow_mS   2000     //otherwise this often, for a live standard change (a C64U switched from its menu)
@@ -24,8 +24,7 @@
 #define Phi2Max_pS         1060000
 
 uint8_t MeasuredVidStd = 0xff; //the latest PHI2 timing: rvtcNTSC, 0 for PAL, 0xff not measured
-uint32_t Phi2BurstStartmS = 0;
-bool     Phi2Burst = false;     //a post-release burst of re-checks is running
+uint32_t Phi2BurstUntilmS = 0;  //millis() a post-release burst of re-checks runs until
 
 //rvtcNTSC or 0 for PAL, from the stamp isrPHI2 takes on every rising edge (LastCycCnt), or 0xff
 //   when there is no good reading.  Nothing is masked, so the ISR keeps serving the bus throughout.
@@ -33,7 +32,12 @@ bool     Phi2Burst = false;     //a post-release burst of re-checks is running
 //   periods: ~800 CPU cycles either standard and only 4% apart, so a gap of up to Phi2MaxGap periods
 //   rounds unambiguously.  A longer gap means the ISR was held up, by a DMA transfer run inside it
 //   (DMATransferISR, the REU's DirectREU) or anything else long, and rounding it would pull the
-//   reading towards the split, so the reading is thrown away instead.  Needs isrPHI2 attached.
+//   reading towards the split, so the reading is thrown away instead.  So is one with a gap more
+//   than a quarter period off a whole number: a stamp taken on a late ISR entry rather than on an
+//   edge.  A real gap of up to Phi2MaxGap periods is at most ~16% off (the two standards' periods
+//   either side of the split), so that caps what a late stamp at either end of a reading can shift
+//   it by at a quarter period over the run: ~7.6nS at Phi2CheckPeriods, against 18nS to the split.
+//   Needs isrPHI2 attached.
 FLASHMEM uint8_t MeasureVideoStd(uint32_t Periods)
 {
    const uint32_t Nominal = nSToCyc(Phi2Split_pS/1000);
@@ -47,8 +51,10 @@ FLASHMEM uint8_t MeasureVideoStd(uint32_t Periods)
    {
       Mark = ARM_DWT_CYCCNT;
       while ((Now = LastCycCnt) == Prev) if (ARM_DWT_CYCCNT - Mark > TimeoutCyc) return 0xff;
-      const uint32_t Whole = (Now - Prev + Nominal/2) / Nominal;
-      if (Whole == 0 || Whole > Phi2MaxGap) return 0xff;
+      const uint32_t Gap = Now - Prev;
+      const uint32_t Whole = (Gap + Nominal/2) / Nominal;
+      const int32_t Off = (int32_t)(Gap - Whole * Nominal);
+      if (Whole == 0 || Whole > Phi2MaxGap || Off > (int32_t)(Nominal/4) || Off < -(int32_t)(Nominal/4)) return 0xff;
       Count += Whole;
       Prev = Now;
    }
@@ -69,8 +75,7 @@ FLASHMEM uint8_t TimeVideoStdAtBoot()
 //loop(), right after each reset release: start a burst of re-checks
 FLASHMEM void Phi2ResetReleased()
 {
-   Phi2BurstStartmS = millis();
-   Phi2Burst = true;
+   Phi2BurstUntilmS = millis() + Phi2BurstFor_mS;
 }
 
 //loop(): re-times PHI2 when due (or now, when Force), and returns the new standard when it has
@@ -80,8 +85,8 @@ FLASHMEM uint8_t RecheckVideoStd(bool Force)
 {
    static uint32_t LastmS = 0;
    const uint32_t Now = millis();
-   if (Phi2Burst && Now - Phi2BurstStartmS >= Phi2BurstFor_mS) Phi2Burst = false;
-   if (!Force && Now - LastmS < (Phi2Burst ? Phi2CheckBurst_mS : Phi2CheckSlow_mS)) return 0xff;
+   const bool Burst = (int32_t)(Phi2BurstUntilmS - Now) > 0;
+   if (!Force && Now - LastmS < (Burst ? Phi2CheckBurst_mS : Phi2CheckSlow_mS)) return 0xff;
    LastmS = Now;
    const uint8_t Std = MeasureVideoStd(Phi2CheckPeriods);
    if (Std == 0xff || Std == MeasuredVidStd) return 0xff;

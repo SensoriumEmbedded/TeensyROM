@@ -39,7 +39,8 @@ stcIOHandlers IOHndlr_TeensyROM =
 
 int16_t SidSpeedAdjust = 0;
 uint8_t VidTODClksKnown = 0; //bits of IO1[wRegVid_TOD_Clks] that are known: rvtcNTSC once PHI2 is timed at boot, all three once MainMenu.asm reports
-volatile uint8_t VidStdMenuMismatch = 0xff; //the menu's report when its PAL/NTSC disagreed with the timed one, for loop() to log and re-check
+volatile uint8_t VidStdMenuReport = 0xff; //MainMenu.asm's wRegVid_TOD_Clks write, caught in the IO1 handler for ApplyMenuVidReport() to merge
+bool    VidStdRecheckNow = false; //the menu's PAL/NTSC disagreed with the timed one: loop() re-times it on its next pass
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint16_t StreamOffsetAddr, StringOffset = 0;
@@ -553,16 +554,45 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
-void SetMachineInfoStr()
-{  //called from IO1 handler, do not FLASHMEM
+FLASHMEM void SetMachineInfoStr()
+{
    sprintf(StrMachineInfo, "C%d  %s Vid  %s", (IO1[wRegVid_TOD_Clks] & rvtcC128) ? 128 : 64,
       (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
       (IO1[wRegVid_TOD_Clks] & rvtc60Hz) ? "6" : "5");
 }
 
-void SetVideoStdTiming()
+FLASHMEM void SetVideoStdTiming()
 {  //from the machine in IO1[wRegVid_TOD_Clks], unconditionally; used by the td serial command
    SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
+   SetMachineInfoStr();
+}
+
+//Merges the report the IO1 handler caught.  Thread mode, from the polling handler: that's also where the menu's
+//   next request is dispatched (a launch at boot reaches tryLaunch from there), so the report is always merged
+//   before anything uses it, and with only thread mode writing the register, the timing and StrMachineInfo,
+//   nothing has to be masked.  MainMenu.asm reports all three bits.  PAL/NTSC timed from PHI2 wins: the menu's
+//   comes from the TOD clock against the CPU clock, and a dead TOD reads as NTSC.  A disagreement makes loop()
+//   re-time it straight away, in case the machine changed standard since the last reading.
+FLASHMEM void ApplyMenuVidReport()
+{
+   const uint8_t Report = __atomic_exchange_n(&VidStdMenuReport, (uint8_t)0xff, __ATOMIC_RELAXED); //never loses a report the ISR writes meanwhile
+   if (Report == 0xff) return;
+
+   uint8_t Merged = Report & (rvtcNTSC | rvtc60Hz | rvtcC128);
+   if (VidTODClksKnown & rvtcNTSC)
+   {
+      if ((Merged ^ IO1[wRegVid_TOD_Clks]) & rvtcNTSC)
+      {
+         Serial.printf("Menu reported %s, PHI2 timed %s: re-checking\n", (Merged & rvtcNTSC) ? "NTSC" : "PAL",
+            (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL");
+         VidStdRecheckNow = true;
+      }
+      Merged = (uint8_t)((Merged & ~rvtcNTSC) | (IO1[wRegVid_TOD_Clks] & rvtcNTSC));
+   }
+   IO1[wRegVid_TOD_Clks] = Merged;
+   VidTODClksKnown = rvtcNTSC | rvtc60Hz | rvtcC128;
+   //Re-applied only on a change: keeps 't' timing tweaks across menu restarts
+   if ((Merged ^ TimingVidTODClks) & (rvtcNTSC | rvtcC128)) SetVideoStdDMATiming(Merged);
    SetMachineInfoStr();
 }
 
@@ -624,23 +654,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             else SetExROMDeassert;  //rtBin8kHi or None
             break;
          case wRegVid_TOD_Clks:
-         {  //MainMenu.asm reports all three bits.  PAL/NTSC timed from PHI2 wins: the menu's comes from the TOD
-            //   clock against the CPU clock, and a dead TOD reads as NTSC.  A disagreement makes loop() re-time
-            //   it straight away, in case the machine changed standard since the last reading.
-            uint8_t Merged = Data & (rvtcNTSC | rvtc60Hz | rvtcC128);
-            if (VidTODClksKnown & rvtcNTSC)
-            {
-               if ((Merged ^ IO1[wRegVid_TOD_Clks]) & rvtcNTSC) VidStdMenuMismatch = Data;
-               Merged = (uint8_t)((Merged & ~rvtcNTSC) | (IO1[wRegVid_TOD_Clks] & rvtcNTSC));
-            }
-            IO1[wRegVid_TOD_Clks] = Merged;
-            VidTODClksKnown = rvtcNTSC | rvtc60Hz | rvtcC128;
-            //Re-applied only on a change: keeps 't' timing tweaks across menu restarts, and the timing
-            //   steady under a DMA already in flight
-            if ((Merged ^ TimingVidTODClks) & (rvtcNTSC | rvtcC128)) SetVideoStdDMATiming(Merged);
-            SetMachineInfoStr();
+            VidStdMenuReport = Data; //merged in thread mode, by ApplyMenuVidReport()
             break;
-         }
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
             IO1[rRegNumItemsOnPage] = (NumItemsFull > Data*MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull-(Data-1)*MaxItemsPerPage);
@@ -930,6 +945,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_TeensyROM()
 {
+   ApplyMenuVidReport(); //ahead of the dispatch below, which may act on the machine (tryLaunch's pair)
+
    if (IO1[rwRegStatus] != rsReady)
    {  //ISR requested work
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)

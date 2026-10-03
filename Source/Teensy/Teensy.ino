@@ -259,22 +259,13 @@ void setup()
      
 void loop()
 {
-   bool RecheckNow = false;
-   if (VidStdMenuMismatch != 0xff)
-   {  //caught in the IO1 handler
-      Serial.printf("Menu reported %s, PHI2 timed %s: re-checking\n", (VidStdMenuMismatch & rvtcNTSC) ? "NTSC" : "PAL",
-         (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL");
-      VidStdMenuMismatch = 0xff;
-      RecheckNow = true;
-   }
-   const uint8_t NewVidStd = RecheckVideoStd(RecheckNow);
+   const uint8_t NewVidStd = RecheckVideoStd(VidStdRecheckNow);
+   VidStdRecheckNow = false;
    if (NewVidStd != 0xff)
-   {  //the menu's report is merged into the same register from the IO1 handler, so this update can't be interrupted
-      __disable_irq();
+   {  //only thread mode writes the register (the menu's report is merged by ApplyMenuVidReport), so nothing to mask
       IO1[wRegVid_TOD_Clks] = (uint8_t)((IO1[wRegVid_TOD_Clks] & ~rvtcNTSC) | NewVidStd);
       VidTODClksKnown |= rvtcNTSC;
       SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
-      __enable_irq();
       if (VidTODClksKnown & rvtcC128) SetMachineInfoStr(); //the menu has reported, so the string exists: keep it current
    }
 

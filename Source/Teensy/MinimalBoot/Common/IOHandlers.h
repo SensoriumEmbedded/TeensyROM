@@ -65,7 +65,7 @@ uint8_t TimingVidTODClks = 0; //what SetVideoStdDMATiming() last applied, so a t
 //The bus timing for a wRegVid_TOD_Clks value (RegVidTODClksMasks).  Every image times PAL/NTSC at
 //   boot and keeps re-timing it from loop() (MachineDetect.h).  C64/C128 comes from MainMenu.asm in
 //   the main image, and from what the main image left it (VM_EEP_MACHINE_ADDR) in the extension image.
-//   Called from the IO1 handler, do not FLASHMEM
+//   Thread mode only: nothing in the ISR changes the timing
 void SetVideoStdDMATiming(uint8_t VidTODClks)
 {
    TimingVidTODClks = VidTODClks;
