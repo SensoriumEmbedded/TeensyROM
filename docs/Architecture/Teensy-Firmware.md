@@ -60,7 +60,7 @@ Each cartridge/IO type is one `.c` file under `MinimalBoot/Common/IO_Handlers/` 
 
 `MinimalBoot/` is a separate, self-contained Arduino sketch (`MinimalBoot.ino`) sharing most logic with the main firmware via `MinimalBoot/Common/` (guarded by `#ifdef MinimumBuild`), including `ISRs.c`, IO handler headers, and `Fab04FeatureCtl.h` feature gating — a comment in `Common_Defs.h:2` warns "re-compile both minimal and full if anything changes here!"
 
-**Purpose:** this is a dual-firmware system specifically for large-CRT support. Full firmware handles CRT files up to ~650KB; MinimalBoot strips out USB host support to free RAM, extending the ceiling to ~850KB (files in that range must load from SD, not USB) — see [docs/ControlComms.md](/docs/ControlComms.md) and [docs/CRT_Implementation.md](/docs/CRT_Implementation.md) for the user-facing framing.
+**Purpose:** this is a dual-firmware system specifically for large-CRT support. Full firmware handles CRT files up to ~650KB; MinimalBoot strips out USB host support to free RAM, extending the ceiling to ~824KB held in RAM, beyond which banks swap in from SD at runtime (files in that range must load from SD, not USB; numbers in [Constraints.md](Constraints.md)) — see [docs/ControlComms.md](/docs/ControlComms.md) and [docs/CRT_Implementation.md](/docs/CRT_Implementation.md) for the user-facing framing.
 
 **The switch trigger is dynamic exhaustion, not a size check.** `ParseChipHeader()` (`FileParsers.ino:97-` ) tries RAM1 first, then falls back to `malloc()` in RAM2 for each CRT chip/bank (`FileParsers.ino:120-128`). Only when that `malloc()` fails does it look for a MinimalBoot image already present in flash at a higher address (magic-number/vector-table sanity checks, `FileParsers.ino:135-157`) and reboot into it by writing `EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin)` followed by `RebootTR()` (`FileParsers.ino:165-168`) -- asserting the C64's own `/RESET` before the actual reboot so it doesn't see a glitch mid-transition. On the next boot, `Teensy.ino`'s `switch (EEPROM.read(eepAdMinBootInd))` (`Teensy.ino:189`) sees `MinBootInd_ExecuteMin` and boots straight into `MinimalBoot.ino`, which auto-launches the pending CRT (`eepAdCrtBootName`) rather than showing the menu (`MinimalBoot.ino:135-146`). If the user later launches something else from within minimal mode, `Min_SerUSBIO.ino:274` writes `MinBootInd_LaunchFull` so the *next* reboot returns to full firmware and launches it there instead (`Teensy.ino:206-209`). The ~650KB figure quoted elsewhere is the empirical result of this exhaustion point, not a hardcoded threshold in source.
 
@@ -79,7 +79,7 @@ Confirmed directly from each sketch's `#include` list, not inferred:
 ## Memory budgets (see [Constraints.md](Constraints.md) for the full list)
 
 - `MaxRAM_ImageSize = 128` KB in full build (`TeensyROM.h:26`)
-- MinimalBoot: `(392 - 8*Num8kSwapBuffers - EthernetDeduction)` KB (`Min_TeensyROM.h:58`)
+- MinimalBoot: `(440 - 8*Num8kSwapBuffers - EthernetDeduction)` KB = 208 KB (`Min_TeensyROM.h:58`)
 
 <br>
 

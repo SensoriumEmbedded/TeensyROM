@@ -405,7 +405,7 @@ function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
     ld ?? read(path.join(linkers, `imxrt1062_t41.ld.${suffix}`)));
 }
 
-function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '' }) {
+function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0 }) {
   console.log(`\n[${name}] Building`);
   writeLinkerFiles(suffix, { ld, bootdata });
   const buildDir = path.join(runRoot, name);
@@ -424,6 +424,15 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   const log = run(cli, compileArgs, env);
   write(path.join(runRoot, `${name}.log`), log);
   console.log(log.split(/\r?\n/).filter((l) => /Memory Usage|RAM1:|RAM2:|FLASH:/.test(l)).join('\n'));
+  if (minFreeLocals) {
+    const freeLocals = log.match(/free for local variables:(\d+)/)?.[1];
+    if (freeLocals === undefined) throw new Error(`[${name}] No "free for local variables" in the memory report; cannot check the stack floor`);
+    if (Number(freeLocals) < minFreeLocals) {
+      throw new Error(`[${name}] RAM1 free for local variables is ${freeLocals}, under the ${minFreeLocals} it needs. ` +
+        'If RAM1 code just grew into another 32 KB ITCM bank, move code to FLASHMEM; otherwise lower MaxRAM_ImageSize ' +
+        '(MinimalBoot/Min_TeensyROM.h explains both).');
+    }
+  }
 
   const elf = path.join(buildDir, `${elfStem}.ino.elf`);
   const hex = path.join(buildDir, `${elfStem}.ino.hex`);
@@ -463,6 +472,10 @@ if (!skipMinimalBuild && !hostOnly) {
     elfStem: 'MinimalBoot',
     ld: withExtensions ? minimalLinkerScript(linkers) : undefined,
     extraDefs: withExtensions ? VM_EXTENSIONS_DEFINE : '',
+    // Minimal sizes its RAM1 image buffer to leave just over this for the stack, the floor
+    // Min_TeensyROM.h measured with Ethernet listening (below it, boot can crash). Checked
+    // here because an ITCM bank crossing takes 32 KB of it at once, with no other symptom.
+    minFreeLocals: 24000,
   });
 }
 

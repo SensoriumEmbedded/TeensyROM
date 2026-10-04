@@ -55,6 +55,10 @@
    #define EthernetDeduction    0
 #endif
 
-#define MaxRAM_ImageSize  (392-8*Num8kSwapBuffers-EthernetDeduction)  // base minus space for 8k swap blocks and ethernet needs
-   // need to leave ~15k of RAM1 "free for local variables" w/ Ethernet,  OK w/ <7k free w/o it
+#define MaxRAM_ImageSize  (440-8*Num8kSwapBuffers-EthernetDeduction)  // base minus space for 8k swap blocks and ethernet needs
+   // need to leave >24000 RAM1 "free for local variables" w/ Ethernet (above),  OK w/ <7k free w/o it
+   //   tools/build-firmware.mjs fails the build below 24000, so this can't creep under it unnoticed
+   // Base was 392 until Min's ITCM code shrank from 5 to 4 32k banks, which returned 32k to DTCM.
+   //   With 440: ~28k free (TR+), ~30k (TR), but only ~4k of ITCM slack (RAM1 "padding") before
+   //   a 5th bank takes that 32k back -- the build check then fails: move code to FLASHMEM or lower this.
 
