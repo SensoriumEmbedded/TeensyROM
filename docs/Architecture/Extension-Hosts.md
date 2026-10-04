@@ -100,13 +100,19 @@ every launch falls through to the main app, which from the C64 looks exactly lik
 a host that failed.
 
 Past the marker's terminator, at `VM_EEP_MACHINE_ADDR`, the main image leaves the
-machine the C64 menu reported -- `VM_MACHINE_NTSC`, `VM_MACHINE_60HZ`,
-`VM_MACHINE_C128` -- followed by its complement. A host that drives the bus itself
-needs it to pick its timing, because this image boots without the menu that
-measured it. `vm_launch_machine()` reads the pair, and answers `-1` for a main
-image that did not leave one, or for a launch at power-up that came before the
-menu reported. A main image predating the pair does not clear it, so after a
-downgrade it can be one a newer image left.
+machine -- `VM_MACHINE_NTSC`, `VM_MACHINE_60HZ`, `VM_MACHINE_C128` -- followed by its
+complement. PAL/NTSC is what the main image timed from PHI2; C64/C128 and 50/60 Hz
+are what the C64 menu reported. A host that drives the bus itself needs it to pick
+its timing, because this image boots without the menu. A launch made before the menu
+has run goes through the menu first, so a current main image always leaves the pair;
+`vm_launch_machine()` reads it, and answers `-1` for an older main image that did not
+leave one. A main image predating the pair does not clear it, so after a downgrade it
+can be one a newer image left.
+
+PAL/NTSC can change after the pair is written: a C64U applies a saved standard only
+after the cartridge port's reset is released, and can switch live from its menu. A
+host that drives the bus should time PHI2 itself as well, as the stock host does
+(`MachineDetect.h`), and keep only C64/C128 from the pair.
 
 ### 3. The record
 

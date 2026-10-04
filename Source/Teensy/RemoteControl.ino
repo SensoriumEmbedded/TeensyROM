@@ -20,7 +20,7 @@
 //Functions to control C64/TR via USB connection
 
 #ifdef VM_EXTENSIONS_ENABLED
-#include "MinimalBoot/Common/VMRegistry.h"
+#include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
 
@@ -299,6 +299,17 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
          case rtBin8kHi:
          case rtBin8kLo:
          case rtBinC128:
+#ifdef VM_EXTENSIONS_ENABLED
+            //An extension packaged as a .crt goes through the menu instead while C64/C128 isn't known yet
+            //  (autolaunch at power-up, the relaunch after a launch sent to MinimalBoot): its launch hands
+            //  the extension image the machine, and only the menu's report says C64 or C128
+            if (!(VidTODClksKnown & rvtcC128) &&
+                VmLaunch::isPackageCrt(MenuSourceID, DriveDirPath, MenuSource[SelItemFullIdx].Name))
+            {
+               Serial.printf("Extension package: launching through the menu\n");
+               break;
+            }
+#endif
             Printf_dbg("Forced CRT launch\n"); 
             SendC64Msgs = false;
             HandleExecution();

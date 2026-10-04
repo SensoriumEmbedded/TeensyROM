@@ -63,3 +63,22 @@ test('the NFC directory filter shares the predicate rather than spelling it out 
   const body = functionBody(blankComments(read('nfcScan.ino')), 'nfcReadTagLaunch');
   assert.match(body, /IsStorableLaunchType\s*\(/);
 });
+
+// A file a /VMS package claims keeps rtUnknown, which the predicate turns away, so every
+// stored-reference path also has to let a claimed SD file through, or hot keys, autolaunch
+// and NFC quietly go back to refusing extension files such as .mpe.
+test('every stored-reference setter also admits a /VMS-claimed selection', () => {
+  const source = blankComments(read('MinimalBoot/Common/IO_Handlers/StatusFunctions.c'));
+
+  const missing = STORED_REFERENCE_SETTERS.filter(
+    (name) => !/!\s*IsVmClaimedSelection\s*\(\s*\)/.test(functionBody(source, name)));
+  assert.deepEqual(missing, []);
+
+  // Only SD is claimed: the registry and VmLaunch::tryFile know no other source.
+  assert.match(functionBody(source, 'IsVmClaimedSelection'), /rWRegCurrMenuWAIT\s*\]\s*==\s*rmtSD/);
+});
+
+test('the NFC directory filter keeps /VMS-claimed SD files', () => {
+  const body = functionBody(blankComments(read('nfcScan.ino')), 'nfcReadTagLaunch');
+  assert.match(body, /MenuSourceID\s*==\s*rmtSD\s*&&\s*IsVmClaimedItem\s*\(\s*FNum\s*\)/);
+});

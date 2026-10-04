@@ -38,6 +38,15 @@ int main(int argc,char **argv){
     assert(!VmLaunch::tryFile(rmtSD,nullptr,"HELLO.crt"));
     assert(!rebooted);
 
+    // isPackageCrt, RemoteLaunch's test for sending a package through the menu before the
+    // machine is known, answers the same question as tryFile without launching anything.
+    assert(VmLaunch::isPackageCrt(rmtSD,"/","HELLO.crt")&&!rebooted);
+    assert(!VmLaunch::isPackageCrt(2,"/","HELLO.crt"));          // USB keeps stock routing.
+    assert(!VmLaunch::isPackageCrt(rmtSD,"/disk.d64*","HELLO.crt"));
+    assert(!VmLaunch::isPackageCrt(rmtSD,"/","GAME.PRG"));
+    assert(!VmLaunch::isPackageCrt(rmtSD,"","HELLO.crt")&&!VmLaunch::isPackageCrt(rmtSD,nullptr,"HELLO.crt"));
+    assert(!rebooted);
+
     // An ordinary cartridge is still an ordinary cartridge, at any size. File
     // size is not a VM identity; only the descriptor at 0x4070 is.
     for(unsigned mib:{1u,2u}){
@@ -46,12 +55,15 @@ int main(int argc,char **argv){
         std::ofstream file(base/"ordinary.crt",std::ios::binary);
         file.write(crt.data(),crt.size());file.close();
         assert(!VmLaunch::tryFile(rmtSD,"/","ordinary.crt")&&!rebooted);
+        assert(!VmLaunch::isPackageCrt(rmtSD,"/","ordinary.crt"));
     }
 
     // A cartridge that claims to be ours but is damaged reports, and does not boot.
     auto damaged=base/"HELLO.crt";
     std::fstream f(damaged,std::ios::binary|std::ios::in|std::ios::out);
     f.seekp(0x4074);f.put(99);f.close();   // ABI byte in the descriptor
+    // Still a package as far as routing goes: it goes through the menu, where tryLaunch reports it.
+    assert(VmLaunch::isPackageCrt(rmtSD,"/","HELLO.crt"));
     message.clear();
     assert(VmLaunch::tryFile(rmtSD,"/","HELLO.crt")&&!rebooted&&!message.empty());
 

@@ -426,6 +426,17 @@ test('a combine that cannot happen is refused before anything compiles', {
   }
 });
 
+// The two images' USB types are picked in two separate FQBNs, and nothing at compile
+// time ties them together: MinimalBoot.ino's #error only says minimal is Serial + MIDI.
+// If they drift apart, a board changes USB identity every time it passes through minimal.
+test('the minimal and main images are built as the same USB type', () => {
+  const source = fs.readFileSync(script, 'utf8');
+  const usbType = (image) =>
+    source.match(new RegExp(`build\\('${image}', \\{[^}]*?fqbn: '[^']*\\busb=(\\w+)`))?.[1];
+  assert.equal(usbType('minimal'), 'serialmidi');
+  assert.equal(usbType('main'), 'serialmidi');
+});
+
 // The example host is documentation that compiles, so the four contract points it is
 // meant to demonstrate are asserted here rather than left to a reader to notice.
 test('the example host carries the four things a host owes', () => {

@@ -25,8 +25,15 @@
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
 #include "Common/IOHandlers.h"
+#include "Common/MachineDetect.h"
 #ifdef VM_EXTENSIONS_ENABLED
 #include "Common/VMFail.h"
+#endif
+
+//Same USB type as the main image, so both present one USB device (Min_UsbNames.c).
+//   Here, not in Common/: the extension image builds from this folder without this file, USB off.
+#ifndef USB_MIDI_SERIAL
+   #error MinimalBoot requires Tools > USB Type: "Serial + MIDI" (same as the main TeensyROM image)
 #endif
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
@@ -170,6 +177,10 @@ void setup()
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 
+   //C64 held in reset since SetResetAssert above.  Only nS_MaxAdj matters here: this image does no
+   //  DMA transfers, so it never needs C64/C128.  Timed here rather than handed over by the main image.
+   if (TimeVideoStdAtBoot() != 0xff) SetVideoStdDMATiming(MeasuredVidStd);
+
 #ifdef FeatTCPListen
    if (EEPROM.read(eepAdPwrUpDefaults2) & rpud2TRTCPListen) 
    { //Init Ethernet to to listen for TCP packets  Dynamically allocates ~100k of RAM2
@@ -196,6 +207,7 @@ void setup()
    BigBuf = (uint32_t*)malloc(BigBufSize*sizeof(uint32_t));
    Serial.printf("\n%s *minimal* is on-line\n", strVersionNumber);
    Serial.printf(" %luMHz  %.1fC\n FW: %s, %s\n", (F_CPU_ACTUAL/1000000), tempmonGetTemp(), __DATE__, __TIME__);
+   Serial.printf(" PHI2 timed: %s\n", MeasuredVidStd == 0xff ? "not clocking, PAL default" : MeasuredVidStd ? "NTSC" : "PAL");
    
 #ifdef Dbg_TestMin
    //calc/show free RAM space for CRT:
@@ -222,6 +234,9 @@ void setup()
      
 void loop()
 {
+   FollowVideoStd(); //a C64U switches standard after the reset is released, and can switch live
+   while (usb_midi_read_message()); //discard host->TR MIDI so the endpoint doesn't stall while a cart runs in Min
+
    if (BtnPressed)
    {
       //Serial.print("Button detected (minimal)\n");
@@ -247,6 +262,7 @@ void loop()
 #endif      
       doReset=false;
       BtnPressed = false;
+      Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
 
 #ifdef DbgSignalSenseReset
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );

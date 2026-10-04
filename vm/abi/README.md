@@ -225,10 +225,10 @@ else times a job.
 A slice writes wherever the C64's memory map puts its addresses at the moment
 of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM
 the C64 cannot read until it banks the ROM out. `$DE00..$DFFF`, the cartridge's
-own registers, is refused. The bus is timed for the machine the C64 menu last
-reported. A launch that comes before the menu has reported one, such as an
-autolaunch at power-up, gets PAL timing, as the main image does until then, and
-on an NTSC machine that timing can corrupt bytes.
+own registers, is refused. The bus is timed for the machine: the extension image
+times PAL/NTSC from PHI2 itself and follows a change, and takes C64/C128 from the
+menu's report, which every launch now waits for. A launch made before the menu has
+run, such as an autolaunch at power-up, goes through the menu first.
 
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as

@@ -21,20 +21,6 @@ For a distilled, public-facing summary of the NTSC C128 write-fault investigatio
 
 ## Development
 
-### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Development]`
-`wRegVid_TOD_Clks` (video standard detection) is only written by the C64-side
-main menu ROM (`MainMenu.asm` → `Start:`). CRT/REU images launched via SD or TR
-autolaunch (`Teensy.ino` → `RemoteLaunch` → `DoCartDirect`) skip the menu
-entirely, so an NTSC machine runs the whole transfer on PAL's `nS_DMADataHold`
-default (430) — which sits inside NTSC's own measured 430–450ns partial-byte
-error band. Reachable via the REU handler and `WriteC64Mem`/`ReadC64Mem` before
-the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
-Check, which necessarily runs after `Start:` has already set the constants.
-— *Common_Defs.h `nS_MaxAdj` comment, PR #21*
-
-Confirmed to hit C128 too, not just NTSC C64 — see #14: an autolaunched C128
-never reaches its own `te445` set either, same mechanism.
-
 ### 5. Cycle-overrun mode has no graceful degradation `[Development]`
 Past ~455ns hold, the DMA write wait doesn't return before Phi2 falls, and the
 transfer collapses completely (deterministic, whole-byte corruption) rather
@@ -117,6 +103,45 @@ measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
 correctly, but not the analog margin (its buffers/bus loading are its own).
 
 ## Closed
+
+### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Closed]`
+`wRegVid_TOD_Clks` (video standard detection) is only written by the C64-side
+main menu ROM (`MainMenu.asm` → `Start:`). CRT/REU images launched via SD or TR
+autolaunch (`Teensy.ino` → `RemoteLaunch` → `DoCartDirect`) skip the menu
+entirely, so an NTSC machine runs the whole transfer on PAL's `nS_DMADataHold`
+default (430) — which sits inside NTSC's own measured 430–450ns partial-byte
+error band. Reachable via the REU handler and `WriteC64Mem`/`ReadC64Mem` before
+the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
+Check, which necessarily runs after `Start:` has already set the constants.
+— *Common_Defs.h `nS_MaxAdj` comment, PR #21*
+
+Confirmed to hit C128 too, not just NTSC C64 — see #14: an autolaunched C128
+never reaches its own `te445` set either, same mechanism.
+
+**Closed (2026-10-03):** PAL/NTSC is now timed on the Teensy (`MachineDetect.h`), from
+the stamp `isrPHI2` already takes on every rising edge: in `setup()` with the C64 held
+in reset, in the full, minimal and extension images, then again from `loop()`, every
+~10 mS for 2 S after each reset release and every 2 S after that. A cartridge started
+without the menu gets the right `nS_MaxAdj` and PAL or NTSC DMA set from its first
+cycle. The re-checks exist because a C64U powers up at the PAL rate and applies a saved
+NTSC setting only after the cartridge port's reset is released, and can also switch
+live — see [Constraints.md](Constraints.md#machine-type-palntsc-is-timed-on-the-teensy-c64c128-only-comes-from-the-menu).
+
+C64 vs C128 is **not** detected on the Teensy: a C128 held in reset, or early in its
+boot, can't be read at the port, and DMA in that window can hang its boot (same
+section of Constraints.md). It still comes from the menu's report, which is now merged
+with the Teensy's timing instead of overwriting it. What that leaves:
+- A `.crt`-packaged extension launched before the menu has run is sent through the
+  menu instead of being launched directly, so the machine it's handed always includes
+  C64/C128.
+- An ordinary CRT or bin launched directly at power-up — the direct path is there for
+  diagnostic carts on machines that may not run the menu — gets the non-C128 set for
+  its standard. Such carts do no DMA themselves; the one consumer left is a host's
+  `WriteC64Mem`/`ReadC64Mem` while one runs on a C128, accepted.
+- The REU handler is only reached through the menu, which has reported by then.
+
+Bench: Kawari C64 (PAL and NTSC), C64U with a plain TR (PAL, NTSC, and a live switch),
+NTSC C128 with a TR+, and a packaged extension autolaunched on the C128.
 
 ### 3. NTSC-vs-PAL and C64-vs-C128 are confounded in the PR #21 data `[Closed]`
 The only "NTSC" characterization rig was a flat C128; the only "PAL" rig was a
@@ -503,6 +528,12 @@ machine type, so an autolaunched C128 never reaches its own set either —
 confirmed directly in the write-up ("an autolaunched NTSC C64 gets the write
 errors PR #21 fixed, and a C128 gets the same, never reaching its own set
 either").
+
+**Update (2026-10-03):** with #1 closed, PAL/NTSC no longer waits for the menu, but
+C64 vs C128 still does — a C128 can't be detected at the port while it's in reset or
+early in its boot. Extensions launched before the menu has run now go through it, so
+they get this set; a directly launched C128 cart still doesn't, which only matters for
+a host's memory commands while it runs. See #1's closing note.
 
 **Not yet independently verified** — tested extensively by kfox on their own
 rig, not yet run against this branch's own hardware or reconciled with

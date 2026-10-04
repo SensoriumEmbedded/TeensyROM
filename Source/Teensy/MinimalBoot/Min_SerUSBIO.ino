@@ -38,10 +38,8 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          }
          else if (inVal == VersionInfoToken) //Version Info
          {
-            uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse 
-            if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
             SendU16(AckToken);
-            CmdChannel->printf("\n  FW: %s(minimal)\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r\n", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+            CmdChannel->printf("\n  FW: %s(minimal)\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r\n", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), TR_ChipSerialNum());
             return;
          }
          else if (inVal == LaunchFileToken) //Launch File
@@ -126,7 +124,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                GetDigits(3, &nS_VICStart);
                break;
             case 'd': //Set Defaults
-               nS_MaxAdj    = Def_nS_MaxAdjPAL;
+               SetVideoStdDMATiming(TimingVidTODClks); //MaxAdj (and the DMA set) for the machine timed or handed over at boot, not always PAL
                nS_RWnReady  = Def_nS_RWnReady;  
                nS_PLAprop   = Def_nS_PLAprop;  
                nS_DataSetup = Def_nS_DataSetup;  

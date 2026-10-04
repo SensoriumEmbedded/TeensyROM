@@ -137,8 +137,8 @@ static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 // at most the timer's latch + 1, less the cycles from its underflow to the grant, less a
 // margin for what the VIC steals (vm/abi/README.md, "The C64 transfer tail"). A slice
 // lands wherever the C64's memory map puts that address at the moment it is granted. The bus
-// is timed for the machine the C64 menu last reported, or for PAL when a launch comes before
-// the menu has reported one, and PAL timing can corrupt bytes on an NTSC machine.
+// is timed for the machine: the extension image times PAL/NTSC from PHI2 itself and follows a
+// change, and takes C64/C128 from the menu's report, which every launch now waits for.
 struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
 struct VmHostC64Dma {
     VmHostExit base;

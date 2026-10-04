@@ -209,9 +209,7 @@ FLASHMEM void SelectSerialStringBuf()
 //companion app's version query landed in the middle of the file names on screen.
 FLASHMEM void MakeBuildInfo(char *Buf, size_t Size)
 {
-   uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
-   if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
-   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), TR_ChipSerialNum());
 
    //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
    //prints at column 0, so a 37 character cut would take most of it away.
@@ -440,6 +438,18 @@ FLASHMEM void SearchForLetter()
    }
 }
 
+//The selected item is an SD file a /VMS package claims (MarkVmClaimed).  Its type stays rtUnknown, which
+//   IsStorableLaunchType turns away, but it is safe to store: the launch goes through the menu to
+//   VmLaunch::tryFile, and the host's return leaves VM_BOOT_FROM_MIN, which never re-runs the autolaunch.
+FLASHMEM bool IsVmClaimedSelection()
+{
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   return IO1[rWRegCurrMenuWAIT] == rmtSD && IsVmClaimedItem(SelItemFullIdx);
+#else
+   return false;
+#endif
+}
+
 FLASHMEM void WriteNFCTagCheck()
 {
    //IO1[rwRegScratch] 1=rand dir, 0=single file
@@ -453,7 +463,7 @@ FLASHMEM void WriteNFCTagCheck()
 
    SelItemFullIdx = IO1[rwRegCursorItemOnPg]+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
 
-   if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType)) //single file, not storable
+   if (!IO1[rwRegScratch] && !IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType) && !IsVmClaimedSelection()) //single file, not storable
    {
       SendMsgPrintfln(" Invalid File Type (%d)\r", MenuSource[SelItemFullIdx].ItemType);
       return;
@@ -505,7 +515,7 @@ FLASHMEM void HotKeySetLaunch()
       GetCurrentFilePathName(PathFilename);
       SendMsgPrintfln("\rSet Hot Key #%d to this file:\r%s\r", HotKeyNumSL+1, PathFilename);
 
-      if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
+      if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType) && !IsVmClaimedSelection())
       {
          SendMsgPrintfln("Invalid File Type (%d)\r\rHot Key *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
          return;
@@ -651,7 +661,7 @@ FLASHMEM void SetAutoLaunch()
    GetCurrentFilePathName(PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
 
-   if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType))
+   if(!IsStorableLaunchType(MenuSource[SelItemFullIdx].ItemType) && !IsVmClaimedSelection())
    {
       SendMsgPrintfln("Invalid File Type (%d)\r\rAuto Launch *not* updated\r", MenuSource[SelItemFullIdx].ItemType);
       return;
