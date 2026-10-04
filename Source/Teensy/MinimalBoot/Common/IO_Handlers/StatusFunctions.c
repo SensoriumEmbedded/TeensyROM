@@ -209,9 +209,7 @@ FLASHMEM void SelectSerialStringBuf()
 //companion app's version query landed in the middle of the file names on screen.
 FLASHMEM void MakeBuildInfo(char *Buf, size_t Size)
 {
-   uint32_t serialNum = HW_OCOTP_MAC0 & 0xFFFFFF; // Read the unique 24-bit identifier from the hardware fuse
-   if (serialNum < 10000000) serialNum *= 10; // Replicate the OS-X CDC-ACM driver work-around used by PJRC core
-   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), serialNum);
+   snprintf(Buf, Size, "  FW: %s\r\n      %s, %s\r\n  Teensy: %luMHz  %.1fC  UID: %lu\r", strVersionNumber, __DATE__, __TIME__, (F_CPU_ACTUAL/1000000), tempmonGetTemp(), TR_ChipSerialNum());
 
    //No clamp here, unlike MakeExtHostStr: this string is deliberately multi-line and
    //prints at column 0, so a 37 character cut would take most of it away.

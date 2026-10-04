@@ -3,6 +3,7 @@
 
 
 #include "Fab04FeatureCtl.h"  //determines if build is for Fab0.2/0.3 or Fab0.4+
+#include "ChipSerial.h"       //TR_ChipSerialNum(): the UID in the USB names and build info
 
 //fab 0.4 adds bi-dir data buffers, R/W Signal, Reset Signal and Special Button
 #ifdef Fab04_Features   //see Fab04FeatureCtl.h

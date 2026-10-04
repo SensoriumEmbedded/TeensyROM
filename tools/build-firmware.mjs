@@ -454,7 +454,11 @@ if (withExtensions && !hostOnly) {
 if (!skipMinimalBuild && !hostOnly) {
   minimalImage = build('minimal', {
     inoPath: path.join(root, 'Source/Teensy/MinimalBoot/MinimalBoot.ino'),
-    fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
+    // Serial + MIDI like main, though minimal never uses MIDI: both images then present
+    // the same USB device (16C0:0489, same interfaces, same name strings), so a board
+    // passing through minimal keeps its COM port and DAWs keep its MIDI port. A serial-only
+    // minimal comes up as a different device. MinimalBoot.ino #errors on anything else.
+    fqbn: 'teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us',
     suffix: 'orig',
     elfStem: 'MinimalBoot',
     ld: withExtensions ? minimalLinkerScript(linkers) : undefined,

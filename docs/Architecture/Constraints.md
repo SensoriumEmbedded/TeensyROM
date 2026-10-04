@@ -201,7 +201,7 @@ The Teensyduino core's `ResetHandler2()` (`cores/teensy4/startup.c`, Teensyduino
 
 Hooks run exactly once per boot, so they're `FLASHMEM` candidates and should be marked as such given the RAM1 budget above.
 
-**This came up concretely.** `MidiDevName_AppendUniqueID()` (`midiDevName.c`) overwrites the placeholder zeros in the USB MIDI product/serial strings with the chip ID so two units enumerate with distinct names. It was originally the first line of `setup()` — but `setup()` can't run until after that ~300ms wait, by which point the host has already read the descriptors, and a unit powered on with USB pre-attached could enumerate as `TeensyROM-00000000`. The fix was not a core patch — it was moving the call into `startup_middle_hook()`, where the strings are final before the device ever attaches. Same lesson applies to anything else that must be true before enumeration: `setup()` is ~300ms too late, and the middle hook is the tool.
+**This came up concretely.** `UsbNames_AppendUniqueID()` (`MinimalBoot/Common/UsbNames.c`, shared by both images) overwrites the placeholder zeros in the USB product/serial strings with the chip ID so two units enumerate with distinct names. It was originally the first line of `setup()` — but `setup()` can't run until after that ~300ms wait, by which point the host has already read the descriptors, and a unit powered on with USB pre-attached could enumerate as `TeensyROM-00000000`. The fix was not a core patch — it was moving the call into `startup_middle_hook()`, where the strings are final before the device ever attaches. Same lesson applies to anything else that must be true before enumeration: `setup()` is ~300ms too late, and the middle hook is the tool.
 
 ## Toolchain pin: avoid Teensyduino 1.62.0
 

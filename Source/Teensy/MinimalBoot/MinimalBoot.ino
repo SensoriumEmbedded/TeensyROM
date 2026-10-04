@@ -30,6 +30,12 @@
 #include "Common/VMFail.h"
 #endif
 
+//Same USB type as the main image, so both present one USB device (Min_UsbNames.c).
+//   Here, not in Common/: the extension image builds from this folder without this file, USB off.
+#ifndef USB_MIDI_SERIAL
+   #error MinimalBoot requires Tools > USB Type: "Serial + MIDI" (same as the main TeensyROM image)
+#endif
+
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
@@ -229,6 +235,7 @@ void setup()
 void loop()
 {
    FollowVideoStd(); //a C64U switches standard after the reset is released, and can switch live
+   while (usb_midi_read_message()); //discard host->TR MIDI so the endpoint doesn't stall while a cart runs in Min
 
    if (BtnPressed)
    {

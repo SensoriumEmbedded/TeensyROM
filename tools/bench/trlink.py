@@ -14,9 +14,10 @@ apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
 board (Fab04_FullDMACapable).
 
 The port is $TR_PORT, else the first /dev/cu.usbmodem* on macOS or /dev/ttyACM*
-on Linux. Do not hardcode it: on macOS the main image renames its USB device
-(MidiDevName_AppendUniqueID), so its node differs from the one minimal and the
-extension image enumerate as.
+on Linux. Do not hardcode it: the board's USB serial string carries its chip ID
+(UsbNames_AppendUniqueID), so on macOS the node differs from board to board.
+The main and minimal images present the same USB device; the extension image
+has none.
 
 macOS and Linux only (termios); no third-party packages.
 """
