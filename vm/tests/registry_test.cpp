@@ -221,7 +221,7 @@ int main(int argc,char **argv){
     // unserved bit rides through the same way; validation is not the gate.
     VmBootImage::installWithoutDescriptor();
     assert(VmBootImage::installed()&&!VmBootImage::identity(read));
-    io1[wRegVid_TOD_Clks]=0x80|VM_MACHINE_NTSC|VM_MACHINE_C128;VidStdReported=true;
+    io1[wRegVid_TOD_Clks]=0x80|VM_MACHINE_NTSC|VM_MACHINE_C128;VidTODClksKnown=rvtcNTSC|rvtc60Hz|rvtcC128; // the menu has reported
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
     // The machine the menu reported rides past the marker, and nothing else of that register.
     assert(machineAt==VM_EEP_MACHINE_ADDR&&vm_launch_machine(machine)==(VM_MACHINE_NTSC|VM_MACHINE_C128));
@@ -229,8 +229,9 @@ int main(int argc,char **argv){
     const uint8_t text[2]={'r','t'},zero[2]={0,0},wide[2]={8,0xf7};
     assert(vm_launch_machine(text)==-1&&vm_launch_machine(zero)==-1&&vm_launch_machine(wide)==-1);
     rebooted=false;message.clear();
-    // An autolaunch at power-up, before the menu has reported: none, not a PAL C64.
-    VidStdReported=false;io1[wRegVid_TOD_Clks]=0;machineAt=-1;
+    // Before the menu has reported, only PAL/NTSC is known (timed from PHI2): none, not a guess at C64/C128.
+    // RemoteLaunch sends such a launch through the menu first, so this is only a backstop.
+    VidTODClksKnown=rvtcNTSC;io1[wRegVid_TOD_Clks]=VM_MACHINE_NTSC;machineAt=-1;
     assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&rebooted&&message.empty());
     assert(machineAt==VM_EEP_MACHINE_ADDR&&vm_launch_machine(machine)==-1);
 

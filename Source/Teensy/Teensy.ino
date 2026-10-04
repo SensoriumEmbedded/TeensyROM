@@ -48,6 +48,7 @@
    #include "MinimalBoot/Common/VMBootImage.h"
 #endif
 #include "MinimalBoot/Common/IOHandlers.h"
+#include "MinimalBoot/Common/MachineDetect.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -176,6 +177,14 @@ void setup()
    for (uint8_t reg=0; reg<NumColorRefs; reg++) IO1[rwRegColorRefStart+reg]=EEPROM.read(eepAdColorRefStart+reg); 
    //IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr); //done each entry into menu
    SetUpMainMenuROM();
+   //C64 held in reset since SetResetAssert above, and ahead of any autolaunch: a cart started without
+   //  the menu gets the right timing from its first cycle.  C64/C128 waits for the menu's report.
+   if (TimeVideoStdAtBoot() != 0xff)
+   {
+      IO1[wRegVid_TOD_Clks] = MeasuredVidStd;
+      VidTODClksKnown = rvtcNTSC; //the menu's report adds C64/C128 and 50/60Hz, and doesn't override this
+      SetVideoStdDMATiming(MeasuredVidStd);
+   }
    MenuChange(); //set up drive path, menu source/size
 
    for(uint8_t cnt=0; cnt<IOH_Num_Handlers; cnt++) PadSpace(IOHandler[cnt]->Name, IOHNameLength-1); //done so selection shown on c64 overwrites previous
@@ -203,6 +212,7 @@ void setup()
 #else
    Serial.printf("  for Fab 0.2/0.3 PCB\n");
 #endif
+   Serial.printf("  PHI2 timed: %s\n", MeasuredVidStd == 0xff ? "not clocking, PAL default" : MeasuredVidStd ? "NTSC" : "PAL");
    Printf_dbg("Debug messages enabled!\n");
    Printf_dbg_sw("Swiftlink debug messages enabled!\n");
 
@@ -249,6 +259,16 @@ void setup()
      
 void loop()
 {
+   const uint8_t NewVidStd = RecheckVideoStd(VidStdRecheckNow);
+   VidStdRecheckNow = false;
+   if (NewVidStd != 0xff)
+   {  //only thread mode writes the register (the menu's report is merged by ApplyMenuVidReport), so nothing to mask
+      IO1[wRegVid_TOD_Clks] = (uint8_t)((IO1[wRegVid_TOD_Clks] & ~rvtcNTSC) | NewVidStd);
+      VidTODClksKnown |= rvtcNTSC;
+      SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
+      if (VidTODClksKnown & rvtcC128) SetMachineInfoStr(); //the menu has reported, so the string exists: keep it current
+   }
+
    if (BtnPressed)
    {
       CmdChannel->print("Button detected\n"); 
@@ -301,6 +321,7 @@ void loop()
 #endif      
       doReset=false;
       BtnPressed = false;
+      Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
 
 #ifdef DbgSignalSenseReset
       delay(50); 

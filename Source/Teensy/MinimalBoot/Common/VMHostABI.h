@@ -99,12 +99,15 @@ enum : uint32_t { VM_HOSTID_MAGIC = 0x3248564du };  // 'MVH2'
 enum : uint32_t { VM_EEP_MAGIC = 0xfeed6415u };
 enum : int { VM_EEP_MAGIC_ADDR = 0, VM_EEP_BOOTNAME_ADDR = 1919, VM_EEP_BOOTIND_ADDR = 2175 };
 
-// Past the marker's NUL, the main image leaves the machine the C64 menu reported and then its
-// complement, so a host that masters the bus can time it for that machine. Menu_Regs.h's
-// RegVidTODClksMasks, duplicated. vm_launch_machine() answers -1 where a main image left
-// none -- an older one, or a launch at power-up before the menu ran -- and a host then has
-// no way to know. An older main image leaves bytes a newer one wrote, so after a firmware
-// downgrade the pair can be a stale one.
+// Past the marker's NUL, the main image leaves the machine and then its complement, so a host
+// that masters the bus can time it for that machine. Menu_Regs.h's RegVidTODClksMasks,
+// duplicated: PAL/NTSC as the main image timed it from PHI2, C64/C128 and 50/60Hz as the C64
+// menu reported them. A launch made before the menu has run goes through the menu first, so a
+// current main image always leaves one. vm_launch_machine() answers -1 where an older main
+// image left none, and a host then has no way to know. An older main image leaves bytes a
+// newer one wrote, so after a firmware downgrade the pair can be a stale one. A C64U applies a
+// saved standard only after the reset is released, and can switch live, so a host that
+// masters the bus should time PHI2 itself as well, as the stock one does (MachineDetect.h).
 enum : uint8_t { VM_MACHINE_NTSC = 1, VM_MACHINE_60HZ = 2, VM_MACHINE_C128 = 4 };
 enum : int { VM_EEP_MACHINE_ADDR = VM_EEP_BOOTNAME_ADDR + sizeof(VM_HOST_MARKER) };
 static inline int vm_launch_machine(const uint8_t pair[2]) {

@@ -60,11 +60,15 @@
 
 #define IOHNameLength 20  //limited by display location on C64
 
-//The bus timing for a wRegVid_TOD_Clks value (RegVidTODClksMasks).  The main image has it from
-//   MainMenu.asm; the extension image, from what the main image left it (VM_EEP_MACHINE_ADDR).
-//   Called from the IO1 handler, do not FLASHMEM
+uint8_t TimingVidTODClks = 0; //what SetVideoStdDMATiming() last applied, so a timing reset can re-apply it
+
+//The bus timing for a wRegVid_TOD_Clks value (RegVidTODClksMasks).  Every image times PAL/NTSC at
+//   boot and keeps re-timing it from loop() (MachineDetect.h).  C64/C128 comes from MainMenu.asm in
+//   the main image, and from what the main image left it (VM_EEP_MACHINE_ADDR) in the extension image.
+//   Thread mode only: nothing in the ISR changes the timing
 void SetVideoStdDMATiming(uint8_t VidTODClks)
 {
+   TimingVidTODClks = VidTODClks;
    if (VidTODClks & rvtcNTSC)
    {
       nS_MaxAdj = Def_nS_MaxAdjNTSC;
