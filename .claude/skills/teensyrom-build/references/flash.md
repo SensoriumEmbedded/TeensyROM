@@ -70,8 +70,9 @@ Boards:
   main firmware. TeensyROM stays in it to run a large cartridge image, and it reports its
   own build date.
 
-After each write the board shows up for a moment as MinimalBoot, on a COM port of its own,
-before the main firmware starts. The tool waits for the main firmware to answer, then
+After each write the board shows up for a moment as MinimalBoot before the main firmware
+starts. With firmware where MinimalBoot is Serial + MIDI like main, that is the same COM
+port; older firmware's MinimalBoot came up on a COM port of its own. The tool waits for the main firmware to answer, then
 checks that:
 
 - the written board answers with the build date recorded in the image;

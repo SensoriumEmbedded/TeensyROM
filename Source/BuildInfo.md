@@ -16,6 +16,7 @@
        * Optimize: "Faster"
        * CPU Speed: "600 MHz"
        * USB Type: "Serial + MIDI"
+         * The same for MinimalBoot.ino (/Source/Teensy/MinimalBoot): both images must present the same USB device, so a board passing through MinimalBoot keeps its COM and MIDI ports. It won't build with anything else.
      * Build the project and download directly to TeensyROM
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
      * Alternatively, you can generate a .hex file and put it on a SD/USB drive

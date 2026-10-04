@@ -14,10 +14,12 @@ apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
 board (Fab04_FullDMACapable).
 
 The port is $TR_PORT, else the first /dev/cu.usbmodem* on macOS or /dev/ttyACM*
-on Linux. Do not hardcode it: the board's USB serial string carries its chip ID
-(UsbNames_AppendUniqueID), so on macOS the node differs from board to board.
-The main and minimal images present the same USB device; the extension image
-has none.
+on Linux. Do not hardcode it. The main and minimal images present the same USB device,
+with TeensyROM's own serial string (UsbNames_AppendUniqueID), and macOS names
+that by USB location (usbmodem2101) rather than by serial number, so the node
+follows the socket the board is in. Firmware before minimal became Serial + MIDI
+put minimal under the Teensy's serial number instead. The extension image has
+no USB.
 
 macOS and Linux only (termios); no third-party packages.
 """

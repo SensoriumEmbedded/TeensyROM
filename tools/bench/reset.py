@@ -3,7 +3,8 @@
 """Reset the C64 back to the TeensyROM menu.   reset.py
 
 Also the way out of the minimal image: the reset returns the board to the main
-one, which re-enumerates USB under a different name. Every command the firmware
+one, which re-enumerates USB (under the same name; older firmware's minimal
+used a different one). Every command the firmware
 refuses with "Busy!" becomes available again afterwards.
 """
 from trlink import Link

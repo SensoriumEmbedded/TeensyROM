@@ -20,7 +20,7 @@ Skipping step 1 after a C64-side change means the Teensy build silently uses sta
 
 ## Teensy side
 
-- Arduino IDE 2.x + Teensyduino, board "Teensy 4.1", Optimize "Faster", CPU Speed "600 MHz", USB Type "Serial + MIDI" — useful for interactive single-image dev/debug builds and direct IDE upload.
+- Arduino IDE 2.x + Teensyduino, board "Teensy 4.1", Optimize "Faster", CPU Speed "600 MHz", USB Type "Serial + MIDI" (for `MinimalBoot.ino` too, which `#error`s otherwise: both images must present the same USB device, so a board passing through MinimalBoot keeps its COM and MIDI ports) — useful for interactive single-image dev/debug builds and direct IDE upload.
 - **Known-bad toolchain version: Teensyduino 1.62.0** — its GCC 15.2.1 bump (from 11.3.1) causes intermittent SD-read stalls with 2 PSRAM chips installed. Current pinned/recommended version is **1.61.0** (as of FW 0.8, 2026-08-02). Root cause confirmed to be the toolchain, not TeensyROM source — do not "fix" this by changing source code.
 - Alternative: generate a `.hex` and flash via SD/USB drive instead of direct IDE upload (needed since the Teensy USB power trace is severed during assembly, and TR must be C64-powered to program directly)
 

@@ -20,9 +20,10 @@ runs with USB disabled** and answers nothing at all, so a silent port after
 launching an extension is success, not a hang.
 
 `probe.py` asks the board whether it is main or minimal, and reports silence
-otherwise -- which is the extension image or a hung board. On macOS the port
-name is a second opinion: the main image renames its USB device, so it
-enumerates as `usbmodem2101` where the other two use the Teensy's serial number.
+otherwise -- which is the extension image or a hung board. The port name is no
+help: main and minimal present the same USB device, both `usbmodem2101`-style
+on macOS. (On firmware before minimal became Serial + MIDI, minimal enumerated
+under the Teensy's serial number instead.)
 
 The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*` on macOS or
 `/dev/ttyACM*` on Linux. Do not hardcode it. After a reboot `$TR_PORT` is a
