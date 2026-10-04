@@ -738,6 +738,26 @@ FLASHMEM void PrintDebugLog()
                //   }
                //#endif
       }
+      else if (BigBuf[Cnt] & IOTLPostDMAByte)
+      {
+         CmdChannel->printf("      served $%02x\n", BigBuf[Cnt] & 0xff);
+      }
+      else if (BigBuf[Cnt] & IOTLPostDMA)
+      {  //a normal cycle is ~1015 nS (PAL); about half that means the ISR fired during Phi2 low
+         const char *Region[] = {"", "ROML", "ROMH", "IO"};
+         CmdChannel->printf("  post-DMA %s $%04x %-4s +%lu nS\n", (BigBuf[Cnt] & IOTLRead) ? "Read " : "Write",
+            BigBuf[Cnt] & 0xffff, Region[(BigBuf[Cnt] >> 17) & 3], CycTonS((BigBuf[Cnt] >> 24) << 3));
+      }
+      else if (BigBuf[Cnt] & IOTLMarker)
+      {
+         switch (BigBuf[Cnt] & 0xff)
+         {
+            case IOTLMrkHndlrSwitch:  CmdChannel->println("---- InitHndlr done, switching IO handler ----"); break;
+            case IOTLMrkResetAssert:  CmdChannel->println("---- C64 reset asserted ----"); break;
+            case IOTLMrkResetRelease: CmdChannel->println("---- C64 reset released ----"); break;
+            default: CmdChannel->printf("---- marker %lu ----\n", BigBuf[Cnt] & 0xff); break;
+         }
+      }
       else if (BigBuf[Cnt] & AdjustedCycleTiming)
       {
          BigBuf[Cnt] &= ~AdjustedCycleTiming;
@@ -745,7 +765,8 @@ FLASHMEM void PrintDebugLog()
       }
       else
       {
-         CmdChannel->printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
+         CmdChannel->printf("%s 0x%s%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite",
+            (BigBuf[Cnt] & IOTLIO2) ? "df" : "de", BigBuf[Cnt] & 0xff);
 
          if (BigBuf[Cnt] & IOTLDataValid) CmdChannel->printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else CmdChannel->printf("n/a\n");

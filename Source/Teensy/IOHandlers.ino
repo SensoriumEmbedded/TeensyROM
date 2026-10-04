@@ -17,6 +17,45 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifdef DbgIOTraceLog
+uint32_t TraceInitHndlruS = 0;  //time spent in the last InitHndlr, C64 not in reset
+
+//active-low control line, reads the output latch
+#define LineAsserted(pin) (!(CORE_PIN##pin##_PORTREG & CORE_PIN##pin##_BITMASK))
+
+FLASHMEM void PrintResetSnapshot()
+{  //called while the C64 is held in reset: this is the state it will boot into
+   CmdChannel->printf("Reset snapshot, IO handler: %s\n", IOHandler[CurrentIOHandler]->Name);
+   CmdChannel->printf(" Last InitHndlr took %lu uS, %u log entries so far\n", TraceInitHndlruS, BigBufCount);
+   CmdChannel->printf(" Asserted: %s%s%s%s%s\n",
+      LineAsserted(32) ? "GAME " : "", LineAsserted(9) ? "EXROM " : "", LineAsserted(25) ? "NMI " : "",
+      LineAsserted(24) ? "IRQ " : "", LineAsserted(30) ? "DMA " : "");
+   CmdChannel->printf(" LOROM:%08x HIROM:%08x fBusSnoop:%08x DMA_State:%d CycleCountdown:%lu\n",
+      (uint32_t)LOROM_Image, (uint32_t)HIROM_Image, (uint32_t)fBusSnoop, DMA_State, CycleCountdown);
+
+#ifdef Fab04_Freezers
+   if (CurrentIOHandler == IOH_SuperSnapshotV5 || CurrentIOHandler == IOH_SuperSnapshotV5_REU)
+   {  //compare to power-on state from ProcessControlReg(0): Ultimax, RAM at ROML, ROM bank 0 upper at ROMH
+      bool PwrOnState = BankNum == 0 && lcl_LOROM_Image == SSv5_RAM_Buf &&
+                        HIROM_Image == CrtChips[0].ChipROM + 0x2000 &&
+                        LineAsserted(32) && !LineAsserted(9);
+      CmdChannel->printf(" SSv5: BankNum:%d lcl_LOROM:%08x RAM_Buf:%08x ROM0:%08x -> %s\n",
+         BankNum, (uint32_t)lcl_LOROM_Image, (uint32_t)SSv5_RAM_Buf, (uint32_t)CrtChips[0].ChipROM,
+         PwrOnState ? "power-on state" : "*** CHANGED from power-on state ***");
+   }
+#endif
+
+#ifdef Fab04_REU
+   if (NumREU_Banks)
+   {  //defaults from InitHndlr_REU: 10 10 00 00 00 00 f8 ff ff 1f 3f (Stat bit 4 per size)
+      CmdChannel->printf(" REU regs:");
+      for (uint8_t Reg = 0; Reg < REUReg_NumRegs; Reg++) CmdChannel->printf(" %02x", REURegs[Reg]);
+      CmdChannel->println();
+   }
+#endif
+}
+#endif
+
 void IOHandlerNextInit()
 {
    Printf_dbg("Default IO Handler\n");
@@ -49,10 +88,19 @@ void IOHandlerInit(uint8_t NewIOHandler)
    }
    
    Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
-   
+
+#ifdef DbgIOTraceLog
+   uint32_t InitStartuS = micros();
+#endif
+
    if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
 
    Serial.flush();
+#ifdef DbgIOTraceLog
+   //no printing here: it would widen the window being measured, see PrintResetSnapshot
+   TraceInitHndlruS = micros() - InitStartuS;
+   TraceLogMarker(IOTLMrkHndlrSwitch);
+#endif
    CurrentIOHandler = NewIOHandler;
 
    //PRG-load handshake handoff (see HandshakeSnoop in IOH_TeensyROM.c):

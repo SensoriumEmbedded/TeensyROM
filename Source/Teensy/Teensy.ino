@@ -271,8 +271,14 @@ void loop()
 #ifdef DbgSignalSenseReset
       detachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN) );
 #endif
-      SetResetAssert; 
-      CmdChannel->println("Resetting C64"); 
+      SetResetAssert;
+#ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetAssert);
+#endif
+      CmdChannel->println("Resetting C64");
+#ifdef DbgIOTraceLog
+      PrintResetSnapshot();
+#endif
       CmdChannel->flush();
       delay(50); 
       uint32_t NextInterval = 10000, beginWait = millis();
@@ -295,10 +301,16 @@ void loop()
       }
 #ifdef Fab04_BiDirReset
       SetResetInput;
+   #ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetRelease);  //before the debounce, C64 is already running
+   #endif
       delay(50);  //debounce
-#else      
+#else
       SetResetDeassert;
-#endif      
+   #ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetRelease);
+   #endif
+#endif
       doReset=false;
       BtnPressed = false;
 

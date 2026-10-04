@@ -202,9 +202,25 @@ uint32_t* BigBuf = NULL;
 #define IOTLDataValid       0x20000
 #define AdjustedCycleTiming 0x40000
 #define DbgSpecialData      0x80000
+#define IOTLIO2             0x100000  //IO2 ($DFxx) access, IO1 if not set
+#define IOTLMarker          0x200000  //not a bus access: phase marker, code in low byte
+#define IOTLPostDMA         0x400000  //cycle after an REU DMA: addr 15:0, IOTLRead, region 18:17, (cycles since last ISR)>>3 in 31:24
+#define IOTLPostDMAByte     0x800000  //byte served from HIROM_Image for the IOTLPostDMA entry before it, in 7:0
+
+//IOTLMarker codes:
+#define IOTLMrkHndlrSwitch  1  //InitHndlr returned, about to switch CurrentIOHandler
+#define IOTLMrkResetAssert  2  //C64 reset asserted
+#define IOTLMrkResetRelease 3  //C64 reset released
 
 #ifdef DbgIOTraceLog
+   volatile uint8_t PostDMATrace = 0;  //number of Phi2 ISR entries still to log after an REU DMA, set in DirectREU
    __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
+   inline void TraceLogMarker(uint8_t code)
+   {  //called from main loop: block the Phi2 ISR so it can't be mid-entry
+      noInterrupts();
+      if (BigBuf != NULL && BigBufCount < BigBufSize) BigBuf[BigBufCount++] = code | IOTLMarker;
+      interrupts();
+   };
 #else
    __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif
