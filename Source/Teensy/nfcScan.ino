@@ -371,7 +371,7 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
       }
 
       
-      //remove dirs and unknown file types
+      //remove dirs and unknown file types, keeping SD files a /VMS package claims (LoadDirectory marked them)
       Printf_dbg("%d files found\n", LocalNumItems);
       uint16_t CleanLocalNumItems = 0;
       StructMenuItem *CleanLocalDirMenu[MaxMenuItems];
@@ -379,7 +379,11 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
       for(uint16_t FNum=0; FNum<LocalNumItems; FNum++)
       {
          //Printf_dbg("%4d %2d %s\n", FNum, LocalDirMenu[FNum].ItemType, LocalDirMenu[FNum].Name);
-         if (IsStorableLaunchType(LocalDirMenu[FNum].ItemType))
+         if (IsStorableLaunchType(LocalDirMenu[FNum].ItemType)
+#ifdef VM_EXTENSIONS_ENABLED
+             || (MenuSourceID == rmtSD && IsVmClaimedItem(FNum))
+#endif
+            )
          {
             CleanLocalDirMenu[CleanLocalNumItems] = &LocalDirMenu[FNum];
             Printf_dbg("%4d %2d %s\n", CleanLocalNumItems, CleanLocalDirMenu[CleanLocalNumItems]->ItemType, CleanLocalDirMenu[CleanLocalNumItems]->Name);

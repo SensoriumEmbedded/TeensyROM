@@ -58,6 +58,7 @@ uint16_t NumItemsFull;  //Num Items in Current Menu
 // One bit per DriveDirMenu item, set by MarkVmClaimed: a /VMS package claims the file's
 // extension. Kept here so rRegItemTypePlusIOH reads a bit, not the registry.
 uint8_t VmClaimedItems[(MaxMenuItems+7)/8];
+static inline bool IsVmClaimedItem(uint16_t ItemNum) { return VmClaimedItems[ItemNum/8] & (1 << ItemNum%8); }
 #endif
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
