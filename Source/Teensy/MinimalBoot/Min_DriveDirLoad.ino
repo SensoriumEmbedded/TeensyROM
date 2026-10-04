@@ -179,7 +179,10 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          }
          else
          {
-            for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
+            //read in ROM info, one bulk read (see LoadBank in IOH_EasyFlash.c): -1 on error, 0xff fill past the end of the file
+            int BytesRead = (int)myFile.read(CrtChips[NumCrtChips].ChipROM, CrtChips[NumCrtChips].ROMSize);
+            if (BytesRead < 0) BytesRead = 0;
+            if (BytesRead < CrtChips[NumCrtChips].ROMSize) memset(CrtChips[NumCrtChips].ChipROM + BytesRead, 0xff, CrtChips[NumCrtChips].ROMSize - BytesRead);
          }
             
          Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
