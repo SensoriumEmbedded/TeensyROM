@@ -264,9 +264,15 @@ END
 ```
 
 Line 3 is a comma-separated list of file extensions this package claims, at most
-**7 characters in total** (`gb,gbc` fits). Extensions the stock menu owns are
+**31 characters in total** (`a26,a52,a78` fits), each extension at most 7
+characters. Extensions the stock menu owns are
 refused: `prg crt hex p00 sid kla koa ocp pic art aas hpi txt nfo md seq d64 d71
 d81 reu trh`.
+
+The launch record carries the manifest's CRC, and the host recomputes it, so a
+package edited between the launch and the reboot is refused (`$13`). It is the
+CRC32 of the file's bytes exactly as read, line endings included; a file holding
+a NUL byte is malformed.
 
 ### engine.mvm — the MVM1 image
 

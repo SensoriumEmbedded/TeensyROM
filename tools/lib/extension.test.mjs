@@ -113,6 +113,10 @@ test('code larger than the module window is refused with its measurement', () =>
 test('a manifest is six strict lines', () => {
   assert.equal(buildManifest({ id: 'HELLO', extensions: 'hi' }), 'VM1\nHELLO\nhi\nengine.mvm\nclient.crt\nEND\n');
   assert.equal(buildManifest({ id: 'GBVM', extensions: ['gb', 'gbc'] }).split('\n')[2], 'gb,gbc');
+  // 31 characters, the firmware's field less its NUL.
+  const longest = 'a26,a52,a78,nes,gb,gbc,gg,sms,x';
+  assert.equal(longest.length, 31);
+  assert.equal(buildManifest({ id: 'MULTI', extensions: longest }).split('\n')[2], longest);
 });
 
 test('a manifest cannot claim an extension the stock menu owns', () => {
@@ -120,6 +124,7 @@ test('a manifest cannot claim an extension the stock menu owns', () => {
     assert.throws(() => buildManifest({ id: 'X', extensions: extension }), /belongs to the stock menu/);
   }
   assert.throws(() => buildManifest({ id: 'X', extensions: 'toolong' + 'x' }), /must be 1\.\.7 characters/);
+  assert.throws(() => buildManifest({ id: 'X', extensions: 'a26,a52,a78,nes,gb,gbc,gg,sms,xy' }), /must be 1\.\.31 characters/);
   assert.throws(() => buildManifest({ id: 'X', extensions: 'a.b' }), /Invalid extension/);
   assert.throws(() => buildManifest({ id: '../escape', extensions: 'hi' }), /Invalid id/);
   assert.throws(() => buildManifest({ id: 'X'.repeat(24), extensions: 'hi' }), /shorter than 24/);

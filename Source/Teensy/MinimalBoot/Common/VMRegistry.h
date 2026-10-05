@@ -20,7 +20,7 @@ static FLASHMEM bool validExtensions(const char *list){return vm_manifest_extens
 static FLASHMEM bool readManifest(const char *root,Manifest &m){
     char path[128],buf[192];if(!absolute(root,80)||snprintf(path,sizeof path,"%s/manifest.vmi",root)>=(int)sizeof path)return false;
     FsFile f=SD.sdfs.open(path,O_RDONLY);if(!f||f.isDirectory()||f.fileSize()>=sizeof buf){f.close();return false;}
-    const uint32_t n=f.fileSize();const bool ok=f.read(buf,n)==(int)n;f.close();if(!ok)return false;buf[n]=0;
+    const uint32_t n=f.fileSize();const bool ok=f.read(buf,n)==(int)n;f.close();if(!ok||memchr(buf,0,n))return false;buf[n]=0;
     return vm_manifest_parse(buf,root,m);
 }
 // Registry limits are deliberate. Over-limit or ambiguous installs reject launch.
@@ -29,7 +29,7 @@ static FLASHMEM int find(const char *extension,const char *clientId,Launch &laun
     unsigned scanned=0,found=0;FsFile item;
     while(item.openNext(&directory,O_RDONLY)){
         if(item.isDirectory()){
-            char name[24],root[80];const size_t n=item.getName(name,sizeof name);
+            char name[sizeof(Manifest::id)+1],root[80];const size_t n=item.getName(name,sizeof name); //+1 so n<sizeof name-1 below still admits a full-length (23) id
             if(++scanned>32){item.close();directory.close();return -1;}
             if(n&&n<sizeof name-1&&component(name)){
                 snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
@@ -76,7 +76,7 @@ static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
 // every case where the table cannot speak for /VMS answers Unknown, and the
 // caller falls back to the scan.
 enum Association : uint8_t { NotAssociated, Associated, Unknown };
-static char extensions[32][8];static uint8_t extensionCount;static bool extensionsKnown;
+static char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
 static FLASHMEM void refresh(bool sd){
     extensionCount=0;extensionsKnown=false;if(!sd)return;
     FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
@@ -84,7 +84,7 @@ static FLASHMEM void refresh(bool sd){
     while(item.openNext(&dir,O_RDONLY)){
         if(item.isDirectory()){
             if(++scanned>32){overflowed=true;item.close();break;}
-            char id[24],root[80];auto n=item.getName(id,sizeof id);Manifest m{};
+            char id[sizeof(Manifest::id)+1],root[80];auto n=item.getName(id,sizeof id);Manifest m{}; //+1 as in find()
             if(n&&n<sizeof id-1&&component(id)){
                 snprintf(root,sizeof root,"/VMS/%s",id);
                 if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);

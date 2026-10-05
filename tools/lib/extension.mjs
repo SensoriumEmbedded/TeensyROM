@@ -153,9 +153,10 @@ export function buildManifest({ id, extensions, module = 'engine.mvm', client = 
     if (!NAME.test(value) || value.includes('..')) throw new Error(`Invalid ${label}: ${value}`);
     if (value.length >= limit) throw new Error(`Package ${label} must be shorter than ${limit} characters`);
   }
-  if (!list.length || list.length > 7) throw new Error(`Extension list "${list}" must be 1..7 characters`);
+  if (!list.length || list.length > 31) throw new Error(`Extension list "${list}" must be 1..31 characters`);
   for (const extension of list.split(',')) {
     if (!extension || !NAME.test(extension) || extension.includes('.')) throw new Error(`Invalid extension: ${extension}`);
+    if (extension.length > 7) throw new Error(`Extension "${extension}" must be 1..7 characters`);
     if (PROTECTED_EXTENSIONS.includes(extension.toLowerCase())) throw new Error(`Extension "${extension}" belongs to the stock menu`);
   }
   return `VM1\n${id}\n${list}\n${module}\n${client}\nEND\n`;

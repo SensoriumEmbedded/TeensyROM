@@ -73,10 +73,16 @@ int main() {
     assert(vm_path_absolute("/VMS/EXAMPLE", 80) && !vm_path_absolute("/VMS/../etc", 80));
     assert(vm_path_component("EXAMPLE") && !vm_path_component("a/b"));
     assert(vm_manifest_extensions("hi") && !vm_manifest_extensions("prg"));
+    // The list may run to the field less its NUL; each extension stays under 8.
+    assert(vm_manifest_extensions("a26,a52,a78,nes,gb,gbc,gg,sms,x"));
+    assert(!vm_manifest_extensions("a26,a52,a78,nes,gb,gbc,gg,sms,xy"));
+    assert(!vm_manifest_extensions("abcdefgh"));
     char text[] = "VM1\nEXAMPLE\nhi\nengine.mvm\nclient.crt\nEND\n";
+    // The CRC is the file's bytes as read, taken before the parse writes NULs into them.
+    const uint32_t fileCrc = vm_crc32(text, strlen(text));
     VmManifest manifest{};
     assert(vm_manifest_parse(text, "/VMS/EXAMPLE", manifest));
-    assert(!strcmp(manifest.id, "EXAMPLE") && manifest.crc);
+    assert(!strcmp(manifest.id, "EXAMPLE") && manifest.crc == fileCrc);
 
     // The failure record.
     VmFailRecord fail{};

@@ -44,6 +44,24 @@ int main(int argc,char **argv){
     for(unsigned i=0;i<33;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
     refresh(true);assert(associated("Demo.HI")==Associated);
 
+    // A full-length id (23) registers, one longer does not, and a 31-character list
+    // routes through the scan and the cached table alike.
+    const std::string longId(23,'L'),longList="a26,a52,a78,nes,gb,gbc,gg,sms,x";
+    put(base/"VMS"/longId/"manifest.vmi","VM1\n"+longId+"\n"+longList+"\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("a78",nullptr,launch)==1&&launch.root=="/VMS/"+longId);
+    assert(find("x",nullptr,launch)==1);
+    refresh(true);assert(associated("Game.A52")==Associated&&associated("Game.x")==Associated);
+    fs::remove_all(base/"VMS"/longId);
+    const std::string tooLong(24,'L');
+    put(base/"VMS"/tooLong/"manifest.vmi","VM1\n"+tooLong+"\nlng\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("lng",nullptr,launch)==0);
+    fs::remove_all(base/"VMS"/tooLong);
+    // A NUL inside the file would leave bytes the CRC cannot cover, so it is refused.
+    put(base/"VMS/NULVM/manifest.vmi",std::string("VM1\nNULVM\nnul\nengine.mvm\nclient.crt\nEND\n")+'\0'+'x');
+    assert(!readManifest("/VMS/NULVM",manifest)&&find("nul",nullptr,launch)==0);
+    fs::remove_all(base/"VMS/NULVM");
+    refresh(true);
+
     // Path traversal is refused at the component level, before any SD access.
     assert(!absolute("/VMS/../secret",80));assert(!component("../HELLO"));assert(!component("HELLO/VM"));
 

@@ -159,14 +159,15 @@ static inline bool vm_launch_valid(const VmLaunchRecord &l) {
 // <root>/manifest.vmi, parsed into this and CRC'd. The CRC is the only value
 // that has to agree across the reboot: the main image computes it before
 // launching and the host recomputes it, so a package edited in between is
-// caught. It runs over the struct including its padding.
-struct VmManifest { char id[24],extension[8],module[32],client[32];uint32_t crc; };
+// caught. It is the CRC32 of the file's bytes as read, not of this struct, so a
+// field that grows later changes no package's CRC.
+struct VmManifest { char id[24],extension[32],module[32],client[32];uint32_t crc; };
 
 // Extensions the stock menu owns, which no package may claim. A host does not
-// enforce this -- discovery happens in the main image -- but the parser must
-// agree byte for byte or the CRC will not match.
+// enforce this -- discovery happens in the main image -- but it parses with this
+// same function, and a manifest it refuses fails the launch after the reboot ($12).
 VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
-    if(!*list||strlen(list)>7)return false;
+    if(!*list||strlen(list)>=sizeof(VmManifest::extension))return false;
     static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu","trh"};
     for(const char *p=list;*p;){
         char ext[8]{};
@@ -184,11 +185,13 @@ VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
 }
 
 // Six strict lines: VM1, id, extensions, module, client, END. `text` is the
-// whole file, NUL-terminated and writable; `root` is /VMS/<id>, whose last
-// component must equal the id. Returns false without touching `out` on any
-// malformed input.
+// whole file, NUL-terminated and writable, with no NUL of its own (readManifest
+// refuses one), so the CRC taken here, before the parse writes into it, covers
+// every byte of the file; `root` is /VMS/<id>, whose last component must equal
+// the id. Returns false without touching `out` on any malformed input.
 VM_HOST_TEXT static inline bool vm_manifest_parse(char *text, const char *root, VmManifest &out) {
     if(!vm_path_absolute(root,80))return false;
+    const uint32_t crc=vm_crc32(text,strlen(text));
     char *line[6],*p=text;unsigned count=0;
     while(*p&&count<6){line[count++]=p;while(*p&&*p!='\n'&&*p!='\r')p++;if(*p){*p++=0;while(*p=='\n'||*p=='\r')p++;}}
     if(count!=6||*p||strcmp(line[0],"VM1")||strcmp(line[5],"END"))return false;
@@ -196,7 +199,7 @@ VM_HOST_TEXT static inline bool vm_manifest_parse(char *text, const char *root, 
        strlen(line[1])>=sizeof out.id||strlen(line[2])>=sizeof out.extension||strlen(line[3])>=sizeof out.module||strlen(line[4])>=sizeof out.client)return false;
     const char *id=strrchr(root,'/');if(!id||strcmp(id+1,line[1]))return false;
     memset(&out,0,sizeof out);strcpy(out.id,line[1]);strcpy(out.extension,line[2]);strcpy(out.module,line[3]);strcpy(out.client,line[4]);
-    out.crc=vm_crc32(&out,offsetof(VmManifest,crc));return true;
+    out.crc=crc;return true;
 }
 
 // ------------------------------------------------------------ failure record
