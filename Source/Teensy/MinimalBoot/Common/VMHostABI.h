@@ -177,6 +177,8 @@ VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
         memcpy(ext,p,n);
         if(!vm_path_component(ext)||strchr(ext,'.'))return false;
         for(const auto &protectedExt:protectedExtensions)if(!strcasecmp(ext,protectedExt))return false;
+        // Matching ignores case, so gb,GB names one extension twice.
+        for(const char *q=list;q<p;){const char *e=strchr(q,',');if(size_t(e-q)==n&&!strncasecmp(q,ext,n))return false;q=e+1;}
         if(!end)return true;
         p=end+1;
         if(!*p)return false;

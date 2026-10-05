@@ -265,7 +265,8 @@ END
 
 Line 3 is a comma-separated list of file extensions this package claims, at most
 **31 characters in total** (`a26,a52,a78` fits), each extension at most 7
-characters. Extensions the stock menu owns are
+characters and none listed twice (case is ignored, so `gb,GB` is refused).
+Extensions the stock menu owns are
 refused: `prg crt hex p00 sid kla koa ocp pic art aas hpi txt nfo md seq d64 d71
 d81 reu trh`.
 

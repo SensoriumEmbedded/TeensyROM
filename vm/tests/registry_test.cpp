@@ -60,6 +60,10 @@ int main(int argc,char **argv){
     put(base/"VMS/NULVM/manifest.vmi",std::string("VM1\nNULVM\nnul\nengine.mvm\nclient.crt\nEND\n")+'\0'+'x');
     assert(!readManifest("/VMS/NULVM",manifest)&&find("nul",nullptr,launch)==0);
     fs::remove_all(base/"VMS/NULVM");
+    // A list naming one extension twice is malformed, so the package claims nothing.
+    put(base/"VMS/DUPVM/manifest.vmi","VM1\nDUPVM\ndp,DP\nengine.mvm\nclient.crt\nEND\n");
+    assert(!readManifest("/VMS/DUPVM",manifest)&&find("dp",nullptr,launch)==0);
+    fs::remove_all(base/"VMS/DUPVM");
     refresh(true);
 
     // Path traversal is refused at the component level, before any SD access.

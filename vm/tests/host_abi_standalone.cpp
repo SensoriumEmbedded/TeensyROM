@@ -77,6 +77,10 @@ int main() {
     assert(vm_manifest_extensions("a26,a52,a78,nes,gb,gbc,gg,sms,x"));
     assert(!vm_manifest_extensions("a26,a52,a78,nes,gb,gbc,gg,sms,xy"));
     assert(!vm_manifest_extensions("abcdefgh"));
+    // No extension twice, in any case, wherever the second one falls.
+    assert(!vm_manifest_extensions("gb,gb") && !vm_manifest_extensions("gb,GB"));
+    assert(!vm_manifest_extensions("a26,a52,a78,A52") && !vm_manifest_extensions("a26,gb,a26"));
+    assert(vm_manifest_extensions("gb,gbc") && vm_manifest_extensions("gbc,gb"));
     char text[] = "VM1\nEXAMPLE\nhi\nengine.mvm\nclient.crt\nEND\n";
     // The CRC is the file's bytes as read, taken before the parse writes NULs into them.
     const uint32_t fileCrc = vm_crc32(text, strlen(text));
