@@ -41,6 +41,7 @@ int main(int argc,char **argv){
     assert(associated("Demo.HI")==Unknown&&extensionCount==0);
     for(unsigned i=0;i<33;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
     refresh(true);assert(associated("Demo.HI")==Unknown&&extensionCount==0);
+    assert(find("hi",nullptr,launch)==OverLimitOrError);
     for(unsigned i=0;i<33;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
     refresh(true);assert(associated("Demo.HI")==Associated);
 
@@ -271,8 +272,17 @@ int main(int argc,char **argv){
     assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
 
     // Two packages claiming one extension is ambiguous, and ambiguity refuses.
+    // The refusal names the extension and both packages, whichever the scan met first.
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\nhi\nengine.mvm\nclient.crt\nEND\n");
-    assert(find("hi",nullptr,launch)==-1);
+    char rival[sizeof(Manifest::id)]{};
+    assert(find("hi",nullptr,launch,&rival)==Ambiguous);
+    const std::string last=strrchr(launch.root,'/')+1;
+    assert((last=="HELLO"&&!strcmp(rival,"OTHER"))||(last=="OTHER"&&!strcmp(rival,"HELLO")));
+    rebooted=false;message.clear();
+    assert(tryLaunch(rmtSD,"/","Sample.HI")&&!rebooted);
+    assert(message.find(".HI is claimed by both")==0&&message.find("HELLO")!=std::string::npos&&message.find("OTHER")!=std::string::npos);
+    // Only the shared extension is refused; the clients still launch by id.
+    assert(find(nullptr,"OTHER",launch)==1&&find(nullptr,"HELLO",launch)==1);
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\nengine.mvm\nclient.crt\nEND\n");
     assert(find("hi",nullptr,launch)==1);
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\n../bad\nclient.crt\nEND\n");
