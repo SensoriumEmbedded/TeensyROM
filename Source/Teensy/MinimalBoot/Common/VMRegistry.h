@@ -78,12 +78,8 @@ static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
 // send an extension package into stock file handling with nothing said. So
 // every case where the table cannot speak for /VMS answers Unknown, and the
 // caller falls back to the scan.
-//
-// The table is in RAM2 because RAM1 is the stack's, and nothing reads it from
-// the PHI2 ISR. DMAMEM is not zeroed at startup, which is safe only because the
-// count and the flag stay here in RAM1: no row is read before refresh() writes it.
 enum Association : uint8_t { NotAssociated, Associated, Unknown };
-static DMAMEM char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
+static char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
 static FLASHMEM void refresh(bool sd){
     extensionCount=0;extensionsKnown=false;if(!sd)return;
     FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
