@@ -274,13 +274,27 @@ int main(int argc,char **argv){
     // Two packages claiming one extension is ambiguous, and ambiguity refuses.
     // The refusal names the extension and both packages, whichever the scan met first.
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\nhi\nengine.mvm\nclient.crt\nEND\n");
-    char rival[sizeof(Manifest::id)]{};
-    assert(find("hi",nullptr,launch,&rival)==Ambiguous);
+    Rival rival{};
+    assert(find("hi",nullptr,launch,&rival)==Ambiguous&&rival.claims==2);
     const std::string last=strrchr(launch.root,'/')+1;
-    assert((last=="HELLO"&&!strcmp(rival,"OTHER"))||(last=="OTHER"&&!strcmp(rival,"HELLO")));
+    assert((last=="HELLO"&&!strcmp(rival.id,"OTHER"))||(last=="OTHER"&&!strcmp(rival.id,"HELLO")));
     rebooted=false;message.clear();
     assert(tryLaunch(rmtSD,"/","Sample.HI")&&!rebooted);
     assert(message.find(".HI is claimed by both")==0&&message.find("HELLO")!=std::string::npos&&message.find("OTHER")!=std::string::npos);
+    // Three claimants: the count, and exactly the first and the last the scan met. A rival
+    // overwritten on every match would name the second and third, which this tells apart.
+    put(base/"VMS/THIRD/manifest.vmi","VM1\nTHIRD\nhi\nengine.mvm\nclient.crt\nEND\n");
+    std::vector<std::string> claimants; // in the order the fake's openNext walks /VMS
+    for(const auto &e:fs::directory_iterator(base/"VMS")){const auto id=e.path().filename().string();
+        if(id=="HELLO"||id=="OTHER"||id=="THIRD")claimants.push_back(id);}
+    assert(claimants.size()==3);
+    rival=Rival{};
+    assert(find("hi",nullptr,launch,&rival)==Ambiguous&&rival.claims==3);
+    assert(claimants.front()==rival.id&&claimants.back()==strrchr(launch.root,'/')+1);
+    message.clear();
+    assert(tryLaunch(rmtSD,"/","Sample.HI")&&!rebooted&&message.find(".HI is claimed by 3 packages")==0);
+    assert(message.find(claimants.front())!=std::string::npos&&message.find(claimants.back())!=std::string::npos&&message.find("and 1 more")!=std::string::npos);
+    fs::remove_all(base/"VMS/THIRD");
     // Only the shared extension is refused; the clients still launch by id.
     assert(find(nullptr,"OTHER",launch)==1&&find(nullptr,"HELLO",launch)==1);
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\nengine.mvm\nclient.crt\nEND\n");

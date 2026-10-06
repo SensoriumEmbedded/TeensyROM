@@ -25,9 +25,11 @@ static FLASHMEM bool readManifest(const char *root,Manifest &m){
 }
 // Registry limits are deliberate. Over-limit or ambiguous installs reject launch.
 // find() returns how many packages matched (0 or 1), or one of these. On
-// Ambiguous, `rival` (if given) holds the id of a package other than launch.root's.
+// Ambiguous, `rival` (if given) holds the first claimant's id and how many claim
+// it; launch.root is the last claimant's.
 enum : int { OverLimitOrError=-1, Ambiguous=-2 };
-static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch,char (*rival)[sizeof(Manifest::id)]=nullptr){
+struct Rival { char id[sizeof(Manifest::id)]; unsigned claims; };
+static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch,Rival *rival=nullptr){
     FsFile directory=SD.sdfs.open("/VMS",O_RDONLY);if(!directory)return 0;
     unsigned scanned=0,found=0;FsFile item;
     while(item.openNext(&directory,O_RDONLY)){
@@ -37,12 +39,13 @@ static FLASHMEM int find(const char *extension,const char *clientId,Launch &laun
             if(n&&n<sizeof name-1&&component(name)){
                 snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
                 if(readManifest(root,m)&&((clientId&&strcmp(clientId,m.id)==0)||(!clientId&&extensionMatches(m.extension,extension)))){
-                    if(found++&&rival)strcpy(*rival,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
+                    if(found++==1&&rival)strcpy(rival->id,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
                 }
             }
         }
         item.close();
     }
+    if(rival)rival->claims=found;
     const bool error=directory.getError();directory.close();return error?OverLimitOrError:found>1?Ambiguous:(int)found;
 }
 static FLASHMEM bool consume(Launch &l){
@@ -120,9 +123,12 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
         if(d[4]!=VM_ABI||!memchr(d+16,0,24)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){SendMsgPrintfln("Invalid VM client");return true;}
         strcpy(id,(char *)d+16);clientId=id;
     }
-    char rival[sizeof(Manifest::id)]{};const int found=find(ext,clientId,l,&rival);
+    Rival rival{};const int found=find(ext,clientId,l,&rival);
     if(!found){if(!clientId)return false;SendMsgPrintfln("VM package missing in /VMS");return true;}
-    if(found==Ambiguous){SendMsgPrintfln(".%s is claimed by both\r\n%s\r\n%s",ext,rival,strrchr(l.root,'/')+1);return true;}
+    if(found==Ambiguous){
+        if(rival.claims==2)SendMsgPrintfln(".%s is claimed by both\r\n%s\r\n%s",ext,rival.id,strrchr(l.root,'/')+1);
+        else SendMsgPrintfln(".%s is claimed by %u packages\r\n%s\r\n%s\r\nand %u more",ext,rival.claims,rival.id,strrchr(l.root,'/')+1,rival.claims-2);
+        return true;}
     if(found<0){SendMsgPrintfln("Over-limit or unreadable /VMS");return true;}
     if(!clientId)strcpy(l.content,selected);
     VmImageHeader image{};

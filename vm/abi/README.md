@@ -249,7 +249,7 @@ A package is a directory on the SD card holding exactly three files:
 manifest. The loader scans at most **32** directories under `/VMS`; more than
 that, or two packages claiming the same extension, refuses the launch rather
 than guessing. A shared extension refuses only files of that extension, and the
-refusal names both packages.
+refusal names both packages, or how many there are and two of them.
 
 ### manifest.vmi
 
