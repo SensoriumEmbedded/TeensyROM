@@ -1116,10 +1116,12 @@ FLASHMEM void WriteC64SpansCommand()
    uint32_t Total, Landed;
    const uint32_t Began = millis();
 
-   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation
-   // starts a transfer from the PHI2 interrupt and runs it from the main loop, which a job holds,
-   // and the job's next DMA overwrites its state; a paused C64 would be resumed by the first slice.
-   const char *Busy = CurrentIOHandler == IOH_REU ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
+   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation,
+   // alone or alongside a freezer cart (RR, FC3 101%, SSv5), runs its transfers from the PHI2
+   // interrupt using the same DMA_* state a job sets up, and overwrites it; a paused C64 would be
+   // resumed by the first slice.  NumREU_Banks is non-zero whenever REU emulation is set up,
+   // whichever handler set it up.
+   const char *Busy = NumREU_Banks ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
    if (Busy)
    {
       SendU16(FailToken);
