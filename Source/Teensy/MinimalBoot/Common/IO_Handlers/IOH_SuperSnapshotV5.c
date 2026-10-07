@@ -51,6 +51,7 @@ stcIOHandlers IOHndlr_SuperSnapshotV5_REU =
 };
 
 extern void BindFreezeCRT_REU();  // Button handler w/REU
+extern void FreeDriveDirMenu();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
 extern uint16_t LOROM_Mask;
 extern uint8_t* TgetQueue;
@@ -146,6 +147,7 @@ FLASHMEM void InitHndlr_SuperSnapshotV5()
 
 FLASHMEM void InitHndlr_SuperSnapshotV5_REU()
 {
+  FreeDriveDirMenu();  // InitHndlr_REU frees it anyway; do it first so the 32K SSv5 RAM can use that space too
   InitHndlr_SuperSnapshotV5();
   InitHndlr_REU();  // Initialize REU handler for REU compatibility
   BindFreezeCRT_REU();
