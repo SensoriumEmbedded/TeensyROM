@@ -54,6 +54,7 @@ stcIOHandlers IOHndlr_RetroReplay_REU =
 extern volatile uint32_t CycleCountdown;
 extern uint8_t *lcl_LOROM_Image;    
 extern uint8_t CurrentIOHandler;       
+extern void FreeDriveDirMenu();
 
 #define RR_RAM_Buf  TgetQueue  //re-use this as it is freed on main menu start
 
@@ -144,7 +145,7 @@ FLASHMEM void InitHndlr_RetroReplay()
 {
   fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
    
-  RR_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k
+  RR_RAM_Buf = AllocFreezerRAM(32*1024, "RR"); //32k
 
   // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
   //  use ROMLHndlr_RetroReplay: for R/W instead
@@ -192,6 +193,7 @@ FLASHMEM void BindFreezeCRT_REU()
 
 FLASHMEM void InitHndlr_RetroReplay_REU()
 {
+  FreeDriveDirMenu();  // InitHndlr_REU frees it anyway; do it first so the 32K RR RAM can use that space too
   InitHndlr_RetroReplay();
   InitHndlr_REU();  // Initialize REU handler for REU compatibility
   BindFreezeCRT_REU();

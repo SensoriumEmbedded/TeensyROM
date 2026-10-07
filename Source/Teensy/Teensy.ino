@@ -291,8 +291,14 @@ void loop()
 #ifdef DbgSignalSenseReset
       detachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN) );
 #endif
-      SetResetAssert; 
-      CmdChannel->println("Resetting C64"); 
+      SetResetAssert;
+#ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetAssert);
+#endif
+      CmdChannel->println("Resetting C64");
+#ifdef DbgIOTraceLog
+      PrintResetSnapshot();
+#endif
       CmdChannel->flush();
       delay(50); 
       uint32_t NextInterval = 10000, beginWait = millis();
@@ -315,10 +321,16 @@ void loop()
       }
 #ifdef Fab04_BiDirReset
       SetResetInput;
+   #ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetRelease);  //before the debounce, C64 is already running
+   #endif
       delay(50);  //debounce
-#else      
+#else
       SetResetDeassert;
-#endif      
+   #ifdef DbgIOTraceLog
+      TraceLogMarker(IOTLMrkResetRelease);
+   #endif
+#endif
       doReset=false;
       BtnPressed = false;
       Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
@@ -478,7 +490,7 @@ FLASHMEM void SetEEPDefaults()
 {
    CmdChannel->println("--> Setting EEPROM to defaults");
    EEPROM.write(eepAdPwrUpDefaults, 0x90); //default: music on, eth time synch off, hide extensions, 12 hour clock, med js speed (9/15), see RegPowerUpDefaultMasks
-   EEPROM.write(eepAdPwrUpDefaults3, 0x00); //default: Reset Detect enabled, TR+ REU with RR/FC3-101% enabled, see bit mask defs RegPowerUpDefaultMasks3
+   EEPROM.write(eepAdPwrUpDefaults3, 0x00); //default: Reset Detect enabled, TR+ REU with SSv5/RR/FC3-101% enabled, see bit mask defs RegPowerUpDefaultMasks3
    EEPROM.write(eepAdTimezone, 0); //default to GMT (Greenwich Mean Time)
    EEPROM.write(eepAdNextIOHndlr, IOH_None); //default to no Special HW
    SetEthEEPDefaults();

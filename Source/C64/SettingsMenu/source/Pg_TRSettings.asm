@@ -264,7 +264,7 @@ MsgTRSettings:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "d/D", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "     Joystick2 Speed:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "e",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Show File Extensions:", ChrReturn
    !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "TR+ Ext Reset Detect:", ChrReturn   
-   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, " RR/FC3-101% TR+ REU:", ChrReturn
+   !tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "g",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "RR/FC3-101/SS TR+REU:", ChrReturn
    ;!tx EscC,EscArgSpaces+4, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "f",   ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Reboot TeensyROM" , ChrReturn
    !tx 0 
 

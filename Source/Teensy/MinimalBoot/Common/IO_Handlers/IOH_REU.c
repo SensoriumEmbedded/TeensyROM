@@ -353,13 +353,20 @@ void DirectREU()
       REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
    Printf_dbg_reu(" Type %d REU xfer took %luuS\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime);
    //Printf_dbg_reu(" Type %d REU xfer took %luuS, Miss Count=%lu\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime, MisCount);
-   Serial.flush();
-   
+#ifdef DbgMsgs_REU
+   Serial.flush();  //debug only: this runs inside isrPHI2, and can collide with a print already in progress in the main loop
+#endif
+
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
    LastCycCnt = ARM_DWT_CYCCNT; //   Ready for next active cycle
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
    //StartCycCnt = ARM_DWT_CYCCNT; //back to IRQ control
    SetDMADeassert;
+   //Phi2 edges during the transfer left the interrupt pending: clear it so the next isrPHI2
+   //is the CPU's first cycle, not a stale entry in this VIC phase that makes it late.
+   //Matters when the CPU resumes in cart ROM (e.g. Super Snapshot's REU probe at $F783)
+   GPIO6_ISR = CORE_PIN1_BITMASK;  //PHI2_PIN, write-1-to-clear
+   NVIC_CLEAR_PENDING(IRQ_GPIO6789);
 }
 #endif
 
@@ -706,7 +713,7 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 {
    #ifdef DbgIOTraceLog
-      BigBuf[BigBufCount] = Address; //initialize w/ address 
+      BigBuf[BigBufCount] = Address | IOTLIO2; //initialize w/ address
    #endif
 
    if (NumREU_Banks == 0) return;   // no REU: don't respond, looks like open bus
@@ -757,7 +764,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
    }
    #ifdef DbgIOTraceLog
       if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-      if (BigBufCount < BigBufSize) BigBufCount++;
+      if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
    #endif
 }
 

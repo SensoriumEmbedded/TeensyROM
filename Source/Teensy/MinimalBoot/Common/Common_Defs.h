@@ -203,9 +203,22 @@ uint32_t* BigBuf = NULL;
 #define IOTLDataValid       0x20000
 #define AdjustedCycleTiming 0x40000
 #define DbgSpecialData      0x80000
+#define IOTLIO2             0x100000  //IO2 ($DFxx) access, IO1 if not set
+#define IOTLMarker          0x200000  //not a bus access: phase marker, code in low byte
+
+//IOTLMarker codes:
+#define IOTLMrkHndlrSwitch  1  //InitHndlr returned, about to switch CurrentIOHandler
+#define IOTLMrkResetAssert  2  //C64 reset asserted
+#define IOTLMrkResetRelease 3  //C64 reset released
 
 #ifdef DbgIOTraceLog
    __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
+   inline void TraceLogMarker(uint8_t code)
+   {  //called from main loop: block the Phi2 ISR so it can't be mid-entry
+      noInterrupts();
+      if (BigBuf != NULL && BigBufCount < BigBufSize-1) BigBuf[BigBufCount++] = code | IOTLMarker; //last entry is scratch
+      interrupts();
+   };
 #else
    __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif

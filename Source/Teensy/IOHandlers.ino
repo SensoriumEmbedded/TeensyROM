@@ -17,6 +17,24 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#ifdef DbgIOTraceLog
+uint32_t TraceInitHndlruS = 0;  //time spent in the last InitHndlr, C64 not in reset
+
+//active-low control line, reads the output latch
+#define LineAsserted(pin) (!(CORE_PIN##pin##_PORTREG & CORE_PIN##pin##_BITMASK))
+
+FLASHMEM void PrintResetSnapshot()
+{  //called while the C64 is held in reset: this is the state it will boot into
+   CmdChannel->printf("Reset snapshot, IO handler: %s\n", IOHandler[CurrentIOHandler]->Name);
+   CmdChannel->printf(" Last InitHndlr took %lu uS, %u log entries so far\n", TraceInitHndlruS, BigBufCount);
+   CmdChannel->printf(" Asserted: %s%s%s%s%s\n",
+      LineAsserted(32) ? "GAME " : "", LineAsserted(9) ? "EXROM " : "", LineAsserted(25) ? "NMI " : "",
+      LineAsserted(24) ? "IRQ " : "", LineAsserted(30) ? "DMA " : "");
+   CmdChannel->printf(" LOROM:%08x HIROM:%08x fBusSnoop:%08x DMA_State:%d CycleCountdown:%lu\n",
+      (uint32_t)LOROM_Image, (uint32_t)HIROM_Image, (uint32_t)fBusSnoop, DMA_State, CycleCountdown);
+}
+#endif
+
 void IOHandlerNextInit()
 {
    Printf_dbg("Default IO Handler\n");
@@ -49,10 +67,19 @@ void IOHandlerInit(uint8_t NewIOHandler)
    }
    
    Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
-   
+
+#ifdef DbgIOTraceLog
+   uint32_t InitStartuS = micros();
+#endif
+
    if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
 
    Serial.flush();
+#ifdef DbgIOTraceLog
+   //no printing here: it would widen the window being measured, see PrintResetSnapshot
+   TraceInitHndlruS = micros() - InitStartuS;
+   TraceLogMarker(IOTLMrkHndlrSwitch);
+#endif
    CurrentIOHandler = NewIOHandler;
 
    //PRG-load handshake handoff (see HandshakeSnoop in IOH_TeensyROM.c):

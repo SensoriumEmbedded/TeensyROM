@@ -716,10 +716,8 @@ FLASHMEM void PrintDebugLog()
       return;
    }
    
-   bool BufferFull = (BigBufCount == BigBufSize);
-   
-   if  (BufferFull) BigBufCount--; //last element invalid
-   
+   bool BufferFull = (BigBufCount == BigBufSize-1); //loggers stop counting here: the last entry is scratch, not printed
+
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
       CmdChannel->printf("#%04d ", Cnt);
@@ -743,9 +741,20 @@ FLASHMEM void PrintDebugLog()
          BigBuf[Cnt] &= ~AdjustedCycleTiming;
          CmdChannel->printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
+      else if (BigBuf[Cnt] & IOTLMarker)
+      {  //after AdjustedCycleTiming: a long skip's tick count can reach the marker bit
+         switch (BigBuf[Cnt] & 0xff)
+         {
+            case IOTLMrkHndlrSwitch:  CmdChannel->println("---- InitHndlr done, switching IO handler ----"); break;
+            case IOTLMrkResetAssert:  CmdChannel->println("---- C64 reset asserted ----"); break;
+            case IOTLMrkResetRelease: CmdChannel->println("---- C64 reset released ----"); break;
+            default: CmdChannel->printf("---- marker %lu ----\n", BigBuf[Cnt] & 0xff); break;
+         }
+      }
       else
       {
-         CmdChannel->printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
+         CmdChannel->printf("%s 0x%s%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite",
+            (BigBuf[Cnt] & IOTLIO2) ? "df" : "de", BigBuf[Cnt] & 0xff);
 
          if (BigBuf[Cnt] & IOTLDataValid) CmdChannel->printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else CmdChannel->printf("n/a\n");
@@ -1107,10 +1116,12 @@ FLASHMEM void WriteC64SpansCommand()
    uint32_t Total, Landed;
    const uint32_t Began = millis();
 
-   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation
-   // starts a transfer from the PHI2 interrupt and runs it from the main loop, which a job holds,
-   // and the job's next DMA overwrites its state; a paused C64 would be resumed by the first slice.
-   const char *Busy = CurrentIOHandler == IOH_REU ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
+   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation,
+   // alone or alongside a freezer cart (RR, FC3 101%, SSv5), runs its transfers from the PHI2
+   // interrupt using the same DMA_* state a job sets up, and overwrites it; a paused C64 would be
+   // resumed by the first slice.  NumREU_Banks is non-zero whenever REU emulation is set up,
+   // whichever handler set it up.
+   const char *Busy = NumREU_Banks ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
    if (Busy)
    {
       SendU16(FailToken);

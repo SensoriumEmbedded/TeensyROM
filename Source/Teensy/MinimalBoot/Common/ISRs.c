@@ -69,7 +69,7 @@ FASTRUN void isrPHI2()
          if (BigBuf != NULL)
          {
             BigBuf[BigBufCount] = CycSinceLast | AdjustedCycleTiming;
-            if (BigBufCount < BigBufSize) BigBufCount++;
+            if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
          }
       #endif
    }
@@ -104,9 +104,9 @@ FASTRUN void isrPHI2()
    if (fKernRepl != NULL) if (fKernRepl(Address, R_Wn)) return;
 #endif
    
-   WaitUntil_nS(nS_PLAprop); 
-   uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals 
-   
+   WaitUntil_nS(nS_PLAprop);
+   uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 
@@ -129,7 +129,7 @@ FASTRUN void isrPHI2()
 
       #ifdef DbgIOTraceLog
          if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-         if (BigBufCount < BigBufSize) BigBufCount++;
+         if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
       #endif
    }  //IO1
    

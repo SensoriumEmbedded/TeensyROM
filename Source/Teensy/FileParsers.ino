@@ -80,13 +80,14 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
 #ifdef Fab04_Freezers
    // Create pseudo-CRT number (real HWType + 200) to select dual REU & CRT handler
 
-   // All versions RetroReplay are REU compatible, but only the 101% version of 
+   // All versions RetroReplay and SuperSnapshot are REU compatible, but only the 101% version of 
    // FinalCartridge III is REU compatible. This is indicated by CRT subtype bit = 1 
    //  https://1541u-documentation.readthedocs.io/en/latest/howto/cartridges.html
 
    if (!(IO1[rwRegPwrUpDefaults3] & rpud3FreezerREUDisable))  // unless disabled in TR settings
    {
-      if ((HWType == Cart_RetroReplay) ||                                   // All RetroReplay or 
+      if ((HWType == Cart_RetroReplay)     ||                               // All RetroReplay or 
+         (HWType == Cart_SuperSnapshotV5) ||                               // All SuperSnapshotV5 or
          ((HWType == Cart_FinalCartridgeIII) && (*(CRT_Image+0x1A) == 1 ))) // FCIII with REU subtype bit set (101%)
          
       {
@@ -467,6 +468,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
 #ifdef Fab04_Freezers
    if (IO1[rwRegNextIOHndlr] == IOH_SuperSnapshotV5 ||
        IO1[rwRegNextIOHndlr] == IOH_FinalCartridgeIII ||
+       IO1[rwRegNextIOHndlr] == IOH_SuperSnapshotV5_REU ||
        IO1[rwRegNextIOHndlr] == IOH_FCIII_101_REU)
    {  //EXROM==1 && GAME==1, Addr==$8000, Size==$4000
       MyMenuItem->ItemType = rtBin8kLo; //set in IOH handler, using Lo here to not enable VIC cycle
