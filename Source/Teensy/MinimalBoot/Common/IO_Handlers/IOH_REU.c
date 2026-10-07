@@ -353,8 +353,10 @@ void DirectREU()
       REURegs[REUReg_TransLengthHi], REURegs[REUReg_TransLengthLo], REURegs[REUReg_InterruptMask], REURegs[REUReg_AddressControl]);
    Printf_dbg_reu(" Type %d REU xfer took %luuS\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime);
    //Printf_dbg_reu(" Type %d REU xfer took %luuS, Miss Count=%lu\n", REURegs[REUReg_Command] & REUReg_Command_TypeMask, StartTime, MisCount);
-   Serial.flush();
-   
+#ifdef DbgMsgs_REU
+   Serial.flush();  //debug only: this runs inside isrPHI2, and can collide with a print already in progress in the main loop
+#endif
+
    while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising (start transfer phase)
    LastCycCnt = ARM_DWT_CYCCNT; //   Ready for next active cycle
    while(GP6_Phi2(ReadGPIO6)); //Find phi2 falling (start VIC phase)
