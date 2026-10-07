@@ -131,6 +131,12 @@ FLASHMEM void InitHndlr_SuperSnapshotV5()
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5;
    
    SSv5_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k RAM
+   if(SSv5_RAM_Buf == NULL)
+   {  //can't run without it: ProcessControlReg would point RAM banks 1-3 at NULL+offset, i.e. into ITCM code
+      Serial.println("SS5 OOM");
+      Serial.flush();
+      RebootTR();
+   }
    // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
    LOROM_Image = NULL;   

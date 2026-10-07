@@ -146,6 +146,12 @@ FLASHMEM void InitHndlr_RetroReplay()
   fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
    
   RR_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k
+  if (RR_RAM_Buf == NULL)
+  {  //can't run without it: ProcessRRControlReg would point RAM banks 1-3 at NULL+offset, i.e. into ITCM code
+     Serial.println("RR OOM");
+     Serial.flush();
+     RebootTR();
+  }
 
   // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
   //  use ROMLHndlr_RetroReplay: for R/W instead
