@@ -367,9 +367,6 @@ void DirectREU()
    //Matters when the CPU resumes in cart ROM (e.g. Super Snapshot's REU probe at $F783)
    GPIO6_ISR = CORE_PIN1_BITMASK;  //PHI2_PIN, write-1-to-clear
    NVIC_CLEAR_PENDING(IRQ_GPIO6789);
-#ifdef DbgIOTraceLog
-   PostDMATrace = 16;  //log the next cycles in isrPHI2: does the CPU resume where it stopped?
-#endif
 }
 #endif
 

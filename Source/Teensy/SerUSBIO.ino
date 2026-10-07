@@ -736,18 +736,13 @@ FLASHMEM void PrintDebugLog()
                //   }
                //#endif
       }
-      else if (BigBuf[Cnt] & IOTLPostDMAByte)
+      else if (BigBuf[Cnt] & AdjustedCycleTiming)
       {
-         CmdChannel->printf("      served $%02x\n", BigBuf[Cnt] & 0xff);
-      }
-      else if (BigBuf[Cnt] & IOTLPostDMA)
-      {  //a normal cycle is ~1015 nS (PAL); about half that means the ISR fired during Phi2 low
-         const char *Region[] = {"", "ROML", "ROMH", "IO"};
-         CmdChannel->printf("  post-DMA %s $%04x %-4s +%lu nS\n", (BigBuf[Cnt] & IOTLRead) ? "Read " : "Write",
-            BigBuf[Cnt] & 0xffff, Region[(BigBuf[Cnt] >> 17) & 3], CycTonS((BigBuf[Cnt] >> 24) << 3));
+         BigBuf[Cnt] &= ~AdjustedCycleTiming;
+         CmdChannel->printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
       else if (BigBuf[Cnt] & IOTLMarker)
-      {
+      {  //after AdjustedCycleTiming: a long skip's tick count can reach the marker bit
          switch (BigBuf[Cnt] & 0xff)
          {
             case IOTLMrkHndlrSwitch:  CmdChannel->println("---- InitHndlr done, switching IO handler ----"); break;
@@ -755,11 +750,6 @@ FLASHMEM void PrintDebugLog()
             case IOTLMrkResetRelease: CmdChannel->println("---- C64 reset released ----"); break;
             default: CmdChannel->printf("---- marker %lu ----\n", BigBuf[Cnt] & 0xff); break;
          }
-      }
-      else if (BigBuf[Cnt] & AdjustedCycleTiming)
-      {
-         BigBuf[Cnt] &= ~AdjustedCycleTiming;
-         CmdChannel->printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
       else
       {

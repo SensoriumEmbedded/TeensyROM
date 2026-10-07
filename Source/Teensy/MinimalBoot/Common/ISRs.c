@@ -107,20 +107,6 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_PLAprop);
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
 
-#ifdef DbgIOTraceLog
-   if (PostDMATrace)
-   {  //first cycles after DirectREU released the bus
-      PostDMATrace--;
-      uint32_t Region = !GP9_ROML(GPIO_9) ? 1 : !GP9_ROMH(GPIO_9) ? 2 : (!GP9_IO1n(GPIO_9) || !GP9_IO2n(GPIO_9)) ? 3 : 0;
-      uint32_t Since = CycSinceLast >> 3;
-      if (Since > 255) Since = 255;
-      if (BigBufCount < BigBufSize)
-         BigBuf[BigBufCount++] = Address | (R_Wn ? IOTLRead : 0) | (Region << 17) | IOTLPostDMA | (Since << 24);
-      if (Region == 2 && HIROM_Image != NULL && BigBufCount < BigBufSize)
-         BigBuf[BigBufCount++] = HIROM_Image[Address & HIROM_Mask] | IOTLPostDMAByte;
-   }
-#endif
-   
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {
       if (LOROM_Image!=NULL) DataPortWriteWait(LOROM_Image[Address & LOROM_Mask]); 

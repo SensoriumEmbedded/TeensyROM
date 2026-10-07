@@ -32,27 +32,6 @@ FLASHMEM void PrintResetSnapshot()
       LineAsserted(24) ? "IRQ " : "", LineAsserted(30) ? "DMA " : "");
    CmdChannel->printf(" LOROM:%08x HIROM:%08x fBusSnoop:%08x DMA_State:%d CycleCountdown:%lu\n",
       (uint32_t)LOROM_Image, (uint32_t)HIROM_Image, (uint32_t)fBusSnoop, DMA_State, CycleCountdown);
-
-#ifdef Fab04_Freezers
-   if (CurrentIOHandler == IOH_SuperSnapshotV5 || CurrentIOHandler == IOH_SuperSnapshotV5_REU)
-   {  //compare to power-on state from ProcessControlReg(0): Ultimax, RAM at ROML, ROM bank 0 upper at ROMH
-      bool PwrOnState = BankNum == 0 && lcl_LOROM_Image == SSv5_RAM_Buf &&
-                        HIROM_Image == CrtChips[0].ChipROM + 0x2000 &&
-                        LineAsserted(32) && !LineAsserted(9);
-      CmdChannel->printf(" SSv5: BankNum:%d lcl_LOROM:%08x RAM_Buf:%08x ROM0:%08x -> %s\n",
-         BankNum, (uint32_t)lcl_LOROM_Image, (uint32_t)SSv5_RAM_Buf, (uint32_t)CrtChips[0].ChipROM,
-         PwrOnState ? "power-on state" : "*** CHANGED from power-on state ***");
-   }
-#endif
-
-#ifdef Fab04_REU
-   if (NumREU_Banks)
-   {  //defaults from InitHndlr_REU: 10 10 00 00 00 00 f8 ff ff 1f 3f (Stat bit 4 per size)
-      CmdChannel->printf(" REU regs:");
-      for (uint8_t Reg = 0; Reg < REUReg_NumRegs; Reg++) CmdChannel->printf(" %02x", REURegs[Reg]);
-      CmdChannel->println();
-   }
-#endif
 }
 #endif
 
