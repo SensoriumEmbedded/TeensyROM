@@ -270,6 +270,13 @@ int main(int argc,char **argv){
     rebooted=false;
     assert(tryLaunch(rmtSD,"/VMS/HELLO/DATA","Sample.hi"));
     assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
+    // The menu's own path form below the root ("/" + "/VMS" + ...), and any other doubled
+    // slash, reaches the host as one.
+    for(const char *dir:{"//VMS/HELLO/DATA","/VMS//HELLO///DATA/","//VMS/HELLO//DATA//"}){
+        rebooted=false;
+        assert(tryLaunch(rmtSD,dir,"Sample.hi"));
+        assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
+    }
 
     // Two packages claiming one extension is ambiguous, and ambiguity refuses.
     // The refusal names the extension and both packages, whichever the scan met first.

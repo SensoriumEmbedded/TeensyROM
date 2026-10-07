@@ -117,6 +117,9 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
     const char *ext=strrchr(name,'.');if(!ext)return false;ext++;
     Launch l{};char selected[256];
     if(snprintf(selected,sizeof selected,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)sizeof selected){SendMsgPrintfln("VM path too long");return true;}
+    // The host gets one slash between components. The browser's path is "/" plus "/<dir>"
+    // per level, so below the root it starts "//", and stored or remote paths can carry more.
+    {char *w=selected;for(const char *r=selected;*r;r++)if(*r!='/'||w==selected||w[-1]!='/')*w++=*r;*w=0;}
     char id[24]{};const char *clientId=nullptr;
     if(!strcasecmp(ext,"crt")){
         uint8_t d[128];if(!clientDescriptor(selected,d))return false;

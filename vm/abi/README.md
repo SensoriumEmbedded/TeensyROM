@@ -348,7 +348,8 @@ A launch begins in one of two ways:
 
 - the user picks a **client cartridge**, identified by its `VMH1` descriptor; or
 - the user picks a **content file** whose extension a manifest claims, in which
-  case its full path is handed to the module as `content_path`.
+  case its full path, with a single `/` before each component, is handed to the
+  module as `content_path`.
 
 Which extensions are claimed is answered from a table the firmware rebuilds when
 it loads an SD listing, so a package copied onto the card while a listing is
