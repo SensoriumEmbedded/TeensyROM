@@ -124,19 +124,27 @@ FLASHMEM void SpecialBtn_SuperSnapshotV5(bool Up_nDn)
    }
 }
 
+//Freezer cart RAM, shared with RR and AR like SpecialBtn_SuperSnapshotV5.  Doesn't return on failure:
+//  a cart can't run without it, its control register would point RAM at NULL(+offset), i.e. into ITCM code
+FLASHMEM uint8_t* AllocFreezerRAM(uint32_t Size, const char *CartName)
+{
+   uint8_t *Buf = (uint8_t*)calloc(Size, sizeof(uint8_t));
+   if (Buf == NULL)
+   {
+      Serial.printf("%s OOM\n", CartName);
+      Serial.flush();
+      RebootTR();
+   }
+   return Buf;
+}
+
 //__________________________________________________________________________________
 
 FLASHMEM void InitHndlr_SuperSnapshotV5()
 {
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5;
    
-   SSv5_RAM_Buf = (uint8_t*)calloc(32*1024, sizeof(uint8_t)); //32k RAM
-   if(SSv5_RAM_Buf == NULL)
-   {  //can't run without it: ProcessControlReg would point RAM banks 1-3 at NULL+offset, i.e. into ITCM code
-      Serial.println("SS5 OOM");
-      Serial.flush();
-      RebootTR();
-   }
+   SSv5_RAM_Buf = AllocFreezerRAM(32*1024, "SS5"); //32k RAM
    // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
    //  use ROMLHndlr_SuperSnapshotV5 for R/W instead
    LOROM_Image = NULL;   

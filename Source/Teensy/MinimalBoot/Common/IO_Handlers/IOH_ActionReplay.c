@@ -91,12 +91,7 @@ FLASHMEM void InitHndlr_ActionReplay()
 {
    fSpecialBtnChange = &SpecialBtn_SuperSnapshotV5; //same trigger as SSv5
    
-   AR_RAM_Buf = (uint8_t*)calloc(8*1024, sizeof(uint8_t)); //8k RAM
-   //if(AR_RAM_Buf == NULL)
-   //{
-   //   Serial.println("AR OOM");
-   //   REBOOT;
-   //}
+   AR_RAM_Buf = AllocFreezerRAM(8*1024, "AR"); //8k RAM
 
    // fake out the Phi2 isr to not serve LOROM_Image directly as read-only
    //  use ROMLHndlr_ActionReplay for R/W instead
