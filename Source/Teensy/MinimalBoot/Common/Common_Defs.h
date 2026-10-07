@@ -219,7 +219,7 @@ uint32_t* BigBuf = NULL;
    inline void TraceLogMarker(uint8_t code)
    {  //called from main loop: block the Phi2 ISR so it can't be mid-entry
       noInterrupts();
-      if (BigBuf != NULL && BigBufCount < BigBufSize) BigBuf[BigBufCount++] = code | IOTLMarker;
+      if (BigBuf != NULL && BigBufCount < BigBufSize-1) BigBuf[BigBufCount++] = code | IOTLMarker; //last entry is scratch
       interrupts();
    };
 #else

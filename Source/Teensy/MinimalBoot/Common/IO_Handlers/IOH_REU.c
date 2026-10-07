@@ -767,7 +767,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
    }
    #ifdef DbgIOTraceLog
       if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-      if (BigBufCount < BigBufSize) BigBufCount++;
+      if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
    #endif
 }
 

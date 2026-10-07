@@ -69,7 +69,7 @@ FASTRUN void isrPHI2()
          if (BigBuf != NULL)
          {
             BigBuf[BigBufCount] = CycSinceLast | AdjustedCycleTiming;
-            if (BigBufCount < BigBufSize) BigBufCount++;
+            if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
          }
       #endif
    }
@@ -143,7 +143,7 @@ FASTRUN void isrPHI2()
 
       #ifdef DbgIOTraceLog
          if (R_Wn) BigBuf[BigBufCount] |= IOTLRead;
-         if (BigBufCount < BigBufSize) BigBufCount++;
+         if (BigBufCount < BigBufSize-1) BigBufCount++; //last entry is scratch, rewritten once full
       #endif
    }  //IO1
    

@@ -200,10 +200,8 @@ FLASHMEM void PrintDebugLog()
       return;
    }
    
-   bool BufferFull = (BigBufCount == BigBufSize);
-   
-   if  (BufferFull) BigBufCount--; //last element invalid
-   
+   bool BufferFull = (BigBufCount == BigBufSize-1); //loggers stop counting here: the last entry is scratch, not printed
+
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
       CmdChannel->printf("#%04d ", Cnt);
