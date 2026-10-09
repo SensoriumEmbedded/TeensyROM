@@ -85,14 +85,14 @@ TeensyROM uses a dual-firmware system for large cartridge support:
 
 ### Knowing When the Menu Has Booted
 
-After a reset, and after anything else that brings the C64 back to the TeensyROM menu (including a reboot out of Minimal FW), the menu boots before it takes commands reliably. How long that takes depends on the setup: NFC, the SD card or USB drive, loading the startup SID, the network time sync, the TCP listener. It can be under a second, or tens of seconds when DHCP has no network to answer it. A command sent in the middle of the boot can be delayed or lost.
+After a reset, or anything else that returns the C64 to the TeensyROM menu (including a reboot out of Minimal FW), the menu has to finish booting before it reliably accepts commands. Boot time depends on which features are enabled: NFC, the SD card or USB drive, the startup SID, network time sync, and the TCP listener. It ranges from under a second to tens of seconds when DHCP gets no response. A command sent during the boot can be delayed or lost.
 
-Full FW reports where the boot is as the last line of the [Version Info](#version-info) reply:
-  * `Boot: in progress`: from every return to the menu until the menu has listed its items. A boot that runs a pending remote launch ends as the launch starts. A cartridge the TeensyROM starts without the menu (an autolaunch, or a launch sent while in Minimal FW) reads `complete` from the moment it starts.
-  * `Boot: complete`: the menu has finished booting. It stays set while a launched program runs, until the next return to the menu.
+Full FW reports the boot state on the last line of the [Version Info](#version-info) reply:
+  * `Boot: in progress`: from each return to the menu until the menu has displayed its item list. When the C64 was reset to run a remote launch, the state changes to `complete` as the launched file starts. If that file returns to the menu (a SID, text file, picture, or load error, after a key press on its screen), the state goes back to `in progress` until the menu finishes booting and displays its item list. A cartridge started without the menu (an autolaunch, or a launch sent while in Minimal FW) reports `complete` as soon as it starts.
+  * `Boot: complete`: the menu has finished booting and accepts commands. It stays `complete` while a launched program runs and while a launched SID, text file, or picture waits for a key (that screen accepts remote commands), until the next return to the menu.
   * No `Boot:` line: Minimal FW, or firmware from before this line was added.
 
-To wait for the menu, poll Version Info until it says `Boot: complete`, one request at a time, not back to back. `GoodSIDToken` (`0x9B81`) is not a ready signal: the menu sends it when it loads its startup SID, part way through the boot. Over TCP, the listener only starts near the end of the boot, so after a reboot the first reply usually already says `complete`.
+To wait for the menu, poll Version Info until it reports `Boot: complete`. Send one request at a time, wait for each reply, and pause briefly between requests. `GoodSIDToken` (`0x9B81`) does not mean the menu is ready: the menu sends it partway through the boot, when it loads its startup SID. Over TCP, the listener starts near the end of the boot, so after a reboot the first reply usually already reports `complete`.
 
 A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn't clear the flag.
 
