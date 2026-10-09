@@ -64,6 +64,7 @@ uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
 volatile bool BootComplete = false; //set by the menu when its boot ends (rCtlBootComplete) or when a cart starts, cleared by SetUpMainMenuROM()
+                                    //  and by rCtlBootInProgress when a remote launch on reset returns to the menu
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -878,6 +879,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlBootComplete:
                   if (!doReset) BootComplete = true; //ignored while a reset is pending: the old menu may still be finishing its boot
+                  break;
+               case rCtlBootInProgress:
+                  BootComplete = false; //remote launch on reset returned to the menu, which is finishing its boot
                   break;
                case rCtlReturnToMainMenu:
                   BtnPressed = true;

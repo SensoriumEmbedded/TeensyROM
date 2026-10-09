@@ -362,7 +362,7 @@ FLASHMEM void HandleExecution()
    
    if (CartLoaded)
    {
-      BootComplete = true; //the C64 resets into the cart. Started without the menu (autolaunch, back from MinimalBoot), the menu never boots to set it
+      BootComplete = true; //C64 resets straight into the cart; when started without the menu (autolaunch, relaunch from MinimalBoot) nothing else sets it
       doReset=true;
       IOHandlerSelectInit();
    }
