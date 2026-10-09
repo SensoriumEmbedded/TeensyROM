@@ -374,6 +374,7 @@ enum RegCtlCommands
    rCtlMakeExtHostStrWAIT   = 56, // installed host name, ABI and services, into SerialStringBuf
    rCtlUninstallExtHostWAIT = 57, // erase the host slot; reboots unless it was already blank
    rCtlBootComplete         = 58, // menu finished booting: sets BootComplete, reported by the version command
+   rCtlBootInProgress       = 59, // clears BootComplete: a remote launch on reset returned and the menu is finishing its boot
    
 };                               
                                  
