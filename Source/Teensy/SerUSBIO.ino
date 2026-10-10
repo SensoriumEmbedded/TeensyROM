@@ -595,14 +595,21 @@ FLASHMEM void ProcessCommand()
          return;   
    }
 
-   
-   if (CurrentIOHandler != IOH_TeensyROM)
+
+   //ASID Player active: also allow Ping and file commands (SD/USB only, no IO1/IRQ); audio pauses while one runs
+   bool ASIDAllowed = (CurrentIOHandler == IOH_ASID) &&
+      (TokenVal == PingToken         || TokenVal == GetFileToken      ||
+       TokenVal == GetDirectoryToken || TokenVal == GetDirNDJSONToken ||
+       TokenVal == SendFileToken     || TokenVal == PostFileToken     ||
+       TokenVal == CopyFileToken     || TokenVal == DeleteFileToken);
+
+   if (CurrentIOHandler != IOH_TeensyROM && !ASIDAllowed)
    {
       SendU16(FailToken);
       CmdChannel->print("Busy!\n");
       return;
    }
-   //TeensyROM IO Handler is active, additional commands available...
+   //TeensyROM IO Handler active, or ASID Player with an allowed command: additional commands available
    
    switch (TokenVal)
    {
