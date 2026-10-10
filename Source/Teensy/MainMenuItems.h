@@ -54,6 +54,8 @@
 #include "TRMenuFiles/ROMs/TRHelpScreens.prg.h"
 #include "TRMenuFiles/ROMs/TRExtPortCheck.prg.h"
 #include "TRMenuFiles/ROMs/shclock_tr.prg.h"
+#include "TRMenuFiles/ROMs/headcrash.prg.h"
+#include "TRMenuFiles/ROMs/fb64.prg.h"
 #ifdef Fab04_REU
    #include "TRMenuFiles/ROMs/ExpansionPortTest.prg.h"
    #include "TRMenuFiles/ROMs/reutest.prg.h"
@@ -176,7 +178,9 @@ StructMenuItem dirUtilities[] =
      rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
      rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,
      rtFilePrg  , IOH_None         , (char*)"80 Columns"                       , (uint8_t*)a80columns_prg             , sizeof(a80columns_prg) ,
+     rtFilePrg  , IOH_None         , (char*)"CBM FileBrowser v1.6 (IEC drives)", (uint8_t*)fb64_prg                   , sizeof(fb64_prg) ,
      rtFilePrg  , IOH_None         , (char*)"DualCopy"                         , (uint8_t*)DualCopy_prg               , sizeof(DualCopy_prg) ,
+     rtFilePrg  , IOH_None         , (char*)"HEADCRASH Format Util 1541/1581"  , (uint8_t*)headcrash_prg              , sizeof(headcrash_prg) ,
      rtFilePrg  , IOH_None         , (char*)"Hex Mon"                          , (uint8_t*)hex_mon_prg                , sizeof(hex_mon_prg) ,
      rtFilePrg  , IOH_None         , (char*)"Kawari Quick Change"              , (uint8_t*)KawariQuickChange_prg      , sizeof(KawariQuickChange_prg) ,
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
