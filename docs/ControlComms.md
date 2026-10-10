@@ -58,6 +58,8 @@ These commands return `FailToken` (`0x9B7F`) followed by `"Busy!\n"` if the Teen
   * All SID-related commands (PauseSID, SetSIDSong, SetSIDSpeed*, SetSIDVoiceMute)
   * Other menu/UI commands (SetColor, Ping, Debug)
 
+While the ASID Player is running, Ping and the file operations are also accepted. ASID playback can pause while one runs, because the TeensyROM doesn't read incoming ASID data until the command finishes.
+
 ---
 
 ### Minimal vs. Full Firmware Modes
