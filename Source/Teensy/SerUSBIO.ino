@@ -390,6 +390,13 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
    #endif
    
+   // o
+   #ifdef Dbg_SerSD
+      case 'o': //SD card info + speed test
+         SDSpeedTest();
+         break;
+   #endif
+   
    // m, p, k, r, s
    #ifdef Dbg_SerSwift
       case 'm':      
@@ -965,6 +972,201 @@ FLASHMEM void  getFreeITCM()
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
+
+#ifdef Dbg_SerSD
+// SD card info, then a copy of SdFat's TeensySdioDemo speed test (examples/TeensySdioDemo), then
+// what a MinimalBoot bank swap does (LoadBank in IOH_EasyFlash.c): a seek and one 8K read, timed in uS.
+// Writes, then deletes, an 8 MiB file in the SD root.
+FLASHMEM void SDSpeedTest()
+{
+   const char *TestFileName = "/SDSpeedTest.bin";
+   const uint32_t BufSize = 32768;              //largest transfer size tested
+   const uint32_t TestFileSize = 256*BufSize;   //8 MiB, as in TeensySdioDemo, so results compare
+
+   if (CurrentIOHandler != IOH_TeensyROM)
+   {  //holds up loop() for several seconds, which would stall a running handler's polling
+      CmdChannel->println("Busy! Run from the TR menu");
+      return;
+   }
+
+   CmdChannel->println("\n***** SD card info *****");
+   if (!SDFullInit()) //re-begin, so the clock is negotiated fresh
+   {
+      CmdChannel->println("No SD card");
+      return;
+   }
+
+   SdCard *Card = SD.sdfs.card();
+   //an SdioCard: SD.begin(BUILTIN_SDCARD) begins with SdioConfig(FIFO_SDIO)
+   uint32_t kHzClk = static_cast<SdioCard*>(Card)->kHzSdClk();
+   CmdChannel->printf("SdFat %s, SDIO 4-bit, FIFO mode\n", SD_FAT_VERSION_STR);
+   CmdChannel->printf("SD clock: %lu kHz (%s)\n", kHzClk, kHzClk >= 49000 ? "High Speed" : "Default Speed");
+
+   csd_t CSD;
+   bool CSDValid = Card->readCSD(&CSD);
+   uint32_t EraseSize = 0; //flash erase size in 512 byte blocks, 0 if unknown
+   if (!CSDValid) PrintSDError("readCSD failed");
+   else if (CSD.v1.csd_ver == 0) EraseSize = ((CSD.v1.sector_size_high << 1) | CSD.v1.sector_size_low) + 1;
+   else if (CSD.v2.csd_ver == 1) EraseSize = ((CSD.v2.sector_size_high << 1) | CSD.v2.sector_size_low) + 1;
+
+   const char *CardType = "Unknown";
+   switch (Card->type())
+   {
+      case SD_CARD_TYPE_SD1:  CardType = "SD1"; break;
+      case SD_CARD_TYPE_SD2:  CardType = "SD2"; break;
+      case SD_CARD_TYPE_SDHC: CardType = (CSDValid && sdCardCapacity(&CSD) >= 70000000) ? "SDXC" : "SDHC"; break;
+   }
+   uint32_t Sectors = Card->sectorCount();
+   CmdChannel->printf("Card type: %s, %lu MB (%lu sectors)\n", CardType, (uint32_t)((uint64_t)Sectors*512/1000000), Sectors);
+
+   cid_t CID;
+   if (Card->readCID(&CID))
+      CmdChannel->printf("CID: Mfr 0x%02x, OEM %c%c, Product %.5s, Rev %d.%d, SN 0x%08lx, Made %d/%d\n",
+         CID.mid, CID.oid[0], CID.oid[1], CID.pnm, CID.prv_n, CID.prv_m, CID.psn,
+         CID.mdt_month, 2000 + 16*CID.mdt_year_high + CID.mdt_year_low);
+   else PrintSDError("readCID failed");
+
+   uint32_t OCR;
+   if (Card->readOCR(&OCR)) CmdChannel->printf("OCR: 0x%08lx\n", OCR);
+   else PrintSDError("readOCR failed");
+
+   uint8_t FatType = SD.sdfs.fatType();
+   uint32_t ClusterBytes = SD.sdfs.bytesPerCluster();
+   uint32_t FreeClusters = SD.sdfs.freeClusterCount(); //scans the FAT/bitmap
+   if (FatType <= 32) CmdChannel->printf("Volume: FAT%d", FatType);
+   else CmdChannel->printf("Volume: exFAT");
+   CmdChannel->printf(", %luK clusters, %lu clusters, %lu MB free\n", ClusterBytes/1024, SD.sdfs.clusterCount(),
+      (uint32_t)((uint64_t)FreeClusters*ClusterBytes/1000000));
+   uint32_t DataStart = SD.sdfs.dataStartSector();
+   CmdChannel->printf("Data start sector: %lu", DataStart);
+   if (EraseSize) CmdChannel->printf(", %saligned to the %lu block erase size", (DataStart % EraseSize) ? "NOT " : "", EraseSize);
+   CmdChannel->println();
+
+   //From the heap, not RAM_Image, which can be holding a running cartridge's ROM
+   uint8_t *Buf = (uint8_t *)malloc(BufSize);
+   if (!Buf)
+   {
+      CmdChannel->printf("No memory for a %lu byte buffer\n", BufSize);
+      return;
+   }
+   uint32_t *Buf32 = (uint32_t *)Buf;
+
+   FsFile TestFile = SD.sdfs.open(TestFileName, O_RDWR | O_CREAT | O_TRUNC);
+   if (!TestFile)
+   {
+      PrintSDError("Test file open failed");
+      free(Buf);
+      return;
+   }
+
+   //From here on, errors drop through to the cleanup at the end
+   bool Passed = true;
+   CmdChannel->printf("\n***** Speed test: %s, %lu MiB *****\n", TestFileName, TestFileSize/1048576);
+   CmdChannel->printf("%7s %9s %9s %10s %10s\n", "Size", "Write", "Read", "Max write", "Max read");
+   CmdChannel->printf("%7s %9s %9s %10s %10s\n", "bytes", "KB/sec", "KB/sec", "uS", "uS");
+   for (uint32_t BlkSize = 512; Passed && BlkSize <= BufSize; BlkSize *= 2)
+   {
+      uint32_t NumBlks = TestFileSize/BlkSize;
+      uint32_t MaxWrite = 0, MaxRead = 0;
+      if (!TestFile.truncate(0))
+      {
+         PrintSDError("truncate failed");
+         Passed = false;
+         break;
+      }
+
+      uint32_t WriteMicros = micros();
+      for (uint32_t BlkNum = 0; BlkNum < NumBlks; BlkNum++)
+      {
+         Buf32[0] = BlkNum; //marks the start and end of each block, checked when read back
+         Buf32[BlkSize/4 - 1] = BlkNum;
+         uint32_t CallMicros = micros();
+         if (TestFile.write(Buf, BlkSize) != BlkSize)
+         {
+            PrintSDError("write failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         if (CallMicros > MaxWrite) MaxWrite = CallMicros;
+      }
+      WriteMicros = micros() - WriteMicros;
+      if (!Passed) break;
+
+      TestFile.rewind();
+      uint32_t ReadMicros = micros();
+      for (uint32_t BlkNum = 0; BlkNum < NumBlks; BlkNum++)
+      {
+         uint32_t CallMicros = micros();
+         if (TestFile.read(Buf, BlkSize) != (int)BlkSize)
+         {
+            PrintSDError("read failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         if (CallMicros > MaxRead) MaxRead = CallMicros;
+         if (Buf32[0] != BlkNum || Buf32[BlkSize/4 - 1] != BlkNum)
+         {
+            CmdChannel->printf("Data check failed: %lu byte block #%lu\n", BlkSize, BlkNum);
+            Passed = false;
+            break;
+         }
+      }
+      ReadMicros = micros() - ReadMicros;
+      if (!Passed) break;
+
+      CmdChannel->printf("%7lu %9lu %9lu %10lu %10lu\n", BlkSize, (uint32_t)((uint64_t)TestFileSize*1000/WriteMicros),
+         (uint32_t)((uint64_t)TestFileSize*1000/ReadMicros), MaxWrite, MaxRead);
+   }
+
+   //exFAT only: SdFat's FAT32 contiguous flag isn't set by ordinary writes, so it would read "no" regardless
+   if (Passed && FatType > 32) CmdChannel->printf("Test file contiguous (seeks skip the FAT chain): %s\n",
+      TestFile.isContiguous() ? "yes" : "no");
+
+   if (Passed)
+   {  //Bank swap: CRT bank data sits at 0x40 (CRT header) + 0x10 (CHIP header), then every 0x2010
+      //  (CHIP header + 8K), so the reads aren't sector aligned, as with a real CRT
+      const uint32_t NumSwaps = 256;
+      const uint32_t FirstBank = 0x50, BankStride = 0x2010;
+      uint32_t NumBanks = (TestFileSize - FirstBank - 0x2000)/BankStride + 1;
+      uint32_t MinMicros = 0xffffffff, MaxMicros = 0, TotalMicros = 0, NumOver1mS = 0;
+
+      CmdChannel->printf("\n***** Bank swap test: %lu seek + 8K reads at CRT bank offsets *****\n", NumSwaps);
+      for (uint32_t SwapNum = 0; SwapNum < NumSwaps; SwapNum++)
+      {
+         uint32_t Bank = (SwapNum * 389) % NumBanks; //fixed scattered order: seeks both ways, same every run
+         uint32_t CallMicros = micros();
+         if (!TestFile.seek(FirstBank + Bank*BankStride) || TestFile.read(Buf, 8192) != 8192)
+         {
+            PrintSDError("Bank read failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         TotalMicros += CallMicros;
+         if (CallMicros < MinMicros) MinMicros = CallMicros;
+         if (CallMicros > MaxMicros) MaxMicros = CallMicros;
+         if (CallMicros > 1000) NumOver1mS++;
+      }
+      if (Passed) CmdChannel->printf("Per 8K bank: min %luuS, avg %luuS, max %luuS; %lu of %lu over 1mS\n",
+         MinMicros, TotalMicros/NumSwaps, MaxMicros, NumOver1mS, NumSwaps);
+   }
+
+   TestFile.close();
+   if (!SD.sdfs.remove(TestFileName)) CmdChannel->printf("Couldn't remove %s\n", TestFileName);
+   free(Buf);
+   CmdChannel->println(Passed ? "Done" : "Stopped on error");
+}
+
+FLASHMEM void PrintSDError(const char *What)
+{
+   uint8_t ErrCode = SD.sdfs.sdErrorCode();
+   CmdChannel->printf("%s, SD error 0x%02x ", What, ErrCode);
+   printSdErrorSymbol(CmdChannel, ErrCode);
+   CmdChannel->printf(", data 0x%02x\n", SD.sdfs.sdErrorData());
+}
+#endif
 
 #ifdef Fab04_FullDMACapable
 // Staging for one remote DMA command, from the heap and freed when the command returns.  Not
