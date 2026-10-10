@@ -103,18 +103,54 @@ FLASHMEM bool EnsureDirectory(const char* path, FS& fs)
     return result;
 }
 
+// The USB host port runs at 115200 baud (11.52 bytes/mS), so only the device port gets the
+// tight floor.  The constant must span several SerialTimoutMillis: the deadline is tested
+// before SerialAvailabeTimeout, so one legal per-byte wait can overrun it by a full window.
+FLASHMEM uint32_t TransferCeilingmS(uint32_t len)
+{
+   const uint32_t FloorBytesPer_mS = (CmdChannel == &Serial) ? 10 : 2;
+
+   return SerialTimoutMillis * 10 + len / FloorBytesPer_mS;
+}
+
+// Discards the rest of an aborted payload, which ProcessCommand would otherwise scan for
+// tokens.  Capped in absolute time, since a peer that keeps sending resets Quiet forever.
+FLASHMEM void DrainCmdChannel()
+{
+   const uint32_t Began = millis();
+   const uint32_t CeilingmS = SerialTimoutMillis * 2;
+   uint32_t Quiet = Began;
+
+   while (millis() - Quiet < SerialTimoutMillis && millis() - Began < CeilingmS)
+   {
+      if (CmdChannel->available()) { CmdChannel->read(); Quiet = millis(); }
+   }
+}
+
 FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
 {
     uint32_t bytenum = 0;
     uint8_t byteIn;
 
+    const uint32_t Began = millis();
+    const uint32_t CeilingmS = TransferCeilingmS(len);
+
     while (bytenum < len)
     {
+        if (millis() - Began >= CeilingmS)
+        {
+            SendU16(FailToken);
+            CmdChannel->printf("Too slow, %lu of %lu bytes\n", bytenum, len);
+            file.close();
+            DrainCmdChannel();
+            return false;
+        }
         if (!SerialAvailabeTimeout())
         {
             SendU16(FailToken);
             CmdChannel->printf("Rec %lu of %lu bytes\n", bytenum, len);
             file.close();
+            DrainCmdChannel();
             return false;
         }
         file.write(byteIn = CmdChannel->read());
@@ -576,8 +612,20 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
     uint8_t chunk[64];
 
-    while (bytenum < len) 
+    // Also tested in the stall branch below: the 2 s there resets on every partial write, so
+    // a peer trickling one byte at a time would otherwise run a whole chunk past the deadline.
+    const uint32_t Began = millis();
+    const uint32_t CeilingmS = TransferCeilingmS(len);
+
+    while (bytenum < len)
     {
+        if (millis() - Began >= CeilingmS)
+        {
+            Printf_dbg("[SendFileData] Deadline - %lu/%lu bytes\n", bytenum, len);
+            SendU16(FailToken);
+            CmdChannel->print("SendFileData: too slow\n");
+            return false;
+        }
         uint32_t bytesToRead = sizeof(chunk);
         if (bytenum + bytesToRead > len) 
         {
@@ -609,6 +657,13 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
                 offset += toWrite;
                 lastProgressTime = millis();
             } 
+            else if (millis() - Began >= CeilingmS)
+            {
+                Printf_dbg("[SendFileData] Deadline - %lu/%lu bytes\n", bytenum + offset, len);
+                SendU16(FailToken);
+                CmdChannel->print("SendFileData: too slow\n");
+                return false;
+            }
             else if (millis() - lastProgressTime > 2000) 
             {
                 Printf_dbg("[SendFileData] Timeout - no progress for 2s at %lu/%lu\n", 
@@ -628,7 +683,7 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
     Printf_dbg("[SendFileData] Complete - Sent %lu bytes\n", bytenum);
     Printf_dbg("[SendFileData] Flushing output...\n");
-    CmdChannel->flush();
+    FlushCmdChannel(CmdChannel);
     Printf_dbg("[SendFileData] Flush complete\n");
     return true;
 }

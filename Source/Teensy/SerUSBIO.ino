@@ -292,7 +292,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             if(StartMicros>MaxMicros) MaxMicros=StartMicros;
             if(StartMicros<MinMicros) MinMicros=StartMicros;
             CmdChannel->printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
-            CmdChannel->flush();
+            FlushCmdChannel(CmdChannel);
             delay(10); //allow scope time to re-arm
          }
          CmdChannel->printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
@@ -833,6 +833,13 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
    return true;
 }
 
+FLASHMEM void FlushCmdChannel(Stream *Channel)
+{
+   // EthernetClient::flush() and USBSerialBase::flush() wait with no deadline for the peer
+   // to ACK; the bytes are already queued to go without them.
+   if (Channel == &Serial) Serial.send_now();
+}
+
 FLASHMEM void SendU16(uint16_t SendVal)
 {
    CmdChannel->write((uint8_t)(SendVal & 0xff));
@@ -1017,12 +1024,22 @@ FLASHMEM void WriteC64MemCommand()
       return;
    }
 
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
+   const uint32_t CeilingmS = TransferCeilingmS(DMALength);
+
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
    {
+      if(millis() - Began >= CeilingmS)
+      {
+         SendU16(FailToken);
+         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, DMALength);
+         DrainCmdChannel();
+         return;
+      }
       if(!SerialAvailabeTimeout())
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
+         DrainCmdChannel();
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
