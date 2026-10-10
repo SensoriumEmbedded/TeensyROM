@@ -270,6 +270,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       SetNumItems(NumMenuItems);
       IO1[rwRegCursorItemOnPg] = MenuNum;
       SelItemFullIdx = MenuNum;  //  "Select" item
+      UpdateItemTypeReg();
    }
    else
    {
@@ -285,6 +286,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       SetNumItems(1); //sets # of menu items
       IO1[rwRegCursorItemOnPg] = 0;
       SelItemFullIdx = 0;  //  "Select" item
+      UpdateItemTypeReg();
    }
    
    //Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);

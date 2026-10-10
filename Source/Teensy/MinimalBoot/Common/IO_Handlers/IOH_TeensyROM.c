@@ -598,6 +598,26 @@ FLASHMEM void ApplyMenuVidReport()
    SetMachineInfoStr();
 }
 
+//rRegItemTypePlusIOH for the selected item, worked out when the item is selected so the C64's read is a plain
+//   register read.  Worked out during the read itself, the item type reached the bus ~40nS after every other
+//   IO1 read (~342nS after ISR entry, vs ~300nS): on NTSC (250425 C64 with a Kawari) that left no data setup
+//   time, and whether a read failed came down to how late code layout made the ISR entry.  Precomputed, it
+//   ran clean with nS_PLAprop raised from 150 to 200 on a layout where the old read failed at 150.
+//   Called from the ISR on the rwRegSelItemOnPage write, after the data is latched, and from thread mode
+//   wherever else the selection, the menu or its /VMS claims can change: after each status function (the
+//   C64 is still waiting) and after a remote launch's selection (the menu's RunSelected reads the type then
+//   without selecting first).  Not FLASHMEM: the ISR calls it.
+void UpdateItemTypeReg()
+{
+   if (MenuSource == NULL) return; //no menu set up yet
+   uint8_t Data = MenuSource[SelItemFullIdx].ItemType;
+   if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   if(IO1[rWRegCurrMenuWAIT] == rmtSD && VmClaimedItems[SelItemFullIdx/8] & (1 << SelItemFullIdx%8)) Data |= 0x40; //bit 6: show rsstItemExt as the type
+#endif
+   IO1[rRegItemTypePlusIOH] = Data;
+}
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
@@ -605,14 +625,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    {
       switch(Address)
       {
-         case rRegItemTypePlusIOH:
-            Data = MenuSource[SelItemFullIdx].ItemType;
-            if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
-#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
-            if(IO1[rWRegCurrMenuWAIT] == rmtSD && VmClaimedItems[SelItemFullIdx/8] & (1 << SelItemFullIdx%8)) Data |= 0x40; //bit 6: show rsstItemExt as the type
-#endif
-            DataPortWriteWaitLog(Data);
-            break;
+         //rRegItemTypePlusIOH: the default read, set by UpdateItemTypeReg()
          case rRegStreamData:
             DataPortWriteWait(XferImage[StreamOffsetAddr]);
             //inc on read, check for end:
@@ -635,6 +648,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       {
          case rwRegSelItemOnPage:
             SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            UpdateItemTypeReg();
+            //fall through
          case rwRegStatus:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
@@ -968,6 +983,7 @@ void PollingHndlr_TeensyROM()
       if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
       else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
       Serial.flush();
+      UpdateItemTypeReg(); //the work may have moved the selection or changed the menu
       IO1[rwRegStatus] = rsReady;
    }
    usbHostMIDI.read();
