@@ -28,7 +28,7 @@ Binary, token-based request/response protocol over USB Serial or Ethernet TCP (p
 **Fully documented in [docs/ControlComms.md](/docs/ControlComms.md) — read that doc directly rather than duplicating it here.** Key structural points worth flagging up front:
 
 - Command tokens sent big-endian to TR; TR's Ack/replies are little-endian
-- Commands split into "always-available" (work even while TR is busy — reset, launch, version, DMA memory access, C64 pause) vs "conditionally-available" (return `FailToken` + `"Busy!"` if not idle — file ops, SID commands, most UI commands). While the ASID Player runs, Ping and file ops are also accepted; ASID playback can pause while one runs
+- Commands split into "always-available" (work even while TR is busy — reset, launch, version, DMA memory access, C64 pause) vs "conditionally-available" (return `FailToken` + `"Busy!"` if not idle — file ops, SID commands, most UI commands). While the ASID Player runs, Ping and file ops are also accepted over USB serial (TCP doesn't answer then: the player turns off the Ethernet interrupt); ASID playback can pause while one runs
 - Firmware-mode-aware: minimal-boot firmware only accepts a restricted command subset — see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware)
 - Implemented Teensy-side in `Source/Teensy/SerUSBIO.ino` (serial) and `Source/Teensy/ServiceTCP.ino` (Ethernet, routes into the same parser)
 - Several independent third-party client implementations exist (TeensyROM-UI, TeensyROM-Web, TeensyROM-CLI, trterm, c64cast) — see the project table in `docs/ControlComms.md`
