@@ -1020,9 +1020,9 @@ FLASHMEM void SDSpeedTest()
    CmdChannel->printf("Card type: %s, %lu MB (%lu sectors)\n", CardType, (uint32_t)((uint64_t)Sectors*512/1000000), Sectors);
 
    cid_t CID;
-   if (Card->readCID(&CID))
+   if (Card->readCID(&CID))  //SdFat 2.1.2's psn holds the CID's big-endian bytes as read, so swap them
       CmdChannel->printf("CID: Mfr 0x%02x, OEM %c%c, Product %.5s, Rev %d.%d, SN 0x%08lx, Made %d/%d\n",
-         CID.mid, CID.oid[0], CID.oid[1], CID.pnm, CID.prv_n, CID.prv_m, CID.psn,
+         CID.mid, CID.oid[0], CID.oid[1], CID.pnm, CID.prv_n, CID.prv_m, __builtin_bswap32(CID.psn),
          CID.mdt_month, 2000 + 16*CID.mdt_year_high + CID.mdt_year_low);
    else PrintSDError("readCID failed");
 
@@ -1051,7 +1051,7 @@ FLASHMEM void SDSpeedTest()
    }
    uint32_t *Buf32 = (uint32_t *)Buf;
 
-   FsFile TestFile = SD.sdfs.open(TestFileName, O_RDWR | O_CREAT | O_TRUNC);
+   FsFile TestFile = SD.sdfs.open(TestFileName, O_RDWR | O_CREAT | O_TRUNC); //truncate one left by an interrupted run
    if (!TestFile)
    {
       PrintSDError("Test file open failed");
@@ -1162,6 +1162,11 @@ FLASHMEM void SDSpeedTest()
 FLASHMEM void PrintSDError(const char *What)
 {
    uint8_t ErrCode = SD.sdfs.sdErrorCode();
+   if (!ErrCode)
+   {  //no card command failed: the file system refused, a full card for one
+      CmdChannel->printf("%s, a file system error, not a card error (card full?)\n", What);
+      return;
+   }
    CmdChannel->printf("%s, SD error 0x%02x ", What, ErrCode);
    printSdErrorSymbol(CmdChannel, ErrCode);
    CmdChannel->printf(", data 0x%02x\n", SD.sdfs.sdErrorData());
