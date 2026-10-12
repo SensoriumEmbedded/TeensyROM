@@ -47,10 +47,17 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
 * An extension usually comes with a small registration folder for your SD card, which tells TeensyROM which file types belong to it (for example, `.mpe` files for MPE).
 * Selecting one of those files from the SD card in the file browser hands the C64 over to the extension.
 * To get back to the TeensyROM menu at any time, press the TeensyROM menu button, or reboot your C64.
+* If a file type doesn't open its extension, the "Installed Extension" settings page (below) lists what's registered and why one wouldn't start.
 
 ### Checking or removing the installed extension
 * In the TeensyROM Main Menu, select **F8** to go to the Settings Menu, then **0** for "Installed Extension".
   * This page shows the name of the installed extension, or "None installed".
+  * Below that, it lists the registration folders in `/VMS` on the SD card, one per row, with the file types each one claims. A mark in front of a name flags a problem:
+    * `*` Another folder claims one of the same file types. TeensyROM won't open that file type with either of them until one is removed.
+    * `x` TeensyROM couldn't read the folder: its name isn't valid, or its `manifest.vmi` is missing or invalid. It claims nothing.
+    * `!` The installed extension can't run this one. A row below the list says why.
+  * After the list, rows say what else stops a launch (for example, no extension installed), then how the last launch went.
+  * The page checks the SD card each time it opens, so it also shows a card that was just inserted or swapped.
 * Press `u` to uninstall it, then `y` to confirm. TeensyROM restarts afterwards.
   * Also use `u` if the page says `None installed; slot not blank.` That means an earlier install or uninstall didn't finish.
 * ***Important:*** Uninstall any extension before loading an older firmware without extension support. That firmware can't update itself while an extension is installed.

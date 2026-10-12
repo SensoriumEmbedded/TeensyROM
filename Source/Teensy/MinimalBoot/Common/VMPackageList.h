@@ -1,0 +1,230 @@
+// SPDX-License-Identifier: MIT
+#pragma once
+#include <stdarg.h>
+#include "VMRegistry.h"
+#include "VMFail.h"
+
+// The extension packages on the SD card, for the settings menu's Installed Extension
+// page: a row per package, then a row for each reason one of them would not launch,
+// then how the last launch went. Each row is one SendMsgPrintfln, which the C64 prints
+// under the page's own header. It reads /VMS itself rather than VmRegistry's table,
+// which is empty whenever the menu's source is not SD and keeps no ids, and it changes
+// nothing the launch path reads.
+//
+// The page has rows 12-20 for it, 21 being the divider: nine rows. A row stays within
+// 39 columns, because one that fills all 40 makes the screen editor advance by itself
+// and the next message's leading return then leaves a blank row.
+//
+// COPIES: the walk over /VMS in collect() repeats VmRegistry::find() and refresh()
+// (VMRegistry.h) -- the 32-folder limit, the id rules, the manifest parse -- and
+// fileCheck() repeats preflight()'s module-header and client-descriptor checks without
+// its two CRC passes. They are copies rather than shared so that this page left the
+// launch path untouched for the 0.9 release. A change to those rules there has to be
+// made here too, or this page and the launch will disagree.
+namespace VmPackageList {
+enum : unsigned { Rows=9, Columns=39, PackageRows=8, IdColumns=10, ExtensionColumns=26 };
+typedef char Row[Columns+1];
+
+enum : unsigned { FolderLimit=32 };  // find()'s and refresh()'s
+enum Walk : uint8_t { WalkDone, WalkNoDirectory, WalkOverLimit, WalkError };
+enum State : uint8_t { Listed, BadName, BadManifest };
+// What launching would refuse, in the order tryLaunch() finds it.
+enum Refusal : uint8_t { NoRefusal, ModuleFile, ClientFile, Services, CodeBase };
+struct Entry {
+    char id[sizeof(VmManifest::id)];  // the folder's name; a BadName one cut to fit and filtered
+    char extension[sizeof(VmManifest::extension)];
+    State state; Refusal refusal;
+    uint32_t detail;                  // Services: the bits the host lacks; CodeBase: the module's base
+};
+struct Scan { Entry entry[FolderLimit]; unsigned count; Walk walk; bool cardRead; };
+
+// A byte of a folder name goes to the screen only if an id could hold it. Anything
+// else becomes '?', so the row still says which folder it is without handing the C64
+// a control code.
+static FLASHMEM char shown(char c){const char s[2]={c,0};return vm_path_component(s)?c:'?';}
+
+// preflight()'s checks on the module image's header and the client cartridge's
+// descriptor, with the same conditions, and without the CRC passes over every byte of
+// both files that follow them there. A copy: see the top of this file.
+static FLASHMEM Refusal fileCheck(const char *root,const VmManifest &m,VmImageHeader &h){
+    char path[128];snprintf(path,sizeof path,"%s/%s",root,m.module);FsFile f=SD.sdfs.open(path,O_RDONLY);
+    const bool module=f&&!f.isDirectory()&&f.fileSize()<=UINT32_MAX&&f.read(&h,64)==64&&vm_valid_header(h,f.fileSize());
+    f.close();if(!module)return ModuleFile;
+    snprintf(path,sizeof path,"%s/%s",root,m.client);f=SD.sdfs.open(path,O_RDONLY);uint8_t d[128];
+    const bool client=f&&f.fileSize()==0x6070&&f.seekSet(0x4070)&&f.read(d,128)==128&&!memcmp(d,"VMH1",4)&&d[4]==VM_ABI&&
+                      memchr(d+16,0,24)&&!strcmp((char *)d+16,m.id)&&vm_crc32(d,124)==*(uint32_t *)(d+124);
+    f.close();return client?NoRefusal:ClientFile;
+}
+
+// One folder of /VMS. `n` is getName's answer: an id is 1-23 characters of
+// vm_path_component's set, as find() and refresh() require.
+static FLASHMEM void entry(Scan &s,const VmHostId *host,const char *name,size_t n){
+    Entry &e=s.entry[s.count++];
+    memset(&e,0,sizeof e);
+    for(size_t i=0;name[i]&&i+1<sizeof e.id;i++)e.id[i]=shown(name[i]);
+    if(!n||n>=sizeof(VmManifest::id)||!VmRegistry::component(name)){e.state=BadName;return;}
+    char root[80];snprintf(root,sizeof root,"/VMS/%s",name);VmManifest m{};
+    if(!VmRegistry::readManifest(root,m)){e.state=BadManifest;return;}
+    e.state=Listed;strcpy(e.extension,m.extension);
+    VmImageHeader h{};
+    if((e.refusal=fileCheck(root,m,h))!=NoRefusal)return;
+    // What the host is owed, only when it can say: one without a descriptor is
+    // launched without these checks, and one on another ABI refuses every package,
+    // which layout() says once.
+    if(!host||host->abi!=VM_ABI)return;
+    if(const uint32_t missing=h.required_services&~host->services){e.refusal=Services;e.detail=missing;}
+    else if(!vm_host_takes_code(h,host->code_floor)){e.refusal=CodeBase;e.detail=h.code_base;}
+}
+
+// `host` is the installed host's descriptor, null when there is no host or it has none.
+// `card` is whether a card is in the slot and begun, which the caller finds out from the
+// card itself (ShowVmPackages, DriveDirLoad.ino). It cannot be found here by reading:
+// with the card pulled, SdFat still opens the root directory it remembers, so a missing
+// card read as one without /VMS.
+static FLASHMEM void collect(Scan &s,const VmHostId *host,bool card){
+    s.count=0;s.cardRead=card;s.walk=WalkNoDirectory;
+    FsFile directory;
+    if(card&&(directory=SD.sdfs.open("/VMS",O_RDONLY))){
+        s.walk=WalkDone;unsigned scanned=0;FsFile item;
+        while(item.openNext(&directory,O_RDONLY)){
+            if(item.isDirectory()){
+                if(++scanned>FolderLimit){item.close();s.walk=WalkOverLimit;break;}
+                // Wider than any id, so a folder that is not one can still be named.
+                // SdFat gives back an empty name when it does not fit.
+                char name[64]{};const size_t n=item.getName(name,sizeof name);name[sizeof name-1]=0;
+                entry(s,host,name,n);
+            }
+            item.close();
+        }
+        if(s.walk==WalkDone&&directory.getError())s.walk=WalkError;
+        directory.close();
+    }
+    // By id, ignoring case: the card lists folders in the order they were made.
+    for(unsigned i=1;i<s.count;i++)
+        for(unsigned j=i;j&&strcasecmp(s.entry[j-1].id,s.entry[j].id)>0;j--){const Entry t=s.entry[j];s.entry[j]=s.entry[j-1];s.entry[j-1]=t;}
+}
+
+struct Out { Row *row; unsigned count; };
+// One row, if the block has room for it. A row too wide is cut at the last column with
+// a '>', as MakeExtHostStr marks its own cut, rather than silently.
+__attribute__((format(printf,2,3)))
+static FLASHMEM void add(Out &out,const char *format,...){
+    if(out.count==Rows)return;
+    char line[96];va_list args;va_start(args,format);vsnprintf(line,sizeof line,format,args);va_end(args);
+    if(strlen(line)>Columns){line[Columns-1]='>';line[Columns]=0;}
+    strcpy(out.row[out.count++],line);
+}
+
+// The k-th extension of a manifest's list; vm_manifest_extensions bounds each to 7.
+static FLASHMEM bool extensionAt(const char *list,unsigned k,char (&ext)[8]){
+    for(const char *p=list;*p;k--){
+        const char *end=strchr(p,',');const size_t n=end?size_t(end-p):strlen(p);
+        if(!k){const size_t c=n<sizeof ext-1?n:sizeof ext-1;memcpy(ext,p,c);ext[c]=0;return true;}
+        if(!end)break;
+        p=end+1;
+    }
+    return false;
+}
+static FLASHMEM bool claims(const Entry &e,const char *ext){return e.state==Listed&&VmRegistry::extensionMatches(e.extension,ext);}
+// True when another package claims one of entry i's extensions, which tryLaunch then
+// refuses for both.
+static FLASHMEM bool shared(const Scan &s,unsigned i){
+    char ext[8];
+    for(unsigned k=0;extensionAt(s.entry[i].extension,k,ext);k++)
+        for(unsigned j=0;j<s.count;j++)if(j!=i&&claims(s.entry[j],ext))return true;
+    return false;
+}
+
+// x: not read at all; *: shares an extension; !: would not launch on this host.
+static FLASHMEM void packageRow(Out &out,const Scan &s,unsigned i){
+    const Entry &e=s.entry[i];
+    const char mark=e.state!=Listed?'x':shared(s,i)?'*':e.refusal?'!':' ';
+    char id[IdColumns+1];
+    if(!e.id[0])strcpy(id,"?");
+    else if(strlen(e.id)>IdColumns){memcpy(id,e.id,IdColumns-1);id[IdColumns-1]='>';id[IdColumns]=0;}
+    else strcpy(id,e.id);
+    const char *what=e.state==BadName?"(bad folder name)":e.state==BadManifest?"(no valid manifest.vmi)":e.extension;
+    // A list too long is cut after the last whole extension that fits, with a '>'.
+    char list[ExtensionColumns+1];
+    if(strlen(what)<=ExtensionColumns)strcpy(list,what);
+    else{size_t keep=0;for(size_t c=0;c<ExtensionColumns;c++)if(what[c]==',')keep=c;
+        memcpy(list,what,keep);list[keep]='>';list[keep+1]=0;}
+    add(out," %c%-*s %s",mark,(int)IdColumns,id,list);
+}
+
+// Fills `rows` and returns how many: the packages, then what would refuse a launch, then
+// the last launch, each only while there is a row left for it. `last` is the record the
+// main image collected at boot (VmFail::captured), null when there was none.
+static FLASHMEM unsigned layout(const Scan &s,bool installed,const VmHostId *host,const VmFailRecord *last,Row (&rows)[Rows]){
+    Out out{rows,0};
+    unsigned listed=0;for(unsigned i=0;i<s.count;i++)listed+=s.entry[i].state==Listed;
+
+    // At most PackageRows, the last of them "+N more", so a row is always left for why.
+    const unsigned packages=s.count>PackageRows?PackageRows-1:s.count;
+    for(unsigned i=0;i<packages;i++)packageRow(out,s,i);
+    if(packages<s.count)add(out,"   +%u more",s.count-packages);
+
+    // The whole of /VMS. Over the limit or on a read error, find() refuses every launch.
+    if(!s.cardRead)add(out," No SD card, or it can't be read.");
+    else if(s.walk==WalkNoDirectory)add(out," No /VMS folder on the SD card.");
+    else if(s.walk==WalkOverLimit)add(out," Over %u folders in /VMS: none launch.",(unsigned)FolderLimit);
+    else if(s.walk==WalkError)add(out," /VMS read error: none launch.");
+    else if(!s.count)add(out," No packages in /VMS.");
+
+    // The host refuses every package or none of them on these two.
+    if(listed){
+        if(!installed)add(out," No host installed, so none launch.");
+        else if(host&&host->abi!=VM_ABI)add(out," Host is ABI %lu, firmware needs %lu.",(unsigned long)host->abi,(unsigned long)VM_ABI);
+    }
+
+    // An extension more than one package claims, once, at the first of them.
+    for(unsigned i=0;i<s.count;i++){
+        char ext[8];
+        for(unsigned k=0;s.entry[i].state==Listed&&extensionAt(s.entry[i].extension,k,ext);k++){
+            bool earlier=false;unsigned others=0,other=0;
+            for(unsigned j=0;j<s.count;j++)if(j!=i&&claims(s.entry[j],ext)){if(j<i)earlier=true;else if(!others++)other=j;}
+            if(earlier||!others)continue;
+            if(others==1)add(out," *.%s claimed by %s and %s",ext,s.entry[i].id,s.entry[other].id);
+            else add(out," *.%s claimed by %u packages",ext,others+1);
+        }
+    }
+
+    // What tryLaunch would say for a package of its own; the wording follows its messages.
+    for(unsigned i=0;i<s.count;i++){
+        const Entry &e=s.entry[i];
+        if(e.state!=Listed)continue;
+        switch(e.refusal){
+            case ModuleFile:add(out," !%s: module file bad or missing",e.id);break;
+            case ClientFile:add(out," !%s: client file bad or missing",e.id);break;
+            case Services:add(out," !%s: host lacks service $%lx",e.id,(unsigned long)e.detail);break;
+            case CodeBase:
+                if(!host||!host->code_floor)add(out," !%s: host takes code at $%lx only",e.id,(unsigned long)VM_CODE_BASE);
+                else add(out," !%s: code $%lx below host $%lx",e.id,(unsigned long)e.detail,
+                         (unsigned long)vm_host_code_floor(host->code_floor));
+                break;
+            case NoRefusal:break;
+        }
+    }
+
+    // Plain words for the three outcomes of a launch that started, VmFail::describe()'s
+    // for the rest. The detail rides along as in the menu's own message (VmFail::report),
+    // except an install's, which is its size.
+    if(last){
+        const uint8_t code=(uint8_t)last->code;
+        const char *text=code==VmFail::Ok?"extension started":code==VmFail::Exited?"extension exited":
+                         code==VmFail::Faulted?"extension crashed":VmFail::describe(code);
+        if(last->detail&&code!=VmFail::Installed)add(out," Msg: %s ($%lx)",text,(unsigned long)last->detail);
+        else add(out," Msg: %s",text);
+    }
+    return out.count;
+}
+
+// rsShowExtPackages: every row, one message each, the C64 printing them down the page.
+// A row the C64 did not read has cost SendMsgSerialStringBuf's three-second wait, so
+// the rest are not sent after it.
+static FLASHMEM void show(bool card,const VmHostId *host,bool installed,const VmFailRecord *last){
+    Scan scan;collect(scan,host,card);
+    Row rows[Rows];const unsigned count=layout(scan,installed,host,last,rows);
+    for(unsigned i=0;i<count;i++)if(!SendMsgPrintfln("%s",rows[i]))break;
+}
+}

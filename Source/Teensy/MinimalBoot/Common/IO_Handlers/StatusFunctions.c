@@ -1240,16 +1240,21 @@ FLASHMEM void ExtPortCheck()
    BtnPressed = false;  //in case of re-trigger/debounce
 }
 
-#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
-// Defined in FlashUpdate.ino. Written out because the sketch preprocessor puts its
-// generated prototypes after the includes, and this file arrives through one.
+#if defined(VM_EXTENSIONS_ENABLED)
+// Defined in FlashUpdate.ino and DriveDirLoad.ino. Written out because the sketch
+// preprocessor puts its generated prototypes after the includes, and this file arrives
+// through one -- ahead of the registry DriveDirLoad.ino includes.
 void DoHostUninstall();
+void ShowVmPackages();
 #endif
 
-// Both of these are compiled into every image, including the minimal one and a
-// build without the loader, because StatusFunction[] below is indexed by status
-// code: dropping an entry would shift every later one. Where there is no loader
-// there is nothing installed, which is what they say.
+// These three are compiled into every main image, with or without the loader, because
+// StatusFunction[] below is indexed by status code and PollingHndlr_TeensyROM only
+// range-checks it: an entry left out would shift every later one, or leave a null at
+// the end to be called. The minimal image has neither, since this file comes in
+// through IOH_TeensyROM.c, which it does not build. Without the loader they say why
+// there is nothing here: a TR+ built without it, or a TR, which cannot host one
+// (VM_EXTENSIONS_ENABLED requires the Fab 0.4 features, Common_Defs.h).
 FLASHMEM void MakeExtHostStr()
 {
    //No arm ends its line with \r, because this string is printed through
@@ -1260,7 +1265,7 @@ FLASHMEM void MakeExtHostStr()
    //expecting to have moved. It used to move the uninstall prompt itself, on the arms
    //that carried one; Pg_InstalledExt.asm now places that prompt with SetCursor, so
    //this is a convention the rows share rather than the thing holding the prompt up.
-#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+#if defined(VM_EXTENSIONS_ENABLED)
    VmHostId id{};
    //"Not blank" is what an install that failed part way leaves: no host, but bytes in
    //the slot that uninstalling clears. See VmBootImage::blank().
@@ -1278,8 +1283,10 @@ FLASHMEM void MakeExtHostStr()
                Name, (unsigned long)id.abi, (unsigned long)id.services);
    }
    else strcpy(SerialStringBuf, "Installed, no descriptor.");
-#else
+#elif defined(Fab04_Features)
    strcpy(SerialStringBuf, "No extension loader in this firmware.");
+#else
+   strcpy(SerialStringBuf, "Only supported on TR+.");
 #endif
    //displayName bounds the name to twelve drawn bytes, but abi and services are
    //uint32 fields the host writes about itself, so the line can still reach 48
@@ -1310,10 +1317,27 @@ FLASHMEM void MakeExtHostStr()
 
 FLASHMEM void UninstallExtHost()
 {
-#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+#if defined(VM_EXTENSIONS_ENABLED)
    DoHostUninstall(); //does not return if there was a host to remove
-#else
+#elif defined(Fab04_Features)
    SendMsgPrintfln("No extension loader in this firmware.");
+#else
+   SendMsgPrintfln("Only supported on TR+.");
+#endif
+}
+
+//The rows under the Installed Extension page's package header, one message each:
+//Pg_InstalledExt.asm waits with the cursor at the header and no dots, and each
+//message's leading return puts its row on the next line. Every build answers with at
+//least one row, so the header never stands alone.
+FLASHMEM void ShowExtPackages()
+{
+#if defined(VM_EXTENSIONS_ENABLED)
+   ShowVmPackages();
+#elif defined(Fab04_Features)
+   SendMsgPrintfln(" No extension loader in this firmware.");
+#else
+   SendMsgPrintfln(" Only supported on TR+.");
 #endif
 }
 
@@ -1353,4 +1377,5 @@ void (*StatusFunction[rsNumStatusTypes])() = //match RegStatusTypes order
    &ExpPortDMA,          // rsExpPortDMA
    &MakeExtHostStr,      // rsMakeExtHostStr
    &UninstallExtHost,    // rsUninstallExtHost
+   &ShowExtPackages,     // rsShowExtPackages
 };

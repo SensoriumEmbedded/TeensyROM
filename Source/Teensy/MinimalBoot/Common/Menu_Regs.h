@@ -284,13 +284,14 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsForceEthInit       = 0x1d,
    rsExtPortCheck       = 0x1e,
    rsExpPortDMA         = 0x1f,
-   //Extension host management, driven from the Installed Extensions page. Both
-   //are present in every build so the dispatch table keeps its indices; without
-   //the loader compiled in they say so and change nothing.
+   //Extension host management, driven from the Installed Extensions page. All
+   //three are present in every main image so the dispatch table keeps its indices;
+   //without the loader compiled in they say so and change nothing.
    rsMakeExtHostStr     = 0x20,
    rsUninstallExtHost   = 0x21,
-   
-   rsNumStatusTypes     = 0x22,
+   rsShowExtPackages    = 0x22,
+
+   rsNumStatusTypes     = 0x23,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -375,6 +376,7 @@ enum RegCtlCommands
    rCtlUninstallExtHostWAIT = 57, // erase the host slot; reboots unless it was already blank
    rCtlBootComplete         = 58, // menu finished booting: sets BootComplete, reported by the version command
    rCtlBootInProgress       = 59, // clears BootComplete: a remote launch on reset returned and the menu is finishing its boot
+   rCtlShowExtPackagesWAIT  = 60, // the /VMS packages on SD, sent as one message per row
    
 };                               
                                  
