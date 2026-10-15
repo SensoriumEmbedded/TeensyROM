@@ -159,8 +159,8 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    #ifdef Fab04_KernalReplace
       &IOHndlr_KernalReplace,      //IOH_KernalReplace,
    #endif  
-      &IOHndlr_GeoRAM,             //IOH_GeoRAM,
       &IOHndlr_Debug,              //IOH_Debug, 
+      &IOHndlr_GeoRAM,             //IOH_GeoRAM,
       
    //*not* manually selectable, see LastSelectableIOH
                                    
