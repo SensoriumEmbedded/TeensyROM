@@ -9,10 +9,13 @@ monitor prompt comes back (a breakpoint or watchpoint hit), the second set runs.
 VICE with -remotemonitor (127.0.0.1:6510, or $VICE_MONITOR as host or host:port).
 """
 import os
+import re
 import socket
 import sys
 
-PROMPT = b'(C:$'
+PROMPT = re.compile(rb'\(C:\$[0-9a-fA-F]{4}\) $')
+COMMAND_TIMEOUT = 30
+GREETING_WAIT = 0.5
 DEFAULT_HOST, DEFAULT_PORT = '127.0.0.1', 6510
 
 
@@ -25,34 +28,39 @@ def main():
     def send(cmd):
         s.sendall((cmd + '\n').encode())
 
-    def drain(secs):
-        s.settimeout(secs)
+    def until_prompt(timeout, what):
+        s.settimeout(timeout)
         out = b''
         try:
-            while True:
+            while not PROMPT.search(out):
                 data = s.recv(65536)
                 if not data:
-                    break
+                    sys.exit(f'VICE closed the monitor connection {what}')
                 out += data
         except socket.timeout:
-            pass
+            sys.exit(f'no monitor prompt within {timeout} s {what}')
         return out.decode('latin1')
 
-    for cmd in sys.argv[1].split(';'):
-        send(cmd)
-    drain(1)
+    def run(cmds, show):
+        for cmd in commands(cmds):
+            send(cmd)
+            out = until_prompt(COMMAND_TIMEOUT, f'after {cmd!r}')
+            if show:
+                print(out)
+
+    s.settimeout(GREETING_WAIT)
+    try:
+        s.recv(65536)
+    except socket.timeout:
+        pass
+    run(sys.argv[1], show=False)
     send('x')
-    s.settimeout(None)
-    buf = b''
-    while PROMPT not in buf:
-        data = s.recv(4096)
-        if not data:
-            sys.exit('VICE closed the monitor connection before stopping')
-        buf += data
-    print(buf.decode('latin1'))
-    for cmd in sys.argv[2].split(';'):
-        send(cmd)
-        print(drain(2))
+    print(until_prompt(None, 'before stopping'))
+    run(sys.argv[2], show=True)
+
+
+def commands(cmds):
+    return [c.strip() for c in cmds.split(';') if c.strip()]
 
 
 main()
