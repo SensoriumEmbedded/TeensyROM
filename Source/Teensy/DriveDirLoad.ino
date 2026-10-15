@@ -392,12 +392,18 @@ FLASHMEM void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
+      {
+         const StructCrtChip *ROML, *ROMH;
+         FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH);
          SetGameDeassert;
          SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LOROM_Image = ROML ? ROML->ChipROM : NULL;
+         HIROM_Image = ROMH ? ROMH->ChipROM : NULL;
+         if (ROML) LOROM_Mask = ROML->ROMSize - 1;
+         if (ROMH) HIROM_Mask = ROMH->ROMSize - 1;
          CartLoaded=true;
          break;      
+      }
       case rtFilePrg:
          //set up for transfer
          SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 

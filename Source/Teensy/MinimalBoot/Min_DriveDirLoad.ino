@@ -19,6 +19,7 @@
 
 
 uint8_t NumCrtChips = 0;
+bool CrtIsC128 = false;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 File myFile = NULL;
 
@@ -62,12 +63,18 @@ void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
+      {
+         const StructCrtChip *ROML, *ROMH;
+         FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH);
          SetGameDeassert;
          SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LOROM_Image = ROML ? ROML->ChipROM : NULL;
+         HIROM_Image = ROMH ? ROMH->ChipROM : NULL;
+         if (ROML) LOROM_Mask = ROML->ROMSize - 1;
+         if (ROMH) HIROM_Mask = ROMH->ROMSize - 1;
          CartLoaded=true;
          break;      
+      }
       case rtUnknown: //had to have been marked unknown after check at start
          //SendMsgFailed();
          SendMsgPrintfln(" :(");
@@ -237,7 +244,8 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) SendMsgPrintfln("C128 crt");
+   CrtIsC128 = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
+   if (CrtIsC128) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
@@ -255,6 +263,12 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    
    uint16_t HWType = toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
+   
+   if (CrtIsC128 && HWType != Cart_Generic)
+   {  //C128 crts number their HW types separately: 1 is Warpspeed128, not Action Replay
+      SendMsgPrintfln("Unsupported C128 HW Type");
+      return false;
+   }
    
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
@@ -339,6 +353,19 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
    //check configuration
+   
+   if (CrtIsC128)
+   {
+      const StructCrtChip *ROML, *ROMH;
+      if (!FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH))
+      {
+         SendMsgPrintfln("C128 chip layout unsupported");
+         return false;
+      }
+      MyMenuItem->ItemType = rtBinC128;
+      SendMsgPrintfln(" C128 config");
+      return true;
+   }
       
    if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
    //Usually GAME ==1 and EXROM==0
@@ -361,13 +388,6 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
-      return true;
-   }      
-   
-   if(CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && EXROM==0 && GAME==0)
-   {
-      MyMenuItem->ItemType = rtBinC128;
-      SendMsgPrintfln(" C128 config");
       return true;
    }      
    

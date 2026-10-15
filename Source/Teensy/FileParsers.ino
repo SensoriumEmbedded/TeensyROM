@@ -19,6 +19,7 @@
 
 uint8_t *ptrRAM_ImageEnd = NULL; // Made global for REU access 
 uint8_t NumCrtChips = 0;
+bool CrtIsC128 = false;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
 char* LatestSIDLoaded; // allocated to RAM2 via MaxPathLength
@@ -57,7 +58,8 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) SendMsgPrintfln("C128 crt");
+   CrtIsC128 = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
+   if (CrtIsC128) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
@@ -75,6 +77,12 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    
    uint16_t HWType = toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
+   
+   if (CrtIsC128 && HWType != Cart_Generic)
+   {  //C128 crts number their HW types separately: 1 is Warpspeed128, not Action Replay
+      SendMsgPrintfln("Unsupported C128 HW Type");
+      return false;
+   }
    
 
 #ifdef Fab04_Freezers
@@ -465,6 +473,19 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    
    //check configuration
    
+   if (CrtIsC128)
+   {
+      const StructCrtChip *ROML, *ROMH;
+      if (!FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH))
+      {
+         SendMsgPrintfln("C128 chip layout unsupported");
+         return false;
+      }
+      MyMenuItem->ItemType = rtBinC128;
+      SendMsgPrintfln(" C128 config");
+      return true;
+   }
+   
 #ifdef Fab04_Freezers
    if (IO1[rwRegNextIOHndlr] == IOH_SuperSnapshotV5 ||
        IO1[rwRegNextIOHndlr] == IOH_FinalCartridgeIII ||
@@ -498,13 +519,6 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
-      return true;
-   }      
-   
-   if(CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && EXROM==0 && GAME==0)
-   {
-      MyMenuItem->ItemType = rtBinC128;
-      SendMsgPrintfln(" C128 config");
       return true;
    }      
    
