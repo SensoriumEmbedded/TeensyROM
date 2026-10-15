@@ -184,13 +184,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 #define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
 
 
-struct StructCrtChip
-{
-   uint8_t *ChipROM;
-   uint16_t LoadAddress;
-   uint16_t ROMSize;
-   uint16_t BankNum;
-};
+#include "CrtChips.h"
 
 #ifndef MinimumBuild
    //only needed in full build:
