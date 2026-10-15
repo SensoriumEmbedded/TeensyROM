@@ -19,6 +19,8 @@ AM1581_SHA256 = 'cbe786823301f3f1830f0ab32341d480be20220b8d5d900b2b5ee20b28c8042
 
 STUB_RAM, STUB_ROM = 0x1300, 0x22   # the loader runs from $1300, copied from ROM offset $22
 ROUTINES = 0x8120                   # ROM filler the loader never copies
+CLOCK_ADDR, FIX1581_ADDR = 0x8130, 0x81F9   # baked into the hook's JSRs and the routines' operands
+CLOCK_SCRATCH = 0x1370              # CLOCK's buffer in the stub's filler, just past the hook
 
 # The TR finds this record by its tag and keeps the seven bytes after it at local time.
 CLOCK_TAG = b'TRCLOCK\x01'
@@ -136,6 +138,8 @@ def patch_boot_hook(rom, t, am1581):
     start = ROUTINES - 0x8000
     fill = rom[start]
     expect(rom, start, bytes([fill]) * len(code), 'filler for the boot routines')
+    assert ROUTINES + len(clock_record(t)) == CLOCK_ADDR
+    assert CLOCK_ADDR + len(CLOCK) == FIX1581_ADDR
     rom[start:start + len(code)] = code
     rom[stub(0x1343):stub(0x1346)] = bytes.fromhex('205c13')         # JSR $135C
     hook = bytes.fromhex(
@@ -147,6 +151,7 @@ def patch_boot_hook(rom, t, am1581):
         'a97f'      # LDA #$7F
         '8d00ff'    # STA $FF00
         '60')       # RTS
+    assert 0x135C + len(hook) <= CLOCK_SCRATCH
     rom[stub(0x135C):stub(0x135C) + len(hook)] = hook
 
 
