@@ -109,6 +109,7 @@ struct stcIOHandlers
 #ifndef MinimumBuild
       #include "IO_Handlers/IOH_MIDI.c"
       #include "IO_Handlers/IOH_Debug.c"
+      #include "IO_Handlers/RAMBanks.c"
    #ifdef Fab04_REU
       #include "IO_Handlers/IOH_REU.c"
    #endif 
