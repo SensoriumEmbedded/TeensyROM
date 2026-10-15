@@ -32,14 +32,19 @@ def main():
     data = data.upper().replace(b'\n', b'\r')
     with Link() as tr:
         for i in range(0, len(data), KEYBUF_SIZE):
+            wait_until_read(tr, keycount, i)
             chunk = data[i:i + KEYBUF_SIZE]
             if not (tr.poke(keybuf, chunk) and tr.poke(keycount, [len(chunk)])):
                 sys.exit(f'poke refused at character {i}')
-            start = time.time()
-            while tr.peek(keycount, 1)[0]:
-                if time.time() - start > DRAIN_TIMEOUT:
-                    sys.exit(f'keyboard buffer not read for {DRAIN_TIMEOUT} s, at character {i}')
-                time.sleep(0.1)
+        wait_until_read(tr, keycount, len(data))
+
+
+def wait_until_read(tr, keycount, at):
+    start = time.time()
+    while tr.peek(keycount, 1)[0]:
+        if time.time() - start > DRAIN_TIMEOUT:
+            sys.exit(f'keyboard buffer not read for {DRAIN_TIMEOUT} s, at character {at}')
+        time.sleep(0.1)
 
 
 main()
