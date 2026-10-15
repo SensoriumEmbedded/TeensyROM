@@ -7,6 +7,7 @@
 Also writes the patched raw ROM next to the .crt as <out>.bin.
 """
 import hashlib
+import os
 import struct
 import sys
 
@@ -68,6 +69,9 @@ def main():
         sys.exit(__doc__.strip())
     src, dst = sys.argv[1], sys.argv[2]
     name = sys.argv[3] if len(sys.argv) == 4 else 'GEOS 128'
+    raw = os.path.splitext(dst)[0] + '.bin'
+    if os.path.abspath(raw) == os.path.abspath(dst):
+        sys.exit(f'{dst}: the patched ROM is written as <out>.bin, so the .crt cannot be a .bin')
     rom = bytearray(open(src, 'rb').read())
     if len(rom) != 0x8000 or rom[7:10] != b'CBM':
         sys.exit(f'{src}: not a 32 KB C128 function ROM')
@@ -77,7 +81,7 @@ def main():
         patch_sd2iec_1581(rom)
         print('Am1581: added the sd2iec 1581 hook')
     open(dst, 'wb').write(crt(rom, name))
-    open(dst.rsplit('.', 1)[0] + '.bin', 'wb').write(rom)
+    open(raw, 'wb').write(rom)
     print(f'wrote {dst}')
 
 
