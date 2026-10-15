@@ -184,35 +184,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 #define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
 
 
-struct StructCrtChip
-{
-   uint8_t *ChipROM;
-   uint16_t LoadAddress;
-   uint16_t ROMSize;
-   uint16_t BankNum;
-};
-
-//Generic C128 cart (VICE CRT spec, C128 type 0): ROML is $8000-$BFFF and ROMH $C000-$FFFF, each
-//  one 8k (mirrored) or 16k chip.
-inline bool FindC128Chips(const StructCrtChip *Chips, uint8_t NumChips,
-                          const StructCrtChip **ROML, const StructCrtChip **ROMH)
-{
-   *ROML = *ROMH = NULL;
-   for (uint8_t ChipNum = 0; ChipNum < NumChips; ChipNum++)
-   {
-      const StructCrtChip *Chip = &Chips[ChipNum];
-      if (Chip->BankNum != 0 || (Chip->ROMSize != 0x2000 && Chip->ROMSize != 0x4000)) return false;
-
-      const StructCrtChip **Slot;
-      if (Chip->LoadAddress == 0x8000) Slot = ROML;
-      else if (Chip->LoadAddress == 0xC000) Slot = ROMH;
-      else return false;
-
-      if (*Slot != NULL) return false;
-      *Slot = Chip;
-   }
-   return *ROML != NULL || *ROMH != NULL;
-}
+#include "CrtChips.h"
 
 #ifndef MinimumBuild
    //only needed in full build:

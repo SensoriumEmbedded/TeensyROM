@@ -34,6 +34,8 @@ void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for transfer
    uint8_t CartLoaded = false;
+   //a C128 cart widens these, and a direct remote launch skips SetUpMainMenuROM, which resets them
+   LOROM_Mask = HIROM_Mask = 0x1fff;
    
    switch(MenuSelCpy.ItemType)
    {
@@ -64,14 +66,18 @@ void HandleExecution()
          break;
       case rtBinC128:
       {
-         const StructCrtChip *ROML, *ROMH;
-         FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH);
+         C128CartMap Map;
+         if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
+         {
+            SendMsgPrintfln("C128 chip layout unsupported");
+            break;
+         }
          SetGameDeassert;
          SetExROMDeassert;
-         LOROM_Image = ROML ? ROML->ChipROM : NULL;
-         HIROM_Image = ROMH ? ROMH->ChipROM : NULL;
-         if (ROML) LOROM_Mask = ROML->ROMSize - 1;
-         if (ROMH) HIROM_Mask = ROMH->ROMSize - 1;
+         LOROM_Image = Map.ROML;
+         HIROM_Image = Map.ROMH;
+         LOROM_Mask = Map.ROMLMask;
+         HIROM_Mask = Map.ROMHMask;
          CartLoaded=true;
          break;      
       }
@@ -356,8 +362,8 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    
    if (CrtIsC128)
    {
-      const StructCrtChip *ROML, *ROMH;
-      if (!FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH))
+      C128CartMap Map;
+      if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
       {
          SendMsgPrintfln("C128 chip layout unsupported");
          return false;

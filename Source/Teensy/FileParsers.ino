@@ -475,8 +475,8 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    
    if (CrtIsC128)
    {
-      const StructCrtChip *ROML, *ROMH;
-      if (!FindC128Chips(CrtChips, NumCrtChips, &ROML, &ROMH))
+      C128CartMap Map;
+      if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
       {
          SendMsgPrintfln("C128 chip layout unsupported");
          return false;
