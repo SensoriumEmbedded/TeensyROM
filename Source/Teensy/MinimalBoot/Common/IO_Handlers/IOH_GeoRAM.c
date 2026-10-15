@@ -32,11 +32,11 @@ stcIOHandlers IOHndlr_GeoRAM =
 #define GeoRAM_RegsBase      0x80
 #define GeoRAM_RegBlockBit   0x01
 
-uint8_t NumGeoRAM_Banks = 0;
-uint8_t *GeoRAM_Bank[MAX_GEORAM_BANKS];
-uint8_t GeoRAM_Block, GeoRAM_PageNum;
+static uint8_t NumGeoRAM_Banks = 0;
+static uint8_t *GeoRAM_Bank[MAX_GEORAM_BANKS];
+static uint8_t GeoRAM_Block, GeoRAM_PageNum;
 static uint8_t GeoRAM_NoRAM[256];   // the window until a page of allocated RAM is selected
-uint8_t *GeoRAM_Page = GeoRAM_NoRAM;
+static uint8_t *GeoRAM_Page = GeoRAM_NoRAM;
 
 static void GeoRAM_SelectPage()
 {
