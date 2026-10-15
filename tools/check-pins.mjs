@@ -73,6 +73,7 @@ const DEPENDENCIES = [
     pins: [
       ['tools/lib/c64-toolchain.mjs', /KICKASS_VERSION = '([\d.]+)'/],
       ['Source/C64/README.md', /\*\*KickAssembler\*\* ([\d.]+)/],
+      ['Source/BuildInfo.md', /theweb\.dk\/KickAssembler\/\) ([\d.]+)/],
     ],
   },
 ];
