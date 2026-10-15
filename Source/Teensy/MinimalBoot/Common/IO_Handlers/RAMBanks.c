@@ -34,7 +34,7 @@ extern uint8_t NumCrtChips;
 extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer
 
 FLASHMEM void FreeRAMBanks(uint8_t *Bank[], uint8_t *NumBanks)
-{ //free banks allocated in RAM2
+{
    for(uint16_t cnt=0; cnt < *NumBanks; cnt++)
       if((uint32_t)Bank[cnt] >= 0x20200000) free(Bank[cnt]);
    *NumBanks = 0;
@@ -44,12 +44,11 @@ FLASHMEM void FreeRAMBanks(uint8_t *Bank[], uint8_t *NumBanks)
 FLASHMEM uint8_t AllocRAMBanks(uint8_t *Bank[], uint8_t MaxBanks, uint8_t MinBanks)
 {
    uint8_t NumBanks = 0;
-   FreeDriveDirMenu(); //free/clear prev loaded directory to make space. Doing it regardless to preserve continuity
+   FreeDriveDirMenu();
 
    if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //If no CRT loaded, RAM1 is entirely free
    uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
 
-   //First use RAM_Image from RAM1:
    while (((uint32_t)pRAM_Image - (uint32_t)RAM_Image + RAM_Bank_Size <= RAM_ImageSize)
            && (NumBanks < MaxBanks))
    {
@@ -58,11 +57,9 @@ FLASHMEM uint8_t AllocRAMBanks(uint8_t *Bank[], uint8_t MaxBanks, uint8_t MinBan
       NumBanks++;
    }
 
-   //allocate the rest from RAM2
    while(NumBanks < MaxBanks && (NULL != (Bank[NumBanks] = (uint8_t*)malloc(RAM_Bank_Size))))
       NumBanks++;
 
-   //resize to a power of 2 if needed and free unused banks
    if (NumBanks & (NumBanks-1))  //not a power of 2
    {
       // largest power less than or equal to NumBanks
@@ -86,7 +83,7 @@ FLASHMEM uint8_t AllocRAMBanks(uint8_t *Bank[], uint8_t MaxBanks, uint8_t MinBan
 // Path is source-prefixed ("SD:/reu.reu")
 FLASHMEM static FS *RAMBanksFS(char *Path, char **ptrFileName)
 {
-   *ptrFileName = Path; //pointer to move past SD/USB/TR:
+   *ptrFileName = Path;
    RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(ptrFileName);
 
    if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
@@ -135,10 +132,10 @@ FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    FS *sourceFS = RAMBanksFS(Filename, &ptrFileName);
 
    char Extension[20];
-   char *pDot = strrchr(ptrFileName, '.'); //find last dot
+   char *pDot = strrchr(ptrFileName, '.');
    if (pDot == NULL) pDot = ptrFileName + strlen(ptrFileName); //if no extension, set to end of filename
-   strlcpy(Extension, pDot, sizeof(Extension)); //copy extension
-   *pDot = 0; //terminate at dot/extension
+   strlcpy(Extension, pDot, sizeof(Extension));
+   *pDot = 0;
 
    bool IsNum = true; //are last 3digits of filename all numbers?
    if (strlen(ptrFileName)>=3)
@@ -155,7 +152,6 @@ FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
       *(pDot-3) = 0; //terminate number
    }
 
-   //now see if the file exists, or itterate until it doesn't
    char NewFilename[MaxPathLength];
 
    do sprintf(NewFilename, "%s%03d%s", ptrFileName, NewNum++, Extension);
@@ -181,7 +177,6 @@ FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    Serial.printf("Saved %dKBytes\n", NumBanks * RAM_Bank_Size / 1024);
    SaveFile.close();
 
-   //Flash LED to ack save
    uint32_t LastmS = millis();
    bool LEDState = true;
 
