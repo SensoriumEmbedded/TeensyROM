@@ -52,11 +52,13 @@ def main():
     for cycle, cmd in commands(sys.argv[1]):
         if cmd[:3] == b'M-W' and len(cmd) >= 6:
             addr, n = cmd[3] | cmd[4] << 8, cmd[5]
-            for b in cmd[6:6 + n]:
+            payload = cmd[6:6 + n]
+            for b in payload:
                 crc = crc16(crc, b)
-            if UPLOAD_BASE <= addr and addr + n <= UPLOAD_BASE + UPLOAD_SIZE:
-                ram[addr - UPLOAD_BASE:addr - UPLOAD_BASE + n] = cmd[6:6 + n]
-            print(f'{cycle:>10} M-W ${addr:04x} len {n:3} crc-so-far {crc:04x}')
+            if UPLOAD_BASE <= addr and addr + len(payload) <= UPLOAD_BASE + UPLOAD_SIZE:
+                ram[addr - UPLOAD_BASE:addr - UPLOAD_BASE + len(payload)] = payload
+            short = f' (only {len(payload)} sent)' if len(payload) < n else ''
+            print(f'{cycle:>10} M-W ${addr:04x} len {n:3}{short} crc-so-far {crc:04x}')
         elif cmd[:3] == b'M-E' and len(cmd) >= 5:
             print(f'{cycle:>10} M-E ${cmd[3] | cmd[4] << 8:04x}  (crc {crc:04x})')
             images.append(bytes(ram))
