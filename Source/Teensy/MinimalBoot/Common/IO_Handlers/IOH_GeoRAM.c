@@ -77,6 +77,7 @@ FLASHMEM void InitHndlr_GeoRAM()
 
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
 {
+   if (NumGeoRAM_Banks == 0) return;   // disabled: $DE00 stays open bus, so software sees no geoRAM
    if (R_Wn) DataPortWriteWaitLog(GeoRAM_Page[Address]);
    else
    {
