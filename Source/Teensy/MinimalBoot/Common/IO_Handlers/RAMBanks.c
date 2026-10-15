@@ -115,7 +115,11 @@ FLASHMEM void LoadRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
 
    uint32_t CharNum = 0;
    for (uint8_t BankNum = 0; BankNum < NumBanks && LoadFile.available(); BankNum++)
-      CharNum += LoadFile.read(Bank[BankNum], RAM_Bank_Size);
+   {
+      int BytesRead = LoadFile.read(Bank[BankNum], RAM_Bank_Size);
+      if (BytesRead <= 0) break;
+      CharNum += BytesRead;
+   }
    Serial.printf("Read %lu Bytes\n", CharNum);
    LoadFile.close();
 }
@@ -166,7 +170,14 @@ FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    }
 
    for (uint8_t BankNum = 0; BankNum < NumBanks; BankNum++)
-      SaveFile.write(Bank[BankNum], RAM_Bank_Size);
+   {
+      if (SaveFile.write(Bank[BankNum], RAM_Bank_Size) != RAM_Bank_Size)
+      {
+         Serial.printf("Write failed after %dKBytes!\n", BankNum * RAM_Bank_Size / 1024);
+         SaveFile.close();
+         return;
+      }
+   }
    Serial.printf("Saved %dKBytes\n", NumBanks * RAM_Bank_Size / 1024);
    SaveFile.close();
 
