@@ -13,8 +13,7 @@ extern uint8_t NumCrtChips;
 bool CrtIsC128 = false;
 static C128CartMap C128Map;
 
-// tools/c128/README.md, "The boot clock": the seven bytes after the tag are century, year (0-99),
-//  month, day, hour (0-23), minute and second, kept at local time while the cart runs.
+// Record layout: tools/c128/README.md, "The boot clock".
 static const uint8_t C128ClockTag[8] = {'T', 'R', 'C', 'L', 'O', 'C', 'K', 1};
 static const uint8_t C128ClockLen = 7;
 static uint8_t *C128Clock = NULL;
