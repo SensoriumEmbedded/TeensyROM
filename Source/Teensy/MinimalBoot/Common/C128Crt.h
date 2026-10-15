@@ -17,7 +17,8 @@ static C128CartMap C128Map;
 static const uint8_t C128ClockTag[8] = {'T', 'R', 'C', 'L', 'O', 'C', 'K', 1};
 static const uint8_t C128ClockLen = 7;
 static uint8_t *C128Clock = NULL;
-static int8_t C128ClockTimezone;
+static const int32_t TimezoneStepSecs = 30 * 60;
+static int32_t C128ClockLocalOffset;
 
 static bool DetectC128Crt(const uint8_t *CrtHeader)
 {
@@ -57,7 +58,7 @@ static uint8_t *FindC128Clock(const uint8_t *Image, uint16_t Mask)
 static void WriteC128Clock()
 {
    tmElements_t tm;
-   breakTime(Teensy3Clock.get() + (int16_t)C128ClockTimezone*30*60, tm); //30 min increments
+   breakTime(Teensy3Clock.get() + C128ClockLocalOffset, tm);
    const uint16_t Year = tmYearToCalendar(tm.Year);
    const uint8_t Clock[C128ClockLen] = {(uint8_t)(Year / 100), (uint8_t)(Year % 100),
       tm.Month, tm.Day, tm.Hour, tm.Minute, tm.Second};
@@ -84,6 +85,6 @@ static void LaunchC128Cart()
    C128Clock = FindC128Clock(C128Map.ROML, C128Map.ROMLMask);
    if (C128Clock == NULL) C128Clock = FindC128Clock(C128Map.ROMH, C128Map.ROMHMask);
    if (C128Clock == NULL) return;
-   C128ClockTimezone = (int8_t)EEPROM.read(eepAdTimezone);
+   C128ClockLocalOffset = (int8_t)EEPROM.read(eepAdTimezone) * TimezoneStepSecs;
    WriteC128Clock();
 }
