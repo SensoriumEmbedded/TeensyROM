@@ -35,7 +35,7 @@ stcIOHandlers IOHndlr_GeoRAM =
 uint8_t NumGeoRAM_Banks = 0;
 uint8_t *GeoRAM_Bank[MAX_GEORAM_BANKS];
 uint8_t GeoRAM_Block, GeoRAM_PageNum;
-static uint8_t GeoRAM_NoRAM[256];   // the window while no RAM is allocated
+static uint8_t GeoRAM_NoRAM[256];   // the window until a page of allocated RAM is selected
 uint8_t *GeoRAM_Page = GeoRAM_NoRAM;
 
 static void GeoRAM_SelectPage()
@@ -49,8 +49,12 @@ static void GeoRAM_SelectPage()
 
 FLASHMEM void FreeGeoRAM()
 {
-   FreeRAMBanks(GeoRAM_Bank, &NumGeoRAM_Banks);
+   // the handler is still installed and the C64 may be running: the IO ISRs must stop
+   //  touching the banks before the first one is freed
+   uint8_t NumBanks = NumGeoRAM_Banks;
+   NumGeoRAM_Banks = 0;
    GeoRAM_Page = GeoRAM_NoRAM;
+   FreeRAMBanks(GeoRAM_Bank, &NumBanks);
 }
 
 FLASHMEM void SpecialBtn_GeoRAM(bool Up_nDn)
