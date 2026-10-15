@@ -32,5 +32,5 @@ screenshots, so read results from memory through the monitor instead (`bsave`, o
 
     x128 -default -80col -drive8type 1581 -8 disk.d81 -cartcrt geos.crt \
          -remotemonitor -monlog -monlogname iec.log -limitcycles 2000000000 &
-    printf 'trace exec ffb1\ntrace exec ffa8\ntrace exec ffae\nx\n' | nc 127.0.0.1 6510
+    printf 'trace exec ffb1\ntrace exec ff93\ntrace exec ffa8\ntrace exec ffae\nx\n' | nc 127.0.0.1 6510
     python3 tools/c128/iecdecode.py iec.log

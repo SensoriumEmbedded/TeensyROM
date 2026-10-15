@@ -9,13 +9,16 @@ For M-W it also prints sd2iec's running CRC, which is what sd2iec matches agains
 of known fast loaders (doscmd.c, fl_crc_table) when the M-E arrives.  With an image prefix,
 writes the $0300-$04FF drive RAM image each M-E ran as <prefix>_<n>.bin.
 
-Make the log with VICE's monitor: `trace exec ffb1`, `trace exec ffa8` and `trace exec
-ffae` (LISTEN, CIOUT, UNLSN), then `x`, with -monlog / -monlogname set.
+Make the log with VICE's monitor: `trace exec ffb1`, `trace exec ff93`, `trace exec ffa8`
+and `trace exec ffae` (LISTEN, SECOND, CIOUT, UNLSN), then `x`, with -monlog / -monlogname
+set.  Only bytes sent after a SECOND to channel 15 are decoded; file data is skipped.
 """
 import re
 import sys
 
-LISTEN, CIOUT, UNLSN = 'ffb1', 'ffa8', 'ffae'
+LISTEN, SECOND, CIOUT, UNLSN = 'ffb1', 'ff93', 'ffa8', 'ffae'
+COMMAND_CHANNEL = 15
+SA_DATA, SA_OPEN = 0x60, 0xF0
 TRACE_HIT = re.compile(r'\.C:(ff\w\w)\s+4C .*A:(\w\w).*\s(\d+)$')
 UPLOAD_BASE, UPLOAD_SIZE = 0x0300, 0x200
 
@@ -36,7 +39,11 @@ def commands(path):
             continue
         entry, acc, cycle = m.group(1), int(m.group(2), 16), int(m.group(3))
         if entry == LISTEN:
-            cur = (cycle, bytearray())
+            cur = None
+        elif entry == SECOND:
+            to_command_channel = (acc & 0x0F == COMMAND_CHANNEL
+                                  and acc & 0xF0 in (SA_DATA, SA_OPEN))
+            cur = (cycle, bytearray()) if to_command_channel else None
         elif entry == CIOUT and cur is not None:
             cur[1].append(acc)
         elif entry == UNLSN and cur is not None:
