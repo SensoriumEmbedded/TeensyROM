@@ -420,7 +420,8 @@ FLASHMEM void SetUpMainMenuROM()
    FreeCrtChips();
 #ifdef Fab04_REU
    FreeREU();
-#endif 
+#endif
+   FreeGeoRAM(); 
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;

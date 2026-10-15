@@ -110,6 +110,7 @@ struct stcIOHandlers
       #include "IO_Handlers/IOH_MIDI.c"
       #include "IO_Handlers/IOH_Debug.c"
       #include "IO_Handlers/RAMBanks.c"
+      #include "IO_Handlers/IOH_GeoRAM.c"
    #ifdef Fab04_REU
       #include "IO_Handlers/IOH_REU.c"
    #endif 
@@ -158,6 +159,7 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    #ifdef Fab04_KernalReplace
       &IOHndlr_KernalReplace,      //IOH_KernalReplace,
    #endif  
+      &IOHndlr_GeoRAM,             //IOH_GeoRAM,
       &IOHndlr_Debug,              //IOH_Debug, 
       
    //*not* manually selectable, see LastSelectableIOH
