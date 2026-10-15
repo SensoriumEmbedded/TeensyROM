@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: MIT
+#pragma once
+#include "CrtChips.h"
+
+// Included after IOHandlers.h and Common_Defs.h, ahead of the .ino code that calls it: it sets the
+//  cart lines and ROM pointers those define.
+
+extern StructCrtChip CrtChips[];
+extern uint8_t NumCrtChips;
+
+bool CrtIsC128 = false;
+static C128CartMap C128Map;
+
+static bool DetectC128Crt(const uint8_t *CrtHeader)
+{
+   CrtIsC128 = (memcmp(CrtHeader, "C128 CARTRIDGE", 14) == 0);
+   return CrtIsC128;
+}
+
+static bool C128HWTypeSupported(uint16_t HWType)
+{  //C128 crts number their HW types separately: 1 is Warpspeed128, not Action Replay
+   if (!CrtIsC128 || HWType == Cart_Generic) return true;
+   SendMsgPrintfln("Unsupported C128 HW Type");
+   return false;
+}
+
+// The C128 half of SetTypeFromCRT; keeps the map for LaunchC128Cart.
+static bool SetC128Type(StructMenuItem *MyMenuItem)
+{
+   if (!MapC128Cart(CrtChips, NumCrtChips, &C128Map))
+   {
+      SendMsgPrintfln("C128 chip layout unsupported");
+      return false;
+   }
+   MyMenuItem->ItemType = rtBinC128;
+   SendMsgPrintfln(" C128 config");
+   return true;
+}
+
+static void LaunchC128Cart()
+{
+   SetGameDeassert;
+   SetExROMDeassert;
+   LOROM_Image = C128Map.ROML;
+   HIROM_Image = C128Map.ROMH;
+   LOROM_Mask = C128Map.ROMLMask;
+   HIROM_Mask = C128Map.ROMHMask;
+}

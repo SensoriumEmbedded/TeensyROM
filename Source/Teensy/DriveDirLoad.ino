@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+#include "MinimalBoot/Common/C128Crt.h"
 #ifdef VM_EXTENSIONS_ENABLED
 #include "MinimalBoot/Common/VMLaunch.h"
 #include "MinimalBoot/Common/VMPackageList.h"
@@ -394,22 +395,9 @@ FLASHMEM void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-      {
-         C128CartMap Map;
-         if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
-         {
-            SendMsgPrintfln("C128 chip layout unsupported");
-            break;
-         }
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = Map.ROML;
-         HIROM_Image = Map.ROMH;
-         LOROM_Mask = Map.ROMLMask;
-         HIROM_Mask = Map.ROMHMask;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
-      }
       case rtFilePrg:
          //set up for transfer
          SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 

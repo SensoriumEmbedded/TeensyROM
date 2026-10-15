@@ -19,8 +19,8 @@
 
 
 uint8_t NumCrtChips = 0;
-bool CrtIsC128 = false;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
+#include "Common/C128Crt.h"
 File myFile = NULL;
 
 void HandleExecution()
@@ -63,22 +63,9 @@ void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-      {
-         C128CartMap Map;
-         if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
-         {
-            SendMsgPrintfln("C128 chip layout unsupported");
-            break;
-         }
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = Map.ROML;
-         HIROM_Image = Map.ROMH;
-         LOROM_Mask = Map.ROMLMask;
-         HIROM_Mask = Map.ROMHMask;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
-      }
       case rtUnknown: //had to have been marked unknown after check at start
          //SendMsgFailed();
          SendMsgPrintfln(" :(");
@@ -248,8 +235,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   CrtIsC128 = (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0);
-   if (CrtIsC128) SendMsgPrintfln("C128 crt");
+   if (DetectC128Crt(CRT_Image)) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
@@ -268,11 +254,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    uint16_t HWType = toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
    
-   if (CrtIsC128 && HWType != Cart_Generic)
-   {  //C128 crts number their HW types separately: 1 is Warpspeed128, not Action Replay
-      SendMsgPrintfln("Unsupported C128 HW Type");
-      return false;
-   }
+   if (!C128HWTypeSupported(HWType)) return false;
    
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
@@ -358,18 +340,7 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    
    //check configuration
    
-   if (CrtIsC128)
-   {
-      C128CartMap Map;
-      if (!MapC128Cart(CrtChips, NumCrtChips, &Map))
-      {
-         SendMsgPrintfln("C128 chip layout unsupported");
-         return false;
-      }
-      MyMenuItem->ItemType = rtBinC128;
-      SendMsgPrintfln(" C128 config");
-      return true;
-   }
+   if (CrtIsC128) return SetC128Type(MyMenuItem);
       
    if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
    //Usually GAME ==1 and EXROM==0
