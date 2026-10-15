@@ -4,7 +4,8 @@
 
   type.py [--c128] '<text>'
 
-`\\n` is RETURN.  Letters go in unshifted (uppercase on the power-on character set).
+`\\n` is RETURN and `\\xNN` is any key code.  Letters go in unshifted (uppercase on the
+power-on character set).
 --c128 uses the C128-mode buffer; C64 mode, including a C128 in 64 mode, is the default.
 """
 import sys
@@ -22,8 +23,13 @@ def main():
     if len(args) != 1:
         sys.exit(__doc__.strip())
     keybuf, keycount = (KEYBUF_128, KEYCOUNT_128) if c128 else (KEYBUF, KEYCOUNT)
-    text = args[0].encode().decode('unicode_escape').upper().replace('\n', '\r')
-    data = text.encode('ascii')
+    if not args[0].isascii():
+        sys.exit('ASCII only: write any other key code as \\xNN')
+    try:
+        data = args[0].encode().decode('unicode_escape').encode('latin1')
+    except UnicodeEncodeError:
+        sys.exit('key codes go up to \\xFF')
+    data = data.upper().replace(b'\n', b'\r')
     with Link() as tr:
         for i in range(0, len(data), KEYBUF_SIZE):
             chunk = data[i:i + KEYBUF_SIZE]
