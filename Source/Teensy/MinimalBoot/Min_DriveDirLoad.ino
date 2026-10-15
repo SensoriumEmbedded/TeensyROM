@@ -20,6 +20,7 @@
 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
+#include "Common/C128Crt.h"
 File myFile = NULL;
 
 void HandleExecution()
@@ -62,10 +63,7 @@ void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
       case rtUnknown: //had to have been marked unknown after check at start
@@ -237,7 +235,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) SendMsgPrintfln("C128 crt");
+   if (DetectC128Crt(CRT_Image)) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
@@ -255,6 +253,8 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    
    uint16_t HWType = toU16(CRT_Image+0x16);
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
+   
+   if (!C128HWTypeSupported(HWType)) return false;
    
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
@@ -326,6 +326,7 @@ void FreeCrtChips()
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000 && (uint32_t)CrtChips[cnt].ChipROM < SwapSeekAddrMask) free(CrtChips[cnt].ChipROM);
    NumCrtChips = 0;
+   C128Clock = NULL;
 }
  
 bool PathIsRoot()
@@ -339,6 +340,8 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
    //check configuration
+   
+   if (CrtIsC128) return SetC128Type(MyMenuItem);
       
    if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
    //Usually GAME ==1 and EXROM==0
@@ -361,13 +364,6 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
-      return true;
-   }      
-   
-   if(CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && EXROM==0 && GAME==0)
-   {
-      MyMenuItem->ItemType = rtBinC128;
-      SendMsgPrintfln(" C128 config");
       return true;
    }      
    
