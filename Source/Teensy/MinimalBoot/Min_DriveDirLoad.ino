@@ -34,8 +34,6 @@ void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for transfer
    uint8_t CartLoaded = false;
-   //a C128 cart widens these, and a direct remote launch skips SetUpMainMenuROM, which resets them
-   LOROM_Mask = HIROM_Mask = 0x1fff;
    
    switch(MenuSelCpy.ItemType)
    {

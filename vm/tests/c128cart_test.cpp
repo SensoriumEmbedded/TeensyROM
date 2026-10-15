@@ -12,7 +12,7 @@ static StructCrtChip chip(uint8_t *Rom, uint16_t Load, uint16_t Size, uint16_t B
 
 static bool map(const StructCrtChip *Chips, uint8_t Num, C128CartMap *Out)
 {
-   *Out = C128CartMap{RomA, RomA, 0, 0};  // a refusal must not count on a clean Map
+   *Out = C128CartMap{RomA, RomA, 0, 0};
    return MapC128Cart(Chips, Num, Out);
 }
 
