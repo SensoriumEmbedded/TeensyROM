@@ -3,6 +3,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define CRT_MAIN_HDR_LEN  0x40
+#define CRT_CHIP_HDR_LEN  0x10
+#define MAX_LEGACY_CRT_CHIPS 128
+#if defined(MinimumBuild) && !defined(VM_HOST_PROFILE)
+#define MAX_CRT_CHIPS 512
+#else
+#define MAX_CRT_CHIPS MAX_LEGACY_CRT_CHIPS
+#endif
+#ifndef SwapSeekAddrMask
+// Virtual address marker ORed with an SD-file offset in MinimalBoot.
+#define SwapSeekAddrMask 0xef000000
+#endif
+
 // One CHIP packet of a loaded .crt.  Pure, so the native tests can hold the layout rules below.
 struct StructCrtChip
 {
@@ -11,6 +24,15 @@ struct StructCrtChip
    uint16_t ROMSize;
    uint16_t BankNum;
 };
+
+#if defined(MinimumBuild) && !defined(VM_HOST_PROFILE)
+extern StructCrtChip *CrtChips;
+extern uint16_t NumCrtChips;
+#else
+// Keep the main image's ISR table reads in DTCM and VMBoot's original footprint.
+extern StructCrtChip CrtChips[];
+extern uint8_t NumCrtChips;
+#endif
 
 struct C128CartMap
 {

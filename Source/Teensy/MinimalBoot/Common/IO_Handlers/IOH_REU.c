@@ -147,8 +147,7 @@ extern bool DMAByte(uint8_t *Data);
 
 extern void FreeDriveDirMenu();
 extern uint8_t RAM_Image[];
-extern StructCrtChip CrtChips[]; // Removal breaks downstream code, so keep it here for now. 
-extern uint8_t NumCrtChips;        
+// CrtChips.h declares the main image's static table and count.
 extern StructMenuItem *DriveDirMenu;
 extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer 
 

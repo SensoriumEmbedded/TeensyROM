@@ -286,16 +286,30 @@ FLASHMEM void HandleExecution()
             Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
             while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
             {
-               if (!ParseChipHeader(ptrChipOffset, "")) //sends error messages
+               const size_t Remaining = MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset;
+               if (Remaining < CRT_CHIP_HDR_LEN ||
+                   toU16(ptrChipOffset+0x0E) > Remaining-CRT_CHIP_HDR_LEN)
+               {
+                  SendMsgPrintfln("Truncated CRT CHIP packet");
+                  FreeCrtChips();
+                  IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+                  return;
+               }
+               const uint16_t PayloadSize = toU16(ptrChipOffset+0x0E);
+               const int16_t Chip = ParseChipHeader(ptrChipOffset, "");
+               if (Chip == -1) //sends error messages
                {
                   FreeCrtChips();
                   IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);  //in case it was over-ridden by .crt
                   return;        
                }
                ptrChipOffset += CRT_CHIP_HDR_LEN;
-               memcpy(CrtChips[NumCrtChips].ChipROM, ptrChipOffset, CrtChips[NumCrtChips].ROMSize);
-               ptrChipOffset += CrtChips[NumCrtChips].ROMSize;
-               NumCrtChips++;
+               if (Chip >= 0)
+               {
+                  memcpy(CrtChips[Chip].ChipROM, ptrChipOffset, PayloadSize);
+                  if (Chip == NumCrtChips) NumCrtChips++;
+               }
+               ptrChipOffset += PayloadSize;
             }
             
             //check configuration (sends error messages)
@@ -513,7 +527,12 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       }
       
       //load header and parse
-      for (count = 0; count < CRT_MAIN_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read main header
+      if (myFile.read(lclBuf, CRT_MAIN_HDR_LEN) != CRT_MAIN_HDR_LEN)
+      {
+         SendMsgPrintfln("Truncated CRT header");
+         myFile.close();
+         return false;
+      }
       MyMenuItem->Code_Image = lclBuf;
       if (!ParseCRTHeader(MyMenuItem, &EXROM, &GAME)) //sends error messages
       {
@@ -527,8 +546,20 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
       while (myFile.available())
       {
-         for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
-         if (!ParseChipHeader(lclBuf, FullFilePath)) //sends error messages
+         if (myFile.size() - myFile.position() < CRT_CHIP_HDR_LEN ||
+             myFile.read(lclBuf, CRT_CHIP_HDR_LEN) != CRT_CHIP_HDR_LEN ||
+             toU16(lclBuf+0x0E) > myFile.size() - myFile.position())
+         {
+            SendMsgPrintfln("Truncated CRT CHIP packet");
+            myFile.close();
+            FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+            RedirectEmptyDriveDirMenu();
+            return false;
+         }
+         const uint16_t PayloadSize = toU16(lclBuf+0x0E);
+         const int16_t Chip = ParseChipHeader(lclBuf, FullFilePath);
+         if (Chip == -1) //sends error messages
          {
             myFile.close();
             FreeCrtChips();
@@ -536,8 +567,26 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
             RedirectEmptyDriveDirMenu();
             return false;        
          }
-         for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
-         NumCrtChips++;
+         if (Chip == -2)
+         {
+            if (myFile.seek(myFile.position() + PayloadSize)) continue;
+            SendMsgPrintfln("Cannot skip CRT CHIP payload");
+            myFile.close();
+            FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+            RedirectEmptyDriveDirMenu();
+            return false;
+         }
+         if (Chip == NumCrtChips) NumCrtChips++;
+         if (myFile.read(CrtChips[Chip].ChipROM, PayloadSize) != PayloadSize)
+         {
+            SendMsgPrintfln("Truncated CRT CHIP payload");
+            myFile.close();
+            FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+            RedirectEmptyDriveDirMenu();
+            return false;
+         }
       }
       
       //check configuration
