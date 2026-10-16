@@ -30,19 +30,22 @@ void PollUSBMouse()
    // MouseController is also a BTHIDInput, so its own bool conversion is ambiguous
    if (!static_cast<USBHIDInput &>(usbHostMouse))
    {
-      USBMouse_Buttons = 0;   // unplugging leaves the library's last report in place
+      // unplugging leaves the library's last report in place, for a replug to deliver
+      usbHostMouse.mouseDataClear();
+      USBMouse_Buttons = 0;
       return;
    }
    if (!usbHostMouse.available()) return;
    // the USB ISR writes each report straight into the controller, and mouseDataClear()
-   //  would drop one that lands between these reads and the clear.  IRQ_USB2 is the host
-   //  port's, which USBHost_t36 calls IRQ_USBHS in a header of its own
-   NVIC_DISABLE_IRQ(IRQ_USB2);
+   //  would drop one that lands between these reads and the clear
+   NVIC_DISABLE_IRQ(IRQ_USBHS);
+   // the Cortex-M7 can still take the IRQ after the NVIC write until a DSB and ISB
+   asm volatile("dsb\n\tisb" ::: "memory");
    int32_t X = usbHostMouse.getMouseX();
    int32_t Y = usbHostMouse.getMouseY();
    uint8_t Buttons = usbHostMouse.getButtons();
    usbHostMouse.mouseDataClear();
-   NVIC_ENABLE_IRQ(IRQ_USB2);
+   NVIC_ENABLE_IRQ(IRQ_USBHS);
    USBMouse_Counts[0] += X;
    USBMouse_Counts[1] += Y;
    USBMouse_Buttons = Buttons;
