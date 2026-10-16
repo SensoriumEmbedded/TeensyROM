@@ -164,11 +164,18 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
    return true;
 }
 
+FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *Name)
+{
+   SendMsgPrintfln("%s boot disk:\r\n%s", Launcher->Title, Name);
+   return true;
+}
+
 // Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one
 FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name)
 {
    char Source[MaxNamePathLength], Copy[MaxNamePathLength], Error[GEOS_ERROR_SIZE];
    struct GeosBootDisk Found;
+   const char *CopyName = Copy + strlen(Launcher->Folder) + 1;
 
    GeosPath(Source, sizeof Source, Launcher, Name);
    GeosCopyPath(Copy, sizeof Copy, Launcher, Name);
@@ -178,21 +185,21 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return false;
    }
    if (!Found.HasDeskTop) return false;
+   if (Found.HasDriver) return GeosReady(Launcher, Name);
 
-   SendMsgPrintfln("%s boot disk:\r\n%s", Launcher->Title, Name);
-   if (Found.HasDriver) return true;
    if (SD.exists(Copy))
    {
       // The copy is the disk GEOS saves the user's work to: one that cannot be read is left alone, not replaced
       if (!GeosInspectFile(Launcher, Copy, &Found, Error, sizeof Error))
       {
-         SendMsgPrintfln("%s:\r\n%s", Copy, Error);
+         SendMsgPrintfln("%s:\r\n%s", CopyName, Error);
          return true;
       }
-      if (Found.HasDriver) return true;
+      if (Found.HasDriver) return GeosReady(Launcher, CopyName);
    }
-   if (GeosPatchCopy(Launcher, Source, Copy)) SendMsgPrintfln("Added the TR USB mouse driver to\r\n%s", Copy);
-   return true;
+   if (!GeosPatchCopy(Launcher, Source, Copy)) return true;
+   SendMsgPrintfln("Added the TR USB mouse driver to\r\na copy of %s", Name);
+   return GeosReady(Launcher, CopyName);
 }
 
 FLASHMEM void LaunchGeos(const struct GeosLauncher *Launcher)
