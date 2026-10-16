@@ -285,18 +285,15 @@ static bool GeosCheckDirectoryRoom(struct GeosDisk *Disk, const struct GeosTS *C
    return GeosFail(Disk, "the directory is full");
 }
 
-// Chains one more directory sector, as DOS does when a directory fills, once GeosCheckDirectoryRoom has passed.
+// Chains one more directory sector, as DOS does when a directory fills.
 static bool GeosGrowDirectory(struct GeosDisk *Disk, struct GeosTS *Chain, int *Length)
 {
    const struct GeosFormat *Format = Disk->Format;
    uint8_t Block[GEOS_SECTOR_SIZE];
    int New;
 
-   if (!GeosTake(Disk, Format->DirTrack, &New)) return false;
-   if (New < 0 || !GeosIsDirSector(Format, Format->DirTrack, New) || *Length == GEOS_MAX_DIR_SECTORS)
-   {
-      return GeosFail(Disk, "the directory is full");
-   }
+   if (*Length == GEOS_MAX_DIR_SECTORS) return GeosFail(Disk, "the directory is full");
+   if (!GeosCheckDirectoryRoom(Disk, Chain, *Length) || !GeosTake(Disk, Format->DirTrack, &New)) return false;
 
    struct GeosTS Last = Chain[*Length - 1];
    if (!GeosReadTS(Disk, Last.Track, Last.Sector, Block)) return false;
