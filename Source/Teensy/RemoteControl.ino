@@ -124,7 +124,6 @@ FLASHMEM bool SetRTC()
    if (!GetUInt(&SecsSince1970, 4)) return false;
 
    Teensy3Clock.set(SecsSince1970);
-   C64TODfromRTC();
    return true;
 }
 
