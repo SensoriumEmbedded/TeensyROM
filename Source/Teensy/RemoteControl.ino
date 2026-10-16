@@ -112,6 +112,23 @@ FLASHMEM bool SetColorRef()
 }
 
 // Command: 
+// Set the TR's real-time clock, which the TR+'s battery keeps through power-off
+//
+// Workflow:
+// Receive <-- SetRTCToken Token 0x6474
+// Receive <-- UTC time, seconds since 1970 (4 bytes, big endian)
+// Send --> AckToken 0x64CC or FailToken 0x9B7F
+FLASHMEM bool SetRTC()
+{
+   uint32_t SecsSince1970;
+   if (!GetUInt(&SecsSince1970, 4)) return false;
+
+   Teensy3Clock.set(SecsSince1970);
+   C64TODfromRTC();
+   return true;
+}
+
+// Command: 
 // Set sub-song number of currently loaded SID
 //
 // Workflow:

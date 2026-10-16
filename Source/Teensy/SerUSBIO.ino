@@ -661,6 +661,10 @@ FLASHMEM void ProcessCommand()
          if(SetColorRef()) SendU16(AckToken);
          else SendU16(FailToken);
          break;
+      case SetRTCToken: //Set the real-time clock
+         if(SetRTC()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
       case DebugToken: //'dg'Test/debug
          //for (int a=0; a<256; a++) CmdChannel->printf("\n%3d, // %3d   '%c'", ToPETSCII(a), a, a);
          //Printf_dbg("isFab2x: %d\n", isFab2x()); 
