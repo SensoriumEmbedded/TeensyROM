@@ -19,10 +19,12 @@ import tempfile
 SOURCE = pathlib.Path(__file__).with_name('trmouse128.asm')
 NAME = b'TR USB MOUSE'
 CLASS_NAME = b'TR USB Mouse'
+CLASS_NAME_SIZE = 12   # GEOS reads the version right after it
 LOAD = 0xfd00
 MAX_SIZE = 0x180   # GEOS 128's input driver area, $FD00-$FE7F
 
 D81_SIZE = 819200
+TRACKS = 80
 SECTORS = 40
 DIR_TRACK = 40
 BAM_SECTORS = (1, 2)   # tracks 1-40, 41-80
@@ -99,7 +101,7 @@ class D81:
         return self.offset(DIR_TRACK, sector) + BAM_ENTRIES + ((track - 1) % SECTORS) * BAM_ENTRY_SIZE
 
     def allocate(self):
-        for track in range(1, 81):
+        for track in range(1, TRACKS + 1):
             if track == DIR_TRACK:
                 continue
             entry = self.bam_entry(track)
@@ -115,7 +117,8 @@ class D81:
         track, sector = DIR_TRACK, FIRST_DIR_SECTOR
         seen = set()
         while track:
-            if (track, sector) in seen or not 1 <= track <= 80 or sector >= SECTORS:
+            in_header = track == DIR_TRACK and sector < FIRST_DIR_SECTOR
+            if (track, sector) in seen or in_header or not 1 <= track <= TRACKS or sector >= SECTORS:
                 sys.exit(f'the directory chain is broken at {track}/{sector}')
             seen.add((track, sector))
             base = self.offset(track, sector)
@@ -148,7 +151,7 @@ def info_block(size):
     info[0x44:0x47] = bytes((USR_CLOSED, INPUT_128, GEOS_SEQUENTIAL))
     info[0x47:0x49] = LOAD.to_bytes(2, 'little')
     info[0x49:0x4b] = (LOAD + size).to_bytes(2, 'little')
-    info[0x4d:0x61] = padded(CLASS_NAME.ljust(12) + b'V1.0', 20)   # GEOS reads the version at +12
+    info[0x4d:0x61] = padded(padded(CLASS_NAME, CLASS_NAME_SIZE, b' ') + b'V1.0', 20)
     info[0x61:0x75] = padded(b'TeensyROM', 20)
     info[0xa0:0x100] = padded(b'A USB mouse plugged into a TeensyROM.', 0x60)
     return bytes(info)
