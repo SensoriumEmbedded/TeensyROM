@@ -324,5 +324,6 @@ StructMenuItem TeensyROMMenu[] =
  /**7**/ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
  /* 8 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
  /**9**/ rtDirectory, IOH_None           , (char*)"/TeensyROM Specific"              , (uint8_t*)dirTeensyROMSpecific       , sizeof(dirTeensyROMSpecific) ,
+ /* 10*/ rtGEOS     , IOH_None           , (char*)"GEOS 128"                         , (uint8_t*)&Geos128Launcher           , sizeof(Geos128Launcher) ,
 };
 
