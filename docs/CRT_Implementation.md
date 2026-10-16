@@ -14,6 +14,14 @@
  * The Teensy's Flash memory and external add-on RAM locations are not quite fast enough to serve the C64. This is because they are serial devices and take about 400nS for a random read.  We need about twice that fast to meet the 1MHz C64 bus timing. There are some discussions/attempts to increase speed documented [here](https://forum.pjrc.com/index.php?threads/faster-way-to-read-a-single-byte-from-flash-or-ext-psram.73428/)
  * That left us stuck at an 850KB CRT limit, until...
 
+## Extended EasyFlash images
+
+ * CRT hardware type 32 supports read-only images with 64, 128 or 256 banks (1, 2 or 4 MiB).
+ * Each bank has two 8 KiB CHIP packets: ROML at `$8000` and ROMH at `$A000` or `$E000`. Omitted halves read as erased flash (`$FF`).
+ * The highest bank present selects the `$DE00` bank mask: `$3F`, `$7F` or `$FF`. Ordinary 1 MiB images retain their six-bit bank wrapping.
+ * Up to 512 CHIP packets are accepted. Invalid bank numbers, duplicate halves, incomplete packets and unsupported EasyFlash CHIP layouts are rejected before execution.
+ * Larger images use the existing MinimalBoot SD bank-swap mechanism below. They must be launched from SD; they do not require a host extension or external PSRAM. EAPI writes remain unsupported.
+
 ## Very Large (>850KB) CRT file support:
  * Beta starting in FW v0.6.7
  * Example files in this category "A Pig Quest", "Eye of the Beholder" and "SNK vs Capcom"

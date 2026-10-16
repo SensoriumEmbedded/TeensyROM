@@ -264,6 +264,14 @@ FLASHMEM void HandleExecution()
             Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
             while (MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset > 1) //allow for off by 1 sometimes caused by bin2header
             {
+               const size_t Remaining = MenuSelCpy.Code_Image + MenuSelCpy.Size - ptrChipOffset;
+               if (Remaining < CRT_CHIP_HDR_LEN ||
+                   toU16(ptrChipOffset+0x0E) > Remaining-CRT_CHIP_HDR_LEN)
+               {
+                  FreeCrtChips();
+                  IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+                  return;
+               }
                if (!ParseChipHeader(ptrChipOffset, "")) //sends error messages
                {
                   FreeCrtChips();
@@ -496,7 +504,11 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       }
       
       //load header and parse
-      for (count = 0; count < CRT_MAIN_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read main header
+      if (myFile.read(lclBuf, CRT_MAIN_HDR_LEN) != CRT_MAIN_HDR_LEN)
+      {
+         myFile.close();
+         return false;
+      }
       MyMenuItem->Code_Image = lclBuf;
       if (!ParseCRTHeader(MyMenuItem, &EXROM, &GAME)) //sends error messages
       {
@@ -510,7 +522,17 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
       while (myFile.available())
       {
-         for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
+         if (myFile.size() - myFile.position() < CRT_CHIP_HDR_LEN ||
+             myFile.read(lclBuf, CRT_CHIP_HDR_LEN) != CRT_CHIP_HDR_LEN ||
+             toU16(lclBuf+0x0E) > myFile.size() - myFile.position())
+         {
+            SendMsgPrintfln("Truncated CRT CHIP packet");
+            myFile.close();
+            FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+            RedirectEmptyDriveDirMenu();
+            return false;
+         }
          if (!ParseChipHeader(lclBuf, FullFilePath)) //sends error messages
          {
             myFile.close();
@@ -519,7 +541,16 @@ bool LoadFile(FS *sourceFS, const char* FilePath, StructMenuItem* MyMenuItem)
             RedirectEmptyDriveDirMenu();
             return false;        
          }
-         for (count = 0; count < CrtChips[NumCrtChips].ROMSize; count++) CrtChips[NumCrtChips].ChipROM[count]=myFile.read();//read in ROM info:
+         if (myFile.read(CrtChips[NumCrtChips].ChipROM, CrtChips[NumCrtChips].ROMSize) != CrtChips[NumCrtChips].ROMSize)
+         {
+            // The current allocation is owned even when its payload read fails.
+            NumCrtChips++;
+            myFile.close();
+            FreeCrtChips();
+            IO1[rwRegNextIOHndlr] = EEPROM.read(eepAdNextIOHndlr);
+            RedirectEmptyDriveDirMenu();
+            return false;
+         }
          NumCrtChips++;
       }
       
@@ -695,6 +726,7 @@ void FreeCrtChips()
 { //free chips allocated in RAM2 and reset NumCrtChips
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
+   free(CrtChips); CrtChips = NULL;
    NumCrtChips = 0;
 }
 

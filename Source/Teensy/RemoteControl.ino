@@ -226,6 +226,19 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       }                                          //DriveDirPath's buffer can't hold both "/" and the filename starting at index 1
    }
    
+   // The menu keeps its IRQ launch path. Other cartridges must stop using
+   // their CHIP table and ROM pointers before the remote launch releases them.
+   if (CurrentIOHandler != IOH_TeensyROM)
+   {
+      CurrentIOHandler = IOH_None;
+      PendingfBusSnoop = fBusSnoop = NULL;
+#ifdef Fab04_GlobalKernalReplace
+      fKernRepl = NULL;
+#endif
+      SetGameDeassert;
+      SetExROMDeassert;
+      LOROM_Image = HIROM_Image = NULL;
+   }
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
 #ifdef Fab04_REU

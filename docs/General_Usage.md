@@ -102,6 +102,7 @@
           * See full CRT implementation details [here](CRT_Implementation.md).
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. 
           * This issue only impacts UltiMax CRTs on C128s and is resolved in PCB rev 0.3
+        * EasyFlash supports read-only 1, 2 and 4 MiB images (64, 128 or 256 banks). Larger images use the SD-card bank-swap path described above.
         * EasyFlash EAPI not currently supported
     * **.SID files:**
       * Play SID file: ~90% of known SID files are supported

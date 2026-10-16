@@ -32,8 +32,8 @@ stcIOHandlers IOHndlr_MagicDesk =
   NULL,                  //called at the end of EVERY c64 cycle
 };
 
-extern StructCrtChip CrtChips[];
-extern uint8_t NumCrtChips;
+extern StructCrtChip *CrtChips;
+extern uint16_t NumCrtChips;
 
 uint8_t BankReg; 
 
