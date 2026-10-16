@@ -350,7 +350,7 @@ Sets one of the colors in the TR UI. Color is stored in EEPROM and IO space; the
 ---
 
 ### Set Real-Time Clock
-Sets the TR's real-time clock. The time is UTC; the TR applies its time zone setting when it shows or passes on the time. On a TR+ with a battery, the clock keeps the time through power-off.
+Sets the TR's real-time clock. The time is UTC; the TR applies its time zone setting when it shows or passes on the time. On a TR+ with a battery, the clock keeps the time through power-off. The menu's clock shows the new time after its next reset.
 
 **Workflow:**
 | Direction | Data |
