@@ -79,7 +79,7 @@ readY   lda $df00+regY
         sta deltaY
         bit mouseOn
         bmi readButtons
-noMouse rts                     ; movement while the pointer is off is dropped, as a 1351's is
+noMouse rts                     ; movement while the pointer is off is dropped
 
 readButtons
         lda $df00+regButtons
