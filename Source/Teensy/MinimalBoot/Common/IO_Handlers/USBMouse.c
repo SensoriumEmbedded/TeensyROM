@@ -45,6 +45,7 @@ void PollUSBMouse()
    int32_t Y = usbHostMouse.getMouseY();
    uint8_t Buttons = usbHostMouse.getButtons();
    usbHostMouse.mouseDataClear();
+   asm volatile("" ::: "memory");
    NVIC_ENABLE_IRQ(IRQ_USBHS);
    USBMouse_Counts[0] += X;
    USBMouse_Counts[1] += Y;
