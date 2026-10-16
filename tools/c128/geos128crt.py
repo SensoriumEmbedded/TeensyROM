@@ -302,7 +302,7 @@ def rom_image(image, t):
     for code, offset, want in OPERANDS:
         assert code[offset] | code[offset + 1] << 8 == want, (hex(offset), hex(want))
     assert STUB[0x32] | STUB[0x36] << 8 == DATA and STUB[0x3A] | STUB[0x3E] << 8 == LOAD
-    assert CLOCK[0x3D] | CLOCK[0x42] << 8 == DEFAULTS + 0x18
+    assert CLOCK[0x3D] | CLOCK[0x42] << 8 == DEFAULTS + 0x18 and CLOCK[0x19] == len(BOOT4) - 1
     assert 0x8000 + len(STUB) <= RECORD and len(STUB) - (STUB_ROM - 0x8000) <= 0x100
     assert RECORD + len(clock_record(t)) == CLOCK_ADDR and CLOCK_ADDR + len(CLOCK) <= DATA
     packed = lz_pack(bytes(image))
