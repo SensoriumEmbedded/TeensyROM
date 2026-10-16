@@ -370,6 +370,7 @@ void loop()
    
    if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
+   PollUSBMouse();
    
    if (nfcState == nfcStateEnabled) nfcCheck();
    
