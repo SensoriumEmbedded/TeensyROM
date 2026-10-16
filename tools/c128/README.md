@@ -28,7 +28,7 @@ TR's Special IO set to GeoRAM. Take the file off the disk with VICE's `c1541`:
 GEOBOOT128 is packed (an LZ format of the tool's own, unpacked by the stub) into the cart's
 32 KB from `$8300`. The C128 calls a function ROM's cold start with IRQs enabled and the
 ROM's top page mapped over the CPU vectors, so the cold start masks IRQs first, and `$FFF9`
-holds an `RTI` that the vectors point to. The stub runs from `$1300` with the bottom 8 KB
+holds an `RTI` that the NMI vector points to; the IRQ vector points at the cold start. The stub runs from `$1300` with the bottom 8 KB
 common to both banks, reading the ROM with `$FF00 = $2B` and writing bank 1 with `$7F`.
 
 GEOS keeps a RAM reset key in bank 1: `CBM` at `$FFF5` and a vector to `$03E4`. The C128

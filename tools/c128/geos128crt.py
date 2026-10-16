@@ -24,7 +24,7 @@ RESET_KEY = 0x6FF5                  # unpacks to bank 1 $FFF5 with the rest of G
 STUB_RAM, STUB_ROM = 0x1300, 0x8021
 RECORD, CLOCK_ADDR, DATA = 0x81F0, 0x8200, 0x8300   # baked into the stub and CLOCK operands
 CLOCK_SCRATCH = 0x1B00
-VECTORS = 0xFFF9
+VECTORS, COLD = 0xFFF9, 0x800A
 
 # The TR finds this record by its tag and keeps the seven bytes after it at local time.
 CLOCK_TAG = b'TRCLOCK\x01'
@@ -206,10 +206,12 @@ CLOCK = bytes.fromhex(               # $8200, entered with $FF00 = $6A
 ) + BOOT4           # 82a2
 
 # Addresses the code above has baked in, as (code, offset of the operand, what it must be).
-OPERANDS = ((STUB, 0x16, STUB_ROM), (STUB, 0x19, STUB_RAM), (STUB, 0x1F, STUB_RAM),
+OPERANDS = ((STUB, 0x04, COLD), (STUB, 0x16, STUB_ROM), (STUB, 0x19, STUB_RAM), (STUB, 0x1F, STUB_RAM),
             (STUB, 0x8E, CLOCK_ADDR), (STUB, 0xA4, ENTRY),
             (CLOCK, 0x03, RECORD + len(CLOCK_TAG)), (CLOCK, 0x06, CLOCK_SCRATCH),
-            (CLOCK, 0x1B, DEFAULTS), (CLOCK, 0x1E, CLOCK_ADDR + len(CLOCK) - len(BOOT4)))
+            (CLOCK, 0x0E, RECORD + len(CLOCK_TAG)), (CLOCK, 0x1B, DEFAULTS),
+            (CLOCK, 0x29, DEFAULTS + 0x19), (CLOCK, 0x2F, DEFAULTS + 0x1E),
+            (CLOCK, 0x35, DEFAULTS + 0x23), (CLOCK, 0x3A, DEFAULTS), (CLOCK, 0x1E, CLOCK_ADDR + len(CLOCK) - len(BOOT4)))
 LZ_MIN, LZ_MAX_COPY, LZ_MAX_RUN = 3, 127 + 3, 127
 
 
@@ -289,16 +291,19 @@ def clock_record(t):
 def rom_image(image, t):
     for code, offset, want in OPERANDS:
         assert code[offset] | code[offset + 1] << 8 == want, (hex(offset), hex(want))
-    assert STUB[0x32] | STUB[0x36] << 8 == DATA
+    assert STUB[0x32] | STUB[0x36] << 8 == DATA and STUB[0x3A] | STUB[0x3E] << 8 == LOAD
+    assert CLOCK[0x3D] | CLOCK[0x42] << 8 == DEFAULTS + 0x18
     assert 0x8000 + len(STUB) <= RECORD and len(STUB) - (STUB_ROM - 0x8000) <= 0x100
     assert RECORD + len(clock_record(t)) == CLOCK_ADDR and CLOCK_ADDR + len(CLOCK) <= DATA
     packed = lz_pack(bytes(image))
     assert lz_unpack(packed) == image
     if DATA + len(packed) > 0xFF00:   # the MMU registers at $FF00 hide the ROM from there up
         sys.exit(f'GEOBOOT128 packs to {len(packed)} bytes, {DATA + len(packed) - 0xFF00} too many')
+    # An IRQ that arrives before the cold start's SEI is still asserted when an RTI returns,
+    # and the 6502 takes it again before the next instruction, so IRQ enters the cold start.
     rom = bytearray(b'\xff' * 0x8000)
     for addr, data in ((0x8000, STUB), (RECORD, clock_record(t)), (CLOCK_ADDR, CLOCK),
-                       (DATA, packed), (VECTORS, b'\x40' + struct.pack('<H', VECTORS) * 3)):
+                       (DATA, packed), (VECTORS, b'\x40' + struct.pack('<HHH', VECTORS, VECTORS, COLD))):
         rom[addr - 0x8000:addr - 0x8000 + len(data)] = data   # $40 is RTI
     return rom
 
