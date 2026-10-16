@@ -46,28 +46,40 @@ SetMouse
 
 ; The registers are at $DF00 beside GeoRAM and $DE00 beside the REU; the ID tells which.
 ;  $DF03-$DF05 are REU address registers, which have no side effects when read.
+;  Carry set: neither page has the ID, so what reads there is not a mouse.
 FindRegs
+        ldy #$df
+nextPage
+        sty readID+2
         ldx #2
--       lda $df00+regID,x
+readID  lda $df00+regID,x
         cmp trID,x
         bne +
         dex
-        bpl -
-        lda #$df
-        bne ++
-+       lda #$de
-++      sta readX+2
-        sta readY+2
-        sta readButtons+2
+        bpl readID
+        sty readX+2
+        sty readY+2
+        sty readButtons+2
+        clc
+        rts
++       dey
+        cpy #$dd
+        bne nextPage
+        sec
         rts
 
 trID    !text "TRM"
 
 UpdateMouse
+        jsr FindRegs
+        bcs noMouse
+readX   lda $df00+regX
+        sta deltaX
+readY   lda $df00+regY
+        sta deltaY
         bit mouseOn
-        bmi +
-        rts
-+       jsr FindRegs
+        bmi readButtons
+noMouse rts                     ; movement while the pointer is off is dropped, as a 1351's is
 
 readButtons
         lda $df00+regButtons
@@ -85,11 +97,8 @@ readButtons
         sta pressFlag
 ++
 
-readX
-        lda $df00+regX
-        sta deltaX
         ldx #0
-        cmp #0
+        lda deltaX
         bpl +
         dex
 +       stx deltaX+1
@@ -105,9 +114,7 @@ readX
         adc deltaX+1
         sta mouseXPos+1         ; the kernal clamps it to the screen
 
-readY
-        lda $df00+regY
-        sta deltaY
+        lda deltaY
         clc
         adc mouseYPos
         bit deltaY
