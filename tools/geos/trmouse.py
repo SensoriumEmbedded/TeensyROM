@@ -147,6 +147,8 @@ class Disk:
         for sector in range(self.format.sectors(track)):
             byte, bit = bitmap + sector // 8, 1 << (sector % 8)
             if self.image[byte] & bit:
+                if not self.image[count]:
+                    sys.exit(f'the BAM count for track {track} disagrees with its bitmap')
                 self.image[byte] &= ~bit
                 self.image[count] -= 1
                 return track, sector
@@ -163,6 +165,8 @@ class Disk:
     def dir_sectors(self):
         header = self.offset(self.format.dir_track, 0)
         track, sector = self.image[header], self.image[header + 1]
+        if not track:
+            sys.exit('the disk header links to no directory')
         seen = set()
         while track:
             in_directory = track == self.format.dir_track and sector in self.format.dir_sectors
@@ -173,23 +177,27 @@ class Disk:
             base = self.offset(track, sector)
             track, sector = self.image[base], self.image[base + 1]
 
+    def slots(self, track, sector):
+        base = self.offset(track, sector)
+        return [base + i * DIR_ENTRY_SIZE for i in range(SECTOR_SIZE // DIR_ENTRY_SIZE)]
+
     def dir_slots(self):
         for track, sector in self.dir_sectors():
-            base = self.offset(track, sector)
-            for i in range(SECTOR_SIZE // DIR_ENTRY_SIZE):
-                yield base + i * DIR_ENTRY_SIZE
+            yield from self.slots(track, sector)
 
     def grow_directory(self):
         """Chain one more directory sector, as DOS does when a directory fills; returns its slots."""
-        last = list(self.dir_sectors())[-1]
+        chain = list(self.dir_sectors())
         new = self.take(self.format.dir_track)
         if new is None or new[1] not in self.format.dir_sectors:
             sys.exit('the directory is full')
-        o = self.offset(*last)
+        if new in chain:
+            sys.exit(f'the BAM shows directory sector {new[0]}/{new[1]} free')
+        o = self.offset(*chain[-1])
         self.image[o:o + 2] = bytes(new)
         o = self.offset(*new)
         self.image[o:o + SECTOR_SIZE] = padded(b'\x00\xff', SECTOR_SIZE)
-        return [o + i * DIR_ENTRY_SIZE for i in range(SECTOR_SIZE // DIR_ENTRY_SIZE)]
+        return self.slots(*new)
 
     def write_file(self, data, info):
         """Write a GEOS sequential file; returns its first data sector."""
