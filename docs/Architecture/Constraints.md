@@ -114,6 +114,15 @@ for why that specific fix is unsafe, not just inelegant.
 
 ## Memory budgets are hard caps, not soft targets
 
+EasyFlash's decode table covers 256 banks (2 KiB of RAM1). CRT metadata is allocated
+on the RAM2 heap only while a CRT is loaded: up to 512 entries, 6 KiB on Teensy.
+Sparse EasyFlash halves share one 8 KiB `DMAMEM` page initialized to `$FF`; it must
+remain in RAM2 because the C64 bus ISR reads it directly. The image buffers and
+16 swap buffers keep their existing sizes. Large capacity still comes from SD,
+rather than a larger resident ROM buffer. `VM_HOST_PROFILE` keeps its existing
+64-bank client-cartridge table and does not reserve the erased page; VMBoot
+loads a complete 16 KiB client instead of a native CRT.
+
 - Full firmware: `MaxRAM_ImageSize = 128` KB (`Source/Teensy/TeensyROM.h:26`) — the RAM1 image buffer. Beyond that, CRT banks spill into RAM2 via `malloc()` (`FileParsers.ino:120-128`); when that allocation fails, firmware reboots into MinimalBoot (`FileParsers.ino:165-168`, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for the full trigger mechanism) — this exhaustion point empirically lands around **~650KB** total, it is not a hardcoded threshold.
 - MinimalBoot: `(440 - 8*Num8kSwapBuffers - EthernetDeduction)` KB = 208 KB (`Source/Teensy/MinimalBoot/Min_TeensyROM.h:58`) — with RAM2 and the 16 swap buffers, holds **103 8K banks (~824KB)** before any bank has to come from SD at runtime (measured 2026-10-04: an 880K EasyFlash loads 87 banks, flags 23 for swapping, 16 of them preloaded into the swap buffers, 7 left for SD), at the cost of dropping USB host support (SD-only loading in this mode). Its RAM1 stack floor (>24000 free with Ethernet, measured in that header) is enforced by `tools/build-firmware.mjs`; the base was 392 until MinimalBoot's ITCM code dropped from five 32 KB banks to four.
 - Files beyond that use bank-swapping from SD (only), asserting the DMA line for about 0.5–1.5 mS per uncached swap depending on the card, 2.3 mS at worst so far (since 24c187c reads each 8K bank in one call; reading it a byte at a time took ~3 mS) — not true bus-mastering DMA, just the old-school REU-style pause assertion. TR+'s true bus-mastering DMA doesn't help here: the pause just needs to be perceptually instant to the 6510 for an SD→RAM bank transfer, which bus-mastering doesn't improve. This mechanism was documented as unreliable on most C128s and a low percentage of NTSC systems; **that reliability claim may now be stale and is due for a re-test** (flagged during architecture review, 2026-08-11 — see [Known-Issues.md](Known-Issues.md)). A DMA Pause check utility (`TODCheck`/Test+Diags BASIC tool) exists to test a given system before relying on this.

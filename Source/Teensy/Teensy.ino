@@ -400,6 +400,9 @@ void loop()
 
 FLASHMEM void SetUpMainMenuROM()
 {
+   // Retire cartridge callbacks before releasing their dynamic CHIP table.
+   // PHI2 remains live until loop() applies the reset requested below.
+   CurrentIOHandler = IOH_None;
    PendingfBusSnoop = fBusSnoop = NULL;
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;

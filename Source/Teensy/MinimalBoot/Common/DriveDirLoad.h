@@ -179,7 +179,8 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 
 #define CRT_MAIN_HDR_LEN  0x40
 #define CRT_CHIP_HDR_LEN  0x10
-#define MAX_CRT_CHIPS     128
+#define MAX_CRT_CHIPS     512
+#define MAX_LEGACY_CRT_CHIPS 128
 
 #define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
 
@@ -191,6 +192,9 @@ struct StructCrtChip
    uint16_t ROMSize;
    uint16_t BankNum;
 };
+
+bool EnsureCrtChipTable();
+void FreeCrtChips();
 
 #ifndef MinimumBuild
    //only needed in full build:

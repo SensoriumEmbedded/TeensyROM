@@ -18,9 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define Printf_Swaps     Serial.printf  //Printf_dbg   //
+#ifdef VM_HOST_PROFILE
+// VMBoot validates a complete 16 KiB client and mirrors it across 64 banks.
+// Its ABI-reserved RAM2 arena cannot host the native CRT erased-page buffer.
 #define NumDecodeBanks   64
+#else
+#define NumDecodeBanks   256
+// ROM reads run in the PHI2 ISR: an erased half must live in RAM, never flash.
+DMAMEM static uint8_t EasyFlashErasedBank[8192];
+#endif
 uint8_t *BankDecode[NumDecodeBanks][2];
 uint8_t EZFlashRAM[256];
+uint8_t EasyFlashBankMask = 0x3f;
 #ifdef FeatVMHost
 // Defined by the extension image only. Stock builds compile none of this.
 uint8_t CurrentEasyFlashBank;
@@ -63,7 +72,7 @@ stcIOHandlers IOHndlr_EasyFlash =
 };
 
 #ifdef MinimumBuild
-void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
+static bool ReadBank(uint32_t SeekTo, uint8_t* ptrImage)
 {
    if(!myFile)
    {
@@ -81,33 +90,54 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
       if (!myFile) 
       {
          Printf_dbg("File Not Found");
-         return;
+         return false;
       }
    }
    //Printf_dbg("\n %lu mS Open ", millis()-Startms);
    
-   myFile.seek(SeekTo);
-   //One bulk read: SdFat moves whole sectors straight into the buffer instead of 8192 single-byte calls.
-   //   SdFat returns -1 on error (through File's size_t, hence the cast); fill any shortfall with
-   //   0xff, which is what the byte-wise read() returned past the end of the file.
-   int BytesRead = (int)myFile.read(ptrImage, 8192);
-   if (BytesRead < 0) BytesRead = 0;
-   if (BytesRead < 8192) memset(ptrImage + BytesRead, 0xff, 8192 - BytesRead);
-   //myFile.close();
-   //Printf_dbg("\n %lu mS Load ", millis()-Startms);
+   // Do not publish a stale or partial page after a failed seek/read.
+   return myFile.seek(SeekTo) && myFile.read(ptrImage, 8192) == 8192;
 }
+
+// Magic Desk 2 shares this reader and retains its erased-page fallback.
+void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
+{
+   if (!ReadBank(SeekTo, ptrImage)) memset(ptrImage, 0xff, 8192);
+}
+
+static void EasyFlashSwapFailed()
+{
+   LOROM_Image = HIROM_Image = NULL;
+   SetGameDeassert;
+   SetExROMDeassert;
+   doReset = true;
+   DMA_State = DMA_S_StartDisable;
+}
+uint8_t* ImageCheckAssign(uint8_t* BankRequested);
 #endif
 
 void InitHndlr_EasyFlash()
 {
     
-   //initialize bank decode pointers
-   for(uint8_t BankNum = 0; BankNum < NumDecodeBanks; BankNum++) {BankDecode[BankNum][0]=NULL;BankDecode[BankNum][1]=NULL;}
-   for(uint8_t ChipNum = 0; ChipNum < NumCrtChips; ChipNum++)
+   EasyFlashBankMask = 0x3f;
+#ifdef VM_HOST_PROFILE
+   uint8_t* ErasedBank = NULL; // native CRT initialization is unused by VMBoot
+#else
+   memset(EasyFlashErasedBank, 0xff, sizeof EasyFlashErasedBank);
+   uint8_t* ErasedBank = EasyFlashErasedBank;
+#endif
+   // Sparse native images read as erased flash, including an absent ROMH in bank 0.
+   for(uint16_t BankNum = 0; BankNum < NumDecodeBanks; BankNum++) {BankDecode[BankNum][0]=ErasedBank;BankDecode[BankNum][1]=ErasedBank;}
+   for(uint16_t ChipNum = 0; ChipNum < NumCrtChips; ChipNum++)
    {
       Printf_dbg("Bank# %02d,%d  chip# %03d  addr %08x\n", CrtChips[ChipNum].BankNum, (CrtChips[ChipNum].LoadAddress == 0x8000 ? 0 : 1), ChipNum, (uint32_t)CrtChips[ChipNum].ChipROM);
       if (CrtChips[ChipNum].BankNum < NumDecodeBanks)
-         BankDecode[CrtChips[ChipNum].BankNum][CrtChips[ChipNum].LoadAddress == 0x8000 ? 0 : 1] = CrtChips[ChipNum].ChipROM;
+      {
+         const uint16_t Bank = CrtChips[ChipNum].BankNum;
+         if (Bank >= 128) EasyFlashBankMask = 0xff;
+         else if (Bank >= 64 && EasyFlashBankMask != 0xff) EasyFlashBankMask = 0x7f;
+         BankDecode[Bank][CrtChips[ChipNum].LoadAddress == 0x8000 ? 0 : 1] = CrtChips[ChipNum].ChipROM;
+      }
       else Serial.printf("Unexp Bank# (%d) in chip %d\n", CrtChips[ChipNum].BankNum, ChipNum);
    }
    
@@ -115,17 +145,35 @@ void InitHndlr_EasyFlash()
    
 #ifdef MinimumBuild
    //initialize/invalidate swap buffer, pre-load first swappable chips
-   uint8_t ChipNum = 0;
+   uint16_t ChipNum = 0;
    for(uint8_t BuffNum = 0; BuffNum < Num8kSwapBuffers; BuffNum++) 
    {
       SwapBuffers[BuffNum].Offset=0; //default to zero/invalid
+      // Bank 0 must be resident before the C64 is released, even when CHIP
+      // packets are unordered and its halves were not loaded into RAM.
+      uint8_t* StartupHalf = BuffNum < 2 ? BankDecode[0][BuffNum] : NULL;
+      if (((uint32_t)StartupHalf & SwapSeekAddrMask) == SwapSeekAddrMask)
+      {
+         if (!ReadBank((uint32_t)StartupHalf & ~SwapSeekAddrMask, SwapBuffers[BuffNum].Image))
+         {
+            EasyFlashSwapFailed();
+            return;
+         }
+         SwapBuffers[BuffNum].Offset = (uint32_t)StartupHalf;
+         continue;
+      }
       //find next chip marked as swappable
       while (ChipNum < NumCrtChips)
       {
-         if(((uint32_t)CrtChips[ChipNum].ChipROM & SwapSeekAddrMask) == SwapSeekAddrMask)
+         if(((uint32_t)CrtChips[ChipNum].ChipROM & SwapSeekAddrMask) == SwapSeekAddrMask &&
+            CrtChips[ChipNum].BankNum != 0)
          {
             //pre-load and update
-            LoadBank((uint32_t)CrtChips[ChipNum].ChipROM & ~SwapSeekAddrMask, SwapBuffers[BuffNum].Image);
+            if (!ReadBank((uint32_t)CrtChips[ChipNum].ChipROM & ~SwapSeekAddrMask, SwapBuffers[BuffNum].Image))
+            {
+               EasyFlashSwapFailed();
+               return;
+            }
             SwapBuffers[BuffNum].Offset = (uint32_t)CrtChips[ChipNum].ChipROM;   
             Printf_Swaps("Pre%d: %08x\n", BuffNum, (uint32_t) SwapBuffers[BuffNum].Offset & ~SwapSeekAddrMask);
             ChipNum++;
@@ -137,8 +185,13 @@ void InitHndlr_EasyFlash()
 #endif
    
    //start with Bank 0:
+#ifdef MinimumBuild
+   LOROM_Image = ImageCheckAssign(BankDecode[0][0]);
+   HIROM_Image = ImageCheckAssign(BankDecode[0][1]);
+#else
    LOROM_Image = BankDecode[0][0];
    HIROM_Image = BankDecode[0][1];
+#endif
    //Printf_dbg("Jmp vect: $%02x%02x\n", HIROM_Image[0x1FFD], HIROM_Image[0x1FFC]);
    if(memcmp(HIROM_Image+0x1800, "eapi", 4)==0) Serial.printf("EAPI found\n");
    else Printf_dbg("EAPI *not* found: %d %d %d %d\n", HIROM_Image[0x1800], HIROM_Image[0x1801], HIROM_Image[0x1802], HIROM_Image[0x1803]);
@@ -182,7 +235,7 @@ void IO1Hndlr_EasyFlash(uint8_t Address, bool R_Wn)
       switch (Address)
       {
          case 0x00:   // Register $DE00 – EasyFlash Bank (write-only)
-            Data &= 0x3f;
+            Data &= EasyFlashBankMask;
 #ifdef FeatVMHost
             CurrentEasyFlashBank = Data;
 #endif
@@ -248,7 +301,12 @@ void PollingHndlr_EasyFlash()
          if(HIROM_Image && HIROM_Image == SwapBuffers[NextSwapBuffNum].Image)
             if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
          
-         LoadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
+         SwapBuffers[NextSwapBuffNum].Offset = 0;
+         if (!ReadBank((uint32_t)LOROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image))
+         {
+            EasyFlashSwapFailed();
+            return;
+         }
          Printf_Swaps("L%02d: %08x  ", NextSwapBuffNum, (uint32_t)LOROM_Image & ~SwapSeekAddrMask);
          SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)LOROM_Image;
          LOROM_Image = SwapBuffers[NextSwapBuffNum].Image;
@@ -261,7 +319,12 @@ void PollingHndlr_EasyFlash()
          if(LOROM_Image && LOROM_Image == SwapBuffers[NextSwapBuffNum].Image)
             if(++NextSwapBuffNum==Num8kSwapBuffers) NextSwapBuffNum=0;
          
-         LoadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image);
+         SwapBuffers[NextSwapBuffNum].Offset = 0;
+         if (!ReadBank((uint32_t)HIROM_Image & ~SwapSeekAddrMask, SwapBuffers[NextSwapBuffNum].Image))
+         {
+            EasyFlashSwapFailed();
+            return;
+         }
          Printf_Swaps("H%02d: %08x  ", NextSwapBuffNum, (uint32_t)HIROM_Image & ~SwapSeekAddrMask);
          SwapBuffers[NextSwapBuffNum].Offset = (uint32_t)HIROM_Image;
          HIROM_Image = SwapBuffers[NextSwapBuffNum].Image;
