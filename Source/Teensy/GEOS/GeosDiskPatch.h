@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-// Puts the TR USB mouse driver on a GEOS 128 boot disk image, block by block.
+// Puts a TR input driver on a GEOS boot disk image, block by block.
 // Mirrors tools/geos/trmouse.py install(), which the host test holds it to byte for byte.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "TRMouse128.h"
 
 #define GEOS_SECTOR_SIZE     256
 #define GEOS_DIR_ENTRY_SIZE  32
@@ -16,14 +14,11 @@
 #define GEOS_MAX_DIR_SECTORS 40
 #define GEOS_ERROR_SIZE      80
 #define GEOS_DATA_PER_BLOCK  (GEOS_SECTOR_SIZE - 2)
-#define GEOS_DRIVER_DATA_BLOCKS ((sizeof TRMouse128Code + GEOS_DATA_PER_BLOCK - 1) / GEOS_DATA_PER_BLOCK)
-#define GEOS_DRIVER_BLOCKS   (GEOS_DRIVER_DATA_BLOCKS + 1)
 
 #define CBM_NAME_PAD         0xa0
 #define CBM_TYPE_MASK        0x07
 #define CBM_USR_CLOSED       0x83
 #define GEOS_SEQUENTIAL      0
-#define GEOS_INPUT_128       15
 #define D71_DOUBLE_SIDED     0x80
 
 // Byte offsets inside a 32-byte directory slot (the first two hold the sector link)
@@ -54,10 +49,22 @@ struct GeosFormat
 
 struct GeosDate { uint8_t Year, Month, Day, Hour, Minute; };
 
+// A GEOS version the TR sets up: its boot disk's DeskTop and the input driver the TR adds
+struct GeosTarget
+{
+   const char *DeskTopName, *DriverName;
+   const uint8_t *DriverCode, *DriverInfo;
+   uint16_t DriverSize;
+   uint8_t InputType;
+};
+
+struct GeosBootDisk { bool HasDeskTop, HasDriver; };
+
 // A boot disk image reached through 256-byte block reads and writes at byte offsets.
 struct GeosDisk
 {
    const struct GeosFormat *Format;
+   const struct GeosTarget *Target;
    void *Context;
    bool (*Read)(void *Context, uint32_t Offset, uint8_t *Block);
    bool (*Write)(void *Context, uint32_t Offset, const uint8_t *Block);
@@ -307,46 +314,53 @@ static bool GeosGrowDirectory(struct GeosDisk *Disk, struct GeosTS *Chain, int *
    return GeosWriteTS(Disk, Format->DirTrack, New, Block);
 }
 
+static uint16_t GeosDriverDataBlocks(const struct GeosTarget *Target)
+{
+   return (Target->DriverSize + GEOS_DATA_PER_BLOCK - 1) / GEOS_DATA_PER_BLOCK;
+}
+
 // Writes the driver's data chain and info block; returns the first data sector, the info sector and the block count.
 static bool GeosWriteDriver(struct GeosDisk *Disk, struct GeosTS *First, struct GeosTS *Info, uint16_t *Blocks)
 {
+   const struct GeosTarget *Target = Disk->Target;
+   const uint16_t DataBlocks = GeosDriverDataBlocks(Target);
    struct GeosTS Here, Next = { 0, 0 };
    uint8_t Block[GEOS_SECTOR_SIZE];
 
    if (!GeosAllocate(Disk, &Here)) return false;
    *First = Here;
-   for (uint16_t i = 0; i < GEOS_DRIVER_DATA_BLOCKS; i++)
+   for (uint16_t i = 0; i < DataBlocks; i++)
    {
-      uint16_t Start = i * GEOS_DATA_PER_BLOCK, Length = sizeof TRMouse128Code - Start;
+      uint16_t Start = i * GEOS_DATA_PER_BLOCK, Length = Target->DriverSize - Start;
       if (Length > GEOS_DATA_PER_BLOCK) Length = GEOS_DATA_PER_BLOCK;
-      bool Last = i + 1 == GEOS_DRIVER_DATA_BLOCKS;
+      bool Last = i + 1 == DataBlocks;
 
       if (!Last && !GeosAllocate(Disk, &Next)) return false;
       memset(Block, 0, sizeof Block);
       Block[0] = Last ? 0 : Next.Track;
       Block[1] = Last ? Length + 1 : Next.Sector;
-      memcpy(Block + 2, TRMouse128Code + Start, Length);
+      memcpy(Block + 2, Target->DriverCode + Start, Length);
       if (!GeosWriteTS(Disk, Here.Track, Here.Sector, Block)) return false;
       Here = Next;
    }
 
    if (!GeosAllocate(Disk, Info)) return false;
-   *Blocks = GEOS_DRIVER_BLOCKS;
-   return GeosWriteTS(Disk, Info->Track, Info->Sector, TRMouse128Info);
+   *Blocks = DataBlocks + 1;
+   return GeosWriteTS(Disk, Info->Track, Info->Sector, Target->DriverInfo);
 }
 
-static void GeosBuildEntry(uint8_t *Slot, struct GeosTS First, struct GeosTS Info, uint16_t Blocks, const struct GeosDate *Date)
+static void GeosBuildEntry(const struct GeosTarget *Target, uint8_t *Slot, struct GeosTS First, struct GeosTS Info, uint16_t Blocks, const struct GeosDate *Date)
 {
    memset(Slot + SlotType, 0, GEOS_DIR_ENTRY_SIZE - SlotType);
    Slot[SlotType] = CBM_USR_CLOSED;
    Slot[SlotFirst] = First.Track;
    Slot[SlotFirst + 1] = First.Sector;
    memset(Slot + SlotName, CBM_NAME_PAD, GEOS_NAME_SIZE);
-   memcpy(Slot + SlotName, TRMouse128Name, strlen(TRMouse128Name));
+   memcpy(Slot + SlotName, Target->DriverName, strlen(Target->DriverName));
    Slot[SlotInfo] = Info.Track;
    Slot[SlotInfo + 1] = Info.Sector;
    Slot[SlotStructure] = GEOS_SEQUENTIAL;
-   Slot[SlotGeosType] = GEOS_INPUT_128;
+   Slot[SlotGeosType] = Target->InputType;
    Slot[SlotDate] = Date->Year % 100;
    Slot[SlotDate + 1] = Date->Month;
    Slot[SlotDate + 2] = Date->Day;
@@ -374,11 +388,12 @@ struct GeosSlotRef { int Sector, Slot; };
 struct GeosDirScan
 {
    struct GeosSlotRef Free, FirstDriver;
-   bool HasFree, HasDriver, HasMouse;
+   bool HasFree, HasDriver, HasDeskTop, HasOurs;
 };
 
 static bool GeosScanDirectory(struct GeosDisk *Disk, const struct GeosTS *Chain, int Length, struct GeosDirScan *Scan)
 {
+   const struct GeosTarget *Target = Disk->Target;
    uint8_t Block[GEOS_SECTOR_SIZE];
 
    memset(Scan, 0, sizeof *Scan);
@@ -393,8 +408,9 @@ static bool GeosScanDirectory(struct GeosDisk *Disk, const struct GeosTS *Chain,
 
          if (!Slot[SlotType] && !Scan->HasFree) { Scan->Free = Here; Scan->HasFree = true; }
          if (!InUse) continue;
-         if (GeosSlotNamed(Slot, TRMouse128Name)) Scan->HasMouse = true;
-         if (Slot[SlotGeosType] == GEOS_INPUT_128 && !Scan->HasDriver) { Scan->FirstDriver = Here; Scan->HasDriver = true; }
+         if (GeosSlotNamed(Slot, Target->DriverName)) Scan->HasOurs = true;
+         if (GeosSlotNamed(Slot, Target->DeskTopName)) Scan->HasDeskTop = true;
+         if (Slot[SlotGeosType] == Target->InputType && !Scan->HasDriver) { Scan->FirstDriver = Here; Scan->HasDriver = true; }
       }
    }
    return true;
@@ -430,7 +446,7 @@ static bool GeosWriteEntry(struct GeosDisk *Disk, struct GeosTS Where, int Slot,
 
    if (!GeosWriteDriver(Disk, &First, &Info, &Blocks)) return false;
    if (!GeosReadTS(Disk, Where.Track, Where.Sector, Block)) return false;
-   GeosBuildEntry(Block + Slot * GEOS_DIR_ENTRY_SIZE, First, Info, Blocks, Date);
+   GeosBuildEntry(Disk->Target, Block + Slot * GEOS_DIR_ENTRY_SIZE, First, Info, Blocks, Date);
    return GeosWriteTS(Disk, Where.Track, Where.Sector, Block);
 }
 
@@ -457,30 +473,35 @@ static bool GeosReadDirectory(struct GeosDisk *Disk, struct GeosTS *Chain, int *
    return GeosScanDirectory(Disk, Chain, *Length, Scan);
 }
 
-// Checks the image and returns whether it already holds the driver.
-static inline bool GeosHasMouseDriver(struct GeosDisk *Disk, bool *HasMouse)
+// Checks the image and says whether it is the target's boot disk and already holds the TR driver.
+static inline bool GeosInspect(struct GeosDisk *Disk, struct GeosBootDisk *Found)
 {
    struct GeosTS Chain[GEOS_MAX_DIR_SECTORS];
    struct GeosDirScan Scan;
    int Length;
 
    if (!GeosReadDirectory(Disk, Chain, &Length, &Scan)) return false;
-   *HasMouse = Scan.HasMouse;
+   Found->HasDeskTop = Scan.HasDeskTop;
+   Found->HasDriver = Scan.HasOurs;
    return true;
 }
 
-// Writes the driver ahead of every other input driver, since GEOS 128 loads the first one in the directory.
+// Writes the driver ahead of every other input driver of its type: GEOS 128 boots with the first one in the directory.
 // Every refusal but a failed block read or write comes before the first write, leaving the image as it was.
-static inline bool GeosInstallMouseDriver(struct GeosDisk *Disk, const struct GeosDate *Date)
+static inline bool GeosInstallDriver(struct GeosDisk *Disk, const struct GeosDate *Date)
 {
    struct GeosTS Chain[GEOS_MAX_DIR_SECTORS];
    struct GeosDirScan Scan;
    int Length;
 
    if (!GeosReadDirectory(Disk, Chain, &Length, &Scan)) return false;
-   if (Scan.HasMouse) return GeosFail(Disk, "TR USB MOUSE is already on this disk");
+   if (Scan.HasOurs)
+   {
+      snprintf(Disk->Error, sizeof Disk->Error, "%s is already on this disk", Disk->Target->DriverName);
+      return false;
+   }
    if (!Scan.HasFree && !GeosCheckDirectoryRoom(Disk, Chain, Length)) return false;
-   if (!GeosCheckRoom(Disk, GEOS_DRIVER_BLOCKS)) return false;
+   if (!GeosCheckRoom(Disk, GeosDriverDataBlocks(Disk->Target) + 1u)) return false;
    if (!Scan.HasFree)
    {
       if (!GeosGrowDirectory(Disk, Chain, &Length)) return false;

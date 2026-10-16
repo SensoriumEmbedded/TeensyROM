@@ -224,6 +224,24 @@ test('the firmware patch matches trmouse.py', { skip }, async (t) => {
     }
   }
 
+  for (const kind of Object.keys(FORMATS)) {
+    await t.test(`${kind}: inspect tells a boot disk from a data disk, and sees the driver once added`, () => {
+      const inspect = (label, image) => {
+        const file = path.join(dir, `${kind}-inspect-${label}`);
+        fs.writeFileSync(file, image);
+        const result = run(path.join(dir, 'harness'), ['--inspect', file]);
+        assert.equal(result.status, 0, result.stderr);
+        return result.stdout.trim();
+      };
+      const bootDisk = withDriver(kind);
+      const { firmware } = patchBoth(dir, `${kind}-inspect-patched`, bootDisk.image);
+
+      assert.equal(inspect('data', blankDisk(kind).image), 'desktop=0 driver=0');
+      assert.equal(inspect('boot', bootDisk.image), 'desktop=1 driver=0');
+      assert.equal(inspect('patched', fs.readFileSync(firmware.out)), 'desktop=1 driver=1');
+    });
+  }
+
   await t.test('d71: refuses a single-sided disk', () => {
     const disk = blankDisk('d71');
     disk.image[offset(disk.format, 18, 0) + 3] = 0;
