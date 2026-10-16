@@ -25,6 +25,7 @@ const INPUT_128 = 15;
 const MOUSE_NAME = 'TR USB MOUSE';
 const DATE_IN_SLOT = 25;
 const DATE_BYTES = 5;
+const REFUSED_AFTER_WRITING = 3;
 
 const zoneSectors = (track) => {
   const zone = (track - 1) % 35 + 1;
@@ -155,6 +156,11 @@ const REFUSED_CASES = {
   'a disk with room for the data block but not the info block': (kind) => withOneDataSector(blankDisk(kind)),
   'a full directory on a disk with room for the data block but not the info block': (kind) =>
     withOneDataSector(fullDirectory(kind)),
+  'a full directory whose track has only a system sector free': (kind) => {
+    const disk = fullDirectory(kind);
+    setTrackFree(disk, disk.format.dirTrack, [0]);
+    return disk;
+  },
   'a full directory whose BAM frees its sector': (kind) => {
     const disk = fullDirectory(kind);
     const free = allSectors(disk, disk.format.dirTrack).filter((s) => s >= disk.format.firstDir);
@@ -210,7 +216,6 @@ test('the firmware patch matches trmouse.py', { skip }, async (t) => {
     for (const [label, make] of Object.entries(REFUSED_CASES)) {
       await t.test(`${kind}: refuses ${label}`, () => {
         const { python, firmware } = patchBoth(dir, `${kind}-${label}`, make(kind).image);
-        const REFUSED_AFTER_WRITING = 3;
         assert.notEqual(firmware.status, REFUSED_AFTER_WRITING, `the refusal changed the image: ${firmware.stderr}`);
         assert.equal(firmware.status, 1, `the firmware patched it: ${firmware.stderr}`);
         assert.notEqual(python.status, 0, 'trmouse.py patched it');

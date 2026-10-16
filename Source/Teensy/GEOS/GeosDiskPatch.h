@@ -293,6 +293,10 @@ static bool GeosGrowDirectory(struct GeosDisk *Disk, struct GeosTS *Chain, int *
    int New;
 
    if (!GeosTake(Disk, Format->DirTrack, &New)) return false;
+   if (New < 0 || !GeosIsDirSector(Format, Format->DirTrack, New) || *Length == GEOS_MAX_DIR_SECTORS)
+   {
+      return GeosFail(Disk, "the directory is full");
+   }
 
    struct GeosTS Last = Chain[*Length - 1];
    if (!GeosReadTS(Disk, Last.Track, Last.Sector, Block)) return false;
