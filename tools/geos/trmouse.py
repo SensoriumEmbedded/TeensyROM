@@ -18,6 +18,7 @@ import tempfile
 
 SOURCE = pathlib.Path(__file__).with_name('trmouse128.asm')
 NAME = b'TR USB MOUSE'
+CLASS_NAME = b'TR USB Mouse'
 LOAD = 0xfd00
 MAX_SIZE = 0x180   # GEOS 128's input driver area, $FD00-$FE7F
 
@@ -112,7 +113,11 @@ class D81:
 
     def dir_slots(self):
         track, sector = DIR_TRACK, FIRST_DIR_SECTOR
+        seen = set()
         while track:
+            if (track, sector) in seen or not 1 <= track <= 80 or sector >= SECTORS:
+                sys.exit(f'the directory chain is broken at {track}/{sector}')
+            seen.add((track, sector))
             base = self.offset(track, sector)
             for i in range(8):
                 yield base + i * 32
@@ -143,7 +148,7 @@ def info_block(size):
     info[0x44:0x47] = bytes((USR_CLOSED, INPUT_128, GEOS_SEQUENTIAL))
     info[0x47:0x49] = LOAD.to_bytes(2, 'little')
     info[0x49:0x4b] = (LOAD + size).to_bytes(2, 'little')
-    info[0x4d:0x61] = padded(b'TR USB Mouse V1.0', 20)
+    info[0x4d:0x61] = padded(CLASS_NAME.ljust(12) + b'V1.0', 20)   # GEOS reads the version at +12
     info[0x61:0x75] = padded(b'TeensyROM', 20)
     info[0xa0:0x100] = padded(b'A USB mouse plugged into a TeensyROM.', 0x60)
     return bytes(info)
