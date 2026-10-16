@@ -51,6 +51,7 @@
 //synch with win app:
 //all commands must start with 0x64
 #define SetColorToken     0x6422
+#define SetRTCToken       0x6474  //dt
 #define LaunchFileToken   0x6444
 #define PingToken         0x6455
 #define PauseSIDToken     0x6466  //df
