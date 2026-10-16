@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 // geos_disk_patch_harness IN OUT: the firmware's GEOS boot-disk patch, run on an image file.
-// Exits 0 after writing OUT, 1 with the patcher's refusal on stderr.
+// Exits 0 after writing OUT, 1 with the patcher's refusal on stderr, 3 if a refusal changed the image.
 #include <stdlib.h>
 
 #include "../GEOS/GeosDiskPatch.h"
 
 #define MAX_IMAGE 819200
 
-static uint8_t Image[MAX_IMAGE];
+// One byte past the largest image, so an oversized file reads as a size no format has
+static uint8_t Image[MAX_IMAGE + 1], Original[MAX_IMAGE + 1];
 
 static bool ReadBlock(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -33,6 +34,7 @@ int main(int argc, char **argv)
    if (!In) return 2;
    Size = fread(Image, 1, sizeof Image, In);
    fclose(In);
+   memcpy(Original, Image, Size);
 
    Disk.Format = GeosFormatForSize(Size);
    Disk.Context = Image;
@@ -41,7 +43,7 @@ int main(int argc, char **argv)
    if (!GeosInstallMouseDriver(&Disk, &Date))
    {
       fprintf(stderr, "%s\n", Disk.Error);
-      return 1;
+      return memcmp(Original, Image, Size) ? 3 : 1;
    }
 
    Out = fopen(argv[2], "wb");

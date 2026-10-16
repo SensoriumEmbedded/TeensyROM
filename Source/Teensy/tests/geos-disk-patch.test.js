@@ -122,6 +122,14 @@ function fullDirectory(kind) {
   return disk;
 }
 
+function withOneDataSector(disk) {
+  const reserved = disk.kind === 'd71' ? [18, 53] : [disk.format.dirTrack];
+  for (let track = 1; track <= disk.format.tracks; track++) {
+    if (!reserved.includes(track)) setTrackFree(disk, track, track === 1 ? [0] : []);
+  }
+  return disk;
+}
+
 const PATCHED_CASES = {
   'a blank boot disk': blankDisk,
   'a disk whose first input driver comes earlier': withDriver,
@@ -144,6 +152,9 @@ const REFUSED_CASES = {
     disk.image[offset(disk.format, disk.format.dirTrack, 0)] = 1;
     return disk;
   },
+  'a disk with room for the data block but not the info block': (kind) => withOneDataSector(blankDisk(kind)),
+  'a full directory on a disk with room for the data block but not the info block': (kind) =>
+    withOneDataSector(fullDirectory(kind)),
   'a full directory whose BAM frees its sector': (kind) => {
     const disk = fullDirectory(kind);
     const free = allSectors(disk, disk.format.dirTrack).filter((s) => s >= disk.format.firstDir);
@@ -199,6 +210,8 @@ test('the firmware patch matches trmouse.py', { skip }, async (t) => {
     for (const [label, make] of Object.entries(REFUSED_CASES)) {
       await t.test(`${kind}: refuses ${label}`, () => {
         const { python, firmware } = patchBoth(dir, `${kind}-${label}`, make(kind).image);
+        const REFUSED_AFTER_WRITING = 3;
+        assert.notEqual(firmware.status, REFUSED_AFTER_WRITING, `the refusal changed the image: ${firmware.stderr}`);
         assert.equal(firmware.status, 1, `the firmware patched it: ${firmware.stderr}`);
         assert.notEqual(python.status, 0, 'trmouse.py patched it');
         assert.equal(firmware.stderr.trim(), python.stderr.trim());
