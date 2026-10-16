@@ -206,12 +206,22 @@ CLOCK = bytes.fromhex(               # $8200, entered with $FF00 = $6A
 ) + BOOT4           # 82a2
 
 # Addresses the code above has baked in, as (code, offset of the operand, what it must be).
+GET, PUT, BCD = STUB_RAM + 0x85, STUB_RAM + 0x9C, CLOCK_ADDR + 0x8C
 OPERANDS = ((STUB, 0x04, COLD), (STUB, 0x16, STUB_ROM), (STUB, 0x19, STUB_RAM), (STUB, 0x1F, STUB_RAM),
-            (STUB, 0x8E, CLOCK_ADDR), (STUB, 0xA4, ENTRY),
+            (STUB, 0x47, GET), (STUB, 0x4F, GET), (STUB, 0x52, PUT), (STUB, 0x60, GET),
+            (STUB, 0x65, GET), (STUB, 0x7B, PUT), (STUB, 0x8E, CLOCK_ADDR), (STUB, 0xA4, ENTRY),
             (CLOCK, 0x03, RECORD + len(CLOCK_TAG)), (CLOCK, 0x06, CLOCK_SCRATCH),
-            (CLOCK, 0x0E, RECORD + len(CLOCK_TAG)), (CLOCK, 0x1B, DEFAULTS),
-            (CLOCK, 0x29, DEFAULTS + 0x19), (CLOCK, 0x2F, DEFAULTS + 0x1E),
-            (CLOCK, 0x35, DEFAULTS + 0x23), (CLOCK, 0x3A, DEFAULTS), (CLOCK, 0x1E, CLOCK_ADDR + len(CLOCK) - len(BOOT4)))
+            (CLOCK, 0x0E, RECORD + len(CLOCK_TAG)), (CLOCK, 0x11, CLOCK_SCRATCH),
+            (CLOCK, 0x1B, DEFAULTS), (CLOCK, 0x1E, CLOCK_ADDR + len(CLOCK) - len(BOOT4)),
+            (CLOCK, 0x26, CLOCK_SCRATCH + 1), (CLOCK, 0x29, DEFAULTS + 0x19),
+            (CLOCK, 0x2C, CLOCK_SCRATCH + 2), (CLOCK, 0x2F, DEFAULTS + 0x1E),
+            (CLOCK, 0x32, CLOCK_SCRATCH + 3), (CLOCK, 0x35, DEFAULTS + 0x23),
+            (CLOCK, 0x3A, DEFAULTS), (CLOCK, 0x3F, DEFAULTS + 1), (CLOCK, 0x44, DEFAULTS + 2),
+            (CLOCK, 0x51, CLOCK_SCRATCH + 4), (CLOCK, 0x5C, CLOCK_SCRATCH + 7),
+            (CLOCK, 0x62, CLOCK_SCRATCH + 7), (CLOCK, 0x67, CLOCK_SCRATCH + 7),
+            (CLOCK, 0x6C, BCD), (CLOCK, 0x6F, CLOCK_SCRATCH + 7), (CLOCK, 0x75, CLOCK_SCRATCH + 5),
+            (CLOCK, 0x78, BCD), (CLOCK, 0x7E, CLOCK_SCRATCH + 6), (CLOCK, 0x81, BCD),
+            (CLOCK, 0x97, CLOCK_SCRATCH + 8), (CLOCK, 0x9F, CLOCK_SCRATCH + 8))
 LZ_MIN, LZ_MAX_COPY, LZ_MAX_RUN = 3, 127 + 3, 127
 
 
@@ -305,6 +315,8 @@ def rom_image(image, t):
     for addr, data in ((0x8000, STUB), (RECORD, clock_record(t)), (CLOCK_ADDR, CLOCK),
                        (DATA, packed), (VECTORS, b'\x40' + struct.pack('<HHH', VECTORS, VECTORS, COLD))):
         rom[addr - 0x8000:addr - 0x8000 + len(data)] = data   # $40 is RTI
+    if rom[0x4007:0x400A] == b'CBM':   # the KERNAL would take $C000 for a second function ROM
+        sys.exit('GEOBOOT128 packs to "CBM" at $C007, where the KERNAL looks for a function ROM')
     return rom
 
 
