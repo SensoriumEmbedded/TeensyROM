@@ -141,18 +141,23 @@ class Disk:
         track, sector, byte = place
         return self.offset(track, sector) + byte
 
+    def free_sectors(self, track):
+        _, bitmap = (self.at(p) for p in self.format.bam(track))
+        return [s for s in range(self.format.sectors(track))
+                if self.image[bitmap + s // 8] & 1 << (s % 8)]
+
     def take(self, track):
         """Mark the first free sector of a track in use; None if it has none."""
         count, bitmap = (self.at(p) for p in self.format.bam(track))
-        for sector in range(self.format.sectors(track)):
-            byte, bit = bitmap + sector // 8, 1 << (sector % 8)
-            if self.image[byte] & bit:
-                if not self.image[count]:
-                    sys.exit(f'the BAM count for track {track} disagrees with its bitmap')
-                self.image[byte] &= ~bit
-                self.image[count] -= 1
-                return track, sector
-        return None
+        free = self.free_sectors(track)
+        if self.image[count] < len(free):
+            sys.exit(f'the BAM count for track {track} disagrees with its bitmap')
+        if not free:
+            return None
+        sector = free[0]
+        self.image[bitmap + sector // 8] &= ~(1 << (sector % 8))
+        self.image[count] -= 1
+        return track, sector
 
     def allocate(self):
         for track in range(1, self.format.tracks + 1):
@@ -188,11 +193,13 @@ class Disk:
     def grow_directory(self):
         """Chain one more directory sector, as DOS does when a directory fills; returns its slots."""
         chain = list(self.dir_sectors())
+        free = self.free_sectors(self.format.dir_track)
+        for track, sector in chain:
+            if sector in free:
+                sys.exit(f'the BAM shows directory sector {track}/{sector} free')
         new = self.take(self.format.dir_track)
         if new is None or new[1] not in self.format.dir_sectors:
             sys.exit('the directory is full')
-        if new in chain:
-            sys.exit(f'the BAM shows directory sector {new[0]}/{new[1]} free')
         o = self.offset(*chain[-1])
         self.image[o:o + 2] = bytes(new)
         o = self.offset(*new)
