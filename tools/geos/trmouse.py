@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Put the TR USB mouse driver on a GEOS 128 boot disk.
 
-    python3 tools/geos/trmouse.py boot.d81 out.d81
+    python3 tools/geos/trmouse.py boot.d81 out.d81     (or a .d64 or .d71)
 
 GEOS loads the first input driver in the boot disk's directory, so the driver
 goes into the entry ahead of every other one, and the input driver that was
@@ -23,14 +23,8 @@ CLASS_NAME_SIZE = 12   # GEOS reads the version right after it
 LOAD = 0xfd00
 MAX_SIZE = 0x180   # GEOS 128's input driver area, $FD00-$FE7F
 
-TRACKS = 80
-SECTORS = 40
-D81_SIZE = TRACKS * SECTORS * 256
-DIR_TRACK = 40
-BAM_SECTORS = (1, 2)   # tracks 1-40, 41-80
-FIRST_DIR_SECTOR = 3
-BAM_ENTRIES = 0x10
-BAM_ENTRY_SIZE = 6
+SECTOR_SIZE = 256
+DIR_ENTRY_SIZE = 32
 
 USR_CLOSED = 0x83
 GEOS_SEQUENTIAL = 0
@@ -87,44 +81,115 @@ def padded(text, size, pad=b'\0'):
     return text + pad * (size - len(text))
 
 
-class D81:
+def zone_sectors(track):
+    """A 1541's sectors per track, which a 1571 repeats on its second side."""
+    track = (track - 1) % 35 + 1
+    return 21 if track <= 17 else 19 if track <= 24 else 18 if track <= 30 else 17
+
+
+class Format:
+    def __init__(self, name, tracks, sectors, dir_track, dir_sectors, reserved, bam):
+        self.name, self.tracks, self.sectors = name, tracks, sectors
+        self.dir_track, self.dir_sectors = dir_track, dir_sectors
+        self.reserved = reserved   # tracks DOS never hands out for file data
+        self.bam = bam             # track -> (count, bitmap) as (track, sector, byte)
+        self.starts = [0]
+        for track in range(1, tracks + 1):
+            self.starts.append(self.starts[-1] + sectors(track))
+
+    @property
+    def size(self):
+        return self.starts[-1] * SECTOR_SIZE
+
+
+def d64_bam(track):
+    return (18, 0, 4 + (track - 1) * 4), (18, 0, 5 + (track - 1) * 4)
+
+
+def d71_bam(track):
+    if track <= 35:
+        return d64_bam(track)
+    return (18, 0, 0xdd + track - 36), (53, 0, (track - 36) * 3)
+
+
+def d81_bam(track):
+    sector, entry = 1 + (track - 1) // 40, 0x10 + (track - 1) % 40 * 6
+    return (40, sector, entry), (40, sector, entry + 1)
+
+
+FORMATS = {f.size: f for f in (
+    Format('D64', 35, zone_sectors, 18, range(1, 19), (18,), d64_bam),
+    Format('D71', 70, zone_sectors, 18, range(1, 19), (18, 53), d71_bam),
+    Format('D81', 80, lambda track: 40, 40, range(3, 40), (40,), d81_bam),
+)}
+
+
+class Disk:
     def __init__(self, image):
-        if len(image) != D81_SIZE:
-            sys.exit(f'not a D81 without error bytes ({len(image)} bytes, expected {D81_SIZE})')
+        self.format = FORMATS.get(len(image))
+        if self.format is None:
+            sizes = ', '.join(f'{f.name} {f.size}' for f in FORMATS.values())
+            sys.exit(f'not a D64, D71 or D81 without error bytes ({len(image)} bytes; expected {sizes})')
         self.image = bytearray(image)
+        if self.format.name == 'D71' and not self.image[self.offset(18, 0) + 3] & 0x80:
+            sys.exit('this D71 is formatted single-sided')
 
     def offset(self, track, sector):
-        return ((track - 1) * SECTORS + sector) * 256
+        return (self.format.starts[track - 1] + sector) * SECTOR_SIZE
 
-    def bam_entry(self, track):
-        sector = BAM_SECTORS[(track - 1) // SECTORS]
-        return self.offset(DIR_TRACK, sector) + BAM_ENTRIES + ((track - 1) % SECTORS) * BAM_ENTRY_SIZE
+    def at(self, place):
+        track, sector, byte = place
+        return self.offset(track, sector) + byte
+
+    def take(self, track):
+        """Mark the first free sector of a track in use; None if it has none."""
+        count, bitmap = (self.at(p) for p in self.format.bam(track))
+        for sector in range(self.format.sectors(track)):
+            byte, bit = bitmap + sector // 8, 1 << (sector % 8)
+            if self.image[byte] & bit:
+                self.image[byte] &= ~bit
+                self.image[count] -= 1
+                return track, sector
+        return None
 
     def allocate(self):
-        for track in range(1, TRACKS + 1):
-            if track == DIR_TRACK:
-                continue
-            entry = self.bam_entry(track)
-            for sector in range(SECTORS):
-                byte, bit = entry + 1 + sector // 8, 1 << (sector % 8)
-                if self.image[byte] & bit:
-                    self.image[byte] &= ~bit
-                    self.image[entry] -= 1
-                    return track, sector
+        for track in range(1, self.format.tracks + 1):
+            if track not in self.format.reserved:
+                found = self.take(track)
+                if found:
+                    return found
         sys.exit('the disk is full')
 
-    def dir_slots(self):
-        track, sector = DIR_TRACK, FIRST_DIR_SECTOR
+    def dir_sectors(self):
+        header = self.offset(self.format.dir_track, 0)
+        track, sector = self.image[header], self.image[header + 1]
         seen = set()
         while track:
-            in_directory = track == DIR_TRACK and FIRST_DIR_SECTOR <= sector < SECTORS
+            in_directory = track == self.format.dir_track and sector in self.format.dir_sectors
             if (track, sector) in seen or not in_directory:
                 sys.exit(f'the directory chain is broken at {track}/{sector}')
             seen.add((track, sector))
+            yield track, sector
             base = self.offset(track, sector)
-            for i in range(8):
-                yield base + i * 32
             track, sector = self.image[base], self.image[base + 1]
+
+    def dir_slots(self):
+        for track, sector in self.dir_sectors():
+            base = self.offset(track, sector)
+            for i in range(SECTOR_SIZE // DIR_ENTRY_SIZE):
+                yield base + i * DIR_ENTRY_SIZE
+
+    def grow_directory(self):
+        """Chain one more directory sector, as DOS does when a directory fills; returns its slots."""
+        last = list(self.dir_sectors())[-1]
+        new = self.take(self.format.dir_track)
+        if new is None or new[1] not in self.format.dir_sectors:
+            sys.exit('the directory is full')
+        o = self.offset(*last)
+        self.image[o:o + 2] = bytes(new)
+        o = self.offset(*new)
+        self.image[o:o + SECTOR_SIZE] = padded(b'\x00\xff', SECTOR_SIZE)
+        return [o + i * DIR_ENTRY_SIZE for i in range(SECTOR_SIZE // DIR_ENTRY_SIZE)]
 
     def write_file(self, data, info):
         """Write a GEOS sequential file; returns its first data sector."""
@@ -136,10 +201,10 @@ class D81:
             else:
                 link = bytes((0, len(chunk) + 1))
             o = self.offset(track, sector)
-            self.image[o:o + 256] = padded(link + chunk, 256)
+            self.image[o:o + SECTOR_SIZE] = padded(link + chunk, SECTOR_SIZE)
         info_ts = self.allocate()
         o = self.offset(*info_ts)
-        self.image[o:o + 256] = info
+        self.image[o:o + SECTOR_SIZE] = info
         return sectors[0], info_ts, len(sectors) + 1
 
 
@@ -158,14 +223,16 @@ def info_block(size):
 
 
 def install(image, code):
-    disk = D81(image)
+    disk = Disk(image)
     slots = list(disk.dir_slots())
     entries = [s for s in slots if disk.image[s + 2] & 7]
     if any(disk.image[s + 5:s + 21].rstrip(b'\xa0') == NAME for s in entries):
         sys.exit(f'{NAME.decode()} is already on this disk')
     free = next((s for s in slots if disk.image[s + 2] == 0), None)
     if free is None:
-        sys.exit('the directory is full')
+        grown = disk.grow_directory()
+        slots += grown
+        free = grown[0]
 
     first, info_ts, blocks = disk.write_file(code, info_block(len(code)))
     now = datetime.datetime.now()
