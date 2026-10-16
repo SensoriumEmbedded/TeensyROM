@@ -35,8 +35,7 @@ GEOS keeps a RAM reset key in bank 1: `CBM` at `$FFF5` and a vector to `$03E4`. 
 KERNAL jumps through it on every reset into C128 mode, before it initializes anything, and
 it survives every reset. The TR menu runs in C64 mode, which reuses
 `$03E4`, so after GEOS the next C128 crt of any kind crashed at reset. The tool breaks the
-`C` in GEOBOOT128 (`$6FF5`), as GEOS's own ROM build does. GEOS booted from disk still leaves
-the key, so a C128 crt launched after a disk boot of GEOS needs a power cycle first.
+`C` in GEOBOOT128 (`$6FF5`), as GEOS's own ROM build does.
 
 ## The boot clock
 
