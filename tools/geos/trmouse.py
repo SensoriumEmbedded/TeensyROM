@@ -23,9 +23,9 @@ CLASS_NAME_SIZE = 12   # GEOS reads the version right after it
 LOAD = 0xfd00
 MAX_SIZE = 0x180   # GEOS 128's input driver area, $FD00-$FE7F
 
-D81_SIZE = 819200
 TRACKS = 80
 SECTORS = 40
+D81_SIZE = TRACKS * SECTORS * 256
 DIR_TRACK = 40
 BAM_SECTORS = (1, 2)   # tracks 1-40, 41-80
 FIRST_DIR_SECTOR = 3
@@ -117,8 +117,8 @@ class D81:
         track, sector = DIR_TRACK, FIRST_DIR_SECTOR
         seen = set()
         while track:
-            in_header = track == DIR_TRACK and sector < FIRST_DIR_SECTOR
-            if (track, sector) in seen or in_header or not 1 <= track <= TRACKS or sector >= SECTORS:
+            in_directory = track == DIR_TRACK and FIRST_DIR_SECTOR <= sector < SECTORS
+            if (track, sector) in seen or not in_directory:
                 sys.exit(f'the directory chain is broken at {track}/{sector}')
             seen.add((track, sector))
             base = self.offset(track, sector)
