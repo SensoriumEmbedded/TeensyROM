@@ -319,6 +319,11 @@ static uint16_t GeosDriverDataBlocks(const struct GeosTarget *Target)
    return (Target->DriverSize + GEOS_DATA_PER_BLOCK - 1) / GEOS_DATA_PER_BLOCK;
 }
 
+static uint16_t GeosDriverBlocks(const struct GeosTarget *Target)
+{
+   return GeosDriverDataBlocks(Target) + 1;
+}
+
 // Writes the driver's data chain and info block; returns the first data sector, the info sector and the block count.
 static bool GeosWriteDriver(struct GeosDisk *Disk, struct GeosTS *First, struct GeosTS *Info, uint16_t *Blocks)
 {
@@ -345,7 +350,7 @@ static bool GeosWriteDriver(struct GeosDisk *Disk, struct GeosTS *First, struct 
    }
 
    if (!GeosAllocate(Disk, Info)) return false;
-   *Blocks = DataBlocks + 1;
+   *Blocks = GeosDriverBlocks(Target);
    return GeosWriteTS(Disk, Info->Track, Info->Sector, Target->DriverInfo);
 }
 
@@ -387,8 +392,8 @@ struct GeosSlotRef { int Sector, Slot; };
 
 struct GeosDirScan
 {
-   struct GeosSlotRef Free, FirstDriver;
-   bool HasFree, HasDriver, HasDeskTop, HasOurs;
+   struct GeosSlotRef Free, FirstInputDriver;
+   bool HasFree, HasInputDriver, HasDeskTop, HasOurs;
 };
 
 static bool GeosScanDirectory(struct GeosDisk *Disk, const struct GeosTS *Chain, int Length, struct GeosDirScan *Scan)
@@ -410,7 +415,7 @@ static bool GeosScanDirectory(struct GeosDisk *Disk, const struct GeosTS *Chain,
          if (!InUse) continue;
          if (GeosSlotNamed(Slot, Target->DriverName)) Scan->HasOurs = true;
          if (GeosSlotNamed(Slot, Target->DeskTopName)) Scan->HasDeskTop = true;
-         if (Slot[SlotGeosType] == Target->InputType && !Scan->HasDriver) { Scan->FirstDriver = Here; Scan->HasDriver = true; }
+         if (Slot[SlotGeosType] == Target->InputType && !Scan->HasInputDriver) { Scan->FirstInputDriver = Here; Scan->HasInputDriver = true; }
       }
    }
    return true;
@@ -463,6 +468,12 @@ static bool GeosReadDirectory(struct GeosDisk *Disk, struct GeosTS *Chain, int *
 {
    uint8_t Header[GEOS_SECTOR_SIZE];
 
+   const struct GeosTarget *Target = Disk->Target;
+
+   if (strlen(Target->DeskTopName) > GEOS_NAME_SIZE || strlen(Target->DriverName) > GEOS_NAME_SIZE || !Target->DriverSize)
+   {
+      return GeosFail(Disk, "the GEOS target's names or driver do not fit a directory entry");
+   }
    if (!Disk->Format) return GeosFail(Disk, "not a D64, D71 or D81 without error bytes");
    if (!GeosReadTS(Disk, Disk->Format->DirTrack, 0, Header)) return false;
    if (Disk->Format->TwoSided && !(Header[3] & D71_DOUBLE_SIDED))
@@ -501,7 +512,7 @@ static inline bool GeosInstallDriver(struct GeosDisk *Disk, const struct GeosDat
       return false;
    }
    if (!Scan.HasFree && !GeosCheckDirectoryRoom(Disk, Chain, Length)) return false;
-   if (!GeosCheckRoom(Disk, GeosDriverDataBlocks(Disk->Target) + 1u)) return false;
+   if (!GeosCheckRoom(Disk, GeosDriverBlocks(Disk->Target))) return false;
    if (!Scan.HasFree)
    {
       if (!GeosGrowDirectory(Disk, Chain, &Length)) return false;
@@ -509,6 +520,6 @@ static inline bool GeosInstallDriver(struct GeosDisk *Disk, const struct GeosDat
    }
 
    if (!GeosWriteEntry(Disk, Chain[Scan.Free.Sector], Scan.Free.Slot, Date)) return false;
-   if (!Scan.HasDriver || !GeosSlotBefore(Scan.FirstDriver, Scan.Free)) return true;
-   return GeosSwapEntries(Disk, Chain, Scan.FirstDriver, Scan.Free);
+   if (!Scan.HasInputDriver || !GeosSlotBefore(Scan.FirstInputDriver, Scan.Free)) return true;
+   return GeosSwapEntries(Disk, Chain, Scan.FirstInputDriver, Scan.Free);
 }

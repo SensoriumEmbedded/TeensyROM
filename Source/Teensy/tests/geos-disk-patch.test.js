@@ -235,6 +235,7 @@ test('the firmware patch matches trmouse.py', { skip }, async (t) => {
       };
       const bootDisk = withDriver(kind);
       const { firmware } = patchBoth(dir, `${kind}-inspect-patched`, bootDisk.image);
+      assert.equal(firmware.status, 0, firmware.stderr);
 
       assert.equal(inspect('data', blankDisk(kind).image), 'desktop=0 driver=0');
       assert.equal(inspect('boot', bootDisk.image), 'desktop=1 driver=0');
