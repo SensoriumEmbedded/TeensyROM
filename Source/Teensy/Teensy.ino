@@ -36,6 +36,7 @@
 #include "MinimalBoot/Common/DMAControl.c"
 #include "MinimalBoot/Common/DriveDirLoad.h"
 #include "LoadedListing.h"
+#include "GEOS/GeosTargets.h"
 #include "MainMenuItems.h"
 #ifdef VM_EXTENSIONS_ENABLED
    // Before IOHandlers.h: PollingHndlr_TeensyROM is where the record is shown.
@@ -370,6 +371,7 @@ void loop()
    
    if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
+   PollUSBMouse();
    
    if (nfcState == nfcStateEnabled) nfcCheck();
    
@@ -420,7 +422,8 @@ FLASHMEM void SetUpMainMenuROM()
    FreeCrtChips();
 #ifdef Fab04_REU
    FreeREU();
-#endif 
+#endif
+   FreeGeoRAM();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;

@@ -230,7 +230,8 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    FreeCrtChips();
 #ifdef Fab04_REU
    FreeREU();
-#endif   
+#endif
+   FreeGeoRAM();
    FreeSwiftlinkBuffs();
    InitDriveDirMenu();
 

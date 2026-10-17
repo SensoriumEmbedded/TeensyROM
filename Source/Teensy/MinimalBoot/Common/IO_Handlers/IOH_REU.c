@@ -29,8 +29,7 @@
 
 #ifdef USE_RAM12
    
-   #define REU_RAM_Bank_Size   0x2000
-   #define REU_Size            (NumREU_Banks * REU_RAM_Bank_Size)   //Dynamically allocated based on NumREU_Banks, each bank is 8k (0x2000)
+   #define REU_Size            (NumREU_Banks * RAM_Bank_Size)   //Dynamically allocated based on NumREU_Banks, each bank is 8k (0x2000)
    #define REU_RAM_READ(a,d)   d=REU_Bank[a>>13][a&0x1fff]  
    #define REU_RAM_WRITE(a,d)  REU_Bank[a>>13][a&0x1fff]=d  
    #define MIN_REU_BANKS 16   // 128K, smallest real REU (1700)
@@ -52,6 +51,7 @@
    __attribute__((always_inline)) inline void Printf_dbg_reu(...) {};
 #endif
 
+void IO1Hndlr_REU(uint8_t Address, bool R_Wn);
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn);  
 void PollingHndlr_REU();                           
 void InitHndlr_REU();                           
@@ -60,7 +60,7 @@ stcIOHandlers IOHndlr_REU =
 {
   "512KB REU",         //Name of handler
   &InitHndlr_REU,      //Called once at handler startup
-  NULL,                //IO1 R/W handler
+  &IO1Hndlr_REU,       //IO1 R/W handler
   &IO2Hndlr_REU,       //IO2 R/W handler
   NULL,                //ROML Read handler, in addition to any ROM data sent
   NULL,                //ROMH Read handler, in addition to any ROM data sent
@@ -76,11 +76,6 @@ stcIOHandlers IOHndlr_REU =
 extern bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
 extern bool CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
-extern void EEPreadStr(uint16_t addr, char* buf);
-extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);
-extern bool SDFullInit();
-extern bool USBFileSystemWait();
-extern FS *FSfromSourceID(RegMenuTypes SourceID);
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
 //tests:
@@ -145,18 +140,12 @@ extern bool DMA_RnW, DMA_FixC64Addr;
 extern uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 extern bool DMAByte(uint8_t *Data);
 
-extern void FreeDriveDirMenu();
-extern uint8_t RAM_Image[];
 extern StructCrtChip CrtChips[]; // Removal breaks downstream code, so keep it here for now. 
-extern uint8_t NumCrtChips;        
 extern StructMenuItem *DriveDirMenu;
-extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer 
 
 void FreeREU()
-{ //free banks allocated in RAM2 and reset NumREUBanks
-   for(uint16_t cnt=0; cnt < NumREU_Banks; cnt++) 
-      if((uint32_t)REU_Bank[cnt] >= 0x20200000) free(REU_Bank[cnt]);
-   NumREU_Banks = 0;
+{
+   FreeRAMBanks(REU_Bank, &NumREU_Banks);
 }
 
 void DMAByte_BASkip(uint8_t *Data1)
@@ -456,83 +445,12 @@ FLASHMEM void ReadWriteREU(bool RnW, uint32_t REUAddr, uint8_t *REUBuf, uint16_t
 
 FLASHMEM void Save_REU()
 {
-   if (NumREU_Banks == 0) return;   // nothing to save: probably due to failure to allocate 128K
-
-   //Create filename based on current. reu000.reu becomes reu001.reu, etc
+#ifndef USE_RAM12
+   #error Save_REU saves RAM1/2 banks only
+#endif
    char Filename[MaxPathLength];
    EEPreadStr(eepAdREUFilename, Filename);
-   char *ptrFileName = Filename; //pointer to move past SD/USB/TR:
-   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrFileName);
-
-   if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
-   if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
-   //rmtTeensy not allowed, no reu files in Teensy Mem
-   
-   FS *sourceFS = FSfromSourceID(MenuSourceID);
-
-   char Extension[20];
-   char *pDot = strrchr(ptrFileName, '.'); //find last dot
-   if (pDot == NULL) pDot = ptrFileName + strlen(ptrFileName); //if no extension, set to end of filename 
-   strcpy(Extension, pDot); //copy extension
-   *pDot = 0; //terminate at dot/extension
-   
-   bool IsNum = true; //are last 3digits of filename all numbers?
-   if (strlen(ptrFileName)>=3)
-   {
-      for(char *charloc=pDot-3; charloc<pDot; charloc++)
-      {  
-         if (*charloc<'0' || *charloc>'9') IsNum = false;
-         //Serial.printf("%08x: %c %02x\n", (uint32_t)charloc, *charloc, *charloc);
-      }
-   }
-   else IsNum = false;
-   
-   
-   uint16_t NewNum = 0;
-   if (IsNum)
-   {  //find current number and then terminate it
-      NewNum = atoi(pDot-3);
-      *(pDot-3) = 0; //terminate number
-   }
-   
-   //now see if the file exists, or itterate until it doesn't
-   char NewFilename[MaxPathLength];
-
-   do sprintf(NewFilename, "%s%03d%s", ptrFileName, NewNum++, Extension);
-   while (sourceFS->exists(NewFilename));
-   
-   Serial.printf("Saving REU: %s\n", NewFilename);
-   File SaveFile = sourceFS->open(NewFilename, FILE_WRITE);
-   if (!SaveFile)
-   {
-      Serial.println("Unable to open!");
-      return;
-   }
-         
-   //uint32_t StartmS = millis();
-   uint8_t NextByte;
-   
-   for (uint32_t CharNum=0; CharNum<REU_Size; CharNum++)
-   {
-      REU_RAM_READ(CharNum, NextByte);
-      SaveFile.write(NextByte);
-   }
-   //Serial.printf("Saved %lu KBytes in %lumS\n", REU_Size/1024, millis()-StartmS);
-   Serial.printf("Saved %dKBytes\n", REU_Size/1024);
-   SaveFile.close();
-   
-   //Flash LED to ack save
-   uint32_t LastmS = millis();
-   bool LEDState = true;
-   
-   for (uint32_t FlashCount=0; FlashCount<20; FlashCount++)
-   {
-      while(millis()-LastmS < 75);
-      LastmS = millis();
-      if ((LEDState = !LEDState)) SetLEDOn;
-      else SetLEDOff;
-   }     
-   
+   SaveRAMBanks(REU_Bank, NumREU_Banks, Filename);
 }
 
 // This only applies to REU-Only mode. 
@@ -552,6 +470,7 @@ FLASHMEM void InitHndlr_REU()
    //set reg defaults:
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
+   InitUSBMouse();
    
 #ifdef Direct_REU
    Printf_dbg_reu("Direct REU mode\n");
@@ -560,59 +479,10 @@ FLASHMEM void InitHndlr_REU()
 #endif   
 
 #ifdef USE_RAM12
-   //Allocate full REU size in Ram 1 and 2
-   //FreeCrtChips(); //re-using CrtChips for this, free mem allocated in RAM2 and reset NumCrtChips
-   FreeDriveDirMenu(); //free/clear prev loaded directory to make space. Doing it regardless to preserve continuity
-   //Serial.printf("RAM2#x- %d\n", RAM2blocks());
-
-if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //If no CRT loaded, RAM1 is entirely free for REU 
-uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1 
-  
-   //Serial.printf("%dk REU, (%d banks x %d bytes)\n", REU_Size/1024, REU_Size/REU_RAM_Bank_Size, REU_RAM_Bank_Size);
-   
-   //First use RAM_Image from RAM1:
-   while (((uint32_t)pRAM_Image - (uint32_t)RAM_Image + REU_RAM_Bank_Size <= RAM_ImageSize) 
-           && (NumREU_Banks < MAX_REU_BANKS))
+   NumREU_Banks = AllocRAMBanks(REU_Bank, MAX_REU_BANKS, MIN_REU_BANKS);
+   if (NumREU_Banks == 0)
    {
-      //CrtChips[NumCrtChips].ChipROM = pRAM_Image;
-      REU_Bank[NumREU_Banks] = pRAM_Image;
-      pRAM_Image += REU_RAM_Bank_Size;
-      NumREU_Banks++;
-   }
-   Printf_dbg_reu("Used %lu/%lu Bytes of RAM1 Image\n", (uint32_t)NumREU_Banks * REU_RAM_Bank_Size, RAM_ImageSize);
-
-   //allocate the rest from RAM2
-   while((NumREU_Banks < MAX_REU_BANKS &&                                           // while NumREU_Banks < 64 (512k/8k)
-         (NULL != (REU_Bank[NumREU_Banks] = (uint8_t*)malloc(REU_RAM_Bank_Size)))))  // and allocation of 8k succeeds
-   {
-      NumREU_Banks++; // if allocation a success, increment NumREU_Banks
-   }
-   
-   // NumREU_Banks = number of banks allocated, one higher than the last index of REU_Bank[] that was allocated
-
-   Printf_dbg_reu("After parsing RAM2, %luK bytes allocated\n", (uint32_t)NumREU_Banks * REU_RAM_Bank_Size / 1024);
-
-   //resize REU to a power of 2 if needed and free unused banks 
-   if (NumREU_Banks & (NumREU_Banks-1))  //not a power of 2
-   {
-      uint8_t unused_bank; 
-      // largest power less than or equal to NumREU_Banks 
-      uint8_t NewNumREU_Banks =  1 << (7 - (__builtin_clz(NumREU_Banks) - 24));  
-      Serial.printf("Resizing REU from %d banks to %d banks\n", NumREU_Banks, NewNumREU_Banks);
-
-      for (unused_bank = NewNumREU_Banks; unused_bank < NumREU_Banks; unused_bank++)
-      if((uint32_t)REU_Bank[unused_bank] >= 0x20200000) 
-         free(REU_Bank[unused_bank]);
-      NumREU_Banks = NewNumREU_Banks;
-   }
-
-   Printf_dbg_reu("After resizing to power of 2, %luK bytes allocated\n", (uint32_t)NumREU_Banks * REU_RAM_Bank_Size / 1024);
-
-   if (NumREU_Banks < MIN_REU_BANKS) // If REU is not 128k or larger
-   {
-      Serial.printf("Unable to allocate minimum REU size of 128K\n"
-                     "REU is disabled\n");
-      FreeREU(); 
+      Serial.printf("REU is disabled\n");
       return;
    }
 
@@ -623,37 +493,9 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
    fSpecialBtnChange = &SpecialBtn_REU;  //REU RAM is ready; enable button now so a failed/missing preload below doesn't skip it
    Serial.printf("REU Size: %luK bytes\n", (uint32_t)REU_Size / 1024);
 
-   //pre-load REU into RAM here:
    char Filename[MaxPathLength];
    EEPreadStr(eepAdREUFilename, Filename);
-   char *ptrFileName = Filename; //pointer to move past SD/USB/TR:
-   Serial.printf("Loading REU: %s\n", Filename);
-   RegMenuTypes MenuSourceID = RegMenuTypeFromFileName(&ptrFileName);
-
-   if (MenuSourceID == rmtSD) SDFullInit(); // SD.begin(BUILTIN_SDCARD); with retry if presence detected
-   if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
-   //rmtTeensy not allowed, no reu files in Teensy Mem
-   
-   FS *sourceFS = FSfromSourceID(MenuSourceID);
-   File LoadFile = sourceFS->open(ptrFileName, FILE_READ);
-   if (!LoadFile)
-   {
-      Serial.println("Not found!");
-      return;
-   }
-   
-   if (LoadFile.size() > REU_Size)
-      Serial.printf("Too Large! Loading first %luK\n", (uint32_t)REU_Size/1024);
-
-   //uint32_t StartmS = millis();
-   uint32_t CharNum = 0;
-   for (uint8_t Bank = 0; Bank < NumREU_Banks && LoadFile.available(); Bank++)
-      CharNum += LoadFile.read(REU_Bank[Bank], REU_RAM_Bank_Size);
-   //Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
-   Serial.printf("Read %lu Bytes into REU\n", CharNum);
-   LoadFile.close();
-   //delay(250);
-   
+   LoadRAMBanks(REU_Bank, NumREU_Banks, Filename);
    
 #elif defined(USE_PSRAM)
    //higher clock speed and shorter CS setup/hold do help, but still not enough for NUVIEs w/ sound
@@ -709,6 +551,11 @@ uint8_t *pRAM_Image = ptrRAM_ImageEnd;  //start at end of any CRT-used RAM1
 
 }  //InitHndlr_REU
 
+
+void IO1Hndlr_REU(uint8_t Address, bool R_Wn)
+{
+   if (R_Wn) USBMouseIORead(Address);
+}
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
 {
