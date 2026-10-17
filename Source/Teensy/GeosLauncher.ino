@@ -58,10 +58,10 @@ FLASHMEM static void GeosPath(char *Path, size_t Size, const struct GeosLauncher
    snprintf(Path, Size, "%s/%s", Launcher->Folder, Name);
 }
 
-FLASHMEM static void GeosCopyPath(char *Path, size_t Size, const struct GeosLauncher *Launcher, const char *Name)
+FLASHMEM static void GeosCopyName(char *CopyName, size_t Size, const char *Name)
 {
    int Base = strlen(Name) - GEOS_EXT_LENGTH;
-   snprintf(Path, Size, "%s/%.*s" GEOS_COPY_TAG "%s", Launcher->Folder, Base, Name, Name + Base);
+   snprintf(CopyName, Size, "%.*s" GEOS_COPY_TAG "%s", Base, Name, Name + Base);
 }
 
 // The originals in the folder, listed before anything is written to it
@@ -149,7 +149,8 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
 }
 
 // Patches a temporary copy and renames it into place, so a failure never leaves a half-patched copy behind
-FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Source, const char *Copy)
+FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
+                                   const char *Copy)
 {
    char Temp[MaxNamePathLength], Error[GEOS_ERROR_SIZE] = "the SD card could not be written";
 
@@ -158,7 +159,7 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
        (SD.exists(Copy) && !SD.remove(Copy)) || !SD.rename(Temp, Copy))
    {
       SD.remove(Temp);
-      SendMsgPrintfln("Could not add the mouse driver:\r\n%s", Error);
+      SendMsgPrintfln("Could not add the mouse driver to\r\na copy of %s:\r\n%s", Name, Error);
       return false;
    }
    return true;
@@ -173,12 +174,13 @@ FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *
 // Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one
 FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name)
 {
-   char Source[MaxNamePathLength], Copy[MaxNamePathLength], Error[GEOS_ERROR_SIZE];
+   char Source[MaxNamePathLength], CopyName[MaxItemNameLength + sizeof GEOS_COPY_TAG], Copy[MaxNamePathLength];
+   char Error[GEOS_ERROR_SIZE];
    struct GeosBootDisk Found;
-   const char *CopyName = Copy + strlen(Launcher->Folder) + 1;
 
    GeosPath(Source, sizeof Source, Launcher, Name);
-   GeosCopyPath(Copy, sizeof Copy, Launcher, Name);
+   GeosCopyName(CopyName, sizeof CopyName, Name);
+   GeosPath(Copy, sizeof Copy, Launcher, CopyName);
    if (!GeosInspectFile(Launcher, Source, &Found, Error, sizeof Error))
    {
       SendMsgPrintfln("%s:\r\n%s", Name, Error);
@@ -197,7 +199,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       }
       if (Found.HasDriver) return GeosReady(Launcher, CopyName);
    }
-   if (!GeosPatchCopy(Launcher, Source, Copy)) return true;
+   if (!GeosPatchCopy(Launcher, Name, Source, Copy)) return true;
    SendMsgPrintfln("Added the TR USB mouse driver to\r\na copy of %s", Name);
    return GeosReady(Launcher, CopyName);
 }
