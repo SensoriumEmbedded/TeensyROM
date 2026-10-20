@@ -68,6 +68,7 @@ FLASHMEM void InitHndlr_GeoRAM()
    FreeGeoRAM();
    GeoRAM_Block = GeoRAM_PageNum = 0;
    InitUSBMouse();
+   InitTRBlock();
    NumGeoRAM_Banks = AllocRAMBanks(GeoRAM_Bank, MAX_GEORAM_BANKS, MIN_GEORAM_BANKS);
    if (NumGeoRAM_Banks == 0)
    {
@@ -96,7 +97,7 @@ void IO2Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
 {
    if (Address < GeoRAM_RegsBase)
    {
-      if (R_Wn) USBMouseIORead(Address);
+      TRPageIO(Address, R_Wn);
       return;
    }
    if (R_Wn) return;   // write-only registers

@@ -471,6 +471,7 @@ FLASHMEM void InitHndlr_REU()
    uint8_t REURegsInit[REUReg_NumRegs]={0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0xff, 0x1f, 0x3f};
    memcpy(REURegs, REURegsInit, REUReg_NumRegs);
    InitUSBMouse();
+   InitTRBlock();
    
 #ifdef Direct_REU
    Printf_dbg_reu("Direct REU mode\n");
@@ -554,7 +555,7 @@ FLASHMEM void InitHndlr_REU()
 
 void IO1Hndlr_REU(uint8_t Address, bool R_Wn)
 {
-   if (R_Wn) USBMouseIORead(Address);
+   TRPageIO(Address, R_Wn);
 }
 
 void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
