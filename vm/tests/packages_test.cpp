@@ -143,22 +143,6 @@ int main(int argc,char **argv){
             got[7]=="   +7 more notes"&&got[8]==" Msg: extension crashed");}
     for(unsigned i=0;i<6;i++)fs::remove_all(base/"VMS"/("PKG"+std::to_string(i)));
 
-    // A package whose header is sound but whose payload or client bank fails its CRC
-    // would be refused at launch, so it gets the '!' too.
-    {const fs::path module=base/"VMS/HELLO/engine.mvm",client=base/"VMS/HELLO/client.crt";
-     const fs::path moduleKept=base/"engine.keep",clientKept=base/"client.keep";
-     fs::copy_file(module,moduleKept);fs::copy_file(client,clientKept);
-     auto flip=[](const fs::path &f,std::streamoff at){std::fstream io(f,std::ios::binary|std::ios::in|std::ios::out);
-         io.seekg(at);char c=0;io.get(c);io.seekp(at);io.put(char(c^1));};
-     flip(module,fs::file_size(module)-1);
-     assert(has(rows(nullptr)," !HELLO      hi")&&has(rows(nullptr)," !HELLO: module file bad or missing"));
-     fs::copy_file(moduleKept,module,fs::copy_options::overwrite_existing);
-     flip(client,64+16+100);
-     assert(has(rows(nullptr)," !HELLO      hi")&&has(rows(nullptr)," !HELLO: client file bad or missing"));
-     fs::copy_file(clientKept,client,fs::copy_options::overwrite_existing);
-     fs::remove(moduleKept);fs::remove(clientKept);
-     assert(has(rows(nullptr),"  HELLO      hi"));}
-
     // Over the limit, every launch is refused; the list says so after what it read.
     for(unsigned i=0;i<VmRegistry::FolderLimit+1;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
     assert(has(rows(nullptr)," Over 32 folders in /VMS: none launch."));

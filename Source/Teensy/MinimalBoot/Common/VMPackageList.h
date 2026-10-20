@@ -44,7 +44,7 @@ static FLASHMEM void entry(Scan &s,const VmHostId *host,const char *name,size_t 
     if(!VmRegistry::readManifest(root,m)){e.state=BadManifest;return;}
     e.state=Listed;strcpy(e.extension,m.extension);
     VmImageHeader h{};
-    const VmRegistry::Fault fault=VmRegistry::verify(root,m,h);
+    const VmRegistry::Fault fault=VmRegistry::verify(root,m,h,VmRegistry::Quick);
     if(fault!=VmRegistry::Sound){e.refusal=fault==VmRegistry::ModuleBad?ModuleFile:ClientFile;return;}
     // What the host is owed, only when it can say: one without a descriptor is
     // launched without these checks, and one on another ABI refuses every package,

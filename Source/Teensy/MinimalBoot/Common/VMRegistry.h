@@ -71,18 +71,21 @@ static FLASHMEM bool consume(Launch &l){
 }
 #ifndef MinimumBuild
 enum Fault : uint8_t { Sound, ModuleBad, ClientBad };
+// Quick leaves out the payload and client bank CRCs, which read every byte of both files.
+enum Depth : uint8_t { Quick, Full };
 // Whether the package at `root` has a module image and a client cartridge that launch
-// would accept, every CRC included. `h` is the module's header once it reads.
-static FLASHMEM Fault verify(const char *root,const Manifest &m,VmImageHeader &h){
+// would accept. `h` is the module's header once it reads.
+static FLASHMEM Fault verify(const char *root,const Manifest &m,VmImageHeader &h,Depth depth=Full){
     char path[128];snprintf(path,sizeof path,"%s/%s",root,m.module);FsFile f=SD.sdfs.open(path,O_RDONLY);
     if(!f||f.isDirectory()||f.fileSize()>UINT32_MAX||f.read(&h,64)!=64||!vm_valid_header(h,f.fileSize())){f.close();return ModuleBad;}
-    uint8_t block[512];uint32_t remain=vm_image_payload_bytes(h),c=~0u;
+    uint8_t block[512];uint32_t remain=depth==Full?vm_image_payload_bytes(h):0,c=~0u;
     while(remain){const unsigned n=remain>sizeof block?sizeof block:remain;if(f.read(block,n)!=(int)n){f.close();return ModuleBad;}
         for(unsigned i=0;i<n;i++){c^=block[i];for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}remain-=n;}
-    f.close();if(~c!=h.payload_crc)return ModuleBad;
+    f.close();if(depth==Full&&~c!=h.payload_crc)return ModuleBad;
     snprintf(path,sizeof path,"%s/%s",root,m.client);f=SD.sdfs.open(path,O_RDONLY);uint8_t d[128];
     if(!f||f.fileSize()!=0x6070||!f.seekSet(0x4070)||f.read(d,128)!=128||memcmp(d,"VMH1",4)||d[4]!=VM_ABI||
        !memchr(d+16,0,24)||strcmp((char *)d+16,m.id)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){f.close();return ClientBad;}
+    if(depth==Quick){f.close();return Sound;}
     c=~0u;for(unsigned bank=0;bank<2;bank++){
         if(!f.seekSet(64+16+bank*8208)){f.close();return ClientBad;}
         for(unsigned offset=0;offset<8192;offset+=512){if(f.read(block,512)!=512){f.close();return ClientBad;}

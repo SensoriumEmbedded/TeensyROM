@@ -232,7 +232,7 @@
     * To install: copy the `.TRH` file to SD or USB and select it in the file browser
     * Firmware updates keep the installed extension
   * Lists the file types registered on the SD card: one row per registration folder in `/VMS`, with the file types it claims
-    * `*` another folder claims the same file type, so neither opens it; `x` the folder couldn't be read; `!` it wouldn't launch: its module or client file is damaged or missing (checksums included), or the installed extension can't run it
+    * `*` another folder claims the same file type, so neither opens it; `x` the folder couldn't be read; `!` it wouldn't launch: its module or client file is damaged or missing, or the installed extension can't run it
     * Rows below the list say what stops a launch, then how the last launch went. See [TR Host Extensions](TR_Host_Extensions.md#checking-or-removing-the-installed-extension)
   * `u` Uninstall the extension (`y` to confirm). TeensyROM restarts afterwards
     * Also use `u` if the page says `None installed; slot not blank.` That means an earlier install or uninstall didn't finish
