@@ -44,6 +44,7 @@ StructMenuItem DriveDirMenu;
 char DriveDirPath[MaxPathLength];
 uint16_t LOROM_Mask, HIROM_Mask;
 Stream *CmdChannel  = &Serial;
+void UpdateC128Clock(); //C128Crt.h, which needs the globals here and comes in with the .ino code
 
 #ifdef FeatTCPListen
    #include <NativeEthernet.h>
@@ -246,6 +247,8 @@ void loop()
       runMainTRApp_FromMin(); 
 #endif       
    }
+
+   UpdateC128Clock();
    
    if (doReset)
    {

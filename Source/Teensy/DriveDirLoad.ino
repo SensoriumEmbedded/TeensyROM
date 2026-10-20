@@ -696,6 +696,7 @@ void FreeCrtChips()
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000) free(CrtChips[cnt].ChipROM);
    NumCrtChips = 0;
+   C128Clock = NULL;
 }
 
 uint8_t Assoc_Ext_ItemType(char * FileName)

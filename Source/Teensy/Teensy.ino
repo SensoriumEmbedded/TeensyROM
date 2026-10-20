@@ -67,6 +67,7 @@ uint8_t nfcState = nfcStateBitDisabled; //default disabled unless set in eeprom 
 Stream *CmdChannel  = &Serial; 
 bool isFrozen = false;
 void (*fSpecialBtnChange)(bool Up_nDn);    //Pointer to function called when Special Button Changes
+void UpdateC128Clock(); //C128Crt.h, which needs the globals here and comes in with the .ino code
 
 #ifdef Fab04_SpecialButton
    Bounce SpecialBtnBounce = Bounce(Special_Btn_In_PIN, 35); //35mS debounce time
@@ -285,6 +286,8 @@ void loop()
       if (IO1[rwRegPwrUpDefaults2] & rpud2NFCEnabled) nfcInit(); //connect to nfc scanner
       SetUpMainMenuROM(); //back to main menu, also sets doReset
    }
+
+   UpdateC128Clock();
    
    if (doReset)
    {
