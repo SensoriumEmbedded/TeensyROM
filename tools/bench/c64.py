@@ -13,6 +13,8 @@ VIC_BACKGROUND = 0xD021
 VIC_DEN = 0x10
 
 KEYBUF, KEYCOUNT = 0x0277, 0x00C6  # KERNAL keyboard buffer, and the count GETIN reads
+KEYBUF_128, KEYCOUNT_128 = 0x034A, 0x00D0  # the same pair in C128 mode
+KEYBUF_SIZE = 10
 PETSCII_U, PETSCII_Y = 0x55, 0x59
 F1, F3, F5, F7, F8 = 0x85, 0x86, 0x87, 0x88, 0x8C
 
