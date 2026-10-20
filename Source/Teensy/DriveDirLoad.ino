@@ -73,18 +73,6 @@ FLASHMEM void MarkVmClaimed()
          VmClaimedItems[Num/8] |= 1 << Num%8;
 }
 
-// Whether a card is in the slot, from card detect on DAT3. CheckLaunchSDAuto's check
-// (Teensy.ino), copied rather than shared so that boot stayed untouched for the 0.9
-// release. It takes the pin back first, so it reads true whoever had it last, a failed
-// SD.begin included.
-FLASHMEM bool SDSlotFilled()
-{
-   // _SD_DAT3 = pin 46
-   pinMode(46, INPUT_PULLDOWN);
-   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
-   return digitalReadFast(46);
-}
-
 // rsShowExtPackages (StatusFunctions.c), for the Installed Extension page. Here rather
 // than beside the other status functions because that file is included ahead of the
 // registry. Reads the card whatever the menu's source is.

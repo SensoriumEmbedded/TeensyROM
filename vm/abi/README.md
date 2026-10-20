@@ -252,7 +252,7 @@ than guessing. A shared extension refuses only files of that extension, and the
 refusal names both packages, or how many there are and two of them.
 
 The C64 settings menu's Installed Extension page (`F8`, `0`) lists what that scan
-sees, by the same rules (a copy of them in `VMPackageList.h`): each package's extensions, a
+sees, by the same code (`VmRegistry` in `VMRegistry.h`, which `VMPackageList.h` calls): each package's extensions, a
 directory skipped for its name or its manifest, a shared extension, and what the
 installed host would refuse, so these can be found before a launch rather than
 by one.

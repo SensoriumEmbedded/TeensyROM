@@ -24,29 +24,45 @@ static FLASHMEM bool readManifest(const char *root,Manifest &m){
     return vm_manifest_parse(buf,root,m);
 }
 // Registry limits are deliberate. Over-limit or ambiguous installs reject launch.
+enum : unsigned { FolderLimit=32 };
+enum Walk : uint8_t { WalkNoDirectory, WalkDone, WalkOverLimit, WalkError };
+// A folder of /VMS can hold a package only if its name is an id: 1-23 characters of
+// component()'s set. `n` is getName's answer.
+static FLASHMEM bool folderIsId(const char *name,size_t n){return n&&n<sizeof(Manifest::id)&&component(name);}
+// Calls visit(name,n) for each folder of /VMS, the name wide enough that a folder that is
+// no id can still be shown. Every reader of /VMS goes through here, so they agree on
+// where the walk stops.
+template<class Visit> static FLASHMEM Walk walk(Visit visit){
+    FsFile directory=SD.sdfs.open("/VMS",O_RDONLY);if(!directory)return WalkNoDirectory;
+    unsigned scanned=0;FsFile item;
+    while(item.openNext(&directory,O_RDONLY)){
+        if(item.isDirectory()){
+            if(++scanned>FolderLimit){item.close();directory.close();return WalkOverLimit;}
+            char name[64]{};const size_t n=item.getName(name,sizeof name);name[sizeof name-1]=0;
+            visit(name,n);
+        }
+        item.close();
+    }
+    const bool error=directory.getError();directory.close();return error?WalkError:WalkDone;
+}
 // find() returns how many packages matched (0 or 1), or one of these. On
 // Ambiguous, `rival` (if given) holds the first claimant's id and how many claim
 // it; launch.root is the last claimant's.
 enum : int { OverLimitOrError=-1, Ambiguous=-2 };
 struct Rival { char id[sizeof(Manifest::id)]; unsigned claims; };
 static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch,Rival *rival=nullptr){
-    FsFile directory=SD.sdfs.open("/VMS",O_RDONLY);if(!directory)return 0;
-    unsigned scanned=0,found=0;FsFile item;
-    while(item.openNext(&directory,O_RDONLY)){
-        if(item.isDirectory()){
-            char name[sizeof(Manifest::id)+1],root[80];const size_t n=item.getName(name,sizeof name); //+1 so n<sizeof name-1 below still admits a full-length (23) id
-            if(++scanned>32){item.close();directory.close();return OverLimitOrError;}
-            if(n&&n<sizeof name-1&&component(name)){
-                snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
-                if(readManifest(root,m)&&((clientId&&strcmp(clientId,m.id)==0)||(!clientId&&extensionMatches(m.extension,extension)))){
-                    if(found++==1&&rival)strcpy(rival->id,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
-                }
-            }
+    unsigned found=0;
+    const Walk w=walk([&](const char *name,size_t n){
+        if(!folderIsId(name,n))return;
+        char root[80];snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
+        if(readManifest(root,m)&&((clientId&&strcmp(clientId,m.id)==0)||(!clientId&&extensionMatches(m.extension,extension)))){
+            if(found++==1&&rival)strcpy(rival->id,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
         }
-        item.close();
-    }
+    });
+    if(w==WalkNoDirectory)return 0;
+    if(w==WalkOverLimit||w==WalkError)return OverLimitOrError;
     if(rival)rival->claims=found;
-    const bool error=directory.getError();directory.close();return error?OverLimitOrError:found>1?Ambiguous:(int)found;
+    return found>1?Ambiguous:(int)found;
 }
 static FLASHMEM bool consume(Launch &l){
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_RDONLY);
@@ -54,23 +70,33 @@ static FLASHMEM bool consume(Launch &l){
     return ok&&vm_launch_valid(l);
 }
 #ifndef MinimumBuild
+enum Fault : uint8_t { Sound, ModuleBad, ClientBad };
+// Quick leaves out the payload and client bank CRCs, which read every byte of both files.
+enum Depth : uint8_t { Quick, Full };
+// Whether the package at `root` has a module image and a client cartridge that launch
+// would accept. `h` is the module's header once it reads.
+static FLASHMEM Fault verify(const char *root,const Manifest &m,VmImageHeader &h,Depth depth=Full){
+    char path[128];snprintf(path,sizeof path,"%s/%s",root,m.module);FsFile f=SD.sdfs.open(path,O_RDONLY);
+    if(!f||f.isDirectory()||f.fileSize()>UINT32_MAX||f.read(&h,64)!=64||!vm_valid_header(h,f.fileSize())){f.close();return ModuleBad;}
+    uint8_t block[512];uint32_t remain=depth==Full?vm_image_payload_bytes(h):0,c=~0u;
+    while(remain){const unsigned n=remain>sizeof block?sizeof block:remain;if(f.read(block,n)!=(int)n){f.close();return ModuleBad;}
+        for(unsigned i=0;i<n;i++){c^=block[i];for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}remain-=n;}
+    f.close();if(depth==Full&&~c!=h.payload_crc)return ModuleBad;
+    snprintf(path,sizeof path,"%s/%s",root,m.client);f=SD.sdfs.open(path,O_RDONLY);uint8_t d[128];
+    if(!f||f.fileSize()!=0x6070||!f.seekSet(0x4070)||f.read(d,128)!=128||memcmp(d,"VMH1",4)||d[4]!=VM_ABI||
+       !memchr(d+16,0,24)||strcmp((char *)d+16,m.id)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){f.close();return ClientBad;}
+    if(depth==Quick){f.close();return Sound;}
+    c=~0u;for(unsigned bank=0;bank<2;bank++){
+        if(!f.seekSet(64+16+bank*8208)){f.close();return ClientBad;}
+        for(unsigned offset=0;offset<8192;offset+=512){if(f.read(block,512)!=512){f.close();return ClientBad;}
+            for(auto v:block){c^=v;for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}}
+    }f.close();return ~c==*(uint32_t *)(d+8)?Sound:ClientBad;
+}
 static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
     Manifest m{};if(!readManifest(l.root,m)||m.crc!=l.manifest_crc)return false;
-    char path[128];snprintf(path,sizeof path,"%s/%s",l.root,m.module);FsFile f=SD.sdfs.open(path,O_RDONLY);VmImageHeader h{};
-    if(!f||f.isDirectory()||f.fileSize()>UINT32_MAX||f.read(&h,64)!=64||!vm_valid_header(h,f.fileSize())){f.close();return false;}
+    VmImageHeader h{};const Fault fault=verify(l.root,m,h);
     if(out)*out=h;
-    uint8_t block[512];uint32_t remain=vm_image_payload_bytes(h),c=~0u;
-    while(remain){const unsigned n=remain>sizeof block?sizeof block:remain;if(f.read(block,n)!=(int)n){f.close();return false;}
-        for(unsigned i=0;i<n;i++){c^=block[i];for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}remain-=n;}
-    f.close();if(~c!=h.payload_crc)return false;
-    snprintf(path,sizeof path,"%s/%s",l.root,m.client);f=SD.sdfs.open(path,O_RDONLY);uint8_t d[128];
-    if(!f||f.fileSize()!=0x6070||!f.seekSet(0x4070)||f.read(d,128)!=128||memcmp(d,"VMH1",4)||d[4]!=VM_ABI||
-       !memchr(d+16,0,24)||strcmp((char *)d+16,m.id)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){f.close();return false;}
-    c=~0u;for(unsigned bank=0;bank<2;bank++){
-        if(!f.seekSet(64+16+bank*8208)){f.close();return false;}
-        for(unsigned offset=0;offset<8192;offset+=512){if(f.read(block,512)!=512){f.close();return false;}
-            for(auto v:block){c^=v;for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}}
-    }f.close();return ~c==*(uint32_t *)(d+8);
+    return fault==Sound;
 }
 // The extensions the installed packages claim, so launching an ordinary file
 // need not rescan /VMS. Rebuilt wherever the SD listing is, which keeps the
@@ -85,19 +111,12 @@ enum Association : uint8_t { NotAssociated, Associated, Unknown };
 static char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
 static FLASHMEM void refresh(bool sd){
     extensionCount=0;extensionsKnown=false;if(!sd)return;
-    FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
-    FsFile item;unsigned scanned=0;bool overflowed=false;
-    while(item.openNext(&dir,O_RDONLY)){
-        if(item.isDirectory()){
-            if(++scanned>32){overflowed=true;item.close();break;}
-            char id[sizeof(Manifest::id)+1],root[80];auto n=item.getName(id,sizeof id);Manifest m{}; //+1 as in find()
-            if(n&&n<sizeof id-1&&component(id)){
-                snprintf(root,sizeof root,"/VMS/%s",id);
-                if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
-            }
-        }item.close();
-    }
-    extensionsKnown=!overflowed&&!dir.getError();if(!extensionsKnown)extensionCount=0;dir.close();
+    const Walk w=walk([](const char *name,size_t n){
+        if(!folderIsId(name,n))return;
+        char root[80];Manifest m{};snprintf(root,sizeof root,"/VMS/%s",name);
+        if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
+    });
+    extensionsKnown=w==WalkDone;if(!extensionsKnown)extensionCount=0;
 }
 static FLASHMEM Association associated(const char *name){
     if(!extensionsKnown)return Unknown;
