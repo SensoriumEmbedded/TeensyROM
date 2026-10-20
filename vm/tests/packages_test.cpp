@@ -129,17 +129,40 @@ int main(int argc,char **argv){
     {const Lines got=rows(nullptr);assert(got[0].substr(2,5)=="alpha"&&got[1].substr(2,4)=="Beta");}
     fs::remove_all(base/"VMS/alpha");fs::remove_all(base/"VMS/Beta");
 
-    // More packages than rows: seven, then a count of the rest, and still a row for why.
+    // More packages than rows: five, a count of the rest, then as many reasons as are left.
+    // The packages give way, never the reasons or the last launch: what does not fit is
+    // counted on a row of its own.
     for(unsigned i=0;i<6;i++)manifest("PKG"+std::to_string(i),"p"+std::to_string(i));
     {const Lines got=rows(&host);
-     assert(got.size()==Rows&&got[6]==" !PKG4       p4"&&got[7]=="   +3 more");
-     assert(got[8]==" !PKG0: module file bad or missing");}
+     assert(got.size()==Rows&&got[4]==" !PKG2       p2"&&got[5]=="   +5 more");
+     assert(got[6]==" !PKG0: module file bad or missing"&&got[7]==" !PKG1: module file bad or missing");
+     assert(got[8]=="   +6 more notes");}
+    {const VmFailRecord crashed=record(VmFail::Faulted,0);
+     const Lines got=rows(&host,true,&crashed);
+     assert(got.size()==Rows&&got[5]=="   +5 more"&&got[6]==" !PKG0: module file bad or missing"&&
+            got[7]=="   +7 more notes"&&got[8]==" Msg: extension crashed");}
     for(unsigned i=0;i<6;i++)fs::remove_all(base/"VMS"/("PKG"+std::to_string(i)));
 
+    // A package whose header is sound but whose payload or client bank fails its CRC
+    // would be refused at launch, so it gets the '!' too.
+    {const fs::path module=base/"VMS/HELLO/engine.mvm",client=base/"VMS/HELLO/client.crt";
+     const fs::path moduleKept=base/"engine.keep",clientKept=base/"client.keep";
+     fs::copy_file(module,moduleKept);fs::copy_file(client,clientKept);
+     auto flip=[](const fs::path &f,std::streamoff at){std::fstream io(f,std::ios::binary|std::ios::in|std::ios::out);
+         io.seekg(at);char c=0;io.get(c);io.seekp(at);io.put(char(c^1));};
+     flip(module,fs::file_size(module)-1);
+     assert(has(rows(nullptr)," !HELLO      hi")&&has(rows(nullptr)," !HELLO: module file bad or missing"));
+     fs::copy_file(moduleKept,module,fs::copy_options::overwrite_existing);
+     flip(client,64+16+100);
+     assert(has(rows(nullptr)," !HELLO      hi")&&has(rows(nullptr)," !HELLO: client file bad or missing"));
+     fs::copy_file(clientKept,client,fs::copy_options::overwrite_existing);
+     fs::remove(moduleKept);fs::remove(clientKept);
+     assert(has(rows(nullptr),"  HELLO      hi"));}
+
     // Over the limit, every launch is refused; the list says so after what it read.
-    for(unsigned i=0;i<FolderLimit+1;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
+    for(unsigned i=0;i<VmRegistry::FolderLimit+1;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
     assert(has(rows(nullptr)," Over 32 folders in /VMS: none launch."));
-    for(unsigned i=0;i<FolderLimit+1;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
+    for(unsigned i=0;i<VmRegistry::FolderLimit+1;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
     failDirError=true;assert(has(rows(nullptr)," /VMS read error: none launch."));failDirError=false;
 
     // Nothing to list: an empty /VMS, none at all, and no card. The last is the caller's
