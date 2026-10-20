@@ -165,6 +165,16 @@ test('with no image mounted every command fails with no image, and status never 
   }
 });
 
+test('an image that is no known size mounts as no image rather than being guessed at', { skip }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trblock-odd-'));
+  const image = path.join(dir, 'in.img'), out = path.join(dir, 'out.img');
+  fs.writeFileSync(image, makeImage(FORMATS.d64).subarray(0, SECTOR * 100));
+  for (const cmd of [READ, WRITE, INFO]) {
+    const ran = spawnSync(harness(), [image, out], { input: command(cmd, { addr0: 1 }) + 'svc\n' + read(STATUS), encoding: 'utf8' });
+    assert.equal(ran.stdout.trim().split('\n').at(-1), hex(NO_IMAGE), `cmd ${cmd}`);
+  }
+});
+
 test('a command that is not one fails with bad command, and so does zero', { skip }, () => {
   for (const cmd of [0, 5, 0x80, 0xff]) assert.equal(statusOf(command(cmd) + 'svc\n'), hex(BAD_COMMAND), `cmd ${cmd}`);
 });

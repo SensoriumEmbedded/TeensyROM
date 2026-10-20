@@ -40,12 +40,17 @@ static bool FlushAll(void *Context)
 
 int main(int argc, char **argv)
 {
-   FILE *In = fopen(argv[1], "rb");
+   FILE *In = argc >= 3 ? fopen(argv[1], "rb") : NULL;
    struct TRBlock Dev;
    struct TRBlockImage Image = { NULL, argc < 4 || strcmp(argv[3], "ro"), NULL, ReadAt, WriteAt, FlushAll };
    struct TRBlockBackend Backend;
    char Line[64];
 
+   if (!In)
+   {
+      fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend]\n");
+      return 2;
+   }
    Size = fread(Bytes, 1, MAX_IMAGE, In);
    fclose(In);
    Image.Format = GeosFormatForSize(Size);

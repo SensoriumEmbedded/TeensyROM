@@ -98,7 +98,7 @@ Any other CMD fails with `$E6`.
 | `$E5` | the image is read-only |
 | `$E6` | not a command |
 
-A failure changes nothing on the card. A failed `READ` leaves the buffer unspecified.
+A failed `READ` leaves the buffer unspecified. A failed `WRITE` that was rejected before the card was touched (`$E1`, `$E2`, `$E5`) changes nothing; one the card failed (`$E4`) may have changed part of the block.
 
 ## Disk addresses
 For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector, as the 1541, 1571 and 1581 number them: tracks start at 1, sectors at 0. The 1541 and 1571 use the usual four speed zones (21, 19, 18 and 17 sectors a track, the 1571's second side repeating them); the 1581 has 40 sectors on every track. An address off the end of the image or past a track's last sector fails with `$E2`.
