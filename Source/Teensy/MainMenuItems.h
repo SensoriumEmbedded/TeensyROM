@@ -296,6 +296,7 @@ StructMenuItem dirTeensyROMSpecific[] =
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC TR Command IO access only"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
      rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM External Ports Test"    , (uint8_t*)TRExtPortCheck_prg         , sizeof(TRExtPortCheck_prg) ,
+     rtGEOS     , IOH_None         , (char*)"GEOS 128 Boot Disk Setup"         , (uint8_t*)&Geos128Launcher           , sizeof(Geos128Launcher) ,
 #ifdef Fab04_REU
      rtFilePrg  , IOH_TeensyROM    , (char*)"TR+ C64 Expansion Port Test"      , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
 #endif
@@ -324,6 +325,5 @@ StructMenuItem TeensyROMMenu[] =
  /**7**/ rtDirectory, IOH_None           , (char*)"/Utilities"                       , (uint8_t*)dirUtilities               , sizeof(dirUtilities) ,
  /* 8 */ rtDirectory, IOH_None           , (char*)"/Text + PETSCII + Docs"           , (uint8_t*)dirTEXT_PETSCII            , sizeof(dirTEXT_PETSCII) ,
  /**9**/ rtDirectory, IOH_None           , (char*)"/TeensyROM Specific"              , (uint8_t*)dirTeensyROMSpecific       , sizeof(dirTeensyROMSpecific) ,
- /* 10*/ rtGEOS     , IOH_None           , (char*)"GEOS 128"                         , (uint8_t*)&Geos128Launcher           , sizeof(Geos128Launcher) ,
 };
 
