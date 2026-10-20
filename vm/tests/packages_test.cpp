@@ -143,6 +143,15 @@ int main(int argc,char **argv){
             got[7]=="   +7 more notes"&&got[8]==" Msg: extension crashed");}
     for(unsigned i=0;i<6;i++)fs::remove_all(base/"VMS"/("PKG"+std::to_string(i)));
 
+    // The list reads headers only, so a payload that fails its CRC still lists clean;
+    // launch (preflight) is where it is refused.
+    {const fs::path module=base/"VMS/HELLO/engine.mvm";
+     const fs::path kept=base/"engine.keep";fs::copy_file(module,kept);
+     {std::fstream io(module,std::ios::binary|std::ios::in|std::ios::out);
+      io.seekg(-1,std::ios::end);char c=0;io.get(c);io.seekp(-1,std::ios::end);io.put(char(c^1));}
+     assert(has(rows(nullptr),"  HELLO      hi"));
+     fs::copy_file(kept,module,fs::copy_options::overwrite_existing);fs::remove(kept);}
+
     // Over the limit, every launch is refused; the list says so after what it read.
     for(unsigned i=0;i<VmRegistry::FolderLimit+1;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
     assert(has(rows(nullptr)," Over 32 folders in /VMS: none launch."));
