@@ -27,6 +27,7 @@ static uint8_t TRBlockImageTransfer(void *Context, bool Write, uint8_t Track, ui
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
    uint32_t Offset;
 
+   if (!Image->Format) return TRBlockNoImage;
    if (!TRBlockImageHasSector(Image->Format, Track, Sector)) return TRBlockBadAddress;
    Offset = GeosOffset(Image->Format, Track, Sector);
    if (!Write) return Image->Read(Image->Context, Offset, Block) ? TRBlockDone : TRBlockReadFailed;
@@ -37,7 +38,10 @@ static uint8_t TRBlockImageTransfer(void *Context, bool Write, uint8_t Track, ui
 static uint8_t TRBlockImageInfo(void *Context, uint8_t *Out)
 {
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
-   uint32_t Blocks = Image->Format->Size / GEOS_SECTOR_SIZE;
+   uint32_t Blocks;
+
+   if (!Image->Format) return TRBlockNoImage;
+   Blocks = Image->Format->Size / GEOS_SECTOR_SIZE;
 
    Out[0] = (uint8_t)(Image->Format - GeosFormats + 1);
    Out[1] = Image->Writable ? TRBLOCK_IMAGE_WRITABLE : 0;

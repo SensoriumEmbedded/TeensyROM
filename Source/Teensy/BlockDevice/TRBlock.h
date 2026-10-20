@@ -87,7 +87,11 @@ static inline uint8_t TRBlockReadAt(const struct TRBlock *Dev, uint8_t Offset)
    if (Offset == TRBlockStatus) return Dev->Status;
    if (Offset == TRBlockEcho) return Dev->Echo;
    if (Offset >= TRBlockId && Offset < TRBlockId + TRBLOCK_ID_SIZE) return (uint8_t)TRBlockIdText[Offset - TRBlockId];
-   return Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow];
+   if (Offset >= TRBlockWindow && Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE)
+   {
+      return Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow];
+   }
+   return 0xff;
 }
 
 // ...and writes go to registers or the window. The caller reads the data byte only when this says
@@ -104,7 +108,7 @@ static inline void TRBlockWriteAt(struct TRBlock *Dev, uint8_t Offset, uint8_t D
 
    if (Offset >= TRBlockWindow)
    {
-      if (!Busy) Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow] = Data;
+      if (Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE && !Busy) Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow] = Data;
       return;
    }
    if (Offset == TRBlockAddr0) Dev->Addr0 = Data;
