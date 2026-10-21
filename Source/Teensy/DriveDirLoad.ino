@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+#include "MinimalBoot/Common/C128Crt.h"
 #ifdef VM_EXTENSIONS_ENABLED
 #include "MinimalBoot/Common/VMLaunch.h"
 #include "MinimalBoot/Common/VMPackageList.h"
@@ -308,6 +309,8 @@ FLASHMEM void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for transfer
    uint8_t CartLoaded = false;
+   //a C128 cart widens these, and a direct remote launch skips SetUpMainMenuROM, which resets them
+   LOROM_Mask = HIROM_Mask = 0x1fff;
 
    switch(MenuSelCpy.ItemType)
    {
@@ -397,10 +400,7 @@ FLASHMEM void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
       case rtFilePrg:
