@@ -16,6 +16,7 @@
 #define GEOS_SYSTEM_FILE     5
 #define GEOS_CONFIG_PREFIX   "CONFIG"
 #define GEOS_BASIC_START     0x0801
+#define GEOS_MEMORY_END      0x10000
 #define GEOS_MAX_FILE_BLOCKS 3200
 #define GEOS_DEVICE_8        8
 
@@ -176,6 +177,7 @@ static bool GeosBuildBootPrg(struct GeosDisk *Disk, uint8_t *Out, uint32_t Capac
    int32_t Driver;
    uint8_t *Body = Out + 2;
 
+   if (!Disk->Target->BootFile) return GeosFail(Disk, "this version has no boot file to start from");
    if (!GeosReadFile(Disk, Disk->Target->BootFile, Out, Capacity, &FileSize)) return false;
    if (FileSize < 2 + GEOS_DRIVER_SIZE) return GeosFail(Disk, "the boot file is too short");
    BodySize = FileSize - 2;
@@ -183,7 +185,7 @@ static bool GeosBuildBootPrg(struct GeosDisk *Disk, uint8_t *Out, uint32_t Capac
    Driver = GeosFindDriver(Body, BodySize);
    if (Driver < 0 || !GeosReplaceTransport(Body + Driver)) return GeosFail(Disk, "the boot file's disk driver is not one the TR can replace");
    Place = 2 + Load - GEOS_BASIC_START;
-   if (Load < GEOS_BASIC_START + Prologue - 2 || Place + BodySize > Capacity) return GeosFail(Disk, "the boot file does not fit in memory");
+   if (Load < GEOS_BASIC_START + Prologue - 2 || Place + BodySize > Capacity || Load + BodySize > GEOS_MEMORY_END) return GeosFail(Disk, "the boot file does not fit in memory");
 
    memmove(Out + Place, Body, BodySize);
    memset(Out, 0, Place);
