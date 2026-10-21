@@ -72,4 +72,4 @@ def header():
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(__doc__)
-    pathlib.Path(sys.argv[1]).write_text(header())
+    pathlib.Path(sys.argv[1]).write_bytes(header().encode())
