@@ -297,6 +297,7 @@ StructMenuItem dirTeensyROMSpecific[] =
      rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
      rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM External Ports Test"    , (uint8_t*)TRExtPortCheck_prg         , sizeof(TRExtPortCheck_prg) ,
      rtGEOS     , IOH_None         , (char*)"GEOS 128 Boot Disk Setup"         , (uint8_t*)&Geos128Launcher           , sizeof(Geos128Launcher) ,
+     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
 #ifdef Fab04_REU
      rtFilePrg  , IOH_TeensyROM    , (char*)"TR+ C64 Expansion Port Test"      , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
 #endif

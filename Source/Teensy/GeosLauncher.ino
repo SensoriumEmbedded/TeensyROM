@@ -1,6 +1,7 @@
 // A GEOS menu item: finds the user's boot disk image in the launcher's folder on the SD card and puts
 // the TR input driver on a copy of it, leaving the original untouched.
 
+#include "GEOS/GeosBoot.h"
 #include "GEOS/GeosTargets.h"
 
 #define GEOS_TEMP_NAME     "PATCHING.TMP"
@@ -150,12 +151,12 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
 
 // Patches a temporary copy and renames it into place, so a failure never leaves a half-patched copy behind
 FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
-                                   const char *Copy)
+                                   const char *Copy, bool Patch)
 {
    char Temp[MaxNamePathLength], Error[GEOS_ERROR_SIZE] = "the SD card could not be written";
 
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
-   if (!GeosCopyFile(Source, Temp) || !GeosPatchFile(Launcher, Temp, Error, sizeof Error) ||
+   if (!GeosCopyFile(Source, Temp) || (Patch && !GeosPatchFile(Launcher, Temp, Error, sizeof Error)) ||
        (SD.exists(Copy) && !SD.remove(Copy)) || !SD.rename(Temp, Copy))
    {
       SD.remove(Temp);
@@ -171,12 +172,21 @@ FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *
    return true;
 }
 
-// Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one
-FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name)
+FLASHMEM static bool GeosUse(const struct GeosLauncher *Launcher, const char *Name, char *BootName)
+{
+   strcpy(BootName, Name);
+   return GeosReady(Launcher, Name);
+}
+
+// Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one.
+// BootName gets the disk to start from: the original when it is set up and only the setup is wanted, else a copy,
+// since GEOS saves to the disk it starts from
+FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name, char *BootName)
 {
    char Source[MaxNamePathLength], CopyName[MaxItemNameLength + sizeof GEOS_COPY_TAG], Copy[MaxNamePathLength];
    char Error[GEOS_ERROR_SIZE];
    struct GeosBootDisk Found;
+   bool NeedsDriver;
 
    GeosPath(Source, sizeof Source, Launcher, Name);
    GeosCopyName(CopyName, sizeof CopyName, Name);
@@ -187,7 +197,8 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return false;
    }
    if (!Found.HasDeskTop) return false;
-   if (Found.HasDriver) return GeosReady(Launcher, Name);
+   if (Found.HasDriver && !GeosBoots(Launcher)) return GeosUse(Launcher, Name, BootName);
+   NeedsDriver = !Found.HasDriver;
 
    if (SD.exists(Copy))
    {
@@ -197,27 +208,64 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
          SendMsgPrintfln("%s:\r\n%s", CopyName, Error);
          return true;
       }
-      if (Found.HasDriver) return GeosReady(Launcher, CopyName);
+      if (Found.HasDriver) return GeosUse(Launcher, CopyName, BootName);
    }
-   if (!GeosPatchCopy(Launcher, Name, Source, Copy)) return true;
-   SendMsgPrintfln("Added the TR USB mouse driver to\r\na copy of %s", Name);
-   return GeosReady(Launcher, CopyName);
+   if (!GeosPatchCopy(Launcher, Name, Source, Copy, NeedsDriver)) return true;
+   SendMsgPrintfln(NeedsDriver ? "Added the TR USB mouse driver to\r\na copy of %s" : "Made a copy of %s\r\nto start from", Name);
+   return GeosUse(Launcher, CopyName, BootName);
 }
 
-FLASHMEM void LaunchGeos(const struct GeosLauncher *Launcher)
+// Turns the menu item into the PRG that starts GEOS from the disk, which the block device serves from the SD card
+FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
-   char Names[GEOS_MAX_IMAGES][MaxItemNameLength];
+   char Path[MaxNamePathLength];
+   struct GeosDisk Disk;
+   uint32_t Length = 0;
+   bool Changed, Built;
+   File Image;
+
+   GeosPath(Path, sizeof Path, Launcher, Name);
+   Image = SD.open(Path, FILE_WRITE_BEGIN);
+   if (!Image)
+   {
+      SendMsgPrintfln("%s\r\ncould not be opened", Name);
+      return false;
+   }
+   Disk = GeosDiskOn(Launcher, &Image);
+   Built = GeosDisableConfigure(&Disk, &Changed) && GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length);
+   if (!Built) SendMsgPrintfln("%s:\r\n%s", Name, Disk.Error);
+   Image.close();
+   if (!Built) return false;
+   if (!TRBlockMount(Path))
+   {
+      SendMsgPrintfln("%s\r\ncould not be mounted", Name);
+      return false;
+   }
+   Item->ItemType = rtFilePrg;
+   Item->Code_Image = RAM_Image;
+   Item->Size = Length;
+   return true;
+}
+
+// True when the item has become a PRG to run: the version starts from the disk it set up
+FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *Item)
+{
+   char Names[GEOS_MAX_IMAGES][MaxItemNameLength], BootName[MaxItemNameLength + sizeof GEOS_COPY_TAG] = "";
    uint8_t Count;
    bool BootDiskFound = false;
 
    if (!SDFullInit())
    {
       SendMsgPrintfln("%s starts from your boot disk\r\nimage on the SD card. Insert the card.", Launcher->Title);
-      return;
+      return false;
    }
    Count = GeosListImages(Launcher, Names);
-   for (uint8_t i = 0; i < Count; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i]);
-   if (BootDiskFound) return;
-   SendMsgPrintfln("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again.",
-                   Launcher->Title, Launcher->Folder);
+   for (uint8_t i = 0; i < Count && !(GeosBoots(Launcher) && *BootName); i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
+   if (!BootDiskFound)
+   {
+      SendMsgPrintfln("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again.",
+                      Launcher->Title, Launcher->Folder);
+      return false;
+   }
+   return GeosBoots(Launcher) && *BootName && GeosStart(Launcher, BootName, Item);
 }
