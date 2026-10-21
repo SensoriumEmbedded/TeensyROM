@@ -377,6 +377,8 @@ const uint8_t OutputPins[] = {
 // Times from Phi2 falling:
 #define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
 #define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
+//DMA timing, from here through the NTSC C128 set: docs/Architecture/DMA-Phi2-Timing.md copies these values
+//   into per-cycle positions and a diagram - update it when they change
 #define Def_nS_DMAAssert     40  //    delay from Phi2 falling to DMA assertion when activating
                                        // Initial val was 200, 80nS recommended. In scope analysis, min is ~108nS, when val is 40 or lower
 #define Def_nS_DMABAWait    200  //    delay from Phi2 falling to sampling BA in DMAByte(), before deciding whether to steal the cycle.
