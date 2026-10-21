@@ -73,13 +73,28 @@ void PollTRBlock()
    if (TRBlockDirty && millis() - TRBlockLastWritemS > TRBlock_FlushIdlemS) TRBlockFileFlush(NULL);
 }
 
-// One IO access to the page the mouse registers start: the mouse's and the block device's offsets do not overlap
-void TRPageIO(uint8_t Address, bool R_Wn)
+// One IO access to the page the mouse registers start: the mouse owns the offsets below the block device's.
+// A read that reaches DataPortWriteWait late is latched wrong on some C64s, so the window is answered first.
+__attribute__((always_inline)) inline void TRPageIO(uint8_t Address, bool R_Wn)
 {
+   uint8_t WindowOffset = Address - TRBlockWindow;
+
    if (R_Wn)
    {
-      USBMouseIORead(Address);
-      if (TRBlockServes(Address)) DataPortWriteWaitLog(TRBlockReadAt(&TRBlockDev, Address));
+      int Data;
+
+      if (WindowOffset < TRBLOCK_WINDOW_SIZE)
+      {
+         DataPortWriteWaitLog(TRBlockDev.Window[WindowOffset]);
+         return;
+      }
+      if (Address < TRBlockCmd)
+      {
+         USBMouseIORead(Address);
+         return;
+      }
+      Data = TRBlockReadAt(&TRBlockDev, Address);
+      if (Data != TRBLOCK_UNSERVED) DataPortWriteWaitLog(Data);
    }
    else if (TRBlockTakes(Address))
    {

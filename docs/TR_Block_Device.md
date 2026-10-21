@@ -61,6 +61,8 @@ Two rules that Wes Biggs' [teensyrom-vdrive](https://github.com/wesbiggs/teensyr
 * **Read STATUS until two consecutive reads agree** before believing a value other than `$80`. A read can land while the firmware is updating it.
 * **Read back what you write into the window** when the data matters, and compare, before sending CMD.
 
+On an NTSC C64 with a Kawari VIC-II, a TR+ read now and then comes back with the previous read's bits ORed in, so **read every byte until two consecutive reads agree**, the window and ID included, and compare a read-back again before calling it a fault.
+
 Do not write ADDR0, ADDR1, PAGE or TOKEN, or the window, while STATUS is `$80`. The firmware latches the command's operands when CMD is written, so a stray register write cannot change a command already running, but writes to the window during a command are ignored.
 
 ## Commands

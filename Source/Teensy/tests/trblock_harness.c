@@ -68,7 +68,8 @@ int main(int argc, char **argv)
       }
       else if (sscanf(Line, "r %x", &Offset) == 1)
       {
-         if (TRBlockServes(Offset)) printf("%02x\n", TRBlockReadAt(&Dev, Offset));
+         int Read = TRBlockReadAt(&Dev, Offset);
+         if (Read != TRBLOCK_UNSERVED) printf("%02x\n", Read);
          else printf("open\n");
       }
       else if (!strncmp(Line, "svc", 3)) printf("%d\n", TRBlockService(&Dev, Use));
