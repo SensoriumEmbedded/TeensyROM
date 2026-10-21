@@ -375,9 +375,11 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(TR_BASStatRegVal);
             break;
          case TR_BASStreamDataReg:
-            DataPortWriteWait(RAM_Image[StreamOffsetAddr]);
+            //a 32-bit offset no longer wraps back inside RAM_Image when a reader runs past the end
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? RAM_Image[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);

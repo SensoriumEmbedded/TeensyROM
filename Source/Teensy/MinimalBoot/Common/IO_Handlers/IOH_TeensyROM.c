@@ -603,9 +603,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(Data);
             break;
          case rRegStreamData:
-            DataPortWriteWait(XferImage[StreamOffsetAddr]);
+            //a 32-bit offset no longer wraps back inside the image when a reader runs past the end
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
             Data = ptrSerialString[StringOffset++];
