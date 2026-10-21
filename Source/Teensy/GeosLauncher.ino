@@ -178,7 +178,7 @@ FLASHMEM static bool GeosRestoreCopy(const char *Copy)
 FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
                                    const char *Copy, bool Patch)
 {
-   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[GEOS_ERROR_SIZE] = "the SD card could not be written";
+   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[MaxNamePathLength + GEOS_ERROR_SIZE] = "the SD card could not be written";
    bool Replacing = SD.exists(Copy);
 
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
