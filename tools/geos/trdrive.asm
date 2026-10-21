@@ -38,6 +38,12 @@ STATUS_BAD_ADDRESS = $e2
 ERR_INV_TRACK = 2
 ERR_DEV_NOT_FOUND = 13
 
+VIC_IRQ_FLAGS = $d019
+VIC_IRQ_ENABLE = $d01a
+CIA1_ICR = $dc0d
+CIA2_ICR = $dd0d
+MASK_ALL = $7f
+
 BASE_GEOS_RAM = $df
 BASE_REU = $de
 
@@ -52,10 +58,22 @@ InitForIO
         sta saved01
         lda #$36
         sta $01
+        lda VIC_IRQ_ENABLE
+        sta savedIrqEnable
+        lda #0
+        sta VIC_IRQ_ENABLE
+        lda #MASK_ALL
+        sta VIC_IRQ_FLAGS
+        sta CIA1_ICR
+        sta CIA2_ICR
         rts
 
 DoneWithIO
         sei
+        lda CIA1_ICR
+        lda CIA2_ICR
+        lda savedIrqEnable
+        sta VIC_IRQ_ENABLE
         lda saved01
         sta $01
         lda savedP
@@ -345,3 +363,4 @@ page    !byte 0
 token   !byte 0
 baseHi  !byte 0
 patience !word 0
+savedIrqEnable !byte 0
