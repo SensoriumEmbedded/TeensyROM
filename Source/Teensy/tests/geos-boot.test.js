@@ -180,6 +180,14 @@ test('a boot file whose driver is not recognized is refused', { skip }, () => {
     const crowded = stockDriver();
     crowded.writeUInt16LE(0x9110, 2 * 7);
     assert.equal(launch(standardDisk(crowded)).status, 1, 'no room for the TR driver before ReadBlock');
+
+    const shared = stockDriver();
+    shared.writeUInt16LE(TURBO_START + 0x20, 2 * 12);
+    assert.equal(launch(standardDisk(shared)).status, 1, 'a vector the TR driver does not replace points into the replaced run');
+
+    const jumped = stockDriver();
+    jumped.writeUInt16LE(TURBO_START + 0x20, JUMP_SLOTS + 3 * 2 + 1);
+    assert.equal(launch(standardDisk(jumped)).status, 1, 'a jump slot the TR driver does not replace points into the replaced run');
   });
 });
 

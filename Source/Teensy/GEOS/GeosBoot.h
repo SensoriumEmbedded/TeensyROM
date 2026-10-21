@@ -76,6 +76,17 @@ static bool GeosReplaceTransport(uint8_t *Driver)
       uint16_t Routine = GeosWord(Driver + 2 * i);
       if (Routine < Start || Routine >= End) return false;
    }
+   for (int i = VecCount; i < GEOS_VECTOR_WORDS; i++)
+   {
+      uint16_t Other = GeosWord(Driver + 2 * i);
+      if (Other >= Start && Other < End) return false;
+   }
+   for (int i = 0; i < GEOS_JUMP_COUNT; i++)
+   {
+      uint16_t Target = GeosWord(Driver + GEOS_JUMP_SLOTS + 3 * i + 1);
+      bool Repointed = i == JumpSendTSBytes || i == JumpGetDOSError || i == JumpReadLink;
+      if (!Repointed && Target >= Start && Target < End) return false;
+   }
    memcpy(Code, TRDriverCode, sizeof Code);
    for (size_t i = 0; i < sizeof TRDriverRelocations / sizeof TRDriverRelocations[0]; i++)
    {

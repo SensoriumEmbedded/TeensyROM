@@ -232,7 +232,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
-   Built = GeosDisableConfigure(&Disk, &Changed) && GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length);
+   Built = GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length) && GeosDisableConfigure(&Disk, &Changed);
    if (!Built) SendMsgPrintfln("%s:\r\n%s", Name, Disk.Error);
    Image.close();
    if (!Built) return false;
