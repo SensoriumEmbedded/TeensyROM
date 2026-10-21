@@ -5,7 +5,7 @@
 #include "GEOS/GeosTargets.h"
 
 #define GEOS_TEMP_NAME     "PATCHING.TMP"
-#define GEOS_BACKUP_NAME   "REPLACED.BAK"
+#define GEOS_BACKUP_TAG    ".BAK"
 #define GEOS_COPY_TAG      "-TR"
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
@@ -154,6 +154,20 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    return Patched;
 }
 
+FLASHMEM static void GeosBackupPath(char *Backup, size_t Size, const char *Copy)
+{
+   snprintf(Backup, Size, "%s" GEOS_BACKUP_TAG, Copy);
+}
+
+// A copy renamed aside and never put back means power dropped between the two renames of GeosPatchCopy
+FLASHMEM static void GeosRestoreCopy(const char *Copy)
+{
+   char Backup[MaxNamePathLength];
+
+   GeosBackupPath(Backup, sizeof Backup, Copy);
+   if (!SD.exists(Copy) && SD.exists(Backup)) SD.rename(Backup, Copy);
+}
+
 // Patches a temporary copy and renames it into place, keeping the copy it replaces until the new one is in, so a
 // failure never leaves a half-patched copy behind or loses the one GEOS saved to
 FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
@@ -163,10 +177,10 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
    bool Replacing = SD.exists(Copy);
 
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
-   GeosPath(Backup, sizeof Backup, Launcher, GEOS_BACKUP_NAME);
-   if (Replacing && SD.exists(Backup)) snprintf(Error, sizeof Error, "%s is left from an earlier try: remove or restore it", GEOS_BACKUP_NAME);
-   else if (GeosCopyFile(Source, Temp) && (!Patch || GeosPatchFile(Launcher, Temp, Error, sizeof Error)) &&
-            (!Replacing || SD.rename(Copy, Backup)))
+   GeosBackupPath(Backup, sizeof Backup, Copy);
+   if (Replacing) SD.remove(Backup);
+   if (GeosCopyFile(Source, Temp) && (!Patch || GeosPatchFile(Launcher, Temp, Error, sizeof Error)) &&
+       (!Replacing || SD.rename(Copy, Backup)))
    {
       if (SD.rename(Temp, Copy))
       {
@@ -214,6 +228,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    if (Found.HasDriver && !GeosBoots(Launcher)) return GeosUse(Launcher, Name, BootName);
    NeedsDriver = !Found.HasDriver;
 
+   GeosRestoreCopy(Copy);
    if (SD.exists(Copy))
    {
       // The copy is the disk GEOS saves the user's work to: one that cannot be read is left alone, not replaced
