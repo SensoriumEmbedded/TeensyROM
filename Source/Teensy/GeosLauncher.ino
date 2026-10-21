@@ -5,6 +5,7 @@
 #include "GEOS/GeosTargets.h"
 
 #define GEOS_TEMP_NAME     "PATCHING.TMP"
+#define GEOS_BACKUP_NAME   "REPLACED.BAK"
 #define GEOS_COPY_TAG      "-TR"
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
@@ -153,21 +154,30 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    return Patched;
 }
 
-// Patches a temporary copy and renames it into place, so a failure never leaves a half-patched copy behind
+// Patches a temporary copy and renames it into place, keeping the copy it replaces until the new one is in, so a
+// failure never leaves a half-patched copy behind or loses the one GEOS saved to
 FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
                                    const char *Copy, bool Patch)
 {
-   char Temp[MaxNamePathLength], Error[GEOS_ERROR_SIZE] = "the SD card could not be written";
+   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[GEOS_ERROR_SIZE] = "the SD card could not be written";
+   bool Replacing = SD.exists(Copy);
 
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
-   if (!GeosCopyFile(Source, Temp) || (Patch && !GeosPatchFile(Launcher, Temp, Error, sizeof Error)) ||
-       (SD.exists(Copy) && !SD.remove(Copy)) || !SD.rename(Temp, Copy))
+   GeosPath(Backup, sizeof Backup, Launcher, GEOS_BACKUP_NAME);
+   if (Replacing && SD.exists(Backup)) snprintf(Error, sizeof Error, "%s is left from an earlier try: remove or restore it", GEOS_BACKUP_NAME);
+   else if (GeosCopyFile(Source, Temp) && (!Patch || GeosPatchFile(Launcher, Temp, Error, sizeof Error)) &&
+            (!Replacing || SD.rename(Copy, Backup)))
    {
-      SD.remove(Temp);
-      SendMsgPrintfln(Patch ? "Could not add the mouse driver to\r\na copy of %s:\r\n%s" : "Could not make a copy of\r\n%s:\r\n%s", Name, Error);
-      return false;
+      if (SD.rename(Temp, Copy))
+      {
+         if (Replacing) SD.remove(Backup);
+         return true;
+      }
+      if (Replacing) SD.rename(Backup, Copy);
    }
-   return true;
+   SD.remove(Temp);
+   SendMsgPrintfln(Patch ? "Could not add the mouse driver to\r\na copy of %s:\r\n%s" : "Could not make a copy of\r\n%s:\r\n%s", Name, Error);
+   return false;
 }
 
 FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *Name)
