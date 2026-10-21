@@ -160,12 +160,12 @@ FLASHMEM static void GeosBackupPath(char *Backup, size_t Size, const char *Copy)
 }
 
 // A copy renamed aside and never put back means power dropped between the two renames of GeosPatchCopy
-FLASHMEM static void GeosRestoreCopy(const char *Copy)
+FLASHMEM static bool GeosRestoreCopy(const char *Copy)
 {
    char Backup[MaxNamePathLength];
 
    GeosBackupPath(Backup, sizeof Backup, Copy);
-   if (!SD.exists(Copy) && SD.exists(Backup)) SD.rename(Backup, Copy);
+   return SD.exists(Copy) || !SD.exists(Backup) || SD.rename(Backup, Copy);
 }
 
 // Patches a temporary copy and renames it into place, keeping the copy it replaces until the new one is in, so a
@@ -228,7 +228,11 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    if (Found.HasDriver && !GeosBoots(Launcher)) return GeosUse(Launcher, Name, BootName);
    NeedsDriver = !Found.HasDriver;
 
-   GeosRestoreCopy(Copy);
+   if (!GeosRestoreCopy(Copy))
+   {
+      SendMsgPrintfln("%s\r\nwas set aside and could not be put back", CopyName);
+      return true;
+   }
    if (SD.exists(Copy))
    {
       // The copy is the disk GEOS saves the user's work to: one that cannot be read is left alone, not replaced
