@@ -141,7 +141,11 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    struct GeosDate Today = GeosToday();
    bool Patched;
 
-   if (!Image) return false;
+   if (!Image)
+   {
+      snprintf(Error, ErrorSize, "the image could not be opened");
+      return false;
+   }
    Disk = GeosDiskOn(Launcher, &Image);
    Patched = GeosInstallDriver(&Disk, &Today);
    if (!Patched) snprintf(Error, ErrorSize, "%s", Disk.Error);
