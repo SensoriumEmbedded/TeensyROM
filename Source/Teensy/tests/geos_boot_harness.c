@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // geos_boot_harness IN.d81 OUT.prg OUT.d81: retypes the disk's CONFIGURE files, builds the GEOS 64 boot PRG from
-// it, and writes both. Prints "changed=<0|1>"; exits 1 with the refusal on stderr.
+// it, sets the clock to 2026-10-21 15:07, and writes both. Prints "changed=<0|1> clock=<0|1>"; exits 1 with the refusal on stderr.
 #include <stdlib.h>
 
 #include "../GEOS/GeosBoot.h"
@@ -25,6 +25,7 @@ static bool WriteBlock(void *Context, uint32_t Offset, const uint8_t *Block)
 
 int main(int argc, char **argv)
 {
+   const struct GeosDate Now = { 26, 10, 21, 15, 7 };
    struct GeosDisk Disk = { 0 };
    uint32_t Length;
    bool Changed;
@@ -45,7 +46,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "%s\n", Disk.Error);
       return 1;
    }
-   printf("changed=%d\n", Changed);
+   printf("changed=%d clock=%d\n", Changed, GeosSetClock(Prg, Length, &Now));
    File = fopen(argv[2], "wb");
    fwrite(Prg, 1, Length, File);
    fclose(File);

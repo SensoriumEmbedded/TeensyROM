@@ -66,10 +66,15 @@ function stockDriver() {
   return driver;
 }
 
-function bootFile(driver = stockDriver()) {
+const START_AT_IN_BODY = 0x1000;
+const START_DATE = [0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85];
+const START_CLOCK = [0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, 0xa9, 0x81, 0x8d, 0x0b, 0xdc, 0xa9, 0x00, 0x8d, 0x0a, 0xdc, 0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc];
+
+function bootFile(driver = stockDriver(), startUp = false) {
   const body = Buffer.alloc(BODY_SIZE);
   for (let i = 0; i < BODY_SIZE; i++) body[i] = (i * 31 + 7) & 0xff;
   driver.copy(body, DRIVER_AT_IN_BODY);
+  if (startUp) Buffer.from([...START_DATE, ...START_CLOCK]).copy(body, START_AT_IN_BODY);
   const file = Buffer.alloc(2 + BODY_SIZE);
   file.writeUInt16LE(LOAD_ADDRESS, 0);
   body.copy(file, 2);
@@ -135,10 +140,10 @@ function withHarness(body) {
   }
 }
 
-function standardDisk(driver) {
+function standardDisk(driver, startUp = false) {
   const disk = new Disk();
   disk.addFile('GEOS', Buffer.from([1, 8, 0]));
-  disk.addFile('GEOBOOT', bootFile(driver).file);
+  disk.addFile('GEOBOOT', bootFile(driver, startUp).file);
   return disk;
 }
 
@@ -166,6 +171,28 @@ test('the boot PRG carries the boot file, with the TR disk driver in place of th
     assert.equal(patched[TYPE_BYTE], 3);
     assert.equal(r.prg.subarray(place, place + DRIVER_AT_IN_BODY).equals(body.subarray(0, DRIVER_AT_IN_BODY)), true, 'bytes before the driver');
     assert.equal(r.prg.subarray(place + DRIVER_AT_IN_BODY + DRIVER_SIZE).equals(body.subarray(DRIVER_AT_IN_BODY + DRIVER_SIZE)), true, 'bytes after the driver');
+  });
+});
+
+test('the boot PRG starts GEOS with the given date and time', { skip }, () => {
+  withHarness((launch) => {
+    const r = launch(standardDisk(undefined, true));
+    const place = 2 + LOAD_ADDRESS - BASIC_START + START_AT_IN_BODY;
+    const at = r.prg.subarray(place, place + START_DATE.length + START_CLOCK.length);
+
+    assert.match(r.out, /clock=1/);
+    assert.deepEqual([at[1], at[6], at[11]], [21, 10, 26], 'day, month, year');
+    assert.deepEqual([...at.subarray(15 + 6, 15 + 24)], [0xa9, 0x83, 0x8d, 0x0b, 0xdc, 0xa2, 0x07, 0x8e, 0x0a, 0xdc, 0xa9, 0x00, 0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc], '3 PM and 7 minutes');
+    assert.equal(at.subarray(15, 15 + 6).every((b) => b === 0xea), true, 'padding');
+  });
+});
+
+test('a boot file without the known start-up code keeps the date and time it has', { skip }, () => {
+  withHarness((launch) => {
+    const r = launch(standardDisk());
+    assert.match(r.out, /clock=0/);
+    const place = 2 + LOAD_ADDRESS - BASIC_START;
+    assert.equal(r.prg.subarray(place, place + DRIVER_AT_IN_BODY).equals(bootFile().body.subarray(0, DRIVER_AT_IN_BODY)), true);
   });
 });
 
