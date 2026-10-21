@@ -545,6 +545,18 @@ void SetNumItems(uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
+bool SDBegin()
+{
+   //SD.begin(BUILTIN_SDCARD), ending any read left open first.  In FIFO mode SdFat leaves a
+   //  multi-block read (CMD18) running after every read, the mount's included, until a file
+   //  close ends it with CMD12; a failed open (e.g. no autolaunch.txt) closes nothing.
+   //  SD.begin then resets the card (CMD0) mid-read, which leaves some cards unresponsive
+   //  until they lose power.
+   SdCard *Card = SD.sdfs.card(); //NULL until the first SD.begin
+   if (Card) Card->syncDevice();  //CMD12 only if a read or write is open
+   return SD.begin(BUILTIN_SDCARD);
+}
+
 bool SDFullInit()
 {
 
@@ -556,7 +568,7 @@ bool SDFullInit()
    Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
    Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()
     
-   while (!SD.begin(BUILTIN_SDCARD)) 
+   while (!SDBegin()) 
    {
       Count--;
       Printf_dbg("SD Init fail, %d tries left. Time: %lu mS\n", Count, millis()-Startms);

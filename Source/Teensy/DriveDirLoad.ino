@@ -437,7 +437,7 @@ void MenuChange()
          SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
-         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         SDBegin(); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
          MenuSource = DriveDirMenu; 
          break;

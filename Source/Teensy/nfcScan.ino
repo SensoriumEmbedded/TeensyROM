@@ -173,7 +173,7 @@ FS *FSfromSourceID(RegMenuTypes SourceID)
 {
    if(SourceID == rmtSD) 
    {
-      SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      SDBegin(); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
       return &SD;
    }
    else if(SourceID == rmtUSBDrive) return &firstPartition;    
