@@ -55,6 +55,7 @@ static uint8_t TRBlockImageFlush(void *Context)
 {
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
 
+   if (!Image->Format) return TRBlockNoImage;
    return Image->Flush(Image->Context) ? TRBlockDone : TRBlockWriteFailed;
 }
 
