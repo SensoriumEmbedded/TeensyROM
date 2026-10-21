@@ -212,8 +212,7 @@ FLASHMEM static bool GeosUse(const struct GeosLauncher *Launcher, const char *Na
 }
 
 // Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one.
-// BootName gets the disk to start from: the original when it is set up and only the setup is wanted, else a copy,
-// since GEOS saves to the disk it starts from
+// BootName gets the disk to start from: always a copy, since GEOS saves to the disk it starts from
 FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name, char *BootName)
 {
    char Source[MaxNamePathLength], CopyName[MaxItemNameLength + sizeof GEOS_COPY_TAG], Copy[MaxNamePathLength];
@@ -230,7 +229,6 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return false;
    }
    if (!Found.HasDeskTop) return false;
-   if (Found.HasDriver && !GeosBoots(Launcher)) return GeosUse(Launcher, Name, BootName);
    NeedsDriver = !Found.HasDriver;
 
    if (!GeosRestoreCopy(Copy))
@@ -305,12 +303,12 @@ FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *It
       return false;
    }
    Count = GeosListImages(Launcher, Names);
-   for (uint8_t i = 0; i < Count && !(GeosBoots(Launcher) && *BootName); i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
+   for (uint8_t i = 0; i < Count && !*BootName; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
    if (!BootDiskFound)
    {
       SendMsgPrintfln("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again.",
                       Launcher->Title, Launcher->Folder);
       return false;
    }
-   return GeosBoots(Launcher) && *BootName && GeosStart(Launcher, BootName, Item);
+   return *BootName && GeosStart(Launcher, BootName, Item);
 }

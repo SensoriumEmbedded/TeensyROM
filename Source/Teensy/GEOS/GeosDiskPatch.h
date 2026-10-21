@@ -56,7 +56,7 @@ struct GeosTarget
    const uint8_t *DriverCode, *DriverInfo;
    uint16_t DriverSize;
    uint8_t InputType;
-   const char *BootFile;   // what the TR starts the disk from; none for a version it only sets up
+   const char *BootFile;   // what the TR starts the disk from
    uint16_t BootEntry;
 };
 

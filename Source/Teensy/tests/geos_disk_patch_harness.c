@@ -5,6 +5,9 @@
 #include <stdlib.h>
 
 #include "../GEOS/GeosTargets.h"
+#include "../GEOS/TRMouse128.h"
+
+#define GEOS_INPUT_128 15
 
 #define MAX_IMAGE 819200
 
@@ -22,6 +25,9 @@ static bool WriteBlock(void *Context, uint32_t Offset, const uint8_t *Block)
    memcpy((uint8_t *)Context + Offset, Block, GEOS_SECTOR_SIZE);
    return true;
 }
+
+static const struct GeosTarget Geos128Target =
+   { "128 DESKTOP", TRMouse128Name, TRMouse128Code, TRMouse128Info, sizeof TRMouse128Code, GEOS_INPUT_128, NULL, 0 };
 
 static int Inspect(struct GeosDisk *Disk)
 {
@@ -53,7 +59,7 @@ int main(int argc, char **argv)
    memcpy(Original, Image, Size);
 
    Disk.Format = GeosFormatForSize(Size);
-   Disk.Target = &Geos128Launcher.Target;
+   Disk.Target = &Geos128Target;
    Disk.Context = Image;
    Disk.Read = ReadBlock;
    Disk.Write = WriteBlock;
