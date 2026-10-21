@@ -71,8 +71,6 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
 
       //uint32_t Startms = millis();
 
-      //bounded: DriveDirPath grows through unbounded strcat and Name is the card's own, so the
-      //MaxNamePathLength arithmetic is not by itself a bound
       if (PathIsRoot()) snprintf(FullFilePath, sizeof FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
       else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
          

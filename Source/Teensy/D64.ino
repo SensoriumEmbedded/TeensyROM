@@ -113,10 +113,7 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
       Sector = 3;
    }
    
-   //The sector chain and every entry come off the card.  A directory sector linking back to
-   //itself walked forever -- and, if it held entries, wrote one menu item per pass straight
-   //past DriveDirMenu's MaxMenuItems.  A real directory is at most 37 sectors (D81's 40/3..
-   //40/39), so stop following links after MaxDxxDirSectors, and stop adding at the array's end.
+   //An image's directory chain can link back to itself; a real one is at most 37 sectors (D81)
    const uint8_t MaxDxxDirSectors = 64;
    uint8_t DirSectorsRead = 0;
    while(Track != 0 && DirSectorsRead++ < MaxDxxDirSectors && NumDrvDirMenuItems < MaxMenuItems)
@@ -148,12 +145,6 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
          else if (FileName[0]) //check for end of dir, no entry
          {  //valid dir entry
             DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(DxxFNB_Bytes); // 16 char max + term + ftrack + fsec + DiskType
-            if (DriveDirMenu[NumDrvDirMenuItems].Name == NULL)
-            {  //out of memory ends the listing; nothing written through NULL
-               Serial.println("Out of mem!");
-               Track = 0; //and the outer walk with it
-               break;
-            }
 
             for(uint8_t CharNum=0; CharNum<DxxFNB_NameLength; CharNum++)
             { //converting to ascii, then back to petscii for display later.  All other file names are ascii...

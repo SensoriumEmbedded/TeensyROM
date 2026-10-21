@@ -108,8 +108,6 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    char FullFilePath[MaxNamePathLength];
    uint32_t SwapBanksDetected = 0;
 
-   //bounded: DriveDirPath grows through unbounded strcat and Name is the card's own, so the
-   //MaxNamePathLength arithmetic is not by itself a bound
    if (PathIsRoot()) snprintf(FullFilePath, sizeof FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
    else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       

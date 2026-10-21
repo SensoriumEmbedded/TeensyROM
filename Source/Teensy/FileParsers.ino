@@ -161,9 +161,7 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
                SendMsgPrintfln("Must run this crt from SD"); 
                return false;                        
             }
-            //FullFilePath is MaxNamePathLength, the EEPROM slot MaxPathLength: a longer path
-            //ran on into eepAdMinBootInd and the autolaunch record, and the minimal image then
-            //strcpy'd an unterminated slot into its own DriveDirPath.
+            //the EEPROM slot is MaxPathLength, shorter than FullFilePath
             if (strlen(FullFilePath) >= MaxPathLength)
             {
                SendMsgPrintfln("Path too long to boot\r\nthis crt from");

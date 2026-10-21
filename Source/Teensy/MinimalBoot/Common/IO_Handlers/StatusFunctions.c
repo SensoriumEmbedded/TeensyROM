@@ -31,7 +31,7 @@ FLASHMEM void SendStrPrintfln(const char *Msg)
 }
 
 FLASHMEM void TerminateSIDRecord(char* Record)
-{  //EEPROM may hold a record carrying neither terminator; SetLatestSIDLoaded keeps both fields below these
+{  //a record written by an older build may carry neither terminator
    Record[MaxPathLength-2] = 0;
    Record[MaxPathLength-1] = 0;
 }
@@ -377,9 +377,6 @@ FLASHMEM void SetCursorToItemNum(uint16_t ItemNum)
 
 FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   //An empty menu has no item to land on, and the wrap below counts against NumItemsFull
-   //rather than against MenuSource's real extent -- see LastFileType for what that costs.
-   if (NumItemsFull == 0) return;
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
    do
@@ -396,11 +393,6 @@ FLASHMEM void NextFileType(uint8_t FileType1, uint8_t FileType2)
 
 FLASHMEM void LastFileType(uint8_t FileType1, uint8_t FileType2)
 {
-   //Must come before the wrap below: NumItemsFull is uint16_t, so NumItemsFull-1 promotes
-   //to int, evaluates to -1, and converts back to 65535 -- an index 65535*sizeof(
-   //StructMenuItem) = 1,048,560 bytes past MenuSource, walked downward one entry per
-   //iteration until it reaches InitItemNum.
-   if (NumItemsFull == 0) return;
    SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
    uint16_t InitItemNum = SelItemFullIdx;
 
@@ -478,7 +470,7 @@ FLASHMEM void WriteNFCTagCheck()
    const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
    SendMsgPrintfln("File Selected:\r%s\r", PathMsg);
    if (!PathFits)
-   {  //a tag holding a cut-short path launches a different file, or none
+   {
       SendMsgPrintfln(" Path incomplete or too long\r");
       return;
    }
@@ -493,12 +485,7 @@ FLASHMEM void WriteNFCTag()
    //nfc polling not Enabled here
 
    char PathMsg[MaxPathLength];
-   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
-   if (!PathFits)
-   {  //WriteNFCTagCheck refuses this; the selection changed in between
-      SendMsgPrintfln("Path incomplete or too long\r  Tag *not* written\r");
-      return;
-   }
+   (void)GetCurrentFilePathName(PathMsg, sizeof PathMsg); //WriteNFCTagCheck refused one that does not fit
 
    SendMsgPrintfln("Preparing...");
    //Serial.printf("WriteNFCTag: %s\n", PathMsg);
@@ -537,7 +524,7 @@ FLASHMEM void HotKeySetLaunch()
       }
 
       if (!PathFits)
-      {  //a stored prefix is a different file, or none -- refuse rather than report success
+      {
          SendMsgPrintfln("Path incomplete or too long\r\rHot Key *not* updated\r");
          return;
       }
@@ -566,15 +553,10 @@ FLASHMEM void KERNALPreStart()
    //Serial.println("Hi from KERNALPreStart");
    //Which IO Handler will be started?
    uint8_t NextIOHndlr = IO1[rwRegNextIOHndlr];
-   //Nothing re-forms SelItemFullIdx in this function, so it is whatever the last menu change
-   //left behind; fall back to the stored handler when it no longer names an item -- and say
-   //so, because that fallback is otherwise indistinguishable from the ordinary IOH_None case.
-   const StructMenuItem* Item = MenuItemSel();
-   if (Item == NULL) Serial.printf("Menu sel out of range, using stored IO handler\n");
-   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && Item != NULL && Item->IOHndlrAssoc != IOH_None)
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
       //Serial.println("IO Handler set by Teensy Menu\n");
-      NextIOHndlr = Item->IOHndlrAssoc;
+      NextIOHndlr = MenuSource[SelItemFullIdx].IOHndlrAssoc;
    }
 
    if (NextIOHndlr == IOH_KernalReplace)
@@ -628,7 +610,7 @@ FLASHMEM void SetREUFile()
    //}
 
    if (!PathFits)
-   {  //a stored prefix is a different file, or none -- refuse rather than report success
+   {
       SendMsgPrintfln("Path incomplete or too long\r  *not* updated\r");
       return;
    }
@@ -676,7 +658,7 @@ FLASHMEM void SetKERNALBin()
    //}
 
    if (!PathFits)
-   {  //a stored prefix is a different file, or none -- refuse rather than report success
+   {
       SendMsgPrintfln("Path incomplete or too long\r  *not* updated\r");
       return;
    }
@@ -707,7 +689,7 @@ FLASHMEM void SetAutoLaunch()
    }
 
    if (!PathFits)
-   {  //a stored prefix is a different file, or none -- refuse rather than report success
+   {
       SendMsgPrintfln("Path incomplete or too long\r\rAuto Launch *not* updated\r");
       return;
    }
@@ -727,7 +709,7 @@ FLASHMEM void ClearAutoLaunch()
 FLASHMEM void SetBackgroundSID()
 {
    if (LatestSIDLoaded[0] == SIDRecordUnstorable)
-   {  //SetLatestSIDLoaded could not fit its path: storing it would name a different file
+   {
       SendMsgPrintfln("SID path too long,\r  background SID *not* set\r");
       return;
    }
@@ -1368,9 +1350,7 @@ FLASHMEM void UninstallExtHost()
 #endif
 }
 
-// Unbounded on purpose: the length comes from the initializer, so the static_assert
-// below can compare it against rsNumStatusTypes.  Written [rsNumStatusTypes] instead,
-// a short list zero-fills the tail and the count assert is a tautology.
+//Unsized so the static_assert below can compare its length against rsNumStatusTypes
 void (*StatusFunction[])() = //match RegStatusTypes order
 {
    &MenuChange,          // rsChangeMenu
@@ -1408,8 +1388,5 @@ void (*StatusFunction[])() = //match RegStatusTypes order
    &MakeExtHostStr,      // rsMakeExtHostStr
    &UninstallExtHost,    // rsUninstallExtHost
 };
-//Same guard IOHandler[] already carries (IOHandlers.h).  A status code appended to
-//RegStatusTypes without its entry here is otherwise silent: the array zero-fills, the
-//build is clean, and the omission is only found by a C64 asking for that code.
 static_assert(sizeof(StatusFunction) / sizeof(StatusFunction[0]) == rsNumStatusTypes,
               "StatusFunction[] / RegStatusTypes count mismatch");

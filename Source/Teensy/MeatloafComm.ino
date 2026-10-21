@@ -54,7 +54,7 @@ FLASHMEM void MountDxxFile()
    const bool PathFits = GetCurrentFilePathName(DxxPathFilename, sizeof DxxPathFilename);
    SendMsgPrintfln("%s\r", DxxPathFilename);
    if (!PathFits)
-   {  //mounting a cut-short path mounts a different image, or none
+   {
       SendMsgPrintfln("Path incomplete or too long\r");
       return;
    }

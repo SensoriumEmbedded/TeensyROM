@@ -204,8 +204,7 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
       }
       
       
-      //Each read lands 16 bytes at CharNum, and the tag's own length byte decides how far
-      //CharNum goes (up to DataStart+255) -- past TagData.  Refuse a message that will not fit.
+      //the tag's own length byte decides how far CharNum goes
       if (CharNum + 16 >= sizeof TagData)
       {
          Serial.printf("Tag message too long\n");
@@ -293,7 +292,6 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
    }
    //assuming short record format...
    pDataStart += 2 + pDataStart[1] + ((pDataStart[0] & 0x08)>>3); //add 1 for ID length, if IL flagged
-   //the offsets above and below are the tag's own bytes; keep the pointer inside what was read
    if (pDataStart >= TagData + CharNum) return false;
    
    if(pDataStart[0] != 'T') 
@@ -397,10 +395,10 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
          }
       }
       if (CleanLocalNumItems)  //if there are valid files
-      {  //pick a random one and append to path -- in TagData, which the tag's path already fills
+      {  //pick a random one and append to path
          const char* Picked = CleanLocalDirMenu[random(0, CleanLocalNumItems)]->Name;
          if (strlen((char*)pDataStart) + strlen(Picked) >= sizeof TagData - (pDataStart - TagData))
-         {  //a cut-short name is a different file: refuse
+         {
             Serial.printf("Random pick path too long\n");
             return false;
          }

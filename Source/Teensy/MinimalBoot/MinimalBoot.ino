@@ -179,7 +179,7 @@ void setup()
 
    char *CrtBootNamePath = (char*)malloc(MaxPathLength);
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)CrtBootNamePath, MaxPathLength); //load the source/path/name from EEPROM
-   CrtBootNamePath[MaxPathLength-1] = 0; //a slot written by an older main image may not end inside itself; LoadCRT strcpy's it into DriveDirPath
+   CrtBootNamePath[MaxPathLength-1] = 0; //older main images could write this slot unterminated
    Serial.printf("Sel CRT: %s\n", CrtBootNamePath);
 
    //SetUpMainMenuROM();
