@@ -215,7 +215,6 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    return GeosUse(Launcher, CopyName, BootName);
 }
 
-// Turns the menu item into the PRG that starts GEOS from the disk, which the block device serves from the SD card
 FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
    char Path[MaxNamePathLength];
@@ -247,7 +246,6 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    return true;
 }
 
-// True when the item has become a PRG to run: the version starts from the disk it set up
 FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *Item)
 {
    char Names[GEOS_MAX_IMAGES][MaxItemNameLength], BootName[MaxItemNameLength + sizeof GEOS_COPY_TAG] = "";
