@@ -209,6 +209,15 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
          return true;
       }
       if (Found.HasDriver) return GeosUse(Launcher, CopyName, BootName);
+      if (Found.HasDeskTop)
+      {
+         if (!GeosPatchFile(Launcher, Copy, Error, sizeof Error))
+         {
+            SendMsgPrintfln("Could not add the mouse driver to\r\n%s:\r\n%s", CopyName, Error);
+            return true;
+         }
+         return GeosUse(Launcher, CopyName, BootName);
+      }
    }
    if (!GeosPatchCopy(Launcher, Name, Source, Copy, NeedsDriver)) return true;
    SendMsgPrintfln(NeedsDriver ? "Added the TR USB mouse driver to\r\na copy of %s" : "Made a copy of %s\r\nto start from", Name);
