@@ -119,6 +119,14 @@ smcSkipPrintRunning:
    sta $b0	; to $f672
    lda #$f6
    sta $b1
+   ; JaffyDOS Specific (JiffyDOS-based kernal) 
++  lda $fa00  
+   cmp #$20  ;check for JaffyDOS intialization vector at $fa00
+   bne +
+   lda #$88	; Set up JaffyDOS function key vector
+   sta $b0	; to $fa88
+   lda #$fa
+   sta $b1
 
 +  lda #$08  ;Set Current Device Number to 8 (floppy drive). 0=kbd, 1=tape
    sta $ba   ;makes file browsers load from floppy by default, could adversely effect games that want to be loaded from tape
