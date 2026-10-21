@@ -165,7 +165,12 @@ FLASHMEM static bool GeosRestoreCopy(const char *Copy)
    char Backup[MaxNamePathLength];
 
    GeosBackupPath(Backup, sizeof Backup, Copy);
-   return SD.exists(Copy) || !SD.exists(Backup) || SD.rename(Backup, Copy);
+   if (SD.exists(Copy))
+   {
+      SD.remove(Backup);
+      return true;
+   }
+   return !SD.exists(Backup) || SD.rename(Backup, Copy);
 }
 
 // Patches a temporary copy and renames it into place, keeping the copy it replaces until the new one is in, so a
