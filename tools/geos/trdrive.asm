@@ -133,11 +133,11 @@ ReadLink
         ldx #REG_PAGE
         jsr putReg
         ldx #WINDOW
-        jsr getReg
+        jsr getStable
         ldy #0
         sta (r4),y
         ldx #WINDOW + 1
-        jsr getReg
+        jsr getStable
         iny
         sta (r4),y
         ldx #0
@@ -166,6 +166,9 @@ readPage
         ldx #0
 windowRead
         lda BASE_GEOS_RAM * 256 + WINDOW,x
+windowReread
+        cmp BASE_GEOS_RAM * 256 + WINDOW,x
+        bne windowRead
         sta (r4),y
         iny
         inx
@@ -196,7 +199,11 @@ windowStore
         sta BASE_GEOS_RAM * 256 + WINDOW,x
 windowCheck
         cmp BASE_GEOS_RAM * 256 + WINDOW,x
+        beq windowStored
+windowRecheck
+        cmp BASE_GEOS_RAM * 256 + WINDOW,x
         bne windowFault
+windowStored
         iny
         inx
         cpx #WINDOW_SIZE
@@ -321,8 +328,10 @@ settle
         stx getReg + 2
         stx putReg + 2
         stx windowRead + 2
+        stx windowReread + 2
         stx windowStore + 2
         stx windowCheck + 2
+        stx windowRecheck + 2
 located
         clc
         rts
@@ -332,9 +341,13 @@ absent
 
 tryBase
         stx probe + 2
+        stx probeAgain + 2
         ldy #2
 probe
         lda BASE_GEOS_RAM * 256 + $10,y
+probeAgain
+        cmp BASE_GEOS_RAM * 256 + $10,y
+        bne probe
         cmp trbId,y
         bne notHere
         dey
@@ -347,6 +360,15 @@ notHere
 
 getReg
         lda BASE_GEOS_RAM * 256,x
+        rts
+
+; a read that comes back the same twice; on some machines the TR's byte arrives with the last one's bits ORed in
+getStable
+        jsr getReg
+        sta seen
+        jsr getReg
+        cmp seen
+        bne getStable
         rts
 
 putReg
