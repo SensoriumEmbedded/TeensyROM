@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-// geos_boot_harness IN.d81 OUT.prg OUT.d81: retypes the disk's CONFIGURE files, builds the GEOS 64 boot PRG from
-// it, sets the clock to 2026-10-21 15:07, and writes both. Prints "changed=<0|1> clock=<0|1>"; exits 1 with the refusal on stderr.
+// geos_boot_harness IN.d81 OUT.prg OUT.d81: builds the GEOS 64 boot PRG from the disk, retypes its CONFIGURE
+// files, sets the clock to 2026-10-21 15:07, and writes both. Prints "changed=<0|1> clock=<0|1>"; exits 1 with the refusal on stderr.
 #include <stdlib.h>
 
 #include "../GEOS/GeosBoot.h"
