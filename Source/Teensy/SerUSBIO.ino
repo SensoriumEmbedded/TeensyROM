@@ -966,6 +966,21 @@ FLASHMEM void  getFreeITCM()
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
+// One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
+// every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is under every
+// channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
+FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
+
+// Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
+// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the command's deadline.
+FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
+{
+   const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
+   uint32_t Quiet = millis();
+   while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
+      if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
+}
+
 #ifdef Fab04_FullDMACapable
 // Staging for one remote DMA command, from the heap and freed when the command returns.  Not
 // RAM_Image, which can be holding a running cartridge's ROM or REU emulation's banks.  Those
@@ -1053,21 +1068,6 @@ FLASHMEM void WriteC64MemCommand()
    //CmdChannel->printf
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
-}
-
-// One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
-// every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is under every
-// channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
-FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
-
-// Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
-// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the command's deadline.
-FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
-{
-   const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
-   uint32_t Quiet = millis();
-   while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
-      if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
 }
 
 // After is what the sender goes on to send without waiting for a reply.  On false a FailToken

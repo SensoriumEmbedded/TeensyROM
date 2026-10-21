@@ -110,7 +110,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
 
     const uint32_t Began = millis();
 
-    while (bytenum < len) 
+    while (bytenum < len)
     {
         if (!SerialAvailabeTimeout())
         {
