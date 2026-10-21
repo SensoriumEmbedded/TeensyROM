@@ -40,7 +40,7 @@ int main(int argc, char **argv)
    Disk.Context = Image;
    Disk.Read = ReadBlock;
    Disk.Write = WriteBlock;
-   if (!GeosDisableConfigure(&Disk, &Changed) || !GeosBuildBootPrg(&Disk, Prg, sizeof Prg, &Length))
+   if (!GeosBuildBootPrg(&Disk, Prg, sizeof Prg, &Length) || !GeosDisableConfigure(&Disk, &Changed))
    {
       fprintf(stderr, "%s\n", Disk.Error);
       return 1;
