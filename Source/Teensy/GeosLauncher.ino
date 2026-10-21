@@ -164,7 +164,7 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
        (SD.exists(Copy) && !SD.remove(Copy)) || !SD.rename(Temp, Copy))
    {
       SD.remove(Temp);
-      SendMsgPrintfln("Could not add the mouse driver to\r\na copy of %s:\r\n%s", Name, Error);
+      SendMsgPrintfln(Patch ? "Could not add the mouse driver to\r\na copy of %s:\r\n%s" : "Could not make a copy of\r\n%s:\r\n%s", Name, Error);
       return false;
    }
    return true;
