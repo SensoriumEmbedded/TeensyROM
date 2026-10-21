@@ -70,7 +70,7 @@ static bool GeosReplaceTransport(uint8_t *Driver)
    uint16_t Start = GeosWord(Driver + 2 * VecInitForIO), End = GeosWord(Driver + 2 * VecReadBlock);
    uint8_t Code[sizeof TRDriverCode];
 
-   if (End <= Start || End - Start < sizeof Code) return false;
+   if (End <= Start || (size_t)(End - Start) < sizeof Code) return false;
    for (int i = VecDoneWithIO; i <= VecNewDisk; i++)
    {
       uint16_t Routine = GeosWord(Driver + 2 * i);
