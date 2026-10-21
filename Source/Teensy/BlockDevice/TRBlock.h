@@ -52,7 +52,8 @@ static const char TRBlockIdText[] = "TRB";
 struct TRBlock
 {
    uint8_t Buffer[TRBLOCK_SIZE];
-   uint8_t Addr0, Addr1, Page, Token;
+   uint8_t *Window;   // the page of Buffer the window shows, kept by page writes so a read does no arithmetic
+   uint8_t Addr0, Addr1, Token;
    uint8_t JobCmd, JobAddr0, JobAddr1, JobToken;
    volatile uint8_t Status, Echo;
    volatile bool Pending;
@@ -72,26 +73,23 @@ struct TRBlockBackend
 static inline void TRBlockReset(struct TRBlock *Dev)
 {
    memset((void *)Dev, 0, sizeof *Dev);
+   Dev->Window = Dev->Buffer;
 }
 
-// The IO ISR's side: reads answer from registers or the window...
-static inline bool TRBlockServes(uint8_t Offset)
-{
-   return Offset == TRBlockStatus || Offset == TRBlockEcho ||
-          (Offset >= TRBlockId && Offset < TRBlockId + TRBLOCK_ID_SIZE) ||
-          (Offset >= TRBlockWindow && Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE);
-}
+#define TRBLOCK_UNSERVED (-1)
 
-static inline uint8_t TRBlockReadAt(const struct TRBlock *Dev, uint8_t Offset)
+// The IO ISR's side: a read answers from the window or a register, else TRBLOCK_UNSERVED
+static inline int TRBlockReadAt(const struct TRBlock *Dev, uint8_t Offset)
 {
+   if (Offset >= TRBlockWindow)
+   {
+      if (Offset >= TRBlockWindow + TRBLOCK_WINDOW_SIZE) return TRBLOCK_UNSERVED;
+      return Dev->Window[Offset - TRBlockWindow];
+   }
    if (Offset == TRBlockStatus) return Dev->Status;
    if (Offset == TRBlockEcho) return Dev->Echo;
-   if (Offset >= TRBlockId && Offset < TRBlockId + TRBLOCK_ID_SIZE) return (uint8_t)TRBlockIdText[Offset - TRBlockId];
-   if (Offset >= TRBlockWindow && Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE)
-   {
-      return Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow];
-   }
-   return 0xff;
+   if ((uint8_t)(Offset - TRBlockId) < TRBLOCK_ID_SIZE) return (uint8_t)TRBlockIdText[Offset - TRBlockId];
+   return TRBLOCK_UNSERVED;
 }
 
 // ...and writes go to registers or the window. The caller reads the data byte only when this says
@@ -108,12 +106,12 @@ static inline void TRBlockWriteAt(struct TRBlock *Dev, uint8_t Offset, uint8_t D
 
    if (Offset >= TRBlockWindow)
    {
-      if (Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE && !Busy) Dev->Buffer[(Dev->Page & 3) * TRBLOCK_WINDOW_SIZE + Offset - TRBlockWindow] = Data;
+      if (Offset < TRBlockWindow + TRBLOCK_WINDOW_SIZE && !Busy) Dev->Window[Offset - TRBlockWindow] = Data;
       return;
    }
    if (Offset == TRBlockAddr0) Dev->Addr0 = Data;
    else if (Offset == TRBlockAddr1) Dev->Addr1 = Data;
-   else if (Offset == TRBlockPage) Dev->Page = Data;
+   else if (Offset == TRBlockPage) Dev->Window = Dev->Buffer + (Data & 3) * TRBLOCK_WINDOW_SIZE;
    else if (Offset == TRBlockToken) Dev->Token = Data;
    else if (Offset == TRBlockCmd && !Busy)
    {
