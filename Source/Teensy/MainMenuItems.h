@@ -296,10 +296,10 @@ StructMenuItem dirTeensyROMSpecific[] =
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC TR Command IO access only"  , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,
      rtBin8kLo  , IOH_TeensyROM    , (char*)"(This) TeensyROM Menu Cart"       , (uint8_t*)TeensyROMC64_bin           , sizeof(TeensyROMC64_bin) ,
      rtFilePrg  , IOH_TeensyROM    , (char*)"TeensyROM External Ports Test"    , (uint8_t*)TRExtPortCheck_prg         , sizeof(TRExtPortCheck_prg) ,
-     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
 #ifdef Fab04_REU
      rtFilePrg  , IOH_TeensyROM    , (char*)"TR+ C64 Expansion Port Test"      , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
 #endif
+     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
 //could repeat these here...
    //rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
    //rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
