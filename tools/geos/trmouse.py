@@ -24,8 +24,9 @@ NAME = b'TR USB MOUSE'
 CLASS_NAME = b'TR USB Mouse'
 CLASS_NAME_SIZE = 12   # GEOS reads the version right after it
 TARGETS = {'128': (0xfd00, 15), '64': (0xfe80, 10)}   # where GEOS loads an input driver, and its type
+AREA_END = {'128': 0xfe80, '64': 0xfffa}   # the 64's area stops at the hardware vectors
 LOAD, INPUT_TYPE = TARGETS['128']
-MAX_SIZE = 0x180   # the input driver area, $FD00-$FE7F on GEOS 128 and $FE80-$FFFF on GEOS 64
+TARGET = '128'
 
 SECTOR_SIZE = 256
 DIR_ENTRY_SIZE = 32
@@ -62,10 +63,11 @@ ICON = """
 def assemble():
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / 'trmouse128.bin'
-        subprocess.run(['acme', f'-DMOUSE_BASE={LOAD}', '-f', 'plain', '-o', str(out), str(SOURCE)], check=True)
+        subprocess.run(['acme', f'-DMOUSE_BASE={LOAD}', *(['-DGEOS64=1'] if TARGET == '64' else []), '-f', 'plain', '-o', str(out), str(SOURCE)], check=True)
         code = out.read_bytes()
-    if len(code) > MAX_SIZE:
-        sys.exit(f'the driver is {len(code)} bytes; GEOS has room for {MAX_SIZE}')
+    room = AREA_END[TARGET] - LOAD
+    if len(code) > room:
+        sys.exit(f'the driver is {len(code)} bytes; GEOS {TARGET} has room for {room}')
     return code
 
 
@@ -301,7 +303,8 @@ def main():
     parser.add_argument('--c-header', type=pathlib.Path, metavar='OUT')
     parser.add_argument('--target', choices=TARGETS, default='128')
     args = parser.parse_args()
-    global LOAD, INPUT_TYPE
+    global LOAD, INPUT_TYPE, TARGET
+    TARGET = args.target
     LOAD, INPUT_TYPE = TARGETS[args.target]
     if args.c_header:
         if args.disk:

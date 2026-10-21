@@ -103,11 +103,14 @@ readButtons
         bpl +
         dex
 +       stx deltaX+1
+!ifndef GEOS64 {
         bit graphMode
         bpl +
         asl deltaX              ; 640 pixels across in 80 columns
         rol deltaX+1
-+       clc
++
+}
+        clc
         lda mouseXPos
         adc deltaX
         sta mouseXPos

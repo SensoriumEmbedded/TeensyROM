@@ -25,6 +25,8 @@ for (const [target, committedPath] of Object.entries(committedHeaders)) {
       const r = spawnSync('python3', [trmouse, '--target', target, '--c-header', header], { encoding: 'utf8' });
       assert.equal(r.status, 0, r.stdout + r.stderr);
       const committed = fs.readFileSync(path.join(root, committedPath), 'utf8').replaceAll('\r\n', '\n');
+      const first = committed.match(/Code\[\d+\] PROGMEM = \{\s*0x4c, 0x([0-9a-f]{2}), 0x([0-9a-f]{2})/);
+      assert.equal(parseInt(first[2] + first[1], 16) >> 8, target === '64' ? 0xfe : 0xfd, 'the first jump lands in the target\'s own driver area');
       assert.equal(fs.readFileSync(header, 'utf8'), committed, `rerun tools/geos/trmouse.py --target ${target} --c-header`);
     } finally {
       fs.rmSync(out, { recursive: true, force: true });
