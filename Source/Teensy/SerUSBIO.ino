@@ -1017,22 +1017,13 @@ FLASHMEM void WriteC64MemCommand()
       return;
    }
 
-   const uint32_t CeilingmS = TransferCeilingmS(DMALength);
-
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++)
+   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
    {
-      if(millis() - Began >= CeilingmS)
-      {
-         SendU16(FailToken);
-         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, DMALength);
-         DrainCmdChannel();
-         return;
-      }
       if(!SerialAvailabeTimeout())
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
-         DrainCmdChannel();
+         DiscardCmdInput(DMALength - ByteNum, Began, DMALength);
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
