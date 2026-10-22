@@ -986,9 +986,9 @@ FLASHMEM void  getFreeITCM()
 FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
 
 // Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
-// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the time Owed bytes take
-// at 2 bytes/mS, counted from Began.  A caller with no command deadline passes millis() and Owed, so
-// the ceiling runs from the failure; WriteC64Spans passes its command's start, so it runs from there.
+// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past SpansCeilingmS(Bytes)
+// counted from Began.  A caller with no command deadline passes millis() and Owed, so the ceiling
+// runs from the failure; WriteC64Spans passes its command's start and length, so it runs from there.
 FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
 {
    const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
