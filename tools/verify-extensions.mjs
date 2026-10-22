@@ -495,6 +495,7 @@ fs.writeFileSync(path.join(fixture, 'VMS/HELLO/DATA/Sample.hi'), 'content');
 native('files_test', [sandbox('files-sandbox-')]);
 native('image_test', [path.join(fixture, 'VMS/HELLO/engine.mvm')]);
 native('registry_test', [fixture, sandbox('registry-sandbox-')]);
+native('packages_test', [fixture, sandbox('packages-sandbox-')]);
 native('launch_test', [fixture, sandbox('launch-sandbox-')]);
 native('listing_test');
 native('scheduler_test');
@@ -502,8 +503,9 @@ native('fail_test');
 native('hello_module_test', [sandbox('hello-sandbox-')]);
 native('host_install_test', [hostPackageFixture(sandbox('host-package-'))]);
 native('c64spans_test');
+native('c128cart_test');
 native('transfer_test');
 
 if (keep) console.log(`Artifacts kept in ${output}`);
 else fs.rmSync(output, { recursive: true, force: true });
-console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, launch routing, listing invalidation, packet scheduler, failure reporting, host-package installation, reference module, C64 span rules)');
+console.log('PASS: extension loader conformance (published host contract, package format, file services, image validation, registry, settings package list, launch routing, listing invalidation, packet scheduler, failure reporting, host-package installation, reference module, C64 span rules, C128 cart layouts)');

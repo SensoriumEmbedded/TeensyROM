@@ -18,8 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+#include "MinimalBoot/Common/C128Crt.h"
 #ifdef VM_EXTENSIONS_ENABLED
 #include "MinimalBoot/Common/VMLaunch.h"
+#include "MinimalBoot/Common/VMPackageList.h"
 #endif
 
 // A remote file command changed storage under a listing the C64 has already
@@ -69,6 +71,63 @@ FLASHMEM void MarkVmClaimed()
       if (DriveDirMenu[Num].ItemType == rtUnknown &&
           VmRegistry::associated(DriveDirMenu[Num].Name) == VmRegistry::Associated)
          VmClaimedItems[Num/8] |= 1 << Num%8;
+}
+
+// Whether a card is in the slot, from card detect on DAT3. CheckLaunchSDAuto's check
+// (Teensy.ino), copied rather than shared so that boot stayed untouched for the 0.9
+// release. It takes the pin back first, so it reads true whoever had it last, a failed
+// SD.begin included.
+FLASHMEM bool SDSlotFilled()
+{
+   // _SD_DAT3 = pin 46
+   pinMode(46, INPUT_PULLDOWN);
+   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
+   return digitalReadFast(46);
+}
+
+// rsShowExtPackages (StatusFunctions.c), for the Installed Extension page. Here rather
+// than beside the other status functions because that file is included ahead of the
+// registry. Reads the card whatever the menu's source is.
+FLASHMEM void ShowVmPackages()
+{
+   //The card in the slot as it is now, so each draw of the page shows the card as it is.
+   //This, not a read, is what says there is a card: SdFat still opens the root directory
+   //of one that has been pulled.
+   //
+   //First the card that was begun, if any, asked for its status: one command, the one
+   //SD.mediaPresent starts with. It fails when that card has been removed or swapped, and
+   //there is none after a return from an extension, whose boot skips the SD setup.
+   //Not SD.mediaPresent itself: after a failed SD.begin it reads card detect while the
+   //SD controller still has the pin, and then tries a full restart, two seconds or more.
+   //A card that answers is only usable with its filesystem mounted: SD.begin starts the
+   //card and then mounts it, and a card whose mount failed (unformatted, say) still
+   //answers.
+   SdCard *Begun = SD.sdfs.card();
+   bool Card = Begun && Begun->status() && SD.sdfs.fatType();
+   if (!Card && SDSlotFilled())
+   {
+      //Begun here, with one retry while the slot still reads filled: the retry
+      //SDFullInit makes, because a card's first start can fail. Nothing is remembered
+      //between draws, so a card that will not start costs both attempts on each one.
+      Card = SD.begin(BUILTIN_SDCARD) || (SDSlotFilled() && SD.begin(BUILTIN_SDCARD));
+      //A card started here in place of one that had been begun: whatever the menu holds
+      //from that one is stale, its listing and the extension table built from it. The
+      //flags remote file commands raise for the same reason make the menu's next
+      //selection reload rather than launch from it (ApplyRemoteFileChanges). Only on a
+      //change, so an empty slot does not refuse a selection on every visit; a card
+      //pulled and put back reloads once, harmlessly.
+      if (Card && Begun)
+      {
+         RemoteChangedSDCard = true;
+         if (IO1[rWRegCurrMenuWAIT] == rmtSD) RemoteChangedLoadedDir = true;
+      }
+   }
+
+   VmHostId Host{};
+   const bool Installed = VmBootImage::installed();
+   const bool Described = Installed && VmBootImage::identity(Host);
+   VmPackageList::show(Card, Described ? &Host : nullptr, Installed,
+                       VmFail::captureValid ? &VmFail::captured : nullptr);
 }
 #endif
 
@@ -245,6 +304,8 @@ FLASHMEM void HandleExecution()
    //has to be distilled down to one of these by this point, only ones supported so far.
    //Emulate ROM or prep for transfer
    uint8_t CartLoaded = false;
+   //a C128 cart widens these, and a direct remote launch skips SetUpMainMenuROM, which resets them
+   LOROM_Mask = HIROM_Mask = 0x1fff;
 
    switch(MenuSelCpy.ItemType)
    {
@@ -334,10 +395,7 @@ FLASHMEM void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
       case rtFilePrg:
@@ -362,7 +420,7 @@ FLASHMEM void HandleExecution()
    
    if (CartLoaded)
    {
-      BootComplete = true; //the C64 resets into the cart. Started without the menu (autolaunch, back from MinimalBoot), the menu never boots to set it
+      BootComplete = true; //C64 resets straight into the cart; when started without the menu (autolaunch, relaunch from MinimalBoot) nothing else sets it
       doReset=true;
       IOHandlerSelectInit();
    }

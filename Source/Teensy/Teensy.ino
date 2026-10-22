@@ -451,8 +451,8 @@ FLASHMEM void SetUpMainMenuROM()
    
    isFrozen = false;
    doReset = true;
-   //Every path back to the menu comes through here. Cleared after doReset is set: the old menu runs until
-   //  the loop asserts /RESET, and the IO handler ignores its rCtlBootComplete from here until the reset is done.
+   //Every return to the menu calls this. Clear after setting doReset: the old menu keeps running until the loop
+   //  asserts /RESET, and rCtlBootComplete is ignored while doReset is set, so the old menu can't set it again.
    BootComplete = false;
 }
 

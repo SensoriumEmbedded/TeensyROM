@@ -251,6 +251,12 @@ that, or two packages claiming the same extension, refuses the launch rather
 than guessing. A shared extension refuses only files of that extension, and the
 refusal names both packages, or how many there are and two of them.
 
+The C64 settings menu's Installed Extension page (`F8`, `0`) lists what that scan
+sees, by the same rules (a copy of them in `VMPackageList.h`): each package's extensions, a
+directory skipped for its name or its manifest, a shared extension, and what the
+installed host would refuse, so these can be found before a launch rather than
+by one.
+
 ### manifest.vmi
 
 Six newline-terminated lines, nothing else:
@@ -735,6 +741,7 @@ were run again; the others were not.
 | A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
 | Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extension → uninstall → confirm) | yes |
 | The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) were `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
+| The same page listing the packages in `/VMS`: extensions, skipped directories, shared extensions, what the host would refuse, the last launch | yes, on a TR+ with the MPE SD set and a plain TR: the five MPE packages, the `Msg:` row after a return from an extension, skipped directories (a manifest left with another id, a name with a space), the SD card pulled, swapped and absent (begun from the page, with the menu's listing reloaded on its next selection), and the plain TR's `Only supported on TR+.`. A shared extension and a card without `/VMS` were not run on hardware; `vm/tests/packages_test.cpp` covers both natively |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
 | A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting ten ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
 | `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | yes — `tools/bench/grants` leaves through it on every row, and the main image prints `$04` with the module's status as the detail |

@@ -42,6 +42,23 @@ ShowInstalledExtSettings:
    ldy #3 ;col
    jsr PrintFileName
 
+   ;The packages in /VMS on the SD card, under the header on row 11.  The firmware sends
+   ;each row as a message, which prints at the cursor, and each one's leading return
+   ;moves down a row -- so the cursor goes to the header's row, and the wait shows no
+   ;dots and no "Waiting:" (WaitForTRWaitMsg's Y=$ff without its SetCursor), either of
+   ;which would land among the rows.  Row 21 is the divider, which leaves the firmware
+   ;rows 12-20: VMPackageList.h sends at most those nine, each under 40 columns.
+   ldx #11 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   lda TblEscC+EscMenuMiscColor
+   sta $0286  ;set text color
+   lda #rCtlShowExtPackagesWAIT
+   sta wRegControl+IO1Port
+   ldy #$ff ;don't print dots
+   jsr WaitForTRMain
+
 WaitInstalledExtMenuKey:
    ;main wait loop
    jsr DisplayTime
@@ -68,8 +85,9 @@ WaitInstalledExtMenuKey:
    ;to the next row on its own -- two returns from there land a row lower than two
    ;returns from a short name.  Measured on a TR+: "None installed." put this prompt
    ;on row 8 and a clamped "WIDEHOSTNAME  ABI 2  services $fffff>" put it on row 9.
-   ;A build with no extension loader says "No extension loader in this firmware.",
-   ;which is 37 characters as well -- the trailing stop is the 37th.
+   ;A TR+ build with no extension loader says "No extension loader in this firmware.",
+   ;which is 37 characters as well -- the trailing stop is the 37th.  A TR says
+   ;"Only supported on TR+."
    ldx #8 ;row
    ldy #0 ;col
    clc
@@ -127,9 +145,12 @@ MsgInstalledExtMenu:
    ;A row that fills all 40 makes the screen editor advance on its own, and the ChrReturn
    ;then advances again, which put a blank row in the middle of this sentence on a real
    ;screen.
-   !tx EscC,EscSourcesColor, " Uninstall first if loading an older", ChrReturn
-   !tx EscC,EscSourcesColor, " firmware: it can't update itself", ChrReturn
-   !tx EscC,EscSourcesColor, " while an extension host is installed.", ChrReturn
+   ;One row, to leave the package list its nine: why an older firmware needs the host
+   ;gone (it can't update itself past one) is in General_Usage.md and
+   ;TR_Host_Extensions.md.
+   !tx EscC,EscSourcesColor, " Uninstall before loading older FW.", ChrReturn, ChrReturn
+   ;Row 11.  The rows under it are the firmware's (ShowInstalledExtSettings).
+   !tx EscC,EscTimeColor,  " File types registered on SD (/VMS):"
    !tx 0
 
 MsgConfirmUninstall:

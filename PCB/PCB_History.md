@@ -1,6 +1,6 @@
 # PCB/Design History:
 ## Latest firmware will work with all TR PCB versions 0.2 and higher, we recommend always building with the latest
-   [Two versions of FW now available: TR (v0.2-0.3) and TR+ (v0.4)](/bin/TeensyROM)
+   [Two versions of FW now available: TR (v0.2-0.3) and TR+ (v0.4)](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
 
 ## **v0.4: TeensyROM+ released Apr 20, 2026**
   * SOIC packages changed to TSSOP
