@@ -800,6 +800,12 @@ FLASHMEM void LaunchFile()
    
    if (ReceiveFileName(&DriveType, FileNamePath))
    {
+      if (!LaunchFolderFits(FileNamePath))
+      {
+         SendU16(FailToken);
+         CmdChannel->print("Path too long!\n");
+         return;
+      }
       SendU16(AckToken);
       RemoteLaunch(DriveType, FileNamePath, false);
    }

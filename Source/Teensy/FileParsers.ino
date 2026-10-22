@@ -186,7 +186,7 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             //the EEPROM slot is MaxPathLength, shorter than FullFilePath
             if (strlen(FullFilePath) >= MaxPathLength)
             {
-               SendMsgPrintfln("Path too long to boot\r\nthis crt from");
+               SendMsgPrintfln("CRT path too long\r\nto boot from SD");
                return false;
             }
 
