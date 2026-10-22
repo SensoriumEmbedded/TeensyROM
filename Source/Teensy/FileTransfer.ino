@@ -210,7 +210,11 @@ FLASHMEM void PostFileCommand()
 
     SendU16(AckToken);
 
-    if (!ReceiveFileData(fileStream, fileLength, checksum)) return;
+    if (!ReceiveFileData(fileStream, fileLength, checksum))
+    {
+        sourceFS->remove(FileNamePath); //GetFileStream made it, so a retry finds no "File already exists"
+        return;
+    }
 
     SendU16(AckToken);
 
