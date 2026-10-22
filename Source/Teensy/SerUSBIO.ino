@@ -422,7 +422,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                   CmdChannel->printf("numbers only\n");
                   return;
                }
-               NewBaud += ((ByteIn-'0') * pow(10,ByteNum));
+               NewBaud = NewBaud*10 + (ByteIn-'0'); //most significant digit first; pow() would link ~6KB of tables into RAM1
+            }
+            if (NewBaud == 0)
+            {
+               CmdChannel->printf("baud can't be 0\n");
+               return;
             }
             C64CycBetweenRx = 985250*8/NewBaud;
             CmdChannel->printf("Manual baud set: %lubps, %lu Cycles\n", NewBaud, C64CycBetweenRx);
