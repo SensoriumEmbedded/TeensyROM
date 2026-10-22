@@ -205,7 +205,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
 
    //set path & filename; DriveDirPath changes only once the launch goes ahead
    char LaunchDir[MaxPathLength];
-   const char* ptrSlash = strrchr(FileNamePath, '/'); //find last slash
+   const char* ptrSlash = strrchr(FileNamePath, '/');
    char* ptrFilename;
    if (ptrSlash == NULL)
    {  //no path:
@@ -288,7 +288,6 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       // Set up DriveDirMenu to point to file to load
       //    without doing LoadDirectory(&SD/&firstPartition);
       Printf_dbg("Dir Setup\n");
-      //Cleared only here: the TR branch's early returns leave the C64 showing the old listing
       InitDriveDirMenu();
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
