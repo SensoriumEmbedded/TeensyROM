@@ -394,6 +394,7 @@
    rtBinC128 = 18
    rtFileREU = 19
    rtFileTRH = 20
+   rtGEOS = 21
 
 ;63 max: rRegItemTypePlusIOH uses bit 7 (assigned IOH) and bit 6 (/VMS claim),
 ;and TblItemType's mult by 4 limits it to 63 as well
