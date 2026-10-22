@@ -538,6 +538,7 @@ void SetMenu(StructMenuItem* Source, uint16_t NumItems)
 {
    MenuSource = Source;
    NumItemsFull = NumItems;
+   SelItemFullIdx = 0; //UpdateItemTypeReg reads MenuSource[SelItemFullIdx] before the C64 selects in the new menu
    IO1[rRegNumItemsOnPage] = (NumItems > MaxItemsPerPage ? MaxItemsPerPage : NumItems);
    IO1[rwRegPageNumber] = 1;
    IO1[rRegNumPages] =
