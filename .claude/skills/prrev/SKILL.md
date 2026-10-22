@@ -252,7 +252,8 @@ each RAM1 change. Then look for improvements to suggest:
 - **New newlib routines.** The build already refuses `sscanf`, `pow`, `strtod` and similar.
   Note smaller additions such as `snprintf` or `strlcpy`.
 
-Frame memory points as improvements, not blockers, unless a floor is at risk.
+Memory improvements are requested changes, like the recommended items. Ask for each one before
+merging, whether or not a floor is at risk, and say plainly when one is.
 
 ## 5. Hardware testing
 
@@ -313,23 +314,35 @@ as a direct message to the author.
 - **Contents.**
   - The recommended changes, renumbered 1..n. For each: a heading saying what's wrong (with
     `file:line`), why it matters (a repro if there is one) and the suggested fix.
-  - Memory: one short paragraph with the measured impact. Raise concerns as cleanups, naming
-    the specific lever.
+  - Memory: one short paragraph with the measured impact, then each improvement as its own
+    bullet: the lever, what it saves (bytes, and which RAM), and why it's safe. Don't fold a
+    saving into a passing sentence. These count as changes before merging: include them in
+    the "N things" lead-in (for example "Besides the memory item above, one thing…"), and
+    never say "nothing to change" or "ready as it stands" when a response has any.
   - Hardware testing still to do, after acknowledging what the author covered.
   - Leave out hardware-check-only items unless they need the author to act, and the optional
-    and no-change items. One closing line covers them: "Everything else I noted is either
-    covered by your follow-ups list or fine as it is."
+    and no-change items. The hardware-testing heading's framing covers them (see Tone).
 - **Tone**, from the maintainer's own edits of an earlier draft:
-  - Open by thanking the contributor for their own testing and write-up.
+  - Open the first response with thanks for the work itself, meaning what the PR adds and
+    not just its testing or write-up. For example: "Thank you for the Geos64
+    implementation, this is exciting!  :)"
   - "There are N things I'd like you to look at before merging." Not "I'd like changed".
   - "As always, feel free to push back on any that are inappropriate or would take
     significant memory/code to resolve."
-  - Hardware testing is shared and before release, not a merge gate: "One of us should
-    probably hit the following at some point before release:".
-  - Offer a hand before closing: "If any of these would be easier for me to take on, or
-    you'd like a hand with the testing, just let me know."
+  - The hardware-testing framing goes in the section's heading, not in a sentence under it:
+    "### Hardware testing still to do: for one of us to *possibly* get to before release,
+    not gates, and anything I noted that isn't listed is covered by your follow-ups or
+    fine as it is". Every hardware heading carries it. Later responses in a set use the
+    short form, which ends at "before release".
+  - No offer-of-a-hand line ("If any of these would be easier for me to take on…").
   - Close with "Thank you!"
   - The voice is the user's ("I reviewed…"), addressed to the author.
+  - **A set of related PRs reviewed together** (a stack, or a batch from one author): the
+    author reads every response at once, so say the shared lines only once, in the first
+    PR's response. Those are the review method, the push-back invitation, the long form of
+    the hardware-testing heading, and "Thank you!". Every other response opens with one
+    plain thank-you specific to that PR, and words its "nothing to change" or closing
+    line differently from the rest of the set.
 - **No private references.** This text is public.
   - No todo-list item numbers. GitHub also turns "#69" into a link to the repo's own PR or
     issue #69.
@@ -349,11 +362,17 @@ as a direct message to the author.
 The shape, with the details filled in from the review:
 
 ```markdown
-Thanks for <the author's testing and write-up>, much appreciated!  I reviewed this merged
-onto current main (<sha>) and built both targets. <One or two sentences of memory impact.>
+Thank you for <the work itself>, <a short, genuine reaction>!
 
-There are <N> things I'd like you to look at before merging.  As always, feel free to push
-back on any that are inappropriate or would take significant memory/code to resolve.
+I reviewed this merged onto current main (<sha>) and built both targets. As always, feel
+free to push back on anything that's inappropriate or would take significant memory/code
+to resolve.
+
+Memory: <one or two sentences of measured impact>. <N> improvement(s):
+
+- **<The lever>: <bytes saved, and which RAM>.** <Why it's safe.>
+
+There are <N> things I'd like you to look at before merging.
 
 ### 1. <What's wrong> (`<file>:<line>`)
 
@@ -363,19 +382,18 @@ Suggested fix: <the fix>.
 
 ### 2. ...
 
-### Hardware testing still to do
+### Hardware testing still to do: for one of us to *possibly* get to before release, not gates, and anything I noted that isn't listed is covered by your follow-ups or fine as it is
 
-Your <tests> cover <what they cover>.  One of us should probably hit the following at some
-point before release:
+Your <tests> cover <what they cover>.
 
 - <test>
 - <test>
 
-Everything else I noted is either covered by your follow-ups list or fine as it is.
-If any of these would be easier for me to take on, or you'd like a hand with the testing,
-just let me know.
 Thank you!
 ```
 
-Responses the user approved before, when there are any, are in this skill's `references/`
-folder.
+Responses the user approved and posted are in this skill's `references/` folder:
+`example-response-pr39.md` and `example-response-pr40.md`. Both predate the current tone
+rules: they thank the author for testing rather than for the work, frame hardware testing
+in a sentence instead of the heading, and end with an "everything else" line (PR #40 also
+with an offer of a hand). Where an example and the tone rules above differ, follow the rules.
