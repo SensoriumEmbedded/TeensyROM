@@ -11,6 +11,16 @@ enum : uint32_t { C64SpansMax = 64, C64SlicesMax = 1024 };
 
 enum class C64SpansCheck : uint8_t { OK, BadCount, EmptySpan, Wraps, HitsIO, TooBig, TooManySlices };
 
+// WriteC64Spans header flags.  LockToStore starts each slice on the cycle after the C64 writes
+// StoreAddr, which the first span-list entry names in place of a span: a sample player's store to
+// its DAC comes right after its interrupt is acknowledged, so a slice that starts there and fits
+// the rest of the period never spans a second timer underflow.
+enum : uint8_t { C64SpansFlagLockToStore = 0x01, C64SpansFlagsKnown = C64SpansFlagLockToStore };
+
+// Counters of the sample store watch, IntervalCyc and LongestCyc in ARM cycles.  Locked and
+// Unlocked count the slices that did and did not find a store to start on.
+struct SampleWatchStats { uint32_t Intervals; uint64_t IntervalCyc; uint32_t LongestCyc, Locked, Unlocked; };
+
 // Every span must end at or below $FFFF and stay off $DE00-$DFFF, which is this cartridge's own
 // IO1/IO2 and not memory.  *Total is the payload they need, in span order, when OK.  SliceBytes
 // 0 is a span per slice.
