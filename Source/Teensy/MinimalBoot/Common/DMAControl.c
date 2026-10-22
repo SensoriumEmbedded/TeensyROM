@@ -294,11 +294,16 @@ FASTRUN bool SampleStoreSnoop(uint16_t Address, bool R_Wn)
    return false;
 }
 
-// False when another user holds the single bus snoop slot, the way BusAnalysis declines it.
+// False when another user holds the single bus snoop slot, the way BusAnalysis declines it.  The
+// test is masked with the install because a C64 write to rCtlRunningPRG claims the slot from isrPHI2.
 FLASHMEM bool SampleWatchStart(uint16_t Address)
 {
-   if (fBusSnoop != &SampleStoreSnoop && (fBusSnoop != NULL || PendingfBusSnoop != NULL)) return false;
    __disable_irq();
+   if (fBusSnoop != &SampleStoreSnoop && (fBusSnoop != NULL || PendingfBusSnoop != NULL))
+   {
+      __enable_irq();
+      return false;
+   }
    if (fBusSnoop != &SampleStoreSnoop || SampleStoreAddr != Address) SampleHaveLast = false;
    SampleStoreAddr = Address;
    fBusSnoop = &SampleStoreSnoop;
@@ -350,7 +355,7 @@ static FLASHMEM void StartSliceOnStore(uint32_t WaituS)
 struct DMAAutoRunJob
 {
    DMAAutoRunJob() { DMA_AutoRun = true; }
-   ~DMAAutoRunJob() { SampleLockArmed = false; DMA_AutoRun = false; }
+   ~DMAAutoRunJob() { DMA_AutoRun = false; }
 };
 
 // Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),

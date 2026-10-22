@@ -483,7 +483,7 @@ Counts the C64's writes to one address, timing each against the one before it, a
 |---|---|
 | Receive | `SampleWatchToken` — `0x64F9` |
 | Receive | Mode (`0` = stop watching, `1` = watch), C64 address (Hi, Low) |
-| Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if another user holds the bus snoop, or the mode is not `0` or `1` |
+| Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if another user holds the bus snoop, the mode is not `0` or `1`, or the mode and address did not arrive |
 | Send | Intervals (4), interval ARM cycles (8), longest interval in ARM cycles (4), locked slices (4), unlocked slices (4), ARM cycles per second (4): Low byte first, all since the previous Sample Watch |
 
 Each call resets the counts. Watching again keeps the last store's time unless the address changes, so no interval is lost between two reads.

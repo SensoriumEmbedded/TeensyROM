@@ -1400,7 +1400,12 @@ FLASHMEM void WriteC64SpansCommand()
 FLASHMEM void SampleWatchCommand()
 {
    uint32_t Mode, Addr;
-   if (!GetUInt(&Mode, 1) || !GetUInt(&Addr, 2)) return;
+   if (!GetUInt(&Mode, 1) || !GetUInt(&Addr, 2))
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Error receiving mode and address!");
+      return;
+   }
    if (Mode > 1)
    {
       SendU16(FailToken);
