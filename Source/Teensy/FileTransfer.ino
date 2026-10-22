@@ -108,8 +108,6 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
     uint32_t bytenum = 0;
     uint8_t byteIn;
 
-    const uint32_t Began = millis();
-
     while (bytenum < len)
     {
         if (!SerialAvailabeTimeout())
@@ -117,7 +115,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
             SendU16(FailToken);
             CmdChannel->printf("Rec %lu of %lu bytes\n", bytenum, len);
             file.close();
-            DiscardCmdInput(len - bytenum, Began, len);
+            DiscardCmdInput(len - bytenum, millis(), len - bytenum);
             return false;
         }
         file.write(byteIn = CmdChannel->read());

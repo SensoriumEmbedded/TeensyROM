@@ -980,13 +980,15 @@ FLASHMEM void  getFreeITCM()
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
-// One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
-// every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is under every
-// channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
+// The WriteC64Spans command's deadline for the whole command, not only SerialAvailabeTimeout's per
+// byte, which leaves every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is
+// under every channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
 FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
 
 // Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
-// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the command's deadline.
+// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the time Owed bytes take
+// at 2 bytes/mS, counted from Began.  A caller with no command deadline passes millis() and Owed, so
+// the ceiling runs from the failure; WriteC64Spans passes its command's start, so it runs from there.
 FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
 {
    const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
@@ -1220,7 +1222,6 @@ struct DMAStage
 FLASHMEM void WriteC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   const uint32_t Began = millis();
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -1242,7 +1243,7 @@ FLASHMEM void WriteC64MemCommand()
    {
       SendU16(FailToken);
       CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
-      DiscardCmdInput(DMALength, Began, DMALength);  // sent unprompted, and not to be read as commands
+      DiscardCmdInput(DMALength, millis(), DMALength);  // sent unprompted, and not to be read as commands
       return;
    }
 
@@ -1252,7 +1253,7 @@ FLASHMEM void WriteC64MemCommand()
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
-         DiscardCmdInput(DMALength - ByteNum, Began, DMALength);
+         DiscardCmdInput(DMALength - ByteNum, millis(), DMALength - ByteNum);
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
