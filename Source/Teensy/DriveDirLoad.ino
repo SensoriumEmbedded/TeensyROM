@@ -249,6 +249,11 @@ FLASHMEM void HandleExecution()
             return;
          }
          
+         if (MenuSelCpy.ItemType == rtGEOS)
+         {
+            if (!LaunchGeos((const struct GeosLauncher*)MenuSelCpy.Code_Image, &MenuSelCpy)) return;
+         }
+         
          SendMsgPrintfln(MenuSelCpy.Name); 
          if (MenuSelCpy.ItemType == rtFileCrt)
          {  //load the CRT into RAM
@@ -287,7 +292,7 @@ FLASHMEM void HandleExecution()
          
          else
          {  //non-CRT: copy the whole thing from flash into the RAM1 buffer
-            memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
+            if (MenuSelCpy.Code_Image != RAM_Image) memcpy(RAM_Image, MenuSelCpy.Code_Image, MenuSelCpy.Size);
             MenuSelCpy.Code_Image = RAM_Image;   
          }            
          SendMsgPrintfln("Copied to RAM"); 

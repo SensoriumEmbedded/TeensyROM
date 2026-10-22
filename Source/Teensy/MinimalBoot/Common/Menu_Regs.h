@@ -403,6 +403,7 @@ enum regItemTypes //synch with TblItemType
    rtBinC128     = 18, 
    rtFileREU     = 19,
    rtFileTRH     = 20,
+   rtGEOS        = 21,
 
    //63 max: rRegItemTypePlusIOH uses bit 7 (assigned IOH) and bit 6 (/VMS claim),
    //and TblItemType's mult by 4 limits it to 63 as well
@@ -437,7 +438,8 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    #ifdef Fab04_KernalReplace
       IOH_KernalReplace,
    #endif  
-      IOH_Debug, //last manually selectable, see LastSelectableIOH
+      IOH_Debug,
+      IOH_GeoRAM, //last manually selectable, see LastSelectableIOH
 
    //*not* manually selectable, see LastSelectableIOH
       
@@ -471,4 +473,4 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_Debug     //127 max.  Used in IOH_TeensyROM.c for Special IO display/select
+#define LastSelectableIOH  IOH_GeoRAM    //127 max.  Used in IOH_TeensyROM.c for Special IO display/select
