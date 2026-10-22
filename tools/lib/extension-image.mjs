@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
-// The third flash image. An extension module needs 96 KiB of ITCM and 192 KiB
-// of DTCM at fixed addresses, which the ordinary minimal image cannot give it
-// while still holding a megabyte of cartridge. So the loader builds a separate
-// image with that memory map and boots into it, and the other two images shrink
-// to make room.
+// The third flash image. An extension module needs 96 or 128 KiB of ITCM and
+// 192 KiB of DTCM at fixed addresses, which the ordinary minimal image cannot
+// give it while still holding a megabyte of cartridge. So the loader builds a
+// separate image with that memory map and boots into it, and the other two
+// images shrink to make room.
 //
 // Nothing here generates code or rewrites a source file: it edits the stock
 // Teensy linker script and bootdata, and every edit must match exactly once.
@@ -13,7 +13,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { FLASH_BASE, MAIN_BASE, VM_BASE, VM_LIMIT } from './hex.mjs';
 
-const read = (p) => fs.readFileSync(p, 'utf8');
+// A Windows checkout with core.autocrlf gives these CRLF line endings, which no
+// anchor below would match.
+const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
 // An anchor that has drifted would otherwise drop its replacement silently --
 // worst of all for the ASSERTs below, where a miss removes the entire safety
@@ -54,13 +56,49 @@ export function mainLinkerScript(linkers) {
     `LENGTH = ${STOCK_MAIN_KB}K`, `LENGTH = ${flashBudget().mainKB}K`);
 }
 
+// How much of ITCM the host's own code may fill. 64 KiB leaves 0x10000-0x18000
+// free below the module window; 96 KiB fills it, for a third-party host that
+// needs the room and does not offer modules the space.
+export const HOST_CODE_KIB = [64, 96];
+export const DEFAULT_HOST_CODE_KIB = 64;
+
+// Libraries whose code runs from flash rather than ITCM, which is what fits the
+// stock host in 64 KiB, each with the object files of its own that stay. Matched
+// by their arduino-cli build path. Only .text moves: a function the library itself
+// marks FASTRUN stays in ITCM. SdFat's SDIO driver stays whole, because
+// SdioCard::readData masks interrupts around its SDHC_PROCTL writes, and a flash
+// cache miss inside that would hold off isrPHI2.
+const FLASH_RESIDENT_LIBRARIES = { SdFat: ['SdioTeensy.cpp.o'], SD: [], SPI: [] };
+// ld matches object paths literally, and arduino-cli writes them with '\' on Windows.
+// The escaped '\' comes first: libiberty's fnmatch, which ld links where the host C
+// library has none (MinGW), reads an escape while skipping the rest of a class that
+// matched, so in '[/\\]' a '/' match would swallow the ']'.
+const PATH_SEPARATOR = '[\\\\/]';
+
+// The flash-resident library a directory lies inside, if any. Everything built
+// there matches that library's pattern above, the sketch's own IO handlers among
+// it, so a build directory inside one would run them from flash.
+export function flashResidentLibraryAround(dir) {
+  const parts = path.resolve(dir).split(/[\\/]/);
+  return Object.keys(FLASH_RESIDENT_LIBRARIES).find((name) =>
+    parts.some((part, i) => part === 'libraries' && parts[i + 1] === name));
+}
+
 // The extension image: relocated to its own slot, its ITCM footprint pinned and
 // its heap capped, with five ASSERTs that turn a host/module layout regression
 // into a link error instead of a hang on hardware.
-export function extensionLinkerScript(linkers) {
+export function extensionLinkerScript(linkers, hostCodeKiB = DEFAULT_HOST_CODE_KIB) {
+  assert(HOST_CODE_KIB.includes(hostCodeKiB), 'Host code budget must be 64 or 96 KiB');
   let ld = read(path.join(linkers, 'imxrt1062_t41.ld.orig'));
   ld = replaceOnce(ld, `ORIGIN = 0x${FLASH_BASE.toString(16)}, LENGTH = ${STOCK_MINIMAL_KB}K`,
     `ORIGIN = 0x${VM_BASE.toString(16)}, LENGTH = ${flashBudget().extensionKB}K`);
+  // .text.progmem precedes .text.itcm, so ld places these here before
+  // .text.itcm's own *(.text*) can claim them.
+  ld = replaceOnce(ld, '\t\t*(.progmem*)\n', '\t\t*(.progmem*)\n' +
+    Object.entries(FLASH_RESIDENT_LIBRARIES).map(([name, staying]) =>
+      `\t\t*${PATH_SEPARATOR}libraries${PATH_SEPARATOR}${name}${PATH_SEPARATOR}*(` +
+      (staying.length ? `EXCLUDE_FILE(${staying.map((file) => `*${PATH_SEPARATOR}${file}`).join(' ')}) ` : '') +
+      '.text*)\n').join(''));
   // Pin the host to six 32 KiB ITCM blocks, so the module window at 0x18000
   // cannot be pushed around by a change in host code size.
   ld = replaceOnce(ld, '_itcm_block_count = (SIZEOF(.text.itcm) + SIZEOF(.ARM.exidx) + 0x7FFF) >> 15;',
@@ -77,10 +115,14 @@ export function extensionLinkerScript(linkers) {
     `		. = ORIGIN(FLASH) + 0x800;
 		KEEP(*(.vmhostid))
 		. = ORIGIN(FLASH) + 0x1000;`);
+  // The code bound is on __exidx_end, the end of .ARM.exidx, which is the last
+  // output section in ITCM. _etext stops short of it: it leaves out the orphan
+  // .fini that ld places between .text.itcm and .ARM.exidx, 4 bytes in practice.
   ld = replaceOnce(ld, '_teensy_model_identifier = 0x25;',
     `_teensy_model_identifier = 0x25;
       _vm_data_start = 0x20014000; _vm_data_end = 0x20044000;
-      ASSERT(_etext <= 0x18000, "Host code overlaps the module ITCM window")
+      ASSERT(__exidx_end <= 0x${(hostCodeKiB * 1024).toString(16)}, "Host code exceeds its ${hostCodeKiB} KiB ITCM budget${
+        hostCodeKiB === DEFAULT_HOST_CODE_KIB ? '; a --host-sketch host that needs more can build with --host-code-kib 96' : ''}")
       ASSERT(_heap_end <= _vm_data_start, "Host heap overlaps the module DTCM window")
       ASSERT(_estack - _vm_data_end >= 49152, "Shared stack below 48 KiB")
       ASSERT(SIZEOF(.bss.dma) == 0, "Host globals overlap the guest RAM2 arena")

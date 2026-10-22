@@ -101,6 +101,12 @@
 #define Cart_MagicDesk2              79  //Remove?
 #define Cart_MagicDesk2b             85  //Supported
 
+// Alternate Handlers adding TR+ REU to Known/public Cartridge HW types
+// Reserved range is currently 200 to 300  
+#define Cart_FCIII_101_REU          203 // Supported on v0.4
+#define Cart_SuperSnapshotV5_REU    220 // Supported on v0.4
+#define Cart_RetroReplay_REU        236 // Supported on v0.4
+
 // IO handlers only
 #define Cart_DigiMax               -100 
 #define Cart_DQBB                  -101 
@@ -145,10 +151,13 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
    (uint16_t)Cart_SwiftLink,       IOH_Swiftlink,
    (uint16_t)Cart_Turbo232,        IOH_Swiftlink,
 #ifdef Fab04_Freezers
-   (uint16_t)Cart_SuperSnapshotV5, IOH_SuperSnapshotV5,
-   (uint16_t)Cart_RetroReplay,     IOH_RetroReplay,
-   (uint16_t)Cart_FinalCartridgeIII,IOH_FinalCartridgeIII,
-   (uint16_t)Cart_ActionReplay,    IOH_ActionReplay,
+   (uint16_t)Cart_SuperSnapshotV5,   IOH_SuperSnapshotV5,
+   (uint16_t)Cart_RetroReplay,       IOH_RetroReplay,
+   (uint16_t)Cart_FinalCartridgeIII, IOH_FinalCartridgeIII,
+   (uint16_t)Cart_ActionReplay,      IOH_ActionReplay,
+   (uint16_t)Cart_RetroReplay_REU,   IOH_RetroReplay_REU,
+   (uint16_t)Cart_FCIII_101_REU,     IOH_FCIII_101_REU,
+   (uint16_t)Cart_SuperSnapshotV5_REU, IOH_SuperSnapshotV5_REU,
 #endif
 #endif
 
@@ -175,13 +184,7 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 #define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
 
 
-struct StructCrtChip
-{
-   uint8_t *ChipROM;
-   uint16_t LoadAddress;
-   uint16_t ROMSize;
-   uint16_t BankNum;
-};
+#include "CrtChips.h"
 
 #ifndef MinimumBuild
    //only needed in full build:
@@ -242,5 +245,13 @@ struct StructCrtChip
    inline bool IsStorableLaunchType(uint8_t ItemType)
    {
       return ItemType >= rtFilePrg && !IsDeviceWriteType(ItemType);
+   }
+
+   // Directory entries kept out of every listing of USB/SD media.  A card or stick
+   // that has been in a Mac comes back with .DS_Store, .Trashes, .Spotlight-V100
+   // and a ._ twin of every file it touched -- and a ._game.prg is typed as a .prg.
+   inline bool IsDotfile(const char *Name)
+   {
+      return Name[0] == '.';
    }
 #endif

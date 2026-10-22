@@ -42,6 +42,23 @@ ShowInstalledExtSettings:
    ldy #3 ;col
    jsr PrintFileName
 
+   ;The packages in /VMS on the SD card, under the header on row 11.  The firmware sends
+   ;each row as a message, which prints at the cursor, and each one's leading return
+   ;moves down a row -- so the cursor goes to the header's row, and the wait shows no
+   ;dots and no "Waiting:" (WaitForTRWaitMsg's Y=$ff without its SetCursor), either of
+   ;which would land among the rows.  Row 21 is the divider, which leaves the firmware
+   ;rows 12-20: VMPackageList.h sends at most those nine, each under 40 columns.
+   ldx #11 ;row
+   ldy #0 ;col
+   clc
+   jsr SetCursor
+   lda TblEscC+EscMenuMiscColor
+   sta $0286  ;set text color
+   lda #rCtlShowExtPackagesWAIT
+   sta wRegControl+IO1Port
+   ldy #$ff ;don't print dots
+   jsr WaitForTRMain
+
 WaitInstalledExtMenuKey:
    ;main wait loop
    jsr DisplayTime
@@ -68,8 +85,9 @@ WaitInstalledExtMenuKey:
    ;to the next row on its own -- two returns from there land a row lower than two
    ;returns from a short name.  Measured on a TR+: "None installed." put this prompt
    ;on row 8 and a clamped "WIDEHOSTNAME  ABI 2  services $fffff>" put it on row 9.
-   ;A build with no extension loader says "No extension loader in this firmware.",
-   ;which is 37 characters as well -- the trailing stop is the 37th.
+   ;A TR+ build with no extension loader says "No extension loader in this firmware.",
+   ;which is 37 characters as well -- the trailing stop is the 37th.  A TR says
+   ;"Only supported on TR+."
    ldx #8 ;row
    ldy #0 ;col
    clc
@@ -93,11 +111,9 @@ WaitInstalledExtMenuKey:
    ;Put the cursor below the prompt before handing over: DisplayTime left it at the
    ;clock, and everything after this prints wherever it is -- WaitForTRDots puts a
    ;dot per second at the cursor, and the firmware's reply follows them.
-   ;Row 9 is not free.  The prompt is 47 drawn characters from column 0, so it fills
-   ;row 8 and its last seven -- "to keep" -- are row 9 columns 0 to 6; a cursor there
-   ;spells the first dot over them.  Row 10 is free whatever the prompt is changed to
-   ;say, because the screen editor links at most two rows into one logical line, so a
-   ;prompt placed on row 8 can never reach past row 9.  From row 10 SendMsgPrintfln's
+   ;Row 9 is not free: it holds the prompt's reboot note, and a cursor there spells
+   ;the first dot over it.  Row 10 is free as long as the prompt stays one row and the
+   ;note one row, so keep each under 40 columns.  From row 10 SendMsgPrintfln's
    ;leading return puts the reply on row 11 and AnyKeyMsgWait's own leading return
    ;puts the key prompt on row 12.
    ldx #10 ;row
@@ -118,29 +134,33 @@ WaitInstalledExtMenuKey:
    jmp WaitInstalledExtMenuKey
 
 MsgInstalledExtMenu:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Installed Extensions ", ChrReturn, ChrReturn
+   !tx EscC,EscSourcesColor, ChrRvsOn, " Installed Extension ", ChrReturn, ChrReturn
 
-   !tx EscC,EscTimeColor,  " Extension host in the firmware slot:", ChrReturn, ChrReturn
+   !tx EscC,EscTimeColor,  " Currently installed:", ChrReturn, ChrReturn
    !tx ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall the extension host", ChrReturn, ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "u", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor,   "Uninstall Extension Host", ChrReturn, ChrReturn
 
-   !tx EscC,EscSourcesColor, " Uninstalling erases the host from", ChrReturn
    ;Keep every row below 40 visible columns -- a row, not an !tx line: what counts is
    ;everything drawn between two returns, and that can be spread over several directives.
    ;A row that fills all 40 makes the screen editor advance on its own, and the ChrReturn
    ;then advances again, which put a blank row in the middle of this sentence on a real
    ;screen.
-   !tx EscC,EscSourcesColor, " flash. Do it before loading firmware", ChrReturn
-   !tx EscC,EscSourcesColor, " without extensions, which cannot", ChrReturn
-   !tx EscC,EscSourcesColor, " update itself with a host in flash.", ChrReturn, ChrReturn
-   !tx EscC,EscTimeColor,  " The TeensyROM reboots to do it.", ChrReturn
+   ;One row, to leave the package list its nine: why an older firmware needs the host
+   ;gone (it can't update itself past one) is in General_Usage.md and
+   ;TR_Host_Extensions.md.
+   !tx EscC,EscSourcesColor, " Uninstall before loading older FW.", ChrReturn, ChrReturn
+   ;Row 11.  The rows under it are the firmware's (ShowInstalledExtSettings).
+   !tx EscC,EscTimeColor,  " File types registered on SD (/VMS):"
    !tx 0
 
 MsgConfirmUninstall:
-   !tx EscC,EscSourcesColor, ChrRvsOn, " Uninstall extension host ", ChrRvsOff, ChrReturn, ChrReturn
+   ;Leading return: the title sits one row lower than on the page it came from.
+   !tx ChrReturn, EscC,EscSourcesColor, ChrRvsOn, " Uninstall Extension ", ChrRvsOff, ChrReturn, ChrReturn
    !tx 0
 MsgConfirmPrompt:
    ;No leading returns: the caller places this with SetCursor, because where the
-   ;host line above it stops is not fixed.
-   !tx EscC,EscOptionColor, " Remove it?  ", ChrRvsOn, "y", ChrRvsOff, " to remove, any other key to keep"
+   ;host line above it stops is not fixed.  The prompt is 39 columns from column 0,
+   ;so it stays on row 8 and the return puts the note on row 9.
+   !tx EscC,EscOptionColor, " Uninstall? ", ChrRvsOn, "y", ChrRvsOff, " = yes, any other key = no", ChrReturn
+   !tx EscC,EscTimeColor,  " TeensyROM reboots when complete."
    !tx 0

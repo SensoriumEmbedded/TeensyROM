@@ -2,6 +2,17 @@
 
 #ifdef Fab04_FullDMACapable
 
+enum DMA_Trans_RnW
+{
+   DMA_READ =  true,
+   DMA_WRITE = false
+};
+enum DMA_Addr_Mode
+{
+   DMA_ADDR_FIXED     = true,  //same address every byte (e.g. a hardware register)
+   DMA_ADDR_INCREMENT = false  //address advances per byte (normal block transfer)
+};
+
 bool DMA_RnW, DMA_FixC64Addr;
 uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 uint8_t *DMA_Buffer;
@@ -208,10 +219,9 @@ static FLASHMEM uint32_t DMATransferCeilingmS(uint32_t Length)
    return DMA_HANDSHAKE_CEILING_mS + (Length * 4) / 1000;
 }
 
-// false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
-// that only drive the bus may ignore it; a caller that reports a value to someone else has
-// to check, or it reports the stale contents of its own buffer as C64 memory.
-FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+// PerformDMA in two halves, for a start made in between by someone else: the extension
+// image's IO2 handler sets DMA_S_StartAsynch on the cycle its C64 client asks for it.
+FLASHMEM void SetUpDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
 {
    //Uses DMA to Read or Write C64 memory to/from *DMABuffer
    DMA_RnW = RnW; //true=read, false=write
@@ -220,22 +230,68 @@ FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
    DMA_Buffer = Buffer;
    DMA_Length = Length;
    DMA_FixC64Addr = FixC64Addr;
+}
 
-   DMA_State = DMA_S_StartAsynch;
+FLASHMEM bool FinishDMA()
+{
    if (!WaitForDMAState(DMA_S_TransferReady, DMA_HANDSHAKE_CEILING_mS)) return false;
    DMA_State = DMA_S_TransferExecuting;
-   if (!WaitForDMAState(DMA_S_TransferComplete, DMATransferCeilingmS(Length))) return false;
+   if (!WaitForDMAState(DMA_S_TransferComplete, DMATransferCeilingmS(DMA_Length))) return false;
 
    delayMicroseconds(2); //wait a couple cycles in case of restart, moved to transfer start
 
-   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (RnW ? "Read":"Write"), StartAddr, StartAddr+Length-1, Length, DMACycleCount);
+   Printf_dbg("DMA %s addr $%04x:$%04x (len: $%04x) StCyc: %lu\n", (DMA_RnW ? "Read":"Write"), DMA_StartAddr, DMA_StartAddr+DMA_Length-1, DMA_Length, DMACycleCount);
    return true;
+}
+
+// false means the transfer did not happen and *Buffer is not what the C64 holds.  Callers
+// that only drive the bus may ignore it; a caller that reports a value to someone else has
+// to check, or it reports the stale contents of its own buffer as C64 memory.
+FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr)
+{
+   SetUpDMA(RnW, StartAddr, Buffer, Length, FixC64Addr);
+   DMA_State = DMA_S_StartAsynch;
+   return FinishDMA();
 }
 
 FLASHMEM bool CloseDMA()
 {
    DMA_State = DMA_S_StartDisable;
    return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
+}
+
+// A slice on a live C64 starts within DMA_TIMEOUT_CYCLES (~5 mS), so this holds a job to about
+// what its slice cap allows even on a bus that makes every handshake run to its own ceiling.
+#define DMA_SPANS_CEILING_mS  (C64SlicesMax * 5 + 1000)
+
+// Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
+// giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
+// its C64 code can take, and how long its interrupt handler needs to run between them.  Stops
+// at the first slice or release that fails, or at DMA_SPANS_CEILING_mS, with the bus released, and
+// returns false.  *Landed
+// counts every slice that finished, even one whose CloseDMA then failed; a slice aborted
+// mid-transfer may have partly landed and is not counted.
+FLASHMEM bool WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Payload, uint32_t SliceBytes, uint32_t GapuS,
+                            uint32_t *Landed)
+{
+   const uint32_t Began = millis();
+   *Landed = 0;
+   for (uint32_t Num = 0; Num < Count; Num++)
+   {
+      for (uint32_t Done = 0; Done < Spans[Num].Len; )
+      {
+         uint32_t Slice = Spans[Num].Len - Done;
+         if (SliceBytes && Slice > SliceBytes) Slice = SliceBytes;
+         if (*Landed) delayMicroseconds(GapuS);
+         if (millis() - Began >= DMA_SPANS_CEILING_mS) return false;
+         if (!PerformDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + *Landed, Slice, DMA_ADDR_INCREMENT))
+            return false;
+         Done += Slice;
+         *Landed += Slice;
+         if (!CloseDMA()) return false;
+      }
+   }
+   return true;
 }
 
 //__attribute__((always_inline)) inline bool DMAByte()

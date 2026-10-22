@@ -27,8 +27,8 @@
 // headers above; strings.h is there for strcasecmp, which is POSIX rather
 // than C, so a toolchain without it needs its own shim.
 
-// Placement. The extension image has only 96 KiB of ITCM, so TeensyROM keeps
-// the larger pure helpers in flash; FLASHMEM is the Teensy core's attribute
+// Placement. The stock host links its code into 64 KiB of ITCM, so TeensyROM
+// keeps the larger pure helpers in flash; FLASHMEM is the Teensy core's attribute
 // for that, and it must already be defined when this header is included to be
 // picked up. Define VM_HOST_TEXT yourself to choose otherwise.
 #ifndef VM_HOST_TEXT
@@ -72,10 +72,16 @@ static inline bool vm_host_slot_valid(uint32_t flashMagic, uint32_t vectorMagic,
 // Stamped into the image at VM_HOST_ID_OFFSET so the main image can read what
 // the installed host provides without booting it. services is the host's
 // provided set; name is for the refusal message on the C64.
+//
+// code_floor is the lowest code base this host can take, which is where its own
+// code ends. Set it to VM_HOST_CODE_FLOOR rather than a literal: that resolves
+// to the link's own __exidx_end, so the descriptor cannot claim room the host
+// is occupying. Zero reads as VM_CODE_BASE, so a host that never set it is
+// offered only the window every host has.
 struct VmHostId {
     uint32_t magic, abi, services, host_bytes;
     char name[12];
-    uint32_t reserved;
+    uint32_t code_floor;
 };
 static_assert(sizeof(VmHostId)==32, "MVH2 host descriptor");
 enum : uint32_t { VM_HOSTID_MAGIC = 0x3248564du };  // 'MVH2'
@@ -92,6 +98,21 @@ enum : uint32_t { VM_HOSTID_MAGIC = 0x3248564du };  // 'MVH2'
 // them.
 enum : uint32_t { VM_EEP_MAGIC = 0xfeed6415u };
 enum : int { VM_EEP_MAGIC_ADDR = 0, VM_EEP_BOOTNAME_ADDR = 1919, VM_EEP_BOOTIND_ADDR = 2175 };
+
+// Past the marker's NUL, the main image leaves the machine and then its complement, so a host
+// that masters the bus can time it for that machine. Menu_Regs.h's RegVidTODClksMasks,
+// duplicated: PAL/NTSC as the main image timed it from PHI2, C64/C128 and 50/60Hz as the C64
+// menu reported them. A launch made before the menu has run goes through the menu first, so a
+// current main image always leaves one. vm_launch_machine() answers -1 where an older main
+// image left none, and a host then has no way to know. An older main image leaves bytes a
+// newer one wrote, so after a firmware downgrade the pair can be a stale one. A C64U applies a
+// saved standard only after the reset is released, and can switch live, so a host that
+// masters the bus should time PHI2 itself as well, as the stock one does (MachineDetect.h).
+enum : uint8_t { VM_MACHINE_NTSC = 1, VM_MACHINE_60HZ = 2, VM_MACHINE_C128 = 4 };
+enum : int { VM_EEP_MACHINE_ADDR = VM_EEP_BOOTNAME_ADDR + sizeof(VM_HOST_MARKER) };
+static inline int vm_launch_machine(const uint8_t pair[2]) {
+    return (pair[0] ^ pair[1]) == 0xff && pair[0] < 8 ? pair[0] : -1;
+}
 
 // The boot indicator, which the main image reads on the way back. A host must
 // leave VM_BOOT_FROM_MIN behind when it resets to the menu; VM_BOOT_SKIP_MIN
@@ -138,14 +159,15 @@ static inline bool vm_launch_valid(const VmLaunchRecord &l) {
 // <root>/manifest.vmi, parsed into this and CRC'd. The CRC is the only value
 // that has to agree across the reboot: the main image computes it before
 // launching and the host recomputes it, so a package edited in between is
-// caught. It runs over the struct including its padding.
-struct VmManifest { char id[24],extension[8],module[32],client[32];uint32_t crc; };
+// caught. It is the CRC32 of the file's bytes as read, not of this struct, so a
+// field that grows later changes no package's CRC.
+struct VmManifest { char id[24],extension[32],module[32],client[32];uint32_t crc; };
 
 // Extensions the stock menu owns, which no package may claim. A host does not
-// enforce this -- discovery happens in the main image -- but the parser must
-// agree byte for byte or the CRC will not match.
+// enforce this -- discovery happens in the main image -- but it parses with this
+// same function, and a manifest it refuses fails the launch after the reboot ($12).
 VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
-    if(!*list||strlen(list)>7)return false;
+    if(!*list||strlen(list)>=sizeof(VmManifest::extension))return false;
     static const char protectedExtensions[][4]={"prg","crt","hex","p00","sid","kla","koa","ocp","pic","art","aas","hpi","txt","nfo","md","seq","d64","d71","d81","reu","trh"};
     for(const char *p=list;*p;){
         char ext[8]{};
@@ -155,6 +177,8 @@ VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
         memcpy(ext,p,n);
         if(!vm_path_component(ext)||strchr(ext,'.'))return false;
         for(const auto &protectedExt:protectedExtensions)if(!strcasecmp(ext,protectedExt))return false;
+        // Matching ignores case, so gb,GB names one extension twice.
+        for(const char *q=list;q<p;){const char *e=strchr(q,',');if(size_t(e-q)==n&&!strncasecmp(q,ext,n))return false;q=e+1;}
         if(!end)return true;
         p=end+1;
         if(!*p)return false;
@@ -163,11 +187,13 @@ VM_HOST_TEXT static bool vm_manifest_extensions(const char *list) {
 }
 
 // Six strict lines: VM1, id, extensions, module, client, END. `text` is the
-// whole file, NUL-terminated and writable; `root` is /VMS/<id>, whose last
-// component must equal the id. Returns false without touching `out` on any
-// malformed input.
+// whole file, NUL-terminated and writable, with no NUL of its own (readManifest
+// refuses one), so the CRC taken here, before the parse writes into it, covers
+// every byte of the file; `root` is /VMS/<id>, whose last component must equal
+// the id. Returns false without touching `out` on any malformed input.
 VM_HOST_TEXT static inline bool vm_manifest_parse(char *text, const char *root, VmManifest &out) {
     if(!vm_path_absolute(root,80))return false;
+    const uint32_t crc=vm_crc32(text,strlen(text));
     char *line[6],*p=text;unsigned count=0;
     while(*p&&count<6){line[count++]=p;while(*p&&*p!='\n'&&*p!='\r')p++;if(*p){*p++=0;while(*p=='\n'||*p=='\r')p++;}}
     if(count!=6||*p||strcmp(line[0],"VM1")||strcmp(line[5],"END"))return false;
@@ -175,7 +201,7 @@ VM_HOST_TEXT static inline bool vm_manifest_parse(char *text, const char *root, 
        strlen(line[1])>=sizeof out.id||strlen(line[2])>=sizeof out.extension||strlen(line[3])>=sizeof out.module||strlen(line[4])>=sizeof out.client)return false;
     const char *id=strrchr(root,'/');if(!id||strcmp(id+1,line[1]))return false;
     memset(&out,0,sizeof out);strcpy(out.id,line[1]);strcpy(out.extension,line[2]);strcpy(out.module,line[3]);strcpy(out.client,line[4]);
-    out.crc=vm_crc32(&out,offsetof(VmManifest,crc));return true;
+    out.crc=crc;return true;
 }
 
 // ------------------------------------------------------------ failure record
@@ -221,19 +247,60 @@ static inline bool vm_host_serves(const VmImageHeader &h, uint32_t provided) {
     return (h.required_services & ~provided) == 0;
 }
 
+// The end of .ARM.exidx, the last output section in ITCM, so the first address
+// a module could have. _etext stops short of it: it leaves out the orphan
+// .fini ld places between .text.itcm and .ARM.exidx. A host's code_floor takes
+// its value from this symbol rather than a literal, so the descriptor cannot
+// claim room the link is using.
+#if defined(__arm__)
+extern "C" const char __exidx_end[];
+#define VM_HOST_CODE_FLOOR ((uint32_t)(uintptr_t)__exidx_end)
+#endif
+
+// Zero means the host never stated one, which is every host built before the
+// field existed, so it reads as the base they all accept.
+static inline uint32_t vm_host_code_floor(uint32_t stated) {
+    return stated ? stated : uint32_t(VM_CODE_BASE);
+}
+
+// The other half of what a host owes before it loads: the image's code has to
+// start at or above where the host's own ends. h must have passed
+// vm_valid_header, which is what bounds code_base to the two legal values.
+static inline bool vm_host_takes_code(const VmImageHeader &h, uint32_t stated_floor) {
+    return h.code_base >= vm_host_code_floor(stated_floor);
+}
+
+// The window takes two MPU regions, not one, because a region must be aligned
+// to its own size and a 128 KiB region cannot start at 0x10000. Splitting at
+// 0x20000 gives both bases a legal pair: 32K@0x18000 or 64K@0x10000, then
+// 64K@0x20000 either way. A base outside the two vm_valid_header allows would
+// not have that property, and the MPU would silently round it down over host
+// code rather than refuse it.
+enum : uint32_t { VM_CODE_SPLIT = 0x20000 };
+struct VmCodeRegion { uint32_t base, bytes; };
+static inline VmCodeRegion vm_code_window_region(uint32_t code_base, unsigned index) {
+    return index ? VmCodeRegion{ VM_CODE_SPLIT, VM_CODE_LIMIT - VM_CODE_SPLIT }
+                 : VmCodeRegion{ code_base, VM_CODE_SPLIT - code_base };
+}
+// RASR SIZE encodes 2^(field+1) bytes, and 4 is the 32-byte floor the MPU has.
+static inline unsigned vm_mpu_size_field(uint32_t bytes) {
+    unsigned n = 4; while (n < 31 && (2u << n) < bytes) n++; return n;
+}
+
 // The module's ITCM window is read-only at entry, because the core's MPU
 // region 1 covers all of ITCM, so the payload copy faults without this. Call
 // with true before copying code and false after, which also restores execute
 // permission.
 #if defined(__arm__)
-static inline void vm_host_code_window(bool writable) {
+static inline void vm_host_code_window(uint32_t code_base, bool writable) {
     uint32_t mask; __asm__ volatile("mrs %0, primask":"=r"(mask)); __disable_irq();
     __asm__ volatile("dsb":::"memory"); SCB_MPU_CTRL = 0;
-    // 96 KiB window: 32 KiB at 0x18000, then 64 KiB at 0x20000.
     for (unsigned i = 0; i < 2; i++) {
-        SCB_MPU_RBAR = (i ? 0x20000u : 0x18000u) | SCB_MPU_RBAR_VALID | (11 + i);
+        const VmCodeRegion r = vm_code_window_region(code_base, i);
+        SCB_MPU_RBAR = r.base | SCB_MPU_RBAR_VALID | (11 + i);
         SCB_MPU_RASR = SCB_MPU_RASR_TEX(1) | SCB_MPU_RASR_AP(writable ? 3 : 7) |
-            (writable ? SCB_MPU_RASR_XN : 0) | SCB_MPU_RASR_SIZE(i ? 15 : 14) | SCB_MPU_RASR_ENABLE;
+            (writable ? SCB_MPU_RASR_XN : 0) |
+            SCB_MPU_RASR_SIZE(vm_mpu_size_field(r.bytes)) | SCB_MPU_RASR_ENABLE;
     }
     SCB_MPU_CTRL = SCB_MPU_CTRL_ENABLE; __asm__ volatile("dsb\nisb":::"memory");
     if (!mask) __enable_irq();
@@ -261,11 +328,11 @@ template<class Reader> static bool vm_load_payload(const VmImageHeader &h,Reader
 
 // The table vm_entry returned. Every pointer in it must lie inside the code
 // actually loaded.
-static inline bool vm_module_table_valid(const VmModule *module, uint32_t code_bytes) {
-    const uintptr_t end = VM_CODE_BASE + code_bytes;
-    auto codePointer = [end](uintptr_t p) { return (p & 1) && (p & ~1u) >= VM_CODE_BASE && (p & ~1u) < end; };
+static inline bool vm_module_table_valid(const VmModule *module, uint32_t code_base, uint32_t code_bytes) {
+    const uintptr_t end = code_base + code_bytes;
+    auto codePointer = [=](uintptr_t p) { return (p & 1) && (p & ~1u) >= code_base && (p & ~1u) < end; };
     const uintptr_t p = (uintptr_t)module;
-    return p >= VM_CODE_BASE && p <= VM_CODE_LIMIT - sizeof(VmModule) && module->abi == VM_ABI &&
+    return p >= code_base && p <= VM_CODE_LIMIT - sizeof(VmModule) && module->abi == VM_ABI &&
            module->bytes == sizeof(VmModule) && codePointer((uintptr_t)module->input) &&
            codePointer((uintptr_t)module->pump) && codePointer((uintptr_t)module->packet) &&
            codePointer((uintptr_t)module->ack);

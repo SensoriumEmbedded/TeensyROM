@@ -2,12 +2,20 @@
 # TeensyROM software/firmware build instructions
 
 ## Main TeensyROM C/C++ application
-### Software tools & lib needed
-  * [Arduino IDE 2.x](https://www.arduino.cc/en/software)
-  * [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
-  * Install as directed in links above
+### Full firmware build (recommended)
+  * Builds the full, shippable firmware: the combined dual-boot hex (MinimalBoot + main) that CI produces and Releases ship, plus for TeensyROM+ the stock extension host as a separate `.TRH` package
+  * `npm run build:tr` for plain TeensyROM, `npm run build:tr-plus` for TeensyROM+
+  * Requires Node.js (`.nvmrc` pins the version) and no other dependencies; downloads a pinned, checksummed `arduino-cli` on first run if one isn't already on `PATH`
+  * `npm test` runs the build tooling's own tests
+  * `npm run flash` writes the result to a TeensyROM over USB, checking first that the image is built for that cartridge (`npm run flash -- --help` for the options)
+  * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works, and the [build skill](/.claude/skills/teensyrom-build/SKILL.md) for step-by-step use
 
-### Build parameters/instructions
+### Arduino IDE (single-image dev/debug builds)
+  * Builds and uploads one image at a time, not the full dual-boot firmware above
+  * Software tools & lib needed
+    * [Arduino IDE 2.x](https://www.arduino.cc/en/software)
+    * [Teensyduino app](https://www.pjrc.com/teensy/td_download.html)
+    * Install as directed in links above
   * In the Arduino IDE
      * Load the Teensy.ino file from the /Source/Teensy directory
      * Tools menu item settings:
@@ -16,17 +24,13 @@
        * Optimize: "Faster"
        * CPU Speed: "600 MHz"
        * USB Type: "Serial + MIDI"
+         * The same for MinimalBoot.ino (/Source/Teensy/MinimalBoot): both images must present the same USB device, so a board passing through MinimalBoot keeps its COM and MIDI ports. It won't build with anything else.
      * Build the project and download directly to TeensyROM
        * TeensyROM needs to be powered by a C64/128 for programming since the Teensy USB power trace should be severed during assembly.
      * Alternatively, you can generate a .hex file and put it on a SD/USB drive
        * See FW update section of the [General Usage doc](/docs/General_Usage.md)
-   * For a full, shippable build — the combined dual-boot hex (MinimalBoot + main) that CI produces and Releases ship, plus for TeensyROM+ the stock extension host as a separate `.TRH` package — use the Node builder instead of the Arduino IDE:
-     * `npm run build:tr` for plain TeensyROM, `npm run build:tr-plus` for TeensyROM+
-     * Requires Node.js (`.nvmrc` pins the version) and no other dependencies; downloads a pinned, checksummed `arduino-cli` on first run if one isn't already on `PATH`
-     * `npm test` runs the build tooling's own tests
-     * See [Build-System.md](/docs/Architecture/Build-System.md#dual-boot-linking-toolsbuild-firmwaremjs) for how this works
    
-### Latest Support tool/lib versions as of FW v0.8 on 2026/08/02
+### Latest Support tool/lib versions as of FW v0.9 on 2026/10/15
    * Arduino IDE 2.3.10
    * Teensyduino 1.61.0
      * Note: 1.62.0 not recommended — its GCC 15.2.1 toolchain (up from 11.3.1) causes intermittent SD-read stalls with 2 PSRAM chips installed
@@ -34,11 +38,12 @@
      * SD at version 2.0.0
      * SdFat at version 2.1.2
      * SPI at version 1.0
-     * USBHost_t36 at version 0.2
+     * USBHost_t36 at version 0.2 — vendored in [Source/Teensy/src/USBHost_t36](/Source/Teensy/src/USBHost_t36/README.md), pinned to upstream commit f943c4b; Teensyduino's bundled copy is not used
      * NativeEthernet at version 1.0.5
      * FNET at version 0.1.3
      * EEPROM at version 2.0
      * Time at version 1.6.1
+     * PN532 — vendored in [Source/Teensy/src/PN532](/Source/Teensy/src/PN532/README.md), trimmed from Seeed Studio's [PN532 library](https://github.com/Seeed-Studio/PN532); nothing to install
      * Bounce (legacy)
      * CRC32 at version 2.0.1
 
@@ -46,7 +51,7 @@
 These steps are only needed if modifying the application menu assembly code running on the C64/128.
 ### Software tools needed
   * Node (see `.nvmrc`)
-  * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/) 0.97 and, for TRCustomBasicCommands only, [KickAssembler](https://theweb.dk/KickAssembler/) with Java. The build finds them on your `PATH` (or through `ACME`, `KICKASS_JAR` and `JAVA_HOME`) and otherwise downloads a checksummed copy: KickAssembler on any platform, ACME on Windows and macOS (on Linux, install it with your package manager). Java is never downloaded. See [Source/C64/README.md](C64/README.md).
+  * [ACME Cross-Compiler](https://sourceforge.net/projects/acme-crossass/) 0.97 and, for TRCustomBasicCommands only, [KickAssembler](https://theweb.dk/KickAssembler/) 5.25 with Java. The build finds them on your `PATH` (or through `ACME`, `KICKASS_JAR` and `JAVA_HOME`) and otherwise downloads a checksummed copy: KickAssembler on any platform, ACME on Windows and macOS (on Linux, install it with your package manager). Java is never downloaded. See [Source/C64/README.md](C64/README.md).
 
 ### Build instructions
   * Run `npm run build:c64` (or double-click `tools/Build-C64.ps1` on Windows) to complete the following

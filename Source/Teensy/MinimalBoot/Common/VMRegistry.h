@@ -20,27 +20,33 @@ static FLASHMEM bool validExtensions(const char *list){return vm_manifest_extens
 static FLASHMEM bool readManifest(const char *root,Manifest &m){
     char path[128],buf[192];if(!absolute(root,80)||snprintf(path,sizeof path,"%s/manifest.vmi",root)>=(int)sizeof path)return false;
     FsFile f=SD.sdfs.open(path,O_RDONLY);if(!f||f.isDirectory()||f.fileSize()>=sizeof buf){f.close();return false;}
-    const uint32_t n=f.fileSize();const bool ok=f.read(buf,n)==(int)n;f.close();if(!ok)return false;buf[n]=0;
+    const uint32_t n=f.fileSize();const bool ok=f.read(buf,n)==(int)n;f.close();if(!ok||memchr(buf,0,n))return false;buf[n]=0;
     return vm_manifest_parse(buf,root,m);
 }
 // Registry limits are deliberate. Over-limit or ambiguous installs reject launch.
-static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch){
+// find() returns how many packages matched (0 or 1), or one of these. On
+// Ambiguous, `rival` (if given) holds the first claimant's id and how many claim
+// it; launch.root is the last claimant's.
+enum : int { OverLimitOrError=-1, Ambiguous=-2 };
+struct Rival { char id[sizeof(Manifest::id)]; unsigned claims; };
+static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch,Rival *rival=nullptr){
     FsFile directory=SD.sdfs.open("/VMS",O_RDONLY);if(!directory)return 0;
     unsigned scanned=0,found=0;FsFile item;
     while(item.openNext(&directory,O_RDONLY)){
         if(item.isDirectory()){
-            char name[24],root[80];const size_t n=item.getName(name,sizeof name);
-            if(++scanned>32){item.close();directory.close();return -1;}
+            char name[sizeof(Manifest::id)+1],root[80];const size_t n=item.getName(name,sizeof name); //+1 so n<sizeof name-1 below still admits a full-length (23) id
+            if(++scanned>32){item.close();directory.close();return OverLimitOrError;}
             if(n&&n<sizeof name-1&&component(name)){
                 snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
                 if(readManifest(root,m)&&((clientId&&strcmp(clientId,m.id)==0)||(!clientId&&extensionMatches(m.extension,extension)))){
-                    found++;strcpy(launch.root,root);launch.manifest_crc=m.crc;
+                    if(found++==1&&rival)strcpy(rival->id,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
                 }
             }
         }
         item.close();
     }
-    const bool error=directory.getError();directory.close();return error||found>1?-1:(int)found;
+    if(rival)rival->claims=found;
+    const bool error=directory.getError();directory.close();return error?OverLimitOrError:found>1?Ambiguous:(int)found;
 }
 static FLASHMEM bool consume(Launch &l){
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_RDONLY);
@@ -76,7 +82,7 @@ static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
 // every case where the table cannot speak for /VMS answers Unknown, and the
 // caller falls back to the scan.
 enum Association : uint8_t { NotAssociated, Associated, Unknown };
-static char extensions[32][8];static uint8_t extensionCount;static bool extensionsKnown;
+static char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
 static FLASHMEM void refresh(bool sd){
     extensionCount=0;extensionsKnown=false;if(!sd)return;
     FsFile dir=SD.sdfs.open("/VMS",O_RDONLY);if(!dir)return;
@@ -84,7 +90,7 @@ static FLASHMEM void refresh(bool sd){
     while(item.openNext(&dir,O_RDONLY)){
         if(item.isDirectory()){
             if(++scanned>32){overflowed=true;item.close();break;}
-            char id[24],root[80];auto n=item.getName(id,sizeof id);Manifest m{};
+            char id[sizeof(Manifest::id)+1],root[80];auto n=item.getName(id,sizeof id);Manifest m{}; //+1 as in find()
             if(n&&n<sizeof id-1&&component(id)){
                 snprintf(root,sizeof root,"/VMS/%s",id);
                 if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
@@ -99,23 +105,34 @@ static FLASHMEM Association associated(const char *name){
     for(unsigned i=0;i<extensionCount;i++)if(extensionMatches(extensions[i],ext+1))return Associated;
     return NotAssociated;
 }
+// A packaged .crt carries the generic client descriptor in its third CHIP, after the 16 KiB boot bank.
+// True when d[] holds one; it is not validated past the magic.
+static FLASHMEM bool clientDescriptor(const char *path,uint8_t d[128]){
+    FsFile f=SD.sdfs.open(path,O_RDONLY);
+    const bool ok=f&&f.seekSet(0x4070)&&f.read(d,128)==128;f.close();
+    return ok&&!memcmp(d,"VMH1",4);
+}
 static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *name){
     if(source!=rmtSD)return false;
     const char *ext=strrchr(name,'.');if(!ext)return false;ext++;
     Launch l{};char selected[256];
     if(snprintf(selected,sizeof selected,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)sizeof selected){SendMsgPrintfln("VM path too long");return true;}
+    // The host gets one slash between components. The browser's path is "/" plus "/<dir>"
+    // per level, so below the root it starts "//", and stored or remote paths can carry more.
+    {char *w=selected;for(const char *r=selected;*r;r++)if(*r!='/'||w==selected||w[-1]!='/')*w++=*r;*w=0;}
     char id[24]{};const char *clientId=nullptr;
     if(!strcasecmp(ext,"crt")){
-        // Generic descriptor occupies the third CHIP, after the 16 KiB boot bank.
-        uint8_t d[128];FsFile f=SD.sdfs.open(selected,O_RDONLY);
-        const bool ok=f&&f.seekSet(0x4070)&&f.read(d,sizeof d)==sizeof d;f.close();
-        if(!ok||memcmp(d,"VMH1",4))return false;
+        uint8_t d[128];if(!clientDescriptor(selected,d))return false;
         if(d[4]!=VM_ABI||!memchr(d+16,0,24)||vm_crc32(d,124)!=*(uint32_t *)(d+124)){SendMsgPrintfln("Invalid VM client");return true;}
         strcpy(id,(char *)d+16);clientId=id;
     }
-    const int found=find(ext,clientId,l);
+    Rival rival{};const int found=find(ext,clientId,l,&rival);
     if(!found){if(!clientId)return false;SendMsgPrintfln("VM package missing in /VMS");return true;}
-    if(found<0){SendMsgPrintfln("Ambiguous or over-limit VM registry");return true;}
+    if(found==Ambiguous){
+        if(rival.claims==2)SendMsgPrintfln(".%s is claimed by both\r\n%s\r\n%s",ext,rival.id,strrchr(l.root,'/')+1);
+        else SendMsgPrintfln(".%s is claimed by %u packages\r\n%s\r\n%s\r\nand %u more",ext,rival.claims,rival.id,strrchr(l.root,'/')+1,rival.claims-2);
+        return true;}
+    if(found<0){SendMsgPrintfln("Over-limit or unreadable /VMS");return true;}
     if(!clientId)strcpy(l.content,selected);
     VmImageHeader image{};
     if(!preflight(l,&image)){SendMsgPrintfln("VM package/client failed validation");return true;}
@@ -131,13 +148,27 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
         if(hostId.abi!=VM_ABI){SendMsgPrintfln("%s host is ABI %lu, not %lu",hostName,
                         (unsigned long)hostId.abi,(unsigned long)VM_ABI);return true;}
         if(image.required_services&~hostId.services){SendMsgPrintfln("%s host lacks service $%lx",hostName,
-                        (unsigned long)(image.required_services&~hostId.services));return true;}}
+                        (unsigned long)(image.required_services&~hostId.services));return true;}
+        // Says the number rather than a capability, because that is what the module
+        // asked for and what a rebuild would have to change. A host that states no
+        // floor is told apart, since it is most often one installed before the
+        // field rather than one whose code fills the window.
+        if(!vm_host_takes_code(image,hostId.code_floor)){
+            if(!hostId.code_floor)SendMsgPrintfln("%s host states no code floor, so takes $%lx only",hostName,
+                        (unsigned long)VM_CODE_BASE);
+            else SendMsgPrintfln("%s host needs code at $%lx, not $%lx",hostName,
+                        (unsigned long)vm_host_code_floor(hostId.code_floor),(unsigned long)image.code_base);
+            return true;}}
     l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
     FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
     const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();
     Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return true;}
     // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
-    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
+    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);
+    // C64/C128 is only known once the menu has reported. A launch made before that is sent through the
+    // menu first (RemoteLaunch), so the pair is only left invalid, rather than hand over a guess, if not.
+    const uint8_t vid=IO1[wRegVid_TOD_Clks]&7,machine[2]={vid,uint8_t((VidTODClksKnown&rvtcC128)?~vid:vid)};
+    EEPwriteNBuf(VM_EEP_MACHINE_ADDR,machine,2);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
     RebootTR();return true;
 }
 #endif

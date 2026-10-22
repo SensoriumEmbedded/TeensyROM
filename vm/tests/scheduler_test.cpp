@@ -7,6 +7,7 @@
 #include <cstring>
 #include <initializer_list>
 #include "../abi/vm_abi.h"
+#include "../../Source/Teensy/MinimalBoot/Common/C64Spans.h"
 
 static uint8_t EZFlashRAM[256];
 static uint32_t now;
@@ -28,6 +29,9 @@ static void fail(uint8_t error) { failure = error; EZFlashRAM[0xfb] = error; EZF
 #include "../../Source/Teensy/MinimalBoot/VMHostWire.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostCommand.h"
 #include "../../Source/Teensy/MinimalBoot/VMHostYield.h"
+#include "../../Source/Teensy/MinimalBoot/VMHostTransfer.h"
+static int32_t grantedSlice(uint16_t, const uint8_t *, uint32_t, uint32_t) { now += 400; return SliceLanded; }
+static bool sourceReadable(const uint8_t *, uint32_t bytes) { return moduleWindow(VM_DATA_BASE, bytes); }
 }
 #include "../../Source/Teensy/MinimalBoot/VMHostPoll.h"
 
@@ -200,7 +204,17 @@ int main() {
     inputPending = false; EZFlashRAM[0xf6] = 4;
     assert(shouldYield());
 
+    // Service bit 20's job runs from the poll, in a turn of its own: three slices take 1200us,
+    // and the module's slice starts after them.
+    reset();
+    started = true; now = 0;
+    const VmC64Span job[] = { { EZFlashRAM, 0x4000, 12 } };
+    const uint32_t ticket = c64Write(job, 1, 4, 0);
+    assert(ticket && c64Status(ticket) == VM_C64_PENDING);
+    VMHostPoll();
+    assert(c64Status(ticket) == VM_C64_DONE && now == 1200 && sliceStarted == 1200 && pumps == 1);
+
     puts("PASS: real scheduler; start handshake, wire framing, frozen-until-ACK, ACK before pump, "
          "input ordering, silence, idempotent run over all three states, sequence wrap, three malformed packets "
-         "latched, a fault raised from input() and from ack() surviving the turn, load failure and yield conditions");
+         "latched, a fault raised from input() and from ack() surviving the turn, load failure and yield conditions, and a service bit 20 job run in its own turn ahead of the module's");
 }

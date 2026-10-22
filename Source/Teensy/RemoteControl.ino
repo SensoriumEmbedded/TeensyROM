@@ -20,7 +20,7 @@
 //Functions to control C64/TR via USB connection
 
 #ifdef VM_EXTENSIONS_ENABLED
-#include "MinimalBoot/Common/VMRegistry.h"
+#include "MinimalBoot/Common/VMLaunch.h"
 #endif
 
 
@@ -236,6 +236,9 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
    
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
+#ifdef Fab04_REU
+   FreeREU();
+#endif   
    FreeSwiftlinkBuffs();
 
    if (MenuSourceID == rmtTeensy)
@@ -273,6 +276,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       SetMenu(DefTRMenu, NumMenuItems);
       IO1[rwRegCursorItemOnPg] = MenuNum;
       SelItemFullIdx = MenuNum;  //  "Select" item
+      UpdateItemTypeReg();
    }
    else
    {
@@ -283,9 +287,13 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       InitDriveDirMenu();
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
+#ifdef VM_EXTENSIONS_ENABLED
+      MarkVmClaimed();
+#endif
       SetMenu(DriveDirMenu, 1);
       IO1[rwRegCursorItemOnPg] = 0;
       SelItemFullIdx = 0;  //  "Select" item
+      UpdateItemTypeReg();
    }
    
    strcpy(DriveDirPath, LaunchDir);
@@ -302,6 +310,17 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
          case rtBin8kHi:
          case rtBin8kLo:
          case rtBinC128:
+#ifdef VM_EXTENSIONS_ENABLED
+            //An extension packaged as a .crt goes through the menu instead while C64/C128 isn't known yet
+            //  (autolaunch at power-up, the relaunch after a launch sent to MinimalBoot): its launch hands
+            //  the extension image the machine, and only the menu's report says C64 or C128
+            if (!(VidTODClksKnown & rvtcC128) &&
+                VmLaunch::isPackageCrt(MenuSourceID, DriveDirPath, MenuSource[SelItemFullIdx].Name))
+            {
+               Serial.printf("Extension package: launching through the menu\n");
+               break;
+            }
+#endif
             Printf_dbg("Forced CRT launch\n"); 
             SendC64Msgs = false;
             HandleExecution();

@@ -62,6 +62,6 @@ MsgIndexMenu:
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "7", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Info: General", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "8", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Info: Ethernet", ChrReturn
    !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "9", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "  Info: HotKeys", ChrReturn
-   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "0", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Installed Extensions", ChrReturn
+   !tx EscC,EscArgSpaces+2, EscC,EscOptionColor, ChrFillRight, ChrRvsOn, "0", ChrRvsOff, ChrFillLeft, EscC,EscSourcesColor, "Installed Extension", ChrReturn
 
    !tx 0

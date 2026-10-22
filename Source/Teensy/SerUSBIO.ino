@@ -390,6 +390,13 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
    #endif
    
+   // o
+   #ifdef Dbg_SerSD
+      case 'o': //SD card info + speed test
+         SDSpeedTest();
+         break;
+   #endif
+   
    // m, p, k, r, s
    #ifdef Dbg_SerSwift
       case 'm':      
@@ -557,6 +564,9 @@ FLASHMEM void ProcessCommand()
       case WriteC64MemToken: //Write to C64 mem via DMA
          WriteC64MemCommand();
          return;
+      case WriteC64SpansToken: //Write C64 mem spans via DMA, sliced
+         WriteC64SpansCommand();
+         return;
       case ReadC64MemToken: //Write to C64 mem via DMA
          ReadC64MemCommand();
          return;
@@ -584,7 +594,7 @@ FLASHMEM void ProcessCommand()
             char BuildInfo[sizeof SerialStringBuf];
             MakeBuildInfo(BuildInfo, sizeof BuildInfo);
             SendU16(AckToken);
-            CmdChannel->printf("\n%s\n  %s0 Hz\n", BuildInfo, StrMachineInfo);
+            CmdChannel->printf("\n%s\n  %s0 Hz\n  Boot: %s\n", BuildInfo, StrMachineInfo, BootComplete ? "complete" : "in progress");
          }
          return;
       case FWCheckToken: //Check firmware type
@@ -592,14 +602,21 @@ FLASHMEM void ProcessCommand()
          return;   
    }
 
-   
-   if (CurrentIOHandler != IOH_TeensyROM)
+
+   //ASID Player active: also allow Ping and file commands (SD/USB only, no IO1/IRQ); audio pauses while one runs
+   bool ASIDAllowed = (CurrentIOHandler == IOH_ASID) &&
+      (TokenVal == PingToken         || TokenVal == GetFileToken      ||
+       TokenVal == GetDirectoryToken || TokenVal == GetDirNDJSONToken ||
+       TokenVal == SendFileToken     || TokenVal == PostFileToken     ||
+       TokenVal == CopyFileToken     || TokenVal == DeleteFileToken);
+
+   if (CurrentIOHandler != IOH_TeensyROM && !ASIDAllowed)
    {
       SendU16(FailToken);
       CmdChannel->print("Busy!\n");
       return;
    }
-   //TeensyROM IO Handler is active, additional commands available...
+   //TeensyROM IO Handler active, or ASID Player with an allowed command: additional commands available
    
    switch (TokenVal)
    {
@@ -713,10 +730,8 @@ FLASHMEM void PrintDebugLog()
       return;
    }
    
-   bool BufferFull = (BigBufCount == BigBufSize);
-   
-   if  (BufferFull) BigBufCount--; //last element invalid
-   
+   bool BufferFull = (BigBufCount == BigBufSize-1); //loggers stop counting here: the last entry is scratch, not printed
+
    for(uint16_t Cnt=0; Cnt<BigBufCount; Cnt++)
    {
       CmdChannel->printf("#%04d ", Cnt);
@@ -740,9 +755,20 @@ FLASHMEM void PrintDebugLog()
          BigBuf[Cnt] &= ~AdjustedCycleTiming;
          CmdChannel->printf("skip %lu ticks = %lu nS, adj = %lu nS\n", BigBuf[Cnt], CycTonS(BigBuf[Cnt]), CycTonS(BigBuf[Cnt])-nS_MaxAdj);
       }
+      else if (BigBuf[Cnt] & IOTLMarker)
+      {  //after AdjustedCycleTiming: a long skip's tick count can reach the marker bit
+         switch (BigBuf[Cnt] & 0xff)
+         {
+            case IOTLMrkHndlrSwitch:  CmdChannel->println("---- InitHndlr done, switching IO handler ----"); break;
+            case IOTLMrkResetAssert:  CmdChannel->println("---- C64 reset asserted ----"); break;
+            case IOTLMrkResetRelease: CmdChannel->println("---- C64 reset released ----"); break;
+            default: CmdChannel->printf("---- marker %lu ----\n", BigBuf[Cnt] & 0xff); break;
+         }
+      }
       else
       {
-         CmdChannel->printf("%s 0xde%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite", BigBuf[Cnt] & 0xff);
+         CmdChannel->printf("%s 0x%s%02x : ", (BigBuf[Cnt] & IOTLRead) ? "Read" : "\t\t\t\tWrite",
+            (BigBuf[Cnt] & IOTLIO2) ? "df" : "de", BigBuf[Cnt] & 0xff);
 
          if (BigBuf[Cnt] & IOTLDataValid) CmdChannel->printf("%02x\n", (BigBuf[Cnt]>>8) & 0xff); //data is valid
          else CmdChannel->printf("n/a\n");
@@ -947,7 +973,218 @@ FLASHMEM void  getFreeITCM()
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
 }
 
+#ifdef Dbg_SerSD
+// SD card info, then a copy of SdFat's TeensySdioDemo speed test (examples/TeensySdioDemo), then
+// what a MinimalBoot bank swap does (LoadBank in IOH_EasyFlash.c): a seek and one 8K read, timed in uS.
+// Writes, then deletes, an 8 MiB file in the SD root.
+FLASHMEM void SDSpeedTest()
+{
+   const char *TestFileName = "/SDSpeedTest.bin";
+   const uint32_t BufSize = 32768;              //largest transfer size tested
+   const uint32_t TestFileSize = 256*BufSize;   //8 MiB, as in TeensySdioDemo, so results compare
+
+   if (CurrentIOHandler != IOH_TeensyROM)
+   {  //holds up loop() for several seconds, which would stall a running handler's polling
+      CmdChannel->println("Busy! Run from the TR menu");
+      return;
+   }
+
+   CmdChannel->println("\n***** SD card info *****");
+   if (!SDFullInit()) //re-begin, so the clock is negotiated fresh
+   {
+      CmdChannel->println("No SD card");
+      return;
+   }
+
+   SdCard *Card = SD.sdfs.card();
+   //an SdioCard: SD.begin(BUILTIN_SDCARD) begins with SdioConfig(FIFO_SDIO)
+   uint32_t kHzClk = static_cast<SdioCard*>(Card)->kHzSdClk();
+   CmdChannel->printf("SdFat %s, SDIO 4-bit, FIFO mode\n", SD_FAT_VERSION_STR);
+   CmdChannel->printf("SD clock: %lu kHz (%s)\n", kHzClk, kHzClk >= 49000 ? "High Speed" : "Default Speed");
+
+   csd_t CSD;
+   bool CSDValid = Card->readCSD(&CSD);
+   uint32_t EraseSize = 0; //flash erase size in 512 byte blocks, 0 if unknown
+   if (!CSDValid) PrintSDError("readCSD failed");
+   else if (CSD.v1.csd_ver == 0) EraseSize = ((CSD.v1.sector_size_high << 1) | CSD.v1.sector_size_low) + 1;
+   else if (CSD.v2.csd_ver == 1) EraseSize = ((CSD.v2.sector_size_high << 1) | CSD.v2.sector_size_low) + 1;
+
+   const char *CardType = "Unknown";
+   switch (Card->type())
+   {
+      case SD_CARD_TYPE_SD1:  CardType = "SD1"; break;
+      case SD_CARD_TYPE_SD2:  CardType = "SD2"; break;
+      case SD_CARD_TYPE_SDHC: CardType = (CSDValid && sdCardCapacity(&CSD) >= 70000000) ? "SDXC" : "SDHC"; break;
+   }
+   uint32_t Sectors = Card->sectorCount();
+   CmdChannel->printf("Card type: %s, %lu MB (%lu sectors)\n", CardType, (uint32_t)((uint64_t)Sectors*512/1000000), Sectors);
+
+   cid_t CID;
+   if (Card->readCID(&CID))  //SdFat 2.1.2's psn holds the CID's big-endian bytes as read, so swap them
+      CmdChannel->printf("CID: Mfr 0x%02x, OEM %c%c, Product %.5s, Rev %d.%d, SN 0x%08lx, Made %d/%d\n",
+         CID.mid, CID.oid[0], CID.oid[1], CID.pnm, CID.prv_n, CID.prv_m, __builtin_bswap32(CID.psn),
+         CID.mdt_month, 2000 + 16*CID.mdt_year_high + CID.mdt_year_low);
+   else PrintSDError("readCID failed");
+
+   uint32_t OCR;
+   if (Card->readOCR(&OCR)) CmdChannel->printf("OCR: 0x%08lx\n", OCR);
+   else PrintSDError("readOCR failed");
+
+   uint8_t FatType = SD.sdfs.fatType();
+   uint32_t ClusterBytes = SD.sdfs.bytesPerCluster();
+   uint32_t FreeClusters = SD.sdfs.freeClusterCount(); //scans the FAT/bitmap
+   if (FatType <= 32) CmdChannel->printf("Volume: FAT%d", FatType);
+   else CmdChannel->printf("Volume: exFAT");
+   CmdChannel->printf(", %luK clusters, %lu clusters, %lu MB free\n", ClusterBytes/1024, SD.sdfs.clusterCount(),
+      (uint32_t)((uint64_t)FreeClusters*ClusterBytes/1000000));
+   uint32_t DataStart = SD.sdfs.dataStartSector();
+   CmdChannel->printf("Data start sector: %lu", DataStart);
+   if (EraseSize) CmdChannel->printf(", %saligned to the %lu block erase size", (DataStart % EraseSize) ? "NOT " : "", EraseSize);
+   CmdChannel->println();
+
+   //From the heap, not RAM_Image, which can be holding a running cartridge's ROM
+   uint8_t *Buf = (uint8_t *)malloc(BufSize);
+   if (!Buf)
+   {
+      CmdChannel->printf("No memory for a %lu byte buffer\n", BufSize);
+      return;
+   }
+   uint32_t *Buf32 = (uint32_t *)Buf;
+
+   FsFile TestFile = SD.sdfs.open(TestFileName, O_RDWR | O_CREAT | O_TRUNC); //truncate one left by an interrupted run
+   if (!TestFile)
+   {
+      PrintSDError("Test file open failed");
+      free(Buf);
+      return;
+   }
+
+   //From here on, errors drop through to the cleanup at the end
+   bool Passed = true;
+   CmdChannel->printf("\n***** Speed test: %s, %lu MiB *****\n", TestFileName, TestFileSize/1048576);
+   CmdChannel->printf("%7s %9s %9s %10s %10s\n", "Size", "Write", "Read", "Max write", "Max read");
+   CmdChannel->printf("%7s %9s %9s %10s %10s\n", "bytes", "KB/sec", "KB/sec", "uS", "uS");
+   for (uint32_t BlkSize = 512; Passed && BlkSize <= BufSize; BlkSize *= 2)
+   {
+      uint32_t NumBlks = TestFileSize/BlkSize;
+      uint32_t MaxWrite = 0, MaxRead = 0;
+      if (!TestFile.truncate(0))
+      {
+         PrintSDError("truncate failed");
+         Passed = false;
+         break;
+      }
+
+      uint32_t WriteMicros = micros();
+      for (uint32_t BlkNum = 0; BlkNum < NumBlks; BlkNum++)
+      {
+         Buf32[0] = BlkNum; //marks the start and end of each block, checked when read back
+         Buf32[BlkSize/4 - 1] = BlkNum;
+         uint32_t CallMicros = micros();
+         if (TestFile.write(Buf, BlkSize) != BlkSize)
+         {
+            PrintSDError("write failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         if (CallMicros > MaxWrite) MaxWrite = CallMicros;
+      }
+      WriteMicros = micros() - WriteMicros;
+      if (!Passed) break;
+
+      TestFile.rewind();
+      uint32_t ReadMicros = micros();
+      for (uint32_t BlkNum = 0; BlkNum < NumBlks; BlkNum++)
+      {
+         uint32_t CallMicros = micros();
+         if (TestFile.read(Buf, BlkSize) != (int)BlkSize)
+         {
+            PrintSDError("read failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         if (CallMicros > MaxRead) MaxRead = CallMicros;
+         if (Buf32[0] != BlkNum || Buf32[BlkSize/4 - 1] != BlkNum)
+         {
+            CmdChannel->printf("Data check failed: %lu byte block #%lu\n", BlkSize, BlkNum);
+            Passed = false;
+            break;
+         }
+      }
+      ReadMicros = micros() - ReadMicros;
+      if (!Passed) break;
+
+      CmdChannel->printf("%7lu %9lu %9lu %10lu %10lu\n", BlkSize, (uint32_t)((uint64_t)TestFileSize*1000/WriteMicros),
+         (uint32_t)((uint64_t)TestFileSize*1000/ReadMicros), MaxWrite, MaxRead);
+   }
+
+   //exFAT only: SdFat's FAT32 contiguous flag isn't set by ordinary writes, so it would read "no" regardless
+   if (Passed && FatType > 32) CmdChannel->printf("Test file contiguous (seeks skip the FAT chain): %s\n",
+      TestFile.isContiguous() ? "yes" : "no");
+
+   if (Passed)
+   {  //Bank swap: CRT bank data sits at 0x40 (CRT header) + 0x10 (CHIP header), then every 0x2010
+      //  (CHIP header + 8K), so the reads aren't sector aligned, as with a real CRT
+      const uint32_t NumSwaps = 256;
+      const uint32_t FirstBank = 0x50, BankStride = 0x2010;
+      uint32_t NumBanks = (TestFileSize - FirstBank - 0x2000)/BankStride + 1;
+      uint32_t MinMicros = 0xffffffff, MaxMicros = 0, TotalMicros = 0, NumOver1mS = 0;
+
+      CmdChannel->printf("\n***** Bank swap test: %lu seek + 8K reads at CRT bank offsets *****\n", NumSwaps);
+      for (uint32_t SwapNum = 0; SwapNum < NumSwaps; SwapNum++)
+      {
+         uint32_t Bank = (SwapNum * 389) % NumBanks; //fixed scattered order: seeks both ways, same every run
+         uint32_t CallMicros = micros();
+         if (!TestFile.seek(FirstBank + Bank*BankStride) || TestFile.read(Buf, 8192) != 8192)
+         {
+            PrintSDError("Bank read failed");
+            Passed = false;
+            break;
+         }
+         CallMicros = micros() - CallMicros;
+         TotalMicros += CallMicros;
+         if (CallMicros < MinMicros) MinMicros = CallMicros;
+         if (CallMicros > MaxMicros) MaxMicros = CallMicros;
+         if (CallMicros > 1000) NumOver1mS++;
+      }
+      if (Passed) CmdChannel->printf("Per 8K bank: min %luuS, avg %luuS, max %luuS; %lu of %lu over 1mS\n",
+         MinMicros, TotalMicros/NumSwaps, MaxMicros, NumOver1mS, NumSwaps);
+   }
+
+   TestFile.close();
+   if (!SD.sdfs.remove(TestFileName)) CmdChannel->printf("Couldn't remove %s\n", TestFileName);
+   free(Buf);
+   CmdChannel->println(Passed ? "Done" : "Stopped on error");
+}
+
+FLASHMEM void PrintSDError(const char *What)
+{
+   uint8_t ErrCode = SD.sdfs.sdErrorCode();
+   if (!ErrCode)
+   {  //no card command failed: the file system refused, a full card for one
+      CmdChannel->printf("%s, a file system error, not a card error (card full?)\n", What);
+      return;
+   }
+   CmdChannel->printf("%s, SD error 0x%02x ", What, ErrCode);
+   printSdErrorSymbol(CmdChannel, ErrCode);
+   CmdChannel->printf(", data 0x%02x\n", SD.sdfs.sdErrorData());
+}
+#endif
+
 #ifdef Fab04_FullDMACapable
+// Staging for one remote DMA command, from the heap and freed when the command returns.  Not
+// RAM_Image, which can be holding a running cartridge's ROM or REU emulation's banks.  Those
+// take heap too, REU emulation up to 512 KiB of it, so an allocation can fail, and the command
+// then refuses.
+struct DMAStage
+{
+   uint8_t *const Buf;
+   explicit DMAStage(uint32_t Len) : Buf((uint8_t *)malloc(Len ? Len : 1)) {}
+   ~DMAStage() { free(Buf); }
+};
+
 // Command: 
 // Write sequential C64 memory segment with supplied data
 // 
@@ -961,7 +1198,7 @@ FLASHMEM void  getFreeITCM()
 FLASHMEM void WriteC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
+   const uint32_t Began = millis();
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -975,6 +1212,16 @@ FLASHMEM void WriteC64MemCommand()
        SendU16(FailToken);
        CmdChannel->println("Error receiving length!");
        return;
+   }
+
+   DMAStage Stage(DMALength);
+   uint8_t *DMABuf = Stage.Buf;
+   if (!DMABuf)
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
+      DiscardCmdInput(DMALength, Began, DMALength);  // sent unprompted, and not to be read as commands
+      return;
    }
 
    for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
@@ -997,7 +1244,7 @@ FLASHMEM void WriteC64MemCommand()
    // already stopped WaitForDMAState ends each wait itself and PerformDMA reports the
    // failure.  A bus that stops part way through a transfer is caught by nothing at all --
    // DMATransferISR's edge waits are unbounded, see the fourth case named over WaitForDMAState in
-   // DMAControl.ino.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
+   // DMAControl.c.  C64IsClockingPHI2 is deliberately not called on this path -- the bound
    // lives where the wait is -- so a new remote command is covered by checking this return
    // and by nothing else.
    if (!PerformDMA(DMA_WRITE, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
@@ -1014,6 +1261,116 @@ FLASHMEM void WriteC64MemCommand()
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
 }
 
+// One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
+// every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is under every
+// channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
+FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
+
+// Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
+// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the command's deadline.
+FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
+{
+   const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
+   uint32_t Quiet = millis();
+   while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
+      if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
+}
+
+// After is what the sender goes on to send without waiting for a reply.  On false a FailToken
+// has gone out.  Patient waits out a pause under the command's deadline alone, rather than
+// SerialAvailabeTimeout's per byte.
+FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t After, uint32_t Began, uint32_t Bytes,
+                               bool Patient = false)
+{
+   for (uint32_t ByteNum = 0; ByteNum < Len; ByteNum++)
+   {
+      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes));
+      if (millis() - Began >= SpansCeilingmS(Bytes))
+      {
+         SendU16(FailToken);
+         CmdChannel->printf("Too slow, %lu of %lu bytes\n", ByteNum, Len);
+         DiscardCmdInput(Len - ByteNum + After, Began, Bytes);
+         return false;
+      }
+      if (!SerialAvailabeTimeout()) { DiscardCmdInput(Len - ByteNum + After, Began, Bytes); return false; }
+      Buf[ByteNum] = CmdChannel->read();
+   }
+   return true;
+}
+
+FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
+{
+   SendU16(FailToken);
+   CmdChannel->println(Why);
+   DiscardCmdInput(Owed, Began, C64SpansMax * 4);
+}
+
+// Command:
+// Write up to 64 C64 memory spans by DMA, sliced so that no one halt outlasts what the C64 can take
+//
+// Workflow:
+// Receive <-- WriteC64SpansToken (0x64FC)
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason while another DMA user holds the bus
+// Receive <-- Flags (0), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
+// Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }
+// Send --> AckToken 0x64CC if the spans are accepted, 0x9b7f and the reason if not
+// Receive <-- Data bytes for every span, in span order
+// TR+ Performs DMA writes
+// Send --> AckToken 0x64CC once every span has landed, 0x9b7f and the reason on Fail
+//
+// The sender waits for each reply before sending more.  Waiting on the first is what keeps firmware
+// without this command, which answers "Unk cmd" or "Busy!", from reading the header and span list as
+// commands of its own; waiting on the second keeps a refused payload from being read the same way.
+FLASHMEM void WriteC64SpansCommand()
+{
+   static const char *const Why[] = {"", "Want 1 to 64 spans", "Empty span", "Span runs past $FFFF",
+                                     "Span touches $DE00-$DFFF", "Spans exceed 64 KiB", "Over 1024 slices"};
+   uint8_t Head[4], List[C64SpansMax * 4];
+   C64Span Spans[C64SpansMax];
+   uint32_t Total, Landed;
+   const uint32_t Began = millis();
+
+   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation,
+   // alone or alongside a freezer cart (RR, FC3 101%, SSv5), runs its transfers from the PHI2
+   // interrupt using the same DMA_* state a job sets up, and overwrites it; a paused C64 would be
+   // resumed by the first slice.  NumREU_Banks is non-zero whenever REU emulation is set up,
+   // whichever handler set it up.
+   const char *Busy = NumREU_Banks ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
+   if (Busy)
+   {
+      SendU16(FailToken);
+      CmdChannel->println(Busy);
+      return;
+   }
+   SendU16(AckToken);
+   // Until the count arrives the list it announces could be any length, so a header that fails leaves
+   // the most to discard -- and a discard runs on while bytes keep coming, the sender's next command
+   // among them.  So the header alone waits out a stall.
+   if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List, true)) return;
+   const uint32_t Count = Head[3];
+   if (Head[0]) return RefuseSpans("Flags must be 0", Count * 4, Began);
+   if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount], Count * 4, Began);
+   if (!ReceiveSpanBytes(List, Count * 4, 0, Began, sizeof List)) return;
+   for (uint32_t Num = 0; Num < Count; Num++)
+      Spans[Num] = { (uint16_t)(List[Num*4] << 8 | List[Num*4+1]), (uint16_t)(List[Num*4+2] << 8 | List[Num*4+3]) };
+
+   // WriteC64Mem's reach.
+   const C64SpansCheck Check = CheckC64Spans(Spans, Count, Head[1], 0x10000, &Total);
+   if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check], 0, Began);
+   DMAStage Stage(Total);
+   if (!Stage.Buf) return RefuseSpans("No memory to stage the payload", 0, Began);
+   SendU16(AckToken);
+   if (!ReceiveSpanBytes(Stage.Buf, Total, 0, Began, sizeof List + Total)) return;
+
+   if (!WriteC64Spans(Spans, Count, Stage.Buf, Head[1], Head[2], &Landed))
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("Stopped at %lu of %lu bytes: C64 bus not clocking, or DMA timed out\n", Landed, Total);
+      return;
+   }
+   SendU16(AckToken);
+}
+
 // Command: 
 // read sequential C64 memory segment and send to host
 // 
@@ -1027,7 +1384,6 @@ FLASHMEM void WriteC64MemCommand()
 FLASHMEM void ReadC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   uint8_t *DMABuf = RAM_Image; //make this dynamic (RAM2), or local[DMALength]?
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -1042,11 +1398,20 @@ FLASHMEM void ReadC64MemCommand()
        CmdChannel->println("Error receiving length!");
        return;
    }
+
+   DMAStage Stage(DMALength);
+   uint8_t *DMABuf = Stage.Buf;
+   if (!DMABuf)
+   {
+      SendU16(FailToken);
+      CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
+      return;
+   }
    
    //uint32_t StartTime = micros();
-   // Same reach as the write above.  Checked here for the second reason too: DMABuf is
-   // RAM_Image, which holds whatever the last operation left in it, so acking a transfer
-   // that did not happen would send that back as the contents of C64 memory.
+   // Same reach as the write above.  Checked here for the second reason too: DMABuf holds
+   // whatever the heap last had there, so acking a transfer that did not happen would send
+   // that back as the contents of C64 memory.
    if (!PerformDMA(DMA_READ, DMAAddr, DMABuf, DMALength, DMA_ADDR_INCREMENT) || !CloseDMA())
    {
       SendU16(FailToken);

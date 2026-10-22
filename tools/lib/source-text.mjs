@@ -37,4 +37,7 @@ export function definesMacro(source, name) {
   return new RegExp(String.raw`^[ \t]*#[ \t]*define[ \t]+${name}\b`, 'm').test(blankComments(spliced));
 }
 
-export const readSource = (file) => withoutComments(fs.readFileSync(file, 'utf8'));
+// A file as the gates read it: LF line endings, whatever a Windows checkout with
+// core.autocrlf left on disk, so an anchor that spans a line matches either way.
+export const readText = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+export const readSource = (file) => withoutComments(readText(file));

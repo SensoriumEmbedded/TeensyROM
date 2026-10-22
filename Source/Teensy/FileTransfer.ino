@@ -291,9 +291,16 @@ FLASHMEM bool SendPagedDirectoryContents(FS& fileStream, const char* directoryPa
 
     while (directoryItem && pageCount < take)
     {
-        currentCount++;
-
         const char* itemName = directoryItem.name();
+
+        if (IsDotfile(itemName)) // not counted, so skip and take page over what is listed
+        {
+            directoryItem.close();
+            directoryItem = directory.openNextFile();
+            continue;
+        }
+
+        currentCount++;
 
         if (currentCount >= skip)
         {

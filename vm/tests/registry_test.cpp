@@ -41,8 +41,31 @@ int main(int argc,char **argv){
     assert(associated("Demo.HI")==Unknown&&extensionCount==0);
     for(unsigned i=0;i<33;i++)fs::create_directories(base/"VMS"/("PAD"+std::to_string(i)));
     refresh(true);assert(associated("Demo.HI")==Unknown&&extensionCount==0);
+    assert(find("hi",nullptr,launch)==OverLimitOrError);
     for(unsigned i=0;i<33;i++)fs::remove_all(base/"VMS"/("PAD"+std::to_string(i)));
     refresh(true);assert(associated("Demo.HI")==Associated);
+
+    // A full-length id (23) registers, one longer does not, and a 31-character list
+    // routes through the scan and the cached table alike.
+    const std::string longId(23,'L'),longList="a26,a52,a78,nes,gb,gbc,gg,sms,x";
+    put(base/"VMS"/longId/"manifest.vmi","VM1\n"+longId+"\n"+longList+"\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("a78",nullptr,launch)==1&&launch.root=="/VMS/"+longId);
+    assert(find("x",nullptr,launch)==1);
+    refresh(true);assert(associated("Game.A52")==Associated&&associated("Game.x")==Associated);
+    fs::remove_all(base/"VMS"/longId);
+    const std::string tooLong(24,'L');
+    put(base/"VMS"/tooLong/"manifest.vmi","VM1\n"+tooLong+"\nlng\nengine.mvm\nclient.crt\nEND\n");
+    assert(find("lng",nullptr,launch)==0);
+    fs::remove_all(base/"VMS"/tooLong);
+    // A NUL inside the file would leave bytes the CRC cannot cover, so it is refused.
+    put(base/"VMS/NULVM/manifest.vmi",std::string("VM1\nNULVM\nnul\nengine.mvm\nclient.crt\nEND\n")+'\0'+'x');
+    assert(!readManifest("/VMS/NULVM",manifest)&&find("nul",nullptr,launch)==0);
+    fs::remove_all(base/"VMS/NULVM");
+    // A list naming one extension twice is malformed, so the package claims nothing.
+    put(base/"VMS/DUPVM/manifest.vmi","VM1\nDUPVM\ndp,DP\nengine.mvm\nclient.crt\nEND\n");
+    assert(!readManifest("/VMS/DUPVM",manifest)&&find("dp",nullptr,launch)==0);
+    fs::remove_all(base/"VMS/DUPVM");
+    refresh(true);
 
     // Path traversal is refused at the component level, before any SD access.
     assert(!absolute("/VMS/../secret",80));assert(!component("../HELLO"));assert(!component("HELLO/VM"));
@@ -73,6 +96,22 @@ int main(int argc,char **argv){
     VmBootImage::install(VM_HOST_SERVICES);
     assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&!rebooted);
     assert(message.find("lacks service $10000")!=std::string::npos);
+
+    // A host whose own code fills the lower window cannot take a module linked
+    // there. Stating no floor means the same thing, because that is what every
+    // host built before the field said, but it is told apart as that.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI,"TeensyROM",VM_CODE_BASE);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&!rebooted);
+    assert(message.find("needs code at $18000, not $10000")!=std::string::npos);
+    VmBootImage::install(VM_HOST_SERVICES);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&!rebooted);
+    assert(message.find("TeensyROM host states no code floor, so takes $18000 only")!=std::string::npos);
+
+    // A host linked clear of it takes the same module through to the reboot,
+    // and still takes one at the base every host accepts.
+    VmBootImage::install(VM_HOST_SERVICES,VM_ABI,"TeensyROM",0xdd1c);
+    assert(tryLaunch(rmtSD,"/","WIDE.crt")&&rebooted);rebooted=false;
+    assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);rebooted=false;
 
     // A host that speaks another ABI would refuse every module this image can
     // validate, so that is knowable here too.
@@ -205,9 +244,19 @@ int main(int argc,char **argv){
     // unserved bit rides through the same way; validation is not the gate.
     VmBootImage::installWithoutDescriptor();
     assert(VmBootImage::installed()&&!VmBootImage::identity(read));
+    io1[wRegVid_TOD_Clks]=0x80|VM_MACHINE_NTSC|VM_MACHINE_C128;VidTODClksKnown=rvtcNTSC|rvtc60Hz|rvtcC128; // the menu has reported
     assert(tryLaunch(rmtSD,"/","HELLO.crt")&&rebooted);
+    // The machine the menu reported rides past the marker, and nothing else of that register.
+    assert(machineAt==VM_EEP_MACHINE_ADDR&&vm_launch_machine(machine)==(VM_MACHINE_NTSC|VM_MACHINE_C128));
+    // What a main image that left none leaves there is the tail of an older path, or zeroes.
+    const uint8_t text[2]={'r','t'},zero[2]={0,0},wide[2]={8,0xf7};
+    assert(vm_launch_machine(text)==-1&&vm_launch_machine(zero)==-1&&vm_launch_machine(wide)==-1);
     rebooted=false;message.clear();
+    // Before the menu has reported, only PAL/NTSC is known (timed from PHI2): none, not a guess at C64/C128.
+    // RemoteLaunch sends such a launch through the menu first, so this is only a backstop.
+    VidTODClksKnown=rvtcNTSC;io1[wRegVid_TOD_Clks]=VM_MACHINE_NTSC;machineAt=-1;
     assert(tryLaunch(rmtSD,"/","VENDOR.crt")&&rebooted&&message.empty());
+    assert(machineAt==VM_EEP_MACHINE_ADDR&&vm_launch_machine(machine)==-1);
 
     rebooted=false;marker.clear();
     VmBootImage::install(VM_HOST_SERVICES);
@@ -221,10 +270,40 @@ int main(int argc,char **argv){
     rebooted=false;
     assert(tryLaunch(rmtSD,"/VMS/HELLO/DATA","Sample.hi"));
     assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
+    // The menu's own path form below the root ("/" + "/VMS" + ...), and any other doubled
+    // slash, reaches the host as one.
+    for(const char *dir:{"//VMS/HELLO/DATA","/VMS//HELLO///DATA/","//VMS/HELLO//DATA//"}){
+        rebooted=false;
+        assert(tryLaunch(rmtSD,dir,"Sample.hi"));
+        assert(rebooted&&consume(saved)&&!strcmp(saved.content,"/VMS/HELLO/DATA/Sample.hi"));
+    }
 
     // Two packages claiming one extension is ambiguous, and ambiguity refuses.
+    // The refusal names the extension and both packages, whichever the scan met first.
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\nhi\nengine.mvm\nclient.crt\nEND\n");
-    assert(find("hi",nullptr,launch)==-1);
+    Rival rival{};
+    assert(find("hi",nullptr,launch,&rival)==Ambiguous&&rival.claims==2);
+    const std::string last=strrchr(launch.root,'/')+1;
+    assert((last=="HELLO"&&!strcmp(rival.id,"OTHER"))||(last=="OTHER"&&!strcmp(rival.id,"HELLO")));
+    rebooted=false;message.clear();
+    assert(tryLaunch(rmtSD,"/","Sample.HI")&&!rebooted);
+    assert(message.find(".HI is claimed by both")==0&&message.find("HELLO")!=std::string::npos&&message.find("OTHER")!=std::string::npos);
+    // Three claimants: the count, and exactly the first and the last the scan met. A rival
+    // overwritten on every match would name the second and third, which this tells apart.
+    put(base/"VMS/THIRD/manifest.vmi","VM1\nTHIRD\nhi\nengine.mvm\nclient.crt\nEND\n");
+    std::vector<std::string> claimants; // in the order the fake's openNext walks /VMS
+    for(const auto &e:fs::directory_iterator(base/"VMS")){const auto id=e.path().filename().string();
+        if(id=="HELLO"||id=="OTHER"||id=="THIRD")claimants.push_back(id);}
+    assert(claimants.size()==3);
+    rival=Rival{};
+    assert(find("hi",nullptr,launch,&rival)==Ambiguous&&rival.claims==3);
+    assert(claimants.front()==rival.id&&claimants.back()==strrchr(launch.root,'/')+1);
+    message.clear();
+    assert(tryLaunch(rmtSD,"/","Sample.HI")&&!rebooted&&message.find(".HI is claimed by 3 packages")==0);
+    assert(message.find(claimants.front())!=std::string::npos&&message.find(claimants.back())!=std::string::npos&&message.find("and 1 more")!=std::string::npos);
+    fs::remove_all(base/"VMS/THIRD");
+    // Only the shared extension is refused; the clients still launch by id.
+    assert(find(nullptr,"OTHER",launch)==1&&find(nullptr,"HELLO",launch)==1);
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\nengine.mvm\nclient.crt\nEND\n");
     assert(find("hi",nullptr,launch)==1);
     put(base/"VMS/OTHER/manifest.vmi","VM1\nOTHER\not\n../bad\nclient.crt\nEND\n");
@@ -249,6 +328,6 @@ int main(int argc,char **argv){
     puts("PASS: real registry/preflight over packager output; generic extension routing, client and "
          "content launch, one-shot record, ambiguity, traversal, malformed manifest, corrupt module and corrupt client, "
          "extension cache answering Unknown when unscanned, errored or over the limit, "
-         "a service belonging to another host refused by its number, and the same module "
+         "a service belonging to another host refused by its number, a module linked at the lower code base refused by a host that fills it and launched by one that does not, and the same module "
          "reaching the reboot when the installed host cannot say what it provides");
 }

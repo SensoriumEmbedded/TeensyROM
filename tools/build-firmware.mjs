@@ -38,6 +38,9 @@
 //            the stock firmware rather than shipped inside a firmware of its own.
 //            Packaging is the step after the combine, so with --skip-combine it builds
 //            the host image into the kept build root and writes no .TRH.
+//   --host-code-kib 64|96  with --host-sketch only: how much ITCM the host's code may
+//            fill. The default, 64, is what the stock host is linked at. 96 lets a
+//            third-party host's code grow up to the module window at 0x18000.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
@@ -65,12 +68,12 @@ import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
 import { definesMacro } from './lib/source-text.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
-import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay,
+import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
          HOST_SLOT_BYTES } from './lib/extension.mjs';
 import { hostImageFromHex } from './build-host-package.mjs';
 import {
-  minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, VM_EXTENSIONS_DEFINE,
-  patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget,
+  minimalLinkerScript, mainLinkerScript, extensionLinkerScript, extensionBootdata, flashResidentLibraryAround, VM_EXTENSIONS_DEFINE,
+  patchStartupForUsbDisabled, patchYieldForUsbDisabled, flashBudget, HOST_CODE_KIB, DEFAULT_HOST_CODE_KIB,
 } from './lib/extension-image.mjs';
 
 const TEENSY_CORE_VERSION = '1.61.0';
@@ -86,7 +89,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // HELLO and exited 0 for the same first-wins reason this scan was written to stop. That
 // file carries the reasoning; this one just says which arguments it takes.
 const { option, flag } = scanArgs(process.argv.slice(2), {
-  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch'],
+  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch', '--host-code-kib'],
   flags: [
     '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
     '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
@@ -136,6 +139,14 @@ const skipExtensionBuild = flag('--skip-extension-build');
 // where the extension image is not built at all, rather than ignored: a flag that
 // silently does nothing here ships the stock host under the caller's own name.
 const hostSketchOption = option('--host-sketch', null);
+const hostCodeOption = option('--host-code-kib', null);
+if (hostCodeOption !== null && hostSketchOption === null) {
+  throw new Error('--host-code-kib requires an explicit --host-sketch');
+}
+if (hostCodeOption !== null && !HOST_CODE_KIB.map(String).includes(hostCodeOption)) {
+  throw new Error('--host-code-kib must be 64 or 96');
+}
+const hostCodeKiB = hostCodeOption === null ? DEFAULT_HOST_CODE_KIB : Number(hostCodeOption);
 if (hostSketchOption !== null && !withExtensions) {
   throw new Error(fab04Features
     ? '--host-sketch has nothing to build with --no-extensions'
@@ -313,6 +324,13 @@ const guardedFiles = ['bootdata.c', 'imxrt1062_t41.ld'].map((f) => path.join(ins
 const hashGuardedFiles = () => guardedFiles.map((f) => sha256(fs.readFileSync(f))).join(',');
 const installedCoreHashBefore = hashGuardedFiles();
 
+// The extension host's linker script runs from flash whatever lies inside a
+// libraries/<name> directory it names, so a build there would move the sketch too.
+const aroundLibrary = withExtensions && !skipExtensionBuild && flashResidentLibraryAround(outDir);
+if (aroundLibrary) {
+  throw new Error(`--out ${outDir} lies inside a libraries/${aroundLibrary} directory, where the extension host's ` +
+                  'linker script would run the sketch from flash; build somewhere else');
+}
 fs.mkdirSync(outDir, { recursive: true });
 let runRoot;
 if (useCcache) {
@@ -387,7 +405,7 @@ function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
     ld ?? read(path.join(linkers, `imxrt1062_t41.ld.${suffix}`)));
 }
 
-function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '' }) {
+function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0 }) {
   console.log(`\n[${name}] Building`);
   writeLinkerFiles(suffix, { ld, bootdata });
   const buildDir = path.join(runRoot, name);
@@ -406,6 +424,15 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   const log = run(cli, compileArgs, env);
   write(path.join(runRoot, `${name}.log`), log);
   console.log(log.split(/\r?\n/).filter((l) => /Memory Usage|RAM1:|RAM2:|FLASH:/.test(l)).join('\n'));
+  if (minFreeLocals) {
+    const freeLocals = log.match(/free for local variables:(\d+)/)?.[1];
+    if (freeLocals === undefined) throw new Error(`[${name}] No "free for local variables" in the memory report; cannot check the stack floor`);
+    if (Number(freeLocals) < minFreeLocals) {
+      throw new Error(`[${name}] RAM1 free for local variables is ${freeLocals}, under the ${minFreeLocals} it needs. ` +
+        'If RAM1 code just grew into another 32 KB ITCM bank, move code to FLASHMEM; otherwise lower MaxRAM_ImageSize ' +
+        '(MinimalBoot/Min_TeensyROM.h explains both).');
+    }
+  }
 
   const elf = path.join(buildDir, `${elfStem}.ino.elf`);
   const hex = path.join(buildDir, `${elfStem}.ino.hex`);
@@ -436,11 +463,19 @@ if (withExtensions && !hostOnly) {
 if (!skipMinimalBuild && !hostOnly) {
   minimalImage = build('minimal', {
     inoPath: path.join(root, 'Source/Teensy/MinimalBoot/MinimalBoot.ino'),
-    fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
+    // Serial + MIDI like main, though minimal never uses MIDI: both images then present
+    // the same USB device (16C0:0489, same interfaces, same name strings), so a board
+    // passing through minimal keeps its COM port and DAWs keep its MIDI port. A serial-only
+    // minimal comes up as a different device. MinimalBoot.ino #errors on anything else.
+    fqbn: 'teensy:avr:teensy41:usb=serialmidi,speed=600,opt=o2std,keys=en-us',
     suffix: 'orig',
     elfStem: 'MinimalBoot',
     ld: withExtensions ? minimalLinkerScript(linkers) : undefined,
     extraDefs: withExtensions ? VM_EXTENSIONS_DEFINE : '',
+    // Minimal sizes its RAM1 image buffer to leave just over this for the stack, the floor
+    // Min_TeensyROM.h measured with Ethernet listening (below it, boot can crash). Checked
+    // here because an ITCM bank crossing takes 32 KB of it at once, with no other symptom.
+    minFreeLocals: 24000,
   });
 }
 
@@ -492,7 +527,7 @@ if (withExtensions && !skipExtensionBuild) {
     inoPath: path.join(sketch, hostEntryIno),
     fqbn: 'teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us',
     elfStem,
-    ld: extensionLinkerScript(linkers),
+    ld: extensionLinkerScript(linkers, hostCodeKiB),
     bootdata: extensionBootdata(linkers),
     usbType: 'USB_DISABLED',
     extraDefs: ' -DVM_HOST_PROFILE',
@@ -552,7 +587,8 @@ if (!skipCombine && extensionImage) {
   const header = parseHostPackage(pkg);
   const id = hostDescriptor(pkg.subarray(header.headerBytes));
   write(hostOutput, pkg);
-  console.log(`  Host "${hostNameForDisplay(id.name)}", ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}`);
+  console.log(`  Host "${hostNameForDisplay(id.name)}", ABI ${id.abi}, services 0x${id.services.toString(16).padStart(8, '0')}, ` +
+    describeCodeFloor(id.codeFloor));
   console.log(`  ${(header.payloadBytes / 1024).toFixed(1)}K of ${(HOST_SLOT_BYTES / 1024).toFixed(0)}K slot` +
     ` (${(100 * header.payloadBytes / HOST_SLOT_BYTES).toFixed(1)}%)`);
   console.log(`Packaged: ${hostOutput} (${pkg.length} bytes)`);

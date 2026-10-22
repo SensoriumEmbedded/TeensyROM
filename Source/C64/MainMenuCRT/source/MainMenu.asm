@@ -222,8 +222,14 @@ smcTODbit
    ;inc BorderColorReg
    lda #ricmdNone
    sta rwRegIRQ_CMD+IO1Port
+   ;set BootComplete before the launch: a SID/text/picture/error screen accepts remote commands while it waits for a key
+   lda #rCtlBootComplete
+   sta wRegControl+IO1Port
    jsr RunSelected  ;start TR selected app...
    ;prg/crt won't return from here, likely SID or error
+   ;launch returned: clear BootComplete until the boot below finishes (net time, listener, menu list)
+   lda #rCtlBootInProgress
+   sta wRegControl+IO1Port
    lda #rmtTeensy ; force back to TR menu
    jsr MenuChangeInit   
    jmp ++
@@ -284,6 +290,10 @@ smcTODbit
 
    ;Display main menu and enter JS/key wait loop
    jsr ListMenuItems
+
+   ;boot finished, tell the Teensy (remote clients read it via the version command)
+   lda #rCtlBootComplete
+   sta wRegControl+IO1Port
    
 HighlightCurrent:   
    lda rwRegCursorItemOnPg+IO1Port 
@@ -651,8 +661,13 @@ nextLine
    ldy #>MsgHasHandler
    jsr PrintString
 ; print 4(3) char type
++  bit rRegItemTypePlusIOH+IO1Port ;bit 6 (V): a /VMS package claims it, show its own extension
+   bvc +
+   lda #rsstItemExt
+   jsr PrintSerialString
+   jmp MenuLineDone
 +  lda rRegItemTypePlusIOH+IO1Port 
-   and #$7f  ;bit 7 indicates an assigned IOHandler, don't care
+   and #$3f  ;bits 7 and 6 are flags, don't care
 ;prints 4 chars from a table of continuous 4 char sets (no termination)
 ;acc=index to item# (63 max)
    asl
@@ -756,7 +771,7 @@ SelectItem:
 
 RunSelected:   
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
-   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
+   and #$3f  ;bits 7 and 6 are flags (assigned IOHandler, /VMS claim), we don't care here
    cmp #rtDirectory  ;check for dir selected
    beq DirUpdate 
    cmp #rtD64  ;check for D64 file selected
@@ -1195,7 +1210,7 @@ CtlWaitReprint
    sta $0286  ;set text color
    jsr WaitForTRDots
    lda rRegItemTypePlusIOH+IO1Port ;Read Item type selected
-   and #$7f  ;bit 7 indicates an assigned IOHandler, we don't care here
+   and #$3f  ;bits 7 and 6 are flags (assigned IOHandler, /VMS claim), we don't care here
    jmp LoadViewKoala
    
 +  cmp #'+'

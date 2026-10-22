@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   crc32, buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
+  CODE_BASE, CODE_BASE_128K, DATA_BASE, CLIENT_BYTES, DESCRIPTOR_OFFSET,
   BASE_SERVICES, SERVICE, PROFILE_RAM2_RO, RAM2_RO_BYTES, CODE_LIMIT,
   ASSIGNED_SERVICES, HOST_SERVICES, UNASSIGNED_SERVICES, SERVICE_EXAMPLE,
   buildHostPackage, parseHostPackage, hostSlotValid,
-  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI,
+  HOST_ID_OFFSET, HOST_SLOT_BYTES, HOST_PACKAGE_HEADER_BYTES, ABI, hostDescriptor, describeCodeFloor,
 } from './extension.mjs';
 import { hostImage } from './fixtures.mjs';
 import { VM_BASE } from './hex.mjs';
@@ -68,7 +68,7 @@ test('entry points the loader would refuse are refused at build time', () => {
   assert.throws(() => image({ entry: (CODE_BASE - 2) | 1 }), /outside the module code window/);
 });
 
-test('a service assigned to another host packages and round trips through the parser', () => {
+test('a service assigned but not served here packages and round trips through the parser', () => {
   for (const bit of [32, 512, 0x10000]) {
     assert.equal(parseImage(image({ requiredServices: BASE_SERVICES | bit })).requiredServices,
                  BASE_SERVICES | bit);
@@ -85,9 +85,9 @@ test('the mask --services offers as an example is one a module could really ship
 });
 
 test('an unassigned service bit is refused at build time, and only there', () => {
-  const unclaimed = 1 << 20;
+  const unclaimed = 1 << 21;
   assert.equal(unclaimed & UNASSIGNED_SERVICES, unclaimed);
-  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x100000/);
+  assert.throws(() => image({ requiredServices: BASE_SERVICES | unclaimed }), /unassigned services 0x200000/);
   const forced = image({ requiredServices: BASE_SERVICES | unclaimed, allowUnassignedServices: true });
   assert.equal(parseImage(forced).requiredServices, BASE_SERVICES | unclaimed);
 });
@@ -113,6 +113,10 @@ test('code larger than the module window is refused with its measurement', () =>
 test('a manifest is six strict lines', () => {
   assert.equal(buildManifest({ id: 'HELLO', extensions: 'hi' }), 'VM1\nHELLO\nhi\nengine.mvm\nclient.crt\nEND\n');
   assert.equal(buildManifest({ id: 'GBVM', extensions: ['gb', 'gbc'] }).split('\n')[2], 'gb,gbc');
+  // 31 characters, the firmware's field less its NUL.
+  const longest = 'a26,a52,a78,nes,gb,gbc,gg,sms,x';
+  assert.equal(longest.length, 31);
+  assert.equal(buildManifest({ id: 'MULTI', extensions: longest }).split('\n')[2], longest);
 });
 
 test('a manifest cannot claim an extension the stock menu owns', () => {
@@ -120,7 +124,10 @@ test('a manifest cannot claim an extension the stock menu owns', () => {
     assert.throws(() => buildManifest({ id: 'X', extensions: extension }), /belongs to the stock menu/);
   }
   assert.throws(() => buildManifest({ id: 'X', extensions: 'toolong' + 'x' }), /must be 1\.\.7 characters/);
+  assert.throws(() => buildManifest({ id: 'X', extensions: 'a26,a52,a78,nes,gb,gbc,gg,sms,xy' }), /must be 1\.\.31 characters/);
   assert.throws(() => buildManifest({ id: 'X', extensions: 'a.b' }), /Invalid extension/);
+  assert.throws(() => buildManifest({ id: 'X', extensions: 'gb,GB' }), /"GB" is listed twice/);
+  assert.throws(() => buildManifest({ id: 'X', extensions: ['a26', 'a52', 'a26'] }), /listed twice/);
   assert.throws(() => buildManifest({ id: '../escape', extensions: 'hi' }), /Invalid id/);
   assert.throws(() => buildManifest({ id: 'X'.repeat(24), extensions: 'hi' }), /shorter than 24/);
   assert.throws(() => buildManifest({ id: 'HI', extensions: 'hi', module: 'm'.repeat(32) }), /shorter than 32/);
@@ -237,4 +244,43 @@ test('hostSlotValid agrees with the five words the minimal image reads', () => {
   assert.ok(!hostSlotValid({ ...ok, bootBase: 0 }));
   assert.ok(!hostSlotValid({ ...ok, imageBytes: HOST_SLOT_BYTES + 1 }));
   assert.ok(!hostSlotValid({ ...ok, imageBytes: 0x1000 }));
+});
+
+test('the lower code base round trips, and every bound moves with it', () => {
+  const wide = image({ codeBase: CODE_BASE_128K, entry: CODE_BASE_128K | 1 });
+  const header = parseImage(wide);
+  assert.equal(header.codeBase, CODE_BASE_128K);
+  assert.equal(header.entry, CODE_BASE_128K | 1);
+
+  // The extra 32 KiB is reachable only from the lower base.
+  const wideCode = Buffer.alloc(CODE_LIMIT - CODE_BASE_128K);
+  assert.equal(parseImage(buildImage({ code: wideCode, entry: CODE_BASE_128K | 1, codeBase: CODE_BASE_128K })).codeBytes,
+    CODE_LIMIT - CODE_BASE_128K);
+  assert.throws(() => buildImage({ code: wideCode, entry: CODE_BASE | 1 }),
+    new RegExp(`window is ${CODE_LIMIT - CODE_BASE}`));
+
+  // Entry is bounded by the image's own base, in both directions.
+  assert.throws(() => buildImage({ code: thumbReturn, entry: CODE_BASE | 1, codeBase: CODE_BASE_128K }),
+    /falls outside the module code window/);
+  assert.throws(() => buildImage({ code: thumbReturn, entry: CODE_BASE_128K | 1 }),
+    /falls outside the module code window/);
+});
+
+test('a code base the loader does not accept is refused by the writer and the reader', () => {
+  for (const codeBase of [0, 0x10001, 0x14000, 0x18001, 0x20000]) {
+    assert.throws(() => buildImage({ code: thumbReturn, entry: codeBase | 1, codeBase }),
+      /is not one the loader accepts/);
+  }
+  // Restamping a legal image to an illegal base is caught on the way back in.
+  const forged = Buffer.from(image());
+  forged.writeUInt32LE(0x14000, 28);
+  assert.throws(() => parseImage(forged), /linked for a different memory map/);
+});
+
+test('a host descriptor reads its code floor, and a host line says what zero means', () => {
+  const payload = hostImage();
+  payload.writeUInt32LE(0xf00c, HOST_ID_OFFSET + 28);
+  assert.equal(hostDescriptor(payload).codeFloor, 0xf00c);
+  assert.equal(describeCodeFloor(0xf00c), 'code floor 0xf00c');
+  assert.equal(describeCodeFloor(0), 'no code floor, so modules at 0x18000 only');
 });

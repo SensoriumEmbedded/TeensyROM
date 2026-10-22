@@ -38,6 +38,9 @@ stcIOHandlers IOHndlr_TeensyROM =
 };
 
 int16_t SidSpeedAdjust = 0;
+uint8_t VidTODClksKnown = 0; //bits of IO1[wRegVid_TOD_Clks] that are known: rvtcNTSC once PHI2 is timed at boot, all three once MainMenu.asm reports
+volatile uint8_t VidStdMenuReport = 0xff; //MainMenu.asm's wRegVid_TOD_Clks write, caught in the IO1 handler for ApplyMenuVidReport() to merge
+bool    VidStdRecheckNow = false; //the menu's PAL/NTSC disagreed with the timed one: loop() re-times it on its next pass
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
 volatile uint32_t StreamOffsetAddr = 0;
@@ -52,9 +55,17 @@ volatile uint16_t eepAddrToWrite;
 StructMenuItem *MenuSource;
 uint16_t SelItemFullIdx = 0;  //logical full index into menu for selected item
 uint16_t NumItemsFull;  //Num Items in Current Menu
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+// One bit per DriveDirMenu item, set by MarkVmClaimed: a /VMS package claims the file's
+// extension. Kept here so rRegItemTypePlusIOH reads a bit, not the registry.
+uint8_t VmClaimedItems[(MaxMenuItems+7)/8];
+static inline bool IsVmClaimedItem(uint16_t ItemNum) { return VmClaimedItems[ItemNum/8] & (1 << ItemNum%8); }
+#endif
 uint8_t *XferImage = NULL; //pointer to image being transferred to C64
 uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
+volatile bool BootComplete = false; //set by the menu when its boot ends (rCtlBootComplete) or when a cart starts, cleared by SetUpMainMenuROM()
+                                    //  and by rCtlBootInProgress when a remote launch on reset returns to the menu
 
 //Returning 0 relies on every loader leaving at least one item ("<Empty>", the D64 up-dir entry)
 inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
@@ -558,36 +569,66 @@ void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    }
 }
 
-void SetVideoStdTiming()
-{  //from the machine type MainMenu.asm reported in IO1[wRegVid_TOD_Clks]; also used by the td serial command
-   //called from IO1 handler, do not FLASHMEM
-   if (IO1[wRegVid_TOD_Clks] & rvtcNTSC)
-   {
-      nS_MaxAdj = Def_nS_MaxAdjNTSC;
-      if (IO1[wRegVid_TOD_Clks] & rvtcC128)
-      {
-         nS_DMASetup     = Def_nS_DMASetupNTSC128;
-         nS_DMADataSetup = Def_nS_DMADataSetupNTSC128;
-         nS_DMADataHold  = Def_nS_DMADataHoldNTSC128;
-      }
-      else
-      {
-         nS_DMASetup     = Def_nS_DMASetupNTSC;
-         nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
-         nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
-      }
-   }
-   else
-   {  //PAL C128 has no measured set of its own yet
-      nS_MaxAdj       = Def_nS_MaxAdjPAL;
-      nS_DMASetup     = Def_nS_DMASetupPAL;
-      nS_DMADataSetup = Def_nS_DMADataSetupPAL;
-      nS_DMADataHold  = Def_nS_DMADataHoldPAL;
-   }
-
+FLASHMEM void SetMachineInfoStr()
+{
    sprintf(StrMachineInfo, "C%d  %s Vid  %s", (IO1[wRegVid_TOD_Clks] & rvtcC128) ? 128 : 64,
       (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
       (IO1[wRegVid_TOD_Clks] & rvtc60Hz) ? "6" : "5");
+}
+
+FLASHMEM void SetVideoStdTiming()
+{  //from the machine in IO1[wRegVid_TOD_Clks], unconditionally; used by the td serial command
+   SetVideoStdDMATiming(IO1[wRegVid_TOD_Clks]);
+   SetMachineInfoStr();
+}
+
+//Merges the report the IO1 handler caught.  Thread mode, from the polling handler: that's also where the menu's
+//   next request is dispatched (a launch at boot reaches tryLaunch from there), so the report is always merged
+//   before anything uses it, and with only thread mode writing the register, the timing and StrMachineInfo,
+//   nothing has to be masked.  MainMenu.asm reports all three bits.  PAL/NTSC timed from PHI2 wins: the menu's
+//   comes from the TOD clock against the CPU clock, and a dead TOD reads as NTSC.  A disagreement makes loop()
+//   re-time it straight away, in case the machine changed standard since the last reading.
+FLASHMEM void ApplyMenuVidReport()
+{
+   const uint8_t Report = __atomic_exchange_n(&VidStdMenuReport, (uint8_t)0xff, __ATOMIC_RELAXED); //never loses a report the ISR writes meanwhile
+   if (Report == 0xff) return;
+
+   uint8_t Merged = Report & (rvtcNTSC | rvtc60Hz | rvtcC128);
+   if (VidTODClksKnown & rvtcNTSC)
+   {
+      if ((Merged ^ IO1[wRegVid_TOD_Clks]) & rvtcNTSC)
+      {
+         Serial.printf("Menu reported %s, PHI2 timed %s: re-checking\n", (Merged & rvtcNTSC) ? "NTSC" : "PAL",
+            (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL");
+         VidStdRecheckNow = true;
+      }
+      Merged = (uint8_t)((Merged & ~rvtcNTSC) | (IO1[wRegVid_TOD_Clks] & rvtcNTSC));
+   }
+   IO1[wRegVid_TOD_Clks] = Merged;
+   VidTODClksKnown = rvtcNTSC | rvtc60Hz | rvtcC128;
+   //Re-applied only on a change: keeps 't' timing tweaks across menu restarts
+   if ((Merged ^ TimingVidTODClks) & (rvtcNTSC | rvtcC128)) SetVideoStdDMATiming(Merged);
+   SetMachineInfoStr();
+}
+
+//rRegItemTypePlusIOH for the selected item, worked out when the item is selected so the C64's read is a plain
+//   register read.  Worked out during the read itself, the item type reached the bus ~40nS after every other
+//   IO1 read (~342nS after ISR entry, vs ~300nS): on NTSC (250425 C64 with a Kawari) that left no data setup
+//   time, and whether a read failed came down to how late code layout made the ISR entry.  Precomputed, it
+//   ran clean with nS_PLAprop raised from 150 to 200 on a layout where the old read failed at 150.
+//   Called from the ISR on the rwRegSelItemOnPage write, after the data is latched, and from thread mode
+//   wherever else the selection, the menu or its /VMS claims can change: after each status function (the
+//   C64 is still waiting) and after a remote launch's selection (the menu's RunSelected reads the type then
+//   without selecting first).  Not FLASHMEM: the ISR calls it.
+void UpdateItemTypeReg()
+{
+   if (MenuSource == NULL) return; //no menu set up yet
+   uint8_t Data = MenuSource[SelItemFullIdx].ItemType;
+   if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+   if(IO1[rWRegCurrMenuWAIT] == rmtSD && VmClaimedItems[SelItemFullIdx/8] & (1 << SelItemFullIdx%8)) Data |= 0x40; //bit 6: show rsstItemExt as the type
+#endif
+   IO1[rRegItemTypePlusIOH] = Data;
 }
 
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
@@ -597,11 +638,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
    {
       switch(Address)
       {
-         case rRegItemTypePlusIOH:
-            Data = MenuSource[SelItemFullIdx].ItemType;
-            if(IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None) Data |= 0x80; //bit 7 indicates an assigned IOHandler
-            DataPortWriteWaitLog(Data);
-            break;
+         //rRegItemTypePlusIOH: the default read, set by UpdateItemTypeReg()
          case rRegStreamData:
             //a 32-bit offset no longer wraps back inside the image when a reader runs past the end
             DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
@@ -628,6 +665,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       {
          case rwRegSelItemOnPage:
             SelItemFullIdx = MenuIdxFromRegs(Data);
+            UpdateItemTypeReg();
+            //fall through
          case rwRegStatus:
          case wRegIRQ_ACK:
          case rwRegIRQ_CMD:
@@ -649,8 +688,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             else SetExROMDeassert;  //rtBin8kHi or None
             break;
          case wRegVid_TOD_Clks:
-            IO1[wRegVid_TOD_Clks]=Data;
-            SetVideoStdTiming(); //make NTSC/PAL/C128 specific timing tweaks upon discovery
+            VidStdMenuReport = Data; //merged in thread mode, by ApplyMenuVidReport()
             break;
          case rwRegPageNumber:
             IO1[rwRegPageNumber]=Data;
@@ -760,6 +798,17 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   }
                   ptrSerialString = SerialStringBuf;
                   break;
+#if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
+               case rsstItemExt: //up to 3 chars after the last dot, like the TblItemType labels
+               {
+                  const char *Ext = strrchr(MenuSource[SelItemFullIdx].Name, '.');
+                  uint8_t Len = 0;
+                  if (Ext) while (Len < 3 && Ext[Len+1]) { SerialStringBuf[Len] = Ext[Len+1]; Len++; }
+                  SerialStringBuf[Len] = 0;
+                  ptrSerialString = SerialStringBuf;
+               }
+                  break;
+#endif
                case rsstNextIOHndlrName:
                {  //also loaded raw from EEPROM, which a build with more handlers may have written
                   const uint8_t NextIOH = IO1[rwRegNextIOHndlr];
@@ -864,6 +913,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlNFCReEnableWAIT:
                   IO1[rwRegStatus] = rsNFCReEnable; //work this in the main code
                   break;
+               case rCtlBootComplete:
+                  if (!doReset) BootComplete = true; //ignored while a reset is pending: the old menu may still be finishing its boot
+                  break;
+               case rCtlBootInProgress:
+                  BootComplete = false; //remote launch on reset returned to the menu, which is finishing its boot
+                  break;
                case rCtlReturnToMainMenu:
                   BtnPressed = true;
                   break;
@@ -915,6 +970,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlUninstallExtHostWAIT:
                   IO1[rwRegStatus] = rsUninstallExtHost; //work this in the main code
                   break;
+               case rCtlShowExtPackagesWAIT:
+                  IO1[rwRegStatus] = rsShowExtPackages; //work this in the main code
+                  break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code
@@ -931,6 +989,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 
 void PollingHndlr_TeensyROM()
 {
+   ApplyMenuVidReport(); //ahead of the dispatch below, which may act on the machine (tryLaunch's pair)
+
    if (IO1[rwRegStatus] != rsReady)
    {  //ISR requested work
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
@@ -947,6 +1007,7 @@ void PollingHndlr_TeensyROM()
       if (IO1[rwRegStatus]<rsNumStatusTypes) StatusFunction[IO1[rwRegStatus]]();
       else Serial.printf("?Stat: %02x\n", IO1[rwRegStatus]);
       Serial.flush();
+      UpdateItemTypeReg(); //the work may have moved the selection or changed the menu
       IO1[rwRegStatus] = rsReady;
    }
    usbHostMIDI.read();

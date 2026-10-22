@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 //
-// Builds an extension package from module sources: compile, link against
-// vm/abi/module.ld, measure the sections, and write /VMS/<id> with its
-// manifest, module image and client cartridge.
+// Builds an extension package from module sources: compile, link against the
+// module linker script for the chosen code window, measure the sections, and
+// write /VMS/<id> with its manifest, module image and client cartridge.
 //
 //   node tools/build-extension.mjs --id HELLO --extensions hi \
 //        --source vm/hello/hello.cpp --client build/c64/vmhello.bin
 //
 // --services is the mask of service bits the module cannot run without,
 // defaulting to the base profile. See the registry in vm/abi/README.md.
+//
+// --code-kib picks the code window: 96 (the default, which every host takes)
+// or 128, which needs a host whose code ends at or below 0x10000.
 //
 // The image and cartridge formats live in tools/lib/extension.mjs; this script
 // only turns an ELF into the inputs that library wants, then reads its own
@@ -21,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { scanArgs } from './lib/cli-args.mjs';
 import {
   buildImage, parseImage, buildManifest, buildClientCrt,
-  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES,
+  CODE_BASE, CODE_LIMIT, DATA_BASE, DATA_BYTES, MODULE_SCRIPTS,
   BASE_SERVICES, ASSIGNED_SERVICES, HOST_SERVICES,
 } from './lib/extension.mjs';
 
@@ -31,7 +34,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // first-wins indexOf() meant `npm run build:hello -- --id OTHER` built HELLO and exited 0.
 const { option, all, flag, given } = scanArgs(process.argv.slice(2), {
   options: ['--id', '--extensions', '--client', '--client-source', '--out', '--services',
-            '--toolchain', '--arduino-data'],
+            '--code-kib', '--toolchain', '--arduino-data'],
   repeatable: ['--source'],
   flags: ['--keep', '--allow-unassigned-services'],
 });
@@ -47,8 +50,21 @@ const allowUnassignedServices = flag('--allow-unassigned-services');
 if (!id || !extensions || !sources.length) {
   throw new Error('Use --id <NAME> --extensions <list> --source <file.cpp> [--source ...]\n' +
                   '    [--client <file.bin> | --client-source <file.a>] [--out <dir>]\n' +
-                  '    [--services <bits>] [--allow-unassigned-services]');
+                  '    [--services <bits>] [--allow-unassigned-services] [--code-kib 96|128]');
 }
+
+// The code window, and with it the linker script. 96 KiB links at a base every
+// host takes; 128 KiB needs one whose code_floor is at or below 0x10000, which
+// the loader checks and the preflight reports. Default to the portable one --
+// a module that does not need the space should run everywhere.
+const windowKiB = (base) => (CODE_LIMIT - base) / 1024;
+const codeKiB = given('--code-kib') ? Number(option('--code-kib')) : windowKiB(CODE_BASE);
+const codeBase = [...MODULE_SCRIPTS.keys()].find((base) => windowKiB(base) === codeKiB);
+if (codeBase === undefined) {
+  throw new Error(`--code-kib wants ${[...MODULE_SCRIPTS.keys()].map(windowKiB).join(' or ')}, ` +
+                  `not ${option('--code-kib') || 'a bare flag'}`);
+}
+const codeScript = MODULE_SCRIPTS.get(codeBase);
 
 const SERVICE_MASK = /^(0[xX][0-9a-fA-F]+|[0-9]+)$/;
 function parseServices(text) {
@@ -124,7 +140,7 @@ const objects = sources.map((source) => {
 });
 const elf = path.join(work, id + '.elf');
 run(tool('g++'), [...CPU, '-nostdlib', '-Wl,--gc-sections',
-  '-T', path.join(root, 'vm/abi/module.ld'), ...objects, runtime, '-o', elf], 'linking');
+  '-T', path.join(root, codeScript), ...objects, runtime, '-o', elf], 'linking');
 
 // --- Measure ---------------------------------------------------------------
 const headers = run(tool('readelf'), ['-h', elf], 'reading ELF header');
@@ -132,12 +148,21 @@ const entryMatch = headers.match(/Entry point address:\s*(0x[0-9a-fA-F]+)/);
 if (!entryMatch) throw new Error('Could not read the entry point from the linked module');
 const entry = parseInt(entryMatch[1], 16);
 
-const sections = run(tool('size'), ['-A', elf], 'measuring sections');
-const sectionBytes = (name) => {
-  const match = sections.match(new RegExp('^' + name.replace('.', '\\.') + '\\s+(\\d+)', 'm'));
-  return match ? Number(match[1]) : 0;
-};
-const bssBytes = sectionBytes('.bss');
+// size -A prints one row per section: name, size, address.
+const sections = new Map(run(tool('size'), ['-A', elf], 'measuring sections').split('\n')
+  .map((line) => line.trim().split(/\s+/)).filter((row) => row.length >= 3)
+  .map(([name, bytes, addr]) => [name, { bytes: Number(bytes), addr: Number(addr) }]));
+const bssBytes = sections.get('.bss')?.bytes ?? 0;
+
+// Where the linker actually put the code. buildImage's entry check only
+// notices a --code-kib that disagrees with the script while the two windows
+// do not overlap at the entry; past 32 KiB of .text they do, and a mismatch
+// packages clean. The section address says it outright.
+if (!sections.has('.text')) throw new Error('Could not read the address of .text from the linked module');
+const linkedBase = sections.get('.text').addr;
+if (linkedBase !== codeBase) {
+  throw new Error(`--code-kib ${codeKiB} packages at 0x${codeBase.toString(16)}, but ${codeScript} linked .text at 0x${linkedBase.toString(16)}`);
+}
 
 const binary = (section) => {
   const file = path.join(work, section.slice(1) + '.bin');
@@ -148,11 +173,13 @@ const code = binary('.text');
 const data = binary('.data');
 
 // --- Package ---------------------------------------------------------------
-const image = buildImage({ code, data, bssBytes, entry, requiredServices, allowUnassignedServices });
+const image = buildImage({ code, data, bssBytes, entry, requiredServices, allowUnassignedServices, codeBase });
 // Read our own output back with the same checks the firmware applies, so a
-// packaging mistake fails here rather than on the C64.
+// packaging mistake fails here rather than on the C64. A --code-kib that
+// disagrees with the script that linked it is already out at the .text address
+// above; this is the rest of the header agreeing with the module.
 const header = parseImage(image);
-if (header.entry !== entry || header.codeBase !== CODE_BASE || header.ramBase !== DATA_BASE) {
+if (header.entry !== entry || header.codeBase !== codeBase || header.ramBase !== DATA_BASE) {
   throw new Error('Packaged image disagrees with the linked module');
 }
 
@@ -187,6 +214,6 @@ if (keep) console.log(`Build tree kept in ${work}`);
 else fs.rmSync(work, { recursive: true, force: true });
 
 const free = DATA_BYTES - (data.length + bssBytes);
-console.log(`${id}: code ${code.length} of ${CODE_LIMIT - CODE_BASE} bytes, data ${data.length}, bss ${bssBytes}, ` +
-            `workspace left for the module ${free} bytes`);
+console.log(`${id}: code ${code.length} of ${CODE_LIMIT - codeBase} bytes at $${codeBase.toString(16)}, ` +
+            `data ${data.length}, bss ${bssBytes}, workspace left for the module ${free} bytes`);
 console.log(`Package written to ${directory}`);

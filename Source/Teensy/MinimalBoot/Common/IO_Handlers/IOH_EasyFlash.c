@@ -87,7 +87,12 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
    //Printf_dbg("\n %lu mS Open ", millis()-Startms);
    
    myFile.seek(SeekTo);
-   for (uint16_t count = 0; count < 8192; count++) ptrImage[count]=myFile.read();
+   //One bulk read: SdFat moves whole sectors straight into the buffer instead of 8192 single-byte calls.
+   //   SdFat returns -1 on error (through File's size_t, hence the cast); fill any shortfall with
+   //   0xff, which is what the byte-wise read() returned past the end of the file.
+   int BytesRead = (int)myFile.read(ptrImage, 8192);
+   if (BytesRead < 0) BytesRead = 0;
+   if (BytesRead < 8192) memset(ptrImage + BytesRead, 0xff, 8192 - BytesRead);
    //myFile.close();
    //Printf_dbg("\n %lu mS Load ", millis()-Startms);
 }

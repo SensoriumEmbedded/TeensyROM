@@ -15,13 +15,12 @@
 // Only the hooks in use are defined; the core's defaults cover the rest.
 
 #include "avr/pgmspace.h"
-
-void MidiDevName_AppendUniqueID(void);
+#include "MinimalBoot/Common/UsbNames.c"  //USB name strings, shared with MinimalBoot (its hook: Min_UsbNames.c)
 
 // Runs once, after RAM globals and peripherals are up and before the core
 // starts USB.  Anything that must be in place before the host can see the
 // device goes here.  No C++ objects exist yet.
 FLASHMEM void startup_middle_hook(void)
 {
-   MidiDevName_AppendUniqueID();  //USB name strings must be final before usb_init()
+   UsbNames_AppendUniqueID();  //USB name strings must be final before usb_init()
 }

@@ -24,7 +24,10 @@
 #include "Common/Common_Defs.h"
 #include "Common/Menu_Regs.h"
 #include "Common/DriveDirLoad.h"
+#include "Common/C64Spans.h"
+#include "Common/DMAControl.c"
 #include "Common/IOHandlers.h"
+#include "Common/MachineDetect.h"
 
 uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
@@ -166,6 +169,10 @@ void setup()
    
    EEPROM.write(eepAdMinBootInd, MinBootInd_SkipMin); //clear the boot flag for next boot default, in case power is lost
 
+   //C64 held in reset since SetResetAssert above.  PAL/NTSC timed here; C64/C128 can only come from the
+   //  main image's pair, below.
+   if (TimeVideoStdAtBoot() != 0xff) SetVideoStdDMATiming(MeasuredVidStd);
+
    // The launcher leaves this marker in place of a file path when the selection
    // was an extension rather than a cartridge. Only this image acts on it, and
    // only this image reserves the module's ITCM and DTCM windows at link time,
@@ -174,6 +181,11 @@ void setup()
    EEPreadNBuf(eepAdCrtBootName, (uint8_t*)vmMarker, 4);
    if (!strcmp(vmMarker, VM_HOST_MARKER))
    {
+      uint8_t machine[2];
+      EEPreadNBuf(VM_EEP_MACHINE_ADDR, machine, 2);
+      const int Machine = vm_launch_machine(machine);
+      if (Machine >= 0) //else C64 timing for the standard timed above, as the main image before its menu reports
+         SetVideoStdDMATiming(MeasuredVidStd == 0xff ? Machine : (uint8_t)((Machine & ~rvtcNTSC) | MeasuredVidStd));
       if (!VMHostBoot()) { RebootToMenu(); }
       BtnPressed = false;
       return;
@@ -232,6 +244,8 @@ void setup()
      
 void loop()
 {
+   FollowVideoStd(); //a C64U switches standard after the reset is released, and can switch live; C64/C128 stays as handed over
+
    if (BtnPressed)
    {
       // A running extension owns the machine. Hand the button back to the menu
@@ -260,6 +274,7 @@ void loop()
 #endif      
       doReset=false;
       BtnPressed = false;
+      Phi2ResetReleased(); //re-time PHI2 in a burst: a C64U applies a saved NTSC setting only now
 
 #ifdef DbgSignalSenseReset
       attachInterrupt( digitalPinToInterrupt(DotClk_Debug_PIN), isrButton, FALLING );

@@ -3,6 +3,7 @@
 
 
 #include "Fab04FeatureCtl.h"  //determines if build is for Fab0.2/0.3 or Fab0.4+
+#include "ChipSerial.h"       //TR_ChipSerialNum(): the UID in the USB names and build info
 
 //fab 0.4 adds bi-dir data buffers, R/W Signal, Reset Signal and Special Button
 #ifdef Fab04_Features   //see Fab04FeatureCtl.h
@@ -37,7 +38,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.8.0.11"    //*VERSION*
+#define TRVersion              "0.9"    //*VERSION*
 #ifdef Fab04_Features
    char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
 #else
@@ -71,6 +72,7 @@
 #define GetDirNDJSONToken 0x64DE  // NDJSON format
 #define ResetC64Token     0x64EE
 #define WriteC64MemToken  0x64FB
+#define WriteC64SpansToken 0x64FC
 #define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
@@ -201,9 +203,22 @@ uint32_t* BigBuf = NULL;
 #define IOTLDataValid       0x20000
 #define AdjustedCycleTiming 0x40000
 #define DbgSpecialData      0x80000
+#define IOTLIO2             0x100000  //IO2 ($DFxx) access, IO1 if not set
+#define IOTLMarker          0x200000  //not a bus access: phase marker, code in low byte
+
+//IOTLMarker codes:
+#define IOTLMrkHndlrSwitch  1  //InitHndlr returned, about to switch CurrentIOHandler
+#define IOTLMrkResetAssert  2  //C64 reset asserted
+#define IOTLMrkResetRelease 3  //C64 reset released
 
 #ifdef DbgIOTraceLog
    __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
+   inline void TraceLogMarker(uint8_t code)
+   {  //called from main loop: block the Phi2 ISR so it can't be mid-entry
+      noInterrupts();
+      if (BigBuf != NULL && BigBufCount < BigBufSize-1) BigBuf[BigBufCount++] = code | IOTLMarker; //last entry is scratch
+      interrupts();
+   };
 #else
    __attribute__((always_inline)) inline void TraceLogAddValidData(...) {};
 #endif
@@ -322,19 +337,6 @@ const uint8_t OutputPins[] = {
    #define SetAddrPortDirOut   CORE_PIN19_DDRREG |= GP6_AddrMask
    #define SetAddrPortDirIn    CORE_PIN19_DDRREG &= ~GP6_AddrMask
 
-   //Here, not DMAControl.ino: IOHandlers.h (included above, from Teensy.ino) pulls in
-   //   IOH_REU.c/StatusFunctions.c, which reference these, before DMAControl.ino's own
-   //   content is reached in the concatenated sketch.
-   enum DMA_Trans_RnW
-   {
-      DMA_READ =  true,
-      DMA_WRITE = false
-   };
-   enum DMA_Addr_Mode
-   {
-      DMA_ADDR_FIXED     = true,  //same address every byte (e.g. a hardware register)
-      DMA_ADDR_INCREMENT = false  //address advances per byte (normal block transfer)
-   };
 #endif
 
 //N parenthesized - an unparenthesized N silently only multiplies the last term of an
@@ -416,15 +418,12 @@ const uint8_t OutputPins[] = {
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
 
-//PAL-biased until the main menu's first wRegVid_TOD_Clks write.  MaxAdj has to stay PAL here: NTSC's
-//   993 is under PAL's 1015nS cycle, so a PAL machine would re-adjust on every interrupt.
-//The hold is the problem.  Autolaunch (Teensy.ino -> RemoteLaunch w/ DoCartDirect) starts a CRT without
-//   ever loading the C64 menu, so MainMenu.asm never writes the register and an NTSC machine keeps the
-//   PAL 430 - inside NTSC's own 430-450 partial-byte band.  DMA is reachable there: the REU handler,
-//   and Write/ReadC64MemToken, which ProcessCommand() answers ahead of the busy check.
-//Not fixed by dropping this to 410: that needs a PAL board that reproduces the 390 (err) below, and the
-//   one PAL rig measured so far does not.  The real fix is timing Phi2 on the Teensy rather than
-//   waiting for the C64 to report it, which would retire this whole bootstrap.
+//PAL defaults until PHI2 is timed at boot with the C64 held in reset (MachineDetect.h), and re-timed
+//   from loop() to follow a later change.  MaxAdj has to default to PAL: NTSC's 993 is under PAL's
+//   1015nS cycle, so a PAL machine would re-adjust on every interrupt.
+//C64/C128 still comes from the menu's wRegVid_TOD_Clks write, so a CRT started without the menu
+//   (Teensy.ino -> RemoteLaunch w/ DoCartDirect) gets the non-C128 set for its standard.  Only DMA
+//   transfers use it there: Write/ReadC64MemToken, which ProcessCommand() answers ahead of the busy check.
 uint32_t nS_MaxAdj    = Def_nS_MaxAdjPAL;
 uint32_t nS_RWnReady  = Def_nS_RWnReady;  
 uint32_t nS_PLAprop   = Def_nS_PLAprop;  

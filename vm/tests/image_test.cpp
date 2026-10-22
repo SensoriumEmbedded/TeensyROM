@@ -33,7 +33,31 @@ int main(int argc,char **argv){
     h=good;h.entry=VM_CODE_BASE-1;reject(h);h=good;h.entry&=~1;reject(h);h=good;h.entry=VM_CODE_LIMIT|1;reject(h);
     h=good;h.abi++;reject(h);h=good;h.ram_base=0x20000000;reject(h);h=good;h.code_base=0;reject(h);
     h=good;h.reserved[2]=1;reject(h);h=good;h.reserved[3]=1;reject(h);
+    // The second code base. Every bound is measured from the image's own base,
+    // so the same module is well formed at either one once entry moves with it.
+    auto sized=[&](VmImageHeader s,bool want){const uint32_t n=64+vm_image_payload_bytes(s);
+        s.header_crc=0;s.header_crc=vm_crc32(&s,64);assert(vm_valid_header(s,n)==want);};
+    const uint32_t delta=VM_CODE_BASE-VM_CODE_BASE_128K;
+    h=good;h.code_base=VM_CODE_BASE_128K;h.entry=good.entry-delta;sized(h,true);
+    // Entry left in the window the image no longer occupies.
+    h=good;h.code_base=VM_CODE_BASE_128K;sized(h,false);
+    // The extra 32 KiB is reachable only from the lower base.
+    h=good;h.code_base=VM_CODE_BASE_128K;h.entry=good.entry-delta;
+    h.code_bytes=VM_CODE_LIMIT-VM_CODE_BASE_128K;sized(h,true);
+    h.code_bytes++;sized(h,false);
+    h=good;h.code_bytes=VM_CODE_LIMIT-VM_CODE_BASE;sized(h,true);
+    h=good;h.code_bytes=VM_CODE_LIMIT-VM_CODE_BASE_128K;sized(h,false);
+    // No third base. 0x14000 is the one that matters: its region would be
+    // rounded down over host code by the MPU rather than refused. entry and
+    // code_bytes are fitted to each base so that every other bound holds and
+    // only the base check can refuse it; an odd base needs entry one halfword
+    // up, and 0x2fffe leaves room for two bytes of code.
+    for(uint32_t base:{0u,0x10001u,0x14000u,0x18001u,0x20000u,0x2fffeu}){
+        h=good;h.code_base=base;h.entry=((base+1)&~1u)|1;
+        if(h.code_bytes>VM_CODE_LIMIT-base)h.code_bytes=VM_CODE_LIMIT-base;
+        sized(h,false);}
     b.back()^=1;assert(vm_crc32(b.data()+64,b.size()-64)!=good.payload_crc);
     puts("PASS: MVM1 image CRC, 64 header corruption cases, truncation, overflow, ABI, entry/arena bounds, "
-         "profile consistency, and services outside this loader accepted as well formed");
+         "both code bases and the six illegal ones, profile consistency, and services outside this loader "
+         "accepted as well formed");
 }

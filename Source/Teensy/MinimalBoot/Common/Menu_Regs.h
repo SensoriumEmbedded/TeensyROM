@@ -42,7 +42,7 @@ enum IO1_Registers  //offset from 0xDE00
    rRegNumItemsOnPage  = 13 , // Item sel/info: num items on current menu page
    rwRegPageNumber     = 14 , // Item sel/info: (one based) current page number
    rRegNumPages        = 15 , // Item sel/info: total number of pages
-   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu) 
+   rRegItemTypePlusIOH = 16 , // Item sel/info: regItemTypes: type of item, bit 7 indicates there's an assigned IOHandler (from TR mem menu), bit 6 that a /VMS package claims it (rsstItemExt) 
    rwRegMIDISettings   = 17 , // EEPROM stored: MIDI Settings reg, see RegMIDISettingsMasks
    rwRegMIDISettings2  = 18 , // EEPROM stored: MIDI Settings reg #2, see RegMIDISettingsMasks2
    rwRegPwrUpDefaults  = 19 , // EEPROM stored: power up default reg, see RegPowerUpDefaultMasks
@@ -176,6 +176,7 @@ enum RegSerialStringSelect // rwRegSerialString
    rsstMachineInfo     = 6,  // Info on current machine vid/TOD clk (set when SID loaded)
    rsstSIDSpeed        = 7,  // Current SID playback speed
    rsstSIDSpeedCtlType = 8,  // Current SID Speed Control Type (Log/Lin)
+   rsstItemExt         = 9,  // Extension of selected item, the type shown when a /VMS package claims it
 };
 
 enum RegVidTODClksMasks
@@ -224,7 +225,8 @@ enum RegPowerUpDefaultMasks2  //SerCtl bits match TblMsgHostSerCtl and TblAltBut
 enum RegPowerUpDefaultMasks3
 {  //eepAdPwrUpDefaults3, rwRegPwrUpDefaults3
    rpud3ResetDetectDisable= 0b10000000, // bit 7, 1=External Reset Detect Disabled (0=enabled/default)
-   // bits 6:0 unused
+   rpud3FreezerREUDisable = 0b01000000, // bit 6, 1=TR+ REU not added to SSv5/RetroReplay/FC3 101% (0=added/default)
+   // bits 5:0 unused
 };
 
 enum RegMIDISettingsMasks
@@ -282,13 +284,14 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsForceEthInit       = 0x1d,
    rsExtPortCheck       = 0x1e,
    rsExpPortDMA         = 0x1f,
-   //Extension host management, driven from the Installed Extensions page. Both
-   //are present in every build so the dispatch table keeps its indices; without
-   //the loader compiled in they say so and change nothing.
+   //Extension host management, driven from the Installed Extensions page. All
+   //three are present in every main image so the dispatch table keeps its indices;
+   //without the loader compiled in they say so and change nothing.
    rsMakeExtHostStr     = 0x20,
    rsUninstallExtHost   = 0x21,
-   
-   rsNumStatusTypes     = 0x22,
+   rsShowExtPackages    = 0x22,
+
+   rsNumStatusTypes     = 0x23,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -371,6 +374,9 @@ enum RegCtlCommands
    rCtlExpPortDMAWAIT       = 55,
    rCtlMakeExtHostStrWAIT   = 56, // installed host name, ABI and services, into SerialStringBuf
    rCtlUninstallExtHostWAIT = 57, // erase the host slot; reboots unless it was already blank
+   rCtlBootComplete         = 58, // menu finished booting: sets BootComplete, reported by the version command
+   rCtlBootInProgress       = 59, // clears BootComplete: a remote launch on reset returned and the menu is finishing its boot
+   rCtlShowExtPackagesWAIT  = 60, // the /VMS packages on SD, sent as one message per row
    
 };                               
                                  
@@ -398,8 +404,8 @@ enum regItemTypes //synch with TblItemType
    rtFileREU     = 19,
    rtFileTRH     = 20,
 
-   //127 max, bit 7 used to indicate assigned IOH to TR
-   //TblItemType mult by 4 further limits to 63 max!
+   //63 max: rRegItemTypePlusIOH uses bit 7 (assigned IOH) and bit 6 (/VMS claim),
+   //and TblItemType's mult by 4 limits it to 63 as well
 };
 
 //   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  End C64 matching  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -441,6 +447,9 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
       IOH_RetroReplay,
       IOH_FinalCartridgeIII,
       IOH_ActionReplay,
+      IOH_RetroReplay_REU,
+      IOH_FCIII_101_REU,
+      IOH_SuperSnapshotV5_REU,
    #endif
       IOH_ASID,
       IOH_TR_BASIC,

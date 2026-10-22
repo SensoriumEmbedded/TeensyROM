@@ -1,16 +1,120 @@
 
 # FW Release Version history:
 
-## Dual FW releases
-The TR+ (PCB v0.4) has architectural differences that warrant a different binary build than the original TR (PCB v0.2–0.3).  
-The original TR will continue to be supported, with separate .hex file releases.
+## TR and TR+ firmware
+TR (PCB v0.2–0.3) and TR+ (PCB v0.4) each have their own .hex file: `TeensyROM_<ver>_full.hex` and `TeensyROM+_<ver>_full.hex`, on the [releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest).  
+See [Firmware updates](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#firmware-updates) for which to use and how to install it.
 
- * "+" in TR+ FW name, banner/title and serial boot-up messaging
- * Distinct FW file names
-   * TR (PCB v0.2–0.3) example: **TeensyROM_0.7.2_full.hex**
-   * TR+ (PCB v0.4)    example: **TeensyROM+_0.7.2_full.hex**
- * Safeguards in place to prevent loading FW on the wrong HW version via the normal menu-based TR FW update method.
-   * If loading via the Teensy Loader program, take care to load only the correct version for your hardware.
+
+## FW 0.9 Release 2026/10/15
+ * Note: EEPROM settings are kept when updating from 0.8.  Updating from an older release resets them to defaults.
+
+### New for TR+
+#### TR Host Extensions
+ * Install an extension host (.TRH) into its own flash slot alongside the core firmware, without modifying it.  See [TR_Host_Extensions.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/TR_Host_Extensions.md) for details.
+ * Envisioned and implemented by [Kelly Fox](https://github.com/kfox) — a huge thank you!
+ * Opens the TeensyROM to developers: write and experiment with your own Teensy code as an extension, built and installed without recompiling or reflashing the core firmware.
+   * Start with [Writing your own extension host](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/Architecture/Extension-Hosts.md), which includes a minimal example to build from.
+ * [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-engine) is the first TRH extension: NES, Game Boy, Doom, classic point-and-click adventures and more on your C64!
+   * Get `MPE.TRH` and its SD card setup files (`Teensy.Support.Package.zip`) from the [MHS-GAME-SUPPORT releases page](https://github.com/ziggystar12/MHS-GAME-SUPPORT/releases/latest).
+   * Thank you [John Swiderski](https://github.com/ziggystar12) of Mean Hamster Software for MPE and the inspiration behind extensions.
+ * Extension packages live in the SD card's `/VMS` folder and claim file types, so selecting one of those files launches it through the installed extension.
+   * Claimed files show their own extension as the file type in the menu, and can be used as hot keys, the autolaunch file, or NFC tags.
+ * New Settings page `0`: **Installed Extension**
+   * Shows the installed extension, lists the SD card's extension packages and the file types each claims, and flags problems.
+   * `u` uninstalls.  Firmware updates keep the installed extension.
+
+#### Freezers and REU
+ * **New freezer cartridges:** Retro Replay and Final Cartridge III (FC3, 101% and III+ 256K)
+   * Retro Replay includes RAM banking and NOFREEZE support.
+ * **TR+ REU alongside Retro Replay, Final Cartridge III 101% and Super Snapshot V5**
+   * REU is sized from 128K to 512K depending on free RAM.  A larger pre-load image loads the part that fits.
+   * Short press of the Alt button freezes; hold 700 ms or longer to save the REU image.
+   * On by default.  To run these carts without the REU, turn it off with `g` on Settings page `2` (Config: TeensyROM General).
+   * Thank you [Paul Harker (LessPaul)](https://github.com/LessPaul) for all of the freezer contributions!
+
+#### DMA
+ * **C128 detected, with its own NTSC DMA timing**
+   * DMA writes on an NTSC C128 are much more reliable.  DMA write timing was also corrected for all NTSC machines.
+   * See [TR+NTSC_C128_DMA_Findings.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/TR+NTSC_C128_DMA_Findings.md) for the investigation, including the U55 74F245 -> 74LS245 fix on some C128s.
+ * **DMA hardening:** a C64 that stops clocking can no longer hang the TeensyROM in a DMA wait, and every DMA result is now checked.
+   * Remote DMA commands now stage their data in a buffer of their own, so a write no longer overwrites a running cartridge's ROM or REU contents.
+ * **New remote command `WriteC64Spans`:** writes a list of C64 memory spans by DMA in caller-sized slices with gaps between, so a running C64 program keeps its timer interrupts.
+ * Expansion Port test now includes a DMA bit-pattern write test, with results shown on the C64 screen.
+ * Thank you [Kelly Fox](https://github.com/kfox) for most of the DMA work above!
+
+#### Other
+ * **External Reset Detect can now be turned off** (`f` on Settings page `2`), for setups where an external reset shouldn't return to the TR menu.
+   * Helpful for getting into C128 BASIC when needed.
+   * Thanks Joe Ochwat for the prompt!
+
+### Updates for both TR and TR+
+#### USB and MIDI
+ * **One USB identity:** MinimalBoot (large CRTs, FW updates, extension launches) now presents the same USB device as the main firmware
+   * Same COM port and the same MIDI port name throughout; a DAW's MIDI port no longer disappears while MinimalBoot runs.
+   * Existing boards will see MinimalBoot enumerate as a new device one time.
+ * **USB MIDI device name now includes the unique Teensy ID** (`TeensyROM-xxxxxxxx`), so multiple TeensyROMs can be told apart in a DAW or ASID player.
+   * See [ASID_Player.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ASID_Player.md) and [MIDI_Usage.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/MIDI_Usage.md) for using more than one unit.  Thanks [William Pereira (MetalHexx)](https://github.com/MetalHexx)!
+ * **MIDI channel fix:** USB MIDI to/from the C64 (Cynthcart, SID-Wizard, Station64, etc.) was off by one channel in both directions.
+   * Thank you retrodal for reporting and tracking it down!
+ * MIDI Message Filter fix: SongSelect, TuneRequest and RealTimeSystem filters now toggle independently (they followed the Song Position setting)
+ * USB host port: some USB devices stopped being recognized after Teensyduino 1.60.  FW now builds against the USBHost_t36 library from before that change.
+
+#### Files and remote control
+ * **Remote control updates for TeensyROM-Web** (thanks [William](https://github.com/MetalHexx)!):
+   * Version Info reply now ends with the C64 menu's boot state (`Boot: complete` / `Boot: in progress`), so a host knows when it's safe to send a launch after a reset.
+   * Ping and the file commands (get, list, post, copy, delete) are now accepted over USB serial while the ASID Player runs, for TeensyROM-Web's DJ Player.
+   * See [ControlComms.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/ControlComms.md) for details.
+ * **Dot files hidden** from USB/SD listings: any file or folder whose name starts with a dot, such as the macOS `._` twins, `.DS_Store` and `.Trashes`
+   * Applies to the menu browser, NFC random pick, remote listings, TR BASIC directory, and the SwiftLink browser.  Thanks [Kelly](https://github.com/kfox)!
+ * Remote file post/copy/delete now refreshes the menu's SD/USB listing instead of showing the old contents until you navigate away.
+
+#### New and updated programs
+ * **New programs in the Utilities directory:**
+   * **HEADCRASH Format Util 1541/1581** by [Robert Mech](https://github.com/rwmech): formats a track at a time with progress shown, retries failing tracks and keeps bad tracks out of the BAM.  Drive 8-11 selectable.
+     * Thank you [Robert](https://github.com/rwmech) for writing it and offering it for the TeensyROM menu!  https://github.com/rwmech/c64_HEADCRASH_Format_Util
+   * **CBM FileBrowser v1.6 (IEC drives)**: browse and launch from real drives, SD2IEC, pi1541, etc.  Starts on drive 8, `D` steps to the next drive.
+     * Thank you nbla000 for CBM FileBrowser, and Hannu Nuotio (sd2brwse) and Michael Kircher (sort routine), whose work it builds on.
+ * **RetroMate Internet Chess updated to v1.03**
+   * Fixes `1`/`2` keypresses being read as mouse buttons (e.g. `1` acting like backspace while typing a chess server password), plus a buffer-handling rework.
+   * Thank you [Stefan Wessels](https://github.com/StewBC)!
+ * Segment+Dot Matrix Digital Clock updated to v11.  Thanks again Steven Hardison!
+
+#### PAL/NTSC detection
+ * **PAL/NTSC now detected by the TeensyROM itself** by timing the C64 clock at power-up, instead of waiting for the main menu to report it
+   * Cartridges started without the menu (autolaunch, large CRTs in MinimalBoot) now get the right bus timing from the first cycle.
+   * Keeps checking afterwards, so a C64 Ultimate that switches video standard (at boot or live from its menu) is followed.
+   * The detected machine (C64/C128, NTSC/PAL, 50/60 Hz) is now shown consistently in General Settings, the Version Info remote command, and the SID Info page.
+
+#### Other
+ * **Larger CRTs in MinimalBoot:** image buffer grown from 160KB to 208KB, holding 103 8K banks before any are swapped from SD
+   * Bank swaps now read SD in one call per bank instead of per byte, for shorter pauses on large EasyFlash and Magic Desk 2 images.
+ * The C64 is now held in reset while the TeensyROM reboots, so it can't run garbage off the cartridge port.  TR+ also blanks the screen when a large CRT hands off to MinimalBoot.
+ * PRGs start a little faster: the post-load IO handler swap now uses a handshake instead of a fixed worst-case delay.
+ * Each firmware image is ~210KB smaller and has more free RAM: the unused TLS library is no longer linked in.
+
+### Infrastructure, bug fixes, and Housekeeping updates (TR and TR+)
+ * **New cross-platform build system** (thank you [Kelly Fox](https://github.com/kfox)!)
+   * `npm run build:tr` / `build:tr-plus` / `build:c64` on Windows, macOS and Linux
+   * Replaces `Build-DualBoot.ps1`, `HexCombine.exe`, the C64 `.bat` files and Python helpers
+   * Builds in a private copy of the Teensy core, so the installed one is never modified
+   * Build date in the banner is now the commit's date, so a commit always rebuilds to the same .hex
+ * **GitHub CI:** every push and pull request builds TR and TR+, and runs the tool, C64 header and extension tests
+ * `tools/flash-firmware.mjs`: write firmware over USB from Windows, macOS or Linux, choosing the right board when several are attached and refusing a TR/TR+ mismatched image.  Thanks [Kelly](https://github.com/kfox) and [William](https://github.com/MetalHexx)!
+ * Python bench scripts for driving a TeensyROM over USB (push, launch, peek, read the screen, reflash)
+ * SD card build scripts (Makefile and PowerShell) to rebuild the full SD card file set
+ * Run Self Test removed from Settings: on TR+ the Expansion Port test replaces it; plain TR no longer has an IO1 read test
+ * Crash reports are now printed on USB serial where they can be read
+ * Misc bug fixes: SD autolaunch card-detect settle time, D64 double close, remote delete with no SD card, C64 message buffer bounds, file handle leaks
+ * General info page: the Gateway IP and Subnet Mask values no longer show under each other's labels (thanks [Kelly](https://github.com/kfox)!)
+
+### Documentation additions/updates since last release
+ * **[TR Host Extensions](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/TR_Host_Extensions.md)** guide
+ * [NTSC C128 DMA write-fault findings](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/TR+NTSC_C128_DMA_Findings.md)
+ * [General Usage](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md) revised throughout
+ * [CONTRIBUTING.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/CONTRIBUTING.md) and the [docs/Architecture](https://github.com/SensoriumEmbedded/TeensyROM/tree/main/docs/Architecture) reference set for contributors
+ * C64 Ultimate: set `Cartridge Preference` to `External` and `Bus Operation Mode` to `Writes` for TR+ DMA features.  See [C64_Ultimate_Enhancements.md](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/C64_Ultimate_Enhancements.md)
+ * Connections diagram updated with the TR+ additions; notes on reaching the case button with a paperclip, and on USB updates with the C64 powered
 
 
 ## FW 0.8 Release 2026/08/05
@@ -88,6 +192,7 @@ The original TR will continue to be supported, with separate .hex file releases.
 
 
 ## FW 0.7.2 Release 2026/04/20
+ * First release with separate TR and TR+ firmware (`TeensyROM_0.7.2_full.hex` and `TeensyROM+_0.7.2_full.hex`).
 
 ### Updates for both TR and TR+
  * Note that EEPROM settings will be reset to defaults with this FW update.

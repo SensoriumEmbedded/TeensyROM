@@ -60,6 +60,40 @@
 
 #define IOHNameLength 20  //limited by display location on C64
 
+uint8_t TimingVidTODClks = 0; //what SetVideoStdDMATiming() last applied, so a timing reset can re-apply it
+
+//The bus timing for a wRegVid_TOD_Clks value (RegVidTODClksMasks).  Every image times PAL/NTSC at
+//   boot and keeps re-timing it from loop() (MachineDetect.h).  C64/C128 comes from MainMenu.asm in
+//   the main image, and from what the main image left it (VM_EEP_MACHINE_ADDR) in the extension image.
+//   Thread mode only: nothing in the ISR changes the timing
+void SetVideoStdDMATiming(uint8_t VidTODClks)
+{
+   TimingVidTODClks = VidTODClks;
+   if (VidTODClks & rvtcNTSC)
+   {
+      nS_MaxAdj = Def_nS_MaxAdjNTSC;
+      if (VidTODClks & rvtcC128)
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC128;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC128;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC128;
+      }
+      else
+      {
+         nS_DMASetup     = Def_nS_DMASetupNTSC;
+         nS_DMADataSetup = Def_nS_DMADataSetupNTSC;
+         nS_DMADataHold  = Def_nS_DMADataHoldNTSC;
+      }
+   }
+   else
+   {  //PAL C128 has no measured set of its own yet
+      nS_MaxAdj       = Def_nS_MaxAdjPAL;
+      nS_DMASetup     = Def_nS_DMASetupPAL;
+      nS_DMADataSetup = Def_nS_DMADataSetupPAL;
+      nS_DMADataHold  = Def_nS_DMADataHoldPAL;
+   }
+}
+
 struct stcIOHandlers
 {
   char Name[IOHNameLength];                        //Name of handler
@@ -133,6 +167,9 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
       &IOHndlr_RetroReplay,        //IOH_RetroReplay
       &IOHndlr_FinalCartridgeIII,  //IOH_FinalCartridgeIII
       &IOHndlr_ActionReplay,       //IOH_ActionReplay
+      &IOHndlr_RetroReplay_REU,    //IOH_RetroReplay_REU
+      &IOHndlr_FCIII_101_REU,      //IOH_FCIII_101_REU 
+      &IOHndlr_SuperSnapshotV5_REU, //IOH_SuperSnapshotV5_REU
    #endif
       &IOHndlr_ASID,               //IOH_ASID,
       &IOHndlr_TR_BASIC,           //IOH_TR_BASIC,

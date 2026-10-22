@@ -23,6 +23,9 @@ this repository, all of them in [`vm/abi/`](.):
   `ENTRY(vm_entry)`, and fixes the code and data windows to the addresses the
   loader validates, so an image linked without it is refused rather than
   mislinked.
+- [`module128.ld`](module128.ld) — the same script for the 128 KiB code
+  window. Use it only if your module needs the space: it links at `0x10000`,
+  which a host whose own code reaches past there will refuse.
 - [`vm_runtime.c`](vm_runtime.c) — weak `memset`, `memcpy`, `memmove`,
   `memcmp`, `strlen` and `strcmp`. A freestanding module has no libc, and GCC
   emits calls to these on its own for code that never names them — zeroing a
@@ -84,18 +87,13 @@ number for good. It says nothing about who implements it.
 | 8 | `VM_SERVICE_WRITE` | base profile | yes |
 | 16 | `VM_SERVICE_GUEST_RAM` | base profile | yes |
 | 128 | `VM_SERVICE_RAM2_RO` | this loader | yes (memory profile 1) |
-| 32 | video transport | Mean Hamster Software | no |
-| 64 | indexed video | Mean Hamster Software | no |
-| 256 | indexed raster | Mean Hamster Software | no |
-| 512 | RAM1 auxiliary spans | Mean Hamster Software | no |
-| 1024 | speech | Mean Hamster Software | no |
-| 2048 | SD root | Mean Hamster Software | no |
-| 4096 | desktop | Mean Hamster Software | no |
-| 8192 | firmware catalogue | Mean Hamster Software | no |
+| 32, 64, 256 .. 8192 | — | reserved, out of tree | no |
 | 16384 | `VM_SERVICE_EXIT` | this loader | yes |
 | 32768 | — | unassigned, on request | no |
 | 65536 | examples and conformance | this repository | no |
-| 1<<17 .. 1<<31 | — | unassigned | no |
+| 1<<17 .. 1<<19 | — | unassigned | no |
+| 1<<20 | `VM_SERVICE_C64_DMA` | this loader | yes, on a TR+ |
+| 1<<21 .. 1<<31 | — | unassigned | no |
 
 To claim a bit, open an issue naming the host and the callback it adds.
 
@@ -152,6 +150,86 @@ exist in one host, and a module that checked `bytes` would be told the pointer
 was long enough to read the wrong function. Each new tail extends the longest
 one there is, and `VM_HOST_*_BYTES` grows with it.
 
+### The C64 transfer tail
+
+Bit 20 is the second, on `VmHostExit`. It writes module memory into C64 RAM by
+taking the bus, which only a TR+ can do:
+
+```c
+struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
+struct VmHostC64Dma {
+    VmHostExit base;
+    uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count,
+                          uint32_t slice_bytes, uint32_t flags);
+    int32_t (*c64_status)(uint32_t ticket);
+};
+```
+
+`c64_write` starts a job and answers its ticket, or `0` when it refuses the job
+whole; the conditions are in `VMABI.h`, and a refused job writes nothing and
+leaves the last ticket as it was. One job runs at a time. `c64_status` answers
+`VM_C64_PENDING` until it ends, then `VM_C64_DONE`, `VM_C64_NO_GRANT` or
+`VM_C64_BUS_FAILED`. The job runs in the
+host's own turn, between `pump` calls, so a module polls the ticket from
+`pump` and leaves the sources alone until it ends.
+
+**The client grants every slice.** A slice starts as the client's write to
+`$DFF0` completes, and holds the CPU off the bus for about `slice_bytes`
+cycles, plus any the VIC takes. Nothing else starts one, so a transfer lands
+where the client chose to let it: a client that counts timer interrupts, for
+instance, grants from the handler a slice shorter than the time left to the
+next interrupt, and loses none.
+
+Grant as the handler's last act before its `RTI`. An interrupt that comes due
+during a slice is taken when the instruction under way ends, so after a grant
+followed by anything else it is taken inside the handler, and a handler
+interrupted that way every time nests deeper until the stack wraps and the C64
+crashes. And grant only a slice that ends before the next interrupt comes due,
+or that interrupt is late, and several merge into one under a slice longer than
+their period; a client that counts timer ticks can read the timer to decide.
+
+For a client granting from a CIA timer's interrupt, size the slice to what is
+left of the period when the handler reaches its grant:
+
+```
+slice_bytes <= (latch + 1) - cycles from the underflow to the grant - margin
+```
+
+`latch + 1` is the timer's period. The cycles to the grant are the handler's
+own, up to the grant's write, plus one for the CIA to raise the interrupt, what
+is left of the instruction it arrives in, the 7 the 6510 takes to enter it, and
+the KERNAL's 7-cycle NMI entry for a client that goes through it. The margin is
+for what the VIC steals during the slice: about 40 cycles for each badline it
+crosses with the screen on, and up to about 19 more on every line with eight
+sprites showing. Too small a margin makes the next interrupt late, and too small
+by more than a period loses it. These are all counts of cycles, so one size
+serves PAL and NTSC, except that a long slice crosses badlines at each
+standard's own line length. Recompute the size whenever the latch changes. The
+bench client in `tools/bench/grants` reaches its grant 55 to 60 cycles after the
+underflow and keeps no margin for the VIC: in a 200-cycle period its check
+passes slices of 140 bytes and never 150, so a badline under a slice can make
+the next tick late, though its runs lost none.
+
+A slice waits for its grant only during the host's turns for the job, which
+alternate with the module's own; a grant in between starts nothing, and the
+client grants again next time. How many grants land depends on how long the
+module's turns are: a module that yields when `should_yield` says to leaves a
+slice armed about half the time, and one that overruns its turn leaves it
+armed less. A grant at a fixed rate can also fall into step with the turns and
+then land rarely, or, in exact step, never, so a client should not grant only
+at one fixed point in its frame. A slice that has waited `VM_C64_GRANT_MS` of
+those turns without landing ends the job with `VM_C64_NO_GRANT`, whether the
+client granted nothing or only between turns: it is refused, not hung. Nothing
+else times a job.
+
+A slice writes wherever the C64's memory map puts its addresses at the moment
+of the grant — RAM under the BASIC and KERNAL ROMs, for instance, lands in RAM
+the C64 cannot read until it banks the ROM out. `$DE00..$DFFF`, the cartridge's
+own registers, is refused. The bus is timed for the machine: the extension image
+times PAL/NTSC from PHI2 itself and follows a change, and takes C64/C128 from the
+menu's report, which every launch now waits for. A launch made before the menu has
+run, such as an autolaunch at power-up, goes through the menu first.
+
 Memory profile `2` is likewise reserved and refused; profiles `0` and `1` load.
 Profile `0` lends all 512 KiB of RAM2; profile `1` keeps 80 KiB of that as
 write-protected constants loaded from the image and holds back the reserved top
@@ -170,7 +248,14 @@ A package is a directory on the SD card holding exactly three files:
 `<id>` is 1–23 characters of `A–Z a–z 0–9 _ - .` and must match line 2 of the
 manifest. The loader scans at most **32** directories under `/VMS`; more than
 that, or two packages claiming the same extension, refuses the launch rather
-than guessing.
+than guessing. A shared extension refuses only files of that extension, and the
+refusal names both packages, or how many there are and two of them.
+
+The C64 settings menu's Installed Extension page (`F8`, `0`) lists what that scan
+sees, by the same rules (a copy of them in `VMPackageList.h`): each package's extensions, a
+directory skipped for its name or its manifest, a shared extension, and what the
+installed host would refuse, so these can be found before a launch rather than
+by one.
 
 ### manifest.vmi
 
@@ -186,9 +271,16 @@ END
 ```
 
 Line 3 is a comma-separated list of file extensions this package claims, at most
-**7 characters in total** (`gb,gbc` fits). Extensions the stock menu owns are
+**31 characters in total** (`a26,a52,a78` fits), each extension at most 7
+characters and none listed twice (case is ignored, so `gb,GB` is refused).
+Extensions the stock menu owns are
 refused: `prg crt hex p00 sid kla koa ocp pic art aas hpi txt nfo md seq d64 d71
 d81 reu trh`.
+
+The launch record carries the manifest's CRC, and the host recomputes it, so a
+package edited between the launch and the reboot is refused (`$13`). It is the
+CRC32 of the file's bytes exactly as read, line endings included; a file holding
+a NUL byte is malformed.
 
 ### engine.mvm — the MVM1 image
 
@@ -200,11 +292,11 @@ only) the RAM2 constants. `.bss` is not stored; the loader zeroes it.
 | 0 | `magic` | `0x314d564d` (`MVM1`) |
 | 4 | `abi` | 2 |
 | 8 | `header_bytes` | 64 |
-| 12 | `code_bytes` | ≤ 96 KiB |
+| 12 | `code_bytes` | ≤ `0x30000 - code_base`: 96 KiB, or 128 KiB at the lower base |
 | 16 | `data_bytes` | |
 | 20 | `bss_bytes` | `data_bytes + bss_bytes` ≤ 192 KiB |
 | 24 | `entry` | Thumb bit set; inside the code window |
-| 28 | `code_base` | `0x00018000` |
+| 28 | `code_base` | `0x00018000`, or `0x00010000` on a host whose code ends there |
 | 32 | `ram_base` | `0x20014000` |
 | 36 | `required_services` | see §2 |
 | 40 | `payload_crc` | CRC32 of everything after the header |
@@ -246,7 +338,10 @@ an ordinary cartridge. A cartridge without a valid `VMH1` at `0x4070` is parsed
 by the stock cartridge path exactly as before, whatever its size.
 
 Build all three with [`tools/lib/extension.mjs`](../../tools/lib/extension.mjs)
-rather than by hand; it enforces every rule above at write time.
+rather than by hand; it enforces at write time every rule above that the bytes
+can show. That a module was linked for the code base its header names shows only
+in the ELF, which [`tools/build-extension.mjs`](../../tools/build-extension.mjs)
+checks.
 
 ## 4. Launching
 
@@ -259,7 +354,8 @@ A launch begins in one of two ways:
 
 - the user picks a **client cartridge**, identified by its `VMH1` descriptor; or
 - the user picks a **content file** whose extension a manifest claims, in which
-  case its full path is handed to the module as `content_path`.
+  case its full path, with a single `/` before each component, is handed to the
+  module as `content_path`.
 
 Which extensions are claimed is answered from a table the firmware rebuilds when
 it loads an SD listing, so a package copied onto the card while a listing is
@@ -272,8 +368,9 @@ Then:
 1. `preflight` re-validates the module image and the client cartridge in full,
    including both CRCs. A failure reports on screen and does **not** reboot.
 2. The installed extension image is read out of its flash slot. An empty slot,
-   a host that speaks another ABI, and a host missing a bit the module asked for
-   in `required_services` each report on screen and do **not** reboot. A host
+   a host that speaks another ABI, a host missing a bit the module asked for in
+   `required_services`, and a host whose code floor lies above the module's code
+   base each report on screen and do **not** reboot. A host
    built before that descriptor existed cannot say what it provides, so its
    launch proceeds and the refusal happens after the reboot as it always did.
 3. A `launch.vml` record is written to `/VMS` and read back to confirm.
@@ -294,7 +391,8 @@ installed host in place.
 
 | Region | Address | Size | Owner |
 |--------|---------|-----:|-------|
-| ITCM | `0x00000000` | 96 KiB | host code |
+| ITCM | `0x00000000` | 64 or 96 KiB | host code, bounded at link by `__exidx_end` |
+| ITCM | `0x00010000` | 32 KiB | **module code** when the host stops below it, else host code |
 | ITCM | `0x00018000` | 96 KiB | **module code** |
 | DTCM | below `0x20014000` | — | host state and heap |
 | DTCM | `0x20014000` | 192 KiB | **module `.data`, `.bss`, then workspace** |
@@ -380,6 +478,7 @@ bank switch. Until then the window is an ordinary EasyFlash register area.
 | Address | Direction | Meaning |
 |--------:|:---------:|---------|
 | `$DF00..$DFEF` | read | the published packet |
+| `$DFF0` | write | grant: start the C64 transfer slice now waiting (bit 20) |
 | `$DFF4` | write | command: `1` run, `3` input ready, `4` quiet |
 | `$DFF5` | read | status: `2` running, `$12` quiet, `$E0` failed |
 | `$DFF6` | write | acknowledge: the sequence number you consumed |
@@ -507,7 +606,8 @@ and clearing them reports `$40` like any other removal.
 
 The failure code a client reads from `$DFFB` is separate, and is the same value
 the record carries as its detail for `$20`: `$11` the image would not open, has
-a bad header, or requires a service this host does not provide; `$14` the
+a bad header, requires a service this host does not provide, or links its code
+below this host's code floor; `$14` the
 returned `VmModule` table failed validation; `$15` the module published a
 malformed packet; `$16` the module reported an error without giving a code.
 Other values come from the image loader's own bounds and CRC checks.
@@ -526,6 +626,9 @@ and reads its own output back through the firmware's validation before writing
 it. It finds the ARM toolchain from `--toolchain`, then `PATH`, then the Teensy
 core's own bundled copy — the same compiler the firmware is built with.
 
+`--code-kib 128` builds against the larger window instead, linking with
+`module128.ld` and reporting the base it used. The default is 96.
+
 Building by hand, if you need to:
 
 ```
@@ -538,11 +641,16 @@ arm-none-eabi-g++ -nostdlib -Wl,--gc-sections -T vm/abi/module.ld \
     hello.o vm_runtime.o -o hello.elf
 ```
 
+Swap in `vm/abi/module128.ld` for the 128 KiB window.
+
 The float ABI must match: Cortex-M7 with the double-precision FPU. A module
 built for a different one links cleanly and then faults on target.
 
-`module.ld` asserts the 96 KiB code limit and the 192 KiB data limit at link
-time, so an overflow is a linker error rather than a boot failure.
+Each script asserts its own code limit and the 192 KiB data limit at link time,
+so an overflow is a linker error rather than a boot failure. `module128.ld` is
+the same script opening 128 KiB at `0x10000` instead of 96 KiB at `0x18000`;
+`--code-kib 128` is how the packager chooses it. Prefer the default unless the
+module needs the room, because the wider window is the one a host can refuse.
 
 There is no libc, no heap and no static constructors. Keep state in `.data` and
 `.bss` and initialise it in `vm_entry`.
@@ -586,10 +694,10 @@ byte out of `rwRegSerialString` (`ToPETSCII`, `IOH_TeensyROM.c:675`, table at
 `:107` -- `'A'` goes to 97 and `'a'` to 65), and CHROUT (`SendChar` = `$ffd2`)
 stores the screen code for that PETSCII byte in the charset the menu selects
 (`$d018` = `$17`, `MainMenu.asm`'s `TextScreenMemColor`), where the unshifted
-letters read lower case. Run the pair and `TeensyROM  ABI 2  services $409f` is
-on the screen as `TeensyROM  ABI 2  services $409f`; a dump through
+letters read lower case. Run the pair and `TeensyROM  ABI 2  services $10409f` is
+on the screen as `TeensyROM  ABI 2  services $10409f`; a dump through
 `tools/bench/c64.py`'s `petscii_row` reads it the same way. Leave either stage
-out of the model and it comes out `tEENSYrom  abi 2  SERVICES $409F`, which is
+out of the model and it comes out `tEENSYrom  abi 2  SERVICES $10409F`, which is
 the shape to distrust: it means one half of the pair was missed. Nothing tests
 this round trip, so check it against the source rather than against a previous
 reading of this paragraph. Matching case-folded, as `hostops.Outcome.said` does,
@@ -601,13 +709,18 @@ of these rows were run. The rows for installing and removing over USB, the
 blank-slot refusal, and the page naming the stock host were run again after
 both changes, along with a firmware update that left the installed host in
 place. The rest were run with the slot at `0x60280000` and have not been
-repeated; nothing on their paths changed apart from the slot address.
+repeated; nothing on their paths changed apart from the slot address. The host
+then moved to 64 KiB of ITCM, with SdFat, SD and SPI running from flash apart
+from the SDIO driver. On that host the rows for modules at `0x18000` and at
+`0x10000`, for `exit_to_menu`, and for a refusal by a host with no code floor
+were run again; the others were not.
 
 | Verified on hardware | |
 |----------------------|:-:|
 | Launch record, manifest and client validation in the extension image | yes |
 | The firmware's own host running against the published contract in [`VMHostABI.h`](../../Source/Teensy/MinimalBoot/Common/VMHostABI.h) | yes |
-| Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes |
+| Module loaded into ITCM/DTCM, entry point called, `VmModule` table accepted | yes — linked at `0x18000` |
+| The same, for a module linked at `0x10000` (`--code-kib 128`), and its refusal by a host whose code floor is above that | yes — a module with 101 KiB of code, more than the `0x18000` window holds, runs under the stock host (floor `0xf00c`), reads the card, and returns to the menu on joystick-2 up. It and an 876-byte module at `0x10000` are refused on screen by a host with no code floor, `TeensyROM host states no code floor, so takes $18000 only`, with the board left at the menu. The refusal by a host that states a floor above `0x10000` (`host needs code at …`) is covered by `registry_test` only. |
 | Client cartridge cold start from the Ultimax reset vector | yes |
 | Bank 58 opens the IO2 window; `start` handshake | yes |
 | Four packets published, framed, CRC-checked by the client and acknowledged | yes |
@@ -626,16 +739,17 @@ repeated; nothing on their paths changed apart from the slot address.
 | A firmware update leaving the installed host in place | yes |
 | A remove with the slot blank declining without touching flash | yes |
 | A remove clearing a slot that holds no host but is not blank (what a failed install leaves) | no — covered natively, by a verify failure and a power cut at every install operation, but no bench step leaves such a slot |
-| Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extensions → uninstall → confirm) | yes |
-| The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) are still `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
+| Removing a host from the C64 menu: `F8`, `0`, `u`, `y` (Settings → Installed Extension → uninstall → confirm) | yes |
+| The same page naming the installed host out of the slot's own descriptor | yes — and separated from the constants. Read off the board twice on the same firmware: with its own host in the slot the page shows `TeensyROM  ABI 2  services $409f`, and with `Source/Teensy/ExampleHost` installed over it the *same image* shows `Example  ABI 2  services $0000`. The running firmware's compiled-in values (`VMHost.h`, `VM_ABI`, `VM_HOST_SERVICES`) were `TeensyROM` and `$409f` in both runs, so the second line can only have come from the slot's descriptor. Earlier runs could not make this distinction, because the only host ever read on the page was the one whose constants the firmware also carried. |
+| The same page listing the packages in `/VMS`: extensions, skipped directories, shared extensions, what the host would refuse, the last launch | yes, on a TR+ with the MPE SD set and a plain TR: the five MPE packages, the `Msg:` row after a return from an extension, skipped directories (a manifest left with another id, a name with a space), the SD card pulled, swapped and absent (begun from the page, with the menu's listing reloaded on its next selection), and the plain TR's `Only supported on TR+.`. A shared extension and a card without `/VMS` were not run on hardware; `vm/tests/packages_test.cpp` covers both natively |
 | A host that is *not* this one installed into the slot and entered: `Source/Teensy/ExampleHost`, built through `--host-sketch` | yes — installed as `$30`/`$14c00`, entered, and back with `$50`/`$4`, its own `HostReturned` and blink count |
-| A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting nine ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
-| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | **no** — `vm/hello` takes it on joystick-2 up, and the native tests cover all four hosts a module can meet (bit and tail both present, both absent, and each without the other), but nothing has driven it on a C64. Input reaches a running module from the joystick only, and the extension image has no USB, so this one needs a hand at the board. |
+| A module refused against a host whose descriptor does not publish its services | yes — the gate names itself on the screen. With `Source/Teensy/ExampleHost` in the slot (`services $0000`), launching `/HELLO.crt` left the port up and printed `Example host lacks service $1f` on the C64, which is the `required_services` check in `tryLaunch` (`VMRegistry.h`) and no other line in the firmware. That is what the earlier run could not show: `tryLaunch` declines without rebooting ten ways and four more paths fall through to an ordinary launch without declining at all, so an intact port on its own does not say which of them fired. The host name in the message comes from the slot's descriptor, and `$1f` is the module's `required_services` minus what the host publishes. |
+| `exit_to_menu` (`VM_SERVICE_EXIT`) called by a module | yes — `tools/bench/grants` leaves through it on every row, and the main image prints `$04` with the module's status as the detail |
+| Service bit 20: a C64 write the client grants slice by slice | yes — `tools/bench/grants.py` on a C64 run as NTSC and then as PAL, whose client grants from a CIA2 timer NMI every 200 cycles: with slices of 32 to 140 bytes no NMI is lost and the last job's 4 KiB lands intact (the client's sum over it matches); a slice too long to end before the next tick is never granted, and its job ends `VM_C64_NO_GRANT`, as does a client that never grants |
 
 Treat the rows marked **no** as untested rather than as working.
 
-There are two ways out of a running extension, and only one of them has run on
-hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
+There are two ways out of a running extension, and both have run on hardware. A module that took `VM_SERVICE_EXIT` calls `exit_to_menu`, which
 records `$04` and reboots into the menu. A module that did not is returned by
 the reset button, which the extension image services from `loop()`: `isrButton`
 (`ISRs.c`) only sets `BtnPressed`, and the reboot happens on the next pass of

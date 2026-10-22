@@ -19,7 +19,7 @@ Base address `IO1Port = $de00` (`c64defs.i`); everything else is an offset from 
 - An IRQ command channel: `wRegIRQ_ACK` / `rwRegIRQ_CMD` with `enum RegIRQCommands` (e.g. `ricmdLaunch`, `ricmdSIDPause`) — this is what `RemoteControl.ino`'s `DoC64IRQ()` drives from the Teensy side
 - `IO2Scratch = $7f` — used by the Expansion Port test app only
 
-**How the two protocols connect:** an external host command (below) typically causes the Teensy to twiddle one of these registers or fire an IRQ, which the running C64 program observes and reacts to. Example: a host `LaunchFileToken` causes the Teensy to eventually drive `ricmdLaunch` / `rCtlRunningPRG` at this register layer — the C64 code never sees the external protocol directly, only its effects here.
+**How the two protocols connect:** an external host command (below) typically causes the Teensy to twiddle one of these registers or fire an IRQ, which the running C64 program observes and reacts to. Example: a host `LaunchFileToken` causes the Teensy to eventually drive `ricmdLaunch` / `rCtlRunningPRG` at this register layer — the C64 code never sees the external protocol directly, only its effects here. It also works in the other direction: when the menu finishes booting it writes `rCtlBootComplete` to `wRegControl`, which sets the flag the host reads as the Version Info reply's `Boot:` line. `SetUpMainMenuROM()` clears the flag on every return to the menu, and the menu clears it with `rCtlBootInProgress` when a remote launch on reset returns to the menu and the remaining boot steps run.
 
 ## 2. External host protocol (PC/mobile apps ↔ TeensyROM, off-board)
 
@@ -28,7 +28,7 @@ Binary, token-based request/response protocol over USB Serial or Ethernet TCP (p
 **Fully documented in [docs/ControlComms.md](/docs/ControlComms.md) — read that doc directly rather than duplicating it here.** Key structural points worth flagging up front:
 
 - Command tokens sent big-endian to TR; TR's Ack/replies are little-endian
-- Commands split into "always-available" (work even while TR is busy — reset, launch, version, DMA memory access, C64 pause) vs "conditionally-available" (return `FailToken` + `"Busy!"` if not idle — file ops, SID commands, most UI commands)
+- Commands split into "always-available" (work even while TR is busy — reset, launch, version, DMA memory access, C64 pause) vs "conditionally-available" (return `FailToken` + `"Busy!"` if not idle — file ops, SID commands, most UI commands). While the ASID Player runs, Ping and file ops are also accepted over USB serial (TCP doesn't answer then: the player turns off the Ethernet interrupt); ASID playback can pause while one runs
 - Firmware-mode-aware: minimal-boot firmware only accepts a restricted command subset — see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware)
 - Implemented Teensy-side in `Source/Teensy/SerUSBIO.ino` (serial) and `Source/Teensy/ServiceTCP.ino` (Ethernet, routes into the same parser)
 - Several independent third-party client implementations exist (TeensyROM-UI, TeensyROM-Web, TeensyROM-CLI, trterm, c64cast) — see the project table in `docs/ControlComms.md`

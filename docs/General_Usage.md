@@ -55,6 +55,7 @@
       * Optionally, the time can be automatically synced via Ethernet on startup (see settings).
       * If neither of these are available, time can be set manually in the settings menu, or just let it start at midnight.
     * **File type** is to the right of each file/dir displayed. If "Unk" (unknown) then it is not a recognized/supported file type.
+      * A file on the SD card whose extension an installed extension package (in `/VMS`) claims shows the first three characters of its own extension instead, such as "MPE".
       * **'+'** in front of file type means it is pre-associated with [Special IO](#selecting-and-associating-special-io) emulation needed for function (MIDI, Swiftlink network) 
     * **Quick Help** is displayed at the bottom of the screen, use F7 for detailed help screen.
 
@@ -90,7 +91,7 @@
         * EasyFlash, Magic Desk, Ocean, Dinamic, Zaxxon/Super Zaxxon, GMod2
         * Epyx Fast Load, Game System 3, SuperGames, FunPlay/PowerPlay, Magic Desk 2
         * Ethernet (Swiftlink/Turbo-232), MIDI (Passport, Datel, Sequential, & Namesoft)
-        * Action Replay, Super Snapshot V5 (freezer carts, **TR+ only**)
+        * Action Replay, Retro Replay, Final Cartridge III, Super Snapshot V5 (freezer carts, **TR+ only**)
       * Additional CRT support info
         * Files larger than 850KB will automatically employ a bank-swap scheme 
           * These files must be run from an SD Card (not USB Stick)
@@ -147,8 +148,12 @@
       * Only active when the button isn't already in use by a freezer cart or REU
     * `d/D` Increment/Decrement Joystick 2 repeat speed for menu navigation
     * `e` Toggle Show File Extensions
-    * `f` Run Self Test (quickly verifies the TR can read its own emulated IO space)
-      * See TR External Port and Expansion Port tests for more thorough testing.
+    * `f` Toggle External Reset Detect **(TR+ only)**: when on (default), an external reset (C64 reset button, User port, etc.) returns to the TeensyROM menu, as if the TR menu button was pressed
+      * Turn it off when an external reset shouldn't return to the TR menu, such as when getting into C128 BASIC
+    * `g` Toggle TR+ REU with RetroReplay, SuperSnapshotV5, and Final Cartridge III 101% **(TR+ only)**
+      * On (default): those carts launch with the TR+ REU alongside them. A short press of the Alt button freezes; holding it 700 ms or longer saves the REU image
+      * Off: they launch as the plain cartridge, with no TR+ REU
+      * Only FC3 CRTs flagged as the REU-compatible 101% version (CRT subtype 1) get the REU
 
 ### 3. Config: Startup Options
   * On Main Menu Startup:
@@ -221,14 +226,18 @@
   * Shows the currently assigned file for each of the 5 programmable Hot Keys (#1-5)
   * Reassign from the main menu file browser using `!`/`"`/`#`/`$`/`%` (Hot Keys 1-5 respectively)
 
-### 0. Installed Extensions
-  * Names the extension host in the firmware slot -- its name, ABI version and service mask, read out of the slot's own descriptor (the stock host formats as `TeensyROM  ABI 2  services $409f`) -- or reports that nothing is installed
-  * The firmware comes with no host installed, and runs exactly as it would without one. A host is an optional add-on distributed as a `.TRH` file: copy it to the SD card or USB drive and select it in the file browser to install it. A firmware update leaves the installed host in place
-  * `u` uninstalls it, after a confirmation that names the host; `y` removes it, any other key keeps it
-  * Uninstalling erases the host from flash and reboots the TeensyROM
-  * `None installed; slot not blank.` means an install or an uninstall did not finish and left part of a host behind; `u` erases it the same way, and the report on the way back up says the host was removed
-  * Uninstall the host before loading a firmware without extension support, such as an older release: that firmware cannot update itself while a host is in flash. If one is already loaded, load a TeensyROM+ firmware with extension support using the TeensyLoader app, then uninstall
-  * On a board or build with no extension loader, the page says so and `u` changes nothing
+### 0. Installed Extension **(TR+ only)**
+  * Shows the name of the installed extension, or "None installed"
+    * Extensions are optional add-ons, distributed as `.TRH` files. TeensyROM works normally without one
+    * See [TR Host Extensions](TR_Host_Extensions.md) for what they are and how to get them
+    * To install: copy the `.TRH` file to SD or USB and select it in the file browser
+    * Firmware updates keep the installed extension
+  * Lists the file types registered on the SD card: one row per registration folder in `/VMS`, with the file types it claims
+    * `*` another folder claims the same file type, so neither opens it; `x` the folder couldn't be read; `!` the installed extension can't run it
+    * Rows below the list say what stops a launch, then how the last launch went. See [TR Host Extensions](TR_Host_Extensions.md#checking-or-removing-the-installed-extension)
+  * `u` Uninstall the extension (`y` to confirm). TeensyROM restarts afterwards
+    * Also use `u` if the page says `None installed; slot not blank.` That means an earlier install or uninstall didn't finish
+  * ***Important*** Uninstall any extension before loading an older firmware without extension support. That firmware can't update itself while an extension is installed
 
 ## Selecting and associating Special IO
   * What is it?
@@ -250,15 +259,21 @@
     * If a selected CRT file is associated with different Special IO (i.e. Epyx, EasyFlash etc), that Special IO will be loaded instead
 
 ## Firmware updates
+  TR and TR+ have separate firmware files, so first pick the one for your hardware:
+  * TR (PCB v0.2–0.3): `TeensyROM_<version>_full.hex`
+  * TR+ (PCB v0.4): `TeensyROM+_<version>_full.hex`
+    * A TR+ shows "+" in its banner and title (e.g. "TeensyROM+ v0.9"), if you're not sure which you have
+  * The menu-based updates below (SD/USB and Ethernet) refuse a file built for the other board
+  * The TeensyLoader application doesn't check, so take care to load the right file with it
+  * Firmware older than 0.4 can't update from SD/USB (0.5.8 for Ethernet); use the TeensyLoader method once
+
   There are multiple ways to update the TeensyROM firmware, choose one of the following:
 
 ### **From SD Card or USB Thumb Drive**
-  * This method is only available in FW v0.4 and higher.
-    * Older versions will have to use one of the other methods one time to update
-  * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from here](/bin/TeensyROM)
+  * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
   * Copy the file to a USB Thumb drive or SD card
     * This can be done by the traditional method of moving the card to a capable computer
-    * Or directly via USB using the **[TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)** or Cross-platform **[Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)**
+    * Or directly via USB using **[TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)** (cross-platform, recommended), the **[TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)** (Windows desktop), or the cross-platform **[Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)**
   * In the TeensyROM USB or SD Menu, select the Firmware  .hex file
   * A new screen will open and ask you to confirm that you want to update
     * Check that the file name shown is correct
@@ -271,8 +286,6 @@
 
 ### **Directly using TeensyROM via Ethernet connection**
   * Digitalman uses a similar approach in [this video](https://www.youtube.com/watch?v=PGRFLHmw0hY)
-  * This method uses features added in FW v0.5.8
-    * Older versions will have to use one of the other methods one time to update
   * Connect active Ethernet cable to TeensyROM
     * An inserted SD card (preferred) or USB Thumb drive is also required
   * Open CCGMS from the main menu and type "atbrowse"
@@ -288,7 +301,7 @@
     * Check the version and confirm as described in the section above.
 
 ### **Using the TeensyLoader application** (requires computer with USB connection)
-  * Get the .hex file of the latest released version [from here](/bin/TeensyROM/)
+  * Get the .hex file of the latest released version [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
   * Download and install the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
     * Teensyduino requires arduino to run, which works fine.
     * Alternatively, the Teensyloader stand alone file can be downloaded via a link further down the page
@@ -303,14 +316,14 @@
       * This is electrically safe by design — the C64 just won't be usable again until the update finishes
   * You should see the app process through erasing and programming before your C64/128 reboots with the new version
 
-### **Using the arduino environment** (for custom builds/code)
-  * See the [Software build document](/Source/BuildInfo.md) for details on this process.
+### **Building your own firmware** (for custom builds/code)
+  * See the [Software build document](/Source/BuildInfo.md): `npm run build:tr` / `build:tr-plus` builds the full firmware, and `npm run flash -- --hex <file>` writes it, or any release .hex, over USB, refusing a file built for the other board
 
 ## Troubleshooting
 
 ### Commodore C64 Ultimate
   * Check settings to be sure no other devices (such as a SID/UtiliSID or ACIA/Swiftlink mapping) are using the IO1 ($DE00) location. Some CRTs emulated by the TR can use the IO2 ($DF00) range as well.
-  * Set the Cartridge Port to the default settings (Preference: Auto, Bus Operation: Quiet, Bus Sharing: Both for all)
+  * Set `Cartridge Preference` to `External` and `Bus Operation Mode` to `Writes` (in C64 and Cartridge Settings). Required for TR+ DMA features and safe for any TR. See [C64 Ultimate Enhancements](C64_Ultimate_Enhancements.md)
 
 ### Resetting EEPROM Contents
   * To set *all* EEPROM values back to default settings:

@@ -4,7 +4,7 @@ Tracking list for the `DMA_Timing` branch, started after merging PR #21 (NTSC DM
 write-hold fix + `TestDMAPattern()`). Covers what's still open in the DMA path,
 not just what PR #21 fixed.
 
-This is about TR+'s true bus-mastering DMA (`DMAControl.ino`'s `PerformDMA()`/
+This is about TR+'s true bus-mastering DMA (`DMAControl.c`'s `PerformDMA()`/
 `DMAByte()` — real REU, Kernal Replace, freezer carts, remote
 `WriteC64Mem`/`ReadC64Mem`), **not** the DMA-line-assert-only pause used by the
 >850KB CRT bank-swap mechanism (see [Known-Issues.md](Known-Issues.md)'s
@@ -21,20 +21,6 @@ For a distilled, public-facing summary of the NTSC C128 write-fault investigatio
 
 ## Development
 
-### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Development]`
-`wRegVid_TOD_Clks` (video standard detection) is only written by the C64-side
-main menu ROM (`MainMenu.asm` → `Start:`). CRT/REU images launched via SD or TR
-autolaunch (`Teensy.ino` → `RemoteLaunch` → `DoCartDirect`) skip the menu
-entirely, so an NTSC machine runs the whole transfer on PAL's `nS_DMADataHold`
-default (430) — which sits inside NTSC's own measured 430–450ns partial-byte
-error band. Reachable via the REU handler and `WriteC64Mem`/`ReadC64Mem` before
-the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
-Check, which necessarily runs after `Start:` has already set the constants.
-— *Common_Defs.h `nS_MaxAdj` comment, PR #21*
-
-Confirmed to hit C128 too, not just NTSC C64 — see #14: an autolaunched C128
-never reaches its own `te445` set either, same mechanism.
-
 ### 5. Cycle-overrun mode has no graceful degradation `[Development]`
 Past ~455ns hold, the DMA write wait doesn't return before Phi2 falls, and the
 transfer collapses completely (deterministic, whole-byte corruption) rather
@@ -49,7 +35,7 @@ Phi2 check in `DataPortWriteWaitDMA()` was taken out on purpose (comment:
 cause early exit"); a per-iteration `GP6_Phi2` read this early/tight could
 cut the hold *short* on a false read, trading one corruption mode for another.
 
-**Next step:** scope it. Only one call site (`DMAControl.ino`, inside
+**Next step:** scope it. Only one call site (`DMAControl.c`, inside
 `DMAByte()`'s write branch), so no per-site ambiguity. Data bus alone isn't
 enough to read on a scope — persistence-mode capture just shows a noisy band
 (every transaction overlaid, DMA and non-DMA indistinguishable). Bracket the
@@ -59,7 +45,7 @@ SetDebugAssert;
 WaitUntil_nS_fine(nS_DMADataHold);
 SetDebugDeassert;
 ```
-in `DataPortWriteWaitDMA()` ([DMAControl.ino:28](../../Source/Teensy/DMAControl.ino)) — pin 52 on this TR+ build
+in `DataPortWriteWaitDMA()` ([DMAControl.c:38](../../Source/Teensy/MinimalBoot/Common/DMAControl.c)) — pin 52 on this TR+ build
 (`Fab04_DebugSignals`). Phi2 on one channel, that pulse on another: the gap
 between the pulse's falling edge and Phi2's next falling edge is the real
 margin, and tells you how early in the wait it'd be safe to start polling
@@ -72,7 +58,7 @@ overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
 `DataPortWriteWaitDMA()` have been switched over so far. Eight live call sites
 still use the coarser `WaitUntil_nS()`:
 
-- `DMAControl.ino` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
+- `DMAControl.c` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
   DMA-assert path
@@ -80,7 +66,7 @@ still use the coarser `WaitUntil_nS()`:
   read/write helpers)
 - `IOH_REU.c:178` — `nS_DMAAssert`
 
-(`DMAControl.ino:70`'s BA-transition wait is no longer on this list — the
+(`DMAByte()`'s BA-transition wait is no longer on this list — the
 `C128-DMA-Timing` import hoisted it to the same manual pattern as the
 already-fixed data-setup/hold waits, and gave it a name, `nS_DMABAWait`. Not
 using the `WaitUntil_nS_fine()` macro itself, so still worth a small follow-up
@@ -117,6 +103,45 @@ measured. An FPGA C64 can regression-test that the PAL/NTSC switch logic fires
 correctly, but not the analog margin (its buffers/bus loading are its own).
 
 ## Closed
+
+### 1. Autolaunch never applies PAL/NTSC-specific DMA constants `[Closed]`
+`wRegVid_TOD_Clks` (video standard detection) is only written by the C64-side
+main menu ROM (`MainMenu.asm` → `Start:`). CRT/REU images launched via SD or TR
+autolaunch (`Teensy.ino` → `RemoteLaunch` → `DoCartDirect`) skip the menu
+entirely, so an NTSC machine runs the whole transfer on PAL's `nS_DMADataHold`
+default (430) — which sits inside NTSC's own measured 430–450ns partial-byte
+error band. Reachable via the REU handler and `WriteC64Mem`/`ReadC64Mem` before
+the menu has ever loaded once. Does **not** affect the menu-driven DMA Pause
+Check, which necessarily runs after `Start:` has already set the constants.
+— *Common_Defs.h `nS_MaxAdj` comment, PR #21*
+
+Confirmed to hit C128 too, not just NTSC C64 — see #14: an autolaunched C128
+never reaches its own `te445` set either, same mechanism.
+
+**Closed (2026-10-03):** PAL/NTSC is now timed on the Teensy (`MachineDetect.h`), from
+the stamp `isrPHI2` already takes on every rising edge: in `setup()` with the C64 held
+in reset, in the full, minimal and extension images, then again from `loop()`, every
+~10 mS for 2 S after each reset release and every 2 S after that. A cartridge started
+without the menu gets the right `nS_MaxAdj` and PAL or NTSC DMA set from its first
+cycle. The re-checks exist because a C64U powers up at the PAL rate and applies a saved
+NTSC setting only after the cartridge port's reset is released, and can also switch
+live — see [Constraints.md](Constraints.md#machine-type-palntsc-is-timed-on-the-teensy-c64c128-only-comes-from-the-menu).
+
+C64 vs C128 is **not** detected on the Teensy: a C128 held in reset, or early in its
+boot, can't be read at the port, and DMA in that window can hang its boot (same
+section of Constraints.md). It still comes from the menu's report, which is now merged
+with the Teensy's timing instead of overwriting it. What that leaves:
+- A `.crt`-packaged extension launched before the menu has run is sent through the
+  menu instead of being launched directly, so the machine it's handed always includes
+  C64/C128.
+- An ordinary CRT or bin launched directly at power-up — the direct path is there for
+  diagnostic carts on machines that may not run the menu — gets the non-C128 set for
+  its standard. Such carts do no DMA themselves; the one consumer left is a host's
+  `WriteC64Mem`/`ReadC64Mem` while one runs on a C128, accepted.
+- The REU handler is only reached through the menu, which has reported by then.
+
+Bench: Kawari C64 (PAL and NTSC), C64U with a plain TR (PAL, NTSC, and a live switch),
+NTSC C128 with a TR+, and a packaged extension autolaunched on the C128.
 
 ### 3. NTSC-vs-PAL and C64-vs-C128 are confounded in the PR #21 data `[Closed]`
 The only "NTSC" characterization rig was a flat C128; the only "PAL" rig was a
@@ -503,6 +528,12 @@ machine type, so an autolaunched C128 never reaches its own set either —
 confirmed directly in the write-up ("an autolaunched NTSC C64 gets the write
 errors PR #21 fixed, and a C128 gets the same, never reaching its own set
 either").
+
+**Update (2026-10-03):** with #1 closed, PAL/NTSC no longer waits for the menu, but
+C64 vs C128 still does — a C128 can't be detected at the port while it's in reset or
+early in its boot. Extensions launched before the menu has run now go through it, so
+they get this set; a directly launched C128 cart still doesn't, which only matters for
+a host's memory commands while it runs. See #1's closing note.
 
 **Not yet independently verified** — tested extensively by kfox on their own
 rig, not yet run against this branch's own hardware or reconciled with

@@ -53,7 +53,10 @@ int main(int argc, char **argv) {
         std::ofstream(package / name, std::ios::binary) << name;
 
     std::vector<uint8_t> workspace(64 * 1024), guest(VM_RAM_BYTES);
-    const std::string root = package.string();
+    // The modeled card accepts slash-rooted paths, not Windows drive letters.
+    // Select this sandbox's drive before presenting its root-relative path.
+    fs::current_path(package.root_path());
+    const std::string root = "/" + package.relative_path().generic_string();
 
     // A module must refuse a host it does not understand, and must refuse it
     // without touching lent memory. Each of these is a real rejection path.

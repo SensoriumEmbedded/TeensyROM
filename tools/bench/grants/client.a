@@ -1,0 +1,293 @@
+; SPDX-License-Identifier: MIT
+;
+; The C64 half of tools/bench/grants: counts CIA2 timer A NMIs, grants a service bit 20 slice
+; from each handler with room for one, and tells the module how many ticks it lost when asked.
+;
+; CIA2 timer B counts timer A's underflows, every one of them, so the ticks lost to a halt
+; are the ones it saw and the handler did not. Nothing here is on a clock of its own.
+;
+; A packet from the module is a question: payload[0] is its number, payload[1] 1 to grant
+; from here on and 0 not to, payload[2..3] the slice size. A slice is granted only when it
+; ends before the next tick comes due, so that no tick is lost. The answer is an input
+; record whose buttons and display bytes are the ticks lost since the client started, low
+; byte first, and whose overflow byte is the question's number. Question 3 is answered
+; with a sum over $4000..$4FFF instead, the bytes the module wrote: s1 += byte and s2 += s1,
+; each modulo 256, as buttons and display.
+
+HOSTBANK = 58
+PACKET   = $DF00
+GRANT    = $DFF0
+CMD      = $DFF4
+STATUS   = $DFF5
+ACK      = $DFF6
+SEQ      = $DFF7
+PERIOD   = 200                ; cycles between ticks, the NMI period spans.py uses; under 256,
+                              ; so timer A's low byte is the time left to the next tick
+MARGIN   = 16                 ; cycles from reading timer A to the slice starting, with room
+
+ticks    = $C000              ; 2: NMIs the handler took
+granting = $C002              ; nonzero: grant from the handler
+lastseq  = $C003
+token    = $C004
+tb0      = $C005              ; 2: timer B at the start
+t0       = $C007              ; 2: ticks at the start
+lost     = $C009              ; 2
+tb       = $C00B              ; 2: timer B when sampled
+tk       = $C00D              ; 2: ticks when sampled
+question = $C00F
+need     = $C010              ; timer A must read at least this to grant
+; What it is doing, for a look at the screen when a run never comes back: the NMIs taken,
+; the question last asked, and the answers sent, as the first three characters.
+SEEN     = $0400
+
+* = $8000
+        !word coldstart
+        !word coldstart
+        !byte $C3, $C2, $CD, $38, $30    ; CBM80
+
+coldstart:
+        sei
+        jsr $FDA3                ; IOINIT
+        jsr $FD50                ; RAMTAS
+        jsr $FD15                ; RESTOR
+        jsr $FF5B                ; CINT
+        lda #$7F
+        sta $DC0D                ; no CIA1 interrupts: nothing here but the NMI
+        sta $DD0D
+        lda #0
+        sta $D01A                ; nor the VIC's
+        sta granting
+        sta lastseq
+        sta token
+        sta ticks
+        sta ticks + 1
+        lda #<nmi
+        sta $0318
+        lda #>nmi
+        sta $0319
+        lda #0                   ; clear what the module writes, which a reset leaves as it was
+        sta $FB
+        tay
+        ldx #$40
+        stx $FC
+        ldx #16
+clear:
+        sta ($FB), y
+        iny
+        bne clear
+        inc $FC
+        dex
+        bne clear
+
+        lda #<(PERIOD - 1)
+        sta $DD04
+        lda #>(PERIOD - 1)
+        sta $DD05
+        lda #$FF
+        sta $DD06
+        sta $DD07
+        lda #$51                 ; timer B: count timer A underflows, load, start
+        sta $DD0F
+        lda #$11                 ; timer A: continuous, load, start
+        sta $DD0E
+        lda #$81
+        sta $DD0D                ; NMI on timer A only
+        jsr sample
+        lda tb
+        sta tb0
+        lda tb + 1
+        sta tb0 + 1
+        lda tk
+        sta t0
+        lda tk + 1
+        sta t0 + 1
+
+        lda #HOSTBANK
+        sta $DE00
+        lda #1
+        sta CMD
+
+main:
+        lda STATUS
+        cmp #$E0
+        beq failed
+        lda SEQ
+        beq main
+        cmp lastseq
+        beq main
+        sta lastseq
+        lda PACKET + 9           ; payload[1]: grant or not
+        sta granting
+        lda #$FF                 ; a slice of 0 (a whole span) or over 255 never fits
+        ldx PACKET + 11
+        bne fits
+        ldx PACKET + 10
+        beq fits
+        txa
+        clc
+        adc #MARGIN
+        bcc fits
+        lda #$FF
+fits:
+        sta need
+        lda PACKET + 8           ; payload[0]: which question
+        sta question
+        sta SEEN + 1
+        lda lastseq
+        sta ACK
+        jsr answer
+        jmp main
+
+failed:
+        lda #2
+        sta $D020
+        jmp failed
+
+; Timer B and the tick count, read so that no NMI lands between them.
+sample:
+        lda ticks
+        sta tk
+        lda ticks + 1
+        sta tk + 1
+        lda $DD07
+        sta tb + 1
+        lda $DD06
+        sta tb
+        lda $DD07
+        cmp tb + 1
+        bne sample               ; timer B's high byte moved under the read
+        lda ticks
+        cmp tk
+        bne sample               ; an NMI came in between
+        rts
+
+; lost = (tb0 - tb) - (tk - t0), modulo 65536 like both counts.
+answer:
+        lda question
+        cmp #3
+        bne measure
+        jsr checksum
+        jmp send
+measure:
+        jsr sample
+        sec
+        lda tb0
+        sbc tb
+        sta lost
+        lda tb0 + 1
+        sbc tb + 1
+        sta lost + 1
+        sec
+        lda lost
+        sbc tk
+        sta lost
+        lda lost + 1
+        sbc tk + 1
+        sta lost + 1
+        clc
+        lda lost
+        adc t0
+        sta lost
+        lda lost + 1
+        adc t0 + 1
+        sta lost + 1
+
+send:
+        lda lost
+        sta $DFF8                ; buttons
+        lda lost + 1
+        sta $DFF9                ; display
+        lda question
+        sta $DFFA                ; overflow: the question
+        lda #$82
+        sta $DFFD                ; protocol
+        inc token
+        bne tokenOk
+        inc token                ; zero means "no input"
+tokenOk:
+        lda token
+        sta $DFFE
+        lda #$A5
+        eor lost
+        eor lost + 1
+        eor #$82
+        eor token
+        eor question
+        sta $DFFF
+        lda #3
+        sta CMD
+        inc SEEN + 2
+        rts
+
+checksum:
+        lda #0
+        sta lost
+        sta lost + 1
+        sta $FB
+        lda #$40
+        sta $FC
+        ldx #16                  ; pages
+        ldy #0
+sumByte:
+        lda lost
+        clc
+        adc ($FB), y
+        sta lost
+        clc
+        adc lost + 1
+        sta lost + 1
+        iny
+        bne sumByte
+        inc $FC
+        dex
+        bne sumByte
+        rts
+
+; Reached through the KERNAL's $FE43, which has already done SEI and costs 7 cycles more.
+nmi:
+        pha
+        lda $DD0D                ; acknowledge: the next underflow can raise a new NMI
+        inc ticks
+        bne counted
+        inc ticks + 1
+        inc SEEN                 ; every 256
+counted:
+        lda granting
+        beq done
+        lda $DD04                ; cycles left before the next tick
+        cmp need
+        bcc done                 ; the slice would still be running when it came due
+        pla
+        sta GRANT                ; the slice starts on the next cycle, the RTI's
+        rti                      ; so a tick due during it is taken after the RTI, not inside
+done:                            ; this handler, where each one would nest a level deeper
+        pla
+        rti
+
+        !fill $A000 - *, $FF
+
+; ROMH at $E000 in Ultimax: switch to 16 KiB mode from RAM and hand back to the KERNAL,
+; exactly as Source/C64/VMHello/vmhello.a does and for the reason it gives.
+!pseudopc $E000 {
+        !fill $FF00 - $E000, $FF
+ultimax:
+        sei
+        ldx #$FF
+        txs
+        cld
+        ldx #7
+copyStub:
+        lda stub, x
+        sta $0100, x
+        dex
+        bpl copyStub
+        jmp $0100
+stub:
+        !byte $A9, $87           ; lda #$87
+        !byte $8D, $02, $DE      ; sta $DE02
+        !byte $4C, $E2, $FC      ; jmp $FCE2
+        !fill $FFFA - *, $FF
+        !word ultimax
+        !word ultimax
+        !word ultimax
+}

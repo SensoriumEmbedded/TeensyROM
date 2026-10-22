@@ -43,7 +43,8 @@ smoothly on the first pass.
    there are step-by-step checklists in `.claude/skills/add-io-handler/SKILL.md` and
    `.claude/skills/add-menu-program/SKILL.md` — useful reading even without Claude Code,
    since they cover the exact files that have to stay in sync and the gotchas found
-   integrating past handlers.
+   integrating past handlers. Building and flashing, step by step, is in
+   `.claude/skills/teensyrom-build/SKILL.md`.
 
 ## Building
 

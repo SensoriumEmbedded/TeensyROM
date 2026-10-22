@@ -11,7 +11,7 @@ The TeensyROM+ (v0.4) has a built-in battery holder for a CR1225 coin cell, but 
     * Must fit the battery holder.  :)  My example uses a CR2032 battery due to the holder chosen.
       * If there were something smaller that might fit inside one of the case designs, that would be great. However, the holders for smaller batteries (ie CR1225) are not insulated and risk shorting.
 * **Update steps:**
-  * [Update the TR FW](/bin/TeensyROM) to v0.7.2 (or higher) to enable RTC functionality.  Be sure to grab the "TeensyROM" (not TR+) version of the FW.
+  * [Update the TR FW](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest) to v0.7.2 (or higher) to enable RTC functionality.  Be sure to grab the "TeensyROM" (not TR+) version of the FW.
   * **Plan your battery placement**
     * The battery/holder I chose won't fit inside the low-profile case.  The best wire routing I could find was via the sides of the micro-SD port opening.
     * The wires need to be routed through the planned opening **before** solderring to the Teensy module.

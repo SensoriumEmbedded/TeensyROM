@@ -1,0 +1,47 @@
+; C64 side of spans.py. IRQs off; the bench sets CIA2 Timer A by DMA when
+; it wants NMIs, and each one counts into ticks. mode 0 loops writing to
+; memory, mode 1 loops only reading, which is what decides how soon a DMA
+; can start.
+* = $0801
+!word next, 10
+!byte $9e
+!text "2064"
+!byte 0
+next !word 0
+
+mode  = $c100
+ticks = $c101           ; 16 bits
+ready = $c104           ; $5A once set up
+* = $0810
+        sei
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+        lda #0
+        sta $d01a
+        sta mode
+        sta ticks
+        sta ticks+1
+        lda #<nmi
+        sta $0318
+        lda #>nmi
+        sta $0319
+        lda #$5a
+        sta ready
+loop    lda mode
+        bne ro
+        inc $c103
+        jmp loop
+ro      lda mode
+        bne ro
+        jmp loop
+
+nmi     pha
+        lda $dd0d
+        inc ticks
+        bne +
+        inc ticks+1
++       pla
+        rti

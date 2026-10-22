@@ -30,7 +30,13 @@
 // hands out the rest one host at a time, so two hosts cannot pick the same
 // number; an assignment binds the number for good and says nothing about which
 // host implements it.
-enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_LIMIT = 0x30000,
+// A module links at one of two code bases. VM_CODE_BASE is the one every host
+// accepts; VM_CODE_BASE_128K needs a host whose own code ends at or below it,
+// which VmHostId::code_floor states. Both are MPU-legal: the window each opens
+// splits into two power-of-two regions aligned to their own size, which an
+// arbitrary base would not.
+enum : uint32_t { VM_ABI = 2, VM_CODE_BASE = 0x18000, VM_CODE_BASE_128K = 0x10000,
+                  VM_CODE_LIMIT = 0x30000,
                   VM_DATA_BASE = 0x20014000, VM_DATA_LIMIT = 0x20044000,
                   VM_DATA_BYTES = VM_DATA_LIMIT-VM_DATA_BASE,
                   VM_RAM_BASE = 0x20200000,
@@ -123,6 +129,41 @@ static constexpr uint32_t VM_HOST_EXIT_BYTES=sizeof(VmHostExit);
 #if defined(__arm__)
 static_assert(sizeof(VmHostExit)==80, "ABI 2 exit tail layout is frozen");
 #endif
+// Service bit 20, composed on VmHostExit: writes module memory into C64 RAM by mastering the
+// bus, one slice per grant. The client grants each slice by writing $DFF0, and the slice
+// starts as that write completes and holds the C64 off the bus for about slice_bytes cycles plus
+// what the VIC steals, so a client grants where it can afford that -- from a timer
+// interrupt's handler, say, for a slice shorter than the time to the next one: slice_bytes
+// at most the timer's latch + 1, less the cycles from its underflow to the grant, less a
+// margin for what the VIC steals (vm/abi/README.md, "The C64 transfer tail"). A slice
+// lands wherever the C64's memory map puts that address at the moment it is granted. The bus
+// is timed for the machine: the extension image times PAL/NTSC from PHI2 itself and follows a
+// change, and takes C64/C128 from the menu's report, which every launch now waits for.
+struct VmC64Span { const uint8_t *source; uint16_t address, bytes; };
+struct VmHostC64Dma {
+    VmHostExit base;
+    // Starts writing each span's bytes, in span order, slice_bytes at a time (0 for a span
+    // per slice), and answers the job's ticket. 0 refuses the job whole: flags other than 0,
+    // a job still pending, no spans or more than VM_C64_SPANS_MAX, a source that does not lie
+    // wholly inside the module's code, data or RAM2 window, a span that is empty, runs past
+    // $FFFF or touches $DE00..$DFFF, more than 64 KiB or VM_C64_SLICES_MAX slices in all. The
+    // sources are read as each slice goes, so leave them alone until the job ends.
+    uint32_t (*c64_write)(const VmC64Span *spans, uint32_t count, uint32_t slice_bytes, uint32_t flags);
+    // PENDING while the job runs, then how it ended; UNKNOWN for any ticket but the last one
+    // c64_write issued (a refusal issues none). A slice waits for its grant only during the
+    // host's turns for the job, and a grant between them starts nothing. A job ends NO_GRANT
+    // when a slice has waited VM_C64_GRANT_MS of those turns without landing, and BUS_FAILED
+    // when a slice does not complete or the bus is not given back after it; the slices before
+    // that one have landed.
+    int32_t (*c64_status)(uint32_t ticket);
+};
+static constexpr uint32_t VM_HOST_C64_DMA_BYTES=sizeof(VmHostC64Dma);
+enum : uint32_t { VM_C64_SPANS_MAX=64, VM_C64_SLICES_MAX=1024, VM_C64_GRANT_MS=100 };
+enum : int32_t { VM_C64_PENDING=0, VM_C64_DONE=1, VM_C64_NO_GRANT=-1, VM_C64_BUS_FAILED=-2,
+                 VM_C64_UNKNOWN=-3 };
+#if defined(__arm__)
+static_assert(sizeof(VmC64Span)==8&&sizeof(VmHostC64Dma)==88, "ABI 2 C64 transfer tail layout is frozen");
+#endif
 struct VmModule {
     uint32_t abi, bytes;
     // pump is permitted while awaiting ACK; it must not alter frozen output.
@@ -148,23 +189,23 @@ using VmEntry = const VmModule *(*)(const VmHost *host);
 // requiring an unassigned one.
 //   0..4      base profile, below
 //   7         this loader's optional RAM2 memory profile
-//   5,6,8..13 Mean Hamster Software (Prism+/MPE): video transport, indexed
-//             video, indexed raster, RAM1 auxiliary spans, speech, SD root,
-//             desktop, firmware catalogue
+//   5,6,8..13 reserved, assigned out of tree
 //   14        this loader's module exit (VmHostExit, above)
 //   15        unassigned, available on request
 //   16        TeensyROM's own examples and conformance fixtures
-//   17..31    unassigned
+//   17..19    unassigned
+//   20        this loader's C64 transfer (VmHostC64Dma, above), TR+ only
+//   21..31    unassigned
 enum : uint32_t { VM_SERVICE_FILES=1, VM_SERVICE_CLOCK=2, VM_SERVICE_PACKETS=4,
                   VM_SERVICE_WRITE=8, VM_SERVICE_GUEST_RAM=16,
-                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384,
+                  VM_SERVICE_RAM2_RO=128, VM_SERVICE_EXIT=16384, VM_SERVICE_C64_DMA=0x100000,
                   // The base profile, which every module may assume.
                   VM_SERVICES=31,
-                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT,
+                  VM_HOST_SERVICES=VM_SERVICES|VM_SERVICE_RAM2_RO|VM_SERVICE_EXIT|VM_SERVICE_C64_DMA,
                   VM_SERVICES_ASSIGNED=32|64|256|512|1024|2048|4096|8192|0x10000,
                   VM_IMAGE_MAGIC=0x314d564d };
 static_assert((VM_HOST_SERVICES&VM_SERVICES_ASSIGNED)==0,
-              "this loader must not claim a bit assigned to another host");
+              "a bit this loader serves must leave VM_SERVICES_ASSIGNED");
 static inline uint32_t vm_crc32(const void *data, uint32_t size) {
     auto p=static_cast<const uint8_t *>(data); uint32_t c=~0u;
     while(size--) { c^=*p++; for(unsigned b=0;b<8;b++) c=(c>>1)^((0u-(c&1))&0xedb88320u); }
@@ -174,7 +215,8 @@ static inline uint32_t vm_image_ro_bytes(const VmImageHeader &h){return h.reserv
 static inline uint32_t vm_image_guest_bytes(const VmImageHeader &h){return h.reserved[0]==VM_PROFILE_RAM2_RO?uint32_t(VM_RAM2_GUEST_BYTES):uint32_t(VM_RAM_BYTES);}
 static inline uint32_t vm_image_payload_bytes(const VmImageHeader &h){return h.code_bytes+h.data_bytes+vm_image_ro_bytes(h);}
 // Structure and self-consistency only. Whether a host can serve what an image
-// requires is vm_host_serves() in VMHostABI.h, which a host owes before it
+// requires is vm_host_serves() in VMHostABI.h, and whether it can take the
+// image's code base is vm_host_takes_code() there; a host owes both before it
 // loads. Bit 7 is judged here because it has to agree with the memory profile
 // in reserved[0].
 static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) {
@@ -184,12 +226,13 @@ static inline bool vm_valid_header(const VmImageHeader &h, uint32_t file_bytes) 
     }else if(h.reserved[0]==VM_PROFILE_RAM2_RO){
         if(!(h.required_services&VM_SERVICE_RAM2_RO)||!h.reserved[1]||h.reserved[1]>VM_RAM2_RO_BYTES)return false;
     }else return false;
+    if(h.code_base!=VM_CODE_BASE && h.code_base!=VM_CODE_BASE_128K)return false;
     if(h.magic!=VM_IMAGE_MAGIC || h.abi!=VM_ABI || h.header_bytes!=sizeof h ||
-       h.code_base!=VM_CODE_BASE || h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
-       h.code_bytes>VM_CODE_LIMIT-VM_CODE_BASE || h.data_bytes>VM_DATA_BYTES ||
+       h.ram_base!=VM_DATA_BASE || !h.code_bytes ||
+       h.code_bytes>VM_CODE_LIMIT-h.code_base || h.data_bytes>VM_DATA_BYTES ||
        h.bss_bytes>VM_DATA_BYTES-h.data_bytes ||
        file_bytes!=sizeof h+vm_image_payload_bytes(h) || !(h.entry&1) ||
-       (h.entry&~1u)<VM_CODE_BASE || (h.entry&~1u)>=VM_CODE_BASE+h.code_bytes) return false;
+       (h.entry&~1u)<h.code_base || (h.entry&~1u)>=h.code_base+h.code_bytes) return false;
     VmImageHeader check=h; check.header_crc=0;
     return vm_crc32(&check,sizeof check)==h.header_crc;
 }

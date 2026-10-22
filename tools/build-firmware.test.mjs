@@ -32,6 +32,15 @@ const repoRoot = path.dirname(path.dirname(script));
 const build = (...args) =>
   spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', timeout: 20_000 });
 
+test('custom host code budget cannot silently change the stock host', () => {
+  assert.match(build('--target', 'tr-plus', '--host-code-kib', '96').stderr,
+    /requires an explicit --host-sketch/);
+  for (const value of ['32', '128', '64junk']) {
+    assert.match(build('--target', 'tr-plus', '--host-sketch', 'Source/Teensy/ExampleHost',
+      '--host-code-kib', value).stderr, /must be 64 or 96/);
+  }
+});
+
 test('extensions are refused on a target whose DMA cannot blank the screen', () => {
   const result = build('--target', 'tr', '--with-extensions');
   assert.equal(result.status, 1);
@@ -415,6 +424,17 @@ test('a combine that cannot happen is refused before anything compiles', {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// The two images' USB types are picked in two separate FQBNs, and nothing at compile
+// time ties them together: MinimalBoot.ino's #error only says minimal is Serial + MIDI.
+// If they drift apart, a board changes USB identity every time it passes through minimal.
+test('the minimal and main images are built as the same USB type', () => {
+  const source = fs.readFileSync(script, 'utf8');
+  const usbType = (image) =>
+    source.match(new RegExp(`build\\('${image}', \\{[^}]*?fqbn: '[^']*\\busb=(\\w+)`))?.[1];
+  assert.equal(usbType('minimal'), 'serialmidi');
+  assert.equal(usbType('main'), 'serialmidi');
 });
 
 // The example host is documentation that compiles, so the four contract points it is

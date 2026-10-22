@@ -284,6 +284,11 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
    while (File entry = dir.openNextFile())
    {
       filename = entry.name();
+      if (IsDotfile(filename))
+      {
+         entry.close();
+         continue;
+      }
 
       //Before appending: a FAT long name is up to 255 characters, plus " /", "\r" and the notice
       if (XferSize >= RAM_ImageSize-300)

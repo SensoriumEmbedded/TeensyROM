@@ -17,4 +17,16 @@ static FLASHMEM bool tryFile(uint8_t source, const char *directory, const char *
     }
     return VmRegistry::tryLaunch(source,directory,name);
 }
+// A .crt that is an extension package rather than a cartridge: the test tryLaunch makes, without
+// launching it or validating it any further.
+static FLASHMEM bool isPackageCrt(uint8_t source, const char *directory, const char *name) {
+    if(source!=rmtSD || !directory || !directory[0] || !name) return false;
+    const char *extension=strrchr(name,'.');
+    if(!extension || strcasecmp(extension+1,"crt")) return false;
+    char path[256];
+    if(snprintf(path,sizeof path,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)sizeof path)
+        return false;
+    uint8_t d[128];
+    return VmRegistry::clientDescriptor(path,d);
+}
 }
