@@ -68,6 +68,14 @@ for (const axis of [X, Y]) {
     assert.equal(lines[0], `race ${unread.toString(16)}`);
     assert.deepEqual(lines.slice(1).map(signed), [more, 0, 0, 0, 0]);
   });
+
+  test(`axis ${axis}: a read landing during the poll's update that leaves the same byte ready does not repeat movement`, { skip }, () => {
+    const steps = 10;
+    const move = (n) => report(axis === X ? n * COUNTS_PER_STEP : 0, axis === Y ? n * COUNTS_PER_STEP : 0);
+    const lines = run([...move(steps), `race ${axis}`, ...move(steps), ...Array(3).fill(read(axis))]);
+    assert.equal(lines[0], `race ${steps.toString(16).padStart(2, '0')}`);
+    assert.deepEqual(lines.slice(1).map(signed), [steps, 0, 0]);
+  });
 }
 
 test('a weak compare-exchange failing for no reason still leaves the new movement ready', { skip }, () => {
