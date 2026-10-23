@@ -2,7 +2,7 @@
 
 // The TR block device (docs/TR_Block_Device.md) on the IO page a RAM expansion handler leaves free, beside
 //  the USB mouse's registers. The ISR side only fills registers and the window; the SD card is touched
-//  only from PollTRBlock, in the main loop.
+//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDBegin.
 
 #include "../../../BlockDevice/TRBlockImage.h"
 

@@ -371,7 +371,6 @@ void loop()
    
    if (Serial.available()) ServiceSerial(&Serial);
    myusbHost.Task();
-   PollTRBlock();
    
    if (nfcState == nfcStateEnabled) nfcCheck();
    
@@ -424,6 +423,7 @@ FLASHMEM void SetUpMainMenuROM()
    FreeREU();
 #endif
    FreeGeoRAM();
+   TRBlockUnmount();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;

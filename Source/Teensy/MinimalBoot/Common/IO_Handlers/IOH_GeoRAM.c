@@ -86,6 +86,7 @@ FLASHMEM void InitHndlr_GeoRAM()
 FLASHMEM void PollingHndlr_GeoRAM()
 {
    PollUSBMouse();
+   PollTRBlock();
 }
 
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
