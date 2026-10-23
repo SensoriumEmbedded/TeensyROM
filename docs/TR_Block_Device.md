@@ -109,7 +109,7 @@ The firmware does this arithmetic so that a 6502 driver does not have to. A driv
 * **Speed.** A command takes as long as the card takes. Poll; do not time it.
 * **C128 2 MHz.** The registers have not been exercised at 2 MHz. A driver on the C128 should run at 1 MHz around a transfer until that is measured.
 * **Concurrent users.** One command at a time, one driver at a time. Two programs polling the same STATUS will read each other's results; the token tells them apart but does not queue them.
-* **The image.** It must not be changed on the card while it is mounted.
+* **The image.** It must not be changed on the card while it is mounted. A card swapped while it is mounted is noticed when the firmware next starts the card, as a GeoRAM save does; commands then fail with `$E1` rather than write to the other card.
 
 ## A reader's checklist
 A driver that follows this document:

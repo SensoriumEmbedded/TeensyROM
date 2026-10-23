@@ -16,6 +16,7 @@ static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
 static char *TRBlockPath;
+static struct { uint32_t FirstSector, CardSerial; } TRBlockMounted;
 
 FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -62,9 +63,24 @@ FLASHMEM void TRBlockClose()
    TRBlockDirty = false;
 }
 
+FLASHMEM static uint32_t TRBlockCardSerial()
+{
+   cid_t CID;
+
+   return SD.sdfs.card()->readCID(&CID) ? CID.psn : 0;
+}
+
+FLASHMEM static bool TRBlockIsMountedFile()
+{
+   return TRBlockFile.firstSector() == TRBlockMounted.FirstSector && TRBlockCardSerial() == TRBlockMounted.CardSerial;
+}
+
+// Every D64 is the same size, so a swapped card's image at the same path would take GEOS's cached BAM and directory
 FLASHMEM void TRBlockReopen()
 {
-   if (TRBlockPath) TRBlockOpen();
+   if (!TRBlockPath || !TRBlockOpen() || TRBlockIsMountedFile()) return;
+   TRBlockClose();
+   Serial.printf("TR block image: %s on the card is not the one mounted; left unmounted\n", TRBlockPath);
 }
 
 FLASHMEM void TRBlockUnmount()
@@ -79,7 +95,11 @@ FLASHMEM bool TRBlockMount(const char *Path)
 {
    TRBlockUnmount();
    TRBlockPath = strdup(Path);
-   if (TRBlockPath && TRBlockOpen()) return true;
+   if (TRBlockPath && TRBlockOpen())
+   {
+      TRBlockMounted = { TRBlockFile.firstSector(), TRBlockCardSerial() };
+      return true;
+   }
    TRBlockUnmount();
    return false;
 }
