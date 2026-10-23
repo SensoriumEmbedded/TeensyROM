@@ -612,6 +612,9 @@ FLASHMEM void ProcessCommand()
 
    if (CurrentIOHandler != IOH_TeensyROM && !ASIDAllowed)
    {
+      //left unread, the time bytes would each run as a command of their own: 'e' resets EEPROM
+      uint32_t RefusedTime;
+      if (TokenVal == SetRTCToken) GetUInt(&RefusedTime, 4);
       SendU16(FailToken);
       CmdChannel->print("Busy!\n");
       return;
