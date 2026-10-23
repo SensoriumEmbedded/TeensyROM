@@ -11,18 +11,19 @@
 static struct TRBlock TRBlockDev;
 static struct TRBlockImage TRBlockImg;
 static struct TRBlockBackend TRBlockBack;
-static File TRBlockFile;
+// An FsFile, not an SD.h File: File::flush() discards whether the sync reached the card
+static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
 
 static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
-   return TRBlockFile.seek(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
+   return TRBlockFile.seekSet(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
 }
 
 static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
 {
-   if (!TRBlockFile.seek(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
+   if (!TRBlockFile.seekSet(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
    TRBlockDirty = true;
    TRBlockLastWritemS = millis();
    return true;
@@ -30,15 +31,14 @@ static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Bloc
 
 static bool TRBlockFileFlush(void *Context)
 {
-   TRBlockFile.flush();
    TRBlockDirty = false;
-   return true;
+   return TRBlockFile.sync();
 }
 
 FLASHMEM void TRBlockUnmount()
 {
    TRBlockBack.Context = NULL;
-   if (TRBlockFile) TRBlockFile.close();
+   if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
    TRBlockDirty = false;
 }
 
@@ -48,8 +48,7 @@ FLASHMEM bool TRBlockMount(const char *Path)
    uint64_t Size;
 
    TRBlockUnmount();
-   TRBlockFile = SD.open(Path, FILE_WRITE_BEGIN);
-   if (!TRBlockFile) return false;
+   if (!TRBlockFile.open(&SD.sdfs, Path, O_RDWR)) return false;
    Size = TRBlockFile.size();
    TRBlockImg = (struct TRBlockImage){ Size <= UINT32_MAX ? GeosFormatForSize(Size) : NULL, true, NULL,
                                        TRBlockFileRead, TRBlockFileWrite, TRBlockFileFlush };

@@ -108,7 +108,7 @@ For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector
 The firmware does this arithmetic so that a 6502 driver does not have to. A driver that wants raw sector numbers instead is a different image kind, which this version does not define.
 
 ## Writes reach the card later
-`WRITE` returns `$5A` when the block is accepted, not when the card holds it. The firmware writes the block to the file at once and flushes the file when no command has arrived for a quarter of a second, or on `FLUSH`. A program that must know a write survived power loss sends `FLUSH` and waits for `$5A`. GEOS does not, so a disk saved and then powered off within that quarter second can be torn.
+`WRITE` returns `$5A` when the block is accepted, not when the card holds it. The firmware writes the block to the file at once and flushes the file a quarter of a second after the last `WRITE`, or on `FLUSH`. A `FLUSH` the card fails returns `$E4`. A program that must know a write survived power loss sends `FLUSH` and waits for `$5A`. GEOS does not, so a disk saved and then powered off within that quarter second can be torn.
 
 ## What the firmware does not promise
 * **Speed.** A command takes as long as the card takes. Poll; do not time it.
