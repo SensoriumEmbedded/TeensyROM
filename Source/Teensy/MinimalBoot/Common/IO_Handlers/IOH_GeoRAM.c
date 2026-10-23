@@ -60,7 +60,7 @@ FLASHMEM void FreeGeoRAM()
 FLASHMEM void SpecialBtn_GeoRAM(bool Up_nDn)
 {
    // on button release save GeoRAM contents
-   if(Up_nDn) SaveRAMBanks(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
+   if(Up_nDn) SaveRAMBanksReplacing(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
 }
 
 FLASHMEM void InitHndlr_GeoRAM()
