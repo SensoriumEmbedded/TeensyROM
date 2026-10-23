@@ -52,6 +52,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             SendU16(FWMinimalToken);
             return;
          }
+         //left unread, the time bytes would each run as a command of their own: a 0x64 can reset or launch
+         uint32_t RefusedTime;
+         if (inVal == SetRTCToken) GetUInt(&RefusedTime, 4);
          SendU16(FailToken);
          CmdChannel->print("Busy!\n");
          return;
