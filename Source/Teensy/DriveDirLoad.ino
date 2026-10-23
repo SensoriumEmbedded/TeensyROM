@@ -109,7 +109,7 @@ FLASHMEM void ShowVmPackages()
       //Begun here, with one retry while the slot still reads filled: the retry
       //SDFullInit makes, because a card's first start can fail. Nothing is remembered
       //between draws, so a card that will not start costs both attempts on each one.
-      Card = SDBegin() || (SDSlotFilled() && SDBegin());
+      Card = SD.begin(BUILTIN_SDCARD) || (SDSlotFilled() && SD.begin(BUILTIN_SDCARD));
       //A card started here in place of one that had been begun: whatever the menu holds
       //from that one is stale, its listing and the extension table built from it. The
       //flags remote file commands raise for the same reason make the menu's next
@@ -443,7 +443,7 @@ void MenuChange()
          SetNumItems(sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]));
          break;
       case rmtSD:
-         SDBegin(); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+         SD.begin(BUILTIN_SDCARD); // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
          LoadDirectory(&SD); //do this regardless of SD.begin result to populate one entry w/ message
          MenuSource = DriveDirMenu; 
          break;

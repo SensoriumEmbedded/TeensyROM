@@ -2,7 +2,7 @@
 
 // The TR block device (docs/TR_Block_Device.md) in IO2, the page GeoRAM leaves free, beside the USB
 //  mouse's registers. The ISR side only fills registers and the window; the SD card is touched
-//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDBegin.
+//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDFullInit.
 
 #include "../../../BlockDevice/TRBlockImage.h"
 
@@ -53,11 +53,18 @@ FLASHMEM static bool TRBlockOpen()
    return true;
 }
 
-FLASHMEM static void TRBlockClose()
+// Close and reopen around an SD.begin that can run while GeoRAM has an image mounted, as SDFullInit does.
+//  SD.begin rebuilds the volume in place under any open file and drops its cached, unwritten sectors.
+FLASHMEM void TRBlockClose()
 {
    TRBlockBack.Context = NULL;
    if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
    TRBlockDirty = false;
+}
+
+FLASHMEM void TRBlockReopen()
+{
+   if (TRBlockPath) TRBlockOpen();
 }
 
 FLASHMEM void TRBlockUnmount()
@@ -75,18 +82,6 @@ FLASHMEM bool TRBlockMount(const char *Path)
    if (TRBlockPath && TRBlockOpen()) return true;
    TRBlockUnmount();
    return false;
-}
-
-// Every SD.begin in the main image goes through here. SD.begin rebuilds the volume in place under
-//  any open file and drops its cached, unwritten sectors, so the image is closed around it.
-FLASHMEM bool SDBegin()
-{
-   bool Began;
-
-   TRBlockClose();
-   Began = SD.begin(BUILTIN_SDCARD);
-   if (TRBlockPath) TRBlockOpen();
-   return Began;
 }
 
 FLASHMEM void InitTRBlock()

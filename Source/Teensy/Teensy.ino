@@ -548,7 +548,7 @@ void SetNumItems(uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
-bool SDFullInit()
+bool SDBeginRetrying()
 {
 
    // begin() takes 3 seconds for fail, 20-200mS for pass, 2 seconds for unpopulated
@@ -559,7 +559,7 @@ bool SDFullInit()
    Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
    Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()
     
-   while (!SDBegin()) 
+   while (!SD.begin(BUILTIN_SDCARD)) 
    {
       Count--;
       Printf_dbg("SD Init fail, %d tries left. Time: %lu mS\n", Count, millis()-Startms);
@@ -577,6 +577,16 @@ bool SDFullInit()
    
    Printf_dbg("SD Init OK, took %lu mS, mediaPresent %d\n", millis()-Startms, SD.mediaPresent());
    return true;
+}
+
+bool SDFullInit()
+{
+   bool Began;
+
+   TRBlockClose();
+   Began = SDBeginRetrying();
+   TRBlockReopen();
+   return Began;
 }
 
 bool USBFileSystemWait()

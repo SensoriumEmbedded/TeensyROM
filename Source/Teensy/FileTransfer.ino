@@ -37,7 +37,7 @@ FLASHMEM FS* GetStorageDevice(uint32_t storageType)
 {
     if (!storageType) return &firstPartition;
 
-    if (!SDBegin())
+    if (!SD.begin(BUILTIN_SDCARD))
     {
         SendU16(FailToken);
         CmdChannel->printf("Specified storage device was not found: %u\n", storageType);

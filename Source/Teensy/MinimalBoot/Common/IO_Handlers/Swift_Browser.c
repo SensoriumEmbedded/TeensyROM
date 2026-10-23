@@ -645,7 +645,7 @@ FLASHMEM void DoSearch(const char *Term)
 
 FLASHMEM bool InitCheckSD()
 {
-   if (!SDBegin())  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+   if (!SD.begin(BUILTIN_SDCARD))  // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
    {
       SendASCIIErrorStrImmediate("No SD card");  
       return false;      
