@@ -19,18 +19,13 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 ## What it is and is not
 * One image at a time, chosen by the firmware (for GEOS, when the menu launches it). The C64 cannot choose or replace the image.
 * Blocks are 256 bytes. A block is addressed by two bytes whose meaning depends on the image kind ([Disk addresses](#disk-addresses)).
-* It is available while a RAM expansion handler is active (GeoRAM or REU, which is also where the USB mouse registers are). It is not available under other handlers, and not under a Host Extension.
+* It is available while the GeoRAM handler is active, which is also where the USB mouse registers are. It is not available under other handlers, the REU included, and not under a Host Extension.
 * It is not an IEC drive. Software that talks to the IEC bus cannot see it.
 
 ## Where the registers are
-The USB mouse registers already occupy the start of the free IO page left by the RAM expansion handler, and identify it:
+The registers share IO2, the page GeoRAM leaves free, with the USB mouse registers, which start the page and identify it. The base `B` is `$DF00`.
 
-| Handler | Free page | Base (`B`) |
-|---------|-----------|-----------:|
-| GeoRAM | IO2 | `$DF00` |
-| REU | IO1 | `$DE00` |
-
-Find the base the way the mouse driver does: look for `TRM` at `$DF03..$DF05`, then at `$DE03..$DE05`. The block device is present when `TRB` is also at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes.
+Find it the way the mouse driver does: look for `TRM` at `$DF03..$DF05`. The block device is present when `TRB` is also at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes.
 
 Everything below is an offset from `B`.
 
@@ -108,7 +103,7 @@ For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector
 The firmware does this arithmetic so that a 6502 driver does not have to. A driver that wants raw sector numbers instead is a different image kind, which this version does not define.
 
 ## Writes reach the card later
-`WRITE` returns `$5A` when the block is accepted, not when the card holds it. The firmware writes the block to the file at once and flushes the file when no command has arrived for a quarter of a second, or on `FLUSH`. A program that must know a write survived power loss sends `FLUSH` and waits for `$5A`. GEOS does not, so a disk saved and then powered off within that quarter second can be torn.
+`WRITE` returns `$5A` when the block is accepted, not when the card holds it. The firmware writes the block to the file at once and flushes the file a quarter of a second after the last `WRITE`, or on `FLUSH`. A `FLUSH` the card fails returns `$E4`. A program that must know a write survived power loss sends `FLUSH` and waits for `$5A`. GEOS does not, so a disk saved and then powered off within that quarter second can be torn.
 
 ## What the firmware does not promise
 * **Speed.** A command takes as long as the card takes. Poll; do not time it.
@@ -118,9 +113,8 @@ The firmware does this arithmetic so that a 6502 driver does not have to. A driv
 
 ## A reader's checklist
 A driver that follows this document:
-* finds `B` from `TRM`, then confirms `TRB`;
+* checks `TRM` at `$DF03`, then confirms `TRB`;
 * writes TOKEN, the address, PAGE, then CMD;
 * reads STATUS until two reads agree and the value is not `$80`, then checks ECHO;
 * moves a block as four PAGEs of the window;
-* sends `FLUSH` where a write must survive power loss;
-* works whichever of `$DF00` and `$DE00` the base is.
+* sends `FLUSH` where a write must survive power loss.

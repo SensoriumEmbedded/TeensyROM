@@ -22,7 +22,7 @@ const PAGES = SECTOR / WINDOW;
 const CMD = 0x08, ADDR0 = 0x09, ADDR1 = 0x0a, PAGE = 0x0b, TOKEN = 0x0c, STATUS = 0x0d, ECHO = 0x0e, ID = 0x10;
 const WINDOW_AT = 0x40;
 const READ = 1, WRITE = 2, FLUSH = 3, INFO = 4;
-const BUSY = 0x80, DONE = 0x5a, NO_IMAGE = 0xe1, BAD_ADDRESS = 0xe2, READ_ONLY = 0xe5, BAD_COMMAND = 0xe6;
+const BUSY = 0x80, DONE = 0x5a, NO_IMAGE = 0xe1, BAD_ADDRESS = 0xe2, WRITE_FAILED = 0xe4, READ_ONLY = 0xe5, BAD_COMMAND = 0xe6;
 
 const zoneSectors = (track) => {
   const zone = (track - 1) % 35 + 1;
@@ -186,6 +186,10 @@ test('a command that is not one fails with bad command, and so does zero', { ski
 test('flush reaches the backend once per command and reports done', { skip }, () => {
   const { lines } = run('d81', command(FLUSH) + 'svc\n' + read(STATUS) + 'flushes\n' + command(FLUSH, { token: 2 }) + 'svc\nflushes\n');
   assert.deepEqual(lines, ['1', '5a', '1', '1', '2']);
+});
+
+test('a flush the card fails reports write failed, not done', { skip }, () => {
+  assert.equal(statusOf(command(FLUSH) + 'svc\n', 'd81', 'flushfails'), hex(WRITE_FAILED));
 });
 
 test('operands are latched when CMD is written: changing them while the command waits changes nothing', { skip }, () => {

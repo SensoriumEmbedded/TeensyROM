@@ -57,13 +57,13 @@ FLASHMEM static bool GeosIsPatchedCopy(const char *Name)
 
 FLASHMEM static void GeosPath(char *Path, size_t Size, const struct GeosLauncher *Launcher, const char *Name)
 {
-   snprintf(Path, Size, "%s/%s", Launcher->Folder, Name);
+   snprintf(Path, Size, PSTR("%s/%s"), Launcher->Folder, Name);
 }
 
 FLASHMEM static void GeosCopyName(char *CopyName, size_t Size, const char *Name)
 {
    int Base = strlen(Name) - GEOS_EXT_LENGTH;
-   snprintf(CopyName, Size, "%.*s" GEOS_COPY_TAG "%s", Base, Name, Name + Base);
+   snprintf(CopyName, Size, PSTR("%.*s" GEOS_COPY_TAG "%s"), Base, Name, Name + Base);
 }
 
 // The originals in the folder, listed before anything is written to it
@@ -93,12 +93,12 @@ FLASHMEM static bool GeosInspectFile(const struct GeosLauncher *Launcher, const 
 
    if (!Image)
    {
-      if (Error) snprintf(Error, ErrorSize, "the image could not be opened");
+      if (Error) snprintf(Error, ErrorSize, PSTR("the image could not be opened"));
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
    Inspected = GeosInspect(&Disk, Found);
-   if (!Inspected && Error) snprintf(Error, ErrorSize, "%s", Disk.Error);
+   if (!Inspected && Error) snprintf(Error, ErrorSize, PSTR("%s"), Disk.Error);
    Image.close();
    return Inspected;
 }
@@ -149,14 +149,14 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    }
    Disk = GeosDiskOn(Launcher, &Image);
    Patched = GeosInstallDriver(&Disk, &Today);
-   if (!Patched) snprintf(Error, ErrorSize, "%s", Disk.Error);
+   if (!Patched) snprintf(Error, ErrorSize, PSTR("%s"), Disk.Error);
    Image.close();
    return Patched;
 }
 
 FLASHMEM static void GeosBackupPath(char *Backup, size_t Size, const char *Copy)
 {
-   snprintf(Backup, Size, "%s" GEOS_BACKUP_TAG, Copy);
+   snprintf(Backup, Size, PSTR("%s" GEOS_BACKUP_TAG), Copy);
 }
 
 // A copy renamed aside and never put back means power dropped between the two renames of GeosPatchCopy
@@ -178,9 +178,10 @@ FLASHMEM static bool GeosRestoreCopy(const char *Copy)
 FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
                                    const char *Copy, bool Patch)
 {
-   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[MaxNamePathLength + GEOS_ERROR_SIZE] = "the SD card could not be written";
+   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[MaxNamePathLength + GEOS_ERROR_SIZE];
    bool Replacing = SD.exists(Copy);
 
+   strcpy(Error, PSTR("the SD card could not be written"));
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
    GeosBackupPath(Backup, sizeof Backup, Copy);
    if (Replacing) SD.remove(Backup);
@@ -192,16 +193,17 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
          if (Replacing) SD.remove(Backup);
          return true;
       }
-      if (Replacing && !SD.rename(Backup, Copy)) snprintf(Error, sizeof Error, "your disk is now %s", Backup);
+      if (Replacing && !SD.rename(Backup, Copy)) snprintf(Error, sizeof Error, PSTR("your disk is now %s"), Backup);
    }
    SD.remove(Temp);
-   SendMsgPrintfln(Patch ? "Could not add the mouse driver to\r\na copy of %s:\r\n%s" : "Could not make a copy of\r\n%s:\r\n%s", Name, Error);
+   SendMsgPrintfln(Patch ? PSTR("Could not add the mouse driver to\r\na copy of %s:\r\n%s") : PSTR("Could not make a copy of\r\n%s:\r\n%s"),
+                   Name, Error);
    return false;
 }
 
 FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *Name)
 {
-   SendMsgPrintfln("%s boot disk:\r\n%s", Launcher->Title, Name);
+   SendMsgPrintfln(PSTR("%s boot disk:\r\n%s"), Launcher->Title, Name);
    return true;
 }
 
@@ -225,7 +227,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    GeosPath(Copy, sizeof Copy, Launcher, CopyName);
    if (!GeosInspectFile(Launcher, Source, &Found, Error, sizeof Error))
    {
-      SendMsgPrintfln("%s:\r\n%s", Name, Error);
+      SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Error);
       return false;
    }
    if (!Found.HasDeskTop) return false;
@@ -241,7 +243,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       // The copy is the disk GEOS saves the user's work to: one that cannot be read is left alone, not replaced
       if (!GeosInspectFile(Launcher, Copy, &Found, Error, sizeof Error))
       {
-         SendMsgPrintfln("%s:\r\n%s", CopyName, Error);
+         SendMsgPrintfln(PSTR("%s:\r\n%s"), CopyName, Error);
          return true;
       }
       if (Found.HasDriver) return GeosUse(Launcher, CopyName, BootName);
@@ -254,7 +256,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return GeosUse(Launcher, CopyName, BootName);
    }
    if (!GeosPatchCopy(Launcher, Name, Source, Copy, NeedsDriver)) return true;
-   SendMsgPrintfln(NeedsDriver ? "Added the TR USB mouse driver to\r\na copy of %s" : "Made a copy of %s\r\nto start from", Name);
+   SendMsgPrintfln(NeedsDriver ? PSTR("Added the TR USB mouse driver to\r\na copy of %s") : PSTR("Made a copy of %s\r\nto start from"), Name);
    return GeosUse(Launcher, CopyName, BootName);
 }
 
@@ -299,14 +301,14 @@ FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *It
 
    if (!SDFullInit())
    {
-      SendMsgPrintfln("%s starts from your boot disk\r\nimage on the SD card. Insert the card.", Launcher->Title);
+      SendMsgPrintfln(PSTR("%s starts from your boot disk\r\nimage on the SD card. Insert the card."), Launcher->Title);
       return false;
    }
    Count = GeosListImages(Launcher, Names);
    for (uint8_t i = 0; i < Count && !*BootName; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
    if (!BootDiskFound)
    {
-      SendMsgPrintfln("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again.",
+      SendMsgPrintfln(PSTR("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again."),
                       Launcher->Title, Launcher->Folder);
       return false;
    }

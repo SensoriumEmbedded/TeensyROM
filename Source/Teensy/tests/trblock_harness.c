@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// trblock_harness IMAGE OUT [ro|nobackend]: the block device's register side and disk image backend,
+// trblock_harness IMAGE OUT [ro|nobackend|flushfails]: the block device's register side and disk image backend,
 // driven from stdin one command a line, as the IO ISR and the main loop would drive them:
 //   w OFFSET HEX   an IO write          r OFFSET   an IO read, printing the byte or "open"
 //   svc            the main loop's service, printing 1 if a command ran
@@ -14,6 +14,7 @@
 
 static uint8_t Bytes[MAX_IMAGE];
 static uint32_t Size, Flushes;
+static bool FlushFails;
 
 static bool ReadAt(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -35,7 +36,7 @@ static bool FlushAll(void *Context)
 {
    (void)Context;
    Flushes++;
-   return true;
+   return !FlushFails;
 }
 
 int main(int argc, char **argv)
@@ -48,12 +49,13 @@ int main(int argc, char **argv)
 
    if (!In)
    {
-      fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend]\n");
+      fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend|flushfails]\n");
       return 2;
    }
    Size = fread(Bytes, 1, MAX_IMAGE, In);
    fclose(In);
    Image.Format = GeosFormatForSize(Size);
+   FlushFails = argc >= 4 && !strcmp(argv[3], "flushfails");
    Backend = TRBlockImageBackend(&Image);
    TRBlockReset(&Dev);
    const struct TRBlockBackend *Use = argc >= 4 && !strcmp(argv[3], "nobackend") ? NULL : &Backend;

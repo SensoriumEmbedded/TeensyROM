@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-// The TR block device (docs/TR_Block_Device.md) on the IO page a RAM expansion handler leaves free, beside
-//  the USB mouse's registers. The ISR side only fills registers and the window; the SD card is touched
-//  only from PollTRBlock, in the main loop.
+// The TR block device (docs/TR_Block_Device.md) in IO2, the page GeoRAM leaves free, beside the USB
+//  mouse's registers. The ISR side only fills registers and the window; the SD card is touched
+//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDBegin.
 
 #include "../../../BlockDevice/TRBlockImage.h"
 
@@ -11,45 +11,36 @@
 static struct TRBlock TRBlockDev;
 static struct TRBlockImage TRBlockImg;
 static struct TRBlockBackend TRBlockBack;
-static File TRBlockFile;
+// An FsFile, not an SD.h File: File::flush() discards whether the sync reached the card
+static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
+static char *TRBlockPath;
 
-static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
+FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
-   return TRBlockFile.seek(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
+   return TRBlockFile.seekSet(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
 }
 
-static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
+FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
 {
-   if (!TRBlockFile.seek(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
+   if (!TRBlockFile.seekSet(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
    TRBlockDirty = true;
    TRBlockLastWritemS = millis();
    return true;
 }
 
-static bool TRBlockFileFlush(void *Context)
+FLASHMEM static bool TRBlockFileFlush(void *Context)
 {
-   TRBlockFile.flush();
    TRBlockDirty = false;
-   return true;
+   return TRBlockFile.sync();
 }
 
-FLASHMEM void TRBlockUnmount()
-{
-   TRBlockBack.Context = NULL;
-   if (TRBlockFile) TRBlockFile.close();
-   TRBlockDirty = false;
-}
-
-// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler
-FLASHMEM bool TRBlockMount(const char *Path)
+FLASHMEM static bool TRBlockOpen()
 {
    uint64_t Size;
 
-   TRBlockUnmount();
-   TRBlockFile = SD.open(Path, FILE_WRITE_BEGIN);
-   if (!TRBlockFile) return false;
+   if (!TRBlockFile.open(&SD.sdfs, TRBlockPath, O_RDWR)) return false;
    Size = TRBlockFile.size();
    TRBlockImg = (struct TRBlockImage){ Size <= UINT32_MAX ? GeosFormatForSize(Size) : NULL, true, NULL,
                                        TRBlockFileRead, TRBlockFileWrite, TRBlockFileFlush };
@@ -62,12 +53,48 @@ FLASHMEM bool TRBlockMount(const char *Path)
    return true;
 }
 
+FLASHMEM static void TRBlockClose()
+{
+   TRBlockBack.Context = NULL;
+   if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
+   TRBlockDirty = false;
+}
+
+FLASHMEM void TRBlockUnmount()
+{
+   TRBlockClose();
+   free(TRBlockPath);
+   TRBlockPath = NULL;
+}
+
+// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler
+FLASHMEM bool TRBlockMount(const char *Path)
+{
+   TRBlockUnmount();
+   TRBlockPath = strdup(Path);
+   if (TRBlockPath && TRBlockOpen()) return true;
+   TRBlockUnmount();
+   return false;
+}
+
+// Every SD.begin in the main image goes through here. SD.begin rebuilds the volume in place under
+//  any open file and drops its cached, unwritten sectors, so the image is closed around it.
+FLASHMEM bool SDBegin()
+{
+   bool Began;
+
+   TRBlockClose();
+   Began = SD.begin(BUILTIN_SDCARD);
+   if (TRBlockPath) TRBlockOpen();
+   return Began;
+}
+
 FLASHMEM void InitTRBlock()
 {
    TRBlockReset(&TRBlockDev);
 }
 
-void PollTRBlock()
+FLASHMEM void PollTRBlock()
 {
    TRBlockService(&TRBlockDev, &TRBlockBack);
    if (TRBlockDirty && millis() - TRBlockLastWritemS > TRBlock_FlushIdlemS) TRBlockFileFlush(NULL);
