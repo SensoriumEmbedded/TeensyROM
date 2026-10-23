@@ -10,6 +10,7 @@
 #include <avr/pgmspace.h>
 #else
 #define FLASHMEM
+#define PSTR(s) (s)
 #endif
 
 #define GEOS_SECTOR_SIZE     256
@@ -85,7 +86,7 @@ static const struct GeosFormat GeosFormats[] =
 
 FLASHMEM static bool GeosFail(struct GeosDisk *Disk, const char *Message)
 {
-   snprintf(Disk->Error, sizeof Disk->Error, "%s", Message);
+   snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s"), Message);
    return false;
 }
 
@@ -108,13 +109,13 @@ FLASHMEM static uint32_t GeosOffset(const struct GeosFormat *Format, uint8_t Tra
 FLASHMEM static bool GeosReadTS(struct GeosDisk *Disk, uint8_t Track, uint8_t Sector, uint8_t *Block)
 {
    if (Disk->Read(Disk->Context, GeosOffset(Disk->Format, Track, Sector), Block)) return true;
-   return GeosFail(Disk, "the image could not be read");
+   return GeosFail(Disk, PSTR("the image could not be read"));
 }
 
 FLASHMEM static bool GeosWriteTS(struct GeosDisk *Disk, uint8_t Track, uint8_t Sector, const uint8_t *Block)
 {
    if (Disk->Write(Disk->Context, GeosOffset(Disk->Format, Track, Sector), Block)) return true;
-   return GeosFail(Disk, "the image could not be written");
+   return GeosFail(Disk, PSTR("the image could not be written"));
 }
 
 FLASHMEM static bool GeosIsReserved(const struct GeosFormat *Format, uint8_t Track)
@@ -193,7 +194,7 @@ FLASHMEM static bool GeosReadTrackBam(struct GeosDisk *Disk, uint8_t Track, stru
 FLASHMEM static bool GeosCheckCount(struct GeosDisk *Disk, uint8_t Track, const struct GeosTrackBam *Bam)
 {
    if (*Bam->Count >= Bam->Free) return true;
-   snprintf(Disk->Error, sizeof Disk->Error, "the BAM count for track %u disagrees with its bitmap", Track);
+   snprintf(Disk->Error, sizeof Disk->Error, PSTR("the BAM count for track %u disagrees with its bitmap"), Track);
    return false;
 }
 
@@ -226,7 +227,7 @@ FLASHMEM static bool GeosCheckRoom(struct GeosDisk *Disk, unsigned Needed)
       Found += Bam.Free;
       if (Found >= Needed) return true;
    }
-   return GeosFail(Disk, "the disk is full");
+   return GeosFail(Disk, PSTR("the disk is full"));
 }
 
 FLASHMEM static bool GeosAllocate(struct GeosDisk *Disk, struct GeosTS *Where)
@@ -240,7 +241,7 @@ FLASHMEM static bool GeosAllocate(struct GeosDisk *Disk, struct GeosTS *Where)
       *Where = (struct GeosTS){ Track, (uint8_t)Sector };
       return true;
    }
-   return GeosFail(Disk, "the disk is full");
+   return GeosFail(Disk, PSTR("the disk is full"));
 }
 
 FLASHMEM static bool GeosChainHas(const struct GeosTS *Chain, int Length, uint8_t Track, uint8_t Sector)
@@ -261,14 +262,14 @@ FLASHMEM static bool GeosDirChain(struct GeosDisk *Disk, struct GeosTS *Chain, i
    if (!GeosReadTS(Disk, Disk->Format->DirTrack, 0, Block)) return false;
    Track = Block[0];
    Sector = Block[1];
-   if (!Track) return GeosFail(Disk, "the disk header links to no directory");
+   if (!Track) return GeosFail(Disk, PSTR("the disk header links to no directory"));
 
    while (Track)
    {
       if (GeosChainHas(Chain, *Length, Track, Sector) || !GeosIsDirSector(Disk->Format, Track, Sector) ||
           *Length == GEOS_MAX_DIR_SECTORS)
       {
-         snprintf(Disk->Error, sizeof Disk->Error, "the directory chain is broken at %u/%u", Track, Sector);
+         snprintf(Disk->Error, sizeof Disk->Error, PSTR("the directory chain is broken at %u/%u"), Track, Sector);
          return false;
       }
       Chain[(*Length)++] = (struct GeosTS){ Track, Sector };
@@ -289,12 +290,12 @@ FLASHMEM static bool GeosCheckDirectoryRoom(struct GeosDisk *Disk, const struct 
    for (int i = 0; i < Length; i++)
    {
       if (!GeosSectorIsFree(Bam.Bits, Chain[i].Sector)) continue;
-      snprintf(Disk->Error, sizeof Disk->Error, "the BAM shows directory sector %u/%u free", Chain[i].Track, Chain[i].Sector);
+      snprintf(Disk->Error, sizeof Disk->Error, PSTR("the BAM shows directory sector %u/%u free"), Chain[i].Track, Chain[i].Sector);
       return false;
    }
    if (!GeosCheckCount(Disk, Format->DirTrack, &Bam)) return false;
    if (Bam.FirstFree >= 0 && GeosIsDirSector(Format, Format->DirTrack, Bam.FirstFree)) return true;
-   return GeosFail(Disk, "the directory is full");
+   return GeosFail(Disk, PSTR("the directory is full"));
 }
 
 // Chains one more directory sector, as DOS does when a directory fills.
@@ -304,7 +305,7 @@ FLASHMEM static bool GeosGrowDirectory(struct GeosDisk *Disk, struct GeosTS *Cha
    uint8_t Block[GEOS_SECTOR_SIZE];
    int New;
 
-   if (*Length == GEOS_MAX_DIR_SECTORS) return GeosFail(Disk, "the directory is full");
+   if (*Length == GEOS_MAX_DIR_SECTORS) return GeosFail(Disk, PSTR("the directory is full"));
    if (!GeosCheckDirectoryRoom(Disk, Chain, *Length) || !GeosTake(Disk, Format->DirTrack, &New)) return false;
 
    struct GeosTS Last = Chain[*Length - 1];
@@ -477,13 +478,13 @@ FLASHMEM static bool GeosReadDirectory(struct GeosDisk *Disk, struct GeosTS *Cha
 
    if (strlen(Target->DeskTopName) > GEOS_NAME_SIZE || strlen(Target->DriverName) > GEOS_NAME_SIZE || !Target->DriverSize)
    {
-      return GeosFail(Disk, "the GEOS target's names or driver do not fit a directory entry");
+      return GeosFail(Disk, PSTR("the GEOS target's names or driver do not fit a directory entry"));
    }
-   if (!Disk->Format) return GeosFail(Disk, "not a D64, D71 or D81 without error bytes");
+   if (!Disk->Format) return GeosFail(Disk, PSTR("not a D64, D71 or D81 without error bytes"));
    if (!GeosReadTS(Disk, Disk->Format->DirTrack, 0, Header)) return false;
    if (Disk->Format->TwoSided && !(Header[3] & D71_DOUBLE_SIDED))
    {
-      return GeosFail(Disk, "this D71 is formatted single-sided");
+      return GeosFail(Disk, PSTR("this D71 is formatted single-sided"));
    }
    if (!GeosDirChain(Disk, Chain, Length)) return false;
    return GeosScanDirectory(Disk, Chain, *Length, Scan);
@@ -513,7 +514,7 @@ FLASHMEM static inline bool GeosInstallDriver(struct GeosDisk *Disk, const struc
    if (!GeosReadDirectory(Disk, Chain, &Length, &Scan)) return false;
    if (Scan.HasOurs)
    {
-      snprintf(Disk->Error, sizeof Disk->Error, "%s is already on this disk", Disk->Target->DriverName);
+      snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s is already on this disk"), Disk->Target->DriverName);
       return false;
    }
    if (!Scan.HasFree && !GeosCheckDirectoryRoom(Disk, Chain, Length)) return false;
