@@ -2,7 +2,7 @@
 
 // The TR block device (docs/TR_Block_Device.md) in IO2, the page GeoRAM leaves free, beside the USB
 //  mouse's registers. The ISR side only fills registers and the window; the SD card is touched
-//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDBegin.
+//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDFullInit.
 
 #include "../../../BlockDevice/TRBlockImage.h"
 
@@ -16,6 +16,8 @@ static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
 static char *TRBlockPath;
+static bool TRBlockFlushFailureLogged;
+static struct { uint32_t FirstSector, CardSerial; } TRBlockMounted;
 
 FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -30,10 +32,19 @@ FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint
    return true;
 }
 
+// GEOS never sends FLUSH, so a failed sync stays dirty for the idle flush to retry
 FLASHMEM static bool TRBlockFileFlush(void *Context)
 {
-   TRBlockDirty = false;
-   return TRBlockFile.sync();
+   if (TRBlockFile.sync())
+   {
+      TRBlockDirty = TRBlockFlushFailureLogged = false;
+      return true;
+   }
+   TRBlockDirty = true;
+   TRBlockLastWritemS = millis();
+   if (!TRBlockFlushFailureLogged) Serial.printf("TR block image: writes are not reaching the card; retrying\n");
+   TRBlockFlushFailureLogged = true;
+   return false;
 }
 
 FLASHMEM static bool TRBlockOpen()
@@ -53,11 +64,33 @@ FLASHMEM static bool TRBlockOpen()
    return true;
 }
 
-FLASHMEM static void TRBlockClose()
+// Close and reopen around an SD.begin that can run while GeoRAM has an image mounted, as SDFullInit does.
+//  SD.begin rebuilds the volume in place under any open file and drops its cached, unwritten sectors.
+FLASHMEM void TRBlockClose()
 {
    TRBlockBack.Context = NULL;
    if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
-   TRBlockDirty = false;
+   TRBlockDirty = TRBlockFlushFailureLogged = false;
+}
+
+FLASHMEM static uint32_t TRBlockCardSerial()
+{
+   cid_t CID;
+
+   return SD.sdfs.card()->readCID(&CID) ? CID.psn : 0;
+}
+
+FLASHMEM static bool TRBlockIsMountedFile()
+{
+   return TRBlockFile.firstSector() == TRBlockMounted.FirstSector && TRBlockCardSerial() == TRBlockMounted.CardSerial;
+}
+
+// Every D64 is the same size, so a swapped card's image at the same path would take GEOS's cached BAM and directory
+FLASHMEM void TRBlockReopen()
+{
+   if (!TRBlockPath || !TRBlockOpen() || TRBlockIsMountedFile()) return;
+   TRBlockClose();
+   Serial.printf("TR block image: %s on the card is not the one mounted; left unmounted\n", TRBlockPath);
 }
 
 FLASHMEM void TRBlockUnmount()
@@ -72,21 +105,13 @@ FLASHMEM bool TRBlockMount(const char *Path)
 {
    TRBlockUnmount();
    TRBlockPath = strdup(Path);
-   if (TRBlockPath && TRBlockOpen()) return true;
+   if (TRBlockPath && TRBlockOpen())
+   {
+      TRBlockMounted = { TRBlockFile.firstSector(), TRBlockCardSerial() };
+      return true;
+   }
    TRBlockUnmount();
    return false;
-}
-
-// Every SD.begin in the main image goes through here. SD.begin rebuilds the volume in place under
-//  any open file and drops its cached, unwritten sectors, so the image is closed around it.
-FLASHMEM bool SDBegin()
-{
-   bool Began;
-
-   TRBlockClose();
-   Began = SD.begin(BUILTIN_SDCARD);
-   if (TRBlockPath) TRBlockOpen();
-   return Began;
 }
 
 FLASHMEM void InitTRBlock()
