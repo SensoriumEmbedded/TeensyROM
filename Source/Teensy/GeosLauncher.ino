@@ -144,7 +144,7 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
 
    if (!Image)
    {
-      snprintf(Error, ErrorSize, "the image could not be opened");
+      snprintf(Error, ErrorSize, PSTR("the image could not be opened"));
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
@@ -235,7 +235,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
 
    if (!GeosRestoreCopy(Copy))
    {
-      SendMsgPrintfln("%s\r\nwas set aside and could not be put back", CopyName);
+      SendMsgPrintfln(PSTR("%s\r\nwas set aside and could not be put back"), CopyName);
       return true;
    }
    if (SD.exists(Copy))
@@ -249,7 +249,7 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       if (Found.HasDriver) return GeosUse(Launcher, CopyName, BootName);
       if (!Found.HasDeskTop)
       {
-         SendMsgPrintfln("%s\r\nhas no desktop; remove it to start over", CopyName);
+         SendMsgPrintfln(PSTR("%s\r\nhas no desktop; remove it to start over"), CopyName);
          return true;
       }
       if (!GeosPatchCopy(Launcher, CopyName, Copy, Copy, true)) return true;
@@ -273,18 +273,18 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    Image = SD.open(Path, FILE_WRITE_BEGIN);
    if (!Image)
    {
-      SendMsgPrintfln("%s\r\ncould not be opened", Name);
+      SendMsgPrintfln(PSTR("%s\r\ncould not be opened"), Name);
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
    Built = GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length) && GeosDisableConfigure(&Disk, &Changed);
    if (Built) GeosSetClock(RAM_Image, Length, &Now);
-   if (!Built) SendMsgPrintfln("%s:\r\n%s", Name, Disk.Error);
+   if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
    if (!Built) return false;
    if (!TRBlockMount(Path))
    {
-      SendMsgPrintfln("%s\r\ncould not be mounted", Name);
+      SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;
    }
    Item->ItemType = rtFilePrg;

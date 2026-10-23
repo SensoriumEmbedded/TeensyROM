@@ -121,16 +121,16 @@ static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, 
          break;
       }
    }
-   if (!At.Track) return GeosFail(Disk, "the boot file is not on the disk");
+   if (!At.Track) return GeosFail(Disk, PSTR("the boot file is not on the disk"));
 
    *Length = 0;
    for (int Blocks = 0; At.Track; Blocks++)
    {
       uint32_t Used;
-      if (Blocks > GEOS_MAX_FILE_BLOCKS || At.Track > Disk->Format->Tracks) return GeosFail(Disk, "the boot file's chain is broken");
+      if (Blocks > GEOS_MAX_FILE_BLOCKS || At.Track > Disk->Format->Tracks) return GeosFail(Disk, PSTR("the boot file's chain is broken"));
       if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
       Used = Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0);
-      if (*Length + Used > Capacity) return GeosFail(Disk, "the boot file is too large");
+      if (*Length + Used > Capacity) return GeosFail(Disk, PSTR("the boot file is too large"));
       memcpy(Out + *Length, Block + 2, Used);
       *Length += Used;
       At = (struct GeosTS){ Block[0], Block[1] };
@@ -252,15 +252,15 @@ static bool GeosBuildBootPrg(struct GeosDisk *Disk, uint8_t *Out, uint32_t Capac
    int32_t Driver;
    uint8_t *Body = Out + 2;
 
-   if (!Disk->Target->BootFile) return GeosFail(Disk, "this version has no boot file to start from");
+   if (!Disk->Target->BootFile) return GeosFail(Disk, PSTR("this version has no boot file to start from"));
    if (!GeosReadFile(Disk, Disk->Target->BootFile, Out, Capacity, &FileSize)) return false;
-   if (FileSize < 2 + GEOS_DRIVER_SIZE) return GeosFail(Disk, "the boot file is too short");
+   if (FileSize < 2 + GEOS_DRIVER_SIZE) return GeosFail(Disk, PSTR("the boot file is too short"));
    BodySize = FileSize - 2;
    Load = GeosWord(Out);
    Driver = GeosFindDriver(Body, BodySize);
-   if (Driver < 0 || !GeosReplaceTransport(Body + Driver)) return GeosFail(Disk, "the boot file's disk driver is not one the TR can replace");
+   if (Driver < 0 || !GeosReplaceTransport(Body + Driver)) return GeosFail(Disk, PSTR("the boot file's disk driver is not one the TR can replace"));
    Place = 2 + Load - GEOS_BASIC_START;
-   if (Load < GEOS_BASIC_START + Prologue - 2 || Place + BodySize > Capacity || Load + BodySize > GEOS_MEMORY_END) return GeosFail(Disk, "the boot file does not fit in memory");
+   if (Load < GEOS_BASIC_START + Prologue - 2 || Place + BodySize > Capacity || Load + BodySize > GEOS_MEMORY_END) return GeosFail(Disk, PSTR("the boot file does not fit in memory"));
 
    memmove(Out + Place, Body, BodySize);
    memset(Out, 0, Place);
