@@ -226,23 +226,15 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       }                                          //DriveDirPath's buffer can't hold both "/" and the filename starting at index 1
    }
    
-   //free mem for DriveDirMenu in case current (non-tr) handler is using it all
-   FreeCrtChips();
-#ifdef Fab04_REU
-   FreeREU();
-#endif
-   FreeGeoRAM();
-   TRBlockUnmount();
-   FreeSwiftlinkBuffs();
-   InitDriveDirMenu();
+   int16_t MenuNum = -1;
+   StructMenuItem* DefTRMenu = TeensyROMMenu;  //default to root menu
+   uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
 
+   // A launch can arrive while a handler is running the C64: one that finds no
+   // target must return before anything that handler uses is freed.
    if (MenuSourceID == rmtTeensy)
    {
       //point MenuSource to directory
-      int16_t MenuNum = -1;
-      StructMenuItem* DefTRMenu = TeensyROMMenu;  //default to root menu
-      uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
-      
       if(strcmp(DriveDirPath, "/") !=0 )
       {//find dir menu
          MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, DriveDirPath);
@@ -266,7 +258,20 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
          return;
       }   
       Printf_dbg("TR File Num = %d\n", MenuNum);
+   }
 
+   //free mem for DriveDirMenu in case current (non-tr) handler is using it all
+   FreeCrtChips();
+#ifdef Fab04_REU
+   FreeREU();
+#endif
+   FreeGeoRAM();
+   TRBlockUnmount();
+   FreeSwiftlinkBuffs();
+   InitDriveDirMenu();
+
+   if (MenuSourceID == rmtTeensy)
+   {
       //point to item # matching filename
       MenuSource = DefTRMenu;
       SetNumItems(NumMenuItems);

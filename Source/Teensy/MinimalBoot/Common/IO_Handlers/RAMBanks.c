@@ -222,11 +222,16 @@ FLASHMEM void SaveRAMBanksReplacing(uint8_t *Bank[], uint8_t NumBanks, const cha
    WithExtension(BackupFilename, ptrFileName, ".bak");
 
    if (!WriteRAMBanksFile(sourceFS, TempFilename, Bank, NumBanks)) return;
-   sourceFS->remove(BackupFilename);
-   sourceFS->rename(ptrFileName, BackupFilename);   // fails harmlessly when there is no previous save
+   bool HadSave = sourceFS->exists(ptrFileName);
+   if (HadSave)
+   {  // rename refuses an existing target
+      sourceFS->remove(BackupFilename);
+      sourceFS->rename(ptrFileName, BackupFilename);
+   }
    if (!sourceFS->rename(TempFilename, ptrFileName))
    {
       Serial.printf("Unable to rename %s to %s!\n", TempFilename, ptrFileName);
+      if (HadSave) sourceFS->rename(BackupFilename, ptrFileName);
       return;
    }
    FlashSavedLED();
