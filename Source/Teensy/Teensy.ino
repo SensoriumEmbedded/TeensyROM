@@ -534,13 +534,15 @@ FLASHMEM void SetEEPDefaults()
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }
 
-void SetNumItems(uint16_t NumItems)
+void SetMenu(StructMenuItem* Source, uint16_t NumItems)
 {
+   MenuSource = Source;
    NumItemsFull = NumItems;
-   IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
+   SelItemFullIdx = 0; //UpdateItemTypeReg reads MenuSource[SelItemFullIdx] before the C64 selects in the new menu
+   IO1[rRegNumItemsOnPage] = (NumItems > MaxItemsPerPage ? MaxItemsPerPage : NumItems);
    IO1[rwRegPageNumber] = 1;
-   IO1[rRegNumPages] = 
-      NumItems/MaxItemsPerPage + 
+   IO1[rRegNumPages] =
+      NumItems/MaxItemsPerPage +
       (NumItems%MaxItemsPerPage!=0 ? 1 : 0) +
       (NumItems==0 ? 1 : 0);
 }

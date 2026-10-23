@@ -106,8 +106,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    char FullFilePath[MaxNamePathLength];
    uint32_t SwapBanksDetected = 0;
 
-   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
+   if (PathIsRoot()) snprintf(FullFilePath, sizeof FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
+   else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
@@ -270,7 +270,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    *GAME = CRT_Image[0x19];
    SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
-   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %.32s", (CRT_Image+0x20)); //the CRT Name field is 32 bytes and may fill them all
    return true;
 }
    
@@ -410,7 +410,7 @@ void SendMsgPrintfln(const char *Fmt, ...)
    
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
     
    Serial.printf("%s\n", SerialStringBuf);

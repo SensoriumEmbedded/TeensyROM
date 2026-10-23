@@ -186,9 +186,70 @@ void EEPRemoteLaunch(uint16_t eepAdNameToLaunch)
    RemoteLaunch(MenuSourceID, ptrAutoFileName, true); //do CRT directly 
 }
                
+//Only the folder has to fit in DriveDirPath; the file name is read from FileNamePath
+bool LaunchFolderFits(const char *FileNamePath)
+{
+   const char* ptrSlash = strrchr(FileNamePath, '/');
+   return ptrSlash == NULL || (size_t)(ptrSlash - FileNamePath) < MaxPathLength;
+}
+
 void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCartDirect)
-{  //assumes file exists & TR is not "busy" (Handler active)
+{//assumes file exists & TR is not "busy" (Handler active)
    
+   //A cut-short folder opens a different one, so refuse rather than truncate
+   if (!LaunchFolderFits(FileNamePath))
+   {
+      Serial.printf("Remote launch folder too long (%u chars)\n", (unsigned)strlen(FileNamePath));
+      return;
+   }
+
+   //set path & filename; DriveDirPath changes only once the launch goes ahead
+   char LaunchDir[MaxPathLength];
+   const char* ptrSlash = strrchr(FileNamePath, '/');
+   char* ptrFilename;
+   if (ptrSlash == NULL)
+   {  //no path:
+      strcpy(LaunchDir, "/");
+      ptrFilename = (char*)FileNamePath;
+   }
+   else
+   {  //separate path/filename; the file name stays in FileNamePath, which may be longer than LaunchDir
+      size_t FolderLen = ptrSlash - FileNamePath;
+      memcpy(LaunchDir, FileNamePath, FolderLen);
+      LaunchDir[FolderLen] = 0;
+      if (!FolderLen) strcpy(LaunchDir, "/"); //root-level file: the only slash was the leading one
+      ptrFilename = (char*)ptrSlash + 1;
+   }
+
+   //Resolve the TR entry before anything changes: a failed lookup must leave the C64's listing,
+   //  menu type and registry as they were, or its next selection runs against the wrong menu
+   int16_t TRMenuNum = -1;
+   StructMenuItem* TRMenu = TeensyROMMenu;  //default to root menu
+   uint16_t TRNumItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
+   if (MenuSourceID == rmtTeensy)
+   {
+      if(strcmp(LaunchDir, "/") !=0 )
+      {//find dir menu
+         int16_t DirNum = FindTRMenuItem(TRMenu, TRNumItems, LaunchDir);
+         if(DirNum<0)
+         {
+            Printf_dbg("No TR Dir \"%s\"\n", LaunchDir);
+            //Somehow notify user?
+            return;
+         }
+         TRMenu = (StructMenuItem*)TeensyROMMenu[DirNum].Code_Image;
+         TRNumItems = TeensyROMMenu[DirNum].Size/sizeof(StructMenuItem);
+      }
+      TRMenuNum = FindTRMenuItem(TRMenu, TRNumItems, ptrFilename);
+      if(TRMenuNum<0)
+      {
+         Printf_dbg("No TR File \"%s\"\n", ptrFilename);
+         //Somehow notify user?
+         return;
+      }
+      Printf_dbg("TR File Num = %d\n", TRMenuNum);
+   }
+
    //Printf_dbg("Launching: SrcID%d DoCRT%d \"%s\"\n", MenuSourceID, DoCartDirect, FileNamePath);
    RemoteLaunched = true;
    //Set selected drive
@@ -207,69 +268,19 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
 
    if (MenuSourceID == rmtUSBDrive) USBFileSystemWait(); //wait up to 1.5 sec in case USB drive just changed or powered up
    
-   //set path & filename
-   strcpy(DriveDirPath, FileNamePath);
-   char* ptrFilename = strrchr(DriveDirPath, '/'); //pointer file name, find last slash
-   if (ptrFilename == NULL) 
-   {  //no path:
-      strcpy(DriveDirPath, "/");
-      ptrFilename = (char*)FileNamePath; 
-   }
-   else
-   {  //separate path/filename
-      *ptrFilename = 0; //terminate DriveDirPath
-      ptrFilename++; //inc to point to filename
-      if (!DriveDirPath[0]) //root-level file: the only slash was the leading one, DriveDirPath is now empty
-      {
-         strcpy(DriveDirPath, "/"); //restore the leading slash
-         ptrFilename = (char*)FileNamePath + 1; //re-point into the untouched source string (past its leading slash) --
-      }                                          //DriveDirPath's buffer can't hold both "/" and the filename starting at index 1
-   }
-   
    //free mem for DriveDirMenu in case current (non-tr) handler is using it all
    FreeCrtChips();
 #ifdef Fab04_REU
    FreeREU();
 #endif   
    FreeSwiftlinkBuffs();
-   InitDriveDirMenu();
 
    if (MenuSourceID == rmtTeensy)
    {
-      //point MenuSource to directory
-      int16_t MenuNum = -1;
-      StructMenuItem* DefTRMenu = TeensyROMMenu;  //default to root menu
-      uint16_t NumMenuItems = sizeof(TeensyROMMenu)/sizeof(StructMenuItem);
-      
-      if(strcmp(DriveDirPath, "/") !=0 )
-      {//find dir menu
-         MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, DriveDirPath);
-         if(MenuNum<0)
-         {
-            Printf_dbg("No TR Dir \"%s\"\n", DriveDirPath);
-            //Somehow notify user?  
-            return;
-         }
-         DefTRMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
-         NumMenuItems = TeensyROMMenu[MenuNum].Size/sizeof(StructMenuItem);
-      }
-      Printf_dbg("TR Dir Num = %d\n", MenuNum);
-      
-      //find file name
-      MenuNum = FindTRMenuItem(DefTRMenu, NumMenuItems, ptrFilename);
-      if(MenuNum<0)
-      {
-         Printf_dbg("No TR File \"%s\"\n", ptrFilename);
-         //Somehow notify user?  
-         return;
-      }   
-      Printf_dbg("TR File Num = %d\n", MenuNum);
-
       //point to item # matching filename
-      MenuSource = DefTRMenu;
-      SetNumItems(NumMenuItems);
-      IO1[rwRegCursorItemOnPg] = MenuNum;
-      SelItemFullIdx = MenuNum;  //  "Select" item
+      SetMenu(TRMenu, TRNumItems);
+      IO1[rwRegCursorItemOnPg] = TRMenuNum;
+      SelItemFullIdx = TRMenuNum;  //  "Select" item
       UpdateItemTypeReg();
    }
    else
@@ -277,18 +288,20 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
       // Set up DriveDirMenu to point to file to load
       //    without doing LoadDirectory(&SD/&firstPartition);
       Printf_dbg("Dir Setup\n");
+      InitDriveDirMenu();
       SetDriveDirMenuNameType(0, ptrFilename);  //not worried about out of memory here (first/only item)
       NumDrvDirMenuItems = 1;
 #ifdef VM_EXTENSIONS_ENABLED
       MarkVmClaimed();
 #endif
-      MenuSource = DriveDirMenu; 
-      SetNumItems(1); //sets # of menu items
+      SetMenu(DriveDirMenu, 1);
       IO1[rwRegCursorItemOnPg] = 0;
       SelItemFullIdx = 0;  //  "Select" item
       UpdateItemTypeReg();
    }
    
+   strcpy(DriveDirPath, LaunchDir);
+
    //Printf_dbg("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
    Serial.printf("Remote Launch:\nP: %s\nF: %s\n", DriveDirPath, ptrFilename);
 

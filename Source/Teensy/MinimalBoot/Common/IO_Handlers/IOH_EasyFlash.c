@@ -71,8 +71,8 @@ void LoadBank(uint32_t SeekTo, uint8_t* ptrImage)
 
       //uint32_t Startms = millis();
 
-      if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
-      else sprintf(FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
+      if (PathIsRoot()) snprintf(FullFilePath, sizeof FullFilePath, "%s%s", DriveDirPath, DriveDirMenu.Name);  // at root
+      else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", DriveDirPath, DriveDirMenu.Name);
          
       //Printf_dbg("Loading:\r\n%s", FullFilePath);
 

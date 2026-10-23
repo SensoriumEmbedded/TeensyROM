@@ -113,7 +113,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    *GAME = CRT_Image[0x19];
    SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
-   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %.32s", (CRT_Image+0x20)); //the CRT Name field is 32 bytes and may fill them all
    return true;
 }
    
@@ -182,6 +182,12 @@ bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
             {
                SendMsgPrintfln("Must run this crt from SD"); 
                return false;                        
+            }
+            //the EEPROM slot is MaxPathLength, shorter than FullFilePath
+            if (strlen(FullFilePath) >= MaxPathLength)
+            {
+               SendMsgPrintfln("CRT path too long\r\nto boot from SD");
+               return false;
             }
 
             SendMsgPrintfln("Rebooting Teensy to Minimal");
@@ -282,7 +288,7 @@ FLASHMEM void SIDLoadError(const char* ErrMsg)
    strcat(StrSIDInfo, ErrMsg); //add to displayed info
    SendU16(BadSIDToken);
    SendMsgPrintfln("Error:");
-   SendMsgPrintfln(ErrMsg);
+   SendMsgPrintfln("%s", ErrMsg);
 }
 
 FLASHMEM void ParseSIDHeader(const char *filename)
