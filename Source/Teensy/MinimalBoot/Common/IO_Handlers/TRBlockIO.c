@@ -31,10 +31,21 @@ FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint
    return true;
 }
 
+// GEOS never sends FLUSH, so a failed sync stays dirty for the idle flush to retry
 FLASHMEM static bool TRBlockFileFlush(void *Context)
 {
-   TRBlockDirty = false;
-   return TRBlockFile.sync();
+   static bool FailureLogged;
+
+   if (TRBlockFile.sync())
+   {
+      TRBlockDirty = FailureLogged = false;
+      return true;
+   }
+   TRBlockDirty = true;
+   TRBlockLastWritemS = millis();
+   if (!FailureLogged) Serial.printf("TR block image: writes are not reaching the card; retrying\n");
+   FailureLogged = true;
+   return false;
 }
 
 FLASHMEM static bool TRBlockOpen()
