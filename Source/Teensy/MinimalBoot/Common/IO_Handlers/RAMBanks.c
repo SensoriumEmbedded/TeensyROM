@@ -121,6 +121,45 @@ FLASHMEM void LoadRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    LoadFile.close();
 }
 
+FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
+{
+   Serial.printf("Saving: %s\n", FileName);
+   sourceFS->remove(FileName);   // FILE_WRITE appends to an existing file
+   File SaveFile = sourceFS->open(FileName, FILE_WRITE);
+   if (!SaveFile)
+   {
+      Serial.println("Unable to open!");
+      return false;
+   }
+
+   for (uint8_t BankNum = 0; BankNum < NumBanks; BankNum++)
+   {
+      if (SaveFile.write(Bank[BankNum], RAM_Bank_Size) != RAM_Bank_Size)
+      {
+         Serial.printf("Write failed after %dKBytes!\n", BankNum * RAM_Bank_Size / 1024);
+         SaveFile.close();
+         return false;
+      }
+   }
+   Serial.printf("Saved %dKBytes\n", NumBanks * RAM_Bank_Size / 1024);
+   SaveFile.close();
+   return true;
+}
+
+FLASHMEM static void FlashSavedLED()
+{
+   uint32_t LastmS = millis();
+   bool LEDState = true;
+
+   for (uint32_t FlashCount=0; FlashCount<20; FlashCount++)
+   {
+      while(millis()-LastmS < 75);
+      LastmS = millis();
+      if ((LEDState = !LEDState)) SetLEDOn;
+      else SetLEDOff;
+   }
+}
+
 // Saves to the first free numbered name: reu.reu becomes reu000.reu, reu000.reu becomes reu001.reu, etc
 FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *SourcePath)
 {
@@ -157,34 +196,38 @@ FLASHMEM void SaveRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    do sprintf(NewFilename, "%s%03d%s", ptrFileName, NewNum++, Extension);
    while (sourceFS->exists(NewFilename));
 
-   Serial.printf("Saving: %s\n", NewFilename);
-   File SaveFile = sourceFS->open(NewFilename, FILE_WRITE);
-   if (!SaveFile)
+   if (WriteRAMBanksFile(sourceFS, NewFilename, Bank, NumBanks)) FlashSavedLED();
+}
+
+FLASHMEM static void WithExtension(char *Dest, const char *FileName, const char *Extension)
+{
+   strlcpy(Dest, FileName, MaxPathLength);
+   char *pDot = strrchr(Dest, '.');
+   if (pDot != NULL) *pDot = 0;
+   strlcat(Dest, Extension, MaxPathLength);
+}
+
+// Overwrites the file, keeping the one it replaces as .bak: georam.ram becomes georam.bak
+FLASHMEM void SaveRAMBanksReplacing(uint8_t *Bank[], uint8_t NumBanks, const char *SourcePath)
+{
+   if (NumBanks == 0) return;   // nothing to save: probably due to failure to allocate
+
+   char Filename[MaxPathLength];
+   strlcpy(Filename, SourcePath, MaxPathLength);
+   char *ptrFileName;
+   FS *sourceFS = RAMBanksFS(Filename, &ptrFileName);
+
+   char TempFilename[MaxPathLength], BackupFilename[MaxPathLength];
+   WithExtension(TempFilename, ptrFileName, ".tmp");
+   WithExtension(BackupFilename, ptrFileName, ".bak");
+
+   if (!WriteRAMBanksFile(sourceFS, TempFilename, Bank, NumBanks)) return;
+   sourceFS->remove(BackupFilename);
+   sourceFS->rename(ptrFileName, BackupFilename);   // fails harmlessly when there is no previous save
+   if (!sourceFS->rename(TempFilename, ptrFileName))
    {
-      Serial.println("Unable to open!");
+      Serial.printf("Unable to rename %s to %s!\n", TempFilename, ptrFileName);
       return;
    }
-
-   for (uint8_t BankNum = 0; BankNum < NumBanks; BankNum++)
-   {
-      if (SaveFile.write(Bank[BankNum], RAM_Bank_Size) != RAM_Bank_Size)
-      {
-         Serial.printf("Write failed after %dKBytes!\n", BankNum * RAM_Bank_Size / 1024);
-         SaveFile.close();
-         return;
-      }
-   }
-   Serial.printf("Saved %dKBytes\n", NumBanks * RAM_Bank_Size / 1024);
-   SaveFile.close();
-
-   uint32_t LastmS = millis();
-   bool LEDState = true;
-
-   for (uint32_t FlashCount=0; FlashCount<20; FlashCount++)
-   {
-      while(millis()-LastmS < 75);
-      LastmS = millis();
-      if ((LEDState = !LEDState)) SetLEDOn;
-      else SetLEDOff;
-   }
+   FlashSavedLED();
 }
