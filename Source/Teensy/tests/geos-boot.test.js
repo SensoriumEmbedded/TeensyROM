@@ -68,13 +68,48 @@ function stockDriver() {
 
 const START_AT_IN_BODY = 0x1000;
 const START_DATE = [0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85];
+const LOOP_END = [0xca, 0xd0, 0xe4];
 const START_CLOCK = [0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, 0xa9, 0x81, 0x8d, 0x0b, 0xdc, 0xa9, 0x00, 0x8d, 0x0a, 0xdc, 0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc];
+const START_UP = [...START_DATE, ...LOOP_END, ...START_CLOCK];
+const CLOCK_AT = START_DATE.length + LOOP_END.length;
 
-function bootFile(driver = stockDriver(), startUp = false) {
+const CRB = 0xdc0f;
+const ALARM_SELECT = 0x80;
+const TOD_TENTHS = 0xdc08;
+const TOD_HOURS = 0xdc0b;
+const PM = 0x80;
+
+// Runs the start-up clock code the way a 6526 takes it: X is zero from the loop before it, writes go to the alarm
+// while CRB selects it, and writing hour 12 flips AM/PM. Returns the TOD registers it sets, tenths first.
+function runClock(code) {
+  let a = 0;
+  let x = 0;
+  let crb = ALARM_SELECT;
+  const tod = [];
+  const write = (address, value) => {
+    if (address === CRB) crb = value;
+    else if (crb & ALARM_SELECT) assert.fail(`$${address.toString(16)} written while CRB selects the alarm`);
+    else tod[address - TOD_TENTHS] = address === TOD_HOURS && (value & 0x1f) === 0x12 ? value ^ PM : value;
+  };
+  for (let pc = 0; pc < code.length; ) {
+    const op = code[pc];
+    const word = code[pc + 1] | (code[pc + 2] << 8);
+    if (op === 0xa9) (a = code[pc + 1]), (pc += 2);
+    else if (op === 0xa2) (x = code[pc + 1]), (pc += 2);
+    else if (op === 0x29) (a &= code[pc + 1]), (pc += 2);
+    else if (op === 0xad && word === CRB) (a = crb), (pc += 3);
+    else if (op === 0x8d) write(word, a), (pc += 3);
+    else if (op === 0x8e) write(word, x), (pc += 3);
+    else assert.fail(`unexpected opcode $${op.toString(16)}`);
+  }
+  return tod;
+}
+
+function bootFile(driver = stockDriver(), startUp = []) {
   const body = Buffer.alloc(BODY_SIZE);
   for (let i = 0; i < BODY_SIZE; i++) body[i] = (i * 31 + 7) & 0xff;
   driver.copy(body, DRIVER_AT_IN_BODY);
-  if (startUp) Buffer.from([...START_DATE, ...START_CLOCK]).copy(body, START_AT_IN_BODY);
+  Buffer.from(startUp).copy(body, START_AT_IN_BODY);
   const file = Buffer.alloc(2 + BODY_SIZE);
   file.writeUInt16LE(LOAD_ADDRESS, 0);
   body.copy(file, 2);
@@ -129,9 +164,9 @@ function withHarness(body) {
     assert.equal(built.status, 0, built.err);
     const asCpp = run(['c++', '-x', 'c++', '-std=gnu++17', '-Wall', '-Werror', '-fsyntax-only', HARNESS_SOURCE]);
     assert.equal(asCpp.status, 0, asCpp.err);
-    const launch = (disk) => {
+    const launch = (disk, time = []) => {
       fs.writeFileSync(path.join(dir, 'in.d81'), disk.image);
-      const r = run([path.join(dir, 'harness'), path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81')]);
+      const r = run([path.join(dir, 'harness'), path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)]);
       return { ...r, prg: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.prg')) : null, image: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.d81')) : null };
     };
     body(launch);
@@ -140,7 +175,7 @@ function withHarness(body) {
   }
 }
 
-function standardDisk(driver, startUp = false) {
+function standardDisk(driver, startUp = []) {
   const disk = new Disk();
   disk.addFile('GEOS', Buffer.from([1, 8, 0]));
   disk.addFile('GEOBOOT', bootFile(driver, startUp).file);
@@ -176,23 +211,36 @@ test('the boot PRG carries the boot file, with the TR disk driver in place of th
 
 test('the boot PRG starts GEOS with the given date and time', { skip }, () => {
   withHarness((launch) => {
-    const r = launch(standardDisk(undefined, true));
+    const r = launch(standardDisk(undefined, START_UP));
     const place = 2 + LOAD_ADDRESS - BASIC_START + START_AT_IN_BODY;
-    const at = r.prg.subarray(place, place + START_DATE.length + START_CLOCK.length);
+    const at = r.prg.subarray(place, place + START_UP.length);
 
     assert.match(r.out, /clock=1/);
     assert.deepEqual([at[1], at[6], at[11]], [21, 10, 26], 'day, month, year');
-    assert.deepEqual([...at.subarray(15 + 6, 15 + 24)], [0xa9, 0x83, 0x8d, 0x0b, 0xdc, 0xa2, 0x07, 0x8e, 0x0a, 0xdc, 0xa9, 0x00, 0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc], '3 PM and 7 minutes');
-    assert.equal(at.subarray(15, 15 + 6).every((b) => b === 0xea), true, 'padding');
+    assert.deepEqual([...at.subarray(START_DATE.length, CLOCK_AT)], LOOP_END);
+    assert.deepEqual(runClock(at.subarray(CLOCK_AT)), [0x00, 0x00, 0x07, PM | 0x03], '3:07 PM');
+  });
+});
+
+test('the TOD holds noon and midnight as 12 PM and 12 AM', { skip }, () => {
+  withHarness((launch) => {
+    const place = 2 + LOAD_ADDRESS - BASIC_START + START_AT_IN_BODY + CLOCK_AT;
+    for (const [hour, held] of [[12, PM | 0x12], [0, 0x12], [11, 0x11], [23, PM | 0x11]]) {
+      const r = launch(standardDisk(undefined, START_UP), [hour, 30]);
+      assert.equal(r.status, 0, r.err);
+      assert.deepEqual(runClock(r.prg.subarray(place, place + START_CLOCK.length)), [0x00, 0x00, 0x30, held], `${hour}:30`);
+    }
   });
 });
 
 test('a boot file without the known start-up code keeps the date and time it has', { skip }, () => {
   withHarness((launch) => {
-    const r = launch(standardDisk());
-    assert.match(r.out, /clock=0/);
     const place = 2 + LOAD_ADDRESS - BASIC_START;
-    assert.equal(r.prg.subarray(place, place + DRIVER_AT_IN_BODY).equals(bootFile().body.subarray(0, DRIVER_AT_IN_BODY)), true);
+    for (const startUp of [[], [...START_DATE, ...START_CLOCK]]) {
+      const r = launch(standardDisk(undefined, startUp));
+      assert.match(r.out, /clock=0/);
+      assert.equal(r.prg.subarray(place, place + DRIVER_AT_IN_BODY).equals(bootFile(undefined, startUp).body.subarray(0, DRIVER_AT_IN_BODY)), true);
+    }
   });
 });
 

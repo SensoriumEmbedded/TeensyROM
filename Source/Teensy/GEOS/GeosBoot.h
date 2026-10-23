@@ -180,21 +180,32 @@ static const uint8_t GeosBootStub[] =
 };
 
 // The kernal's start-up code sets the date with three immediate stores and the clock in CIA 1 with another run;
-// both are found in the boot file by their bytes, since the stock file fixes the date and time they set
+// both are found in the boot file by their bytes, since the stock file fixes the date and time they set. The
+// clock's run follows a loop that leaves X zero, which the patched run uses for the seconds and tenths.
 static const uint8_t GeosStartDate[] = { 0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85 };
 static const uint8_t GeosStartClock[] =
 {
+   0xca, 0xd0, 0xe4,                               // dex : bne, the loop before it
    0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, // clear the alarm-set bit
    0xa9, 0x81, 0x8d, 0x0b, 0xdc,                   // hour 1 PM
    0xa9, 0x00, 0x8d, 0x0a, 0xdc,                   // minute 0
    0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc,             // second and tenths 0; the tenths start the clock
 };
-#define GEOS_PM_BIT 0x80
-#define GEOS_NOP    0xea
+#define GEOS_CLOCK_TIME 11
+#define GEOS_PM_BIT     0x80
 
 static uint8_t GeosBcd(uint8_t Value)
 {
    return (Value / 10) << 4 | Value % 10;
+}
+
+// The hour byte that leaves CIA 1's TOD holding Hour: a 6526 flips AM/PM when hour 12 is written to it
+static uint8_t GeosTodHour(uint8_t Hour)
+{
+   uint8_t Hour12 = Hour % 12 ? Hour % 12 : 12;
+   bool Pm = (Hour >= 12) != (Hour12 == 12);
+
+   return GeosBcd(Hour12) | (Pm ? GEOS_PM_BIT : 0);
 }
 
 // Finds Pattern once in Prg; NULL when it is absent or ambiguous
@@ -217,20 +228,18 @@ static bool GeosSetClock(uint8_t *Prg, uint32_t Length, const struct GeosDate *N
 {
    uint8_t *Date = GeosFindOnce(Prg, Length, GeosStartDate, sizeof GeosStartDate);
    uint8_t *Clock = GeosFindOnce(Prg, Length, GeosStartClock, sizeof GeosStartClock);
-   uint8_t Hour12 = Now->Hour % 12 ? Now->Hour % 12 : 12;
    uint8_t Time[] =
    {
-      0xa9, (uint8_t)(GeosBcd(Hour12) | (Now->Hour >= 12 ? GEOS_PM_BIT : 0)), 0x8d, 0x0b, 0xdc,
-      0xa2, GeosBcd(Now->Minute), 0x8e, 0x0a, 0xdc,
-      0xa9, 0x00, 0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc,
+      0xa9, GeosTodHour(Now->Hour), 0x8d, 0x0b, 0xdc,
+      0xa9, GeosBcd(Now->Minute), 0x8d, 0x0a, 0xdc,
+      0x8e, 0x09, 0xdc, 0x8e, 0x08, 0xdc,
    };
 
    if (!Date || !Clock) return false;
    Date[1] = Now->Day;
    Date[6] = Now->Month;
    Date[11] = Now->Year;
-   memset(Clock, GEOS_NOP, sizeof GeosStartClock);
-   memcpy(Clock + sizeof GeosStartClock - sizeof Time, Time, sizeof Time);
+   memcpy(Clock + GEOS_CLOCK_TIME, Time, sizeof Time);
    return true;
 }
 
