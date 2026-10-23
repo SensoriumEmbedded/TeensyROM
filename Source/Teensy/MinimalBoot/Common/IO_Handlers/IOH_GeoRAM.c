@@ -8,6 +8,7 @@
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void IO2Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void InitHndlr_GeoRAM();
+void PollingHndlr_GeoRAM();
 extern void (*fSpecialBtnChange)(bool Up_nDn);
 
 stcIOHandlers IOHndlr_GeoRAM =
@@ -18,7 +19,7 @@ stcIOHandlers IOHndlr_GeoRAM =
   &IO2Hndlr_GeoRAM,    //IO2 R/W handler
   NULL,                //ROML Read handler, in addition to any ROM data sent
   NULL,                //ROMH Read handler, in addition to any ROM data sent
-  NULL,                //Polled in main routine
+  &PollingHndlr_GeoRAM, //Polled in main routine
   NULL,                //called at the end of EVERY c64 cycle
 };
 
@@ -32,11 +33,12 @@ stcIOHandlers IOHndlr_GeoRAM =
 #define GeoRAM_RegsBase      0x80
 #define GeoRAM_RegBlockBit   0x01
 
-static uint8_t NumGeoRAM_Banks = 0;
+// volatile: the IO ISRs read the page only while there are banks, so the two stores
+//  must reach memory in the order written
+static volatile uint8_t NumGeoRAM_Banks = 0;
 static uint8_t *GeoRAM_Bank[MAX_GEORAM_BANKS];
 static uint8_t GeoRAM_Block, GeoRAM_PageNum;
-static uint8_t GeoRAM_NoRAM[256];   // the window until a page of allocated RAM is selected
-static uint8_t *GeoRAM_Page = GeoRAM_NoRAM;
+static uint8_t * volatile GeoRAM_Page;
 
 static void GeoRAM_SelectPage()
 {
@@ -53,14 +55,13 @@ FLASHMEM void FreeGeoRAM()
    //  touching the banks before the first one is freed
    uint8_t NumBanks = NumGeoRAM_Banks;
    NumGeoRAM_Banks = 0;
-   GeoRAM_Page = GeoRAM_NoRAM;
    FreeRAMBanks(GeoRAM_Bank, &NumBanks);
 }
 
 FLASHMEM void SpecialBtn_GeoRAM(bool Up_nDn)
 {
    // on button release save GeoRAM contents
-   if(Up_nDn) SaveRAMBanks(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
+   if(Up_nDn) SaveRAMBanksReplacing(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
 }
 
 FLASHMEM void InitHndlr_GeoRAM()
@@ -68,16 +69,22 @@ FLASHMEM void InitHndlr_GeoRAM()
    FreeGeoRAM();
    GeoRAM_Block = GeoRAM_PageNum = 0;
    InitUSBMouse();
-   NumGeoRAM_Banks = AllocRAMBanks(GeoRAM_Bank, MAX_GEORAM_BANKS, MIN_GEORAM_BANKS);
-   if (NumGeoRAM_Banks == 0)
+   uint8_t NumBanks = AllocRAMBanks(GeoRAM_Bank, MAX_GEORAM_BANKS, MIN_GEORAM_BANKS);
+   if (NumBanks == 0)
    {
       Serial.printf("GeoRAM is disabled\n");
       return;
    }
-   GeoRAM_SelectPage();
+   GeoRAM_Page = GeoRAM_Bank[0];
+   NumGeoRAM_Banks = NumBanks;
    fSpecialBtnChange = &SpecialBtn_GeoRAM;
-   Serial.printf("GeoRAM Size: %dK bytes\n", NumGeoRAM_Banks * RAM_Bank_Size / 1024);
-   LoadRAMBanks(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
+   Serial.printf("GeoRAM Size: %dK bytes\n", NumBanks * RAM_Bank_Size / 1024);
+   LoadRAMBanks(GeoRAM_Bank, NumBanks, GeoRAM_Filename);
+}
+
+FLASHMEM void PollingHndlr_GeoRAM()
+{
+   PollUSBMouse();
 }
 
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)

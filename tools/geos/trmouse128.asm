@@ -17,6 +17,7 @@ BUTTON_UP     = $80
 NO_DIRECTION  = $ff
 OFF_TOP       = 228     ; the kernal reads a mouseYPos this high as above the top
 
+regs          = $df00
 regX          = 0
 regY          = 1
 regButtons    = 2
@@ -44,28 +45,19 @@ SlowMouse
 SetMouse
         rts
 
-; The registers are at $DF00 beside GeoRAM and $DE00 beside the REU; the ID tells which.
+; The ID tells whether the registers are there, beside GeoRAM.
 ;  $DF03-$DF05 are REU address registers, which have no side effects when read.
-;  Carry set: neither page has the ID, so what reads there is not a mouse.
+;  Carry set: what reads there is not a mouse.
 FindRegs
-        ldy #$df
-nextPage
-        sty readID+2
         ldx #2
-readID  lda $df00+regID,x
+-       lda regs+regID,x
         cmp trID,x
         bne +
         dex
-        bpl readID
-        sty readX+2
-        sty readY+2
-        sty readButtons+2
+        bpl -
         clc
         rts
-+       dey
-        cpy #$dd
-        bne nextPage
-        sec
++       sec
         rts
 
 trID    !text "TRM"
@@ -73,16 +65,16 @@ trID    !text "TRM"
 UpdateMouse
         jsr FindRegs
         bcs noMouse
-readX   lda $df00+regX
+        lda regs+regX
         sta deltaX
-readY   lda $df00+regY
+        lda regs+regY
         sta deltaY
         bit mouseOn
         bmi readButtons
 noMouse rts                     ; movement while the pointer is off is dropped
 
 readButtons
-        lda $df00+regButtons
+        lda regs+regButtons
         and #LEFT_BUTTON
         beq +
         lda #0                  ; pressed
