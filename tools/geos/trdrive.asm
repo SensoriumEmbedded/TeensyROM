@@ -17,7 +17,7 @@ HEADER_SWAP = $8c
 HEADER_FIRST = 4
 HEADER_END = $1d
 
-; offsets from the base the TRM and TRB ids reveal
+; offsets from BASE_GEOS_RAM's page
 REG_CMD = $08
 REG_ADDR0 = $09
 REG_ADDR1 = $0a
@@ -45,7 +45,6 @@ CIA2_ICR = $dd0d
 MASK_ALL = $7f
 
 BASE_GEOS_RAM = $df
-BASE_REU = $de
 
 * = ORG
 
@@ -123,7 +122,7 @@ WriteBlock
         rts
 
 ReadLink
-        jsr findBase
+        jsr findDevice
         bcs missing
         lda #CMD_READ
         jsr runCommand
@@ -150,7 +149,7 @@ missing
         rts
 
 readSector
-        jsr findBase
+        jsr findDevice
         bcs missing
         lda #CMD_READ
         jsr runCommand
@@ -166,7 +165,6 @@ readPage
         ldx #0
 windowRead
         lda BASE_GEOS_RAM * 256 + WINDOW,x
-windowReread
         cmp BASE_GEOS_RAM * 256 + WINDOW,x
         bne windowRead
         sta (r4),y
@@ -183,7 +181,7 @@ readDone
         rts
 
 writeSector
-        jsr findBase
+        jsr findDevice
         bcs missing
         ldy #0
         lda #0
@@ -195,12 +193,9 @@ writePage
         ldx #0
 windowWrite
         lda (r4),y
-windowStore
         sta BASE_GEOS_RAM * 256 + WINDOW,x
-windowCheck
         cmp BASE_GEOS_RAM * 256 + WINDOW,x
         beq windowStored
-windowRecheck
         cmp BASE_GEOS_RAM * 256 + WINDOW,x
         bne windowFault
 windowStored
@@ -313,48 +308,20 @@ swapField
 swapped
         rts
 
-; carry clear when the TRB id answers at a base: first the page GeoRAM leaves free, then the REU's
-findBase
-        lda baseHi
-        bne located
-        ldx #BASE_GEOS_RAM
-        jsr tryBase
-        bcc settle
-        ldx #BASE_REU
-        jsr tryBase
-        bcs absent
-settle
-        stx baseHi
-        stx getReg + 2
-        stx putReg + 2
-        stx windowRead + 2
-        stx windowReread + 2
-        stx windowStore + 2
-        stx windowCheck + 2
-        stx windowRecheck + 2
-located
-        clc
-        rts
-absent
-        sec
-        rts
-
-tryBase
-        stx probe + 2
-        stx probeAgain + 2
+; carry clear when the TRB id answers
+findDevice
         ldy #2
 probe
         lda BASE_GEOS_RAM * 256 + $10,y
-probeAgain
         cmp BASE_GEOS_RAM * 256 + $10,y
         bne probe
         cmp trbId,y
-        bne notHere
+        bne absent
         dey
         bpl probe
         clc
         rts
-notHere
+absent
         sec
         rts
 
@@ -383,6 +350,5 @@ command !byte 0
 seen    !byte 0
 page    !byte 0
 token   !byte 0
-baseHi  !byte 0
 patience !word 0
 savedIrqEnable !byte 0

@@ -25,7 +25,7 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 ## Where the registers are
 The registers share IO2, the page GeoRAM leaves free, with the USB mouse registers, which start the page and identify it. The base `B` is `$DF00`.
 
-Find it the way the mouse driver does: look for `TRM` at `$DF03..$DF05`. The block device is present when `TRB` is also at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes.
+The block device is present when `TRB` is at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes.
 
 Everything below is an offset from `B`.
 
@@ -113,7 +113,7 @@ The firmware does this arithmetic so that a 6502 driver does not have to. A driv
 
 ## A reader's checklist
 A driver that follows this document:
-* checks `TRM` at `$DF03`, then confirms `TRB`;
+* checks `TRB` at `$DF10`;
 * writes TOKEN, the address, PAGE, then CMD;
 * reads STATUS until two reads agree and the value is not `$80`, then checks ECHO;
 * moves a block as four PAGEs of the window;
