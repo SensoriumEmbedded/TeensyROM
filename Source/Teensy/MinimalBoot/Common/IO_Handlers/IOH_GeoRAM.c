@@ -8,6 +8,7 @@
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void IO2Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void InitHndlr_GeoRAM();
+void PollingHndlr_GeoRAM();
 extern void (*fSpecialBtnChange)(bool Up_nDn);
 
 stcIOHandlers IOHndlr_GeoRAM =
@@ -18,7 +19,7 @@ stcIOHandlers IOHndlr_GeoRAM =
   &IO2Hndlr_GeoRAM,    //IO2 R/W handler
   NULL,                //ROML Read handler, in addition to any ROM data sent
   NULL,                //ROMH Read handler, in addition to any ROM data sent
-  NULL,                //Polled in main routine
+  &PollingHndlr_GeoRAM, //Polled in main routine
   NULL,                //called at the end of EVERY c64 cycle
 };
 
@@ -78,6 +79,11 @@ FLASHMEM void InitHndlr_GeoRAM()
    fSpecialBtnChange = &SpecialBtn_GeoRAM;
    Serial.printf("GeoRAM Size: %dK bytes\n", NumGeoRAM_Banks * RAM_Bank_Size / 1024);
    LoadRAMBanks(GeoRAM_Bank, NumGeoRAM_Banks, GeoRAM_Filename);
+}
+
+FLASHMEM void PollingHndlr_GeoRAM()
+{
+   PollUSBMouse();
 }
 
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)

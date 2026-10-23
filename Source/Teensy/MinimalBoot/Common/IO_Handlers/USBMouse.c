@@ -25,7 +25,7 @@ static int32_t USBMouse_Steps(uint8_t Axis)
    return USBMouse_Counts[Axis] >> USBMouse_StepShift;  // floors, so no wider dead zone at 0
 }
 
-void PollUSBMouse()
+FLASHMEM void PollUSBMouse()
 {
    // MouseController is also a BTHIDInput, so its own bool conversion is ambiguous
    if (!static_cast<USBHIDInput &>(usbHostMouse))
@@ -55,6 +55,7 @@ void PollUSBMouse()
 // Movement from before the handler started (at the TR menu) is not the C64's to see
 FLASHMEM void InitUSBMouse()
 {
+   usbHostMouse.mouseDataClear();
    for (uint8_t Axis = 0; Axis < 2; Axis++) USBMouse_StepsRead[Axis] = USBMouse_Steps(Axis);
 }
 
