@@ -56,6 +56,7 @@ whatever node appeared beside it.
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
 | `ls.py [path] [drive]` | List a directory, to see that a push landed where it was aimed (first 1000 entries). |
 | `reset.py` | Reset the C64 to the menu, and the board out of the minimal image. |
+| `setclock.py [UTC time]` | Set the TR's real-time clock, to this computer's clock or an ISO 8601 UTC time such as `2026-10-16T17:00:00`. Only at the TR menu. |
 | `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Also the phrases a reboot is judged by: `INSTALLED`, `REMOVED` and `FINISHED_NORMALLY`. Shared by the `host*.py` scripts and by `exttest.py`, whose exit status is `finished_normally()`'s answer, so a phrase edited here moves that verdict; and by `test_bounds.py`, which patches its timeouts to test them, and `test_protocol.py`, which pins the phrases against the firmware's own `VmFail::describe()`. |
 | `trlink.py` | The shared library the above are built on. |
 | `protocol.py` | Every value that goes on the wire, named once. |

@@ -21,6 +21,7 @@ WRITE_C64_SPANS = 0x64FC   # TR+ only
 POST_FILE = 0x64BB
 DELETE_FILE = 0x64CF
 GET_DIR_NDJSON = 0x64DE
+SET_RTC = 0x6474
 
 # Replies.
 ACK = 0x64CC
@@ -49,6 +50,7 @@ FIRMWARE_NAMES = {
     'PostFileToken': POST_FILE,
     'DeleteFileToken': DELETE_FILE,
     'GetDirNDJSONToken': GET_DIR_NDJSON,
+    'SetRTCToken': SET_RTC,
     'AckToken': ACK,
     'FailToken': FAIL,
     'FWFullToken': FW_FULL,
