@@ -125,7 +125,7 @@ FLASHMEM FS *FSfromFileName(char** ptrptrLSFileName)
       ptrLSFileName += 3;
       sourceFS = &SD;
       Printf_dbg("SD:*\n");
-      if(!SD.begin(BUILTIN_SDCARD)) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
+      if(!SDBegin()) // refresh, takes 3 seconds for fail/unpopulated, 20-200mS populated
       {
          Printf_dbg("SD Init Fail\n");
          return NULL;   //return BAS_ERROR_DEVICE_NOT_PRESENT;

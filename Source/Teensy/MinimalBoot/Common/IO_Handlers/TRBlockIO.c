@@ -15,6 +15,7 @@ static struct TRBlockBackend TRBlockBack;
 static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
+static char *TRBlockPath;
 
 static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -35,20 +36,11 @@ static bool TRBlockFileFlush(void *Context)
    return TRBlockFile.sync();
 }
 
-FLASHMEM void TRBlockUnmount()
-{
-   TRBlockBack.Context = NULL;
-   if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
-   TRBlockDirty = false;
-}
-
-// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler
-FLASHMEM bool TRBlockMount(const char *Path)
+static FLASHMEM bool TRBlockOpen()
 {
    uint64_t Size;
 
-   TRBlockUnmount();
-   if (!TRBlockFile.open(&SD.sdfs, Path, O_RDWR)) return false;
+   if (!TRBlockFile.open(&SD.sdfs, TRBlockPath, O_RDWR)) return false;
    Size = TRBlockFile.size();
    TRBlockImg = (struct TRBlockImage){ Size <= UINT32_MAX ? GeosFormatForSize(Size) : NULL, true, NULL,
                                        TRBlockFileRead, TRBlockFileWrite, TRBlockFileFlush };
@@ -59,6 +51,42 @@ FLASHMEM bool TRBlockMount(const char *Path)
    }
    TRBlockBack = TRBlockImageBackend(&TRBlockImg);
    return true;
+}
+
+static FLASHMEM void TRBlockClose()
+{
+   TRBlockBack.Context = NULL;
+   if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
+   TRBlockDirty = false;
+}
+
+FLASHMEM void TRBlockUnmount()
+{
+   TRBlockClose();
+   free(TRBlockPath);
+   TRBlockPath = NULL;
+}
+
+// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler
+FLASHMEM bool TRBlockMount(const char *Path)
+{
+   TRBlockUnmount();
+   TRBlockPath = strdup(Path);
+   if (TRBlockPath && TRBlockOpen()) return true;
+   TRBlockUnmount();
+   return false;
+}
+
+// Every SD.begin in the main image goes through here. SD.begin rebuilds the volume in place under
+//  any open file and drops its cached, unwritten sectors, so the image is closed around it.
+FLASHMEM bool SDBegin()
+{
+   bool Began;
+
+   TRBlockClose();
+   Began = SD.begin(BUILTIN_SDCARD);
+   if (TRBlockPath) TRBlockOpen();
+   return Began;
 }
 
 FLASHMEM void InitTRBlock()

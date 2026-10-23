@@ -559,7 +559,7 @@ bool SDFullInit()
    Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
    Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()
     
-   while (!SD.begin(BUILTIN_SDCARD)) 
+   while (!SDBegin()) 
    {
       Count--;
       Printf_dbg("SD Init fail, %d tries left. Time: %lu mS\n", Count, millis()-Startms);
