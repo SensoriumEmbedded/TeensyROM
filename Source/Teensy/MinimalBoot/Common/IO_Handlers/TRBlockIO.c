@@ -17,12 +17,12 @@ static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
 static char *TRBlockPath;
 
-static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
+FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
    return TRBlockFile.seekSet(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
 }
 
-static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
+FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
 {
    if (!TRBlockFile.seekSet(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
    TRBlockDirty = true;
@@ -30,13 +30,13 @@ static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Bloc
    return true;
 }
 
-static bool TRBlockFileFlush(void *Context)
+FLASHMEM static bool TRBlockFileFlush(void *Context)
 {
    TRBlockDirty = false;
    return TRBlockFile.sync();
 }
 
-static FLASHMEM bool TRBlockOpen()
+FLASHMEM static bool TRBlockOpen()
 {
    uint64_t Size;
 
@@ -53,7 +53,7 @@ static FLASHMEM bool TRBlockOpen()
    return true;
 }
 
-static FLASHMEM void TRBlockClose()
+FLASHMEM static void TRBlockClose()
 {
    TRBlockBack.Context = NULL;
    if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
@@ -94,7 +94,7 @@ FLASHMEM void InitTRBlock()
    TRBlockReset(&TRBlockDev);
 }
 
-void PollTRBlock()
+FLASHMEM void PollTRBlock()
 {
    TRBlockService(&TRBlockDev, &TRBlockBack);
    if (TRBlockDirty && millis() - TRBlockLastWritemS > TRBlock_FlushIdlemS) TRBlockFileFlush(NULL);

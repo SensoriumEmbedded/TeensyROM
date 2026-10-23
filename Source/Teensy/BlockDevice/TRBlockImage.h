@@ -22,7 +22,7 @@ static inline bool TRBlockImageHasSector(const struct GeosFormat *Format, uint8_
    return Track >= 1 && Track <= Format->Tracks && Sector < GeosSectorsOnTrack(Format, Track);
 }
 
-static uint8_t TRBlockImageTransfer(void *Context, bool Write, uint8_t Track, uint8_t Sector, uint8_t *Block)
+FLASHMEM static uint8_t TRBlockImageTransfer(void *Context, bool Write, uint8_t Track, uint8_t Sector, uint8_t *Block)
 {
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
    uint32_t Offset;
@@ -35,7 +35,7 @@ static uint8_t TRBlockImageTransfer(void *Context, bool Write, uint8_t Track, ui
    return Image->Write(Image->Context, Offset, Block) ? TRBlockDone : TRBlockWriteFailed;
 }
 
-static uint8_t TRBlockImageInfo(void *Context, uint8_t *Out)
+FLASHMEM static uint8_t TRBlockImageInfo(void *Context, uint8_t *Out)
 {
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
    uint32_t Blocks;
@@ -51,7 +51,7 @@ static uint8_t TRBlockImageInfo(void *Context, uint8_t *Out)
    return TRBlockDone;
 }
 
-static uint8_t TRBlockImageFlush(void *Context)
+FLASHMEM static uint8_t TRBlockImageFlush(void *Context)
 {
    struct TRBlockImage *Image = (struct TRBlockImage *)Context;
 
