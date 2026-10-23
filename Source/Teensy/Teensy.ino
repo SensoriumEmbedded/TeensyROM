@@ -299,7 +299,7 @@ void loop()
 #ifdef DbgIOTraceLog
       PrintResetSnapshot();
 #endif
-      CmdChannel->flush();
+      FlushCmdChannel(CmdChannel);
       delay(50); 
       uint32_t NextInterval = 10000, beginWait = millis();
       bool LEDState = true, DefEEPReboot = false;
