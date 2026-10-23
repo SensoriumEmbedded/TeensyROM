@@ -8,7 +8,7 @@
 //    +0     X movement since the last read of +0, signed, right is positive
 //    +1     Y movement since the last read of +1, signed, down is positive
 //    +2     buttons, 1 = pressed: bit 0 left, bit 1 right, bit 2 middle
-//    +3..5  "TRM", for a driver to find the base it is at
+//    +3..5  "TRM", for a driver to tell that the registers are there
 
 #define USBMouse_RegButtons  2
 #define USBMouse_RegID       3
