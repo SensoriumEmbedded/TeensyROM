@@ -16,6 +16,7 @@ static FsFile TRBlockFile;
 static bool TRBlockDirty;
 static uint32_t TRBlockLastWritemS;
 static char *TRBlockPath;
+static bool TRBlockFlushFailureLogged;
 static struct { uint32_t FirstSector, CardSerial; } TRBlockMounted;
 
 FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
@@ -34,17 +35,15 @@ FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint
 // GEOS never sends FLUSH, so a failed sync stays dirty for the idle flush to retry
 FLASHMEM static bool TRBlockFileFlush(void *Context)
 {
-   static bool FailureLogged;
-
    if (TRBlockFile.sync())
    {
-      TRBlockDirty = FailureLogged = false;
+      TRBlockDirty = TRBlockFlushFailureLogged = false;
       return true;
    }
    TRBlockDirty = true;
    TRBlockLastWritemS = millis();
-   if (!FailureLogged) Serial.printf("TR block image: writes are not reaching the card; retrying\n");
-   FailureLogged = true;
+   if (!TRBlockFlushFailureLogged) Serial.printf("TR block image: writes are not reaching the card; retrying\n");
+   TRBlockFlushFailureLogged = true;
    return false;
 }
 
@@ -71,7 +70,7 @@ FLASHMEM void TRBlockClose()
 {
    TRBlockBack.Context = NULL;
    if (TRBlockFile.isOpen() && !TRBlockFile.close()) Serial.printf("TR block image: last writes did not reach the card\n");
-   TRBlockDirty = false;
+   TRBlockDirty = TRBlockFlushFailureLogged = false;
 }
 
 FLASHMEM static uint32_t TRBlockCardSerial()
