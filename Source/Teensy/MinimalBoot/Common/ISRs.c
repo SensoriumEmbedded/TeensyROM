@@ -52,7 +52,7 @@ void DMAWaitAssertReady()
 {
    WaitUntil_nS(nS_DMAAssert); 
    SetDMAAssert;
-   DMA_State = DMA_S_TransferReady;
+   DMA_State = DMA_AutoRun ? DMA_S_TransferExecuting : DMA_S_TransferReady;
 }
 
 //Phi2 rising edge:

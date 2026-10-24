@@ -264,6 +264,100 @@ FLASHMEM bool CloseDMA()
 // what its slice cap allows even on a bus that makes every handshake run to its own ceiling.
 #define DMA_SPANS_CEILING_mS  (C64SlicesMax * 5 + 1000)
 
+// The sample store watch: every CPU write to SampleStoreAddr is counted against the time since
+// the one before it, so a host that knows the store's period can count the stores that did not
+// happen -- NMIs lost to a halt -- at the source rather than from captured audio.  A slice armed
+// with SampleLockArmed starts on the cycle after the next one.
+uint32_t SampleStoreAddr;
+volatile bool SampleLockArmed, SampleHaveLast;
+volatile uint32_t SampleLastStoreCyc;
+volatile SampleWatchStats SampleStats;
+
+FASTRUN bool SampleStoreSnoop(uint16_t Address, bool R_Wn)
+{
+   if (R_Wn || Address != SampleStoreAddr) return false;
+   const uint32_t Now = StartCycCnt;
+   if (SampleHaveLast)
+   {
+      const uint32_t Gap = Now - SampleLastStoreCyc;
+      SampleStats.Intervals++;
+      SampleStats.IntervalCyc += Gap;
+      if (Gap > SampleStats.LongestCyc) SampleStats.LongestCyc = Gap;
+   }
+   SampleLastStoreCyc = Now;
+   SampleHaveLast = true;
+   if (SampleLockArmed)
+   {
+      SampleLockArmed = false;
+      DMA_State = DMA_S_StartAsynch;
+   }
+   return false;
+}
+
+// False when another user holds the single bus snoop slot, the way BusAnalysis declines it.  The
+// test is masked with the install because a C64 write to rCtlRunningPRG claims the slot from isrPHI2.
+FLASHMEM bool SampleWatchStart(uint16_t Address)
+{
+   __disable_irq();
+   if (fBusSnoop != &SampleStoreSnoop && (fBusSnoop != NULL || PendingfBusSnoop != NULL))
+   {
+      __enable_irq();
+      return false;
+   }
+   if (fBusSnoop != &SampleStoreSnoop || SampleStoreAddr != Address) SampleHaveLast = false;
+   SampleStoreAddr = Address;
+   fBusSnoop = &SampleStoreSnoop;
+   __enable_irq();
+   return true;
+}
+
+FLASHMEM void SampleWatchStop()
+{
+   __disable_irq();
+   if (fBusSnoop == &SampleStoreSnoop) fBusSnoop = NULL;
+   SampleLockArmed = SampleHaveLast = false;
+   __enable_irq();
+}
+
+// The counters since the last call.  The last store's stamp is kept, so the next interval
+// counted is the one that crosses this call and none goes missing between two reads.
+FLASHMEM SampleWatchStats SampleWatchTake()
+{
+   __disable_irq();
+   const SampleWatchStats Taken = { SampleStats.Intervals, SampleStats.IntervalCyc, SampleStats.LongestCyc,
+                                    SampleStats.Locked, SampleStats.Unlocked };
+   SampleStats.Intervals = SampleStats.LongestCyc = SampleStats.Locked = SampleStats.Unlocked = 0;
+   SampleStats.IntervalCyc = 0;
+   __enable_irq();
+   return Taken;
+}
+
+// Arms the staged slice to start on the next watched store, or starts it anyway once WaituS has
+// passed without one -- audio stopped, or a scene with no player -- so a write never waits on a
+// store that is not coming.
+static FLASHMEM void StartSliceOnStore(uint32_t WaituS)
+{
+   const uint32_t Began = micros();
+   SampleLockArmed = true;
+   while (SampleLockArmed && micros() - Began < WaituS);
+   __disable_irq();
+   const bool Missed = SampleLockArmed;
+   if (Missed)
+   {
+      SampleLockArmed = false;
+      DMA_State = DMA_S_StartAsynch;
+   }
+   __enable_irq();
+   if (Missed) SampleStats.Unlocked++;
+   else SampleStats.Locked++;
+}
+
+struct DMAAutoRunJob
+{
+   DMAAutoRunJob() { DMA_AutoRun = true; }
+   ~DMAAutoRunJob() { DMA_AutoRun = false; }
+};
+
 // Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
 // giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
 // its C64 code can take, and how long its interrupt handler needs to run between them.  Stops
@@ -271,11 +365,35 @@ FLASHMEM bool CloseDMA()
 // returns false.  *Landed
 // counts every slice that finished, even one whose CloseDMA then failed; a slice aborted
 // mid-transfer may have partly landed and is not counted.
+//
+// Locked, each slice starts on the cycle after a watched store (SampleWatchStart must have
+// succeeded) and GapuS is instead how long to wait for one.  The ISR runs the slice and releases
+// the bus itself, since a round trip through thread mode costs more halt than the period allows.
 FLASHMEM bool WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Payload, uint32_t SliceBytes, uint32_t GapuS,
-                            uint32_t *Landed)
+                            uint32_t *Landed, bool Locked)
 {
    const uint32_t Began = millis();
    *Landed = 0;
+   if (Locked)
+   {
+      DMAAutoRunJob Job;
+      for (uint32_t Num = 0; Num < Count; Num++)
+      {
+         for (uint32_t Done = 0; Done < Spans[Num].Len; )
+         {
+            uint32_t Slice = Spans[Num].Len - Done;
+            if (SliceBytes && Slice > SliceBytes) Slice = SliceBytes;
+            if (millis() - Began >= DMA_SPANS_CEILING_mS) return false;
+            SetUpDMA(DMA_WRITE, Spans[Num].Addr + Done, Payload + *Landed, Slice, DMA_ADDR_INCREMENT);
+            StartSliceOnStore(GapuS);
+            if (!WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS + DMATransferCeilingmS(Slice)))
+               return false;
+            Done += Slice;
+            *Landed += Slice;
+         }
+      }
+      return true;
+   }
    for (uint32_t Num = 0; Num < Count; Num++)
    {
       for (uint32_t Done = 0; Done < Spans[Num].Len; )
@@ -361,7 +479,7 @@ void DMATransferISR()
 
       DMA_Count++;
    }
-   DMA_State = DMA_S_TransferComplete;
+   DMA_State = DMA_AutoRun ? DMA_S_StartDisable : DMA_S_TransferComplete;
 }
 
 #endif

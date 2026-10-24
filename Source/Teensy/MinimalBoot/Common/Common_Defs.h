@@ -73,6 +73,7 @@
 #define ResetC64Token     0x64EE
 #define WriteC64MemToken  0x64FB
 #define WriteC64SpansToken 0x64FC
+#define SampleWatchToken  0x64F9
 #define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E
 #define FailToken         0x9B7F
@@ -170,6 +171,10 @@ enum DMA_States  //used with DMA_State
 #define DMA_TIMEOUT_CYCLES  5000
 uint32_t DMACycleCount;
 volatile uint8_t DMA_State = DMA_S_DisableReady;
+//isrPHI2 starts the staged transfer as soon as DMA is asserted and releases the bus as soon as it
+//lands, rather than waiting on thread mode for each step.  Only a job that stages its transfer
+//before starting DMA may set it: a pause started while it is set would run the last staged transfer.
+volatile bool DMA_AutoRun = false;
 
 bool (*fBusSnoop)(uint16_t Address, bool R_Wn) = NULL;    //Bus snoop routine, return true to skip out of phi2 isr
 
