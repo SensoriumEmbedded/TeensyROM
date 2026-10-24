@@ -314,11 +314,12 @@ as a direct message to the author.
 - **Contents.**
   - The recommended changes, renumbered 1..n. For each: a heading saying what's wrong (with
     `file:line`), why it matters (a repro if there is one) and the suggested fix.
-  - Memory: one short paragraph with the measured impact, then each improvement as its own
-    bullet: the lever, what it saves (bytes, and which RAM), and why it's safe. Don't fold a
-    saving into a passing sentence. These count as changes before merging: include them in
-    the "N things" lead-in (for example "Besides the memory item above, one thing…"), and
-    never say "nothing to change" or "ready as it stands" when a response has any.
+  - Memory: one short paragraph with the measured impact, and nothing else. Each memory
+    improvement that needs a code change is a numbered item like the others: a heading with
+    the lever (and `file:line`), what it saves (bytes, and which RAM), why it's safe, and
+    the suggested fix. Don't fold a saving into a passing sentence. These count as changes
+    before merging: include them in the "N things" lead-in, and never say "nothing to
+    change" or "ready as it stands" when a response has any.
   - Hardware testing still to do, after acknowledging what the author covered.
   - Leave out hardware-check-only items unless they need the author to act, and the optional
     and no-change items. The hardware-testing heading's framing covers them (see Tone).
@@ -368,9 +369,7 @@ I reviewed this merged onto current main (<sha>) and built both targets. As alwa
 free to push back on anything that's inappropriate or would take significant memory/code
 to resolve.
 
-Memory: <one or two sentences of measured impact>. <N> improvement(s):
-
-- **<The lever>: <bytes saved, and which RAM>.** <Why it's safe.>
+Memory: <one or two sentences of measured impact>.
 
 There are <N> things I'd like you to look at before merging.
 
@@ -381,6 +380,12 @@ There are <N> things I'd like you to look at before merging.
 Suggested fix: <the fix>.
 
 ### 2. ...
+
+### <N>. <The memory lever> (`<file>:<line>`)
+
+<What it costs now: bytes, and which RAM.>
+
+Suggested fix: <the fix>, which saves <bytes>. <Why it's safe.>
 
 ### Hardware testing still to do: for one of us to *possibly* get to before release, not gates, and anything I noted that isn't listed is covered by your follow-ups or fine as it is
 
