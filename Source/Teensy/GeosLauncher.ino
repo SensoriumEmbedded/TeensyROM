@@ -10,7 +10,8 @@
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
 
-static const char *const GeosImageExtensions[] = { ".d64", ".d71", ".d81" };
+// Only GEOS 64's D81 image, with the deskTop and the applications on one disk, is supported
+#define GEOS_IMAGE_EXTENSION ".d81"
 
 FLASHMEM static bool GeosFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -41,12 +42,7 @@ FLASHMEM static bool GeosHasImageExtension(const char *Name)
 {
    size_t Length = strlen(Name);
 
-   if (Length <= GEOS_EXT_LENGTH) return false;
-   for (const char *Extension : GeosImageExtensions)
-   {
-      if (!strcasecmp(Name + Length - GEOS_EXT_LENGTH, Extension)) return true;
-   }
-   return false;
+   return Length > GEOS_EXT_LENGTH && !strcasecmp(Name + Length - GEOS_EXT_LENGTH, GEOS_IMAGE_EXTENSION);
 }
 
 FLASHMEM static bool GeosIsPatchedCopy(const char *Name)
@@ -308,7 +304,7 @@ FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *It
    for (uint8_t i = 0; i < Count && !*BootName; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
    if (!BootDiskFound)
    {
-      SendMsgPrintfln(PSTR("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again."),
+      SendMsgPrintfln(PSTR("Copy your %s boot disk image\r\n(.D81) to %s\r\non the SD card, then select this again."),
                       Launcher->Title, Launcher->Folder);
       return false;
    }
