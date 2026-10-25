@@ -13,7 +13,7 @@
 #define GEOS_TYPE_BYTE       0x4e
 #define GEOS_JUMP_OPCODE     0x4c
 #define GEOS_AUTO_EXEC       14
-#define GEOS_SYSTEM_FILE     5
+#define GEOS_SYSTEM_FILE     4
 #define GEOS_CONFIG_PREFIX   "CONFIG"
 #define GEOS_BASIC_START     0x0801
 #define GEOS_MEMORY_END      0x10000

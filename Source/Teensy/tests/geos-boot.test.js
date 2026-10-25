@@ -32,7 +32,7 @@ const SLOT_GEOS_TYPE = 24;
 const PAD = 0xa0;
 const USR_CLOSED = 0x83;
 const AUTO_EXEC = 14;
-const SYSTEM_FILE = 5;
+const SYSTEM_FILE = 4;
 
 const DRIVER_AREA = 0x9000;
 const DRIVER_SIZE = 0xd80;
