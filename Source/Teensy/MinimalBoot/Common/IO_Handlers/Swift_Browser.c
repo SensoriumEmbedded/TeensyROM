@@ -603,7 +603,8 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
-      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " BrowserUserAgent "\r\nConnection: close\r\n\r\n",
+      //HTTP/1.0 so the body isn't sent chunked (no decoder here, chunk sizes would show as page text)
+      client.printf("GET %s%s HTTP/1.0\r\nHost: %s\r\nUser-Agent: " BrowserUserAgent "\r\nConnection: close\r\n\r\n",
          DestURL->path, DestURL->postpath, DestURL->host);
 
       //get response header
@@ -614,7 +615,8 @@ uint32_t WebConnect(const stcURLParse *DestURL)
          //Printf_dbg_sw(inbuf);  //causes lost data
          if (ShowHeader) 
          {
-            if (strstr(inbuf, "HTTP/1.1 200") != NULL) ShowHeader = false;
+            //servers may answer a 1.0 request with either version
+            if (strstr(inbuf, "HTTP/1.1 200") != NULL || strstr(inbuf, "HTTP/1.0 200") != NULL) ShowHeader = false;
             else SendASCIIStrImmediate(inbuf);
          }
          
