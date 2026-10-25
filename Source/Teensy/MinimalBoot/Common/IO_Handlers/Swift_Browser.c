@@ -595,7 +595,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
-      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
+      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " BrowserUserAgent "\r\nConnection: close\r\n\r\n",
          DestURL->path, DestURL->postpath, DestURL->host);
 
       //get response header
@@ -631,10 +631,10 @@ FLASHMEM void DoSearch(const char *Term)
 {
    stcURLParse URL =
    {
-      "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
-      80,                 //URL.port = 80;
-      "/",                //strcpy(URL.path = "/");
-      "?q=",              //strcpy(URL.postpath = "?q=");
+      FrogFindHost,         //URL.host
+      80,                   //URL.port
+      "/",                  //URL.path
+      FrogFindSearchQuery,  //URL.postpath
    };
    
    CopyEncode(Term, URL.postpath+strlen(URL.postpath)); //add encoded to end
@@ -791,9 +791,41 @@ FLASHMEM bool ValidModifier(const char cMod)
    return false;
 }
 
-bool isURLFiltered(const stcURLParse *URL)
+FLASHMEM const char * HostNoWWW(const char *Host)
+{  //"www.x" and "x" name the same server
+   if (strncasecmp(Host, "www.", 4) == 0) return Host+4;
+   return Host;
+}
+
+FLASHMEM bool isURLFiltered(const stcURLParse *URL)
 {
-   return (strcmp(URL->host, "www.frogfind.com")==0); 
+   return (strcasecmp(HostNoWWW(URL->host), FrogFindHost)==0);
+}
+
+FLASHMEM void MigrateFrogFindBookmarks()
+{  //Bookmarks saved before the move to FrogFindHost point at the retired host: rewrite them.
+   //Runs at each SwiftLink init, but only writes EEPROM for a bookmark that still needs it.
+   char buf[eepBMURLSize];
+   char NewURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12];
+   stcURLParse URL;
+
+   for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
+   {
+      uint16_t eepAdURL = eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize;
+      EEPreadStr(eepAdURL, buf);
+      ParseURL(buf, URL);
+      if (strcasecmp(HostNoWWW(URL.host), FrogFindOldHost) != 0) continue;
+
+      if (strcmp(URL.path, FrogFindReadPath) == 0 && strncmp(URL.postpath, "?a=", 3) == 0)
+      {  //old reader link, add the language
+         sprintf(NewURL, "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "%s", URL.postpath+3);
+      }
+      else sprintf(NewURL, "http://" FrogFindHost "%s%s", URL.path, URL.postpath);
+
+      if (strlen(NewURL) >= eepBMURLSize) continue; //won't fit, leave it
+      EEPwriteStr(eepAdURL, NewURL);
+      Printf_dbg_sw("BM#%d moved to %s\n", BMNum+1, NewURL);
+   }
 }
 
 FLASHMEM bool DLExtension(const char * Filename)
@@ -853,10 +885,10 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          {  //make filtered URL & connect
             stcURLParse URL =
             {
-               "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
-               80,                     //URL.port = 80;
-               "/read.php",            //strcpy(URL.path = "/read.php?a=http://");
-               "?a=http://"            //URL.postpath
+               FrogFindHost,                  //URL.host
+               80,                            //URL.port
+               FrogFindReadPath,              //URL.path
+               FrogFindReadQuery "http://"    //URL.postpath
             };
                   
             strcat(URL.postpath, DestURL->host);
@@ -874,7 +906,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
          else
          {  //strip off frogfind
-            char * ptrURL = strstr(DestURL->postpath, "http");  // "/read.php?a=http://"
+            char * ptrURL = strstr(DestURL->postpath, "http");  // "?lg=en-us&a=http://"
             if (ptrURL == NULL)
             {
                SendASCIIErrorStrImmediate("Could not remove filter");
@@ -883,6 +915,8 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
             else
             {
                stcURLParse URL;
+               //FrogFind's own links encode the target ("https%3A%2F%2F..."), ones built by 'f' don't
+               if (strstr(ptrURL, "://") == NULL) CopyDecode(ptrURL, ptrURL);
                ParseURL(ptrURL, URL);
                
                //write back unfiltered URL in case it's pointing to a history queue item (ie 'rr' command) 

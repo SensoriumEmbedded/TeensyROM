@@ -57,6 +57,15 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define Drive_USB            1
 #define Drive_SD             2
 
+//FrogFind filter/search server (http only), used by the browser and the default bookmarks
+#define FrogFindHost        "frogfind.de"
+#define FrogFindOldHost     "frogfind.com"      //retired, still in older EEPROM bookmarks; MigrateFrogFindBookmarks rewrites them
+#define FrogFindReadPath    "/read.php"
+#define FrogFindLang        "lg=en-us"          //frogfind.de defaults to German without it
+#define FrogFindReadQuery   "?" FrogFindLang "&a="  //+ target URL
+#define FrogFindSearchQuery "?" FrogFindLang "&q="  //+ encoded search term
+#define BrowserUserAgent    "TeensyROM/" TRVersion  //frogfind.de answers 403 to requests without a User-Agent
+
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
 #define IORegSwiftData     0x00   // Swift Emulation Data Reg
@@ -349,9 +358,9 @@ FLASHMEM void SetEthEEPDefaults()
    {
       "TinyWeb64 @ Sensorium",              "http://sensoriumembedded.com/tinyweb64/",
       "Digitalman TeensyROM Demo",          "http://digitalman.azurewebsites.net/",
-      "CBC Lite News (filtered)",           "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
+      "CBC Lite News (filtered)",           "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "http://www.cbc.ca/lite/news",
       "textfiles.com",                      "http://textfiles.com/directory.html",
-      "legiblenews.com (filtered)",         "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
+      "legiblenews.com (filtered)",         "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "http://legiblenews.com/",
    };
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
@@ -427,6 +436,7 @@ void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->port = 80;
    }
    strcpy(CurrPageTitle, "None");
+   MigrateFrogFindBookmarks();
    SetRandomSeed();
    nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }
