@@ -49,6 +49,8 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define eepBMTitleSize      75    //max chars in bookmark title
 #define eepBMURLSize       225    //Max Chars in bookmark URL path
 #define eepNumBookmarks      5    //Num Bookmarks saved
+#define eepAdBMTitle(BMNum) (eepAdBookmarks+(BMNum)*(eepBMTitleSize+eepBMURLSize)) //EEPROM addr of bookmark title, BMNum zero based
+#define eepAdBMURL(BMNum)   (eepAdBMTitle(BMNum)+eepBMTitleSize)                    //EEPROM addr of bookmark URL
 #define BytesPerDot        (25*1024) //dot every 25k when downloading
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
@@ -365,8 +367,8 @@ FLASHMEM void SetEthEEPDefaults()
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
    {
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),DefBookmarks[BMNum][0]);
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,DefBookmarks[BMNum][1]);
+      EEPwriteStr(eepAdBMTitle(BMNum),DefBookmarks[BMNum][0]);
+      EEPwriteStr(eepAdBMURL(BMNum),DefBookmarks[BMNum][1]);
    }
 }
 
