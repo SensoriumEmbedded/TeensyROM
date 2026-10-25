@@ -20,6 +20,7 @@
 uint8_t *ptrRAM_ImageEnd = NULL; // Made global for REU access 
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
+bool LoadedEasyFlashROM = false;
 char* StrSIDInfo;  // allocated to RAM2 via StrSIDInfoSize
 char* LatestSIDLoaded; // allocated to RAM2 via MaxPathLength
 char StrMachineInfo[21] = ""; //~3 extra
@@ -52,6 +53,11 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    // https://vice-emu.sourceforge.io/vice_17.html#SEC369
    // http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
    
+   if (MyMenuItem->Size < CRT_MAIN_HDR_LEN)
+   {
+      SendMsgPrintfln("Truncated CRT header");
+      return false;
+   }
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
 
    SendMsgPrintfln("Parsing CRT File");
@@ -74,6 +80,7 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Ver: %02x.%02x", CRT_Image[0x14], CRT_Image[0x15]);
    
    uint16_t HWType = toU16(CRT_Image+0x16);
+   LoadedEasyFlashROM = !CrtIsC128 && HWType == Cart_EasyFlash;
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
    
    if (!C128HWTypeSupported(HWType)) return false;
@@ -117,128 +124,156 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    return true;
 }
    
-bool ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)   
+FLASHMEM bool BootCrtFromSD(const char *FullFilePath)
 {
- 
+   if (FullFilePath[0] == 0)
+   {
+      SendMsgPrintfln("Must run this crt from SD");
+      return false;
+   }
+   //the EEPROM slot is MaxPathLength, shorter than FullFilePath
+   if (strlen(FullFilePath) >= MaxPathLength)
+   {
+      SendMsgPrintfln("CRT path too long\r\nto boot from SD");
+      return false;
+   }
+
+   //check for minimal image present by seeing if there's an image (this one) at higher address
+   // These two image checks provided by AndyA via the PJRC forum
+   // https://forum.pjrc.com/index.php?threads/teensy-4-1-dual-boot-capability.74479/post-339451
+   uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image
+
+   // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord
+   if ((*((uint32_t*)imageStartAddress) != 0x42464346) || (*((uint32_t*)(imageStartAddress+0x1000)) != 0x432000D1))
+   {
+      SendMsgPrintfln("Dual boot image not found (NoMagNums)");
+      return false;
+   }
+
+   // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.
+   uint32_t firstInstructionPtr = imageStartAddress + 0x1000 + sizeof(uint32_t);
+   uint32_t firstInstructionAddr = *(uint32_t*)firstInstructionPtr;
+
+   // very basic sanity check, code should start after the ivt but not too far into the image.
+   Printf_dbg("First instruction ptr: 0x%08X  addr: 0x%08X\n", firstInstructionPtr, firstInstructionAddr);
+   if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) )
+   {
+      // Address of first instruction isn't sensible for location in flash. Image was probably incorrectly built
+      SendMsgPrintfln("Dual boot image not found (NoFirstInst)");
+      return false;
+   }
+
+   SendMsgPrintfln("Rebooting Teensy to Minimal");
+   EEPwriteStr(eepAdCrtBootName, FullFilePath);
+   EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
+   #ifdef Fab04_FullDMACapable
+   // Asked first because this path is reached over USB as well as from the menu -- RemoteControl.ino's
+   // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
+   // though: that powers the board too, so there is nothing left to reach it.
+   // What is left is a C64 that still supplies 5 V but has stopped clocking.
+   //
+   // Against a bus that has already stopped, the check buys latency and not
+   // survival.  WaitForDMAState bounds the waits it runs itself -- 5 mS after the
+   // bus goes quiet, or the caller's ceiling while it is still clocking -- so
+   // PerformDMA and CloseDMA return false on their own, both return values are
+   // ignored here, and RebootTR() below runs either way.  Asking first costs
+   // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
+   // that could not have worked: each of the two waits pays 5 mS to notice the
+   // silence and another 5 mS inside AbortDMAUnless.
+   //
+   // Against a bus that stops part way through, it is not only latency, which is
+   // why this is a check and not a deleted line.  DMATransferISR's edge waits have
+   // no bound at all -- see the fourth case named over WaitForDMAState -- so a
+   // clock that dies while the ISR is inside one spins it forever at priority 16,
+   // thread mode never runs again, and RebootTR() is never reached.  Asking cannot
+   // close that window, only decline to open it on a bus that already reads dead.
+   // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
+   //robust for the large majority of real CRT files, with one narrow, named exception:
+   //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
+   //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)
+   if (C64IsClockingPHI2())
+   {
+      uint8_t BlankD011 = 0x00;
+      PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
+      CloseDMA();
+   }
+   #endif
+   RebootTR();
+   return false; // RebootTR does not return on hardware.
+}
+
+// -1 refuses the file, -2 skips an unsupported EasyFlash CHIP type;
+// otherwise the returned slot receives this payload (duplicates reuse a slot).
+int16_t ParseChipHeader(uint8_t* ChipHeader, const char *FullFilePath)
+{
    if (memcmp(ChipHeader, "CHIP", 4)!=0)
    {
       SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
-      return false;
+      return -1;
    }
-      
-   //clutters C64 disaply, just send to serial/debug
-   Printf_dbg(" #%03d $%08x $%04x $%04x $%04x $%04x in RAM", 
-      NumCrtChips, toU32(ChipHeader+0x04), toU16(ChipHeader+0x08), toU16(ChipHeader+0x0A), 
-      toU16(ChipHeader+0x0C), toU16(ChipHeader+0x0E));
-       
-   CrtChips[NumCrtChips].BankNum = toU16(ChipHeader+0x0A);
-   CrtChips[NumCrtChips].LoadAddress = toU16(ChipHeader+0x0C);
-   CrtChips[NumCrtChips].ROMSize = toU16(ChipHeader+0x0E);
-   
-   //chips in main buffer, then malloc in RAM2.  Drop Directory names if space needed?
-   if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image; //init RAM1 Buffer pointer
-
-   //First try RAM1:
-   if (CrtChips[NumCrtChips].ROMSize + (uint32_t)ptrRAM_ImageEnd - (uint32_t)RAM_Image <= RAM_ImageSize)
+   const uint16_t Bank = toU16(ChipHeader+0x0A);
+   const uint16_t Address = toU16(ChipHeader+0x0C);
+   const uint16_t Size = toU16(ChipHeader+0x0E);
+   if (LoadedEasyFlashROM)
+   {
+      const uint16_t Type = toU16(ChipHeader+0x08);
+      if (Type != 0 && Type != 2) return -2;
+      if (Bank >= 256)
+      {
+         SendMsgPrintfln("EasyFlash bank out of range: %u", Bank);
+         return -1;
+      }
+      if (Size != 8192)
+      {
+         SendMsgPrintfln("EasyFlash CHIP must be 8 KB");
+         return -1;
+      }
+      if (Address != 0x8000 && Address != 0xa000 && Address != 0xe000)
+      {
+         SendMsgPrintfln("Unsupported EasyFlash CHIP address: $%04x", Address);
+         return -1;
+      }
+      // A small sparse file can use extended banks without exhausting RAM.
+      if (Bank >= 64)
+      {
+         BootCrtFromSD(FullFilePath);
+         return -1;
+      }
+      for (uint8_t Previous=0; Previous<NumCrtChips; Previous++)
+         if (CrtChips[Previous].BankNum == Bank &&
+             (CrtChips[Previous].LoadAddress == 0x8000) == (Address == 0x8000))
+            return Previous;
+   }
+   // The main image retains its DTCM table and the existing bus-read timing.
+   if (NumCrtChips >= MAX_CRT_CHIPS)
+   {
+      SendMsgPrintfln("More than %d CRT Chips found", MAX_CRT_CHIPS);
+      return -1;
+   }
+   CrtChips[NumCrtChips].BankNum = Bank;
+   CrtChips[NumCrtChips].LoadAddress = Address;
+   CrtChips[NumCrtChips].ROMSize = Size;
+   if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image;
+   if (Size + (uint32_t)ptrRAM_ImageEnd - (uint32_t)RAM_Image <= RAM_ImageSize)
    {
       CrtChips[NumCrtChips].ChipROM = ptrRAM_ImageEnd;
-      ptrRAM_ImageEnd += CrtChips[NumCrtChips].ROMSize;
-      Printf_dbg("1");
+      ptrRAM_ImageEnd += Size;
    }
-   else //then try RAM2
+   else
    {
-      while(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(CrtChips[NumCrtChips].ROMSize)))
+      while(NULL == (CrtChips[NumCrtChips].ChipROM = (uint8_t*)malloc(Size)))
       {
          if (DriveDirMenu == NULL)
-         {  //we've used up all of ram1 & 2 now, too big for main image, have to boot minimal image    
-            //SendMsgPrintfln("Too large for main image..."); 
-            
-            //check for minimal image present by seeing if there's an image (this one) at higher address
-            // These two image checks provided by AndyA via the PJRC forum
-            // https://forum.pjrc.com/index.php?threads/teensy-4-1-dual-boot-capability.74479/post-339451
-            uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image
-      
-            // check For Valid Image: SPIFlashConfigMagicWord and VectorTableMagicWord
-            if ((*((uint32_t*)imageStartAddress) != 0x42464346) || (*((uint32_t*)(imageStartAddress+0x1000)) != 0x432000D1))
-            {
-               SendMsgPrintfln("Dual boot image not found (NoMagNums)");
-               return false;                        
-            }
-               
-            // ivt starts 0x1000 after the start of flash. Address of start of code is 2nd vector in table.
-            uint32_t firstInstructionPtr = imageStartAddress + 0x1000 + sizeof(uint32_t);
-            uint32_t firstInstructionAddr = *(uint32_t*)firstInstructionPtr;
-      
-            // very basic sanity check, code should start after the ivt but not too far into the image.
-            Printf_dbg("First instruction ptr: 0x%08X  addr: 0x%08X\n", firstInstructionPtr, firstInstructionAddr);
-            if ( (firstInstructionAddr < (imageStartAddress+0x1000)) || (firstInstructionAddr > (imageStartAddress+0x3000)) ) 
-            {
-               // Address of first instruction isn't sensible for location in flash. Image was probably incorrectly built
-               SendMsgPrintfln("Dual boot image not found (NoFirstInst)");
-               return false;                        
-            }
-            
-            if (FullFilePath[0] == 0)
-            {
-               SendMsgPrintfln("Must run this crt from SD"); 
-               return false;                        
-            }
-            //the EEPROM slot is MaxPathLength, shorter than FullFilePath
-            if (strlen(FullFilePath) >= MaxPathLength)
-            {
-               SendMsgPrintfln("CRT path too long\r\nto boot from SD");
-               return false;
-            }
-
-            SendMsgPrintfln("Rebooting Teensy to Minimal");
-            EEPwriteStr(eepAdCrtBootName, FullFilePath);
-            EEPROM.write(eepAdMinBootInd, MinBootInd_ExecuteMin);
-#ifdef Fab04_FullDMACapable
-            // Asked first because this path is reached over USB as well as from the menu -- RemoteControl.ino's
-            // forced CRT launch calls HandleExecution.  Not with the C64 switched off,
-            // though: that powers the board too, so there is nothing left to reach it.
-            // What is left is a C64 that still supplies 5 V but has stopped clocking.
-            //
-            // Against a bus that has already stopped, the check buys latency and not
-            // survival.  WaitForDMAState bounds the waits it runs itself -- 5 mS after the
-            // bus goes quiet, or the caller's ceiling while it is still clocking -- so
-            // PerformDMA and CloseDMA return false on their own, both return values are
-            // ignored here, and RebootTR() below runs either way.  Asking first costs
-            // nothing on a live bus and, on a dead one, spends 5 mS to skip ~20 mS of DMA
-            // that could not have worked: each of the two waits pays 5 mS to notice the
-            // silence and another 5 mS inside AbortDMAUnless.
-            //
-            // Against a bus that stops part way through, it is not only latency, which is
-            // why this is a check and not a deleted line.  DMATransferISR's edge waits have
-            // no bound at all -- see the fourth case named over WaitForDMAState -- so a
-            // clock that dies while the ISR is inside one spins it forever at priority 16,
-            // thread mode never runs again, and RebootTR() is never reached.  Asking cannot
-            // close that window, only decline to open it on a bus that already reads dead.
-            // Fixed 0x00, not read-modify-write: DEN=0 stops all VIC-II byte fetches
-            //robust for the large majority of real CRT files, with one narrow, named exception:
-            //  an Ultimax-mode cartridge whose own startup code doesn't set $D011.
-            //  If we ever hit that specific case, the fix would need to be different (e.g., detect Ultimax mode from the header and skip the blank)
-            if (C64IsClockingPHI2())
-            {
-               uint8_t BlankD011 = 0x00;
-               PerformDMA(DMA_WRITE, 0xD011, &BlankD011, 1, DMA_ADDR_INCREMENT);
-               CloseDMA();
-            }
-#endif
-            RebootTR();
-            
-         }
-         else
          {
-            FreeDriveDirMenu(); //free/clear prev loaded directory to make space
+            BootCrtFromSD(FullFilePath);
+            return -1;
          }
+         FreeDriveDirMenu();
       }
-      Printf_dbg("2");
    }
-   Printf_dbg(" %08x\n", (uint32_t)CrtChips[NumCrtChips].ChipROM);
-   return true;
+   return NumCrtChips;
 }
- 
+
 FLASHMEM bool ParseARTHeader()
 {
   // XferImage and XferSize are populated w/ koala file info
@@ -469,6 +504,11 @@ bool PathIsRoot()
 bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)   
 {
    SendMsgPrintfln("%d Chip(s) found/loaded", NumCrtChips); 
+   if (!NumCrtChips)
+   {
+      SendMsgPrintfln("No supported CRT CHIP packets");
+      return false;
+   }
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
    //check configuration

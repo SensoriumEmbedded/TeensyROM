@@ -495,7 +495,7 @@ Three `USBHIDParser` instances (`hid1`, `hid2`, `hid3`) are declared for the USB
 
 Unlike the C64 side, where `Menu_Regs.i`/`Menu_Regs.h` at least document the sync requirement in a comment, these pairs carry no such marker — nothing signals that a fix in one file has a counterpart that likely needs the same fix.
 
-**Already causing real drift, not just a theoretical risk:** MinimalBoot's `ParseChipHeader` correctly bounds-checks `NumCrtChips == MAX_CRT_CHIPS` before writing; the full-firmware `ParseChipHeader` in `DriveDirLoad.ino` does not. Same function, same name, same intended behavior, silently diverged.
+**An example of real drift, now fixed:** MinimalBoot bounded its CHIP table before writing while the full-firmware `ParseChipHeader` in `FileParsers.ino` did not. Both now check their table capacity before creating a new entry. The main image retains its static 128-entry table; native MinimalBoot accepts up to 512 unique EasyFlash bank halves, with the legacy 128-entry limit for other cartridges.
 
 **No fix proposed** — restructuring this (shared translation units, a common library, etc.) would be a significant undertaking given the two builds' different memory/feature constraints, and isn't asked for. Recorded as a standing reminder: when fixing a bug in one of these known-duplicated functions, check whether the other build's copy needs the identical fix.
 
