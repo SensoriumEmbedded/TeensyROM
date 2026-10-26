@@ -95,18 +95,6 @@ FLASHMEM void MarkVmClaimed()
          VmClaimedItems[Num/8] |= 1 << Num%8;
 }
 
-// Whether a card is in the slot, from card detect on DAT3. CheckLaunchSDAuto's check
-// (Teensy.ino), copied rather than shared so that boot stayed untouched for the 0.9
-// release. It takes the pin back first, so it reads true whoever had it last, a failed
-// SD.begin included.
-FLASHMEM bool SDSlotFilled()
-{
-   // _SD_DAT3 = pin 46
-   pinMode(46, INPUT_PULLDOWN);
-   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
-   return digitalReadFast(46);
-}
-
 // rsShowExtPackages (StatusFunctions.c), for the Installed Extension page. Here rather
 // than beside the other status functions because that file is included ahead of the
 // registry. Reads the card whatever the menu's source is.
@@ -131,7 +119,7 @@ FLASHMEM void ShowVmPackages()
       //Begun here, with one retry while the slot still reads filled: the retry
       //SDFullInit makes, because a card's first start can fail. Nothing is remembered
       //between draws, so a card that will not start costs both attempts on each one.
-      Card = SD.begin(BUILTIN_SDCARD) || (SDSlotFilled() && SD.begin(BUILTIN_SDCARD));
+      Card = SDBegin() || (SDSlotFilled() && SDBegin());
       //A card started here in place of one that had been begun: whatever the menu holds
       //from that one is stale, its listing and the extension table built from it. The
       //flags remote file commands raise for the same reason make the menu's next

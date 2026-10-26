@@ -55,8 +55,8 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
   * Below that, it lists the registration folders in `/VMS` on the SD card, one per row, with the file types each one claims. A mark in front of a name flags a problem:
     * `*` Another folder claims one of the same file types. TeensyROM won't open that file type with either of them until one is removed.
     * `x` TeensyROM couldn't read the folder: its name isn't valid, or its `manifest.vmi` is missing or invalid. It claims nothing.
-    * `!` The installed extension can't run this one. A row below the list says why.
-  * After the list, rows say what else stops a launch (for example, no extension installed), then how the last launch went.
+    * `!` TeensyROM wouldn't launch this one: its module or client file is damaged or missing, or the installed extension can't run it. A row below the list says why.
+  * After the list, rows say what else stops a launch (for example, no extension installed), then how the last launch went. With many packages the list shortens to a `+N more` row so these stay on screen; a `+N more notes` row stands in for any reasons that still don't fit.
   * The page checks the SD card each time it opens, so it also shows a card that was just inserted or swapped.
 
   <img src="/media/Screen%20captures/TR+/help-settings-info/settings10-installed-extensions.png" alt="Installed Extension settings page" width="480">

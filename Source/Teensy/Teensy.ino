@@ -550,6 +550,19 @@ void SetMenu(StructMenuItem* Source, uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
+// Whether a card is in the slot, from card detect on DAT3. Takes the pin back from the
+// SD controller first, so it reads true whoever had it last, a failed SD.begin included.
+// The pin is left a pulldown input, as the SD library itself leaves it when a card is
+// gone; SD.begin muxes it back to the controller, and every caller that reads true goes
+// on to begin.
+FLASHMEM bool SDSlotFilled()
+{
+   // _SD_DAT3 = pin 46
+   pinMode(46, INPUT_PULLDOWN);
+   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
+   return digitalReadFast(46);
+}
+
 bool SDBegin()
 {
    //SD.begin(BUILTIN_SDCARD), ending any read left open first.  In FIFO mode SdFat leaves a
@@ -645,10 +658,7 @@ bool CheckLaunchSDAuto()
    // Launch file attempted, not found: 39mS
    // Autolaunch file found, launch set-up: 10mS
    
-   // _SD_DAT3 = pin 46
-   pinMode(46, INPUT_PULLDOWN);
-   delayMicroseconds(5); //let the pulldown settle before reading; see PaulStoffregen/SD@c535ae9
-   if (digitalReadFast(46))
+   if (SDSlotFilled())
    {  //SD Presence detected, do full init and check for auotlaunch file    
       Printf_dbg("SD Presence detected\n");
       if (SDFullInit())
