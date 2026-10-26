@@ -30,7 +30,6 @@ extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
 extern void FreeDriveDirMenu();
 extern uint8_t RAM_Image[];
-extern uint8_t NumCrtChips;
 extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer
 
 FLASHMEM void FreeRAMBanks(uint8_t *Bank[], uint8_t *NumBanks)
