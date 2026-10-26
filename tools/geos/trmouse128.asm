@@ -1,6 +1,6 @@
 ; SPDX-License-Identifier: MIT
 ;
-; GEOS 128 input driver for a USB mouse on a TeensyROM (USBMouse.c has the registers).
+; GEOS input driver (128, or 64 assembled at its own address) for a USB mouse on a TeensyROM (USBMouse.c has the registers).
 
 !cpu 6502
 
@@ -24,7 +24,8 @@ regButtons    = 2
 regID         = 3
 LEFT_BUTTON   = $01
 
-        * = $fd00               ; where GEOS 128 loads an input driver
+!ifndef MOUSE_BASE { MOUSE_BASE = $fd00 }
+        * = MOUSE_BASE          ; where GEOS loads an input driver
 
         jmp MouseInit
         jmp SlowMouse
@@ -94,11 +95,14 @@ readButtons
         bpl +
         dex
 +       stx deltaX+1
+!ifndef GEOS64 {
         bit graphMode
         bpl +
         asl deltaX              ; 640 pixels across in 80 columns
         rol deltaX+1
-+       clc
++
+}
+        clc
         lda mouseXPos
         adc deltaX
         sta mouseXPos

@@ -1,14 +1,17 @@
 // A GEOS menu item: finds the user's boot disk image in the launcher's folder on the SD card and puts
 // the TR input driver on a copy of it, leaving the original untouched.
 
+#include "GEOS/GeosBoot.h"
 #include "GEOS/GeosTargets.h"
 
 #define GEOS_TEMP_NAME     "PATCHING.TMP"
+#define GEOS_BACKUP_TAG    ".BAK"
 #define GEOS_COPY_TAG      "-TR"
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
 
-static const char *const GeosImageExtensions[] = { ".d64", ".d71", ".d81" };
+// Only GEOS 64's D81 image, with the deskTop and the applications on one disk, is supported
+#define GEOS_IMAGE_EXTENSION ".d81"
 
 FLASHMEM static bool GeosFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -39,12 +42,7 @@ FLASHMEM static bool GeosHasImageExtension(const char *Name)
 {
    size_t Length = strlen(Name);
 
-   if (Length <= GEOS_EXT_LENGTH) return false;
-   for (const char *Extension : GeosImageExtensions)
-   {
-      if (!strcasecmp(Name + Length - GEOS_EXT_LENGTH, Extension)) return true;
-   }
-   return false;
+   return Length > GEOS_EXT_LENGTH && !strcasecmp(Name + Length - GEOS_EXT_LENGTH, GEOS_IMAGE_EXTENSION);
 }
 
 FLASHMEM static bool GeosIsPatchedCopy(const char *Name)
@@ -140,7 +138,11 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    struct GeosDate Today = GeosToday();
    bool Patched;
 
-   if (!Image) return false;
+   if (!Image)
+   {
+      snprintf(Error, ErrorSize, PSTR("the image could not be opened"));
+      return false;
+   }
    Disk = GeosDiskOn(Launcher, &Image);
    Patched = GeosInstallDriver(&Disk, &Today);
    if (!Patched) snprintf(Error, ErrorSize, PSTR("%s"), Disk.Error);
@@ -148,22 +150,51 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
    return Patched;
 }
 
-// Patches a temporary copy and renames it into place, so a failure never leaves a half-patched copy behind
-FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
-                                   const char *Copy)
+FLASHMEM static void GeosBackupPath(char *Backup, size_t Size, const char *Copy)
 {
-   char Temp[MaxNamePathLength], Error[GEOS_ERROR_SIZE];
+   snprintf(Backup, Size, PSTR("%s" GEOS_BACKUP_TAG), Copy);
+}
+
+// A copy renamed aside and never put back means power dropped between the two renames of GeosPatchCopy
+FLASHMEM static bool GeosRestoreCopy(const char *Copy)
+{
+   char Backup[MaxNamePathLength];
+
+   GeosBackupPath(Backup, sizeof Backup, Copy);
+   if (SD.exists(Copy))
+   {
+      SD.remove(Backup);
+      return true;
+   }
+   return !SD.exists(Backup) || SD.rename(Backup, Copy);
+}
+
+// Patches a temporary copy and renames it into place, keeping the copy it replaces until the new one is in, so a
+// failure never leaves a half-patched copy behind or loses the one GEOS saved to
+FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const char *Name, const char *Source,
+                                   const char *Copy, bool Patch)
+{
+   char Temp[MaxNamePathLength], Backup[MaxNamePathLength], Error[MaxNamePathLength + GEOS_ERROR_SIZE];
+   bool Replacing = SD.exists(Copy);
 
    strcpy(Error, PSTR("the SD card could not be written"));
    GeosPath(Temp, sizeof Temp, Launcher, GEOS_TEMP_NAME);
-   if (!GeosCopyFile(Source, Temp) || !GeosPatchFile(Launcher, Temp, Error, sizeof Error) ||
-       (SD.exists(Copy) && !SD.remove(Copy)) || !SD.rename(Temp, Copy))
+   GeosBackupPath(Backup, sizeof Backup, Copy);
+   if (Replacing) SD.remove(Backup);
+   if (GeosCopyFile(Source, Temp) && (!Patch || GeosPatchFile(Launcher, Temp, Error, sizeof Error)) &&
+       (!Replacing || SD.rename(Copy, Backup)))
    {
-      SD.remove(Temp);
-      SendMsgPrintfln(PSTR("Could not add the mouse driver to\r\na copy of %s:\r\n%s"), Name, Error);
-      return false;
+      if (SD.rename(Temp, Copy))
+      {
+         if (Replacing) SD.remove(Backup);
+         return true;
+      }
+      if (Replacing && !SD.rename(Backup, Copy)) snprintf(Error, sizeof Error, PSTR("your disk is now %s"), Backup);
    }
-   return true;
+   SD.remove(Temp);
+   if (Patch) SendMsgPrintfln(PSTR("Could not add the mouse driver to\r\na copy of %s:\r\n%s"), Name, Error);
+   else SendMsgPrintfln(PSTR("Could not make a copy of\r\n%s:\r\n%s"), Name, Error);
+   return false;
 }
 
 FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *Name)
@@ -172,12 +203,20 @@ FLASHMEM static bool GeosReady(const struct GeosLauncher *Launcher, const char *
    return true;
 }
 
-// Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one
-FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name)
+FLASHMEM static bool GeosUse(const struct GeosLauncher *Launcher, const char *Name, char *BootName)
+{
+   strcpy(BootName, Name);
+   return GeosReady(Launcher, Name);
+}
+
+// Whether the image is a boot disk, set up or not: only with none does the user need telling where to copy one.
+// BootName gets the disk to start from: always a copy, since GEOS saves to the disk it starts from
+FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const char *Name, char *BootName)
 {
    char Source[MaxNamePathLength], CopyName[MaxItemNameLength + sizeof GEOS_COPY_TAG], Copy[MaxNamePathLength];
    char Error[GEOS_ERROR_SIZE];
    struct GeosBootDisk Found;
+   bool NeedsDriver;
 
    GeosPath(Source, sizeof Source, Launcher, Name);
    GeosCopyName(CopyName, sizeof CopyName, Name);
@@ -188,8 +227,13 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return false;
    }
    if (!Found.HasDeskTop) return false;
-   if (Found.HasDriver) return GeosReady(Launcher, Name);
+   NeedsDriver = !Found.HasDriver;
 
+   if (!GeosRestoreCopy(Copy))
+   {
+      SendMsgPrintfln(PSTR("%s\r\nwas set aside and could not be put back"), CopyName);
+      return true;
+   }
    if (SD.exists(Copy))
    {
       // The copy is the disk GEOS saves the user's work to: one that cannot be read is left alone, not replaced
@@ -198,27 +242,72 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
          SendMsgPrintfln(PSTR("%s:\r\n%s"), CopyName, Error);
          return true;
       }
-      if (Found.HasDriver) return GeosReady(Launcher, CopyName);
+      if (Found.HasDriver) return GeosUse(Launcher, CopyName, BootName);
+      if (!Found.HasDeskTop)
+      {
+         SendMsgPrintfln(PSTR("%s\r\nhas no desktop; remove it to start over"), CopyName);
+         return true;
+      }
+      if (!GeosPatchCopy(Launcher, CopyName, Copy, Copy, true)) return true;
+      return GeosUse(Launcher, CopyName, BootName);
    }
-   if (!GeosPatchCopy(Launcher, Name, Source, Copy)) return true;
-   SendMsgPrintfln(PSTR("Added the TR USB mouse driver to\r\na copy of %s"), Name);
-   return GeosReady(Launcher, CopyName);
+   if (!GeosPatchCopy(Launcher, Name, Source, Copy, NeedsDriver)) return true;
+   if (NeedsDriver) SendMsgPrintfln(PSTR("Added the TR USB mouse driver to\r\na copy of %s"), Name);
+   else SendMsgPrintfln(PSTR("Made a copy of %s\r\nto start from"), Name);
+   return GeosUse(Launcher, CopyName, BootName);
 }
 
-FLASHMEM void LaunchGeos(const struct GeosLauncher *Launcher)
+FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
-   char Names[GEOS_MAX_IMAGES][MaxItemNameLength];
+   char Path[MaxNamePathLength];
+   struct GeosDisk Disk;
+   uint32_t Length = 0;
+   struct GeosDate Now = GeosToday();
+   bool Changed, Built;
+   File Image;
+
+   GeosPath(Path, sizeof Path, Launcher, Name);
+   Image = SD.open(Path, FILE_WRITE_BEGIN);
+   if (!Image)
+   {
+      SendMsgPrintfln(PSTR("%s\r\ncould not be opened"), Name);
+      return false;
+   }
+   Disk = GeosDiskOn(Launcher, &Image);
+   Built = GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length) && GeosDisableConfigure(&Disk, &Changed);
+   if (Built) GeosSetClock(RAM_Image, Length, &Now);
+   if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
+   Image.close();
+   if (!Built) return false;
+   if (!TRBlockMount(Path))
+   {
+      SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
+      return false;
+   }
+   Item->ItemType = rtFilePrg;
+   Item->Code_Image = RAM_Image;
+   Item->Size = Length;
+   return true;
+}
+
+FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *Item)
+{
+   char Names[GEOS_MAX_IMAGES][MaxItemNameLength], BootName[MaxItemNameLength + sizeof GEOS_COPY_TAG] = "";
    uint8_t Count;
    bool BootDiskFound = false;
 
    if (!SDFullInit())
    {
       SendMsgPrintfln(PSTR("%s starts from your boot disk\r\nimage on the SD card. Insert the card."), Launcher->Title);
-      return;
+      return false;
    }
    Count = GeosListImages(Launcher, Names);
-   for (uint8_t i = 0; i < Count; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i]);
-   if (BootDiskFound) return;
-   SendMsgPrintfln(PSTR("Copy your %s boot disk image\r\n(.D64, .D71 or .D81) to %s\r\non the SD card, then select this again."),
-                   Launcher->Title, Launcher->Folder);
+   for (uint8_t i = 0; i < Count && !*BootName; i++) BootDiskFound |= GeosSetUpImage(Launcher, Names[i], BootName);
+   if (!BootDiskFound)
+   {
+      SendMsgPrintfln(PSTR("Copy your %s boot disk image\r\n(.D81) to %s\r\non the SD card, then select this again."),
+                      Launcher->Title, Launcher->Folder);
+      return false;
+   }
+   return *BootName && GeosStart(Launcher, BootName, Item);
 }
