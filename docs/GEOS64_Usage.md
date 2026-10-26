@@ -29,6 +29,7 @@
 * **(TR+ only)** To save GeoRAM, press and release the Alt button (to the left of the menu button).
   * The contents are written to `georam.ram` on the SD card, and the LED flashes for about 1.5 seconds once the save is done.
   * The previous `georam.ram` is kept as `georam.bak`.
+  * If the power goes off during a save, the next launch loads the newest complete save: the one just made if it was fully written, otherwise the previous one.
 * GEOS's `CONFIGURE` does not run at start-up, since it looks for a disk drive, so GEOS does not set GeoRAM up as a RAM disk.
 
 ## Date and time

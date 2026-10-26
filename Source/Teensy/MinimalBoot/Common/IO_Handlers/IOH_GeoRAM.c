@@ -80,7 +80,7 @@ FLASHMEM void InitHndlr_GeoRAM()
    NumGeoRAM_Banks = NumBanks;
    fSpecialBtnChange = &SpecialBtn_GeoRAM;
    Serial.printf("GeoRAM Size: %dK bytes\n", NumBanks * RAM_Bank_Size / 1024);
-   LoadRAMBanks(GeoRAM_Bank, NumBanks, GeoRAM_Filename);
+   LoadRAMBanksReplaced(GeoRAM_Bank, NumBanks, GeoRAM_Filename);
 }
 
 FLASHMEM void PollingHndlr_GeoRAM()
