@@ -39,8 +39,12 @@ static void* arenaAllocate(size_t bytes) {
     auto p = VirtualAlloc(reinterpret_cast<void*>(0x20200000), arenaBytes, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #else
     auto p = mmap(reinterpret_cast<void*>(0x20200000), arenaBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    assert(p != MAP_FAILED);
+    // 64-bit macOS reserves the low 4 GB (__PAGEZERO), so there the address is only a hint
+    // and the arena lands higher. That serves too: with uint32_t defined as uintptr_t below,
+    // the production check compares the whole pointer with 0x20200000.
 #endif
-    assert(p == reinterpret_cast<void*>(0x20200000)); return static_cast<uint8_t*>(p);
+    assert(uintptr_t(p) >= 0x20200000); return static_cast<uint8_t*>(p);
   }();
   // Every test releases the preceding cartridge before starting another.
   static size_t cursor = 0;
