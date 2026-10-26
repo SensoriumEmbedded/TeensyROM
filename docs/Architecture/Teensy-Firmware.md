@@ -68,6 +68,25 @@ A host app can query which mode is currently active via `FWCheckToken`. Only a r
 
 **Why MinimalBoot includes Ethernet** despite the RAM cost of an otherwise memory-scarce build: it's specifically so a host app can remote-launch a command over the network while a large CRT is running in minimal mode, interrupting it and taking back system control — not because minimal-mode logic itself needs network access.
 
+### EasyFlash beyond 1 MB
+
+Native MinimalBoot reads EasyFlash CRTs (hardware type 32) of 64, 128 or 256 banks (1, 2 or 4 MB), read-only; EAPI writes are not supported. The main image and the extension host keep the original 1 MB path.
+
+- **Banks and halves:** each accepted CHIP is 8 KB: ROML at `$8000`, ROMH at `$A000` or `$E000` (the same half). MinimalBoot's decoder covers 256 banks (`NumDecodeBanks`, `IOH_EasyFlash.c`); a half the file doesn't supply reads as erased flash (`$FF`) from a page allocated with the CHIP table.
+- **Bank register:** MinimalBoot masks `$DE00` by the highest bank present: `$3F`, `$7F` or `$FF`, so ordinary 1 MB images keep six-bit wrapping. The main image and the extension host keep their fixed 64-bank decoder and `$3F` mask.
+- **Which image runs it:** the main image keeps its static 128-entry DTCM CHIP table (`MinimalBoot/Common/CrtChips.h`). Its `ParseChipHeader` (`FileParsers.ino`) sends any EasyFlash with a bank of 64 or above to MinimalBoot through the same SD handoff as a file that outgrows RAM (`BootCrtFromSD`), even a small sparse file that would fit; a USB launch that needs MinimalBoot is refused with "Must run this crt from SD". MinimalBoot allocates its table on the RAM2 heap (`EnsureCrtChipTable`, `Min_DriveDirLoad.ino`): up to 512 unique EasyFlash halves, or 128 CHIPs for other types. The RAM cost is in [Constraints.md](Constraints.md#memory-budgets-are-hard-caps-not-soft-targets).
+- **CHIP handling, matching the Ultimate's loader:** the packet-length field is ignored (the loader reads the CHIP's ROM size); CHIP types other than 0 (ROM) and 2 (flash) are skipped over by their ROM size; a later duplicate half replaces the earlier one in the same table slot.
+- **Refused, with a reason:** a bank of 256 or above, a size other than 8 KB, an address other than those above, a truncated header or payload, an allocation failure. Messages show on the C64 screen in the main image and on serial in MinimalBoot.
+- **SD swapping:** halves that don't fit in RAM are swapped in from SD as for any large CRT. The swap marker holds a 24-bit file offset, so a payload that would end beyond it (possible only with long runs of duplicate or skipped CHIPs) is refused at load. A bank that fails to read at runtime holds the C64 in reset and returns to the main menu (`EasyFlashSwapFailed`).
+- **Tests:** `node --test Source/Teensy/tests/easyflash.test.js` compiles the production MinimalBoot loader and handlers natively against SD and register stand-ins, plus focused main-image checks for routing and the static-table limit. `Source/Teensy/tests/easyflash-fixtures.mjs` writes bank-identification CRTs; they are loader fixtures, not runnable C64 programs, and it refuses to overwrite a file:
+
+  ```
+  node Source/Teensy/tests/easyflash-fixtures.mjs --mib 2 --output ef2.crt
+  node Source/Teensy/tests/easyflash-fixtures.mjs --mib 4 --sparse --reverse --output ef4-sparse-reverse.crt
+  ```
+
+  Each half starts with its bank number, half number and bank XOR `$5A`, then a deterministic pattern and a readable bank label; `--sparse` omits selected halves, `--reverse` puts bank zero last.
+
 ## File associations: full vs. MinimalBoot vs. shared
 
 Confirmed directly from each sketch's `#include` list, not inferred:

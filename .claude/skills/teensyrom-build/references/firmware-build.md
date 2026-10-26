@@ -72,6 +72,7 @@ target. The first line it prints is the build date it will stamp into the image.
 | `Use a shorter --out path` | Windows path limit: pick a short folder such as `C:/tr-build`. |
 | A library not found during compile | The sketchbook is not where the builder looked: `--arduino-user`. |
 | The build fails after linking because an mbedTLS symbol came back | TLS is compiled out on purpose; see Build-System.md. |
+| `[main] links __ssvfscanf_r (...)` (or `__pow_log_data`, `_strtod_l`, ...) | New code calls `sscanf`, `pow`, `atof` or a similar newlib routine that costs RAM1. Parse or compute the value directly; the list and why is in `tools/lib/heavy-libc.mjs`, see Build-System.md. |
 
 A failed build keeps its `run-XXXX` folder in the output folder; the logs in it explain
 the failure. Delete these folders once you are done, since each holds a few hundred MB.
