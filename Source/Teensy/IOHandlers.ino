@@ -47,7 +47,7 @@ void IOHandlerSelectInit()
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy && MenuSource[SelItemFullIdx].IOHndlrAssoc != IOH_None)
    {
       Printf_dbg("IO Handler set by Teensy Menu\n");
-      IOHandlerInit(MenuSource[SelItemFullIdx].IOHndlrAssoc); 
+      IOHandlerInit(MenuSource[SelItemFullIdx].IOHndlrAssoc);
    }
    else IOHandlerNextInit();
 }
@@ -62,25 +62,28 @@ void IOHandlerInit(uint8_t NewIOHandler)
    
    if (NewIOHandler>=IOH_Num_Handlers)
    {
-      Printf_dbg("***IOHandler out of range\n");
-      return;
+      //Reachable from an EEPROM byte written by a build with more handlers.  No early return:
+      //the handoff below is all that releases the C64's untimed rRegIOHSwapPoll loop.
+      Serial.printf("***IOHandler out of range: %d\n", NewIOHandler);
    }
-   
-   Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
+   else
+   {
+      Serial.printf("Loading IO handler: %s\n", IOHandler[NewIOHandler]->Name);
 
 #ifdef DbgIOTraceLog
-   uint32_t InitStartuS = micros();
+      uint32_t InitStartuS = micros();
 #endif
 
-   if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
+      if (IOHandler[NewIOHandler]->InitHndlr != NULL) IOHandler[NewIOHandler]->InitHndlr();
 
-   Serial.flush();
+      Serial.flush();
 #ifdef DbgIOTraceLog
-   //no printing here: it would widen the window being measured, see PrintResetSnapshot
-   TraceInitHndlruS = micros() - InitStartuS;
-   TraceLogMarker(IOTLMrkHndlrSwitch);
+      //no printing here: it would widen the window being measured, see PrintResetSnapshot
+      TraceInitHndlruS = micros() - InitStartuS;
+      TraceLogMarker(IOTLMrkHndlrSwitch);
 #endif
-   CurrentIOHandler = NewIOHandler;
+      CurrentIOHandler = NewIOHandler;
+   }
 
    //PRG-load handshake handoff (see HandshakeSnoop in IOH_TeensyROM.c):
    //if the handshake currently owns fBusSnoop, let its own completion-read do the handoff later;

@@ -5,7 +5,7 @@
   * Saved in the TeensyROM for future sessions. 
   * Defaults loaded with popular text sites
 * Previously visited sites saved in a browsing queue, use the 'p' command to go back.
-* Ability to Read filtered (via [FrogFind](http://www.frogfind.com/)) or raw/unfiltered web pages
+* Ability to Read filtered (via [FrogFind](http://frogfind.de/)) or raw/unfiltered web pages
 * Download files directly to a specified path on USB or SD 
   * Path saved in TeensyROM
 * View downloaded files and launch directly from browser
@@ -30,7 +30,7 @@
 |--|--|
 | ? | Show Browser Commands |
 | Return | When page is paused, hitting Return alone continues to next screen |
-| S [Term] | Search the internet for [Term] via the [FrogFind](http://frogfind.com/about.php) text search engine |
+| S [Term] | Search the internet for [Term] via the [FrogFind](http://frogfind.de/about.php) text search engine<br>Note: FrogFind's search doesn't currently accept searches from the TeensyROM browser. Filtered reading (the F modifier) still works. |
 | P | Go to Previous Page |
 | R[m] | Re-load current page<br>Common modifiers (see below). |
 | U[m] [URL]| Go to [URL] (Use Server name or IP address)<br>URL Format: host[:port][/path]<br>"HTTP://" is assumed and added<br>Common modifiers (see below). |

@@ -114,8 +114,21 @@ for why that specific fix is unsafe, not just inelegant.
 
 ## Memory budgets are hard caps, not soft targets
 
+The main image keeps its static 128-entry CRT table in DTCM and its 64-bank
+EasyFlash decoder. An EasyFlash bank of 64 or above takes the existing SD-only
+MinimalBoot handoff even when a sparse file fits the main image's RAM.
+Native MinimalBoot has a 256-bank decoder (2 KiB of RAM1); its CRT metadata is
+allocated on the RAM2 heap, with at most 512 unique EasyFlash bank halves or
+128 CHIP records for other cartridges. EasyFlash reserves its 8 KiB erased
+`$FF` page in the same allocation before ROM payloads fill the heap. The page
+must stay in RAM2 because the C64 bus ISR reads it directly; other cartridge
+types allocate no erased page. Image buffers and the 16 swap buffers retain
+their existing sizes. Large capacity comes from SD, not a larger resident ROM
+buffer. `VM_HOST_PROFILE` keeps its static table, 64-bank client mapping and
+original handler code; it carries no native EasyFlash metadata or erased page.
+
 - Full firmware: `MaxRAM_ImageSize = 128` KB (`Source/Teensy/TeensyROM.h:26`) — the RAM1 image buffer. Beyond that, CRT banks spill into RAM2 via `malloc()` (`FileParsers.ino:120-128`); when that allocation fails, firmware reboots into MinimalBoot (`FileParsers.ino:165-168`, see [Teensy-Firmware.md](Teensy-Firmware.md#minimalboot-vs-full-firmware) for the full trigger mechanism) — this exhaustion point empirically lands around **~650KB** total, it is not a hardcoded threshold.
-- MinimalBoot: `(440 - 8*Num8kSwapBuffers - EthernetDeduction)` KB = 208 KB (`Source/Teensy/MinimalBoot/Min_TeensyROM.h:58`) — with RAM2 and the 16 swap buffers, holds **103 8K banks (~824KB)** before any bank has to come from SD at runtime (measured 2026-10-04: an 880K EasyFlash loads 87 banks, flags 23 for swapping, 16 of them preloaded into the swap buffers, 7 left for SD), at the cost of dropping USB host support (SD-only loading in this mode). Its RAM1 stack floor (>24000 free with Ethernet, measured in that header) is enforced by `tools/build-firmware.mjs`; the base was 392 until MinimalBoot's ITCM code dropped from five 32 KB banks to four.
+- MinimalBoot: `(440 - 8*Num8kSwapBuffers - EthernetDeduction)` KB = 208 KB (`Source/Teensy/MinimalBoot/Min_TeensyROM.h:58`) — with RAM2 and the 16 swap buffers, holds **103 8K banks (~824KB)** before any bank has to come from SD at runtime (measured 2026-10-04: an 880K EasyFlash loads 87 banks, flags 23 for swapping, 16 of them preloaded into the swap buffers, 7 left for SD; since PR #65 an EasyFlash also spends about 14 KB of that RAM2 on its CHIP table and erased `$FF` page, other cartridge types about 1.5 KB on their table, so an EasyFlash keeps one or two fewer 8K banks resident — not re-measured), at the cost of dropping USB host support (SD-only loading in this mode). Its RAM1 stack floor (>24000 free with Ethernet, measured in that header) is enforced by `tools/build-firmware.mjs`; the base was 392 until MinimalBoot's ITCM code dropped from five 32 KB banks to four.
 - Files beyond that use bank-swapping from SD (only), asserting the DMA line for about 0.5–1.5 mS per uncached swap depending on the card, 2.3 mS at worst so far (since 24c187c reads each 8K bank in one call; reading it a byte at a time took ~3 mS) — not true bus-mastering DMA, just the old-school REU-style pause assertion. TR+'s true bus-mastering DMA doesn't help here: the pause just needs to be perceptually instant to the 6510 for an SD→RAM bank transfer, which bus-mastering doesn't improve. This mechanism was documented as unreliable on most C128s and a low percentage of NTSC systems; **that reliability claim may now be stale and is due for a re-test** (flagged during architecture review, 2026-08-11 — see [Known-Issues.md](Known-Issues.md)). A DMA Pause check utility (`TODCheck`/Test+Diags BASIC tool) exists to test a given system before relying on this.
   - Measured 2026-10-10 with the `Dbg_SerSD` serial command `o` (`SerUSBIO.ino`): 256 seeks + 8K reads at CRT bank offsets in an 8 MiB file kept open, as `LoadBank` (`IOH_EasyFlash.c`) keeps the CRT open. This is the SD side of a swap, not the whole pause: the test runs in the Full firmware and reads through SdFat's `FsFile` directly, while a real swap runs in MinimalBoot through SD's `File` wrapper with the C64 held by DMA. Min / avg / max per bank:
     - Patriot 32 GB, 32K clusters: 542 / 615 / 689 µS

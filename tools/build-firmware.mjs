@@ -67,6 +67,7 @@ import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mj
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
 import { definesMacro } from './lib/source-text.mjs';
+import { heavyLibcLinked } from './lib/heavy-libc.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
          HOST_SLOT_BYTES } from './lib/extension.mjs';
@@ -405,7 +406,7 @@ function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
     ld ?? read(path.join(linkers, `imxrt1062_t41.ld.${suffix}`)));
 }
 
-function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0 }) {
+function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0, checkHeavyLibc = false }) {
   console.log(`\n[${name}] Building`);
   writeLinkerFiles(suffix, { ld, bootdata });
   const buildDir = path.join(runRoot, name);
@@ -446,6 +447,16 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   write(path.join(runRoot, `${name}.nm`), symbols);
   if (!/^[0-9a-fA-F]+ \S /m.test(symbols)) throw new Error(`nm listed no symbols for ${name}; the linked-symbol checks cannot run`);
   if (/mbedtls/i.test(symbols)) throw new Error(`mbedTLS is linked into ${name}; ${TLS_OFF} should have kept it out`);
+  // The extension image skips this: a third-party host may use these in its own RAM.
+  if (checkHeavyLibc) {
+    const linked = heavyLibcLinked(symbols);
+    if (linked.length) {
+      throw new Error(`[${name}] links ${linked.map(([symbol, what]) => `${symbol} (${what})`).join(', ')}. ` +
+        'These cost RAM1 for tables or code the firmware never needs; parse or compute the value directly instead ' +
+        '(see parse_hex_digits() in Flash/FXUtil.cpp and M2SOnNoteOn() in IOH_TeensyROM.c). ' +
+        'The list and the reasons are in tools/lib/heavy-libc.mjs.');
+    }
+  }
   const sizes = run(armBin + 'size' + exeSuffix, ['-A', elf], env);
   write(path.join(runRoot, `${name}.size`), sizes);
 
@@ -476,6 +487,7 @@ if (!skipMinimalBuild && !hostOnly) {
     // Min_TeensyROM.h measured with Ethernet listening (below it, boot can crash). Checked
     // here because an ITCM bank crossing takes 32 KB of it at once, with no other symptom.
     minFreeLocals: 24000,
+    checkHeavyLibc: true,
   });
 }
 
@@ -487,6 +499,7 @@ if (!skipTeensyBuild && !hostOnly) {
     elfStem: 'Teensy',
     ld: withExtensions ? mainLinkerScript(linkers) : undefined,
     extraDefs: withExtensions ? VM_EXTENSIONS_DEFINE : '',
+    checkHeavyLibc: true,
   });
 }
 

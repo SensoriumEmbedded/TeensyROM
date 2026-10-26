@@ -43,7 +43,8 @@ volatile uint8_t VidStdMenuReport = 0xff; //MainMenu.asm's wRegVid_TOD_Clks writ
 bool    VidStdRecheckNow = false; //the menu's PAL/NTSC disagreed with the timed one: loop() re-times it on its next pass
 bool    SidLogConv = false; //true=Log, false=linear
 volatile uint8_t* IO1;  //io1 space/regs
-volatile uint16_t StreamOffsetAddr, StringOffset = 0;
+volatile uint32_t StreamOffsetAddr = 0;
+volatile uint16_t StringOffset = 0;
 volatile char*    ptrSerialString; //pointer to selected serialstring
 char SerialStringBuf[MaxPathLength+6] = "err"; // used for message passing to C64, up to full path length
 volatile uint8_t doReset = true;
@@ -65,6 +66,15 @@ uint32_t XferSize = 0;  //size of image being transferred to C64
 bool NetListenEnable = false;
 volatile bool BootComplete = false; //set by the menu when its boot ends (rCtlBootComplete) or when a cart starts, cleared by SetUpMainMenuROM()
                                     //  and by rCtlBootInProgress when a remote launch on reset returns to the menu
+
+//Returning 0 relies on every loader leaving at least one item ("<Empty>", the D64 up-dir entry)
+inline uint16_t MenuIdxFromRegs(uint8_t ItemOnPage)
+{
+   int32_t Idx = (int32_t)ItemOnPage + ((int32_t)IO1[rwRegPageNumber] - 1) * MaxItemsPerPage;
+   if (Idx < 0 || Idx >= (int32_t)NumItemsFull) return 0;
+   return (uint16_t)Idx;
+}
+
 uint8_t ASCIItoPETSCII[128]=
 {
  /*   ASCII   */  //PETSCII
@@ -297,12 +307,14 @@ bool SetSIDSpeed(bool LogConv, int16_t PlaybackSpeedIn)
    return true;
 }
 
-FLASHMEM void GetCurrentFilePathName(char* FilePathName)
+//False when the TR directory was not found or the path did not fit in Size
+FLASHMEM bool GetCurrentFilePathName(char* FilePathName, size_t Size)
 {
    char *LclFilename = MenuSource[SelItemFullIdx].Name;
    char Rand[] = "?";
 
    if (IO1[rwRegScratch]) LclFilename = Rand; //random dir
+   int Len = -1;
 
    if (IO1[rWRegCurrMenuWAIT] == rmtTeensy)
    {
@@ -319,23 +331,24 @@ FLASHMEM void GetCurrentFilePathName(char* FilePathName)
             if (++DirNum == sizeof(TeensyROMMenu)/sizeof(TeensyROMMenu[0]))
             {
                Printf_dbg("TR Dir not found\n"); //what now?
-               sprintf(FilePathName, "TR:Dir not found");
-               return;
+               snprintf(FilePathName, Size, "TR:Dir not found");
+               return false;
             }
          }
          strcpy(DirName, TeensyROMMenu[DirNum].Name);
       }
 
-      sprintf(FilePathName, "TR:%s/%s", DirName, LclFilename);
+      Len = snprintf(FilePathName, Size, "TR:%s/%s", DirName, LclFilename);
    }
    else
    {
       char SDUSB[6] = "SD";
       if (IO1[rWRegCurrMenuWAIT] == rmtUSBDrive) strcpy(SDUSB, "USB");
 
-      if (PathIsRoot()) sprintf(FilePathName, "%s:/%s", SDUSB, LclFilename);  // at root
-      else sprintf(FilePathName, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
+      if (PathIsRoot()) Len = snprintf(FilePathName, Size, "%s:/%s", SDUSB, LclFilename);
+      else Len = snprintf(FilePathName, Size, "%s:%s/%s", SDUSB, DriveDirPath, LclFilename);
    }
+   return Len >= 0 && (size_t)Len < Size;
 }
 
 FLASHMEM int16_t FindTRMenuItem(StructMenuItem* MyMenu, uint16_t NumEntries, char* EntryName)
@@ -415,8 +428,12 @@ void M2SOnNoteOn(uint8_t channel, uint8_t note, uint8_t velocity)
    }
 
    // https://ilmilou.uk/NoteFreqCalcs
-   // 2^(1/12) = 1.059463094359
-   float Frequency = 440*pow(1.059463094359,note-60);
+   // Frequency = 440*2^((note-60)/12) = 13.75*2^(note/12): the lowest octave from the table,
+   //   doubled for each octave above it.  Don't use pow() here: it links ~6KB of tables into RAM1
+   static const float LowOctaveFreq[12] ={13.75000000f, 14.56761755f, 15.43385316f, 16.35159783f,
+                                          17.32391444f, 18.35404799f, 19.44543648f, 20.60172231f,
+                                          21.82676446f, 23.12465142f, 24.49971475f, 25.95654360f};
+   float Frequency = LowOctaveFreq[note%12] * (1 << note/12);
    // https://codebase64.org/doku.php?id=base:how_to_calculate_your_own_sid_frequency_table
    // 256^3 = 16777216
    // IO1[wRegVid_TOD_Clks] & rvtcNTSC  //1=NTSC, 0=PAL
@@ -627,16 +644,20 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       {
          //rRegItemTypePlusIOH: the default read, set by UpdateItemTypeReg()
          case rRegStreamData:
-            DataPortWriteWait(XferImage[StreamOffsetAddr]);
+            //a 32-bit offset no longer wraps back inside the image when a reader runs past the end
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? XferImage[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) IO1[rRegStrAvailable]=0; //signal end of transfer
             break;
          case rwRegSerialString:
             Data = ptrSerialString[StringOffset++];
             DataPortWriteWaitLog(ToPETSCII(Data));
             break;
          default: //used for all other IO1 reads
-            DataPortWriteWaitLog(IO1[Address]); //will read garbage if above IO1Size
+            //rRegIOHSwapPoll is above IO1Size and lands here whenever HandshakeSnoop is not
+            //installed; 0 reads as rihsBusy
+            DataPortWriteWaitLog(Address < IO1Size ? IO1[Address] : 0);
             break;
       }
    }
@@ -647,7 +668,7 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case rwRegSelItemOnPage:
-            SelItemFullIdx = Data+(IO1[rwRegPageNumber]-1)*MaxItemsPerPage;
+            SelItemFullIdx = MenuIdxFromRegs(Data);
             UpdateItemTypeReg();
             //fall through
          case rwRegStatus:
@@ -770,8 +791,8 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  memcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength);
-                  SerialStringBuf[MaxItemDispLength-1] = 0; //Trim to length, if needed
+                  //card names are malloc'd at strlen+1, shorter than MaxItemDispLength
+                  strlcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength); //Trim to length, if needed
                   if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
                       MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
                       IO1[rWRegCurrMenuWAIT] != rmtTeensy)
@@ -793,7 +814,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
 #endif
                case rsstNextIOHndlrName:
-                  ptrSerialString = IOHandler[IO1[rwRegNextIOHndlr]]->Name;
+               {  //also loaded raw from EEPROM, which a build with more handlers may have written
+                  const uint8_t NextIOH = IO1[rwRegNextIOHndlr];
+                  ptrSerialString = (NextIOH < IOH_Num_Handlers) ?
+                     IOHandler[NextIOH]->Name : (char*)"?IOH";
+               }
                   break;
                case rsstSerialStringBuf:
                   //assumes SerialStringBuf built first...(FWUpd msg or BuildInfo)
