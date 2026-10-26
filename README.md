@@ -92,6 +92,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
     * **[Ethernet Usage](docs/Ethernet_Usage.md)**
     * **[NFC Loading System](docs/NFC_Loader.md)**
     * **[TeensyROM Web Browser](docs/Browser_Usage.md)**
+    * **[GEOS 64](docs/GEOS64_Usage.md)**
     * **[Custom BASIC Commands](docs/Custom_BASIC_Commands.md)**
     * **[TR Host Extensions (TR+ only)](docs/TR_Host_Extensions.md)**
     * **[USB/Ethernet Remote Command Protocol](docs/ControlComms.md)**
