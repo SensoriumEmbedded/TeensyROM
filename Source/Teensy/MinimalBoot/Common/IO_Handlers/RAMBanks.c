@@ -34,9 +34,13 @@ extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer
 
 FLASHMEM void FreeRAMBanks(uint8_t *Bank[], uint8_t *NumBanks)
 {
-   for(uint16_t cnt=0; cnt < *NumBanks; cnt++)
-      if((uint32_t)Bank[cnt] >= 0x20200000) free(Bank[cnt]);
+   // the handler may still be installed and the C64 running: zero the count first, so the
+   //  IO register handlers return before touching the banks once the first one is freed
+   uint8_t Count = *NumBanks;
    *NumBanks = 0;
+   asm volatile("" ::: "memory");
+   for(uint16_t cnt=0; cnt < Count; cnt++)
+      if((uint32_t)Bank[cnt] >= 0x20200000) free(Bank[cnt]);
 }
 
 // Returns the number of banks allocated: a power of 2 up to MaxBanks, or 0 if fewer than MinBanks fit.
