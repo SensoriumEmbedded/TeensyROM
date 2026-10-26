@@ -112,6 +112,7 @@ struct stcIOHandlers
       #include "IO_Handlers/IOH_Debug.c"
       #include "IO_Handlers/RAMBanks.c"
       #include "IO_Handlers/USBMouse.c"
+      #include "IO_Handlers/TRBlockIO.c"
       #include "IO_Handlers/IOH_GeoRAM.c"
    #ifdef Fab04_REU
       #include "IO_Handlers/IOH_REU.c"

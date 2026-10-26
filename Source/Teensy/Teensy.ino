@@ -423,6 +423,7 @@ FLASHMEM void SetUpMainMenuROM()
    FreeREU();
 #endif
    FreeGeoRAM();
+   TRBlockUnmount();
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
@@ -561,7 +562,7 @@ bool SDBegin()
    return SD.begin(BUILTIN_SDCARD);
 }
 
-bool SDFullInit()
+bool SDBeginRetrying()
 {
 
    // begin() takes 3 seconds for fail, 20-200mS for pass, 2 seconds for unpopulated
@@ -590,6 +591,16 @@ bool SDFullInit()
    
    Printf_dbg("SD Init OK, took %lu mS, mediaPresent %d\n", millis()-Startms, SD.mediaPresent());
    return true;
+}
+
+bool SDFullInit()
+{
+   bool Began;
+
+   TRBlockClose();
+   Began = SDBeginRetrying();
+   TRBlockReopen();
+   return Began;
 }
 
 bool USBFileSystemWait()
