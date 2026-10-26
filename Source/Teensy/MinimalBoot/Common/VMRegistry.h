@@ -29,17 +29,19 @@ enum Walk : uint8_t { WalkNoDirectory, WalkDone, WalkOverLimit, WalkError };
 // A folder of /VMS can hold a package only if its name is an id: 1-23 characters of
 // component()'s set. `n` is getName's answer.
 static FLASHMEM bool folderIsId(const char *name,size_t n){return n&&n<sizeof(Manifest::id)&&component(name);}
-// Calls visit(name,n) for each folder of /VMS, the name wide enough that a folder that is
-// no id can still be shown. Every reader of /VMS goes through here, so they agree on
-// where the walk stops.
-template<class Visit> static FLASHMEM Walk walk(Visit visit){
+// Calls visit(context,name,n) for each folder of /VMS, the name wide enough that a folder
+// that is no id can still be shown. Every reader of /VMS goes through here, so they agree
+// on where the walk stops. A function pointer, not a template: FLASHMEM on a template
+// does not reach every instance, and refresh()'s landed in ITCM.
+using Visit = void (*)(void *context,const char *name,size_t n);
+static FLASHMEM Walk walk(Visit visit,void *context){
     FsFile directory=SD.sdfs.open("/VMS",O_RDONLY);if(!directory)return WalkNoDirectory;
     unsigned scanned=0;FsFile item;
     while(item.openNext(&directory,O_RDONLY)){
         if(item.isDirectory()){
             if(++scanned>FolderLimit){item.close();directory.close();return WalkOverLimit;}
             char name[64]{};const size_t n=item.getName(name,sizeof name);name[sizeof name-1]=0;
-            visit(name,n);
+            visit(context,name,n);
         }
         item.close();
     }
@@ -50,15 +52,17 @@ template<class Visit> static FLASHMEM Walk walk(Visit visit){
 // it; launch.root is the last claimant's.
 enum : int { OverLimitOrError=-1, Ambiguous=-2 };
 struct Rival { char id[sizeof(Manifest::id)]; unsigned claims; };
+struct Search { const char *extension; const char *clientId; Launch &launch; Rival *rival; unsigned found; };
+static FLASHMEM void claimant(void *context,const char *name,size_t n){
+    Search &s=*(Search *)context;if(!folderIsId(name,n))return;
+    char root[80];snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
+    if(readManifest(root,m)&&((s.clientId&&strcmp(s.clientId,m.id)==0)||(!s.clientId&&extensionMatches(m.extension,s.extension)))){
+        if(s.found++==1&&s.rival)strcpy(s.rival->id,strrchr(s.launch.root,'/')+1);strcpy(s.launch.root,root);s.launch.manifest_crc=m.crc;
+    }
+}
 static FLASHMEM int find(const char *extension,const char *clientId,Launch &launch,Rival *rival=nullptr){
-    unsigned found=0;
-    const Walk w=walk([&](const char *name,size_t n){
-        if(!folderIsId(name,n))return;
-        char root[80];snprintf(root,sizeof root,"/VMS/%s",name);Manifest m{};
-        if(readManifest(root,m)&&((clientId&&strcmp(clientId,m.id)==0)||(!clientId&&extensionMatches(m.extension,extension)))){
-            if(found++==1&&rival)strcpy(rival->id,strrchr(launch.root,'/')+1);strcpy(launch.root,root);launch.manifest_crc=m.crc;
-        }
-    });
+    Search search{extension,clientId,launch,rival,0};
+    const Walk w=walk(claimant,&search);const unsigned found=search.found;
     if(w==WalkNoDirectory)return 0;
     if(w==WalkOverLimit||w==WalkError)return OverLimitOrError;
     if(rival)rival->claims=found;
@@ -109,13 +113,14 @@ static FLASHMEM bool preflight(const Launch &l,VmImageHeader *out=nullptr){
 // caller falls back to the scan.
 enum Association : uint8_t { NotAssociated, Associated, Unknown };
 static char extensions[32][sizeof(Manifest::extension)];static uint8_t extensionCount;static bool extensionsKnown;
+static FLASHMEM void recordExtension(void *,const char *name,size_t n){
+    if(!folderIsId(name,n))return;
+    char root[80];Manifest m{};snprintf(root,sizeof root,"/VMS/%s",name);
+    if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
+}
 static FLASHMEM void refresh(bool sd){
     extensionCount=0;extensionsKnown=false;if(!sd)return;
-    const Walk w=walk([](const char *name,size_t n){
-        if(!folderIsId(name,n))return;
-        char root[80];Manifest m{};snprintf(root,sizeof root,"/VMS/%s",name);
-        if(readManifest(root,m))strcpy(extensions[extensionCount++],m.extension);
-    });
+    const Walk w=walk(recordExtension,nullptr);
     extensionsKnown=w==WalkDone;if(!extensionsKnown)extensionCount=0;
 }
 static FLASHMEM Association associated(const char *name){

@@ -552,7 +552,7 @@ void SetMenu(StructMenuItem* Source, uint16_t NumItems)
 // The pin is left a pulldown input, as the SD library itself leaves it when a card is
 // gone; SD.begin muxes it back to the controller, and every caller that reads true goes
 // on to begin.
-bool SDSlotFilled()
+FLASHMEM bool SDSlotFilled()
 {
    // _SD_DAT3 = pin 46
    pinMode(46, INPUT_PULLDOWN);

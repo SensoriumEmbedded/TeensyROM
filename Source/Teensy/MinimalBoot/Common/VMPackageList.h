@@ -59,9 +59,12 @@ static FLASHMEM void entry(Scan &s,const VmHostId *host,const char *name,size_t 
 // card itself (ShowVmPackages, DriveDirLoad.ino). It cannot be found here by reading:
 // with the card pulled, SdFat still opens the root directory it remembers, so a missing
 // card read as one without /VMS.
+struct Collecting { Scan &scan; const VmHostId *host; };
+static FLASHMEM void collected(void *context,const char *name,size_t n){Collecting &c=*(Collecting *)context;entry(c.scan,c.host,name,n);}
 static FLASHMEM void collect(Scan &s,const VmHostId *host,bool card){
     s.count=0;s.cardRead=card;s.walk=VmRegistry::WalkNoDirectory;
-    if(card)s.walk=VmRegistry::walk([&](const char *name,size_t n){entry(s,host,name,n);});
+    Collecting c{s,host};
+    if(card)s.walk=VmRegistry::walk(collected,&c);
     // By id, ignoring case: the card lists folders in the order they were made.
     for(unsigned i=1;i<s.count;i++)
         for(unsigned j=i;j&&strcasecmp(s.entry[j-1].id,s.entry[j].id)>0;j--){const Entry t=s.entry[j];s.entry[j]=s.entry[j-1];s.entry[j-1]=t;}
