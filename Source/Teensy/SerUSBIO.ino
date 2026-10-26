@@ -572,6 +572,9 @@ FLASHMEM void ProcessCommand()
       case WriteC64SpansToken: //Write C64 mem spans via DMA, sliced
          WriteC64SpansCommand();
          return;
+      case SampleWatchToken: //Count C64 writes to one address
+         SampleWatchCommand();
+         return;
       case ReadC64MemToken: //Write to C64 mem via DMA
          ReadC64MemCommand();
          return;
@@ -1338,8 +1341,9 @@ FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
 // Workflow:
 // Receive <-- WriteC64SpansToken (0x64FC)
 // Send --> AckToken 0x64CC, or 0x9b7f and the reason while another DMA user holds the bus
-// Receive <-- Flags (0), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
-// Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }
+// Receive <-- Flags (C64SpansFlag*), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
+// Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }; with LockToStore, the first
+//             entry is { store address (Hi,Low), 0 (Hi,Low) } and the gap is the longest wait for a store
 // Send --> AckToken 0x64CC if the spans are accepted, 0x9b7f and the reason if not
 // Receive <-- Data bytes for every span, in span order
 // TR+ Performs DMA writes
@@ -1375,21 +1379,28 @@ FLASHMEM void WriteC64SpansCommand()
    // among them.  So the header alone waits out a stall.
    if (!ReceiveSpanBytes(Head, sizeof Head, 255 * 4, Began, sizeof List, true)) return;
    const uint32_t Count = Head[3];
-   if (Head[0]) return RefuseSpans("Flags must be 0", Count * 4, Began);
+   // Firmware before LockToStore refuses every flag with "Flags must be 0", so a sender tells the
+   // two apart by the refusal a flagged zero-span header gets: that text, or the span count's.
+   if (Head[0] & ~C64SpansFlagsKnown) return RefuseSpans("Flags must be 0", Count * 4, Began);
    if (Count > C64SpansMax) return RefuseSpans(Why[(int)C64SpansCheck::BadCount], Count * 4, Began);
    if (!ReceiveSpanBytes(List, Count * 4, 0, Began, sizeof List)) return;
+   const bool Locked = Head[0] & C64SpansFlagLockToStore;
+   const uint32_t First = Locked ? 1 : 0;
+   if (Count <= First) return RefuseSpans(Why[(int)C64SpansCheck::BadCount], 0, Began);
    for (uint32_t Num = 0; Num < Count; Num++)
       Spans[Num] = { (uint16_t)(List[Num*4] << 8 | List[Num*4+1]), (uint16_t)(List[Num*4+2] << 8 | List[Num*4+3]) };
+   if (Locked && Spans[0].Len) return RefuseSpans("Store entry's length must be 0", 0, Began);
 
    // WriteC64Mem's reach.
-   const C64SpansCheck Check = CheckC64Spans(Spans, Count, Head[1], 0x10000, &Total);
+   const C64SpansCheck Check = CheckC64Spans(Spans + First, Count - First, Head[1], 0x10000, &Total);
    if (Check != C64SpansCheck::OK) return RefuseSpans(Why[(int)Check], 0, Began);
+   if (Locked && !SampleWatchStart(Spans[0].Addr)) return RefuseSpans("Bus snoop in use", 0, Began);
    DMAStage Stage(Total);
    if (!Stage.Buf) return RefuseSpans("No memory to stage the payload", 0, Began);
    SendU16(AckToken);
    if (!ReceiveSpanBytes(Stage.Buf, Total, 0, Began, sizeof List + Total)) return;
 
-   if (!WriteC64Spans(Spans, Count, Stage.Buf, Head[1], Head[2], &Landed))
+   if (!WriteC64Spans(Spans + First, Count - First, Stage.Buf, Head[1], Head[2], &Landed, Locked))
    {
       SendU16(FailToken);
       CmdChannel->printf("Stopped at %lu of %lu bytes: C64 bus not clocking, or DMA timed out\n", Landed, Total);
@@ -1398,7 +1409,50 @@ FLASHMEM void WriteC64SpansCommand()
    SendU16(AckToken);
 }
 
-// Command: 
+// Command:
+// Count the C64's writes to one address -- a sample player's store to its DAC -- to measure the
+// NMIs a DMA halt costs it, and report the counts since the previous SampleWatch
+//
+// Workflow:
+// Receive <-- SampleWatchToken (0x64F9)
+// Receive <-- Mode (0 = stop watching, 1 = watch), C64 address (Hi,Low)
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason
+// Send --> Intervals (4), interval ARM cycles (8), longest interval ARM cycles (4), locked slices (4),
+//          unlocked slices (4), ARM cycles per second (4); each Low first, all since the previous SampleWatch
+FLASHMEM void SampleWatchCommand()
+{
+   uint32_t Mode, Addr;
+   if (!GetUInt(&Mode, 1) || !GetUInt(&Addr, 2))
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Error receiving mode and address!");
+      return;
+   }
+   if (Mode > 1)
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Mode must be 0 or 1");
+      return;
+   }
+   if (Mode == 0) SampleWatchStop();
+   else if (!SampleWatchStart(Addr))
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Bus snoop in use");
+      return;
+   }
+   const SampleWatchStats Stats = SampleWatchTake();
+   SendU16(AckToken);
+   SendU32(Stats.Intervals);
+   SendU32(Stats.IntervalCyc);
+   SendU32(Stats.IntervalCyc >> 32);
+   SendU32(Stats.LongestCyc);
+   SendU32(Stats.Locked);
+   SendU32(Stats.Unlocked);
+   SendU32(F_CPU_ACTUAL);
+}
+
+// Command:
 // read sequential C64 memory segment and send to host
 // 
 // Workflow:

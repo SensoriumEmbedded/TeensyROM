@@ -49,7 +49,7 @@ The TeensyROM divides commands into two availability tiers:
 #### Always-Available Commands
 These commands are processed regardless of what handler is active, even if the TeensyROM is "busy":
   * Core control (LaunchFile, ResetC64, VersionInfo, FWCheck)
-  * DMA memory access (WriteC64Mem, WriteC64Spans, ReadC64Mem) — TR+ only
+  * DMA memory access (WriteC64Mem, WriteC64Spans, ReadC64Mem) and SampleWatch — TR+ only
   * C64 pause control (C64PauseOn, C64PauseOff)
 
 #### Conditionally-Available Commands
@@ -129,6 +129,7 @@ A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn'
 |*WriteC64MemToken  | 0x64FB  | Write sequential C64 memory segment via DMA (TR+ Only)|
 |*WriteC64SpansToken | 0x64FC | Write up to 64 C64 memory spans via DMA, in slices (TR+ Only)|
 |*ReadC64MemToken   | 0x64FD  | Read sequential C64 memory segment via DMA (TR+ Only)|
+|*SampleWatchToken  | 0x64F9  | Count the C64's writes to one address (TR+ Only)|
 |DebugToken        | 0x6467  | Internal debug use only |
 
 *- Always available with full FW (others return "Busy!" if not ready for commands)
@@ -462,7 +463,7 @@ Writes up to 64 C64 memory spans from one payload. Each DMA moves at most *slice
 |---|---|
 | Receive | `WriteC64SpansToken` — `0x64FC` |
 | Send | `AckToken 0x64CC` — send nothing more until it arrives; `FailToken 0x9B7F` and a line of text while REU emulation is running or the C64 is paused |
-| Receive | Flags (`0`), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
+| Receive | Flags (`0`, or `0x01` = lock to a sample store), slice bytes (`0` = whole spans), gap in µs, span count (1–64): one byte each |
 | Receive | Span count × { C64 address (Hi, Low), length (Hi, Low) } |
 | Send | `AckToken 0x64CC` if the spans are accepted; `FailToken 0x9B7F` and a line of text if not |
 | Receive | Data bytes for every span, in span order — send these only after the `AckToken` |
@@ -481,10 +482,31 @@ Spans are refused, before any payload is sent, if one is empty, runs past `$FFFF
 
 Smaller slices and longer gaps make the job slower: that 4 KiB took 6.3 mS as one `WriteC64Mem`, 14.9 mS at slice 32 and 37 mS at slice 8, all with a 40 µs gap. A raster split rewriting screen and colour RAM (2 × 1,000 bytes) ran its IRQs up to 18 lines late against `WriteC64Mem`, and at most 1 line late at slice 32 / gap 40 µs.
 
+**Locked to a sample store (flag `0x01`).** For a C64 playing samples from a timer NMI, the gap can be replaced by the player's own timing. With the flag set, the first span entry is `{ store address, 0 }` (the player's sample store, `$D418` for a `$D418` DAC) and is not written, and the gap byte becomes the longest wait for a store, in µs. Each slice then starts on the cycle after the C64 next writes that address, and runs and releases the bus from the interrupt handler, without the per-slice overhead above. Size the slice to the cycles the player leaves free between its store and the next timer underflow, and no halt ever covers an underflow. On an NTSC C64 with a 12 kHz NMI (85 cycles), a `$D418` player that stores 28 cycles after the underflow and needs 19 more cycles to return leaves 38 cycles: 33-byte slices lost no NMIs at any payload, against 5% of them for 1 KiB writes with `WriteC64Mem`, and carried 270–300 KiB/s for 1–2 KiB writes. A slice whose store has not come within the wait starts anyway, so a stopped player costs time, not a hung write.
+
+The flag needs at least one span after the store entry, and the store entry's length must be `0`. The store is watched with the board's one bus snoop: if another user holds it (a cartridge's handler), the command is refused with `Bus snoop in use`. A user that takes the snoop while a job is running leaves the remaining slices to time out and start unlocked. Firmware without the flag refuses every flagged header with `Flags must be 0`. A sender can therefore probe with the header `01 00 00 00`: firmware with the flag refuses it for its span count (`Want 1 to 64 spans`), and firmware without it with `Flags must be 0`. Either way no span list or payload is owed.
+
 **Handler:** `WriteC64SpansCommand()`
  
 ---
  
+### Sample Watch (TR+ Only)
+Counts the C64's writes to one address, timing each against the one before it, and reports the counts since the previous Sample Watch. Pointed at a sample player's store, it counts the samples a DMA halt cost the player at the source: with the store period *P* in ARM cycles, *interval cycles / P − intervals* is the number of stores that did not happen. Locked Write C64 Memory Spans slices start on the watched address.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `SampleWatchToken` — `0x64F9` |
+| Receive | Mode (`0` = stop watching, `1` = watch), C64 address (Hi, Low) |
+| Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if another user holds the bus snoop, the mode is not `0` or `1`, or the mode and address did not arrive |
+| Send | Intervals (4), interval ARM cycles (8), longest interval in ARM cycles (4), locked slices (4), unlocked slices (4), ARM cycles per second (4): Low byte first, all since the previous Sample Watch |
+
+Each call resets the counts. Watching again keeps the last store's time unless the address changes, so no interval is lost between two reads.
+
+**Handler:** `SampleWatchCommand()`
+
+---
+
 ### Read C64 Memory (TR+ Only)
 Reads a sequential C64 memory segment and sends it to the host.
  
