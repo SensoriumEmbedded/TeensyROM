@@ -115,6 +115,7 @@ FLASHMEM bool ReceiveFileData(File& file, uint32_t len, uint32_t& checksum)
             SendU16(FailToken);
             CmdChannel->printf("Rec %lu of %lu bytes\n", bytenum, len);
             file.close();
+            DiscardCmdInput(len - bytenum, millis(), len - bytenum);
             return false;
         }
         file.write(byteIn = CmdChannel->read());
@@ -209,7 +210,11 @@ FLASHMEM void PostFileCommand()
 
     SendU16(AckToken);
 
-    if (!ReceiveFileData(fileStream, fileLength, checksum)) return;
+    if (!ReceiveFileData(fileStream, fileLength, checksum))
+    {
+        sourceFS->remove(FileNamePath); //GetFileStream made it, so a retry finds no "File already exists"
+        return;
+    }
 
     SendU16(AckToken);
 
@@ -628,7 +633,7 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
 
     Printf_dbg("[SendFileData] Complete - Sent %lu bytes\n", bytenum);
     Printf_dbg("[SendFileData] Flushing output...\n");
-    CmdChannel->flush();
+    FlushCmdChannel(CmdChannel);
     Printf_dbg("[SendFileData] Flush complete\n");
     return true;
 }

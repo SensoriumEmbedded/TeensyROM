@@ -155,7 +155,7 @@ FLASHMEM FS *FSfromFileName(char** ptrptrLSFileName)
 FLASHMEM void AddToRAM_Image(const char *ToAdd)
 {  //and convert to petscii
    uint32_t count = 0;
-   
+
    while(1)
    {
       RAM_Image[XferSize] = ToPETSCII(ToAdd[count]);
@@ -171,7 +171,7 @@ FLASHMEM uint8_t ContRegAction_LoadPrep()
    
    char* ptrLSFileName = (char*)LSFileName; //local pointer
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
-   
+
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
    Printf_dbg("Load: %s\n", ptrLSFileName);
@@ -230,10 +230,10 @@ FLASHMEM uint8_t ContRegAction_SaveFinish()
 
    char* ptrLSFileName = (char*)LSFileName; //local pointer
    FS *sourceFS = FSfromFileName(&ptrLSFileName);
-   
+
    if(sourceFS == NULL) return BAS_ERROR_DEVICE_NOT_PRESENT;
 
-   Printf_dbg("Save: %s\nSize: %d bytes\n", ptrLSFileName, StreamOffsetAddr);
+   Printf_dbg("Save: %s\nSize: %lu bytes\n", ptrLSFileName, (unsigned long)StreamOffsetAddr);
    sourceFS->remove(ptrLSFileName); //del prev version to overwrite!
    File myFile = sourceFS->open(ptrLSFileName, FILE_WRITE); //O_RDWR | O_CREAT <- doesn't reduce filesize if smaller 
       
@@ -281,7 +281,7 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
    AddToRAM_Image(ptrLSFileName);
    AddToRAM_Image("\"\r");
    
-   while (File entry = dir.openNextFile()) 
+   while (File entry = dir.openNextFile())
    {
       filename = entry.name();
       if (IsDotfile(filename))
@@ -289,21 +289,24 @@ FLASHMEM uint8_t ContRegAction_DirPrep()
          entry.close();
          continue;
       }
-      
-      if (entry.isDirectory()) AddToRAM_Image(" /");
-      else AddToRAM_Image("  ");
-      
-      AddToRAM_Image(filename);
-      AddToRAM_Image("\r");
-      
-      Printf_dbg("%s\n", filename);
-      
-      entry.close();
-      if (XferSize >= RAM_ImageSize-80)
+
+      //Before appending: a FAT long name is up to 255 characters, plus " /", "\r" and the notice
+      if (XferSize >= RAM_ImageSize-300)
       {
-         AddToRAM_Image("*** Too many files!\r");         
+         entry.close();
+         AddToRAM_Image("*** Too many files!\r");
          break;
       }
+
+      if (entry.isDirectory()) AddToRAM_Image(" /");
+      else AddToRAM_Image("  ");
+
+      AddToRAM_Image(filename);
+      AddToRAM_Image("\r");
+
+      Printf_dbg("%s\n", filename);
+
+      entry.close();
    }
    
    dir.close();
@@ -347,8 +350,8 @@ FLASHMEM uint8_t ContRegAction_TISet()
 FLASHMEM void InitHndlr_TR_BASIC()
 {
    if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
-   if (LSFileName == NULL) LSFileName = (uint8_t*)malloc(MaxPathLength);
-   
+   if (LSFileName == NULL) LSFileName = (uint8_t*)calloc(MaxPathLength, 1); //last byte stays the terminator
+
    RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
  
    TR_BASStatRegVal = TR_BASStat_Ready;
@@ -377,9 +380,11 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             DataPortWriteWaitLog(TR_BASStatRegVal);
             break;
          case TR_BASStreamDataReg:
-            DataPortWriteWait(RAM_Image[StreamOffsetAddr]);
+            //a 32-bit offset no longer wraps back inside RAM_Image when a reader runs past the end
+            DataPortWriteWait(StreamOffsetAddr < XferSize ? RAM_Image[StreamOffsetAddr] : 0);
             //inc on read, check for end:
-            if (++StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
+            if (StreamOffsetAddr < XferSize) StreamOffsetAddr++;
+            if (StreamOffsetAddr >= XferSize) TR_BASStrAvailableRegVal=0; //signal end of transfer
             break;
          case TR_BASStrAvailableReg:
             DataPortWriteWait(TR_BASStrAvailableRegVal);
@@ -431,14 +436,15 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
             if (Data & 0x80) Data &= 0x7f; //bit 7 is Cap in Graphics mode
             else if (Data & 0x40) Data |= 0x20;  //conv to lower case
          
-            LSFileName[FNCount++] = Data;
+            if (FNCount < MaxPathLength-1) LSFileName[FNCount++] = Data;
             if (Data == 0)
             {
                Printf_dbg("Received FN: \"%s\"\n", LSFileName);
             }
             break;
          case TR_BASStreamDataReg: //receive save data
-            RAM_Image[StreamOffsetAddr++] = Data;
+            //StreamOffsetAddr is 32-bit and no longer wraps inside RAM_Image
+            if (StreamOffsetAddr < RAM_ImageSize) RAM_Image[StreamOffsetAddr++] = Data;
             break;
       }
    } //write

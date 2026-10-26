@@ -40,6 +40,7 @@ C64 code and Teensy firmware also talk to each other **at runtime** two differen
 - [DMA-Timing-Known-Issues.md](DMA-Timing-Known-Issues.md) — itemized tracking for the `DMA_Timing` branch (TR+'s true bus-mastering DMA, not the CRT bank-swap pause mechanism)
 - [Reboot-Display-Blanking.md](Reboot-Display-Blanking.md) — why `RebootTR()` exists, the large-CRT reboot glitch fix, and what was tried and didn't help
 - [C64-C128-DMA-Port-Reference.md](C64-C128-DMA-Port-Reference.md) — what Commodore's own manuals/schematics say about C64 vs C128 `/DMA` assert/de-assert timing (background reference, not a bug list)
+- [DMA-Phi2-Timing.md](DMA-Phi2-Timing.md) — where each `nS_DMA*` offset lands in one Phi2 cycle (PAL / NTSC / NTSC C128), and how `DMAByte()` uses them
 
 <br>
 

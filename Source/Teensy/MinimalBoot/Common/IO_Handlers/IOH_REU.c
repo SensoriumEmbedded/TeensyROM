@@ -139,7 +139,6 @@ extern bool DMA_RnW, DMA_FixC64Addr;
 extern uint32_t DMA_Length, DMA_Count, DMA_StartAddr;
 extern bool DMAByte(uint8_t *Data);
 
-extern StructCrtChip CrtChips[]; // Removal breaks downstream code, so keep it here for now. 
 extern StructMenuItem *DriveDirMenu;
 
 void FreeREU()
