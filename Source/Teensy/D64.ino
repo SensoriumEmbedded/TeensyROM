@@ -113,11 +113,14 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
       Sector = 3;
    }
    
-   while(Track != 0)
+   //An image's directory chain can link back to itself; a real one is at most 37 sectors (D81)
+   const uint8_t MaxDxxDirSectors = 64;
+   uint8_t DirSectorsRead = 0;
+   while(Track != 0 && DirSectorsRead++ < MaxDxxDirSectors && NumDrvDirMenuItems < MaxMenuItems)
    {
       uint32_t CurTSOffset = DxxOffset(DiskType, Track, Sector);
-      Printf_dbg("Track:%d  Sector:%d = DxxOffset:$%x\n", Track, Sector, CurTSOffset); 
-      
+      Printf_dbg("Track:%d  Sector:%d = DxxOffset:$%x\n", Track, Sector, CurTSOffset);
+
       do
       {
          myFile.seek(CurTSOffset+SecOffset);
@@ -138,10 +141,11 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
             Sector = NextSect;
          }
          
-         if (FileName[0]) //check for end of dir, no entry
+         if (FileName[0] && NumDrvDirMenuItems >= MaxMenuItems) SecOffset = 0; //array full: stop
+         else if (FileName[0]) //check for end of dir, no entry
          {  //valid dir entry
             DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(DxxFNB_Bytes); // 16 char max + term + ftrack + fsec + DiskType
-            
+
             for(uint8_t CharNum=0; CharNum<DxxFNB_NameLength; CharNum++)
             { //converting to ascii, then back to petscii for display later.  All other file names are ascii...
                if (FileName[CharNum] & 0x80) FileName[CharNum] &= 0x7f; //Cap petscii to ascii

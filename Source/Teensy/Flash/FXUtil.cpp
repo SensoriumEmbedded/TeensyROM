@@ -28,7 +28,7 @@ typedef struct {	//
 // hex_info_t	struct for hex record and hex file info
 //******************************************************************************
 void read_ascii_line( Stream *serial, char *line, int maxbytes );
-int  parse_hex_line( const char *theline, char *bytes,
+int  parse_hex_line( const char *theline, char *bytes, unsigned int maxbytes,
 	unsigned int *addr, unsigned int *num, unsigned int *code );
 int  process_hex_record( hex_info_t *hex );
 void update_firmware( Stream *in, Stream *out,
@@ -59,7 +59,7 @@ void update_firmware( Stream *in, Stream *out,
     //  out->flush();
     //}
 
-    if (parse_hex_line( (const char*)line, hex.data, &hex.addr, &hex.num, &hex.code ) == 0) 
+    if (parse_hex_line( (const char*)line, hex.data, sizeof(data), &hex.addr, &hex.num, &hex.code ) == 0)
     {
       //out->printf( "abort - bad hex line %s\n", line );
       SendMsgPrintfln("Bad hex line: %s", line);
@@ -269,17 +269,40 @@ int process_hex_record( hex_info_t *hex )
 /* parses a line of intel hex code, stores the data in bytes[] */
 /* and the beginning address in addr, and returns a 1 if the */
 /* line was valid, or a 0 if an error occurred.  The variable */
-/* num gets the number of bytes that were stored into bytes[] */
+/* num gets the number of bytes that were stored into bytes[]. */
+/* A record longer than maxbytes is an error */
 
-#include <stdio.h>		// sscanf(), etc.
 #include <string.h>		// strlen(), etc.
 
-int parse_hex_line( const char *theline, char *bytes, 
+/* reads exactly ndigits hex digits at ptr into *value, 0 if one isn't hex. */
+/* Don't use sscanf here: it links all of scanf/strtod into RAM1, along */
+/* with newlib's ~27KB of JIS character tables.  noinline keeps one copy */
+/* in RAM1 instead of one per call site */
+static __attribute__((noinline)) int parse_hex_digits( const char *ptr, int ndigits, unsigned int *value )
+{
+  unsigned int v = 0;
+  for (int i = 0; i < ndigits; i++)
+  {
+    char c = ptr[i];
+    if (c >= '0' && c <= '9')
+      v = (v << 4) | (c - '0');
+    else if (c >= 'A' && c <= 'F')
+      v = (v << 4) | (c - 'A' + 10);
+    else if (c >= 'a' && c <= 'f')
+      v = (v << 4) | (c - 'a' + 10);
+    else
+      return 0;
+  }
+  *value = v;
+  return 1;
+}
+
+int parse_hex_line( const char *theline, char *bytes, unsigned int maxbytes,
 		unsigned int *addr, unsigned int *num, unsigned int *code )
 {
   unsigned sum, len, cksum;
   const char *ptr;
-  int temp;
+  unsigned temp;
 
   *num = 0;
   if (theline[0] != ':')
@@ -287,31 +310,31 @@ int parse_hex_line( const char *theline, char *bytes,
   if (strlen (theline) < 11)
     return 0;
   ptr = theline + 1;
-  if (!sscanf (ptr, "%02x", &len))
+  if (!parse_hex_digits (ptr, 2, &len))
+    return 0;
+  if (len > maxbytes)
     return 0;
   ptr += 2;
   if (strlen (theline) < (11 + (len * 2)))
     return 0;
-  if (!sscanf (ptr, "%04x", (unsigned int *)addr))
+  if (!parse_hex_digits (ptr, 4, addr))
     return 0;
   ptr += 4;
   /* Serial.printf("Line: length=%d Addr=%d\n", len, *addr); */
-  if (!sscanf (ptr, "%02x", code))
+  if (!parse_hex_digits (ptr, 2, code))
     return 0;
   ptr += 2;
   sum = (len & 255) + ((*addr >> 8) & 255) + (*addr & 255) + (*code & 255);
   while (*num != len)
   {
-    if (!sscanf (ptr, "%02x", &temp))
+    if (!parse_hex_digits (ptr, 2, &temp))
       return 0;
     bytes[*num] = temp;
     ptr += 2;
     sum += bytes[*num] & 255;
     (*num)++;
-    if (*num >= 256)
-      return 0;
   }
-  if (!sscanf (ptr, "%02x", &cksum))
+  if (!parse_hex_digits (ptr, 2, &cksum))
     return 0;
 
   if (((sum & 255) + (cksum & 255)) & 255)

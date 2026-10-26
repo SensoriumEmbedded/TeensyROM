@@ -177,20 +177,9 @@ StructHWID_IOH_Assoc HWID_IOH_Assoc[]=
 
 #define StrSIDInfoSize    (5*40+5) // max 5 *full* lines + 1 blank line
 
-#define CRT_MAIN_HDR_LEN  0x40
-#define CRT_CHIP_HDR_LEN  0x10
-#define MAX_CRT_CHIPS     128
+#include "CrtChips.h"
 
-#define SwapSeekAddrMask   0xef000000   //virtual address mask/marker for swap-out blocks, or-ed with file seek address (minimal build only)
-
-
-struct StructCrtChip
-{
-   uint8_t *ChipROM;
-   uint16_t LoadAddress;
-   uint16_t ROMSize;
-   uint16_t BankNum;
-};
+void FreeCrtChips();
 
 #ifndef MinimumBuild
    //only needed in full build:

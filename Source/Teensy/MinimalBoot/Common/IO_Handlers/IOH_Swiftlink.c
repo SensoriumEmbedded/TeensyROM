@@ -49,6 +49,8 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define eepBMTitleSize      75    //max chars in bookmark title
 #define eepBMURLSize       225    //Max Chars in bookmark URL path
 #define eepNumBookmarks      5    //Num Bookmarks saved
+#define eepAdBMTitle(BMNum) (eepAdBookmarks+(BMNum)*(eepBMTitleSize+eepBMURLSize)) //EEPROM addr of bookmark title, BMNum zero based
+#define eepAdBMURL(BMNum)   (eepAdBMTitle(BMNum)+eepBMTitleSize)                    //EEPROM addr of bookmark URL
 #define BytesPerDot        (25*1024) //dot every 25k when downloading
 #define RxQueueNumBlocks    40 
 #define RxQueueBlockSize   (1024*8) // 40*8k=320k
@@ -56,6 +58,15 @@ stcIOHandlers IOHndlr_SwiftLink =
 #define NMITimeoutuS      7000    //DbgMsgs_SW only: if Rx data reg not read within this time from NMI assert, deassert NMI anyway.  7000uS is just under 1200 baud to read status reg
 #define Drive_USB            1
 #define Drive_SD             2
+
+//FrogFind filter/search server (http only), used by the browser and the default bookmarks
+#define FrogFindHost        "frogfind.de"
+#define FrogFindOldHost     "frogfind.com"      //retired, still in older EEPROM bookmarks; MigrateFrogFindBookmarks rewrites them
+#define FrogFindReadPath    "/read.php"
+#define FrogFindLang        "lg=en-us"          //frogfind.de defaults to German without it
+#define FrogFindReadQuery   "?" FrogFindLang "&a="  //+ target URL
+#define FrogFindSearchQuery "?" FrogFindLang "&q="  //+ encoded search term
+#define BrowserUserAgent    "TeensyROM/" TRVersion  //frogfind.de answers 403 to requests without a User-Agent
 
 // 6551 ACIA interface emulation
 //register locations (IO1, DExx)
@@ -349,15 +360,15 @@ FLASHMEM void SetEthEEPDefaults()
    {
       "TinyWeb64 @ Sensorium",              "http://sensoriumembedded.com/tinyweb64/",
       "Digitalman TeensyROM Demo",          "http://digitalman.azurewebsites.net/",
-      "CBC Lite News (filtered)",           "http://www.frogfind.com/read.php?a=http://www.cbc.ca/lite/news",
+      "CBC Lite News (filtered)",           "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "http://www.cbc.ca/lite/news",
       "textfiles.com",                      "http://textfiles.com/directory.html",
-      "legiblenews.com (filtered)",         "http://www.frogfind.com/read.php?a=http://legiblenews.com/",
+      "legiblenews.com (filtered)",         "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "http://legiblenews.com/",
    };
    
    for (uint8_t BMNum=0; BMNum<eepNumBookmarks; BMNum++)
    {
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),DefBookmarks[BMNum][0]);
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,DefBookmarks[BMNum][1]);
+      EEPwriteStr(eepAdBMTitle(BMNum),DefBookmarks[BMNum][0]);
+      EEPwriteStr(eepAdBMURL(BMNum),DefBookmarks[BMNum][1]);
    }
 }
 
@@ -427,6 +438,7 @@ void InitHndlr_SwiftLink()
       PrevURLQueue[cnt]->port = 80;
    }
    strcpy(CurrPageTitle, "None");
+   MigrateFrogFindBookmarks();
    SetRandomSeed();
    nfcState |= nfcStateBitPaused; //Pause NFC for time critical routine
 }

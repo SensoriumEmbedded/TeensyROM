@@ -35,3 +35,10 @@
  * File sizes of <850KB continue to work as they do today, all served directly out of RAM.
  * Thank you @Boris Schneider-Johne for the general idea behind this capability, very much appreciate the brainstorming!
 
+## 2 and 4 MB EasyFlash
+ * EasyFlash CRTs can now be up to 4MB (256 banks), using the same SD bank swapping as above, so they must be launched from SD.
+ * Read-only: EAPI flash writes are not supported.
+ * Ordinary 1MB EasyFlash files work exactly as before.
+ * Implementation details are in [Teensy-Firmware.md](Architecture/Teensy-Firmware.md#easyflash-beyond-1-mb).
+ * Thank you @ziggystar12 (John Swiderski) for adding this, and for the 2 and 4MB test images!
+

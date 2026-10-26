@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 392" width="760" height="392" role="img" aria-label="DMA drives the bus just before Phi2 rises and lets go before it falls" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+  <rect width="760" height="392" fill="#ffffff"/>
+  <text x="24" y="28" font-size="15" font-weight="600" fill="#1f2328">DMA drives the bus just before Phi2 rises and lets go before it falls</text>
+  <text x="24" y="48" font-size="11.5" fill="#59636e">PAL defaults, one cycle counted in nS from the Phi2 falling edge</text>
+
+  <!-- edge guides at fall (0), rise (507), next fall (1015) -->
+  <g stroke="#d1d9e0">
+    <line x1="190" y1="76" x2="190" y2="350"/>
+    <line x1="459.7" y1="76" x2="459.7" y2="350"/>
+    <line x1="730" y1="76" x2="730" y2="350"/>
+  </g>
+
+  <!-- Phi2 waveform -->
+  <path d="M166 84H190V116H459.7V84H730V116" fill="none" stroke="#1f2328" stroke-width="1.25"/>
+  <text x="24" y="104" fill="#1f2328">Phi2</text>
+  <text x="324.9" y="72" text-anchor="middle" font-size="11.5" fill="#59636e">Phi2 low (VIC cycle)</text>
+  <text x="594.9" y="72" text-anchor="middle" font-size="11.5" fill="#59636e">Phi2 high (CPU cycle)</text>
+
+  <!-- event rows: x = 190 + t * 540/1015 -->
+  <g stroke="#d1d9e0">
+    <line x1="190" y1="158" x2="211.3" y2="158"/>
+    <line x1="190" y1="188" x2="296.4" y2="188"/>
+    <line x1="190" y1="218" x2="424.1" y2="218"/>
+    <line x1="190" y1="248" x2="459.7" y2="248"/>
+    <line x1="190" y1="278" x2="631.6" y2="278"/>
+    <line x1="190" y1="308" x2="652.9" y2="308"/>
+    <line x1="190" y1="338" x2="730" y2="338"/>
+  </g>
+  <g fill="#ffffff" stroke="#59636e" stroke-width="1.25">
+    <circle cx="211.3" cy="158" r="5"/>
+    <circle cx="296.4" cy="188" r="5"/>
+    <circle cx="459.7" cy="248" r="5"/>
+    <circle cx="631.6" cy="278" r="5"/>
+    <circle cx="652.9" cy="308" r="5"/>
+    <circle cx="730" cy="338" r="5"/>
+  </g>
+  <circle cx="424.1" cy="218" r="5" fill="#b6d4fb" stroke="#0969da" stroke-width="2"/>
+
+  <g fill="#59636e" font-size="11.5">
+    <text x="223.3" y="162">40 nS</text>
+    <text x="308.4" y="192">200 nS</text>
+    <text x="619.6" y="282" text-anchor="end">830 nS</text>
+    <text x="640.9" y="312" text-anchor="end">870 nS</text>
+    <text x="718" y="342" text-anchor="end">1015 nS</text>
+    <text x="471.7" y="252">507 nS</text>
+  </g>
+  <text x="436.1" y="222" font-size="11.5" fill="#1f2328">440 nS</text>
+
+  <g fill="#1f2328">
+    <text x="24" y="162">DMA asserted</text>
+    <text x="24" y="192">BA sampled</text>
+    <text x="24" y="222" font-weight="600">R/W + addr driven</text>
+    <text x="24" y="252">Phi2 rises</text>
+    <text x="24" y="282">Read: data latched</text>
+    <text x="24" y="312">Write: data released</text>
+    <text x="24" y="342">Phi2 falls again</text>
+  </g>
+  <text x="24" y="376" font-size="11.5" fill="#59636e">Read and write times are setup plus the data offset; the counter is re-latched at setup.</text>
+</svg>

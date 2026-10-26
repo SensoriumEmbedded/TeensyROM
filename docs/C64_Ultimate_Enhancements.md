@@ -84,7 +84,7 @@ For more information: [autolaunch.txt](/docs/autolaunch.txt)
 Explore the internet from your C64 with optimized web access:
 
 - Built-in support for browsing retro-compatible websites directly on your C64
-- Check out [FrogFind](http://www.frogfind.de/) for vintage computer-ready web content
+- Check out [FrogFind](http://frogfind.de/) for vintage computer-ready web content
 
 For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
