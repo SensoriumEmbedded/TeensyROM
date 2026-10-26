@@ -5,9 +5,6 @@
 // Included after IOHandlers.h and Common_Defs.h, ahead of the .ino code that calls it: it sets the
 //  cart lines and ROM pointers those define.
 
-extern StructCrtChip CrtChips[];
-extern uint8_t NumCrtChips;
-
 bool CrtIsC128 = false;
 static C128CartMap C128Map;
 
@@ -27,7 +24,13 @@ static bool C128HWTypeSupported(uint16_t HWType)
 // The C128 half of SetTypeFromCRT; keeps the map for LaunchC128Cart.
 static bool SetC128Type(StructMenuItem *MyMenuItem)
 {
+#if defined(MinimumBuild) && !defined(VM_HOST_PROFILE)
+   // C128 keeps the existing non-EasyFlash limit even in the wider loader.
+   if (NumCrtChips > MAX_LEGACY_CRT_CHIPS ||
+       !MapC128Cart(CrtChips, (uint8_t)NumCrtChips, &C128Map))
+#else
    if (!MapC128Cart(CrtChips, NumCrtChips, &C128Map))
+#endif
    {
       SendMsgPrintfln("C128 chip layout unsupported");
       return false;
