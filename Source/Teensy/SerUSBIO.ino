@@ -617,6 +617,9 @@ FLASHMEM void ProcessCommand()
 
    if (CurrentIOHandler != IOH_TeensyROM && !ASIDAllowed)
    {
+      //left unread, the time bytes would each run as a command of their own: 'e' resets EEPROM
+      uint32_t RefusedTime;
+      if (TokenVal == SetRTCToken) GetUInt(&RefusedTime, 4);
       SendU16(FailToken);
       CmdChannel->print("Busy!\n");
       return;
@@ -664,6 +667,10 @@ FLASHMEM void ProcessCommand()
          break;
       case SetColorToken: //Set a TR UI color value
          if(SetColorRef()) SendU16(AckToken);
+         else SendU16(FailToken);
+         break;
+      case SetRTCToken: //Set the real-time clock
+         if(SetRTC()) SendU16(AckToken);
          else SendU16(FailToken);
          break;
       case DebugToken: //'dg'Test/debug

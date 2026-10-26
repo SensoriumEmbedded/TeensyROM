@@ -118,6 +118,7 @@ A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn'
 |GetDirectoryToken | 0x64DD  | List directory contents (JSON format - deprecated) |
 |GetDirNDJSONToken | 0x64DE  | List directory contents (NDJSON format) |
 |SetColorToken     | 0x6422  | Set a TR UI color value |
+|SetRTCToken       | 0x6474  | Set the real-time clock |
 |PauseSIDToken     | 0x6466  | Pause SID playback |
 |SetSIDSongToken   | 0x6488  | Set sub-song number of currently loaded SID |
 |SIDSpeedLinToken  | 0x6499  | Set SID playback speed (linear equation) |
@@ -346,6 +347,20 @@ Sets one of the colors in the TR UI. Color is stored in EEPROM and IO space; the
  
 **Handler:** `SetColorRef()`
  
+---
+
+### Set Real-Time Clock
+Sets the TR's real-time clock. The time is UTC; the TR applies its time zone setting when it shows or passes on the time. On a TR+ with a battery, the clock keeps the time through power-off. The menu's clock shows the new time after its next reset.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `SetRTCToken` — `0x6474` |
+| Receive | UTC time in seconds since 1970-01-01 (4 bytes, big endian) |
+| Send | `AckToken 0x64CC` or `FailToken 0x9B7F` |
+
+**Handler:** `SetRTC()`
+
 ---
 
 ### Pause SID
