@@ -292,7 +292,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             if(StartMicros>MaxMicros) MaxMicros=StartMicros;
             if(StartMicros<MinMicros) MinMicros=StartMicros;
             CmdChannel->printf("Took %luuS to send %d Regs\n", StartMicros, RegsInPacket);
-            CmdChannel->flush();
+            FlushCmdChannel(CmdChannel);
             delay(10); //allow scope time to re-arm
          }
          CmdChannel->printf(" %d packets, %luuS Min to %luuS Max\n", NumPackets, MinMicros, MaxMicros);
@@ -370,7 +370,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          break;
       case 'x': 
          { 
-            FreeDriveDirMenu(); //Will mess up navigation if not on TR menu!
+            FreeDriveDirMenu(); //drops back to the TR menu if we were on SD/USB (see FreeDriveDirMenu)
             
             uint32_t CrtMax = (RAM_ImageSize & 0xffffe000)/1024; //round down to k bytes rounded to nearest 8k
             CmdChannel->printf("\n\nRAM1 Buff: %luK (%lu blks)\n", CrtMax, CrtMax/8);
@@ -422,7 +422,12 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                   CmdChannel->printf("numbers only\n");
                   return;
                }
-               NewBaud += ((ByteIn-'0') * pow(10,ByteNum));
+               NewBaud = NewBaud*10 + (ByteIn-'0'); //most significant digit first; pow() would link ~6KB of tables into RAM1
+            }
+            if (NewBaud == 0)
+            {
+               CmdChannel->printf("baud can't be 0\n");
+               return;
             }
             C64CycBetweenRx = 985250*8/NewBaud;
             CmdChannel->printf("Manual baud set: %lubps, %lu Cycles\n", NewBaud, C64CycBetweenRx);
@@ -800,6 +805,12 @@ FLASHMEM void LaunchFile()
    
    if (ReceiveFileName(&DriveType, FileNamePath))
    {
+      if (!LaunchFolderFits(FileNamePath))
+      {
+         SendU16(FailToken);
+         CmdChannel->print("Path too long!\n");
+         return;
+      }
       SendU16(AckToken);
       RemoteLaunch(DriveType, FileNamePath, false);
    }
@@ -838,6 +849,13 @@ FLASHMEM bool GetUInt(uint32_t *InVal, uint8_t NumBytes)
       *InVal += (ByteIn << (ByteNum*8));
    }
    return true;
+}
+
+FLASHMEM void FlushCmdChannel(Stream *Channel)
+{
+   // EthernetClient::flush() and USBSerialBase::flush() wait with no deadline for the peer
+   // to ACK; the bytes are already queued to go without them.
+   if (Channel == &Serial) Serial.send_now();
 }
 
 FLASHMEM void SendU16(uint16_t SendVal)
@@ -971,6 +989,23 @@ FLASHMEM void  getFreeITCM()
    //uint32_t jj = 0;
    //for ( uint32_t ii = 0; ii < sizeofFreeITCM; ii++) jj += ptrFreeITCM[ii];
    //CmdChannel->printf( "ITCM DWORD cnt = %u [#bytes=%u] \n", jj, jj*4);
+}
+
+// The WriteC64Spans command's deadline for the whole command, not only SerialAvailabeTimeout's per
+// byte, which leaves every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is
+// under every channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
+FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
+
+// Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
+// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past SpansCeilingmS(Bytes)
+// counted from Began.  A caller with no command deadline passes millis() and Owed, so the ceiling
+// runs from the failure; WriteC64Spans passes its command's start and length, so it runs from there.
+FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
+{
+   const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
+   uint32_t Quiet = millis();
+   while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
+      if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
 }
 
 #ifdef Dbg_SerSD
@@ -1198,7 +1233,6 @@ struct DMAStage
 FLASHMEM void WriteC64MemCommand() 
 {
    uint32_t DMAAddr, DMALength;
-   const uint32_t Began = millis();
 
    if (!GetUInt(&DMAAddr, 2))
    {
@@ -1220,7 +1254,7 @@ FLASHMEM void WriteC64MemCommand()
    {
       SendU16(FailToken);
       CmdChannel->printf("No memory to stage %lu bytes\n", DMALength);
-      DiscardCmdInput(DMALength, Began, DMALength);  // sent unprompted, and not to be read as commands
+      DiscardCmdInput(DMALength, millis(), DMALength);  // sent unprompted, and not to be read as commands
       return;
    }
 
@@ -1230,6 +1264,7 @@ FLASHMEM void WriteC64MemCommand()
       {
          SendU16(FailToken);
          CmdChannel->println("Error receiving data!");
+         DiscardCmdInput(DMALength - ByteNum, millis(), DMALength - ByteNum);
          return;
       }
       DMABuf[ByteNum] = CmdChannel->read();
@@ -1259,21 +1294,6 @@ FLASHMEM void WriteC64MemCommand()
    //CmdChannel->printf
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
    //Serial.printf("DMA Write: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
-}
-
-// One deadline for the whole command, not only SerialAvailabeTimeout's per byte, which leaves
-// every byte's wait for the peer to spend with the C64 unserved.  2 bytes/mS is under every
-// channel's rate, the 115200 baud USB host port included.  Bytes is the command's length so far.
-FLASHMEM uint32_t SpansCeilingmS(uint32_t Bytes) { return SerialTimoutMillis * 10 + Bytes / 2; }
-
-// Throws away up to Owed bytes a failed sender can still send unprompted, so they are not parsed
-// as commands.  Ends early on quiet longer than a TCP retransmit, or 2 S past the command's deadline.
-FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
-{
-   const uint32_t CeilingmS = SpansCeilingmS(Bytes) + SerialTimoutMillis * 4;
-   uint32_t Quiet = millis();
-   while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
-      if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
 }
 
 // After is what the sender goes on to send without waiting for a reply.  On false a FailToken

@@ -84,7 +84,7 @@ For more information: [autolaunch.txt](/docs/autolaunch.txt)
 Explore the internet from your C64 with optimized web access:
 
 - Built-in support for browsing retro-compatible websites directly on your C64
-- Check out [FrogFind](http://www.frogfind.de/) for vintage computer-ready web content
+- Check out [FrogFind](http://frogfind.de/) for vintage computer-ready web content
 
 For more information: [Browser Usage Guide](/docs/Browser_Usage.md)
 
@@ -100,7 +100,7 @@ For more information: [TR Host Extensions Guide](/docs/TR_Host_Extensions.md)
 
 ## TR+ Compatibility Note
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, KERNAL Replacement, and more). It's safe to leave these set regardless.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, and more). It's safe to leave these set regardless.
 
 For more information: [TR+ New Features Guide](/docs/TR+NewFeatures.md)
 

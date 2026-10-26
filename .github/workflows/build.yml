@@ -212,6 +212,9 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/Release_v')
         uses: softprops/action-gh-release@v3
         with:
+          # A draft, so the notes can be added and the hex files checked before anyone sees it;
+          # it goes public only when published from the GitHub Releases page.
+          draft: true
           # The firmware only. The stock host's .TRH is in the build artifact for anyone
           # testing modules, but a release does not offer an extension host until there is
           # a module a user would install it for.

@@ -18,8 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+#ifdef VM_HOST_PROFILE
 uint8_t NumCrtChips = 0;
 StructCrtChip CrtChips[MAX_CRT_CHIPS];
+#else
+uint16_t NumCrtChips = 0;
+bool LoadedEasyFlashROM = false;
+StructCrtChip *CrtChips = NULL;
+// Reserve the erased page before CHIP payloads fill RAM2. Other cartridges
+// allocate only their original 128 metadata entries and no erased page.
+FLASHMEM bool EnsureCrtChipTable()
+{
+   if (!CrtChips)
+   {
+      const uint32_t TableBytes = (LoadedEasyFlashROM ? MAX_CRT_CHIPS : MAX_LEGACY_CRT_CHIPS) * sizeof(StructCrtChip);
+      uint8_t* Storage = (uint8_t*)calloc(1, TableBytes + (LoadedEasyFlashROM ? 8192u : 0u));
+      if (!Storage)
+      {
+         SendMsgPrintfln("Not enough RAM for CRT CHIP table%s", LoadedEasyFlashROM ? " and erased page" : "");
+         return false;
+      }
+      CrtChips = (StructCrtChip*)Storage;
+      EasyFlashErasedBank = LoadedEasyFlashROM ? Storage + TableBytes : NULL;
+      if (EasyFlashErasedBank) memset(EasyFlashErasedBank, 0xff, 8192);
+   }
+   return true;
+}
+#endif
+#include "Common/C128Crt.h"
 File myFile = NULL;
 
 void HandleExecution()
@@ -62,10 +88,7 @@ void HandleExecution()
          CartLoaded=true;
          break;
       case rtBinC128:
-         SetGameDeassert;
-         SetExROMDeassert;
-         LOROM_Image = MenuSelCpy.Code_Image;
-         HIROM_Image = NULL;
+         LaunchC128Cart();
          CartLoaded=true;
          break;      
       case rtUnknown: //had to have been marked unknown after check at start
@@ -108,8 +131,8 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
    char FullFilePath[MaxNamePathLength];
    uint32_t SwapBanksDetected = 0;
 
-   if (PathIsRoot()) sprintf(FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
-   else sprintf(FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
+   if (PathIsRoot()) snprintf(FullFilePath, sizeof FullFilePath, "%s%s", DriveDirPath, MyMenuItem->Name);  // at root
+   else snprintf(FullFilePath, sizeof FullFilePath, "%s/%s", DriveDirPath, MyMenuItem->Name);
       
    SendMsgPrintfln("Loading:\r\n%s", FullFilePath);
 
@@ -138,7 +161,16 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       }
       
       //load header and parse
+#ifdef VM_HOST_PROFILE
       for (count = 0; count < CRT_MAIN_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read main header
+#else
+      if (myFile.read(lclBuf, CRT_MAIN_HDR_LEN) != CRT_MAIN_HDR_LEN)
+      {
+         SendMsgPrintfln("Truncated CRT header");
+         myFile.close();
+         return false;
+      }
+#endif
       MyMenuItem->Code_Image = lclBuf;
       if (!ParseCRTHeader(MyMenuItem, &EXROM, &GAME)) //sends error messages
       {
@@ -149,6 +181,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       //process Chip Packets
       FreeCrtChips();  //clears any previous and resets NumCrtChips
       Printf_dbg("\n Chp# Length    Type  Bank  Addr  Size\n");
+#ifdef VM_HOST_PROFILE
       while (myFile.available())
       {
          if (NumCrtChips == MAX_CRT_CHIPS)
@@ -160,7 +193,7 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          }
 
          for (count = 0; count < CRT_CHIP_HDR_LEN; count++) lclBuf[count]=myFile.read(); //Read chip header
-         if (!ParseChipHeader(lclBuf)) //sends error messages
+         if (!ParseLegacyChipHeader(lclBuf)) //sends error messages
          {
             myFile.close();
             FreeCrtChips();
@@ -189,6 +222,65 @@ bool LoadFile(StructMenuItem* MyMenuItem, FS *sourceFS)
          NumCrtChips++;
       }
       
+#else
+      while (myFile.available())
+      {
+         if (myFile.size() - myFile.position() < CRT_CHIP_HDR_LEN ||
+             myFile.read(lclBuf, CRT_CHIP_HDR_LEN) != CRT_CHIP_HDR_LEN ||
+             toU16(lclBuf+0x0E) > myFile.size() - myFile.position())
+         {
+            SendMsgPrintfln("Truncated CRT CHIP packet at $%08lx", (unsigned long)myFile.position());
+            myFile.close();
+            FreeCrtChips();
+            return false;
+         }
+         const int16_t Slot = ParseChipHeader(lclBuf);
+         if (Slot == -2)
+         {
+            // Unsupported EasyFlash CHIP types have no mapping/count effect.
+            if (myFile.seek(myFile.position() + toU16(lclBuf+0x0E))) continue;
+            SendMsgPrintfln("CRT CHIP skip seek failed at $%08lx", (unsigned long)myFile.position());
+            myFile.close(); FreeCrtChips(); return false;
+         }
+         if (Slot < 0)
+         {
+            myFile.close(); FreeCrtChips(); return false;
+         }
+         // A duplicate half reuses its metadata and, where resident, its RAM.
+         // A swapped half instead receives the newest packet's file offset.
+         StructCrtChip& Chip = CrtChips[Slot];
+         const bool NewSlot = Slot == NumCrtChips;
+         if (NewSlot) NumCrtChips++; // cleanup owns the allocation even on read failure
+         if (Chip.ChipROM == (uint8_t*)SwapSeekAddrMask)
+         {
+            // The upper byte is the swap marker, leaving 24 bits for file offsets.
+            const uint32_t PayloadOffset = myFile.position();
+            if (PayloadOffset > 0x00ffffffu ||
+                (Chip.ROMSize && (uint32_t)Chip.ROMSize-1u > 0x00ffffffu-PayloadOffset))
+            {
+               SendMsgPrintfln("CRT CHIP swap offset exceeds 24-bit range at $%08lx", (unsigned long)PayloadOffset);
+               myFile.close(); FreeCrtChips(); return false;
+            }
+            Chip.ChipROM = (uint8_t*)(SwapSeekAddrMask + PayloadOffset);
+            if (!myFile.seek(myFile.position() + Chip.ROMSize))
+            {
+               SendMsgPrintfln("CRT CHIP seek failed at $%08lx", (unsigned long)myFile.position());
+               myFile.close(); FreeCrtChips(); return false;
+            }
+         }
+         else if (myFile.read(Chip.ChipROM, Chip.ROMSize) != Chip.ROMSize)
+         {
+            SendMsgPrintfln("Truncated CRT CHIP data at $%08lx", (unsigned long)myFile.position());
+            myFile.close(); FreeCrtChips(); return false;
+         }
+         Printf_dbg(" %08x\n", (uint32_t)Chip.ChipROM);
+      }
+      // Duplicates can replace a swap marker with a resident page or vice
+      // versa, so decide whether to retain the file from the final mappings.
+      for (uint16_t ChipNum=0; ChipNum<NumCrtChips; ChipNum++)
+         if (((uint32_t)CrtChips[ChipNum].ChipROM & SwapSeekAddrMask) == SwapSeekAddrMask) SwapBanksDetected++;
+
+#endif
       //check configuration
       if (!SetTypeFromCRT(MyMenuItem, EXROM, GAME)) //sends error messages
       {
@@ -232,12 +324,15 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    // https://vice-emu.sourceforge.io/vice_17.html#SEC369
    // http://ist.uwaterloo.ca/~schepers/formats/CRT.TXT
    
+#ifndef VM_HOST_PROFILE
+   if (MyMenuItem->Size < CRT_MAIN_HDR_LEN) { SendMsgPrintfln("Truncated CRT header"); return false; }
+#endif
    uint8_t* CRT_Image = MyMenuItem->Code_Image;
 
    SendMsgPrintfln("Parsing CRT File");
    SendMsgPrintfln("CRT image size: %luK  $%08x", MyMenuItem->Size/1024, MyMenuItem->Size);
    
-   if (memcmp(CRT_Image, "C128 CARTRIDGE", 14)==0) SendMsgPrintfln("C128 crt");
+   if (DetectC128Crt(CRT_Image)) SendMsgPrintfln("C128 crt");
    else if (memcmp(CRT_Image, "C64 CARTRIDGE", 13)==0) SendMsgPrintfln("C64 crt");
    else
    {
@@ -254,7 +349,12 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    SendMsgPrintfln("Ver: %02x.%02x", CRT_Image[0x14], CRT_Image[0x15]);
    
    uint16_t HWType = toU16(CRT_Image+0x16);
+#ifndef VM_HOST_PROFILE
+   LoadedEasyFlashROM = !CrtIsC128 && HWType == Cart_EasyFlash;
+#endif
    SendMsgPrintfln("HW Type: %d ($%04x)", (int16_t)HWType, HWType);
+   
+   if (!C128HWTypeSupported(HWType)) return false;
    
    if (HWType != Cart_Generic) //leave IOH as default/user set for generic
    {
@@ -270,11 +370,12 @@ bool ParseCRTHeader(StructMenuItem* MyMenuItem, uint8_t *EXROM, uint8_t *GAME)
    *GAME = CRT_Image[0x19];
    SendMsgPrintfln("EXROM: %d   GAME: %d", *EXROM, *GAME);
    
-   SendMsgPrintfln("Name: %s", (CRT_Image+0x20));
+   SendMsgPrintfln("Name: %.32s", (CRT_Image+0x20)); //the CRT Name field is 32 bytes and may fill them all
    return true;
 }
    
-bool ParseChipHeader(uint8_t* ChipHeader)   
+#ifdef VM_HOST_PROFILE
+bool ParseLegacyChipHeader(uint8_t* ChipHeader)
 {
    static uint8_t *ptrRAM_ImageEnd = NULL;
    
@@ -321,10 +422,78 @@ bool ParseChipHeader(uint8_t* ChipHeader)
    return true;
 }
  
+#else
+int16_t ParseChipHeader(uint8_t* ChipHeader)
+{
+   static uint8_t *ptrRAM_ImageEnd = NULL;
+   if (memcmp(ChipHeader, "CHIP", 4)!=0)
+   {
+      SendMsgPrintfln("\"CHIP\" not found in #%d", NumCrtChips);
+      return -1;
+   }
+   const uint16_t Bank = toU16(ChipHeader+0x0A);
+   const uint16_t Address = toU16(ChipHeader+0x0C);
+   const uint16_t Size = toU16(ChipHeader+0x0E);
+   uint16_t Slot = NumCrtChips;
+#ifndef VM_HOST_PROFILE
+   if (LoadedEasyFlashROM)
+   {
+      const uint16_t Type = toU16(ChipHeader+0x08);
+      if (Type != 0 && Type != 2) return -2;
+      if (Bank >= 256) { SendMsgPrintfln("EasyFlash bank %u exceeds 255", Bank); return -1; }
+      if (Size != 8192) { SendMsgPrintfln("EasyFlash CHIP size %u is not 8192", Size); return -1; }
+      if (Address != 0x8000 && Address != 0xa000 && Address != 0xe000)
+      {
+         SendMsgPrintfln("EasyFlash CHIP address $%04x unsupported", Address); return -1;
+      }
+      // $A000 and $E000 name the same high half. Last accepted packet wins.
+      for (uint16_t Previous=0; Previous<NumCrtChips; Previous++)
+         if (CrtChips[Previous].BankNum == Bank &&
+             (CrtChips[Previous].LoadAddress == 0x8000) == (Address == 0x8000)) { Slot=Previous; break; }
+   }
+   const uint16_t Capacity = LoadedEasyFlashROM ? MAX_CRT_CHIPS : MAX_LEGACY_CRT_CHIPS;
+#else
+   const uint16_t Capacity = MAX_CRT_CHIPS;
+#endif
+   if (Slot == NumCrtChips && NumCrtChips >= Capacity)
+   {
+      SendMsgPrintfln("More than %u CRT Chips found", Capacity); return -1;
+   }
+#ifndef VM_HOST_PROFILE
+   if (!EnsureCrtChipTable()) return -1;
+#endif
+   StructCrtChip& Chip = CrtChips[Slot];
+   if (Slot == NumCrtChips)
+   {
+      if (NumCrtChips == 0) ptrRAM_ImageEnd = RAM_Image;
+      if (Size + (uint32_t)ptrRAM_ImageEnd - (uint32_t)RAM_Image <= RAM_ImageSize)
+      {
+         Chip.ChipROM = ptrRAM_ImageEnd;
+         ptrRAM_ImageEnd += Size;
+      }
+      else
+      {
+         Chip.ChipROM = (uint8_t*)malloc(Size);
+         if (!Chip.ChipROM) Chip.ChipROM = (uint8_t*)SwapSeekAddrMask;
+      }
+   }
+   else if (((uint32_t)Chip.ChipROM & SwapSeekAddrMask) == SwapSeekAddrMask)
+      Chip.ChipROM = (uint8_t*)SwapSeekAddrMask;
+   Chip.BankNum = Bank;
+   Chip.LoadAddress = Address;
+   Chip.ROMSize = Size;
+   return Slot;
+}
+
+#endif
 void FreeCrtChips()
 { //free chips allocated in RAM2 and reset NumCrtChips
    for(uint16_t cnt=0; cnt < NumCrtChips; cnt++) 
       if((uint32_t)CrtChips[cnt].ChipROM >= 0x20200000 && (uint32_t)CrtChips[cnt].ChipROM < SwapSeekAddrMask) free(CrtChips[cnt].ChipROM);
+#ifndef VM_HOST_PROFILE
+   free(CrtChips); CrtChips = NULL;
+   EasyFlashErasedBank = NULL; // the page belongs to the same allocation
+#endif
    NumCrtChips = 0;
 }
  
@@ -336,9 +505,14 @@ bool PathIsRoot()
 bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)   
 {
    SendMsgPrintfln("%d Chip(s) found/loaded", NumCrtChips); 
+#ifndef VM_HOST_PROFILE
+   if (!NumCrtChips) { SendMsgPrintfln("No supported CRT Chips found"); return false; }
+#endif
    MyMenuItem->Code_Image = CrtChips[0].ChipROM;
    
    //check configuration
+   
+   if (CrtIsC128) return SetC128Type(MyMenuItem);
       
    if(CrtChips[0].LoadAddress == 0x8000 && CrtChips[0].ROMSize == 0x2000) 
    //Usually GAME ==1 and EXROM==0
@@ -361,13 +535,6 @@ bool SetTypeFromCRT(StructMenuItem* MyMenuItem, uint8_t EXROM, uint8_t GAME)
    {
       MyMenuItem->ItemType = rtBin16k;
       SendMsgPrintfln(" 16k config");
-      return true;
-   }      
-   
-   if(CrtChips[0].LoadAddress == 0x0000 && CrtChips[0].ROMSize == 0x2000 && EXROM==0 && GAME==0)
-   {
-      MyMenuItem->ItemType = rtBinC128;
-      SendMsgPrintfln(" C128 config");
       return true;
    }      
    
@@ -415,7 +582,7 @@ void SendMsgPrintfln(const char *Fmt, ...)
    
    va_list ap;
    va_start(ap,Fmt);
-   vsprintf(SerialStringBuf, Fmt, ap); 
+   vsnprintf(SerialStringBuf, sizeof SerialStringBuf, Fmt, ap);
    va_end(ap);
     
    Serial.printf("%s\n", SerialStringBuf);

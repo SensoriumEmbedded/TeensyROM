@@ -299,7 +299,7 @@ void loop()
 #ifdef DbgIOTraceLog
       PrintResetSnapshot();
 #endif
-      CmdChannel->flush();
+      FlushCmdChannel(CmdChannel);
       delay(50); 
       uint32_t NextInterval = 10000, beginWait = millis();
       bool LEDState = true, DefEEPReboot = false;
@@ -534,13 +534,15 @@ FLASHMEM void SetEEPDefaults()
    EEPROM.put(eepAdMagicNum, (uint32_t)eepMagicNum); //set this last in case of power down, etc.
 }
 
-void SetNumItems(uint16_t NumItems)
+void SetMenu(StructMenuItem* Source, uint16_t NumItems)
 {
+   MenuSource = Source;
    NumItemsFull = NumItems;
-   IO1[rRegNumItemsOnPage] = (NumItemsFull > MaxItemsPerPage ? MaxItemsPerPage : NumItemsFull);
+   SelItemFullIdx = 0; //UpdateItemTypeReg reads MenuSource[SelItemFullIdx] before the C64 selects in the new menu
+   IO1[rRegNumItemsOnPage] = (NumItems > MaxItemsPerPage ? MaxItemsPerPage : NumItems);
    IO1[rwRegPageNumber] = 1;
-   IO1[rRegNumPages] = 
-      NumItems/MaxItemsPerPage + 
+   IO1[rRegNumPages] =
+      NumItems/MaxItemsPerPage +
       (NumItems%MaxItemsPerPage!=0 ? 1 : 0) +
       (NumItems==0 ? 1 : 0);
 }
@@ -558,6 +560,18 @@ bool SDSlotFilled()
    return digitalReadFast(46);
 }
 
+bool SDBegin()
+{
+   //SD.begin(BUILTIN_SDCARD), ending any read left open first.  In FIFO mode SdFat leaves a
+   //  multi-block read (CMD18) running after every read, the mount's included, until a file
+   //  close ends it with CMD12; a failed open (e.g. no autolaunch.txt) closes nothing.
+   //  SD.begin then resets the card (CMD0) mid-read, which leaves some cards unresponsive
+   //  until they lose power.
+   SdCard *Card = SD.sdfs.card(); //NULL until the first SD.begin
+   if (Card) Card->syncDevice();  //CMD12 only if a read or write is open
+   return SD.begin(BUILTIN_SDCARD);
+}
+
 bool SDFullInit()
 {
 
@@ -569,7 +583,7 @@ bool SDFullInit()
    Printf_dbg("[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]\n");  
    Printf_dbg("Start mediaPresent %d\n", SD.mediaPresent()); //This indicates zero regardless of actual prior to begin()
     
-   while (!SD.begin(BUILTIN_SDCARD)) 
+   while (!SDBegin()) 
    {
       Count--;
       Printf_dbg("SD Init fail, %d tries left. Time: %lu mS\n", Count, millis()-Startms);

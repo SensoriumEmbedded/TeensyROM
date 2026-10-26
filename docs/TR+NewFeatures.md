@@ -26,7 +26,7 @@ A handful of other new hardware additions round out the TR+ feature set.
    * Validated against real hardware compatibility tools (REU-Checker, CMD 1750/1750XL REU Test) included right in the Test+Diags menu
  * **Freezer Cartridge Support** — Action Replay, Retro Replay, Final Cartridge III and Super Snapshot V5 emulated natively
    * Enter freezer on demand via the new 'Alt' button
-   * Retro Replay, Super Snapshot V5, and Final Cartridge III 101% can also run with the TR+ REU alongside them (on by default, see Settings)
+   * Retro Replay, Super Snapshot V5, and Final Cartridge III 101% can also run with the TR+ REU alongside them (on by default, see Settings): a short press of the Alt button freezes, holding it 700 ms or longer saves the REU image
    * Freezer contributions by [Paul Harker (LessPaul)](https://github.com/LessPaul)
  * **Remote DMA Memory Access** — `WriteC64Mem` and `ReadC64Mem` give an external app direct, real-time read/write access to C64 memory over Serial or Ethernet
    * This is the TR+ engine behind [c64cast](https://github.com/kfox/c64cast) — streaming video, and a lot more, straight through your C64
@@ -34,6 +34,7 @@ A handful of other new hardware additions round out the TR+ feature set.
    * Keep BASIC's `TI`/`TI$` variables and any RTC-aware program (like the included Segment/Dot Matrix Clock) accurate from the moment you power on — no Ethernet re-sync needed once it's set
    * The original TR can get there too, but only via a DIY battery mod.
  * **External Reset Detect** — press an external reset (C64U button, User port,  WOPR, or any other custom reset wiring) and TR+ responds exactly as if you'd pressed the TR menu button, dropping you right back into the menu
+   * Can be turned off in Settings (`f` on page `2`) when you don't want that, such as when getting into C128 BASIC
  * **Programmable Alternate Button** — the "Alt" button (to the left of the menu button) is assignable to whatever's most useful when it isn't busy running a freezer cart or REU:
    * **AutoLaunch** (default) — jump straight into your favorite game or utility with one press
    * **Pause/Unpause** — freeze the C64/128 mid-session
@@ -46,7 +47,7 @@ A handful of other new hardware additions round out the TR+ feature set.
 
 ## Using TR+ with a Commodore 64 Ultimate / Ultimate64
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, KERNAL Replacement, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
+If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings. This is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, and more) — it's safe to leave these set, so there's no downside even if you're not using those specific capabilities yet.
 
 ## Q&A
 

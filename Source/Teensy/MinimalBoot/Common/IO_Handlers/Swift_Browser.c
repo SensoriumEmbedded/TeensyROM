@@ -227,8 +227,9 @@ FLASHMEM void CopyDecode(const char *FromEncoded, char *ToDecoded)
    Printf_dbg_sw("To: %s\n", ToDecoded);
 }
 
-FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
-{
+FLASHMEM bool CopyEncode(const char *FromRaw, char *ToEncoded, uint16_t MaxLen)
+{  //MaxLen is ToEncoded's size, terminator included
+   //returns false, with ToEncoded empty, if the encoded string won't fit
    uint16_t EncCharNum = 0;
    char HexChar[] = "0123456789abcdef";
    
@@ -238,10 +239,18 @@ FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
    for(uint16_t RawCharNum=0; RawCharNum <= strlen(FromRaw); RawCharNum++) //include terminator
    {
       uint8_t NextChar = FromRaw[RawCharNum];
-      if((NextChar >= 'a' && NextChar <= 'z') ||
-         (NextChar >= 'A' && NextChar <= 'Z') ||
-         (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
-          NextChar == 0)                          //include terminator
+      bool Plain = ((NextChar >= 'a' && NextChar <= 'z') ||
+                    (NextChar >= 'A' && NextChar <= 'Z') ||
+                    (NextChar >= '.' && NextChar <= '9') ||  //   ./0123456789
+                     NextChar == 0);                         //include terminator
+
+      if (EncCharNum + (Plain ? 1 : 3) > MaxLen)
+      {
+         ToEncoded[0] = 0;
+         return false;
+      }
+
+      if(Plain)
       {      
          ToEncoded[EncCharNum++] = NextChar;  //normal char, just copy  
       }
@@ -254,6 +263,7 @@ FLASHMEM void CopyEncode(const char *FromRaw, char *ToEncoded)
       }
    }
    Printf_dbg_sw("To: %s\n", ToEncoded);
+   return true;
 }
 
 void DumpQueueUnPausePage()
@@ -437,7 +447,7 @@ void ParseHTMLTag()
    
 } 
 
-void ParseURL(const char * URL, stcURLParse &URLParse)
+FLASHMEM void ParseURL(const char * URL, stcURLParse &URLParse)
 {
    //https://en.wikipedia.org/wiki/URL
    //https://www.w3.org/Library/src/HTParse.html
@@ -471,21 +481,19 @@ void ParseURL(const char * URL, stcURLParse &URLParse)
       }
       
       //set host name & port (if present):
+      const char * ptrHostEnd;
       if (PortPresent)
       {
          URLParse.port = atoi(ptrPort+1);  //skip the ":"
-         strncpy(URLParse.host, ptrServerName, ptrPort-ptrServerName);
-         URLParse.host[ptrPort-ptrServerName]=0; //terminate it
+         ptrHostEnd = ptrPort;
       }
-      else
-      {
-         if (ptrPath != NULL)  //there's a path; set host name
-         {
-            strncpy(URLParse.host, ptrServerName, ptrPath-ptrServerName);
-            URLParse.host[ptrPath-ptrServerName]=0; //terminate it
-         }
-         else strcpy(URLParse.host, ptrServerName);  //no path
-      }
+      else if (ptrPath != NULL) ptrHostEnd = ptrPath;  //there's a path
+      else ptrHostEnd = ptrServerName + strlen(ptrServerName);  //no path
+
+      uint16_t HostLen = ptrHostEnd-ptrServerName;
+      if (HostLen > MaxURLHostSize-1) HostLen = MaxURLHostSize-1;  //too long: truncate, the connect will fail
+      strncpy(URLParse.host, ptrServerName, HostLen);
+      URLParse.host[HostLen]=0; //terminate it
       
       //copy path, if present
       if (ptrPath != NULL) strcpy(URLParse.path, ptrPath);
@@ -595,7 +603,7 @@ uint32_t WebConnect(const stcURLParse *DestURL)
       const uint16_t MaxBuf = 350;
       char inbuf[MaxBuf];
       
-      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", 
+      client.printf("GET %s%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: " BrowserUserAgent "\r\nConnection: close\r\n\r\n",
          DestURL->path, DestURL->postpath, DestURL->host);
 
       //get response header
@@ -631,13 +639,18 @@ FLASHMEM void DoSearch(const char *Term)
 {
    stcURLParse URL =
    {
-      "www.frogfind.com", //strcpy(URL.host = "www.frogfind.com");
-      80,                 //URL.port = 80;
-      "/",                //strcpy(URL.path = "/");
-      "?q=",              //strcpy(URL.postpath = "?q=");
+      FrogFindHost,         //URL.host
+      80,                   //URL.port
+      "/",                  //URL.path
+      FrogFindSearchQuery,  //URL.postpath
    };
    
-   CopyEncode(Term, URL.postpath+strlen(URL.postpath)); //add encoded to end
+   uint16_t QueryLen = strlen(URL.postpath);
+   if (!CopyEncode(Term, URL.postpath+QueryLen, MaxURLPathSize-QueryLen)) //add encoded to end
+   {
+      SendASCIIErrorStrImmediate("Search too long");
+      return;
+   }
 
    WebConnect(&URL);
    AddToPrevURLQueue(&URL);
@@ -791,9 +804,48 @@ FLASHMEM bool ValidModifier(const char cMod)
    return false;
 }
 
-bool isURLFiltered(const stcURLParse *URL)
+FLASHMEM const char * HostNoWWW(const char *Host)
+{  //"www.x" and "x" name the same server
+   if (strncasecmp(Host, "www.", 4) == 0) return Host+4;
+   return Host;
+}
+
+FLASHMEM bool isURLFiltered(const stcURLParse *URL)
 {
-   return (strcmp(URL->host, "www.frogfind.com")==0); 
+   return (strcasecmp(HostNoWWW(URL->host), FrogFindHost)==0);
+}
+
+FLASHMEM void MigrateFrogFindBookmarks()
+{  //Bookmarks saved before the move to FrogFindHost point at the retired host: rewrite them.
+   //Runs at each SwiftLink init, but only writes EEPROM for a bookmark that still needs it.
+   char buf[eepBMURLSize];
+   char NewURL[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+12];
+   stcURLParse URL;
+
+   for (uint8_t BMNum=0; BMNum < eepNumBookmarks; BMNum++)
+   {
+      uint16_t eepAdURL = eepAdBMURL(BMNum);
+      EEPreadStr(eepAdURL, buf);
+      ParseURL(buf, URL);
+      if (strcasecmp(HostNoWWW(URL.host), FrogFindOldHost) != 0) continue;
+
+      if (strcmp(URL.path, FrogFindReadPath) == 0 && strncmp(URL.postpath, "?a=", 3) == 0)
+      {  //old reader link: add the language, and encode the target as 'f' does (raw mode decodes it)
+         const char *Target = URL.postpath+3;
+         char Encoded[eepBMURLSize];
+         if (strstr(Target, "://") != NULL) //not already encoded
+         {
+            if (!CopyEncode(Target, Encoded, sizeof(Encoded))) continue; //won't fit, leave it
+            Target = Encoded;
+         }
+         sprintf(NewURL, "http://" FrogFindHost FrogFindReadPath FrogFindReadQuery "%s", Target);
+      }
+      else sprintf(NewURL, "http://" FrogFindHost "%s%s", URL.path, URL.postpath);
+
+      if (strlen(NewURL) >= eepBMURLSize) continue; //won't fit, leave it
+      EEPwriteStr(eepAdURL, NewURL);
+      Printf_dbg_sw("BM#%d moved to %s\n", BMNum+1, NewURL);
+   }
 }
 
 FLASHMEM bool DLExtension(const char * Filename)
@@ -831,9 +883,10 @@ FLASHMEM bool DLExtension(const char * Filename)
    return false;
 }
 
-void ModWebConnect(stcURLParse *DestURL, char cMod)
+FLASHMEM bool ModWebConnect(stcURLParse *DestURL, char cMod)
 {  //Do WebConnect, apply Modifier argument
    //assumes char already qualified via ValidModifier()
+   //returns false if refused before connecting (don't add DestURL to the prev queue)
    
    if (cMod == ' ' || cMod == 0) //modifier not specified, check for auto-download
    {
@@ -853,15 +906,22 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          {  //make filtered URL & connect
             stcURLParse URL =
             {
-               "www.frogfind.com",     //strcpy(URL.host = "www.frogfind.com");
-               80,                     //URL.port = 80;
-               "/read.php",            //strcpy(URL.path = "/read.php?a=http://");
-               "?a=http://"            //URL.postpath
+               FrogFindHost,                  //URL.host
+               80,                            //URL.port
+               FrogFindReadPath,              //URL.path
+               FrogFindReadQuery              //URL.postpath
             };
                   
-            strcat(URL.postpath, DestURL->host);
-            strcat(URL.postpath, DestURL->path);
-            strcat(URL.postpath, DestURL->postpath);
+            //target goes in encoded, as in FrogFind's own links, so its own query survives
+            char Target[MaxURLHostSize+MaxURLPathSize+MaxURLPathSize+14]; //+"http://" and ":port"
+            if (DestURL->port == 80) sprintf(Target, "http://%s%s%s", DestURL->host, DestURL->path, DestURL->postpath);
+            else sprintf(Target, "http://%s:%d%s%s", DestURL->host, DestURL->port, DestURL->path, DestURL->postpath);
+            uint16_t QueryLen = strlen(URL.postpath);
+            if (!CopyEncode(Target, URL.postpath+QueryLen, MaxURLPathSize-QueryLen))
+            {
+               SendASCIIErrorStrImmediate("URL too long to filter");
+               return false;
+            }
             //write back filtered URL in case it's pointing to a history queue item (ie 'rf' command) 
             //  so link paths will be relative to correct server
             memcpy(DestURL, &URL, sizeof(stcURLParse)); 
@@ -874,7 +934,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          if(!isURLFiltered(DestURL)) WebConnect(DestURL); //go now if already raw
          else
          {  //strip off frogfind
-            char * ptrURL = strstr(DestURL->postpath, "http");  // "/read.php?a=http://"
+            char * ptrURL = strstr(DestURL->postpath, "http");  // "?lg=en-us&a=http%3a//"
             if (ptrURL == NULL)
             {
                SendASCIIErrorStrImmediate("Could not remove filter");
@@ -883,6 +943,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
             else
             {
                stcURLParse URL;
+               CopyDecode(ptrURL, ptrURL); //target is encoded, by 'f' and in FrogFind's own links
                ParseURL(ptrURL, URL);
                
                //write back unfiltered URL in case it's pointing to a history queue item (ie 'rr' command) 
@@ -897,6 +958,7 @@ void ModWebConnect(stcURLParse *DestURL, char cMod)
          WebConnect(DestURL); //no mod, default to reader, prev defined filtering
          break;
    }
+   return true;
 }
 
 FLASHMEM void BC_Bookmarks(char* CmdMsg) 
@@ -923,11 +985,11 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
          else AddRawStrToRxQueue("<li>");
          
          AddRawStrToRxQueue("<a href=\"");
-         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize,bufURL); //URL
+         EEPreadStr(eepAdBMURL(BMNum),bufURL); //URL
          Printf_dbg_sw("BM#%d- %s", BMNum, bufURL);
          AddRawStrToRxQueue(bufURL);
          AddRawStrToRxQueue("\">");
-         EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize),bufTitle); //Title
+         EEPreadStr(eepAdBMTitle(BMNum),bufTitle); //Title
          Printf_dbg_sw("- %s\n", bufTitle);
          AddRawStrToRxQueue(bufTitle);         
          AddRawStrToRxQueue("</a>");
@@ -948,7 +1010,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       char buf[eepBMURLSize];
       uint8_t BMNum = *CmdMsg - '1'; //zero based
       
-      EEPreadStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, buf); //URL
+      EEPreadStr(eepAdBMURL(BMNum), buf); //URL
       ParseURL(buf, URL);
       
       if(DLExtension(URL.path)) DownloadFile(&URL);
@@ -976,8 +1038,8 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       CmdMsg++;
       uint8_t BMNum = *CmdMsg - '1'; //zero based
       while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize), CurrPageTitle); //Title
-      EEPwriteStr(eepAdBookmarks+BMNum*(eepBMTitleSize+eepBMURLSize)+eepBMTitleSize, strURL); //URL
+      EEPwriteStr(eepAdBMTitle(BMNum), CurrPageTitle); //Title
+      EEPwriteStr(eepAdBMURL(BMNum), strURL); //URL
       
       //Send confirmation
       Add_BR_ToRxQueue();
@@ -998,7 +1060,7 @@ FLASHMEM void BC_Bookmarks(char* CmdMsg)
       while(*CmdMsg==' ') CmdMsg++;  //Allow for spaces after command   
 
       while(!ReadyToSendRx()) CheckRxNMITimeout(); //Let any outstanding NMIs clear before EEPROM writes (resource hog)
-      EEPwriteStr(eepAdBookmarks+(cBMNum - '1')*(eepBMTitleSize+eepBMURLSize), CmdMsg); //rename, cBMNum to zero based
+      EEPwriteStr(eepAdBMTitle(cBMNum - '1'), CmdMsg); //rename, cBMNum to zero based
 
       Add_BR_ToRxQueue();
       AddRawStrToRxQueue("<b>Bookmark #"); 
@@ -1102,15 +1164,15 @@ FLASHMEM void BC_Downloads(char* CmdMsg)
             AddRawCharToRxQueue('/');
             AddRawStrToRxQueue(entry.name());
          }
-         else 
-         {  //it's a file. add as local hyperlink          
+         else if (CopyEncode(entry.name(), FileNamePath, MaxTagSize-sizeof("a href=\"lcl:"))) //link has to fit ParseHTMLTag's TagBuf
+         {  //it's a file. add as local hyperlink
             AddRawStrToRxQueue("<a href=\"lcl:");
-            CopyEncode(entry.name(), FileNamePath);
             AddRawStrToRxQueue(FileNamePath);
             AddRawStrToRxQueue("\">");
             AddRawStrToRxQueue(entry.name()); //name shown
             AddRawStrToRxQueue("</a>");
          }
+         else AddRawStrToRxQueue(entry.name()); //name too long to link
          entry.close();
       }
       if (Empty) AddRawStrToRxQueue(" -empty-");
@@ -1164,14 +1226,18 @@ FLASHMEM void BC_FollowHyperlink(char* CmdMsg)
             strcpy(URL.path, PrevURLQueue[PrevURLQueueNum]->path); 
             char * ptrLastSlash = strrchr(URL.path, '/'); // find last slash
             if (ptrLastSlash != NULL) *(ptrLastSlash+1) = 0; //terminate after last slash
+            if (strlen(URL.path) + strlen(temp) >= MaxURLPathSize)
+            {
+               SendASCIIErrorStrImmediate("Link too long");
+               return;
+            }
             strcat(URL.path, temp); //add rel path back to end
          }
          URL.port = PrevURLQueue[PrevURLQueueNum]->port;
          strcpy(URL.host, PrevURLQueue[PrevURLQueueNum]->host);
          //leave postpath data in-tact
       }
-      ModWebConnect(&URL, *CmdMsg);
-      AddToPrevURLQueue(&URL);
+      if (ModWebConnect(&URL, *CmdMsg)) AddToPrevURLQueue(&URL);
    }
    else
    {
@@ -1231,8 +1297,7 @@ FLASHMEM void ProcessBrowserCommand()
       char httpServer[MaxTagSize] = "http://";
       strcat(httpServer, CmdMsg);
       ParseURL(httpServer, URL);
-      ModWebConnect(&URL, Mod);
-      AddToPrevURLQueue(&URL);
+      if (ModWebConnect(&URL, Mod)) AddToPrevURLQueue(&URL);
    }
    
    else if(*CmdMsg == 's') //search

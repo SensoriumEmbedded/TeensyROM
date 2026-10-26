@@ -38,7 +38,7 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
 * Copy the `.TRH` file to your SD card or USB drive.
 * In the TeensyROM menu, select the `.TRH` file in the file browser.
 * TeensyROM checks the file, shows the extension's name, and installs it.
-  * The screen goes blank briefly while it writes. **Do not power off during this time.**
+  * The screen goes blank for up to 45 seconds while it writes. **Do not power off during this time.**
   * TeensyROM restarts when it's done.
 * Installing a different extension replaces the one already installed.
 * Firmware updates keep the installed extension in place.
@@ -58,7 +58,11 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
     * `!` TeensyROM wouldn't launch this one: its module or client file is damaged or missing, or the installed extension can't run it. A row below the list says why.
   * After the list, rows say what else stops a launch (for example, no extension installed), then how the last launch went. With many packages the list shortens to a `+N more` row so these stay on screen; a `+N more notes` row stands in for any reasons that still don't fit.
   * The page checks the SD card each time it opens, so it also shows a card that was just inserted or swapped.
+
+  <img src="/media/Screen%20captures/TR+/help-settings-info/settings10-installed-extensions.png" alt="Installed Extension settings page" width="480">
+
 * Press `u` to uninstall it, then `y` to confirm. TeensyROM restarts afterwards.
+  * The screen goes blank for up to 45 seconds while it erases. **Do not power off during this time.**
   * Also use `u` if the page says `None installed; slot not blank.` That means an earlier install or uninstall didn't finish.
 * ***Important:*** Uninstall any extension before loading an older firmware without extension support. That firmware can't update itself while an extension is installed.
   * See [Firmware updates](General_Usage.md#firmware-updates) for more on updating.
@@ -73,15 +77,18 @@ The [Mean Hamster Power Engine (MPE)](https://meanhamster.com/games/mpe-power-en
 MPE is developed and distributed by Mean Hamster Software, separately from TeensyROM.
 
 ### Getting MPE.TRH and .mpe files
-* **TeensyROM firmware:** MPE needs TeensyROM+ firmware 0.9 or later. Get the official TeensyROM release [from here](/bin/TeensyROM).
-* **MPE.TRH and setup files:** download `MPE-Host.zip` from the latest release of [MHS-GAME-SUPPORT](https://github.com/ziggystar12/MHS-GAME-SUPPORT/releases/latest).
+* **TeensyROM firmware:** MPE needs TeensyROM+ firmware 0.9 or later. Get the official TeensyROM release [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest).
+* **MPE.TRH and setup files:** download `Teensy.Support.Package.zip` from the latest release of [MHS-GAME-SUPPORT](https://github.com/ziggystar12/MHS-GAME-SUPPORT/releases/latest).
   * It includes `MPE.TRH`, the SD card registration files, and HamsterOS with its matching apps.
+  * The same release page also has C64 game system players (VMs), such as NES, Game Boy, Game Gear and Tritari.
   * `MPE.TRH` is the engine itself. Each `.mpe` file is a game, or a game system player (such as NES), packaged to run on it.
   * Once `MPE.TRH` is installed and the registration files are on your SD card, select any `.mpe` file in the TeensyROM SD file browser to launch it.
-    * Game ROMs (`.nes`, `.gb`, etc.) can be launched directly too: each one is automatically associated with its matching engine.
+    * Game ROMs (`.nes`, `.gb`, `.a26`, etc.) can be launched directly too: each one is automatically associated with its matching engine.
+      * Game ROMs and `.mpe` files can also be set as hot keys, the autolaunch file, or NFC tags, like any other launchable file.
+      * Original game ROMs for MPE's NES, Game Boy, Game Gear and Tritari players aren't included; those are available elsewhere.
   * Follow Mean Hamster's [MPE host guide](https://github.com/ziggystar12/MHS-GAME-SUPPORT/blob/main/docs/MPE-HOST.md) for setup and launching games.
-* **.mpe game files:** games and game conversion are available from the [Power Engine for C64](https://meanhamster.com/games/mpe-power-engine) page on MeanHamster.com.
-  * Original game ROMs for MPE's NES, Game Boy and Game Gear players aren't included; those are available elsewhere.
+* **.mpe games:** build them with the free *Mean Hamster Power Engine for 8-Bits* app (Windows or Mac), from the [Power Engine for C64](https://meanhamster.com/games/mpe-power-engine) page on MeanHamster.com.
+  * It packages your own original game files as `.mpe` files and prepares the SD card, for titles such as Doom, The Secret of Monkey Island, Space Quest III, Sierra's AGI adventures, and arcade games like OutRun.
 
 <br>
 

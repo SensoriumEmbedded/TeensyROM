@@ -139,10 +139,19 @@ extern RegMenuTypes RegMenuTypeFromFileName(char** ptrptrFileName);
 extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
+extern bool HandshakeSnoop(uint16_t Address, bool R_Wn);
 
 #ifdef Fab04_GlobalKernalReplace
 	bool (*fKernRepl)(uint16_t Address, bool R_Wn) = NULL;    //return true to skip out of phi2 isr
 #endif
+
+FLASHMEM void FreeKernalBin()
+{  //nothing loaded: a NULL KernalBin keeps InitHndlr_KernalReplace from restaging KernalCheck
+#ifndef Fab04_GlobalKernalReplace
+   free((void*)KernalBin);
+   KernalBin = NULL;
+#endif
+}
 
 FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via init; called earlier, manually, from KERNALPreStart()
 {
@@ -154,6 +163,11 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    KernalBin = (uint8_t*)malloc(8192);
    //KernalBin = RAM_Image;
 #endif
+   if (KernalBin == NULL)
+   {
+      Serial.println("Kernal buffer alloc failed!");
+      return;
+   }
 
    //load kernal image into RAM:
    char Filename[MaxPathLength];
@@ -171,6 +185,7 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    if (!LoadFile)
    {
       Serial.println("Not found!");
+      FreeKernalBin();
       return;
    }
    
@@ -178,6 +193,7 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    {
       Serial.println("Wrong Size!");
       LoadFile.close();
+      FreeKernalBin();
       return;
    }
 
@@ -208,6 +224,10 @@ FLASHMEM void InitHndlr_KernalReplace()
    //this just re-stages the hook so the PRG-load handshake hands fBusSnoop back to KernalCheck
    //once it completes, instead of leaving it NULL.
 #ifndef Fab04_GlobalKernalReplace  //Fab04_GlobalKernalReplace uses fKernRepl, which the handshake never touches -- nothing to restage
+   //Only after a PRG load (the handshake owns fBusSnoop) whose PreStart loaded a kernal. PreStart
+   //runs on PRG launches only, but a generic CRT inherits Kernal Replace as its Special IO too:
+   //hooked there, KernalCheck reads an unloaded KernalBin and drives GAME/EXROM over the cart's own.
+   if (fBusSnoop != &HandshakeSnoop || KernalBin == NULL) return;
    HIRAM_State = HIRAM_State_Unknown;
    PendingfBusSnoop = &KernalCheck; //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
 #endif
