@@ -186,6 +186,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_None         , (char*)"S.A.M.     ]RECITER   SAY\"hello\"", (uint8_t*)sam_prg                   , sizeof(sam_prg) ,
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"Segment+Dot Matrix Digital Clock" , (uint8_t*)shclock_tr_prg             , sizeof(shclock_tr_prg) ,
+     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
 //     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 
@@ -299,7 +300,6 @@ StructMenuItem dirTeensyROMSpecific[] =
 #ifdef Fab04_REU
      rtFilePrg  , IOH_TeensyROM    , (char*)"TR+ C64 Expansion Port Test"      , (uint8_t*)ExpansionPortTest_prg      , sizeof(ExpansionPortTest_prg) ,
 #endif
-     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
 //could repeat these here...
    //rtFilePrg  , IOH_ASID         , (char*)"TeensyROM ASID Player    +TR ASID", (uint8_t*)ASIDPlayer_prg             , sizeof(ASIDPlayer_prg) ,
    //rtFilePrg  , IOH_TeensyROM    , (char*)"MIDI2SID          +TeensyROM MIDI", (uint8_t*)MIDI2SID_prg               , sizeof(MIDI2SID_prg) ,
