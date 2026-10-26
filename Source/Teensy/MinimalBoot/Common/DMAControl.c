@@ -264,6 +264,9 @@ FLASHMEM bool CloseDMA()
 // what its slice cap allows even on a bus that makes every handshake run to its own ceiling.
 #define DMA_SPANS_CEILING_mS  (C64SlicesMax * 5 + 1000)
 
+// The extension image includes this file but never reaches the store watch or locked slices,
+// and FASTRUN would put SampleStoreSnoop in its ITCM regardless, so they are main-image only.
+#ifndef MinimumBuild
 // The sample store watch: every CPU write to SampleStoreAddr is counted against the time since
 // the one before it, so a host that knows the store's period can count the stores that did not
 // happen -- NMIs lost to a halt -- at the source rather than from captured audio.  A slice armed
@@ -357,6 +360,7 @@ struct DMAAutoRunJob
    DMAAutoRunJob() { DMA_AutoRun = true; }
    ~DMAAutoRunJob() { DMA_AutoRun = false; }
 };
+#endif
 
 // Writes Spans from Payload, packed in span order, SliceBytes at a time (0 = a span at a time),
 // giving the 6510 GapuS between slices.  Both are the caller's: only it knows how long a halt
@@ -374,6 +378,7 @@ FLASHMEM bool WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Paylo
 {
    const uint32_t Began = millis();
    *Landed = 0;
+#ifndef MinimumBuild
    if (Locked)
    {
       DMAAutoRunJob Job;
@@ -394,6 +399,7 @@ FLASHMEM bool WriteC64Spans(const C64Span *Spans, uint32_t Count, uint8_t *Paylo
       }
       return true;
    }
+#endif
    for (uint32_t Num = 0; Num < Count; Num++)
    {
       for (uint32_t Done = 0; Done < Spans[Num].Len; )
