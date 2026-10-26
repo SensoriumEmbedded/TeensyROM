@@ -273,6 +273,7 @@ void RemoteLaunch(RegMenuTypes MenuSourceID, const char *FileNamePath, bool DoCa
 #ifdef Fab04_REU
    FreeREU();
 #endif   
+   FreeGeoRAM();
    FreeSwiftlinkBuffs();
 
    if (MenuSourceID == rmtTeensy)
