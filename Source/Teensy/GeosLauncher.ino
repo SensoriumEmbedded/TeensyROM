@@ -192,8 +192,8 @@ FLASHMEM static bool GeosPatchCopy(const struct GeosLauncher *Launcher, const ch
       if (Replacing && !SD.rename(Backup, Copy)) snprintf(Error, sizeof Error, PSTR("your disk is now %s"), Backup);
    }
    SD.remove(Temp);
-   SendMsgPrintfln(Patch ? PSTR("Could not add the mouse driver to\r\na copy of %s:\r\n%s") : PSTR("Could not make a copy of\r\n%s:\r\n%s"),
-                   Name, Error);
+   if (Patch) SendMsgPrintfln(PSTR("Could not add the mouse driver to\r\na copy of %s:\r\n%s"), Name, Error);
+   else SendMsgPrintfln(PSTR("Could not make a copy of\r\n%s:\r\n%s"), Name, Error);
    return false;
 }
 
@@ -252,7 +252,8 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
       return GeosUse(Launcher, CopyName, BootName);
    }
    if (!GeosPatchCopy(Launcher, Name, Source, Copy, NeedsDriver)) return true;
-   SendMsgPrintfln(NeedsDriver ? PSTR("Added the TR USB mouse driver to\r\na copy of %s") : PSTR("Made a copy of %s\r\nto start from"), Name);
+   if (NeedsDriver) SendMsgPrintfln(PSTR("Added the TR USB mouse driver to\r\na copy of %s"), Name);
+   else SendMsgPrintfln(PSTR("Made a copy of %s\r\nto start from"), Name);
    return GeosUse(Launcher, CopyName, BootName);
 }
 
