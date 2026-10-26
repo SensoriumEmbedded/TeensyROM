@@ -8,6 +8,7 @@
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void IO2Hndlr_GeoRAM(uint8_t Address, bool R_Wn);
 void InitHndlr_GeoRAM();
+void PollingHndlr_GeoRAM();
 extern void (*fSpecialBtnChange)(bool Up_nDn);
 
 stcIOHandlers IOHndlr_GeoRAM =
@@ -18,7 +19,7 @@ stcIOHandlers IOHndlr_GeoRAM =
   &IO2Hndlr_GeoRAM,    //IO2 R/W handler
   NULL,                //ROML Read handler, in addition to any ROM data sent
   NULL,                //ROMH Read handler, in addition to any ROM data sent
-  NULL,                //Polled in main routine
+  &PollingHndlr_GeoRAM, //Polled in main routine
   NULL,                //called at the end of EVERY c64 cycle
 };
 
@@ -28,7 +29,7 @@ stcIOHandlers IOHndlr_GeoRAM =
 #define GeoRAM_PagesPerBlock 64
 #define GeoRAM_BanksPerBlock (16384 / RAM_Bank_Size)
 
-// VICE decodes the registers across $DF80-$DFFF (A0 picks which); $DF00-$DF7F is left free.
+// VICE decodes the registers across $DF80-$DFFF (A0 picks which); $DF00-$DF7F is the USB mouse's.
 #define GeoRAM_RegsBase      0x80
 #define GeoRAM_RegBlockBit   0x01
 
@@ -67,6 +68,7 @@ FLASHMEM void InitHndlr_GeoRAM()
 {
    FreeGeoRAM();
    GeoRAM_Block = GeoRAM_PageNum = 0;
+   InitUSBMouse();
    uint8_t NumBanks = AllocRAMBanks(GeoRAM_Bank, MAX_GEORAM_BANKS, MIN_GEORAM_BANKS);
    if (NumBanks == 0)
    {
@@ -78,6 +80,11 @@ FLASHMEM void InitHndlr_GeoRAM()
    fSpecialBtnChange = &SpecialBtn_GeoRAM;
    Serial.printf("GeoRAM Size: %dK bytes\n", NumBanks * RAM_Bank_Size / 1024);
    LoadRAMBanks(GeoRAM_Bank, NumBanks, GeoRAM_Filename);
+}
+
+FLASHMEM void PollingHndlr_GeoRAM()
+{
+   PollUSBMouse();
 }
 
 void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
@@ -94,7 +101,12 @@ void IO1Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
 
 void IO2Hndlr_GeoRAM(uint8_t Address, bool R_Wn)
 {
-   if (R_Wn || Address < GeoRAM_RegsBase) return;   // write-only registers
+   if (Address < GeoRAM_RegsBase)
+   {
+      if (R_Wn) USBMouseIORead(Address);
+      return;
+   }
+   if (R_Wn) return;   // write-only registers
    uint8_t Data = DataPortWaitRead();
    if (Address & GeoRAM_RegBlockBit) GeoRAM_Block = Data;
    else GeoRAM_PageNum = Data;

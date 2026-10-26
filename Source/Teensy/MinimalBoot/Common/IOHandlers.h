@@ -36,6 +36,7 @@
    USBHIDParser hid1(myusbHost);
    USBHIDParser hid2(myusbHost);
    USBHIDParser hid3(myusbHost);  //need all 3?
+   MouseController usbHostMouse(myusbHost);
 
    USBSerial USBHostSerial(myusbHost);   //update HostSerialType to match, defined in PN532_UHSU.h
    //USBSerial           USBHostSerial(myusbHost);    // only for those Serial devices who transfer <=64 bytes (like T3.x, FTDI...)
@@ -110,6 +111,7 @@ struct stcIOHandlers
       #include "IO_Handlers/IOH_MIDI.c"
       #include "IO_Handlers/IOH_Debug.c"
       #include "IO_Handlers/RAMBanks.c"
+      #include "IO_Handlers/USBMouse.c"
       #include "IO_Handlers/IOH_GeoRAM.c"
    #ifdef Fab04_REU
       #include "IO_Handlers/IOH_REU.c"
