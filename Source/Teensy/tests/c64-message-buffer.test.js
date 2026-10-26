@@ -9,7 +9,7 @@ const FIRMWARE_ROOT = path.resolve(import.meta.dirname, '..');
 const SOURCE_EXTENSIONS = new Set(['.ino', '.c', '.cpp', '.h']);
 const SKIPPED_DIRECTORIES = new Set(['tests', 'TRMenuFiles']);
 
-const MESSAGE_FORMATTERS = /\b(SendMsgPrintfln|SendMsgPrintf|SendStrPrintfln)\s*\(\s*(\S)/g;
+const MESSAGE_FORMATTERS = /\b(SendMsgPrintfln|SendMsgPrintf|SendStrPrintfln)\s*\(\s*(?:PSTR\s*\(\s*)?(\S)/g;
 const FORMATTER_DECLARATION = /^\s*(?:FLASHMEM\s+|extern\s+)*(?:void|bool)\s+Send(?:Msg|Str)/;
 
 function firmwareSources(dir = FIRMWARE_ROOT) {
@@ -45,6 +45,9 @@ test('the scan still sees a call wrapped after its open paren', () => {
                    ['x.ino:1 SendMsgPrintfln']);
   assert.deepEqual(nonLiteralFormats('SendMsgPrintfln(\n   "%s", MenuSelCpy.Name);\n', 'x.ino'), []);
   assert.deepEqual(nonLiteralFormats('/* SendMsgPrintfln(Name); */\n', 'x.ino'), []);
+  assert.deepEqual(nonLiteralFormats('SendMsgPrintfln(PSTR("%s"), Name);\n', 'x.ino'), []);
+  assert.deepEqual(nonLiteralFormats('SendMsgPrintfln(PSTR(Name));\n', 'x.ino'),
+                   ['x.ino:1 SendMsgPrintfln']);
 });
 
 test('no caller throws away whether the current path fit', () => {

@@ -270,6 +270,12 @@ FLASHMEM void HandleExecution()
             return;
          }
          
+         if (MenuSelCpy.ItemType == rtGEOS)
+         {
+            LaunchGeos((const struct GeosLauncher*)MenuSelCpy.Code_Image);
+            return;
+         }
+         
          SendMsgPrintfln("%s", MenuSelCpy.Name);
          if (MenuSelCpy.ItemType == rtFileCrt)
          {  //load the CRT into RAM
