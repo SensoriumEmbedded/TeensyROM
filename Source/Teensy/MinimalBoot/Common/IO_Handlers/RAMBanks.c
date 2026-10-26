@@ -96,6 +96,22 @@ FLASHMEM static FS *RAMBanksFS(char *Path, char **ptrFileName)
    return FSfromSourceID(MenuSourceID);
 }
 
+FLASHMEM static void ReadRAMBanksFile(File &LoadFile, uint8_t *Bank[], uint8_t NumBanks)
+{
+   if (LoadFile.size() > (uint32_t)NumBanks * RAM_Bank_Size)
+      Serial.printf("Too Large! Loading first %luK\n", (uint32_t)NumBanks * RAM_Bank_Size / 1024);
+
+   uint32_t CharNum = 0;
+   for (uint8_t BankNum = 0; BankNum < NumBanks && LoadFile.available(); BankNum++)
+   {
+      int BytesRead = LoadFile.read(Bank[BankNum], RAM_Bank_Size);
+      if (BytesRead <= 0) break;
+      CharNum += BytesRead;
+   }
+   Serial.printf("Read %lu Bytes\n", CharNum);
+   LoadFile.close();
+}
+
 FLASHMEM void LoadRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *SourcePath)
 {
    char Filename[MaxPathLength];
@@ -109,19 +125,7 @@ FLASHMEM void LoadRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
       Serial.println("Not found!");
       return;
    }
-
-   if (LoadFile.size() > (uint32_t)NumBanks * RAM_Bank_Size)
-      Serial.printf("Too Large! Loading first %luK\n", (uint32_t)NumBanks * RAM_Bank_Size / 1024);
-
-   uint32_t CharNum = 0;
-   for (uint8_t BankNum = 0; BankNum < NumBanks && LoadFile.available(); BankNum++)
-   {
-      int BytesRead = LoadFile.read(Bank[BankNum], RAM_Bank_Size);
-      if (BytesRead <= 0) break;
-      CharNum += BytesRead;
-   }
-   Serial.printf("Read %lu Bytes\n", CharNum);
-   LoadFile.close();
+   ReadRAMBanksFile(LoadFile, Bank, NumBanks);
 }
 
 FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
@@ -210,6 +214,8 @@ FLASHMEM static void WithExtension(char *Dest, const char *FileName, const char 
    strlcat(Dest, Extension, MaxPathLength);
 }
 
+static const char TempExtension[] = ".tmp", BackupExtension[] = ".bak";
+
 // Overwrites the file, keeping the one it replaces as .bak: georam.ram becomes georam.bak
 FLASHMEM void SaveRAMBanksReplacing(uint8_t *Bank[], uint8_t NumBanks, const char *SourcePath)
 {
@@ -221,8 +227,8 @@ FLASHMEM void SaveRAMBanksReplacing(uint8_t *Bank[], uint8_t NumBanks, const cha
    FS *sourceFS = RAMBanksFS(Filename, &ptrFileName);
 
    char TempFilename[MaxPathLength], BackupFilename[MaxPathLength];
-   WithExtension(TempFilename, ptrFileName, ".tmp");
-   WithExtension(BackupFilename, ptrFileName, ".bak");
+   WithExtension(TempFilename, ptrFileName, TempExtension);
+   WithExtension(BackupFilename, ptrFileName, BackupExtension);
 
    if (!WriteRAMBanksFile(sourceFS, TempFilename, Bank, NumBanks)) return;
    bool HadSave = sourceFS->exists(ptrFileName);
@@ -238,4 +244,39 @@ FLASHMEM void SaveRAMBanksReplacing(uint8_t *Bank[], uint8_t NumBanks, const cha
       return;
    }
    FlashSavedLED();
+}
+
+// Loads a file saved by SaveRAMBanksReplacing. Power lost between its two renames leaves no file,
+//  only a complete .tmp (the newer save) and the .bak; a .tmp of any other size is a torn write.
+FLASHMEM void LoadRAMBanksReplaced(uint8_t *Bank[], uint8_t NumBanks, const char *SourcePath)
+{
+   char Filename[MaxPathLength];
+   strlcpy(Filename, SourcePath, MaxPathLength);
+   Serial.printf("Loading: %s\n", Filename);
+   char *ptrFileName;
+   FS *sourceFS = RAMBanksFS(Filename, &ptrFileName);
+   File LoadFile = sourceFS->open(ptrFileName, FILE_READ);
+   if (!LoadFile)
+   {
+      char Fallback[MaxPathLength];
+      WithExtension(Fallback, ptrFileName, TempExtension);
+      LoadFile = sourceFS->open(Fallback, FILE_READ);
+      if (LoadFile && LoadFile.size() != (uint32_t)NumBanks * RAM_Bank_Size)
+      {
+         Serial.printf("Skipping %s: %lu Bytes\n", Fallback, (uint32_t)LoadFile.size());
+         LoadFile.close();
+      }
+      if (!LoadFile)
+      {
+         WithExtension(Fallback, ptrFileName, BackupExtension);
+         LoadFile = sourceFS->open(Fallback, FILE_READ);
+      }
+      if (!LoadFile)
+      {
+         Serial.println("Not found!");
+         return;
+      }
+      Serial.printf("Not found, loading: %s\n", Fallback);
+   }
+   ReadRAMBanksFile(LoadFile, Bank, NumBanks);
 }
