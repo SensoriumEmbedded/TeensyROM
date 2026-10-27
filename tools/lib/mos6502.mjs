@@ -117,6 +117,7 @@ export class Mos6502 {
       if (done(this)) return;
       this.step();
     }
+    if (done(this)) return;
     throw new Error(`still running after ${limit} steps, at ${hex(this.pc, 4)}`);
   }
 

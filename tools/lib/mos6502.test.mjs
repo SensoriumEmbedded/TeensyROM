@@ -152,12 +152,57 @@ test('an IRQ is held off while I is set and taken once it is clear', () => {
   assert.equal(memory[0x1fb] & FLAG.B, 0);
 });
 
-test('reset loads the PC from $FFFC', () => {
+test('an NMI is taken while I is set, through $FFFA, and sets I', () => {
+  const memory = new Uint8Array(0x10000);
+  memory.set([0x00, 0x40], 0xfffa);
+  memory.set([0x00, 0x30], 0xfffe);
+  const cpu = new Mos6502({ read: (a) => memory[a], write: (a, v) => (memory[a] = v) });
+  cpu.pc = 0x0200;
+  cpu.nmi();
+  assert.equal(cpu.pc, 0x4000);
+  cpu.p &= ~FLAG.I;
+  cpu.irq();
+  assert.equal(cpu.pc, 0x3000);
+  assert.equal(cpu.p & FLAG.I, FLAG.I, 'the IRQ sets I');
+});
+
+test('reset loads the PC from $FFFC, sets I and puts S at $FD', () => {
   const memory = new Uint8Array(0x10000);
   memory.set([0x34, 0x12], 0xfffc);
   const cpu = new Mos6502({ read: (a) => memory[a], write: () => {} });
+  cpu.p = FLAG.U;
+  cpu.s = 0x12;
   cpu.reset();
-  assert.equal(cpu.pc, 0x1234);
+  assert.deepEqual([cpu.pc, cpu.p & FLAG.I, cpu.s], [0x1234, FLAG.I, 0xfd]);
+});
+
+test('PHP pushes B and U, PLP keeps U set, TXS sets no flags', () => {
+  const { cpu, memory } = machine([
+    0x18, 0xb8, 0x08, //       CLC / CLV / PHP
+    0xa9, 0x00, 0x48, 0x28, // LDA #0 / PHA / PLP
+    0xa2, 0x80, 0xa9, 0x01, // LDX #$80 / LDA #1
+    0x9a, //                   TXS
+  ], (c) => (c.p |= FLAG.V));
+  assert.equal(memory[0x1fd], FLAG.B | FLAG.U | FLAG.I);
+  assert.equal(cpu.s, 0x80);
+  assert.deepEqual(flags(cpu, 'U', 'V', 'Z', 'N'), [true, false, false, false]);
+});
+
+test('PLA sets Z from the pulled byte', () => {
+  const { cpu } = machine([0xa9, 0x00, 0x48, 0xa9, 0x01, 0x68]); // LDA #0 / PHA / LDA #1 / PLA
+  assert.deepEqual(flags(cpu, 'Z'), [true]);
+});
+
+test('CMP of equal values sets C and Z', () => {
+  const { cpu } = machine([0xa9, 0x42, 0xc9, 0x42]);
+  assert.deepEqual(flags(cpu, 'C', 'Z', 'N'), [true, true, false]);
+});
+
+test('absolute,Y wraps past $FFFF and zero-page,Y indexes by Y', () => {
+  let { cpu } = machine([0xa0, 0x02, 0xb9, 0xff, 0xff], (c, mem) => (mem[0x0001] = 0x5a));
+  assert.equal(cpu.a, 0x5a, 'LDA $FFFF,Y with Y=2 reads $0001');
+  ({ cpu } = machine([0xa0, 0x03, 0xa2, 0x00, 0xb6, 0x10], (c, mem) => (mem[0x13] = 0x77)));
+  assert.equal(cpu.x, 0x77, 'LDX $10,Y with Y=3 reads $13');
 });
 
 test('JMP indirect does not carry into the pointer high byte', () => {
@@ -214,4 +259,12 @@ test('a run that never finishes throws instead of hanging the test', () => {
   const cpu = new Mos6502({ read: (a) => memory[a], write: () => {} });
   cpu.pc = 0x0200;
   assert.throws(() => cpu.run(() => false, 100), /still running after 100 steps, at \$0200/);
+});
+
+test('a run that finishes on its last allowed step returns', () => {
+  const memory = new Uint8Array(0x10000).fill(0xea);
+  const cpu = new Mos6502({ read: (a) => memory[a], write: () => {} });
+  cpu.pc = 0x0200;
+  cpu.run((c) => c.pc === 0x0203, 3);
+  assert.equal(cpu.steps, 3);
 });
