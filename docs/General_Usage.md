@@ -18,7 +18,7 @@
     * ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options-Navigation
-  * (as of FW v0.8)
+  * (as of FW v0.9)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
     * `CRSR or Joystick Left/Right` Page up/down the list of files
@@ -61,21 +61,22 @@
 
 ## SD Card or USB Drive Setup
   * General info/configuration
-    * No TR code is stored on these external drives, so they are not required to start using your TeensyROM and all of its FW bundled programs.
+    * No TR firmware is stored on these external drives, so they are not required to start using your TeensyROM and all of its firmware-bundled programs.
     * SD Cards are somewhat favored over USB drives as they have slightly faster access times.
       * 32GB SD cards typically give the fastest directory read times
     * We've seen some issues with USB (or SD) drives with non-standard partitioning of the drive, especially manufacturer default partitions.  
       * If you have issues reading drive contents via the TR, try deleting the existing partition(s) (either via the 'diskman' Disk Management gui or using 'diskpart' and 'clean' via command line) then re-partition. After that, re-format in either FAT32 or FAT16 and load files.
-    * Mac users: Before removing the SD card from your Mac, we recommend running the `dot_clean` command on the top-level directory of the volume, e.g. `dot_clean -m /Volumes/TEENSYSD`. This will remove all macOS-specific meta files from the SD card and reduce clutter.
   * Recommended Files/Games/SIDs
     * The [OneLoad64 Games Collection (v5)](https://www.youtube.com/watch?v=lz0CJbkplj0) is a wonderful (and free) source for thousands of files/games in CRT format, which is perfect for the TeensyROM
     * The [High Voltage SID Collection](https://hvsc.de/downloads) contains over 50,000 SID files, most of which are directly playable on the TeensyROM.
     * There's a great collection of Single Load Demos [located here](http://sensoriumembedded.com/tinyweb64/Demos/).
     * [Here's a .zip](https://sensoriumembedded.com/tinyweb64/TeensyROM+/TR+%20Demos-Support.zip) of files/programs that highlight TeensyROM+ capabilities.
-    * I recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
+    * We recommend adding [this autolaunch.txt file](autolaunch.txt) to the root of an SD card in case you want to set up your TeensyROM as an unprompted diagnostics cartridge in the future.
     * Here are a couple scripts that copy all of the above referenced files to an SD Card
       * [Cross platform MAKEFILE](Ref_Scripts/Makefile) by [The JEEP](https://github.com/mchineboy)
       * Or use this [Windows PowerShell Script](Ref_Scripts/Build-TeensyromCard.ps1)
+    * TeensyROM+ owners: add the [Mean Hamster Power Engine (MPE)](TR_Host_Extensions.md#mean-hamster-power-engine-mpe) Host Extension and its game system VMs (NES, Game Boy, Game Gear, Tritari, Doom and more) to play games never released for the C64.
+      * Licensed material isn't included with MPE or its VMs: game ROMs and original game files for the MPE/VMs are yours to obtain as needed.
     
 ## Loading files and emulating ROMs
   * Files can be launched from any of the available sources, including any subdirectory
@@ -101,8 +102,8 @@
           * Many large CRT files have been tested with this scheme, all are working smoothly (as long as host C64 passes DMA check)
           * See full CRT implementation details [here](CRT_Implementation.md).
         * On rev 0.2x PCBs, when using the C128 to emulate "Ultimax" carts (Deadtest, Jupiter Lander), some screen artifacts are visible. 
-          * This issue only impacts UltiMax CRTs on C128s and is resolved in PCB rev 0.3
-        * EasyFlash supports up to 4 MB images (256 banks). Larger images use the SD-card bank-swap path described above.
+          * This issue only impacts Ultimax CRTs on C128s and is resolved in PCB rev 0.3
+        * EasyFlash images up to 4 MB (256 banks) are supported. Large images use the SD card bank-swap scheme above, so they must be launched from SD.
         * EasyFlash EAPI not currently supported
     * **.SID files:**
       * Play SID file: ~90% of known SID files are supported
@@ -122,11 +123,12 @@
       * See viewer usage/navigation doc via TR on your C64
     * **.D64/.D71/.D81 files:**
       * Single File load/exec only (no multi-file/writebacks)
+      * Exception (FW 0.9.1 and later): GEOS 64 boots from a .D81 boot disk in `/GEOS64` with full disk read/write. See [GEOS 64 on the TeensyROM](GEOS64_Usage.md).
     * **.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
 ## The Settings Menu 
-  * (as of FW v0.8)
+  * (as of FW v0.9)
   * Accessed via `F8` from the main menu. Organized into indexed pages — settings changes take effect live and are stored in EEPROM (recalled on power-up).
   * Shared navigation, works from any page:
     * `CRSR Left/Right` Previous/Next page
@@ -271,11 +273,11 @@
   There are multiple ways to update the TeensyROM firmware, choose one of the following:
 
 ### **From SD Card or USB Thumb Drive**
-  * Get the .hex file containing the latest major (x.x) or minor(x.x.x) release [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
+  * Get the .hex file containing the latest major (x.x) or minor (x.x.x) release [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
   * Copy the file to a USB Thumb drive or SD card
     * This can be done by the traditional method of moving the card to a capable computer
     * Or directly via USB using **[TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)** (cross-platform, recommended), the **[TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)** (Windows desktop), or the cross-platform **[Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)**
-  * In the TeensyROM USB or SD Menu, select the Firmware  .hex file
+  * In the TeensyROM USB or SD Menu, select the Firmware .hex file
   * A new screen will open and ask you to confirm that you want to update
     * Check that the file name shown is correct
     * 'y' to confirm/continue, 'n' to abort
@@ -294,7 +296,7 @@
     * Bookmark #1 is for the TinyWeb64 site, entering "b1" will take you to sensoriumembedded.com/tinyweb64
     * Bookmark #2 is for Digitalman's site, so "b2" to go to digitalman.azurewebsites.net
     * Alternatively the 'U' command will also work: "u sensoriumembedded.com/tinyweb64"
-  * From the main menu, link #5 will take you to the Firmware download section on either site
+  * From the main menu, the Firmware download section is link #6 on TinyWeb64 and link #5 on Digitalman's site
   * Choose the link # for the FW version you want to download/install
     * The FW file will take a minute or two to download, dots shown on screen to indicate progress
   * Use the "d" command to see the local downloaded files directory.
@@ -303,11 +305,11 @@
 
 ### **Using the TeensyLoader application** (requires computer with USB connection)
   * Get the .hex file of the latest released version [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
-  * Download and install the [Teenyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
-    * Teensyduino requires arduino to run, which works fine.
+  * Download and install the [Teensyduino/TeensyLoader app](https://www.pjrc.com/teensy/td_download.html)
+    * Teensyduino requires Arduino to run, which works fine.
     * Alternatively, the Teensyloader stand alone file can be downloaded via a link further down the page
   * Launch the Teensyloader/teensyduino app (teensy.exe)
-  * Select File, Open HEX File and select the save TeensyROM .hex file
+  * Select File, Open HEX File and select the saved TeensyROM .hex file
   * Connect the TeensyROM to your computer with a USB A to microB cable.
   * Plug the TeensyROM into your C64/128 and power it up to the main menu
   * Press the white button on the Teensy module itself, as shown in the app
