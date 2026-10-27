@@ -50,3 +50,8 @@ test('a computer that cannot be stopped is not saved, and the last save is kept'
 test('a write the card refuses still lets the computer run again', { skip }, () => {
   assert.deepEqual(save('replacing', 'writefails'), [PRELOAD, 'georam.tmp 8192']);
 });
+
+test('a computer the host paused is saved and stays paused', { skip }, () => {
+  assert.deepEqual(save('replacing', 'paused'), ['consistent', 'held', 'georam.bak 3', `georam.ram ${BANKS_BYTES}`]);
+  assert.deepEqual(save('numbered', 'paused'), ['consistent', 'held', PRELOAD, `reu000.reu ${BANKS_BYTES}`]);
+});

@@ -5,6 +5,7 @@
 //   numbered|replacing   SaveRAMBanks (the REU's save) or SaveRAMBanksReplacing (GeoRAM's)
 //   [holdfails]          HoldC64 cannot stop the computer
 //   [writefails]         the card refuses the second bank's write
+//   [paused]             the host has paused the computer before the save
 // Prints "consistent" when the saved file is the banks as they were when the save began, else
 // "torn"; "held" if the computer is still stopped afterwards; then each file left on the card.
 #include <cstdint>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #define FLASHMEM
+#define Fab04_FullDMACapable
 #define MaxPathLength 256
 #define RAM_ImageSize 0
 #define FILE_READ 0
@@ -39,6 +41,7 @@ static constexpr int NumBanks = 4;
 static uint8_t *Bank[NumBanks];
 static bool Held, HoldFails, WriteFails;
 static int WritesSeen;
+bool isFrozen;
 
 static void ComputerRuns()
 {
@@ -129,6 +132,7 @@ int main(int argc, char **argv)
    {
       HoldFails |= !strcmp(argv[Arg], "holdfails");
       WriteFails |= !strcmp(argv[Arg], "writefails");
+      isFrozen |= !strcmp(argv[Arg], "paused");
    }
 
    std::vector<uint8_t> AtStart;
@@ -139,6 +143,7 @@ int main(int argc, char **argv)
       AtStart.insert(AtStart.end(), Bank[Num], Bank[Num] + RAM_Bank_Size);
    }
    Card.Files["georam.ram"] = std::vector<uint8_t>(3, 0xee);
+   Held = isFrozen;
 
    if (Replacing) SaveRAMBanksReplacing(Bank, NumBanks, "SD:georam.ram");
    else SaveRAMBanks(Bank, NumBanks, "SD:reu.reu");

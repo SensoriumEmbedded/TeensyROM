@@ -29,8 +29,15 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
 extern void FreeDriveDirMenu();
+#ifdef Fab04_FullDMACapable
 extern bool HoldC64();
 extern bool CloseDMA();
+#else
+// No DMA to stop the computer with, so it is never saved, rather than saved torn.
+static bool HoldC64() { return false; }
+static bool CloseDMA() { return true; }
+#endif
+extern bool isFrozen;
 extern uint8_t RAM_Image[];
 extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer
 
@@ -159,6 +166,8 @@ FLASHMEM static bool WriteHeldRAMBanksFile(FS *sourceFS, const char *FileName, u
 FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
 {
    Serial.printf("Saving: %s\n", FileName);
+   // Paused by the host, the computer is already held, and releasing it would resume it.
+   if (isFrozen) return WriteHeldRAMBanksFile(sourceFS, FileName, Bank, NumBanks);
    if (!HoldC64())
    {
       Serial.println("Unable to pause the computer!");
