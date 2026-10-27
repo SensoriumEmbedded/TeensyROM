@@ -2,6 +2,7 @@
 // What launching a GEOS boot disk from the TR needs of its image: the boot file with the disk driver swapped for
 // the TR's, and the disk's own auto-configuration kept from probing a drive that is not there.
 #pragma once
+#include "Geos128Boot.h"
 #include "GeosDiskPatch.h"
 
 #define GEOS_DRIVER_AREA     0x9000
@@ -18,6 +19,8 @@
 #define GEOS_MEMORY_END      0x10000
 #define GEOS_MAX_FILE_BLOCKS 3200
 #define GEOS_DEVICE_8        8
+#define GEOS128_SHARED_RAM_END 0x2000   // the C128 boot ROM's loader runs in the RAM below, which both banks share
+#define GEOS128_IO_START       0xd000   // and writes bank 1 with I/O mapped in from here up
 
 enum GeosDriverVector { VecInitForIO, VecDoneWithIO, VecExitTurbo, VecPurgeTurbo, VecEnterTurbo, VecChangeDiskDevice,
                         VecNewDisk, VecReadBlock, VecWriteBlock, VecVerWriteBlock, VecCount = 10 };
@@ -382,5 +385,32 @@ static inline bool GeosBuildBootPrg(struct GeosDisk *Disk, const struct GeosDate
    memcpy(Out + 2 + sizeof GeosBasicLine, GeosBootStub, sizeof GeosBootStub);
    GeosPutWord(Out + Prologue - 2, Disk->Target->BootEntry);
    *Length = Place + BodySize;
+   return true;
+}
+
+// The C128 boot ROM, its ROML chip then its ROMH chip, followed by the boot image it pulls through BOOT a page at a
+// time. Image and ImageSize say where that image starts, without its load address, for TRBlockMount.
+static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
+                                     const uint8_t **Image, uint32_t *ImageSize, bool *ClockSet)
+{
+   uint8_t *Roml = Out, *Romh = Out + GEOS128_BOOT_CHIP_SIZE, *File = Out + 2 * GEOS128_BOOT_CHIP_SIZE;
+   uint32_t Length, Pages, Load;
+
+   if (!GeosBuildBootImage(Disk, Now, File, Capacity - 2 * GEOS128_BOOT_CHIP_SIZE, &Length, ClockSet)) return false;
+   Load = GeosWord(File);
+   Pages = (Length - 2 + GEOS_SECTOR_SIZE - 1) / GEOS_SECTOR_SIZE;
+   if (Load < GEOS128_SHARED_RAM_END || Load + Pages * GEOS_SECTOR_SIZE > GEOS128_IO_START)
+   {
+      return GeosFail(Disk, PSTR("the boot file does not fit in memory"));
+   }
+
+   memset(Out, 0, 2 * GEOS128_BOOT_CHIP_SIZE);
+   memcpy(Roml, Geos128BootRoml, sizeof Geos128BootRoml);
+   memcpy(Romh + GEOS128_BOOT_VECTORS, Geos128BootVectors, sizeof Geos128BootVectors);
+   GeosPutWord(Roml + GEOS128_BOOT_PARAMS, Load);
+   GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 2, Pages);
+   GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 4, Disk->Target->BootEntry);
+   *Image = File + 2;
+   *ImageSize = Length - 2;
    return true;
 }

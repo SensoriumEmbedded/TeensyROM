@@ -550,6 +550,20 @@ void SetMenu(StructMenuItem* Source, uint16_t NumItems)
       (NumItems==0 ? 1 : 0);
 }
 
+// Known only once the menu has reported the machine, which it does before the user can select anything
+FLASHMEM bool HostIsC128()
+{
+   return VidTODClksKnown & IO1[wRegVid_TOD_Clks] & rvtcC128;
+}
+
+// The rows of a TeensyROM menu directory this machine can run: the last Utilities row starts GEOS 128
+FLASHMEM uint16_t TeensyDirItemCount(const StructMenuItem *DirEntry)
+{
+   uint16_t NumItems = DirEntry->Size/sizeof(StructMenuItem);
+   if (DirEntry->Code_Image == (uint8_t*)dirUtilities && !HostIsC128()) NumItems--;
+   return NumItems;
+}
+
 // Whether a card is in the slot, from card detect on DAT3. Takes the pin back from the
 // SD controller first, so it reads true whoever had it last, a failed SD.begin included.
 // The pin is left a pulldown input, as the SD library itself leaves it when a card is

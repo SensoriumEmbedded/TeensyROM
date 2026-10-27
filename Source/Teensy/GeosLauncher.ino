@@ -10,7 +10,7 @@
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
 
-// Only GEOS 64's D81 image, with the deskTop and the applications on one disk, is supported
+// Only the D81 image, with the deskTop and the applications on one disk, is supported
 #define GEOS_IMAGE_EXTENSION ".d81"
 
 FLASHMEM static bool GeosFileRead(void *Context, uint32_t Offset, uint8_t *Block)
@@ -262,6 +262,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    char Path[MaxNamePathLength];
    struct GeosDisk Disk;
    uint32_t Length = 0;
+   const uint8_t *Boot = NULL;
    struct GeosDate Now = GeosToday();
    bool Changed, ClockSet, Built;
    File Image;
@@ -274,14 +275,23 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
-   Built = GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet) && GeosDisableConfigure(&Disk, &Changed);
+   Built = Launcher->Machine == GeosC128
+         ? GeosBuildC128Boot(&Disk, &Now, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
+         : GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet);
+   Built = Built && GeosDisableConfigure(&Disk, &Changed);
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
    if (!Built) return false;
-   if (!TRBlockMount(Path, NULL, 0))
+   if (!TRBlockMount(Path, Boot, Boot ? Length : 0))
    {
       SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;
+   }
+   if (Launcher->Machine == GeosC128)
+   {
+      SetC128Image(RAM_Image, RAM_Image + GEOS128_BOOT_CHIP_SIZE, GEOS128_BOOT_CHIP_SIZE);
+      Item->ItemType = rtBinC128;
+      return true;
    }
    Item->ItemType = rtFilePrg;
    Item->Code_Image = RAM_Image;
@@ -289,12 +299,18 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    return true;
 }
 
+
 FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *Item)
 {
    char Names[GEOS_MAX_IMAGES][MaxItemNameLength], BootName[MaxItemNameLength + sizeof GEOS_COPY_TAG] = "";
    uint8_t Count;
    bool BootDiskFound = false;
 
+   if (Launcher->Machine == GeosC128 && !HostIsC128())
+   {
+      SendMsgPrintfln(PSTR("%s needs a C128"), Launcher->Title);
+      return false;
+   }
    if (!SDFullInit())
    {
       SendMsgPrintfln(PSTR("%s starts from your boot disk\r\nimage on the SD card. Insert the card."), Launcher->Title);

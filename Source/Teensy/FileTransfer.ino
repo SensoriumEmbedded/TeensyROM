@@ -275,7 +275,7 @@ FLASHMEM void SendTRDirectory(const char *dirName, StructMenuItem *TROMMenu, uin
          if(strcmp(TROMMenu[itemNum].Name, UpDirString)!=0) // Skip Up Dir entries
          {
             SendDirInfo(TROMMenu[itemNum].Name, dirName);
-            SendTRDirectory(TROMMenu[itemNum].Name, (StructMenuItem*)TROMMenu[itemNum].Code_Image, TROMMenu[itemNum].Size/sizeof(StructMenuItem));
+            SendTRDirectory(TROMMenu[itemNum].Name, (StructMenuItem*)TROMMenu[itemNum].Code_Image, TeensyDirItemCount(&TROMMenu[itemNum]));
          }
       }
       else
