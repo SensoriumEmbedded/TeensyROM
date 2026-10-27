@@ -25,3 +25,11 @@ test('a menu change drops the old selection along with the old item count', () =
   const source = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'Teensy.ino'), 'utf8'));
   assert.match(functionBody(source, 'SetMenu'), /\bSelItemFullIdx\s*=\s*0\s*;/);
 });
+
+test('a random NFC pick from a TeensyROM directory chooses among the rows the menu lists', () => {
+  // On a C64 the menu hides the GEOS 128 row, which a pick over the directory's full size can still land on
+  const source = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'nfcScan.ino'), 'utf8'));
+  const body = functionBody(source, 'nfcReadTagLaunch');
+  assert.doesNotMatch(body, /\.Size\s*\/\s*sizeof\s*\(\s*StructMenuItem\s*\)/);
+  assert.match(body, /\bTeensyDirItemCount\s*\(\s*&\s*TeensyROMMenu\s*\[\s*MenuNum\s*\]\s*\)/);
+});
