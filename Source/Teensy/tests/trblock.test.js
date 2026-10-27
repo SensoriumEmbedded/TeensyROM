@@ -229,12 +229,14 @@ const BOOT_IMAGE = Buffer.from(Array.from({ length: 2 * SECTOR + 100 }, (_, i) =
 const bootPage = (page, token = 1) => readBlock(page & 0xff, page >> 8, token).replace(`w ${hex(CMD)} ${hex(READ)}`, `w ${hex(CMD)} ${hex(BOOT)}`);
 
 test('boot reads the launch\'s boot image a page at a time, the last page padded with zeros', { skip }, () => {
-  for (const page of [0, 1, 2]) {
-    const { lines } = run('d81', bootPage(page), undefined, BOOT_IMAGE);
+  const pages = [0, 1, 2];
+  const { lines } = run('d81', pages.map((page) => bootPage(page, page + 1)).join(''), undefined, BOOT_IMAGE);
+  for (const page of pages) {
+    const got = lines.slice(page * (SECTOR + 1), (page + 1) * (SECTOR + 1));
     const expected = Buffer.alloc(SECTOR);
     BOOT_IMAGE.copy(expected, 0, page * SECTOR, (page + 1) * SECTOR);
-    assert.equal(lines[0], '1', 'the main loop ran it');
-    assert.deepEqual(bytesOf(lines.slice(1)), expected, `page ${page}`);
+    assert.equal(got[0], '1', 'the main loop ran it');
+    assert.deepEqual(bytesOf(got.slice(1)), expected, `page ${page}`);
   }
 });
 
@@ -242,6 +244,8 @@ test('boot past the end of the boot image fails with bad address', { skip }, () 
   for (const [addr0, addr1] of [[3, 0], [0, 1], [0xff, 0xff]]) {
     assert.equal(run('d81', command(BOOT, { addr0, addr1 }) + 'svc\n' + read(STATUS), undefined, BOOT_IMAGE).lines.at(-1), hex(BAD_ADDRESS), `page ${addr1}:${addr0}`);
   }
+  const twoPages = BOOT_IMAGE.subarray(0, 2 * SECTOR);
+  assert.equal(run('d81', command(BOOT, { addr0: 2 }) + 'svc\n' + read(STATUS), undefined, twoPages).lines.at(-1), hex(BAD_ADDRESS), 'the page just past a whole-page end');
 });
 
 test('boot with no boot image fails with no image, while the disk image still reads', { skip }, () => {
