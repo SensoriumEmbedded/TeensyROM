@@ -396,5 +396,8 @@ test('a GEOS 128 boot file whose reset key is not where GEOS 128 keeps it is ref
     const early = launch(geos128Disk(START_UP_128, { ...GEOS128, load: 0x7000 }), [], '128');
     assert.equal(early.status, 1, 'a boot file loaded above the key');
     assert.match(early.err, /reset key/);
+    const short = launch(geos128Disk(START_UP_128, { ...GEOS128, load: 0x0f00 }), [], '128');
+    assert.equal(short.status, 1, 'a boot file that ends before the key');
+    assert.match(short.err, /reset key/);
   });
 });
