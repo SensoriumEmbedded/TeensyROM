@@ -443,6 +443,7 @@ test('a GEOS 128 boot file that would reach I/O or the shared RAM is refused', {
   withHarness((launch) => {
     const fits = (load, size) => launch(geos128Disk(START_UP_128, geos128Layout(load, size)), [], '128');
     assert.equal(fits(GEOS128_LOAD, 0xa400).status, 0, 'its last page ends below $D000');
+    assert.equal(fits(0x2c00, 0xa400).status, 0, 'its last page ends at $D000');
     for (const [load, size] of [[GEOS128_LOAD, 0xa401], [0x1fff, BODY_SIZE]]) {
       const r = fits(load, size);
       assert.equal(r.status, 1, `load ${load.toString(16)}, ${size} bytes`);
