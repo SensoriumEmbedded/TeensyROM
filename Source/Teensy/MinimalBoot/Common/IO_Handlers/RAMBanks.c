@@ -29,6 +29,8 @@ extern bool SDFullInit();
 extern bool USBFileSystemWait();
 extern FS *FSfromSourceID(RegMenuTypes SourceID);
 extern void FreeDriveDirMenu();
+extern bool HoldC64();
+extern bool CloseDMA();
 extern uint8_t RAM_Image[];
 extern uint8_t *ptrRAM_ImageEnd;    // points to end of CRT-used RAM1 buffer
 
@@ -128,9 +130,8 @@ FLASHMEM void LoadRAMBanks(uint8_t *Bank[], uint8_t NumBanks, const char *Source
    ReadRAMBanksFile(LoadFile, Bank, NumBanks);
 }
 
-FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
+FLASHMEM static bool WriteHeldRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
 {
-   Serial.printf("Saving: %s\n", FileName);
    sourceFS->remove(FileName);   // FILE_WRITE appends to an existing file
    File SaveFile = sourceFS->open(FileName, FILE_WRITE);
    if (!SaveFile)
@@ -151,6 +152,21 @@ FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8
    Serial.printf("Saved %dKBytes\n", NumBanks * RAM_Bank_Size / 1024);
    SaveFile.close();
    return true;
+}
+
+// The computer writes the banks through the IO handlers while it runs, so a save it is not
+//  stopped for mixes the RAM before and after: a RAM disk whose directory and BAM disagree.
+FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8_t *Bank[], uint8_t NumBanks)
+{
+   Serial.printf("Saving: %s\n", FileName);
+   if (!HoldC64())
+   {
+      Serial.println("Unable to pause the computer!");
+      return false;
+   }
+   bool Saved = WriteHeldRAMBanksFile(sourceFS, FileName, Bank, NumBanks);
+   CloseDMA();
+   return Saved;
 }
 
 FLASHMEM static void FlashSavedLED()
