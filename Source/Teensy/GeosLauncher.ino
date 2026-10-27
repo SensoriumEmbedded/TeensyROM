@@ -299,9 +299,10 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;
    }
+   // HandleExecution copies a built-in item's Code_Image into RAM_Image unless it already points there
+   Item->Code_Image = RAM_Image;
    if (Launcher->Machine == GeosC128) return GeosUseC128Boot(Boot + Length, Item);
    Item->ItemType = rtFilePrg;
-   Item->Code_Image = RAM_Image;
    Item->Size = Length;
    return true;
 }
