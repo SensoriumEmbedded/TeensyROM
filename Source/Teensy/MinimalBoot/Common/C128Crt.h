@@ -49,12 +49,3 @@ static void LaunchC128Cart()
    LOROM_Mask = C128Map.ROMLMask;
    HIROM_Mask = C128Map.ROMHMask;
 }
-
-// A C128 cart the TR built in memory rather than read from a crt, launched as LaunchC128Cart launches one
-static inline void SetC128Image(const uint8_t *ROML, const uint8_t *ROMH, uint16_t ChipSize)
-{
-   C128Map.ROML = ROML;
-   C128Map.ROMH = ROMH;
-   C128Map.ROMLMask = ChipSize - 1;
-   C128Map.ROMHMask = ChipSize - 1;
-}

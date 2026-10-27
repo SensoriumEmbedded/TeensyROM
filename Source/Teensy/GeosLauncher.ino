@@ -257,6 +257,17 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    return GeosUse(Launcher, CopyName, BootName);
 }
 
+// The boot ROM and the boot image must outlast the launch in RAM_Image, which the RAM expansion handlers take as
+// free unless a crt's chips are in it: so they are listed as a C128 crt's two chips, ending past the image.
+FLASHMEM static bool GeosUseC128Boot(const uint8_t *ImageEnd, StructMenuItem *Item)
+{
+   CrtChips[0] = { RAM_Image, 0x8000, GEOS128_BOOT_CHIP_SIZE, 0 };
+   CrtChips[1] = { RAM_Image + GEOS128_BOOT_CHIP_SIZE, 0xC000, GEOS128_BOOT_CHIP_SIZE, 0 };
+   NumCrtChips = 2;
+   ptrRAM_ImageEnd = (uint8_t *)ImageEnd;
+   return SetC128Type(Item);
+}
+
 FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
    char Path[MaxNamePathLength];
@@ -267,6 +278,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    bool Changed, ClockSet, Built;
    File Image;
 
+   FreeCrtChips();
    GeosPath(Path, sizeof Path, Launcher, Name);
    Image = SD.open(Path, FILE_WRITE_BEGIN);
    if (!Image)
@@ -287,12 +299,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;
    }
-   if (Launcher->Machine == GeosC128)
-   {
-      SetC128Image(RAM_Image, RAM_Image + GEOS128_BOOT_CHIP_SIZE, GEOS128_BOOT_CHIP_SIZE);
-      Item->ItemType = rtBinC128;
-      return true;
-   }
+   if (Launcher->Machine == GeosC128) return GeosUseC128Boot(Boot + Length, Item);
    Item->ItemType = rtFilePrg;
    Item->Code_Image = RAM_Image;
    Item->Size = Length;
