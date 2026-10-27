@@ -51,6 +51,7 @@ whatever node appeared beside it.
 | `grants.py` | Service bit 20 end to end: packages `grants/module.cpp` and `grants/client.a` as `/VMS/GRANTS`, then launches one content file per slice size. The client grants a slice from a CIA2 timer NMI every 200 cycles, when it will end before the next tick, and counts the NMIs it loses; the module writes 4 KiB to `$4000` for 1.5 s and exits with its job count and that loss, which the main image prints on the way back. Each row also checks a sum the client takes over what it holds after the last job, and a slice that never fits, like a client that never grants (the first row), ends the job `VM_C64_NO_GRANT`. `grants.py 120 140` runs only those rows. Needs `acme` on `PATH` and a host serving bit 20 installed. |
 | `screen.py` | The C64 text screen. |
 | `keypress.py [code]` | Put a key in the keyboard buffer (default `Y`; F1/F3/F5/F7 are `0x85`..`0x88`). |
+| `type.py [--c128] '<text>'` | Type a line into the keyboard buffer, ten keys at a time; `\n` is RETURN. `--c128` for a C128 in 128 mode. |
 | `colors.py` | Top row, its colour RAM and the VIC colour registers. |
 | `listen.py [secs] [hex]` | Echo serial output, optionally sending bytes first. |
 | `probe.py` | Which image is running -- main, minimal or silent -- and its build banner. |
