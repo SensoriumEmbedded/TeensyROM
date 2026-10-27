@@ -263,7 +263,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    struct GeosDisk Disk;
    uint32_t Length = 0;
    struct GeosDate Now = GeosToday();
-   bool Changed, Built;
+   bool Changed, ClockSet, Built;
    File Image;
 
    GeosPath(Path, sizeof Path, Launcher, Name);
@@ -274,8 +274,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
-   Built = GeosBuildBootPrg(&Disk, RAM_Image, RAM_ImageSize, &Length) && GeosDisableConfigure(&Disk, &Changed);
-   if (Built) GeosSetClock(RAM_Image, Length, &Now);
+   Built = GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet) && GeosDisableConfigure(&Disk, &Changed);
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
    if (!Built) return false;

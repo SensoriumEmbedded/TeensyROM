@@ -64,6 +64,10 @@ struct GeosTarget
    uint8_t InputType;
    const char *BootFile;   // what the TR starts the disk from
    uint16_t BootEntry;
+   const struct GeosDiskDriver *DiskDriver;
+   const struct GeosClockRun *ClockRuns;
+   uint8_t ClockRunCount;
+   uint16_t ResetKey;      // where the boot file holds the C128's reset key, or 0
 };
 
 struct GeosBootDisk { bool HasDeskTop, HasDriver; };

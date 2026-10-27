@@ -3,7 +3,6 @@
 // the TR's, and the disk's own auto-configuration kept from probing a drive that is not there.
 #pragma once
 #include "GeosDiskPatch.h"
-#include "TRDriver.h"
 
 #define GEOS_DRIVER_AREA     0x9000
 #define GEOS_DRIVER_SIZE     0xd80
@@ -14,7 +13,7 @@
 #define GEOS_JUMP_OPCODE     0x4c
 #define GEOS_AUTO_EXEC       14
 #define GEOS_SYSTEM_FILE     4
-#define GEOS_CONFIG_PREFIX   "CONFIG"
+#define GEOS_CONFIG_NAME     "CONFIG"
 #define GEOS_BASIC_START     0x0801
 #define GEOS_MEMORY_END      0x10000
 #define GEOS_MAX_FILE_BLOCKS 3200
@@ -24,6 +23,17 @@ enum GeosDriverVector { VecInitForIO, VecDoneWithIO, VecExitTurbo, VecPurgeTurbo
                         VecNewDisk, VecReadBlock, VecWriteBlock, VecVerWriteBlock, VecCount = 10 };
 enum GeosDriverJump { JumpSendTSBytes = 6, JumpGetDOSError = 7, JumpReadLink = 9 };
 enum TRDriverEntry { EntrySendTSBytes = 10, EntryGetDOSError, EntryReadLink };
+
+// A TR disk driver as tools/geos/trdrive.py emits it: code assembled at Base, the offsets of the words that hold
+// addresses inside it, and the offsets of its routines in TRDriverEntry order
+struct GeosDiskDriver
+{
+   const uint8_t *Code;
+   uint16_t Size, Base;
+   const uint16_t *Relocations;
+   uint16_t RelocationCount;
+   const uint16_t *Entries;
+};
 
 static uint16_t GeosWord(const uint8_t *At) { return At[0] | At[1] << 8; }
 
@@ -63,19 +73,15 @@ static int32_t GeosFindDriver(const uint8_t *Data, uint32_t Size)
    return -1;
 }
 
-// The stock driver's turbo routines occupy one run of its code, from InitForIO up to ReadBlock; the TR's
-// driver replaces them and points every vector it implements at its own routines
-static bool GeosReplaceTransport(uint8_t *Driver)
+// The TR's driver goes over the stock driver's code from InitForIO up to ReadBlock, provided no vector or jump slot
+// it leaves alone points there, and every vector it implements is pointed at its own routines. Replaced routines
+// outside that run stay where they are, unused: GEOS 128 keeps NewDisk after ReadBlock.
+static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *With)
 {
    uint16_t Start = GeosWord(Driver + 2 * VecInitForIO), End = GeosWord(Driver + 2 * VecReadBlock);
-   uint8_t Code[sizeof TRDriverCode];
+   uint8_t *Code = Driver + (Start - GEOS_DRIVER_AREA);
 
-   if (End <= Start || (size_t)(End - Start) < sizeof Code) return false;
-   for (int i = VecDoneWithIO; i <= VecNewDisk; i++)
-   {
-      uint16_t Routine = GeosWord(Driver + 2 * i);
-      if (Routine < Start || Routine >= End) return false;
-   }
+   if (End <= Start || (size_t)(End - Start) < With->Size) return false;
    for (int i = VecCount; i < GEOS_VECTOR_WORDS; i++)
    {
       uint16_t Other = GeosWord(Driver + 2 * i);
@@ -87,17 +93,16 @@ static bool GeosReplaceTransport(uint8_t *Driver)
       bool Repointed = i == JumpSendTSBytes || i == JumpGetDOSError || i == JumpReadLink;
       if (!Repointed && Target >= Start && Target < End) return false;
    }
-   memcpy(Code, TRDriverCode, sizeof Code);
-   for (size_t i = 0; i < sizeof TRDriverRelocations / sizeof TRDriverRelocations[0]; i++)
+   memcpy(Code, With->Code, With->Size);
+   for (uint16_t i = 0; i < With->RelocationCount; i++)
    {
-      uint8_t *Word = Code + TRDriverRelocations[i];
-      GeosPutWord(Word, GeosWord(Word) + Start - TR_DRIVER_BASE);
+      uint8_t *Word = Code + With->Relocations[i];
+      GeosPutWord(Word, GeosWord(Word) + Start - With->Base);
    }
-   memcpy(Driver + (Start - GEOS_DRIVER_AREA), Code, sizeof Code);
-   for (int i = 0; i < VecCount; i++) GeosPutWord(Driver + 2 * i, Start + TRDriverEntries[i]);
-   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpSendTSBytes + 1, Start + TRDriverEntries[EntrySendTSBytes]);
-   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpGetDOSError + 1, Start + TRDriverEntries[EntryGetDOSError]);
-   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpReadLink + 1, Start + TRDriverEntries[EntryReadLink]);
+   for (int i = 0; i < VecCount; i++) GeosPutWord(Driver + 2 * i, Start + With->Entries[i]);
+   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpSendTSBytes + 1, Start + With->Entries[EntrySendTSBytes]);
+   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpGetDOSError + 1, Start + With->Entries[EntryGetDOSError]);
+   GeosPutWord(Driver + GEOS_JUMP_SLOTS + 3 * JumpReadLink + 1, Start + With->Entries[EntryReadLink]);
    return true;
 }
 
@@ -138,9 +143,20 @@ static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, 
    return true;
 }
 
+static bool GeosNameContains(const uint8_t *Name, const char *Part)
+{
+   size_t Length = strlen(Part);
+
+   for (size_t i = 0; i + Length <= GEOS_NAME_SIZE; i++)
+   {
+      if (!memcmp(Name + i, Part, Length)) return true;
+   }
+   return false;
+}
+
 // Gives AUTO_EXEC configuration files the type of a file GEOS leaves alone, the way the stock disk's own
 // configuration probes the IEC bus and empties drive A; returns whether anything was retyped
-static bool GeosDisableConfigure(struct GeosDisk *Disk, bool *Changed)
+static inline bool GeosDisableConfigure(struct GeosDisk *Disk, bool *Changed)
 {
    struct GeosTS Chain[GEOS_MAX_DIR_SECTORS];
    uint8_t Block[GEOS_SECTOR_SIZE];
@@ -157,7 +173,7 @@ static bool GeosDisableConfigure(struct GeosDisk *Disk, bool *Changed)
       {
          uint8_t *Slot = Block + e * GEOS_DIR_ENTRY_SIZE;
          if (!(Slot[SlotType] & CBM_TYPE_MASK) || Slot[SlotGeosType] != GEOS_AUTO_EXEC) continue;
-         if (strncmp((char *)Slot + SlotName, GEOS_CONFIG_PREFIX, strlen(GEOS_CONFIG_PREFIX))) continue;
+         if (!GeosNameContains(Slot + SlotName, GEOS_CONFIG_NAME)) continue;
          Slot[SlotGeosType] = GEOS_SYSTEM_FILE;
          Retyped = true;
       }
@@ -179,19 +195,6 @@ static const uint8_t GeosBootStub[] =
    0x4c, 0x00, 0x00,                // jmp entry
 };
 
-// The kernal's start-up code sets the date with three immediate stores and the clock in CIA 1 with another run;
-// both are found in the boot file by their bytes, since the stock file fixes the date and time they set. The
-// clock's run follows a loop that leaves X zero, which the patched run uses for the seconds and tenths.
-static const uint8_t GeosStartDate[] = { 0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85 };
-static const uint8_t GeosStartClock[] =
-{
-   0xca, 0xd0, 0xe4,                               // dex : bne, the loop before it
-   0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, // clear the alarm-set bit
-   0xa9, 0x81, 0x8d, 0x0b, 0xdc,                   // hour 1 PM
-   0xa9, 0x00, 0x8d, 0x0a, 0xdc,                   // minute 0
-   0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc,             // second and tenths 0; the tenths start the clock
-};
-#define GEOS_CLOCK_TIME 11
 #define GEOS_PM_BIT     0x80
 
 static uint8_t GeosBcd(uint8_t Value)
@@ -208,61 +211,171 @@ static uint8_t GeosTodHour(uint8_t Hour)
    return GeosBcd(Hour12) | (Pm ? GEOS_PM_BIT : 0);
 }
 
-// Finds Pattern once in Prg; NULL when it is absent or ambiguous
-static uint8_t *GeosFindOnce(uint8_t *Prg, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
+// One run of a boot file's start-up code that sets the date or the time. It is found by its bytes, since the stock
+// file fixes the values it sets, and Set makes it set Now instead without changing its length.
+struct GeosClockRun
 {
-   uint8_t *Found = NULL;
+   const uint8_t *Pattern;
+   uint8_t Size;
+   void (*Set)(uint8_t *Run, const struct GeosDate *Now);
+};
 
-   for (uint32_t i = 0; i + Size <= Length; i++)
-   {
-      if (memcmp(Prg + i, Pattern, Size)) continue;
-      if (Found) return NULL;
-      Found = Prg + i;
-   }
-   return Found;
+// GEOS 64 sets the date with three immediate stores and the clock in CIA 1 with another run. The clock's run
+// follows a loop that leaves X zero, which the patched run uses for the seconds and tenths.
+static const uint8_t Geos64StartDate[] = { 0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85 };
+static const uint8_t Geos64StartClock[] =
+{
+   0xca, 0xd0, 0xe4,                               // dex : bne, the loop before it
+   0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, // clear the alarm-set bit
+   0xa9, 0x81, 0x8d, 0x0b, 0xdc,                   // hour 1 PM
+   0xa9, 0x00, 0x8d, 0x0a, 0xdc,                   // minute 0
+   0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc,             // second and tenths 0; the tenths start the clock
+};
+#define GEOS64_CLOCK_TIME 11
+
+static void Geos64SetDate(uint8_t *Run, const struct GeosDate *Now)
+{
+   Run[1] = Now->Day;
+   Run[6] = Now->Month;
+   Run[11] = Now->Year;
 }
 
-// Sets the date and time GEOS starts with. Leaves the PRG as it is, and returns false, for a boot file whose
-// start-up code is not the one this knows
-static bool GeosSetClock(uint8_t *Prg, uint32_t Length, const struct GeosDate *Now)
+static void Geos64SetTime(uint8_t *Run, const struct GeosDate *Now)
 {
-   uint8_t *Date = GeosFindOnce(Prg, Length, GeosStartDate, sizeof GeosStartDate);
-   uint8_t *Clock = GeosFindOnce(Prg, Length, GeosStartClock, sizeof GeosStartClock);
-   uint8_t Time[] =
+   const uint8_t Time[] =
    {
       0xa9, GeosTodHour(Now->Hour), 0x8d, 0x0b, 0xdc,
       0xa9, GeosBcd(Now->Minute), 0x8d, 0x0a, 0xdc,
       0x8e, 0x09, 0xdc, 0x8e, 0x08, 0xdc,
    };
 
-   if (!Date || !Clock) return false;
-   Date[1] = Now->Day;
-   Date[6] = Now->Month;
-   Date[11] = Now->Year;
-   memcpy(Clock + GEOS_CLOCK_TIME, Time, sizeof Time);
+   memcpy(Run + GEOS64_CLOCK_TIME, Time, sizeof Time);
+}
+
+static const struct GeosClockRun Geos64ClockRuns[] =
+{
+   { Geos64StartDate, sizeof Geos64StartDate, Geos64SetDate },
+   { Geos64StartClock, sizeof Geos64StartClock, Geos64SetTime },
+};
+
+// GEOS 128 sets the clock and then the date in one run, behind a store of zero. No register is known to be zero
+// there and the run has no byte to spare for clearing one, so the patched run makes that store load X instead.
+static const uint8_t Geos128StartUp[] =
+{
+   0xa9, 0x00, 0x8d, 0xc5, 0x88,                   // lda #0 : sta $88c5
+   0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc, // clear the alarm-set bit
+   0xa9, 0x81, 0x8d, 0x0b, 0xdc,                   // hour 1 PM
+   0xa9, 0x00, 0x8d, 0x0a, 0xdc,                   // minute 0
+   0x8d, 0x09, 0xdc, 0x8d, 0x08, 0xdc,             // second and tenths 0; the tenths start the clock
+   0xa9, 0x5c, 0x8d, 0x16, 0x85,                   // year 92
+   0xa9, 0x03, 0x8d, 0x17, 0x85,                   // month 3
+   0xa9, 0x17, 0x8d, 0x18, 0x85,                   // day 23
+};
+
+static void Geos128SetClock(uint8_t *Run, const struct GeosDate *Now)
+{
+   const uint8_t StartUp[sizeof Geos128StartUp] =
+   {
+      0xa2, 0x00, 0x8e, 0xc5, 0x88,
+      0xad, 0x0f, 0xdc, 0x29, 0x7f, 0x8d, 0x0f, 0xdc,
+      0xa9, GeosTodHour(Now->Hour), 0x8d, 0x0b, 0xdc,
+      0xa9, GeosBcd(Now->Minute), 0x8d, 0x0a, 0xdc,
+      0x8e, 0x09, 0xdc, 0x8e, 0x08, 0xdc,
+      0xa9, Now->Year, 0x8d, 0x16, 0x85,
+      0xa9, Now->Month, 0x8d, 0x17, 0x85,
+      0xa9, Now->Day, 0x8d, 0x18, 0x85,
+   };
+
+   memcpy(Run, StartUp, sizeof StartUp);
+}
+
+static const struct GeosClockRun Geos128ClockRuns[] = { { Geos128StartUp, sizeof Geos128StartUp, Geos128SetClock } };
+
+// Finds Pattern once in Body; NULL when it is absent or ambiguous
+static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
+{
+   uint8_t *Found = NULL;
+
+   for (uint32_t i = 0; i + Size <= Length; i++)
+   {
+      if (memcmp(Body + i, Pattern, Size)) continue;
+      if (Found) return NULL;
+      Found = Body + i;
+   }
+   return Found;
+}
+
+// Sets the date and time GEOS starts with. Leaves the body as it is, and returns false, for a boot file whose
+// start-up code is not the one the target knows
+static bool GeosSetClock(uint8_t *Body, uint32_t Length, const struct GeosTarget *Target, const struct GeosDate *Now)
+{
+   for (uint8_t i = 0; i < Target->ClockRunCount; i++)
+   {
+      const struct GeosClockRun *Run = &Target->ClockRuns[i];
+      if (!GeosFindOnce(Body, Length, Run->Pattern, Run->Size)) return false;
+   }
+   for (uint8_t i = 0; i < Target->ClockRunCount; i++)
+   {
+      const struct GeosClockRun *Run = &Target->ClockRuns[i];
+      Run->Set(GeosFindOnce(Body, Length, Run->Pattern, Run->Size), Now);
+   }
    return true;
 }
 
-// One PRG that starts GEOS: the boot file with the disk driver's transport replaced, placed where its load
-// address puts it, behind a BASIC line that jumps to the boot entry
-static bool GeosBuildBootPrg(struct GeosDisk *Disk, uint8_t *Out, uint32_t Capacity, uint32_t *Length)
+// GEOS 128 leaves "CBM" and $03E4 in bank 1 at $FFF5, and the C128 kernal resumes there on every reset until the
+// power goes off. The TR menu runs in C64 mode and overwrites $03E4, so the next C128 program would crash.
+static const uint8_t GeosResetKey[] = { 'C', 'B', 'M', 0xe4, 0x03 };
+
+static bool GeosBreakResetKey(struct GeosDisk *Disk, uint8_t *Image, uint32_t Length)
+{
+   uint16_t Key = Disk->Target->ResetKey, Load = GeosWord(Image);
+   uint32_t At = 2 + (uint32_t)(Key - Load);
+
+   if (!Key) return true;
+   if (Key < Load || At + sizeof GeosResetKey > Length || memcmp(Image + At, GeosResetKey, sizeof GeosResetKey))
+   {
+      return GeosFail(Disk, PSTR("the boot file's reset key is not where this version keeps it"));
+   }
+   Image[At] = 0;
+   return true;
+}
+
+// The boot file as GEOS starts from it, load address first: the disk driver's transport replaced, any reset key
+// broken, and the clock set to Now where the start-up code is one the target knows
+static inline bool GeosBuildBootImage(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
+                                      uint32_t *Length, bool *ClockSet)
+{
+   const struct GeosTarget *Target = Disk->Target;
+   int32_t Driver;
+
+   if (!Target->BootFile) return GeosFail(Disk, PSTR("this version has no boot file to start from"));
+   if (!GeosReadFile(Disk, Target->BootFile, Out, Capacity, Length)) return false;
+   if (*Length < 2 + GEOS_DRIVER_SIZE) return GeosFail(Disk, PSTR("the boot file is too short"));
+   Driver = GeosFindDriver(Out + 2, *Length - 2);
+   if (Driver < 0 || !GeosReplaceTransport(Out + 2 + Driver, Target->DiskDriver))
+   {
+      return GeosFail(Disk, PSTR("the boot file's disk driver is not one the TR can replace"));
+   }
+   if (!GeosBreakResetKey(Disk, Out, *Length)) return false;
+   *ClockSet = GeosSetClock(Out + 2, *Length - 2, Target, Now);
+   return true;
+}
+
+// One PRG that starts GEOS 64: the boot image placed where its load address puts it, behind a BASIC line that
+// jumps to the boot entry
+static inline bool GeosBuildBootPrg(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
+                                    uint32_t *Length, bool *ClockSet)
 {
    const uint32_t Prologue = 2 + sizeof GeosBasicLine + sizeof GeosBootStub;
-   uint32_t FileSize, BodySize, Load, Place;
-   int32_t Driver;
-   uint8_t *Body = Out + 2;
+   uint32_t ImageSize, BodySize, Load, Place;
 
-   if (!Disk->Target->BootFile) return GeosFail(Disk, PSTR("this version has no boot file to start from"));
-   if (!GeosReadFile(Disk, Disk->Target->BootFile, Out, Capacity, &FileSize)) return false;
-   if (FileSize < 2 + GEOS_DRIVER_SIZE) return GeosFail(Disk, PSTR("the boot file is too short"));
-   BodySize = FileSize - 2;
+   if (!GeosBuildBootImage(Disk, Now, Out, Capacity, &ImageSize, ClockSet)) return false;
+   BodySize = ImageSize - 2;
    Load = GeosWord(Out);
-   Driver = GeosFindDriver(Body, BodySize);
-   if (Driver < 0 || !GeosReplaceTransport(Body + Driver)) return GeosFail(Disk, PSTR("the boot file's disk driver is not one the TR can replace"));
    Place = 2 + Load - GEOS_BASIC_START;
    if (Load < GEOS_BASIC_START + Prologue - 2 || Place + BodySize > Capacity || Load + BodySize > GEOS_MEMORY_END) return GeosFail(Disk, PSTR("the boot file does not fit in memory"));
 
-   memmove(Out + Place, Body, BodySize);
+   memmove(Out + Place, Out + 2, BodySize);
    memset(Out, 0, Place);
    GeosPutWord(Out, GEOS_BASIC_START);
    memcpy(Out + 2, GeosBasicLine, sizeof GeosBasicLine);

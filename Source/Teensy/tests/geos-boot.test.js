@@ -66,6 +66,14 @@ function stockDriver() {
   return driver;
 }
 
+// GEOS 128's 1581 driver keeps NewDisk after ReadBlock, outside the run the TR driver takes
+const NEW_DISK_128 = 0x9480;
+function stockDriver128() {
+  const driver = stockDriver();
+  driver.writeUInt16LE(NEW_DISK_128, 2 * 6);
+  return driver;
+}
+
 const START_AT_IN_BODY = 0x1000;
 const START_DATE = [0xa9, 0x17, 0x8d, 0x18, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x5c, 0x8d, 0x16, 0x85];
 const LOOP_END = [0xca, 0xd0, 0xe4];
@@ -79,15 +87,16 @@ const TOD_TENTHS = 0xdc08;
 const TOD_HOURS = 0xdc0b;
 const PM = 0x80;
 
-// Runs the start-up clock code the way a 6526 takes it: X is zero from the loop before it, writes go to the alarm
-// while CRB selects it, and writing hour 12 flips AM/PM. Returns the TOD registers it sets, tenths first.
-function runClock(code) {
+// Runs the start-up clock code the way a 6526 takes it: X is zero from the loop before it unless given, writes go
+// to the alarm while CRB selects it, and writing hour 12 flips AM/PM. Returns the TOD registers it sets, tenths
+// first; other stores land in memory.
+function runClock(code, { x = 0, memory = {} } = {}) {
   let a = 0;
-  let x = 0;
   let crb = ALARM_SELECT;
   const tod = [];
   const write = (address, value) => {
     if (address === CRB) crb = value;
+    else if (address < TOD_TENTHS || address > TOD_HOURS) memory[address] = value;
     else if (crb & ALARM_SELECT) assert.fail(`$${address.toString(16)} written while CRB selects the alarm`);
     else tod[address - TOD_TENTHS] = address === TOD_HOURS && (value & 0x1f) === 0x12 ? value ^ PM : value;
   };
@@ -105,13 +114,16 @@ function runClock(code) {
   return tod;
 }
 
-function bootFile(driver = stockDriver(), startUp = []) {
+const GEOS64 = { load: LOAD_ADDRESS, driverAt: DRIVER_AT_IN_BODY, startUpAt: START_AT_IN_BODY };
+
+function bootFile(driver = stockDriver(), startUp = [], layout = GEOS64) {
   const body = Buffer.alloc(BODY_SIZE);
   for (let i = 0; i < BODY_SIZE; i++) body[i] = (i * 31 + 7) & 0xff;
-  driver.copy(body, DRIVER_AT_IN_BODY);
-  Buffer.from(startUp).copy(body, START_AT_IN_BODY);
+  driver.copy(body, layout.driverAt);
+  Buffer.from(startUp).copy(body, layout.startUpAt);
+  if (layout.resetKey) Buffer.from(layout.resetKey.bytes).copy(body, layout.resetKey.at);
   const file = Buffer.alloc(2 + BODY_SIZE);
-  file.writeUInt16LE(LOAD_ADDRESS, 0);
+  file.writeUInt16LE(layout.load, 0);
   body.copy(file, 2);
   return { file, body };
 }
@@ -164,9 +176,9 @@ function withHarness(body) {
     assert.equal(built.status, 0, built.err);
     const asCpp = run(['c++', '-x', 'c++', '-std=gnu++17', '-Wall', '-Werror', '-fsyntax-only', HARNESS_SOURCE]);
     assert.equal(asCpp.status, 0, asCpp.err);
-    const launch = (disk, time = []) => {
+    const launch = (disk, time = [], version = '64') => {
       fs.writeFileSync(path.join(dir, 'in.d81'), disk.image);
-      const r = run([path.join(dir, 'harness'), path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)]);
+      const r = run([path.join(dir, 'harness'), version, path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)]);
       return { ...r, prg: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.prg')) : null, image: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.d81')) : null };
     };
     body(launch);
@@ -179,6 +191,29 @@ function standardDisk(driver, startUp = []) {
   const disk = new Disk();
   disk.addFile('GEOS', Buffer.from([1, 8, 0]));
   disk.addFile('GEOBOOT', bootFile(driver, startUp).file);
+  return disk;
+}
+
+// GEOBOOT128 as the stock GEOS 128 2.0 disk has it: loaded at $2B19, the 1581 driver staged at $7000 with the
+// reset key just below it, and the clock and date set in one run at $2C24
+const GEOS128_LOAD = 0x2b19;
+const RESET_KEY = [0x43, 0x42, 0x4d, 0xe4, 0x03];
+const START_UP_128 = [
+  0xa9, 0x00, 0x8d, 0xc5, 0x88, ...START_CLOCK,
+  0xa9, 0x5c, 0x8d, 0x16, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x17, 0x8d, 0x18, 0x85,
+];
+const GEOS128 = {
+  load: GEOS128_LOAD,
+  driverAt: 0x7000 - GEOS128_LOAD,
+  startUpAt: 0x2c24 - GEOS128_LOAD,
+  resetKey: { at: 0x6ff5 - GEOS128_LOAD, bytes: RESET_KEY },
+};
+const DATE = { 0x8516: 26, 0x8517: 10, 0x8518: 21 };
+
+function geos128Disk(startUp = START_UP_128, layout = GEOS128) {
+  const disk = new Disk();
+  disk.addFile('GEOS128', Buffer.from([1, 8, 0]));
+  disk.addFile('GEOBOOT128', bootFile(stockDriver128(), startUp, layout).file);
   return disk;
 }
 
@@ -281,6 +316,7 @@ test('CONFIGURE files stop being auto-executed, and nothing else changes', { ski
     const disk = standardDisk();
     const configure = disk.addFile('CONFIGURE', Buffer.from([1, 2, 3]), AUTO_EXEC);
     const second = disk.addFile('CONFIG 2.0r', Buffer.from([1, 2, 3]), AUTO_EXEC);
+    const geos128 = ['128 CONFIGURE', '128 CONFIG 2.0r', '64 CONFIG 2.0r'].map((name) => disk.addFile(name, Buffer.from([1, 2, 3]), AUTO_EXEC));
     const other = disk.addFile('pad color mgr', Buffer.from([1, 2, 3]), AUTO_EXEC);
     const plain = disk.addFile('CONFIGURE.DOC', Buffer.from([1, 2, 3]), 0);
 
@@ -289,11 +325,76 @@ test('CONFIGURE files stop being auto-executed, and nothing else changes', { ski
     assert.match(first.out, /changed=1/);
     assert.equal(first.image[configure + SLOT_GEOS_TYPE], SYSTEM_FILE);
     assert.equal(first.image[second + SLOT_GEOS_TYPE], SYSTEM_FILE);
+    for (const slot of geos128) assert.equal(first.image[slot + SLOT_GEOS_TYPE], SYSTEM_FILE, 'GEOS 128 names CONFIG after a prefix');
     assert.equal(first.image[other + SLOT_GEOS_TYPE], AUTO_EXEC, 'other auto-exec files stay');
     assert.equal(first.image[plain + SLOT_GEOS_TYPE], 0, 'a CONFIG file that is not auto-exec stays');
 
     const again = launch({ image: first.image });
     assert.match(again.out, /changed=0/);
     assert.equal(again.image.equals(first.image), true);
+  });
+});
+
+test('the GEOS 128 boot image is the boot file with the TR disk driver in place and the reset key broken', { skip }, () => {
+  withHarness((launch) => {
+    const r = launch(geos128Disk(), [], '128');
+    assert.equal(r.status, 0, r.err);
+    const { file } = bootFile(stockDriver128(), START_UP_128, GEOS128);
+    const driverAt = 2 + GEOS128.driverAt;
+    const keyAt = 2 + GEOS128.resetKey.at;
+    const startAt = 2 + GEOS128.startUpAt;
+
+    assert.equal(r.prg.length, file.length);
+    assert.equal(r.prg.readUInt16LE(0), GEOS128_LOAD);
+    const patched = r.prg.subarray(driverAt, driverAt + DRIVER_SIZE);
+    for (let i = 0; i < 10; i++) assert.equal(patched.readUInt16LE(2 * i), TURBO_START + ENTRIES[i], `vector ${i}`);
+    const oldNewDisk = NEW_DISK_128 - DRIVER_AREA;
+    assert.equal(patched.subarray(oldNewDisk, READ_BLOCK - DRIVER_AREA + 0x100).equals(stockDriver128().subarray(oldNewDisk, READ_BLOCK - DRIVER_AREA + 0x100)), true, 'the stock NewDisk stays');
+    assert.deepEqual([...r.prg.subarray(keyAt, keyAt + RESET_KEY.length)], [0, ...RESET_KEY.slice(1)], 'the C of CBM is gone');
+
+    const unchanged = (from, to) => assert.equal(r.prg.subarray(from, to).equals(file.subarray(from, to)), true, `bytes ${from}-${to}`);
+    unchanged(0, startAt);
+    unchanged(startAt + START_UP_128.length, keyAt);
+    unchanged(keyAt + 1, driverAt);
+    unchanged(driverAt + DRIVER_SIZE, file.length);
+  });
+});
+
+test('GEOS 128 starts with the given date and time, whatever X holds', { skip }, () => {
+  withHarness((launch) => {
+    const startAt = 2 + GEOS128.startUpAt;
+    for (const [hour, minute, held] of [[0, 5, 0x12], [12, 30, PM | 0x12], [23, 59, PM | 0x11], [15, 7, PM | 0x03]]) {
+      const r = launch(geos128Disk(), [hour, minute], '128');
+      assert.match(r.out, /clock=1/);
+      const memory = {};
+      const tod = runClock(r.prg.subarray(startAt, startAt + START_UP_128.length), { x: 0x5a, memory });
+      assert.deepEqual(tod, [0x00, 0x00, parseInt(String(minute), 16), held], `${hour}:${minute}`);
+      assert.deepEqual(memory, { 0x88c5: 0, ...DATE }, 'the store before the run, then year, month, day');
+    }
+  });
+});
+
+test('a GEOS 128 boot file without its start-up code keeps the date and time it has', { skip }, () => {
+  withHarness((launch) => {
+    const startAt = 2 + GEOS128.startUpAt;
+    for (const startUp of [START_UP_128.slice(5), START_UP]) {
+      const r = launch(geos128Disk(startUp), [], '128');
+      assert.equal(r.status, 0, r.err);
+      assert.match(r.out, /clock=0/, 'GEOS 64\'s runs are not GEOS 128\'s');
+      assert.deepEqual([...r.prg.subarray(startAt, startAt + startUp.length)], startUp);
+    }
+  });
+});
+
+test('a GEOS 128 boot file whose reset key is not where GEOS 128 keeps it is refused', { skip }, () => {
+  withHarness((launch) => {
+    for (const bytes of [[0x43, 0x42, 0x4d, 0xe5, 0x03], [0, 0, 0, 0, 0]]) {
+      const r = launch(geos128Disk(START_UP_128, { ...GEOS128, resetKey: { at: GEOS128.resetKey.at, bytes } }), [], '128');
+      assert.equal(r.status, 1);
+      assert.match(r.err, /reset key is not where this version keeps it/);
+    }
+    const early = launch(geos128Disk(START_UP_128, { ...GEOS128, load: 0x7000 }), [], '128');
+    assert.equal(early.status, 1, 'a boot file loaded above the key');
+    assert.match(early.err, /reset key/);
   });
 });
