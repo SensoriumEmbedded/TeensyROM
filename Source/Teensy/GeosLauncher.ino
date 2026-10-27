@@ -278,7 +278,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
    if (!Built) return false;
-   if (!TRBlockMount(Path))
+   if (!TRBlockMount(Path, NULL, 0))
    {
       SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// trblock_harness IMAGE OUT [ro|nobackend|flushfails]: the block device's register side and disk image backend,
+// trblock_harness IMAGE OUT [ro|nobackend|flushfails|boot=FILE]: the block device's register side and disk image
+// backend, with FILE as the launch's boot image when given,
 // driven from stdin one command a line, as the IO ISR and the main loop would drive them:
 //   w OFFSET HEX   an IO write          r OFFSET   an IO read, printing the byte or "open"
 //   svc            the main loop's service, printing 1 if a command ran
@@ -12,7 +13,7 @@
 
 #define MAX_IMAGE 819200
 
-static uint8_t Bytes[MAX_IMAGE];
+static uint8_t Bytes[MAX_IMAGE], Boot[MAX_IMAGE];
 static uint32_t Size, Flushes;
 static bool FlushFails;
 
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
 
    if (!In)
    {
-      fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend|flushfails]\n");
+      fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend|flushfails|boot=FILE]\n");
       return 2;
    }
    Size = fread(Bytes, 1, MAX_IMAGE, In);
@@ -57,6 +58,14 @@ int main(int argc, char **argv)
    Image.Format = GeosFormatForSize(Size);
    FlushFails = argc >= 4 && !strcmp(argv[3], "flushfails");
    Backend = TRBlockImageBackend(&Image);
+   if (argc >= 4 && !strncmp(argv[3], "boot=", 5))
+   {
+      FILE *BootFile = fopen(argv[3] + 5, "rb");
+      if (!BootFile) return 2;
+      Backend.Boot = Boot;
+      Backend.BootSize = fread(Boot, 1, sizeof Boot, BootFile);
+      fclose(BootFile);
+   }
    TRBlockReset(&Dev);
    const struct TRBlockBackend *Use = argc >= 4 && !strcmp(argv[3], "nobackend") ? NULL : &Backend;
 

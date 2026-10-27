@@ -68,8 +68,9 @@ Do not write ADDR0, ADDR1, PAGE or TOKEN, or the window, while STATUS is `$80`. 
 | `$02` | `WRITE` | writes the 256-byte buffer to the block at ADDR0, ADDR1. The buffer is what the window wrote, one PAGE at a time, since the last command |
 | `$03` | `FLUSH` | forces the card to hold every write accepted so far |
 | `$04` | `INFO` | describes the image: five bytes at the start of the window (see below) |
+| `$05` | `BOOT` | reads page ADDR1:ADDR0 (ADDR0 the low byte) of the launch's boot image into the buffer, as `READ` does; a last page shorter than 256 bytes is padded with zeros |
 
-`READ` and `INFO` fill the buffer; a `WRITE` after either writes what they left unless the window changed it. A `WRITE` for a block the driver has not filled is the driver's mistake, not the firmware's to guard.
+`READ`, `INFO` and `BOOT` fill the buffer; a `WRITE` after either writes what they left unless the window changed it. A `WRITE` for a block the driver has not filled is the driver's mistake, not the firmware's to guard.
 
 `INFO` answers, in window bytes 0 to 4:
 
@@ -78,6 +79,8 @@ Do not write ADDR0, ADDR1, PAGE or TOKEN, or the window, while STATUS is `$80`. 
 | 0 | image kind: `1` D64, `2` D71, `3` D81 |
 | 1 | flags; bit 0 set when the image can be written |
 | 2..4 | blocks in the image, 24 bits, low byte first |
+
+The boot image is what a launch that cannot start from a PRG hands its boot code: GEOS 128's C128 boot ROM pulls `GEOBOOT128`, with the TR driver already in it, through `BOOT`. The firmware sets it when it mounts the disk image, and it goes with that image. A launch that mounts an image without one leaves `BOOT` failing with `$E1`, and `BOOT` past the boot image's end fails with `$E2`.
 
 Any other CMD fails with `$E6`.
 
@@ -88,14 +91,14 @@ Any other CMD fails with `$E6`.
 | `$00` | no command has been run since the handler started |
 | `$80` | a command is running |
 | `$5A` | the command with ECHO's token succeeded |
-| `$E1` | no image is mounted |
-| `$E2` | the address is outside the image |
+| `$E1` | no image is mounted, or for `BOOT`, no boot image |
+| `$E2` | the address is outside the image, or for `BOOT`, past the boot image's end |
 | `$E3` | the card could not be read |
 | `$E4` | the card could not be written |
 | `$E5` | the image is read-only |
 | `$E6` | not a command |
 
-A failed `READ` leaves the buffer unspecified. A failed `WRITE` that was rejected before the card was touched (`$E1`, `$E2`, `$E5`) changes nothing; one the card failed (`$E4`) may have changed part of the block.
+A failed `READ` or `BOOT` leaves the buffer unspecified. A failed `WRITE` that was rejected before the card was touched (`$E1`, `$E2`, `$E5`) changes nothing; one the card failed (`$E4`) may have changed part of the block.
 
 ## Disk addresses
 For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector, as the 1541, 1571 and 1581 number them: tracks start at 1, sectors at 0. The 1541 and 1571 use the usual four speed zones (21, 19, 18 and 17 sectors a track, the 1571's second side repeating them); the 1581 has 40 sectors on every track. An address off the end of the image or past a track's last sector fails with `$E2`.
