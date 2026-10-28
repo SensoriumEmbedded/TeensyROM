@@ -422,6 +422,8 @@ const uint8_t OutputPins[] = {
 #define Def_nS_DMADataHoldNTSC128  395
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
+#define Def_nS_KSenseSample 250 // Kernal replace DMA HIRAM sense (C128): when ROMH is read, from Phi2 rising of the DMA read.
+                                //   10/28/26 flat NTSC C128: ROMH low at 98-136nS.  Must stay below nS_DMADataSetup.
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
@@ -445,6 +447,7 @@ uint32_t nS_DMASetup  = Def_nS_DMASetupPAL;
 uint32_t nS_DMADataSetup = Def_nS_DMADataSetupPAL;
 uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;
 uint32_t Cyc_KernProp = Def_Cyc_KernProp;
+uint32_t nS_KSenseSample = Def_nS_KSenseSample;
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only

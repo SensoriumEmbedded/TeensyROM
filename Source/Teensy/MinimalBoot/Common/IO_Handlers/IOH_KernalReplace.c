@@ -58,16 +58,174 @@ enum enumHIRAM_States
 
 extern volatile uint8_t doReset;
 
+//HIRAM sense: how KernalCheck finds out, after a write to $00/$01, whether the KERNAL is banked in.
+//  (The 6510 doesn't put the value of a $00/$01 write on the external data bus, so it can't be tracked from the writes.)
+//  Skoe: on the first $E000+ read, drive A14 low with /EXROM+/GAME asserted (16K mode) and look at ROMH.
+//     This needs the PLA to see the address the TR drives over the CPU's.  On a C128 in C64 mode it doesn't: the
+//     expansion port's address lines come through a transceiver that drives towards the port outside DMA, so ROMH never
+//     answers, every sense reads "RAM", and the replacement image is never served.
+//  DMA: right after the write, hold the CPU with /DMA for one cycle and, as bus master, read $A000 with /EXROM+/GAME
+//     asserted: the PLA selects ROMH there only with HIRAM set.  The cycle after a store to $00/$01 is always the next
+//     opcode fetch, a read, so the CPU halts on it.  Costs the CPU one cycle per write to $00/$01 (more when the VIC
+//     holds the bus).  Used on a C128.
+enum enumHIRAMSenseModes
+{
+   KSense_Skoe = 0,
+   KSense_DMA  = 2,
+   KSense_Auto = 9,  //DMA on a C128 (the menu's machine report), Skoe otherwise
+};
+uint32_t KSenseMode = KSense_Auto;  //serial tx# (Dbg_SerTimChg)
+uint8_t  KSenseEff  = KSense_Skoe;  //the method in effect
+
+FLASHMEM void KSenseApplyMode()
+{
+#ifdef Fab04_FullDMACapable
+   KSenseEff = (KSenseMode == KSense_Auto) ? ((IO1[wRegVid_TOD_Clks] & rvtcC128) ? KSense_DMA : KSense_Skoe) :
+               (KSenseMode == KSense_DMA) ? KSense_DMA : KSense_Skoe;
+#else
+   KSenseEff = KSense_Skoe;
+#endif
+   Serial.printf("Kernal HIRAM sense: %s\n", KSenseEff == KSense_DMA ? "DMA" : "Skoe");
+}
+
+#ifdef Fab04_FullDMACapable
+enum enumKDS_States
+{
+   KDS_Idle,
+   KDS_Skip,         //the sense cycle's rising-edge interrupt arrives late (in Phi2 low): drop it
+   KDS_WaitBus,      //DMA asserted, BA was low: try the sense read on the next cycle
+   KDS_AfterRead01,  //a write to $00/$01 right after a read of $00/$01: the first of a read-modify-write's two
+                     //  writes, or a store after an indexed dummy read.  The next cycle tells which.
+};
+volatile uint8_t KDS_State = KDS_Idle;
+uint8_t  KDS_Guess = HIRAM_State_ROM;  //last verdict, for a KERNAL read no sense could precede
+uint32_t KDS_Read01Cyc = 0;            //ARM_DWT_CYCCNT of the last CPU read of $00/$01
+bool     KDS_Read01Valid = false;
+
+//Phi2 low (StartCycCnt = falling), /DMA asserted: one DMA read of $A000 with /GAME+/EXROM, address timing as DMAByte's.
+//false: bus not available (badline, sprite fetch), try again on the next cycle
+FASTRUN bool KDS_SenseCycle()
+{
+   WaitUntil_nS_fine(nS_DMABAWait);
+   if (!GP9_BA(ReadGPIO9)) return false;
+
+   uint32_t RegAddrBits = (0xA000 << 16);
+   CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
+   CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
+   WaitUntil_nS(nS_DMASetup);  //just ahead of Phi2 rising
+   StartCycCnt = ARM_DWT_CYCCNT;
+   SetAddrBufsOut;
+   SetAddrPortDirOut;
+   SetExROMAssert;
+   SetGameAssert;
+
+   WaitUntil_nS_fine(nS_KSenseSample);
+   HIRAM_State = KDS_Guess = (GP9_ROMH(ReadGPIO9)==0 ? HIRAM_State_ROM : HIRAM_State_RAM);
+
+   WaitUntil_nS_fine(nS_DMADataSetup); //keep the address valid as long as a DMA read does
+   SetGameDeassert;
+   SetExROMDeassert;
+   SetAddrPortDirIn;
+   SetAddrBufsIn;
+   return true;
+}
+
+//Phi2 low, /DMA asserted, StartCycCnt = falling
+FASTRUN void KDS_Run()
+{
+   if (!KDS_SenseCycle())
+   {
+      KDS_State = KDS_WaitBus;
+      return;
+   }
+   while (GP6_Phi2(ReadGPIO6)); //Phi2 falling after the sense cycle
+   SetDMADeassert;              //release in Phi2 low, as isrPHI2's DMA_S_StartDisable does
+   KDS_State = KDS_Skip;
+}
+
+//Phi2 high of the CPU's write to $00/$01
+FASTRUN void KDS_Begin()
+{
+   if (DMA_State != DMA_S_DisableReady)
+   {  //another DMA user (REU, remote memory access) owns the line
+      HIRAM_State = KDS_Guess;
+      return;
+   }
+   while (GP6_Phi2(ReadGPIO6)); //Phi2 falling
+   StartCycCnt = ARM_DWT_CYCCNT;
+   WaitUntil_nS(nS_DMAAssert);
+   SetDMAAssert;
+   KDS_Run();
+}
+
+//The DMA sense's work for a cycle off the common path: a sense pending, or a $00/$01 access.
+//true ends the cycle: nothing else may answer it
+FASTRUN bool KDS_Slow(uint16_t Address, bool R_Wn)
+{
+   switch (KDS_State)
+   {
+      case KDS_Skip:
+         KDS_State = KDS_Idle;
+         return true;
+      case KDS_WaitBus:
+         while (!GP6_Phi2(ReadGPIO6)); //a late call (in Phi2 low) waits for the next cycle
+         while (GP6_Phi2(ReadGPIO6));
+         StartCycCnt = ARM_DWT_CYCCNT;
+         KDS_Run();
+         return true;
+   }
+   if ((Address & 0xfffe) == 0)
+   {
+      if (R_Wn)
+      {
+         KDS_Read01Cyc = ARM_DWT_CYCCNT;
+         KDS_Read01Valid = true;
+      }
+      else
+      {  //write to $00/$01
+         HIRAM_State = HIRAM_State_Unknown;
+         bool AfterRead = KDS_Read01Valid && (ARM_DWT_CYCCNT - KDS_Read01Cyc) < nSToCyc(1500); //the previous cycle
+         KDS_Read01Valid = false;
+         if (AfterRead && KDS_State != KDS_AfterRead01)
+         {
+            KDS_State = KDS_AfterRead01;
+            return true;
+         }
+         KDS_State = KDS_Idle;
+         KDS_Begin();
+         return true;
+      }
+   }
+   if (KDS_State == KDS_AfterRead01) KDS_State = KDS_Idle; //it was a store after a dummy read: this read is served on KDS_Guess
+   return false;
+}
+#endif
+
 //______________________________________________________________________________________________
 
 FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 {
+#ifdef Fab04_FullDMACapable
+   if (KSenseEff == KSense_DMA)
+   {  //this runs ahead of every IO1/IO2 answer, so the common cycle costs only these tests: work added here answers IO late
+      if ((KDS_State != KDS_Idle || (Address & 0xfffe) == 0) && KDS_Slow(Address, R_Wn)) return true;
+   }
+   else
+#endif
    //monitor port $0001 for changes
    if (!R_Wn && (Address & 0xfffe) == 0) HIRAM_State = HIRAM_State_Unknown;  //write to addr 0 or 1 causes re-evaluation of HIRAM
 
    if (!R_Wn || (Address & 0xe000) != 0xe000 || !GP9_BA(ReadGPIO9)) return false;  //continue with cycle processing
 
    // CPU read access from address $E000..$FFFF
+#ifdef Fab04_FullDMACapable
+   if (HIRAM_State == HIRAM_State_Unknown && KSenseEff == KSense_DMA) HIRAM_State = KDS_Guess; //no sense could precede this read
+#endif
+#ifndef KERNAL_MONITOR_ONLY
+   //HIRAM known to be RAM (no write to $00/$01 since it was sensed): the C64's own RAM answers, so leave /GAME and the
+   //data bus alone.  Asserting /GAME (Ultimax) here takes the read away from the RAM.
+   if (HIRAM_State == HIRAM_State_RAM) return true;
+#endif
    
    //prepare modified Address for Skoe HIRAM check (if needed)
    uint32_t RegAddrBits = ((Address & 0xbfff) << 16); //drive A14 low
@@ -206,6 +364,12 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    //Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
    Serial.printf("Read %lu Bytes\nKernal replace Enabled\n", CharNum);
    LoadFile.close();
+   KSenseApplyMode();
+#ifdef Fab04_FullDMACapable
+   KDS_State = KDS_Idle;
+   KDS_Read01Valid = false;
+   KDS_Guess = HIRAM_State_ROM;
+#endif
    delay(250);
    
    //hook kernal checks: runs before BASIC init, well before any PRG-load handshake (see
@@ -229,6 +393,10 @@ FLASHMEM void InitHndlr_KernalReplace()
    //hooked there, KernalCheck reads an unloaded KernalBin and drives GAME/EXROM over the cart's own.
    if (fBusSnoop != &HandshakeSnoop || KernalBin == NULL) return;
    HIRAM_State = HIRAM_State_Unknown;
+#ifdef Fab04_FullDMACapable
+   KDS_State = KDS_Idle;  //KernalCheck is unhooked during the handshake: no sense can be in flight
+   KDS_Read01Valid = false;
+#endif
    PendingfBusSnoop = &KernalCheck; //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
 #endif
 }
