@@ -79,6 +79,10 @@ Coldstart:
 
    jsr $fd15            ; RESTOR - Init KERNAL RAM vectors
    jsr $ff5b            ; CINT   - Init VIC and screen editor
+   jsr ScanKey          ; SCNKEY, must stay after CINT (it jumps through the $028f vector CINT sets):
+   lda #$00             ;  scan once with IRQs off, so a key still held from before the reset becomes
+   sta $c6              ;  "last key" ($c5) and the IRQ scan won't queue it again; NDX=0 drops the
+                        ;  copy this scan queued, so the key counts on its next press
    cli                  ; Re-enable IRQ interrupts
 ;  BASIC RESET  Routine
 Warmstart:
