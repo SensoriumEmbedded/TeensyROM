@@ -22,8 +22,8 @@
 #define RAM_ImageSize 0
 #define FILE_READ 0
 #define FILE_WRITE 1
-#define SetLEDOn
-#define SetLEDOff
+#define SetLEDOn do {} while (0)
+#define SetLEDOff do {} while (0)
 
 static struct
 {
