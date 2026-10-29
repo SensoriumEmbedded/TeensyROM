@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // geos_boot_harness 64|128 IN.d81 OUT OUT.d81 [HOUR MINUTE]: builds the GEOS 64 boot PRG, or the GEOS 128 boot ROM
-// and the boot image behind it, from the disk, retypes its CONFIGURE files, sets the clock to 2026-10-21 at
+// and the boot image behind it, from the disk, sets up its CONFIGURE files, sets the clock to 2026-10-21 at
 // HOUR:MINUTE (15:07 if not given), and writes both. Prints "changed=<0|1> clock=<0|1>", and for GEOS 128
 // " boot=<offset>,<size>" where BOOT's image lies in OUT; exits 1 with the refusal on stderr. REGS_PAGE (hex) is the
 // block device's page the GEOS 128 boot ROM is built for, beside GeoRAM if not set.
@@ -51,10 +51,10 @@ int main(int argc, char **argv)
    Disk.Context = Image;
    Disk.Read = ReadBlock;
    Disk.Write = WriteBlock;
-   Built = Is128 ? GeosBuildC128Boot(&Disk, &Now, RegsPage ? (uint8_t)strtol(RegsPage, NULL, 16) : GEOS_REGS_BESIDE_GEORAM,
+   Built = GeosPrepareConfigure(&Disk, Prg, sizeof Prg, &Changed) && (Is128 ? GeosBuildC128Boot(&Disk, &Now, RegsPage ? (uint8_t)strtol(RegsPage, NULL, 16) : GEOS_REGS_BESIDE_GEORAM,
                                      Prg, sizeof Prg, &Boot, &BootSize, &ClockSet)
-                 : GeosBuildBootPrg(&Disk, &Now, Prg, sizeof Prg, &Length, &ClockSet);
-   if (!Built || !GeosDisableConfigure(&Disk, &Changed))
+                 : GeosBuildBootPrg(&Disk, &Now, Prg, sizeof Prg, &Length, &ClockSet));
+   if (!Built)
    {
       fprintf(stderr, "%s\n", Disk.Error);
       return 1;

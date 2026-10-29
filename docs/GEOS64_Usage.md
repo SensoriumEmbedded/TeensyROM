@@ -30,7 +30,8 @@
   * The contents are written to `georam.ram` on the SD card, and the LED flashes for about 1.5 seconds once the save is done.
   * The previous `georam.ram` is kept as `georam.bak`.
   * If the power goes off during a save, the next launch loads the newest complete save: the one just made if it was fully written, otherwise the previous one.
-* GEOS's `CONFIGURE` does not run at start-up, since it looks for a disk drive, so GEOS does not set GeoRAM up as a RAM disk.
+* GEOS's own `CONFIGURE` runs at start-up, set up in the `-TR` copy to find the TeensyROM as drive A. It does not find GeoRAM, so GEOS does not set GeoRAM up as a RAM disk.
+  * Other configuration programs on the disk (such as `CONFIG 2.0r`) are kept from running at start-up, since they look for a disk drive.
 
 ## Date and time
 * GEOS starts with the date and time of the TeensyROM's real-time clock, adjusted by the Time Zone setting.

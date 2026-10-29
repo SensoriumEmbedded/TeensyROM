@@ -30,6 +30,8 @@ const DIR_SLOT = 32;
 const SLOT_TYPE = 2;
 const SLOT_FIRST = 3;
 const SLOT_NAME = 5;
+const SLOT_STRUCTURE = 23;
+const VLIR = 1;
 const SLOT_GEOS_TYPE = 24;
 const PAD = 0xa0;
 const USR_CLOSED = 0x83;
@@ -147,10 +149,40 @@ class Disk {
     const header = offsetOf(DIR_TRACK, 0);
     this.image[header] = DIR_TRACK;
     this.image[header + 1] = FIRST_DIR_SECTOR;
+    this.slotsPerSector = SECTOR / DIR_SLOT;
     this.image[offsetOf(DIR_TRACK, FIRST_DIR_SECTOR) + 1] = 0xff;
   }
 
   addFile(name, data, geosType = 0) {
+    return this.addSlot(name, this.writeChain(data), geosType);
+  }
+
+  // A VLIR file: an index block naming each record's chain
+  addVlir(name, records, geosType = 0) {
+    const index = Buffer.alloc(SECTOR - 2);
+    records.forEach((data, i) => {
+      const first = this.writeChain(data);
+      index[2 * i] = first.track;
+      index[2 * i + 1] = first.sector;
+    });
+    const slot = this.addSlot(name, this.writeChain(index), geosType);
+    this.image[slot + SLOT_STRUCTURE] = VLIR;
+    return slot;
+  }
+
+  // A record's bytes, read back along its chain from the index block
+  record(slot, i, image = this.image) {
+    let o = offsetOf(image[slot + SLOT_FIRST], image[slot + SLOT_FIRST + 1]);
+    const chunks = [];
+    for (let at = offsetOf(image[o + 2 + 2 * i], image[o + 3 + 2 * i]); ; ) {
+      const last = !image[at];
+      chunks.push(image.subarray(at + 2, last ? at + image[at + 1] + 1 : at + SECTOR));
+      if (last) return Buffer.concat(chunks);
+      at = offsetOf(image[at], image[at + 1]);
+    }
+  }
+
+  writeChain(data) {
     const sectors = [];
     for (let at = 0; at < data.length || !sectors.length; at += SECTOR - 2) sectors.push(this.nextSector++);
     sectors.forEach((n, i) => {
@@ -163,10 +195,15 @@ class Disk {
       this.image[o + 1] = last ? chunk.length + 1 : next % SECTORS_PER_TRACK;
       chunk.copy(this.image, o + 2);
     });
+    return { track: FIRST_FILE_TRACK + Math.floor(sectors[0] / SECTORS_PER_TRACK), sector: sectors[0] % SECTORS_PER_TRACK };
+  }
+
+  addSlot(name, first, geosType) {
+    assert.ok(this.slots.length < this.slotsPerSector, 'the directory has one sector');
     const slot = offsetOf(DIR_TRACK, FIRST_DIR_SECTOR) + this.slots.length * DIR_SLOT;
     this.image[slot + SLOT_TYPE] = USR_CLOSED;
-    this.image[slot + SLOT_FIRST] = FIRST_FILE_TRACK + Math.floor(sectors[0] / SECTORS_PER_TRACK);
-    this.image[slot + SLOT_FIRST + 1] = sectors[0] % SECTORS_PER_TRACK;
+    this.image[slot + SLOT_FIRST] = first.track;
+    this.image[slot + SLOT_FIRST + 1] = first.sector;
     this.image.fill(PAD, slot + SLOT_NAME, slot + SLOT_NAME + 16);
     this.image.write(name, slot + SLOT_NAME, 'latin1');
     this.image[slot + SLOT_GEOS_TYPE] = geosType;
@@ -331,14 +368,13 @@ test('a disk with no boot file is refused', { skip }, () => {
   });
 });
 
-test('CONFIGURE files stop being auto-executed, and nothing else changes', { skip }, () => {
+test('configuration files other than the stock CONFIGURE stop being auto-executed, and nothing else changes', { skip }, () => {
   withHarness((launch) => {
     const disk = standardDisk();
     const configure = disk.addFile('CONFIGURE', Buffer.from([1, 2, 3]), AUTO_EXEC);
     const second = disk.addFile('CONFIG 2.0r', Buffer.from([1, 2, 3]), AUTO_EXEC);
     const geos128 = ['128 CONFIGURE', '128 CONFIG 2.0r', '64 CONFIG 2.0r'].map((name) => disk.addFile(name, Buffer.from([1, 2, 3]), AUTO_EXEC));
     const other = disk.addFile('pad color mgr', Buffer.from([1, 2, 3]), AUTO_EXEC);
-    const plain = disk.addFile('CONFIGURE.DOC', Buffer.from([1, 2, 3]), 0);
 
     const first = launch(disk);
     assert.equal(first.status, 0, first.err);
@@ -347,7 +383,12 @@ test('CONFIGURE files stop being auto-executed, and nothing else changes', { ski
     assert.equal(first.image[second + SLOT_GEOS_TYPE], SYSTEM_FILE);
     for (const slot of geos128) assert.equal(first.image[slot + SLOT_GEOS_TYPE], SYSTEM_FILE, 'GEOS 128 names CONFIG after a prefix');
     assert.equal(first.image[other + SLOT_GEOS_TYPE], AUTO_EXEC, 'other auto-exec files stay');
-    assert.equal(first.image[plain + SLOT_GEOS_TYPE], 0, 'a CONFIG file that is not auto-exec stays');
+
+    const documented = standardDisk();
+    const plain = documented.addFile('CONFIGURE.DOC', Buffer.from([1, 2, 3]), 0);
+    const left = launch(documented);
+    assert.match(left.out, /changed=0/);
+    assert.equal(left.image[plain + SLOT_GEOS_TYPE], 0, 'a CONFIG file that is not auto-exec stays');
 
     const again = launch({ image: first.image });
     assert.match(again.out, /changed=0/);
@@ -469,3 +510,91 @@ test('the GEOS 128 boot ROM reaches the block device on the page the launch puts
     assert.deepEqual(moved, BOOT_PAGE_AT, 'nothing else in the ROM changes with the page');
   });
 });
+
+// CONFIGURE as the stock disks have it: record 0 its code from $0406, with the drive-type probe in it, and record 4
+// the 1581 driver it installs for drive A, shorter than the driver area
+const STOCK_PROBE = [0xa9, 0xe5, 0x85, 0x03, 0xa9, 0x80, 0x85, 0x02, 0x20, 0x1e, 0x0c];
+const TR_PROBE = [0xa9, 0x00, 0xae, 0x89, 0x84, 0xe0, 0x08, 0xd0, 0x02, 0xa9, 0x03, 0x60];
+const PROBE_AT = { 64: 0x0c33 - 0x0406, 128: 0x0b7f - 0x0406 };
+const RECORD_0_SIZE = 3504;
+const RECORD_4_SIZE = { 64: 3179, 128: 2997 };
+const PROBE_RECORD = 0;
+const DRIVER_RECORD = 4;
+
+function configure(version, { probes = [PROBE_AT[version]], driver } = {}) {
+  const code = Buffer.alloc(RECORD_0_SIZE);
+  for (let i = 0; i < code.length; i++) code[i] = (i * 7 + 3) & 0xff;
+  for (const at of probes) Buffer.from(STOCK_PROBE).copy(code, at);
+  const stock = (version === '128' ? stockDriver128() : stockDriver()).subarray(0, RECORD_4_SIZE[version]);
+  return [code, ...[1, 2, 3].map((n) => Buffer.alloc(300 * n, n)), driver ?? stock, Buffer.alloc(1782, 5)];
+}
+
+const STOCK_CONFIGURE = { 64: 'CONFIGURE', 128: '128 CONFIGURE' };
+const diskFor = (version) => (version === '128' ? geos128Disk() : standardDisk());
+const bootDriver = (version, r) => r.prg.subarray(version === '128' ? 2 + GEOS128.driverAt : 2 + LOAD_ADDRESS - BASIC_START + DRIVER_AT_IN_BODY);
+
+for (const version of ['64', '128']) {
+  test(`GEOS ${version}: the stock CONFIGURE is set up to find the TR's drive and runs, installing the TR's driver for drive A`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const records = configure(version);
+      const slot = disk.addVlir(STOCK_CONFIGURE[version], records, AUTO_EXEC);
+
+      const first = launch(disk, [], version);
+      assert.equal(first.status, 0, first.err);
+      assert.match(first.out, /changed=1/);
+      assert.equal(first.image[slot + SLOT_GEOS_TYPE], AUTO_EXEC);
+      const code = disk.record(slot, PROBE_RECORD, first.image);
+      const probe = Buffer.from(records[PROBE_RECORD]);
+      Buffer.from(TR_PROBE).copy(probe, PROBE_AT[version]);
+      assert.equal(code.equals(probe), true, 'the probe answers for the TR, and nothing else in record 0 changes');
+      const driver = disk.record(slot, DRIVER_RECORD, first.image);
+      assert.equal(driver.length, RECORD_4_SIZE[version]);
+      assert.equal(driver.equals(bootDriver(version, first).subarray(0, driver.length)), true, 'the TR transport, as the boot image has it');
+      for (const i of [1, 2, 3, 5]) assert.equal(disk.record(slot, i, first.image).equals(records[i]), true, `record ${i}`);
+
+      const again = launch({ image: first.image }, [], version);
+      assert.match(again.out, /changed=0/);
+      assert.equal(again.image.equals(first.image), true);
+    });
+  });
+
+  test(`GEOS ${version}: a copy whose stock CONFIGURE was put aside gets it set up and running again`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const slot = disk.addVlir(STOCK_CONFIGURE[version], configure(version), SYSTEM_FILE);
+      const r = launch(disk, [], version);
+      assert.equal(r.status, 0, r.err);
+      assert.equal(r.image[slot + SLOT_GEOS_TYPE], AUTO_EXEC);
+      assert.equal(disk.record(slot, PROBE_RECORD, r.image).subarray(PROBE_AT[version], PROBE_AT[version] + TR_PROBE.length).equals(Buffer.from(TR_PROBE)), true);
+    });
+  });
+
+  test(`GEOS ${version}: a CONFIGURE that is not the stock one, or not as the stock one is laid out, is put aside untouched`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const other = version === '128' ? '64' : '128';
+      const shortDriver = (version === '128' ? stockDriver128() : stockDriver()).subarray(0, READ_BLOCK - DRIVER_AREA - 1);
+      const notADriver = Buffer.from(configure(version)[DRIVER_RECORD]);
+      notADriver[TYPE_BYTE] = 0;
+      const odd = [
+        ['the other version', STOCK_CONFIGURE[other], configure(version)],
+        ['another configuration program', 'CONFIG 2.0r', configure(version)],
+        ['no probe', STOCK_CONFIGURE[version], configure(version, { probes: [] })],
+        ['the probe twice', STOCK_CONFIGURE[version], configure(version, { probes: [PROBE_AT[version], 0x100] })],
+        ['record 4 not a driver', STOCK_CONFIGURE[version], configure(version, { driver: notADriver })],
+        ['record 4 ending before ReadBlock', STOCK_CONFIGURE[version], configure(version, { driver: shortDriver })],
+      ].map(([why, name, records]) => ({ why, records, slot: disk.addVlir(name, records, AUTO_EXEC) }));
+      const r = launch(disk, [], version);
+      assert.equal(r.status, 0, r.err);
+      for (const { why, records, slot } of odd) {
+        assert.equal(r.image[slot + SLOT_GEOS_TYPE], SYSTEM_FILE, why);
+        records.forEach((data, i) => assert.equal(disk.record(slot, i, r.image).equals(data), true, `${why}: record ${i}`));
+      }
+
+      const plain = diskFor(version);
+      const sequential = plain.addFile(STOCK_CONFIGURE[version], configure(version)[PROBE_RECORD], AUTO_EXEC);
+      assert.equal(launch(plain, [], version).image[sequential + SLOT_GEOS_TYPE], SYSTEM_FILE, 'a sequential file');
+    });
+  });
+}

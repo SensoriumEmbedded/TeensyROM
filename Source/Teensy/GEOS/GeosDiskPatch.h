@@ -68,6 +68,7 @@ struct GeosTarget
    const struct GeosClockRun *ClockRuns;
    uint8_t ClockRunCount;
    uint16_t ResetKey;      // where the boot file holds the C128's reset key, or 0
+   const char *ConfigureName;
 };
 
 struct GeosBootDisk { bool HasDeskTop, HasDriver; };
