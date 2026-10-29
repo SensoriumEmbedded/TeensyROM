@@ -132,8 +132,9 @@ improvement:
   behind runtime checks.
 - **Tools are zero-dependency Node** run through `npm run`, and build options
   flow through `tools/build-firmware.mjs`. Python is confined to the bench
-  scripts in `tools/bench/` and `tools/Debug/`; a new PowerShell, batch or Python
-  build step duplicates the Node one.
+  scripts in `tools/bench/` and `tools/Debug/` and the GEOS driver generators in
+  `tools/geos/`; a new PowerShell, batch or Python build step duplicates the
+  Node one.
 - **Deliberate shapes that look wrong:**
   - `FlashUpdate.ino` and `Flash/` stay out of `FLASHMEM`: they rewrite the
     flash they would run from.

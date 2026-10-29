@@ -109,7 +109,7 @@ Auditor's bound findings arrive rated from the code alone and nothing supplies
 the other half; say that in the report rather than letting the rating stand
 unqualified.
 
-## Phase 1 — analyse, in parallel, read-only
+## Phase 1 — analyze, in parallel, read-only
 
 Launch every selected lane in one message so they run concurrently. Each gets
 the resolved target and an explicit **report only, do not touch the tree**.
@@ -164,7 +164,7 @@ description is new code, new code earns a review, and that is the loop that
 spends hours on a minor change.
 
 Order matters: **Auditor → Adversary → Steward → Pragmatist.** Correctness and
-abuse fixes change behaviour, and changed behaviour changes what the docs and
+abuse fixes change behavior, and changed behavior changes what the docs and
 tests should say, so the Steward runs after them and reviews the tree as
 repaired rather than as submitted. The Pragmatist is last and advisory.
 
