@@ -25,3 +25,10 @@ test('a menu change drops the old selection along with the old item count', () =
   const source = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'Teensy.ino'), 'utf8'));
   assert.match(functionBody(source, 'SetMenu'), /\bSelItemFullIdx\s*=\s*0\s*;/);
 });
+
+test('GEOS 128, listed on every machine, starts only once the menu has reported a C128', () => {
+  // Its boot ROM cannot run on a C64, where the menu still lists it
+  const source = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'GeosLauncher.ino'), 'utf8'));
+  assert.match(functionBody(source, 'LaunchGeos'),
+    /^\{[^{}]*?\bif\s*\(\s*Launcher->Machine\s*==\s*GeosC128\s*&&\s*!\s*HostIsC128\s*\(\s*\)\s*\)\s*\{[^}]*\breturn\s+false\s*;/);
+});
