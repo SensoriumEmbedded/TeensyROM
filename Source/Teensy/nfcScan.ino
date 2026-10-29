@@ -360,7 +360,7 @@ bool nfcReadTagLaunch(uint8_t* uid, uint8_t uidLength)
             {
                //point at sub-dir
                LocalDirMenu = (StructMenuItem*)TeensyROMMenu[MenuNum].Code_Image;
-               LocalNumItems = TeensyDirItemCount(&TeensyROMMenu[MenuNum]);
+               LocalNumItems = TeensyROMMenu[MenuNum].Size/sizeof(StructMenuItem);
             }
             Printf_dbg("TR Dir Num = %d\n", MenuNum);
          }

@@ -110,7 +110,7 @@ static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *W
 }
 
 // A file's bytes, found by name in the directory and followed along its sector chain
-static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, uint32_t Capacity, uint32_t *Length)
+FLASHMEM static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, uint32_t Capacity, uint32_t *Length)
 {
    struct GeosTS Chain[GEOS_MAX_DIR_SECTORS], At = { 0, 0 };
    uint8_t Block[GEOS_SECTOR_SIZE];
@@ -275,7 +275,7 @@ static const uint8_t Geos128StartUp[] =
    0xa9, 0x17, 0x8d, 0x18, 0x85,                   // day 23
 };
 
-static void Geos128SetClock(uint8_t *Run, const struct GeosDate *Now)
+FLASHMEM static void Geos128SetClock(uint8_t *Run, const struct GeosDate *Now)
 {
    const uint8_t StartUp[sizeof Geos128StartUp] =
    {
@@ -345,7 +345,7 @@ static bool GeosBreakResetKey(struct GeosDisk *Disk, uint8_t *Image, uint32_t Le
 
 // The boot file as GEOS starts from it, load address first: the disk driver's transport replaced, any reset key
 // broken, and the clock set to Now where the start-up code is one the target knows
-static inline bool GeosBuildBootImage(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
+FLASHMEM static inline bool GeosBuildBootImage(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
                                       uint32_t *Length, bool *ClockSet)
 {
    const struct GeosTarget *Target = Disk->Target;

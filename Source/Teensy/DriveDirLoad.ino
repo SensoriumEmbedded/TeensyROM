@@ -252,7 +252,7 @@ FLASHMEM void HandleExecution()
             if(strcmp(MenuSelCpy.Name, UpDirString)==0) MenuChange(); //only 1 level, returning to root
             else 
             {
-               SetMenu((StructMenuItem*)MenuSelCpy.Code_Image, TeensyDirItemCount(&MenuSelCpy));
+               SetMenu((StructMenuItem*)MenuSelCpy.Code_Image, MenuSelCpy.Size/sizeof(StructMenuItem));
                strcat(DriveDirPath, MenuSelCpy.Name); //append selected dir name
             }
             return;
