@@ -55,6 +55,40 @@ history; this is the list to hold in your head.
 - **RAM is a hard budget.** RAM1 is shared between ITCM code and DTCM data in
   32 KB banks; one bank crossed costs 32 KB of stack. Measure before and after
   with the same build configuration, and never compare against numbers in a doc.
+- **Code lands in ITCM unless it says otherwise.** A thread-mode function
+  without `FLASHMEM` costs RAM1, and a helper the compiler used to inline lands
+  there once it gains a second caller, is called through a function pointer, or
+  is a template or lambda instance. Only the build's memory report shows this,
+  never the diff. Mark thread-mode code `FLASHMEM`; on anything the PHI2 ISR
+  reaches, `FLASHMEM` is a timing bug, not a saving.
+- **Strings and tables go to flash.** New messages use `F()` or `PSTR()` and new
+  const tables `PROGMEM`, unless the ISR reads them; a buffer nothing uses any
+  more is deleted. DTCM grows in 1 KiB and 4 KiB alignment steps, so a few
+  hundred bytes of new strings can cost the plain TR 4 KiB of free-for-locals.
+- **A feature costs nothing while it is off.** Its background work runs from
+  its IO handler's `PollingHndlr`, not from `loop()`. A mode that does not need
+  a register does not answer at it: other cartridges and programs probe IO1 and
+  IO2. The handler's teardown flushes and closes what it opened. A command
+  arriving over USB or TCP can land while the C64 is mid-read, so it never
+  touches state the C64 is reading, such as `SerialStringBuf` and
+  `ptrSerialString`.
+- **Every entry path, not just the menu.** A file or feature is reached from
+  the TR menu, a remote launch (`RemoteControl.ino`), the host app's directory
+  listing (`FileTransfer.ino`), NFC (random pick included), hot keys and
+  autolaunch. A change to how something launches covers each of them. Resolve
+  everything that can fail (the file, the folder, the image) before changing
+  any state, so a failure leaves things as they were.
+- **Failure paths tell the truth.** A failed write leaves no partial file
+  behind, a failure is never reported as success, and a command that was
+  acknowledged never refuses silently afterwards. Error codes match the
+  contract their caller reads, such as [ControlComms.md](docs/ControlComms.md)
+  for the remote protocol.
+- **Emulated chips and patched 6502 code match the real thing.** Check a chip
+  register's behavior against VICE's model of that chip, and a patch to ROM or
+  C64 code against the actual ROM bytes, not a datasheet summary: the CIA's TOD
+  flips AM/PM when its hour is written as 12, and while CRB bit 7 is set a TOD
+  write sets the alarm instead of the clock. Leave every register you touched
+  in the state the code that runs next expects.
 - **The main loop is single-threaded.** A blocking call in a command handler
   stalls ASID playback, NFC and TCP for as long as it blocks.
 - **Hand-synced lists.** `enumIOHandlers` (`Menu_Regs.h`) and `IOHandler[]`

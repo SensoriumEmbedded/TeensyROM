@@ -104,7 +104,8 @@ on, goes back unfixed as **advisory**.
   `--no-extensions` choice on both) and report RAM1 code, RAM1 padding, RAM1
   free for local variables, RAM2 and flash for each, as the `prrev` skill's
   section 4 describes. A crossed 32 KB bank, a floor breached, or new DTCM
-  strings that could live in flash are findings.
+  strings that could live in flash, and a buffer nothing uses any more, are
+  findings.
 - **Read before judging.** `docs/Architecture/Constraints.md` for anything on
   the PHI2 path, in DMA, or in RAM placement; `Teensy-Firmware.md` for the
   module; `Known-Issues.md`, where a defect already recorded is not new. A fix
@@ -122,7 +123,24 @@ on, goes back unfixed as **advisory**.
     `Min_DriveDirLoad.ino`, `SerUSBIO.ino` and `Min_SerUSBIO.ino`, and so on),
     and TR and TR+ differ under `Fab04_Features`;
   - code reachable from the PHI2 path that is `FLASHMEM`, reads EEPROM, or
-    touches SD or USB; and the inverse, new thread-mode code left in ITCM;
+    touches SD or USB; and the inverse, thread-mode code left in ITCM,
+    including a helper that moved there by gaining a second caller, being
+    called through a function pointer, or being a template or lambda instance:
+    the memory report shows it, the diff does not;
+  - a launch or load change that covers the menu and misses another entry
+    path `CLAUDE.md` lists, or that mutates state before resolving what can
+    fail;
+  - a failure path that leaves a partial file, reports success, or refuses
+    silently after an ack, and an error code that differs from its documented
+    contract;
+  - a feature that costs something while it is off: work in `loop()` instead
+    of the handler's `PollingHndlr`, registers answered in modes that do not
+    need them, a teardown that does not flush or close, a remote command that
+    touches `SerialStringBuf` or `ptrSerialString` while the C64 may be reading
+    them;
+  - a chip-register write or 6502 patch checked only against documentation,
+    not against VICE's chip model and the real ROM bytes, or one that leaves a
+    register in a state the next code does not expect;
   - `fBusSnoop` assigned or cleared without staging or an ownership check;
   - a fixed buffer filled from C64-, SD-, USB- or network-driven data with no
     bound (`sprintf`, `strcpy`, path joins);

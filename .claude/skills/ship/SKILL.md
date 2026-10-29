@@ -17,7 +17,7 @@ mandatory unless the user says otherwise, and the last one is a hard stop.
 
 ```
 worktree → (implement → commit → review that change)* → final pass (if needed)
-         → draft PR → CI green → ready for review → STOP
+         → draft PR → CI green → before-Ready checks → ready for review → STOP
 ```
 
 **Never merge.** Do not run `gh pr merge`, do not enable auto-merge, and do not
@@ -64,10 +64,11 @@ board runs the image:
 - **Both images, both boards.** Grep for every other site of what you changed:
   the MinimalBoot twin of a full-firmware function (`Min_*.ino`), and the TR and
   TR+ sides of `Fab04_Features`.
-- **Measure memory.** Build the base and your tip the same way and compare
-  RAM1 code, padding, free-for-locals, RAM2 and flash. Put new strings and
-  tables in flash (`F()`, `PSTR`, `PROGMEM`) unless the ISR reads them; mark
-  thread-mode code `FLASHMEM` unless the ISR reaches it.
+- **Mind memory as you write.** `CLAUDE.md` → "The rules that bite hardest"
+  covers ITCM, strings, tables and idle cost. The diff cannot show ITCM
+  growth, so step 7 compares the link reports before the PR is marked ready.
+- **Every entry path and every failure path.** The same section lists them; a
+  launch change is checked from each.
 - **Findings are fixed, filed or dropped by `CLAUDE.md` → "Findings"**, and so
   is every subagent this run starts: its prompt says "follow CLAUDE.md →
   Findings" rather than restating the rules.
@@ -118,6 +119,18 @@ Only when the branch had **two or more** reviewed changes, once, at `medium`:
     Agent(subagent_type="reviewer", description="<branch-slug> final",
           prompt="Worktree: <absolute worktree path>\nTarget: origin/main..HEAD\nEffort: medium\nEvery change on this branch has had its own review. Look for interactions between them, not for defects inside one diff.")
 
+**A firmware PR headed upstream gets the maintainer's review instead.** Its
+final pass is the `prrev` skill's sections 3 to 5, whatever the number of
+reviewed changes, in place of the `medium` pass above:
+
+- **Section 3:** the review at `high`, through the `reviewer` agent with
+  `Target: origin/main..HEAD` and `Effort: high` rather than `prrev`'s own
+  `/code-review` call, which resolves the primary checkout instead of this
+  worktree. Check and trim its findings as section 3 says.
+- **Section 4:** the memory comparison, which step 7 takes from CI.
+- **Section 5:** the hardware list, which goes into the PR description as
+  step 5 says.
+
 A defect still open afterwards is a stop: report it and ask before opening a PR.
 
 ## 5. Open the PR as a draft
@@ -129,9 +142,15 @@ gh pr create --draft --title "<type>: <what changed>" --body-file <file>
 
 The body says what the change does and why, and:
 
-- **What it was tested on:** board (TR or TR+), machine, PAL or NTSC, image, and
-  commit; or "host build only, not hardware tested".
-- **Memory impact** for a firmware change: the before and after numbers.
+- **What ran on hardware**, across the axes `prrev` section 5 reviews: board
+  (TR, TR+), machine (C64, C128), PAL or NTSC, Full or MinimalBoot, the source
+  (SD, USB, TR menu, remote launch), the failure paths (no card, missing
+  folder, bad image), a replug or card pull, a second launch, and a re-run
+  after each fix, each with the commit it ran on. Run what is cheap before
+  asking for review. List what ran, not what didn't: an axis left untested is
+  simply absent, never a follow-up. With no hardware run at all, say "host
+  build only, not hardware tested".
+- **Memory impact** for a firmware change, from step 7.
 - **Anything downstream tools would notice:** a remote-protocol, register-map
   or EEPROM-layout change, called out on its own line.
 
@@ -146,8 +165,36 @@ gh pr checks --watch
 
 CI runs the tool tests, the extension conformance suite, the bench tests and
 both firmware builds. A failure that is a real defect gets its fix reviewed by
-step 3's rules, not quietly patched. Once every check is green and nothing is
-left to do, mark it ready:
+step 3's rules, not quietly patched.
+
+## 7. Before Ready
+
+The maintainer's review is the `prrev` skill. Answer its questions in the PR
+before asking for it.
+
+- **Memory, base against head.** CI's build log prints the memory report for
+  each image under `[minimal]`, `[main]` and `[extension]`, so no local build
+  is needed: compare this PR's head run with the run on `main` at the merge
+  base (`gh run list -w build.yml --commit <sha>`, then `gh run view <id>
+  --log`). Compare RAM1 code, RAM1 variables, free for local variables, RAM2
+  and flash for the main image on TR and TR+, and for MinimalBoot and the
+  extension image when the change touches them (`prrev` section 4, "What to
+  build"). Put the figures in the description as section 4's "Report the
+  numbers" lays them out, one table per target and image, each naming its
+  image.
+- **ITCM growth gets `FLASHMEM` first.** Anything that grew RAM1 code and no
+  ISR reaches is marked `FLASHMEM` before the PR is marked ready, not left for
+  the maintainer to ask for; that commit is reviewed by step 3's rules and the
+  figures re-taken from its CI run. When the cause is not obvious, `prrev`
+  section 4's "Find what grew" finds the symbols, from local builds of both
+  sides.
+- **Re-read the words after every fix round,** whether the fix came from a
+  review, CI or a comment: the title, the description and the code comments,
+  against the final code. The title becomes the merge commit's subject, and a
+  memory figure that no longer matches the head, or that names no image, is a
+  false claim.
+
+Once every check is green and nothing is left to do, mark it ready:
 
 ```bash
 gh pr ready
@@ -155,7 +202,7 @@ gh pr ready
 
 If more work turns up after that, `gh pr ready --undo` puts it back to a draft.
 
-## 7. Stop
+## 8. Stop
 
 Report to the user:
 
