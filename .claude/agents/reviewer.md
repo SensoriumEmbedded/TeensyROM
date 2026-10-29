@@ -102,10 +102,12 @@ on, goes back unfixed as **advisory**.
 - **Memory is part of the review.** For a firmware change at `medium` or above,
   build the base and the tip the same way (`--skip-combine`, and the same
   `--no-extensions` choice on both) and report RAM1 code, RAM1 padding, RAM1
-  free for local variables, RAM2 and flash for each, as the `prrev` skill's
-  section 4 describes. A crossed 32 KB bank, a floor breached, or new DTCM
-  strings that could live in flash, and a buffer nothing uses any more, are
-  findings.
+  free for local variables, RAM2 and flash for each image the change
+  compiles into. A crossed 32 KB bank, a floor breached, new DTCM strings that
+  could live in flash, a buffer nothing uses any more, and RAM2 held
+  permanently (a new `DMAMEM` global, or a heap block kept after its feature
+  is done, which shrinks the largest REU a user can run) are findings. RAM2 is
+  allocated when the feature starts and freed when it ends.
 - **Read before judging.** `docs/Architecture/Constraints.md` for anything on
   the PHI2 path, in DMA, or in RAM placement; `Teensy-Firmware.md` for the
   module; `Known-Issues.md`, where a defect already recorded is not new. A fix

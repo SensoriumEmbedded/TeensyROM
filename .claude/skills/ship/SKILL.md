@@ -119,17 +119,10 @@ Only when the branch had **two or more** reviewed changes, once, at `medium`:
     Agent(subagent_type="reviewer", description="<branch-slug> final",
           prompt="Worktree: <absolute worktree path>\nTarget: origin/main..HEAD\nEffort: medium\nEvery change on this branch has had its own review. Look for interactions between them, not for defects inside one diff.")
 
-**A firmware PR headed upstream gets the maintainer's review instead.** Its
-final pass is the `prrev` skill's sections 3 to 5, whatever the number of
-reviewed changes, in place of the `medium` pass above:
-
-- **Section 3:** the review at `high`, through the `reviewer` agent with
-  `Target: origin/main..HEAD` and `Effort: high` rather than `prrev`'s own
-  `/code-review` call, which resolves the primary checkout instead of this
-  worktree. Check and trim its findings as section 3 says.
-- **Section 4:** the memory comparison, which step 7 takes from CI.
-- **Section 5:** the hardware list, which goes into the PR description as
-  step 5 says.
+**A firmware PR headed upstream gets a final pass at `high` instead,** whatever
+the number of reviewed changes: the `reviewer` agent with
+`Target: origin/main..HEAD` and `Effort: high`, in place of the `medium` pass
+above. Its memory comparison is step 7's, and its hardware list is step 5's.
 
 A defect still open afterwards is a stop: report it and ask before opening a PR.
 
@@ -142,8 +135,7 @@ gh pr create --draft --title "<type>: <what changed>" --body-file <file>
 
 The body says what the change does and why, and:
 
-- **What ran on hardware**, across the axes `prrev` section 5 reviews: board
-  (TR, TR+), machine (C64, C128), PAL or NTSC, Full or MinimalBoot, the source
+- **What ran on hardware**, across these axes: board (TR, TR+), machine (C64, C128), PAL or NTSC, Full or MinimalBoot, the source
   (SD, USB, TR menu, remote launch), the failure paths (no card, missing
   folder, bad image), a replug or card pull, a second launch, and a re-run
   after each fix, each with the commit it ran on. Run what is cheap before
@@ -169,25 +161,26 @@ step 3's rules, not quietly patched.
 
 ## 7. Before Ready
 
-The maintainer's review is the `prrev` skill. Answer its questions in the PR
-before asking for it.
+Answer in the PR what a review will ask, before asking for one. CONTRIBUTING.md's
+"Before you open a PR" checklist applies; these go further.
 
 - **Memory, base against head.** CI's build log prints the memory report for
   each image under `[minimal]`, `[main]` and `[extension]`, so no local build
   is needed: compare this PR's head run with the run on `main` at the merge
   base (`gh run list -w build.yml --commit <sha>`, then `gh run view <id>
-  --log`). Compare RAM1 code, RAM1 variables, free for local variables, RAM2
-  and flash for the main image on TR and TR+, and for MinimalBoot and the
-  extension image when the change touches them (`prrev` section 4, "What to
-  build"). Put the figures in the description as section 4's "Report the
-  numbers" lays them out, one table per target and image, each naming its
-  image.
+  --log`). Compare the main image on TR and TR+, and MinimalBoot and the
+  extension image when the change touches them: `Source/Teensy/MinimalBoot/`
+  builds into MinimalBoot, and it or `Source/Teensy/VMBoot/` into the TR+
+  extension image. In the description, give one table per target and image,
+  each naming its image, with base, head and change for RAM1 code, RAM1
+  variables, RAM1 padding, free for local variables, RAM2 and flash.
 - **ITCM growth gets `FLASHMEM` first.** Anything that grew RAM1 code and no
   ISR reaches is marked `FLASHMEM` before the PR is marked ready, not left for
   the maintainer to ask for; that commit is reviewed by step 3's rules and the
-  figures re-taken from its CI run. When the cause is not obvious, `prrev`
-  section 4's "Find what grew" finds the symbols, from local builds of both
-  sides.
+  figures re-taken from its CI run. When the cause is not obvious, build both
+  sides locally with `--skip-combine` and diff `arm-none-eabi-nm -S
+  --size-sort -C` of their ELFs: ITCM symbols sit at `0x0000_0000`, DTCM at
+  `0x2000_0000`.
 - **Re-read the words after every fix round,** whether the fix came from a
   review, CI or a comment: the title, the description and the code comments,
   against the final code. The title becomes the merge commit's subject, and a

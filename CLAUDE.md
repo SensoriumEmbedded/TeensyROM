@@ -21,9 +21,7 @@ breaking one shows up as a glitch on one machine, not as a failed build.
 | [`add-io-handler`](.claude/skills/add-io-handler/SKILL.md) | add or review a cartridge/peripheral IO handler |
 | [`add-menu-program`](.claude/skills/add-menu-program/SKILL.md) | add a program, game, SID or picture to the built-in menu |
 | [`ship`](.claude/skills/ship/SKILL.md) | take a change from branch to a ready-for-review PR |
-| [`prrev`](.claude/skills/prrev/SKILL.md) | review someone's PR, with its memory impact and the hardware testing it still needs |
 | [`panel-review`](.claude/skills/panel-review/SKILL.md) | the four-lane review, for a large or risky change |
-| [`bcbc`](.claude/skills/bcbc/SKILL.md) | open a diff or a PR in Beyond Compare |
 
 ## Gates
 
@@ -61,10 +59,12 @@ history; this is the list to hold in your head.
   is a template or lambda instance. Only the build's memory report shows this,
   never the diff. Mark thread-mode code `FLASHMEM`; on anything the PHI2 ISR
   reaches, `FLASHMEM` is a timing bug, not a saving.
-- **Strings and tables go to flash.** New messages use `F()` or `PSTR()` and new
-  const tables `PROGMEM`, unless the ISR reads them; a buffer nothing uses any
-  more is deleted. DTCM grows in 1 KiB and 4 KiB alignment steps, so a few
-  hundred bytes of new strings can cost the plain TR 4 KiB of free-for-locals.
+- **Strings and tables go to flash.** New messages use `PSTR()` and new const
+  tables `PROGMEM`, unless the ISR reads them; `F()` is only a cast on Teensy 4,
+  so its strings stay in DTCM. A buffer nothing uses any more is deleted. DTCM
+  grows in 1 KiB and 4 KiB alignment steps, so a few hundred bytes of new
+  strings can cost the plain TR 4 KiB of free-for-locals. RAM2 and the rest
+  are in CONTRIBUTING.md's "Before you open a PR" checklist.
 - **A feature costs nothing while it is off.** Its background work runs from
   its IO handler's `PollingHndlr`, not from `loop()`. A mode that does not need
   a register does not answer at it: other cartridges and programs probe IO1 and
@@ -108,8 +108,8 @@ Every PR opens as a Draft and is marked ready only when nothing is left to do.
 edit, so the change lands in `.claude/worktrees/<name>` on its own branch. The
 primary checkout may have someone's uncommitted work in it, and a `git pull`
 there moves HEAD out from under a session. A worktree has no `tools/.cache`, so
-point `ARDUINO_CLI` at the primary checkout's copy (the `prrev` skill shows
-how). On Windows, where the toolchain refuses long paths, build with
+point `ARDUINO_CLI` at the primary checkout's
+`tools/.cache/*/arduino-cli*`. On Windows, where the toolchain refuses long paths, build with
 `--out` under a short folder such as `C:/tr-build/`.
 
 **Commits** say why, not what, with an area prefix: `firmware:`, `c64:`,
@@ -183,8 +183,7 @@ Reviews run through the agents in [.claude/agents/](.claude/agents/): the
 `reviewer` for every change, and the four lanes (`auditor`, `adversary`,
 `steward`, `pragmatist`) that `/panel-review` runs when a panel is chosen. A
 reviewer fixes what it finds as its own commit; that commit gets one `low`
-review, and the chain ends there. Reviewing someone else's PR is the `prrev`
-skill.
+review, and the chain ends there.
 
 **Pinned paths.** A change touching any of these is reviewed at `high` whatever
 its size, because a one-line change there does the most damage:
@@ -232,7 +231,8 @@ question, and the PR says "host build only, not hardware tested".
 PR descriptions, issues, commit messages and docs are public. They never carry
 a contributor's private notes, local paths, machine names, todo-list numbers
 or unpublished investigations. Cite a commit, a PR or a doc section instead,
-or state the fact plainly. The `prrev` skill's section 7 has the checklist.
+or state the fact plainly, and reread the text for each of these before it
+goes out.
 
 ## Spelling
 
