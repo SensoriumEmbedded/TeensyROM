@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm test *)",
+      "Bash(npm run build:c64)",
+      "Bash(npm run build:c64 *)",
+      "Bash(npm run build:tr)",
+      "Bash(npm run build:tr *)",
+      "Bash(npm run build:tr-plus)",
+      "Bash(npm run build:tr-plus *)",
+      "Bash(npm run verify:extensions)",
+      "Bash(npm run flash -- --check)",
+      "Bash(node --test *)",
+      "Bash(python3 -m unittest discover -s tools/bench)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)"
+    ]
+  }
+}
