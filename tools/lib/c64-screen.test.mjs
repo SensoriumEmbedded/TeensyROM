@@ -97,7 +97,7 @@ test('an expression it cannot evaluate is reported rather than assumed', () => {
 // deliberate -- listed so a new one has to be added here on purpose rather than slipping in.
 const DELIBERATE_FULL_WIDTH_ROWS = [
   'MIDI2SID/source/M2Ssupport.asm:158',
-  'MainMenuCRT/source/TeensyROMC64.asm:155',
+  'MainMenuCRT/source/TeensyROMC64.asm:159',
 ];
 
 test('no C64 message row fills all 40 columns except the declared banners', () => {
