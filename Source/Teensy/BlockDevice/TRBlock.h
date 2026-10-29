@@ -29,6 +29,7 @@ enum TRBlockCommand
    TRBlockWrite = 2,
    TRBlockFlush = 3,
    TRBlockInfo  = 4,
+   TRBlockBoot  = 5,
 };
 
 enum TRBlockStatusValue
@@ -65,6 +66,8 @@ struct TRBlockBackend
    uint8_t (*Transfer)(void *Context, bool Write, uint8_t Addr0, uint8_t Addr1, uint8_t *Block);
    uint8_t (*Info)(void *Context, uint8_t *Out);   // TRBLOCK_INFO_SIZE bytes
    uint8_t (*Flush)(void *Context);
+   const uint8_t *Boot;   // what BOOT reads, page by page; NULL when the launch left none
+   uint32_t BootSize;
 };
 
 // ISR and main loop run on one core, so only the compiler's ordering matters
@@ -126,6 +129,18 @@ static inline void TRBlockWriteAt(struct TRBlock *Dev, uint8_t Offset, uint8_t D
    }
 }
 
+static uint8_t TRBlockBootPage(const struct TRBlockBackend *Backend, uint8_t Addr0, uint8_t Addr1, uint8_t *Block)
+{
+   uint32_t Offset = (uint32_t)(Addr1 << 8 | Addr0) * TRBLOCK_SIZE, Length;
+
+   if (!Backend->Boot) return TRBlockNoImage;
+   if (Offset >= Backend->BootSize) return TRBlockBadAddress;
+   Length = Backend->BootSize - Offset < TRBLOCK_SIZE ? Backend->BootSize - Offset : TRBLOCK_SIZE;
+   memcpy(Block, Backend->Boot + Offset, Length);
+   memset(Block + Length, 0, TRBLOCK_SIZE - Length);
+   return TRBlockDone;
+}
+
 static uint8_t TRBlockRun(struct TRBlock *Dev, const struct TRBlockBackend *Backend)
 {
    if (!Backend || !Backend->Context) return TRBlockNoImage;
@@ -139,6 +154,8 @@ static uint8_t TRBlockRun(struct TRBlock *Dev, const struct TRBlockBackend *Back
          return Backend->Flush(Backend->Context);
       case TRBlockInfo:
          return Backend->Info(Backend->Context, Dev->Buffer);
+      case TRBlockBoot:
+         return TRBlockBootPage(Backend, Dev->JobAddr0, Dev->JobAddr1, Dev->Buffer);
    }
    return TRBlockBadCommand;
 }

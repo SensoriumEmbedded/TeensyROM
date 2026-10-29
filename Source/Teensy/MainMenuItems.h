@@ -187,6 +187,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_Swiftlink    , (char*)"Simple SwiftLink Term (dev ref)"  , (uint8_t*)SST_prg                    , sizeof(SST_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"Segment+Dot Matrix Digital Clock" , (uint8_t*)shclock_tr_prg             , sizeof(shclock_tr_prg) ,
      rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 64"                          , (uint8_t*)&Geos64Launcher            , sizeof(Geos64Launcher) ,
+     rtGEOS     , IOH_GeoRAM       , (char*)"GEOS 128                   +C128" , (uint8_t*)&Geos128Launcher           , sizeof(Geos128Launcher) ,
 //     rtFilePrg  , IOH_Swiftlink    , (char*)"V-1541.19k.sl         +SwiftLink ", (uint8_t*)v1541wrap_prg              , sizeof(v1541wrap_prg) ,
 };
 

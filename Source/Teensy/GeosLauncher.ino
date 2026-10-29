@@ -10,7 +10,7 @@
 #define GEOS_EXT_LENGTH    4
 #define GEOS_MAX_IMAGES    8
 
-// Only GEOS 64's D81 image, with the deskTop and the applications on one disk, is supported
+// Only the D81 image, with the deskTop and the applications on one disk, is supported
 #define GEOS_IMAGE_EXTENSION ".d81"
 
 FLASHMEM static bool GeosFileRead(void *Context, uint32_t Offset, uint8_t *Block)
@@ -257,15 +257,28 @@ FLASHMEM static bool GeosSetUpImage(const struct GeosLauncher *Launcher, const c
    return GeosUse(Launcher, CopyName, BootName);
 }
 
+// The boot ROM and the boot image must outlast the launch in RAM_Image, which the RAM expansion handlers take as
+// free unless a crt's chips are in it: so they are listed as a C128 crt's two chips, ending past the image.
+FLASHMEM static bool GeosUseC128Boot(const uint8_t *ImageEnd, StructMenuItem *Item)
+{
+   CrtChips[0] = { RAM_Image, 0x8000, GEOS128_BOOT_CHIP_SIZE, 0 };
+   CrtChips[1] = { RAM_Image + GEOS128_BOOT_CHIP_SIZE, 0xC000, GEOS128_BOOT_CHIP_SIZE, 0 };
+   NumCrtChips = 2;
+   ptrRAM_ImageEnd = (uint8_t *)ImageEnd;
+   return SetC128Type(Item);
+}
+
 FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
    char Path[MaxNamePathLength];
    struct GeosDisk Disk;
    uint32_t Length = 0;
+   const uint8_t *Boot = NULL;
    struct GeosDate Now = GeosToday();
    bool Changed, ClockSet, Built;
    File Image;
 
+   FreeCrtChips();
    GeosPath(Path, sizeof Path, Launcher, Name);
    Image = SD.open(Path, FILE_WRITE_BEGIN);
    if (!Image)
@@ -274,20 +287,26 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
-   Built = GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet) && GeosDisableConfigure(&Disk, &Changed);
+   Built = Launcher->Machine == GeosC128
+         ? GeosBuildC128Boot(&Disk, &Now, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
+         : GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet);
+   Built = Built && GeosDisableConfigure(&Disk, &Changed);
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
    if (!Built) return false;
-   if (!TRBlockMount(Path))
+   if (!TRBlockMount(Path, Boot, Boot ? Length : 0))
    {
       SendMsgPrintfln(PSTR("%s\r\ncould not be mounted"), Name);
       return false;
    }
-   Item->ItemType = rtFilePrg;
+   // HandleExecution copies a built-in item's Code_Image into RAM_Image unless it already points there
    Item->Code_Image = RAM_Image;
+   if (Launcher->Machine == GeosC128) return GeosUseC128Boot(Boot + Length, Item);
+   Item->ItemType = rtFilePrg;
    Item->Size = Length;
    return true;
 }
+
 
 FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *Item)
 {
@@ -295,6 +314,11 @@ FLASHMEM bool LaunchGeos(const struct GeosLauncher *Launcher, StructMenuItem *It
    uint8_t Count;
    bool BootDiskFound = false;
 
+   if (Launcher->Machine == GeosC128 && !HostIsC128())
+   {
+      SendMsgPrintfln(PSTR("%s needs a C128"), Launcher->Title);
+      return false;
+   }
    if (!SDFullInit())
    {
       SendMsgPrintfln(PSTR("%s starts from your boot disk\r\nimage on the SD card. Insert the card."), Launcher->Title);

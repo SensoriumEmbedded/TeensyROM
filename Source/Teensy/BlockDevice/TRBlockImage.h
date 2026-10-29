@@ -61,5 +61,5 @@ FLASHMEM static uint8_t TRBlockImageFlush(void *Context)
 
 static inline struct TRBlockBackend TRBlockImageBackend(struct TRBlockImage *Image)
 {
-   return (struct TRBlockBackend){ Image, TRBlockImageTransfer, TRBlockImageInfo, TRBlockImageFlush };
+   return (struct TRBlockBackend){ Image, TRBlockImageTransfer, TRBlockImageInfo, TRBlockImageFlush, NULL, 0 };
 }

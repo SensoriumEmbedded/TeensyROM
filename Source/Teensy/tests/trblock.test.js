@@ -21,7 +21,7 @@ const WINDOW = 64;
 const PAGES = SECTOR / WINDOW;
 const CMD = 0x08, ADDR0 = 0x09, ADDR1 = 0x0a, PAGE = 0x0b, TOKEN = 0x0c, STATUS = 0x0d, ECHO = 0x0e, ID = 0x10;
 const WINDOW_AT = 0x40;
-const READ = 1, WRITE = 2, FLUSH = 3, INFO = 4;
+const READ = 1, WRITE = 2, FLUSH = 3, INFO = 4, BOOT = 5;
 const BUSY = 0x80, DONE = 0x5a, NO_IMAGE = 0xe1, BAD_ADDRESS = 0xe2, WRITE_FAILED = 0xe4, READ_ONLY = 0xe5, BAD_COMMAND = 0xe6;
 
 const zoneSectors = (track) => {
@@ -76,10 +76,14 @@ function harness() {
   return harnessPath;
 }
 
-function run(kind, script, mode) {
+function run(kind, script, mode, boot) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trblock-run-'));
   const image = path.join(dir, 'in.img'), out = path.join(dir, 'out.img');
   fs.writeFileSync(image, makeImage(FORMATS[kind]));
+  if (boot) {
+    fs.writeFileSync(path.join(dir, 'boot.bin'), boot);
+    mode = `boot=${path.join(dir, 'boot.bin')}`;
+  }
   const ran = spawnSync(harness(), [image, out, ...(mode ? [mode] : [])], { input: script, encoding: 'utf8' });
   assert.equal(ran.status, 0, ran.stderr);
   const lines = ran.stdout.split('\n').filter(Boolean);
@@ -180,7 +184,7 @@ test('an image that is no known size mounts as no image rather than being guesse
 });
 
 test('a command that is not one fails with bad command, and so does zero', { skip }, () => {
-  for (const cmd of [0, 5, 0x80, 0xff]) assert.equal(statusOf(command(cmd) + 'svc\n'), hex(BAD_COMMAND), `cmd ${cmd}`);
+  for (const cmd of [0, 6, 0x80, 0xff]) assert.equal(statusOf(command(cmd) + 'svc\n'), hex(BAD_COMMAND), `cmd ${cmd}`);
 });
 
 test('flush reaches the backend once per command and reports done', { skip }, () => {
@@ -218,4 +222,33 @@ test('the page register uses only its low two bits', { skip }, () => {
   const { lines } = run('d81', command(READ, { addr0: 1, addr1: 0 }) + 'svc\n' + write(PAGE, 0) + read(WINDOW_AT) + write(PAGE, 4) + read(WINDOW_AT) + write(PAGE, 5) + read(WINDOW_AT));
   assert.equal(lines[1], lines[2]);
   assert.notEqual(lines[1], lines[3]);
+});
+
+// A boot image with its page number in every byte's high bits, longer than one page and ending partway into one
+const BOOT_IMAGE = Buffer.from(Array.from({ length: 2 * SECTOR + 100 }, (_, i) => ((i >> 8) * 0x40 + i) & 0xff));
+const bootPage = (page, token = 1) => readBlock(page & 0xff, page >> 8, token).replace(`w ${hex(CMD)} ${hex(READ)}`, `w ${hex(CMD)} ${hex(BOOT)}`);
+
+test('boot reads the launch\'s boot image a page at a time, the last page padded with zeros', { skip }, () => {
+  const pages = [0, 1, 2];
+  const { lines } = run('d81', pages.map((page) => bootPage(page, page + 1)).join(''), undefined, BOOT_IMAGE);
+  for (const page of pages) {
+    const got = lines.slice(page * (SECTOR + 1), (page + 1) * (SECTOR + 1));
+    const expected = Buffer.alloc(SECTOR);
+    BOOT_IMAGE.copy(expected, 0, page * SECTOR, (page + 1) * SECTOR);
+    assert.equal(got[0], '1', 'the main loop ran it');
+    assert.deepEqual(bytesOf(got.slice(1)), expected, `page ${page}`);
+  }
+});
+
+test('boot past the end of the boot image fails with bad address', { skip }, () => {
+  for (const [addr0, addr1] of [[3, 0], [0, 1], [0xff, 0xff]]) {
+    assert.equal(run('d81', command(BOOT, { addr0, addr1 }) + 'svc\n' + read(STATUS), undefined, BOOT_IMAGE).lines.at(-1), hex(BAD_ADDRESS), `page ${addr1}:${addr0}`);
+  }
+  const twoPages = BOOT_IMAGE.subarray(0, 2 * SECTOR);
+  assert.equal(run('d81', command(BOOT, { addr0: 2 }) + 'svc\n' + read(STATUS), undefined, twoPages).lines.at(-1), hex(BAD_ADDRESS), 'the page just past a whole-page end');
+});
+
+test('boot with no boot image fails with no image, while the disk image still reads', { skip }, () => {
+  assert.equal(statusOf(command(BOOT) + 'svc\n'), hex(NO_IMAGE));
+  assert.equal(statusOf(command(READ, { addr0: 1 }) + 'svc\n'), hex(DONE));
 });

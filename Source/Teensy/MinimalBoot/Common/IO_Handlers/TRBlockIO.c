@@ -18,6 +18,8 @@ static uint32_t TRBlockLastWritemS;
 static char *TRBlockPath;
 static bool TRBlockFlushFailureLogged;
 static struct { uint32_t FirstSector, CardSerial; } TRBlockMounted;
+static const uint8_t *TRBlockBootImage;
+static uint32_t TRBlockBootSize;
 
 FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
@@ -61,6 +63,8 @@ FLASHMEM static bool TRBlockOpen()
       return false;
    }
    TRBlockBack = TRBlockImageBackend(&TRBlockImg);
+   TRBlockBack.Boot = TRBlockBootImage;
+   TRBlockBack.BootSize = TRBlockBootSize;
    return true;
 }
 
@@ -98,12 +102,17 @@ FLASHMEM void TRBlockUnmount()
    TRBlockClose();
    free(TRBlockPath);
    TRBlockPath = NULL;
+   TRBlockBootImage = NULL;
+   TRBlockBootSize = 0;
 }
 
-// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler
-FLASHMEM bool TRBlockMount(const char *Path)
+// The image stays mounted across handler restarts, so a launcher can mount it and then start the handler.
+//  Boot, which BOOT reads, must stay in place for as long as the image is mounted; NULL for none.
+FLASHMEM bool TRBlockMount(const char *Path, const uint8_t *Boot, uint32_t BootSize)
 {
    TRBlockUnmount();
+   TRBlockBootImage = Boot;
+   TRBlockBootSize = BootSize;
    TRBlockPath = strdup(Path);
    if (TRBlockPath && TRBlockOpen())
    {

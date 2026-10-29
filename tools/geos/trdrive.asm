@@ -44,6 +44,13 @@ CIA1_ICR = $dc0d
 CIA2_ICR = $dd0d
 MASK_ALL = $7f
 
+CPU_PORT = $01
+IO_IN_64 = $36
+MMU_CR = $ff00
+IO_IN_BANK_1 = $7e
+VIC_CLOCK = $d030
+CLOCK_1MHZ = 0
+
 BASE_GEOS_RAM = $df
 
 * = ORG
@@ -53,10 +60,21 @@ InitForIO
         pla
         sta savedP
         sei
-        lda $01
-        sta saved01
-        lda #$36
-        sta $01
+!ifdef C128 {
+        lda MMU_CR
+        sta savedMemory
+        lda #IO_IN_BANK_1
+        sta MMU_CR
+        lda VIC_CLOCK
+        sta savedClock
+        lda #CLOCK_1MHZ
+        sta VIC_CLOCK
+} else {
+        lda CPU_PORT
+        sta savedMemory
+        lda #IO_IN_64
+        sta CPU_PORT
+}
         lda VIC_IRQ_ENABLE
         sta savedIrqEnable
         lda #0
@@ -73,8 +91,15 @@ DoneWithIO
         lda CIA2_ICR
         lda savedIrqEnable
         sta VIC_IRQ_ENABLE
-        lda saved01
-        sta $01
+!ifdef C128 {
+        lda savedClock
+        sta VIC_CLOCK
+        lda savedMemory
+        sta MMU_CR
+} else {
+        lda savedMemory
+        sta CPU_PORT
+}
         lda savedP
         pha
         plp
@@ -344,7 +369,10 @@ putReg
 
 trbId   !byte $54, $52, $42
 savedP  !byte 0
-saved01 !byte 0
+savedMemory !byte 0
+!ifdef C128 {
+savedClock !byte 0
+}
 scratch !byte 0
 command !byte 0
 seen    !byte 0

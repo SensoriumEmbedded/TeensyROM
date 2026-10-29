@@ -12,6 +12,8 @@ import { commandExists } from '../../../tools/lib/toolchain.mjs';
 const FIRMWARE_ROOT = path.resolve(import.meta.dirname, '..');
 const HARNESS_SOURCE = path.join(FIRMWARE_ROOT, 'tests/geos_boot_harness.c');
 const DRIVER_HEADER = path.join(FIRMWARE_ROOT, 'GEOS/TRDriver.h');
+const DRIVER128_HEADER = path.join(FIRMWARE_ROOT, 'GEOS/TRDriver128.h');
+const BOOT_ROM_HEADER = path.join(FIRMWARE_ROOT, 'GEOS/Geos128Boot.h');
 
 const NOT_CI = ['', '0', 'false'];
 const inCi = !NOT_CI.includes(process.env.CI ?? '');
@@ -46,11 +48,16 @@ const DRIVER_AT_IN_BODY = 0x4400;
 const BODY_SIZE = 0x6000;
 const BASIC_START = 0x0801;
 
-const header = fs.readFileSync(DRIVER_HEADER, 'utf8');
-const arrayOf = (name) => [...header.match(new RegExp(`${name}\\[\\d+\\] PROGMEM = \\{([^}]*)\\}`))[1].matchAll(/0x[0-9a-f]+/g)].map((m) => parseInt(m[0], 16));
+const arrayIn = (file) => (name) => [...fs.readFileSync(file, 'utf8').match(new RegExp(`${name}\\[\\d+\\] PROGMEM = \\{([^}]*)\\}`))[1].matchAll(/0x[0-9a-f]+/g)].map((m) => parseInt(m[0], 16));
+const arrayOf = arrayIn(DRIVER_HEADER);
 const CODE = arrayOf('TRDriverCode');
 const RELOCATIONS = arrayOf('TRDriverRelocations');
 const ENTRIES = arrayOf('TRDriverEntries');
+const ENTRIES_128 = arrayIn(DRIVER128_HEADER)('TRDriver128Entries');
+const BOOT_ROML = arrayIn(BOOT_ROM_HEADER)('Geos128BootRoml');
+const BOOT_VECTORS = arrayIn(BOOT_ROM_HEADER)('Geos128BootVectors');
+const BOOT_CHIP = 0x2000;
+const BOOT_PARAMS = 0x21;
 
 const offsetOf = (track, sector) => ((track - 1) * SECTORS_PER_TRACK + sector) * SECTOR;
 
@@ -117,12 +124,13 @@ function runClock(code, { x = 0, memory = {} } = {}) {
 const GEOS64 = { load: LOAD_ADDRESS, driverAt: DRIVER_AT_IN_BODY, startUpAt: START_AT_IN_BODY };
 
 function bootFile(driver = stockDriver(), startUp = [], layout = GEOS64) {
-  const body = Buffer.alloc(BODY_SIZE);
-  for (let i = 0; i < BODY_SIZE; i++) body[i] = (i * 31 + 7) & 0xff;
+  const size = layout.size ?? BODY_SIZE;
+  const body = Buffer.alloc(size);
+  for (let i = 0; i < size; i++) body[i] = (i * 31 + 7) & 0xff;
   driver.copy(body, layout.driverAt);
   Buffer.from(startUp).copy(body, layout.startUpAt);
   if (layout.resetKey) Buffer.from(layout.resetKey.bytes).copy(body, layout.resetKey.at);
-  const file = Buffer.alloc(2 + BODY_SIZE);
+  const file = Buffer.alloc(2 + size);
   file.writeUInt16LE(layout.load, 0);
   body.copy(file, 2);
   return { file, body };
@@ -179,7 +187,14 @@ function withHarness(body) {
     const launch = (disk, time = [], version = '64') => {
       fs.writeFileSync(path.join(dir, 'in.d81'), disk.image);
       const r = run([path.join(dir, 'harness'), version, path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)]);
-      return { ...r, prg: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.prg')) : null, image: r.status === 0 ? fs.readFileSync(path.join(dir, 'out.d81')) : null };
+      const out = r.status === 0 ? fs.readFileSync(path.join(dir, 'out.prg')) : null;
+      const image = r.status === 0 ? fs.readFileSync(path.join(dir, 'out.d81')) : null;
+      const boot = r.out.match(/ boot=(\d+),(\d+)/);
+      if (!boot) return { ...r, prg: out, image };
+      const [at, size] = [Number(boot[1]), Number(boot[2])];
+      assert.equal(at + size, out.length, 'the boot image ends the output');
+      // the boot file as the disk holds it, load address first, and the ROM in front of it
+      return { ...r, prg: out.subarray(at - 2), rom: out.subarray(0, at - 2), boot: out.subarray(at), image };
     };
     body(launch);
   } finally {
@@ -202,12 +217,14 @@ const START_UP_128 = [
   0xa9, 0x00, 0x8d, 0xc5, 0x88, ...START_CLOCK,
   0xa9, 0x5c, 0x8d, 0x16, 0x85, 0xa9, 0x03, 0x8d, 0x17, 0x85, 0xa9, 0x17, 0x8d, 0x18, 0x85,
 ];
-const GEOS128 = {
-  load: GEOS128_LOAD,
-  driverAt: 0x7000 - GEOS128_LOAD,
-  startUpAt: 0x2c24 - GEOS128_LOAD,
-  resetKey: { at: 0x6ff5 - GEOS128_LOAD, bytes: RESET_KEY },
-};
+const geos128Layout = (load = GEOS128_LOAD, size = BODY_SIZE) => ({
+  load,
+  size,
+  driverAt: 0x7000 - load,
+  startUpAt: 0x2c24 - load,
+  resetKey: { at: 0x6ff5 - load, bytes: RESET_KEY },
+});
+const GEOS128 = geos128Layout();
 const DATE = { 0x8516: 26, 0x8517: 10, 0x8518: 21 };
 
 function geos128Disk(startUp = START_UP_128, layout = GEOS128) {
@@ -347,7 +364,7 @@ test('the GEOS 128 boot image is the boot file with the TR disk driver in place 
     assert.equal(r.prg.length, file.length);
     assert.equal(r.prg.readUInt16LE(0), GEOS128_LOAD);
     const patched = r.prg.subarray(driverAt, driverAt + DRIVER_SIZE);
-    for (let i = 0; i < 10; i++) assert.equal(patched.readUInt16LE(2 * i), TURBO_START + ENTRIES[i], `vector ${i}`);
+    for (let i = 0; i < 10; i++) assert.equal(patched.readUInt16LE(2 * i), TURBO_START + ENTRIES_128[i], `vector ${i}`);
     const oldNewDisk = NEW_DISK_128 - DRIVER_AREA;
     assert.equal(patched.subarray(oldNewDisk, READ_BLOCK - DRIVER_AREA + 0x100).equals(stockDriver128().subarray(oldNewDisk, READ_BLOCK - DRIVER_AREA + 0x100)), true, 'the stock NewDisk stays');
     assert.deepEqual([...r.prg.subarray(keyAt, keyAt + RESET_KEY.length)], [0, ...RESET_KEY.slice(1)], 'the C of CBM is gone');
@@ -399,5 +416,39 @@ test('a GEOS 128 boot file whose reset key is not where GEOS 128 keeps it is ref
     const short = launch(geos128Disk(START_UP_128, { ...GEOS128, load: 0x0f00 }), [], '128');
     assert.equal(short.status, 1, 'a boot file that ends before the key');
     assert.match(short.err, /reset key/);
+  });
+});
+
+test('the GEOS 128 boot ROM is told where the boot image goes, how many pages it has, and where to enter it', { skip }, () => {
+  withHarness((launch) => {
+    for (const size of [BODY_SIZE, BODY_SIZE + 1]) {
+      const r = launch(geos128Disk(START_UP_128, geos128Layout(GEOS128_LOAD, size)), [], '128');
+      assert.equal(r.status, 0, r.err);
+      assert.equal(r.rom.length, 2 * BOOT_CHIP);
+      assert.equal(r.boot.length, size, 'BOOT serves the body, without its load address');
+      const roml = r.rom.subarray(0, BOOT_CHIP), romh = r.rom.subarray(BOOT_CHIP);
+      assert.deepEqual([...roml.subarray(0, BOOT_PARAMS)], BOOT_ROML.slice(0, BOOT_PARAMS));
+      assert.equal(roml.readUInt16LE(BOOT_PARAMS), GEOS128_LOAD);
+      assert.equal(roml.readUInt16LE(BOOT_PARAMS + 2), Math.ceil(size / SECTOR), 'a short last page counts');
+      assert.equal(roml.readUInt16LE(BOOT_PARAMS + 4), 0x2f3c);
+      assert.deepEqual([...roml.subarray(BOOT_PARAMS + 6, BOOT_ROML.length)], BOOT_ROML.slice(BOOT_PARAMS + 6));
+      assert.equal(roml.subarray(BOOT_ROML.length).every((b) => b === 0), true);
+      assert.deepEqual([...romh.subarray(BOOT_CHIP - BOOT_VECTORS.length)], BOOT_VECTORS, 'the CPU vectors end ROMH');
+      assert.equal(romh.subarray(0, BOOT_CHIP - BOOT_VECTORS.length).every((b) => b === 0), true, 'ROMH is not a function ROM of its own');
+    }
+  });
+});
+
+test('a GEOS 128 boot file that would reach I/O or the shared RAM is refused', { skip }, () => {
+  withHarness((launch) => {
+    const fits = (load, size) => launch(geos128Disk(START_UP_128, geos128Layout(load, size)), [], '128');
+    assert.equal(fits(GEOS128_LOAD, 0xa400).status, 0, 'its last page ends below $D000');
+    assert.equal(fits(0x2c00, 0xa400).status, 0, 'its last page ends at $D000');
+    for (const [load, size] of [[GEOS128_LOAD, 0xa401], [0x1fff, BODY_SIZE]]) {
+      const r = fits(load, size);
+      assert.equal(r.status, 1, `load ${load.toString(16)}, ${size} bytes`);
+      assert.match(r.err, /does not fit in memory/);
+    }
+    assert.equal(fits(0x2000, BODY_SIZE).status, 0, 'loaded right above the shared RAM');
   });
 });
