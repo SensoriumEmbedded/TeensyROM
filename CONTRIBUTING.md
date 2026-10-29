@@ -1,26 +1,27 @@
 # Contributing to TeensyROM
 
-Thanks for your interest in TeensyROM! This is a hobby project maintained largely by one
-person (Travis Smith / Sensorium Embedded) in spare time, with a small number of community
-contributions over the years (menu features, IO handlers, docs, and the separate
+Thanks for your interest in TeensyROM! The project is maintained by one person (Travis
+Smith / Sensorium Embedded) in spare time, and a growing group of regular contributors
+now sends a steady stream of pull requests: features, IO handlers, extensions, docs and
+tooling, alongside the separate
 [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)/[CLI](https://github.com/MetalHexx/TeensyROM-CLI)
-tools). Review bandwidth is limited, so this doc exists to help your contribution land
-smoothly on the first pass.
+tools. Each release's notes credit the people whose work went into it. Reviewing,
+hardware testing and releasing still go through one person, so this doc covers what to
+expect on timing (see [Review and release timing](#review-and-release-timing)) and how to
+help your contribution land on the first pass.
 
 ## Ways to contribute
 
-- **Bug reports** — open a GitHub issue. Include your hardware revision (TR v0.2/0.3 vs
-  TR+ v0.4), firmware version, C64/C128 model, and NTSC/PAL. For anything
-  timing/DMA/hardware-quirk related, the exact machine model matters a lot (see
-  [Compatibility](README.md#compatibility)).
+- **Bug reports** — post them in the [TeensyROM Discord](https://discord.gg/ubSAb74S5U).
+  Include your hardware revision (TR v0.2/0.3 vs TR+ v0.4), firmware version, C64/C128
+  model, and NTSC/PAL. For anything timing/DMA/hardware-quirk related, the exact machine
+  model matters a lot (see [Compatibility](README.md#compatibility)).
 - **Feature ideas / questions** — the
   [TeensyROM Discord](https://discord.gg/ubSAb74S5U) is the best place to float an idea or
   ask "would this even work" before writing code. For anything non-trivial (new IO handler,
-  new hardware interface, changes near the ISR or memory layout), please discuss it there or
-  in an issue first — it's a lot easier to redirect an idea than a finished PR.
+  new hardware interface, changes near the ISR or memory layout), please discuss it there
+  first — it's a lot easier to redirect an idea than a finished PR.
 - **Code** — see below.
-- **Hardware/PCB feedback** — only PCB v0.2/v0.3 is public (`PCB/v0.3/EaglePCB/`); v0.4
-  (TeensyROM+) is not yet open. PCB contributions should target v0.3.
 - **Docs** — usage docs under `docs/` are always welcome fixes, especially from people
   who just got something working and remember where the instructions were unclear.
 
@@ -37,8 +38,7 @@ smoothly on the first pass.
    - RAM budgets are hard caps, not soft targets, in both the full firmware and
      MinimalBoot — see the doc for current headroom numbers before adding anything
      RAM1-resident.
-   - Build against **Teensyduino 1.61.0**, not 1.62.0 (confirmed toolchain regression,
-     not a TeensyROM bug — don't try to work around it in source).
+   - Build against **Teensyduino 1.61.0**, not 1.62.0 (confirmed toolchain regression).
 3. If you're adding a new cartridge/peripheral IO handler or a new built-in menu program,
    there are step-by-step checklists in `.claude/skills/add-io-handler/SKILL.md` and
    `.claude/skills/add-menu-program/SKILL.md` — useful reading even without Claude Code,
@@ -98,11 +98,34 @@ release rather than rejected outright, but flagging it up front saves a review c
   out explicitly in the PR — a silent break there breaks someone else's project, not just
   TeensyROM.
 
+## Before you open a PR
+
+A quick check that saves a review round:
+
+- [ ] `npm test` passes, plus the bench tests on macOS or Linux (see [Testing](#testing)).
+- [ ] New functions outside the per-cycle ISR path are marked `FLASHMEM`, and new constant
+  strings and tables stay out of RAM1: use `PSTR()` or `PROGMEM`. On the Teensy 4.1,
+  `.rodata` (plain string literals and `const` tables) lands in DTCM, and `F()` doesn't
+  help because it's only a cast there. RAM1 is the tightest budget in both images (see
+  [Constraints.md](docs/Architecture/Constraints.md#memory-budgets-are-hard-caps-not-soft-targets)).
+  This is about code your PR adds; existing functions don't need reworking.
+- [ ] New code doesn't hold RAM2 permanently. The RAM2 heap holds the REU, GeoRAM and the
+  CRT banks that don't fit in RAM1, and the REU takes as much of it as it can get. A new
+  `DMAMEM` global, or a heap block kept after its feature is done, shrinks the largest REU
+  a user can run, and in MinimalBoot how many CRT banks stay resident. Allocate when the
+  feature starts and free it when the feature is done.
+- [ ] Docs are updated in the same PR (see
+  [Documentation and compatibility](#documentation-and-compatibility)).
+- [ ] The PR description says what you tested it on: TR or TR+, C64 or C128, NTSC or PAL,
+  or "host build only, not hardware tested".
+- [ ] Optional: the RAM change on TR and TR+, from the link report before and after, with
+  the same build configuration for both: RAM1 `free for local variables` and `padding`,
+  and RAM2 `variables` (see [Testing](#testing)). It's welcome if you have it, and it gets
+  measured during review either way.
+
 ## Submitting changes
 
-- Fork and branch off `main` (day-to-day integration happens on feature branches like
-  `DMA_Timing` or `LittleFS` before merging up, but `main` is the stable base to start
-  from).
+- Fork and branch off `main`.
 - Keep PRs scoped to one change — easier to review and to revert if something regresses on
   hardware later.
 - Write commit messages that explain *why*, not just what (see `git log` for the house
@@ -111,8 +134,25 @@ release rather than rejected outright, but flagging it up front saves a review c
 - If your change touches the shared cartridge register map, remember
   `Source/C64/MainMenuCRT/source/Menu_Regs.i` and `Source/Teensy/.../Menu_Regs.h` define it
   independently with no build-time check — update both.
-- In the PR description, note what you tested it on (hardware model, NTSC/PAL, or "host
-  build only, not hardware tested").
+
+## Review and release timing
+
+**Reviews.** PRs are reviewed in spare time, so there's no guaranteed turnaround. Most get
+a first look within a few days to a few weeks. Changes near the ISR, DMA or memory layout
+take longer, because they need testing on real hardware, often on several machines, before
+they're merged. A series of small, independent PRs moves faster than one large PR or a
+stack of dependent ones. If a PR has had no response for about two weeks, a ping on the
+[TeensyROM Discord](https://discord.gg/ubSAb74S5U) is welcome.
+
+**Releases.** There's no fixed release schedule. A feature release goes out when enough has
+landed and been tested on hardware, which has been every few months so far. Important bug
+fixes can go out sooner as a point release (like 0.7.1 and 0.7.2). Until then, merged work
+is on `main`. Release builds are on the
+[Releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest).
+
+**Before a release.** When a release is getting close, it gets mentioned on Discord. From
+then on, testing and fixes come first, and new features that arrive late may be held for
+the following release.
 
 ## License
 
@@ -129,5 +169,4 @@ can't ship as open source, raise it directly with Travis (see contact in the
 
 ## Questions
 
-Open an issue, or ask in the [TeensyROM Discord](https://discord.gg/ubSAb74S5U) — it's
-generally faster for back-and-forth than GitHub issue comments.
+Ask in the [TeensyROM Discord](https://discord.gg/ubSAb74S5U).
