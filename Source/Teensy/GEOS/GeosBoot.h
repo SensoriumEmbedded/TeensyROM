@@ -233,14 +233,14 @@ static const uint8_t Geos64StartClock[] =
 };
 #define GEOS64_CLOCK_TIME 11
 
-static void Geos64SetDate(uint8_t *Run, const struct GeosDate *Now)
+FLASHMEM static void Geos64SetDate(uint8_t *Run, const struct GeosDate *Now)
 {
    Run[1] = Now->Day;
    Run[6] = Now->Month;
    Run[11] = Now->Year;
 }
 
-static void Geos64SetTime(uint8_t *Run, const struct GeosDate *Now)
+FLASHMEM static void Geos64SetTime(uint8_t *Run, const struct GeosDate *Now)
 {
    const uint8_t Time[] =
    {
