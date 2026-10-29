@@ -56,6 +56,9 @@ const ENTRIES = arrayOf('TRDriverEntries');
 const ENTRIES_128 = arrayIn(DRIVER128_HEADER)('TRDriver128Entries');
 const BOOT_ROML = arrayIn(BOOT_ROM_HEADER)('Geos128BootRoml');
 const BOOT_VECTORS = arrayIn(BOOT_ROM_HEADER)('Geos128BootVectors');
+const BOOT_PAGE_AT = arrayIn(BOOT_ROM_HEADER)('Geos128BootPageAt');
+const REGS_BESIDE_GEORAM = 0xdf;
+const REGS_BESIDE_REU = 0xde;
 const BOOT_CHIP = 0x2000;
 const BOOT_PARAMS = 0x21;
 
@@ -172,8 +175,8 @@ class Disk {
   }
 }
 
-function run(args) {
-  const r = spawnSync(args[0], args.slice(1), { encoding: 'utf8' });
+function run(args, env = {}) {
+  const r = spawnSync(args[0], args.slice(1), { encoding: 'utf8', env: { ...process.env, ...env } });
   return { status: r.status, out: r.stdout, err: r.stderr };
 }
 
@@ -184,9 +187,9 @@ function withHarness(body) {
     assert.equal(built.status, 0, built.err);
     const asCpp = run(['c++', '-x', 'c++', '-std=gnu++17', '-Wall', '-Werror', '-fsyntax-only', HARNESS_SOURCE]);
     assert.equal(asCpp.status, 0, asCpp.err);
-    const launch = (disk, time = [], version = '64') => {
+    const launch = (disk, time = [], version = '64', env = {}) => {
       fs.writeFileSync(path.join(dir, 'in.d81'), disk.image);
-      const r = run([path.join(dir, 'harness'), version, path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)]);
+      const r = run([path.join(dir, 'harness'), version, path.join(dir, 'in.d81'), path.join(dir, 'out.prg'), path.join(dir, 'out.d81'), ...time.map(String)], env);
       const out = r.status === 0 ? fs.readFileSync(path.join(dir, 'out.prg')) : null;
       const image = r.status === 0 ? fs.readFileSync(path.join(dir, 'out.d81')) : null;
       const boot = r.out.match(/ boot=(\d+),(\d+)/);
@@ -432,6 +435,7 @@ test('the GEOS 128 boot ROM is told where the boot image goes, how many pages it
       assert.equal(roml.readUInt16LE(BOOT_PARAMS + 2), Math.ceil(size / SECTOR), 'a short last page counts');
       assert.equal(roml.readUInt16LE(BOOT_PARAMS + 4), 0x2f3c);
       assert.deepEqual([...roml.subarray(BOOT_PARAMS + 6, BOOT_ROML.length)], BOOT_ROML.slice(BOOT_PARAMS + 6));
+      for (const at of BOOT_PAGE_AT) assert.equal(roml[at], REGS_BESIDE_GEORAM, `the block device's page at ROML ${at}`);
       assert.equal(roml.subarray(BOOT_ROML.length).every((b) => b === 0), true);
       assert.deepEqual([...romh.subarray(BOOT_CHIP - BOOT_VECTORS.length)], BOOT_VECTORS, 'the CPU vectors end ROMH');
       assert.equal(romh.subarray(0, BOOT_CHIP - BOOT_VECTORS.length).every((b) => b === 0), true, 'ROMH is not a function ROM of its own');
@@ -450,5 +454,18 @@ test('a GEOS 128 boot file that would reach I/O or the shared RAM is refused', {
       assert.match(r.err, /does not fit in memory/);
     }
     assert.equal(fits(0x2000, BODY_SIZE).status, 0, 'loaded right above the shared RAM');
+  });
+});
+
+test('the GEOS 128 boot ROM reaches the block device on the page the launch puts it', { skip }, () => {
+  withHarness((launch) => {
+    const r = launch(geos128Disk(), [], '128', { REGS_PAGE: REGS_BESIDE_REU.toString(16) });
+    assert.equal(r.status, 0, r.err);
+    const roml = [...r.rom.subarray(0, BOOT_ROML.length)];
+    assert.ok(BOOT_PAGE_AT.length > 0);
+    for (const at of BOOT_PAGE_AT) assert.equal(roml[at], REGS_BESIDE_REU, `ROML ${at}`);
+    const beside = launch(geos128Disk(), [], '128');
+    const moved = roml.flatMap((byte, at) => (byte === beside.rom[at] ? [] : [at]));
+    assert.deepEqual(moved, BOOT_PAGE_AT, 'nothing else in the ROM changes with the page');
   });
 });

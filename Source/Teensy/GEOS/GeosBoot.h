@@ -21,6 +21,9 @@
 #define GEOS_DEVICE_8        8
 #define GEOS128_SHARED_RAM_END 0x2000   // the C128 boot ROM's loader runs in the RAM below, which both banks share
 #define GEOS128_IO_START       0xd000   // and writes bank 1 with I/O mapped in from here up
+// The block device's page: beside GeoRAM, or beside the REU, whose registers repeat across $DF00-$DFFF
+#define GEOS_REGS_BESIDE_GEORAM 0xdf
+#define GEOS_REGS_BESIDE_REU    0xde
 
 enum GeosDriverVector { VecInitForIO, VecDoneWithIO, VecExitTurbo, VecPurgeTurbo, VecEnterTurbo, VecChangeDiskDevice,
                         VecNewDisk, VecReadBlock, VecWriteBlock, VecVerWriteBlock, VecCount = 10 };
@@ -389,9 +392,10 @@ static inline bool GeosBuildBootPrg(struct GeosDisk *Disk, const struct GeosDate
 }
 
 // The C128 boot ROM, its ROML chip then its ROMH chip, followed by the boot image it pulls through BOOT a page at a
-// time. Image and ImageSize say where that image starts, without its load address, for TRBlockMount.
-static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
-                                     const uint8_t **Image, uint32_t *ImageSize, bool *ClockSet)
+// time from the block device at RegsPage. Image and ImageSize say where that image starts, without its load address,
+// for TRBlockMount.
+static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t RegsPage, uint8_t *Out,
+                                     uint32_t Capacity, const uint8_t **Image, uint32_t *ImageSize, bool *ClockSet)
 {
    uint8_t *Roml = Out, *Romh = Out + GEOS128_BOOT_CHIP_SIZE, *File = Out + 2 * GEOS128_BOOT_CHIP_SIZE;
    uint32_t Length, Pages, Load;
@@ -410,6 +414,7 @@ static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDat
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS, Load);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 2, Pages);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 4, Disk->Target->BootEntry);
+   for (size_t i = 0; i < sizeof Geos128BootPageAt / sizeof Geos128BootPageAt[0]; i++) Roml[Geos128BootPageAt[i]] = RegsPage;
    *Image = File + 2;
    *ImageSize = Length - 2;
    return true;
