@@ -287,7 +287,8 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       return false;
    }
    Disk = GeosDiskOn(Launcher, &Image);
-   Built = GeosPrepareConfigure(&Disk, RAM_Image, RAM_ImageSize, &Changed) && (Launcher->Machine == GeosC128
+   Built = GeosRefreshDriver(&Disk, &Changed) && GeosPrepareConfigure(&Disk, RAM_Image, RAM_ImageSize, &Changed) &&
+           (Launcher->Machine == GeosC128
          ? GeosBuildC128Boot(&Disk, &Now, GEOS_REGS_BESIDE_GEORAM, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
          : GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet));
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);

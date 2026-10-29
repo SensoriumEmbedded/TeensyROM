@@ -21,6 +21,7 @@
 * GEOS saves to the disk it starts from, so the TeensyROM never starts from your original image.
 * The first time you select GEOS 64, it makes a copy next to the original with `-TR` added to the name (`GEOS64.D81` becomes `GEOS64-TR.D81`) and adds the TR USB mouse driver to the copy. Your original is not changed.
 * Later launches reuse the `-TR` copy, so your saved work is still there.
+  * Each launch brings the copy's TR USB mouse driver up to date with the firmware's.
 * To start over from your original, delete the `-TR` copy. The next launch makes a new one.
 
 ## GeoRAM
@@ -51,6 +52,7 @@ If GEOS 64 can't start, the TeensyROM stays at the menu and shows one of these:
 | Could not add the mouse driver to a copy of `<name>`: the SD card could not be written | The copy could not be written to the SD card. |
 | `<name>-TR.D81` has no desktop; remove it to start over | The `-TR` copy has lost `DESK TOP`. Delete it. |
 | `<name>-TR.D81` was set aside and could not be put back | Power was lost while the copy was being updated, and the TeensyROM could not restore it. Look for `<name>-TR.D81.BAK` in `/GEOS64`. |
+| `<name>-TR.D81`: its TR USB MOUSE is an old one; delete this copy | The copy's mouse driver is from a TeensyROM firmware whose driver cannot be updated in place. Delete the `-TR` copy; the next launch makes a new one. |
 | `<name>-TR.D81`: the boot file is not on the disk | The image has no `GEOBOOT`. |
 | `<name>-TR.D81`: the boot file's disk driver is not one the TR can replace | This `GEOBOOT` is not a version the TeensyROM can start. |
 

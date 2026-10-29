@@ -657,3 +657,70 @@ for (const version of ['64', '128']) {
     });
   });
 }
+
+const MOUSE_NAME = 'TR USB MOUSE';
+const SLOT_INFO = 21;
+const INPUT_TYPE = { 64: 10, 128: 15 };
+const MOUSE = Object.fromEntries(['64', '128'].map((version) => {
+  const array = arrayIn(path.join(FIRMWARE_ROOT, `GEOS/TRMouse${version}.h`));
+  return [version, { code: Buffer.from(array(`TRMouse${version}Code`)), info: Buffer.from(array(`TRMouse${version}Info`)) }];
+}));
+
+// The TR mouse driver as a copy holds it: its code in a chain, its info block in a sector of its own
+function addMouse(disk, version, code, info) {
+  const slot = disk.addFile(MOUSE_NAME, code, INPUT_TYPE[version]);
+  const at = disk.writeChain(Buffer.alloc(SECTOR - 2));
+  info.copy(disk.image, offsetOf(at.track, at.sector));
+  disk.image[slot + SLOT_INFO] = at.track;
+  disk.image[slot + SLOT_INFO + 1] = at.sector;
+  return { slot, info: offsetOf(at.track, at.sector) };
+}
+
+for (const version of ['64', '128']) {
+  test(`GEOS ${version}: a copy's older TR mouse driver is replaced in place by the firmware's`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const old = Buffer.from(MOUSE[version].code.subarray(0, MOUSE[version].code.length - 30)).fill(0x60, 0, 5);
+      const oldInfo = Buffer.from(MOUSE[version].info).fill(0, 0x49, 0x4b);
+      const { slot, info } = addMouse(disk, version, old, oldInfo);
+
+      const first = launch(disk, [], version);
+      assert.equal(first.status, 0, first.err);
+      assert.match(first.out, /mouse=1/);
+      const data = offsetOf(first.image[slot + SLOT_FIRST], first.image[slot + SLOT_FIRST + 1]);
+      assert.equal(first.image[data], 0, 'still one data block');
+      assert.equal(first.image.subarray(data + 2, data + first.image[data + 1] + 1).equals(MOUSE[version].code), true, 'the firmware driver');
+      assert.equal(first.image.subarray(info, info + SECTOR).equals(MOUSE[version].info), true, 'the firmware info block');
+
+      const again = launch({ image: first.image }, [], version);
+      assert.match(again.out, /mouse=0/);
+      assert.equal(again.image.equals(first.image), true);
+    });
+  });
+
+  test(`GEOS ${version}: a copy whose TR mouse driver takes another number of blocks is refused, to be deleted`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      addMouse(disk, version, Buffer.alloc(SECTOR + 44, 0x60), MOUSE[version].info);
+      const r = launch(disk, [], version);
+      assert.equal(r.status, 1);
+      assert.match(r.err, /TR USB MOUSE is an old one; delete this copy/);
+    });
+  });
+
+  test(`GEOS ${version}: a copy whose TR mouse driver points off the disk is refused, the disk unchanged`, { skip }, () => {
+    withHarness((launch) => {
+      for (const [why, damage] of [
+        ['no info block', (image, { slot }) => (image[slot + SLOT_INFO] = 0)],
+        ['an info block past the last track', (image, { slot }) => (image[slot + SLOT_INFO] = TRACKS + 1)],
+      ]) {
+        const disk = diskFor(version);
+        const mouse = addMouse(disk, version, Buffer.from(MOUSE[version].code).fill(0x60, 0, 5), MOUSE[version].info);
+        damage(disk.image, mouse);
+        const r = launch(disk, [], version);
+        assert.equal(r.status, 1, why);
+        assert.match(r.err, /an old one; delete this copy/, why);
+      }
+    });
+  });
+}
