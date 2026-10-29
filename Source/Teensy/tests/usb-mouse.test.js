@@ -32,7 +32,8 @@ function harness() {
 function run(lines) {
   const ran = spawnSync(harness(), { input: lines.join('\n') + '\n', encoding: 'utf8' });
   assert.equal(ran.status, 0, ran.stderr);
-  return ran.stdout.split('\n').filter(Boolean);
+  // A MinGW build of the harness writes its lines as \r\n: stdout is in text mode there.
+  return ran.stdout.split(/\r?\n/).filter(Boolean);
 }
 
 const report = (dx, dy, buttons = 0) => [`report ${dx} ${dy} ${buttons.toString(16)}`, 'poll'];
