@@ -170,7 +170,7 @@ FLASHMEM static bool WriteRAMBanksFile(FS *sourceFS, const char *FileName, uint8
    if (isFrozen) return WriteHeldRAMBanksFile(sourceFS, FileName, Bank, NumBanks);
    if (!HoldC64())
    {
-      Serial.println("Unable to pause the computer!");
+      Serial.println(PSTR("Unable to pause the computer!"));
       return false;
    }
    bool Saved = WriteHeldRAMBanksFile(sourceFS, FileName, Bank, NumBanks);

@@ -17,6 +17,7 @@
 #include <vector>
 
 #define FLASHMEM
+#define PSTR(s) s
 #define Fab04_FullDMACapable
 #define MaxPathLength 256
 #define RAM_ImageSize 0
