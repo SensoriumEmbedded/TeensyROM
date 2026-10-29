@@ -27,7 +27,7 @@ static bool WriteBlock(void *Context, uint32_t Offset, const uint8_t *Block)
 }
 
 static const struct GeosTarget Geos128Target =
-   { "128 DESKTOP", TRMouse128Name, TRMouse128Code, TRMouse128Info, sizeof TRMouse128Code, GEOS_INPUT_128, NULL, 0 };
+   { "128 DESKTOP", TRMouse128Name, TRMouse128Code, TRMouse128Info, sizeof TRMouse128Code, GEOS_INPUT_128, NULL, 0, NULL, NULL, 0, 0 };
 
 static int Inspect(struct GeosDisk *Disk)
 {
