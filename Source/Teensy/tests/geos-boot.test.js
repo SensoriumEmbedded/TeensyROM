@@ -713,6 +713,11 @@ for (const version of ['64', '128']) {
       for (const [why, damage] of [
         ['no info block', (image, { slot }) => (image[slot + SLOT_INFO] = 0)],
         ['an info block past the last track', (image, { slot }) => (image[slot + SLOT_INFO] = TRACKS + 1)],
+        ['a data block linked past the last track', (image, { slot }) => {
+          const data = offsetOf(image[slot + SLOT_FIRST], image[slot + SLOT_FIRST + 1]);
+          image[data] = TRACKS + 1;
+          image[data + 1] = 0;
+        }],
       ]) {
         const disk = diskFor(version);
         const mouse = addMouse(disk, version, Buffer.from(MOUSE[version].code).fill(0x60, 0, 5), MOUSE[version].info);

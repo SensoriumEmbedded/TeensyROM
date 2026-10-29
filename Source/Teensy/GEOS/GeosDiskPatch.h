@@ -564,12 +564,12 @@ FLASHMEM static inline bool GeosRefreshDriver(struct GeosDisk *Disk, bool *Chang
    Slot = Block + Scan.Ours.Slot * GEOS_DIR_ENTRY_SIZE;
    First = (struct GeosTS){ Slot[SlotFirst], Slot[SlotFirst + 1] };
    Info = (struct GeosTS){ Slot[SlotInfo], Slot[SlotInfo + 1] };
-   for (At = First; At.Track && Blocks <= DataBlocks; Blocks++)
+   for (At = First; At.Track && At.Track <= Disk->Format->Tracks && Blocks <= DataBlocks; Blocks++)
    {
-      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) break;
+      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
       At = (struct GeosTS){ Block[0], Block[1] };
    }
-   if (Blocks != DataBlocks || !Info.Track || Info.Track > Disk->Format->Tracks)
+   if (At.Track || Blocks != DataBlocks || !Info.Track || Info.Track > Disk->Format->Tracks)
    {
       snprintf(Disk->Error, sizeof Disk->Error, PSTR("its %s is an old one; delete this copy"), Target->DriverName);
       return false;

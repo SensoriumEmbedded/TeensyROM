@@ -13,15 +13,19 @@
 #define MAX_PRG   (128 * 1024)
 
 static uint8_t Image[MAX_IMAGE + 1], Prg[MAX_PRG];
+static size_t Size;
 
+// Like the SD card's file, a block past the image's end can be neither read nor written
 static bool ReadBlock(void *Context, uint32_t Offset, uint8_t *Block)
 {
+   if (Offset + GEOS_SECTOR_SIZE > Size) return false;
    memcpy(Block, (uint8_t *)Context + Offset, GEOS_SECTOR_SIZE);
    return true;
 }
 
 static bool WriteBlock(void *Context, uint32_t Offset, const uint8_t *Block)
 {
+   if (Offset + GEOS_SECTOR_SIZE > Size) return false;
    memcpy((uint8_t *)Context + Offset, Block, GEOS_SECTOR_SIZE);
    return true;
 }
@@ -35,7 +39,6 @@ int main(int argc, char **argv)
    const char *RegsPage = getenv("REGS_PAGE");
    bool Is128, Changed, Refreshed, ClockSet, Built;
    FILE *File;
-   size_t Size;
 
    if ((argc != 5 && argc != 7) || !(File = fopen(argv[2], "rb"))) return 2;
    Is128 = !strcmp(argv[1], "128");
