@@ -92,7 +92,6 @@ readY   lda PAGE_BESIDE_GEORAM*256+regY
 noMouse rts                     ; movement while the pointer is off is dropped
 
 readButtons
-readButtons
         lda PAGE_BESIDE_GEORAM*256+regButtons
         and #LEFT_BUTTON
         beq +

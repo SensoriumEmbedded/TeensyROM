@@ -34,13 +34,18 @@ const DRIVERS = [
   ['GEOS 128', readDriver('TRDriver128.h', 'TRDriver128')],
 ];
 
-// The TR block device (docs/TR_Block_Device.md) answering READ and WRITE at once, its blocks keyed by ADDR1:ADDR0
-function blockDevice(blocks) {
+// The TR block device (docs/TR_Block_Device.md) answering READ and WRITE at once, its blocks keyed by ADDR1:ADDR0.
+// A garbled device reads each window byte back wrong once after it is written, as some machines latch it.
+function blockDevice(blocks, { garbled = false } = {}) {
   const regs = { addr0: 0, addr1: 0, page: 0, token: 0 };
+  const unsettled = new Set();
   let buffer = new Uint8Array(PAGE), status = 0, echo = 0;
   return {
     write(offset, value) {
-      if (offset >= 0x40 && offset < 0x80) buffer[regs.page * QUARTER + offset - 0x40] = value;
+      if (offset >= 0x40 && offset < 0x80) {
+        buffer[regs.page * QUARTER + offset - 0x40] = value;
+        if (garbled) unsettled.add(offset);
+      }
       else if (offset === 0x09) regs.addr0 = value;
       else if (offset === 0x0a) regs.addr1 = value;
       else if (offset === 0x0b) regs.page = value & 3;
@@ -54,6 +59,7 @@ function blockDevice(blocks) {
       }
     },
     read(offset) {
+      if (unsettled.delete(offset)) return buffer[regs.page * QUARTER + offset - 0x40] ^ 0xff;
       if (offset >= 0x40 && offset < 0x80) return buffer[regs.page * QUARTER + offset - 0x40];
       if (offset === 0x0d) return status;
       if (offset === 0x0e) return echo;
@@ -133,6 +139,16 @@ for (const [name, driver] of DRIVERS) {
     assert.equal(call(m, ENTRY.WriteBlock, 5, 6), 0);
     assert.deepEqual(blocks.get(key(5, 6)), sectorOf(3));
     assert.deepEqual(m.ioWrites.filter((a) => a >= BESIDE_GEORAM), [], 'nothing written to the REU');
+  });
+
+  test(`${name}: a window byte beside an REU that reads back wrong once is checked again on that page`, () => {
+    const blocks = new Map();
+    const m = machine(driver, {});
+    m.pages[BESIDE_REU] = blockDevice(blocks, { garbled: true });
+    m.pages[BESIDE_GEORAM] = reuRegisters(new Array(REU_REGISTERS).fill(0));
+    m.ram.set(sectorOf(6), BUFFER);
+    assert.equal(call(m, ENTRY.WriteBlock, 7, 8), 0);
+    assert.deepEqual(blocks.get(key(7, 8)), sectorOf(6));
   });
 
   test(`${name}: the driver finds the registers again when they move, and reports a missing device`, () => {

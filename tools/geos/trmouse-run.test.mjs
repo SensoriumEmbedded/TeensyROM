@@ -13,6 +13,9 @@ const MOUSE_ON = 0x30;
 const POINTER_ON = 0x80;
 const MOUSE_X = 0x3a;
 const MOUSE_Y = 0x3c;
+const PRESS_FLAG = 0x39;
+const MOUSE_BIT = 0x20;
+const LEFT_BUTTON = 0x01;
 const CALLER = 0x0200;
 const BESIDE_GEORAM = 0xdf00;
 const BESIDE_REU = 0xde00;
@@ -34,9 +37,9 @@ const DRIVERS = [
 ];
 
 // The TR's page as USBMouse.c and the block device serve it: X and Y movement, the buttons, "TRM", and "TRB" at $10
-function trPage(dx, dy) {
+function trPage(dx, dy, buttons = 0) {
   const page = new Uint8Array(256);
-  page.set([dx & 0xff, dy & 0xff, 0, ...id('TRM')]);
+  page.set([dx & 0xff, dy & 0xff, buttons, ...id('TRM')]);
   page.set(id('TRB'), 0x10);
   return (offset) => page[offset];
 }
@@ -60,7 +63,7 @@ function update(driver, pages) {
   });
   cpu.pc = CALLER;
   cpu.run((c) => c.pc === CALLER + 3);
-  return { x: ram[MOUSE_X] - START, y: ram[MOUSE_Y] - START };
+  return { x: ram[MOUSE_X] - START, y: ram[MOUSE_Y] - START, pressed: (ram[PRESS_FLAG] & MOUSE_BIT) !== 0 };
 }
 
 for (const [name, driver] of DRIVERS) {
@@ -68,16 +71,21 @@ for (const [name, driver] of DRIVERS) {
     const window = new Uint8Array(256);
     window.set([9, 9, 0, ...id('TRM')]);
     window.set(id('TRB'), 0x10);
-    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: trPage(3, 4), [BESIDE_REU]: (o) => window[o] }), { x: 3, y: 4 });
+    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: trPage(3, 4), [BESIDE_REU]: (o) => window[o] }), { x: 3, y: 4, pressed: false });
   });
 
   test(`${name}: the mouse moves by the registers beside an REU, even when the REU's address registers hold "TRM"`, () => {
     const reu = reuRegisters([0x10, 0, 9, ...id('TRM'), 0, 0, 0, 0, 0]);
-    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: reu, [BESIDE_REU]: trPage(5, 6) }), { x: 5, y: 6 });
+    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: reu, [BESIDE_REU]: trPage(5, 6) }), { x: 5, y: 6, pressed: false });
+  });
+
+  test(`${name}: the button reads from the registers beside an REU, not from the REU's own register at the same offset`, () => {
+    const reu = reuRegisters([0x10, 0, 0, ...id('TRM'), 0, 0, 0, 0, 0]);
+    assert.equal(update(driver, { [BESIDE_GEORAM]: reu, [BESIDE_REU]: trPage(0, 0, LEFT_BUTTON) }).pressed, true);
   });
 
   test(`${name}: with no TR registers on either page the mouse stays put`, () => {
     const reu = reuRegisters([0x10, 0, 9, ...id('TRM'), 0, 0, 0, 0, 0]);
-    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: reu, [BESIDE_REU]: () => 7 }), { x: 0, y: 0 });
+    assert.deepEqual(update(driver, { [BESIDE_GEORAM]: reu, [BESIDE_REU]: () => 7 }), { x: 0, y: 0, pressed: false });
   });
 }
