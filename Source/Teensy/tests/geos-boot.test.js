@@ -595,6 +595,65 @@ for (const version of ['64', '128']) {
       const plain = diskFor(version);
       const sequential = plain.addFile(STOCK_CONFIGURE[version], configure(version)[PROBE_RECORD], AUTO_EXEC);
       assert.equal(launch(plain, [], version).image[sequential + SLOT_GEOS_TYPE], SYSTEM_FILE, 'a sequential file');
+
+      const more = diskFor(version);
+      const pinned = Buffer.from(configure(version)[DRIVER_RECORD]);
+      pinned.writeUInt16LE(READ_BLOCK - 1, 2 * 10);
+      const stillOdd = [
+        ['the probe too near the end of record 0 for the TR probe', configure(version, { probes: [RECORD_0_SIZE - STOCK_PROBE.length + 2] })],
+        ['a vector the transport leaves alone pointing into it', configure(version, { driver: pinned })],
+        ['laid out as the stock one but sequential', configure(version)],
+      ].map(([why, records]) => ({ why, records, slot: more.addVlir(STOCK_CONFIGURE[version], records, AUTO_EXEC) }));
+      more.image[stillOdd[2].slot + SLOT_STRUCTURE] = 0;
+      const m = launch(more, [], version);
+      assert.equal(m.status, 0, m.err);
+      for (const { why, records, slot } of stillOdd) {
+        assert.equal(m.image[slot + SLOT_GEOS_TYPE], SYSTEM_FILE, why);
+        records.forEach((data, i) => assert.equal(more.record(slot, i, m.image).equals(data), true, `${why}: record ${i}`));
+      }
+    });
+  });
+
+  test(`GEOS ${version}: a set-up cut short after the driver was written is put aside next time`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const records = configure(version);
+      const slot = disk.addVlir(STOCK_CONFIGURE[version], records, AUTO_EXEC);
+      const first = launch(disk, [], version);
+      assert.equal(first.status, 0, first.err);
+
+      const cut = { image: Buffer.from(first.image) };
+      const index = offsetOf(cut.image[slot + SLOT_FIRST], cut.image[slot + SLOT_FIRST + 1]);
+      let at = offsetOf(cut.image[index + 2 + 2 * PROBE_RECORD], cut.image[index + 3 + 2 * PROBE_RECORD]);
+      for (let done = 0; ; done += SECTOR - 2) {
+        records[PROBE_RECORD].copy(cut.image, at + 2, done, done + (cut.image[at] ? SECTOR - 2 : cut.image[at + 1] - 1));
+        if (!cut.image[at]) break;
+        at = offsetOf(cut.image[at], cut.image[at + 1]);
+      }
+      const driver = disk.record(slot, DRIVER_RECORD, cut.image);
+      const r = launch(cut, [], version);
+      assert.equal(r.status, 0, r.err);
+      assert.equal(r.image[slot + SLOT_GEOS_TYPE], SYSTEM_FILE);
+      assert.equal(disk.record(slot, PROBE_RECORD, r.image).equals(records[PROBE_RECORD]), true);
+      assert.equal(disk.record(slot, DRIVER_RECORD, r.image).equals(driver), true);
+    });
+  });
+
+  test(`GEOS ${version}: a record whose last block says it holds no bytes is set up without overrunning it`, { skip }, () => {
+    withHarness((launch) => {
+      const disk = diskFor(version);
+      const records = configure(version);
+      const slot = disk.addVlir(STOCK_CONFIGURE[version], records, AUTO_EXEC);
+      const index = offsetOf(disk.image[slot + SLOT_FIRST], disk.image[slot + SLOT_FIRST + 1]);
+      let at = offsetOf(disk.image[index + 2 + 2 * PROBE_RECORD], disk.image[index + 3 + 2 * PROBE_RECORD]);
+      while (disk.image[at]) at = offsetOf(disk.image[at], disk.image[at + 1]);
+      disk.image[at + 1] = 0;
+
+      const r = launch(disk, [], version);
+      assert.equal(r.status, 0, r.err);
+      assert.equal(r.image[slot + SLOT_GEOS_TYPE], AUTO_EXEC);
+      assert.equal(r.image[at + 1], 0);
+      assert.equal(r.image.subarray(at + 2, at + SECTOR).equals(disk.image.subarray(at + 2, at + SECTOR)), true, 'the empty last block keeps its bytes');
     });
   });
 }

@@ -134,6 +134,8 @@ static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Patt
    return Found;
 }
 
+static uint32_t GeosBytesInBlock(const uint8_t *Block) { return Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0); }
+
 // A file's bytes along its sector chain from At; What names it in a refusal
 FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, struct GeosTS At, const char *What, uint8_t *Out,
                                    uint32_t Capacity, uint32_t *Length)
@@ -150,7 +152,7 @@ FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, struct GeosTS At, cons
          return false;
       }
       if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
-      Used = Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0);
+      Used = GeosBytesInBlock(Block);
       if (*Length + Used > Capacity)
       {
          snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s is too large"), What);
@@ -171,7 +173,7 @@ FLASHMEM static bool GeosRewriteChain(struct GeosDisk *Disk, struct GeosTS At, c
    for (uint32_t Done = 0; At.Track; Done += GEOS_DATA_PER_BLOCK)
    {
       if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
-      memcpy(Block + 2, Data + Done, Block[0] ? GEOS_DATA_PER_BLOCK : Block[1] - 1);
+      memcpy(Block + 2, Data + Done, GeosBytesInBlock(Block));
       if (!GeosWriteTS(Disk, At.Track, At.Sector, Block)) return false;
       At = (struct GeosTS){ Block[0], Block[1] };
    }
