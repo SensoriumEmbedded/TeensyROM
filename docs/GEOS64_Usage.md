@@ -35,8 +35,8 @@
   * Other configuration programs on the disk (such as `CONFIG 2.0r`) are kept from running at start-up, since they look for a disk drive.
 
 ## REU (TR+ only)
-* To run GEOS with the TR+'s 512K REU instead of GeoRAM, set Special IO to `REU+USB Mouse/Disk` in the Settings menu (`F8`), then select GEOS 64 or GEOS 128.
-  * GEOS's own `CONFIGURE` finds the REU at start-up and sets it up as GEOS does a 1764 or 1750.
+* To run GEOS with the TR+'s REU (128K to 512K, as much as fits) instead of GeoRAM, set Special IO to `REU+USB Mouse/Disk` in the Settings menu (`F8`), then select GEOS 64 or GEOS 128.
+  * GEOS's own `CONFIGURE` finds the REU at start-up and sets it up as GEOS does a Commodore REU of that size.
   * At launch, the TeensyROM loads the REU pre-load/save image shown in the Settings menu into the REU. To save the REU to that file, press and release the Alt button.
 * With any other Special IO setting, GEOS runs with GeoRAM.
 
