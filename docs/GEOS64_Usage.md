@@ -34,6 +34,12 @@
 * GEOS's own `CONFIGURE` runs at start-up, set up in the `-TR` copy to find the TeensyROM as drive A. It does not find GeoRAM, so GEOS does not set GeoRAM up as a RAM disk.
   * Other configuration programs on the disk (such as `CONFIG 2.0r`) are kept from running at start-up, since they look for a disk drive.
 
+## REU (TR+ only)
+* To run GEOS with the TR+'s 512K REU instead of GeoRAM, set Special IO to `REU+USB Mouse/Disk` in the Settings menu (`F8`), then select GEOS 64 or GEOS 128.
+  * GEOS's own `CONFIGURE` finds the REU at start-up and sets it up as GEOS does a 1764 or 1750.
+  * At launch, the TeensyROM loads the REU pre-load/save image shown in the Settings menu into the REU. To save the REU to that file, press and release the Alt button.
+* With any other Special IO setting, GEOS runs with GeoRAM.
+
 ## Date and time
 * GEOS starts with the date and time of the TeensyROM's real-time clock, adjusted by the Time Zone setting.
   * Set the clock and time zone in the Settings menu (`F8`, page 6). See [General Usage](General_Usage.md#the-settings-menu).

@@ -268,6 +268,16 @@ FLASHMEM static bool GeosUseC128Boot(const uint8_t *ImageEnd, StructMenuItem *It
    return SetC128Type(Item);
 }
 
+// GEOS runs beside GeoRAM unless Special IO is set to the REU with the TR's registers beside it, which GEOS's own
+// CONFIGURE then finds
+uint8_t GeosIOHandler()
+{
+#ifdef Fab04_REU
+   if (IO1[rwRegNextIOHndlr] == IOH_REU_TRPage) return IOH_REU_TRPage;
+#endif
+   return IOH_GeoRAM;
+}
+
 FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *Name, StructMenuItem *Item)
 {
    char Path[MaxNamePathLength];
@@ -289,7 +299,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
    Disk = GeosDiskOn(Launcher, &Image);
    Built = GeosRefreshDriver(&Disk, &Changed) && GeosPrepareConfigure(&Disk, RAM_Image, RAM_ImageSize, &Changed) &&
            (Launcher->Machine == GeosC128
-         ? GeosBuildC128Boot(&Disk, &Now, GEOS_REGS_BESIDE_GEORAM, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
+         ? GeosBuildC128Boot(&Disk, &Now, GeosIOHandler() == IOH_GeoRAM ? GEOS_REGS_BESIDE_GEORAM : GEOS_REGS_BESIDE_REU, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
          : GeosBuildBootPrg(&Disk, &Now, RAM_Image, RAM_ImageSize, &Length, &ClockSet));
    if (!Built) SendMsgPrintfln(PSTR("%s:\r\n%s"), Name, Disk.Error);
    Image.close();
