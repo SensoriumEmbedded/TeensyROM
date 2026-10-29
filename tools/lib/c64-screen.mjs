@@ -127,9 +127,9 @@ function scanMessage(stream) {
   let quoted = false;
   let anchored = false;
   const hits = [];
-  for (const { byte, line } of stream) {
+  for (const { byte, line, label } of stream) {
     if (byte === RETURN || byte === SHIFT_RETURN) {
-      if (filled) hits.push({ line, anchored });
+      if (filled) hits.push({ line, label, anchored });
       column = 0; filled = false; quoted = false; anchored = true;
       continue;
     }
@@ -151,12 +151,18 @@ const TEXT_DIRECTIVE = /^\s*!(?:tx|text)\s+(.*?)\s*$/;
 // A label on its own does not end a message; anything else that assembles does, because the
 // cursor position stops being knowable once code runs between the two halves.
 const LABEL_ONLY = /^\s*[A-Za-z_@+\-][A-Za-z0-9_]*:?\s*$/;
+// The name a message is printed under: an identifier in column 0, with or without a colon,
+// which is how ACME reads a global label. `Name = expr` in column 0 is a definition, not a
+// label, and local (.name) and anonymous (+/-) labels are skipped: a hit is reported against
+// the nearest global label so the name survives edits above it in the file.
+const GLOBAL_LABEL = /^([A-Za-z_][A-Za-z0-9_]*)\b:?(?=\s*(?:$|[^=\s]))/;
 
 /**
  * Scan one ACME source for rows that fill all 40 columns and are then given a ChrReturn.
- * Returns { hits, unresolved }: hits carry the file and the line of the offending return,
- * unresolved names every expression that could not be evaluated, so a scan that understood
- * less than it looked like it did is visible rather than quietly clean.
+ * Returns { hits, unresolved }: hits carry the file, the line of the offending return and
+ * the global label its message is printed under (null before the first one); unresolved
+ * names every expression that could not be evaluated, so a scan that understood less than
+ * it looked like it did is visible rather than quietly clean.
  */
 export function scanSource(file, text, symbols) {
   const escC = symbols.get('EscC') ?? 0x01;
@@ -166,6 +172,7 @@ export function scanSource(file, text, symbols) {
   const hits = [];
   const unresolved = new Set();
   let stream = [];
+  let label = null;
   const flush = () => {
     for (const hit of scanMessage(stream)) hits.push({ file, ...hit, source: lines[hit.line - 1].trim() });
     stream = [];
@@ -174,6 +181,8 @@ export function scanSource(file, text, symbols) {
   lines.forEach((raw, index) => {
     const lineNumber = index + 1;
     const code = raw.trim().startsWith(';') ? '' : raw.split(';')[0];
+    const labelled = GLOBAL_LABEL.exec(code);
+    if (labelled) label = labelled[1];
     const directive = TEXT_DIRECTIVE.exec(code);
     if (!directive) {
       if (code.trim() && !LABEL_ONLY.test(code)) flush();
@@ -183,14 +192,14 @@ export function scanSource(file, text, symbols) {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       if (part.string !== undefined) {
-        for (const ch of part.string) stream.push({ byte: petscii(ch), line: lineNumber });
+        for (const ch of part.string) stream.push({ byte: petscii(ch), line: lineNumber, label });
         continue;
       }
       const value = evaluate(part.expr, symbols);
       if (value === null) { unresolved.add(part.expr); continue; }
       const byte = value & 0xff;
       if (byte === 0) { flush(); break; }          // the string terminator PrintString stops on
-      if (byte !== escC) { stream.push({ byte, line: lineNumber }); continue; }
+      if (byte !== escC) { stream.push({ byte, line: lineNumber, label }); continue; }
       // EscC takes one argument byte, which PrintString consumes: a colour reference draws
       // nothing, EscArgSpaces draws the number of spaces in its low bits.
       const next = parts[i + 1];
@@ -199,7 +208,7 @@ export function scanSource(file, text, symbols) {
       i += 1;
       if (arg === null) { unresolved.add(next.expr); continue; }
       if (((arg & 0xff) & argMask) === argSpaces) {
-        for (let n = 0; n < ((arg & 0xff) & ~argMask & 0xff); n++) stream.push({ byte: 0x20, line: lineNumber });
+        for (let n = 0; n < ((arg & 0xff) & ~argMask & 0xff); n++) stream.push({ byte: 0x20, line: lineNumber, label });
       }
     }
   });

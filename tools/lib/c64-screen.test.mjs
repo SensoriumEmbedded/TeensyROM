@@ -90,21 +90,36 @@ test('an expression it cannot evaluate is reported rather than assumed', () => {
   assert.deepEqual(unresolved, ['WhoKnows']);
 });
 
+// The tree sweep below lists its banners by the label each is printed under, so a hit has
+// to name the nearest global label, and a column-0 `Name = expr` must not pass for one.
+test('a hit names the global label its message is printed under', () => {
+  const body = `   !tx ChrReturn\n   !tx "${'x'.repeat(40)}", ChrReturn`;
+  assert.equal(scan(body).hits[0].label, 'Msg');
+  const { hits } = scanSource('test.asm', `${DEFS}\nFirst:\n   !tx "x", 0\nSecond: \nSize = *\n${body}\n   !tx 0\n`, symbols());
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].label, 'Second');
+  assert.equal(hits[0].line, 13);
+});
+
 // A full-width reverse-video bar is the one place a 40-column row is meant, and both of
 // these are drawn under a ruler comment counting to 40. The cost is the row the wrap lands
 // on: the returns after the bar each advance a further line, so the text below sits one row
 // lower than the same pattern produces on a 39-column banner. Cosmetic, pre-existing, and
 // deliberate -- listed so a new one has to be added here on purpose rather than slipping in.
+// Each is named by the label it is printed under, not a line number: the line moved with
+// every edit above the banner in its file and broke the sweep without a banner changing.
 const DELIBERATE_FULL_WIDTH_ROWS = [
-  'MIDI2SID/source/M2Ssupport.asm:158',
-  'MainMenuCRT/source/TeensyROMC64.asm:159',
+  'MIDI2SID/source/M2Ssupport.asm:MsgM2SPolyMenu',
+  'MainMenuCRT/source/TeensyROMC64.asm:MsgCartBanner',
 ];
 
 test('no C64 message row fills all 40 columns except the declared banners', () => {
   const { hits, unresolved } = scanTree(C64_DIR);
   assert.deepEqual(unresolved, [], 'every symbol in the message tables must resolve');
-  const found = hits.map((hit) => `${hit.file.split(path.sep).join('/')}:${hit.line}`).sort();
-  assert.deepEqual(found, [...DELIBERATE_FULL_WIDTH_ROWS].sort());
+  const at = (hit) => hit.file.split(path.sep).join('/');
+  const found = hits.map((hit) => `${at(hit)}:${hit.label ?? '(no label)'}`).sort();
+  const where = hits.map((hit) => `${at(hit)}:${hit.line} under ${hit.label ?? 'no label'}`).join('; ');
+  assert.deepEqual(found, [...DELIBERATE_FULL_WIDTH_ROWS].sort(), `full-width rows before a return: ${where}`);
 });
 
 test('the sweep reaches the .s and .i sources a *.asm glob would miss', () => {
