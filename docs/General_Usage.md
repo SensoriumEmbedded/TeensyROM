@@ -18,7 +18,7 @@
     * ![TeensyROM connections](/media/TR_Connections.png)
 
 ## Main Menu Options-Navigation
-  * (as of FW v0.9)
+  * (as of FW v0.9.1)
   * Menu navigation: Use the keyboard or a Joystick connected to Control Port 2
     * `CRSR or Joystick Up/Down` Move cursor up/down the list of files on the currently selected source device
     * `CRSR or Joystick Left/Right` Page up/down the list of files
@@ -34,6 +34,7 @@
       * Requires Meatloaf using latest FW connected to the TR USB Host port.
     * `<Shift-K>` **(TR+ only)** Set highlighted file as the Kernal Replace image
     * `<Shift-R>` **(TR+ only)** Set highlighted file as the REU pre-load/save image
+    * `INST/DEL` Delete the highlighted file from the SD card or USB drive (asks for confirmation first)
     * `1-5` Programmable Hot Keys to immediately launch a specified file
       * Defaults: `1` Cynthcart, `2` Station64 **(TR+ default: REU-Checker v1.0)**, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT
     * `!-%` (Shift `1-5`) Set corresponding Hot Key to currently highlighted file (on any media source)

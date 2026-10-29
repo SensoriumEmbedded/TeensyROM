@@ -106,6 +106,7 @@
    ChrUpArrow  = 94
    ChrLeftArrow= 95
    ChrHome     = 19
+   ChrDelete   = 20
    ChrFillLeft = 181
    ChrFillRight= 182
    ChrRun      = 131

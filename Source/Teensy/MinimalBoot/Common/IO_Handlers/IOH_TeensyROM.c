@@ -214,6 +214,7 @@ extern void MenuChange();
 extern void HandleExecution();
 extern bool PathIsRoot();
 extern void LoadDirectory(FS *sourceFS);
+extern void FullPathToSelected(char *Path, size_t Size, const char *Name);
 extern void FreeDriveDirMenu();
 extern void RedirectEmptyDriveDirMenu();
 extern void IOHandlerSelectInit();
@@ -976,6 +977,12 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rCtlShowExtPackagesWAIT:
                   IO1[rwRegStatus] = rsShowExtPackages; //work this in the main code
+                  break;
+               case rCtlDeleteFileCheckWAIT:
+                  IO1[rwRegStatus] = rsDeleteFileCheck; //work this in the main code
+                  break;
+               case rCtlDeleteFileWAIT:
+                  IO1[rwRegStatus] = rsDeleteFile; //work this in the main code
                   break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use

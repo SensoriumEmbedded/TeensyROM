@@ -290,8 +290,10 @@ enum RegStatusTypes  //rwRegStatus, match StatusFunction order
    rsMakeExtHostStr     = 0x20,
    rsUninstallExtHost   = 0x21,
    rsShowExtPackages    = 0x22,
+   rsDeleteFileCheck    = 0x23, //the highlighted SD/USB file: show it, and in rwRegScratch whether it can go
+   rsDeleteFile         = 0x24, //remove it and reload the listing; rwRegScratch reports success
 
-   rsNumStatusTypes     = 0x23,
+   rsNumStatusTypes     = 0x25,
 
    rsReady              = 0x5a, //FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message         = 0xa5, //FW->64 (Rd) message for the C64, set to continue when finished
@@ -377,6 +379,8 @@ enum RegCtlCommands
    rCtlBootComplete         = 58, // menu finished booting: sets BootComplete, reported by the version command
    rCtlBootInProgress       = 59, // clears BootComplete: a remote launch on reset returned and the menu is finishing its boot
    rCtlShowExtPackagesWAIT  = 60, // the /VMS packages on SD, sent as one message per row
+   rCtlDeleteFileCheckWAIT  = 61, // show the highlighted SD/USB file and, in rwRegScratch, whether it can be deleted
+   rCtlDeleteFileWAIT       = 62, // delete it and reload the listing; rwRegScratch reports success
    
 };                               
                                  

@@ -40,6 +40,7 @@ MsgHelpMenu2:
    !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>M",         EscC,EscNameColor, " *", EscC,EscSourcesColor, "Meatloaf: Mount/Launch Dxx", ChrReturn
    !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>K",         EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as Kernal Replace File", ChrReturn
    !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Sh>R",         EscC,EscNameColor, " +", EscC,EscSourcesColor, "Set as REU Pre-load/save File", ChrReturn
+   !tx EscC,EscArgSpaces+1, EscC,EscOptionColor, "<Del>",                                  EscC,EscSourcesColor, "  Delete file (SD/USB)", ChrReturn
    !tx ChrReturn
    !tx EscC,EscNameColor, "   *:", EscC,EscSourcesColor, " External HW Required", ChrReturn
    !tx EscC,EscNameColor, "   +:", EscC,EscSourcesColor, " TeensyROM+ Only", ChrReturn

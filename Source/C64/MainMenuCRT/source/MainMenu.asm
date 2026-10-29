@@ -578,6 +578,30 @@ DirectRunFromTeensyMenu:
    jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
  
    
++  cmp #ChrDelete ;Delete highlighted file
+   bne +
+   jsr PrintBanner ;SourcesColor
+   lda TblEscC+EscSourcesColor
+   sta $0286  ;set text color
+   ;header message comes from DeleteFileCheck()
+   lda #rCtlDeleteFileCheckWAIT ;shows the file, or why it can't go
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   lda rwRegScratch+IO1Port ;non-zero: it can, and the y/n prompt is up
+   beq ++
+-  jsr CheckForIRQGetIn
+   beq -
+   cmp #'y'
+   bne +++  ;anything else cancels, straight back to the list
+   lda #rCtlDeleteFileWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots
+   lda rwRegScratch+IO1Port ;non-zero: deleted, listing reloaded
+   bne +++
+++ jsr AnyKeyMsgWait ;refused or failed, leave the message up
++++ jsr ListMenuItems ; reprint menu
+   jmp HighlightCurrent
+
 +  jmp WaitForJSorKey
    
 ; ******************************* Subroutines ******************************* 

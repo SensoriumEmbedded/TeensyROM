@@ -1384,6 +1384,81 @@ FLASHMEM void ShowExtPackages()
 #endif
 }
 
+// Delete the highlighted file, from the main menu's INST/DEL key. Two steps, like the NFC
+// tag pair: the check shows the file and answers in rwRegScratch whether it can go, the
+// C64 asks the user, and the delete runs only on a yes. rwRegScratch stays zero on a
+// refusal or a failure, and the message says which.
+// Every message here is PSTR(): a bare literal lands in .rodata, which the linker
+// script places in DTCM, and the menu's own messages already fill enough of it.
+FLASHMEM static bool DeletableSelection()
+{
+   if (IO1[rWRegCurrMenuWAIT] == rmtTeensy)
+   {
+      SendMsgPrintfln(PSTR("Select file from SD or USB only\r"));
+      return false;
+   }
+
+   const size_t PathLen = strlen(DriveDirPath);
+   if (PathLen && DriveDirPath[PathLen-1] == '*') //a disk image's entries, not files on the drive
+   {
+      SendMsgPrintfln(PSTR("Can't delete from inside a disk image\r"));
+      return false;
+   }
+
+   const uint8_t Type = MenuSource[SelItemFullIdx].ItemType;
+   if (Type == rtDirectory || Type == rtNone)
+   {
+      SendMsgPrintfln(PSTR("Only files can be deleted\r"));
+      return false;
+   }
+   return true;
+}
+
+FLASHMEM void DeleteFileCheck()
+{
+   char PathMsg[MaxPathLength];
+
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
+   IO1[rwRegScratch] = 0; //needed for GetCurrentFilePathName, and the answer until proven deletable
+   const bool PathFits = GetCurrentFilePathName(PathMsg, sizeof PathMsg);
+   SendMsgPrintfln(PSTR("Delete File:\r%s\r"), PathMsg);
+
+   if (!DeletableSelection()) return;
+
+   if (!PathFits)
+   {
+      SendMsgPrintfln(PSTR("Path incomplete or too long\r"));
+      return;
+   }
+
+   SendMsgPrintfln(PSTR("Delete this file? y/n"));
+   IO1[rwRegScratch] = 1;
+}
+
+FLASHMEM void DeleteSelectedFile()
+{
+   SelItemFullIdx = MenuIdxFromRegs(IO1[rwRegCursorItemOnPg]);
+   IO1[rwRegScratch] = 0;
+   if (!DeletableSelection()) return; //the cursor hasn't moved since the check, but it's cheap
+
+   FS *sourceFS = &firstPartition;
+   if (IO1[rWRegCurrMenuWAIT] == rmtSD) sourceFS = &SD;
+   char FullFilePath[MaxNamePathLength];
+
+   FullPathToSelected(FullFilePath, sizeof FullFilePath, MenuSource[SelItemFullIdx].Name);
+   if (!sourceFS->remove(FullFilePath))
+   {
+      SendMsgPrintfln(PSTR("Delete failed\r"));
+      return;
+   }
+
+   //LoadDirectory's SetMenu starts the page over; put the cursor back where the file was
+   const uint16_t Idx = SelItemFullIdx;
+   LoadDirectory(sourceFS);
+   SetCursorToItemNum(Idx < NumItemsFull ? Idx : NumItemsFull-1);
+   IO1[rwRegScratch] = 1;
+}
+
 //Unsized so the static_assert below can compare its length against rsNumStatusTypes
 void (*StatusFunction[])() = //match RegStatusTypes order
 {
@@ -1422,6 +1497,8 @@ void (*StatusFunction[])() = //match RegStatusTypes order
    &MakeExtHostStr,      // rsMakeExtHostStr
    &UninstallExtHost,    // rsUninstallExtHost
    &ShowExtPackages,     // rsShowExtPackages
+   &DeleteFileCheck,     // rsDeleteFileCheck
+   &DeleteSelectedFile,  // rsDeleteFile
 };
 static_assert(sizeof(StatusFunction) / sizeof(StatusFunction[0]) == rsNumStatusTypes,
               "StatusFunction[] / RegStatusTypes count mismatch");
