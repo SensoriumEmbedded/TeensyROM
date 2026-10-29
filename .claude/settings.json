@@ -13,8 +13,11 @@
       "Bash(npm run flash -- --check)",
       "Bash(node --test *)",
       "Bash(python3 -m unittest discover -s tools/bench)",
+      "Bash(git status)",
       "Bash(git status *)",
+      "Bash(git diff)",
       "Bash(git diff *)",
+      "Bash(git log)",
       "Bash(git log *)",
       "Bash(git show *)"
     ]
