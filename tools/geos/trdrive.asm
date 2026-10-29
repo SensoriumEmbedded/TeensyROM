@@ -17,7 +17,7 @@ HEADER_SWAP = $8c
 HEADER_FIRST = 4
 HEADER_END = $1d
 
-; offsets from BASE_GEOS_RAM's page
+; offsets from the registers' page
 REG_CMD = $08
 REG_ADDR0 = $09
 REG_ADDR1 = $0a
@@ -51,7 +51,10 @@ IO_IN_BANK_1 = $7e
 VIC_CLOCK = $d030
 CLOCK_1MHZ = 0
 
-BASE_GEOS_RAM = $df
+; beside GeoRAM, and beside the REU, whose unused registers read $FF across $DF0B-$DF1F
+PAGE_BESIDE_GEORAM = $df
+PAGE_BESIDE_REU = $de
+REG_ID = $10
 
 * = ORG
 
@@ -189,8 +192,10 @@ readPage
         jsr putReg
         ldx #0
 windowRead
-        lda BASE_GEOS_RAM * 256 + WINDOW,x
-        cmp BASE_GEOS_RAM * 256 + WINDOW,x
+windowLoad
+        lda PAGE_BESIDE_GEORAM * 256 + WINDOW,x
+windowCheck
+        cmp PAGE_BESIDE_GEORAM * 256 + WINDOW,x
         bne windowRead
         sta (r4),y
         iny
@@ -218,10 +223,13 @@ writePage
         ldx #0
 windowWrite
         lda (r4),y
-        sta BASE_GEOS_RAM * 256 + WINDOW,x
-        cmp BASE_GEOS_RAM * 256 + WINDOW,x
+windowStore
+        sta PAGE_BESIDE_GEORAM * 256 + WINDOW,x
+windowVerify
+        cmp PAGE_BESIDE_GEORAM * 256 + WINDOW,x
         beq windowStored
-        cmp BASE_GEOS_RAM * 256 + WINDOW,x
+windowRetry
+        cmp PAGE_BESIDE_GEORAM * 256 + WINDOW,x
         bne windowFault
 windowStored
         iny
@@ -333,25 +341,48 @@ swapField
 swapped
         rts
 
-; carry clear when the TRB id answers
+; carry clear when the TRB id answers on either page, with every register access pointed at that page
 findDevice
+        ldx #PAGE_BESIDE_GEORAM
+        jsr hasId
+        bcc usePage
+        ldx #PAGE_BESIDE_REU
+        jsr hasId
+        bcs absent
+usePage
+        stx getReg + 2
+        stx putReg + 2
+        stx windowLoad + 2
+        stx windowCheck + 2
+        stx windowStore + 2
+        stx windowVerify + 2
+        stx windowRetry + 2
+absent
+        rts
+
+; X = page; carry clear when the TRB id reads there
+hasId
+        stx idLoad + 2
+        stx idCheck + 2
         ldy #2
 probe
-        lda BASE_GEOS_RAM * 256 + $10,y
-        cmp BASE_GEOS_RAM * 256 + $10,y
+idLoad
+        lda PAGE_BESIDE_GEORAM * 256 + REG_ID,y
+idCheck
+        cmp PAGE_BESIDE_GEORAM * 256 + REG_ID,y
         bne probe
         cmp trbId,y
-        bne absent
+        bne notHere
         dey
         bpl probe
         clc
         rts
-absent
+notHere
         sec
         rts
 
 getReg
-        lda BASE_GEOS_RAM * 256,x
+        lda PAGE_BESIDE_GEORAM * 256,x
         rts
 
 ; a read that comes back the same twice; on some machines the TR's byte arrives with the last one's bits ORed in
@@ -364,7 +395,7 @@ getStable
         rts
 
 putReg
-        sta BASE_GEOS_RAM * 256,x
+        sta PAGE_BESIDE_GEORAM * 256,x
         rts
 
 trbId   !byte $54, $52, $42
