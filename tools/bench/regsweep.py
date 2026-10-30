@@ -17,9 +17,9 @@ LAYOUTS = {0: 'plain REU', 1: 'REU with the TR page at $DE00', 2: 'GeoRAM with t
 
 
 def counters(tr):
-    b = tr.peek(RESULTS, 9)
-    return dict(passes=b[0] | b[1] << 8, reu=b[2] | b[3] << 8, ff=b[4] | b[5] << 8,
-                ids=b[6] | b[7] << 8, layout=b[8])
+    b = tr.peek(RESULTS, 12)
+    return dict(passes=b[0] | b[1] << 8, reu=int.from_bytes(b[2:5], 'little'),
+                ff=int.from_bytes(b[5:8], 'little'), ids=int.from_bytes(b[8:11], 'little'), layout=b[11])
 
 
 def start_regread(tr):
@@ -61,9 +61,10 @@ def main():
                 before = counters(tr)
                 time.sleep(dwell)
                 after = counters(tr)
-                added = {k: after[k] - before[k] & 0xFFFF for k in ('passes', 'reu', 'ff', 'ids')}
-                print(f'nS_PLAprop {value:3d}  passes +{added["passes"]:5d}  REU registers +{added["reu"]:5d}  '
-                      f'$FF page +{added["ff"]:5d}  TR page IDs +{added["ids"]:5d}', flush=True)
+                added = {k: after[k] - before[k] & 0xFFFFFF for k in ('reu', 'ff', 'ids')}
+                added['passes'] = after['passes'] - before['passes'] & 0xFFFF
+                print(f'nS_PLAprop {value:3d}  passes +{added["passes"]:5d}  REU registers +{added["reu"]:6d}  '
+                      f'$FF page +{added["ff"]:6d}  TR page IDs +{added["ids"]:6d}', flush=True)
         finally:
             if 'Defaults set' not in timing(tr, b'td'):
                 raise SystemExit('td not confirmed: the board is still running the last value')

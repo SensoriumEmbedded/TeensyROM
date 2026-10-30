@@ -1,7 +1,8 @@
 ; C64 side of regsweep.py: reads the cartridge's registers in a loop and counts
 ; wrong answers at $C000, where regsweep.py reads them by DMA.
-;  $C000/1 passes (256 rounds each)  $C002/3 REU register errors  $C004/5 $FF-page errors
-;  $C006/7 TR page ID errors          $C008 layout: 0 plain REU, 1 REU+TR page at $DE, 2 GeoRAM (TR page at $DF)
+;  $C000/1 passes (256 rounds each)  $C002-4 REU register errors  $C005-7 $FF-page errors
+;  $C008-A TR page ID errors          $C00B layout: 0 plain REU, 1 REU+TR page at $DE, 2 GeoRAM (TR page at $DF)
+; Error counts are 24-bit: with every read failing they pass 65535 within 4 seconds.
 !cpu 6502
 res   = $c000
 val   = $fb
@@ -14,7 +15,7 @@ save  = $02
         !byte 0
 +       !word 0
         lda #0
-        ldx #8
+        ldx #$0b
 -       sta res,x
         dex
         bpl -
@@ -30,9 +31,9 @@ save  = $02
 geo     lda #2
         bne setmode
 beside  lda #1
-setmode sta res+8
+setmode sta res+$0b
 
-loop    lda res+8
+loop    lda res+$0b
         cmp #2
         beq trpage
         ldx #6                  ; REU address and length registers read back as written
@@ -51,17 +52,21 @@ loop    lda res+8
         inc res+2
         bne +
         inc res+3
+        bne +
+        inc res+4
 +       dex
         bpl -
-        lda res+8
+        lda res+$0b
         beq next
         ldx #$0f                ; beside the TR page, $DF10-$DF1F read $FF
 -       lda $df10,x
         cmp #$ff
         beq +
-        inc res+4
-        bne +
         inc res+5
+        bne +
+        inc res+6
+        bne +
+        inc res+7
 +       dex
         bpl -
 trpage  jsr checkIDs
@@ -97,9 +102,11 @@ checkIDs                        ; page+3..5 = "TRM", page+$10..$12 = "TRB"
         bpl -
         rts
 
-idErr   inc res+6
+idErr   inc res+8
         bne +
-        inc res+7
+        inc res+9
+        bne +
+        inc res+$0a
 +       rts
 
 hasTRB  sta page+1              ; carry clear when "TRB" is at A*256+$10
