@@ -34,6 +34,12 @@ whatever node appeared beside it.
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).
 
+Do not use them on a C128 running GEOS 128 in 80 columns: a single one-byte
+`peek.py` stops it, clock and mouse both, until a reset. That mode runs the 8502
+at 2 MHz, which is the likely cause but has not been isolated. GEOS 64 on the
+same C128 survives peeks and whole-bitmap reads. Check an 80-column screen with
+a capture device instead.
+
 ## Scripts
 
 | Script | Does |
