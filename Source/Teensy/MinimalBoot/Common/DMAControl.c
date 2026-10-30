@@ -260,6 +260,13 @@ FLASHMEM bool CloseDMA()
    return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
 }
 
+// Stops the computer on a safe cycle, with nothing to transfer, until CloseDMA.
+FLASHMEM bool HoldC64()
+{
+   DMA_State = DMA_S_StartAsynch;
+   return WaitForDMAState(DMA_S_TransferReady, DMA_HANDSHAKE_CEILING_mS);
+}
+
 // A slice on a live C64 starts within DMA_TIMEOUT_CYCLES (~5 mS), so this holds a job to about
 // what its slice cap allows even on a bus that makes every handshake run to its own ceiling.
 #define DMA_SPANS_CEILING_mS  (C64SlicesMax * 5 + 1000)
