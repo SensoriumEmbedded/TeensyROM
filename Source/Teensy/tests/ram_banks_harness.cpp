@@ -120,6 +120,25 @@ bool CloseDMA()
    return true;
 }
 
+// RAMBanks.c uses strlcpy and strlcat, which MinGW and glibc before 2.38 do not have. These
+//  stand in for them on every host, so the build does not depend on the C library it finds; the
+//  #undefs cover a C library that makes them fortify macros.
+static size_t harness_strlcpy(char *Dest, const char *Src, size_t Size)
+{
+   size_t Len = strlen(Src);
+   if (Size) { size_t Copy = Len < Size - 1 ? Len : Size - 1; memcpy(Dest, Src, Copy); Dest[Copy] = 0; }
+   return Len;
+}
+static size_t harness_strlcat(char *Dest, const char *Src, size_t Size)
+{
+   size_t Len = strnlen(Dest, Size);
+   return Len == Size ? Size + strlen(Src) : Len + harness_strlcpy(Dest + Len, Src, Size - Len);
+}
+#undef strlcpy
+#undef strlcat
+#define strlcpy harness_strlcpy
+#define strlcat harness_strlcat
+
 // RAMBanks.c casts pointers to uint32_t, as wide as a pointer on the Teensy and not on the host
 #define uint32_t uintptr_t
 #include "../MinimalBoot/Common/IO_Handlers/RAMBanks.c"

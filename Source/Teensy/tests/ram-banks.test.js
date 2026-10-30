@@ -31,7 +31,8 @@ function harness() {
 function save(...args) {
   const ran = spawnSync(harness(), args, { encoding: 'utf8' });
   assert.equal(ran.status, 0, ran.stderr);
-  return ran.stdout.split('\n').filter(Boolean);
+  // A MinGW build of the harness writes its lines as \r\n: stdout is in text mode there.
+  return ran.stdout.split(/\r?\n/).filter(Boolean);
 }
 
 test('the REU save is the banks as they were when it began, and the computer runs again', { skip }, () => {
