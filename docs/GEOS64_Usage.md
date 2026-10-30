@@ -7,6 +7,7 @@
 * Plug a USB mouse into the TeensyROM's USB host port.
   * It is not a 1351 mouse: only GEOS, with the TR mouse driver the TeensyROM adds, sees it.
 * Find it in the main menu: `F1` (Teensy Memory), then **Utilities**, then **GEOS 64**.
+* On a C128, GEOS 128 starts the same way: see [GEOS 128 on the TeensyROM](GEOS128_Usage.md).
 
 ## SD card setup
 * Make a folder named `/GEOS64` on the SD card.
@@ -24,21 +25,32 @@
   * Each launch brings the copy's TR USB mouse driver up to date with the firmware's.
 * To start over from your original, delete the `-TR` copy. The next launch makes a new one.
 
-## GeoRAM
-* GEOS 64 runs with GeoRAM (128K to 512K, as much as fits) as its Special IO, selected automatically.
+## RAM expansion: GeoRAM or REU
+GEOS 64 runs beside one of two RAM expansions, chosen by the **Special IO** setting in the Settings menu (`F8`). Either one also carries the TeensyROM's USB mouse and disk, so no other Special IO is needed. See [Selecting and associating Special IO](General_Usage.md#selecting-and-associating-special-io).
+
+| Special IO | RAM expansion | Boards |
+|--|--|--|
+| `REU+USB Mouse/Disk` | REU | TR+ only |
+| anything else | GeoRAM | TR and TR+ |
+
+### REU (recommended on a TR+)
+* Set Special IO to `REU+USB Mouse/Disk`, then select GEOS 64.
+* GEOS's own `CONFIGURE` runs at start-up, finds the REU (128K to 512K, as much as fits) and sets it up as GEOS does a Commodore REU of that size. GEOS knows only the REU as a RAM expansion, so this is the way to give it one.
+* At launch, the TeensyROM loads the REU pre-load/save image into the REU. Choose that file with `<Shift-R>` in the file browser; the Settings menu shows the current one. If the file is not there, the REU starts empty.
+* To save the REU to that file, press and release the Alt button (to the left of the menu button).
+
+### GeoRAM
+* With any other Special IO setting, GEOS 64 runs with GeoRAM (128K to 512K, as much as fits).
 * At launch, the TeensyROM loads `SD:/georam.ram` into GeoRAM.
-* **(TR+ only)** To save GeoRAM, press and release the Alt button (to the left of the menu button).
+* **(TR+ only)** To save GeoRAM, press and release the Alt button.
   * The contents are written to `georam.ram` on the SD card, and the LED flashes for about 1.5 seconds once the save is done.
   * The previous `georam.ram` is kept as `georam.bak`.
   * If the power goes off during a save, the next launch loads the newest complete save: the one just made if it was fully written, otherwise the previous one.
-* GEOS's own `CONFIGURE` runs at start-up, set up in the `-TR` copy to find the TeensyROM as drive A. It does not find GeoRAM, so GEOS does not set GeoRAM up as a RAM disk.
-  * Other configuration programs on the disk (such as `CONFIG 2.0r`) are kept from running at start-up, since they look for a disk drive.
+* `CONFIGURE` runs at start-up as with the REU, but it does not find GeoRAM, so GEOS runs as it does with no RAM expansion. GeoRAM is there for programs that use it themselves.
 
-## REU (TR+ only)
-* To run GEOS with the TR+'s REU (128K to 512K, as much as fits) instead of GeoRAM, set Special IO to `REU+USB Mouse/Disk` in the Settings menu (`F8`), then select GEOS 64 or GEOS 128.
-  * GEOS's own `CONFIGURE` finds the REU at start-up and sets it up as GEOS does a Commodore REU of that size.
-  * At launch, the TeensyROM loads the REU pre-load/save image shown in the Settings menu into the REU. To save the REU to that file, press and release the Alt button.
-* With any other Special IO setting, GEOS runs with GeoRAM.
+### Either way
+* `CONFIGURE` is set up in the `-TR` copy to find the TeensyROM as drive A.
+* Other configuration programs on the disk (such as `CONFIG 2.0r`) are kept from running at start-up, since they look for a disk drive.
 
 ## Date and time
 * GEOS starts with the date and time of the TeensyROM's real-time clock, adjusted by the Time Zone setting.
