@@ -1,0 +1,126 @@
+; C64 side of regsweep.py: reads the cartridge's registers in a loop and counts
+; wrong answers at $C000, where regsweep.py reads them by DMA.
+;  $C000/1 passes (256 rounds each)  $C002-4 REU register errors  $C005-7 $FF-page errors
+;  $C008-A TR page ID errors          $C00B layout: 0 plain REU, 1 REU+TR page at $DE, 2 GeoRAM (TR page at $DF)
+; Error counts are 24-bit: with every read failing they pass 65535 within 4 seconds.
+!cpu 6502
+res   = $c000
+val   = $fb
+page  = $fc     ; pointer $fc/$fd to the TR page
+save  = $02
+        * = $0801
+        !word +, 10
+        !byte $9e
+        !text "2061"
+        !byte 0
++       !word 0
+        lda #0
+        ldx #$0b
+-       sta res,x
+        dex
+        bpl -
+        sta page
+        lda #$df
+        jsr hasTRB
+        bcc geo
+        lda #$de
+        jsr hasTRB
+        bcc beside
+        lda #0
+        beq setmode
+geo     lda #2
+        bne setmode
+beside  lda #1
+setmode sta res+$0b
+
+loop    lda res+$0b
+        cmp #2
+        beq trpage
+        ldx #6                  ; REU address and length registers read back as written
+-       txa
+        clc
+        adc val
+        sta $df02,x
+        dex
+        bpl -
+        ldx #6
+-       txa
+        clc
+        adc val
+        cmp $df02,x
+        beq +
+        inc res+2
+        bne +
+        inc res+3
+        bne +
+        inc res+4
++       dex
+        bpl -
+        lda res+$0b
+        beq next
+        ldx #$0f                ; beside the TR page, $DF10-$DF1F read $FF
+-       lda $df10,x
+        cmp #$ff
+        beq +
+        inc res+5
+        bne +
+        inc res+6
+        bne +
+        inc res+7
++       dex
+        bpl -
+trpage  jsr checkIDs
+next    inc val
+        bne loop
+        inc res
+        bne loop
+        inc res+1
+        jmp loop
+
+checkIDs                        ; page+3..5 = "TRM", page+$10..$12 = "TRB"
+        ldy #2
+-       sty save
+        tya
+        clc
+        adc #3
+        tay
+        lda (page),y
+        ldy save
+        cmp trm,y
+        beq +
+        jsr idErr
++       tya
+        clc
+        adc #$10
+        tay
+        lda (page),y
+        ldy save
+        cmp trb,y
+        beq +
+        jsr idErr
++       dey
+        bpl -
+        rts
+
+idErr   inc res+8
+        bne +
+        inc res+9
+        bne +
+        inc res+$0a
++       rts
+
+hasTRB  sta page+1              ; carry clear when "TRB" is at A*256+$10
+        ldy #$12
+-       lda (page),y
+        cmp trb-$10,y
+        bne +
+        dey
+        cpy #$10
+        bcs -
+        clc
+        rts
++       sec
+        rts
+
+trm     !text "TRM"
+trb     !text "TRB"
