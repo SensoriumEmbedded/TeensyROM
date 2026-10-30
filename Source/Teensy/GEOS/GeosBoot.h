@@ -225,6 +225,7 @@ FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Sl
    uint8_t Index[GEOS_SECTOR_SIZE], *Driver, *At;
    struct GeosTS Probe, Driven;
    uint32_t ProbeLength, DriverLength;
+   uint16_t ReadBlock;
 
    *Ours = false;
    if (Slot[SlotStructure] != GEOS_VLIR || !GeosSlotNamed(Slot, Name)) return true;
@@ -240,7 +241,8 @@ FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Sl
    Driver = Scratch + ProbeLength;
    if (!GeosReadChain(Disk, Driven, Name, Driver, Capacity - ProbeLength, &DriverLength)) return false;
    if (DriverLength <= GEOS_TYPE_BYTE || !GeosIsDriverAt(Driver)) return true;
-   if (GeosWord(Driver + 2 * VecReadBlock) - GEOS_DRIVER_AREA > DriverLength) return true;
+   ReadBlock = GeosWord(Driver + 2 * VecReadBlock);
+   if (ReadBlock < GEOS_DRIVER_AREA || ReadBlock > GEOS_DRIVER_AREA + DriverLength) return true;
    if (!GeosReplaceTransport(Driver, Disk->Target->DiskDriver)) return true;
    memcpy(At, GeosTRProbe, sizeof GeosTRProbe);
    if (!GeosRewriteChain(Disk, Driven, Driver) || !GeosRewriteChain(Disk, Probe, Scratch)) return false;
