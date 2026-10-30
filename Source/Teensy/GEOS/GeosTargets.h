@@ -39,12 +39,15 @@ static const struct GeosDiskDriver TRDiskDriver128 =
    TRDriver128Relocations, sizeof TRDriver128Relocations / sizeof TRDriver128Relocations[0], TRDriver128Entries,
 };
 
+static const char Geos64ConfigureName[] PROGMEM = "CONFIGURE";
+static const char Geos128ConfigureName[] PROGMEM = "128 CONFIGURE";
+
 static const struct GeosLauncher Geos64Launcher =
 {
    "GEOS 64", "/GEOS64", GeosC64,
    { "DESK TOP", TRMouse64Name, TRMouse64Code, TRMouse64Info, sizeof TRMouse64Code, GEOS_INPUT_64,
      GEOS64_BOOT_FILE, GEOS64_BOOT_ENTRY, &TRDiskDriver64,
-     Geos64ClockRuns, sizeof Geos64ClockRuns / sizeof Geos64ClockRuns[0], 0, "CONFIGURE" },
+     Geos64ClockRuns, sizeof Geos64ClockRuns / sizeof Geos64ClockRuns[0], 0, Geos64ConfigureName },
 };
 
 static const struct GeosLauncher Geos128Launcher =
@@ -53,5 +56,5 @@ static const struct GeosLauncher Geos128Launcher =
    { "128 DESKTOP", TRMouse128Name, TRMouse128Code, TRMouse128Info, sizeof TRMouse128Code, GEOS_INPUT_128,
      GEOS128_BOOT_FILE, GEOS128_BOOT_ENTRY, &TRDiskDriver128,
      Geos128ClockRuns, sizeof Geos128ClockRuns / sizeof Geos128ClockRuns[0], GEOS128_RESET_KEY,
-     "128 CONFIGURE" },
+     Geos128ConfigureName },
 };

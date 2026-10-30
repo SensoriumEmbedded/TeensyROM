@@ -56,7 +56,7 @@ static bool GeosInDriverArea(uint16_t Address) { return Address >= GEOS_DRIVER_A
 
 // Whether a stock disk driver's tables start here: the vectors and the jump slots all point into the driver, and
 // the type byte names a 1541, 1571 or 1581
-static bool GeosIsDriverAt(const uint8_t *At)
+FLASHMEM static bool GeosIsDriverAt(const uint8_t *At)
 {
    uint8_t Type = At[GEOS_TYPE_BYTE];
 
@@ -85,7 +85,7 @@ static int32_t GeosFindDriver(const uint8_t *Data, uint32_t Size)
 // The TR's driver goes over the stock driver's code from InitForIO up to ReadBlock, provided no vector or jump slot
 // it leaves alone points there, and every vector it implements is pointed at its own routines. Replaced routines
 // outside that run stay where they are, unused: GEOS 128 keeps NewDisk after ReadBlock.
-static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *With)
+FLASHMEM static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *With)
 {
    uint16_t Start = GeosWord(Driver + 2 * VecInitForIO), End = GeosWord(Driver + 2 * VecReadBlock);
    uint8_t *Code = Driver + (Start - GEOS_DRIVER_AREA);
@@ -116,12 +116,12 @@ static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *W
 }
 
 // CONFIGURE's drive-type probe, which asks each IEC device what drive it is
-static const uint8_t GeosStockProbe[] = { 0xa9, 0xe5, 0x85, 0x03, 0xa9, 0x80, 0x85, 0x02, 0x20 };
+static const uint8_t GeosStockProbe[] PROGMEM = { 0xa9, 0xe5, 0x85, 0x03, 0xa9, 0x80, 0x85, 0x02, 0x20 };
 // What the TR puts over it: drive A, at device 8, is a 1581, and no other drive is there
-static const uint8_t GeosTRProbe[] = { 0xa9, 0x00, 0xae, 0x89, 0x84, 0xe0, 0x08, 0xd0, 0x02, 0xa9, 0x03, 0x60 };
+static const uint8_t GeosTRProbe[] PROGMEM = { 0xa9, 0x00, 0xae, 0x89, 0x84, 0xe0, 0x08, 0xd0, 0x02, 0xa9, 0x03, 0x60 };
 
 // Finds Pattern once in Body; NULL when it is absent or ambiguous
-static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
+FLASHMEM static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
 {
    uint8_t *Found = NULL;
 
@@ -134,7 +134,7 @@ static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Patt
    return Found;
 }
 
-static uint32_t GeosBytesInBlock(const uint8_t *Block) { return Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0); }
+FLASHMEM static uint32_t GeosBytesInBlock(const uint8_t *Block) { return Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0); }
 
 // A file's bytes along its sector chain from At; What names it in a refusal
 FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, struct GeosTS At, const char *What, uint8_t *Out,
