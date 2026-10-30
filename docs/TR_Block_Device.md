@@ -116,7 +116,7 @@ The firmware does this arithmetic so that a 6502 driver does not have to. A driv
 
 ## A reader's checklist
 A driver that follows this document:
-* checks `TRB` at `$DF10`;
+* checks `TRB` at `$DF10`, then at `$DE10`;
 * writes TOKEN, the address, PAGE, then CMD;
 * reads STATUS until two reads agree and the value is not `$80`, then checks ECHO;
 * moves a block as four PAGEs of the window;
