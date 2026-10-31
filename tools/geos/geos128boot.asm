@@ -2,7 +2,7 @@
 ; A C128 function ROM that starts GEOS 128 with no drive: it pulls the boot image the firmware built through the
 ; TR block device's BOOT command (docs/TR_Block_Device.md) into RAM bank 1, then enters it as GEOS's own ROM
 ; loader does. geos128boot.mjs turns it into Source/Teensy/GEOS/Geos128Boot.h; build with acme.
-; The firmware fills in bootLoad, bootPages and bootEntry.
+; The firmware fills in bootLoad, bootPages and bootEntry, and puts the block device's page in every register address.
 
 MMU_CR = $ff00
 MMU_RAM_SHARE = $d506
@@ -22,7 +22,8 @@ DEVICE_8 = 8
 ; in the common RAM the loader shares between the banks, where #63's loader ran
 LOADER = $1300
 
-BLOCK = $df00
+!ifndef BLOCK_PAGE { BLOCK_PAGE = $df }
+BLOCK = BLOCK_PAGE * 256
 REG_CMD = BLOCK + $08
 REG_ADDR0 = BLOCK + $09
 REG_ADDR1 = BLOCK + $0a

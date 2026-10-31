@@ -124,7 +124,7 @@
       * See viewer usage/navigation doc via TR on your C64
     * **.D64/.D71/.D81 files:**
       * Single File load/exec only (no multi-file/writebacks)
-      * Exception (FW 0.9.1 and later): GEOS 64 boots from a .D81 boot disk in `/GEOS64` with full disk read/write. See [GEOS 64 on the TeensyROM](GEOS64_Usage.md).
+      * Exception (FW 0.9.1 and later): GEOS 64 and GEOS 128 boot from a .D81 boot disk in `/GEOS64` and `/GEOS128` with full disk read/write. See [GEOS 64 on the TeensyROM](GEOS64_Usage.md) and [GEOS 128 on the TeensyROM](GEOS128_Usage.md).
     * **.HEX files:**
       * Used for TeensyROM firmware updates (see below)
 
@@ -261,6 +261,13 @@
       * The setting stays in memory and will be re-loaded for any app until changed
       * We recommend disabling NFC if Special IO is selected to avoid interference.
     * If a selected CRT file is associated with different Special IO (i.e. Epyx, EasyFlash etc), that Special IO will be loaded instead
+  * RAM expansions:
+    * **GeoRAM**: Berkeley Softworks geoRAM, 128K to 512K (as much as fits). Its window is at `$DE00` and its registers at `$DFFE`/`$DFFF`. The TeensyROM's USB mouse and [block device](TR_Block_Device.md) registers sit beside it at `$DF00`.
+      * Loads `SD:/georam.ram` at launch. **(TR+ only)** Press and release the Alt button to save it there; the previous save is kept as `georam.bak`.
+    * **512KB REU** **(TR+ only)**: a Commodore REU (1700/1764/1750) at `$DF00`, 128K to 512K (as much as fits).
+      * Loads the REU pre-load/save image at launch (choose it with `<Shift-R>` in the file browser). Press and release the Alt button to save it there.
+    * **REU+USB Mouse/Disk** **(TR+ only)**: the same REU at `$DF00`, with the USB mouse and block device registers moved to `$DE00`. The REU's unused registers read `$FF`, as a 1764's do.
+      * Made for GEOS: with it selected, GEOS 64 and GEOS 128 run with the REU, which GEOS's own CONFIGURE finds. With any other setting they run with GeoRAM. See [GEOS 64](GEOS64_Usage.md#ram-expansion-georam-or-reu) and [GEOS 128](GEOS128_Usage.md#ram-expansion-georam-or-reu).
 
 ## Firmware updates
   TR and TR+ have separate firmware files, so first pick the one for your hardware:

@@ -164,6 +164,9 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
    #endif  
       &IOHndlr_Debug,              //IOH_Debug, 
       &IOHndlr_GeoRAM,             //IOH_GeoRAM,
+   #ifdef Fab04_REU
+      &IOHndlr_REU_TRPage,         //IOH_REU_TRPage,
+   #endif
       
    //*not* manually selectable, see LastSelectableIOH
                                    

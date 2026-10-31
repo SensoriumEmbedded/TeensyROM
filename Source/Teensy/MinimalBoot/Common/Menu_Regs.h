@@ -443,7 +443,12 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
       IOH_KernalReplace,
    #endif  
       IOH_Debug,
+   #ifdef Fab04_REU
+      IOH_GeoRAM,
+      IOH_REU_TRPage, //last manually selectable, see LastSelectableIOH
+   #else
       IOH_GeoRAM, //last manually selectable, see LastSelectableIOH
+   #endif
 
    //*not* manually selectable, see LastSelectableIOH
       
@@ -477,4 +482,8 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
    IOH_Num_Handlers       //always last
 };
 
-#define LastSelectableIOH  IOH_GeoRAM    //127 max.  Used in IOH_TeensyROM.c for Special IO display/select
+#ifdef Fab04_REU
+   #define LastSelectableIOH  IOH_REU_TRPage    //127 max.  Used in IOH_TeensyROM.c for Special IO display/select
+#else
+   #define LastSelectableIOH  IOH_GeoRAM
+#endif

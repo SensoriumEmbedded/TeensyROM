@@ -749,3 +749,43 @@ FLASHMEM void PollingHndlr_REU()
 #endif
 }
 
+//______________________________________________________________________________________________
+// The REU with the TR's USB mouse and block device beside it in IO1, where a GEOS that found the REU looks for them
+
+void IO2Hndlr_REU_TRPage(uint8_t Address, bool R_Wn);
+void PollingHndlr_REU_TRPage();
+void InitHndlr_REU_TRPage();
+
+stcIOHandlers IOHndlr_REU_TRPage =
+{
+  "REU+USB Mouse/Disk", //Name of handler
+  &InitHndlr_REU_TRPage, //Called once at handler startup
+  &TRPageIO,           //IO1 R/W handler
+  &IO2Hndlr_REU_TRPage, //IO2 R/W handler
+  NULL,                //ROML Read handler, in addition to any ROM data sent
+  NULL,                //ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_REU_TRPage, //Polled in main routine
+  NULL,                //called at the end of EVERY c64 cycle
+};
+
+FLASHMEM void InitHndlr_REU_TRPage()
+{
+   InitUSBMouse();
+   InitTRBlock();
+   InitHndlr_REU();
+}
+
+FLASHMEM void PollingHndlr_REU_TRPage()
+{
+   PollUSBMouse();
+   PollTRBlock();
+   PollingHndlr_REU();
+}
+
+// A 1764's unused registers read $FF. The TR's GEOS drivers look for the block device's ID at $DF10 first, which
+// must not answer there beside the REU.
+void IO2Hndlr_REU_TRPage(uint8_t Address, bool R_Wn)
+{
+   if (R_Wn && NumREU_Banks && (Address & 0x1f) >= REUReg_NumRegs) DataPortWriteWaitLog(0xff);
+   else IO2Hndlr_REU(Address, R_Wn);
+}
