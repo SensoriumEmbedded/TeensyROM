@@ -31,3 +31,10 @@ test('screen codes read as the letters of the selected set', () => {
   assert.equal(screenRows(screen, CHARSETS.upperGraphics)[0].trimEnd(), 'HI ...1A.');
   assert.equal(screenRows(screen, CHARSETS.upperGraphics).length, 25);
 });
+
+test('the symbols after Z read as themselves in both sets', () => {
+  const screen = Buffer.alloc(SCREEN_BYTES, 0x20);
+  screen.set([0x1b, 0x1c, 0x1d, 0x1e, 0x1f], 0);
+  assert.equal(screenRows(screen, CHARSETS.upperGraphics)[0].trimEnd(), '[\u00a3]\u2191\u2190');
+  assert.equal(screenRows(screen, CHARSETS.lowerUpper)[0].trimEnd(), '[\u00a3]\u2191\u2190');
+});

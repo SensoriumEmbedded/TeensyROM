@@ -116,7 +116,8 @@ export class Link {
     const value = fromBoard(reply);
     if (value === token) return;
     if (value === TOKENS.FAIL) {
-      const text = (await this.#stream.readIdle(FAIL_TEXT)).toString('latin1').trim();
+      // At the menu, two binary 32-bit stats follow the refusal's line.
+      const [text] = (await this.#stream.readIdle(FAIL_TEXT)).toString('latin1').trim().split(/\r?\n/);
       throw new BoardError(`${what}: the board refused it${text ? `: ${text}` : ''}`);
     }
     throw new BoardError(`${what}: unexpected reply 0x${value.toString(16)}`);

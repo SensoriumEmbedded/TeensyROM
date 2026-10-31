@@ -28,6 +28,7 @@ const CODE_A = 1;
 const CODE_Z = 26;
 const CODE_SHIFT_A = 65;
 const CODE_SHIFT_Z = 90;
+const SYMBOLS_AFTER_Z = '[\u00a3]\u2191\u2190';
 const PUNCTUATION_FIRST = 0x20;
 const PUNCTUATION_LAST = 0x3f;
 const NO_LETTER = '.';
@@ -57,6 +58,7 @@ function codeAsText(screenCode, charset) {
   if (code >= CODE_A && code <= CODE_Z) {
     return String.fromCharCode(code - CODE_A + (lowerUpper ? 0x61 : 0x41));
   }
+  if (code > CODE_Z && code < PUNCTUATION_FIRST) return SYMBOLS_AFTER_Z[code - CODE_Z - 1];
   if (lowerUpper && code >= CODE_SHIFT_A && code <= CODE_SHIFT_Z) {
     return String.fromCharCode(code - CODE_SHIFT_A + 0x41);
   }

@@ -77,6 +77,13 @@ test("a refusal carries the board's own words", async (t) => {
   await assert.rejects(tools.list_dir({}), /directory: the board refused it: Busy!/);
 });
 
+test('a refusal at the menu carries only the line the board printed', async (t) => {
+  const { tools } = await boardWithTools(t);
+  await assert.rejects(tools.list_dir({ path: '/nope' }), {
+    message: 'directory /nope: the board refused it: Directory not found. (Error 5)',
+  });
+});
+
 test('an unknown drive is refused before anything is sent', async (t) => {
   const { tools } = await boardWithTools(t);
   await assert.rejects(tools.launch({ path: '/a.prg', drive: 'tape' }), /drive 'tape': use usb, sd, teensy/);

@@ -9,6 +9,10 @@ import { TOKENS, boardReply, checksum } from '../lib/protocol.mjs';
 import { ByteStream } from '../lib/transport.mjs';
 
 const WAIT_MS = 2000;
+// ProcessCommand() in SerUSBIO.ino follows every command it runs only at the
+// menu with two 32-bit stats: Stats.Unlocked, then F_CPU_ACTUAL.
+const MENU_ONLY = new Set([TOKENS.POST_FILE, TOKENS.DELETE_FILE, TOKENS.GET_DIR_NDJSON]);
+const STATS_TRAILER = Buffer.from([1, 0, 0, 0, 0x00, 0x2c, 0xa3, 0x30]);
 
 export const BANNER = '\n  FW: TeensyROM+ v0.8.0.13\r\n      Oct 30 2026, 10:00:00\r\n'
   + '  Teensy: 816MHz  55.0C  UID: 19277260\r\n  C64  NTSC Vid  60 Hz\n  Boot: complete\n';
@@ -74,12 +78,13 @@ function commandsFor(board) {
       await stream.read(1, WAIT_MS);
       const skip = await readNumber(stream, 2);
       const take = await readNumber(stream, 2);
-      await readPath(stream);
+      const path = await readPath(stream);
+      if (!board.directories.includes(path)) return refuse(stream, 'Directory not found. (Error 5)');
       await reply(stream, TOKENS.ACK);
       await reply(stream, TOKENS.DIR_START);
       const lines = board.listing.slice(skip, skip + take).map((entry) => `${JSON.stringify(entry)}\r\n`);
       await stream.write(Buffer.from(lines.join('')));
-      await reply(stream, TOKENS.DIR_END);
+      return reply(stream, TOKENS.DIR_END);
     },
   };
 }
@@ -90,9 +95,11 @@ async function serve(board, socket) {
   while (!stream.ended) {
     const token = await stream.read(2, 60000);
     if (token.length < 2) break;
-    const command = commands[token.readUInt16BE(0)];
-    if (board.busy && token.readUInt16BE(0) !== TOKENS.FW_CHECK) await refuse(stream, 'Busy!');
+    const value = token.readUInt16BE(0);
+    const command = commands[value];
+    if (board.busy && value !== TOKENS.FW_CHECK) await refuse(stream, 'Busy!');
     else if (command) await command(stream);
+    if (!board.busy && MENU_ONLY.has(value)) await stream.write(STATS_TRAILER);
   }
 }
 
@@ -104,6 +111,7 @@ export async function startFakeBoard(overrides = {}) {
     memory: Buffer.alloc(0x10000, 0x20),
     files: new Map(),
     listing: [],
+    directories: ['/'],
     launched: [],
     ...overrides,
   };
