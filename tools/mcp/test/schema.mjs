@@ -5,7 +5,7 @@
 
 const KNOWN = new Set([
   'type', 'enum', 'properties', 'required', 'additionalProperties', 'items', 'minItems', 'maxItems',
-  'description', 'default', 'minimum', 'maximum',
+  'description',
 ]);
 
 function typeOf(value) {
