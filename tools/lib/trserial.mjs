@@ -9,7 +9,10 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { parseBanner } from '../mcp/lib/banner.mjs';
 import { defaultArduinoDataDir } from './toolchain.mjs';
+
+export { boardKind, parseBanner } from '../mcp/lib/banner.mjs';
 
 // A Teensyduino tool from the newest installed teensy-tools, or null when it is
 // not installed. Windows builds carry an .exe suffix.
@@ -127,27 +130,11 @@ function exchangeWindows(port, send, ms) {
   return result.stdout ?? '';
 }
 
-// TeensyROM answers 'dv' (VersionInfoToken) with a banner that names the build
-// and the chip ("UID: 14470230", burned in at the factory, so it tells two
-// boards of the same type apart). Returns { version, built, uid, minimal, raw }
-// with nulls for anything that did not appear. `minimal` means MinimalBoot answered
-// ("FW: TeensyROM v0.8.0.11(minimal)"). It stays in charge, instead of handing
+// The board's answer to 'dv' (VersionInfoToken), parsed by parseBanner.
+// `minimal` means MinimalBoot answered. It stays in charge, instead of handing
 // over to the main firmware, to run a large cartridge image, and the build it
 // names is its own.
 export function identify(port, ms = 3000) {
   return parseBanner(exchange(port, '\x64\x76', ms));
 }
 
-export function parseBanner(raw) {
-  const version = raw.match(/TeensyROM\+? v[\d.]+/)?.[0] ?? null;
-  const built = raw.match(/([A-Z][a-z]{2} [ \d]\d \d{4}), (\d\d:\d\d:\d\d)/);
-  const uid = raw.match(/UID:\s*(\d+)/)?.[1] ?? null;
-  return { version, built: built ? `${built[1]}, ${built[2]}` : null, uid, minimal: /\(minimal\)/.test(raw), raw };
-}
-
-// Which cartridge a banner belongs to. The '+' is the whole distinction, and
-// it is the thing that decides whether a given hex may be written at all.
-export function boardKind(version) {
-  if (!version) return null;
-  return version.includes('TeensyROM+') ? 'tr-plus' : 'tr';
-}
