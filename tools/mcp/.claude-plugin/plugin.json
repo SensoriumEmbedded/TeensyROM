@@ -1,0 +1,24 @@
+{
+  "name": "teensyrom",
+  "displayName": "TeensyROM",
+  "version": "0.1.0",
+  "description": "Drive a TeensyROM cartridge in a Commodore 64 or 128: check its state, list and push files, launch them, reset, and read the screen",
+  "author": { "name": "TeensyROM contributors" },
+  "repository": "https://github.com/SensoriumEmbedded/TeensyROM",
+  "license": "MIT",
+  "keywords": ["c64", "c128", "commodore", "teensyrom", "retro"],
+  "userConfig": {
+    "tr_host": {
+      "type": "string",
+      "title": "TeensyROM address",
+      "description": "IP address or host name of a TeensyROM with its TCP listener on (host, or host:port). Leave empty to use USB serial.",
+      "default": ""
+    },
+    "tr_port": {
+      "type": "string",
+      "title": "Serial port",
+      "description": "USB serial device of the TeensyROM, such as /dev/cu.usbmodem2101. Leave empty to use the first one found.",
+      "default": ""
+    }
+  }
+}
