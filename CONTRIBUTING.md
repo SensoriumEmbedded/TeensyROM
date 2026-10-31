@@ -61,11 +61,12 @@ code. Full setup and tool-version details: [Source/BuildInfo.md](Source/BuildInf
 ## Testing
 
 - JS-based tests live alongside the code they cover (`*.test.mjs`, `*.test.js`), e.g.
-  `Source/Teensy/tests/recovery-flash-source.test.js`, `mpe/tests/startup.test.mjs`,
-  `mpe/tools/hex.test.mjs`. Run one with `node --test <path>`.
-- Host-side C++ tests under `vm/tests/` and `mpe/tests/` are compiled and run individually
-  against a native `g++`; `mpe/tools/verify.mjs` shows the exact compile/run invocation for
-  each if you need to reproduce one locally.
+  `Source/Teensy/tests/recovery-flash-source.test.js`, `tools/lib/hex.test.mjs`. Run one
+  with `node --test <path>`. Several tests under `Source/Teensy/tests/` compile a host
+  harness around firmware code with a native compiler, so they run as part of `npm test`.
+- Host-side C++ tests under `vm/tests/` are compiled and run by `npm run
+  verify:extensions`; `tools/verify-extensions.mjs` shows the exact compile/run invocation
+  for each if you need to reproduce one locally.
 - If you changed firmware that affects RAM footprint, rebuild and check the link report
   against the budgets in `Constraints.md` (`npm run build:tr-plus -- --skip-minimal-build
   --skip-combine` prints it). Add `--no-extensions` to measure the configuration
@@ -131,9 +132,10 @@ A quick check that saves a review round:
 - Write commit messages that explain *why*, not just what (see `git log` for the house
   style — e.g. "Fix RR38 freeze-bit set logic and remove no-op special-button stubs" rather
   than "update IOH_RetroReplay.c").
-- If your change touches the shared cartridge register map, remember
-  `Source/C64/MainMenuCRT/source/Menu_Regs.i` and `Source/Teensy/.../Menu_Regs.h` define it
-  independently with no build-time check — update both.
+- If your change touches the shared cartridge register map, edit only
+  `Source/Teensy/MinimalBoot/Common/Menu_Regs.h`. `npm run build:c64` regenerates
+  `Source/C64/MainMenuCRT/source/Menu_Regs.i` from it, overwriting any hand edit, and the
+  C64 programs have to be rebuilt to pick the change up.
 
 ## Review and release timing
 
