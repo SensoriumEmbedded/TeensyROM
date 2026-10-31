@@ -74,22 +74,17 @@ enum enumHIRAMSenseModes
    KSense_DMA  = 2,
    KSense_Auto = 9,  //DMA on a C128 (the menu's machine report), Skoe otherwise
 };
-uint32_t KSenseMode = KSense_Auto;  //serial tx# (Dbg_SerTimChg)
-uint8_t  KSenseEff  = KSense_Skoe;  //the method in effect
+uint32_t KSenseMode = KSense_Auto;  //serial tx# (Dbg_SerTimChg), applied at the next launch
+uint8_t  KSenseEff  = KSense_Skoe;  //the method the last launch hooked (KernalCheckArm)
 
 FLASHMEM void KSenseApplyMode()
 {
-#ifdef Fab04_FullDMACapable
    KSenseEff = (KSenseMode == KSense_Auto) ? ((IO1[wRegVid_TOD_Clks] & rvtcC128) ? KSense_DMA : KSense_Skoe) :
                (KSenseMode == KSense_DMA) ? KSense_DMA : KSense_Skoe;
-#else
-   KSenseEff = KSense_Skoe;
-#endif
    if (KSenseEff == KSense_DMA) Serial.println(PSTR("Kernal HIRAM sense: DMA"));
    else Serial.println(PSTR("Kernal HIRAM sense: Skoe"));
 }
 
-#ifdef Fab04_FullDMACapable
 enum enumKDS_States
 {
    KDS_Idle,
@@ -160,8 +155,10 @@ FASTRUN void KDS_Begin()
    KDS_Run();
 }
 
-//The DMA sense's work for a cycle off the common path: a sense pending, or a $00/$01 access.
-//true ends the cycle: nothing else may answer it
+FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn);
+
+//KernalCheckDMA's cycles off the common path: a sense pending, or a $00/$01 access.  Returns the cycle's result:
+//true when the sense used the cycle (nothing else may answer it), else KernalCheck's
 FASTRUN bool KDS_Slow(uint16_t Address, bool R_Wn)
 {
    switch (KDS_State)
@@ -185,7 +182,8 @@ FASTRUN bool KDS_Slow(uint16_t Address, bool R_Wn)
       }
       else
       {  //write to $00/$01
-         HIRAM_State = HIRAM_State_Unknown;
+         HIRAM_State = HIRAM_State_Unknown; //Unknown only while a sense is pending (see KernalCheckDMA): each path below senses,
+                                            //  waits for the bus, or takes the last verdict
          bool AfterRead = KDS_Read01Valid && (ARM_DWT_CYCCNT - KDS_Read01Cyc) < nSToCyc(1500); //the previous cycle
          KDS_Read01Valid = false;
          if (AfterRead && KDS_State != KDS_AfterRead01)
@@ -198,31 +196,27 @@ FASTRUN bool KDS_Slow(uint16_t Address, bool R_Wn)
          return true;
       }
    }
-   if (KDS_State == KDS_AfterRead01) KDS_State = KDS_Idle; //it was a store after a dummy read: this read is served on KDS_Guess
-   return false;
+   if (KDS_State == KDS_AfterRead01)
+   {  //it was a store after a dummy read: no sense is coming, so this read is served on the last verdict
+      //  (Unknown must not outlive KDS_Idle, see KernalCheckDMA)
+      KDS_State = KDS_Idle;
+      HIRAM_State = KDS_Guess;
+   }
+   return KernalCheck(Address, R_Wn);
 }
-#endif
 
 //______________________________________________________________________________________________
 
+//The C64's check (Skoe sense).  It runs ahead of every IO1/IO2 answer while hooked, so its common cycle carries nothing
+//  for the DMA sense: a C128 hooks KernalCheckDMA instead, which comes here once its own tests are done.
 FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
 {
-#ifdef Fab04_FullDMACapable
-   if (KSenseEff == KSense_DMA)
-   {  //this runs ahead of every IO1/IO2 answer, so the common cycle costs only these tests: work added here answers IO late
-      if ((KDS_State != KDS_Idle || (Address & 0xfffe) == 0) && KDS_Slow(Address, R_Wn)) return true;
-   }
-   else
-#endif
    //monitor port $0001 for changes
    if (!R_Wn && (Address & 0xfffe) == 0) HIRAM_State = HIRAM_State_Unknown;  //write to addr 0 or 1 causes re-evaluation of HIRAM
 
    if (!R_Wn || (Address & 0xe000) != 0xe000 || !GP9_BA(ReadGPIO9)) return false;  //continue with cycle processing
 
    // CPU read access from address $E000..$FFFF
-#ifdef Fab04_FullDMACapable
-   if (HIRAM_State == HIRAM_State_Unknown && KSenseEff == KSense_DMA) HIRAM_State = KDS_Guess; //no sense could precede this read
-#endif
 #ifndef KERNAL_MONITOR_ONLY
    //HIRAM known to be RAM (no write to $00/$01 since it was sensed): the C64's own RAM answers, so leave /GAME and the
    //data bus alone.  Asserting /GAME (Ultimax) here takes the read away from the RAM.
@@ -290,6 +284,33 @@ FASTRUN bool KernalCheck(uint16_t Address, bool R_Wn)
    SetGameDeassert;
     
    return true;  //Skip out of phi2 isr
+}
+
+//The C128's check (DMA sense), hooked instead of KernalCheck.  It runs ahead of every IO1/IO2 answer while hooked, so the
+//  common cycle costs only these tests: work added here answers IO late.  Written as one combined test, the cycle needs
+//  no saved register and both exits are tail calls (two separate tests made GCC 11 save one: check the disassembly).
+//KDS_Slow takes every cycle that writes $00/$01, so KernalCheck never resets HIRAM_State from here.  HIRAM_State is only
+//  Unknown while a sense is pending (KDS_State not Idle), so KernalCheck never runs its Skoe sense for a C128.
+FASTRUN bool KernalCheckDMA(uint16_t Address, bool R_Wn)
+{
+   uint32_t Slow = KDS_State | (uint32_t)((Address & 0xfffe) == 0); //a sense pending, or a $00/$01 access
+   if (Slow) return KDS_Slow(Address, R_Wn);
+   return KernalCheck(Address, R_Wn);
+}
+
+typedef bool (*KernalCheckFn)(uint16_t Address, bool R_Wn);
+
+//The check to hook for the method KSenseApplyMode() picked, with HIRAM_State set for it.  Chosen once per launch, so
+//  neither check tests the method on every cycle, and a tx# command can't switch methods under a sense in flight.
+FLASHMEM KernalCheckFn KernalCheckArm()
+{
+   if (KSenseEff == KSense_DMA)
+   {  //no sense precedes the first KERNAL read: serve it on the last verdict (KDS_Guess), never Unknown (see KernalCheckDMA)
+      HIRAM_State = KDS_Guess;
+      return &KernalCheckDMA;
+   }
+   HIRAM_State = HIRAM_State_Unknown;  //the first $E000+ read senses
+   return &KernalCheck;
 }
 
 //______________________________________________________________________________________________
@@ -367,20 +388,17 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    Serial.printf("Read %lu Bytes\nKernal replace Enabled\n", CharNum);
    LoadFile.close();
    KSenseApplyMode();
-#ifdef Fab04_FullDMACapable
    KDS_State = KDS_Idle;
    KDS_Read01Valid = false;
    KDS_Guess = HIRAM_State_ROM;
-#endif
    delay(250);
    
    //hook kernal checks: runs before BASIC init, well before any PRG-load handshake (see
    //HandshakeSnoop in IOH_TeensyROM.c) could be armed, so it's safe to touch fBusSnoop directly here.
-   HIRAM_State = HIRAM_State_Unknown;
 #ifdef Fab04_GlobalKernalReplace
-   fKernRepl = &KernalCheck;
+   fKernRepl = KernalCheckArm();
 #else
-   fBusSnoop = &KernalCheck;
+   fBusSnoop = KernalCheckArm();
 #endif
 }
 
@@ -394,12 +412,9 @@ FLASHMEM void InitHndlr_KernalReplace()
    //runs on PRG launches only, but a generic CRT inherits Kernal Replace as its Special IO too:
    //hooked there, KernalCheck reads an unloaded KernalBin and drives GAME/EXROM over the cart's own.
    if (fBusSnoop != &HandshakeSnoop || KernalBin == NULL) return;
-   HIRAM_State = HIRAM_State_Unknown;
-#ifdef Fab04_FullDMACapable
    KDS_State = KDS_Idle;  //KernalCheck is unhooked during the handshake: no sense can be in flight
    KDS_Read01Valid = false;
-#endif
-   PendingfBusSnoop = &KernalCheck; //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
+   PendingfBusSnoop = KernalCheckArm(); //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
 #endif
 }
 

@@ -514,8 +514,9 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                GetDigits(2, &Cyc_KernProp);
                break;
          #ifdef Fab04_KernalReplace
-            case 'x': //Kernal replace HIRAM sense: tx0 Skoe, tx2 DMA, tx9 auto (DMA on a C128)
-            {  extern uint32_t KSenseMode; extern void KSenseApplyMode(); GetDigits(1, &KSenseMode); KSenseApplyMode(); }
+            case 'x': //Kernal replace HIRAM sense: tx0 Skoe, tx2 DMA, tx9 auto (DMA on a C128), from the next launch
+               GetDigits(1, &KSenseMode);
+               CmdChannel->println(PSTR("Kernal HIRAM sense mode set: takes effect at the next Kernal Replace launch"));
                break;
             case 'n': //Kernal replace DMA HIRAM sense: ROMH sample point
                GetDigits(3, &nS_KSenseSample);
@@ -557,8 +558,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          CmdChannel->printf("\t nS_DMADataSetup %03d (ty###)\n", nS_DMADataSetup);
          CmdChannel->printf("\t Cyc_KernProp  %02d (tk##)\n", Cyc_KernProp);
       #ifdef Fab04_KernalReplace
-         { extern uint32_t KSenseMode; extern uint8_t KSenseEff;
-           CmdChannel->printf("\t KSenseMode    %lu, in effect %u (tx#: 0 Skoe, 2 DMA, 9 auto)\n", KSenseMode, KSenseEff); }
+         CmdChannel->printf("\t KSenseMode    %lu, in effect %u (tx#: 0 Skoe, 2 DMA, 9 auto)\n", KSenseMode, KSenseEff);
          CmdChannel->printf("\t nS_KSenseSample %03lu (tn###)\n", nS_KSenseSample);
       #endif
 
