@@ -513,6 +513,14 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
             case 'k': //Cyc_KernProp change
                GetDigits(2, &Cyc_KernProp);
                break;
+         #ifdef Fab04_KernalReplace
+            case 'x': //Kernal replace HIRAM sense: tx0 Skoe, tx2 DMA, tx9 auto (DMA on a C128)
+            {  extern uint32_t KSenseMode; extern void KSenseApplyMode(); GetDigits(1, &KSenseMode); KSenseApplyMode(); }
+               break;
+            case 'n': //Kernal replace DMA HIRAM sense: ROMH sample point
+               GetDigits(3, &nS_KSenseSample);
+               break;
+         #endif
             case 'd': //Set Defaults
             {  //match what detection would have set, or a sweep resumes from the wrong standard's values
                SetVideoStdTiming(); //MaxAdj and the DMA setup/hold set
@@ -525,6 +533,7 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
                nS_DMAAssert = Def_nS_DMAAssert;
                nS_DMABAWait = Def_nS_DMABAWait;
                Cyc_KernProp = Def_Cyc_KernProp;
+               nS_KSenseSample = Def_nS_KSenseSample;
                CmdChannel->printf("Defaults set (%s %s)\n", (IO1[wRegVid_TOD_Clks] & rvtcNTSC) ? "NTSC" : "PAL",
                   (IO1[wRegVid_TOD_Clks] & rvtcC128) ? "C128" : "C64");
                break;
@@ -547,6 +556,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
          CmdChannel->printf("\t nS_DMADataHold  %03d (tw###)\n", nS_DMADataHold);
          CmdChannel->printf("\t nS_DMADataSetup %03d (ty###)\n", nS_DMADataSetup);
          CmdChannel->printf("\t Cyc_KernProp  %02d (tk##)\n", Cyc_KernProp);
+      #ifdef Fab04_KernalReplace
+         { extern uint32_t KSenseMode; extern uint8_t KSenseEff;
+           CmdChannel->printf("\t KSenseMode    %lu, in effect %u (tx#: 0 Skoe, 2 DMA, 9 auto)\n", KSenseMode, KSenseEff); }
+         CmdChannel->printf("\t nS_KSenseSample %03lu (tn###)\n", nS_KSenseSample);
+      #endif
 
          CmdChannel->printf("\tSet Defaults      (td)\n");
          CmdChannel->printf("\tList current vals (t)\n-----\n");
