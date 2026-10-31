@@ -16,6 +16,7 @@ All times in nS, from the `Def_nS_*` constants in [Common_Defs.h](../../Source/T
 | nS_DMASetup | Phi2 fall | 440 | 430 | 445 | Drive R/W and address, just before Phi2 rises |
 | nS_DMADataSetup | Re-latch at setup | 390 | 390 | 375 | Latch the data bus on a DMA read |
 | nS_DMADataHold | Re-latch at setup | 430 | 410 | 395 | Release the data bus on a DMA write |
+| nS_KSenseSample | Re-latch at setup | 250 | 250 | 250 | Kernal Replace HIRAM sense (C128): sample ROMH in the stolen cycle |
 | Phi2 period (nominal) | | 1015 | 978 | 978 | Reference |
 
 Derived positions, from Phi2 fall in the same cycle:

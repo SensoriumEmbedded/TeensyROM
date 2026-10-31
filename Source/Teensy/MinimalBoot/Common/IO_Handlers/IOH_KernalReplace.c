@@ -85,14 +85,16 @@ FLASHMEM void KSenseApplyMode()
 #else
    KSenseEff = KSense_Skoe;
 #endif
-   Serial.printf("Kernal HIRAM sense: %s\n", KSenseEff == KSense_DMA ? "DMA" : "Skoe");
+   if (KSenseEff == KSense_DMA) Serial.println(PSTR("Kernal HIRAM sense: DMA"));
+   else Serial.println(PSTR("Kernal HIRAM sense: Skoe"));
 }
 
 #ifdef Fab04_FullDMACapable
 enum enumKDS_States
 {
    KDS_Idle,
-   KDS_Skip,         //the sense cycle's rising-edge interrupt arrives late (in Phi2 low): drop it
+   KDS_Skip,         //the sense cycle's rising-edge interrupt arrives late (in Phi2 low): drop it.  It always arrives: the
+                     //  Teensy core clears the GPIO interrupt flag before it calls isrPHI2, so the edge during the sense sets it again.
    KDS_WaitBus,      //DMA asserted, BA was low: try the sense read on the next cycle
    KDS_AfterRead01,  //a write to $00/$01 right after a read of $00/$01: the first of a read-modify-write's two
                      //  writes, or a store after an indexed dummy read.  The next cycle tells which.
