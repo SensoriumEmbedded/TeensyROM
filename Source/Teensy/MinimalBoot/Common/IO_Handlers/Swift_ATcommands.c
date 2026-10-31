@@ -410,7 +410,11 @@ FLASHMEM ATRespCode AT_Hook(char* CmdArg)
 }
 
 
-FLASHMEM ATRespCode ProcessATCommandInner()
+#ifdef Fab04_GlobalKernalReplace
+FLASHMEM ATRespCode ProcessATCommandInner()  //wrapped by ProcessATCommand() below
+#else
+FLASHMEM ATRespCode ProcessATCommand()
+#endif
 {
    char* CmdMsg = TxMsg; //local pointer for manipulation
    stcATCommand ATCommands[] =
@@ -467,11 +471,14 @@ FLASHMEM ATRespCode ProcessATCommandInner()
    return ATRC_ERROR;
 }
 
+#ifdef Fab04_GlobalKernalReplace
 extern volatile bool FnetLoopPoll;
 FLASHMEM ATRespCode ProcessATCommand()
-{  //connect/DHCP/DNS block in here waiting for the stack, which then needs its PIT poll timer (masked while Fab04_GlobalKernalReplace serves the KERNAL, see FnetLoopPollService)
+{  //SwiftLink can run while the KERNAL is replaced: connect/DHCP/DNS block in here waiting for the stack, which then needs
+   //its PIT poll timer (masked while the poll runs from loop(), see FnetLoopPollService in Teensy.ino)
    if (FnetLoopPoll) NVIC_ENABLE_IRQ(IRQ_PIT);
    ATRespCode r = ProcessATCommandInner();
    if (FnetLoopPoll) NVIC_DISABLE_IRQ(IRQ_PIT);
    return r;
 }
+#endif

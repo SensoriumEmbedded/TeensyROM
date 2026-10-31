@@ -55,6 +55,7 @@ uint8_t RAM_Image[RAM_ImageSize]; //Main RAM1 file storage buffer
 volatile uint8_t BtnPressed = false; 
 volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
+#ifdef Fab04_KernalReplace
 volatile bool FnetLoopPoll = false; //Ethernet stack polled from loop(), PIT timer masked (see FnetLoopPollService)
 volatile bool FnetPollHold = false; //set by Kernal Replace PreStart, before CurrentIOHandler changes; cleared with the main menu
 void FnetLoopPollService();
@@ -63,6 +64,7 @@ FLASHMEM void FnetLoopPollStart()
    FnetPollHold = true;
    if (fnet_netif_get_default() != 0 && !FnetLoopPoll) { NVIC_DISABLE_IRQ(IRQ_PIT); FnetLoopPoll = true; }
 }
+#endif
 StructMenuItem *DriveDirMenu = NULL;
 uint16_t NumDrvDirMenuItems = 0;
 char DriveDirPath[MaxPathLength];
@@ -385,7 +387,9 @@ void loop()
    if (IO1[rwRegPwrUpDefaults2] & rpud2TRContEnabled)
       if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
+#ifdef Fab04_KernalReplace
    FnetLoopPollService();
+#endif
 
 #ifdef FeatTCPListen
    if (NetListenEnable)
@@ -409,18 +413,16 @@ void loop()
    if (IOHandler[CurrentIOHandler]->PollingHndlr != NULL) IOHandler[CurrentIOHandler]->PollingHndlr();
 }
 
+#ifdef Fab04_KernalReplace
 FLASHMEM void FnetLoopPollService()
 {  //While Kernal Replace serves the KERNAL, run the Ethernet stack poll from here instead of NativeEthernet's 1ms PIT timer ISR:
    //with the poll in the PIT interrupt, ~39 phi2 interrupts/s were late (>1.1us) even with the GPIO interrupt at a higher priority,
    //and a late one on the HIRAM sense after a $01 write corrupts the read; called from loop() they are down to about one every 2s.
    //(The PIT is only used by that timer, except for ASID, which masks it itself.)
    static uint32_t lastPollUs = 0;
-   bool want = FnetPollHold
+   bool want = FnetPollHold || (CurrentIOHandler == IOH_KernalReplace)
 #ifdef Fab04_GlobalKernalReplace
                || (fKernRepl != NULL)
-#endif
-#ifdef Fab04_KernalReplace
-               || (CurrentIOHandler == IOH_KernalReplace)
 #endif
                ;
    want = want && (fnet_netif_get_default() != 0); //stack initialized
@@ -435,6 +437,7 @@ FLASHMEM void FnetLoopPollService()
       fnet_poll();
    }
 }
+#endif
 
 FLASHMEM void SetUpMainMenuROM()
 {
@@ -442,7 +445,9 @@ FLASHMEM void SetUpMainMenuROM()
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;
 #endif
+#ifdef Fab04_KernalReplace
    FnetPollHold = false;
+#endif
    SetDMADeassert;
    SetIRQDeassert;
    SetNMIDeassert;
