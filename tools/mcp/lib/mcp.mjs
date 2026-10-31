@@ -14,36 +14,45 @@ function protocolVersionFor(requested) {
   return SUPPORTED_PROTOCOL_VERSIONS.includes(requested) ? requested : SUPPORTED_PROTOCOL_VERSIONS[0];
 }
 
-function listing(tool) {
-  const { run, ...described } = tool;
-  return described;
+// Versions before 2025-06-18 have no outputSchema or structuredContent; the
+// JSON in the text block carries the same result to their clients.
+const FIRST_STRUCTURED_VERSION = '2025-06-18';
+
+function listing(tool, structured) {
+  const { run, outputSchema, ...described } = tool;
+  return structured ? { ...described, outputSchema } : described;
 }
 
-function toolResult(text, isError = false) {
-  return { content: [{ type: 'text', text }], isError };
+function errorResult(message) {
+  return { content: [{ type: 'text', text: message }], isError: true };
 }
 
-async function callTool(tools, params) {
+function successResult(value, structured) {
+  const result = { content: [{ type: 'text', text: JSON.stringify(value) }], isError: false };
+  return structured ? { ...result, structuredContent: value } : result;
+}
+
+async function callTool(tools, params, structured) {
   const tool = tools.find((candidate) => candidate.name === params?.name);
-  if (!tool) return toolResult(`no tool named '${params?.name}'`, true);
+  if (!tool) return errorResult(`no tool named '${params?.name}'`);
   try {
-    return toolResult(await tool.run(params.arguments ?? {}));
+    return successResult(await tool.run(params.arguments ?? {}), structured);
   } catch (error) {
-    return toolResult(error.message, true);
+    return errorResult(error.message);
   }
 }
 
 function handlerFor(server) {
+  let structured = true;
   return {
-    initialize: (params) => ({
-      protocolVersion: protocolVersionFor(params?.protocolVersion),
-      capabilities: { tools: {} },
-      serverInfo: server.info,
-      instructions: server.instructions,
-    }),
+    initialize: (params) => {
+      const protocolVersion = protocolVersionFor(params?.protocolVersion);
+      structured = protocolVersion >= FIRST_STRUCTURED_VERSION;
+      return { protocolVersion, capabilities: { tools: {} }, serverInfo: server.info, instructions: server.instructions };
+    },
     ping: () => ({}),
-    'tools/list': () => ({ tools: server.tools.map(listing) }),
-    'tools/call': (params) => callTool(server.tools, params),
+    'tools/list': () => ({ tools: server.tools.map((tool) => listing(tool, structured)) }),
+    'tools/call': (params) => callTool(server.tools, params, structured),
   };
 }
 

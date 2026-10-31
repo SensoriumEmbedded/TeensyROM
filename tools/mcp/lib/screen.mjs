@@ -17,9 +17,9 @@ const ROM_LOWER_UPPER = 0x1800;
 const ROM_BANKS = [0, 2];
 
 export const CHARSETS = {
-  lowerUpper: 'lower/uppercase',
-  upperGraphics: 'uppercase/graphics',
-  custom: 'custom (RAM)',
+  lowerUpper: 'lower_upper',
+  upperGraphics: 'upper_graphics',
+  custom: 'custom',
 };
 
 const REVERSE_VIDEO = 0x80;

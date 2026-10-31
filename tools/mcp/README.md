@@ -13,6 +13,8 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI agent (Claude C
 | `launch` | Runs a file on the C64 (PRG, CRT, SID, D64, …) | main or minimal image |
 | `reset` | Resets the C64 to the TeensyROM menu | main or minimal image |
 
+Every tool declares an `outputSchema` and returns a JSON object matching it, as `structuredContent` and as the text of its one content block (for clients older than MCP 2025-06-18, the text alone). Field names and enum values are fixed, so an agent can rely on them; a `null` means the board didn't report that field.
+
 A command the board can't take right now (for example `list_dir` while a game runs) comes back as a tool error carrying the board's own words, usually `Busy!`. `reset` gets the board back to the menu.
 
 `read_screen` does not read the C128 80-column screen. Avoid it while a C128 runs at 2 MHz (GEOS 128 in 80 columns), because a DMA read can hang the machine.

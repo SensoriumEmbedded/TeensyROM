@@ -95,6 +95,7 @@ async function serve(board, socket) {
   while (!stream.ended) {
     const token = await stream.read(2, 60000);
     if (token.length < 2) break;
+    if (board.silent) continue;
     const value = token.readUInt16BE(0);
     const command = commands[value];
     if (board.busy && value !== TOKENS.FW_CHECK) await refuse(stream, 'Busy!');
@@ -108,6 +109,7 @@ export async function startFakeBoard(overrides = {}) {
     image: 'main',
     banner: BANNER,
     busy: false,
+    silent: false,
     memory: Buffer.alloc(0x10000, 0x20),
     files: new Map(),
     listing: [],
