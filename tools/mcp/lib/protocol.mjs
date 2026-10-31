@@ -63,7 +63,14 @@ export function boardReply(value) {
   return bytes;
 }
 
+// GetPathParameter() in FileTransfer.ino reads into MaxNamePathLength bytes
+// (Common_Defs.h). A longer path, or one with a NUL inside, leaves bytes the
+// board then runs as commands of their own.
+export const MAX_PATH_BYTES = 256 + 100 + 2 - 1;
+
 export function pathField(path) {
+  if (path.includes('\0')) throw new Error('a path cannot contain a NUL character');
+  if (path.length > MAX_PATH_BYTES) throw new Error(`a path is at most ${MAX_PATH_BYTES} characters`);
   return Buffer.from(`${path}\0`, 'latin1');
 }
 

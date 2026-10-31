@@ -88,3 +88,13 @@ test('an unknown drive is refused before anything is sent', async (t) => {
   const { tools } = await boardWithTools(t);
   await assert.rejects(tools.launch({ path: '/a.prg', drive: 'tape' }), /drive 'tape': use usb, sd, teensy/);
 });
+
+test('a path the board cannot hold whole is refused before it is sent', async (t) => {
+  const { board, tools } = await boardWithTools(t, {}, async () => Buffer.from('x'));
+  await assert.rejects(tools.launch({ path: `/${'a'.repeat(357)}` }), /at most 357 characters/);
+  await assert.rejects(tools.launch({ path: '/a.prg\0e' }), /NUL/);
+  await assert.rejects(tools.list_dir({ path: `/${'a'.repeat(357)}` }), /at most 357 characters/);
+  await assert.rejects(tools.push_file({ local_path: 'x', remote_path: '/a\0e' }), /NUL/);
+  await tools.launch({ path: `/${'a'.repeat(356)}` });
+  assert.deepEqual(board.launched.map(({ path }) => path.length), [357]);
+});

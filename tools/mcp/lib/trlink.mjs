@@ -56,9 +56,10 @@ export class Link {
   }
 
   async launch(path, drive) {
+    const target = Buffer.concat([Buffer.of(drive), pathField(path)]);
     await this.#send(toBoard(TOKENS.LAUNCH_FILE));
     await this.#ack('launch');
-    await this.#stream.write(Buffer.concat([Buffer.of(drive), pathField(path)]));
+    await this.#stream.write(target);
     await this.#ack(`launch ${path}`);
   }
 
@@ -73,9 +74,10 @@ export class Link {
   }
 
   async deleteFile(path, drive) {
+    const target = Buffer.concat([Buffer.of(drive), pathField(path)]);
     await this.#send(toBoard(TOKENS.DELETE_FILE));
     await this.#ack('delete');
-    await this.#stream.write(Buffer.concat([Buffer.of(drive), pathField(path)]));
+    await this.#stream.write(target);
     await this.#ack(`delete ${path}`);
   }
 
@@ -90,9 +92,10 @@ export class Link {
   }
 
   async listDirectory(path, drive, { skip, take }) {
+    const request = Buffer.concat([Buffer.of(drive), toBoard(skip), toBoard(take), pathField(path)]);
     await this.#send(toBoard(TOKENS.GET_DIR_NDJSON));
     await this.#ack('directory');
-    await this.#stream.write(Buffer.concat([Buffer.of(drive), toBoard(skip), toBoard(take), pathField(path)]));
+    await this.#stream.write(request);
     await this.#ack(`directory ${path}`);
     await this.#expect(TOKENS.DIR_START, `directory ${path}`);
     const listing = await this.#stream.readUntil(boardReply(TOKENS.DIR_END), LISTING_MS);
