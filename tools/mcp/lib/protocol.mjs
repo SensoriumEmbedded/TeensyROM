@@ -65,11 +65,13 @@ export function boardReply(value) {
 
 // GetPathParameter() in FileTransfer.ino reads into MaxNamePathLength bytes
 // (Common_Defs.h). A longer path, or one with a NUL inside, leaves bytes the
-// board then runs as commands of their own.
+// board then runs as commands of their own. Latin-1 encoding keeps only the
+// low byte of a character above U+00FF, so U+0100 would arrive as a NUL.
 export const MAX_PATH_BYTES = 256 + 100 + 2 - 1;
+const UNSENDABLE = /[^\x01-\xff]/;
 
 export function pathField(path) {
-  if (path.includes('\0')) throw new Error('a path cannot contain a NUL character');
+  if (UNSENDABLE.test(path)) throw new Error('a path holds Latin-1 characters only, and no NUL');
   if (path.length > MAX_PATH_BYTES) throw new Error(`a path is at most ${MAX_PATH_BYTES} characters`);
   return Buffer.from(`${path}\0`, 'latin1');
 }

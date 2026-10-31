@@ -95,6 +95,7 @@ test('a path the board cannot hold whole is refused before it is sent', async (t
   await assert.rejects(tools.launch({ path: '/a.prg\0e' }), /NUL/);
   await assert.rejects(tools.list_dir({ path: `/${'a'.repeat(357)}` }), /at most 357 characters/);
   await assert.rejects(tools.push_file({ local_path: 'x', remote_path: '/a\0e' }), /NUL/);
+  await assert.rejects(tools.launch({ path: '/aĀŤǮ' }), /Latin-1/);
   await tools.launch({ path: `/${'a'.repeat(356)}` });
   assert.deepEqual(board.launched.map(({ path }) => path.length), [357]);
 });
