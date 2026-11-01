@@ -1,0 +1,198 @@
+// SPDX-License-Identifier: MIT
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { SERIAL_TAKEOVER_ITEMS, createTools } from '../lib/tools.mjs';
+import { linkTarget, openLink } from '../lib/trlink.mjs';
+import { TOKENS } from '../lib/protocol.mjs';
+import { BANNER, startFakeBoard } from './fake-board.mjs';
+import { schemaProblems } from './schema.mjs';
+
+const MAIN_MENU_ITEMS = path.resolve(import.meta.dirname, '../../../Source/Teensy/MainMenuItems.h');
+
+function checkedAgainstSchema(tool) {
+  return async (args) => {
+    const result = await tool.run(args);
+    assert.deepEqual(schemaProblems(result, tool.outputSchema), [], `${tool.name} output`);
+    return result;
+  };
+}
+
+async function boardWithTools(t, overrides, readFile, options) {
+  const board = await startFakeBoard(overrides);
+  t.after(board.stop);
+  const connect = () => openLink(linkTarget({ TR_HOST: board.host }));
+  const tools = Object.fromEntries(createTools({ connect, readFile, ...options }).map((tool) => [tool.name, checkedAgainstSchema(tool)]));
+  return { board, tools };
+}
+
+test('status names the image, the build, the machine and the menu state', async (t) => {
+  const { tools } = await boardWithTools(t);
+  assert.deepEqual(await tools.status({}), {
+    image: 'main', firmware: 'TeensyROM+ v0.8.0.13', built: 'Oct 30 2026, 10:00:00', board: 'tr-plus',
+    machine: 'C64', video: 'NTSC', menu: 'complete', dma: true,
+  });
+});
+
+test('the minimal image has no DMA and no menu state', async (t) => {
+  const { tools } = await boardWithTools(t, { image: 'minimal', banner: '\n  FW: TeensyROM+ v0.8.0.13(minimal)\r\n' });
+  const result = await tools.status({});
+  assert.equal(result.image, 'minimal');
+  assert.equal(result.menu, null);
+  assert.equal(result.dma, false);
+});
+
+test('a board that answers nothing has every field null and no DMA', async (t) => {
+  const { tools } = await boardWithTools(t, { silent: true });
+  assert.deepEqual(await tools.status({}), {
+    image: null, firmware: null, built: null, board: null, machine: null, video: null, menu: null, dma: false,
+  });
+});
+
+test('read_screen finds the screen through the VIC registers and decodes it', async (t) => {
+  const { board, tools } = await boardWithTools(t);
+  board.memory[0xd018] = 0x17;
+  board.memory[0xdd00] = 0x97;
+  board.memory.set([0x08, 0x09, 0x20, 0x54, 0x52], 0x0400);
+  const { address, charset, rows } = await tools.read_screen({});
+  assert.equal(address, 0x0400);
+  assert.equal(charset, 'lower_upper');
+  assert.equal(rows[0], 'hi TR');
+  assert.equal(rows[1], '');
+});
+
+test('read_screen refuses a plain TeensyROM without sending it a DMA command', async (t) => {
+  const { board, tools } = await boardWithTools(t, { banner: BANNER.replace('TeensyROM+', 'TeensyROM') });
+  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+ running its main image; this board is TeensyROM v0.8.0.13, main image/);
+  assert.ok(!board.received.includes(TOKENS.READ_C64_MEM));
+});
+
+test('read_screen refuses the minimal image without sending it a DMA command', async (t) => {
+  const { board, tools } = await boardWithTools(
+    t, { image: 'minimal', banner: '\n  FW: TeensyROM+ v0.8.0.13(minimal)\r\n' });
+  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+ running its main image/);
+  assert.ok(!board.received.includes(TOKENS.READ_C64_MEM));
+});
+
+test('push_file replaces a file the board already has', async (t) => {
+  const { board, tools } = await boardWithTools(
+    t, { files: new Map([['/a.prg', Buffer.from('old')]]) }, async () => Buffer.from('new data'));
+  assert.deepEqual(await tools.push_file({ local_path: 'a.prg', remote_path: '/a.prg' }),
+    { drive: 'sd', remote_path: '/a.prg', bytes: 8 });
+  assert.equal(board.files.get('/a.prg').toString(), 'new data');
+});
+
+test('push_file writes a file that was not there', async (t) => {
+  const { board, tools } = await boardWithTools(t, {}, async () => Buffer.from('x'));
+  await tools.push_file({ local_path: 'b.prg', remote_path: '/b.prg' });
+  assert.equal(board.files.get('/b.prg').toString(), 'x');
+});
+
+test('list_dir returns entries and the skip for the next page', async (t) => {
+  const listing = [
+    { type: 'dir', name: 'games' }, { type: 'file', name: 'a.prg', size: 10 }, { type: 'file', name: 'b.sid', size: 20 },
+  ];
+  const { tools } = await boardWithTools(t, { listing });
+  assert.deepEqual(await tools.list_dir({ take: 2 }), {
+    path: '/', drive: 'sd', skip: 0, entries: listing.slice(0, 2), next_skip: 2,
+  });
+  assert.deepEqual(await tools.list_dir({ skip: 2 }), {
+    path: '/', drive: 'sd', skip: 2, entries: listing.slice(2), next_skip: null,
+  });
+});
+
+test('launch sends the drive and path', async (t) => {
+  const { board, tools } = await boardWithTools(t);
+  assert.deepEqual(await tools.launch({ path: '/games/a.crt', drive: 'usb' }), { drive: 'usb', path: '/games/a.crt' });
+  assert.deepEqual(board.launched, [{ drive: 0, path: '/games/a.crt' }]);
+});
+
+test('launch refuses a built-in item whose handler takes over the USB serial port', async (t) => {
+  const { board, tools } = await boardWithTools(t);
+  await assert.rejects(tools.launch({ path: '/Utilities/BASIC with TeensyROM Commands', drive: 'teensy' }),
+    /stops answering remote commands/);
+  assert.deepEqual(board.launched, []);
+  await tools.launch({ path: '/BASIC with TeensyROM Commands', drive: 'sd' });
+  assert.equal(board.launched.length, 1);
+});
+
+test('every built-in item with the TR BASIC handler is one launch refuses', () => {
+  const menu = fs.readFileSync(MAIN_MENU_ITEMS, 'latin1');
+  const items = [...menu.matchAll(/IOH_TR_BASIC\s*,\s*\(char\*\)"([^"]+)"/g)].map(([, name]) => name);
+  assert.ok(items.length > 0);
+  assert.deepEqual(items.filter((name) => !SERIAL_TAKEOVER_ITEMS.has(name)), []);
+});
+
+test('reset returns once the menu has finished booting', async (t) => {
+  const { board, tools } = await boardWithTools(t, { bootPolls: 2 });
+  assert.deepEqual(await tools.reset({}), {});
+  assert.equal(board.bootingFor, -1);
+});
+
+test('reset fails when the menu does not finish booting in time', async (t) => {
+  const { tools } = await boardWithTools(t, { bootPolls: Infinity }, undefined, { menuBootMs: 1500 });
+  await assert.rejects(tools.reset({}), /the menu had not finished booting after 1.5 s/);
+});
+
+test('reset keeps polling while the restarting board refuses connections', async (t) => {
+  const board = await startFakeBoard({ bootPolls: 1 });
+  t.after(board.stop);
+  let connections = 0;
+  const connect = () => {
+    connections += 1;
+    if (connections === 2) return Promise.reject(new Error('connection refused'));
+    return openLink(linkTarget({ TR_HOST: board.host }));
+  };
+  const reset = createTools({ connect }).find((tool) => tool.name === 'reset');
+  assert.deepEqual(await reset.run({}), {});
+  assert.equal(board.bootingFor, -1);
+});
+
+test('a reset that times out names the last connection error', async (t) => {
+  const board = await startFakeBoard();
+  t.after(board.stop);
+  let connections = 0;
+  const connect = () => {
+    connections += 1;
+    if (connections > 1) return Promise.reject(new Error('connection refused'));
+    return openLink(linkTarget({ TR_HOST: board.host }));
+  };
+  const reset = createTools({ connect, menuBootMs: 1500 }).find((tool) => tool.name === 'reset');
+  await assert.rejects(reset.run({}), /after 1.5 s \(connection refused\)/);
+});
+
+test('reset returns at once from firmware that reports no boot state', async (t) => {
+  const { tools } = await boardWithTools(
+    t, { banner: BANNER.replace(/\s*Boot: complete/, '') }, undefined, { menuBootMs: 1500 });
+  assert.deepEqual(await tools.reset({}), {});
+});
+
+test("a refusal carries the board's own words", async (t) => {
+  const { tools } = await boardWithTools(t, { busy: true });
+  await assert.rejects(tools.list_dir({}), /directory: the board refused it: Busy!/);
+});
+
+test('a refusal at the menu carries only the line the board printed', async (t) => {
+  const { tools } = await boardWithTools(t);
+  await assert.rejects(tools.list_dir({ path: '/nope' }), {
+    message: 'directory /nope: the board refused it: Directory not found. (Error 5)',
+  });
+});
+
+test('an unknown drive is refused before anything is sent', async (t) => {
+  const { tools } = await boardWithTools(t);
+  await assert.rejects(tools.launch({ path: '/a.prg', drive: 'tape' }), /drive 'tape': use usb, sd, teensy/);
+});
+
+test('a path the board cannot hold whole is refused before it is sent', async (t) => {
+  const { board, tools } = await boardWithTools(t, {}, async () => Buffer.from('x'));
+  await assert.rejects(tools.launch({ path: `/${'a'.repeat(357)}` }), /at most 357 characters/);
+  await assert.rejects(tools.launch({ path: '/a.prg\0e' }), /NUL/);
+  await assert.rejects(tools.list_dir({ path: `/${'a'.repeat(357)}` }), /at most 357 characters/);
+  await assert.rejects(tools.push_file({ local_path: 'x', remote_path: '/a\0e' }), /NUL/);
+  await assert.rejects(tools.launch({ path: '/aĀŤǮ' }), /Latin-1/);
+  await tools.launch({ path: `/${'a'.repeat(356)}` });
+  assert.deepEqual(board.launched.map(({ path }) => path.length), [357]);
+});
