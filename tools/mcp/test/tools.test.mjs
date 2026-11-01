@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createTools } from '../lib/tools.mjs';
+import { SERIAL_TAKEOVER_ITEMS, createTools } from '../lib/tools.mjs';
 import { linkTarget, openLink } from '../lib/trlink.mjs';
 import { TOKENS } from '../lib/protocol.mjs';
 import { BANNER, startFakeBoard } from './fake-board.mjs';
 import { schemaProblems } from './schema.mjs';
+
+const MAIN_MENU_ITEMS = path.resolve(import.meta.dirname, '../../../Source/Teensy/MainMenuItems.h');
 
 function checkedAgainstSchema(tool) {
   return async (args) => {
@@ -96,6 +100,22 @@ test('launch sends the drive and path', async (t) => {
   const { board, tools } = await boardWithTools(t);
   assert.deepEqual(await tools.launch({ path: '/games/a.crt', drive: 'usb' }), { drive: 'usb', path: '/games/a.crt' });
   assert.deepEqual(board.launched, [{ drive: 0, path: '/games/a.crt' }]);
+});
+
+test('launch refuses a built-in item whose handler takes over the USB serial port', async (t) => {
+  const { board, tools } = await boardWithTools(t);
+  await assert.rejects(tools.launch({ path: '/Utilities/BASIC with TeensyROM Commands', drive: 'teensy' }),
+    /stops answering remote commands/);
+  assert.deepEqual(board.launched, []);
+  await tools.launch({ path: '/BASIC with TeensyROM Commands', drive: 'sd' });
+  assert.equal(board.launched.length, 1);
+});
+
+test('every built-in item with the TR BASIC handler is one launch refuses', () => {
+  const menu = fs.readFileSync(MAIN_MENU_ITEMS, 'latin1');
+  const items = [...menu.matchAll(/IOH_TR_BASIC\s*,\s*\(char\*\)"([^"]+)"/g)].map(([, name]) => name);
+  assert.ok(items.length > 0);
+  assert.deepEqual(items.filter((name) => !SERIAL_TAKEOVER_ITEMS.has(name)), []);
 });
 
 test('reset returns once the board has the command', async (t) => {

@@ -19,6 +19,14 @@ const DRIVE_PROPERTY = {
   default: 'sd',
   description: "Where the file is: 'sd' (SD card), 'usb' (USB drive) or 'teensy' (the built-in menu).",
 };
+// The IOH_TR_BASIC items in Source/Teensy/MainMenuItems.h. Their handler reads
+// the USB serial port itself, so the board stops answering remote commands.
+export const SERIAL_TAKEOVER_ITEMS = new Set([
+  'BASIC TR Command IO access only',
+  'BASIC with TeensyROM Commands',
+  'DMA Pause Check',
+  'Segment+Dot Matrix Digital Clock',
+]);
 const DEFAULT_TAKE = 200;
 const MAX_TAKE = 1000;
 
@@ -138,7 +146,15 @@ async function pushFile(link, { local_path: localPath, remote_path: remotePath, 
   return { drive, remote_path: remotePath, bytes: data.length };
 }
 
+function refuseSerialTakeover(path, drive) {
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  if (drive === 'teensy' && SERIAL_TAKEOVER_ITEMS.has(name)) {
+    throw new BoardError(`'${name}' takes over the USB serial port, and the board stops answering remote commands`);
+  }
+}
+
 async function launch(link, { path, drive = 'sd' }) {
+  refuseSerialTakeover(path, drive);
   await link.launch(path, driveNumber(drive));
   return { drive, path };
 }
@@ -207,7 +223,8 @@ const DEFINITIONS = [
     name: 'launch',
     description: 'Launch a file (PRG, CRT, SID, D64 and the other types the menu runs) on the C64, from the '
       + 'SD card, USB drive or built-in menu. Ends whatever the C64 was running. A large CRT hands over to the '
-      + 'minimal image, which answers only status, launch and reset.',
+      + 'minimal image, which answers only status, launch and reset. Refuses the built-in items whose handler takes '
+      + 'over the USB serial port (TR BASIC, DMA Pause Check, the digital clock).',
     inputSchema: {
       type: 'object',
       properties: {
