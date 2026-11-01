@@ -37,10 +37,15 @@ function commandsFor(board) {
   return {
     [TOKENS.FW_CHECK]: (stream) => reply(stream, board.image === 'main' ? TOKENS.FW_FULL : TOKENS.FW_MINIMAL),
     [TOKENS.VERSION_INFO]: async (stream) => {
+      const booting = board.bootingFor > 0;
+      board.bootingFor -= 1;
       await reply(stream, TOKENS.ACK);
-      await stream.write(Buffer.from(board.banner, 'latin1'));
+      await stream.write(Buffer.from(booting ? board.banner.replace('complete', 'in progress') : board.banner, 'latin1'));
     },
-    [TOKENS.RESET_C64]: (stream) => stream.write(Buffer.from('Reset cmd received\n')),
+    [TOKENS.RESET_C64]: (stream) => {
+      board.bootingFor = board.bootPolls;
+      return stream.write(Buffer.from('Reset cmd received\n'));
+    },
     [TOKENS.READ_C64_MEM]: async (stream) => {
       const address = await readNumber(stream, 2);
       const length = await readNumber(stream, 2);
@@ -117,6 +122,8 @@ export async function startFakeBoard(overrides = {}) {
     directories: ['/'],
     launched: [],
     received: [],
+    bootPolls: 0,
+    bootingFor: 0,
     ...overrides,
   };
   const sockets = new Set();

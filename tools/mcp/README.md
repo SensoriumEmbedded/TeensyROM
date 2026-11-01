@@ -11,7 +11,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI agent (Claude C
 | `read_screen` | The 40-column text screen as 25 lines of text, read by DMA | TR+, main image |
 | `push_file` | Copies a file from this computer to the SD card or USB drive, replacing one already there | main image, C64 at the menu |
 | `launch` | Runs a file on the C64 (PRG, CRT, SID, D64, …) | main or minimal image |
-| `reset` | Resets the C64 to the TeensyROM menu | main or minimal image |
+| `reset` | Resets the C64 to the TeensyROM menu, and returns once the menu has finished booting | main or minimal image |
 
 Every tool declares an `outputSchema` and returns a JSON object matching it, as `structuredContent` and as the text of its one content block (for clients older than MCP 2025-06-18, the text alone). Field names and enum values are fixed, so an agent can rely on them; a `null` means the board didn't report that field.
 

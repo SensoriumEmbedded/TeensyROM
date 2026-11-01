@@ -20,11 +20,11 @@ function checkedAgainstSchema(tool) {
   };
 }
 
-async function boardWithTools(t, overrides, readFile) {
+async function boardWithTools(t, overrides, readFile, options) {
   const board = await startFakeBoard(overrides);
   t.after(board.stop);
   const connect = () => openLink(linkTarget({ TR_HOST: board.host }));
-  const tools = Object.fromEntries(createTools({ connect, readFile }).map((tool) => [tool.name, checkedAgainstSchema(tool)]));
+  const tools = Object.fromEntries(createTools({ connect, readFile, ...options }).map((tool) => [tool.name, checkedAgainstSchema(tool)]));
   return { board, tools };
 }
 
@@ -118,9 +118,15 @@ test('every built-in item with the TR BASIC handler is one launch refuses', () =
   assert.deepEqual(items.filter((name) => !SERIAL_TAKEOVER_ITEMS.has(name)), []);
 });
 
-test('reset returns once the board has the command', async (t) => {
-  const { tools } = await boardWithTools(t);
+test('reset returns once the menu has finished booting', async (t) => {
+  const { board, tools } = await boardWithTools(t, { bootPolls: 2 });
   assert.deepEqual(await tools.reset({}), {});
+  assert.equal(board.bootingFor, -1);
+});
+
+test('reset fails when the menu does not finish booting in time', async (t) => {
+  const { tools } = await boardWithTools(t, { bootPolls: Infinity }, undefined, { menuBootMs: 1500 });
+  await assert.rejects(tools.reset({}), /the menu had not finished booting after 1.5 s/);
 });
 
 test("a refusal carries the board's own words", async (t) => {

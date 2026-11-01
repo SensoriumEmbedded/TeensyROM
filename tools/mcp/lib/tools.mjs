@@ -28,6 +28,9 @@ export const SERIAL_TAKEOVER_ITEMS = new Set([
   'Segment+Dot Matrix Digital Clock',
 ]);
 const DEFAULT_TAKE = 200;
+const MENU_BOOT_MS = 60000;
+const BOOT_POLL_MS = 500;
+const MS_PER_SECOND = 1000;
 const MAX_TAKE = 1000;
 
 const nullable = (schema) => ({ ...schema, type: [schema.type, 'null'] });
@@ -164,12 +167,40 @@ async function reset(link) {
   return {};
 }
 
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+async function bootState(connect) {
+  const link = await connect();
+  try {
+    return parseBanner(await link.version()).boot;
+  } finally {
+    link.close();
+  }
+}
+
+// DMA in the first moments after a C128's reset can hang its boot, so reset
+// returns only once the menu is up. Each poll reconnects: a reset from the
+// minimal image restarts the board, which drops a serial connection.
+async function waitForMenu(connect, { menuBootMs }) {
+  const deadline = Date.now() + menuBootMs;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (await bootState(connect) === 'complete') return;
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(BOOT_POLL_MS);
+  }
+  const why = lastError ? ` (${lastError.message})` : '';
+  throw new BoardError(`the menu had not finished booting after ${menuBootMs / MS_PER_SECOND} s${why}`);
+}
+
 const DEFINITIONS = [
   {
     name: 'status',
     description: 'Which TeensyROM image is running, its firmware and board type, the host machine, whether '
-      + "the menu has finished booting, and whether DMA tools can run. Call this first, and after 'reset' "
-      + "until menu is 'complete'.",
+      + 'the menu has finished booting, and whether DMA tools can run. Call this first.',
     inputSchema: NO_INPUT,
     outputSchema: STATUS_OUTPUT,
     annotations: { readOnlyHint: true, openWorldHint: true },
@@ -240,25 +271,29 @@ const DEFINITIONS = [
   {
     name: 'reset',
     description: 'Reset the C64 to the TeensyROM menu, ending whatever it was running, and bring the board '
-      + "back to its main image. The menu takes from under a second to tens of seconds to boot: call 'status' "
-      + "until menu is 'complete' before using the other tools.",
+      + 'back to its main image. Returns once the menu has finished booting, which takes from under a second '
+      + 'to tens of seconds.',
     inputSchema: NO_INPUT,
     outputSchema: RESET_OUTPUT,
     annotations: { destructiveHint: false, openWorldHint: true },
     run: reset,
+    afterClose: waitForMenu,
   },
 ];
 
-export function createTools({ connect, readFile = fs.readFile }) {
-  return DEFINITIONS.map((definition) => ({
+export function createTools({ connect, readFile = fs.readFile, menuBootMs = MENU_BOOT_MS }) {
+  return DEFINITIONS.map(({ afterClose, ...definition }) => ({
     ...definition,
     run: async (args) => {
       const link = await connect();
+      let result;
       try {
-        return await definition.run(link, args, readFile);
+        result = await definition.run(link, args, readFile);
       } finally {
         link.close();
       }
+      await afterClose?.(connect, { menuBootMs });
+      return result;
     },
   }));
 }
