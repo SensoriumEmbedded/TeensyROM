@@ -121,12 +121,14 @@ async function listDir(link, { path = '/', drive = 'sd', skip = 0, take = DEFAUL
   return { path, drive, skip, entries: entries.map(entryOf), next_skip: entries.length === count ? skip + count : null };
 }
 
-// A plain TR's firmware has no DMA commands, so it would run their address and
-// length bytes as further commands.
+// Neither a plain TR nor the minimal image answers DMA commands, so either would
+// run their address and length bytes as further commands.
 async function requireDma(link) {
-  const { version } = parseBanner(await link.version());
-  if (boardKind(version) !== 'tr-plus') {
-    throw new BoardError(`DMA needs a TeensyROM+; this board is ${version ?? 'not identified'}`);
+  const { dma, image, firmware } = await status(link);
+  if (!dma) {
+    throw new BoardError(
+      `DMA needs a TeensyROM+ running its main image; this board is ${firmware ?? 'not identified'}`
+      + (image ? `, ${image} image` : ''));
   }
 }
 

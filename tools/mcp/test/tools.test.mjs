@@ -65,7 +65,14 @@ test('read_screen finds the screen through the VIC registers and decodes it', as
 
 test('read_screen refuses a plain TeensyROM without sending it a DMA command', async (t) => {
   const { board, tools } = await boardWithTools(t, { banner: BANNER.replace('TeensyROM+', 'TeensyROM') });
-  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+; this board is TeensyROM v0.8.0.13/);
+  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+ running its main image; this board is TeensyROM v0.8.0.13, main image/);
+  assert.ok(!board.received.includes(TOKENS.READ_C64_MEM));
+});
+
+test('read_screen refuses the minimal image without sending it a DMA command', async (t) => {
+  const { board, tools } = await boardWithTools(
+    t, { image: 'minimal', banner: '\n  FW: TeensyROM+ v0.8.0.13(minimal)\r\n' });
+  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+ running its main image/);
   assert.ok(!board.received.includes(TOKENS.READ_C64_MEM));
 });
 
