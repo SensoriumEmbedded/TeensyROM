@@ -188,7 +188,8 @@ async function waitForMenu(connect, { menuBootMs }) {
   let lastError = null;
   while (Date.now() < deadline) {
     try {
-      if (await bootState(connect) === 'complete') return;
+      // Firmware before v0.9 reports no boot state, so there is nothing to wait for.
+      if (await bootState(connect) !== 'in progress') return;
     } catch (error) {
       lastError = error;
     }

@@ -136,6 +136,39 @@ test('reset fails when the menu does not finish booting in time', async (t) => {
   await assert.rejects(tools.reset({}), /the menu had not finished booting after 1.5 s/);
 });
 
+test('reset keeps polling while the restarting board refuses connections', async (t) => {
+  const board = await startFakeBoard({ bootPolls: 1 });
+  t.after(board.stop);
+  let connections = 0;
+  const connect = () => {
+    connections += 1;
+    if (connections === 2) return Promise.reject(new Error('connection refused'));
+    return openLink(linkTarget({ TR_HOST: board.host }));
+  };
+  const reset = createTools({ connect }).find((tool) => tool.name === 'reset');
+  assert.deepEqual(await reset.run({}), {});
+  assert.equal(board.bootingFor, -1);
+});
+
+test('a reset that times out names the last connection error', async (t) => {
+  const board = await startFakeBoard();
+  t.after(board.stop);
+  let connections = 0;
+  const connect = () => {
+    connections += 1;
+    if (connections > 1) return Promise.reject(new Error('connection refused'));
+    return openLink(linkTarget({ TR_HOST: board.host }));
+  };
+  const reset = createTools({ connect, menuBootMs: 1500 }).find((tool) => tool.name === 'reset');
+  await assert.rejects(reset.run({}), /after 1.5 s \(connection refused\)/);
+});
+
+test('reset returns at once from firmware that reports no boot state', async (t) => {
+  const { tools } = await boardWithTools(
+    t, { banner: BANNER.replace(/\s*Boot: complete/, '') }, undefined, { menuBootMs: 1500 });
+  assert.deepEqual(await tools.reset({}), {});
+});
+
 test("a refusal carries the board's own words", async (t) => {
   const { tools } = await boardWithTools(t, { busy: true });
   await assert.rejects(tools.list_dir({}), /directory: the board refused it: Busy!/);
