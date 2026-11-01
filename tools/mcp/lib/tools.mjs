@@ -9,7 +9,7 @@ import fs from 'node:fs/promises';
 
 import { boardKind, parseBanner } from './banner.mjs';
 import { CHARSETS, CIA2_PORT_A, SCREEN_BYTES, VIC_MEMPTR, charsetIn, screenAddress, screenRows } from './screen.mjs';
-import { driveNumber } from './trlink.mjs';
+import { BoardError, driveNumber } from './trlink.mjs';
 
 const DRIVES = ['sd', 'usb', 'teensy'];
 const STORAGE_DRIVES = ['sd', 'usb'];
@@ -110,7 +110,17 @@ async function listDir(link, { path = '/', drive = 'sd', skip = 0, take = DEFAUL
   return { path, drive, skip, entries: entries.map(entryOf), next_skip: entries.length === count ? skip + count : null };
 }
 
+// A plain TR's firmware has no DMA commands, so it would run their address and
+// length bytes as further commands.
+async function requireDma(link) {
+  const { version } = parseBanner(await link.version());
+  if (boardKind(version) !== 'tr-plus') {
+    throw new BoardError(`DMA needs a TeensyROM+; this board is ${version ?? 'not identified'}`);
+  }
+}
+
 async function readScreen(link) {
+  await requireDma(link);
   const [memptr] = await link.readMemory(VIC_MEMPTR, 1);
   const [cia2PortA] = await link.readMemory(CIA2_PORT_A, 1);
   const address = screenAddress(memptr, cia2PortA);

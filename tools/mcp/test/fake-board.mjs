@@ -97,6 +97,7 @@ async function serve(board, socket) {
     if (token.length < 2) break;
     if (board.silent) continue;
     const value = token.readUInt16BE(0);
+    board.received.push(value);
     const command = commands[value];
     if (board.busy && value !== TOKENS.FW_CHECK) await refuse(stream, 'Busy!');
     else if (command) await command(stream);
@@ -115,6 +116,7 @@ export async function startFakeBoard(overrides = {}) {
     listing: [],
     directories: ['/'],
     launched: [],
+    received: [],
     ...overrides,
   };
   const sockets = new Set();

@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 
 import { createTools } from '../lib/tools.mjs';
 import { linkTarget, openLink } from '../lib/trlink.mjs';
-import { startFakeBoard } from './fake-board.mjs';
+import { TOKENS } from '../lib/protocol.mjs';
+import { BANNER, startFakeBoard } from './fake-board.mjs';
 import { schemaProblems } from './schema.mjs';
 
 function checkedAgainstSchema(tool) {
@@ -56,6 +57,12 @@ test('read_screen finds the screen through the VIC registers and decodes it', as
   assert.equal(charset, 'lower_upper');
   assert.equal(rows[0], 'hi TR');
   assert.equal(rows[1], '');
+});
+
+test('read_screen refuses a plain TeensyROM without sending it a DMA command', async (t) => {
+  const { board, tools } = await boardWithTools(t, { banner: BANNER.replace('TeensyROM+', 'TeensyROM') });
+  await assert.rejects(tools.read_screen({}), /DMA needs a TeensyROM\+; this board is TeensyROM v0.8.0.13/);
+  assert.ok(!board.received.includes(TOKENS.READ_C64_MEM));
 });
 
 test('push_file replaces a file the board already has', async (t) => {
