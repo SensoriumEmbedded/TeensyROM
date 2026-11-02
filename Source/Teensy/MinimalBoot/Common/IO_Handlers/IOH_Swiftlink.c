@@ -182,10 +182,11 @@ uint32_t C64CycBetweenRx, LastTxMillis = millis();
 //Tx bytes from the C64 are collected here and sent with one client.write() per burst (one TCP segment per byte before), and only as
 //  much at a time as the stack has room for: client.write() busy-waits for send buffer space, which stalls the main loop until the
 //  stack frees some (and for good when the stack is polled from the main loop). While this buffer is full the C64 sees Tx not empty.
+//  Sent right away when nothing is in flight (Nagle's rule), otherwise collected until one of the limits below.
 #define SwiftTxOutSize       256
 #define SwiftTxOutIdleMicros 2000   //send once the C64 has sent nothing for this long,
 #define SwiftTxOutMaxMicros  20000  //  or this long after the oldest byte waiting
-DMAMEM uint8_t SwiftTxOut[SwiftTxOutSize];
+uint8_t* SwiftTxOut = NULL; //allocated in InitHndlr_SwiftLink()
 uint16_t SwiftTxOutLen = 0;
 uint32_t SwiftTxOutFirstMicros, SwiftTxOutLastMicros;
 
@@ -287,6 +288,7 @@ void FreeSwiftlinkBuffs()
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) {free(PrevURLQueue[cnt]); PrevURLQueue[cnt]=NULL;}
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) {free(RxQueue[cnt]); RxQueue[cnt]=NULL;}
    free(TxMsg); TxMsg = NULL;   
+   free(SwiftTxOut); SwiftTxOut = NULL;
 }
 
 FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
@@ -430,6 +432,8 @@ void InitHndlr_SwiftLink()
    }
    TxMsg = (char*)malloc(TxMsgMaxSize);
    if(TxMsg == NULL) Serial.println("OOM TxQ");
+   SwiftTxOut = (uint8_t*)malloc(SwiftTxOutSize);
+   if(SwiftTxOut == NULL) Serial.println("OOM SwiftTxOut");
    
    for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++)
    {
@@ -554,6 +558,7 @@ void PollingHndlr_SwiftLink()
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
+      SwiftTxOutLen = 0; //Tx bytes for the old connection must not reach a new one
       if (BrowserMode)
       {
          if (!ConnectedToHost) AddRawStrToRxQueue("<eoftag>");  //add special tag to catch when complete
@@ -602,10 +607,12 @@ void PollingHndlr_SwiftLink()
       while (client.available()) AddRawCharToRxQueue(client.read());
    #endif
    
-   //send collected Tx data to host when full, when the C64 pauses, or when the oldest byte has waited long enough
+   //send collected Tx data to host when full, when the C64 pauses, when the oldest byte has waited long enough,
+   //  or when nothing sent earlier is still unacknowledged (FNET_SOCKET_DEFAULT_SIZE: the socket size, never changed with Ethernet.setSocketSize())
    if (SwiftTxOutLen && (SwiftTxOutLen == SwiftTxOutSize ||
                          micros() - SwiftTxOutLastMicros >= SwiftTxOutIdleMicros ||
-                         micros() - SwiftTxOutFirstMicros >= SwiftTxOutMaxMicros)) SendSwiftTxOut();
+                         micros() - SwiftTxOutFirstMicros >= SwiftTxOutMaxMicros ||
+                         client.availableForWrite() >= FNET_SOCKET_DEFAULT_SIZE)) SendSwiftTxOut();
 
    //if Tx data available, get it from C64 (while SwiftTxOut is full, Tx stays not empty: the C64 waits until the stack has taken some)
    if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0 && SwiftTxOutLen < SwiftTxOutSize)
