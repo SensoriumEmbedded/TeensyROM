@@ -81,6 +81,16 @@ VD_COLD int d64_open_size(d64_t *d, d64_read_fn rd, void *ctx, size_t size)
     if (classify(size, &tracks, &fmt)) return -1;
     return d64_open(d, rd, ctx, tracks);
 }
+VD_COLD int d64_open_exact(d64_t *d, d64_read_fn rd, void *ctx, size_t size)
+{
+    static const uint8_t tracks[] D64_FLASH = { 35, 40, 70, 80 };
+    for (size_t i = 0; i < sizeof tracks; i++) {
+        d64_open(d, rd, ctx, tracks[i]);
+        size_t n = (size_t)d64_sectors(d);
+        if (size == n * D64_SECTOR || size == n * (D64_SECTOR + 1)) return 0;
+    }
+    return -1;
+}
 VD_COLD int d64_sectors(const d64_t *d)
 {
     int n = 0;

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // disk_image_harness new KIND: formats a blank D64, D71 or D81 in memory, saves a 600-byte file on it, reads it
 //   back, and prints "free=<before>,<after> blocks=<n> first=<track>/<sector> same=<0|1>".
-// disk_image_harness size BYTES: prints the format and track count d64_open_size picks for a file of that size,
-//   or "none".
+// disk_image_harness size|exact BYTES: prints the format and track count d64_open_size (or d64_open_exact) picks for
+//   a file of that size, or "none".
 // disk_image_harness wrap: a file whose last sector is past every track with room, appended to after a scratch
 //   frees tracks earlier in the allocation order; prints "append=<rc> write=<rc> close=<rc> same=<0|1>".
 // disk_image_harness closefail new|append|copy N: the Nth sector write of d64_close_write fails; prints
@@ -11,6 +11,7 @@
 //   blocks are freed, or over a locked file; prints "create=<rc> write=<rc> close=<rc> free=<before>,<after> files=<n> data=<old|new|none>".
 // disk_image_harness dir fits|small|unreadable|loop: d64_build_dir with room, with a 16-byte buffer, with every sector
 //   read failing, or with a directory sector linking to itself; prints "dir=<rc>" ("dir=ok" for a positive length).
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -233,12 +234,13 @@ static int NewDisk(const char *Kind)
    return 0;
 }
 
-static int SizeOf(const char *Bytes)
+static int SizeOf(const char *Bytes, bool Exact)
 {
    static const char *const Names[] = { "d64", "d71", "d81" };
+   size_t Size = (size_t)strtoul(Bytes, NULL, 10);
    d64_t Disk;
 
-   if (d64_open_size(&Disk, NULL, NULL, (size_t)strtoul(Bytes, NULL, 10)))
+   if (Exact ? d64_open_exact(&Disk, NULL, NULL, Size) : d64_open_size(&Disk, NULL, NULL, Size))
    {
       printf("none\n");
       return 0;
@@ -250,7 +252,8 @@ static int SizeOf(const char *Bytes)
 int main(int argc, char **argv)
 {
    if (argc == 3 && !strcmp(argv[1], "new")) return NewDisk(argv[2]);
-   if (argc == 3 && !strcmp(argv[1], "size")) return SizeOf(argv[2]);
+   if (argc == 3 && !strcmp(argv[1], "size")) return SizeOf(argv[2], false);
+   if (argc == 3 && !strcmp(argv[1], "exact")) return SizeOf(argv[2], true);
    if (argc == 2 && !strcmp(argv[1], "wrap")) return Wrap();
    if (argc == 4 && !strcmp(argv[1], "closefail")) return CloseFail(argv[2], atoi(argv[3]));
    if (argc == 3 && !strcmp(argv[1], "replace")) return Replace(argv[2]);

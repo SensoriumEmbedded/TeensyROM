@@ -11,6 +11,8 @@
 #ifndef D64_FLASH
 #define D64_FLASH PROGMEM
 #endif
+#else
+#define FLASHMEM
 #endif
 
 #include "d64.h"
