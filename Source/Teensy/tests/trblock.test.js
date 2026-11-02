@@ -86,7 +86,7 @@ function run(kind, script, mode, boot) {
   }
   const ran = spawnSync(harness(), [image, out, ...(mode ? [mode] : [])], { input: script, encoding: 'utf8' });
   assert.equal(ran.status, 0, ran.stderr);
-  const lines = ran.stdout.split('\n').filter(Boolean);
+  const lines = ran.stdout.split(/\r?\n/).filter(Boolean);
   return { lines, image: fs.readFileSync(out), original: fs.readFileSync(image) };
 }
 

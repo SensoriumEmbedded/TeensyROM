@@ -33,7 +33,7 @@ function harness() {
 function run(lines) {
   const ran = spawnSync(harness(), { input: lines.join('\n') + '\n', encoding: 'utf8' });
   assert.equal(ran.status, 0, ran.stderr);
-  return ran.stdout.split('\n').filter(Boolean);
+  return ran.stdout.split(/\r?\n/).filter(Boolean);
 }
 
 const read = (offset) => `r ${offset.toString(16)}`;
