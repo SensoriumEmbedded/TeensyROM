@@ -179,6 +179,17 @@ volatile uint8_t SwiftRegStatus, SwiftRegCommand, SwiftRegControl, TurboRegEnhan
 uint8_t PlusCount;
 uint32_t C64CycBetweenRx, LastTxMillis = millis();
 
+//Tx bytes from the C64 are collected here and sent with one client.write() per burst (one TCP segment per byte before), and only as
+//  much at a time as the stack has room for: client.write() busy-waits for send buffer space, which stalls the main loop until the
+//  stack frees some (and for good when the stack is polled from the main loop). While this buffer is full the C64 sees Tx not empty.
+//  Sent right away when nothing is in flight (Nagle's rule), otherwise collected until one of the limits below.
+#define SwiftTxOutSize       256
+#define SwiftTxOutIdleMicros 2000   //send once the C64 has sent nothing for this long,
+#define SwiftTxOutMaxMicros  20000  //  or this long after the oldest byte waiting
+uint8_t* SwiftTxOut = NULL; //allocated in InitHndlr_SwiftLink()
+uint16_t SwiftTxOutLen = 0;
+uint32_t SwiftTxOutFirstMicros, SwiftTxOutLastMicros;
+
 
 // Browser mode: Buffer saved in ASCII from host, converted before sending out
 //               Uses Send...Immediate  commands for direct output
@@ -277,6 +288,7 @@ void FreeSwiftlinkBuffs()
    for(uint8_t cnt=0; cnt<NumPrevURLQueues; cnt++) {free(PrevURLQueue[cnt]); PrevURLQueue[cnt]=NULL;}
    for(uint8_t cnt=0; cnt<RxQueueNumBlocks; cnt++) {free(RxQueue[cnt]); RxQueue[cnt]=NULL;}
    free(TxMsg); TxMsg = NULL;   
+   free(SwiftTxOut); SwiftTxOut = NULL;
 }
 
 FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
@@ -403,6 +415,7 @@ void InitHndlr_SwiftLink()
    TxMsgOffset =0;
    PrintingHyperlink = false;   
    PlusCount=0;
+   SwiftTxOutLen = 0;
    
    FreeDriveDirMenu(); //clear out drive menu to make space in RAM2
    // RAM2 usage as of 11/7/23:
@@ -419,6 +432,8 @@ void InitHndlr_SwiftLink()
    }
    TxMsg = (char*)malloc(TxMsgMaxSize);
    if(TxMsg == NULL) Serial.println("OOM TxQ");
+   SwiftTxOut = (uint8_t*)malloc(SwiftTxOutSize);
+   if(SwiftTxOut == NULL) Serial.println("OOM SwiftTxOut");
    
    for(uint8_t cnt=0; cnt<NumPageLinkBuffs; cnt++)
    {
@@ -522,12 +537,28 @@ void IO1Hndlr_SwiftLink(uint8_t Address, bool R_Wn)
    }
 }
 
+void SendSwiftTxOut()
+{  //send what the stack has room for now (never more: client.write() would wait for the rest), the rest on a later poll
+   if (!client.connected())
+   {
+      SwiftTxOutLen = 0; //connection gone
+      return;
+   }
+   int Room = client.availableForWrite();
+   if (Room <= 0) return;
+   uint16_t Sent = client.write(SwiftTxOut, (Room < SwiftTxOutLen) ? Room : SwiftTxOutLen);
+   if (Sent == 0) return;
+   SwiftTxOutLen -= Sent;
+   memmove(SwiftTxOut, SwiftTxOut + Sent, SwiftTxOutLen);
+}
+
 void PollingHndlr_SwiftLink()
 {
    //detect connection change
    if (ConnectedToHost != client.connected())
    {
       ConnectedToHost = client.connected();
+      SwiftTxOutLen = 0; //Tx bytes for the old connection must not reach a new one
       if (BrowserMode)
       {
          if (!ConnectedToHost) AddRawStrToRxQueue("<eoftag>");  //add special tag to catch when complete
@@ -576,14 +607,22 @@ void PollingHndlr_SwiftLink()
       while (client.available()) AddRawCharToRxQueue(client.read());
    #endif
    
-   //if Tx data available, get it from C64
-   if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0) 
+   //send collected Tx data to host when full, when the C64 pauses, when the oldest byte has waited long enough,
+   //  or when nothing sent earlier is still unacknowledged (FNET_SOCKET_DEFAULT_SIZE: the socket size, never changed with Ethernet.setSocketSize())
+   if (SwiftTxOutLen && (SwiftTxOutLen == SwiftTxOutSize ||
+                         micros() - SwiftTxOutLastMicros >= SwiftTxOutIdleMicros ||
+                         micros() - SwiftTxOutFirstMicros >= SwiftTxOutMaxMicros ||
+                         client.availableForWrite() >= FNET_SOCKET_DEFAULT_SIZE)) SendSwiftTxOut();
+
+   //if Tx data available, get it from C64 (while SwiftTxOut is full, Tx stays not empty: the C64 waits until the stack has taken some)
+   if ((SwiftRegStatus & SwiftStatusTxEmpty) == 0 && SwiftTxOutLen < SwiftTxOutSize)
    {
       if (client.connected() && !BrowserMode) //send Tx data to host
       {
          //Printf_dbg_sw("send %02x: %c\n", SwiftTxBuf, SwiftTxBuf);
-         //client.print((char)SwiftTxBuf);  //send it
-         client.write(SwiftTxBuf);
+         if (SwiftTxOutLen == 0) SwiftTxOutFirstMicros = micros();
+         SwiftTxOutLastMicros = micros();
+         SwiftTxOut[SwiftTxOutLen++] = SwiftTxBuf; //sent by SendSwiftTxOut()
          //client.flush(); //adds ~100mS!
          if(SwiftTxBuf=='+')
          {
