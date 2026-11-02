@@ -37,9 +37,11 @@ Step 2 builds one cartridge type per run. Build both when both kinds of board ne
   (Fab 0.2/0.3), `--target tr-plus` the TeensyROM+ (Fab 0.4). Both build cleanly. The
   flasher refuses the wrong one before writing; the SD-card updater refuses it only after
   the file has been carried over.
-- **The build date names a commit, not a build.** It is the HEAD commit's time, so a build
-  with uncommitted edits carries the previous commit's date, and rebuilding a commit gives
-  the same hex. Commit first if the date on the board has to prove what it runs.
+- **The build date names a commit, not a build, on a clean tree.** It is the HEAD commit's
+  time, so rebuilding a commit gives the same hex. A tree with uncommitted edits to the
+  image sources is stamped with its own time instead, its version string ends in `*` and
+  its output names in `-dirty`. Pass `--tag <name>` to name a review or test build
+  (`TeensyROM+ v0.9-pr65`); [firmware-build.md](references/firmware-build.md) has the rules.
 - **Skipping step 1 is silent.** The firmware embeds whatever headers are in the working
   tree, so a C64 change that was not rebuilt ships the old program.
 - **Old images keep their name.** An image is named after the firmware version, not the

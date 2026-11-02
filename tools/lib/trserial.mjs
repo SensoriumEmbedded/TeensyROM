@@ -139,7 +139,8 @@ export function identify(port, ms = 3000) {
 }
 
 export function parseBanner(raw) {
-  const version = raw.match(/TeensyROM\+? v[\d.]+/)?.[0] ?? null;
+  // A special build's "-<tag>" and dirty-tree '*' (build-firmware.mjs --tag) are part of the version.
+  const version = raw.match(/TeensyROM\+? v[\w.-]+\*?/)?.[0] ?? null;
   const built = raw.match(/([A-Z][a-z]{2} [ \d]\d \d{4}), (\d\d:\d\d:\d\d)/);
   const uid = raw.match(/UID:\s*(\d+)/)?.[1] ?? null;
   return { version, built: built ? `${built[1]}, ${built[2]}` : null, uid, minimal: /\(minimal\)/.test(raw), raw };

@@ -2,10 +2,11 @@
 """Read a TeensyROM firmware hex, to check a board against the file pushed to it.
 
 One hex holds two images at fixed flash addresses. The build pins
-SOURCE_DATE_EPOCH, by default to the HEAD commit time, so GCC gives every
-image in one build the same __DATE__ and __TIME__ -- and that pair is the
-second line of the version banner, which makes it the one field that tells
-two builds of the same version number apart.
+SOURCE_DATE_EPOCH, by default to the HEAD commit time for a clean tree and
+to the build's own time for a tree with uncommitted edits to the image
+sources, so GCC gives every image in one build the same __DATE__ and
+__TIME__ -- and that pair is the second line of the version banner, which
+makes it the one field that tells two builds of the same version number apart.
 
 Two builds of one commit therefore carry one stamp, so a matching stamp says
 the board is running a build of that commit rather than that it was reflashed

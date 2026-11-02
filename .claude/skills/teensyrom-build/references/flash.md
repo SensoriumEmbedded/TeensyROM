@@ -62,8 +62,9 @@ Boards:
 
 - **The build date**, for an image from `build-firmware.mjs`, is the time of the commit it
   was built from, in UTC ([firmware-build.md](firmware-build.md) shows how to find the
-  commit). Edits that were never committed build with the previous commit's date, and an
-  Arduino IDE build carries the time it was compiled.
+  commit). A build from a tree with uncommitted edits carries its own build time instead,
+  and its version ends in `*`; a `--tag` build shows the tag in the version
+  (`TeensyROM+ v0.9-pr65`). An Arduino IDE build carries the time it was compiled.
 - **`chip`** is the Teensy's factory ID. It tells two boards of one type apart, and it is
   what `--uid` takes.
 - **`(MinimalBoot)`** after the version means the small boot program answered, not the

@@ -189,12 +189,14 @@ test('a --no-extensions TR+ writes its own filename, not the shipping one', {
   const dir = stubSdk();
   const out = path.join(dir, 'out');
   fs.mkdirSync(out, { recursive: true });
-  // No --skip-combine: that is what makes the script check the output path at all.
+  // No --skip-combine: that is what makes the script check the output path at all. GIT_DIR
+  // pointing nowhere makes the tree count as clean, so the planned names are the shipping
+  // ones whatever this checkout holds (a dirty tree would plan -dirty names).
   const attempt = () => spawnSync(process.execPath, [script,
     '--target', 'tr-plus', '--no-extensions',
     '--arduino-data', path.join(dir, 'sdk'), '--out', out,
     '--skip-minimal-build', '--skip-teensy-build'],
-    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo', GIT_DIR: path.join(dir, 'not-a-repo') } });
   try {
     // A shipping hex already sitting there is not this build's output, so it neither stops
     // the build nor gets overwritten by it.
@@ -327,10 +329,11 @@ test('a --host-sketch build plans its host package and no firmware hex', () => {
   const dir = stubSdk();
   const out = path.join(dir, 'out');
   fs.mkdirSync(out, { recursive: true });
+  // GIT_DIR pointing nowhere: a clean tree, so the names are the shipping ones (see above).
   const attempt = () => spawnSync(process.execPath, [script, '--target', 'tr-plus',
     '--arduino-data', path.join(dir, 'sdk'), '--out', out,
     '--host-sketch', path.join(repoRoot, 'Source/Teensy/ExampleHost')],
-    { encoding: 'utf8', timeout: 20_000 });
+    { encoding: 'utf8', timeout: 20_000, env: { ...process.env, GIT_DIR: path.join(dir, 'not-a-repo') } });
   try {
     fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_full.hex`), '');
     fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_ExampleHost_full.hex`), '');
@@ -381,7 +384,7 @@ test('a tr-plus build plans the stock host as its own .TRH beside the hex', {
   fs.mkdirSync(out, { recursive: true });
   const attempt = (...args) => spawnSync(process.execPath, [script, '--target', 'tr-plus',
     '--arduino-data', path.join(dir, 'sdk'), '--out', out, ...args],
-    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo', GIT_DIR: path.join(dir, 'not-a-repo') } });
   const hex = path.join(out, `TeensyROM+_${trVersion}_full.hex`);
   const host = path.join(out, `TeensyROM+_${trVersion}_VMBoot.TRH`);
   try {
@@ -456,4 +459,36 @@ test('the example host carries the four things a host owes', () => {
   // corrected before the reset that reads it.
   assert.match(ino, /VmFail::set\(code, detail\)/);
   assert.match(ino, /EEPROM\.write\(VM_EEP_BOOTIND_ADDR, VM_BOOT_FROM_MIN\)/);
+});
+
+// A --tag names the build on the version string and in the output names, within what the
+// C64 banner row can hold. The refusals and the planned names come before anything is
+// copied or compiled, so a stub SDK is enough; GIT_DIR pointing nowhere makes the tree
+// count as clean, so the names are the same whatever this checkout holds.
+test('a --tag names the build, and is refused when the banner row cannot hold it', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  const out = path.join(dir, 'out');
+  fs.mkdirSync(out, { recursive: true });
+  const attempt = (...args) => spawnSync(process.execPath, [script, '--target', 'tr-plus',
+    '--arduino-data', path.join(dir, 'sdk'), '--out', out,
+    '--skip-minimal-build', '--skip-teensy-build', ...args],
+    { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo', GIT_DIR: path.join(dir, 'not-a-repo') } });
+  try {
+    assert.match(attempt('--tag', 'a b').stderr, /may only use letters, digits/);
+    assert.match(attempt('--tag', 'with_underscore').stderr, /may only use letters, digits/);
+    assert.match(attempt('--tag', '').stderr, /--tag is empty/);
+    const limit = 40 - `TeensyROM+ v${trVersion}`.length - 1;
+    assert.match(attempt('--tag', 'a'.repeat(limit + 1)).stderr,
+      new RegExp(`is ${limit + 1} characters; ${limit} is the most that fits`));
+
+    // A release hex in the way is not this build's; the tagged one is.
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}_full.hex`), '');
+    assert.doesNotMatch(attempt('--tag', 'pr65').stderr, /already exists/);
+    fs.writeFileSync(path.join(out, `TeensyROM+_${trVersion}-pr65_full.hex`), '');
+    assert.match(attempt('--tag', 'pr65').stderr, /-pr65_full\.hex already exists/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -53,3 +53,14 @@ test('the + in the version is what tells the cartridges apart', () => {
   assert.equal(boardKind('TeensyROM v0.8.0.11'), 'tr');
   assert.equal(boardKind(null), null);
 });
+
+// A special build's version string carries its tag and a dirty-tree '*' (build-firmware.mjs
+// --tag). All of it is the version, so the flasher names the build a board runs.
+const TAGGED = '\n  FW: TeensyROM+ v0.9-pr65*(minimal)\r\n      Nov  2 2026, 16:33:57\r\n  Teensy: 816MHz  55.0C  UID: 19277260\r\n';
+
+test('a tagged version string is kept whole, dirty marker included', () => {
+  const { raw, ...info } = parseBanner(TAGGED);
+  assert.deepEqual(info, { version: 'TeensyROM+ v0.9-pr65*', built: 'Nov  2 2026, 16:33:57', uid: '19277260', minimal: true });
+  assert.equal(boardKind(info.version), 'tr-plus');
+  assert.equal(parseBanner('TeensyROM v0.9-geos128 ready!\n').version, 'TeensyROM v0.9-geos128');
+});

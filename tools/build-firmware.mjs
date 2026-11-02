@@ -41,13 +41,25 @@
 //   --host-code-kib 64|96  with --host-sketch only: how much ITCM the host's code may
 //            fill. The default, 64, is what the stock host is linked at. 96 lets a
 //            third-party host's code grow up to the module window at 0x18000.
+//   --tag <name>  a special build. The name goes on the version string in every image
+//            ("TeensyROM+ v0.9-pr65" on the C64 banner and in the serial version reply) and
+//            into the output names (TeensyROM+_0.9-pr65_full.hex). Letters, digits, '.'
+//            and '-', up to what keeps the version inside the C64's 40-column banner row
+//            (24 characters for v0.9 on a TR+; a refusal says the limit). A tag long enough
+//            to crowd out a page's word (" Settings" and the like) makes that page show the
+//            version alone, which the build notes. lib/build-tag.mjs holds the rules.
+//   A tree with uncommitted edits to the image sources needs no flag: its version string
+//   ends in '*', its output names in -dirty, and its build date is the build's own time
+//   rather than the commit's (see "Build date" below). A release build, from a clean tree
+//   with no --tag, is unchanged by any of this.
 //
 // --ccache routes compiles through ccache (which must be on PATH; not supported on Windows).
 // Two things that only matter with it on: the build root is a fixed run-ccache-<target>
 // directory, cleared each run, because the compiler's working directory and -I paths are
 // part of ccache's key (-g is on) and a fresh mkdtemp name would miss every time; and
 // pinning SOURCE_DATE_EPOCH to the commit (below) is what lets the __DATE__/__TIME__ files
-// hit at all, until the next commit.
+// hit at all, until the next commit (a dirty tree is stamped with its own time, so those
+// files miss until it is committed).
 //
 // The final combine step uses lib/legacy-hex-combine.mjs, a literal port of
 // HexCombineUtil/HexCombine.exe's algorithm (its source was recovered 2026-09-13). That
@@ -66,6 +78,8 @@ import { resolveArduinoCli, defaultArduinoDataDir, defaultArduinoUserDir } from 
 import { checkFlashHeadroom, formatFlashHeadroom } from './lib/flash-headroom.mjs';
 import { legacyCombineHex } from './lib/legacy-hex-combine.mjs';
 import { scanArgs } from './lib/cli-args.mjs';
+import { DIRTY_PATHSPEC, ROW_WIDTH, dirtyFromStatus, chooseEpoch, validateTag, bannerSuffix, fileSuffix,
+         suffixDefine, versionBase, pagesWithoutWord } from './lib/build-tag.mjs';
 import { definesMacro } from './lib/source-text.mjs';
 import { heavyLibcLinked } from './lib/heavy-libc.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
@@ -90,7 +104,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // HELLO and exited 0 for the same first-wins reason this scan was written to stop. That
 // file carries the reasoning; this one just says which arguments it takes.
 const { option, flag } = scanArgs(process.argv.slice(2), {
-  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch', '--host-code-kib'],
+  options: ['--target', '--out', '--arduino-data', '--arduino-user', '--host-sketch', '--host-code-kib', '--tag'],
   flags: [
     '--yes', '--force', '--keep-work', '--skip-teensy-build', '--skip-minimal-build',
     '--skip-combine', '--skip-extension-build', '--no-extensions', '--with-extensions', '--ccache',
@@ -102,6 +116,7 @@ if (!['tr', 'tr-plus'].includes(target)) {
   throw new Error('Use --target tr or --target tr-plus');
 }
 const fab04Features = target === 'tr-plus';
+const tag = option('--tag', null);
 const yes = flag('--yes');
 const force = flag('--force');
 const keepWork = flag('--keep-work');
@@ -229,21 +244,35 @@ function run(exe, argv, env) {
   return (result.stdout ?? '') + (result.stderr ?? '');
 }
 
-// --- Build date: GCC takes __DATE__/__TIME__ from SOURCE_DATE_EPOCH (formatted in UTC),
-// so the firmware's build date is the HEAD commit's time. Rebuilding a commit reproduces
-// its hex, and the date still says which commit it came from. Uncommitted edits don't
-// move it. A SOURCE_DATE_EPOCH already in the environment wins, per the
-// reproducible-builds convention; outside a git checkout it falls back to now. ---
-function sourceDateEpoch() {
-  if (process.env.SOURCE_DATE_EPOCH) return process.env.SOURCE_DATE_EPOCH;
-  const git = spawnSync('git', ['log', '-1', '--format=%ct'], { cwd: root, encoding: 'utf8', windowsHide: true });
-  const commitTime = git.status === 0 ? git.stdout.trim() : '';
-  if (/^\d+$/.test(commitTime)) return commitTime;
-  console.warn('WARNING: no git commit found; using the current time as the build date');
-  return String(Math.floor(Date.now() / 1000));
-}
-const SOURCE_DATE_EPOCH = sourceDateEpoch();
-console.log(`Build date (SOURCE_DATE_EPOCH): ${new Date(SOURCE_DATE_EPOCH * 1000).toISOString()}`);
+// --- Build date: GCC takes __DATE__/__TIME__ from SOURCE_DATE_EPOCH (formatted in UTC).
+// A clean tree is stamped with the HEAD commit's time: rebuilding a commit reproduces its
+// hex, and the date says which commit it came from. A tree with uncommitted edits to the
+// image sources (DIRTY_PATHSPEC in lib/build-tag.mjs says which paths count) is stamped
+// with its own time, and its version string ends in '*': the commit's date would name an
+// image this is not. A SOURCE_DATE_EPOCH already in the environment wins, per the
+// reproducible-builds convention; outside a git checkout the tree counts as clean and the
+// date is now, and a checkout git cannot read (any other git status failure) is marked
+// dirty, since it cannot be shown clean. ---
+const gitStatus = spawnSync('git', ['status', '--porcelain', '--untracked-files=no', ...DIRTY_PATHSPEC],
+  { cwd: root, encoding: 'utf8', windowsHide: true });
+const { dirty, files: dirtyFiles, problem: statusProblem } = dirtyFromStatus(gitStatus);
+if (statusProblem) console.warn(`WARNING: git status failed (${statusProblem}); the tree cannot be shown clean, so this build is marked dirty`);
+else if (dirty) console.log(`Uncommitted changes to the image sources; this build is marked dirty:\n  ${dirtyFiles.join('\n  ')}`);
+const gitLog = spawnSync('git', ['log', '-1', '--format=%ct'], { cwd: root, encoding: 'utf8', windowsHide: true });
+const { epoch: SOURCE_DATE_EPOCH, source: epochSource } = chooseEpoch({
+  envEpoch: process.env.SOURCE_DATE_EPOCH,
+  commitTime: gitLog.status === 0 ? gitLog.stdout.trim() : '',
+  dirty,
+  now: Math.floor(Date.now() / 1000),
+});
+if (epochSource === 'no git commit') console.warn('WARNING: no git commit found; using the current time as the build date');
+const epochWhy = {
+  environment: 'SOURCE_DATE_EPOCH from the environment',
+  commit: "the HEAD commit's time",
+  'dirty tree': 'now, since the tree has uncommitted edits',
+  'no git commit': 'now, since there is no git commit',
+}[epochSource];
+console.log(`Build date (SOURCE_DATE_EPOCH): ${new Date(SOURCE_DATE_EPOCH * 1000).toISOString()} -- ${epochWhy}`);
 
 // --- TRVersion, matching Get-TRVersion in Build-DualBoot.ps1 ---
 const commonDefsPath = path.join(root, 'Source/Teensy/MinimalBoot/Common/Common_Defs.h');
@@ -251,6 +280,18 @@ const trVersionMatch = read(commonDefsPath).match(/^\s*#define\s+TRVersion\s+"([
 if (!trVersionMatch) throw new Error(`TRVersion not found in ${commonDefsPath}`);
 const trVersion = trVersionMatch[1];
 console.log(`TRVersion: ${trVersion}`);
+
+// --- Special builds: --tag and the dirty marker ride on the version string (TRVersionSuffix
+// in Common_Defs.h), never on TRVersion itself, which names the release hex and the
+// browser's User-Agent. The C64 banner row is 40 columns, which caps the tag; a page's word
+// (" Settings", " Help", " Test") is left off its banner once the version alone fills the row. ---
+const trTag = tag === null ? null : validateTag(tag, { target, trVersion, dirty });
+const versionSuffix = bannerSuffix({ tag: trTag, dirty });
+const versionString = versionBase(target, trVersion) + versionSuffix;
+if (versionSuffix) console.log(`Version string: ${versionString}`);
+for (const page of pagesWithoutWord(versionString.length)) {
+  console.log(`Note: the ${page} banner shows this version without its page word (the row is ${ROW_WIDTH} columns)`);
+}
 
 // --- Fab04 guard, matching Test-Fab04FeaturesDefined / Disable-Fab04FeaturesDefine ---
 // Fab04FeatureCtl.h has a commented-out "#define Fab04_Features" that overrides the target
@@ -295,8 +336,10 @@ if (!fab04Features && fab04Active) {
 // name keeps it from overwriting, or being published as, the build that carries the loader.
 // The host package is named for the sketch directory it was built from -- VMBoot for the
 // stock one -- so `npm run build:example-host` cannot leave an LED blinker sitting where the
-// stock host goes, and two hosts built into the same directory stay two files.
-const outputStem = target === 'tr-plus' ? `TeensyROM+_${trVersion}` : `TeensyROM_${trVersion}`;
+// stock host goes, and two hosts built into the same directory stay two files. A tagged
+// or dirty build carries that in its name too (-<tag>, -dirty), so it neither overwrites
+// nor passes for the release image.
+const outputStem = `${target === 'tr-plus' ? 'TeensyROM+' : 'TeensyROM'}_${trVersion}${fileSuffix({ tag: trTag, dirty })}`;
 const finalOutput = hostOnly ? null : path.join(outDir,
   `${outputStem}${fab04Features && !withExtensions ? '_noext' : ''}_full.hex`);
 const hostOutput = withExtensions && !skipExtensionBuild
@@ -413,7 +456,8 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
   const props = run(cli, ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps, '--show-properties', inoPath], env);
   const defsMatch = props.match(/^build\.flags\.defs=(.*)$/m);
   if (!defsMatch) throw new Error('Could not retrieve build.flags.defs from --show-properties');
-  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '') + extraDefs + ' ' + TLS_OFF;
+  const defs = defsMatch[1].trim() + (fab04Features ? ' -DFab04_Features' : '') + extraDefs + ' ' + TLS_OFF +
+    (versionSuffix ? ' ' + suffixDefine(versionSuffix) : '');
 
   const compileArgs = ['compile', '--fqbn', fqbn, '--build-path', buildDir, ...compilerPathProps,
     '--build-property', `build.flags.defs=${defs}`];

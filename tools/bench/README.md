@@ -86,8 +86,10 @@ nowhere. The minimal image can carry the same stamp, so a board that fell back
 to it is a failed update however its banner reads.
 
 The stamp is `SOURCE_DATE_EPOCH`, which the build sets to the HEAD commit time
-unless the environment already holds one, so it identifies a commit and not a
-build: commit before building if you want two runs told apart.
+for a clean tree unless the environment already holds one, so it identifies a
+commit and not a build. A tree with uncommitted edits to the image sources is
+stamped with its own build time instead, and its version string ends in `*`,
+so two local iterations are told apart without a commit.
 
 Run the hello extension (`npm run build:hello` writes `build/extensions/`):
 

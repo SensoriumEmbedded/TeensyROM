@@ -19,9 +19,10 @@ Needs the main image running and a hex built for THIS cartridge (--target
 tr-plus for a TR+); the updater refuses a mismatched target string.
 
 The stamp comes from SOURCE_DATE_EPOCH, which the build sets to the HEAD
-commit time unless the environment already holds one, so it identifies a
-commit rather than a build: commit before building if you want it to tell two
-runs apart.
+commit time for a clean tree unless the environment already holds one, so it
+identifies a commit rather than a build. A tree with uncommitted edits to the
+image sources is stamped with its own build time, so two such runs are told
+apart as well.
 """
 import sys
 import time

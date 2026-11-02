@@ -211,6 +211,8 @@ Retrieves firmware version and build information from the TeensyROM.
 
 **Handler:** Device acknowledges the token, then returns firmware version, build date, and Teensy clock speed/temperature as a formatted string. Full FW (only) appends a fourth line with the detected machine info (C64/C128, NTSC/PAL, TOD Hz), and a fifth with the menu's boot state, `Boot: in progress` or `Boot: complete` (see [Knowing When the Menu Has Booted](#knowing-when-the-menu-has-booted)).
 
+A development build may carry more in the version than digits and dots: a build tag appends `-<tag>` (`FW: TeensyROM+ v0.9-pr65`), and a build from uncommitted sources ends the version with `*`. Read the version up to the first space or `(`, not as a number.
+
 ---
 
 ### Firmware Check
@@ -235,7 +237,7 @@ Verifies TeensyROM connectivity and responsiveness. Useful as a lightweight hear
 | Receive | `PingToken` — `0x6455` |
 | Send | `{strVersionNumber} ready!\n` (e.g., `"TeensyROM v0.7.2.8 ready!\n"`) |
 
-**Handler:** Device responds immediately with version string and ready status; no separate `AckToken` response.
+**Handler:** Device responds immediately with version string and ready status; no separate `AckToken` response. A development build's version may end in `-<tag>` and/or `*` (see [Version Info](#version-info)).
 
 ---
 

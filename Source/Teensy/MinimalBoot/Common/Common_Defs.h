@@ -39,11 +39,20 @@
 
 
 #define TRVersion              "0.9"    //*VERSION*
-#ifdef Fab04_Features
-   char strVersionNumber[] = "TeensyROM+ v" TRVersion; 
-#else
-   char strVersionNumber[] = "TeensyROM v" TRVersion;
+// Special builds: tools/build-firmware.mjs --tag <name> defines TRVersionSuffix as "-<name>",
+// and a build with uncommitted edits to the image sources adds "*". Arduino IDE builds have
+// none. Leave TRVersion to releases: it names the hex and the browser's User-Agent.
+#ifndef TRVersionSuffix
+   #define TRVersionSuffix ""
 #endif
+#ifdef Fab04_Features
+   char strVersionNumber[] = "TeensyROM+ v" TRVersion TRVersionSuffix;
+#else
+   char strVersionNumber[] = "TeensyROM v" TRVersion TRVersionSuffix;
+#endif
+// The C64 banner row (MakeBannerRow in IOH_TeensyROM.c) is 40 columns. A page's word is
+// left off it when the version fills them, but the version itself must fit.
+static_assert(sizeof(strVersionNumber) <= 41, "strVersionNumber must fit the 40-column C64 banner row");
 
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
