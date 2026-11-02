@@ -47,3 +47,7 @@ test('beside an REU, its registers answer and the rest of each 32 bytes reads $F
 test('with no RAM for the REU, nothing in IO2 answers, so software finds no REU there', { skip }, () => {
   assert.deepEqual(run(['init 0', 'banks 0', ...[0x00, 0x0a, BLOCK_ID].map(read)]), ['open', 'open', 'open']);
 });
+
+test('under the stock REU, the unused registers stay open bus', { skip }, () => {
+  assert.deepEqual(run(['init 0', `banks ${BANKS}`, 'stock 0', ...[0x0a, BLOCK_ID, 0x1f].map(read)]), ['3f', 'open', 'open']);
+});

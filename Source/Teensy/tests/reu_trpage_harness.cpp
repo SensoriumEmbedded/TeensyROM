@@ -2,6 +2,7 @@
 // reu_trpage_harness: the REU's IO2 page as IOH_REU_TRPage serves it, driven from stdin one command a line:
 //   init 0         the handler starts, with no RAM to give the REU
 //   banks N        the REU has N banks (0: none could be allocated)
+//   stock 0        the stock 512KB REU is the handler instead
 //   r OFFSET       an IO2 read, printing the byte driven or "open"
 #include <cstdint>
 #include <cstdio>
@@ -58,6 +59,9 @@ static void InitTRBlock() {}
 static void PollUSBMouse() {}
 static void PollTRBlock() {}
 static void TRPageIO(uint8_t, bool) {}
+#define Fab04_REU
+#include "../MinimalBoot/Common/Menu_Regs.h"
+uint8_t CurrentIOHandler = IOH_REU_TRPage;
 
 static int Driven;
 static void DataPortWriteWaitLog(uint8_t Data) { Driven = Data; }
@@ -74,6 +78,7 @@ int main()
    {
       if (!strcmp(Command, "init")) IOHndlr_REU_TRPage.InitHndlr();
       else if (!strcmp(Command, "banks")) NumREU_Banks = Value;
+      else if (!strcmp(Command, "stock")) CurrentIOHandler = IOH_REU;
       else if (!strcmp(Command, "r"))
       {
          Driven = -1;
