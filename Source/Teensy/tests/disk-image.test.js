@@ -93,3 +93,21 @@ test('a directory listing tells a small buffer apart from an image it cannot rea
   const results = { fits: 'dir=ok', small: 'dir=-12', unreadable: 'dir=-1', loop: 'dir=-2' };
   for (const [how, expected] of Object.entries(results)) assert.equal(runHarness('dir', how), expected, how);
 });
+
+test('the exact open takes only those sizes, and nothing between them', { skip }, () => {
+  const sizes = {
+    174848: 'd64 35',
+    175531: 'd64 35',
+    175532: 'none',
+    180000: 'none',
+    196608: 'd64 40',
+    197376: 'd64 40',
+    349696: 'd71 70',
+    351062: 'd71 70',
+    819200: 'd81 80',
+    819201: 'none',
+    822400: 'd81 80',
+    1000000: 'none',
+  };
+  for (const [size, expected] of Object.entries(sizes)) assert.equal(runHarness('exact', size), expected, `${size} bytes`);
+});

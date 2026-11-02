@@ -123,6 +123,8 @@ void d64_mem_init(d64_mem_t *m, uint8_t *data, size_t len);
 int  d64_open_mem(d64_t *d, d64_mem_t *m);          /* image size selects the format */
 int  d64_open(d64_t *d, d64_read_fn rd, void *ctx, uint8_t tracks);   /* tracks: 35/40 = d64, 70 = d71, 80 = d81 */
 int  d64_open_size(d64_t *d, d64_read_fn rd, void *ctx, size_t file_size);   /* format from the file size (error bytes allowed); -1 if too small */
+int  d64_open_exact(d64_t *d, d64_read_fn rd, void *ctx, size_t file_size);  /* as d64_open_size, but -1 unless the size is exactly
+                                                                                 one kind's, with or without error bytes */
 /* Error table: d64_errtab_offset = where it starts in a file of this size (-1: the file has none; after d64_open_size), d64_sectors =
  * the image's sector count (= the table's length). d64_open_mem sets errtab itself. d64_errcode: an error byte -> DOS code, 0 = no
  * read error (1 = OK; 2..6, 9, 11, 15 = 20..24, 27, 29, 74; the write errors 25 / 26 / 28 and unknown bytes read fine). */
