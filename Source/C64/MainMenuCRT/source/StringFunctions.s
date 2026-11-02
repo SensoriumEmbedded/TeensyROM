@@ -82,20 +82,14 @@ smcPrintStringAddr
 ++ rts   
 
 PrintBanner:
+   ;row 0: the TR composes the whole 40-column line (rsstBannerMenu), centered
    lda #<MsgBanner
    ldy #>MsgBanner
-   jsr PrintString 
-   lda #rsstVersionNum
+   jsr PrintString
+   lda #rsstBannerMenu
    jsr PrintSerialString
-   sec
-   jsr SetCursor ;read column into y reg
-   lda #ChrSpace ;spaces to the end of the line
--  jsr SendChar  
-   iny
-   cpy #40
-   bne -
    lda #ChrRvsOff
-   jsr SendChar   
+   jsr SendChar
    rts
    
 DisplayTime:

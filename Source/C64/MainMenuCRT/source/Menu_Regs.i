@@ -165,13 +165,17 @@
    rsstItemName = 0 ; Name of selected item
    rsstNextIOHndlrName = 1 ; IOHandler Name selected in rwRegNextIOHndlr
    rsstSerialStringBuf = 2 ; build SerialStringBuf prior to selecting
-   rsstVersionNum = 3 ; version string for main banner
+   rsstVersionNum = 3 ; bare version string; no bundled program reads it since the banners moved to rsstBanner* below, kept for C64 programs outside this repo
    rsstShortDirPath = 4 ; printable current path
    rsstSIDInfo = 5 ; Info on last SID loaded
    rsstMachineInfo = 6 ; Info on current machine vid/TOD clk (set when SID loaded)
    rsstSIDSpeed = 7 ; Current SID playback speed
    rsstSIDSpeedCtlType = 8 ; Current SID Speed Control Type (Log/Lin)
    rsstItemExt = 9 ; Extension of selected item, the type shown when a /VMS package claims it
+   rsstBannerMenu = 10 ; row 0 of the main menu: version string centered in 40 columns (MakeBannerRow)
+   rsstBannerSettings = 11 ; row 0 of Settings: version + " Settings", centered; the word is left off if it won't fit
+   rsstBannerHelp = 12 ; row 0 of Help: version + " Help", the same way
+   rsstBannerTest = 13 ; row 0 of the port tests: version + " Test", the same way
 
 
 ;enum RegVidTODClksMasks

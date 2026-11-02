@@ -636,6 +636,24 @@ void UpdateItemTypeReg()
    IO1[rRegItemTypePlusIOH] = Data;
 }
 
+//Row 0 of the built-in C64 screens (rsstBanner*): strVersionNumber and the page's word centered in
+//   the 40 columns and padded to all 40, so the C64 prints the row as it comes and pads nothing
+//   itself.  A special build's tag can fill the row on its own; then the word is left off rather
+//   than cut.  The version itself fits the row (static_assert in Common_Defs.h), so with the
+//   word test the copies stay inside the 40 columns.  Runs in the IO1 write handler like the
+//   other rsst* composers; memset/memcpy are core routines in ITCM, so nothing here reads flash.
+static void MakeBannerRow(const char *PageWord)
+{
+   const uint8_t Width = 40;
+   uint8_t VerLen = strlen(strVersionNumber), WordLen = strlen(PageWord);
+   if (VerLen + WordLen > Width) WordLen = 0;
+   uint8_t Lead = (Width - VerLen - WordLen) / 2;
+   memset(SerialStringBuf, ' ', Width);
+   memcpy(SerialStringBuf + Lead, strVersionNumber, VerLen);
+   memcpy(SerialStringBuf + Lead + VerLen, PageWord, WordLen);
+   SerialStringBuf[Width] = 0;
+}
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
 {
    uint8_t Data;
@@ -827,6 +845,22 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                   break;
                case rsstVersionNum:
                   ptrSerialString = strVersionNumber;
+                  break;
+               case rsstBannerMenu:
+                  MakeBannerRow("");
+                  ptrSerialString = SerialStringBuf;
+                  break;
+               case rsstBannerSettings:
+                  MakeBannerRow(" Settings");
+                  ptrSerialString = SerialStringBuf;
+                  break;
+               case rsstBannerHelp:
+                  MakeBannerRow(" Help");
+                  ptrSerialString = SerialStringBuf;
+                  break;
+               case rsstBannerTest:
+                  MakeBannerRow(" Test");
+                  ptrSerialString = SerialStringBuf;
                   break;
                case rsstSIDInfo:
                   ptrSerialString = StrSIDInfo;

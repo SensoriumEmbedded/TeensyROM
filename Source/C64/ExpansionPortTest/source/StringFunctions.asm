@@ -83,23 +83,14 @@ smcPrintStringAddr
 ++ rts   
 
 PrintBanner:
+   ;row 0: the TR composes the whole 40-column line (rsstBannerTest), centered
    lda #<MsgBanner1
    ldy #>MsgBanner1
-   jsr PrintString 
-   lda #rsstVersionNum
+   jsr PrintString
+   lda #rsstBannerTest
    jsr PrintSerialString
-   lda #<MsgBanner2
-   ldy #>MsgBanner2
-   jsr PrintString 
-   sec
-   jsr SetCursor ;read column into y reg
-   lda #ChrSpace ;spaces to the end of the line
--  jsr SendChar  
-   iny
-   cpy #40
-   bne -
    lda #ChrRvsOff
-   jsr SendChar   
+   jsr SendChar
    rts
    
 DisplayTime:
@@ -307,9 +298,7 @@ pr jsr SendChar
 ;
 
 MsgBanner1:  ;set color before clearing for char poke default  
-   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, EscC,EscArgSpaces+9, 0
-MsgBanner2:  
-   !tx " Test", 0
+   !tx EscC,EscNameColor, ChrClear, EscC,EscTRBannerColor, ChrToLower, ChrRvsOn, 0
 ;MsgAnyKey:
 ;   !tx ChrReturn, EscC,EscOptionColor, "Press any key to return"
 ;   !tx 0
