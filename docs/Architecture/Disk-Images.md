@@ -28,7 +28,17 @@ next row as that row's kind:
 | 349696, or 351062 with error bytes | D71 |
 | 819200, or 822400 with error bytes | D81 |
 
+`d64_open_exact()` takes only the sizes in the table and refuses anything between them. The TR block device mounts
+through it, so a truncated or padded file is no image rather than one read past its end.
+
+## Who uses it
+
+| Caller | What it takes from the engine |
+|---|---|
+| TR block device (`BlockDevice/TRBlockImage.h`) | `d64_open_exact`, the geometry, `d64_block_read`/`d64_block_write`; `INFO` reports `fmt + 1` and `d64_sectors()`. It leaves the error table unread. |
+
 ## Tests
 
 `Source/Teensy/tests/disk-image.test.js` builds the engine with the harness flags as C and as C++, saves and reads a
-file on a blank image of each kind, and checks the size table above.
+file on a blank image of each kind, and checks the size table above. `trblock.test.js` runs the block device on each
+kind, a 40-track D64 and images with error bytes included.

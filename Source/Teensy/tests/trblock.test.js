@@ -33,6 +33,9 @@ const FORMATS = {
   d64: { kind: 1, tracks: 35, sectors: zoneSectors },
   d71: { kind: 2, tracks: 70, sectors: zoneSectors },
   d81: { kind: 3, tracks: 80, sectors: () => 40 },
+  'd64 with 40 tracks': { kind: 1, tracks: 40, sectors: (track) => (track <= 35 ? zoneSectors(track) : 17) },
+  'd64 with error bytes': { kind: 1, tracks: 35, sectors: zoneSectors, errorBytes: true },
+  'd81 with error bytes': { kind: 3, tracks: 80, sectors: () => 40, errorBytes: true },
 };
 
 const blockNumber = (format, track, sector) => {
@@ -47,8 +50,11 @@ const totalBlocks = (format) => blockNumber(format, format.tracks + 1, 0);
 const sectorBytes = (number) => Buffer.from(Array.from({ length: SECTOR }, (_, i) =>
   i === 0 ? number & 0xff : i === 1 ? (number >> 8) & 0xff : (i + number) & 0xff));
 
+// An error table follows the data when the format has one: one byte a sector, 1 meaning no error
 function makeImage(format) {
-  return Buffer.concat(Array.from({ length: totalBlocks(format) }, (_, n) => sectorBytes(n)));
+  const blocks = Array.from({ length: totalBlocks(format) }, (_, n) => sectorBytes(n));
+  if (format.errorBytes) blocks.push(Buffer.alloc(totalBlocks(format), 1));
+  return Buffer.concat(blocks);
 }
 
 const hex = (n) => n.toString(16);
@@ -173,10 +179,14 @@ test('an image that is no known size mounts as no image rather than being guesse
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trblock-odd-'));
   const image = path.join(dir, 'in.img'), out = path.join(dir, 'out.img');
   try {
-    fs.writeFileSync(image, makeImage(FORMATS.d64).subarray(0, SECTOR * 100));
-    for (const cmd of [READ, WRITE, FLUSH, INFO]) {
-      const ran = spawnSync(harness(), [image, out], { input: command(cmd, { addr0: 1 }) + 'svc\n' + read(STATUS), encoding: 'utf8' });
-      assert.equal(ran.stdout.trim().split('\n').at(-1), hex(NO_IMAGE), `cmd ${cmd}`);
+    const d64 = makeImage(FORMATS.d64), d81 = makeImage(FORMATS['d81 with error bytes']);
+    for (const odd of [d64.subarray(0, SECTOR * 100), d64.subarray(0, d64.length + 1 - SECTOR), Buffer.concat([d64, Buffer.alloc(1)]),
+                       Buffer.concat([d81, Buffer.alloc(1)])]) {
+      fs.writeFileSync(image, odd);
+      for (const cmd of [READ, WRITE, FLUSH, INFO]) {
+        const ran = spawnSync(harness(), [image, out], { input: command(cmd, { addr0: 1 }) + 'svc\n' + read(STATUS), encoding: 'utf8' });
+        assert.equal(ran.stdout.trim().split('\n').at(-1), hex(NO_IMAGE), `${odd.length} bytes, cmd ${cmd}`);
+      }
     }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
