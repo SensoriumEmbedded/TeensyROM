@@ -41,7 +41,8 @@ enum {
     D64_E_TYPE = -9,     /* file type mismatch         -> DOS 64 */
     D64_E_TOOBIG = -10,  /* REL file at its size limit -> DOS 52 */
     D64_E_BADSEC = -11,  /* the image's error table marks the sector bad: DOS code in d64_t.bad (20-24, 27, 29, 74) */
-    D64_E_BUF = -12      /* the caller's buffer is too small */
+    D64_E_BUF = -12,     /* the caller's buffer is too small */
+    D64_E_BAM = -13      /* the BAM shows a sector free that the directory holds */
 };
 
 enum { D64_FMT_D64 = 0, D64_FMT_D71 = 1, D64_FMT_D81 = 2 };
@@ -205,6 +206,19 @@ int  d64_block_write(d64_t *d, uint8_t t, uint8_t s, const uint8_t *buf);   /* D
  * D64_E_IO = illegal. */
 int  d64_block_alloc(d64_t *d, uint8_t t, uint8_t s, uint8_t *nt, uint8_t *ns);
 int  d64_block_free(d64_t *d, uint8_t t, uint8_t s);                          /* mark t/s free in the BAM */
+/* The next data sector as a file write takes it: after *t, *s with the file interleave, or (*t == 0) the first in DOS order. */
+int  d64_alloc_next(d64_t *d, uint8_t *t, uint8_t *s);
+
+/* Checks before a write, so a refusal comes before anything changes:
+ *   d64_blocks_allocatable: data sectors the allocator can still hand out (per track the smaller of its BAM count and its
+ *     free bits), which is d64_blocks_free when the BAM agrees with itself
+ *   d64_dir_check: 0 when the header links to a chain of distinct directory sectors on the directory track;
+ *     D64_E_NOTFOUND when it links nowhere, D64_E_LOOP with *t, *s the first link that breaks the chain
+ *   d64_dir_room: 1 when the directory has a free slot, 0 when it can take one more sector, D64_E_FULL when it cannot,
+ *     D64_E_BAM with *t, *s a directory sector the BAM shows free (it could be handed out again); d64_dir_check's codes first */
+int  d64_blocks_allocatable(d64_t *d);
+int  d64_dir_check(d64_t *d, uint8_t *t, uint8_t *s);
+int  d64_dir_room(d64_t *d, uint8_t *t, uint8_t *s);
 
 /* Generic BASIC-listing builder (also used for host directory listings). */
 typedef struct { uint8_t *p; size_t cap, len, base; uint16_t link_at; int ok; } d64_bas_t;

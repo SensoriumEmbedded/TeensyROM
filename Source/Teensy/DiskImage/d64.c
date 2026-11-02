@@ -358,7 +358,7 @@ VD_COLD static int alloc_sector(d64_t *d, uint8_t *t, uint8_t *s, int interleave
                 int n = spt(d, tr);
                 for (int i = 0; i < n; i++) {
                     int sec = (hint + i) % n;
-                    if (dirmode && sec == 0) continue;
+                    if (dirmode && sec < dir_sector0(d)) continue;   /* the header, and on a D81 its BAM sectors */
                     if (bits[sec / 8] & (1 << (sec % 8))) {
                         bits[sec / 8] &= (uint8_t)~(1 << (sec % 8));
                         (*cnt)--;
@@ -391,6 +391,73 @@ VD_COLD static int free_sector(d64_t *d, uint8_t t, uint8_t s)
 VD_COLD int d64_block_read(d64_t *d, uint8_t t, uint8_t s, uint8_t *buf) { return rd(d, t, s, buf); }
 VD_COLD int d64_block_write(d64_t *d, uint8_t t, uint8_t s, const uint8_t *buf) { return wr(d, t, s, buf); }
 VD_COLD int d64_block_free(d64_t *d, uint8_t t, uint8_t s) { return d->write && !d->ro ? free_sector(d, t, s) : D64_E_RO; }
+
+VD_COLD int d64_alloc_next(d64_t *d, uint8_t *t, uint8_t *s)
+{
+    if (!d->write || d->ro) return D64_E_RO;
+    return alloc_sector(d, t, s, 10, 0);
+}
+
+VD_COLD static int popcount_track(const d64_t *d, uint8_t t, const uint8_t *bits)
+{
+    int n = 0;
+    for (int k = 0; k < spt(d, t); k++) n += (bits[k / 8] >> (k % 8)) & 1;
+    return n;
+}
+
+VD_COLD int d64_blocks_allocatable(d64_t *d)
+{
+    uint8_t bufA[D64_SECTOR], bufB[D64_SECTOR], *cnt, *bits;
+    bamloc_t L;
+    int n = 0;
+    for (uint8_t t = 1; t <= bam_tracks(d); t++) {
+        if (bam_reserved(d, t)) continue;
+        int r = bam_load(d, t, &L, bufA, bufB, &cnt, &bits);
+        if (r) return r;
+        int f = popcount_track(d, t, bits);
+        n += *cnt < f ? *cnt : f;          /* alloc_sector needs both a count above 0 and a free bit */
+    }
+    return n;
+}
+
+VD_COLD int d64_dir_check(d64_t *d, uint8_t *t, uint8_t *s)
+{
+    uint8_t b[D64_SECTOR], seen[D64_SECTOR / 8], dt = dir_track(d);
+    int r = rd(d, dt, 0, b);
+    if (r) return r;
+    memset(seen, 0, sizeof seen);
+    *t = b[0]; *s = b[1];
+    if (!*t) return D64_E_NOTFOUND;
+    while (*t) {
+        if (*t != dt || *s < dir_sector0(d) || *s >= spt(d, dt) || (seen[*s / 8] >> (*s % 8)) & 1) return D64_E_LOOP;
+        seen[*s / 8] |= (uint8_t)(1 << (*s % 8));
+        if ((r = rd(d, *t, *s, b))) return r;
+        *t = b[0]; *s = b[1];
+    }
+    return 0;
+}
+
+VD_COLD int d64_dir_room(d64_t *d, uint8_t *t, uint8_t *s)
+{
+    uint8_t b[D64_SECTOR], bufA[D64_SECTOR], bufB[D64_SECTOR], *cnt, *bits, dt = dir_track(d);
+    bamloc_t L;
+    int r = d64_dir_check(d, t, s);
+    if (r) return r;
+    if ((r = rd(d, dt, 0, b))) return r;
+    for (*t = b[0], *s = b[1]; *t; *t = b[0], *s = b[1]) {
+        if ((r = rd(d, *t, *s, b))) return r;
+        for (int i = 0; i < 8; i++) if (b[i * 32 + 2] == 0) return 1;
+    }
+    if ((r = bam_load(d, dt, &L, bufA, bufB, &cnt, &bits))) return r;
+    if ((r = rd(d, dt, 0, b))) return r;
+    for (*t = b[0], *s = b[1]; *t; *t = b[0], *s = b[1]) {      /* a sector growing the directory must not be one it holds */
+        if (bits[*s / 8] & (1 << (*s % 8))) return D64_E_BAM;
+        if ((r = rd(d, *t, *s, b))) return r;
+    }
+    if (*cnt > 0)
+        for (int k = dir_sector0(d); k < spt(d, dt); k++) if (bits[k / 8] & (1 << (k % 8))) return 0;
+    return D64_E_FULL;
+}
 
 VD_COLD int d64_block_alloc(d64_t *d, uint8_t t, uint8_t s, uint8_t *nt, uint8_t *ns)
 {
