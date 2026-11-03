@@ -17,6 +17,8 @@
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "DiskImage/MenuDisk.h"
+
 enum enDxxFileNameBytes
 {
    DxxFNB_NameLength = 16,
@@ -36,25 +38,25 @@ enum enDxxFileTypes
    DxxFT_REL = 4, 
 };
 
-FLASHMEM uint32_t D64Offset(uint8_t Track, uint8_t Sector)
+// An image file open for the shared disk image engine (DiskImage/MenuDisk.h)
+struct DxxImage
 {
-   if (Track<18) return (        ((Track- 1)*21+Sector)*256);
-   if (Track<25) return (0x16500+((Track-18)*19+Sector)*256);
-   if (Track<31) return (0x1ea00+((Track-25)*18+Sector)*256);
-                 return (0x25600+((Track-31)*17+Sector)*256);
+   File *Image;
+   d64_t Disk;
+};
+
+FLASHMEM static int DxxSectorRead(void *Context, uint8_t Track, uint8_t Sector, uint8_t *Block)
+{
+   struct DxxImage *Dxx = (struct DxxImage *)Context;
+   return Dxx->Image->seek(d64_sector_offset(&Dxx->Disk, Track, Sector)) && Dxx->Image->read(Block, D64_SECTOR) == D64_SECTOR ? 0 : -1;
 }
 
-FLASHMEM uint32_t DxxOffset(uint8_t DiskType, uint8_t Track, uint8_t Sector)
+FLASHMEM static bool DxxOpen(struct DxxImage *Dxx, File *Image, uint8_t DiskType)
 {
-   if (DiskType == rtD64) return D64Offset(Track, Sector);
+   enum MenuDiskKind Kind = DiskType == rtD71 ? MenuDiskD71 : DiskType == rtD81 ? MenuDiskD81 : MenuDiskD64;
 
-   if (DiskType == rtD71)  
-   {
-      if (Track>35) return (0x2AB00 + D64Offset(Track-35, Sector)); //side 1
-      else return D64Offset(Track, Sector);   //side 0
-   }
-   
-   return (((Track- 1)*40+Sector)*256);  // Defaulte to (DiskType == rtD81) 
+   Dxx->Image = Image;
+   return MenuDiskOpen(&Dxx->Disk, Kind, Image->size(), DxxSectorRead, Dxx);
 }
 
 FLASHMEM uint8_t ItemTypeFromDxxFileType(uint8_t FileType)
@@ -86,13 +88,11 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
    AddDirEntry(UpDirString);
    
    File myFile = sourceFS->open(DriveDirPath, FILE_READ); //path includes d64/71/81 file
+   struct DxxImage Dxx;
    if (!myFile) return;
    
-   uint32_t FileSize = myFile.size(); 
-   Printf_dbg("Loading dir from %s (%lu bytes) type: %d\n", DriveDirPath, FileSize, DiskType);
-   if((DiskType == rtD64 && (FileSize < 171520 || FileSize > 197376)) ||  // Realm.d64 = 171520
-      (DiskType == rtD71 && (FileSize < 349696 || FileSize > 351062)) ||
-      (DiskType == rtD81 && (FileSize < 819200 || FileSize > 822400)) ) 
+   Printf_dbg("Loading dir from %s (%lu bytes) type: %d\n", DriveDirPath, (uint32_t)myFile.size(), DiskType);
+   if (!DxxOpen(&Dxx, &myFile, DiskType))
    {
       //Create dummy file/name to display err message
       DriveDirMenu[1].ItemType = rtUnknown;
@@ -118,8 +118,9 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
    uint8_t DirSectorsRead = 0;
    while(Track != 0 && DirSectorsRead++ < MaxDxxDirSectors && NumDrvDirMenuItems < MaxMenuItems)
    {
-      uint32_t CurTSOffset = DxxOffset(DiskType, Track, Sector);
-      Printf_dbg("Track:%d  Sector:%d = DxxOffset:$%x\n", Track, Sector, CurTSOffset);
+      long CurTSOffset = d64_sector_offset(&Dxx.Disk, Track, Sector);
+      Printf_dbg("Track:%d  Sector:%d = DxxOffset:$%lx\n", Track, Sector, CurTSOffset);
+      if (CurTSOffset < 0) break; //a link off the image
 
       do
       {
@@ -189,39 +190,20 @@ FLASHMEM bool LoadDxxFile(StructMenuItem* MyMenuItem, FS *sourceFS)
       return false;
    }
    
-   uint8_t Track    = MyMenuItem->Name[DxxFNB_Track];
-   uint8_t Sector   = MyMenuItem->Name[DxxFNB_Sector];
-   uint8_t DiskType = MyMenuItem->Name[DxxFNB_DiskType];
-   MyMenuItem->Size = 0;
+   struct DxxImage Dxx;
+   int32_t Length = DxxOpen(&Dxx, &myFile, MyMenuItem->Name[DxxFNB_DiskType])
+                  ? MenuDiskReadFile(&Dxx.Disk, MyMenuItem->Name[DxxFNB_Track], MyMenuItem->Name[DxxFNB_Sector], RAM_Image, RAM_ImageSize)
+                  : MENUDISK_BROKEN;
 
-   //  Load the whole thing into the RAM1 buffer
-   while(Track != 0)
+   if (Length < 0)
    {
-      uint32_t CurTSOffset = DxxOffset(DiskType, Track, Sector);
-      Printf_dbg("Track:%d  Sector:%d = D64Offset:$%06x\n", Track, Sector, CurTSOffset); 
-      
-      if (MyMenuItem->Size + 254 > RAM_ImageSize)
-      {
-         SendMsgPrintfln("File too large");
-         myFile.close();
-         return false;
-      }
-      myFile.seek(CurTSOffset);
-      Track  = myFile.read();  //0x00
-      Sector  = myFile.read(); //0x01
-
-      uint16_t BytesToCopy = 254; //normal sector: full 254 data bytes used
-      if (Track == 0)
-      { //last sector: Sector byte instead gives the offset of the last used byte
-        //(counting the 2 link bytes), so valid data bytes = Sector-1
-         BytesToCopy = (Sector >= 1) ? (Sector - 1) : 0;
-         if (BytesToCopy > 254) BytesToCopy = 254; //safety clamp for corrupt images
-      }
-
-      myFile.read(RAM_Image+MyMenuItem->Size, BytesToCopy); //read in only the valid bytes
-      MyMenuItem->Size += BytesToCopy;
+      if (Length == MENUDISK_TOO_BIG) SendMsgPrintfln(PSTR("File too large"));
+      else SendMsgPrintfln(PSTR("File could not be read"));
+      myFile.close();
+      return false;
    }
-   
+   MyMenuItem->Size = Length;
+
    SendMsgPrintfln("Done");
    myFile.close();
    Printf_dbg("Size:$%04x\n", MyMenuItem->Size); 
