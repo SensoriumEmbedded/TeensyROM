@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 // node tools/geos/geos128boot.mjs [OUT.h]: assembles the GEOS 128 boot ROM (geos128boot.asm) and emits it for the
-// firmware, by default to Source/Teensy/GEOS/Geos128Boot.h. Needs ACME (found as the C64 build finds it).
+// firmware, by default to Source/Teensy/GEOS/Geos128Boot.h, with where in ROML the block device's page goes. Needs
+// ACME (found as the C64 build finds it).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,12 +18,17 @@ const ROML = 0x8000;
 const ROMH = 0xc000;
 const CHIP_MASK = 0x1fff;
 const BYTES_PER_LINE = 16;
+const WORDS_PER_LINE = 8;
+// the block device's page beside GeoRAM, as the source assembles it, and one it can move to
+const PAGE = 0xdf;
+const OTHER_PAGE = 0xde;
 
-function assemble() {
+function assemble(page = PAGE) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'geos128boot-'));
   try {
     const out = path.join(dir, 'rom.bin'), labels = path.join(dir, 'rom.lbl');
-    const r = spawnSync(resolveAcme(path.join(ROOT, 'tools/.cache')), ['-f', 'plain', '-o', out, '-l', labels, SOURCE], { encoding: 'utf8' });
+    const args = [`-DBLOCK_PAGE=${page}`, '-f', 'plain', '-o', out, '-l', labels, SOURCE];
+    const r = spawnSync(resolveAcme(path.join(ROOT, 'tools/.cache')), args, { encoding: 'utf8' });
     if (r.status !== 0 || r.stderr) throw new Error(`acme: ${r.stdout}${r.stderr}`);
     const found = Object.fromEntries([...fs.readFileSync(labels, 'utf8').matchAll(/^\s*(\w+)\s*=\s*\$([0-9a-f]+)/gm)]
       .map((m) => [m[1], parseInt(m[2], 16)]));
@@ -42,6 +48,24 @@ function cArray(name, bytes) {
 
 const hex4 = (n) => `0x${n.toString(16).padStart(4, '0')}`;
 
+function cWords(name, words) {
+  const rows = [];
+  for (let i = 0; i < words.length; i += WORDS_PER_LINE) rows.push('   ' + words.slice(i, i + WORDS_PER_LINE).map(hex4).join(', '));
+  return `static const uint16_t ${name}[${words.length}] PROGMEM = {\n${rows.join(',\n')}\n};\n`;
+}
+
+// The ROML offsets that hold the block device's page: every byte that moves with it, and moves by exactly that
+function pageOffsets(code) {
+  const moved = assemble(OTHER_PAGE).rom.subarray(0, code.length);
+  const offsets = [];
+  code.forEach((byte, i) => {
+    if (byte === moved[i]) return;
+    if (byte !== PAGE || moved[i] !== OTHER_PAGE) throw new Error(`ROML byte ${hex4(i)} changes with the page but is not it`);
+    offsets.push(i);
+  });
+  return offsets;
+}
+
 export function header() {
   const { rom, labels } = assemble();
   const code = rom.subarray(0, labels.loaderEnd - ROML);
@@ -59,7 +83,8 @@ export function header() {
     + `#define GEOS128_BOOT_PARAMS    ${hex4(labels.loaderRom - ROML)}   // load address, page count, entry: words in ROML\n`
     + `#define GEOS128_BOOT_VECTORS   ${hex4((labels.return - ROMH) & CHIP_MASK)}   // in ROMH\n`
     + cArray('Geos128BootRoml', code)
-    + cArray('Geos128BootVectors', vectors);
+    + cArray('Geos128BootVectors', vectors)
+    + cWords('Geos128BootPageAt', pageOffsets(code));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

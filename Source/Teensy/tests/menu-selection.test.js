@@ -32,3 +32,15 @@ test('GEOS 128, listed on every machine, starts only once the menu has reported 
   assert.match(functionBody(source, 'LaunchGeos'),
     /^\{[^{}]*?\bif\s*\(\s*Launcher->Machine\s*==\s*GeosC128\s*&&\s*!\s*HostIsC128\s*\(\s*\)\s*\)\s*\{[^}]*\breturn\s+false\s*;/);
 });
+
+test('GEOS starts under the handler the launch pointed its boot ROM at, not the item\'s own GeoRAM', () => {
+  // A GEOS 128 boot ROM pointed at the page beside the REU finds no block device under GeoRAM
+  const launcher = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'GeosLauncher.ino'), 'utf8'));
+  assert.match(functionBody(launcher, 'GeosStart'),
+    /\bGeosIOHandler\s*\(\s*\)\s*==\s*IOH_GeoRAM\s*\?\s*GEOS_REGS_BESIDE_GEORAM\s*:\s*GEOS_REGS_BESIDE_REU\b/);
+  const handlers = blankComments(fs.readFileSync(path.join(FIRMWARE_ROOT, 'IOHandlers.ino'), 'utf8'));
+  const select = functionBody(handlers, 'IOHandlerSelectInit');
+  const geos = select.search(/\bItemType\s*==\s*rtGEOS\s*\)\s*IOHandlerInit\s*\(\s*GeosIOHandler\s*\(\s*\)\s*\)/);
+  assert.notEqual(geos, -1, 'a GEOS item does not take its handler from GeosIOHandler');
+  assert.ok(geos < select.indexOf('IOHndlrAssoc'), 'the item\'s own handler is chosen before GeosIOHandler is asked');
+});

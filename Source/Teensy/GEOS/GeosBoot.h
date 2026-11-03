@@ -15,12 +15,18 @@
 #define GEOS_AUTO_EXEC       14
 #define GEOS_SYSTEM_FILE     4
 #define GEOS_CONFIG_NAME     "CONFIG"
+#define GEOS_VLIR            1
+#define GEOS_PROBE_RECORD    0
+#define GEOS_DRIVER_RECORD   4
 #define GEOS_BASIC_START     0x0801
 #define GEOS_MEMORY_END      0x10000
 #define GEOS_MAX_FILE_BLOCKS 3200
 #define GEOS_DEVICE_8        8
 #define GEOS128_SHARED_RAM_END 0x2000   // the C128 boot ROM's loader runs in the RAM below, which both banks share
 #define GEOS128_IO_START       0xd000   // and writes bank 1 with I/O mapped in from here up
+// The block device's page: beside GeoRAM, or beside the REU, whose registers repeat across $DF00-$DFFF
+#define GEOS_REGS_BESIDE_GEORAM 0xdf
+#define GEOS_REGS_BESIDE_REU    0xde
 
 enum GeosDriverVector { VecInitForIO, VecDoneWithIO, VecExitTurbo, VecPurgeTurbo, VecEnterTurbo, VecChangeDiskDevice,
                         VecNewDisk, VecReadBlock, VecWriteBlock, VecVerWriteBlock, VecCount = 10 };
@@ -50,7 +56,7 @@ static bool GeosInDriverArea(uint16_t Address) { return Address >= GEOS_DRIVER_A
 
 // Whether a stock disk driver's tables start here: the vectors and the jump slots all point into the driver, and
 // the type byte names a 1541, 1571 or 1581
-static bool GeosIsDriverAt(const uint8_t *At)
+FLASHMEM static bool GeosIsDriverAt(const uint8_t *At)
 {
    uint8_t Type = At[GEOS_TYPE_BYTE];
 
@@ -79,7 +85,7 @@ static int32_t GeosFindDriver(const uint8_t *Data, uint32_t Size)
 // The TR's driver goes over the stock driver's code from InitForIO up to ReadBlock, provided no vector or jump slot
 // it leaves alone points there, and every vector it implements is pointed at its own routines. Replaced routines
 // outside that run stay where they are, unused: GEOS 128 keeps NewDisk after ReadBlock.
-static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *With)
+FLASHMEM static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *With)
 {
    uint16_t Start = GeosWord(Driver + 2 * VecInitForIO), End = GeosWord(Driver + 2 * VecReadBlock);
    uint8_t *Code = Driver + (Start - GEOS_DRIVER_AREA);
@@ -109,6 +115,71 @@ static bool GeosReplaceTransport(uint8_t *Driver, const struct GeosDiskDriver *W
    return true;
 }
 
+// CONFIGURE's drive-type probe, which asks each IEC device what drive it is
+static const uint8_t GeosStockProbe[] PROGMEM = { 0xa9, 0xe5, 0x85, 0x03, 0xa9, 0x80, 0x85, 0x02, 0x20 };
+// What the TR puts over it: drive A, at device 8, is a 1581, and no other drive is there
+static const uint8_t GeosTRProbe[] PROGMEM = { 0xa9, 0x00, 0xae, 0x89, 0x84, 0xe0, 0x08, 0xd0, 0x02, 0xa9, 0x03, 0x60 };
+
+// Finds Pattern once in Body; NULL when it is absent or ambiguous
+FLASHMEM static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
+{
+   uint8_t *Found = NULL;
+
+   for (uint32_t i = 0; i + Size <= Length; i++)
+   {
+      if (memcmp(Body + i, Pattern, Size)) continue;
+      if (Found) return NULL;
+      Found = Body + i;
+   }
+   return Found;
+}
+
+FLASHMEM static uint32_t GeosBytesInBlock(const uint8_t *Block) { return Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0); }
+
+// A file's bytes along its sector chain from At; What names it in a refusal
+FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, struct GeosTS At, const char *What, uint8_t *Out,
+                                   uint32_t Capacity, uint32_t *Length)
+{
+   uint8_t Block[GEOS_SECTOR_SIZE];
+
+   *Length = 0;
+   for (int Blocks = 0; At.Track; Blocks++)
+   {
+      uint32_t Used;
+      if (Blocks > GEOS_MAX_FILE_BLOCKS || At.Track > Disk->Format->Tracks)
+      {
+         snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s's chain is broken"), What);
+         return false;
+      }
+      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
+      Used = GeosBytesInBlock(Block);
+      if (*Length + Used > Capacity)
+      {
+         snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s is too large"), What);
+         return false;
+      }
+      memcpy(Out + *Length, Block + 2, Used);
+      *Length += Used;
+      At = (struct GeosTS){ Block[0], Block[1] };
+   }
+   return true;
+}
+
+// Writes Data back over the chain GeosReadChain read it from
+FLASHMEM static bool GeosRewriteChain(struct GeosDisk *Disk, struct GeosTS At, const uint8_t *Data)
+{
+   uint8_t Block[GEOS_SECTOR_SIZE];
+
+   for (uint32_t Done = 0; At.Track; Done += GEOS_DATA_PER_BLOCK)
+   {
+      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
+      memcpy(Block + 2, Data + Done, GeosBytesInBlock(Block));
+      if (!GeosWriteTS(Disk, At.Track, At.Sector, Block)) return false;
+      At = (struct GeosTS){ Block[0], Block[1] };
+   }
+   return true;
+}
+
 // A file's bytes, found by name in the directory and followed along its sector chain
 FLASHMEM static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, uint32_t Capacity, uint32_t *Length)
 {
@@ -130,20 +201,7 @@ FLASHMEM static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8
       }
    }
    if (!At.Track) return GeosFail(Disk, PSTR("the boot file is not on the disk"));
-
-   *Length = 0;
-   for (int Blocks = 0; At.Track; Blocks++)
-   {
-      uint32_t Used;
-      if (Blocks > GEOS_MAX_FILE_BLOCKS || At.Track > Disk->Format->Tracks) return GeosFail(Disk, PSTR("the boot file's chain is broken"));
-      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
-      Used = Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0);
-      if (*Length + Used > Capacity) return GeosFail(Disk, PSTR("the boot file is too large"));
-      memcpy(Out + *Length, Block + 2, Used);
-      *Length += Used;
-      At = (struct GeosTS){ Block[0], Block[1] };
-   }
-   return true;
+   return GeosReadChain(Disk, At, PSTR("the boot file"), Out, Capacity, Length);
 }
 
 static bool GeosNameContains(const uint8_t *Name, const char *Part)
@@ -157,9 +215,45 @@ static bool GeosNameContains(const uint8_t *Name, const char *Part)
    return false;
 }
 
-// Gives AUTO_EXEC configuration files the type of a file GEOS leaves alone, the way the stock disk's own
-// configuration probes the IEC bus and empties drive A; returns whether anything was retyped
-static inline bool GeosDisableConfigure(struct GeosDisk *Disk, bool *Changed)
+// Whether Slot is the target's stock CONFIGURE, set up for the TR now or before: its probe answers what the TR has
+// and the 1581 driver it installs for drive A is the TR's. The driver goes first, so a write cut short leaves the
+// stock probe, and next time the driver no longer looks stock and the file is put aside instead.
+FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Slot, uint8_t *Scratch, uint32_t Capacity,
+                                        bool *Ours, bool *Changed)
+{
+   const char *Name = Disk->Target->ConfigureName;
+   uint8_t Index[GEOS_SECTOR_SIZE], *Driver, *At;
+   struct GeosTS Probe, Driven;
+   uint32_t ProbeLength, DriverLength;
+   uint16_t ReadBlock;
+
+   *Ours = false;
+   if (Slot[SlotStructure] != GEOS_VLIR || !GeosSlotNamed(Slot, Name)) return true;
+   if (!GeosReadTS(Disk, Slot[SlotFirst], Slot[SlotFirst + 1], Index)) return false;
+   Probe = (struct GeosTS){ Index[2 + 2 * GEOS_PROBE_RECORD], Index[3 + 2 * GEOS_PROBE_RECORD] };
+   Driven = (struct GeosTS){ Index[2 + 2 * GEOS_DRIVER_RECORD], Index[3 + 2 * GEOS_DRIVER_RECORD] };
+   if (!Probe.Track || !Driven.Track) return true;
+   if (!GeosReadChain(Disk, Probe, Name, Scratch, Capacity, &ProbeLength)) return false;
+   if (GeosFindOnce(Scratch, ProbeLength, GeosTRProbe, sizeof GeosTRProbe)) return *Ours = true;
+   At = GeosFindOnce(Scratch, ProbeLength, GeosStockProbe, sizeof GeosStockProbe);
+   if (!At || At + sizeof GeosTRProbe > Scratch + ProbeLength) return true;
+
+   Driver = Scratch + ProbeLength;
+   if (!GeosReadChain(Disk, Driven, Name, Driver, Capacity - ProbeLength, &DriverLength)) return false;
+   if (DriverLength <= GEOS_TYPE_BYTE || !GeosIsDriverAt(Driver)) return true;
+   ReadBlock = GeosWord(Driver + 2 * VecReadBlock);
+   if (ReadBlock < GEOS_DRIVER_AREA || ReadBlock > GEOS_DRIVER_AREA + DriverLength) return true;
+   if (!GeosReplaceTransport(Driver, Disk->Target->DiskDriver)) return true;
+   memcpy(At, GeosTRProbe, sizeof GeosTRProbe);
+   if (!GeosRewriteChain(Disk, Driven, Driver) || !GeosRewriteChain(Disk, Probe, Scratch)) return false;
+   *Changed = true;
+   return *Ours = true;
+}
+
+// Keeps GEOS's configuration files from probing a drive that is not there: the stock CONFIGURE is set up to find
+// the TR and run, and every other one stops being auto-executed. Scratch holds CONFIGURE's records meanwhile.
+// Returns whether anything changed.
+static inline bool GeosPrepareConfigure(struct GeosDisk *Disk, uint8_t *Scratch, uint32_t Capacity, bool *Changed)
 {
    struct GeosTS Chain[GEOS_MAX_DIR_SECTORS];
    uint8_t Block[GEOS_SECTOR_SIZE];
@@ -174,10 +268,15 @@ static inline bool GeosDisableConfigure(struct GeosDisk *Disk, bool *Changed)
       if (!GeosReadTS(Disk, Chain[i].Track, Chain[i].Sector, Block)) return false;
       for (int e = 0; e < GEOS_ENTRIES_PER_DIR; e++)
       {
-         uint8_t *Slot = Block + e * GEOS_DIR_ENTRY_SIZE;
-         if (!(Slot[SlotType] & CBM_TYPE_MASK) || Slot[SlotGeosType] != GEOS_AUTO_EXEC) continue;
+         uint8_t *Slot = Block + e * GEOS_DIR_ENTRY_SIZE, Type = Slot[SlotGeosType];
+         bool Ours;
+         if (!(Slot[SlotType] & CBM_TYPE_MASK)) continue;
+         if (Type != GEOS_AUTO_EXEC && Type != GEOS_SYSTEM_FILE) continue;
          if (!GeosNameContains(Slot + SlotName, GEOS_CONFIG_NAME)) continue;
-         Slot[SlotGeosType] = GEOS_SYSTEM_FILE;
+         if (!GeosSetUpConfigure(Disk, Slot, Scratch, Capacity, &Ours, Changed)) return false;
+         Type = Ours ? GEOS_AUTO_EXEC : GEOS_SYSTEM_FILE;
+         if (Slot[SlotGeosType] == Type) continue;
+         Slot[SlotGeosType] = Type;
          Retyped = true;
       }
       if (!Retyped) continue;
@@ -294,20 +393,6 @@ FLASHMEM static void Geos128SetClock(uint8_t *Run, const struct GeosDate *Now)
 
 static const struct GeosClockRun Geos128ClockRuns[] = { { Geos128StartUp, sizeof Geos128StartUp, Geos128SetClock } };
 
-// Finds Pattern once in Body; NULL when it is absent or ambiguous
-static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint8_t *Pattern, uint32_t Size)
-{
-   uint8_t *Found = NULL;
-
-   for (uint32_t i = 0; i + Size <= Length; i++)
-   {
-      if (memcmp(Body + i, Pattern, Size)) continue;
-      if (Found) return NULL;
-      Found = Body + i;
-   }
-   return Found;
-}
-
 // Sets the date and time GEOS starts with. Leaves the body as it is, and returns false, for a boot file whose
 // start-up code is not the one the target knows
 static bool GeosSetClock(uint8_t *Body, uint32_t Length, const struct GeosTarget *Target, const struct GeosDate *Now)
@@ -389,9 +474,10 @@ static inline bool GeosBuildBootPrg(struct GeosDisk *Disk, const struct GeosDate
 }
 
 // The C128 boot ROM, its ROML chip then its ROMH chip, followed by the boot image it pulls through BOOT a page at a
-// time. Image and ImageSize say where that image starts, without its load address, for TRBlockMount.
-static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t *Out, uint32_t Capacity,
-                                     const uint8_t **Image, uint32_t *ImageSize, bool *ClockSet)
+// time from the block device at RegsPage. Image and ImageSize say where that image starts, without its load address,
+// for TRBlockMount.
+static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDate *Now, uint8_t RegsPage, uint8_t *Out,
+                                     uint32_t Capacity, const uint8_t **Image, uint32_t *ImageSize, bool *ClockSet)
 {
    uint8_t *Roml = Out, *Romh = Out + GEOS128_BOOT_CHIP_SIZE, *File = Out + 2 * GEOS128_BOOT_CHIP_SIZE;
    uint32_t Length, Pages, Load;
@@ -410,6 +496,7 @@ static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDat
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS, Load);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 2, Pages);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 4, Disk->Target->BootEntry);
+   for (size_t i = 0; i < sizeof Geos128BootPageAt / sizeof Geos128BootPageAt[0]; i++) Roml[Geos128BootPageAt[i]] = RegsPage;
    *Image = File + 2;
    *ImageSize = Length - 2;
    return true;

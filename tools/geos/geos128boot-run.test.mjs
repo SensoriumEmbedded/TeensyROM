@@ -14,7 +14,10 @@ const MMU_RAM_SHARE = 0xd506;
 const KERNAL_RESET_SHARE = 0x04;
 const FUNCTION_ROM_AT_8000 = 0x08;
 const COLD_START = 0x8000;
-const BLOCK = 0xdf00;
+const BESIDE_GEORAM = 0xdf;
+const BESIDE_REU = 0xde;
+const REU_REGISTERS = 0x0b;
+const REU_GHOSTS = 0x1f;
 const STATUS = { BUSY: 0x80, DONE: 0x5a, PAST_END: 0xe2 };
 const CMD_BOOT = 5;
 const PAGE = 256;
@@ -30,12 +33,13 @@ function readHeader() {
     vectors: define('GEOS128_BOOT_VECTORS'),
     roml: bytes('Geos128BootRoml'),
     romVectors: bytes('Geos128BootVectors'),
+    pageAt: [...text.match(/Geos128BootPageAt\[\d+\] PROGMEM = \{([^}]*)\}/)[1].matchAll(/0x[0-9a-f]+/g)].map((m) => parseInt(m[0], 16)),
   };
 }
 
-// The cartridge as GeosBuildC128Boot fills it: ROML with the load address, page count and entry patched in, ROMH
-// holding only the vectors.
-function cartridge({ load, pages, entry }) {
+// The cartridge as GeosBuildC128Boot fills it: ROML with the load address, page count, entry and the block device's
+// page patched in, ROMH holding only the vectors.
+function cartridge({ load, pages, entry, page }) {
   const h = readHeader();
   const roml = new Uint8Array(h.chipSize);
   const romh = new Uint8Array(h.chipSize);
@@ -45,10 +49,11 @@ function cartridge({ load, pages, entry }) {
     roml[h.params + 2 * i] = word & 0xff;
     roml[h.params + 2 * i + 1] = word >> 8;
   }
+  for (const at of h.pageAt) roml[at] = page;
   return { roml, romh };
 }
 
-// The block device's registers at $DF00 as docs/TR_Block_Device.md describes them, serving BOOT from image.
+// The block device's registers as docs/TR_Block_Device.md describes them, serving BOOT from image.
 // busyReads: STATUS reads $80 this many times after each CMD. staleEcho: for this many ECHO reads after STATUS turns
 // done, the device still shows the previous command's result, its token and its page. glitchEvery: every nth read
 // comes back with bits ORed in, as the Kawari does. echoGlitch: ORed into the first stale ECHO read.
@@ -114,8 +119,11 @@ function blockDevice(image, { busyReads = 0, staleEcho = 0, glitchEvery = 0, ech
 }
 
 // A C128 as the boot ROM sees it: two 64K RAM banks behind the MMU's configuration register, the shared RAM at the
-// bottom, I/O at $D000 (the block device at $DF00) and the cartridge's function ROM at $8000 and $C000.
-function c128(cart, device) {
+// bottom, I/O at $D000 (the block device on its page, and beside an REU, the REU's registers at $DF00) and the
+// cartridge's function ROM at $8000 and $C000.
+function c128(cart, device, page) {
+  const block = page << 8;
+  const reu = (offset) => ((offset & REU_GHOSTS) < REU_REGISTERS ? 0 : 0xff);
   const ram = [new Uint8Array(0x10000), new Uint8Array(0x10000)];
   const io = new Map([[MMU_RAM_SHARE, KERNAL_RESET_SHARE]]);
   const ioWrites = [];
@@ -143,7 +151,8 @@ function c128(cart, device) {
     read(address) {
       if (address === MMU_CR) return machine.cr;
       if (ioMapped(address)) {
-        if (address >= BLOCK) return device.read(address - BLOCK);
+        if ((address & 0xff00) === block) return device.read(address - block);
+        if (page === BESIDE_REU && address >= BESIDE_GEORAM << 8) return reu(address & 0xff);
         return io.get(address) ?? 0xff;
       }
       const rom = romAt(address);
@@ -158,7 +167,7 @@ function c128(cart, device) {
       }
       if (ioMapped(address)) {
         ioWrites.push([address, value]);
-        if (address >= BLOCK) device.write(address - BLOCK, value);
+        if ((address & 0xff00) === block) device.write(address - block, value);
         else io.set(address, value);
         return;
       }
@@ -177,9 +186,9 @@ function bootImage(pages, last = PAGE) {
 }
 
 // The kernal's cold start calls the function ROM with IRQs on and the ROM mapped at $8000.
-function boot({ load = 0x2b19, pages = 3, entry = 0x2f3c, image = bootImage(pages), device: options, limit } = {}) {
+function boot({ load = 0x2b19, pages = 3, entry = 0x2f3c, image = bootImage(pages), device: options, limit, page = BESIDE_GEORAM } = {}) {
   const device = blockDevice(image, options);
-  const machine = c128(cartridge({ load, pages, entry }), device);
+  const machine = c128(cartridge({ load, pages, entry, page }), device, page);
   const cpu = new Mos6502(machine.bus);
   cpu.pc = COLD_START;
   cpu.p &= ~0x04;
@@ -206,6 +215,13 @@ test('the boot ROM pulls every page into bank 1 and enters GEOS with I/O in, the
   assert.equal(b.machine.io.get(0xd030), 0, '1 MHz');
   assert.equal(b.machine.ram[0][0xba], 8, 'curDevice, in the shared zero page');
   assert.equal(b.device.commands, 150);
+});
+
+test('the boot ROM pulls the image from the block device beside an REU, and writes nothing to the REU', () => {
+  const b = boot({ pages: 5, page: BESIDE_REU });
+  run(b, entered);
+  assertLoaded(b);
+  assert.deepEqual(b.machine.ioWrites.filter(([a]) => a >= BESIDE_GEORAM << 8), []);
 });
 
 test('the boot ROM writes no bank 0 RAM outside the shared bottom 8K, and nothing in bank 1 but the image', () => {

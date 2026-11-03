@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-// The TR block device (docs/TR_Block_Device.md) in IO2, the page GeoRAM leaves free, beside the USB
-//  mouse's registers. The ISR side only fills registers and the window; the SD card is touched
-//  only from the main loop: PollTRBlock from GeoRAM's polling handler, and SDFullInit.
+// The TR block device (docs/TR_Block_Device.md) beside the USB mouse's registers, in IO2 beside GeoRAM
+//  and in IO1 beside the REU. The ISR side only fills registers and the window; the SD card is touched
+//  only from the main loop: PollTRBlock from those two handlers' polling handlers, and SDFullInit.
 
 #include "../../../BlockDevice/TRBlockImage.h"
 
@@ -68,7 +68,7 @@ FLASHMEM static bool TRBlockOpen()
    return true;
 }
 
-// Close and reopen around an SD.begin that can run while GeoRAM has an image mounted, as SDFullInit does.
+// Close and reopen around an SD.begin that can run while an image is mounted, as SDFullInit does.
 //  SD.begin rebuilds the volume in place under any open file and drops its cached, unwritten sectors.
 FLASHMEM void TRBlockClose()
 {

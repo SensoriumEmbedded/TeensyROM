@@ -68,6 +68,7 @@ struct GeosTarget
    const struct GeosClockRun *ClockRuns;
    uint8_t ClockRunCount;
    uint16_t ResetKey;      // where the boot file holds the C128's reset key, or 0
+   const char *ConfigureName;
 };
 
 struct GeosBootDisk { bool HasDeskTop, HasDriver; };
@@ -336,6 +337,20 @@ FLASHMEM static uint16_t GeosDriverBlocks(const struct GeosTarget *Target)
    return GeosDriverDataBlocks(Target) + 1;
 }
 
+// Block i of the driver's data chain, linked to Next unless it is the last; returns how many of its bytes are used
+FLASHMEM static uint16_t GeosDriverBlock(const struct GeosTarget *Target, uint16_t i, struct GeosTS Next, uint8_t *Block)
+{
+   uint16_t Start = i * GEOS_DATA_PER_BLOCK, Length = Target->DriverSize - Start;
+   bool Last = i + 1 == GeosDriverDataBlocks(Target);
+
+   if (Length > GEOS_DATA_PER_BLOCK) Length = GEOS_DATA_PER_BLOCK;
+   memset(Block, 0, GEOS_SECTOR_SIZE);
+   Block[0] = Last ? 0 : Next.Track;
+   Block[1] = Last ? Length + 1 : Next.Sector;
+   memcpy(Block + 2, Target->DriverCode + Start, Length);
+   return Length + 2;
+}
+
 // Writes the driver's data chain and info block; returns the first data sector, the info sector and the block count.
 FLASHMEM static bool GeosWriteDriver(struct GeosDisk *Disk, struct GeosTS *First, struct GeosTS *Info, uint16_t *Blocks)
 {
@@ -348,15 +363,8 @@ FLASHMEM static bool GeosWriteDriver(struct GeosDisk *Disk, struct GeosTS *First
    *First = Here;
    for (uint16_t i = 0; i < DataBlocks; i++)
    {
-      uint16_t Start = i * GEOS_DATA_PER_BLOCK, Length = Target->DriverSize - Start;
-      if (Length > GEOS_DATA_PER_BLOCK) Length = GEOS_DATA_PER_BLOCK;
-      bool Last = i + 1 == DataBlocks;
-
-      if (!Last && !GeosAllocate(Disk, &Next)) return false;
-      memset(Block, 0, sizeof Block);
-      Block[0] = Last ? 0 : Next.Track;
-      Block[1] = Last ? Length + 1 : Next.Sector;
-      memcpy(Block + 2, Target->DriverCode + Start, Length);
+      if (i + 1 < DataBlocks && !GeosAllocate(Disk, &Next)) return false;
+      GeosDriverBlock(Target, i, Next, Block);
       if (!GeosWriteTS(Disk, Here.Track, Here.Sector, Block)) return false;
       Here = Next;
    }
@@ -404,7 +412,7 @@ struct GeosSlotRef { int Sector, Slot; };
 
 struct GeosDirScan
 {
-   struct GeosSlotRef Free, FirstInputDriver;
+   struct GeosSlotRef Free, FirstInputDriver, Ours;
    bool HasFree, HasInputDriver, HasDeskTop, HasOurs;
 };
 
@@ -425,7 +433,7 @@ FLASHMEM static bool GeosScanDirectory(struct GeosDisk *Disk, const struct GeosT
 
          if (!Slot[SlotType] && !Scan->HasFree) { Scan->Free = Here; Scan->HasFree = true; }
          if (!InUse) continue;
-         if (GeosSlotNamed(Slot, Target->DriverName)) Scan->HasOurs = true;
+         if (GeosSlotNamed(Slot, Target->DriverName)) { Scan->Ours = Here; Scan->HasOurs = true; }
          if (GeosSlotNamed(Slot, Target->DeskTopName)) Scan->HasDeskTop = true;
          if (Slot[SlotGeosType] == Target->InputType && !Scan->HasInputDriver) { Scan->FirstInputDriver = Here; Scan->HasInputDriver = true; }
       }
@@ -534,4 +542,55 @@ FLASHMEM static inline bool GeosInstallDriver(struct GeosDisk *Disk, const struc
    if (!GeosWriteEntry(Disk, Chain[Scan.Free.Sector], Scan.Free.Slot, Date)) return false;
    if (!Scan.HasInputDriver || !GeosSlotBefore(Scan.FirstInputDriver, Scan.Free)) return true;
    return GeosSwapEntries(Disk, Chain, Scan.FirstInputDriver, Scan.Free);
+}
+
+// Makes the copy's TR mouse driver the firmware's, in place: a copy outlives the firmware that set it up, and an older
+// driver may not find the registers where this one puts them. One of another length is refused, the image unchanged.
+FLASHMEM static inline bool GeosRefreshDriver(struct GeosDisk *Disk, bool *Changed)
+{
+   const struct GeosTarget *Target = Disk->Target;
+   const uint16_t DataBlocks = GeosDriverDataBlocks(Target);
+   struct GeosTS Chain[GEOS_MAX_DIR_SECTORS], First, Info, At;
+   uint8_t Block[GEOS_SECTOR_SIZE], Wanted[GEOS_SECTOR_SIZE];
+   const uint8_t *Slot;
+   struct GeosDirScan Scan;
+   uint16_t Blocks = 0;
+   int Length;
+
+   *Changed = false;
+   if (!GeosReadDirectory(Disk, Chain, &Length, &Scan)) return false;
+   if (!Scan.HasOurs) return true;
+   if (!GeosReadTS(Disk, Chain[Scan.Ours.Sector].Track, Chain[Scan.Ours.Sector].Sector, Block)) return false;
+   Slot = Block + Scan.Ours.Slot * GEOS_DIR_ENTRY_SIZE;
+   First = (struct GeosTS){ Slot[SlotFirst], Slot[SlotFirst + 1] };
+   Info = (struct GeosTS){ Slot[SlotInfo], Slot[SlotInfo + 1] };
+   for (At = First; At.Track && At.Track <= Disk->Format->Tracks && Blocks <= DataBlocks; Blocks++)
+   {
+      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
+      At = (struct GeosTS){ Block[0], Block[1] };
+   }
+   if (At.Track || Blocks != DataBlocks || !Info.Track || Info.Track > Disk->Format->Tracks)
+   {
+      snprintf(Disk->Error, sizeof Disk->Error, PSTR("its %s is an old one; delete this copy"), Target->DriverName);
+      return false;
+   }
+
+   for (uint16_t i = 0; First.Track; i++)
+   {
+      struct GeosTS Next;
+      uint16_t Used;
+      if (!GeosReadTS(Disk, First.Track, First.Sector, Block)) return false;
+      Next = (struct GeosTS){ Block[0], Block[1] };
+      Used = GeosDriverBlock(Target, i, Next, Wanted);
+      if (memcmp(Block, Wanted, Used))
+      {
+         if (!GeosWriteTS(Disk, First.Track, First.Sector, Wanted)) return false;
+         *Changed = true;
+      }
+      First = Block[0] ? Next : (struct GeosTS){ 0, 0 };
+   }
+   if (!GeosReadTS(Disk, Info.Track, Info.Sector, Block)) return false;
+   if (!memcmp(Block, Target->DriverInfo, GEOS_SECTOR_SIZE)) return true;
+   *Changed = true;
+   return GeosWriteTS(Disk, Info.Track, Info.Sector, Target->DriverInfo);
 }

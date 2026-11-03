@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-// A USB mouse on the TR's USB host port, read through registers the GeoRAM handler serves
-//  at $DF00, in the part of the IO2 page that GeoRAM leaves free.
+// A USB mouse on the TR's USB host port, read through registers at $DF00 beside GeoRAM, in the
+//  part of IO2 that GeoRAM leaves free, and at $DE00 beside the REU (IOH_REU_TRPage).
 //  It cannot be a 1351: the SID's POT lines are not on the cartridge port, so only software
 //  with a TR driver sees it (tools/geos).
 //

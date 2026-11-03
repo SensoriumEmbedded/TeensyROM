@@ -17,11 +17,14 @@ BUTTON_UP     = $80
 NO_DIRECTION  = $ff
 OFF_TOP       = 228     ; the kernal reads a mouseYPos this high as above the top
 
-regs          = $df00
+; beside GeoRAM, and beside the REU, whose unused registers read $FF across $DF0B-$DF1F
+PAGE_BESIDE_GEORAM = $df
+PAGE_BESIDE_REU = $de
 regX          = 0
 regY          = 1
 regButtons    = 2
 regID         = 3
+regBlockID    = $10     ; the TR block device's, which shares the page and tells it from an REU's
 LEFT_BUTTON   = $01
 
 !ifndef MOUSE_BASE { MOUSE_BASE = $fd00 }
@@ -46,36 +49,50 @@ SlowMouse
 SetMouse
         rts
 
-; The ID tells whether the registers are there, beside GeoRAM.
-;  $DF03-$DF05 are REU address registers, which have no side effects when read.
-;  Carry set: what reads there is not a mouse.
+; The block device's ID picks the page: beside an REU, $DF03-$DF05 are its address registers and can hold anything.
+;  Carry set: what reads there is not a mouse; otherwise every register read points at the page.
 FindRegs
-        ldx #2
--       lda regs+regID,x
-        cmp trID,x
+        ldx #PAGE_BESIDE_GEORAM
+        ldy #2
+-       lda PAGE_BESIDE_GEORAM*256+regBlockID,y
+        cmp trbID,y
         bne +
-        dex
+        dey
+        bpl -
+        bmi ++
++       ldx #PAGE_BESIDE_REU
+++      stx mouseID+2
+        stx readX+2
+        stx readY+2
+        stx readButtons+2
+        ldy #2
+-
+mouseID lda PAGE_BESIDE_GEORAM*256+regID,y
+        cmp trmID,y
+        bne +
+        dey
         bpl -
         clc
         rts
 +       sec
         rts
 
-trID    !text "TRM"
+trmID   !text "TRM"
+trbID   !text "TRB"
 
 UpdateMouse
         jsr FindRegs
         bcs noMouse
-        lda regs+regX
+readX   lda PAGE_BESIDE_GEORAM*256+regX
         sta deltaX
-        lda regs+regY
+readY   lda PAGE_BESIDE_GEORAM*256+regY
         sta deltaY
         bit mouseOn
         bmi readButtons
 noMouse rts                     ; movement while the pointer is off is dropped
 
 readButtons
-        lda regs+regButtons
+        lda PAGE_BESIDE_GEORAM*256+regButtons
         and #LEFT_BUTTON
         beq +
         lda #0                  ; pressed

@@ -443,6 +443,9 @@ enum enumIOHandlers //Synch order/qty with IOHandler[] (IOHandlers.h)
       IOH_KernalReplace,
    #endif  
       IOH_Debug,
+   #ifdef Fab04_REU
+      IOH_REU_TRPage,
+   #endif
       IOH_GeoRAM, //last manually selectable, see LastSelectableIOH
 
    //*not* manually selectable, see LastSelectableIOH

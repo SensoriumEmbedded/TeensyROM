@@ -75,6 +75,7 @@ stcIOHandlers IOHndlr_REU =
 extern bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer, uint32_t Length, DMA_Addr_Mode FixC64Addr);
 extern bool CloseDMA();
 extern void (*fSpecialBtnChange)(bool Up_nDn);  //Pointer to function called when Special Button Changes
+extern uint8_t CurrentIOHandler;
 
 //ref: https://codebase64.net/doku.php?id=base:reu_registers
 //tests:
@@ -561,6 +562,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
    if (R_Wn) //High (IO2 Read)
    {
       if (Address < REUReg_NumRegs) DataPortWriteWaitLog(REURegs[Address]);  
+      else if (CurrentIOHandler == IOH_REU_TRPage) DataPortWriteWaitLog(0xff); // a 1764's unused registers; the TR's GEOS drivers look for the block device at $DF10 first
       
       if (Address == REUReg_Status) 
       {
@@ -749,3 +751,34 @@ FLASHMEM void PollingHndlr_REU()
 #endif
 }
 
+//______________________________________________________________________________________________
+// The REU with the TR's USB mouse and block device beside it in IO1, where a GEOS that found the REU looks for them
+
+void PollingHndlr_REU_TRPage();
+void InitHndlr_REU_TRPage();
+
+stcIOHandlers IOHndlr_REU_TRPage =
+{
+  "REU+USB Mouse/Disk", //Name of handler
+  &InitHndlr_REU_TRPage, //Called once at handler startup
+  &TRPageIO,           //IO1 R/W handler
+  &IO2Hndlr_REU,       //IO2 R/W handler
+  NULL,                //ROML Read handler, in addition to any ROM data sent
+  NULL,                //ROMH Read handler, in addition to any ROM data sent
+  &PollingHndlr_REU_TRPage, //Polled in main routine
+  NULL,                //called at the end of EVERY c64 cycle
+};
+
+FLASHMEM void InitHndlr_REU_TRPage()
+{
+   InitUSBMouse();
+   InitTRBlock();
+   InitHndlr_REU();
+}
+
+FLASHMEM void PollingHndlr_REU_TRPage()
+{
+   PollUSBMouse();
+   PollTRBlock();
+   PollingHndlr_REU();
+}

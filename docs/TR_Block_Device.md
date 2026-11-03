@@ -19,13 +19,13 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 ## What it is and is not
 * One image at a time, chosen by the firmware (for GEOS, when the menu launches it). The C64 cannot choose or replace the image.
 * Blocks are 256 bytes. A block is addressed by two bytes whose meaning depends on the image kind ([Disk addresses](#disk-addresses)).
-* It is available while the GeoRAM handler is active, which is also where the USB mouse registers are. It is not available under other handlers, the REU included, and not under a Host Extension.
+* It is available while the GeoRAM handler or the `REU+USB Mouse/Disk` handler (TR+ only) is active, which is also where the USB mouse registers are. It is not available under other handlers, the plain REU included, and not under a Host Extension.
 * It is not an IEC drive. Software that talks to the IEC bus cannot see it.
 
 ## Where the registers are
-The registers share IO2, the page GeoRAM leaves free, with the USB mouse registers, which start the page and identify it. The base `B` is `$DF00`.
+The registers share a page with the USB mouse registers, which start it and identify it. The base `B` is `$DF00` beside GeoRAM, in the IO2 page GeoRAM leaves free, and `$DE00` beside the REU, whose registers repeat across IO2.
 
-The block device is present when `TRB` is at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes.
+The block device is present when `TRB` is at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes. Look at `$DF10` before `$DE10`: beside the REU, `$DF10..$DF12` read `$FF`, as a 1764's unused registers do, while `$DE10` beside GeoRAM is its window, which can hold any bytes.
 
 Everything below is an offset from `B`.
 
@@ -116,7 +116,7 @@ The firmware does this arithmetic so that a 6502 driver does not have to. A driv
 
 ## A reader's checklist
 A driver that follows this document:
-* checks `TRB` at `$DF10`;
+* checks `TRB` at `$DF10`, then at `$DE10`;
 * writes TOKEN, the address, PAGE, then CMD;
 * reads STATUS until two reads agree and the value is not `$80`, then checks ECHO;
 * moves a block as four PAGEs of the window;
