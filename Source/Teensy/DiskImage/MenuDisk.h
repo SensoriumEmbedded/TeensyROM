@@ -40,3 +40,27 @@ FLASHMEM static int32_t MenuDiskReadFile(d64_t *Disk, uint8_t Track, uint8_t Sec
    if (!d64_file_eof(&File)) return MENUDISK_TOO_BIG;
    return Read;
 }
+
+// Called for each file the menu lists: its 16 name bytes as stored (PETSCII, $A0 padded), its type byte and first
+// sector. Returns false when the menu has no room for more.
+typedef bool (*MenuDiskAddFn)(void *Context, const uint8_t *Name, uint8_t Type, uint8_t Track, uint8_t Sector);
+
+// The files in the directory, as a drive's listing shows them: a deleted entry (type byte 0) is left out, and an
+// empty slot does not end its sector. The listing starts at the first directory sector (18/1, or 40/3 on a D81)
+// rather than at the header's link, as the menu always has. Returns 0, or MENUDISK_BROKEN when the chain broke
+// partway (what was listed before stays).
+FLASHMEM static int MenuDiskList(d64_t *Disk, MenuDiskAddFn Add, void *Context)
+{
+   d64_dir_t Dir;
+   d64_entry_t Entry;
+   int Result;
+
+   if (d64_dir_first(Disk, &Dir)) return MENUDISK_BROKEN;
+   Dir.track = Disk->fmt == D64_FMT_D81 ? 40 : 18;
+   Dir.sector = Disk->fmt == D64_FMT_D81 ? 3 : 1;
+   while ((Result = d64_dir_next(Disk, &Dir, &Entry)) > 0)
+   {
+      if (!Add(Context, Dir.buf + Entry.dir_slot * 32 + 5, Entry.type, Entry.track, Entry.sector)) return 0;
+   }
+   return Result ? MENUDISK_BROKEN : 0;
+}

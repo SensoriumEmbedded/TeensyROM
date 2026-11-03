@@ -122,3 +122,74 @@ test('a file of a size outside its kind\'s is refused', { skip }, () => {
     assert.equal(load(kind, Buffer.alloc(size), [1, 0]).said, 'refused', `${kind} of ${size} bytes`);
   }
 });
+
+const DIR = { d64: [18, 1], d71: [18, 1], d81: [40, 3] };
+const PAD = 0xa0;
+
+// Directory sectors along the chain given, entries placed by [sector index, slot, type, name]
+function directory(kind, size, chain, entries, headerLink = chain[0]) {
+  const image = Buffer.alloc(size);
+  const header = offset(kind, DIR[kind][0], 0);
+  image[header] = headerLink[0];
+  image[header + 1] = headerLink[1];
+  chain.forEach(([track, sector], i) => {
+    const at = offset(kind, track, sector);
+    const next = chain[i + 1];
+    image[at] = next ? next[0] : 0;
+    image[at + 1] = next ? next[1] : 0xff;
+  });
+  for (const [index, slot, type, name] of entries) {
+    const at = offset(kind, ...chain[index]) + slot * 32;
+    image[at + 2] = type;
+    image[at + 3] = 1;
+    image[at + 4] = slot;
+    image.fill(PAD, at + 5, at + 21);
+    image.write(name, at + 5, 'latin1');
+  }
+  return image;
+}
+
+function list(kind, image, limit = 1000) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'menu-disk-list-'));
+  try {
+    const input = path.join(dir, 'in');
+    fs.writeFileSync(input, image);
+    const ran = spawnSync(harness(), ['list', KIND[kind], input, limit], { encoding: 'utf8' });
+    assert.equal(ran.status, 0, ran.stderr);
+    return ran.stdout.trim().split('\n');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+for (const [kind, size] of [['d64', 174848], ['d71', 349696], ['d81', 819200]]) {
+  test(`${kind}: the listing follows the directory chain and leaves deleted entries out`, { skip }, () => {
+    const [track, first] = DIR[kind];
+    const image = directory(kind, size, [[track, first], [track, first + 3]], [
+      [0, 0, 0x82, 'GAME'],
+      [0, 1, 0x00, 'DELETED'],
+      [0, 3, 0x81, 'AFTER A GAP'],
+      [1, 0, 0x83, 'NEXT SECTOR'],
+    ]);
+    assert.deepEqual(list(kind, image), ['82 1/0 GAME', '81 1/3 AFTER A GAP', '83 1/0 NEXT SECTOR', 'end']);
+  });
+}
+
+test('the listing starts at the first directory sector, whatever the header links to', { skip }, () => {
+  const image = directory('d64', 174848, [[18, 1]], [[0, 0, 0x82, 'FIRST']], [18, 4]);
+  assert.deepEqual(list('d64', image), ['82 1/0 FIRST', 'end']);
+});
+
+test('a directory chain that loops lists what it read and reports it broken', { skip }, () => {
+  const image = directory('d64', 174848, [[18, 1], [18, 4]], [[0, 0, 0x82, 'ONE'], [1, 0, 0x82, 'TWO']]);
+  image[offset('d64', 18, 4)] = 18;
+  image[offset('d64', 18, 4) + 1] = 1;
+  const lines = list('d64', image);
+  assert.deepEqual(lines.slice(0, 2), ['82 1/0 ONE', '82 1/0 TWO']);
+  assert.equal(lines.at(-1), 'broken');
+});
+
+test('the listing stops when the menu is full', { skip }, () => {
+  const image = directory('d64', 174848, [[18, 1]], [[0, 0, 0x82, 'ONE'], [0, 1, 0x82, 'TWO'], [0, 2, 0x82, 'THREE']]);
+  assert.deepEqual(list('d64', image, 2), ['82 1/0 ONE', '82 1/1 TWO', 'end']);
+});
