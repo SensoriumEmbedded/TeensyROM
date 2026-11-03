@@ -76,6 +76,30 @@ FLASHMEM uint8_t ItemTypeFromDxxFileType(uint8_t FileType)
    return RetItemType;
 }
 
+FLASHMEM static bool AddDxxEntry(void *Context, const uint8_t *Name, uint8_t FileType, uint8_t FileTrack, uint8_t FileSect)
+{
+   if (NumDrvDirMenuItems >= MaxMenuItems) return false;
+
+   char *Entry = (char*)malloc(DxxFNB_Bytes); // 16 char max + term + ftrack + fsec + DiskType
+   for(uint8_t CharNum=0; CharNum<DxxFNB_NameLength; CharNum++)
+   { //converting to ascii, then back to petscii for display later.  All other file names are ascii...
+      uint8_t Char = Name[CharNum];
+      if (Char & 0x80) Char &= 0x7f; //Cap petscii to ascii
+      else if (Char & 0x40) Char |= 0x20;  //lower case petscii to ascii
+      Entry[CharNum] = Char;
+   }
+   Entry[DxxFNB_NameTerm] = 0;
+   Entry[DxxFNB_Track]    = FileTrack; //store start track in case we need to load later
+   Entry[DxxFNB_Sector]   = FileSect;
+   Entry[DxxFNB_DiskType] = *(uint8_t *)Context;
+
+   DriveDirMenu[NumDrvDirMenuItems].Name = Entry;
+   DriveDirMenu[NumDrvDirMenuItems].ItemType = ItemTypeFromDxxFileType(FileType);
+   Printf_dbg("   Name:%s\n", Entry);
+   NumDrvDirMenuItems++;
+   return true;
+}
+
 FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType) 
 {
    //Interpreted from: https://ist.uwaterloo.ca/~schepers/formats/D64.TXT  D71.TXT  D81.TXT  DISK.TXT
@@ -101,77 +125,7 @@ FLASHMEM void LoadDxxDirectory(FS *sourceFS, uint8_t DiskType)
       return;
    }
    
-   uint8_t Track = 18;
-   uint8_t Sector = 1;
-   uint8_t SecOffset = 0;
-   uint8_t FileName[16];
-   uint8_t NextTrack, NextSect, FileType, FileTrack, FileSect;
-   
-   if(DiskType == rtD81)
-   {
-      Track = 40;
-      Sector = 3;
-   }
-   
-   //An image's directory chain can link back to itself; a real one is at most 37 sectors (D81)
-   const uint8_t MaxDxxDirSectors = 64;
-   uint8_t DirSectorsRead = 0;
-   while(Track != 0 && DirSectorsRead++ < MaxDxxDirSectors && NumDrvDirMenuItems < MaxMenuItems)
-   {
-      long CurTSOffset = d64_sector_offset(&Dxx.Disk, Track, Sector);
-      Printf_dbg("Track:%d  Sector:%d = DxxOffset:$%lx\n", Track, Sector, CurTSOffset);
-      if (CurTSOffset < 0) break; //a link off the image
-
-      do
-      {
-         myFile.seek(CurTSOffset+SecOffset);
-
-         NextTrack = myFile.read(); //0x00 Only first is valid, rest in sect should be 00
-         NextSect  = myFile.read(); //0x01 Only first is valid, rest in sect should be 00
-         FileType  = myFile.read(); //0x02
-         FileTrack = myFile.read(); //0x03
-         FileSect  = myFile.read(); //0x04
-         myFile.read(FileName, DxxFNB_NameLength); //0x05-0x14, padded with $a0 (space)
-
-         Printf_dbg("  SecOffset $%02x:  NTrack:%02d NSect:%02d Type:$%02x FTrack:%02d FSect:%02d\n", 
-            SecOffset, NextTrack, NextSect, FileType, FileTrack, FileSect);             
-
-         if(SecOffset == 0)
-         {
-            Track = NextTrack; //will be 0 if reading last sector
-            Sector = NextSect;
-         }
-         
-         if (FileName[0] && NumDrvDirMenuItems >= MaxMenuItems) SecOffset = 0; //array full: stop
-         else if (FileName[0]) //check for end of dir, no entry
-         {  //valid dir entry
-            DriveDirMenu[NumDrvDirMenuItems].Name = (char*)malloc(DxxFNB_Bytes); // 16 char max + term + ftrack + fsec + DiskType
-
-            for(uint8_t CharNum=0; CharNum<DxxFNB_NameLength; CharNum++)
-            { //converting to ascii, then back to petscii for display later.  All other file names are ascii...
-               if (FileName[CharNum] & 0x80) FileName[CharNum] &= 0x7f; //Cap petscii to ascii
-               else if (FileName[CharNum] & 0x40) FileName[CharNum] |= 0x20;  //lower case petscii to ascii
-            }
-            
-            memcpy(DriveDirMenu[NumDrvDirMenuItems].Name, FileName, DxxFNB_NameLength); 
-            DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_NameTerm] = 0; //terminate it
-            DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_Track]    = FileTrack; //store start track in case we need to load later 
-            DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_Sector]   = FileSect;  //store start sector
-            DriveDirMenu[NumDrvDirMenuItems].Name[DxxFNB_DiskType] = DiskType;  //store disk type
-            DriveDirMenu[NumDrvDirMenuItems].ItemType = ItemTypeFromDxxFileType(FileType);
-            
-            Printf_dbg("   Name:%s\n", DriveDirMenu[NumDrvDirMenuItems].Name);             
-            SecOffset +=0x20;  //uint8_t rolls over to 0x00 at end of 256 byte sector
-            NumDrvDirMenuItems++;
-         }
-         else
-         { // end of dir, Track should also be 0 at this point
-            SecOffset = 0; 
-         }    
-         
-      } while (SecOffset != 0);
-   
-   }
+   MenuDiskList(&Dxx.Disk, AddDxxEntry, &DiskType);
    Printf_dbg("Loaded %d items in %lumS\n", NumDrvDirMenuItems, (millis()-beginWait));
    myFile.close();
 

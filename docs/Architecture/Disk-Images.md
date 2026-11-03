@@ -38,7 +38,7 @@ through it, so a truncated or padded file is no image rather than one read past 
 |---|---|
 | TR block device (`BlockDevice/TRBlockImage.h`) | `d64_open_exact`, the geometry, `d64_block_read`/`d64_block_write`; `INFO` reports `fmt + 1` and `d64_sectors()`. It leaves the error table unread. |
 | GEOS (`GEOS/GeosDiskPatch.h`, `GEOS/GeosBoot.h`) | `d64_open_exact`, `d64_dir_check` before anything reads the directory, `d64_find` and the file reader for the boot file, the directory iterator and the file reader for setting up CONFIGURE, `d64_block_read`/`d64_block_write` for bringing an old TR mouse driver up to date and rewriting CONFIGURE's records in place, and for adding the TR input driver `d64_dir_room`, `d64_blocks_allocatable`, `d64_create`/`d64_write`/`d64_close_write` and `d64_alloc_next`. What stays GEOS's own is the info block, the GEOS bytes of the directory entry, and moving the driver ahead of the other input drivers. |
-| TR menu (`D64.ino`, through `MenuDisk.h`) | `d64_open` with the track count the extension and size give, the geometry, and the file reader to load a program into RAM. It reads only. It opens short D64s down to 171520 bytes (some copiers write them; `Realm.d64` is one), so a sector past the file's end fails to read instead of the image being refused. |
+| TR menu (`D64.ino`, through `MenuDisk.h`) | `d64_open` with the track count the extension and size give, the directory iterator for the listing, and the file reader to load a program into RAM. The listing shows what a drive's would: a deleted entry (type byte 0) is left out, and an empty slot does not end its sector. It starts at the first directory sector (18/1, or 40/3 on a D81) whatever the header links to, as the menu always has. It reads only. It opens short D64s down to 171520 bytes (some copiers write them; `Realm.d64` is one), so a sector past the file's end fails to read instead of the image being refused. |
 
 ## Allocation: one allocator, as 1541 DOS does it
 
@@ -71,5 +71,5 @@ Refusals come before the first write, so a refused image is unchanged:
 `Source/Teensy/tests/disk-image.test.js` builds the engine with the harness flags as C and as C++, saves and reads a
 file on a blank image of each kind, and checks the size table above. `trblock.test.js` runs the block device on each
 kind, a 40-track D64 and images with error bytes included. `geos-disk-patch.test.js` and `geos-boot.test.js` run the
-GEOS installer and boot-file reader on synthetic boot disks. `menu-disk.test.js` loads files the way the TR menu does,
-from each kind, short and odd-sized images, and broken chains.
+GEOS installer and boot-file reader on synthetic boot disks. `menu-disk.test.js` lists directories and loads files the
+way the TR menu does, from each kind, short and odd-sized images, and broken chains.
