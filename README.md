@@ -22,12 +22,7 @@
   * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
   * **Remote Control** your C64 using 
     * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
-    * [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite) for Windows, macOS and Linux, driving your TeensyROM over USB or Ethernet:
-      * [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md): browse, stream and launch your library from any browser, with live video, CRT effects and a [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) that plays one or two C64s as decks
-      * [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md): a BBS-style menu, plus one-line commands for your scripts
-      * [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md): ask your AI coding agent to play sets, tour your library and set up the suite
-      * [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md): the engine behind them all, open to your own tools over HTTP
-      * Needs firmware 0.8.0.9 or later ([Getting started](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md#firmware))
+    * [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite) (cross-platform): [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md) with its [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md), [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md), the [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md) AI companion, and [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md) for your own tools
   * SID File Player with voice muting and speed control 
   * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
   * Lots of games, utilities, pics, and music built-in: no external media required to get started!

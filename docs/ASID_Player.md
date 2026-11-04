@@ -123,7 +123,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * You can play with the frequency to adjust the playback tempo if needed.
 * **Trom UI DJ Mixer** to play and mix SID tunes live on one or two C64s
     * Install the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md) and connect a TeensyROM by USB for each deck you play
-    * Open the [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) in Trom UI in Chrome or Edge, and allow MIDI access
+    * Open the [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) in Trom UI, in a browser with MIDI support, and allow MIDI access
     * Pick the TeensyROM each deck plays through; the mixer starts each one's ASID Player with a click
     
 <br>
