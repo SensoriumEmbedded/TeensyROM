@@ -18,7 +18,7 @@ re-run z999 against a deliberately-left-dirty state).
   python run_z_sweep.py --tw 350                  sweep nS_DMADataHold alone, te/ty left at their current value
   python run_z_sweep.py --te 445 --tw 350         te445's te/ty, but tw overridden to 350 instead of 395
 
-Close the TeensyROM UI first, it holds the port. A badly-faulted board can stall mid-sweep,
+Stop Trom API first (`trom api stop`), it holds the port. A badly-faulted board can stall mid-sweep,
 so the capture window is generous (45s of quiet) before giving up."""
 import argparse, sys, time
 import serial
