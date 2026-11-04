@@ -203,7 +203,8 @@ The contracts this repository states, and what keeps each one honest:
   docs in the same change. A `Known-Issues.md` entry the change fixes is
   closed, and a cited `file:line` that moved is drift.
 - **The remote protocol.** `docs/ControlComms.md` documents every command and
-  token, and TeensyROM-Web, TeensyROM-CLI and c64cast depend on it. A command,
+  token, and Trom API (the engine of the TeensyROM Suite) and c64cast depend on
+  it. A command,
   token, response or timing that changed without the doc is drift, and an
   incompatible change not called out in the PR is a finding.
 - **Shared layouts.**

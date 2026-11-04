@@ -13,6 +13,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |**[SID Factory II](https://blog.chordian.net/sf2/)**|Win/Mac/Linux|Cross-platform SID music editor with ASID output ([beta branch](https://github.com/Chordian/sidfactory2/tree/asid-support))|
 |**[ASIDXP](https://elektron.se/support-downloads/sidstation#resources)**|Win/Mac|Stream SID files directly from your local hard drive|
 |**[SIDPlay](http://www.sidmusic.org/sidplay/mac/)**|Mac|Stream from your local hard drive with visualizations, etc|
+|**[Trom UI DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md)**|Win/Mac/Linux|Play and mix SID tunes live on one or two C64s: beat-match, loop, cue and scratch|
 
 ## USB/TeensyROM Setup
 * Connect USB cable from a MIDI Host/computer to the USB Type B Micro Device port on the Teensy module.
@@ -100,7 +101,7 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * Select the "EMU" tab, in the ASID box, enable output of "Synth V1" and your "TeensyROM-xxxxxxxx" as the destination
     * Using more than one TeensyROM with ChipSynth C64? See [Using more than one TeensyROM](#using-more-than-one-teensyrom) above, extra instances need to run as the standalone application rather than inside the same DAW.
     * There are many things you can do with this great program, purchasing will unlock the 10 minute limit per use.
-    * You can use the [TeensyROM CLI tool](https://github.com/MetalHexx/TeensyROM-CLI) to tweak the Chipsynth presets to work better with ASID.
+    * You can use [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md#generate-asid-presets-for-chipsynth) to make ASID-friendly copies of your Chipsynth presets.
     * Be sure to leave the Frame timer **off** as ChipSynth does not send data in frames.
     * Here's a [demo video](https://www.youtube.com/watch?v=-Xs3h59-dOU) showing some of the capabilities
 * **SID Factory II** for cross-platform SID music editing/playing
@@ -120,6 +121,10 @@ Once the Frame Timer is turned on, the buffer size can be selected with `b` (sma
     * Click "Play"
     * The playback should be emanating from your C64/128!
     * You can play with the frequency to adjust the playback tempo if needed.
+* **Trom UI DJ Mixer** to play and mix SID tunes live on one or two C64s
+    * Install the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md) and connect a TeensyROM by USB for each deck you play
+    * Open the [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) in Trom UI in Chrome or Edge, and allow MIDI access
+    * Pick the TeensyROM each deck plays through; the mixer starts each one's ASID Player with a click
     
 <br>
 

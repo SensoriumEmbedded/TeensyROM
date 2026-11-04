@@ -284,7 +284,7 @@
   * Get the .hex file containing the latest major (x.x) or minor (x.x.x) release [from the releases page](https://github.com/SensoriumEmbedded/TeensyROM/releases/latest)
   * Copy the file to a USB Thumb drive or SD card
     * This can be done by the traditional method of moving the card to a capable computer
-    * Or directly via USB using **[TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)** (cross-platform, recommended), the **[TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI)** (Windows desktop), or the cross-platform **[Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)**
+    * Or directly from your computer using **[Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#copy-files-to-your-cart)** or **[Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md#copy-files)** from the cross-platform **[TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite)**
   * In the TeensyROM USB or SD Menu, select the Firmware .hex file
   * A new screen will open and ask you to confirm that you want to update
     * Check that the file name shown is correct

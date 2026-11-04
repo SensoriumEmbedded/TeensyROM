@@ -201,7 +201,8 @@ its size, because a one-line change there does the most damage:
   defect here can leave a board that needs the program button to recover.
 - **The remote protocol:** `SerUSBIO.ino`, `Min_SerUSBIO.ino`, `ServiceTCP.ino`,
   `Min_ServiceTCP.ino`, `RemoteControl.ino`. It is a network-facing trust
-  boundary, and TeensyROM-Web, TeensyROM-CLI and c64cast depend on its format.
+  boundary, and Trom API (the engine of the TeensyROM Suite) and c64cast depend
+  on its format.
 - **`.github/workflows/`:** the jobs that decide whether a PR may merge and
   that build release images.
 

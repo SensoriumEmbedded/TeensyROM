@@ -4,8 +4,8 @@ Thanks for your interest in TeensyROM! The project is maintained by one person (
 Smith / Sensorium Embedded) in spare time, and a growing group of regular contributors
 now sends a steady stream of pull requests: features, IO handlers, extensions, docs and
 tooling, alongside the separate
-[TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)/[CLI](https://github.com/MetalHexx/TeensyROM-CLI)
-tools. Each release's notes credit the people whose work went into it. Reviewing,
+[TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite)
+apps. Each release's notes credit the people whose work went into it. Reviewing,
 hardware testing and releasing still go through one person, so this doc covers what to
 expect on timing (see [Review and release timing](#review-and-release-timing)) and how to
 help your contribution land on the first pass.
@@ -92,8 +92,8 @@ release rather than rejected outright, but flagging it up front saves a review c
 - **The external protocol is a stable surface other people's projects depend on.**
   [docs/ControlComms.md](docs/ControlComms.md) documents the USB/Ethernet remote command
   protocol, and the cartridge register map it's built on is relied on by downstream
-  projects — [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web),
-  [TeensyROM-CLI](https://github.com/MetalHexx/TeensyROM-CLI), and
+  projects — [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md),
+  the engine of the TeensyROM Suite, and
   [c64cast](https://github.com/kfox/c64cast) (which uses TR+'s Remote DMA feature). If your
   change alters register meanings, command formats, or timing those tools rely on, call it
   out explicitly in the PR — a silent break there breaks someone else's project, not just

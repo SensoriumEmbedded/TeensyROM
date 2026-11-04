@@ -30,9 +30,8 @@ The sections below detail the physical/transport connection options, advanced be
 The protocol is also currently implemented in several control projects, for reference:
 |Project name/Link|Developer|Description|
 |:--|:--:|:--|
-|**[TeensyROM-UI](https://github.com/MetalHexx/TeensyROM-UI)** |[MetalHexx](https://github.com/MetalHexx)|Windows based UI with media exploration, uses all available commands|
-|**[TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web)**  |[MetalHexx](https://github.com/MetalHexx)|Cross-platform web based version with stand-alone API server|
-|**[TeensyROM-CLI](https://github.com/MetalHexx/TeensyROM-CLI)** |[MetalHexx](https://github.com/MetalHexx)|Cross-platform CLI version|
+|**[Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md)** |[MetalHexx](https://github.com/MetalHexx)|Engine of the TeensyROM Suite: speaks this protocol over USB serial and TCP, and serves it as an HTTP API with an OpenAPI spec|
+|**[TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite)** |[MetalHexx](https://github.com/MetalHexx)|Trom UI (web, with the DJ Mixer), Trom Terminal and Trom Agent, all built on Trom API|
 |**[c64cast](https://github.com/kfox/c64cast/)**  |[Kelly Fox](https://github.com/kfox) |Python project to stream video/audio to the C64 via the TR+|
 |**[TRWinApp](https://github.com/SensoriumEmbedded/TRWinApp)** |[SensoriumEmbedded](https://github.com/SensoriumEmbedded)|Very basic command implementation, used for test/development|
 |**[TeensyROMControl](https://github.com/SensoriumEmbedded/TeensyROMControl)** |[SensoriumEmbedded](https://github.com/SensoriumEmbedded)|Library for TeensyROM control from a microcontroller|

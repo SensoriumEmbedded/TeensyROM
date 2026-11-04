@@ -15,6 +15,7 @@ Much like the hardware synthesizer TherapSID, TeensyROM implements the ASID prot
 
 - Stream SID tunes from [DeepSID](https://deepsid.chordian.net/) with multi-SID support
 - Control the SID chip as a synthesizer using [ChipSynth C64](https://plogue.com/products/chipsynth-c64.html) from Plogue.
+- Play and mix SID tunes live on one or two C64s with the [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) in Trom UI
 
 For more information: [ASID Player Guide](/docs/ASID_Player.md)
 
@@ -41,17 +42,21 @@ For more information: [NFC Loader Guide](/docs/NFC_Loader.md)
 
 ## Modern UI Control
 
-TeensyROM apps feature a mashup of modern and retro. By leveraging modern computing power and memory, they unlock instant search, indexing, and random selection across massive file collections—capabilities impossible on vintage hardware alone:
+[TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite) is a mashup of modern and retro. By leveraging modern computing power and memory, it unlocks instant search, indexing, and random selection across massive file collections—capabilities impossible on vintage hardware alone:
 
-- **Modern Web Interfaces**: Browse and launch your entire game and media library from any computer via WiFi, Ethernet, or USB
-- **Live Video Integration**: Watch your C64 gameplay with large array of authentic CRT emulation effects (Web only)
-- **Complete Media Management**: Search, filter, transfer files, create playlists and track favorites across all storage devices
-- **Advanced Playback Control**: Shuffle mode, auto-play, progress tracking, and support for multi-device DJ setups
-- **Cross-Platform Support**: Apps available for Windows, macOS, and Linux
+- **Your Library, Anywhere**: Browse, search and launch every game, demo, SID and image from any computer, phone or tablet on your network, with your TeensyROM on USB or Ethernet
+- **Stream It**: Shuffle and auto-play hands-free across all your storage, with favorites, play history and [audio on your phone](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#mobile-audio-streaming)
+- **Live Video Integration**: Watch your C64 in the browser with a large array of authentic [CRT effects](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#video-and-crt-emulation)
+- **[DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md)**: One or two C64s become decks: beat-match, loop, cue and scratch SID tunes live, with every note from a real SID chip. Watch the [Mix Preview](https://youtu.be/PjhqYkmsScg) and [Scratch / Beat Juggle](https://youtu.be/xoJBOEPB5IY)
+- **[Copy Files](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#copy-files-to-your-cart) and [Watch Folders](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#watch-folders)**: Drag and drop files, folders and archives onto several TeensyROMs at once, or let a folder on your computer send whatever lands in it
+- **[Themes](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#themes)**: Recolor the TeensyROM's own menu, on one TeensyROM or all
+- **Just Ask**: Tell [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md) "play me some Rob Hubbard" or "give me a 30-minute set"
+- **Cross-Platform Support**: Windows, macOS, and Linux
 - **Featured Apps**:
-  - [Web UI / HTTP API](https://github.com/MetalHexx/TeensyROM-Web) **New App!** (Cross-platform) 
-  - [CLI App](https://github.com/MetalHexx/TeensyROM-CLI) (Cross-platform)
-  - [Desktop App](https://github.com/MetalHexx/TeensyROM-UI) (Windows Only)
+  - [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md): the web app, home of the DJ Mixer
+  - [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md): a BBS-style menu plus one-line commands for your scripts
+  - [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md): a plugin for your AI coding agent
+  - [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md): the engine behind them all, open to your own tools
   - [TR Transfer/Control App](https://github.com/SensoriumEmbedded/TRWinApp) (Windows Only)
 
 ## Serial / TCP API
@@ -62,6 +67,7 @@ TeensyROM exposes a comprehensive command protocol over USB Serial or TCP/Ethern
 - **File Operations**: Upload, download, copy, delete, and directory listing capabilities across SD and USB storage
 - **Playback Control**: Remote file launching, SID player control (pause, speed, voice muting, sub-tune selection)
 - **Device Management**: System commands including reset, ping, version info, firmware checks, and DMA control
+- **HTTP API**: [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md#build-your-own-tools) wraps the protocol in an HTTP API with an OpenAPI spec, so your tools can launch files, search your library, copy files and set themes from any language
 
 ## Image Launcher Support
 
