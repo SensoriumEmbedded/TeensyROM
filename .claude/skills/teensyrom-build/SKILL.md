@@ -70,8 +70,8 @@ Step 2 builds one cartridge type per run. Build both when both kinds of board ne
 - With more than one Teensy attached, never call `teensy_post_compile -port=...` yourself:
   with `-port` alone it falls back to auto-search and can write the other board. The
   flasher passes the board's whole address.
-- Stop anything that holds a board's serial port (Trom API or another TeensyROM app,
-  a serial monitor) before flashing; a board it holds cannot answer and cannot be identified.
+- Stop anything that holds a board's serial port (a TeensyROM app or API, a serial
+  monitor) before flashing; a board it holds cannot answer and cannot be identified.
 - TeensyROM settings survive a USB flash.
 
 ## Options

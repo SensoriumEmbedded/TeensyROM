@@ -35,7 +35,7 @@ npm run flash -- --all                    # every board, each with the newest im
 It refuses, and lists the attached boards, when it cannot tell: two boards of the image's
 type (name one with `--uid`), a board that does not answer, or none of the image's type
 (then the image is for the other cartridge). A board that does not answer is usually one
-whose serial port another program holds, such as Trom API or a serial monitor. A board
+whose serial port another program holds, such as a TeensyROM app or a serial monitor. A board
 already waiting in the bootloader cannot be asked what it is. On its own it is written on
 the image's word; beside another board the tool refuses, because the Teensy Loader writes
 to whichever board it finds in the bootloader.
