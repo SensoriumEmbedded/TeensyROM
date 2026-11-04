@@ -112,7 +112,7 @@ You can control the TeensyROM via TCP at port 2112 from the various available ex
 
 ### Applications Supporting TCP
 * [TR Transfer/Control App](https://github.com/SensoriumEmbedded/TRWinApp) - Great for testing and exploring the various TCP/Serial command capabilities on Windows.
-* [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md) - The engine of the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite), which lets Trom UI, Trom Terminal and Trom Agent reach your TeensyROM over the network as well as USB ([Connect your cart](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md#connect-your-cart)). Available on Mac, Linux and Windows.
+* [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md) - The engine of the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite), which lets Trom UI, Trom Terminal and Trom Agent reach your TeensyROM over the network as well as USB ([Connect your cart](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md#connect-your-cart)). Available on Mac, Linux, Raspberry Pi and Windows.
   * It extends the TCP support with a simple REST-style HTTP API and OpenAPI spec, making it easier to build your own TeensyROM apps without programming low-level TCP/Serial code and managing TeensyROM FW state.
 
 >_**Performance Tip**: <br>

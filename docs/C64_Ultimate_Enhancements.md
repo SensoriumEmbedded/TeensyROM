@@ -51,7 +51,7 @@ For more information: [NFC Loader Guide](/docs/NFC_Loader.md)
 - **[Copy Files](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#copy-files-to-your-cart) and [Watch Folders](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#watch-folders)**: Drag and drop files, folders and archives onto several TeensyROMs at once, or let a folder on your computer send whatever lands in it
 - **[Themes](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#themes)**: Recolor the TeensyROM's own menu, on one TeensyROM or all
 - **AI Companion**: [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md) helps you explore your collection, play mixes, and troubleshoot your setup with [Virtual Travis](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md#the-setup-doctor)
-- **Cross-Platform Support**: Windows, macOS, and Linux
+- **Cross-Platform Support**: Windows, macOS, Linux, and Raspberry Pi
 - **Featured Apps**:
   - [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md): the web app, home of the DJ Mixer
   - [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md): a BBS-style menu plus one-line commands for your scripts

@@ -13,7 +13,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |**[SID Factory II](https://blog.chordian.net/sf2/)**|Win/Mac/Linux|Cross-platform SID music editor with ASID output ([beta branch](https://github.com/Chordian/sidfactory2/tree/asid-support))|
 |**[ASIDXP](https://elektron.se/support-downloads/sidstation#resources)**|Win/Mac|Stream SID files directly from your local hard drive|
 |**[SIDPlay](http://www.sidmusic.org/sidplay/mac/)**|Mac|Stream from your local hard drive with visualizations, etc|
-|**[Trom UI DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md)**|Win/Mac/Linux|Play and mix SID tunes live on one or two C64s: beat-match, loop, cue and scratch|
+|**[Trom UI DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md)**|Win/Mac/Linux/Pi|Play and mix SID tunes live on one or two C64s: beat-match, loop, cue and scratch|
 
 ## USB/TeensyROM Setup
 * Connect USB cable from a MIDI Host/computer to the USB Type B Micro Device port on the Teensy module.
