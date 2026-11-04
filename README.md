@@ -22,7 +22,12 @@
   * **Internet interface**: Connect to a [Telnet BBS](docs/Ethernet_Usage.md) or use the integrated [web browser](docs/Browser_Usage.md) to surf/search/download
   * **Remote Control** your C64 using 
     * [NFC Launch System](docs/NFC_Loader.md): The feel of old school cartridges combined with [instant loading](https://www.youtube.com/watch?v=iNfQx2gx0hA)
-    * The feature rich (and cross-platform) [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) and [Command Line Interface](https://github.com/MetalHexx/TeensyROM-CLI)
+    * [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite) for Windows, macOS and Linux, driving your TeensyROM over USB or Ethernet:
+      * [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md): browse, stream and launch your library from any browser, with live video, CRT effects and a [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md) that plays one or two C64s as decks
+      * [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md): a BBS-style menu, plus one-line commands for your scripts
+      * [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md): ask your AI coding agent to play sets, tour your library and set up the suite
+      * [Trom API](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-api.md): the engine behind them all, open to your own tools over HTTP
+      * Needs firmware 0.8.0.9 or later ([Getting started](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/getting-started.md#firmware))
   * SID File Player with voice muting and speed control 
   * Bitmap Picture viewer, Text/PETSCII viewer, Custom BASIC Commands, Autolaunch, *and more* 
   * Lots of games, utilities, pics, and music built-in: no external media required to get started!
@@ -59,7 +64,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
   * USB thumb Drive
   * SD card
   * Teensy Internal Flash Memory
-  * Transfer directly from PC using [TeensyROM-Web](https://github.com/MetalHexx/TeensyROM-Web) (cross-platform, recommended) or the [TeensyROM UI](https://github.com/MetalHexx/TeensyROM-UI) (Windows desktop)
+  * Transfer directly from your computer using [Trom UI](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-ui.md#copy-files-to-your-cart) (drag and drop, or watch folders), [Trom Terminal](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-terminal.md#copy-files) or [Trom Agent](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/trom-agent.md) from the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite)
   * See supported file details [here](https://github.com/SensoriumEmbedded/TeensyROM/blob/main/docs/General_Usage.md#loading-files-and-emulating-roms)
   * [NFC Loading system](docs/NFC_Loader.md) available to quickly select/load with NFC tags.
 ### **MIDI in/out via USB Host connection:** 
@@ -116,6 +121,7 @@ Compatible with C64 and C128 machines/variants, NTSC and PAL supported.
     * MIDI ASID Demo: Stream .SID & .MIDI files directly to your C64/SID
     * Web Browser and internet file download demo 
     * SID Player and Picture viewer demo 
+  * **[SID DJ on Commodore 64 (ft. TeensyROM)](https://youtu.be/PjhqYkmsScg)**: SID tunes mixed live on real C64s in the Trom UI [DJ Mixer](https://github.com/MetalHexx/TeensyROM-Suite/blob/main/docs/dj-mixer.md), plus a [Scratch / Beat Juggle](https://youtu.be/xoJBOEPB5IY) preview
 
 ## Compatibility
 * TeensyROM compatability has been fully validated on **many** different NTSC **and** PAL machines: C64, C64C, SX-64, and C128 as well as modern reproductions such as the C64U, Ultimate 64, EVO64, Mega65 (r5 and higher), and Reloaded MKII
@@ -136,7 +142,7 @@ The Teensy 4.1 is slightly "overclocked" to 816MHz from FW in this design. Per t
 
 ## Inspiration and Thank-Yous:
 * [**Heather S**](https://www.instagram.com/dalliancecreations/): Loving wife, continuous encourager, saintly patience
-* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, remote controls via [TeensyROM Web](https://github.com/MetalHexx/TeensyROM-Web), [UI](https://github.com/MetalHexx/TeensyROM-UI) and [CLI](https://github.com/MetalHexx/TeensyROM-CLI), testing, friendship
+* [**MetalHexx**](https://github.com/MetalHexx): Big picture ideas, remote control via the [TeensyROM Suite](https://github.com/MetalHexx/TeensyROM-Suite), testing, friendship
 * [**Kelly Fox**](https://github.com/kfox): TR+ contributions ([Host Extensions](docs/TR_Host_Extensions.md), build system and much more), [c64cast](https://github.com/kfox/c64cast)
 * [**John Swiderski**](https://github.com/ziggystar12) of Mean Hamster Software: [MPE](https://meanhamster.com/games/mpe-power-engine), the first TR Host Extension, and the inspiration behind them
 * [**Paul Harker aka LessPaul**](https://github.com/LessPaul): Freezer cartridge contributions (Action Replay, Retro Replay, Final Cartridge III, Super Snapshot V5)
