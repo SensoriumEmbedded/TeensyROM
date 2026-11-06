@@ -101,6 +101,17 @@
       ]
     },
     {
+      "name": "C128FastTest",
+      "description": "C128 2MHz bus/memory soak test, in the Test+Diags menu; runs on a C128 in C64 mode",
+      "dir": "Source/C64/C128FastTest",
+      "steps": [
+        { "assembler": "acme", "source": "source/C128FastTest.asm", "output": "C128FastTest.prg", "format": "cbm" }
+      ],
+      "headers": [
+        { "input": "build/C128FastTest.prg", "dest": "C128FastTest.prg.h", "progmem": true }
+      ]
+    },
+    {
       "name": "TRCustomBasicCommands",
       "description": "Custom TeensyROM BASIC commands. Built with KickAssembler, which needs Java; the framework code is vendored from barryw/CustomBasicCommands (MIT).",
       "dir": "Source/C64/TRCustomBasicCommands",

@@ -12,7 +12,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 test('the real manifest loads: every source, header input and directory exists', () => {
   const projects = loadProjects(root);
-  assert.equal(projects.length, 13);
+  assert.equal(projects.length, 14);
 });
 
 test('every directory under Source/C64 is in the manifest', () => {

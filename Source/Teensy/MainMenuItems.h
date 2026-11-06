@@ -18,6 +18,7 @@
 #include "TRMenuFiles/ROMs/game_controller_tester.prg.h"
 #include "TRMenuFiles/ROMs/rom_chksum_137kernals.prg.h"
 #include "TRMenuFiles/ROMs/C128_789010.crt.h"
+#include "TRMenuFiles/ROMs/C128FastTest.prg.h"
 #include "TRMenuFiles/ROMs/Jupiter_Lander.h" 
 #include "TRMenuFiles/ROMs/jupiter_lander_crack.prg.h" 
 #include "TRMenuFiles/ROMs/joust.prg.h"
@@ -153,6 +154,7 @@ StructMenuItem dirTest_Diags[] =
    rtBin8kHi  , IOH_None         , (char*)"781220 C64 Dead Test"             , (uint8_t*)a781220_Dead_Test_BIN      , sizeof(a781220_Dead_Test_BIN) ,
    rtBin8kHi  , IOH_None         , (char*)"DesTestMAX:  Desmond's RAM Test"  , (uint8_t*)destest_max_rom            , sizeof(destest_max_rom) ,
    rtFileCrt  , IOH_None         , (char*)"789010 C128 Diagnostics"          , (uint8_t*)C128_789010_crt            , sizeof(C128_789010_crt) ,
+   rtFilePrg  , IOH_None         , (char*)"C128 2MHz Bus+Memory Test"        , (uint8_t*)C128FastTest_prg           , sizeof(C128FastTest_prg) ,
    rtFilePrg  , IOH_None         , (char*)"Game Controller Tester"           , (uint8_t*)game_controller_tester_prg , sizeof(game_controller_tester_prg) ,
    rtBin8kLo  , IOH_None         , (char*)"Joystick Tester"                  , (uint8_t*)Joystick_Tester_BIN        , sizeof(Joystick_Tester_BIN) ,
    rtBin8kLo  , IOH_None         , (char*)"Keyboard Tester"                  , (uint8_t*)Keyboard_Tester_BIN        , sizeof(Keyboard_Tester_BIN) ,
