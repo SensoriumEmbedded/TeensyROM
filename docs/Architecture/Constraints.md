@@ -81,6 +81,10 @@ Beyond priority, Ethernet/PIT interrupts are fully **disabled** (not just deprio
 - **Firmware self-flash** — `Flash/FXUtil.cpp:175-176` disables both, and goes further by fully `detachInterrupt()`-ing the button and PHI2 pins entirely just above (lines 173-174) — there's no valid handler to service PHI2 while live firmware is being overwritten.
 - **ASID (MIDI SID) playback** — `IOH_ASID.c:579-580` disables both during ASID streaming, which has its own tight audio-rate timing requirement.
 
+The priority alone does not keep the Ethernet stack out of `isrPHI2`'s way. NativeEthernet runs the whole FNET stack (`fnet_poll()`) from a 1 ms `IntervalTimer` (PIT) ISR, and with the stack initialized (no cable needed) about 39 PHI2 interrupts per second came in late (>1.1 µs), with the GPIO interrupt at the higher priority and with `IRQ_ENET` masked. A handler that serves bytes on reads it has to sense first (Kernal Replace's HIRAM sense) gets corrupt reads, NMIs or freezes from those. So while **Kernal Replace** serves the KERNAL (its Special IO, or `fKernRepl` with `Fab04_GlobalKernalReplace`), `IRQ_PIT` is masked and `FnetLoopPollService()` (`Teensy.ino`) calls `fnet_poll()` from `loop()` every ms instead: late PHI2 interrupts drop to about one every 2 s. Kernal Replace starts this in `InitHndlr_KERNALReplace_PreStart()` (`FnetLoopPollStart()`), since `loop()` sees the new handler only ~0.4 s after a launch; `SetUpMainMenuROM()` ends it. Two consequences:
+- TCP is serviced only as often as `loop()` comes round meanwhile, so a `PollingHndlr` that blocks also stalls the network.
+- Code that blocks waiting for the stack (`connect`, DHCP, DNS) needs the PIT poll back: `ProcessATCommand()` (`Swift_ATcommands.c`) unmasks `IRQ_PIT` while an AT command runs (SwiftLink under `Fab04_GlobalKernalReplace`). New blocking network calls that can run while the KERNAL is replaced need the same.
+
 ## The main `loop()` is single-threaded — a blocking call anywhere in it stalls every other main-loop-driven task
 
 `Teensy.ino`'s `loop()` dispatches `ServiceSerial()`/`ProcessCommand()` (incoming serial/network
