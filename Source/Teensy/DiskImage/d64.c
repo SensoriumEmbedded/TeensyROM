@@ -619,8 +619,9 @@ VD_COLD int d64_close_write(d64_t *d, d64_wfile_t *w)
 {
     w->buf[0] = 0; w->buf[1] = (uint8_t)(w->pos - 1);   /* index of last used byte */
     int r = wr(d, w->cur_t, w->cur_s, w->buf);
-    if (r) return r;
-    return dir_update(d, w->dir_t, w->dir_s, w->dir_slot, NULL, 0x80 | w->type, w->blocks);
+    if (!r) r = dir_update(d, w->dir_t, w->dir_s, w->dir_slot, NULL, 0x80 | w->type, w->blocks);
+    if (r) { abort_write(d, w); return r; }
+    return 0;
 }
 
 /* ---- REL files ----------------------------------------------------------- */

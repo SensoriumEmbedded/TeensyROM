@@ -67,3 +67,12 @@ test('the image kind follows the file size, error bytes and 40-track D64s includ
 test('a file grows into tracks before its last one in the allocation order once a scratch frees them', { skip }, () => {
   assert.equal(runHarness('wrap'), 'append=0 write=600 close=0 same=1');
 });
+
+// The first write of the close is the last data sector, the second the directory entry
+for (const how of ['new', 'append', 'copy']) {
+  for (const nth of [1, 2]) {
+    test(`${how}: a close whose write ${nth} fails leaves the disk as it was before the write began`, { skip }, () => {
+      assert.equal(runHarness('closefail', how, String(nth)), 'close=-1 free=662,662 files=1 old=2,1');
+    });
+  }
+}

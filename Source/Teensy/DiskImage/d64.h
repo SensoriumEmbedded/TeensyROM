@@ -155,7 +155,8 @@ size_t d64_build_dir(d64_t *d, const char *pattern, uint8_t *out, size_t cap);
  * unclosed "splat" until d64_close_write). replace!=0 scratches an existing
  * file of that name first (DOS "@:"). */
 int  d64_create(d64_t *d, const char *name, uint8_t type, int replace, d64_wfile_t *w);
-int  d64_write(d64_t *d, d64_wfile_t *w, const uint8_t *data, size_t n); /* n or <0; on D64_E_FULL the file is removed */
+int  d64_write(d64_t *d, d64_wfile_t *w, const uint8_t *data, size_t n); /* n or <0; on failure the file is removed */
+/* On failure the file is removed (an append: put back as it was), as d64_write does. */
 int  d64_close_write(d64_t *d, d64_wfile_t *w);
 /* DOS ",A": reopen a file for writing at its end (the entry shows as unclosed until d64_close_write). D64_E_NOTFOUND,
  * D64_E_TYPE for a REL file. On D64_E_FULL the file is put back as it was before the append. */
