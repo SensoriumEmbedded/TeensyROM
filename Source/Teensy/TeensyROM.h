@@ -52,6 +52,7 @@
   // #define DbgIOTraceLog //Logs Reads/Writes to/from IO1 to BigBuf. Like debug handler but can use for others
   // #define DbgCycAdjLog  //Logs ISR timing adjustments to BigBuf.
   // #define DbgSpecial    //Special case logging to BigBuf
+  // #define DbgSnoopTap   //Records C64 cycles on chosen pages; serial SnoopTapToken sets the pages and takes them
  
 //Debug HW signal enables: Recommend using only 1 at a time.
   // DbgMsgs_SW (above) includes LED/DBG signal control
