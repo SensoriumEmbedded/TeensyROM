@@ -163,7 +163,12 @@ void DirectREU()
 {  //sent here directly from *within the ISR* to incorporate DMA and (PS)RAM REU transfers
    // Either from REU_FF00_W_Check or REUReg_Command_Execute
 
-   uint32_t StartTime = micros();  
+   uint32_t StartTime = micros();
+
+   // The C64 runs, and can start this transfer, while a host DMA job is set up and waiting to
+   // start its next slice; that job reads the same DMA_* state once this returns.
+   const bool JobRnW = DMA_RnW, JobFixC64Addr = DMA_FixC64Addr;
+   const uint32_t JobLength = DMA_Length, JobCount = DMA_Count, JobStartAddr = DMA_StartAddr;
 
    uint8_t Data1, Data2;
    uint32_t REU_StartAddr = REU_Size_Mask & (REURegs[REUReg_REUStartAddrLo] + 256*REURegs[REUReg_REUStartAddrMed] + 256*256*REURegs[REUReg_REUStartAddrHi]);
@@ -355,6 +360,12 @@ void DirectREU()
    //Matters when the CPU resumes in cart ROM (e.g. Super Snapshot's REU probe at $F783)
    GPIO6_ISR = CORE_PIN1_BITMASK;  //PHI2_PIN, write-1-to-clear
    NVIC_CLEAR_PENDING(IRQ_GPIO6789);
+
+   DMA_RnW = JobRnW;
+   DMA_FixC64Addr = JobFixC64Addr;
+   DMA_Length = JobLength;
+   DMA_Count = JobCount;
+   DMA_StartAddr = JobStartAddr;
 }
 #endif
 
