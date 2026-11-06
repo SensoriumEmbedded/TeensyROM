@@ -8,6 +8,8 @@
 //   w OFFSET       an IO2 write of that byte
 //   job ADDR       a host DMA job is set up at ADDR, as SetUpDMA leaves it
 //   dma 0          prints the DMA job state: read, fixed address, start, length, count
+//   watch 0        another owner, such as the sample store watch, holds the bus snoop
+//   snoop 0        prints "watch" while that owner still holds it, "none" or "other" if not
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -77,6 +79,7 @@ static uint8_t DataPortWaitRead() { return WriteData; }
 #include "../MinimalBoot/Common/IO_Handlers/IOH_REU.c"
 
 static uint8_t BankRAM[MAX_REU_BANKS][RAM_Bank_Size];
+static bool WatchSnoop(uint16_t, bool) { return false; }
 
 int main()
 {
@@ -95,7 +98,7 @@ int main()
       else if (!strcmp(Command, "w")) IOHndlr_REU_TRPage.IO2Hndlr(Value, false);
       else if (!strcmp(Command, "job"))
       {
-         DMA_RnW = false;
+         DMA_RnW = true;
          DMA_FixC64Addr = false;
          DMA_StartAddr = Value;
          DMA_Length = 0x40;
@@ -103,6 +106,9 @@ int main()
       }
       else if (!strcmp(Command, "dma"))
          printf("%d %d %04x %x %x\n", DMA_RnW, DMA_FixC64Addr, (unsigned)DMA_StartAddr, (unsigned)DMA_Length, (unsigned)DMA_Count);
+      else if (!strcmp(Command, "watch")) fBusSnoop = &WatchSnoop;
+      else if (!strcmp(Command, "snoop"))
+         printf("%s\n", fBusSnoop == &WatchSnoop ? "watch" : fBusSnoop ? "other" : "none");
       else if (!strcmp(Command, "stock")) CurrentIOHandler = IOH_REU;
       else if (!strcmp(Command, "r"))
       {
