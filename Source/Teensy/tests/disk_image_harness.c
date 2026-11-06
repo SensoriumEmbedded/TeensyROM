@@ -7,6 +7,8 @@
 //   frees tracks earlier in the allocation order; prints "append=<rc> write=<rc> close=<rc> same=<0|1>".
 // disk_image_harness closefail new|append|copy N: the Nth sector write of d64_close_write fails; prints
 //   "close=<rc> free=<before>,<after> files=<n> old=<blocks>,<0|1>" (old: the file an append or copy started from).
+// disk_image_harness replace fit|full: "@:" over a file, with room for both, or without room until the old one's blocks
+//   are freed; prints "create=<rc> write=<rc> close=<rc> free=<before>,<after> files=<n> data=<old|new|none>".
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -134,6 +136,35 @@ static int CloseFail(const char *How, int Nth)
    return 0;
 }
 
+static int Replace(const char *How)
+{
+   static uint8_t Old[2540], New[5080];
+   d64_t Disk;
+   d64_wfile_t Out;
+   uint8_t Nt, Ns;
+   int Before, Create, Write = 0, Close = 0;
+
+   Fill(Old, sizeof Old, 5);
+   Fill(New, sizeof New, 9);
+   if (BlankD64(&Disk) || Save(&Disk, "A", Old, sizeof Old)) return 1;
+   if (!strcmp(How, "full"))
+   {
+      // 15 blocks free: room for the 20-block new file only once the old file's 10 are freed
+      for (uint8_t t = 1; t <= 35; t++)
+         for (uint8_t s = 0; t != 18 && s < d64_sectors_in_track(&Disk, t) && d64_blocks_free(&Disk) > 15; s++)
+            d64_block_alloc(&Disk, t, s, &Nt, &Ns);
+   }
+   else if (strcmp(How, "fit")) return 2;
+   Before = d64_blocks_free(&Disk);
+   Create = d64_create(&Disk, "A", 2, 1, &Out);
+   if (!Create) Write = d64_write(&Disk, &Out, New, sizeof New);
+   if (!Create && Write == (int)sizeof New) Close = d64_close_write(&Disk, &Out);
+   int IsOld = Same(&Disk, "A", Old, sizeof Old), IsNew = Same(&Disk, "A", New, sizeof New);
+   printf("create=%d write=%d close=%d free=%d,%d files=%d data=%s\n", Create, Write, Close, Before, d64_blocks_free(&Disk),
+          Files(&Disk), IsNew == 1 ? "new" : IsOld == 1 ? "old" : "none");
+   return 0;
+}
+
 static int NewDisk(const char *Kind)
 {
    static const struct { const char *Kind; size_t Size; } Kinds[] = { { "d64", 174848 }, { "d71", 349696 }, { "d81", 819200 } };
@@ -186,5 +217,6 @@ int main(int argc, char **argv)
    if (argc == 3 && !strcmp(argv[1], "size")) return SizeOf(argv[2]);
    if (argc == 2 && !strcmp(argv[1], "wrap")) return Wrap();
    if (argc == 4 && !strcmp(argv[1], "closefail")) return CloseFail(argv[2], atoi(argv[3]));
+   if (argc == 3 && !strcmp(argv[1], "replace")) return Replace(argv[2]);
    return 2;
 }

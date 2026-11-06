@@ -518,11 +518,11 @@ VD_COLD int d64_create(d64_t *d, const char *name, uint8_t type, int replace, d6
     d64_entry_t e;
     if (!d->write || d->ro) return D64_E_RO;
     if (!valid_name(name)) return D64_E_NAME;
-    int r = d64_find(d, name, &e);
-    if (r < 0) return r;
-    if (r == 1) {
+    int found = d64_find(d, name, &e), r;
+    if (found < 0) return found;
+    if (found) {
         if (!replace) return D64_E_EXISTS;
-        if ((r = d64_scratch_entry(d, &e))) return r;
+        if (e.type & 0x40) return D64_E_LOCKED;
     }
     uint8_t ft = 0, fs = 0, dt, ds, slot;
     if ((r = alloc_sector(d, &ft, &fs, 10, 0))) return r;
@@ -539,6 +539,7 @@ VD_COLD int d64_create(d64_t *d, const char *name, uint8_t type, int replace, d6
     w->first_t = w->cur_t = ft; w->first_s = w->cur_s = fs;
     w->pos = 2; w->blocks = 1;
     w->app_t = w->app_s = w->app_end = w->app_type = 0; w->app_blocks = 0;
+    if (found) w->rep = e; else w->rep.dir_t = 0;
     memset(w->buf, 0, sizeof w->buf);
     return 0;
 }
@@ -564,6 +565,7 @@ VD_COLD int d64_append(d64_t *d, const char *name, d64_wfile_t *w)
     w->pos = (uint16_t)(w->buf[1] < 1 ? 2 : w->buf[1] + 1);
     w->blocks = n;
     w->app_t = t; w->app_s = s; w->app_end = w->buf[1]; w->app_type = e.type; w->app_blocks = n;
+    w->rep.dir_t = 0;
     return dir_update(d, e.dir_t, e.dir_s, e.dir_slot, NULL, e.type & 0x7F, -1);   /* unclosed while it is written */
 }
 
@@ -621,7 +623,7 @@ VD_COLD int d64_close_write(d64_t *d, d64_wfile_t *w)
     int r = wr(d, w->cur_t, w->cur_s, w->buf);
     if (!r) r = dir_update(d, w->dir_t, w->dir_s, w->dir_slot, NULL, 0x80 | w->type, w->blocks);
     if (r) { abort_write(d, w); return r; }
-    return 0;
+    return w->rep.dir_t ? d64_scratch_entry(d, &w->rep) : 0;
 }
 
 /* ---- REL files ----------------------------------------------------------- */

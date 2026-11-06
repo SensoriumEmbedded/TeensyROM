@@ -76,3 +76,11 @@ for (const how of ['new', 'append', 'copy']) {
     });
   }
 }
+
+test('"@:" replaces a file once the new one is written, freeing the old blocks', { skip }, () => {
+  assert.equal(runHarness('replace', 'fit'), 'create=0 write=5080 close=0 free=654,644 files=1 data=new');
+});
+
+test('"@:" with room for the new file only after the old one is freed fails, and keeps the old file', { skip }, () => {
+  assert.equal(runHarness('replace', 'full'), 'create=0 write=-3 close=0 free=15,15 files=1 data=old');
+});
