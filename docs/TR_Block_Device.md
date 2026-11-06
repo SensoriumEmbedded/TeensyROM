@@ -19,6 +19,7 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 ## What it is and is not
 * One image at a time, chosen by the firmware (for GEOS, when the menu launches it). The C64 cannot choose or replace the image.
 * Blocks are 256 bytes. A block is addressed by two bytes whose meaning depends on the image kind ([Disk addresses](#disk-addresses)).
+* The image is a D64 (35 or 40 tracks), D71 or D81, with or without the error bytes some copiers append. A file of any other size does not mount. The error bytes are not read: a sector they mark bad reads as its bytes.
 * It is available while the GeoRAM handler or the `REU+USB Mouse/Disk` handler (TR+ only) is active, which is also where the USB mouse registers are. It is not available under other handlers, the plain REU included, and not under a Host Extension.
 * It is not an IEC drive. Software that talks to the IEC bus cannot see it.
 
@@ -101,7 +102,7 @@ Any other CMD fails with `$E6`.
 A failed `READ` or `BOOT` leaves the buffer unspecified. A failed `WRITE` that was rejected before the card was touched (`$E1`, `$E2`, `$E5`) changes nothing; one the card failed (`$E4`) may have changed part of the block.
 
 ## Disk addresses
-For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector, as the 1541, 1571 and 1581 number them: tracks start at 1, sectors at 0. The 1541 and 1571 use the usual four speed zones (21, 19, 18 and 17 sectors a track, the 1571's second side repeating them); the 1581 has 40 sectors on every track. An address off the end of the image or past a track's last sector fails with `$E2`.
+For the disk image kinds (D64, D71, D81) ADDR0 is the track and ADDR1 the sector, as the 1541, 1571 and 1581 number them: tracks start at 1, sectors at 0. The 1541 and 1571 use the usual four speed zones (21, 19, 18 and 17 sectors a track, the 1571's second side repeating them, a 40-track D64's tracks 36 to 40 having 17); the 1581 has 40 sectors on every track. The arithmetic is the shared disk image engine's ([Disk-Images.md](Architecture/Disk-Images.md)). An address off the end of the image or past a track's last sector fails with `$E2`.
 
 The firmware does this arithmetic so that a 6502 driver does not have to. A driver that wants raw sector numbers instead is a different image kind, which this version does not define.
 
