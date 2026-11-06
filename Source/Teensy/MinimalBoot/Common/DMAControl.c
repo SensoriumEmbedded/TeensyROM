@@ -346,15 +346,15 @@ FLASHMEM SampleWatchStats SampleWatchTake()
 // Debug only: records C64 cycles on chosen pages into a ring the host takes over USB serial
 // (SnoopTapToken), so the cycles leading up to a crash can be read back after it.
 struct SnoopEntry { uint32_t Cyc; uint16_t Addr; uint8_t Data; uint8_t Info; };
-enum : uint8_t { SnoopWrites = 1, SnoopReads = 2, SnoopTrigger = 4 };
+enum : uint8_t { SnoopWrites = 1, SnoopReads = 2, SnoopTrigger = 4, SnoopSlices = 8 };
 enum : uint32_t { SnoopAfterTrigger = 64 };
 enum : uint8_t { SnoopInfoState = 0x1F, SnoopInfoLockArmed = 0x20, SnoopInfoRead = 0x40, SnoopInfoSliceMark = 0x80 };
 enum : uint32_t { SnoopRingSize = 1024 };
 uint8_t SnoopHot[256];
 // The first write to a SnoopTrigger page freezes the ring SnoopAfterTrigger entries later, so what
 // led up to it survives whatever the host does before it takes the ring.
-volatile bool SnoopActive, SnoopPaused, SnoopTriggered;
-volatile uint32_t SnoopTotal, SnoopSkipped, SnoopFreezeAt;
+volatile bool SnoopActive, SnoopMarkSlices, SnoopPaused, SnoopTriggered;
+volatile uint32_t SnoopTotal, SnoopSkipped, SnoopFreezeAt, SnoopTaps;
 DMAMEM SnoopEntry SnoopRing[SnoopRingSize];
 
 static inline void SnoopRecord(uint16_t Address, uint8_t Data, uint8_t Info)
@@ -370,6 +370,7 @@ static inline void SnoopRecord(uint16_t Address, uint8_t Data, uint8_t Info)
 FASTRUN void SnoopTap(uint16_t Address, bool R_Wn)
 {
    if (!(SnoopHot[Address >> 8] & (R_Wn ? SnoopReads : SnoopWrites))) return;
+   SnoopTaps++;
    if (SnoopPaused || (SnoopTriggered && SnoopTotal >= SnoopFreezeAt)) { SnoopSkipped++; return; }
    SnoopRecord(Address, R_Wn ? 0 : DataPortWaitRead(),
                (DMA_State & SnoopInfoState) | (SampleLockArmed ? SnoopInfoLockArmed : 0) | (R_Wn ? SnoopInfoRead : 0));
@@ -383,7 +384,7 @@ FASTRUN void SnoopTap(uint16_t Address, bool R_Wn)
 // Cyc is the last ISR's, the nearest stamp thread mode has.
 static FLASHMEM void SnoopMarkSlice()
 {
-   if (!SnoopActive) return;
+   if (!SnoopMarkSlices) return;
    __disable_irq();
    if (!SnoopPaused && !(SnoopTriggered && SnoopTotal >= SnoopFreezeAt))
       SnoopRecord(DMA_StartAddr, DMA_Length & 0xFF, SnoopInfoSliceMark);
