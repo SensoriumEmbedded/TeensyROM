@@ -14,7 +14,7 @@ showing that write.
   python dma_scope_write.py --te 445 --tw 350       te445's te/ty, but tw overridden to 350 instead of 395
 
 The C64 is reset to the menu first: the errors only show while the C64 program is writing RAM, and a quiet
-loop hides them.  Needs pyserial (pip install pyserial).  Close the TeensyROM UI first, it holds the port."""
+loop hides them.  Needs pyserial (pip install pyserial).  Stop Trom API first (`trom api stop`), it holds the port."""
 import argparse, re, sys, time
 import serial
 from serial.tools import list_ports
