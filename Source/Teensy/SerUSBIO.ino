@@ -1354,7 +1354,7 @@ FLASHMEM void RefuseSpans(const char *Why, uint32_t Owed, uint32_t Began)
 //
 // Workflow:
 // Receive <-- WriteC64SpansToken (0x64FC)
-// Send --> AckToken 0x64CC, or 0x9b7f and the reason while another DMA user holds the bus
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason while the C64 is paused
 // Receive <-- Flags (C64SpansFlag*), slice bytes (0 = whole spans), gap between slices in uS, span count (1..64)
 // Receive <-- Span count x { C64 address (Hi,Low), length (Hi,Low) }; with LockToStore, the first
 //             entry is { store address (Hi,Low), 0 (Hi,Low) } and the gap is the longest wait for a store
@@ -1375,16 +1375,11 @@ FLASHMEM void WriteC64SpansCommand()
    uint32_t Total, Landed;
    const uint32_t Began = millis();
 
-   // The 6510 runs between slices, so another DMA user could act inside the job.  REU emulation,
-   // alone or alongside a freezer cart (RR, FC3 101%, SSv5), runs its transfers from the PHI2
-   // interrupt using the same DMA_* state a job sets up, and overwrites it; a paused C64 would be
-   // resumed by the first slice.  NumREU_Banks is non-zero whenever REU emulation is set up,
-   // whichever handler set it up.
-   const char *Busy = NumREU_Banks ? "REU emulation is running" : isFrozen ? "C64 is paused" : nullptr;
-   if (Busy)
+   // A paused C64 would be resumed by the first slice.
+   if (isFrozen)
    {
       SendU16(FailToken);
-      CmdChannel->println(Busy);
+      CmdChannel->println("C64 is paused");
       return;
    }
    SendU16(AckToken);

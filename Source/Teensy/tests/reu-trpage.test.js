@@ -37,6 +37,7 @@ function run(lines) {
 }
 
 const read = (offset) => `r ${offset.toString(16)}`;
+const write = (offset, value) => [`d ${value.toString(16)}`, `w ${offset.toString(16)}`];
 
 test('beside an REU, its registers answer and the rest of each 32 bytes reads $FF, as a 1764\'s do', { skip }, () => {
   const offsets = [0x09, 0x0a, 0x0b, BLOCK_ID, BLOCK_ID + 2, 0x1f, 0x2a, 0x20 + BLOCK_ID, 0xff];
@@ -50,4 +51,15 @@ test('with no RAM for the REU, nothing in IO2 answers, so software finds no REU 
 
 test('under the stock REU, the unused registers stay open bus', { skip }, () => {
   assert.deepEqual(run(['init 0', `banks ${BANKS}`, 'stock 0', ...[0x0a, BLOCK_ID, 0x1f].map(read)]), ['3f', 'open', 'open']);
+});
+
+// The C64 can start a transfer between a host job's setup and its slice, or between two slices.
+test('a transfer the C64 starts leaves a host DMA job set up as it found it', { skip }, () => {
+  const transfer = [...write(0x07, 0x10), ...write(0x08, 0x00), ...write(0x0a, 0x80), ...write(0x01, 0x91)];
+  assert.deepEqual(run(['init 0', `banks ${BANKS}`, 'job c000', ...transfer, 'dma 0']), ['1 0 c000 40 0']);
+});
+
+test('a transfer the C64 starts at once leaves another owner\'s bus snoop in place', { skip }, () => {
+  const transfer = [...write(0x07, 0x10), ...write(0x08, 0x00), ...write(0x01, 0x91)];
+  assert.deepEqual(run(['init 0', `banks ${BANKS}`, 'watch 0', ...transfer, 'snoop 0']), ['watch']);
 });
