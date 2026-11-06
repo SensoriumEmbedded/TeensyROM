@@ -589,6 +589,11 @@ FLASHMEM void ProcessCommand()
       case SampleWatchToken: //Count C64 writes to one address
          SampleWatchCommand();
          return;
+   #ifdef DbgSnoopTap
+      case SnoopTapToken: //Set the snooped pages, take what was recorded
+         SnoopTapCommand();
+         return;
+   #endif
       case ReadC64MemToken: //Write to C64 mem via DMA
          ReadC64MemCommand();
          return;
@@ -1465,6 +1470,64 @@ FLASHMEM void SampleWatchCommand()
    SendU32(Stats.Unlocked);
    SendU32(F_CPU_ACTUAL);
 }
+
+#ifdef DbgSnoopTap
+// Receive <-- SnoopTapToken (0x64F8)
+// Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
+//             (bit 0 writes, bit 1 reads), 2 = take, then stop
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason
+// Send --> ARM cycles per second (4), cycles recorded since the last take (4), cycles not recorded
+//          while taking (4), entries sent (2), then each entry oldest first: ARM cycle (4),
+//          C64 address (2), data (1), info (1); all Low first
+FLASHMEM void SnoopTapCommand()
+{
+   uint32_t Mode;
+   if (!GetUInt(&Mode, 1) || Mode > 2)
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Mode must be 0, 1 or 2");
+      return;
+   }
+   uint8_t Pages[256] = {};
+   if (Mode == 1)
+      for (uint32_t Page = 0; Page < 256; Page++)
+      {
+         uint32_t Want;
+         if (!GetUInt(&Want, 1))
+         {
+            SendU16(FailToken);
+            CmdChannel->println("Error receiving pages!");
+            return;
+         }
+         Pages[Page] = Want;
+      }
+   SnoopPaused = true;
+   const uint32_t Total = SnoopTotal, Skipped = SnoopSkipped;
+   const uint32_t Sent = Total < SnoopRingSize ? Total : SnoopRingSize;
+   SendU16(AckToken);
+   SendU32(F_CPU_ACTUAL);
+   SendU32(Total);
+   SendU32(Skipped);
+   SendU16(Sent);
+   for (uint32_t Num = Total - Sent; Num != Total; Num++)
+   {
+      const SnoopEntry &E = SnoopRing[Num % SnoopRingSize];
+      SendU32(E.Cyc);
+      SendU16(E.Addr);
+      CmdChannel->write(E.Data);
+      CmdChannel->write(E.Info);
+   }
+   CmdChannel->flush();
+   if (Mode != 0)
+   {
+      SnoopActive = false;
+      memcpy(SnoopHot, Pages, sizeof SnoopHot);
+      for (uint32_t Page = 0; Page < 256; Page++) if (Pages[Page]) SnoopActive = true;
+   }
+   SnoopTotal = SnoopSkipped = 0;
+   SnoopPaused = false;
+}
+#endif
 
 // Command:
 // read sequential C64 memory segment and send to host
