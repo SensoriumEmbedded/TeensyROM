@@ -162,7 +162,7 @@ StructMenuItem dirTest_Diags[] =
    rtBin8kLo  , IOH_None         , (char*)"SID Tester"                       , (uint8_t*)SID_Tester_BIN             , sizeof(SID_Tester_BIN) ,
    rtFilePrg  , IOH_None         , (char*)"SID checker+finder"               , (uint8_t*)SID_check_prg              , sizeof(SID_check_prg) ,
    rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(BASIC)" , (uint8_t*)cia_tod_prg                , sizeof(cia_tod_prg) ,
-   rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(assy)"  , (uint8_t*)TODCheck_prg                , sizeof(cia_tod_prg) ,
+   rtFilePrg  , IOH_None         , (char*)"CIA TimeOfDay clock check(assy)"  , (uint8_t*)TODCheck_prg               , sizeof(TODCheck_prg) ,
    rtFilePrg  , IOH_TR_BASIC     , (char*)"DMA Pause Check"                  , (uint8_t*)DMACheck_prg               , sizeof(DMACheck_prg) , 
 #ifdef Fab04_REU
    rtFilePrg  , IOH_REU          , (char*)"CMD 1750-1750XL REU Test    +REU" , (uint8_t*)reutest_prg                , sizeof(reutest_prg) , 
