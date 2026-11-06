@@ -597,7 +597,7 @@ void IO2Hndlr_REU(uint8_t Address, bool R_Wn)
          {
             if (REURegs[Address] & REUReg_Command_FF00) //1=disable FF00 decode
             { //Trigger REU start NOW
-               fBusSnoop = NULL; //in case it was activated then turned off before trigger
+               if (fBusSnoop == &REU_FF00_W_Check) fBusSnoop = NULL; //in case it was activated then turned off before trigger
 #ifdef Direct_REU
                DirectREU();
 #else
