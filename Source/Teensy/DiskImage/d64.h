@@ -172,7 +172,9 @@ int  d64_scratch_entry(d64_t *d, const d64_entry_t *e);          /* frees chain,
 int  d64_scratch(d64_t *d, const char *pattern);                 /* returns files scratched or <0 */
 int  d64_rename(d64_t *d, const char *oldname, const char *newname);
 int  d64_format(d64_t *d, const char *name, const char *id);     /* id==NULL: quick (BAM + directory only) */
-int  d64_format_blank(d64_t *d, const char *name, const char *id);   /* an all-zero new image: header, BAM, first directory sector only */
+/* Call this only on an image that is known to be all-zero, such as a file or buffer just created: it writes the header,
+ * BAM and first directory sector and nothing else, so every other sector keeps whatever it held. id is required. */
+int  d64_format_blank(d64_t *d, const char *name, const char *id);
 /* DOS "V": rebuild the BAM from the directory, the data chains and REL side sectors; unclosed (splat) files are deleted.
  * Returns the number of files deleted, or <0. A broken chain is followed as far as it is valid. */
 int  d64_validate(d64_t *d);
