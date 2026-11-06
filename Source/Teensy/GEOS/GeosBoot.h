@@ -20,7 +20,6 @@
 #define GEOS_DRIVER_RECORD   4
 #define GEOS_BASIC_START     0x0801
 #define GEOS_MEMORY_END      0x10000
-#define GEOS_MAX_FILE_BLOCKS 3200
 #define GEOS_DEVICE_8        8
 #define GEOS128_SHARED_RAM_END 0x2000   // the C128 boot ROM's loader runs in the RAM below, which both banks share
 #define GEOS128_IO_START       0xd000   // and writes bank 1 with I/O mapped in from here up
@@ -136,46 +135,41 @@ FLASHMEM static uint8_t *GeosFindOnce(uint8_t *Body, uint32_t Length, const uint
 
 FLASHMEM static uint32_t GeosBytesInBlock(const uint8_t *Block) { return Block[0] ? GEOS_DATA_PER_BLOCK : (Block[1] > 1 ? Block[1] - 1 : 0); }
 
-// A file's bytes along its sector chain from At; What names it in a refusal
-FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, struct GeosTS At, const char *What, uint8_t *Out,
+// A file's bytes along its sector chain from Track/Sector; What names it in a refusal
+FLASHMEM static bool GeosReadChain(struct GeosDisk *Disk, uint8_t Track, uint8_t Sector, const char *What, uint8_t *Out,
                                    uint32_t Capacity, uint32_t *Length)
 {
-   uint8_t Block[GEOS_SECTOR_SIZE];
+   d64_entry_t Start = { 0 };
+   d64_file_t File;
+   int Read;
 
-   *Length = 0;
-   for (int Blocks = 0; At.Track; Blocks++)
+   Start.track = Track;
+   Start.sector = Sector;
+   d64_file_open(&Disk->Image, &Start, &File);
+   Read = d64_file_read(&Disk->Image, &File, Out, Capacity);
+   if (Read < 0 && !Disk->Error[0]) snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s's chain is broken"), What);
+   if (Read < 0) return false;
+   if (!d64_file_eof(&File))
    {
-      uint32_t Used;
-      if (Blocks > GEOS_MAX_FILE_BLOCKS || At.Track > Disk->Format->Tracks)
-      {
-         snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s's chain is broken"), What);
-         return false;
-      }
-      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
-      Used = GeosBytesInBlock(Block);
-      if (*Length + Used > Capacity)
-      {
-         snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s is too large"), What);
-         return false;
-      }
-      memcpy(Out + *Length, Block + 2, Used);
-      *Length += Used;
-      At = (struct GeosTS){ Block[0], Block[1] };
+      snprintf(Disk->Error, sizeof Disk->Error, PSTR("%s is too large"), What);
+      return false;
    }
+   *Length = (uint32_t)Read;
    return true;
 }
 
 // Writes Data back over the chain GeosReadChain read it from
-FLASHMEM static bool GeosRewriteChain(struct GeosDisk *Disk, struct GeosTS At, const uint8_t *Data)
+FLASHMEM static bool GeosRewriteChain(struct GeosDisk *Disk, uint8_t Track, uint8_t Sector, const uint8_t *Data)
 {
    uint8_t Block[GEOS_SECTOR_SIZE];
 
-   for (uint32_t Done = 0; At.Track; Done += GEOS_DATA_PER_BLOCK)
+   for (uint32_t Done = 0; Track; Done += GEOS_DATA_PER_BLOCK)
    {
-      if (!GeosReadTS(Disk, At.Track, At.Sector, Block)) return false;
+      if (d64_block_read(&Disk->Image, Track, Sector, Block)) return GeosFailed(Disk, PSTR("the image could not be read"));
       memcpy(Block + 2, Data + Done, GeosBytesInBlock(Block));
-      if (!GeosWriteTS(Disk, At.Track, At.Sector, Block)) return false;
-      At = (struct GeosTS){ Block[0], Block[1] };
+      if (d64_block_write(&Disk->Image, Track, Sector, Block)) return GeosFailed(Disk, PSTR("the image could not be written"));
+      Track = Block[0];
+      Sector = Block[1];
    }
    return true;
 }
@@ -183,25 +177,14 @@ FLASHMEM static bool GeosRewriteChain(struct GeosDisk *Disk, struct GeosTS At, c
 // A file's bytes, found by name in the directory and followed along its sector chain
 FLASHMEM static bool GeosReadFile(struct GeosDisk *Disk, const char *Name, uint8_t *Out, uint32_t Capacity, uint32_t *Length)
 {
-   struct GeosTS Chain[GEOS_MAX_DIR_SECTORS], At = { 0, 0 };
-   uint8_t Block[GEOS_SECTOR_SIZE];
-   struct GeosDirScan Scan;
-   int Count;
+   d64_entry_t Entry;
+   int Found;
 
-   if (!GeosReadDirectory(Disk, Chain, &Count, &Scan)) return false;
-   for (int i = 0; i < Count && !At.Track; i++)
-   {
-      if (!GeosReadTS(Disk, Chain[i].Track, Chain[i].Sector, Block)) return false;
-      for (int e = 0; e < GEOS_ENTRIES_PER_DIR; e++)
-      {
-         const uint8_t *Slot = Block + e * GEOS_DIR_ENTRY_SIZE;
-         if (!(Slot[SlotType] & CBM_TYPE_MASK) || !GeosSlotNamed(Slot, Name)) continue;
-         At = (struct GeosTS){ Slot[SlotFirst], Slot[SlotFirst + 1] };
-         break;
-      }
-   }
-   if (!At.Track) return GeosFail(Disk, PSTR("the boot file is not on the disk"));
-   return GeosReadChain(Disk, At, PSTR("the boot file"), Out, Capacity, Length);
+   if (!GeosCheckDisk(Disk)) return false;
+   Found = d64_find(&Disk->Image, Name, &Entry);
+   if (Found < 0) return GeosFailed(Disk, PSTR("the image could not be read"));
+   if (!Found) return GeosFail(Disk, PSTR("the boot file is not on the disk"));
+   return GeosReadChain(Disk, Entry.track, Entry.sector, PSTR("the boot file"), Out, Capacity, Length);
 }
 
 static bool GeosNameContains(const uint8_t *Name, const char *Part)
@@ -215,37 +198,39 @@ static bool GeosNameContains(const uint8_t *Name, const char *Part)
    return false;
 }
 
-// Whether Slot is the target's stock CONFIGURE, set up for the TR now or before: its probe answers what the TR has
+// Whether Entry is the target's stock CONFIGURE, set up for the TR now or before: its probe answers what the TR has
 // and the 1581 driver it installs for drive A is the TR's. The driver goes first, so a write cut short leaves the
 // stock probe, and next time the driver no longer looks stock and the file is put aside instead.
-FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Slot, uint8_t *Scratch, uint32_t Capacity,
-                                        bool *Ours, bool *Changed)
+FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const d64_entry_t *Entry, const uint8_t *Slot, uint8_t *Scratch,
+                                        uint32_t Capacity, bool *Ours, bool *Changed)
 {
    const char *Name = Disk->Target->ConfigureName;
    uint8_t Index[GEOS_SECTOR_SIZE], *Driver, *At;
-   struct GeosTS Probe, Driven;
+   uint8_t ProbeTrack, ProbeSector, DrivenTrack, DrivenSector;
    uint32_t ProbeLength, DriverLength;
    uint16_t ReadBlock;
 
    *Ours = false;
-   if (Slot[SlotStructure] != GEOS_VLIR || !GeosSlotNamed(Slot, Name)) return true;
-   if (!GeosReadTS(Disk, Slot[SlotFirst], Slot[SlotFirst + 1], Index)) return false;
-   Probe = (struct GeosTS){ Index[2 + 2 * GEOS_PROBE_RECORD], Index[3 + 2 * GEOS_PROBE_RECORD] };
-   Driven = (struct GeosTS){ Index[2 + 2 * GEOS_DRIVER_RECORD], Index[3 + 2 * GEOS_DRIVER_RECORD] };
-   if (!Probe.Track || !Driven.Track) return true;
-   if (!GeosReadChain(Disk, Probe, Name, Scratch, Capacity, &ProbeLength)) return false;
+   if (Slot[SlotStructure] != GEOS_VLIR || strcmp(Entry->name, Name)) return true;
+   if (d64_block_read(&Disk->Image, Entry->track, Entry->sector, Index)) return GeosFailed(Disk, PSTR("the image could not be read"));
+   ProbeTrack = Index[2 + 2 * GEOS_PROBE_RECORD];
+   ProbeSector = Index[3 + 2 * GEOS_PROBE_RECORD];
+   DrivenTrack = Index[2 + 2 * GEOS_DRIVER_RECORD];
+   DrivenSector = Index[3 + 2 * GEOS_DRIVER_RECORD];
+   if (!ProbeTrack || !DrivenTrack) return true;
+   if (!GeosReadChain(Disk, ProbeTrack, ProbeSector, Name, Scratch, Capacity, &ProbeLength)) return false;
    if (GeosFindOnce(Scratch, ProbeLength, GeosTRProbe, sizeof GeosTRProbe)) return *Ours = true;
    At = GeosFindOnce(Scratch, ProbeLength, GeosStockProbe, sizeof GeosStockProbe);
    if (!At || At + sizeof GeosTRProbe > Scratch + ProbeLength) return true;
 
    Driver = Scratch + ProbeLength;
-   if (!GeosReadChain(Disk, Driven, Name, Driver, Capacity - ProbeLength, &DriverLength)) return false;
+   if (!GeosReadChain(Disk, DrivenTrack, DrivenSector, Name, Driver, Capacity - ProbeLength, &DriverLength)) return false;
    if (DriverLength <= GEOS_TYPE_BYTE || !GeosIsDriverAt(Driver)) return true;
    ReadBlock = GeosWord(Driver + 2 * VecReadBlock);
    if (ReadBlock < GEOS_DRIVER_AREA || ReadBlock > GEOS_DRIVER_AREA + DriverLength) return true;
    if (!GeosReplaceTransport(Driver, Disk->Target->DiskDriver)) return true;
    memcpy(At, GeosTRProbe, sizeof GeosTRProbe);
-   if (!GeosRewriteChain(Disk, Driven, Driver) || !GeosRewriteChain(Disk, Probe, Scratch)) return false;
+   if (!GeosRewriteChain(Disk, DrivenTrack, DrivenSector, Driver) || !GeosRewriteChain(Disk, ProbeTrack, ProbeSector, Scratch)) return false;
    *Changed = true;
    return *Ours = true;
 }
@@ -255,35 +240,28 @@ FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Sl
 // Returns whether anything changed.
 static inline bool GeosPrepareConfigure(struct GeosDisk *Disk, uint8_t *Scratch, uint32_t Capacity, bool *Changed)
 {
-   struct GeosTS Chain[GEOS_MAX_DIR_SECTORS];
-   uint8_t Block[GEOS_SECTOR_SIZE];
-   struct GeosDirScan Scan;
-   int Count;
+   d64_dir_t Dir;
+   d64_entry_t Entry;
+   int Result;
 
    *Changed = false;
-   if (!GeosReadDirectory(Disk, Chain, &Count, &Scan)) return false;
-   for (int i = 0; i < Count; i++)
+   if (!GeosCheckDisk(Disk)) return false;
+   if (d64_dir_first(&Disk->Image, &Dir)) return GeosFailed(Disk, PSTR("the image could not be read"));
+   while ((Result = d64_dir_next(&Disk->Image, &Dir, &Entry)) > 0)
    {
-      bool Retyped = false;
-      if (!GeosReadTS(Disk, Chain[i].Track, Chain[i].Sector, Block)) return false;
-      for (int e = 0; e < GEOS_ENTRIES_PER_DIR; e++)
-      {
-         uint8_t *Slot = Block + e * GEOS_DIR_ENTRY_SIZE, Type = Slot[SlotGeosType];
-         bool Ours;
-         if (!(Slot[SlotType] & CBM_TYPE_MASK)) continue;
-         if (Type != GEOS_AUTO_EXEC && Type != GEOS_SYSTEM_FILE) continue;
-         if (!GeosNameContains(Slot + SlotName, GEOS_CONFIG_NAME)) continue;
-         if (!GeosSetUpConfigure(Disk, Slot, Scratch, Capacity, &Ours, Changed)) return false;
-         Type = Ours ? GEOS_AUTO_EXEC : GEOS_SYSTEM_FILE;
-         if (Slot[SlotGeosType] == Type) continue;
-         Slot[SlotGeosType] = Type;
-         Retyped = true;
-      }
-      if (!Retyped) continue;
-      if (!GeosWriteTS(Disk, Chain[i].Track, Chain[i].Sector, Block)) return false;
+      uint8_t *Slot = Dir.buf + Entry.dir_slot * GEOS_DIR_ENTRY_SIZE, Type = Slot[SlotGeosType];
+      bool Ours;
+      if (!(Slot[SlotType] & CBM_TYPE_MASK)) continue;
+      if (Type != GEOS_AUTO_EXEC && Type != GEOS_SYSTEM_FILE) continue;
+      if (!GeosNameContains(Slot + SlotName, GEOS_CONFIG_NAME)) continue;
+      if (!GeosSetUpConfigure(Disk, &Entry, Slot, Scratch, Capacity, &Ours, Changed)) return false;
+      Type = Ours ? GEOS_AUTO_EXEC : GEOS_SYSTEM_FILE;
+      if (Slot[SlotGeosType] == Type) continue;
+      Slot[SlotGeosType] = Type;
+      if (d64_block_write(&Disk->Image, Entry.dir_t, Entry.dir_s, Dir.buf)) return GeosFailed(Disk, PSTR("the image could not be written"));
       *Changed = true;
    }
-   return true;
+   return Result == 0 || GeosFailed(Disk, PSTR("the image could not be read"));
 }
 
 // BASIC "10 SYS 2061" and the stub it runs: the screen colors and drive 8 the stock GEOS start-up file sets, then
