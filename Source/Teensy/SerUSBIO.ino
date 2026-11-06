@@ -1474,10 +1474,11 @@ FLASHMEM void SampleWatchCommand()
 #ifdef DbgSnoopTap
 // Receive <-- SnoopTapToken (0x64F8)
 // Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
-//             (bit 0 writes, bit 1 reads), 2 = take, then stop
+//             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later),
+//             2 = take, then stop
 // Send --> AckToken 0x64CC, or 0x9b7f and the reason
 // Send --> ARM cycles per second (4), cycles recorded since the last take (4), cycles not recorded
-//          while taking (4), entries sent (2), then each entry oldest first: ARM cycle (4),
+//          while taking or frozen (4), whether a trigger fired (1), entries sent (2), then each entry oldest first: ARM cycle (4),
 //          C64 address (2), data (1), info (1); all Low first
 FLASHMEM void SnoopTapCommand()
 {
@@ -1508,6 +1509,7 @@ FLASHMEM void SnoopTapCommand()
    SendU32(F_CPU_ACTUAL);
    SendU32(Total);
    SendU32(Skipped);
+   CmdChannel->write(SnoopTriggered ? 1 : 0);
    SendU16(Sent);
    for (uint32_t Num = Total - Sent; Num != Total; Num++)
    {
@@ -1525,6 +1527,7 @@ FLASHMEM void SnoopTapCommand()
       for (uint32_t Page = 0; Page < 256; Page++) if (Pages[Page]) SnoopActive = true;
    }
    SnoopTotal = SnoopSkipped = 0;
+   SnoopTriggered = false;
    SnoopPaused = false;
 }
 #endif
