@@ -7,8 +7,8 @@
 //   frees tracks earlier in the allocation order; prints "append=<rc> write=<rc> close=<rc> same=<0|1>".
 // disk_image_harness closefail new|append|copy N: the Nth sector write of d64_close_write fails; prints
 //   "close=<rc> free=<before>,<after> files=<n> old=<blocks>,<0|1>" (old: the file an append or copy started from).
-// disk_image_harness replace fit|full: "@:" over a file, with room for both, or without room until the old one's blocks
-//   are freed; prints "create=<rc> write=<rc> close=<rc> free=<before>,<after> files=<n> data=<old|new|none>".
+// disk_image_harness replace fit|full|locked: "@:" over a file, with room for both, without room until the old one's
+//   blocks are freed, or over a locked file; prints "create=<rc> write=<rc> close=<rc> free=<before>,<after> files=<n> data=<old|new|none>".
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -153,6 +153,10 @@ static int Replace(const char *How)
       for (uint8_t t = 1; t <= 35; t++)
          for (uint8_t s = 0; t != 18 && s < d64_sectors_in_track(&Disk, t) && d64_blocks_free(&Disk) > 15; s++)
             d64_block_alloc(&Disk, t, s, &Nt, &Ns);
+   }
+   else if (!strcmp(How, "locked"))
+   {
+      if (d64_lock(&Disk, "A", 1) != 1) return 1;
    }
    else if (strcmp(How, "fit")) return 2;
    Before = d64_blocks_free(&Disk);

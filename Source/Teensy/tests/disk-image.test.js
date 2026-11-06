@@ -84,3 +84,7 @@ test('"@:" replaces a file once the new one is written, freeing the old blocks',
 test('"@:" with room for the new file only after the old one is freed fails, and keeps the old file', { skip }, () => {
   assert.equal(runHarness('replace', 'full'), 'create=0 write=-3 close=0 free=15,15 files=1 data=old');
 });
+
+test('"@:" over a locked file refuses before writing anything', { skip }, () => {
+  assert.equal(runHarness('replace', 'locked'), 'create=-7 write=0 close=0 free=654,654 files=1 data=old');
+});
