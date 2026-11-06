@@ -1504,7 +1504,7 @@ FLASHMEM void SampleWatchCommand()
    SendU32(F_CPU_ACTUAL);
 }
 
-#ifdef DbgSnoopTap
+#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable)
 // Receive <-- SnoopTapToken (0x64F8)
 // Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
 //             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later),
