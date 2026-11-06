@@ -9,6 +9,8 @@
 //   "close=<rc> free=<before>,<after> files=<n> old=<blocks>,<0|1>" (old: the file an append or copy started from).
 // disk_image_harness replace fit|full|locked: "@:" over a file, with room for both, without room until the old one's
 //   blocks are freed, or over a locked file; prints "create=<rc> write=<rc> close=<rc> free=<before>,<after> files=<n> data=<old|new|none>".
+// disk_image_harness dir fits|small|unreadable|loop: d64_build_dir with room, with a 16-byte buffer, with every sector
+//   read failing, or with a directory sector linking to itself; prints "dir=<rc>" ("dir=ok" for a positive length).
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -169,6 +171,36 @@ static int Replace(const char *How)
    return 0;
 }
 
+static int FailedRead(void *Ctx, uint8_t Track, uint8_t Sector, uint8_t *Buf)
+{
+   (void)Ctx; (void)Track; (void)Sector; (void)Buf;
+   return -1;
+}
+
+static int Dir(const char *How)
+{
+   static uint8_t Listing[8192];
+   uint8_t Data[300], Block[D64_SECTOR];
+   d64_t Disk;
+   size_t Cap = sizeof Listing;
+
+   Fill(Data, sizeof Data, 11);
+   if (BlankD64(&Disk) || Save(&Disk, "ONE", Data, sizeof Data)) return 1;
+   if (!strcmp(How, "small")) Cap = 16;
+   else if (!strcmp(How, "unreadable")) Disk.read = FailedRead;
+   else if (!strcmp(How, "loop"))
+   {
+      if (d64_block_read(&Disk, 18, 1, Block)) return 1;
+      Block[0] = 18; Block[1] = 1;
+      if (d64_block_write(&Disk, 18, 1, Block)) return 1;
+   }
+   else if (strcmp(How, "fits")) return 2;
+   int Result = d64_build_dir(&Disk, NULL, Listing, Cap);
+   if (Result > 0) printf("dir=ok\n");
+   else printf("dir=%d\n", Result);
+   return 0;
+}
+
 static int NewDisk(const char *Kind)
 {
    static const struct { const char *Kind; size_t Size; } Kinds[] = { { "d64", 174848 }, { "d71", 349696 }, { "d81", 819200 } };
@@ -222,5 +254,6 @@ int main(int argc, char **argv)
    if (argc == 2 && !strcmp(argv[1], "wrap")) return Wrap();
    if (argc == 4 && !strcmp(argv[1], "closefail")) return CloseFail(argv[2], atoi(argv[3]));
    if (argc == 3 && !strcmp(argv[1], "replace")) return Replace(argv[2]);
+   if (argc == 3 && !strcmp(argv[1], "dir")) return Dir(argv[2]);
    return 2;
 }

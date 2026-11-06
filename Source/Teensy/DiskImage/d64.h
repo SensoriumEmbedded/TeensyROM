@@ -40,7 +40,8 @@ enum {
     D64_E_NOTFOUND = -8, /* file not found             -> DOS 62 */
     D64_E_TYPE = -9,     /* file type mismatch         -> DOS 64 */
     D64_E_TOOBIG = -10,  /* REL file at its size limit -> DOS 52 */
-    D64_E_BADSEC = -11   /* the image's error table marks the sector bad: DOS code in d64_t.bad (20-24, 27, 29, 74) */
+    D64_E_BADSEC = -11,  /* the image's error table marks the sector bad: DOS code in d64_t.bad (20-24, 27, 29, 74) */
+    D64_E_BUF = -12      /* the caller's buffer is too small */
 };
 
 enum { D64_FMT_D64 = 0, D64_FMT_D71 = 1, D64_FMT_D81 = 2 };
@@ -148,8 +149,9 @@ int  d64_file_read(d64_t *d, d64_file_t *f, uint8_t *out, size_t n); /* bytes re
 int  d64_file_eof(const d64_file_t *f);             /* 1 when no more bytes will follow */
 
 /* BASIC directory listing (load address $0401), optional name pattern (NULL = all).
- * Returns length written, or 0 if cap is too small. */
-size_t d64_build_dir(d64_t *d, const char *pattern, uint8_t *out, size_t cap);
+ * Returns the length written, D64_E_BUF if cap is too small, or the error that kept the header, directory or BAM
+ * from being read. */
+int  d64_build_dir(d64_t *d, const char *pattern, uint8_t *out, size_t cap);
 
 /* ---- write support ----
  * d64_create allocates the first sector and a directory slot (file shows as

@@ -1144,27 +1144,28 @@ VD_COLD size_t d64_bas_end(d64_bas_t *b)
 
 static const char TYPES[8][4] D64_FLASH = { "DEL", "SEQ", "PRG", "USR", "REL", "???", "???", "???" };
 
-VD_COLD size_t d64_build_dir(d64_t *d, const char *pattern, uint8_t *out, size_t cap)
+VD_COLD int d64_build_dir(d64_t *d, const char *pattern, uint8_t *out, size_t cap)
 {
     d64_bas_t b;
     char name[17], id[3], dos[3];
+    int r;
     d64_bas_begin(&b, out, cap);
-    if (d64_header(d, name, id, dos)) return 0;
+    if ((r = d64_header(d, name, id, dos))) return r;
     d64_bas_header(&b, name, id, dos);
 
     d64_dir_t it; d64_entry_t e;
-    if (d64_dir_first(d, &it)) return 0;
-    int r;
+    if ((r = d64_dir_first(d, &it))) return r;
     while ((r = d64_dir_next(d, &it, &e)) > 0) {
         if (pattern && !d64_match(e.name, pattern)) continue;
         d64_bas_entry(&b, e.blocks, e.name, TYPES[e.type & 7], (e.type & 0x80) != 0, (e.type & 0x40) != 0);
     }
-    if (r < 0) return 0;
+    if (r < 0) return r;
 
     int fr = d64_blocks_free(d);
-    if (fr < 0) return 0;
+    if (fr < 0) return fr;
     d64_bas_footer(&b, (uint16_t)fr);
-    return d64_bas_end(&b);
+    size_t n = d64_bas_end(&b);
+    return n ? (int)n : D64_E_BUF;
 }
 
 VD_COLD size_t d64_sizeof_d64(void)   { return sizeof(d64_t); }

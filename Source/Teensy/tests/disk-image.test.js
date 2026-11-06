@@ -88,3 +88,8 @@ test('"@:" with room for the new file only after the old one is freed fails, and
 test('"@:" over a locked file refuses before writing anything', { skip }, () => {
   assert.equal(runHarness('replace', 'locked'), 'create=-7 write=0 close=0 free=654,654 files=1 data=old');
 });
+
+test('a directory listing tells a small buffer apart from an image it cannot read', { skip }, () => {
+  const results = { fits: 'dir=ok', small: 'dir=-12', unreadable: 'dir=-1', loop: 'dir=-2' };
+  for (const [how, expected] of Object.entries(results)) assert.equal(runHarness('dir', how), expected, how);
+});
