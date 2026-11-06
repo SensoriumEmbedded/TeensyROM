@@ -63,3 +63,7 @@ test('the image kind follows the file size, error bytes and 40-track D64s includ
   };
   for (const [size, expected] of Object.entries(sizes)) assert.equal(runHarness('size', size), expected, `${size} bytes`);
 });
+
+test('a file grows into tracks before its last one in the allocation order once a scratch frees them', { skip }, () => {
+  assert.equal(runHarness('wrap'), 'append=0 write=600 close=0 same=1');
+});

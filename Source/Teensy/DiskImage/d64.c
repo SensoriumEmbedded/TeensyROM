@@ -331,12 +331,16 @@ VD_COLD static int alloc_sector(d64_t *d, uint8_t *t, uint8_t *s, int interleave
 {
     uint8_t bufA[D64_SECTOR], bufB[D64_SECTOR], *cnt, *bits;
     bamloc_t L;
-    uint8_t tr; int hint;
+    uint8_t tr; int hint, restarted = dirmode || !*t;
     if (dirmode)   { tr = dir_track(d); hint = (*t == tr) ? *s + interleave : dir_sector0(d); }
     else if (*t)   { tr = *t; hint = *s + interleave; }
     else           { tr = (uint8_t)next_data_track(d, 0); hint = 0; }
     for (;;) {
-        if (tr == 0 || tr > bam_tracks(d)) return D64_E_FULL;
+        if (tr == 0 || tr > bam_tracks(d)) {
+            if (restarted) return D64_E_FULL;
+            restarted = 1;                                    /* a 1541 searches the tracks before the hint too */
+            tr = (uint8_t)next_data_track(d, 0); hint = 0;
+        }
         if (dirmode || !bam_reserved(d, tr)) {
             int r = bam_load(d, tr, &L, bufA, bufB, &cnt, &bits);
             if (r) return r;
