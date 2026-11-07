@@ -510,14 +510,14 @@ Each call resets the counts. Watching again keeps the last store's time unless t
 ---
 
 ### Snoop Tap (TR+ Only, `DbgSnoopTap` builds only)
-Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entries, and sends the ring to the host. It runs in `isrPHI2` after the bus snoop slot, so it keeps recording while Sample Watch holds the slot; a cycle a snoop handler claims (returns true for) is not recorded. A page flagged as a trigger freezes the ring 64 entries after its first write, so what led up to that write survives until the host takes it. Only images built with `DbgSnoopTap` defined in `TeensyROM.h` answer it. `tools/bench/snooptap.py` is its client.
+Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entries, and sends the ring to the host. It runs in `isrPHI2` after the bus snoop slot, so it keeps recording while Sample Watch holds the slot; a cycle a snoop handler claims (returns true for) is not recorded. A page flagged as a trigger and for writes freezes the ring 64 entries after its first write, so what led up to that write survives until the host takes it. Only images built with `DbgSnoopTap` defined in `TeensyROM.h` answer it. `tools/bench/snooptap.py` is its client.
 
 **Workflow:**
 | Direction | Data |
 |---|---|
 | Receive | `SnoopTapToken` — `0x64F8` |
 | Receive | Mode: `0` = send the ring and keep recording, `1` = send the ring, then record the pages that follow, `2` = send the ring and stop |
-| Receive | Mode `1` only: 256 bytes, one per page `$00`..`$FF`, each a sum of `1` writes, `2` reads, `4` trigger, `8` DMA slice marks; `0` leaves the page unrecorded |
+| Receive | Mode `1` only: 256 bytes, one per page `$00`..`$FF`, each a sum of `1` writes, `2` reads, `4` trigger (only with `1`), `8` DMA slice marks; `0` leaves the page unrecorded |
 | Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if the mode is not `0`, `1` or `2`, or the pages did not arrive |
 | Send | ARM cycles per second (4), entries recorded (4), entries skipped while paused or frozen (4), page cycles seen (4), triggered (1), entries sent (2): Low byte first |
 | Send | Each entry, oldest first: ARM cycle stamp (4), address (2), data (1, `0` for a read), info (1): Low byte first. Info bits `0x1F` are the DMA state (`enum DMA_States`), `0x20` a locked slice armed, `0x40` a read, `0x80` a slice mark, whose address and data are the slice's start and the low byte of its length |

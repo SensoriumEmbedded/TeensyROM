@@ -7,8 +7,8 @@
   snooptap.py stop                             print the ring, stop recording
 
 PAGE is the high byte of the address, in hex. FLAGS add up: 1 writes, 2 reads,
-4 trigger (the first write to the page freezes the ring 64 entries later, so what
-led up to it survives), 8 slice marks (each DMA slice start is recorded too).
+4 trigger (only with 1: the first write to the page freezes the ring 64 entries
+later, so what led up to it survives), 8 slice marks (each DMA slice start is recorded too).
 
 The port can only be held by one program, so arm, close, run whatever is under
 test, then take once it has let go of the port. The ring keeps the last 1,024
