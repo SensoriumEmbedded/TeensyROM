@@ -1521,20 +1521,22 @@ FLASHMEM void SnoopTapCommand()
       CmdChannel->write(E.Data);
       CmdChannel->write(E.Info);
    }
-   CmdChannel->flush();
+   FlushCmdChannel(CmdChannel);
    if (Mode != 0)
    {
-      SnoopActive = SnoopMarkSlices = false;
+      SnoopMarkSlices = false;
       memcpy(SnoopHot, Pages, sizeof SnoopHot);
       for (uint32_t Page = 0; Page < 256; Page++)
-      {
-         if (Pages[Page]) SnoopActive = true;
          if (Pages[Page] & SnoopSlices) SnoopMarkSlices = true;
-      }
    }
-   SnoopTotal = SnoopSkipped = SnoopTaps = 0;
+   // What the ISR counted while the ring was being sent stays for the next take.
+   __disable_irq();
+   SnoopTotal = 0;
+   SnoopSkipped -= Skipped;
+   SnoopTaps -= Taps;
    SnoopTriggered = false;
    SnoopPaused = false;
+   __enable_irq();
 }
 #endif
 

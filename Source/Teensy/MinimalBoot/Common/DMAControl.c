@@ -353,7 +353,7 @@ enum : uint32_t { SnoopRingSize = 1024 };
 uint8_t SnoopHot[256];
 // The first write to a SnoopTrigger page freezes the ring SnoopAfterTrigger entries later, so what
 // led up to it survives whatever the host does before it takes the ring.
-volatile bool SnoopActive, SnoopMarkSlices, SnoopPaused, SnoopTriggered;
+volatile bool SnoopMarkSlices, SnoopPaused, SnoopTriggered;
 volatile uint32_t SnoopTotal, SnoopSkipped, SnoopFreezeAt, SnoopTaps;
 DMAMEM SnoopEntry SnoopRing[SnoopRingSize];
 
