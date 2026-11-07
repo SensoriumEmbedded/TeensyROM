@@ -129,6 +129,7 @@ A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn'
 |*WriteC64SpansToken | 0x64FC | Write up to 64 C64 memory spans via DMA, in slices (TR+ Only)|
 |*ReadC64MemToken   | 0x64FD  | Read sequential C64 memory segment via DMA (TR+ Only)|
 |*SampleWatchToken  | 0x64F9  | Count the C64's writes to one address (TR+ Only)|
+|*SnoopTapToken     | 0x64F8  | Record bus cycles on chosen pages and send them back (TR+ Only, `DbgSnoopTap` builds only)|
 |DebugToken        | 0x6467  | Internal debug use only |
 
 *- Always available with full FW (others return "Busy!" if not ready for commands)
@@ -505,6 +506,25 @@ Counts the C64's writes to one address, timing each against the one before it, a
 Each call resets the counts. Watching again keeps the last store's time unless the address changes, so no interval is lost between two reads.
 
 **Handler:** `SampleWatchCommand()`
+
+---
+
+### Snoop Tap (TR+ Only, `DbgSnoopTap` builds only)
+Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entries, and sends the ring to the host. It runs in `isrPHI2` after the bus snoop slot, so it keeps recording while Sample Watch holds the slot; a cycle a snoop handler claims (returns true for) is not recorded. A page flagged as a trigger and for writes freezes the ring 64 entries after its first write, so what led up to that write survives until the host takes it. Only images built with `DbgSnoopTap` defined in `TeensyROM.h` answer it. `tools/bench/snooptap.py` is its client.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `SnoopTapToken` — `0x64F8` |
+| Receive | Mode: `0` = send the ring and keep recording, `1` = send the ring, then record the pages that follow, `2` = send the ring and stop |
+| Receive | Mode `1` only: 256 bytes, one per page `$00`..`$FF`, each a sum of `1` writes, `2` reads, `4` trigger (only with `1`), `8` DMA slice marks; `0` leaves the page unrecorded |
+| Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if the mode is not `0`, `1` or `2`, or the pages did not arrive |
+| Send | ARM cycles per second (4), entries recorded (4), entries skipped while paused or frozen (4), page cycles seen (4), triggered (1), entries sent (2): Low byte first |
+| Send | Each entry, oldest first: ARM cycle stamp (4), address (2), data (1, `0` for a read), info (1): Low byte first. Info bits `0x1F` are the DMA state (`enum DMA_States`), `0x20` a locked slice armed, `0x40` a read, `0x80` a slice mark, whose address and data are the slice's start and the low byte of its length |
+
+Each call clears the trigger and the counts it sends; page cycles that arrive while it sends are counted, as skipped, in the next call's reply.
+
+**Handler:** `SnoopTapCommand()`
 
 ---
 

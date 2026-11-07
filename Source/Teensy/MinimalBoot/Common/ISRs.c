@@ -99,6 +99,10 @@ FASTRUN void isrPHI2()
 #endif
 
    if (fBusSnoop != NULL) if (fBusSnoop(Address, R_Wn)) return;
+
+#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable) && !defined(MinimumBuild)
+   if (SnoopHot[Address >> 8]) SnoopTap(Address, R_Wn);
+#endif
    
 #ifdef Fab04_GlobalKernalReplace
    if (fKernRepl != NULL) if (fKernRepl(Address, R_Wn)) return;
