@@ -522,7 +522,7 @@ Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entri
 | Send | ARM cycles per second (4), entries recorded (4), entries skipped while paused or frozen (4), page cycles seen (4), triggered (1), entries sent (2): Low byte first |
 | Send | Each entry, oldest first: ARM cycle stamp (4), address (2), data (1, `0` for a read), info (1): Low byte first. Info bits `0x1F` are the DMA state (`enum DMA_States`), `0x20` a locked slice armed, `0x40` a read, `0x80` a slice mark, whose address and data are the slice's start and the low byte of its length |
 
-Each call clears the counts and the trigger.
+Each call clears the trigger and the counts it sends; page cycles that arrive while it sends are counted, as skipped, in the next call's reply.
 
 **Handler:** `SnoopTapCommand()`
 
