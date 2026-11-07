@@ -11,6 +11,7 @@ import unittest
 
 import hostops
 import protocol
+import snooptap
 from protocol import FIRMWARE_NAMES, from_board, to_board
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / 'Source' / 'Teensy'
@@ -61,6 +62,14 @@ class WireValues(unittest.TestCase):
                    for name, ours in FIRMWARE_NAMES.items()
                    if name in self.firmware and self.firmware[name] != {ours}}
         self.assertEqual(drifted, {})
+
+
+class SnoopTapStates(unittest.TestCase):
+    def test_the_dma_state_names_follow_the_firmware_enum(self):
+        defs = (SOURCE / 'MinimalBoot' / 'Common' / 'Common_Defs.h').read_text(errors='replace')
+        body = re.search(r'enum DMA_States[^{]*\{(.*?)\};', defs, re.S).group(1)
+        names = tuple(re.findall(r'^\s*DMA_S_(\w+)\s*,', body, re.M))
+        self.assertEqual(snooptap.DMA_STATES, names)
 
 
 def firmware_phrases():
