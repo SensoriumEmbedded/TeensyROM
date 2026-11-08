@@ -896,11 +896,20 @@ FLASHMEM void SendU32(uint32_t SendVal)
     CmdChannel->write((uint8_t)((SendVal >> 24) & 0xff));
 }
    
+//While Kernal Replace serves the KERNAL the Ethernet stack is polled from loop() (FnetLoopPollService in Teensy.ino), and a command
+//  waiting here for its bytes runs inside loop(): keep polling, or a TCP payload longer than one segment stalls until the time-out.
+FLASHMEM void CmdInputPoll()
+{
+#ifdef Fab04_KernalReplace
+   FnetLoopPollService();
+#endif
+}
+
 FLASHMEM bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
    
-   while(!CmdChannel->available() && (millis() - StartTOMillis) < SerialTimoutMillis); // timeout loop
+   while(!CmdChannel->available() && (millis() - StartTOMillis) < SerialTimoutMillis) CmdInputPoll(); // timeout loop
    if (CmdChannel->available()) return(true);
    
    SendU16(FailToken);
@@ -1030,6 +1039,7 @@ FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
    uint32_t Quiet = millis();
    while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
       if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
+      else CmdInputPoll();
 }
 
 #ifdef Dbg_SerSD
@@ -1328,7 +1338,7 @@ FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t After, uint3
 {
    for (uint32_t ByteNum = 0; ByteNum < Len; ByteNum++)
    {
-      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes));
+      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes)) CmdInputPoll();
       if (millis() - Began >= SpansCeilingmS(Bytes))
       {
          SendU16(FailToken);
