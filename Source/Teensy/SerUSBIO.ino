@@ -905,6 +905,29 @@ FLASHMEM void CmdInputPoll()
 #endif
 }
 
+//Sends a reply span as the channel takes it. NativeEthernet's write() spins without a time-out until the whole span fits in the
+//  socket's send buffer, and while Kernal Replace has the PIT masked the buffer only drains (and a lost segment is only retransmitted)
+//  when the stack is polled: so poll while the channel is full. False if it took nothing for SerialTimoutMillis*4.
+FLASHMEM bool CmdSendSpan(const uint8_t *Buf, uint32_t Len)
+{
+   uint32_t Quiet = millis();
+   while (Len)
+   {
+      int Avail = CmdChannel->availableForWrite();
+      if (Avail > 0)
+      {
+         uint32_t Chunk = min((uint32_t)Avail, Len);
+         CmdChannel->write(Buf, Chunk);
+         Buf += Chunk;
+         Len -= Chunk;
+         Quiet = millis();
+      }
+      else if (millis() - Quiet >= SerialTimoutMillis * 4) return false;
+      else CmdInputPoll();
+   }
+   return true;
+}
+
 FLASHMEM bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
@@ -1527,10 +1550,7 @@ FLASHMEM void ReadC64MemCommand()
    //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
-   {
-      CmdChannel->write(DMABuf[ByteNum]);
-   }
+   if (!CmdSendSpan(DMABuf, DMALength)) Serial.printf("DMA Read: reply stalled, %lu bytes\n", DMALength); //Ack already sent, the host times out
    
    //CmdChannel->printf
    //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);

@@ -160,6 +160,9 @@ extern void EEPwriteStr(uint16_t addr, const char* buf);
 extern void EEPreadStr(uint16_t addr, char* buf);
 extern void FreeDriveDirMenu();
 extern void SetRandomSeed();
+#ifdef Fab04_GlobalKernalReplace
+extern volatile bool FnetLoopPoll; //Teensy.ino
+#endif
 extern uint32_t RAM2BytesFree();
 
 uint8_t* RxQueue[RxQueueNumBlocks];  //circular queue to pipe data to the c64, divided into blocks for better malloc
@@ -629,6 +632,11 @@ void PollingHndlr_SwiftLink()
             SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access
             TxMsg[TxMsgOffset-1] = 0; //terminate it
             Printf_dbg_sw("TxMsg: %s\n", TxMsg);
+#ifdef Fab04_GlobalKernalReplace
+            //SwiftLink can run while the KERNAL is replaced: AT commands (connect, DHCP, DNS) and browser commands (DNS) block here
+            //waiting for the stack, which then needs its PIT poll timer (masked while the poll runs from loop(), see FnetLoopPollService in Teensy.ino)
+            if (FnetLoopPoll) NVIC_ENABLE_IRQ(IRQ_PIT);
+#endif
             if(BrowserMode) 
             {
                ProcessBrowserCommand();
@@ -639,6 +647,9 @@ void PollingHndlr_SwiftLink()
                ATRespCode Resp = ProcessATCommand();
                if (!BrowserMode) SendATresponse(Resp);
             }
+#ifdef Fab04_GlobalKernalReplace
+            if (FnetLoopPoll) NVIC_DISABLE_IRQ(IRQ_PIT);
+#endif
             TxMsgOffset = 0;
          }
          else SwiftRegStatus |= SwiftStatusTxEmpty; //clear the flag after last SwiftTxBuf access

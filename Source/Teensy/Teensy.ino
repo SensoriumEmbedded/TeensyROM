@@ -57,10 +57,11 @@ volatile uint8_t EmulateVicCycles = false;
 uint8_t CurrentIOHandler = IOH_None;
 #ifdef Fab04_KernalReplace
 volatile bool FnetLoopPoll = false; //Ethernet stack polled from loop(), PIT timer masked (see FnetLoopPollService)
-volatile bool FnetPollHold = false; //set by Kernal Replace PreStart, before CurrentIOHandler changes; cleared with the main menu
+volatile bool FnetPollHold = false; //set by Kernal Replace PreStart once a KERNAL is served; cleared with the main menu
 void FnetLoopPollService();
 FLASHMEM void FnetLoopPollStart()
 {  //start polling from loop() right away: loop() only sees the new handler ~0.4 s after the launch, and late phi2 interrupts in that time crashed programs
+   //The hold is set even without a network stack: a program can bring it up later (SwiftLink ATC/DHCP), and loop() moves the poll off the PIT then.
    FnetPollHold = true;
    if (fnet_netif_get_default() != 0 && !FnetLoopPoll) { NVIC_DISABLE_IRQ(IRQ_PIT); FnetLoopPoll = true; }
 }
@@ -388,7 +389,7 @@ void loop()
       if (USBHostSerial.available()) ServiceSerial(&USBHostSerial);
 
 #ifdef Fab04_KernalReplace
-   FnetLoopPollService();
+   if (FnetPollHold || FnetLoopPoll) FnetLoopPollService();
 #endif
 
 #ifdef FeatTCPListen
@@ -420,12 +421,7 @@ FLASHMEM void FnetLoopPollService()
    //and a late one on the HIRAM sense after a $01 write corrupts the read; called from loop() they are down to about one every 2s.
    //(The PIT is only used by that timer, except for ASID, which masks it itself.)
    static uint32_t lastPollUs = 0;
-   bool want = FnetPollHold || (CurrentIOHandler == IOH_KernalReplace)
-#ifdef Fab04_GlobalKernalReplace
-               || (fKernRepl != NULL)
-#endif
-               ;
-   want = want && (fnet_netif_get_default() != 0); //stack initialized
+   bool want = FnetPollHold && (fnet_netif_get_default() != 0); //KERNAL served (hold) and stack initialized
    if (want != FnetLoopPoll)
    {
       FnetLoopPoll = want;
@@ -446,7 +442,7 @@ FLASHMEM void SetUpMainMenuROM()
    fKernRepl = NULL;
 #endif
 #ifdef Fab04_KernalReplace
-   FnetPollHold = false;
+   FnetPollHold = FnetLoopPoll = false; //the PIT is re-enabled below
 #endif
    SetDMADeassert;
    SetIRQDeassert;

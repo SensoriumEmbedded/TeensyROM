@@ -622,6 +622,7 @@ FLASHMEM bool SendFileData(File& file, uint32_t len) {
                 CmdChannel->print("SendFileData timeout: no progress for 2s\n");
                 return false;
             }
+            else CmdInputPoll(); //send buffer drains only while the stack is polled (Kernal Replace masks the PIT, see CmdSendSpan)
         }
         bytenum += bytesRead;
 
