@@ -50,6 +50,7 @@
 #include "TRMenuFiles/ROMs/cia_tod.prg.h"
 #include "TRMenuFiles/ROMs/TODCheck.prg.h"
 #include "TRMenuFiles/ROMs/Load8Run.prg.h"
+#include "TRMenuFiles/ROMs/c128basic.prg.h"
 #include "TRMenuFiles/ROMs/retromate_teensyrom.prg.h"
 #include "TRMenuFiles/ROMs/SettingsMenu.prg.h"
 #include "TRMenuFiles/ROMs/TRHelpScreens.prg.h"
@@ -176,6 +177,7 @@ StructMenuItem dirUtilities[] =
      rtFilePrg  , IOH_Swiftlink    , (char*)"CCGMS 2021 Term       +SwiftLink ", (uint8_t*)ccgms_2021_Swift_DE_38k_prg, sizeof(ccgms_2021_Swift_DE_38k_prg) ,
 /*2*/rtFilePrg  , IOH_None         , (char*)"Exit to BASIC"                    , (uint8_t*)empty_prg                  , sizeof(empty_prg) ,    //used by location, see ExitToBASIC:
 /*3*/rtFilePrg  , IOH_None         , (char*)"LOAD\"*\",8,1  and  RUN"          , (uint8_t*)Load8Run_prg               , sizeof(Load8Run_prg) , //used by location, see Load8Run:
+     rtFilePrg  , IOH_None         , (char*)"Exit to C128 BASIC         +C128" , (uint8_t*)c128basic_prg              , sizeof(c128basic_prg) ,
      rtFilePrg  , IOH_TR_BASIC     , (char*)"BASIC with TeensyROM Commands"    , (uint8_t*)TRCBC_prg                  , sizeof(TRCBC_prg) ,
      rtFileCrt  , IOH_None         , (char*)"Super Expander 64"                , (uint8_t*)super_expander_64_crt      , sizeof(super_expander_64_crt) ,
      rtFileCrt  , IOH_None         , (char*)"Epyx Fast Load Cart"              , (uint8_t*)Epyx_Fast_Load_crt         , sizeof(Epyx_Fast_Load_crt) ,

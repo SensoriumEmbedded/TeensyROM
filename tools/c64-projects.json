@@ -112,6 +112,17 @@
       ]
     },
     {
+      "name": "C128PrgBoot",
+      "description": "C128 function ROM that streams a $1C01 BASIC program in and runs it in C128 mode; the firmware copies it to RAM to serve it",
+      "dir": "Source/C64/C128PrgBoot",
+      "steps": [
+        { "assembler": "acme", "source": "C128PrgBoot.asm", "output": "C128PrgBoot.bin", "format": "plain" }
+      ],
+      "headers": [
+        { "input": "build/C128PrgBoot.bin", "dest": "C128PrgBoot.bin.h", "progmem": true }
+      ]
+    },
+    {
       "name": "TRCustomBasicCommands",
       "description": "Custom TeensyROM BASIC commands. Built with KickAssembler, which needs Java; the framework code is vendored from barryw/CustomBasicCommands (MIT).",
       "dir": "Source/C64/TRCustomBasicCommands",
@@ -139,6 +150,7 @@
       "dir": "Source/C64/BASIC",
       "steps": [],
       "headers": [
+        { "input": "c128basic.prg", "dest": "c128basic.prg.h", "progmem": true },
         { "input": "cia tod.prg", "dest": "cia_tod.prg.h", "progmem": true },
         { "input": "DMACheck.prg", "dest": "DMACheck.prg.h", "progmem": true },
         { "input": "empty.prg", "dest": "empty.prg.h", "progmem": true },

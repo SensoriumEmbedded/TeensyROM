@@ -426,6 +426,11 @@ FLASHMEM void HandleExecution()
          CartLoaded=true;
          break;      
       case rtFilePrg:
+         if (RunsInC128Mode(MenuSelCpy.Code_Image, MenuSelCpy.Size))
+         {
+            LaunchC128BasicPrg(MenuSelCpy.Code_Image, MenuSelCpy.Size);
+            break;
+         }
          //set up for transfer
          SendMsgPrintfln("PRG xfer %luK to $%04x:$%04x\n", 
             MenuSelCpy.Size/1024,
