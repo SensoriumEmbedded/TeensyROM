@@ -320,9 +320,11 @@ class Link:
         # GetFileStream refuses to overwrite, so a post starts with a delete.
         self.drain(0.6)
         self.wr(to_board(DELETE_FILE))
-        if len(self.rd(2)) < 2:
-            return
+        # A refused board reads each byte of the path as a one-letter command: 'e'
+        # resets its EEPROM.
+        self.ack(f'delete {remote}')
         self.wr(bytes([DRIVE_SD]) + remote.encode() + b'\0')
+        # A file that is not there yet fails here, and that is what a post wants.
         self.rd(2, 5)
         self.drain(0.6)
 
