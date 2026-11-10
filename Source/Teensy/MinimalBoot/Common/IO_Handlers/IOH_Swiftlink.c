@@ -294,6 +294,23 @@ void FreeSwiftlinkBuffs()
    free(SwiftTxOut); SwiftTxOut = NULL;
 }
 
+// NativeEthernet's static-IP begin() spins on the link with no timeout, so an
+// unplugged cable hung boot. Its DHCP begin() with a zero timeout brings the
+// stack and its link poll up and returns at once, so the link can be awaited
+// with a bound before the static begin(). 5 s covers PHY auto-negotiation.
+FLASHMEM bool EthWaitForLink(uint8_t *mac)
+{
+   uint16_t DHCPRespTO;
+   EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
+   Ethernet.begin(mac, 0, DHCPRespTO);
+   uint32_t beginWait = millis();
+   while (Ethernet.linkStatus() != LinkON)
+   {
+      if (millis() - beginWait >= 5000) return false;
+   }
+   return true;
+}
+
 FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
 {
    uint32_t beginWait = millis();
@@ -331,9 +348,13 @@ FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
-      //this blocks if cable not connected!
-      // https://forum.pjrc.com/index.php?threads/non-blocking-ethernet-begin-with-cable-disconnected-static-ip.65653/
-      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      if (EthWaitForLink(mac)) Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      else
+      {
+         MsgOut(" *Failed!*");
+         MsgOut("Ethernet cable is not connected.");
+         retval = false;
+      }
    }
    
    char msg[40];

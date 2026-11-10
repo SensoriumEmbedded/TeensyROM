@@ -20,6 +20,23 @@ void ServiceTCP(EthernetClient &tcpClient)
    }
 }
    
+// NativeEthernet's static-IP begin() spins on the link with no timeout, so an
+// unplugged cable hung boot. Its DHCP begin() with a zero timeout brings the
+// stack and its link poll up and returns at once, so the link can be awaited
+// with a bound before the static begin(). 5 s covers PHY auto-negotiation.
+FLASHMEM bool EthWaitForLink(uint8_t *mac)
+{
+   uint16_t DHCPRespTO;
+   EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
+   Ethernet.begin(mac, 0, DHCPRespTO);
+   uint32_t beginWait = millis();
+   while (Ethernet.linkStatus() != LinkON)
+   {
+      if (millis() - beginWait >= 5000) return false;
+   }
+   return true;
+}
+
 FLASHMEM bool EthernetInit()
 {
    uint32_t beginWait = millis();
@@ -57,7 +74,12 @@ FLASHMEM bool EthernetInit()
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
-      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      if (EthWaitForLink(mac)) Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      else
+      {
+         Serial.println("*Failed!* Ethernet cable is not connected.");
+         retval = false;
+      }
    }
    
    Serial.printf("Took %d mS\nIP: ", (millis() - beginWait));
