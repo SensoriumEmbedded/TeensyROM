@@ -18,8 +18,8 @@ const BASIC_START = 0x1c01;
 const BASIC_WARM_START = 0x4003;
 const BASIC_RESTART = 0x0a00;
 const TEXT_TOP = 0x1210;
-const KEYD = 0x034a;
-const NDX = 0xd0;
+const KEYBOARD_BUFFER = 0x034a;
+const KEYBOARD_COUNT = 0xd0;
 const IO1 = 0xde00;
 const REG = { STREAM_DATA: 0x03, CONTROL: 0x04, SWAP_POLL: 0xfe };
 const CTL = { VANISH_ROM: 0, RUNNING_PRG: 5 };
@@ -43,8 +43,6 @@ function program(bodySize) {
   return prg;
 }
 
-// A C128 as the boot ROM sees it: bank 0 RAM behind the MMU's configuration register, I/O at $D000 with the
-// TeensyROM's registers at $DE00, and the function ROM at $8000 (1K, mirrored) and $C000 (one page, mirrored).
 function c128(prg, { swapBusyReads = 3 } = {}) {
   const cart = firmwareRom(prg.length);
   const ram = new Uint8Array(0x10000);
@@ -116,7 +114,7 @@ test('the program lands at $1C01 and BASIC is restarted with RUN typed', () => {
   const m = boot(prg);
   assert.deepEqual(m.ram.subarray(BASIC_START, BASIC_START + prg.length - 2), prg.subarray(2));
   assert.equal(word(m.ram, TEXT_TOP), BASIC_START + prg.length - 2);
-  assert.equal(String.fromCharCode(...m.ram.subarray(KEYD, KEYD + m.ram[NDX])), 'RUN\r');
+  assert.equal(String.fromCharCode(...m.ram.subarray(KEYBOARD_BUFFER, KEYBOARD_BUFFER + m.ram[KEYBOARD_COUNT])), 'RUN\r');
   assert.equal(m.cr, SYSTEM_BANK);
 });
 

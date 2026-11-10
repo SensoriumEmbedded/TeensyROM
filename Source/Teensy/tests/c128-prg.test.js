@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-// Which PRGs run in C128 mode, and what LaunchC128BasicPrg leaves behind for the reset and the boot ROM.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

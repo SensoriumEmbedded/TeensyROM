@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: MIT
-// Runs a C128 BASIC program (a PRG that loads at $1C01) in C128 mode, through the function ROM in
-// Source/C64/C128PrgBoot, and returns a C128 to its own BASIC.
 
 #include "TRMenuFiles/ROMs/C128PrgBoot.bin.h"
 
@@ -17,7 +15,6 @@ static uint16_t PrgWord(const uint8_t *Bytes)
    return Bytes[0] | Bytes[1] << 8;
 }
 
-// A $1C01 PRG whose first line link points just past that line's terminating zero, or an empty program (a zero link)
 FLASHMEM bool IsC128BasicPrg(const uint8_t *Prg, uint32_t Size)
 {
    if (Size < 4 || PrgWord(Prg) != C128_BASIC_START) return false;
@@ -45,8 +42,11 @@ static void StartC128Prg(uint8_t *Prg, uint32_t Size)
 {
    uint8_t *Rom = RAM_Image + RAM_ImageSize - sizeof C128PrgBoot_bin;
    const uint16_t End = C128_BASIC_START + Size - 2;
+   const uint8_t *BootRom = C128PrgBoot_bin;
 
-   memcpy(Rom, C128PrgBoot_bin, sizeof C128PrgBoot_bin);
+   // GCC turns a memcpy of a whole const array it can see into a copy of the array in .rodata, which is DTCM
+   asm("" : "+r"(BootRom));
+   memcpy(Rom, BootRom, sizeof C128PrgBoot_bin);
    Rom[C128PRG_END_PARAM] = End & 0xff;
    Rom[C128PRG_END_PARAM + 1] = End >> 8;
 

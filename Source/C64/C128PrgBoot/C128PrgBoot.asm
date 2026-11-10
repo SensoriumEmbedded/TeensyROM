@@ -1,7 +1,6 @@
 ; SPDX-License-Identifier: MIT
-; A C128 function ROM that runs a BASIC program in C128 mode: it streams the selected PRG from the TeensyROM to $1C01
-; and types RUN. The firmware (C128Prg.ino) serves the first $400 bytes as ROML, mirrored through $8000-$BFFF, and the
-; last page as ROMH, mirrored through $C000-$FFFF, and patches the PRG's end address into prgEnd.
+; The firmware (C128Prg.ino) serves the first $400 bytes as ROML, mirrored through $8000-$BFFF, and the last page as
+; ROMH, mirrored through $C000-$FFFF, and patches the PRG's end address into prgEnd.
 ;
 ; The ID byte asks to start after power-up and reset, so the kernal calls the cold start from PHOENIX, which BASIC's
 ; cold start runs last: BASIC has already done its NEW, which would otherwise clear the program at $1C01.
@@ -16,8 +15,8 @@ BANK_0_IO = $3e
 BANK_0_ALL_RAM = $3f
 BASIC_START = $1c01
 TEXT_TOP = $1210
-KEYD = $034a                    ; the keyboard buffer
-NDX = $d0                       ; and its count
+KEYBOARD_BUFFER = $034a
+KEYBOARD_COUNT = $d0
 BASIC_RESTART = $0a00           ; BASIC's cold start points it at its warm start before calling PHOENIX
 ChrReturn = 13
 
@@ -94,11 +93,11 @@ loaded  lda prgEnd
         sta MMU_CR
         ldx #runKeysEnd - runKeys - 1
 -       lda runKeys,x
-        sta KEYD,x
+        sta KEYBOARD_BUFFER,x
         dex
         bpl -
         lda #runKeysEnd - runKeys
-        sta NDX
+        sta KEYBOARD_COUNT
         jmp (BASIC_RESTART)
 
 runKeys !text "RUN", ChrReturn
