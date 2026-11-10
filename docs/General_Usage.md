@@ -87,6 +87,8 @@
       * Super fast-loads any PRG into C64/128 RAM and executes
         * Same result as LOAD"file",x,1 and RUN (but much faster)
       * Must be single PRG file, not multi-part
+      * On a C128, a C128 BASIC program (one that loads at $1C01) restarts the C128 in 128 mode, loads, and runs there; on a C64 it loads as before
+      * **Exit to C128 BASIC** (Utilities, **+C128**) restarts a C128 in 128 mode with no cartridge, as if powered on
     * **.CRT files:**
       * Emulates/supports most popular cartridge types:
         * All 8khi, 8klo, 16k, and C128 "Generic" carts
