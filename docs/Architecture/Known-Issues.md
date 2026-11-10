@@ -22,6 +22,7 @@ Detail for every item below is in its own full section further down — search t
 - Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
 - `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
+- DHCP init after a static-IP init in the same power cycle times out with the cable connected — NativeEthernet only starts its DHCP client from the link-up callback, and only on an interface at 0.0.0.0 [DEFERRED]
 
 **Fixed since last summary (2026-10-03, not open work — kept for context):**
 - `InitHndlr_SuperSnapshotV5` / `SpecialBtn_SuperSnapshotV5` now `FLASHMEM`
@@ -299,6 +300,20 @@ The full-firmware path disables `IRQ_ENET`/`IRQ_PIT` while `EmulateVicCycles` is
 **Proposed fix:** comment out `EmulateVicCycles = true;` at `Min_DriveDirLoad.ino:55` too, so MinimalBoot never attempts VIC-cycle emulation at all — trading "a hypothetical oversized cart needing VIC emulation wouldn't run correctly from MinimalBoot" for closing the unprotected-Ethernet window.
 
 **Status:** deferred — not ready to test yet (2026-08-11).
+
+## DHCP init after a static-IP init times out with the cable connected
+
+**Where:** `ForceEthernetInit()` in `Source/Teensy/MinimalBoot/Common/IO_Handlers/IOH_Swiftlink.c`, reached from Swiftlink's `ATC` after `AT+DHCP=1` (`Swift_ATcommands.c`) and from the TR menu settings' general info (`ForceEthInit()` in `StatusFunctions.c`).
+
+**Input:** a static-IP init has already run in this power cycle (successfully, or timed out waiting for a link), the cable is connected, and the user switches to DHCP and reconnects without rebooting.
+
+**Wrong result:** the DHCP `Ethernet.begin()` waits the full `AT+DHCPTIME` (15 s by default) and reports `*Failed!*`.
+
+**Cause:** NativeEthernet's static `begin()` releases the fnet DHCP client, and `EthBeginStatic()` sets the static address before it waits for a link. The library starts a DHCP client only from `link_callback`, and only while `localIP()` is 0.0.0.0. With a static address on the interface and the link already up, nothing starts one again, so the DHCP `begin()` spins on `fnet_dhcp_cln_is_enabled()` until it times out.
+
+**Proposed fix:** before the DHCP `begin()` in `ForceEthernetInit()`, clear the interface address and start the client directly (`fnet_dhcp_cln_init()` on `fnet_netif_get_default()`, setting the response timeout as `link_callback` does). Or document that switching from static to DHCP takes a reboot. Either needs a check on a board.
+
+**Status:** deferred — needs a design decision and a board (2026-11-09).
 
 ## Cartridge register map (`Menu_Regs.i` / `Menu_Regs.h`) is hand-duplicated across two languages
 
