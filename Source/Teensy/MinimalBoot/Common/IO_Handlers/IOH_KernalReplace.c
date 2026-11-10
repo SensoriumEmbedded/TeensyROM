@@ -334,6 +334,8 @@ FLASHMEM void FreeKernalBin()
 #endif
 }
 
+void FnetLoopPollStart(); //Teensy.ino
+
 FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via init; called earlier, manually, from KERNALPreStart()
 {
 #ifdef Fab04_GlobalKernalReplace
@@ -400,6 +402,7 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
 #else
    fBusSnoop = KernalCheckArm();
 #endif
+   FnetLoopPollStart(); //Ethernet poll off the PIT timer from now on (see FnetLoopPollService in Teensy.ino)
 }
 
 FLASHMEM void InitHndlr_KernalReplace()

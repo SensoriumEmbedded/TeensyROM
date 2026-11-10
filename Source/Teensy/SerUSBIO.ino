@@ -896,11 +896,43 @@ FLASHMEM void SendU32(uint32_t SendVal)
     CmdChannel->write((uint8_t)((SendVal >> 24) & 0xff));
 }
    
+//While Kernal Replace serves the KERNAL the Ethernet stack is polled from loop() (FnetLoopPollService in Teensy.ino), and a command
+//  waiting here for its bytes runs inside loop(): keep polling, or a TCP payload longer than one segment stalls until the time-out.
+FLASHMEM void CmdInputPoll()
+{
+#ifdef Fab04_KernalReplace
+   FnetLoopPollService();
+#endif
+}
+
+//Sends a reply span as the channel takes it. NativeEthernet's write() spins without a time-out until the whole span fits in the
+//  socket's send buffer, and while Kernal Replace has the PIT masked the buffer only drains (and a lost segment is only retransmitted)
+//  when the stack is polled: so poll while the channel is full. False if it took nothing for SerialTimoutMillis*4.
+FLASHMEM bool CmdSendSpan(const uint8_t *Buf, uint32_t Len)
+{
+   uint32_t Quiet = millis();
+   while (Len)
+   {
+      int Avail = CmdChannel->availableForWrite();
+      if (Avail > 0)
+      {
+         uint32_t Chunk = min((uint32_t)Avail, Len);
+         CmdChannel->write(Buf, Chunk);
+         Buf += Chunk;
+         Len -= Chunk;
+         Quiet = millis();
+      }
+      else if (millis() - Quiet >= SerialTimoutMillis * 4) return false;
+      else CmdInputPoll();
+   }
+   return true;
+}
+
 FLASHMEM bool SerialAvailabeTimeout()
 {
    uint32_t StartTOMillis = millis();
    
-   while(!CmdChannel->available() && (millis() - StartTOMillis) < SerialTimoutMillis); // timeout loop
+   while(!CmdChannel->available() && (millis() - StartTOMillis) < SerialTimoutMillis) CmdInputPoll(); // timeout loop
    if (CmdChannel->available()) return(true);
    
    SendU16(FailToken);
@@ -1030,6 +1062,7 @@ FLASHMEM void DiscardCmdInput(uint32_t Owed, uint32_t Began, uint32_t Bytes)
    uint32_t Quiet = millis();
    while (Owed && millis() - Quiet < SerialTimoutMillis * 2 && millis() - Began < CeilingmS)
       if (CmdChannel->available()) { CmdChannel->read(); Owed--; Quiet = millis(); }
+      else CmdInputPoll();
 }
 
 #ifdef Dbg_SerSD
@@ -1328,7 +1361,7 @@ FLASHMEM bool ReceiveSpanBytes(uint8_t *Buf, uint32_t Len, uint32_t After, uint3
 {
    for (uint32_t ByteNum = 0; ByteNum < Len; ByteNum++)
    {
-      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes));
+      while (Patient && !CmdChannel->available() && millis() - Began < SpansCeilingmS(Bytes)) CmdInputPoll();
       if (millis() - Began >= SpansCeilingmS(Bytes))
       {
          SendU16(FailToken);
@@ -1517,10 +1550,7 @@ FLASHMEM void ReadC64MemCommand()
    //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
-   for(uint32_t ByteNum = 0; ByteNum < DMALength; ByteNum++) 
-   {
-      CmdChannel->write(DMABuf[ByteNum]);
-   }
+   if (!CmdSendSpan(DMABuf, DMALength)) Printf_dbg("DMA Read: reply stalled, %lu bytes\n", DMALength); //Ack already sent, the host times out
    
    //CmdChannel->printf
    //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
