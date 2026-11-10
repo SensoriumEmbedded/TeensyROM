@@ -1550,7 +1550,7 @@ FLASHMEM void ReadC64MemCommand()
    //StartTime = micros() - StartTime;
    SendU16(AckToken);
    
-   if (!CmdSendSpan(DMABuf, DMALength)) Serial.printf("DMA Read: reply stalled, %lu bytes\n", DMALength); //Ack already sent, the host times out
+   if (!CmdSendSpan(DMABuf, DMALength)) Printf_dbg("DMA Read: reply stalled, %lu bytes\n", DMALength); //Ack already sent, the host times out
    
    //CmdChannel->printf
    //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
