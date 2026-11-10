@@ -52,6 +52,13 @@ static void GeosPutWord(uint8_t *At, uint16_t Value)
    At[1] = Value >> 8;
 }
 
+// GCC turns a memcpy of a whole const array it can see into a copy of the array in .rodata, which is DTCM
+static inline void GeosCopyFromFlash(uint8_t *To, const uint8_t *From, size_t Size)
+{
+   __asm__("" : "+r"(From));
+   memcpy(To, From, Size);
+}
+
 static bool GeosInDriverArea(uint16_t Address) { return Address >= GEOS_DRIVER_AREA && Address < GEOS_DRIVER_AREA + GEOS_DRIVER_SIZE; }
 
 // Whether a stock disk driver's tables start here: the vectors and the jump slots all point into the driver, and
@@ -244,7 +251,7 @@ FLASHMEM static bool GeosSetUpConfigure(struct GeosDisk *Disk, const uint8_t *Sl
    ReadBlock = GeosWord(Driver + 2 * VecReadBlock);
    if (ReadBlock < GEOS_DRIVER_AREA || ReadBlock > GEOS_DRIVER_AREA + DriverLength) return true;
    if (!GeosReplaceTransport(Driver, Disk->Target->DiskDriver)) return true;
-   memcpy(At, GeosTRProbe, sizeof GeosTRProbe);
+   GeosCopyFromFlash(At, GeosTRProbe, sizeof GeosTRProbe);
    if (!GeosRewriteChain(Disk, Driven, Driver) || !GeosRewriteChain(Disk, Probe, Scratch)) return false;
    *Changed = true;
    return *Ours = true;
@@ -491,8 +498,8 @@ static inline bool GeosBuildC128Boot(struct GeosDisk *Disk, const struct GeosDat
    }
 
    memset(Out, 0, 2 * GEOS128_BOOT_CHIP_SIZE);
-   memcpy(Roml, Geos128BootRoml, sizeof Geos128BootRoml);
-   memcpy(Romh + GEOS128_BOOT_VECTORS, Geos128BootVectors, sizeof Geos128BootVectors);
+   GeosCopyFromFlash(Roml, Geos128BootRoml, sizeof Geos128BootRoml);
+   GeosCopyFromFlash(Romh + GEOS128_BOOT_VECTORS, Geos128BootVectors, sizeof Geos128BootVectors);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS, Load);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 2, Pages);
    GeosPutWord(Roml + GEOS128_BOOT_PARAMS + 4, Disk->Target->BootEntry);
