@@ -41,6 +41,7 @@ IO_TIMEOUT, IO_RETRY, IO_CHUNK = 3, 0.005, 65536
 # The names a TR+ enumerated under either side of a firmware change: the USB
 # serial number moves, so the node does too.
 ORIGINAL_PORT, RENAMED_PORT = 'cu.usbmodem192885901', 'cu.usbmodem2101'
+REFUSED_WHILE_BUSY = {DELETE_FILE, POST_FILE, GET_DIR_NDJSON}
 
 
 def reply(token):
@@ -63,6 +64,8 @@ class FakeBoard:
         self.chatter = b''
         self.silence = 0         # seconds after a boot in which it answers nothing
         self.stop_listing_early = False
+        self.busy = False        # an IO handler other than the menu's is current
+        self.stray = b''         # bytes the firmware would run as one-letter commands
         self.image = FW_FULL     # None models the extension image: USB is off
         self.buf = b''
         self.stop = False
@@ -171,6 +174,8 @@ class FakeBoard:
     def respond(self):
         """Read one command and answer it."""
         first = self.take(1)
+        if first and first != bytes([COMMAND_PREFIX]):
+            self.stray += first
         if first == b'b':          # the one single-byte command: BusAnalysis
             self.send(b'bus ok\n')
             return
@@ -180,7 +185,9 @@ class FakeBoard:
         if not second:
             return
         command = COMMAND_PREFIX << 8 | second[0]
-        if command == FW_CHECK:
+        if self.busy and command in REFUSED_WHILE_BUSY:
+            self.send(reply(FAIL) + b'Busy!\n')
+        elif command == FW_CHECK:
             if self.image and time.time() >= self.answers_at:
                 self.send(self.chatter + reply(self.image))
         elif command == VERSION_INFO:
@@ -287,6 +294,14 @@ class BenchScripts(unittest.TestCase):
             out = run(self.board, 'push.py', f'{f.name}=/A.bin')
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(self.board.files['/A.bin'], b'new')
+
+    def test_a_busy_board_is_sent_no_path_to_run_as_commands(self):
+        self.board.busy = True
+        with tempfile.NamedTemporaryFile() as f:
+            out = run(self.board, 'push.py', f'{f.name}=/c128test/t80b.prg')
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn('Busy!', out.stderr)
+        self.assertEqual(self.board.stray, b'')
 
     def test_launch_sends_drive_then_path(self):
         out = run(self.board, 'launch.py', '/HELLO.crt', '1', '1')
