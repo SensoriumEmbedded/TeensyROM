@@ -10,12 +10,13 @@ memory -- because the scratch region is ordinary BASIC RAM, and anything that
 runs there changes it under the check. It starts by reading the region once to
 learn what is there, then sends the writes (4 KiB each) and the reads (8-16 KiB
 each) in a shuffled order over one connection, each with its own time-out, and
-compares every read with the bytes this run believes the region holds. At the
-end it asks the board which image it is running, over the same connection and
+compares every read with the bytes this run believes the region holds, and
+the whole region once more after the last command, so every write is checked.
+At the end it asks the board which image it is running, over the same connection and
 then over a fresh one, so a board that stopped answering fails the run.
 
 Exits 0 only when every command was acknowledged within its time-out, every
-read matched, and the board answered both checks at the end.
+read and the final one matched, and the board answered both checks at the end.
 """
 import argparse
 import random
@@ -149,6 +150,15 @@ def main():
     elapsed = time.monotonic() - started
     print(f'{moved / 1024:.0f} KiB in {elapsed:.1f} s ({moved / 1024 / elapsed:.0f} KiB/s); '
           f'slowest {slowest[0] * 1000:.0f} ms ({slowest[1]})')
+
+    try:
+        got = board.read(REGION, REGION_BYTES)
+        if got != shadow:
+            first = next(i for i in range(REGION_BYTES) if got[i] != shadow[i])
+            mismatches += 1
+            failures.append(f'final read: differs from ${REGION + first:04X}')
+    except (OSError, RuntimeError) as problem:
+        failures.append(f'final read: {problem}')
 
     for label, fresh in (('same connection', False), ('new connection', True)):
         try:
