@@ -1546,14 +1546,12 @@ FLASHMEM void SnoopTapCommand()
    SendU32(Taps);
    CmdChannel->write(SnoopTriggered ? 1 : 0);
    SendU16(Sent);
-   for (uint32_t Num = Total - Sent; Num != Total; Num++)
-   {
-      const SnoopEntry &E = SnoopRing[Num % SnoopRingSize];
-      SendU32(E.Cyc);
-      SendU16(E.Addr);
-      CmdChannel->write(E.Data);
-      CmdChannel->write(E.Info);
-   }
+   static_assert(sizeof(SnoopEntry) == 8, "SnoopRing is sent as is: the entry layout is the wire format");
+   const uint32_t Oldest = (Total - Sent) % SnoopRingSize;
+   const uint32_t BeforeWrap = min(Sent, SnoopRingSize - Oldest);
+   if (!CmdSendSpan((const uint8_t *)&SnoopRing[Oldest], BeforeWrap * sizeof(SnoopEntry)) ||
+       !CmdSendSpan((const uint8_t *)SnoopRing, (Sent - BeforeWrap) * sizeof(SnoopEntry)))
+      Printf_dbg("Snoop tap: reply stalled\n"); //Ack already sent, the host times out
    FlushCmdChannel(CmdChannel);
    if (Mode != 0)
    {
