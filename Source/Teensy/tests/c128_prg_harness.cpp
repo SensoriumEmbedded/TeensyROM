@@ -5,6 +5,9 @@
 //   size N             the PRG grows to N bytes, zero-filled
 //   classify           prints 1 if RunsInC128Mode takes the PRG, else 0
 //   launch             runs LaunchC128BasicPrg and prints what it left behind
+//   ioh NAME           the Special IO setting: none, swiftlink or kernal
+//   ioh                prints the IO handler the next selection would take
+//   selected           prints the IO handler LaunchC128BasicPrg selected, if it selected one
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -13,6 +16,7 @@
 #include <vector>
 
 #define FLASHMEM
+#define Fab04_KernalReplace
 #define PROGMEM
 #define PSTR(s) (s)
 #define SetGameDeassert (Game = false)
@@ -27,8 +31,18 @@ static uint32_t XferSize, StreamOffsetAddr = 0xffffffff;
 static const unsigned char *LOROM_Image, *HIROM_Image;
 static uint16_t LOROM_Mask = 0x1fff, HIROM_Mask = 0x1fff;
 
+enum { rwRegNextIOHndlr = 22 };
+enum { IOH_None, IOH_Swiftlink, IOH_KernalReplace };
+static const char *const IOHNames[] = {"none", "swiftlink", "kernal"};
+static uint8_t IO1[256];
+static const char *Selected = "nothing";
+
 static bool HostIsC128() { return IsC128; }
-static void IOHandlerSelectInit() { HandlerSelects++; }
+static void IOHandlerSelectInit()
+{
+   HandlerSelects++;
+   Selected = IOHNames[IO1[rwRegNextIOHndlr]];
+}
 static void SendMsgPrintfln(const char *Format, ...)
 {
    char Text[128];
@@ -57,6 +71,14 @@ int main()
          for (char *Byte = strtok(Arg, " \r\n"); Byte; Byte = strtok(NULL, " \r\n")) Prg.push_back(strtoul(Byte, NULL, 16));
       }
       else if (!strcmp(Line, "size")) Prg.resize(strtoul(Arg, NULL, 10));
+      else if (!strcmp(Line, "ioh") && Arg)
+      {
+         Arg[strcspn(Arg, "\r\n")] = 0;
+         for (uint8_t Handler = 0; Handler < sizeof IOHNames / sizeof IOHNames[0]; Handler++)
+            if (!strcmp(Arg, IOHNames[Handler])) IO1[rwRegNextIOHndlr] = Handler;
+      }
+      else if (!strcmp(Line, "ioh")) printf("%s\n", IOHNames[IO1[rwRegNextIOHndlr]]);
+      else if (!strcmp(Line, "selected")) printf("%s\n", Selected);
       else if (!strcmp(Line, "classify")) printf("%d\n", RunsInC128Mode(Prg.data(), Prg.size()));
       else if (!strcmp(Line, "launch"))
       {
