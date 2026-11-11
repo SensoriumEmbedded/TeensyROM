@@ -82,6 +82,10 @@ FLASHMEM void LaunchC128BasicPrg(uint8_t *Prg, uint32_t Size)
       SendMsgPrintfln(PSTR("Too big for C128 BASIC"));
       return;
    }
+   // The MMU ignores GAME and EXROM in 128 mode, so Kernal Replace would drive the bus against the C128's own KERNAL
+#ifdef Fab04_KernalReplace
+   if (IO1[rwRegNextIOHndlr] == IOH_KernalReplace) IO1[rwRegNextIOHndlr] = IOH_None;
+#endif
    SendMsgPrintfln(PSTR("Starting C128 mode"));
    BootComplete = true;
    doReset = true;

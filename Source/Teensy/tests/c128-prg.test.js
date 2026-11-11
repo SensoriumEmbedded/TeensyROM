@@ -78,3 +78,16 @@ test('on a C64, Exit to C128 BASIC is refused before anything changes', { skip }
   assert.equal(launch('c64', EMPTY),
     'reset=0 boot=0 selects=0 game=1 exrom=1 roml=none romh=none end=0000 xfer=none:0:4294967295 masks=1fff:1fff msg=C128 BASIC needs a C128');
 });
+
+const nextHandler = (host, prg, setting) => run([`host ${host}`, `prg ${prg}`, `ioh ${setting}`, 'launch', 'ioh'])[1];
+
+test('a C128-mode launch drops Kernal Replace, whose GAME and EXROM mean nothing in 128 mode', { skip }, () => {
+  assert.equal(nextHandler('c128', ONE_LINE, 'kernal'), 'none', 'a program');
+  assert.equal(run(['host c128', `prg ${EMPTY}`, 'ioh kernal', 'launch', 'selected'])[1], 'none', 'Exit to C128 BASIC');
+  assert.equal(nextHandler('c128', ONE_LINE, 'swiftlink'), 'swiftlink', 'a handler that works in 128 mode');
+});
+
+test('a refused C128-mode launch leaves Kernal Replace selected', { skip }, () => {
+  assert.equal(nextHandler('c64', EMPTY, 'kernal'), 'kernal');
+  assert.equal(run(['host c128', `prg ${ONE_LINE}`, `size ${LARGEST + 1}`, 'ioh kernal', 'launch', 'ioh'])[1], 'kernal');
+});
