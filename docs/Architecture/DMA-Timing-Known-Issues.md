@@ -521,9 +521,9 @@ reads `$FC` at 1MHz where a C64's VIC-II reads `$FF`. `MainMenu.asm` now
 checks this and sets a new `rvtcC128` bit in `wRegVid_TOD_Clks` alongside the
 existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
 out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
-can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` (459 since
-11/11/2026: the same drive point under `WaitUntil_nS_fine`) /
-`Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` instead of
+can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
+`Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` (414 / 420 /
+440 since 11/12/2026, re-measured under `WaitUntil_nS_fine`) instead of
 the plain NTSC set, when both bits are set.
 
 Same exposure as #1: this only ever fires once the menu has reported the

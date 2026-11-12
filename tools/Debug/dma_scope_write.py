@@ -11,7 +11,7 @@ showing that write.
   python dma_scope_write.py COM5 --te 405           set te405 first (build with Dbg_SerTimChg)
   python dma_scope_write.py COM5 --te 405 --addr C0FF    another address, to compare captures
   python dma_scope_write.py --tw 350                sweep nS_DMADataHold alone, te/ty left at their current value
-  python dma_scope_write.py --te 459 --tw 350       te459's te/ty, but tw overridden to 350 instead of 395
+  python dma_scope_write.py --te 414 --tw 350       te414's te/ty, but tw overridden to 350 instead of 440
 
 The C64 is reset to the menu first: the errors only show while the C64 program is writing RAM, and a quiet
 loop hides them.  Needs pyserial (pip install pyserial).  Stop Trom API first (`trom api stop`), it holds the port."""
