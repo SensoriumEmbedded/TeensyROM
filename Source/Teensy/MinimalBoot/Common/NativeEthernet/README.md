@@ -33,6 +33,7 @@ The copy will track a tag in a fork, SensoriumEmbedded/NativeEthernet, branch `t
 
 - `NativeEthernet.h`/`.cpp`: the static-IP `begin(mac, ip, dns, gateway, subnet)` takes a `timeout` in ms (default `ULONG_MAX`, which keeps the old wait) and returns `int`: 0 if the stack failed to start or the link was not up within the time-out, 1 once the link is up. The address is set before the wait, so a cable plugged in later comes up on it. TeensyROM passes the DHCP time-out setting.
 - `NativeEthernet.h`/`.cpp`: which `begin()` ran last decides whether a link-up starts the DHCP client (`dhcp_requested`), not whether the address is 0.0.0.0, so after a static-IP `begin()` a DHCP `begin()` gets a lease without a reboot, and a link-up during a static `begin()` no longer starts DHCP. A DHCP `begin()` on a running stack whose link is already up starts the client itself, with `IRQ_PIT` masked so `link_callback` cannot start one at the same time. Every DHCP `begin()` sets the response time-out the next client uses; upstream kept the first call's. `start_dhcp()` runs from the PIT ISR and stays out of `FLASHMEM`.
+- `NativeEthernet.cpp`: the DHCP and the full static-IP `begin()` are `FLASHMEM`. They run only in thread mode, and on the Teensy 4 an unmarked function costs RAM1 (ITCM). `link_callback()` and `start_dhcp()` stay in ITCM.
 
 ## License
 

@@ -62,7 +62,7 @@ void EthernetClass::setSocketNum(uint8_t _socket_num){
     else socket_num = _socket_num;
 }
 
-int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
+FLASHMEM int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
 {
     unsigned long startMillis = millis();
     dhcp_response_timeout = responseTimeout;
@@ -201,7 +201,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 	begin(mac, ip, dns, gateway, subnet);
 }
 
-int EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet, unsigned long timeout)
+FLASHMEM int EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet, unsigned long timeout)
 {
     unsigned long startMillis = millis();
     dhcp_requested = false;
