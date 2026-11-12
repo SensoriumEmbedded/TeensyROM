@@ -71,9 +71,9 @@
 |AT+RNDMAC | MAC address to random value
 |AT+MAC=\<XX:XX:XX:XX:XX:XX>  | MAC address to provided (hexadecimal) value
 |AT+DHCP=\<0:1> | DHCP On(1)/Off(0)
-|**For DHCP mode only:**|  |
-|AT+DHCPTIME=\<D> |  DHCP Timeout in mS (0-65535)
-|AT+DHCPRESP=\<D> |  DHCP Response Timeout in mS (0-65535)
+|**Timeouts:**|  |
+|AT+DHCPTIME=\<D> |  Init Timeout in mS (0-65535): how long DHCP waits for a lease, or a static IP for the cable link
+|AT+DHCPRESP=\<D> |  DHCP Response Timeout in mS (0-65535), DHCP mode only
 |**For Static mode only:**|  |
 |AT+MYIP=<D.D.D.D> | Local IP address
 |AT+DNSIP=<D.D.D.D> | DNS IP address

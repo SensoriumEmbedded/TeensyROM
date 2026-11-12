@@ -188,7 +188,7 @@ FLASHMEM void AddDHCPTimeoutToRxQueueLN()
    uint16_t invalU16;
    char buf[50];
    EEPROM.get(eepAdDHCPTimeout, invalU16);
-   sprintf(buf, " DHCP Timeout: %dmS", invalU16);
+   sprintf(buf, " Init Timeout: %dmS", invalU16);
    AddToPETSCIIStrToRxQueueLN(buf);
 }
   
