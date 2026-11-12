@@ -55,16 +55,18 @@ for. Deferred — needs the scope, not done yet.
 ### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
 `WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
 overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
-`DataPortWriteWaitDMA()` have been switched over so far. Eight live call sites
+`DataPortWriteWaitDMA()` have been switched over so far, plus the `nS_DMASetup`
+waits in `DMAControl.c`'s `DMAByte()` and `IOH_KernalReplace.c`'s `KDS_SenseCycle()`
+(11/11/2026, see [DMA-Phi2-Timing.md](DMA-Phi2-Timing.md)). Nine live call sites
 still use the coarser `WaitUntil_nS()`:
 
-- `DMAControl.c` — `nS_DMASetup` (address/R-W setup before Phi2 rising)
+- `IOH_KernalReplace.c:153` — `nS_DMAAssert`
 - `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
   `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
   DMA-assert path
 - `Common_Defs.h` `DataPortWriteWaitVIC`, `DataPortWaitRead` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
   read/write helpers)
-- `IOH_REU.c:178` — `nS_DMAAssert`
+- `IOH_REU.c:188` — `nS_DMAAssert`
 
 (`DMAByte()`'s BA-transition wait is no longer on this list — the
 `C128-DMA-Timing` import hoisted it to the same manual pattern as the
@@ -519,7 +521,8 @@ reads `$FC` at 1MHz where a C64's VIC-II reads `$FF`. `MainMenu.asm` now
 checks this and sets a new `rvtcC128` bit in `wRegVid_TOD_Clks` alongside the
 existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
 out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
-can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
+can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` (459 since
+11/11/2026: the same drive point under `WaitUntil_nS_fine`) /
 `Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` instead of
 the plain NTSC set, when both bits are set.
 

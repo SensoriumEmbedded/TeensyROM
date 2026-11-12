@@ -442,7 +442,9 @@ bool DMAByte(uint8_t *Data)
    CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
        
    //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
-   WaitUntil_nS(nS_DMASetup);  //use timer instead to get just ahead of the transition.   
+   // The coarse WaitUntil_nS lands 9-20 nS late, by an amount each call site's code layout decides,
+   // and the window for a write on an NTSC C64 is about 25 nS wide: the late sites lost bytes.
+   WaitUntil_nS_fine(nS_DMASetup);
    //phi2 is about to go high..........................................................................      
    StartCycCnt = ARM_DWT_CYCCNT;
          

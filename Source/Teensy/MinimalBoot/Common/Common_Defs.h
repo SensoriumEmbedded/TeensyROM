@@ -404,15 +404,23 @@ const uint8_t OutputPins[] = {
                                        //   more direct routing, and C128-only DMA failures have shown up here before (see the bank-swap
                                        //   DMA-pause reliability note in Known-Issues.md).  Swept 60-400 on a flat NTSC C128 (in 64
                                        //   mode): worse at both ends, no better than 200 in between.  Not the C128 fault, see DMASetupNTSC128.
-#define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
+//Every dated measurement from here to the NTSC C128 set was taken while DMAByte() waited nS_DMASetup with the
+//   coarse WaitUntil_nS, which drove R/W and the address 9-20 nS (mean 14) later than the value; it now uses
+//   WaitUntil_nS_fine.  PAL and the NTSC C128 set are their old values + 14, the drive point they were tuned at.
+//   PAL is not re-measured.  The NTSC C64 data setup and hold are their old values + 14 for the same reason: they
+//   are measured from the drive point, which moved 14 earlier.
+#define Def_nS_DMASetupPAL  454  //400 delay from Phi2 falling to RW/Addr setup
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
+                                 //   11/11/26, NTSC C64 (Kawari) + TR+, fine wait, REU stash/fetch loop: Phi2 reads high
+                                 //   from about 415, writes clean 310-430, fail from 440 (2 pages in 2,670) and 450 (254).
+                                 //   The coarse 430 drove at 439-450 and lost the first byte of an REU fetch.
 
 //Both are measured from StartCycCnt, which DMAByte() re-latches nS_DMASetup after Phi2 falling, not from Phi2 rising
 #define Def_nS_DMADataSetupPAL  390  //delay to latching the data bus on a DMA read, too soon = bad reads
-#define Def_nS_DMADataSetupNTSC 390  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
+#define Def_nS_DMADataSetupNTSC 404  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
 #define Def_nS_DMADataHoldPAL   430  //delay to releasing the data bus on a DMA write.  390 (err), 470 OK, 430 OK(?)
-#define Def_nS_DMADataHoldNTSC  410  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
+#define Def_nS_DMADataHoldNTSC  424  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
                                      //      intermittent partial-byte errors, <=425 clean.  PAL collapses at 485 (9/10/26,
                                      //      C64+Kawari in PAL, Ultimate agrees) and swept 385-475 clean over 12MB, but that
                                      //      board won't repro the 390 err above - it's forgiving, so PAL's partial-byte
@@ -426,13 +434,13 @@ const uint8_t OutputPins[] = {
 //   RAM.  In 256-byte sessions they clustered on addresses whose low byte has a single 0 bit ($xxEF, $xxF7, ...),
 //   but lone writes to $C0FF fail about as often as to $C0EF.  C64s keep the NTSC set.
 //   PAL C128 is untested (no rig) and keeps the PAL set.
-#define Def_nS_DMASetupNTSC128     445
+#define Def_nS_DMASetupNTSC128     459
 #define Def_nS_DMADataSetupNTSC128 375
 #define Def_nS_DMADataHoldNTSC128  395
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
 #define Def_nS_KSenseSample 250 // Kernal replace DMA HIRAM sense (C128): when ROMH is read, from the nS_DMASetup re-latch of the
-                                //   DMA read (like nS_DMADataSetup), about 44nS before Phi2 rises on an NTSC C128.
+                                //   DMA read (like nS_DMADataSetup), about 30nS before Phi2 rises on an NTSC C128.
                                 //   10/28/26 flat NTSC C128 (Teensy cycle counter, same time base): ROMH seen low at 98-136nS
                                 //   over 180 senses, 98-116nS in 174.  Must stay below nS_DMADataSetup.
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
