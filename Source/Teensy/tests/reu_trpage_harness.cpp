@@ -4,6 +4,12 @@
 //   banks N        the REU has N banks (0: none could be allocated)
 //   stock 0        the stock 512KB REU is the handler instead
 //   r OFFSET       an IO2 read, printing the byte driven or "open"
+//   d VALUE        the byte the C64 drives on the next IO2 write
+//   w OFFSET       an IO2 write of that byte
+//   job ADDR       a host DMA job is set up at ADDR, as SetUpDMA leaves it
+//   dma 0          prints the DMA job state: read, fixed address, start, length, count
+//   watch 0        another owner, such as the sample store watch, holds the bus snoop
+//   snoop 0        prints "watch" while that owner still holds it, "none" or "other" if not
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -16,7 +22,7 @@
 #define SetDMAAssert
 #define SetDMADeassert
 #define ReadGPIO6 0
-#define GP6_Phi2(Port) ((Port) & 0)
+#define GP6_Phi2(Port) ((void)(Port), Phi2Edge())
 #define ARM_DWT_CYCCNT 0u
 #define WaitUntil_nS(nS)
 #define GPIO6_ISR Discard
@@ -41,6 +47,8 @@ struct stcIOHandlers
 static struct { template <typename... Args> void printf(const char *, Args...) {} } Serial;
 
 static uint32_t Discard, StartCycCnt, LastCycCnt;
+static bool Phi2;
+static bool Phi2Edge() { return Phi2 = !Phi2; }
 static uint32_t micros() { return 0; }
 static const int eepAdREUFilename = 0;
 static void EEPreadStr(int, char *Out) { *Out = 0; }
@@ -65,9 +73,13 @@ uint8_t CurrentIOHandler = IOH_REU_TRPage;
 
 static int Driven;
 static void DataPortWriteWaitLog(uint8_t Data) { Driven = Data; }
-static uint8_t DataPortWaitRead() { return 0; }
+static uint8_t WriteData;
+static uint8_t DataPortWaitRead() { return WriteData; }
 
 #include "../MinimalBoot/Common/IO_Handlers/IOH_REU.c"
+
+static uint8_t BankRAM[MAX_REU_BANKS][RAM_Bank_Size];
+static bool WatchSnoop(uint16_t, bool) { return false; }
 
 int main()
 {
@@ -77,7 +89,26 @@ int main()
    while (scanf("%15s %x", Command, &Value) == 2)
    {
       if (!strcmp(Command, "init")) IOHndlr_REU_TRPage.InitHndlr();
-      else if (!strcmp(Command, "banks")) NumREU_Banks = Value;
+      else if (!strcmp(Command, "banks"))
+      {
+         NumREU_Banks = Value;
+         for (unsigned Num = 0; Num < Value; Num++) REU_Bank[Num] = BankRAM[Num];
+      }
+      else if (!strcmp(Command, "d")) WriteData = Value;
+      else if (!strcmp(Command, "w")) IOHndlr_REU_TRPage.IO2Hndlr(Value, false);
+      else if (!strcmp(Command, "job"))
+      {
+         DMA_RnW = true;
+         DMA_FixC64Addr = false;
+         DMA_StartAddr = Value;
+         DMA_Length = 0x40;
+         DMA_Count = 0;
+      }
+      else if (!strcmp(Command, "dma"))
+         printf("%d %d %04x %x %x\n", DMA_RnW, DMA_FixC64Addr, (unsigned)DMA_StartAddr, (unsigned)DMA_Length, (unsigned)DMA_Count);
+      else if (!strcmp(Command, "watch")) fBusSnoop = &WatchSnoop;
+      else if (!strcmp(Command, "snoop"))
+         printf("%s\n", fBusSnoop == &WatchSnoop ? "watch" : fBusSnoop ? "other" : "none");
       else if (!strcmp(Command, "stock")) CurrentIOHandler = IOH_REU;
       else if (!strcmp(Command, "r"))
       {
