@@ -83,6 +83,7 @@ static_assert(sizeof(strVersionNumber) <= 41, "strVersionNumber must fit the 40-
 #define ResetC64Token     0x64EE
 #define WriteC64MemToken  0x64FB
 #define WriteC64SpansToken 0x64FC
+#define WriteREUToken     0x64FA
 #define SampleWatchToken  0x64F9
 #define ReadC64MemToken   0x64FD
 #define RetryToken        0x9B7E

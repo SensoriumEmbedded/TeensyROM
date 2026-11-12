@@ -593,6 +593,16 @@ FLASHMEM void ProcessCommand()
          ReadC64MemCommand();
          return;
    #endif
+   #ifdef Fab04_REU
+      case WriteREUToken: //Write REU emulation's memory, off the C64 bus
+         WriteREUCommand();
+         return;
+   #else
+      case WriteREUToken: //a sender probing for the command waits on this reply before it sends more
+         SendU16(FailToken);
+         CmdChannel->println(PSTR("No REU on this board"));
+         return;
+   #endif
       case ResetC64Token:   //Reset C64
          CmdChannel->println("Reset cmd received");  //UI looks for this string, do not change.
          BtnPressed = true;
@@ -1551,5 +1561,52 @@ FLASHMEM void ReadC64MemCommand()
    //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes) in %luuS\n", DMAAddr, DMAAddr+DMALength-1, DMALength, StartTime);
    //Serial.printf("DMA Read: addr $%04x:$%04x (%lu Bytes)\n", DMAAddr, DMAAddr+DMALength-1, DMALength);
 }
+
+#ifdef Fab04_REU
+// Command:
+// Write host data into REU emulation's memory.  The C64 bus is not touched: the C64 fetches the
+// data with its own REU transfers.
+//
+// Workflow:
+// Receive <-- WriteREUToken (0x64FA)
+// Send --> AckToken 0x64CC and the REU size in bytes (4, Low first), or 0x9b7f and the reason
+// Receive <-- REU offset (Hi,Med,Low), data length (Hi,Med,Low)
+// Send --> AckToken 0x64CC if the data fits in the REU, 0x9b7f and the reason if not
+// Receive <-- Data bytes (data length)
+// Send --> AckToken 0x64CC once every byte has landed, 0x9b7f and the reason on Fail
+//
+// Straight into the banks, not staged: a staging buffer would come from the heap the banks use up.
+// A transfer the C64 starts runs from the PHI2 ISR, between two bytes of this copy, and sees some
+// of the old bytes and some of the new; the sender keeps the C64 off the range until the last reply.
+FLASHMEM void WriteREUCommand()
+{
+   uint8_t Head[6];
+   const uint32_t Began = millis();
+
+   if (NumREU_Banks == 0)
+   {
+      SendU16(FailToken);
+      CmdChannel->println(PSTR("REU emulation is off"));
+      return;
+   }
+   SendU16(AckToken);
+   SendU32(REU_Size);
+   if (!ReceiveSpanBytes(Head, sizeof Head, 0, Began, sizeof Head, true)) return;
+   const uint32_t Offset = Head[0] << 16 | Head[1] << 8 | Head[2], Len = Head[3] << 16 | Head[4] << 8 | Head[5];
+   if (!REUHostWriteFits(Offset, Len))
+   {
+      SendU16(FailToken);
+      CmdChannel->printf(PSTR("Runs past the end of the %lu byte REU\n"), (uint32_t)REU_Size);
+      return;
+   }
+   SendU16(AckToken);
+   for (uint32_t Done = 0, Run; Done < Len; Done += Run)
+   {
+      uint8_t *To = REUBankRun(Offset + Done, Len - Done, &Run);
+      if (!ReceiveSpanBytes(To, Run, Len - Done - Run, Began, sizeof Head + Len)) return;
+   }
+   SendU16(AckToken);
+}
+#endif
 #endif
 
