@@ -41,11 +41,10 @@ stcIOHandlers IOHndlr_KernalReplace =
   NULL,                     //called at the end of EVERY c64 cycle
 };
 
-#ifdef Fab04_GlobalKernalReplace
-	uint8_t *KernalBin = NULL; //use unique global pointer
-#else
-	#define KernalBin MIDIRxBuf //use Special IO resource
-#endif
+//KernalCheck reads the image inside the PHI2 window, so it lives in DTCM: from the RAM2 heap, a read
+//that missed the cache took 100 nS or more and the byte reached the bus late.
+uint8_t KernalBin[8192];
+bool KernalLoaded = false; //PreStart loaded an image; InitHndlr_KernalReplace re-hooks KernalCheck only then
 
 uint8_t HIRAM_State;
 
@@ -326,31 +325,14 @@ extern bool HandshakeSnoop(uint16_t Address, bool R_Wn);
 	bool (*fKernRepl)(uint16_t Address, bool R_Wn) = NULL;    //return true to skip out of phi2 isr
 #endif
 
-FLASHMEM void FreeKernalBin()
-{  //nothing loaded: a NULL KernalBin keeps InitHndlr_KernalReplace from restaging KernalCheck
-#ifndef Fab04_GlobalKernalReplace
-   free((void*)KernalBin);
-   KernalBin = NULL;
-#endif
-}
-
 void FnetLoopPollStart(); //Teensy.ino
 
 FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via init; called earlier, manually, from KERNALPreStart()
 {
 #ifdef Fab04_GlobalKernalReplace
    fKernRepl = NULL;  //default, make sure off during loading
-   if (KernalBin == NULL) KernalBin = (uint8_t*)malloc(8192);
-#else
-   if (KernalBin != NULL) free((void*)KernalBin);
-   KernalBin = (uint8_t*)malloc(8192);
-   //KernalBin = RAM_Image;
 #endif
-   if (KernalBin == NULL)
-   {
-      Serial.println("Kernal buffer alloc failed!");
-      return;
-   }
+   KernalLoaded = false;
 
    //load kernal image into RAM:
    char Filename[MaxPathLength];
@@ -368,7 +350,6 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    if (!LoadFile)
    {
       Serial.println("Not found!");
-      FreeKernalBin();
       return;
    }
    
@@ -376,7 +357,6 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    {
       Serial.println("Wrong Size!");
       LoadFile.close();
-      FreeKernalBin();
       return;
    }
 
@@ -389,6 +369,7 @@ FLASHMEM void InitHndlr_KERNALReplace_PreStart() //not called automatically via 
    //Serial.printf("Read %lu Bytes in %lumS\n", CharNum, millis()-StartmS);
    Serial.printf("Read %lu Bytes\nKernal replace Enabled\n", CharNum);
    LoadFile.close();
+   KernalLoaded = true;
    KSenseApplyMode();
    KDS_State = KDS_Idle;
    KDS_Read01Valid = false;
@@ -414,7 +395,7 @@ FLASHMEM void InitHndlr_KernalReplace()
    //Only after a PRG load (the handshake owns fBusSnoop) whose PreStart loaded a kernal. PreStart
    //runs on PRG launches only, but a generic CRT inherits Kernal Replace as its Special IO too:
    //hooked there, KernalCheck reads an unloaded KernalBin and drives GAME/EXROM over the cart's own.
-   if (fBusSnoop != &HandshakeSnoop || KernalBin == NULL) return;
+   if (fBusSnoop != &HandshakeSnoop || !KernalLoaded) return;
    KDS_State = KDS_Idle;  //KernalCheck is unhooked during the handshake: no sense can be in flight
    KDS_Read01Valid = false;
    PendingfBusSnoop = KernalCheckArm(); //not fBusSnoop directly -- may still be mid PRG-load handshake, see HandshakeSnoop
