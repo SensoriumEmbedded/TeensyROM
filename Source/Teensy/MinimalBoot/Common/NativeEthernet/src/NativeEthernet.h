@@ -173,6 +173,10 @@ private:
     static void teensy_mutex_unlock(fnet_mutex_t *mutex);
     static fnet_time_t timer_get_ms(void);
     static void link_callback(fnet_netif_desc_t netif, fnet_bool_t connected, void *callback_param);
+    // Set by the DHCP begin(), cleared by the static one: whether a link-up starts the DHCP client.
+    static volatile bool dhcp_requested;
+    static volatile unsigned long dhcp_response_timeout;
+    static void start_dhcp(fnet_netif_desc_t netif);
     static void dhcp_cln_callback_updated(fnet_dhcp_cln_desc_t _dhcp_desc, fnet_netif_desc_t netif, void *p);
 };
 

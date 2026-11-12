@@ -30,6 +30,8 @@ ssize_t EthernetClass::socket_size = 0;
 uint8_t EthernetClass::socket_num = 0;
 IntervalTimer EthernetClass::_fnet_poll;
 volatile boolean EthernetClass::link_status = 0;
+volatile bool EthernetClass::dhcp_requested = false;
+volatile unsigned long EthernetClass::dhcp_response_timeout = 4000;
 DMAMEM uint8_t** EthernetClass::socket_buf_receive;
 DMAMEM uint16_t* EthernetClass::socket_buf_index;
 DMAMEM uint8_t** EthernetClass::socket_buf_transmit;
@@ -63,6 +65,8 @@ void EthernetClass::setSocketNum(uint8_t _socket_num){
 int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long responseTimeout)
 {
     unsigned long startMillis = millis();
+    dhcp_response_timeout = responseTimeout;
+    dhcp_requested = true;
     if(!fnet_netif_is_initialized(fnet_netif_get_default())){
         struct fnet_init_params     init_params;
         if(stack_heap_size == 0){
@@ -134,8 +138,6 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
               fnet_link_params_t link_params;
               link_params.netif_desc = fnet_netif_get_default();
               link_params.callback = link_callback;
-              static unsigned long _responseTimeout = responseTimeout;
-              link_params.callback_param = &_responseTimeout;
               fnet_link_init(&link_params);
               _fnet_poll.begin(fnet_poll, FNET_POLL_TIME);
             }
@@ -153,6 +155,12 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
     else{
 //        Serial.println("Error:TCP/IP stack already initialized.");
 //        return true;
+        // A link that is already up raises no link event, so after a static begin() nothing
+        // else would start the client. IRQ_PIT runs link_callback, which may start it too.
+        bool pitEnabled = NVIC_IS_ENABLED(IRQ_PIT);
+        NVIC_DISABLE_IRQ(IRQ_PIT);
+        if(link_status) start_dhcp(fnet_netif_get_default());
+        if(pitEnabled) NVIC_ENABLE_IRQ(IRQ_PIT);
     }
     
     while(!fnet_dhcp_cln_is_enabled(fnet_dhcp_cln_get_by_netif(fnet_netif_get_default()))){
@@ -196,6 +204,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 int EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet, unsigned long timeout)
 {
     unsigned long startMillis = millis();
+    dhcp_requested = false;
     if(!fnet_netif_is_initialized(fnet_netif_get_default())){
         struct fnet_init_params     init_params;
         if(stack_heap_size == 0){
@@ -412,22 +421,9 @@ void EthernetClass::link_callback(fnet_netif_desc_t netif, fnet_bool_t connected
   if(connected){
 //    Serial.println("Initialising Services!");
 //    init_services(netif);
-    if(localIP() == IPAddress(0,0,0,0)){
+    if(dhcp_requested){
 //       Serial.println("Initializing DHCP");
-    
-       static fnet_dhcp_cln_params_t dhcp_params; //DHCP intialization parameters
-       dhcp_params.netif = netif;
-       // Enable DHCP client.
-       if(fnet_dhcp_cln_init(&dhcp_params)){
-         fnet_dhcp_cln_set_response_timeout(fnet_dhcp_cln_get_by_netif(netif), *(unsigned long*)callback_param);
-           /*Register DHCP event handler callbacks.*/
-//          fnet_dhcp_cln_set_callback_updated(fnet_dhcp_cln_get_by_netif(netif), dhcp_cln_callback_updated, NULL);
-//          fnet_dhcp_cln_set_callback_discover(fnet_dhcp_cln_get_by_netif(netif), dhcp_cln_callback_updated, NULL);
-//         Serial.println("DHCP initialization done!");
-       }
-       else{
-//         Serial.println("ERROR: DHCP initialization failed!");
-       }
+       start_dhcp(netif);
     }
       
   }
@@ -436,6 +432,25 @@ void EthernetClass::link_callback(fnet_netif_desc_t netif, fnet_bool_t connected
 //    release_services(netif);
     fnet_dhcp_cln_release(fnet_dhcp_cln_get_by_netif(netif));
   }
+}
+
+// Called from the PIT ISR (link_callback), so it stays out of FLASHMEM. fnet_dhcp_cln_init()
+// refuses a second client on the same interface.
+void EthernetClass::start_dhcp(fnet_netif_desc_t netif){
+    static fnet_dhcp_cln_params_t dhcp_params; //DHCP intialization parameters
+    dhcp_params.netif = netif;
+    // Enable DHCP client.
+    fnet_dhcp_cln_desc_t dhcp_desc = fnet_dhcp_cln_init(&dhcp_params);
+    if(dhcp_desc){
+      fnet_dhcp_cln_set_response_timeout(dhcp_desc, dhcp_response_timeout);
+        /*Register DHCP event handler callbacks.*/
+//       fnet_dhcp_cln_set_callback_updated(dhcp_desc, dhcp_cln_callback_updated, NULL);
+//       fnet_dhcp_cln_set_callback_discover(dhcp_desc, dhcp_cln_callback_updated, NULL);
+//      Serial.println("DHCP initialization done!");
+    }
+    else{
+//      Serial.println("ERROR: DHCP initialization failed!");
+    }
 }
 
 void EthernetClass::dhcp_cln_callback_updated(fnet_dhcp_cln_desc_t _dhcp_desc, fnet_netif_desc_t netif, void *p) { //Called when DHCP updates
