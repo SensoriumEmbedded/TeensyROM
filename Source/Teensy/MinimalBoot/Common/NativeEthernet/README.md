@@ -29,7 +29,9 @@ The copy will track a tag in a fork, SensoriumEmbedded/NativeEthernet, branch `t
 - To take an upstream change: apply it in the fork's `tr` branch, copy `src/` here (still no `examples/`), and update this README.
 - Reapply the local modifications below whenever the contents are replaced.
 
-**Local modifications:** none yet.
+**Local modifications:**
+
+- `NativeEthernet.h`/`.cpp`: the static-IP `begin(mac, ip, dns, gateway, subnet)` takes a `timeout` in ms (default `ULONG_MAX`, which keeps the old wait) and returns `int`: 0 if the stack failed to start or the link was not up within the time-out, 1 once the link is up. The address is set before the wait, so a cable plugged in later comes up on it. TeensyROM passes the DHCP time-out setting.
 
 ## License
 

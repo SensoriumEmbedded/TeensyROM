@@ -193,8 +193,9 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 	begin(mac, ip, dns, gateway, subnet);
 }
 
-void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet)
+int EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet, unsigned long timeout)
 {
+    unsigned long startMillis = millis();
     if(!fnet_netif_is_initialized(fnet_netif_get_default())){
         struct fnet_init_params     init_params;
         if(stack_heap_size == 0){
@@ -259,7 +260,7 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
 //            Serial.println("netif Initialized");
             if(fnet_netif_get_default() == 0){
 //              Serial.println("ERROR: Network Interface is not configurated!");
-              return;
+              return 0;
             }
             else {
 //              Serial.println("SUCCESS: Network Interface is configurated!");
@@ -272,12 +273,12 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
           }
           else {
 //            Serial.println("Error:netif initialization failed.\n");
-            return;
+            return 0;
           }
         }
         else {
 //          Serial.println("Error:TCP/IP stack initialization failed.\n");
-          return;
+          return 0;
         }
     }
     else{
@@ -291,7 +292,9 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
     fnet_netif_set_ip4_dns(fnet_netif_get_default(), dns);
     
     while(!link_status){
+        if(millis() - startMillis >= timeout) return 0;
     }
+    return 1;
 }
 
 void EthernetClass::init(uint8_t sspin)
