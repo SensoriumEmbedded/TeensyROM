@@ -138,23 +138,24 @@ def nmi_loss(tr, gap_us):
     tr.poke(CIA2_CRA, [0])
 
 
-with Link() as tr:
-    try:
-        start_client(tr)
-        print('Integrity across slice boundaries, screen on, loop writing:')
-        integrity(tr)
-        print('What a slice costs:')
-        per_slice(tr, 'loop writing, screen on')
-        tr.poke(MODE, [1])
-        per_slice(tr, 'loop only reading, screen on')
-        tr.poke(D011, [0x0B])
-        per_slice(tr, 'loop only reading, screen blanked')
-        tr.poke(D011, [0x1B])
-        tr.poke(MODE, [0])
-        print('Timer NMIs lost to halts, loop writing:')
-        nmi_loss(tr, 40)
-    finally:
-        tr.reset()
+if __name__ == '__main__':
+    with Link() as tr:
+        try:
+            start_client(tr)
+            print('Integrity across slice boundaries, screen on, loop writing:')
+            integrity(tr)
+            print('What a slice costs:')
+            per_slice(tr, 'loop writing, screen on')
+            tr.poke(MODE, [1])
+            per_slice(tr, 'loop only reading, screen on')
+            tr.poke(D011, [0x0B])
+            per_slice(tr, 'loop only reading, screen blanked')
+            tr.poke(D011, [0x1B])
+            tr.poke(MODE, [0])
+            print('Timer NMIs lost to halts, loop writing:')
+            nmi_loss(tr, 40)
+        finally:
+            tr.reset()
 
-if failed:
-    raise SystemExit('FAILED: ' + '; '.join(failed))
+    if failed:
+        raise SystemExit('FAILED: ' + '; '.join(failed))

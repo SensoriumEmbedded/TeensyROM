@@ -1,0 +1,94 @@
+; C64 side of reuspans.py. IRQs off. The loop stashes a page to the REU, fetches it
+; back to another page and compares, counting rounds and mismatches; a CIA2 timer
+; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
+* = $0801
+!word next, 10
+!byte $9e
+!text "2064"
+!byte 0
+next !word 0
+
+ready  = $c104          ; $5A once set up
+rounds = $c110          ; 16 bits
+errors = $c112          ; 16 bits
+seed   = $c114
+source = $4000
+dest   = $5000
+
+reu_cmd  = $df01
+reu_c64  = $df02
+reu_reu  = $df04
+reu_len  = $df07
+stash    = $90          ; execute now, C64 to REU
+fetch    = $91          ; execute now, REU to C64
+
+* = $0810
+        sei
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+        lda #0
+        sta $d01a
+        sta rounds
+        sta rounds+1
+        sta errors
+        sta errors+1
+        sta seed
+        lda #<nmi
+        sta $0318
+        lda #>nmi
+        sta $0319
+        lda #$5a
+        sta ready
+
+loop    inc seed
+        ldx #0
+-       txa
+        eor seed
+        sta source,x
+        inx
+        bne -
+        lda #>source
+        ldy #stash
+        jsr transfer
+        lda #>dest
+        ldy #fetch
+        jsr transfer
+        ldx #0
+-       lda dest,x
+        cmp source,x
+        bne bad
+        inx
+        bne -
+        inc rounds
+        bne loop
+        inc rounds+1
+        jmp loop
+bad     inc errors
+        bne loop
+        inc errors+1
+        jmp loop
+
+; A = C64 page, Y = command. 256 bytes at REU address 0; every register is
+; written each time, since a transfer leaves them advanced.
+transfer
+        ldx #0
+        stx reu_c64
+        sta reu_c64+1
+        stx reu_reu
+        stx reu_reu+1
+        stx reu_reu+2
+        stx reu_len
+        inx
+        stx reu_len+1
+        sty reu_cmd
+        rts
+
+nmi     pha
+        lda $dd0d
+        lda #$0f
+        sta $d418
+        pla
+        rti
