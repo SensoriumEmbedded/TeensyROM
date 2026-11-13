@@ -1,0 +1,140 @@
+; C64 side of reuwrite.py. IRQs off. Fetches what the host asks for from the REU into
+; window, and while mode is 1 stashes a page to REU page 0 and fetches it back to
+; another page, counting rounds and mismatches as reuclient.a does.
+;
+; About 75 uS after each reply the bench's WriteC64Mem and ReadC64Mem get, the Teensy core's
+; USB serial flush masks interrupts, and an IO2 access in that cycle is answered late or not
+; at all: a write is lost or latched as $FF, a read returns $00. So the registers are read
+; back and rewritten until they hold what was meant before a transfer starts, and a request
+; waits out settle first.
+* = $0801
+!word next, 10
+!byte $9e
+!text "2064"
+!byte 0
+next !word 0
+
+mode    = $c100         ; 1 = run the stash/fetch loop
+idle    = $c101         ; 1 while the loop is stopped
+ready   = $c104         ; $5A once set up
+rounds  = $c110         ; 16 bits
+errors  = $c112         ; 16 bits
+seed    = $c114
+request = $c120         ; REU offset (Low, Med, Hi), length (Low, Hi)
+go      = $c125         ; the host sets it, and it is cleared once window holds the fetch
+regs    = $c130         ; what program writes to $DF02-$DF08
+source  = $4000
+dest    = $5000
+window  = $6000         ; up to 8 KiB
+
+reu_cmd  = $df01
+reu_regs = $df02
+stash    = $90          ; execute now, C64 to REU
+fetch    = $91          ; execute now, REU to C64
+
+* = $0810
+        sei
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+        lda #0
+        sta $d01a
+        sta mode
+        sta go
+        sta rounds
+        sta rounds+1
+        sta errors
+        sta errors+1
+        sta seed
+        lda #$5a
+        sta ready
+
+loop    lda go
+        beq +
+        jsr serve
++       lda mode
+        bne round
+        lda #1
+        sta idle
+        jmp loop
+round   lda #0
+        sta idle
+        inc seed
+        ldx #0
+-       txa
+        eor seed
+        sta source,x
+        inx
+        bne -
+        lda #>source
+        ldy #stash
+        jsr transfer
+        lda #>dest
+        ldy #fetch
+        jsr transfer
+        ldx #0
+-       lda dest,x
+        cmp source,x
+        bne bad
+        inx
+        bne -
+        inc rounds
+        bne loop
+        inc rounds+1
+        jmp loop
+bad     inc errors
+        bne loop
+        inc errors+1
+        jmp loop
+
+serve   ldx #2          ; about 2,500 cycles
+--      ldy #0
+-       dey
+        bne -
+        dex
+        bne --
+        lda #<window
+        sta regs
+        lda #>window
+        sta regs+1
+        ldx #4
+-       lda request,x
+        sta regs+2,x
+        dex
+        bpl -
+        jsr program
+        lda #fetch
+        sta reu_cmd
+        lda #0
+        sta go
+        rts
+
+; A = C64 page, Y = command. 256 bytes at REU address 0.
+transfer
+        sta regs+1
+        lda #0
+        sta regs
+        sta regs+2
+        sta regs+3
+        sta regs+4
+        sta regs+5
+        lda #1
+        sta regs+6
+        jsr program
+        sty reu_cmd
+        rts
+
+program ldx #6
+-       lda regs,x
+        sta reu_regs,x
+        dex
+        bpl -
+        ldx #6
+-       lda reu_regs,x
+        cmp regs,x
+        bne program
+        dex
+        bpl -
+        rts

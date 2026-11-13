@@ -134,6 +134,24 @@ uint8_t NumREU_Banks=0;
 uint8_t *REU_Bank[MAX_REU_BANKS]; // Max 64 banks of 8k each, for 512k total. 
 uint8_t REURegs[REUReg_NumRegs];
 
+// A host write is refused rather than wrapped by REU_Size_Mask: wrapped, it would land on top of
+// whatever the sender keeps at the bottom of the REU.
+FLASHMEM bool REUHostWriteFits(uint32_t Offset, uint32_t Len)
+{
+   return Len <= REU_Size && Offset <= REU_Size - Len;
+}
+
+// Where a host write's next bytes go, and *Run, how many of them fit before that bank ends.
+FLASHMEM uint8_t *REUBankRun(uint32_t Offset, uint32_t Len, uint32_t *Run)
+{
+#ifndef USE_RAM12
+   #error REUBankRun writes RAM1/2 banks only
+#endif
+   const uint32_t At = Offset & (RAM_Bank_Size - 1);
+   *Run = Len < RAM_Bank_Size - At ? Len : RAM_Bank_Size - At;
+   return REU_Bank[Offset / RAM_Bank_Size] + At;
+}
+
 #ifdef Direct_REU
 
 extern bool DMA_RnW, DMA_FixC64Addr;

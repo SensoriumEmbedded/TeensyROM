@@ -49,6 +49,7 @@ The TeensyROM divides commands into two availability tiers:
 These commands are processed regardless of what handler is active, even if the TeensyROM is "busy":
   * Core control (LaunchFile, ResetC64, VersionInfo, FWCheck)
   * DMA memory access (WriteC64Mem, WriteC64Spans, ReadC64Mem) and SampleWatch — TR+ only
+  * REU memory access (WriteREU) — TR+ only
   * C64 pause control (C64PauseOn, C64PauseOff)
 
 #### Conditionally-Available Commands
@@ -128,6 +129,7 @@ A C64 reset the TeensyROM doesn't see (reset detect disabled in Settings) doesn'
 |*WriteC64MemToken  | 0x64FB  | Write sequential C64 memory segment via DMA (TR+ Only)|
 |*WriteC64SpansToken | 0x64FC | Write up to 64 C64 memory spans via DMA, in slices (TR+ Only)|
 |*ReadC64MemToken   | 0x64FD  | Read sequential C64 memory segment via DMA (TR+ Only)|
+|*WriteREUToken     | 0x64FA  | Write REU emulation's memory, off the C64 bus (TR+ Only)|
 |*SampleWatchToken  | 0x64F9  | Count the C64's writes to one address (TR+ Only)|
 |DebugToken        | 0x6467  | Internal debug use only |
 
@@ -450,7 +452,7 @@ Writes a sequential C64 memory segment with supplied data.
 | — | TR+ performs DMA write |
 | Send | `AckToken 0x64CC` on success, `FailToken 0x9B7F` on fail |
  
-The data is staged in a buffer of its own, so a write never touches a running cartridge's ROM or REU emulation's memory. That buffer comes from the heap, which a large cartridge or REU emulation can have used up, and then the write is refused with `No memory to stage <n> bytes` and its data bytes are discarded. Write C64 Memory Spans and Read C64 Memory stage their data the same way, and are refused the same way, before any data is sent.
+The data is staged in a buffer of its own, so a write never touches a running cartridge's ROM or REU emulation's memory. That buffer comes from the heap, which a large cartridge or REU emulation can have used up, and then the write is refused with `No memory to stage <n> bytes` and its data bytes are discarded. Write C64 Memory Spans and Read C64 Memory stage their data the same way, and are refused the same way, before any data is sent. [Write REU Memory](#write-reu-memory-tr-only) stages nothing, so it is never refused for memory.
 
 **Handler:** `WriteC64MemCommand()`
  
@@ -522,3 +524,30 @@ Reads a sequential C64 memory segment and sends it to the host.
 | Send | Data bytes (per Data Length) |
  
 **Handler:** `ReadC64MemCommand()`
+
+---
+
+### Write REU Memory (TR+ Only)
+Writes host data into REU emulation's memory. The C64 bus is not touched and the C64 is never halted: the data goes straight into the memory REU emulation serves, and the C64 program fetches it with its own REU transfers (`$DF00`–`$DF0A`). Special IO must be set to an REU, or to a freezer cartridge with its REU, and the C64 must be running it.
+
+**Workflow:**
+| Direction | Data |
+|---|---|
+| Receive | `WriteREUToken` — `0x64FA` |
+| Send | `AckToken 0x64CC` and the REU size in bytes (4, Low first) — send nothing more until it arrives; `FailToken 0x9B7F` and a line of text if REU emulation is not running |
+| Receive | REU offset (Hi, Med, Low), data length (Hi, Med, Low) |
+| Send | `AckToken 0x64CC` if the data fits in the REU; `FailToken 0x9B7F` and a line of text if not |
+| Receive | Data bytes (per data length) — send these only after the `AckToken` |
+| Send | `AckToken 0x64CC` once every byte has landed; `FailToken 0x9B7F` and a line of text otherwise |
+
+The REU size is 128 KiB to 512 KiB, a power of two: REU emulation takes as much of the heap as it can get when it starts. A write that runs past the end of the REU is refused before its data is sent. It is not wrapped around to offset 0, as a C64 transfer's REU address is.
+
+A write with length `0` sends no data and gets its final `AckToken` at once. Sent at offset `0`, it is a probe: it tells a sender that the command exists and that REU emulation is running, and gives the REU size, without changing anything.
+
+If the data stops arriving part way, the board answers `FailToken` and a line of text, never `AckToken`, and goes on discarding what the sender still owes until a second passes with nothing arriving. The bytes that arrived before the stop are already in REU memory. Wait for that second of quiet before sending the next command, or the board may discard it too.
+
+The C64 can start an REU transfer at any time, including part way through a write: its transfer runs at once and sees some of the old bytes and some of the new. A sender whose C64 program fetches from the range being written must keep the program off that range until the final `AckToken`.
+
+Firmware that predates this command answers the token with `Unk cmd: 0x64fa`, or with `FailToken` and `Busy!`, rather than an `AckToken`. So does the minimal image, and a TeensyROM without the REU (Fab 0.2/0.3) answers `FailToken` and `No REU on this board`. A sender that waits for the first `AckToken` stops there.
+
+**Handler:** `WriteREUCommand()`

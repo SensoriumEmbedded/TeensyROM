@@ -11,7 +11,7 @@ showing that write.
   python dma_scope_write.py COM5 --te 405           set te405 first (build with Dbg_SerTimChg)
   python dma_scope_write.py COM5 --te 405 --addr C0FF    another address, to compare captures
   python dma_scope_write.py --tw 350                sweep nS_DMADataHold alone, te/ty left at their current value
-  python dma_scope_write.py --te 445 --tw 350       te445's te/ty, but tw overridden to 350 instead of 395
+  python dma_scope_write.py --te 414 --tw 350       te414's te/ty, but tw overridden to 350 instead of 440
 
 The C64 is reset to the menu first: the errors only show while the C64 program is writing RAM, and a quiet
 loop hides them.  Needs pyserial (pip install pyserial).  Stop Trom API first (`trom api stop`), it holds the port."""
@@ -116,7 +116,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="serial port, e.g. COM5 (default: the only Teensy found)")
     ap.add_argument("--addr", default="C0EF", help="hex address to write (default C0EF)")
-    ap.add_argument("--te", type=int, help="set nS_DMASetup (0-820) first, with tw=840-te and ty=820-te; needs "
+    ap.add_argument("--te", type=int, help="set nS_DMASetup (0-834) first, with tw=854-te and ty=834-te; needs "
                                            "a build with Dbg_SerTimChg, and the detected defaults are restored on exit")
     ap.add_argument("--ta", type=int, help="set nS_DMAAssert (0-999) directly, independent of --te")
     ap.add_argument("--tb", type=int, help="set nS_DMABAWait (0-999) directly, independent of --te")
@@ -135,8 +135,8 @@ def main():
     addr = int(args.addr, 16)
     if not 0 <= addr <= 0xFFFF:
         ap.error("--addr must be 0000-FFFF")
-    if args.te is not None and not 0 <= args.te <= 820:
-        ap.error("--te must be 0-820, so tw and ty stay 3-digit and positive")
+    if args.te is not None and not 0 <= args.te <= 834:
+        ap.error("--te must be 0-834, so tw and ty stay 3-digit and positive")
     overrides = {"ta": args.ta, "tb": args.tb, "tw": args.tw, "ty": args.ty}
     for name, val in overrides.items():
         if val is not None and not 0 <= val <= 999:
@@ -174,7 +174,7 @@ def main():
                           "TeensyROM.h, nothing was sent")
             timing_changed = True
             if args.te is not None:
-                for cmd in (f"te{args.te:03d}", f"tw{840 - args.te:03d}", f"ty{820 - args.te:03d}"):
+                for cmd in (f"te{args.te:03d}", f"tw{854 - args.te:03d}", f"ty{834 - args.te:03d}"):
                     ser.write(cmd.encode())
                     drain(ser, 0.4)
             for name, val in overrides.items():
