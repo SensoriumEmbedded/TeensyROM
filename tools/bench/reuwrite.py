@@ -11,9 +11,9 @@ REU page 0 in a loop while each write lands, so C64 transfers start from the PHI
 middle of the copies. Then the refusals past the end, a write whose sender stops part way, and
 the rate. Resets the C64 when done.
 
-The fetches are requested with WriteC64Mem and watched with ReadC64Mem, and a host DMA garbles
-a C64 write to IO2 now and then (see reuwclient.a). So the loop is stopped before a fetch is
-requested, and the client is left alone while it sets up the fetch.
+The fetches are requested with WriteC64Mem and watched with ReadC64Mem, and the USB flush after
+each of their replies now and then costs the C64 an IO2 access (see reuwclient.a). So the loop
+is stopped before a fetch is requested, and the client is left alone while it sets up the fetch.
 """
 import os, random, subprocess, sys, tempfile, time
 from protocol import ACK, DRIVE_SD, FAIL, READ_C64_MEM, WRITE_C64_MEM, WRITE_REU, to_board

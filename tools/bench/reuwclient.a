@@ -2,10 +2,11 @@
 ; window, and while mode is 1 stashes a page to REU page 0 and fetches it back to
 ; another page, counting rounds and mismatches as reuclient.a does.
 ;
-; A host DMA (the bench's own WriteC64Mem and ReadC64Mem) garbles a C64 write to IO2 now
-; and then: one it overlaps, and one in the first cycles after it releases the bus. So the
-; registers are read back and rewritten until they hold what was meant before a transfer
-; starts, and a request waits out settle first.
+; About 75 uS after each reply the bench's WriteC64Mem and ReadC64Mem get, the Teensy core's
+; USB serial flush masks interrupts, and an IO2 access in that cycle is answered late or not
+; at all: a write is lost or latched as $FF, a read returns $00. So the registers are read
+; back and rewritten until they hold what was meant before a transfer starts, and a request
+; waits out settle first.
 * = $0801
 !word next, 10
 !byte $9e
