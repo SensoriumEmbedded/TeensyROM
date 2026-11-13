@@ -43,6 +43,7 @@ stcIOHandlers IOHndlr_KernalReplace =
 
 //KernalCheck reads the image inside the PHI2 window, so it lives in DTCM: from the RAM2 heap, a read
 //that missed the cache took 100 nS or more and the byte reached the bus late.
+//Static even while Kernal Replace is off: a deliberate exception, see Constraints.md.
 uint8_t KernalBin[8192];
 bool KernalLoaded = false; //PreStart loaded an image; InitHndlr_KernalReplace re-hooks KernalCheck only then
 
