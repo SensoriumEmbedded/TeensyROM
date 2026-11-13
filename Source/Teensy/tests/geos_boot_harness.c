@@ -9,7 +9,7 @@
 
 #include "../GEOS/GeosTargets.h"
 
-#define MAX_IMAGE 819200
+#define MAX_IMAGE 822400
 #define MAX_PRG   (128 * 1024)
 
 static uint8_t Image[MAX_IMAGE + 1], Prg[MAX_PRG];
@@ -33,7 +33,7 @@ static bool WriteBlock(void *Context, uint32_t Offset, const uint8_t *Block)
 int main(int argc, char **argv)
 {
    struct GeosDate Now = { 26, 10, 21, 15, 7 };
-   struct GeosDisk Disk = { 0 };
+   static struct GeosDisk Disk;
    uint32_t Length, BootSize = 0;
    const uint8_t *Boot = NULL;
    const char *RegsPage = getenv("REGS_PAGE");
@@ -50,11 +50,11 @@ int main(int argc, char **argv)
    Size = fread(Image, 1, sizeof Image, File);
    fclose(File);
 
-   Disk.Format = GeosFormatForSize(Size);
    Disk.Target = Is128 ? &Geos128Launcher.Target : &Geos64Launcher.Target;
    Disk.Context = Image;
    Disk.Read = ReadBlock;
    Disk.Write = WriteBlock;
+   GeosDiskOpen(&Disk, Size);
    Built = GeosRefreshDriver(&Disk, &Refreshed) && GeosPrepareConfigure(&Disk, Prg, sizeof Prg, &Changed) && (Is128 ? GeosBuildC128Boot(&Disk, &Now, RegsPage ? (uint8_t)strtol(RegsPage, NULL, 16) : GEOS_REGS_BESIDE_GEORAM,
                                      Prg, sizeof Prg, &Boot, &BootSize, &ClockSet)
                  : GeosBuildBootPrg(&Disk, &Now, Prg, sizeof Prg, &Length, &ClockSet));
