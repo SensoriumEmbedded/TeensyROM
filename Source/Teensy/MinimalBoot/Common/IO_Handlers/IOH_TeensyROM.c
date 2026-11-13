@@ -20,6 +20,8 @@
 
 //IO Handler for TeensyROM
 
+#include "../MenuItemName.h"
+
 void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn);
 void IO2Hndlr_TeensyROM(uint8_t Address, bool R_Wn);
 void PollingHndlr_TeensyROM();
@@ -810,15 +812,11 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
             switch(Data)
             {
                case rsstItemName:
-                  //card names are malloc'd at strlen+1, shorter than MaxItemDispLength
-                  strlcpy(SerialStringBuf, MenuSource[SelItemFullIdx].Name, MaxItemDispLength); //Trim to length, if needed
-                  if ((IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
-                      MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
-                      IO1[rWRegCurrMenuWAIT] != rmtTeensy)
-                  { // if not show ext, not dir or unknown, not a TR Menu: terminate before extension
-                     char *pDot = strrchr(SerialStringBuf, '.'); //find last dot
-                     if (pDot != NULL) *pDot = 0; //terminate there
-                  }
+                  // hide ext if not show ext, not dir or unknown, not a TR Menu
+                  MenuItemDisplayName(SerialStringBuf, MaxItemDispLength, MenuSource[SelItemFullIdx].Name,
+                                      (IO1[rwRegPwrUpDefaults] & rpudShowExtension) == 0 &&
+                                      MenuSource[SelItemFullIdx].ItemType > rtDirectory &&
+                                      IO1[rWRegCurrMenuWAIT] != rmtTeensy);
                   ptrSerialString = SerialStringBuf;
                   break;
 #if defined(VM_EXTENSIONS_ENABLED) && !defined(MinimumBuild)
