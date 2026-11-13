@@ -33,6 +33,7 @@ C64 code and Teensy firmware also talk to each other **at runtime** two differen
 - [Teensy-Firmware.md](Teensy-Firmware.md) — module map, entry point, IO_Handlers pattern, MinimalBoot
 - [C64-Software.md](C64-Software.md) — MainMenuCRT, SettingsMenu, sub-programs, build pipeline
 - [Comms-Protocol.md](Comms-Protocol.md) — cartridge register protocol + link to external host protocol
+- [Disk-Images.md](Disk-Images.md) — the D64/D71/D81 engine that the GEOS support, the TR block device and VDrive share
 - [Build-System.md](Build-System.md) — toolchains, versions, dual-boot linking, known gotchas
   - How to build and flash, step by step: the build skill, [.claude/skills/teensyrom-build/SKILL.md](/.claude/skills/teensyrom-build/SKILL.md)
 - [Constraints.md](Constraints.md) — hard rules: ISR hot path, memory budgets, startup hooks, toolchain pins
