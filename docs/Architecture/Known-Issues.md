@@ -17,14 +17,14 @@ Detail for every item below is in its own full section further down — search t
 - `FLASHMEM` audit — running list of main-context-only functions still RAM-resident; full-batch apply/measure/revert experiment already run once (clears ~17KB `padding`, doesn't by itself touch stack headroom — see `Constraints.md`), list itself still unapplied
 - `hid3` (third `USBHIDParser` instance) — possibly unnecessary RAM cost, needs real-world-usage confirmation
 
-**DMA timing:**
-- A DMA transfer (a C64 REU transfer or a host write) can lose its first byte, more often next to another transfer; `tools/bench/reuspans.py` reproduces it
-
 **Design/process gaps:**
 - No consistent allocation-failure (OOM) policy across handlers — leaning REBOOT
 - Full-firmware/MinimalBoot code duplication (`SendMsgPrintfln`, `EEPwrite*`/`EEPread*`, `LoadFile`/`ParseCRTHeader`/`ParseChipHeader`, `ServiceTCP`) — no shared translation units, already causing drift; noted as a standing reminder, not queued
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
 - `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
+
+**Fixed since last summary (2026-11-11, not open work — kept for context):**
+- A DMA transfer could lose its first byte: `DMAByte()` drove R/W and the address after a coarse wait that landed 9-20 nS late by an amount each build's code layout decided, at the edge of an NTSC C64's write window; it now uses `WaitUntil_nS_fine`, and the defaults moved with it ([DMA-Phi2-Timing.md](DMA-Phi2-Timing.md))
 
 **Fixed since last summary (2026-10-03, not open work — kept for context):**
 - `InitHndlr_SuperSnapshotV5` / `SpecialBtn_SuperSnapshotV5` now `FLASHMEM`
@@ -517,13 +517,5 @@ Cosmetic, no functional impact — not queued for a dedicated pass, but worth ap
 **Status:** noted, low priority — not queued for a dedicated pass (2026-08-13).
 
 <br>
-
-## A DMA transfer can lose its first byte
-
-On a TR+ with Special IO set to an REU, the first byte of a DMA transfer can go missing: a C64 REU transfer (`DirectREU()`), or a host `WriteC64Mem` running beside the C64's REU transfers. A lost host byte reads back as whatever the C64 held there before; a lost REU byte leaves the destination page's byte 0 at its previous value.
-
-`tools/bench/reuspans.py` reproduces it on an NTSC C64: the C64 loops REU stash, fetch and compare while the host writes and reads back `$6000`. A 120-second run had 3 bad REU pages in 10,854 with no host jobs at all (only the script's counter reads and the client's timer NMI), and 1 in 10,703 beside 288 host jobs, none of which read back wrong. A variant of the script that ran only the 64-byte `WriteC64Mem` writer, for 90 seconds, read back wrong in 0–1 jobs of 256. Before the save and restore of the job's state in `DirectREU()`, that writer read back wrong in 9–10 jobs of 256, through a different mechanism (an REU transfer took over the host job's address and length).
-
-So host DMA is not needed for the REU to lose a byte, though the lost host bytes show it is not the REU alone either. Not yet known: which cycle is lost. Both `DirectREU()`'s release and `DMA_S_StartDisable` in `isrPHI2()` deassert DMA on the PHI2 falling edge with no wait, and in this loop the next transfer asserts within about 40 cycles of a release; that is the first suspect, not a confirmed cause.
 
 [Back to Architecture Overview](Overview.md)
