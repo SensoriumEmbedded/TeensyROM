@@ -289,7 +289,9 @@ Serial.write(Data); //a bit risky doing this here, but seems fast enough in test
 ```
 This runs in the ISR call chain, which `Constraints.md` otherwise rules out for anything with unbounded latency (Serial writes included, same class as SD/USB/EEPROM). Confirmed by the developer as a **deliberate, understood exception**: TPUT's `Serial.write()` calls are paced by BASIC interpreter overhead (tokenization/dispatch), not raw machine-code speed, so in practice this can't be called densely enough to threaten bus timing — verified in testing. Not queued for a fix; recorded here (and to be folded into `Constraints.md`) so it isn't re-flagged as a fresh violation in a future pass.
 
-**Status:** accepted, documented exception — no action needed (2026-08-12).
+**Fixed (2026-11-14):** the exception no longer holds once the build patches the core's USB queueing to raise BASEPRI instead of PRIMASK (`tools/lib/usb-irq-mask.mjs`): `isrPHI2` can then preempt a USB transfer the main loop is queueing, and a `Serial.write()` from it would corrupt that queue. `IO1Hndlr_TR_BASIC` now puts TPUT bytes in a 4 KB ring (`TputQueue`) that `PollingHndlr_TR_BASIC` sends; a byte written while the ring is full is dropped.
+
+**Status:** fixed (2026-11-14).
 
 ## MinimalBoot's Ethernet-disable protection has a gap during VIC-cycle emulation
 

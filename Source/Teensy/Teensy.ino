@@ -466,9 +466,11 @@ FLASHMEM void SetUpMainMenuROM()
    FreeSwiftlinkBuffs();
    RedirectEmptyDriveDirMenu();
    free((void*)MIDIRxBuf); MIDIRxBuf=NULL;
+   IOHandlerInit(IOH_TeensyROM);  
+   //isrPHI2 reads and writes these through the outgoing handler until IOHandlerInit swaps it out
    free(TgetQueue); TgetQueue=NULL;
    free(LSFileName); LSFileName=NULL;
-   IOHandlerInit(IOH_TeensyROM);  
+   free((void*)TputQueue); TputQueue=NULL;
    SetLEDOn;   //can be turned off by pause or some CRTs (ie EZF)
    
    switch (IO1[rwRegPwrUpDefaults2] & rpud2AltBtnActionMask)
