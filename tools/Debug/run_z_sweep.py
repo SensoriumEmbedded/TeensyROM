@@ -3,10 +3,9 @@
 the output. Unlike the on-device "TR+ C64 Expansion Port Test" menu diagnostic, 'z' runs all
 5 TestDMAPattern() sub-patterns unconditionally -- no short-circuit on the first failure --
 so it always gives the full picture in one shot. --te/--ta/--tb/--tw/--ty all need a firmware
-built with Dbg_SerTimChg -- without it, the letters sent run as their own unrelated top-level
-serial commands instead ('e' resets the EEPROM to defaults).  --te checks first, since it reads
-the board's tw and ty; don't pass the others unless you've confirmed the build has it (e.g. via
-dma_scope_write.py, which checks first).
+built with Dbg_SerTimChg -- without it, the letters sent would run as their own unrelated
+top-level serial commands instead ('e' resets the EEPROM to defaults), so when any of them is
+given the script reads the 't' listing first and sends nothing if the build doesn't answer it.
 
 'z' itself needs a firmware built with Dbg_SerDMA: without it the board ignores 'z', and the
 capture comes back empty.
@@ -89,11 +88,12 @@ def main():
 
     timing_changed = args.te is not None or any(v is not None for v in overrides.values())
     confirm = b""
-    if args.te is not None:
+    if timing_changed:
         timing = dma_timing(ser)
         if timing is None:
-            sys.exit("no te/tw/ty in the 't' listing: --te needs a firmware built with #define Dbg_SerTimChg "
-                     "in TeensyROM.h, nothing was sent")
+            sys.exit("no te/tw/ty in the 't' listing: --te/--ta/--tb/--tw/--ty need a firmware built with "
+                     "#define Dbg_SerTimChg in TeensyROM.h, nothing was sent")
+    if args.te is not None:
         try:
             te_cmds = te_commands(timing, args.te)
         except ValueError as err:
