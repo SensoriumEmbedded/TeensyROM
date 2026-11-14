@@ -42,6 +42,11 @@ stcIOHandlers IOHndlr_TR_BASIC =
 #define MainMemLocEnd      0xd000  //see MainMemLocEnd in compiled symbols ($caf5 as of 4/20/25, adding buffer)
 
 uint8_t* TgetQueue = NULL;  //to hold incoming messages
+// A Serial.write from isrPHI2 can land inside a USB transfer the main loop is queueing, so
+// TPUT bytes wait here for the polling handler to send them.
+#define TputQueueSize      4096
+volatile uint8_t* TputQueue = NULL;
+volatile uint16_t TputQueueHead, TputQueueTail;
 uint8_t* LSFileName = NULL;
 extern uint32_t RxQueueHead, RxQueueTail;
 uint16_t FNCount;
@@ -350,6 +355,8 @@ FLASHMEM uint8_t ContRegAction_TISet()
 FLASHMEM void InitHndlr_TR_BASIC()
 {
    if (TgetQueue == NULL) TgetQueue = (uint8_t*)malloc(TgetQueueSize);
+   if (TputQueue == NULL) TputQueue = (volatile uint8_t*)malloc(TputQueueSize);
+   TputQueueHead = TputQueueTail = 0;
    if (LSFileName == NULL) LSFileName = (uint8_t*)calloc(MaxPathLength, 1); //last byte stays the terminator
 
    RxQueueHead = RxQueueTail = 0; //as used in Swiftlink & ASID
@@ -401,7 +408,14 @@ void IO1Hndlr_TR_BASIC(uint8_t Address, bool R_Wn)
       switch(Address)
       {
          case TR_BASDataReg:
-            Serial.write(Data); //a bit risky doing this here, but seems fast enough in testing
+            {
+               const uint16_t Next = (TputQueueHead + 1) % TputQueueSize;
+               if (Next != TputQueueTail)
+               {
+                  TputQueue[TputQueueHead] = Data;
+                  TputQueueHead = Next;
+               }
+            }
             break;
             
          case TR_BASContReg:
@@ -477,6 +491,12 @@ void PollingHndlr_TR_BASIC()
       TR_BASContRegAction = TR_BASCont_None;
    }
    
+   while (TputQueueTail != TputQueueHead)
+   {
+      Serial.write(TputQueue[TputQueueTail]);
+      TputQueueTail = (TputQueueTail + 1) % TputQueueSize;
+   }
+
    while (Serial.available())
    {
       uint8_t Cin = Serial.read();
