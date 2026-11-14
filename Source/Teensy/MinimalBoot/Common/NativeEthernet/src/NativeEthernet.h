@@ -109,7 +109,7 @@ public:
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns);
 	static void begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway);
 	// Returns 0 if the stack failed to start or the link was not up within timeout ms, else 1.
-	// The address is set either way, so a link that comes up later uses it.
+	// On a link time-out the address is already set, so a link that comes up later uses it.
 	static int begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress gateway, IPAddress subnet, unsigned long timeout = ULONG_MAX);
 	static void init(uint8_t sspin = 10);
 
