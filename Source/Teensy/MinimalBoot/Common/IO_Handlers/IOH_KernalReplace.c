@@ -109,7 +109,7 @@ FASTRUN bool KDS_SenseCycle()
    uint32_t RegAddrBits = (0xA000 << 16);
    CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
    CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
-   WaitUntil_nS(nS_DMASetup);  //just ahead of Phi2 rising
+   WaitUntil_nS_fine(nS_DMASetup);  //the same drive point as DMAByte's, which nS_KSenseSample is measured from
    StartCycCnt = ARM_DWT_CYCCNT;
    SetAddrBufsOut;
    SetAddrPortDirOut;

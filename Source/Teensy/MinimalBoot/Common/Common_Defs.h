@@ -405,15 +405,23 @@ const uint8_t OutputPins[] = {
                                        //   more direct routing, and C128-only DMA failures have shown up here before (see the bank-swap
                                        //   DMA-pause reliability note in Known-Issues.md).  Swept 60-400 on a flat NTSC C128 (in 64
                                        //   mode): worse at both ends, no better than 200 in between.  Not the C128 fault, see DMASetupNTSC128.
-#define Def_nS_DMASetupPAL  440  //400 delay from Phi2 falling to RW/Addr setup (just before rising edge)
+//Every dated measurement from here to the NTSC C128 set before 11/11/26 was taken while DMAByte() waited
+//   nS_DMASetup with the coarse WaitUntil_nS, which drove R/W and the address 9-20 nS (mean 14) later than the
+//   value; it now uses WaitUntil_nS_fine.  PAL is its old value + 14, the drive point it was tuned at, and is
+//   not re-measured.  The NTSC C64 data setup and hold are their old values + 14 for the same reason: they
+//   are measured from the drive point, which moved 14 earlier.
+#define Def_nS_DMASetupPAL  454  //400 delay from Phi2 falling to RW/Addr setup
 #define Def_nS_DMASetupNTSC 430  //380    too early will mess up VIC cycle (screen noise), too late will not set up R/W & addr lines fast enough (Write error)
                                  //   5/18/26: 440 not working for Rat NTSC for remote mem, reduced to 430
+                                 //   11/11/26, NTSC C64 (Kawari) + TR+, fine wait, REU stash/fetch loop: Phi2 reads high
+                                 //   from about 415, writes clean 310-430, fail from 440 (2 pages in 2,670) and 450 (254).
+                                 //   The coarse 430 drove at 439-450 and lost the first byte of an REU fetch.
 
 //Both are measured from StartCycCnt, which DMAByte() re-latches nS_DMASetup after Phi2 falling, not from Phi2 rising
 #define Def_nS_DMADataSetupPAL  390  //delay to latching the data bus on a DMA read, too soon = bad reads
-#define Def_nS_DMADataSetupNTSC 390  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
+#define Def_nS_DMADataSetupNTSC 404  //   9/9/26: swept 310-450 on a flat NTSC C128 + TR+, clean at 350+, left at 390
 #define Def_nS_DMADataHoldPAL   430  //delay to releasing the data bus on a DMA write.  390 (err), 470 OK, 430 OK(?)
-#define Def_nS_DMADataHoldNTSC  410  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
+#define Def_nS_DMADataHoldNTSC  424  //   9/9/26: same rig, 455+ overruns Phi2 falling and collapses, 430-450 gives
                                      //      intermittent partial-byte errors, <=425 clean.  PAL collapses at 485 (9/10/26,
                                      //      C64+Kawari in PAL, Ultimate agrees) and swept 385-475 clean over 12MB, but that
                                      //      board won't repro the 390 err above - it's forgiving, so PAL's partial-byte
@@ -427,15 +435,26 @@ const uint8_t OutputPins[] = {
 //   RAM.  In 256-byte sessions they clustered on addresses whose low byte has a single 0 bit ($xxEF, $xxF7, ...),
 //   but lone writes to $C0FF fail about as often as to $C0EF.  C64s keep the NTSC set.
 //   PAL C128 is untested (no rig) and keeps the PAL set.
-#define Def_nS_DMASetupNTSC128     445
-#define Def_nS_DMADataSetupNTSC128 375
-#define Def_nS_DMADataHoldNTSC128  395
+//   11/12/26, the same C128 since its U55 was replaced with an LS245, fine wait, release/latch held at 854/834:
+//   REU stash/fetch (about 10k rounds per point) clean 359-449, bad at 349 (16) and 459 (2), 479 (11), 499 (104);
+//   lone writes clean 379-469, bad at 369 and below.  Outside the window an REU transfer can also break the
+//   C64 program it runs under: every later round failed at 339, the C64 crashed at 479.
+//   11/13/26, the LS245 window and a factory C128's do not overlap, so the set fits factory U55s (74F245): one
+//   with its F245 checked is clean only at 370-380 and 460-480 (bad writes in 2 of 3 lone-write passes at 400-455);
+//   one not opened is never fully clean, best at 450-470.  The 9/12/26 sweep above, on factory U55 with the coarse
+//   wait, is about 454-464 at the fine wait.  reuspans.py 600 (REU pages wrong alone / beside host jobs, host
+//   jobs wrong): factory F245 at 414 17/17/20, at 460 1/1/1; the LS245 C128 at 414 0/0/0, at 460 1/4/1.
+//   An LS245 at U55 is the fix for a C128 that needs DMA without errors.
+#define Def_nS_DMASetupNTSC128     460
+#define Def_nS_DMADataSetupNTSC128 374
+#define Def_nS_DMADataHoldNTSC128  394
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
 #define Def_nS_KSenseSample 250 // Kernal replace DMA HIRAM sense (C128): when ROMH is read, from the nS_DMASetup re-latch of the
-                                //   DMA read (like nS_DMADataSetup), about 44nS before Phi2 rises on an NTSC C128.
+                                //   DMA read (like nS_DMADataSetup), about 29nS before Phi2 rises on an NTSC C128.
                                 //   10/28/26 flat NTSC C128 (Teensy cycle counter, same time base): ROMH seen low at 98-136nS
-                                //   over 180 senses, 98-116nS in 174.  Must stay below nS_DMADataSetup.
+                                //   over 180 senses, 98-116nS in 174, with the re-latch at coarse 445, which drove about where
+                                //   460 does now.  Must stay below nS_DMADataSetup.
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
