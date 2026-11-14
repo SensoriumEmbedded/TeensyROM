@@ -302,13 +302,14 @@ FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
    //MsgOut("Ethernet init");
    
    EEPreadNBuf(eepAdMyMAC, mac, 6);
+   uint16_t DHCPTimeout;  // bounds the static-IP link wait too
+   EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
 
    if (EEPROM.read(eepAdDHCPEnabled))
    {
       MsgOut("Ethernet init via DHCP");
 
-      uint16_t DHCPTimeout, DHCPRespTO;
-      EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
+      uint16_t DHCPRespTO;
       EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
       if (Ethernet.begin(mac, DHCPTimeout, DHCPRespTO) == 0)
       {
@@ -331,9 +332,12 @@ FLASHMEM bool ForceEthernetInit(void (*MsgOut)(const char *))
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
-      //this blocks if cable not connected!
-      // https://forum.pjrc.com/index.php?threads/non-blocking-ethernet-begin-with-cable-disconnected-static-ip.65653/
-      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      if (Ethernet.begin(mac, ip, dns, gateway, subnetmask, DHCPTimeout) == 0)
+      {
+         MsgOut(" *Failed!*");
+         if (Ethernet.linkStatus() == LinkOFF) MsgOut("Ethernet cable is not connected.");
+         retval = false;
+      }
    }
    
    char msg[40];

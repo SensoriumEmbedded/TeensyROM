@@ -46,7 +46,7 @@ uint16_t LOROM_Mask, HIROM_Mask;
 Stream *CmdChannel  = &Serial;
 
 #ifdef FeatTCPListen
-   #include <NativeEthernet.h>
+   #include "Common/NativeEthernet/src/NativeEthernet.h"  // vendored, not the Teensyduino copy
    EthernetServer tcpServer(2112); // We will assume control on port 2112
    EthernetClient tcpClient; 
    bool TCPListen = false;

@@ -28,13 +28,14 @@ FLASHMEM bool EthernetInit()
    Serial.print("\nEthernet init ");
    
    EEPreadNBuf(eepAdMyMAC, mac, 6);
+   uint16_t DHCPTimeout;  // bounds the static-IP link wait too
+   EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
 
    if (EEPROM.read(eepAdDHCPEnabled))
    {
       Serial.print("via DHCP... ");
 
-      uint16_t DHCPTimeout, DHCPRespTO;
-      EEPROM.get(eepAdDHCPTimeout, DHCPTimeout);
+      uint16_t DHCPRespTO;
       EEPROM.get(eepAdDHCPRespTO, DHCPRespTO);
       if (Ethernet.begin(mac, DHCPTimeout, DHCPRespTO) == 0)
       {
@@ -57,7 +58,12 @@ FLASHMEM bool EthernetInit()
       EEPROM.get(eepAdDNSIP, dns);
       EEPROM.get(eepAdGtwyIP, gateway);
       EEPROM.get(eepAdMaskIP, subnetmask);
-      Ethernet.begin(mac, ip, dns, gateway, subnetmask);
+      if (Ethernet.begin(mac, ip, dns, gateway, subnetmask, DHCPTimeout) == 0)
+      {
+         Serial.println("*Failed!*");
+         if (Ethernet.linkStatus() == LinkOFF) Serial.println("Ethernet cable is not connected.");
+         retval = false;
+      }
    }
    
    Serial.printf("Took %d mS\nIP: ", (millis() - beginWait));

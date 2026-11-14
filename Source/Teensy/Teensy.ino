@@ -22,10 +22,10 @@
 
 
 #include <SD.h>
-#include "src/USBHost_t36/USBHost_t36.h"  // vendored/pinned, not the Teensyduino copy -- see src/USBHost_t36/README.md
+#include "MinimalBoot/Common/USBHost_t36/USBHost_t36.h"  // vendored/pinned, not the Teensyduino copy -- see its README.md
 #include <SPI.h>
-#include <NativeEthernet.h>
-#include <NativeEthernetUdp.h>
+#include "MinimalBoot/Common/NativeEthernet/src/NativeEthernet.h"  // vendored, not the Teensyduino copy -- see its README.md
+#include "MinimalBoot/Common/NativeEthernet/src/NativeEthernetUdp.h"
 #include <EEPROM.h>
 #include <TimeLib.h>
 #include <Bounce.h>

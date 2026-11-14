@@ -209,7 +209,7 @@ FLASHMEM ATRespCode AT_S(char* CmdArg)
    
    AddDHCPEnDisToRxQueueLN();
    
-   AddToPETSCIIStrToRxQueueLN("DHCP only:");    
+   AddToPETSCIIStrToRxQueueLN("Timeouts:");
    AddDHCPTimeoutToRxQueueLN();
    AddDHCPRespTOToRxQueueLN();
    
@@ -356,8 +356,8 @@ FLASHMEM ATRespCode AT_HELP(char* CmdArg)
    AddToPETSCIIStrToRxQueueLN(" AT+MAC=<XX:XX:XX:XX:XX:XX>  Set MAC");
    AddToPETSCIIStrToRxQueueLN(" AT+DHCP=<0:1>  DHCP On(1)/Off(0)");
 
-   AddToPETSCIIStrToRxQueueLN("DHCP mode settings: ");
-   AddToPETSCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  DHCP Timeout in mS");
+   AddToPETSCIIStrToRxQueueLN("Timeout settings:");
+   AddToPETSCIIStrToRxQueueLN(" AT+DHCPTIME=<D>  Init Timeout in mS");
    AddToPETSCIIStrToRxQueueLN(" AT+DHCPRESP=<D>  DHCP Response Timeout");
 
    AddToPETSCIIStrToRxQueueLN("Static mode settings: ");

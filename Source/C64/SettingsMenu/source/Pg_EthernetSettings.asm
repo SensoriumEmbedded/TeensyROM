@@ -92,8 +92,8 @@ MsgEthernetMenu:
    !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, " MAC Address:", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "     IP Type:", ChrReturn, ChrReturn  ;Static/DHCP
       
-   !tx EscC,EscTimeColor,  " DHCP Specific:", ChrReturn
-   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "DHCP Timeout:", ChrReturn
+   !tx EscC,EscTimeColor,  " Timeouts:", ChrReturn
+   !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "Init Timeout:", ChrReturn
    !tx EscC,EscArgSpaces+5, EscC,EscSourcesColor, "DHCP Resp TO:", ChrReturn, ChrReturn
    
    !tx EscC,EscTimeColor,  " Static IP Specific:", ChrReturn

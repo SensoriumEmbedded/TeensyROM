@@ -224,7 +224,7 @@
 
 ### 8. Info: Ethernet
   * General Settings: MAC Address, IP Type (Static/DHCP)
-  * DHCP Specific: DHCP Timeout, DHCP Response Timeout
+  * Timeouts: Init Timeout (how long DHCP waits for a lease, or a static IP for the cable link), DHCP Response Timeout
   * Static IP Specific: Static IP, DNS IP, Gateway IP, Subnet Mask
   * This is a read-only display — to modify these values, use a terminal program (such as CCGMS) and the `AT?` command for help. See [Ethernet Usage](Ethernet_Usage.md).
 
