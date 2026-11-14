@@ -10,6 +10,9 @@
 //   dma 0          prints the DMA job state: read, fixed address, start, length, count
 //   watch 0        another owner, such as the sample store watch, holds the bus snoop
 //   snoop 0        prints "watch" while that owner still holds it, "none" or "other" if not
+//   at OFFSET      the REU offset a host write starts at
+//   fits LEN       prints "fits" or "refused" for a host write of LEN bytes there
+//   run LEN        prints the bank and the offset in it the write's next bytes go to, and how many fit there
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -84,7 +87,7 @@ static bool WatchSnoop(uint16_t, bool) { return false; }
 int main()
 {
    char Command[16];
-   unsigned Value;
+   unsigned Value, At = 0;
 
    while (scanf("%15s %x", Command, &Value) == 2)
    {
@@ -92,7 +95,8 @@ int main()
       else if (!strcmp(Command, "banks"))
       {
          NumREU_Banks = Value;
-         for (unsigned Num = 0; Num < Value; Num++) REU_Bank[Num] = BankRAM[Num];
+         // in reverse, so a write that runs off the end of one bank is not caught by the next
+         for (unsigned Num = 0; Num < Value; Num++) REU_Bank[Num] = BankRAM[MAX_REU_BANKS - 1 - Num];
       }
       else if (!strcmp(Command, "d")) WriteData = Value;
       else if (!strcmp(Command, "w")) IOHndlr_REU_TRPage.IO2Hndlr(Value, false);
@@ -110,6 +114,17 @@ int main()
       else if (!strcmp(Command, "snoop"))
          printf("%s\n", fBusSnoop == &WatchSnoop ? "watch" : fBusSnoop ? "other" : "none");
       else if (!strcmp(Command, "stock")) CurrentIOHandler = IOH_REU;
+      else if (!strcmp(Command, "at")) At = Value;
+      else if (!strcmp(Command, "fits")) printf("%s\n", REUHostWriteFits(At, Value) ? "fits" : "refused");
+      else if (!strcmp(Command, "run"))
+      {
+         uint32_t Run;
+         const uint8_t *To = REUBankRun(At, Value, &Run);
+         unsigned Bank = 0;
+         while (Bank < NumREU_Banks && !(To >= REU_Bank[Bank] && To < REU_Bank[Bank] + RAM_Bank_Size)) Bank++;
+         if (Bank == NumREU_Banks) printf("outside\n");
+         else printf("%x %x %x\n", Bank, (unsigned)(To - REU_Bank[Bank]), (unsigned)Run);
+      }
       else if (!strcmp(Command, "r"))
       {
          Driven = -1;
