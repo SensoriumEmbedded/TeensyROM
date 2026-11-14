@@ -1,6 +1,6 @@
 # DMA Timing vs Phi2 (Common_Defs.h)
 
-### Note: Timing values as of 11/12/2026 / TR+ firmware v0.9
+### Note: Timing values as of 11/13/2026 / TR+ firmware v0.9
 Every DMA byte is timed against one Phi2 cycle: the firmware latches a cycle counter at the Phi2 falling edge and waits fixed nanosecond offsets from it. The DMA values are all offsets from Phi2 falling; the two data values are measured from a second latch taken just before Phi2 rises.
 
 Nominal Phi2 periods: PAL about 1015 nS (half about 507 nS), NTSC about 978 nS (half about 489 nS). The 50% duty cycle is an assumption, not a value in the header.
@@ -23,7 +23,7 @@ Derived positions, from Phi2 fall in the same cycle:
 
 | Event | PAL | NTSC | NTSC C128 |
 | --- | --- | --- | --- |
-| Setup, before Phi2 rises (half cycle minus setup) | about 53 | about 59 | about 75 |
+| Setup, before Phi2 rises (half cycle minus setup) | about 53 | about 59 | about 29 |
 | Read latch (setup + data setup) | 844 | 834 | 834 |
 | Write release (setup + data hold) | 884 | 854 | 854 |
 | Write release, before next Phi2 fall | about 131 | about 124 | about 124 |

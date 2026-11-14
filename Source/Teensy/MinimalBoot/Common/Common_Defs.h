@@ -450,10 +450,10 @@ const uint8_t OutputPins[] = {
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
 #define Def_nS_KSenseSample 250 // Kernal replace DMA HIRAM sense (C128): when ROMH is read, from the nS_DMASetup re-latch of the
-                                //   DMA read (like nS_DMADataSetup), about 75nS before Phi2 rises on an NTSC C128.
+                                //   DMA read (like nS_DMADataSetup), about 29nS before Phi2 rises on an NTSC C128.
                                 //   10/28/26 flat NTSC C128 (Teensy cycle counter, same time base): ROMH seen low at 98-136nS
-                                //   over 180 senses, 98-116nS in 174, with the re-latch 45nS later than it is now (coarse 445),
-                                //   so 143-181nS if ROMH follows Phi2 rather than the address.  Must stay below nS_DMADataSetup.
+                                //   over 180 senses, 98-116nS in 174, with the re-latch at coarse 445, which drove about where
+                                //   460 does now.  Must stay below nS_DMADataSetup.
       //C64 long bd/PAL: 10 fails (occasional misdetect of ram on rom cycle) 11 passes
       //C64c/PAL: 19 fails (occasional misdetect of ram on rom cycle) 20 passes
       //was set to 21, but testing on another C64c NTSC (short) was marginal after warmup.
