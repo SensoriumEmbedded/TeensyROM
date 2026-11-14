@@ -589,6 +589,11 @@ FLASHMEM void ProcessCommand()
       case SampleWatchToken: //Count C64 writes to one address
          SampleWatchCommand();
          return;
+   #ifdef DbgSnoopTap
+      case SnoopTapToken: //Set the snooped pages, take what was recorded
+         SnoopTapCommand();
+         return;
+   #endif
       case ReadC64MemToken: //Write to C64 mem via DMA
          ReadC64MemCommand();
          return;
@@ -1493,6 +1498,73 @@ FLASHMEM void SampleWatchCommand()
    SendU32(Stats.Unlocked);
    SendU32(F_CPU_ACTUAL);
 }
+
+#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable)
+// Receive <-- SnoopTapToken (0x64F8)
+// Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
+//             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later,
+//             bit 3 on any page also records each locked slice's start),
+//             2 = take, then stop
+// Send --> AckToken 0x64CC, or 0x9b7f and the reason
+// Send --> ARM cycles per second (4), cycles recorded since the last take (4), cycles not recorded
+//          while taking or frozen (4), page cycles seen, recorded or not (4), whether a trigger fired (1), entries sent (2), then each entry oldest first: ARM cycle (4),
+//          C64 address (2), data (1), info (1); all Low first
+FLASHMEM void SnoopTapCommand()
+{
+   uint32_t Mode;
+   if (!GetUInt(&Mode, 1) || Mode > 2)
+   {
+      SendU16(FailToken);
+      CmdChannel->println("Mode must be 0, 1 or 2");
+      return;
+   }
+   uint8_t Pages[256] = {};
+   if (Mode == 1)
+      for (uint32_t Page = 0; Page < 256; Page++)
+      {
+         uint32_t Want;
+         if (!GetUInt(&Want, 1))
+         {
+            SendU16(FailToken);
+            CmdChannel->println("Error receiving pages!");
+            return;
+         }
+         Pages[Page] = Want;
+      }
+   SnoopPaused = true;
+   const uint32_t Total = SnoopTotal, Skipped = SnoopSkipped, Taps = SnoopTaps;
+   const uint32_t Sent = Total < SnoopRingSize ? Total : SnoopRingSize;
+   SendU16(AckToken);
+   SendU32(F_CPU_ACTUAL);
+   SendU32(Total);
+   SendU32(Skipped);
+   SendU32(Taps);
+   CmdChannel->write(SnoopTriggered ? 1 : 0);
+   SendU16(Sent);
+   static_assert(sizeof(SnoopEntry) == 8, "SnoopRing is sent as is: the entry layout is the wire format");
+   const uint32_t Oldest = (Total - Sent) % SnoopRingSize;
+   const uint32_t BeforeWrap = min(Sent, SnoopRingSize - Oldest);
+   if (!CmdSendSpan((const uint8_t *)&SnoopRing[Oldest], BeforeWrap * sizeof(SnoopEntry)) ||
+       !CmdSendSpan((const uint8_t *)SnoopRing, (Sent - BeforeWrap) * sizeof(SnoopEntry)))
+      Printf_dbg("Snoop tap: reply stalled\n"); //Ack already sent, the host times out
+   FlushCmdChannel(CmdChannel);
+   if (Mode != 0)
+   {
+      SnoopMarkSlices = false;
+      memcpy(SnoopHot, Pages, sizeof SnoopHot);
+      for (uint32_t Page = 0; Page < 256; Page++)
+         if (Pages[Page] & SnoopSlices) SnoopMarkSlices = true;
+   }
+   // What the ISR counted while the ring was being sent stays for the next take.
+   __disable_irq();
+   SnoopTotal = 0;
+   SnoopSkipped -= Skipped;
+   SnoopTaps -= Taps;
+   SnoopTriggered = false;
+   SnoopPaused = false;
+   __enable_irq();
+}
+#endif
 
 // Command:
 // read sequential C64 memory segment and send to host
