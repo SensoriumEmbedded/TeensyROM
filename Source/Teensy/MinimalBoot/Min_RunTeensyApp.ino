@@ -35,9 +35,9 @@ FLASHMEM void runMainTRApp()
 {
    
 #ifdef FeatTCPListen
-   //if ethernet is initialized, jump to main crashes.
+   //if ethernet is initialized, jump to main crashes, even after a failed init (the stack and its interrupts stay up).
    //EEPROM is set up to bypass, just takes a little longer to pass through minimal again
-   if (TCPListen) RebootTR();
+   if (fnet_netif_get_default() != 0) RebootTR();
 #endif
 
   uint32_t imageStartAddress = FLASH_BASEADDRESS + UpperAddr; //point to main TR image
