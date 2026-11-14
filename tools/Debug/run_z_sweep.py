@@ -4,8 +4,17 @@ the output. Unlike the on-device "TR+ C64 Expansion Port Test" menu diagnostic, 
 5 TestDMAPattern() sub-patterns unconditionally -- no short-circuit on the first failure --
 so it always gives the full picture in one shot. --te/--ta/--tb/--tw/--ty all need a firmware
 built with Dbg_SerTimChg -- without it, the letters sent run as their own unrelated top-level
-serial commands instead ('e' resets the EEPROM to defaults), so don't pass any of them unless
-you've confirmed the build has it (e.g. via dma_scope_write.py, which checks first).
+serial commands instead ('e' resets the EEPROM to defaults).  --te checks first, since it reads
+the board's tw and ty; don't pass the others unless you've confirmed the build has it (e.g. via
+dma_scope_write.py, which checks first).
+
+'z' itself needs a firmware built with Dbg_SerDMA: without it the board ignores 'z', and the
+capture comes back empty.
+
+--te moves nS_DMADataHold (tw) and nS_DMADataSetup (ty) the other way, since both count from the
+point nS_DMASetup sets: te+tw (the write's data release) and te+ty (the read's latch) stay at what
+the board's 't' listing shows before the change, which after the reset to the menu is the machine's
+own PAL, NTSC or NTSC C128 set.
 
 The C64 is reset to the menu first, same as dma_scope_write.py -- without this, z999 runs
 against whatever the C64 was last left doing, including a state a previous bad DMA write may
@@ -16,13 +25,13 @@ re-run z999 against a deliberately-left-dirty state).
   python run_z_sweep.py COM5 --passes 200         fewer passes (200*256 = 51200 bytes/pattern)
   python run_z_sweep.py --te 430                  force nS_DMASetup=430 first, restore after
   python run_z_sweep.py --tw 350                  sweep nS_DMADataHold alone, te/ty left at their current value
-  python run_z_sweep.py --te 460 --tw 350         te460's te/ty, but tw overridden to 350 instead of 394
+  python run_z_sweep.py --te 445 --tw 350         te445 and the ty it gets, but tw forced to 350
 
 Stop Trom API first (`trom api stop`), it holds the port. A badly-faulted board can stall mid-sweep,
 so the capture window is generous (45s of quiet) before giving up."""
 import argparse, sys, time
 import serial
-from dma_scope_write import open_port, firmware, reset_from_minimal, FW_FULL, FW_MINIMAL
+from dma_scope_write import open_port, firmware, reset_from_minimal, dma_timing, te_commands, FW_FULL, FW_MINIMAL
 
 
 def drain(ser, idle):
@@ -41,8 +50,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="serial port, e.g. COM5 (default: the only Teensy found)")
     ap.add_argument("--passes", type=int, default=999, help="passes per pattern, 1-999 (default 999)")
-    ap.add_argument("--te", type=int, help="force nS_DMASetup (0-834) first, with tw=854-te and ty=834-te; needs "
-                                           "a build with Dbg_SerTimChg, and the detected defaults are restored on exit")
+    ap.add_argument("--te", type=int, help="force nS_DMASetup first, with tw and ty moved the other way so te+tw and "
+                                           "te+ty stay at the board's values (0 up to the smaller sum); needs a build "
+                                           "with Dbg_SerTimChg, and the detected defaults are restored on exit")
     ap.add_argument("--ta", type=int, help="force nS_DMAAssert (0-999) directly, independent of --te")
     ap.add_argument("--tb", type=int, help="force nS_DMABAWait (0-999) directly, independent of --te")
     ap.add_argument("--tw", type=int, help="force nS_DMADataHold (0-999) directly, independent of --te -- applied "
@@ -52,10 +62,8 @@ def main():
     ap.add_argument("--no-reset", action="store_true", help="don't reset the C64 to the menu first")
     ap.add_argument("--out", default="z_sweep.log", help="log file to write (default z_sweep.log)")
     args = ap.parse_args()
-    if args.te is not None and not 0 <= args.te <= 834:
-        ap.error("--te must be 0-834, so tw and ty stay 3-digit and positive")
     overrides = {"ta": args.ta, "tb": args.tb, "tw": args.tw, "ty": args.ty}
-    for name, val in overrides.items():
+    for name, val in {"te": args.te, **overrides}.items():
         if val is not None and not 0 <= val <= 999:
             ap.error(f"--{name} must be 0-999")
 
@@ -82,7 +90,15 @@ def main():
     timing_changed = args.te is not None or any(v is not None for v in overrides.values())
     confirm = b""
     if args.te is not None:
-        for c in (f"te{args.te:03d}", f"tw{854 - args.te:03d}", f"ty{834 - args.te:03d}"):
+        timing = dma_timing(ser)
+        if timing is None:
+            sys.exit("no te/tw/ty in the 't' listing: --te needs a firmware built with #define Dbg_SerTimChg "
+                     "in TeensyROM.h, nothing was sent")
+        try:
+            te_cmds = te_commands(timing, args.te)
+        except ValueError as err:
+            sys.exit(f"{err}, nothing was sent")
+        for c in te_cmds:
             ser.write(c.encode())
             confirm = drain(ser, 0.4)  # each 't' subcommand echoes the full current listing (ta/tb/te/tw/ty/...)
     for name, val in overrides.items():
