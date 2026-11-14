@@ -16,7 +16,7 @@ re-run z999 against a deliberately-left-dirty state).
   python run_z_sweep.py COM5 --passes 200         fewer passes (200*256 = 51200 bytes/pattern)
   python run_z_sweep.py --te 430                  force nS_DMASetup=430 first, restore after
   python run_z_sweep.py --tw 350                  sweep nS_DMADataHold alone, te/ty left at their current value
-  python run_z_sweep.py --te 414 --tw 350         te414's te/ty, but tw overridden to 350 instead of 440
+  python run_z_sweep.py --te 460 --tw 350         te460's te/ty, but tw overridden to 350 instead of 394
 
 Stop Trom API first (`trom api stop`), it holds the port. A badly-faulted board can stall mid-sweep,
 so the capture window is generous (45s of quiet) before giving up."""

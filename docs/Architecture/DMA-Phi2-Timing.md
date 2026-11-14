@@ -13,9 +13,9 @@ All times in nS, from the `Def_nS_*` constants in [Common_Defs.h](../../Source/T
 | --- | --- | --- | --- | --- | --- |
 | nS_DMAAssert | Phi2 fall | 40 | 40 | 40 | Assert DMA after the falling edge |
 | nS_DMABAWait | Phi2 fall | 200 | 200 | 200 | Sample BA, decide whether to steal the cycle |
-| nS_DMASetup | Phi2 fall | 454 | 430 | 414 | Drive R/W and address, near Phi2 rising |
-| nS_DMADataSetup | Re-latch at setup | 390 | 404 | 420 | Latch the data bus on a DMA read |
-| nS_DMADataHold | Re-latch at setup | 430 | 424 | 440 | Release the data bus on a DMA write |
+| nS_DMASetup | Phi2 fall | 454 | 430 | 460 | Drive R/W and address, near Phi2 rising |
+| nS_DMADataSetup | Re-latch at setup | 390 | 404 | 374 | Latch the data bus on a DMA read |
+| nS_DMADataHold | Re-latch at setup | 430 | 424 | 394 | Release the data bus on a DMA write |
 | nS_KSenseSample | Re-latch at setup | 250 | 250 | 250 | Kernal Replace HIRAM sense (C128): sample ROMH in the stolen cycle |
 | Phi2 period (nominal) | | 1015 | 978 | 978 | Reference |
 
@@ -41,6 +41,6 @@ DMA is asserted and BA checked while Phi2 is low. R/W and the address go out abo
 3. It re-latches `StartCycCnt`. This is why `nS_DMADataSetup` and `nS_DMADataHold` are measured from setup, not from the falling edge.
 4. A read waits `nS_DMADataSetup` and samples the data port. A write drives the data, waits `nS_DMADataHold`, then releases the bus.
 
-Limits found in testing (comments in Common_Defs.h): a setup that is too early disturbs the VIC cycle (screen noise) and one too late gives write errors. On an NTSC C64 (Kawari) with the fine wait, the Teensy reads Phi2 high from a setup of about 415, earlier than the 50% assumption puts it, and writes fail from 440. Values measured before 11/11/2026 were taken with the coarse wait and drove about 14 nS later than they say; the PAL setup was raised by 14 to keep that drive point. The NTSC C128 set was re-measured with the fine wait on 11/12/2026: REU transfers and lone writes are both clean from 379 to 449, and 414 is the middle. On NTSC a data hold of 455 or more overruns the Phi2 fall and collapses. On PAL it collapses at 485. The NTSC C128 set exists because the C64 NTSC set gave intermittent write errors on a C128.
+Limits found in testing (comments in Common_Defs.h): a setup that is too early disturbs the VIC cycle (screen noise) and one too late gives write errors. On an NTSC C64 (Kawari) with the fine wait, the Teensy reads Phi2 high from a setup of about 415, earlier than the 50% assumption puts it, and writes fail from 440. Values measured before 11/11/2026 were taken with the coarse wait and drove about 14 nS later than they say; the PAL setup was raised by 14 to keep that drive point. The NTSC C128 set was re-measured with the fine wait in November 2026. A C128 whose U55 was replaced with a 74LS245 is clean from 379 to 449 (REU transfers and lone writes), but one with its factory 74F245 is clean only around 460-480, so the setup is 460 for factory machines; the LS245 machine drops about one REU page in 21,000 rounds there. An LS245 at U55 is the fix for a C128 that needs DMA without errors. On NTSC a data hold of 455 or more overruns the Phi2 fall and collapses. On PAL it collapses at 485. The NTSC C128 set exists because the C64 NTSC set gave intermittent write errors on a C128.
 
 The set is chosen at runtime in IOHandlers.h (PAL by default, NTSC or NTSC C128 once the machine is detected). Non-DMA values such as `nS_DataSetup`, `nS_DataHold` and `nS_VICStart` are timed from the rising or falling edge directly and are not covered here.

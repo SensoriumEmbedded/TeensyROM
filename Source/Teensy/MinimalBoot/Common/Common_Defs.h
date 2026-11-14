@@ -436,11 +436,17 @@ const uint8_t OutputPins[] = {
 //   PAL C128 is untested (no rig) and keeps the PAL set.
 //   11/12/26, the same C128 since its U55 was replaced with an LS245, fine wait, release/latch held at 854/834:
 //   REU stash/fetch (about 10k rounds per point) clean 359-449, bad at 349 (16) and 459 (2), 479 (11), 499 (104);
-//   lone writes clean 379-469, bad at 369 and below.  Set to the middle of 379-449.  Outside the window an REU
-//   transfer can also break the C64 program it runs under: every later round failed at 339, the C64 crashed at 479.
-#define Def_nS_DMASetupNTSC128     414
-#define Def_nS_DMADataSetupNTSC128 420
-#define Def_nS_DMADataHoldNTSC128  440
+//   lone writes clean 379-469, bad at 369 and below.  Outside the window an REU transfer can also break the
+//   C64 program it runs under: every later round failed at 339, the C64 crashed at 479.
+//   11/13/26, the LS245 window and a factory C128's do not overlap, so the set fits factory U55s (74F245): one
+//   with its F245 checked is clean only at 370-380 and 460-480 (bad writes in 2 of 3 lone-write passes at 400-455);
+//   one not opened is never fully clean, best at 450-470.  The 9/12/26 sweep above, on factory U55 with the coarse
+//   wait, is about 454-464 at the fine wait.  reuspans.py 600 (REU pages wrong alone / beside host jobs, host
+//   jobs wrong): factory F245 at 414 17/17/20, at 460 1/1/1; the LS245 C128 at 414 0/0/0, at 460 1/4/1.
+//   An LS245 at U55 is the fix for a C128 that needs DMA without errors.
+#define Def_nS_DMASetupNTSC128     460
+#define Def_nS_DMADataSetupNTSC128 374
+#define Def_nS_DMADataHoldNTSC128  394
 //Other critical Timing
 #define Def_Cyc_KernProp    35  // Propagation delay for Kernal replace to sample ROMH to determine if HIRAM is asserted
 #define Def_nS_KSenseSample 250 // Kernal replace DMA HIRAM sense (C128): when ROMH is read, from the nS_DMASetup re-latch of the
