@@ -1,4 +1,4 @@
-# NativeEthernet (vendored)
+# NativeEthernet (vendored, pinned)
 
 A copy of vjmuzik's [NativeEthernet](https://github.com/vjmuzik/NativeEthernet) library at upstream commit [`fe82aa7`](https://github.com/vjmuzik/NativeEthernet/commit/fe82aa7) (2021-08-09). That is the version Teensyduino 1.61.0 bundles (1.0.5), file for file. MinimalBoot and the main firmware both build against this copy instead of Teensyduino's. FNET, the TCP/IP stack under it, is still Teensyduino's.
 
@@ -24,10 +24,11 @@ Upstream has one later commit, [`cdf6b3a`](https://github.com/vjmuzik/NativeEthe
 
 ## Updating it
 
-The copy will track a tag in a fork, SensoriumEmbedded/NativeEthernet, branch `tr`, based on `fe82aa7`.
+The copy tracks tag `tr-pin-0747ad0` in the fork, [SensoriumEmbedded/NativeEthernet](https://github.com/SensoriumEmbedded/NativeEthernet), branch `tr`. That branch starts at upstream `fe82aa7` (tag `tr-base-fe82aa7`) and carries the local modifications below.
 
+- To change the library: change it here, where it builds and is tested, then apply the same `src/` change to the fork's `tr` branch as its own commit, tag it `tr-pin-<sha>`, and update this README.
 - To take an upstream change: apply it in the fork's `tr` branch, copy `src/` here (still no `examples/`), and update this README.
-- Reapply the local modifications below whenever the contents are replaced.
+- Copying `src/` from the fork's `tr` branch brings the local modifications along. Replacing it from upstream instead means reapplying them.
 
 **Local modifications:**
 
