@@ -19,7 +19,7 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 ## What it is and is not
 * One image at a time, chosen by the firmware (for GEOS, when the menu launches it). The C64 cannot choose or replace the image.
 * Blocks are 256 bytes. A block is addressed by two bytes whose meaning depends on the image kind ([Disk addresses](#disk-addresses)).
-* It is available while the GeoRAM handler or the `REU+USB Mouse/Disk` handler (TR+ only) is active, which is also where the USB mouse registers are. It is not available under other handlers, the plain REU included, and not under a Host Extension.
+* It is available while the GeoRAM handler or the `REU+USB Mouse/Disk` handler (TR+ only) is active; both also carry the USB mouse registers. It is not available under other handlers, the plain REU included, and not under a Host Extension. The `USB Mouse` Special IO (`IOH_USBMouse`), which the TR menu's Minesweeper also starts, carries the mouse registers alone, at `$DE00`.
 * It is not an IEC drive. Software that talks to the IEC bus cannot see it.
 
 ## Where the registers are

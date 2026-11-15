@@ -1,8 +1,9 @@
 ; SPDX-License-Identifier: MIT
 ;
 ; Minesweeper for the TeensyROM. It takes a 1351 mouse in port 1, a joystick in port 2, and a USB mouse
-;  on the TR's USB host port while the Special IO is GeoRAM or REU+USB Mouse/Disk (USBMouse.c has its
-;  registers), all at once.
+;  on the TR's USB host port (USBMouse.c has its registers), all at once. The TR menu's entry brings the
+;  USB mouse with it; a copy loaded from a disk or a card sees it while the Special IO is USB Mouse,
+;  GeoRAM or REU+USB Mouse/Disk.
 ;
 ; tools/c64/minesweeper-run.test.mjs runs this code from its committed header and reads the
 ;  "name = $hex" lines below, so the API_ entry points and the variables stay where they are written.

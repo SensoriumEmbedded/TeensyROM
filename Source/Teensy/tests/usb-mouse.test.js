@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// The USB mouse registers GeoRAM serves at $DF00, held to the register map in USBMouse.c.
+// The USB mouse registers GeoRAM serves at $DF00, held to the register map in USBMouse.c, and
+// IOH_USBMouse's IO1 handler that serves them alone at $DE00.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -42,6 +43,14 @@ const signed = (byte) => (parseInt(byte, 16) << 24) >> 24;
 
 test('the id is TRM at +3, and nothing answers after it', { skip }, () => {
   assert.deepEqual(run([3, 4, 5, 6, 7].map(read)), ['54', '52', '4d', 'open', 'open']);
+});
+
+test('IOH_USBMouse answers IO1 reads of its registers and never drives a write', { skip }, () => {
+  // a write the C64 makes must not be driven against it, and must not take movement either
+  const writes = [0, 1, 2, 3, 4, 5].map((offset) => `io1 w ${offset}`);
+  const reads = [0, 1, 2, 3, 4, 5, 6].map((offset) => `io1 r ${offset}`);
+  const got = run([...report(3 * COUNTS_PER_STEP, 0, 1), ...writes, ...reads]);
+  assert.deepEqual(got, [...Array(6).fill('open'), '03', '00', '01', '54', '52', '4d', 'open']);
 });
 
 test('a large movement arrives over several reads, 127 at most each, then the remainder', { skip }, () => {

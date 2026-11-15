@@ -270,6 +270,8 @@
       * Loads the REU pre-load/save image at launch (choose it with `<Shift-R>` in the file browser). Press and release the Alt button to save it there.
     * **REU+USB Mouse/Disk** **(TR+ only)**: the same REU at `$DF00`, with the USB mouse and block device registers moved to `$DE00`. The REU's unused registers read `$FF`, as a 1764's do.
       * Made for GEOS: with it selected, GEOS 64 and GEOS 128 run with the REU, which GEOS's own CONFIGURE finds. With any other setting they run with GeoRAM. See [GEOS 64](GEOS64_Usage.md#ram-expansion-georam-or-reu) and [GEOS 128](GEOS128_Usage.md#ram-expansion-georam-or-reu).
+  * Mouse:
+    * **USB Mouse**: the TeensyROM's USB mouse registers alone, at `$DE00`, for software with a TeensyROM USB mouse driver, such as a copy of Minesweeper loaded from a disk or card. GeoRAM and REU+USB Mouse/Disk carry the same registers beside their RAM.
 
 ### IO addresses each mode uses
   Another device that answers at an address the TeensyROM uses makes both misbehave: a SID, modem or REU set to `$DExx`/`$DFxx` on a C64 Ultimate (see [C64 Ultimate Settings](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom)), a second-SID adapter, or another cartridge on a port expander. These are the ranges each mode uses:
@@ -284,6 +286,7 @@
 | GeoRAM | Whole range | Whole range: USB mouse and block device `$DF00`-`$DF7F`, registers `$DF80`-`$DFFF` |
 | 512KB REU **(TR+ only)** | - | Whole range (the registers repeat every 32 bytes) |
 | REU+USB Mouse/Disk **(TR+ only)** | `$DE00`-`$DE7F` | Whole range |
+| USB Mouse | `$DE00`-`$DE05` | - |
 | None, Kernal Replace | - | - |
 
 A CRT file sets the mode from its cartridge type when it launches:

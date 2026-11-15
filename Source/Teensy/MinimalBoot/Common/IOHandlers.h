@@ -112,6 +112,7 @@ struct stcIOHandlers
       #include "IO_Handlers/IOH_Debug.c"
       #include "IO_Handlers/RAMBanks.c"
       #include "IO_Handlers/USBMouse.c"
+      #include "IO_Handlers/IOH_USBMouse.c"
       #include "IO_Handlers/TRBlockIO.c"
       #include "IO_Handlers/IOH_GeoRAM.c"
    #ifdef Fab04_REU
@@ -167,6 +168,7 @@ stcIOHandlers* IOHandler[] =  //Synch order/qty with enum enumIOHandlers
       &IOHndlr_REU_TRPage,         //IOH_REU_TRPage,
    #endif
       &IOHndlr_GeoRAM,             //IOH_GeoRAM,
+      &IOHndlr_USBMouse,           //IOH_USBMouse,
       
    //*not* manually selectable, see LastSelectableIOH
                                    

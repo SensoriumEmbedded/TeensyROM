@@ -6,6 +6,7 @@
 //   poll           the main loop's PollUSBMouse
 //   init           InitUSBMouse, as the handler starts
 //   r OFFSET       an IO read, printing the byte driven or "open"
+//   io1 r|w OFFSET a read or write through IOH_USBMouse's IO1 handler, printing as r does
 //   race AXIS      at the next poll's atomic write of AXIS's ready word, an IO read of
 //                  that axis lands first and prints "race BYTE"
 //   spurious AXIS  the next compare-exchange on AXIS's ready word fails without a reason,
@@ -68,11 +69,31 @@ static void RacedStore(volatile uint32_t *Word, Rest... rest)
 #undef __atomic_store_n
 #undef volatile
 
+// IOHandlers.h's, which IOH_USBMouse.c fills
+struct stcIOHandlers
+{
+   char Name[20];
+   void (*InitHndlr)();
+   void (*IO1Hndlr)(uint8_t Address, bool R_Wn);
+   void (*IO2Hndlr)(uint8_t Address, bool R_Wn);
+   void (*ROMLHndlr)(uint32_t Address, bool R_Wn);
+   void (*ROMHHndlr)(uint32_t Address, bool R_Wn);
+   void (*PollingHndlr)();
+   void (*CycleHndlr)(bool R_Wn);
+};
+#include "../MinimalBoot/Common/IO_Handlers/IOH_USBMouse.c"
+
 static int Read(unsigned Offset)
 {
    Driven = -1;
    USBMouseIORead(Offset);
    return Driven;
+}
+
+static void PrintDriven(int Byte)
+{
+   if (Byte < 0) printf("open\n");
+   else printf("%02x\n", Byte);
 }
 
 static void LandRace(volatile uint32_t *Word)
@@ -98,6 +119,7 @@ int main()
    {
       int X, Y;
       unsigned Value;
+      char Dir;
       if (sscanf(Line, "report %d %d %x", &X, &Y, &Value) == 3)
       {
          usbHostMouse.X = X;
@@ -111,11 +133,12 @@ int main()
       else if (!strncmp(Line, "init", 4)) InitUSBMouse();
       else if (sscanf(Line, "race %u", &Value) == 1) RaceAxis = Value;
       else if (sscanf(Line, "spurious %u", &Value) == 1) SpuriousAxis = Value;
-      else if (sscanf(Line, "r %x", &Value) == 1)
+      else if (sscanf(Line, "r %x", &Value) == 1) PrintDriven(Read(Value));
+      else if (sscanf(Line, "io1 %c %x", &Dir, &Value) == 2 && (Dir == 'r' || Dir == 'w'))
       {
-         int Byte = Read(Value);
-         if (Byte < 0) printf("open\n");
-         else printf("%02x\n", Byte);
+         Driven = -1;
+         IOHndlr_USBMouse.IO1Hndlr(Value, Dir == 'r');
+         PrintDriven(Driven);
       }
       else
       {
