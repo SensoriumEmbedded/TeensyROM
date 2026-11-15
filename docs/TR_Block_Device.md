@@ -23,7 +23,7 @@ This document is the whole contract. The firmware side is [`TRBlock.h`](../Sourc
 * It is not an IEC drive. Software that talks to the IEC bus cannot see it.
 
 ## Where the registers are
-The registers share a page with the USB mouse registers, which start it and identify it. The base `B` is `$DF00` beside GeoRAM, in the IO2 page GeoRAM leaves free, and `$DE00` beside the REU, whose registers repeat across IO2.
+The registers share a page with the [USB mouse registers](TR_USB_Mouse.md), which start it and identify it. The base `B` is `$DF00` beside GeoRAM, in the IO2 page GeoRAM leaves free, and `$DE00` beside the REU, whose registers repeat across IO2.
 
 The block device is present when `TRB` is at `B+$10..B+$12`. A handler that does not carry it leaves those bytes unanswered, which reads as whatever the bus last held, so check all three bytes. Look at `$DF10` before `$DE10`: beside the REU, `$DF10..$DF12` read `$FF`, as a 1764's unused registers do, while `$DE10` beside GeoRAM is its window, which can hold any bytes.
 
