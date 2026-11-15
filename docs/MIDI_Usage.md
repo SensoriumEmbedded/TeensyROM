@@ -20,6 +20,7 @@ Diagram by [**MetalHexx**](https://github.com/MetalHexx)
   * Select/load a MIDI capable application on your C64 to receive the MIDI data from your controller
     * For multi-SID systems (or C64u/U64) Cynthcart can utilize 2 SIDs (6 independent voices).  
       * To do this, set the second SID address to $DF00 and choose the 6CHAN sounds mode or press "="
+      * On a C64U or Ultimate 64 that means setting `UltiSID 2 Address` to `$DF00`. The MIDI modes don't use $DF00, but the REU, GeoRAM, EasyFlash, Host Extensions and freezers do: set it back to an address from $D400 to $D7E0, or load the [settings file](/docs/TeensyROM_C64U.cfg) again, before using those. See [C64 Ultimate Settings](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom).
       * See full Cynthcart documentation [here](https://www.qotile.net/files/cynthcart2.0.pdf).
   * Play around and have fun!
   * MIDI out (C64 to MIDI Device) is also implemented so that keyboards, etc with their own sound capability can be "played" by the C64

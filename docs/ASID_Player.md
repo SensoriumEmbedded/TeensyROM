@@ -41,7 +41,7 @@ Here are a few ASID sources which can be used to stream to your C64/SID. See det
 |`c`|Clear Screen|Clears text from display, just leaves indicators|
 |`x`|Exit|Exit the application, back to the TeensyROM menu|
 |`F1`/`F2`|First  SID address|Inc/Dec address of the *primary* SID, typically $d400|
-|`F3`/`F4`|Second SID address|Inc/Dec address of SID #2 for multi-SID playback|
+|`F3`/`F4`|Second SID address|Inc/Dec address of SID #2 for multi-SID playback, $df00 by default. On a C64U, $d420, $d440, $d500 and $d600 never collide with a TeensyROM mode (see [C64 Ultimate Settings](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom))|
 |`F5`/`F6`|Third  SID address|Inc/Dec address of SID #3 for multi-SID playback|
 |`T`/`t`|Frame Timer (beta)|Inc/Dec through timer states: Off, On-50Hz, On-Auto (see below)|
 |`B`/`b`|Buffer Size|Inc/Dec the size of the Frame Timer buffer, if used (see below)|

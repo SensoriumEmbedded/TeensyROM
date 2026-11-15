@@ -34,7 +34,7 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
 ### Installing an extension
 * Be sure your TeensyROM+ is using firmware version 0.9 or later.
   * See update instructions [here](General_Usage.md#firmware-updates) if an update is needed.
-* Using a C64 Ultimate or Ultimate64? Set **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in its settings, as for the other TR+ DMA features.
+* Using a C64 Ultimate or Ultimate64? Set **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in its settings, as for the other TR+ DMA features. Also keep its REU and any SID out of `$DF00`-`$DFFF`, which Host Extension games use: see [C64 Ultimate Settings for TeensyROM](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom).
 * Copy the `.TRH` file to your SD card or USB drive.
 * In the TeensyROM menu, select the `.TRH` file in the file browser.
 * TeensyROM checks the file, shows the extension's name, and installs it.
