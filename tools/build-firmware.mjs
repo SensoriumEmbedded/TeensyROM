@@ -81,6 +81,7 @@ import { scanArgs } from './lib/cli-args.mjs';
 import { DIRTY_PATHSPEC, ROW_WIDTH, dirtyFromStatus, chooseEpoch, validateTag, bannerSuffix, fileSuffix,
          suffixDefine, versionBase, pagesWithoutWord } from './lib/build-tag.mjs';
 import { definesMacro } from './lib/source-text.mjs';
+import { patchUsbIrqMasking } from './lib/usb-irq-mask.mjs';
 import { heavyLibcLinked } from './lib/heavy-libc.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
@@ -398,6 +399,10 @@ for (const entry of fs.readdirSync(sdk, { withFileTypes: true })) {
   if (entry.isFile()) fs.copyFileSync(path.join(sdk, entry.name), path.join(privateData, entry.name));
 }
 const privateCore = path.join(privateData, 'packages/teensy/hardware/avr', TEENSY_CORE_VERSION, 'cores/teensy4');
+{
+  const usbC = path.join(privateCore, 'usb.c');
+  write(usbC, patchUsbIrqMasking(read(usbC)));
+}
 const linkers = path.join(root, 'tools/BootLinkerFiles');
 
 const cli = resolveArduinoCli(path.join(root, 'tools/.cache'));

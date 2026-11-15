@@ -19,6 +19,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { definesMacro, readSource } from './lib/source-text.mjs';
+import { STOCK_USB_C } from './lib/usb-irq-mask.fixture.mjs';
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build-firmware.mjs');
 const repoRoot = path.dirname(path.dirname(script));
@@ -136,6 +137,7 @@ function stubSdk() {
   fs.mkdirSync(core, { recursive: true });
   fs.mkdirSync(path.join(dir, 'sdk/packages/teensy/tools'), { recursive: true });
   for (const stub of ['bootdata.c', 'imxrt1062_t41.ld']) fs.writeFileSync(path.join(core, stub), '');
+  fs.writeFileSync(path.join(core, 'usb.c'), STOCK_USB_C);
   return dir;
 }
 
