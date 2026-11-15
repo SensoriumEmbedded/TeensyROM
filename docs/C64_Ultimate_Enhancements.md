@@ -104,9 +104,22 @@ Go beyond the C64 software library with TeensyROM+ Host Extensions: add-on firmw
 
 For more information: [TR Host Extensions Guide](/docs/TR_Host_Extensions.md)
 
-## TR+ Compatibility Note
+## C64 Ultimate Settings for TeensyROM
 
-If you're running TR+ on a C64 Ultimate or Ultimate64, we recommend setting **`Cartridge Preference` to `External`** and **`Bus Operation Mode` to `Writes`** in the C64U's settings — this is needed for proper compatibility with TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, and more). It's safe to leave these set regardless.
+TeensyROM answers at addresses in the C64's IO1 (`$DE00`-`$DEFF`) and IO2 (`$DF00`-`$DFFF`) ranges, and several of the C64U's own devices can be set to answer there too. When both answer at the same address, the TeensyROM menu shows garbage or hangs, and MIDI, modem, REU and cartridge programs misbehave. These settings give the cartridge port to the TeensyROM and keep the C64U's devices out of its way. They apply to every TeensyROM, and TR+'s DMA-based features (Host Extensions, Freezer Cartridge Support, REU, and more) need the first two.
+
+* **Cartridge and ROM Settings** (called *C64 and Cartridge Settings* on older C64U firmware):
+  * **`Cartridge Preference`**: `External`
+  * **`Bus Operation Mode`**: `Writes`
+  * **`RAM Expansion Unit`**, **`Command Interface`** and **`Map Ultimate Audio $DF20-DFFF`**: `Disabled`. A TR+ has its own REU (Special IO `512KB REU`).
+* **Modem Settings**: **`ACIA (6551) Mapping`**: `Off`. Use the TeensyROM's own `Swift-Turbo/Modem` Special IO instead.
+* **SID Addressing**: keep **`UltiSID 1 Address`**, **`UltiSID 2 Address`**, **`SID Socket 1 Address`** and **`SID Socket 2 Address`** between `$D400` and `$D7E0`.
+  * Never use a `$DExx` address: the TeensyROM menu uses that whole range.
+  * A second SID at `$DF00` works while running Cynthcart or the ASID Player. Move it back before using the REU, GeoRAM, EasyFlash, Host Extensions or a freezer.
+
+**Set them all at once:** download [TeensyROM_C64U.cfg](/docs/TeensyROM_C64U.cfg) and copy it to a USB drive in the C64U. Select it in the C64U's file browser and choose `Load Settings`. When you leave the C64U's menu, it asks whether to save the changes to flash: answer yes, then power the C64U off and on. The file puts `SID Socket 1` and `UltiSID 1` at `$D400` and `SID Socket 2` and `UltiSID 2` at `$D420`, and leaves the Range Split settings alone, so an 8-SID setup keeps working. For Cynthcart, set `UltiSID 2 Address` to `$DF00` afterwards, then load the file again to move it back.
+
+The addresses each TeensyROM mode uses are listed under [IO addresses each mode uses](/docs/General_Usage.md#io-addresses-each-mode-uses).
 
 For more information: [TR+ New Features Guide](/docs/TR+NewFeatures.md)
 

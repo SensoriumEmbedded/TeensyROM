@@ -250,7 +250,7 @@
     * "Special IO" in this context means additional HW that is emulated to assist with SW function.
     * This emulation runs at the same time as a selected program/cartridge
     * Examples of these are Swiftlink/Modem, and MIDI interfaces
-    * This HW uses the IO1 ($DE00) address space and interrupts to pass information to/from the program running on the C64/128.
+    * This HW uses the IO1 ($DE00) and IO2 ($DF00) address spaces and interrupts to pass information to/from the program running on the C64/128. See [IO addresses each mode uses](#io-addresses-each-mode-uses).
   * How is it used/selected?
     * The easy method is to use the software supplied with the TeensyROM with a '+' sign in front of the type.
       * These will automatically associate the needed IO to emulate Swiftlink Internet or the required MIDI interface.
@@ -270,6 +270,33 @@
       * Loads the REU pre-load/save image at launch (choose it with `<Shift-R>` in the file browser). Press and release the Alt button to save it there.
     * **REU+USB Mouse/Disk** **(TR+ only)**: the same REU at `$DF00`, with the USB mouse and block device registers moved to `$DE00`. The REU's unused registers read `$FF`, as a 1764's do.
       * Made for GEOS: with it selected, GEOS 64 and GEOS 128 run with the REU, which GEOS's own CONFIGURE finds. With any other setting they run with GeoRAM. See [GEOS 64](GEOS64_Usage.md#ram-expansion-georam-or-reu) and [GEOS 128](GEOS128_Usage.md#ram-expansion-georam-or-reu).
+
+### IO addresses each mode uses
+  Another device that answers at an address the TeensyROM uses makes both misbehave: a SID, modem or REU set to `$DExx`/`$DFxx` on a C64 Ultimate (see [C64 Ultimate Settings](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom)), a second-SID adapter, or another cartridge on a port expander. These are the ranges each mode uses:
+
+| Mode | IO1 ($DE00-$DEFF) | IO2 ($DF00-$DFFF) |
+|:--|:--|:--|
+| TeensyROM menu, file browser, Settings and SID player | Whole range | `$DF7F` |
+| MIDI (all four types) | Whole range | - |
+| Swift-Turbo/Modem (Swiftlink) | `$DE00`-`$DE03`, `$DE07` | - |
+| ASID Player | `$DEC2`-`$DECC` | - |
+| BASIC with TeensyROM Commands | `$DEB2`-`$DEBC` | - |
+| GeoRAM | Whole range | Whole range: USB mouse and block device `$DF00`-`$DF7F`, registers `$DF80`-`$DFFF` |
+| 512KB REU **(TR+ only)** | - | Whole range (the registers repeat every 32 bytes) |
+| REU+USB Mouse/Disk **(TR+ only)** | `$DE00`-`$DE7F` | Whole range |
+| None, Kernal Replace | - | - |
+
+A CRT file sets the mode from its cartridge type when it launches:
+
+| CRT type | IO1 ($DE00-$DEFF) | IO2 ($DF00-$DFFF) |
+|:--|:--|:--|
+| EasyFlash, including Host Extension games | `$DE00`, `$DE02` | Whole range |
+| Epyx Fast Load | Whole range | Whole range |
+| Action Replay, Final Cartridge III | Whole range | Whole range |
+| Retro Replay, Super Snapshot V5 | Whole range | - (whole range with the TR+ REU) |
+| Magic Desk, Ocean, Dinamic, FunPlay, GMod2, C64 Game System 3 | Whole range (Magic Desk 2: `$DE00`) | - |
+| Super Games | - | Whole range |
+| Plain 8K/16K/Ultimax, Zaxxon/Super Zaxxon | - | - |
 
 ## Firmware updates
   TR and TR+ have separate firmware files, so first pick the one for your hardware:
@@ -335,8 +362,8 @@
 ## Troubleshooting
 
 ### Commodore C64 Ultimate
-  * Check settings to be sure no other devices (such as a SID/UtiliSID or ACIA/Swiftlink mapping) are using the IO1 ($DE00) location. Some CRTs emulated by the TR can use the IO2 ($DF00) range as well.
-  * Set `Cartridge Preference` to `External` and `Bus Operation Mode` to `Writes` (in C64 and Cartridge Settings). Required for TR+ DMA features and safe for any TR. See [C64 Ultimate Enhancements](C64_Ultimate_Enhancements.md)
+  * If the TeensyROM menu shows garbage or hangs, or MIDI, modem, REU or cartridge programs misbehave, a C64U device is probably answering at an address the TeensyROM uses.
+  * Check the settings in [C64 Ultimate Settings for TeensyROM](C64_Ultimate_Enhancements.md#c64-ultimate-settings-for-teensyrom), or load the [settings file](/docs/TeensyROM_C64U.cfg) that applies them. [IO addresses each mode uses](#io-addresses-each-mode-uses) lists where the TeensyROM answers.
 
 ### Resetting EEPROM Contents
   * To set *all* EEPROM values back to default settings:
