@@ -23,6 +23,9 @@ Detail for every item below is in its own full section further down — search t
 - `LoadCRT()` root-level-file path bug duplicated in `MinimalBoot.ino` and `mpe/host/MinimalBoot.ino` (`mpe-vm-review` branch) — same class as the now-fixed `RemoteLaunch()` bug, but no live consequence found; low priority
 - `SD.mediaPresent()`/`SDFullInit()` can't distinguish "card absent" from "`SD.begin()` never called" — full-firmware boot only calls `SD.begin()` on one gated path, skipped entirely on a reboot-to-full-firmware or minimal-recovery boot [DEFERRED]
 
+**Fixed since last summary (2026-11-14, not open work — kept for context):**
+- `Serial.write()` inside `IO1Hndlr_TR_BASIC` — TPUT bytes now go through a 4 KB ring that `PollingHndlr_TR_BASIC` sends, since the core's USB queueing no longer masks `isrPHI2`
+
 **Fixed since last summary (2026-11-11, not open work — kept for context):**
 - A DMA transfer could lose its first byte: `DMAByte()` drove R/W and the address after a coarse wait that landed 9-20 nS late by an amount each build's code layout decided, at the edge of an NTSC C64's write window; it now uses `WaitUntil_nS_fine`, and the defaults moved with it ([DMA-Phi2-Timing.md](DMA-Phi2-Timing.md))
 
@@ -57,9 +60,6 @@ Detail for every item below is in its own full section further down — search t
 - Commented-out code left unresolved with no explanation
 - Open design questions living only in inline comments (e.g. `//need all 3?`)
 - "Must stay in sync" relationships enforced by comment only where a compile-time check exists
-
-**Accepted, no action needed:**
-- `Serial.write()` inside `IO1Hndlr_TR_BASIC` — deliberate, developer-confirmed exception
 
 **Flagged for re-check, not yet assessed:**
 - MinimalBoot's Ethernet-disable gap during VIC-cycle emulation
