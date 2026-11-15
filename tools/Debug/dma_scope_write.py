@@ -11,7 +11,11 @@ showing that write.
   python dma_scope_write.py COM5 --te 405           set te405 first (build with Dbg_SerTimChg)
   python dma_scope_write.py COM5 --te 405 --addr C0FF    another address, to compare captures
   python dma_scope_write.py --tw 350                sweep nS_DMADataHold alone, te/ty left at their current value
-  python dma_scope_write.py --te 460 --tw 350       te460's te/ty, but tw overridden to 350 instead of 394
+  python dma_scope_write.py --te 445 --tw 350       te445 and the ty it gets, but tw forced to 350
+
+--te moves nS_DMADataHold (tw) and nS_DMADataSetup (ty) the other way, since both count from the point nS_DMASetup
+sets: te+tw (the write's data release) and te+ty (the read's latch) stay at what the board's 't' listing shows
+before the change, which after the reset to the menu is the machine's own PAL, NTSC or NTSC C128 set.
 
 The C64 is reset to the menu first: the errors only show while the C64 program is writing RAM, and a quiet
 loop hides them.  Needs pyserial (pip install pyserial).  Stop Trom API first (`trom api stop`), it holds the port."""
@@ -67,12 +71,27 @@ def firmware(ser):
     return read_exact(ser, 2, timeout=2)
 
 
-def dma_setup(ser):
-    """nS_DMASetup from the 't' listing, or None on a build without Dbg_SerTimChg"""
+def parse_dma_timing(listing):
+    """(nS_DMASetup, nS_DMADataHold, nS_DMADataSetup) from a 't' listing, or None if it doesn't show all three"""
+    found = [re.search(rf"(\d+)\s+\({cmd}###\)", listing) for cmd in ("te", "tw", "ty")]
+    return tuple(int(m.group(1)) for m in found) if all(found) else None
+
+
+def dma_timing(ser):
+    """the board's (te, tw, ty) now, or None on a build without Dbg_SerTimChg (it ignores a bare 't')"""
     ser.write(b"t")
-    listing = drain(ser, 0.5)
-    found = re.search(r"nS_DMASetup\s+(\d+)", listing)
-    return int(found.group(1)) if found else None
+    return parse_dma_timing(drain(ser, 0.5))
+
+
+def te_commands(timing, te):
+    """the te/tw/ty commands that set nS_DMASetup to te and keep te+tw and te+ty at timing's sums, ValueError if
+    any of the three would leave 0-999 (each command takes exactly 3 digits)"""
+    sum_w, sum_y = timing[0] + timing[1], timing[0] + timing[2]
+    low, top = max(0, sum_w - 999, sum_y - 999), min(sum_w, sum_y, 999)
+    if not low <= te <= top:
+        raise ValueError(f"--te must be {low}-{top} on this board (te+tw {sum_w}, te+ty {sum_y}), "
+                         f"so te, tw and ty stay 0-999")
+    return f"te{te:03d}", f"tw{sum_w - te:03d}", f"ty{sum_y - te:03d}"
 
 
 def dma_cmd(ser, token, payload, what, probe=False):
@@ -116,8 +135,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="serial port, e.g. COM5 (default: the only Teensy found)")
     ap.add_argument("--addr", default="C0EF", help="hex address to write (default C0EF)")
-    ap.add_argument("--te", type=int, help="set nS_DMASetup (0-834) first, with tw=854-te and ty=834-te; needs "
-                                           "a build with Dbg_SerTimChg, and the detected defaults are restored on exit")
+    ap.add_argument("--te", type=int, help="set nS_DMASetup first, with tw and ty moved the other way so te+tw and "
+                                           "te+ty stay at the board's values (0 up to the smaller sum); needs a build "
+                                           "with Dbg_SerTimChg, and the detected defaults are restored on exit")
     ap.add_argument("--ta", type=int, help="set nS_DMAAssert (0-999) directly, independent of --te")
     ap.add_argument("--tb", type=int, help="set nS_DMABAWait (0-999) directly, independent of --te")
     ap.add_argument("--tw", type=int, help="set nS_DMADataHold (0-999) directly, independent of --te -- applied "
@@ -135,10 +155,8 @@ def main():
     addr = int(args.addr, 16)
     if not 0 <= addr <= 0xFFFF:
         ap.error("--addr must be 0000-FFFF")
-    if args.te is not None and not 0 <= args.te <= 834:
-        ap.error("--te must be 0-834, so tw and ty stay 3-digit and positive")
     overrides = {"ta": args.ta, "tb": args.tb, "tw": args.tw, "ty": args.ty}
-    for name, val in overrides.items():
+    for name, val in {"te": args.te, **overrides}.items():
         if val is not None and not 0 <= val <= 999:
             ap.error(f"--{name} must be 0-999")
 
@@ -165,30 +183,33 @@ def main():
     writes = bad = 0
     timing_changed = False
     try:
-        setup = dma_setup(ser)
+        timing = dma_timing(ser)
         if args.te is not None or any(v is not None for v in overrides.values()):
             #check before sending anything else: without Dbg_SerTimChg the letters after 't' run as their own
             #   top-level commands, and 'e' resets the EEPROM to defaults
-            if setup is None:
-                sys.exit("--te/--ta/--tb/--tw/--ty need a firmware built with #define Dbg_SerTimChg in "
-                          "TeensyROM.h, nothing was sent")
+            if timing is None:
+                sys.exit("no te/tw/ty in the 't' listing: --te/--ta/--tb/--tw/--ty need a firmware built with "
+                          "#define Dbg_SerTimChg in TeensyROM.h, nothing was sent")
+            try:
+                te_cmds = te_commands(timing, args.te) if args.te is not None else ()
+            except ValueError as err:
+                sys.exit(f"{err}, nothing was sent")
             timing_changed = True
-            if args.te is not None:
-                for cmd in (f"te{args.te:03d}", f"tw{854 - args.te:03d}", f"ty{834 - args.te:03d}"):
-                    ser.write(cmd.encode())
-                    drain(ser, 0.4)
+            for cmd in te_cmds:
+                ser.write(cmd.encode())
+                drain(ser, 0.4)
             for name, val in overrides.items():
                 if val is not None:
                     ser.write(f"{name}{val:03d}".encode())
                     drain(ser, 0.4)
-            setup = dma_setup(ser)
-            if args.te is not None and setup != args.te:
-                sys.exit(f"te didn't take, DMA setup reads {setup}")
+            timing = dma_timing(ser)
+            if args.te is not None and (timing is None or timing[0] != args.te):
+                sys.exit(f"te didn't take, DMA setup reads {timing[0] if timing else None}")
             ser.write(b"t")  #bare listing query -- confirms every knob (ta/tb/te/tw/ty/...), not just nS_DMASetup
             print("firmware-confirmed listing (ta/tb/te/tw/ty and the rest):")
             print(drain(ser, 0.5), end="")
         applied = ", ".join(f"{n}={v}" for n, v in {"te": args.te, **overrides}.items() if v is not None)
-        print(f"DMA setup {setup if setup is not None else '(not reported by this build)'}"
+        print(f"DMA setup {timing[0] if timing else '(not reported by this build)'}"
               f"{f' ({applied} applied)' if applied else ''}, writing ${addr:04X} "
               f"alternating $00/$FF, Ctrl+C to stop", flush=True)
 
