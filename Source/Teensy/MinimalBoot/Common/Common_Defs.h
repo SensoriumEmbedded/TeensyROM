@@ -38,7 +38,7 @@
   // #define DbgSignalSenseReset
 
 
-#define TRVersion              "0.9"    //*VERSION*
+#define TRVersion              "0.9.0.1"    //*VERSION*
 // Special builds: tools/build-firmware.mjs --tag <name> defines TRVersionSuffix as "-<name>",
 // and a build with uncommitted edits to the image sources adds "*". Arduino IDE builds have
 // none. Leave TRVersion to releases: it names the hex and the browser's User-Agent.
