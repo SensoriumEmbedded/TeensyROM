@@ -7,7 +7,7 @@
 #include "../GEOS/GeosTargets.h"
 
 
-#define MAX_IMAGE 819200
+#define MAX_IMAGE 822400
 
 // One byte past the largest image, so an oversized file reads as a size no format has
 static uint8_t Image[MAX_IMAGE + 1], Original[MAX_IMAGE + 1];
@@ -41,7 +41,7 @@ static int Inspect(struct GeosDisk *Disk)
 int main(int argc, char **argv)
 {
    const struct GeosDate Date = { 26, 10, 16, 12, 0 };
-   struct GeosDisk Disk = { 0 };
+   static struct GeosDisk Disk;
    FILE *In, *Out;
    size_t Size;
    bool Inspecting;
@@ -54,11 +54,11 @@ int main(int argc, char **argv)
    fclose(In);
    memcpy(Original, Image, Size);
 
-   Disk.Format = GeosFormatForSize(Size);
    Disk.Target = &Geos128Launcher.Target;
    Disk.Context = Image;
    Disk.Read = ReadBlock;
    Disk.Write = WriteBlock;
+   GeosDiskOpen(&Disk, Size);
    if (Inspecting) return Inspect(&Disk);
    if (!GeosInstallDriver(&Disk, &Date))
    {

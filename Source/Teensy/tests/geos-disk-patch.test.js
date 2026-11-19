@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// The firmware's GEOS boot-disk patch, held byte for byte to tools/geos/trmouse.py on synthetic boot disks.
+// The firmware's GEOS boot-disk patch, held byte for byte to tools/geos/trmouse.py on synthetic boot disks. Both
+// allocate as 1541 DOS does (docs/Architecture/Disk-Images.md), so the expected bytes come from the Python model.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -131,21 +132,40 @@ function withOneDataSector(disk) {
   return disk;
 }
 
+const withErrorBytes = (disk) => {
+  const sectors = disk.image.length / SECTOR;
+  return { ...disk, image: Buffer.concat([disk.image, Buffer.alloc(sectors, 1)]) };
+};
+
+const firstDataTrack = (kind) => (kind === 'd81' ? 39 : 17);
+
 const PATCHED_CASES = {
   'a blank boot disk': blankDisk,
   'a disk whose first input driver comes earlier': withDriver,
   'a full first directory sector': fullDirectory,
+  'a disk with error bytes': (kind) => withErrorBytes(withDriver(kind)),
+  'a BAM count below its bitmap': (kind) => {
+    const disk = blankDisk(kind);
+    disk.image[at(disk, bamPlaces(kind, 1).count)] -= 1;
+    return disk;
+  },
+  'a first data track with one sector free': (kind) => {
+    const disk = withDriver(kind);
+    const first = firstDataTrack(kind);
+    setTrackFree(disk, first, [disk.format.sectors(first) - 1]);
+    return disk;
+  },
+  'a first data track whose count says full': (kind) => {
+    const disk = blankDisk(kind);
+    disk.image[at(disk, bamPlaces(kind, firstDataTrack(kind)).count)] = 0;
+    return disk;
+  },
 };
 
 const REFUSED_CASES = {
   'a disk that already has the driver': (kind) => {
     const disk = withDriver(kind);
     putEntry(disk, 2, { name: MOUSE_NAME, geosType: INPUT_128 });
-    return disk;
-  },
-  'a BAM count below its bitmap': (kind) => {
-    const disk = blankDisk(kind);
-    disk.image[at(disk, bamPlaces(kind, 1).count)] -= 1;
     return disk;
   },
   'a header linking outside the directory': (kind) => {
@@ -159,6 +179,11 @@ const REFUSED_CASES = {
   'a full directory whose track has only a system sector free': (kind) => {
     const disk = fullDirectory(kind);
     setTrackFree(disk, disk.format.dirTrack, [0]);
+    return disk;
+  },
+  'a full directory whose track has only sectors before the directory free': (kind) => {
+    const disk = fullDirectory(kind);
+    setTrackFree(disk, disk.format.dirTrack, allSectors(disk, disk.format.dirTrack).filter((s) => s < disk.format.firstDir));
     return disk;
   },
   'a full directory whose BAM frees its sector': (kind) => {
@@ -242,6 +267,35 @@ test('the firmware patch matches trmouse.py', { skip }, async (t) => {
       assert.equal(inspect('patched', fs.readFileSync(firmware.out)), 'desktop=1 driver=1');
     });
   }
+
+  await t.test('d64: a 40-track disk takes the driver on its first 35 tracks', () => {
+    const disk = withDriver('d64');
+    const image = Buffer.concat([disk.image, Buffer.alloc(5 * 17 * SECTOR)]);
+    const { python, firmware } = patchBoth(dir, 'd64-40-tracks', image);
+    assert.equal(python.status, 0, python.stderr);
+    assert.equal(firmware.status, 0, firmware.stderr);
+    const patched = fs.readFileSync(firmware.out);
+    assert.deepEqual(maskMouseDate(patched), maskMouseDate(fs.readFileSync(python.out)));
+    assert.deepEqual(patched.subarray(disk.image.length), image.subarray(disk.image.length), 'tracks 36 to 40 are not in the BAM');
+  });
+
+  await t.test('d81: a growing directory never takes a BAM sector the BAM shows free', () => {
+    const disk = fullDirectory('d81');
+    setTrackFree(disk, 40, [1, 4]);
+    const { python, firmware } = patchBoth(dir, 'd81-bam-sector-free', disk.image);
+    assert.equal(python.status, 0, python.stderr);
+    assert.equal(firmware.status, 0, firmware.stderr);
+    const patched = fs.readFileSync(firmware.out);
+    assert.deepEqual(maskMouseDate(patched), maskMouseDate(fs.readFileSync(python.out)));
+    const lastDir = offset(disk.format, 40, 3);
+    assert.deepEqual([...patched.subarray(lastDir, lastDir + 2)], [40, 4], 'the directory grows into 40/4, not BAM sector 40/1');
+  });
+
+  await t.test('refuses an image of no known size', () => {
+    const { python, firmware } = patchBoth(dir, 'odd-size', blankDisk('d64').image.subarray(0, 100 * SECTOR));
+    assert.equal(firmware.status, 1);
+    assert.notEqual(python.status, 0);
+  });
 
   await t.test('d71: refuses a single-sided disk', () => {
     const disk = blankDisk('d71');
