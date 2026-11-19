@@ -64,7 +64,7 @@ If GEOS 64 can't start, the TeensyROM stays at the menu and shows one of these:
 |--|--|
 | GEOS 64 starts from your boot disk image on the SD card. Insert the card. | No SD card was found. |
 | Copy your GEOS 64 boot disk image (.D81) to /GEOS64 on the SD card, then select this again. | There is no `/GEOS64` folder, or no D81 in it holds `DESK TOP`. |
-| `<name>`: not a D64, D71 or D81 without error bytes | The file's size is not that of a disk image (a D81 is 819,200 bytes). |
+| `<name>`: not a D64, D71 or D81 image | The file's size is not that of a disk image (a D81 is 819,200 bytes, or 822,400 with error bytes). |
 | `<name>`: (other reason) | The image could not be read, or its directory is damaged. |
 | Could not add the mouse driver to a copy of `<name>`: the disk is full | No room for the driver. Free some space on your original image, or use another one. "the directory is full" is the same for directory entries. |
 | Could not add the mouse driver to a copy of `<name>`: the SD card could not be written | The copy could not be written to the SD card. |
