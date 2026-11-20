@@ -1510,6 +1510,18 @@ FLASHMEM void SampleWatchCommand()
 }
 
 #if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable)
+// What the ISR counted while the ring was being sent stays for the next take.
+static MASKEDRUN void SnoopRestart(uint32_t Skipped, uint32_t Taps)
+{
+   __disable_irq();
+   SnoopTotal = 0;
+   SnoopSkipped -= Skipped;
+   SnoopTaps -= Taps;
+   SnoopTriggered = false;
+   SnoopPaused = false;
+   __enable_irq();
+}
+
 // Receive <-- SnoopTapToken (0x64F8)
 // Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
 //             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later,
@@ -1565,14 +1577,7 @@ FLASHMEM void SnoopTapCommand()
       for (uint32_t Page = 0; Page < 256; Page++)
          if (Pages[Page] & SnoopSlices) SnoopMarkSlices = true;
    }
-   // What the ISR counted while the ring was being sent stays for the next take.
-   __disable_irq();
-   SnoopTotal = 0;
-   SnoopSkipped -= Skipped;
-   SnoopTaps -= Taps;
-   SnoopTriggered = false;
-   SnoopPaused = false;
-   __enable_irq();
+   SnoopRestart(Skipped, Taps);
 }
 #endif
 
