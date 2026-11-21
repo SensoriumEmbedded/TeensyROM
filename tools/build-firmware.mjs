@@ -82,6 +82,7 @@ import { DIRTY_PATHSPEC, ROW_WIDTH, dirtyFromStatus, chooseEpoch, validateTag, b
          suffixDefine, versionBase, pagesWithoutWord } from './lib/build-tag.mjs';
 import { definesMacro } from './lib/source-text.mjs';
 import { patchUsbIrqMasking } from './lib/usb-irq-mask.mjs';
+import { patchUsbRegisterWindow, USB_REGISTER_WINDOW_FILES } from './lib/usb-register-window.mjs';
 import { heavyLibcLinked } from './lib/heavy-libc.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
@@ -402,6 +403,10 @@ const privateCore = path.join(privateData, 'packages/teensy/hardware/avr', TEENS
 {
   const usbC = path.join(privateCore, 'usb.c');
   write(usbC, patchUsbIrqMasking(read(usbC)));
+  for (const file of USB_REGISTER_WINDOW_FILES) {
+    const source = path.join(privateCore, file);
+    write(source, patchUsbRegisterWindow(read(source)));
+  }
 }
 const linkers = path.join(root, 'tools/BootLinkerFiles');
 

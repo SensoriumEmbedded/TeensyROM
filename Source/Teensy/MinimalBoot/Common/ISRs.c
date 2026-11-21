@@ -22,6 +22,29 @@
    extern void DMATransferISR();
 #endif
 
+// The USB controller's registers sit behind the same CPU bus port as the GPIO isrPHI2
+// reads, and under USB load one access can take a few hundred nS. One still in flight
+// when Phi2 rises holds isrPHI2's first GPIO read back far enough that a read's data is
+// driven, or a write's data sampled, after Phi2 falls. The patched Teensy core
+// (tools/lib/usb-register-window.mjs) calls this before every USB1 register access.
+#define nS_USBAccessDeadline  600  // latest start after Phi2 rise that still finishes before the next one
+#define nS_USBNoPhi2         1500  // no rise stamp for this long: Phi2 is not running, nothing to wait for
+
+#if !defined(USB_DISABLED)
+extern "C" FASTRUN IMXRT_REGISTER32_t *usb1_regs_in_phi2_window()
+{
+   __asm__ volatile("dsb" ::: "memory"); //posted writes still draining would outlast the check
+   const uint32_t Deadline = nSToCyc(nS_USBAccessDeadline), NoPhi2 = nSToCyc(nS_USBNoPhi2);
+   // EmulateVicCycles keeps isrPHI2 busy past the deadline in every cycle.
+   while (!EmulateVicCycles)
+   {
+      uint32_t Since = ARM_DWT_CYCCNT - LastCycCnt;
+      if (Since < Deadline || Since > NoPhi2) break;
+   }
+   return &IMXRT_USB1;
+}
+#endif
+
 FASTRUN void isrButton()
 {
    BtnPressed = true;
