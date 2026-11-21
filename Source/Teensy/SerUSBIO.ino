@@ -77,6 +77,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       case 'b': //bus analysis
          BusAnalysis();
          break;
+   #ifdef Dbg_SerBusLat
+      case 'U': //bus latency of USB controller and GPIO accesses
+         BusLatency();
+         break;
+   #endif
          
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
