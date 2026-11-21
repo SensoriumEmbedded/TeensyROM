@@ -342,29 +342,62 @@ FLASHMEM SampleWatchStats SampleWatchTake()
    return Taken;
 }
 
-#ifdef DbgSnoopTap
+#ifdef SnoopTapBuild
 // Debug only: records C64 cycles on chosen pages into a ring the host takes over USB serial
 // (SnoopTapToken), so the cycles leading up to a crash can be read back after it.
 struct SnoopEntry { uint32_t Cyc; uint16_t Addr; uint8_t Data; uint8_t Info; };
-enum : uint8_t { SnoopWrites = 1, SnoopReads = 2, SnoopTrigger = 4, SnoopSlices = 8 };
+enum : uint8_t { SnoopWrites = 1, SnoopReads = 2, SnoopTrigger = 4, SnoopSlices = 8, SnoopBusTiming = 16,
+                 SnoopCycleTiming = 32 };
 enum : uint32_t { SnoopAfterTrigger = 64 };
 enum : uint8_t { SnoopInfoState = 0x1F, SnoopInfoLockArmed = 0x20, SnoopInfoRead = 0x40, SnoopInfoSliceMark = 0x80 };
+// No access or slice mark sets both top bits, so these mark the timing records; each kind's
+// fields are in docs/ControlComms.md, Snoop Tap.
+enum : uint8_t { SnoopLateEntry = 0xC0, SnoopLateEntryPC, SnoopAssert, SnoopAssertDetail, SnoopLateDecode,
+                 SnoopLateDecodePC, SnoopCycle, SnoopCycleDetail };
+enum : uint8_t { SnoopAssertBadLine, SnoopAssertAfterWrite, SnoopAssertTimeout, SnoopAssertImmediate };
 enum : uint32_t { SnoopRingSize = 1024 };
 uint8_t SnoopHot[256];
 // The first write to a SnoopTrigger page freezes the ring SnoopAfterTrigger entries later, so what
 // led up to it survives whatever the host does before it takes the ring.
-volatile bool SnoopMarkSlices, SnoopPaused, SnoopTriggered;
+volatile bool SnoopMarkSlices, SnoopMarkBus, SnoopPaused, SnoopTriggered;
 volatile uint32_t SnoopTotal, SnoopSkipped, SnoopFreezeAt, SnoopTaps;
 DMAMEM SnoopEntry SnoopRing[SnoopRingSize];
+enum : uint32_t { nS_SnoopCycleSpan = 4000, SnoopNotThisCycle = 0x7FFF };  // a stamp further back than the span is from an earlier cycle
+enum : uint32_t { nS_SnoopLateEntry = 1100 };  // longer than a PAL cycle, 1015 nS, and its entry jitter
+// Not LastCycCnt, which DirectREU restamps at the end of a transfer it runs from the REU's handler.
+volatile uint32_t SnoopEntryAt;
+volatile uint32_t SnoopDriveAt, SnoopReleaseAt, SnoopSampleAt, SnoopSampled, SnoopG6At, SnoopG9At, SnoopEntryGap;
+volatile uint32_t SnoopThisAccess, SnoopPrevAccess;  // address | 0x10000 for a read
+volatile bool SnoopReleasedOnFall;
 
-static inline void SnoopRecord(uint16_t Address, uint8_t Data, uint8_t Info)
+static inline void SnoopPut(uint32_t Cyc, uint16_t Address, uint8_t Data, uint8_t Info)
 {
    SnoopEntry &E = SnoopRing[SnoopTotal % SnoopRingSize];
-   E.Cyc = StartCycCnt;
+   E.Cyc = Cyc;
    E.Addr = Address;
    E.Data = Data;
    E.Info = Info;
    SnoopTotal++;
+}
+
+static inline void SnoopRecord(uint16_t Address, uint8_t Data, uint8_t Info)
+{
+   SnoopPut(LastCycCnt, Address, Data, Info);
+}
+
+static inline bool SnoopRoom(uint32_t Entries)
+{
+   return !SnoopPaused && !(SnoopTriggered && SnoopTotal + Entries > SnoopFreezeAt);
+}
+
+static inline uint16_t SnoopU16(uint32_t N) { return N > 0xFFFF ? 0xFFFF : N; }
+static inline uint8_t SnoopU8(uint32_t N) { return N > 0xFF ? 0xFF : N; }
+
+// CycTonS overflows 32 bits past 281,489 cycles, 345 uS: an REU transfer the handler runs, or
+// the entry gap after a DMA transfer, passes that.
+static inline uint32_t SnoopnS(uint32_t Cyc)
+{
+   return Cyc < 0x40000 ? CycTonS(Cyc) : Cyc / (F_CPU_ACTUAL / 1000000) * 1000;
 }
 
 FASTRUN void SnoopTap(uint16_t Address, bool R_Wn)
@@ -372,13 +405,70 @@ FASTRUN void SnoopTap(uint16_t Address, bool R_Wn)
    if (!(SnoopHot[Address >> 8] & (R_Wn ? SnoopReads : SnoopWrites))) return;
    SnoopTaps++;
    if (SnoopPaused || (SnoopTriggered && SnoopTotal >= SnoopFreezeAt)) { SnoopSkipped++; return; }
-   SnoopRecord(Address, R_Wn ? 0 : DataPortWaitRead(),
-               (DMA_State & SnoopInfoState) | (SampleLockArmed ? SnoopInfoLockArmed : 0) | (R_Wn ? SnoopInfoRead : 0));
+   // A handler can hold isrPHI2 past the cycle, so the bus may no longer carry a write's data;
+   // the handler's sample does.
+   const uint32_t Cycle = SnoopG6At;
+   const uint32_t HandlerSampleAt = SnoopSampleAt;
+   const bool HandlerSampled = HandlerSampleAt - Cycle < nSToCyc(nS_SnoopCycleSpan);
+   SnoopPut(SnoopEntryAt, Address, R_Wn ? 0 : HandlerSampled ? GP7_DataByte(SnoopSampled) : DataPortWaitRead(),
+            (DMA_State & SnoopInfoState) | (SampleLockArmed ? SnoopInfoLockArmed : 0) | (R_Wn ? SnoopInfoRead : 0));
+   if ((SnoopHot[Address >> 8] & SnoopCycleTiming) && SnoopRoom(2))
+   {
+      // Stamps from before this cycle's GPIO6 read mean the handler neither drove nor sampled the port.
+      const uint32_t Data = (R_Wn ? SnoopDriveAt : HandlerSampleAt) - Cycle;
+      const bool Touched = Data < nSToCyc(nS_SnoopCycleSpan);
+      const bool Driven = R_Wn && Touched;
+      SnoopPut((SnoopU16(CycTonS(Cycle - SnoopEntryAt)) << 16) | SnoopU16(CycTonS(SnoopG9At - Cycle)),
+               (Touched ? CycTonS(Data) : SnoopNotThisCycle) | (Driven && SnoopReleasedOnFall ? 0x8000 : 0),
+               Driven ? SnoopU8(CycTonS(SnoopReleaseAt - Cycle) / 4) : 0xFF, SnoopCycle);
+      SnoopPut(SnoopnS(ARM_DWT_CYCCNT - Cycle), SnoopU16(SnoopnS(SnoopEntryGap)), 0, SnoopCycleDetail);
+   }
    if (!R_Wn && !SnoopTriggered && (SnoopHot[Address >> 8] & SnoopTrigger))
    {
       SnoopTriggered = true;
       SnoopFreezeAt = SnoopTotal + SnoopAfterTrigger;
    }
+}
+
+// The interrupted context's PC and xPSR, from the exception frame just above the EXC_RETURN
+// that irq_gpio6789, the core's dispatcher that calls isrPHI2, pushed with LR. SP is isrPHI2's.
+static inline void SnoopInterrupted(const uint32_t *SP, uint32_t &PC, uint32_t &XPSR)
+{
+   PC = XPSR = 0;
+   for (uint32_t i = 0; i < 48; i++)
+      if ((SP[i] & 0xFFFFFFE1) == 0xFFFFFFE1) { PC = SP[i + 7]; XPSR = SP[i + 8]; return; }
+}
+
+FASTRUN void SnoopLateEntryTap(const uint32_t *SP)
+{
+   if (!SnoopRoom(2)) return;
+   uint32_t PC, XPSR, BasePri;
+   SnoopInterrupted(SP, PC, XPSR);
+   asm volatile("mrs %0, basepri" : "=r"(BasePri));
+   SnoopPut(SnoopEntryAt, SnoopU16(SnoopnS(SnoopEntryGap)), DMA_State, SnoopLateEntry);
+   SnoopPut(PC, XPSR & 0x1FF, BasePri, SnoopLateEntryPC);
+}
+
+FASTRUN void SnoopLateDecodeTap(uint16_t Address, bool R_Wn, const uint32_t *SP)
+{
+   const uint32_t Now = ARM_DWT_CYCCNT;
+   if (!SnoopRoom(2)) return;
+   uint32_t PC, XPSR;
+   SnoopInterrupted(SP, PC, XPSR);
+   SnoopPut(SnoopEntryAt, Address, DMA_State | (R_Wn ? SnoopInfoRead : 0), SnoopLateDecode);
+   SnoopPut(PC, SnoopU16(SnoopnS(SnoopEntryGap)), SnoopU8(CycTonS(Now - SnoopEntryAt) / 16), SnoopLateDecodePC);
+}
+
+// Called just after SetDMAAssert, in Phi2's low half.
+FASTRUN void SnoopAssertTap(uint8_t Reason)
+{
+   const uint32_t Now = ARM_DWT_CYCCNT;
+   if (!SnoopRoom(2)) return;
+   const uint32_t This = SnoopThisAccess, Prev = SnoopPrevAccess;
+   SnoopPut(SnoopEntryAt, This & 0xFFFF,
+            Reason | (This >> 16 ? SnoopInfoRead : 0) | (Prev >> 16 ? 0x20 : 0), SnoopAssert);
+   SnoopPut((SnoopU16(CycTonS(StartCycCnt - SnoopEntryAt)) << 16) | SnoopU16(CycTonS(Now - StartCycCnt)),
+            Prev & 0xFFFF, SnoopU8(SnoopnS(SnoopEntryGap) / 16), SnoopAssertDetail);
 }
 
 // Cyc is the last ISR's, the nearest stamp thread mode has.
@@ -398,7 +488,7 @@ static FLASHMEM void SnoopMarkSlice()
 static FLASHMEM void StartSliceOnStore(uint32_t WaituS)
 {
    const uint32_t Began = micros();
-#ifdef DbgSnoopTap
+#ifdef SnoopTapBuild
    SnoopMarkSlice();
 #endif
    SampleLockArmed = true;

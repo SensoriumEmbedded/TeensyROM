@@ -52,6 +52,11 @@ void DMAWaitAssertReady()
 {
    WaitUntil_nS(nS_DMAAssert); 
    SetDMAAssert;
+#ifdef SnoopTapBuild
+   // A timeout leaves DMACycleCount at DMA_TIMEOUT_CYCLES + 2; a bad line read can find it at + 1.
+   if (SnoopMarkBus) SnoopAssertTap(DMA_State == DMA_S_StartAsynch_Wait_LWr ? SnoopAssertAfterWrite :
+                                    DMACycleCount > DMA_TIMEOUT_CYCLES + 1 ? SnoopAssertTimeout : SnoopAssertBadLine);
+#endif
    DMA_State = DMA_AutoRun ? DMA_S_TransferExecuting : DMA_S_TransferReady;
 }
 
@@ -74,6 +79,19 @@ FASTRUN void isrPHI2()
       #endif
    }
    
+#ifdef SnoopTapBuild
+   SnoopEntryAt = LastCycCnt;
+   SnoopEntryGap = CycSinceLast;
+   // StartDisable holds /DMA, and an auto-run transfer leaves it there for an entry late by the whole transfer.
+   if (SnoopMarkBus && CycSinceLast > nSToCyc(nS_SnoopLateEntry) &&
+       (DMA_State == DMA_S_DisableReady || DMA_State > DMA_S_StartDisable))
+   {
+      uint32_t *SP;
+      asm volatile("mov %0, sp" : "=r"(SP));
+      SnoopLateEntryTap(SP);
+   }
+#endif
+
 #ifdef DbgSignalIsrPHI2
    SetDebugAssert;
 #endif
@@ -90,19 +108,25 @@ FASTRUN void isrPHI2()
 
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and  R/*W are (almost) valid on Phi2 rising, Read now
+#ifdef SnoopTapBuild
+   SnoopG6At = ARM_DWT_CYCCNT;
+#endif
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
    bool R_Wn = GP6_R_Wn(GPIO_6);  //parse read/write bit
+#ifdef SnoopTapBuild
+   SnoopPrevAccess = SnoopThisAccess;
+   SnoopThisAccess = Address | (R_Wn ? 0x10000 : 0);
+#endif
    
 #ifndef Fab04_DataBufAlwaysEnabled
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
    else SetDataBufIn;
 #endif
 
-   if (fBusSnoop != NULL) if (fBusSnoop(Address, R_Wn)) return;
-
-#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable) && !defined(MinimumBuild)
-   if (SnoopHot[Address >> 8]) SnoopTap(Address, R_Wn);
+#ifdef SnoopTapBuild
+   const uint16_t SnoopAddress = Address;  // the IO handlers' branches keep only the low byte
 #endif
+   if (fBusSnoop != NULL) if (fBusSnoop(Address, R_Wn)) return;
    
 #ifdef Fab04_GlobalKernalReplace
    if (fKernRepl != NULL) if (fKernRepl(Address, R_Wn)) return;
@@ -110,6 +134,15 @@ FASTRUN void isrPHI2()
    
    WaitUntil_nS(nS_PLAprop);
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+#ifdef SnoopTapBuild
+   SnoopG9At = ARM_DWT_CYCCNT;
+   if (SnoopMarkBus && !GP6_Phi2(ReadGPIO6))
+   {
+      uint32_t *SP;
+      asm volatile("mov %0, sp" : "=r"(SP));
+      SnoopLateDecodeTap(SnoopAddress, R_Wn, SP);
+   }
+#endif
 
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {
@@ -145,6 +178,11 @@ FASTRUN void isrPHI2()
    }
    
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr(R_Wn);
+#ifdef SnoopTapBuild
+   // After the handlers: recording first holds back their answer, so a read of a page they
+   // serve came back too late for the C64.
+   if (SnoopHot[SnoopAddress >> 8]) SnoopTap(SnoopAddress, R_Wn);
+#endif
 
    
    if (EmulateVicCycles || DMA_State > DMA_S_BeginStartStates)
@@ -198,6 +236,9 @@ FASTRUN void isrPHI2()
             case DMA_S_StartImmediate:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
+#ifdef SnoopTapBuild
+               if (SnoopMarkBus) SnoopAssertTap(SnoopAssertImmediate);
+#endif
                DMA_State = DMA_S_ActiveReady;
                return;
          }

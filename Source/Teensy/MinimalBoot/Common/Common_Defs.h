@@ -18,6 +18,10 @@
    #define Fab04_DebugSignals         //For debug only
 #endif
 
+#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable) && !defined(MinimumBuild)
+   #define SnoopTapBuild              //the snoop tap's hooks in isrPHI2 and the data port waits
+#endif
+
 // The extension loader rides with the Fab 0.4 feature set: DoHostInstall blanks the screen
 // through the full DMA Fab04_FullDMACapable gates, and tools/build-firmware.mjs only turns
 // extensions on for --target tr-plus. If those two ever come apart, stop here rather than
@@ -481,6 +485,13 @@ uint32_t nS_DMADataHold  = Def_nS_DMADataHoldPAL;
 uint32_t Cyc_KernProp = Def_Cyc_KernProp;
 uint32_t nS_KSenseSample = Def_nS_KSenseSample;
 
+#ifdef SnoopTapBuild
+// ARM cycle stamps of this cycle's data port drive, release and write sample, and the GPIO7 word
+// sampled, for the snoop tap (DMAControl.c), which runs after the handlers.
+extern volatile uint32_t SnoopDriveAt, SnoopReleaseAt, SnoopSampleAt, SnoopSampled;
+extern volatile bool SnoopReleasedOnFall;
+#endif
+
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
 {  // for "normal" (non-VIC) C64 read cycles only
 #ifdef Fab04_DataBufAlwaysEnabled
@@ -493,11 +504,24 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN10_PORTSET = RegBits;
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
+#ifdef SnoopTapBuild
+   SnoopDriveAt = ARM_DWT_CYCCNT;
+   SnoopReleasedOnFall = false;
+#endif
    
    //WaitUntil_nS(nS_DataHold);  
    uint32_t Cyc_DataHold = nSToCyc(nS_DataHold); //avoid calculating every time
    while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DataHold)
-      if(!GP6_Phi2(ReadGPIO6)) break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
+      if(!GP6_Phi2(ReadGPIO6))
+      {
+#ifdef SnoopTapBuild
+         SnoopReleasedOnFall = true;
+#endif
+         break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
+      }
+#ifdef SnoopTapBuild
+   SnoopReleaseAt = ARM_DWT_CYCCNT;
+#endif
    
 #ifdef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports back to inputs/default
@@ -535,6 +559,8 @@ __attribute__((always_inline)) inline void DataPortWriteWaitLog(uint8_t Data)
    TraceLogAddValidData(Data);
 }
 
+#define GP7_DataByte(GPIO7)  (((GPIO7) & 0x0F) | (((GPIO7) >> 12) & 0xF0))
+
 __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 {  // for "normal" (non-VIC) C64 write cycles
 #ifndef Fab04_DataBufAlwaysEnabled
@@ -543,11 +569,15 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 #endif
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
    uint32_t DataIn = ReadGPIO7;
+#ifdef SnoopTapBuild
+   SnoopSampleAt = ARM_DWT_CYCCNT;
+   SnoopSampled = DataIn;
+#endif
 #ifndef Fab04_DataBufAlwaysEnabled
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
 #endif
-   return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
+   return GP7_DataByte(DataIn);
 }
 
 // reboot is the same for all ARM devices
