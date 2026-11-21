@@ -137,7 +137,9 @@ function stubSdk() {
   fs.mkdirSync(core, { recursive: true });
   fs.mkdirSync(path.join(dir, 'sdk/packages/teensy/tools'), { recursive: true });
   for (const stub of ['bootdata.c', 'imxrt1062_t41.ld']) fs.writeFileSync(path.join(core, stub), '');
-  fs.writeFileSync(path.join(core, 'usb.c'), '#include "debug/printf.h"\n' + STOCK_USB_C);
+  // endpoint0_transmit() and endpoint0_receive() hold the other four ENDPTPRIME read-modify-writes.
+  fs.writeFileSync(path.join(core, 'usb.c'),
+    '#include "debug/printf.h"\n' + STOCK_USB_C + '\tUSB1_ENDPTPRIME |= (1<<0);\n'.repeat(4));
   fs.writeFileSync(path.join(core, 'usb_serial.c'), '#include "debug/printf.h"\n');
   return dir;
 }
@@ -191,8 +193,9 @@ test('the private core the firmware compiles against carries the USB register wi
     assert.ok(runRoot, run.stdout);
     const privateCore = path.join(runRoot, `Arduino15/packages/teensy/hardware/avr/${coreVersion}/cores/teensy4`);
     for (const file of ['usb.c', 'usb_serial.c']) {
-      assert.match(fs.readFileSync(path.join(privateCore, file), 'utf8'),
-        /#define IMXRT_USB1 \(\*usb1_regs_in_phi2_window\(\)\)/, file);
+      const patched = fs.readFileSync(path.join(privateCore, file), 'utf8');
+      assert.match(patched, /#define IMXRT_USB1 \(\*usb1_regs_in_phi2_window\(\)\)/, file);
+      assert.doesNotMatch(patched, /USB1_ENDPTPRIME \|=/, file);
     }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

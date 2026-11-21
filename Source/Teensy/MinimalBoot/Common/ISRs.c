@@ -28,19 +28,36 @@
 // driven, or a write's data sampled, after Phi2 falls. The patched Teensy core
 // (tools/lib/usb-register-window.mjs) calls this before every USB1 register access.
 #define nS_USBAccessDeadline  600  // latest start after Phi2 rise that still finishes before the next one
+#define nS_USBPrimeDeadline   400  // ENDPTPRIME, measured taking ~700 nS while the controller primes: ends after the next rise, before its first GPIO read
+#define nS_USBPrimeMaxWait   5000  // cartridge ROM cycles can keep isrPHI2 busy past the prime deadline
 #define nS_USBNoPhi2         1500  // no rise stamp for this long: Phi2 is not running, nothing to wait for
 
 #if !defined(USB_DISABLED)
-extern "C" FASTRUN IMXRT_REGISTER32_t *usb1_regs_in_phi2_window()
+static FASTRUN bool usb1_wait_for_window(uint32_t Deadline, uint32_t MaxWait)
 {
-   __asm__ volatile("dsb" ::: "memory"); //posted writes still draining would outlast the check
-   const uint32_t Deadline = nSToCyc(nS_USBAccessDeadline), NoPhi2 = nSToCyc(nS_USBNoPhi2);
-   // EmulateVicCycles keeps isrPHI2 busy past the deadline in every cycle.
+   const uint32_t NoPhi2 = nSToCyc(nS_USBNoPhi2), Began = ARM_DWT_CYCCNT;
+   // EmulateVicCycles keeps isrPHI2 busy past every deadline in every cycle.
    while (!EmulateVicCycles)
    {
       uint32_t Since = ARM_DWT_CYCCNT - LastCycCnt;
-      if (Since < Deadline || Since > NoPhi2) break;
+      if (Since < Deadline || Since > NoPhi2) return true;
+      if (ARM_DWT_CYCCNT - Began > MaxWait) return false;
    }
+   return true;
+}
+
+extern "C" FASTRUN IMXRT_REGISTER32_t *usb1_regs_in_phi2_window()
+{
+   __asm__ volatile("dsb" ::: "memory"); //posted writes still draining would outlast the check
+   usb1_wait_for_window(nSToCyc(nS_USBAccessDeadline), UINT32_MAX);
+   return &IMXRT_USB1;
+}
+
+extern "C" FASTRUN IMXRT_REGISTER32_t *usb1_prime_in_phi2_window()
+{
+   __asm__ volatile("dsb" ::: "memory");
+   if (!usb1_wait_for_window(nSToCyc(nS_USBPrimeDeadline), nSToCyc(nS_USBPrimeMaxWait)))
+      usb1_wait_for_window(nSToCyc(nS_USBAccessDeadline), UINT32_MAX);
    return &IMXRT_USB1;
 }
 #endif

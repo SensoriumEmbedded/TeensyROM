@@ -405,7 +405,7 @@ const privateCore = path.join(privateData, 'packages/teensy/hardware/avr', TEENS
   write(usbC, patchUsbIrqMasking(read(usbC)));
   for (const file of USB_REGISTER_WINDOW_FILES) {
     const source = path.join(privateCore, file);
-    write(source, patchUsbRegisterWindow(read(source)));
+    write(source, patchUsbRegisterWindow(read(source), file));
   }
 }
 const linkers = path.join(root, 'tools/BootLinkerFiles');
