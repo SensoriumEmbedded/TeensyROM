@@ -3,9 +3,10 @@
 ; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
 ; Every REU register write is read back before the transfer starts. A register that
 ; reads back wrong is counted, the value a second read found is kept, and the write is
-; repeated until it holds: a lost write reads back what the last transfer left there,
-; which for $DF02, $DF04 and $DF06 is the value being written, so their lost writes
-; go uncounted.
+; repeated until it holds: a lost write reads back what the last transfer left there.
+; A transfer leaves the low address bytes and the bank as it found them, so each round
+; aims at a REU address and bank of its own, and a lost write to $DF04 or $DF06 shows
+; on the stash. $DF02 is the same every round, so a lost write there goes uncounted.
 * = $0801
 !word next, 10
 !byte $9e
@@ -81,15 +82,17 @@ bad     inc errors
         inc errors+1
         jmp loop
 
-; A = C64 page, Y = command. 256 bytes at REU address 0; every register is
-; written each time, since a transfer leaves them advanced.
+; A = C64 page, Y = command. 256 bytes at the round's REU address, seed in bank
+; seed & 1, which every REU size has.
 transfer
         sta regs+1
+        lda seed
+        sta regs+2
+        and #1
+        sta regs+4
         lda #0
         sta regs
-        sta regs+2
         sta regs+3
-        sta regs+4
         sta regs+5
         lda #1
         sta regs+6

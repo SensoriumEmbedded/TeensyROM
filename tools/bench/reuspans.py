@@ -11,8 +11,9 @@ setup used to take over the job's DMA state: the host's bytes went to the REU's 
 which the C64 counts as a mismatch, or the read-back finds them missing. The C64 runs the
 same time with no host jobs first, so a fault of the REU alone shows apart. The client
 also reads back each REU register it writes, so a C64 IO2 write isrPHI2 lost or latched
-late counts as a miss on that register, in either phase, except a lost write to $DF02,
-$DF04 or $DF06: a 256-byte transfer leaves those holding what the next one writes.
+late counts as a miss on that register, in either phase, except where the transfer before
+left the register holding what the write stores: $DF02 always, and $DF04 and $DF06 on
+the fetch, which shares its stash's REU address and bank.
 Resets the C64 when done.
 """
 import os, random, subprocess, sys, tempfile, time
