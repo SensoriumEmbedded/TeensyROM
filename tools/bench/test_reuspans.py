@@ -4,7 +4,7 @@
   python3 -m unittest discover -s tools/bench
 """
 import unittest
-from reuspans import REGISTERS, misses_between, register_misses
+from reuspans import REGISTERS, misses_between, register_misses, require_an_reu
 
 
 def block(counts, last):
@@ -30,6 +30,15 @@ class RegisterMisses(unittest.TestCase):
         start = register_misses(block([0xFFFE, 0, 0, 0, 0, 0, 0], [0] * 7))
         stop = register_misses(block([1, 0, 0, 0, 0, 0, 0], [0x20] + [0] * 6))
         self.assertEqual(misses_between(start, stop), {'$DF02': (3, 0x20)})
+
+
+class RequireAnReu(unittest.TestCase):
+    def test_a_bad_page_among_good_rounds_is_not_a_missing_reu(self):
+        require_an_reu(202, 1)
+
+    def test_no_good_round_is_a_missing_reu(self):
+        with self.assertRaises(SystemExit):
+            require_an_reu(0, 37)
 
 
 if __name__ == '__main__':
