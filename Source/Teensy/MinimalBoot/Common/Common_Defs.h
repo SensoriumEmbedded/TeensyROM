@@ -496,6 +496,24 @@ uint32_t nS_KSenseSample = Def_nS_KSenseSample;
 // sampled, for the snoop tap (DMAControl.c), which runs after the handlers.
 extern volatile uint32_t SnoopDriveAt, SnoopReleaseAt, SnoopSampleAt, SnoopSampled;
 extern volatile bool SnoopReleasedOnFall;
+
+   #define SnoopTap_Stamp(At)   ((At) = ARM_DWT_CYCCNT)
+   __attribute__((always_inline)) inline void SnoopTap_Driven()
+   {
+      SnoopDriveAt = ARM_DWT_CYCCNT;
+      SnoopReleasedOnFall = false;
+   }
+   __attribute__((always_inline)) inline void SnoopTap_ReleasedOnFall() { SnoopReleasedOnFall = true; }
+   __attribute__((always_inline)) inline void SnoopTap_Sampled(uint32_t GPIO7)
+   {
+      SnoopSampleAt = ARM_DWT_CYCCNT;
+      SnoopSampled = GPIO7;
+   }
+#else
+   #define SnoopTap_Stamp(At)
+   __attribute__((always_inline)) inline void SnoopTap_Driven() {}
+   __attribute__((always_inline)) inline void SnoopTap_ReleasedOnFall() {}
+   __attribute__((always_inline)) inline void SnoopTap_Sampled(uint32_t) {}
 #endif
 
 __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
@@ -510,24 +528,17 @@ __attribute__((always_inline)) inline void DataPortWriteWait(uint8_t Data)
    uint32_t RegBits = (Data & 0x0F) | ((Data & 0xF0) << 12);
    CORE_PIN10_PORTSET = RegBits;
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
-#ifdef SnoopTapBuild
-   SnoopDriveAt = ARM_DWT_CYCCNT;
-   SnoopReleasedOnFall = false;
-#endif
+   SnoopTap_Driven();
    
    //WaitUntil_nS(nS_DataHold);  
    uint32_t Cyc_DataHold = nSToCyc(nS_DataHold); //avoid calculating every time
    while((ARM_DWT_CYCCNT-StartCycCnt) < Cyc_DataHold)
       if(!GP6_Phi2(ReadGPIO6))
       {
-#ifdef SnoopTapBuild
-         SnoopReleasedOnFall = true;
-#endif
+         SnoopTap_ReleasedOnFall();
          break; //make sure Phi2 is still high, about 50nS of overshoot into VIC cycle if detected
       }
-#ifdef SnoopTapBuild
-   SnoopReleaseAt = ARM_DWT_CYCCNT;
-#endif
+   SnoopTap_Stamp(SnoopReleaseAt);
    
 #ifdef Fab04_DataBufAlwaysEnabled
    SetDataPortDirIn; //set data ports back to inputs/default
@@ -575,10 +586,7 @@ __attribute__((always_inline)) inline uint8_t DataPortWaitRead()
 #endif
    WaitUntil_nS(nS_DataSetup);  //could poll Phi2 for falling edge...  only 30nS typ hold time
    uint32_t DataIn = ReadGPIO7;
-#ifdef SnoopTapBuild
-   SnoopSampleAt = ARM_DWT_CYCCNT;
-   SnoopSampled = DataIn;
-#endif
+   SnoopTap_Sampled(DataIn);
 #ifndef Fab04_DataBufAlwaysEnabled
    DataBufDisable;
    SetDataPortDirOut; //set data ports to outputs (default)
