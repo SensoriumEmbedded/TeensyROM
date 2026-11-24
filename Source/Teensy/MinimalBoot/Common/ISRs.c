@@ -212,7 +212,7 @@ FASTRUN void isrPHI2()
                DMACycleCount = 0; //initialize for timeout
                if (R_Wn) //Read
                {
-                  if(!GP9_BA(ReadGPIO9)) DMAWaitAssertReady(); // start during any bad line read
+                  if(!GP9_BA(GPIO_9)) DMAWaitAssertReady(); // BA was already low during this read, so the CPU is halted on it
                   else DMA_State = DMA_S_StartAsynch_Wait_LRd ;
                }
                else DMA_State = DMA_S_StartAsynch_Wait_LWr;
@@ -225,7 +225,7 @@ FASTRUN void isrPHI2()
             case DMA_S_StartAsynch_Wait_LRd: //Last cycle was a read
                if (R_Wn) //Read
                {
-                  if(!GP9_BA(ReadGPIO9)) DMAWaitAssertReady(); // start during any bad line read
+                  if(!GP9_BA(GPIO_9)) DMAWaitAssertReady(); // BA was already low during this read, so the CPU is halted on it
                   else 
                   {
                      //Another Read, no state change
