@@ -2,11 +2,16 @@
 ; back to another page and compares, counting rounds and mismatches; a CIA2 timer
 ; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
 ; Every REU register write is read back before the transfer starts. A register that
-; reads back wrong is counted, the value a second read found is kept, and the write is
-; repeated until it holds: a lost write reads back what the last transfer left there.
+; reads back wrong is counted, read a second time, logged, and the write is repeated
+; until it holds. The second read tells three misses apart: what the last transfer (or
+; the attempt before) left there means the write was lost, the value written means the
+; first read was answered late, and anything else means the write landed wrong.
 ; A transfer leaves the low address bytes and the bank as it found them, so each round
 ; aims at a REU address and bank of its own, and a lost write to $DF04 or $DF06 shows
 ; on the stash. $DF02 is the same every round, so a lost write there goes uncounted.
+; reuspans.py reads the log. A record's tag is the register index, | $80 on the fetch,
+; | $40 when it repeats a write that missed; the log stops when full, so a repeat's
+; record always follows the one it repeats.
 * = $0801
 !word next, 10
 !byte $9e
@@ -15,12 +20,19 @@
 next !word 0
 
 ready  = $c104          ; $5A once set up
+logn   = $c106          ; log records, at most 255
+second = $c107
+cmdsav = $c108
 rounds = $c110          ; 16 bits
 errors = $c112          ; 16 bits
 seed   = $c114
 misslo = $c120          ; per register $DF02-$DF08: read-back misses, low bytes
 misshi = $c128          ; and high bytes
-lastrd = $c130          ; the value a second read found after the last miss
+lastms = $fb            ; the tag of this transfer's last miss, or 0
+logtag = $7000
+logsd  = $7100          ; the round's seed
+logwr  = $7200          ; the value written
+logrd  = $7300          ; the second read
 source = $4000
 dest   = $5000
 
@@ -43,10 +55,11 @@ fetch    = $91          ; execute now, REU to C64
         sta errors
         sta errors+1
         sta seed
-        ldx #$17
+        ldx #$0f
 -       sta misslo,x
         dex
         bpl -
+        sta logn
         lda #<nmi
         sta $0318
         lda #>nmi
@@ -94,6 +107,7 @@ transfer
         sta regs
         sta regs+3
         sta regs+5
+        sta lastms
         lda #1
         sta regs+6
         ldx #6
@@ -102,7 +116,7 @@ store   lda regs,x
         cmp reu_regs,x
         beq +
         lda reu_regs,x
-        sta lastrd,x
+        jsr logmiss
         inc misslo,x
         bne store
         inc misshi,x
@@ -113,6 +127,32 @@ store   lda regs,x
         rts
 
 regs    !fill 7
+
+; A = the second read, X = register, Y = command. Keeps X and Y.
+logmiss sta second
+        sty cmdsav
+        txa
+        cpy #fetch
+        bne +
+        ora #$80
++       ora #$40
+        cmp lastms
+        beq +
+        sta lastms
+        and #$bf
++       ldy logn
+        cpy #$ff
+        beq +
+        sta logtag,y
+        lda seed
+        sta logsd,y
+        lda regs,x
+        sta logwr,y
+        lda second
+        sta logrd,y
+        inc logn
++       ldy cmdsav
+        rts
 
 nmi     pha
         lda $dd0d
