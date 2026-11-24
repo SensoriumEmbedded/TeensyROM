@@ -18,6 +18,9 @@ from trlink import Link
 ROW = re.compile(r'^(?P<name>.+?)\s+(?P<kept>\d+) kept(?:\s+min\s+(?P<min>\d+)\s+max\s+(?P<max>\d+)'
                  r'\s+\((?P<min_ns>\d+)\.\.(?P<max_ns>\d+) nS\))?\s*$')
 HEADER = 'Bus latency,'
+# BusLatency()'s Names[] in BusSnoop.ino, in its order
+PROBES = ('nothing (counter reads and DSB)', 'GPIO6 read', 'USB1 USBSTS read', 'USB1 ENDPTPRIME read',
+          'GPIO6 read after a USBSTS read', 'GPIO6 read after a USB1 write')
 
 
 def parse(text):
@@ -34,6 +37,17 @@ def parse(text):
     return rows
 
 
+def verdict(rows):
+    """Why the reply fails, or None when every probe has a row that kept samples."""
+    missing = [name for name in PROBES if name not in rows]
+    if missing:
+        return 'FAILED: the reply ended before ' + ', '.join(missing)
+    empty = [name for name in PROBES if rows[name][0] == 0]
+    if empty:
+        return 'FAILED: no sample kept for ' + ', '.join(empty)
+    return None
+
+
 def main():
     with Link() as tr:
         tr.drain(0.2)
@@ -43,8 +57,9 @@ def main():
     if rows is None:
         raise SystemExit('no bus latency reply: this image was built without Dbg_SerBusLat')
     print(text[text.index(HEADER):].rstrip())
-    if not rows or any(kept == 0 for kept, *_ in rows.values()):
-        raise SystemExit('FAILED: a probe kept no sample')
+    problem = verdict(rows)
+    if problem:
+        raise SystemExit(problem)
 
 
 if __name__ == '__main__':

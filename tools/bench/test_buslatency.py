@@ -3,8 +3,12 @@
 
   python3 -m unittest discover -s tools/bench
 """
+import pathlib
+import re
 import unittest
-from buslatency import parse
+from buslatency import PROBES, parse, verdict
+
+BUSSNOOP = pathlib.Path(__file__).resolve().parents[2] / 'Source' / 'Teensy' / 'BusSnoop.ino'
 
 REPLY = """stray menu text
 GPIO6 read from an earlier reply     12 kept
@@ -27,6 +31,31 @@ class Parse(unittest.TestCase):
 
     def test_no_header_means_the_command_is_not_in_the_image(self):
         self.assertIsNone(parse('Unknown command\n'))
+
+
+def full_reply(skip=()):
+    rows = ''.join(f'{name:<34s}  3990 kept  min    1  max    2  (1..2 nS)\n' for name in PROBES if name not in skip)
+    return 'Bus latency, 4000 tries each, in CPU cycles at 816 MHz:\n' + rows
+
+
+class Verdict(unittest.TestCase):
+    def test_every_probe_keeping_samples_passes(self):
+        self.assertIsNone(verdict(parse(full_reply())))
+
+    def test_a_reply_cut_short_fails_even_when_every_row_that_came_kept_samples(self):
+        problem = verdict(parse(full_reply(skip=PROBES[-1:])))
+        self.assertIn(PROBES[-1], problem)
+
+    def test_a_header_with_no_rows_fails(self):
+        self.assertIsNotNone(verdict(parse(full_reply(skip=PROBES))))
+
+    def test_a_probe_that_kept_no_sample_fails(self):
+        reply = full_reply().replace(f'{PROBES[2]:<34s}  3990 kept  min    1  max    2  (1..2 nS)', f'{PROBES[2]:<34s}     0 kept')
+        self.assertIn(PROBES[2], verdict(parse(reply)))
+
+    def test_the_probe_names_are_the_firmwares(self):
+        names = re.search(r'Names\[BL_NumProbes\]\[\d+\] PROGMEM = \{(.*?)\};', BUSSNOOP.read_text(), re.S)
+        self.assertEqual(tuple(re.findall(r'"([^"]*)"', names[1])), PROBES)
 
 
 if __name__ == '__main__':
