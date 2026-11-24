@@ -66,6 +66,14 @@ def misses_between(start, stop):
             in zip(REGISTERS, start, stop) if (after - before) & 0xFFFF}
 
 
+def require_an_reu(rounds, mismatches):
+    # rounds counts only the pages that came back right, and without an REU none does. A
+    # mismatch alone can be the first-byte loss in Known-Issues.md.
+    if rounds == 0:
+        raise SystemExit(f'the client is not seeing an REU ({rounds} rounds, {mismatches} mismatches): '
+                         'is Special IO set to an REU?')
+
+
 def poke_in_pieces(tr, data, piece=64):
     """WriteC64Mem a piece at a time, without poke()'s drain: many short halts, each next to the REU loop."""
     for offset in range(0, len(data), piece):
@@ -101,10 +109,7 @@ def main():
         try:
             start_client(tr)
             time.sleep(1)
-            before = counts(tr)
-            if before[0] == 0 or before[1]:
-                raise SystemExit(f'the client is not seeing an REU ({before[0]} rounds, {before[1]} mismatches): '
-                                 'is Special IO set to an REU?')
+            require_an_reu(*counts(tr))
             latch = NMI_PERIOD - 1
             tr.poke(CIA2_TA, [latch & 0xFF, latch >> 8])
             tr.poke(CIA2_ICR, [0x81])
