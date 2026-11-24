@@ -532,14 +532,14 @@ Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entri
 | `0xC1` its detail | interrupted PC | interrupted exception number (`xPSR` bits 0-8) | `BASEPRI` |
 | `0xC2` DMA assert | entry stamp | this cycle's address | reason in bits 0-1 (`0` bad line read, `1` read after a write, `2` read loop timeout, `3` immediate), `0x40` this cycle read, `0x20` the cycle before read |
 | `0xC3` its detail | nS from entry to Phi2 falling << 16, nS from that to the assert | the cycle before's address | nS since the last entry / 16 |
-| `0xC4` late decode: an IO1 or IO2 cycle decoded after Phi2 fell | entry stamp | address | DMA state, `0x40` a read |
+| `0xC4` late decode: a cycle at `$DE00`-`$DFFF` decoded after Phi2 fell | entry stamp | address | DMA state, `0x40` a read |
 | `0xC5` its detail | interrupted PC | nS since the last entry | nS from entry to the decode / 16 |
 | `0xC6` cycle timing, after its access record | nS from entry to the GPIO6 read << 16; nS from there to the GPIO9 read | from the GPIO6 read: a read's nS to driving the data, `0x8000` if Phi2 fell before the hold time was up; a write's nS to sampling it; `0x7FFF` if the handler did neither | a read's nS from the GPIO6 read to releasing the data / 4, else `0xFF` |
 | `0xC7` its detail | nS from the GPIO6 read to the tap, after the handlers: past a cycle when a handler held `isrPHI2` | nS since the last entry | `0` |
 
 Bus timing and cycle timing are TR+ only.
 
-Bus timing costs `isrPHI2` time: a check on every cycle, a GPIO read on every IO1 and IO2 cycle, and the records it writes. On a machine with little timing margin that can cause the wrong reads it is there to find, so check a count of wrong reads taken with it armed against a release build under the same load.
+Bus timing costs `isrPHI2` time: a check on every cycle, a GPIO read on every cycle at `$DE00`-`$DFFF`, and the records it writes. On a machine with little timing margin that can cause the wrong reads it is there to find, so check a count of wrong reads taken with it armed against a release build under the same load.
 
 Each call clears the trigger and the counts it sends; page cycles that arrive while it sends are counted, as skipped, in the next call's reply.
 

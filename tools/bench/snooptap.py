@@ -10,8 +10,8 @@ PAGE is the high byte of the address, in hex. FLAGS add up: 1 writes, 2 reads,
 4 trigger (only with 1: the first write to the page freezes the ring 64 entries
 later, so what led up to it survives), 8 slice marks (each DMA slice start is recorded too),
 16 bus timing (on any page: isrPHI2 entries more than a PAL cycle after the last while the
-CPU owns the bus, with the interrupted PC; IO1 and IO2 cycles decoded after Phi2 fell; and every
-DMA assert, with why and on which cycle), 32 cycle timing (each of the page's recorded cycles
+CPU owns the bus, with the interrupted PC; cycles at $DE00-$DFFF decoded after Phi2 fell; and
+every DMA assert, with why and on which cycle), 32 cycle timing (each of the page's recorded cycles
 gets how long after its entry isrPHI2 read GPIO6, and how long after that it read GPIO9,
 drove and released the data or sampled it, and finished the handlers). 16 and 32 need an image for a TR+.
 
