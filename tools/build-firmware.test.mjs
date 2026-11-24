@@ -137,7 +137,10 @@ function stubSdk() {
   fs.mkdirSync(core, { recursive: true });
   fs.mkdirSync(path.join(dir, 'sdk/packages/teensy/tools'), { recursive: true });
   for (const stub of ['bootdata.c', 'imxrt1062_t41.ld']) fs.writeFileSync(path.join(core, stub), '');
-  fs.writeFileSync(path.join(core, 'usb.c'), STOCK_USB_C);
+  // endpoint0_transmit() and endpoint0_receive() hold the other four ENDPTPRIME read-modify-writes.
+  fs.writeFileSync(path.join(core, 'usb.c'),
+    '#include "debug/printf.h"\n' + STOCK_USB_C + '\tUSB1_ENDPTPRIME |= (1<<0);\n'.repeat(4));
+  fs.writeFileSync(path.join(core, 'usb_serial.c'), '#include "debug/printf.h"\n');
   return dir;
 }
 
@@ -171,6 +174,29 @@ test('extensions are on by default for tr-plus, and only there', {
     if (fab04Active) assert.match(plain.stderr, /Fab04_Features is #define'd/);
     else assert.equal(plain.status, 0, plain.stderr);
     assert.doesNotMatch(plain.stdout, RESERVATION);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the private core the firmware compiles against carries the USB register window', {
+  skip: process.platform === 'win32' && 'needs /bin/echo as a stand-in for arduino-cli',
+}, () => {
+  const dir = stubSdk();
+  try {
+    const run = spawnSync(process.execPath, [script, '--target', 'tr',
+      '--arduino-data', path.join(dir, 'sdk'), '--out', path.join(dir, 'out'),
+      '--skip-minimal-build', '--skip-teensy-build', '--skip-combine'],
+      { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ARDUINO_CLI: '/bin/echo' } });
+    assert.equal(run.status, 0, run.stderr);
+    const runRoot = run.stdout.match(/Private build root: (.+)/)?.[1];
+    assert.ok(runRoot, run.stdout);
+    const privateCore = path.join(runRoot, `Arduino15/packages/teensy/hardware/avr/${coreVersion}/cores/teensy4`);
+    for (const file of ['usb.c', 'usb_serial.c']) {
+      const patched = fs.readFileSync(path.join(privateCore, file), 'utf8');
+      assert.match(patched, /#define IMXRT_USB1 \(\*usb1_regs_in_phi2_window\(\)\)/, file);
+      assert.doesNotMatch(patched, /USB1_ENDPTPRIME \|=/, file);
+    }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
