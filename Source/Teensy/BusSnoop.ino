@@ -115,24 +115,32 @@ FLASHMEM void BusLatency()
    static const char Names[BL_NumProbes][32] PROGMEM = {
       "nothing (counter reads and DSB)", "GPIO6 read", "USB1 USBSTS read", "USB1 ENDPTPRIME read",
       "GPIO6 read after a USBSTS read", "GPIO6 read after a USB1 write"};
+   struct { uint32_t Min = UINT32_MAX, Max = 0, Kept = 0; } Stats[BL_NumProbes];
    const uint32_t DwtCtrl = ARM_DWT_CTRL;
    ARM_DWT_CTRL = DwtCtrl | DWT_EXCEVTENA;
-   CmdChannel->printf(PSTR("Bus latency, %d tries each, in CPU cycles at %lu MHz:\n"), BusLatSamples, F_CPU_ACTUAL / 1000000);
    for (uint8_t Probe = 0; Probe < BL_NumProbes; Probe++)
    {
-      uint32_t Min = UINT32_MAX, Max = 0, Kept = 0;
+      auto &Stat = Stats[Probe];
       for (uint32_t Try = 0; Try < BusLatSamples; Try++)
       {
          uint32_t Cycles;
          if (!BusLatSample(Probe, Cycles)) continue;
-         Kept++;
-         if (Cycles < Min) Min = Cycles;
-         if (Cycles > Max) Max = Cycles;
+         Stat.Kept++;
+         if (Cycles < Stat.Min) Stat.Min = Cycles;
+         if (Cycles > Stat.Max) Stat.Max = Cycles;
       }
-      if (Kept) CmdChannel->printf(PSTR("%-34s %5lu kept  min %4lu  max %4lu  (%lu..%lu nS)\n"), Names[Probe], Kept,
-                                   Min, Max, CycTonS(Min), CycTonS(Max));
-      else CmdChannel->printf(PSTR("%-34s %5lu kept\n"), Names[Probe], Kept);
    }
    ARM_DWT_CTRL = DwtCtrl;
+
+   // Printed only now: usb_serial sends a part-filled packet from a timer interrupt, so a line
+   // printed between probes would go out while the next one samples.
+   CmdChannel->printf(PSTR("Bus latency, %d tries each, in CPU cycles at %lu MHz:\n"), BusLatSamples, F_CPU_ACTUAL / 1000000);
+   for (uint8_t Probe = 0; Probe < BL_NumProbes; Probe++)
+   {
+      const auto &Stat = Stats[Probe];
+      if (Stat.Kept) CmdChannel->printf(PSTR("%-34s %5lu kept  min %4lu  max %4lu  (%lu..%lu nS)\n"), Names[Probe],
+                                        Stat.Kept, Stat.Min, Stat.Max, CycTonS(Stat.Min), CycTonS(Stat.Max));
+      else CmdChannel->printf(PSTR("%-34s %5lu kept\n"), Names[Probe], Stat.Kept);
+   }
 }
 #endif
