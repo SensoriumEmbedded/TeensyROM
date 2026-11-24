@@ -116,15 +116,20 @@ FLASHMEM bool C64IsClockingPHI2()
 // it with interrupts masked.  isrPHI2 preempts thread mode, so a caller that tests DMA_State
 // and then writes StartDisable leaves a window in which the ISR can reach Target -- a transfer
 // that has landed -- only for the write to overwrite it, and a write the C64 took would be
-// reported as one it did not, which a host that retries then writes twice.  Returns true when
-// Target was already reached and nothing was aborted; false when the bus has been put back.
-static FLASHMEM bool AbortDMAUnless(uint8_t Target)
+// reported as one it did not, which a host that retries then writes twice.
+static MASKEDRUN bool ReachedOrStartDisable(uint8_t Target)
 {
    __disable_irq();
    const bool Reached = (DMA_State == Target);
    if (!Reached) DMA_State = DMA_S_StartDisable;
    __enable_irq();
-   if (Reached) return true;
+   return Reached;
+}
+
+// True when Target was already reached and nothing was aborted; false when the bus has been put back.
+static FLASHMEM bool AbortDMAUnless(uint8_t Target)
+{
+   if (ReachedOrStartDisable(Target)) return true;
 
    uint32_t Seen = LastCycCnt;
    uint32_t Quiet = millis();
@@ -306,7 +311,7 @@ FASTRUN bool SampleStoreSnoop(uint16_t Address, bool R_Wn)
 
 // False when another user holds the single bus snoop slot, the way BusAnalysis declines it.  The
 // test is masked with the install because a C64 write to rCtlRunningPRG claims the slot from isrPHI2.
-FLASHMEM bool SampleWatchStart(uint16_t Address)
+MASKEDRUN bool SampleWatchStart(uint16_t Address)
 {
    __disable_irq();
    if (fBusSnoop != &SampleStoreSnoop && (fBusSnoop != NULL || PendingfBusSnoop != NULL))
@@ -321,7 +326,7 @@ FLASHMEM bool SampleWatchStart(uint16_t Address)
    return true;
 }
 
-FLASHMEM void SampleWatchStop()
+MASKEDRUN void SampleWatchStop()
 {
    __disable_irq();
    if (fBusSnoop == &SampleStoreSnoop) fBusSnoop = NULL;
@@ -331,7 +336,7 @@ FLASHMEM void SampleWatchStop()
 
 // The counters since the last call.  The last store's stamp is kept, so the next interval
 // counted is the one that crosses this call and none goes missing between two reads.
-FLASHMEM SampleWatchStats SampleWatchTake()
+MASKEDRUN SampleWatchStats SampleWatchTake()
 {
    __disable_irq();
    const SampleWatchStats Taken = { SampleStats.Intervals, SampleStats.IntervalCyc, SampleStats.LongestCyc,
@@ -382,7 +387,7 @@ FASTRUN void SnoopTap(uint16_t Address, bool R_Wn)
 }
 
 // Cyc is the last ISR's, the nearest stamp thread mode has.
-static FLASHMEM void SnoopMarkSlice()
+static MASKEDRUN void SnoopMarkSlice()
 {
    if (!SnoopMarkSlices) return;
    __disable_irq();
@@ -391,6 +396,20 @@ static FLASHMEM void SnoopMarkSlice()
    __enable_irq();
 }
 #endif
+
+// True when no store started the slice, and it has been started here instead.
+static MASKEDRUN bool StartSliceIfNoStore()
+{
+   __disable_irq();
+   const bool Missed = SampleLockArmed;
+   if (Missed)
+   {
+      SampleLockArmed = false;
+      DMA_State = DMA_S_StartAsynch;
+   }
+   __enable_irq();
+   return Missed;
+}
 
 // Arms the staged slice to start on the next watched store, or starts it anyway once WaituS has
 // passed without one -- audio stopped, or a scene with no player -- so a write never waits on a
@@ -403,15 +422,7 @@ static FLASHMEM void StartSliceOnStore(uint32_t WaituS)
 #endif
    SampleLockArmed = true;
    while (SampleLockArmed && micros() - Began < WaituS);
-   __disable_irq();
-   const bool Missed = SampleLockArmed;
-   if (Missed)
-   {
-      SampleLockArmed = false;
-      DMA_State = DMA_S_StartAsynch;
-   }
-   __enable_irq();
-   if (Missed) SampleStats.Unlocked++;
+   if (StartSliceIfNoStore()) SampleStats.Unlocked++;
    else SampleStats.Locked++;
 }
 
