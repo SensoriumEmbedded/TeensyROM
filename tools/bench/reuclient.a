@@ -1,6 +1,12 @@
 ; C64 side of reuspans.py. IRQs off. The loop stashes a page to the REU, fetches it
 ; back to another page and compares, counting rounds and mismatches; a CIA2 timer
 ; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
+; Every REU register write is read back before the transfer starts. A register that
+; reads back wrong is counted, the value a second read found is kept, and the write is
+; repeated until it holds: a lost write reads back what the last transfer left there.
+; A transfer leaves the low address bytes and the bank as it found them, so each round
+; aims at a REU address and bank of its own, and a lost write to $DF04 or $DF06 shows
+; on the stash. $DF02 is the same every round, so a lost write there goes uncounted.
 * = $0801
 !word next, 10
 !byte $9e
@@ -12,13 +18,14 @@ ready  = $c104          ; $5A once set up
 rounds = $c110          ; 16 bits
 errors = $c112          ; 16 bits
 seed   = $c114
+misslo = $c120          ; per register $DF02-$DF08: read-back misses, low bytes
+misshi = $c128          ; and high bytes
+lastrd = $c130          ; the value a second read found after the last miss
 source = $4000
 dest   = $5000
 
 reu_cmd  = $df01
-reu_c64  = $df02
-reu_reu  = $df04
-reu_len  = $df07
+reu_regs = $df02        ; C64 address, REU address and bank, length: 7 registers
 stash    = $90          ; execute now, C64 to REU
 fetch    = $91          ; execute now, REU to C64
 
@@ -36,6 +43,10 @@ fetch    = $91          ; execute now, REU to C64
         sta errors
         sta errors+1
         sta seed
+        ldx #$17
+-       sta misslo,x
+        dex
+        bpl -
         lda #<nmi
         sta $0318
         lda #>nmi
@@ -71,20 +82,37 @@ bad     inc errors
         inc errors+1
         jmp loop
 
-; A = C64 page, Y = command. 256 bytes at REU address 0; every register is
-; written each time, since a transfer leaves them advanced.
+; A = C64 page, Y = command. 256 bytes at the round's REU address, seed in bank
+; seed & 1, which every REU size has.
 transfer
-        ldx #0
-        stx reu_c64
-        sta reu_c64+1
-        stx reu_reu
-        stx reu_reu+1
-        stx reu_reu+2
-        stx reu_len
-        inx
-        stx reu_len+1
+        sta regs+1
+        lda seed
+        sta regs+2
+        and #1
+        sta regs+4
+        lda #0
+        sta regs
+        sta regs+3
+        sta regs+5
+        lda #1
+        sta regs+6
+        ldx #6
+store   lda regs,x
+        sta reu_regs,x
+        cmp reu_regs,x
+        beq +
+        lda reu_regs,x
+        sta lastrd,x
+        inc misslo,x
+        bne store
+        inc misshi,x
+        jmp store
++       dex
+        bpl store
         sty reu_cmd
         rts
+
+regs    !fill 7
 
 nmi     pha
         lda $dd0d

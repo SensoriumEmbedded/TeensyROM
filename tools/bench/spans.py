@@ -13,7 +13,7 @@ from trlink import Link
 MODE, TICKS, READY, PROBE = 0xC100, 0xC101, 0xC104, 0xC105
 D011, CIA2_TA, CIA2_ICR, CIA2_CRA = 0xD011, 0xDD04, 0xDD0D, 0xDD0E
 BLOCK = 0x4000
-PERIOD = int(sys.argv[1]) if len(sys.argv) > 1 else 200
+PERIOD = 200
 failed = []
 
 
@@ -139,6 +139,7 @@ def nmi_loss(tr, gap_us):
 
 
 if __name__ == '__main__':
+    PERIOD = int(sys.argv[1]) if len(sys.argv) > 1 else PERIOD
     with Link() as tr:
         try:
             start_client(tr)
