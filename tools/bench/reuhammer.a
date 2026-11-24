@@ -1,8 +1,8 @@
 ; C64 side of reuhammer.py. IRQs off. $DF02-$DF08 are written once, then read back in
 ; an unrolled loop, one IO2 read every 9 cycles. A read that does not match is counted
 ; by register and by the value it read, and the register is read a second time: a
-; second read that matches means the first was answered late, one that misses too means
-; the register holds a wrong value, which is counted and written again. A CIA2 timer
+; second read that matches means the first was answered late. One that misses too is
+; counted, and the register written again in case it changed. A CIA2 timer
 ; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
 ;
 ; reuhammer.py reads $8000-$8E17 in one DMA read, so the counts in it agree:

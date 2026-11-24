@@ -34,8 +34,8 @@ class Counts(unittest.TestCase):
         stop = counts_from(block(12, [(1, 5)], [(1, 0x00, 9), (1, 0x3C, 1), (5, 0x0F, 3)]))
         reads, kinds, values = counts_between(start, stop)
         self.assertEqual(reads, 2 * REPEATS * len(REGISTERS))
-        self.assertEqual(kinds[1], {'late': 2, 'wrong': 1})
-        self.assertEqual(kinds[5], {'late': 3, 'wrong': 0})
+        self.assertEqual(kinds[1], {'late': 2, 'twice': 1})
+        self.assertEqual(kinds[5], {'late': 3, 'twice': 0})
         self.assertEqual(values, {(1, 0x00): 2, (1, 0x3C): 1, (5, 0x0F): 3})
 
     def test_counters_that_wrap_still_count_forward(self):
@@ -43,7 +43,7 @@ class Counts(unittest.TestCase):
         stop = counts_from(block(1, [(0, 0)], [(0, 0x11, 1)]))
         reads, kinds, values = counts_between(start, stop)
         self.assertEqual(reads, 2 * REPEATS * len(REGISTERS))
-        self.assertEqual(kinds[0], {'late': 1, 'wrong': 1})
+        self.assertEqual(kinds[0], {'late': 1, 'twice': 1})
         self.assertEqual(values, {(0, 0x11): 2})
 
 

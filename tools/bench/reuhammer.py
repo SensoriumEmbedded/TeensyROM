@@ -14,7 +14,8 @@ jobs back to back, 1 KiB to $6000 in 33-byte slices:
 --sweep follows each job with a DMA read of $0000-$CFFF, and checks the job's bytes in it.
 
 A wrong read is named by a second read of the register: one that matches means the first
-read was answered late, one that misses too means the register held a wrong value. Each
+read was answered late; one that misses too is counted apart, as a run of wrong reads
+longer than the few cycles between the two, or a register that changed. Each
 phase also lists the values the wrong reads found.
 
 --tap arms the snoop tap on those pages (snooptap.py's PAGE:FLAGS) and takes its ring
@@ -55,7 +56,7 @@ def counts_from(block):
 
 def counts_between(start, stop):
     """What the C64 counted from one counts_from() to a later one: (reads, per register
-    {'late': n, 'wrong': n}, {(register, value read): n})."""
+    {'late': n, 'twice': n}, {(register, value read): n})."""
     (passes0, held0, hist0), (passes1, held1, hist1) = start, stop
     reads = ((passes1 - passes0) & 0xFFFFFFFF) * REPEATS * len(REGISTERS)
     kinds, values = [], {}
@@ -66,8 +67,8 @@ def counts_between(start, stop):
             if n:
                 values[k, v] = n
                 firsts += n
-        wrong = (held1[k] - held0[k]) & 0xFFFF
-        kinds.append({'late': firsts - wrong, 'wrong': wrong})
+        twice = (held1[k] - held0[k]) & 0xFFFF
+        kinds.append({'late': firsts - twice, 'twice': twice})
     return reads, kinds, values
 
 
@@ -83,19 +84,19 @@ def describe_value(register, value):
 def report(label, seconds, jobs, between, tap_entries=None):
     reads, kinds, values = between
     late = sum(k['late'] for k in kinds)
-    wrong = sum(k['wrong'] for k in kinds)
-    line = f'{label}: {seconds:.0f} s, {jobs} jobs, {reads} IO2 reads, {late + wrong} wrong'
-    if late + wrong:
-        line += f' ({late} answered late, {wrong} register held a wrong value)'
+    twice = sum(k['twice'] for k in kinds)
+    line = f'{label}: {seconds:.0f} s, {jobs} jobs, {reads} IO2 reads, {late + twice} wrong'
+    if late + twice:
+        line += f' ({late} right on a second read, {twice} wrong on a second read too)'
     if tap_entries is not None:
         line += f', tap recorded {tap_entries}'
     print(line, flush=True)
     for (register, value), n in sorted(values.items(), key=lambda item: -item[1])[:8]:
         print(f'    {n:8d}  {describe_value(register, value)}')
     for k, per_kind in enumerate(kinds):
-        if per_kind['wrong']:
-            print(f'    {REGISTERS[k]} held a wrong value {per_kind["wrong"]} times')
-    return late + wrong
+        if per_kind['twice']:
+            print(f'    {REGISTERS[k]} read wrong twice in a row {per_kind["twice"]} times')
+    return late + twice
 
 
 def read_mem(tr, addr, length):
@@ -147,7 +148,7 @@ def check_reu(tr):
     start = counts_from(read_mem(tr, COUNTS, COUNTS_BYTES))
     time.sleep(1)
     reads, kinds, _ = counts_between(start, counts_from(read_mem(tr, COUNTS, COUNTS_BYTES)))
-    wrong = sum(k['late'] + k['wrong'] for k in kinds)
+    wrong = sum(k['late'] + k['twice'] for k in kinds)
     if reads == 0 or wrong * 2 > reads:
         raise SystemExit(f'the client is not seeing an REU ({reads} reads, {wrong} wrong): '
                          'is Special IO set to an REU?')
