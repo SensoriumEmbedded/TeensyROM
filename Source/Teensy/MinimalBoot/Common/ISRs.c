@@ -88,10 +88,66 @@ FASTRUN void isrExtResetDetect()
 }
 #endif
 
+#ifdef SnoopTapBuild
+   // The late taps find the interrupted context above isrPHI2's SP, so these inline into it.
+   __attribute__((always_inline)) inline const uint32_t *SnoopTap_SP()
+   {
+      uint32_t *SP;
+      asm volatile("mov %0, sp" : "=r"(SP));
+      return SP;
+   }
+   __attribute__((always_inline)) inline void SnoopTap_Entry(uint32_t CycSinceLast)
+   {
+      SnoopEntryAt = LastCycCnt;
+      SnoopEntryGap = CycSinceLast;
+      // StartDisable holds /DMA, and an auto-run transfer leaves it there for an entry late by the whole transfer.
+      if (SnoopMarkBus && CycSinceLast > nSToCyc(nS_SnoopLateEntry) &&
+          (DMA_State == DMA_S_DisableReady || DMA_State > DMA_S_StartDisable))
+         SnoopLateEntryTap(SnoopTap_SP());
+   }
+   __attribute__((always_inline)) inline void SnoopTap_Access(uint16_t Address, bool R_Wn)
+   {
+      SnoopPrevAccess = SnoopThisAccess;
+      SnoopThisAccess = Address | (R_Wn ? 0x10000 : 0);
+   }
+   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t Address, bool R_Wn)
+   {
+      // The address, not GPIO9's IO selects: a decode late enough reads GPIO9 after Phi2 fell,
+      // when the PLA has already released them.
+      if ((Address & 0xFE00) == 0xDE00 && SnoopMarkBus && !GP6_Phi2(ReadGPIO6))
+         SnoopLateDecodeTap(Address, R_Wn, SnoopTap_SP());
+   }
+   // After the handlers: recording first holds back their answer, so a read of a page they
+   // serve came back too late for the C64.
+   __attribute__((always_inline)) inline void SnoopTap_AfterHandlers(bool R_Wn)
+   {
+      const uint16_t Address = SnoopThisAccess;
+      if (SnoopHot[Address >> 8]) SnoopTap(Address, R_Wn);
+   }
+   __attribute__((always_inline)) inline void SnoopTap_AsynchAssert()
+   {
+      // A timeout leaves DMACycleCount at DMA_TIMEOUT_CYCLES + 2; a bad line read can find it at + 1.
+      if (SnoopMarkBus) SnoopAssertTap(DMA_State == DMA_S_StartAsynch_Wait_LWr ? SnoopAssertAfterWrite :
+                                       DMACycleCount > DMA_TIMEOUT_CYCLES + 1 ? SnoopAssertTimeout : SnoopAssertBadLine);
+   }
+   __attribute__((always_inline)) inline void SnoopTap_ImmediateAssert()
+   {
+      if (SnoopMarkBus) SnoopAssertTap(SnoopAssertImmediate);
+   }
+#else
+   __attribute__((always_inline)) inline void SnoopTap_Entry(uint32_t) {}
+   __attribute__((always_inline)) inline void SnoopTap_Access(uint16_t, bool) {}
+   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t, bool) {}
+   __attribute__((always_inline)) inline void SnoopTap_AfterHandlers(bool) {}
+   __attribute__((always_inline)) inline void SnoopTap_AsynchAssert() {}
+   __attribute__((always_inline)) inline void SnoopTap_ImmediateAssert() {}
+#endif
+
 void DMAWaitAssertReady()
 {
    WaitUntil_nS(nS_DMAAssert); 
    SetDMAAssert;
+   SnoopTap_AsynchAssert();
    DMA_State = DMA_AutoRun ? DMA_S_TransferExecuting : DMA_S_TransferReady;
 }
 
@@ -114,6 +170,8 @@ FASTRUN void isrPHI2()
       #endif
    }
    
+   SnoopTap_Entry(CycSinceLast);
+
 #ifdef DbgSignalIsrPHI2
    SetDebugAssert;
 #endif
@@ -130,8 +188,10 @@ FASTRUN void isrPHI2()
 
    WaitUntil_nS(nS_RWnReady); 
    uint32_t GPIO_6 = ReadGPIO6; //Address bus and  R/*W are (almost) valid on Phi2 rising, Read now
+   SnoopTap_Stamp(SnoopG6At);
    uint16_t Address = GP6_Address(GPIO_6); //parse out address
    bool R_Wn = GP6_R_Wn(GPIO_6);  //parse read/write bit
+   SnoopTap_Access(Address, R_Wn);
    
 #ifndef Fab04_DataBufAlwaysEnabled
    if (R_Wn) SetDataBufOut; //set data buffer direction (on pcb v0.3+)
@@ -139,10 +199,6 @@ FASTRUN void isrPHI2()
 #endif
 
    if (fBusSnoop != NULL) if (fBusSnoop(Address, R_Wn)) return;
-
-#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable) && !defined(MinimumBuild)
-   if (SnoopHot[Address >> 8]) SnoopTap(Address, R_Wn);
-#endif
    
 #ifdef Fab04_GlobalKernalReplace
    if (fKernRepl != NULL) if (fKernRepl(Address, R_Wn)) return;
@@ -150,6 +206,8 @@ FASTRUN void isrPHI2()
    
    WaitUntil_nS(nS_PLAprop);
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
+   SnoopTap_Stamp(SnoopG9At);
+   SnoopTap_LateDecode(Address, R_Wn);
 
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {
@@ -185,6 +243,7 @@ FASTRUN void isrPHI2()
    }
    
    if (IOHandler[CurrentIOHandler]->CycleHndlr != NULL) IOHandler[CurrentIOHandler]->CycleHndlr(R_Wn);
+   SnoopTap_AfterHandlers(R_Wn);
 
    
    if (EmulateVicCycles || DMA_State > DMA_S_BeginStartStates)
@@ -238,6 +297,7 @@ FASTRUN void isrPHI2()
             case DMA_S_StartImmediate:
                WaitUntil_nS(nS_DMAAssert); 
                SetDMAAssert;
+               SnoopTap_ImmediateAssert();
                DMA_State = DMA_S_ActiveReady;
                return;
          }
