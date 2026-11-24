@@ -58,6 +58,12 @@
 // left off it when the version fills them, but the version itself must fit.
 static_assert(sizeof(strVersionNumber) <= 41, "strVersionNumber must fit the 40-column C64 banner row");
 
+// For a function that masks interrupts while the C64 runs.  A flash cache miss inside the mask
+// holds isrPHI2 off for longer than a bus cycle, and the C64's access in that cycle goes
+// unanswered: a read sees open bus, a write is lost.  FASTRUN alone is not enough, because the
+// compiler inlines a small FASTRUN function into its FLASHMEM caller and the mask lands in flash.
+#define MASKEDRUN __attribute__((noinline)) FASTRUN
+
 #define UpperAddr           0x060000  //address of upper (main) TR image, from FLASH_BASEADDRESS
 #define FLASH_BASEADDRESS 0x60000000
 
@@ -234,7 +240,7 @@ uint32_t* BigBuf = NULL;
 
 #ifdef DbgIOTraceLog
    __attribute__((always_inline)) inline void TraceLogAddValidData(uint8_t data) {BigBuf[BigBufCount] |= (data<<8) | IOTLDataValid;};
-   inline void TraceLogMarker(uint8_t code)
+   MASKEDRUN void TraceLogMarker(uint8_t code)
    {  //called from main loop: block the Phi2 ISR so it can't be mid-entry
       noInterrupts();
       if (BigBuf != NULL && BigBufCount < BigBufSize-1) BigBuf[BigBufCount++] = code | IOTLMarker; //last entry is scratch

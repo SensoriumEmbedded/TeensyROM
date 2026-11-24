@@ -77,6 +77,11 @@ FLASHMEM void ServiceSerial(Stream *ThisCmdChannel)
       case 'b': //bus analysis
          BusAnalysis();
          break;
+   #ifdef Dbg_SerBusLat
+      case 'U': //bus latency of USB controller and GPIO accesses
+         BusLatency();
+         break;
+   #endif
          
       //case 'u':  //Pass through USB serial host/device
       //   if(CmdChannel == &Serial) //only start from device port
@@ -1510,6 +1515,18 @@ FLASHMEM void SampleWatchCommand()
 }
 
 #ifdef SnoopTapBuild
+// What the ISR counted while the ring was being sent stays for the next take.
+static MASKEDRUN void SnoopRestart(uint32_t Skipped, uint32_t Taps)
+{
+   __disable_irq();
+   SnoopTotal = 0;
+   SnoopSkipped -= Skipped;
+   SnoopTaps -= Taps;
+   SnoopTriggered = false;
+   SnoopPaused = false;
+   __enable_irq();
+}
+
 // Receive <-- SnoopTapToken (0x64F8)
 // Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
 //             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later,
@@ -1570,14 +1587,7 @@ FLASHMEM void SnoopTapCommand()
          if (Pages[Page] & SnoopBusTiming) SnoopMarkBus = true;
       }
    }
-   // What the ISR counted while the ring was being sent stays for the next take.
-   __disable_irq();
-   SnoopTotal = 0;
-   SnoopSkipped -= Skipped;
-   SnoopTaps -= Taps;
-   SnoopTriggered = false;
-   SnoopPaused = false;
-   __enable_irq();
+   SnoopRestart(Skipped, Taps);
 }
 #endif
 

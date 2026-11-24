@@ -46,6 +46,7 @@
   // #define Dbg_SerMem    //Serial commands that display memory info
   // #define Dbg_SerASID   //Serial commands that test the ASID player + queue adjust info
   // #define Dbg_SerSD     //Serial command 'o': SD card info + speed test (writes, then deletes, an 8 MiB file)
+  // #define Dbg_SerBusLat //Serial command 'U': time GPIO and USB controller register accesses, min/max
  
 //logging:
   // #define Dbg_SerLog    //Serial commands that display log info
