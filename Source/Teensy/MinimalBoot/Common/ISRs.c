@@ -110,9 +110,10 @@ FASTRUN void isrExtResetDetect()
       SnoopPrevAccess = SnoopThisAccess;
       SnoopThisAccess = Address | (R_Wn ? 0x10000 : 0);
    }
-   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t Address, bool R_Wn)
+   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t Address, bool R_Wn, uint32_t GPIO_9)
    {
-      if (SnoopMarkBus && !GP6_Phi2(ReadGPIO6)) SnoopLateDecodeTap(Address, R_Wn, SnoopTap_SP());
+      if ((!GP9_IO1n(GPIO_9) || !GP9_IO2n(GPIO_9)) && SnoopMarkBus && !GP6_Phi2(ReadGPIO6))
+         SnoopLateDecodeTap(Address, R_Wn, SnoopTap_SP());
    }
    // After the handlers: recording first holds back their answer, so a read of a page they
    // serve came back too late for the C64.
@@ -134,7 +135,7 @@ FASTRUN void isrExtResetDetect()
 #else
    __attribute__((always_inline)) inline void SnoopTap_Entry(uint32_t) {}
    __attribute__((always_inline)) inline void SnoopTap_Access(uint16_t, bool) {}
-   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t, bool) {}
+   __attribute__((always_inline)) inline void SnoopTap_LateDecode(uint16_t, bool, uint32_t) {}
    __attribute__((always_inline)) inline void SnoopTap_AfterHandlers(bool) {}
    __attribute__((always_inline)) inline void SnoopTap_AsynchAssert() {}
    __attribute__((always_inline)) inline void SnoopTap_ImmediateAssert() {}
@@ -204,7 +205,7 @@ FASTRUN void isrPHI2()
    WaitUntil_nS(nS_PLAprop);
    uint32_t GPIO_9 = ReadGPIO9; //Now read the derived signals
    SnoopTap_Stamp(SnoopG9At);
-   SnoopTap_LateDecode(Address, R_Wn);
+   SnoopTap_LateDecode(Address, R_Wn, GPIO_9);
 
    if (!GP9_ROML(GPIO_9)) //ROML: 8000-9FFF address space, *usually* read only
    {

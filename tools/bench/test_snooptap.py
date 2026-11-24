@@ -29,8 +29,8 @@ class Decode(unittest.TestCase):
         self.assertIn('Phi2 fell 489 nS after entry, assert 30 nS after that; entry 976 nS', text)
 
     def test_a_late_decode_shows_when_it_decoded(self):
-        (_, text), = decode([(1, 0xC5DB, 0x40, LATE_DECODE), (0xF3A, 1074, 25, LATE_DECODE_PC)], HZ)
-        self.assertIn('LATE DECODE R $C5DB', text)
+        (_, text), = decode([(1, 0xDF07, 0x40, LATE_DECODE), (0xF3A, 1074, 25, LATE_DECODE_PC)], HZ)
+        self.assertIn('LATE DECODE R $DF07', text)
         self.assertIn('decoded 400 nS after entry, entry 1074 nS after the last, interrupted pc=0x00000F3A', text)
 
     def test_cycle_timing_follows_its_access_and_takes_its_stamp(self):

@@ -10,10 +10,14 @@ PAGE is the high byte of the address, in hex. FLAGS add up: 1 writes, 2 reads,
 4 trigger (only with 1: the first write to the page freezes the ring 64 entries
 later, so what led up to it survives), 8 slice marks (each DMA slice start is recorded too),
 16 bus timing (on any page: isrPHI2 entries more than a PAL cycle after the last while the
-CPU owns the bus, with the interrupted PC; IO decodes reached after Phi2 fell; and every DMA
-assert, with why and on which cycle), 32 cycle timing (each of the page's recorded cycles
+CPU owns the bus, with the interrupted PC; IO1 and IO2 cycles decoded after Phi2 fell; and every
+DMA assert, with why and on which cycle), 32 cycle timing (each of the page's recorded cycles
 gets how long after its entry isrPHI2 read GPIO6, and how long after that it read GPIO9,
 drove and released the data or sampled it, and finished the handlers). 16 and 32 need an image for a TR+.
+
+16 costs isrPHI2 time on every cycle, and on a machine with little timing margin it can
+cause the wrong reads it is there to find: check a count of wrong reads taken with it armed
+against a release build under the same load.
 
 The port can only be held by one program, so arm, close, run whatever is under
 test, then take once it has let go of the port. The ring keeps the last 1,024
