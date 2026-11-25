@@ -84,6 +84,7 @@ import { definesMacro } from './lib/source-text.mjs';
 import { patchUsbIrqMasking } from './lib/usb-irq-mask.mjs';
 import { patchUsbRegisterWindow, USB_REGISTER_WINDOW_FILES } from './lib/usb-register-window.mjs';
 import { heavyLibcLinked } from './lib/heavy-libc.mjs';
+import { masksInFlash, FLASH_START, FLASH_END } from './lib/flash-masks.mjs';
 import { combineHex, FLASH_BASE, MAIN_BASE, VM_BASE } from './lib/hex.mjs';
 import { buildHostPackage, parseHostPackage, hostDescriptor, hostNameForDisplay, describeCodeFloor,
          HOST_SLOT_BYTES } from './lib/extension.mjs';
@@ -459,7 +460,8 @@ function writeLinkerFiles(suffix, { ld, bootdata } = {}) {
     ld ?? read(path.join(linkers, `imxrt1062_t41.ld.${suffix}`)));
 }
 
-function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0, checkHeavyLibc = false }) {
+function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, extraDefs = '', minFreeLocals = 0, checkHeavyLibc = false,
+  failOnFlashMasks = true }) {
   console.log(`\n[${name}] Building`);
   writeLinkerFiles(suffix, { ld, bootdata });
   const buildDir = path.join(runRoot, name);
@@ -510,6 +512,18 @@ function build(name, { inoPath, fqbn, suffix, elfStem, ld, bootdata, usbType, ex
         '(see parse_hex_digits() in Flash/FXUtil.cpp and M2SOnNoteOn() in IOH_TeensyROM.c). ' +
         'The list and the reasons are in tools/lib/heavy-libc.mjs.');
     }
+  }
+  const flash = run(armBin + 'objdump' + exeSuffix, ['-d', '-C', `--start-address=0x${FLASH_START.toString(16)}`,
+    `--stop-address=0x${FLASH_END.toString(16)}`, elf], env);
+  const masked = masksInFlash(flash);
+  if (masked.length) {
+    const detail = 'masks interrupts from flash in ' +
+      `${masked.map(([fn, address]) => `${fn} (cpsid at 0x${address.toString(16)})`).join(', ')}. ` +
+      'A flash cache miss inside the mask holds isrPHI2 off past a bus cycle. Make the function that masks ' +
+      'MASKEDRUN (Common_Defs.h), which also keeps it from being inlined into a FLASHMEM caller; ' +
+      'Constraints.md has the reasons, and tools/lib/flash-masks.mjs the core functions allowed.';
+    if (failOnFlashMasks) throw new Error(`[${name}] ${detail}`);
+    console.warn(`[${name}] warning: ${detail}`);
   }
   const sizes = run(armBin + 'size' + exeSuffix, ['-A', elf], env);
   write(path.join(runRoot, `${name}.size`), sizes);
@@ -598,6 +612,9 @@ if (withExtensions && !skipExtensionBuild) {
     bootdata: extensionBootdata(linkers),
     usbType: 'USB_DISABLED',
     extraDefs: ' -DVM_HOST_PROFILE',
+    // A third-party host's own code is its author's to place, but it compiles the shared
+    // MinimalBoot sources too, and a mask of theirs inlined into its code still shows this way.
+    failOnFlashMasks: path.relative(path.join(root, 'Source/Teensy/VMBoot'), hostSketch) === '',
   });
 } else if (withExtensions) {
   console.log('\n[extension] Skipped (--skip-extension-build)');
