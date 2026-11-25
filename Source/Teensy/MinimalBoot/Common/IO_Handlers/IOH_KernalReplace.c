@@ -103,23 +103,23 @@ bool     KDS_Read01Valid = false;
 //false: bus not available (badline, sprite fetch), try again on the next cycle
 FASTRUN bool KDS_SenseCycle()
 {
-   WaitUntil_nS_fine(nS_DMABAWait);
+   WaitUntil_nS(nS_DMABAWait);
    if (!GP9_BA(ReadGPIO9)) return false;
 
    uint32_t RegAddrBits = (0xA000 << 16);
    CORE_PIN19_PORTSET = RegAddrBits; //set address port value to be ready for output drive
    CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
-   WaitUntil_nS_fine(nS_DMASetup);  //the same drive point as DMAByte's, which nS_KSenseSample is measured from
+   WaitUntil_nS(nS_DMASetup);  //the same drive point as DMAByte's, which nS_KSenseSample is measured from
    StartCycCnt = ARM_DWT_CYCCNT;
    SetAddrBufsOut;
    SetAddrPortDirOut;
    SetExROMAssert;
    SetGameAssert;
 
-   WaitUntil_nS_fine(nS_KSenseSample);
+   WaitUntil_nS(nS_KSenseSample);
    HIRAM_State = KDS_Guess = (GP9_ROMH(ReadGPIO9)==0 ? HIRAM_State_ROM : HIRAM_State_RAM);
 
-   WaitUntil_nS_fine(nS_DMADataSetup); //keep the address valid as long as a DMA read does
+   WaitUntil_nS(nS_DMADataSetup); //keep the address valid as long as a DMA read does
    SetGameDeassert;
    SetExROMDeassert;
    SetAddrPortDirIn;

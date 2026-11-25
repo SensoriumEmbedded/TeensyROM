@@ -27,7 +27,7 @@ Detail for every item below is in its own full section further down — search t
 - `Serial.write()` inside `IO1Hndlr_TR_BASIC` — TPUT bytes now go through a 4 KB ring that `PollingHndlr_TR_BASIC` sends, since the core's USB queueing no longer masks `isrPHI2`
 
 **Fixed since last summary (2026-11-11, not open work — kept for context):**
-- A DMA transfer could lose its first byte: `DMAByte()` drove R/W and the address after a coarse wait that landed 9-20 nS late by an amount each build's code layout decided, at the edge of an NTSC C64's write window; it now uses `WaitUntil_nS_fine`, and the defaults moved with it ([DMA-Phi2-Timing.md](DMA-Phi2-Timing.md))
+- A DMA transfer could lose its first byte: `DMAByte()` drove R/W and the address after a coarse wait that landed 9-20 nS late by an amount each build's code layout decided, at the edge of an NTSC C64's write window; it now converts the wait to cycles once, and the defaults moved with it ([DMA-Phi2-Timing.md](DMA-Phi2-Timing.md))
 
 **Fixed since last summary (2026-10-03, not open work — kept for context):**
 - `InitHndlr_SuperSnapshotV5` / `SpecialBtn_SuperSnapshotV5` now `FLASHMEM`
@@ -472,7 +472,7 @@ main-loop-driven for that same duration — `PollingHndlr_ASID` (live MIDI/SID p
 
 The >850KB bank-swap mechanism (REU-style DMA-line-assert pause, not true bus-mastering DMA — TR+'s bus-mastering doesn't help here since the pause just needs to be perceptually instant, which bus-mastering doesn't improve) is documented as unreliable on most C128s and a low percentage of NTSC systems. That claim may no longer hold and is worth re-testing.
 
-Possible (unconfirmed) shared root cause: this mechanism (`IOH_MagicDesk2.c`) uses the same `nS_DMAAssert`/`SetDMAAssert` sequence as the unrelated `DMA_Timing` branch's true-bus-mastering-DMA work, to enter the same paused state — it just never goes on to do an actual transfer. `nS_DMAAssert` hasn't been re-characterized yet (see [DMA-Timing-Known-Issues.md](DMA-Timing-Known-Issues.md) item #9); if it turns out marginal on C128 the way a data-hold constant did on NTSC, that would explain this entry too.
+Possible (unconfirmed) shared root cause: this mechanism (`IOH_MagicDesk2.c`) uses the same `nS_DMAAssert`/`SetDMAAssert` sequence as the unrelated `DMA_Timing` branch's true-bus-mastering-DMA work, to enter the same paused state — it just never goes on to do an actual transfer. `nS_DMAAssert` hasn't been re-characterized on a C128 yet; if it turns out marginal on C128 the way a data-hold constant did on NTSC, that would explain this entry too.
 
 **Status:** flagged for re-test, not yet re-verified (2026-08-11).
 

@@ -20,8 +20,8 @@ uint8_t *DMA_Buffer;
 //These assume Fab04_DataBufAlwaysEnabled
 __attribute__((always_inline)) inline uint8_t DataPortWaitReadDMA()
 {  // for "normal" (non-VIC) C64 write cycles
-   //takes a little longer than the nS_DataSetup=220 non-DMA case, too soon = bad reads
-   WaitUntil_nS_fine(nS_DMADataSetup);
+   //takes a little longer than the nS_DataSetup non-DMA case, too soon = bad reads
+   WaitUntil_nS(nS_DMADataSetup);
    uint32_t DataIn = ReadGPIO7;
    return ((DataIn & 0x0F) | ((DataIn >> 12) & 0xF0));
 }
@@ -35,7 +35,7 @@ __attribute__((always_inline)) inline void DataPortWriteWaitDMA(uint8_t Data)
    CORE_PIN10_PORTSET = RegBits;
    CORE_PIN10_PORTCLEAR = ~RegBits & GP7_DataMask;
 
-   WaitUntil_nS_fine(nS_DMADataHold);  // nS_DataHold = 390 (err), 470 OK, 430 OK(?)
+   WaitUntil_nS(nS_DMADataHold);  // nS_DataHold = 390 (err), 470 OK, 430 OK(?)
    //not checking Phi2 state due to tight timing and early in cycle call can cause early exit
 
    SetDataPortDirIn; //set data ports back to inputs/default
@@ -588,7 +588,7 @@ bool DMAByte(uint8_t *Data)
    if (DMA_FixC64Addr) RegAddrBits = (DMA_StartAddr << 16);
    else RegAddrBits = ((DMA_StartAddr+DMA_Count) << 16);
    
-   WaitUntil_nS_fine(nS_DMABAWait);
+   WaitUntil_nS(nS_DMABAWait);
    
    if (!GP9_BA(ReadGPIO9)) return false;  // bus not available, skip until it is
    
@@ -596,9 +596,7 @@ bool DMAByte(uint8_t *Data)
    CORE_PIN19_PORTCLEAR = ~RegAddrBits & GP6_AddrMask;
        
    //while(!GP6_Phi2(ReadGPIO6)); //Find phi2 rising
-   // The coarse WaitUntil_nS lands 9-20 nS late, by an amount each call site's code layout decides,
-   // and the window for a write on an NTSC C64 is about 25 nS wide: the late sites lost bytes.
-   WaitUntil_nS_fine(nS_DMASetup);
+   WaitUntil_nS(nS_DMASetup);
    //phi2 is about to go high..........................................................................      
    StartCycCnt = ARM_DWT_CYCCNT;
          

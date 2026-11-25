@@ -372,29 +372,25 @@ const uint8_t OutputPins[] = {
 #define nSToCyc(N)          ((N)*(F_CPU_ACTUAL>>16)/(1000000000UL>>16))
 
 //#define RESET_CYCLECOUNT   { ARM_DEMCR |= ARM_DEMCR_TRCENA; ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA; ARM_DWT_CYCCNT = 0; }
-#define WaitUntil_nS(N)     while((ARM_DWT_CYCCNT-StartCycCnt) < nSToCyc(N))
-   
-//Hoists the nS-to-cycles conversion outside the poll loop. nSToCyc() reads the volatile
-//   F_CPU_ACTUAL, so left inline in a while() condition it redoes a reload+shift+multiply+
-//   divide on every single pass - wasted work that widens the loop's polling period and
-//   biases every wait to overshoot late, never early (it can only exit on a check, never
-//   exactly on target). Converting once up front instead of once per pass shrinks that
-//   overshoot from ~24-33nS avg (old, per-pass conversion) to ~1.8-3.7nS avg (this macro) -
-//   measured/derived at this board's 816MHz clock; the gap in nS scales with clock speed,
-//   since the wasted work is a fixed cycle count, not a fixed time.
-#define WaitUntil_nS_fine(N) do{uint32_t Cycles = nSToCyc(N); while((ARM_DWT_CYCCNT-StartCycCnt) < Cycles);}while(0)
+//F_CPU_ACTUAL is volatile, so a conversion inside the loop condition is redone on every pass
+//   (~12 nS), and where a wait exits then depends on the loop's alignment to the target.
+#define WaitUntil_nS(N)     do{uint32_t Cycles = nSToCyc(N); while((ARM_DWT_CYCCNT-StartCycCnt) < Cycles);}while(0)
        
 #define Def_nS_MaxAdjPAL    1030  //    above this nS since last int causes adjustment
 #define Def_nS_MaxAdjNTSC    993  //    NTSC's shorter nominal cycle (~978nS vs PAL's ~1015nS) leaves less slack before this must trigger;
                                   //       restored as its own value - was merged into one shared 1030 constant for a while
 
+//Until 11/24/26 WaitUntil_nS converted nS to cycles on every pass and exited a few nS past its value, by an
+//   amount each build's code layout decided.  The values below that were tuned that way are raised by the
+//   mean of that overshoot, so they land where they were tuned: RWnReady +8 and DataSetup +1, measured on an
+//   NTSC C64 (Kawari) + TR+; PLAprop measured no shift; VICStart and VICDHold +5, half the old ~12 nS pass, unmeasured.
 // Times from Phi2 rising (interrupt start):
-#define Def_nS_RWnReady     135  //    Phi2 rise to RWn valid.  
+#define Def_nS_RWnReady     143  //    Phi2 rise to RWn valid.  
                                  //       2/4/24: Jupiter Lander ship requires 135 on NTSC Reloaded MKII (via alterationx10) 
                                  //       12/14/24: C128 & C64C JL also needs this
                                  //       9/12/25: Removing non-delay (95nS) option in settings, set to 135nS (delayed)
 #define Def_nS_PLAprop      150  //    delay through PLA to decode address (IO1/2, ROML/H)
-#define Def_nS_DataSetup    220  //    On a C64 write, when to latch data bus.
+#define Def_nS_DataSetup    221  //    On a C64 write, when to latch data bus.
 #define Def_nS_DataHold     390  //    On a C64 read, when to stop driving the data bus
                                  //       02/01/24 v0.5.10+:    From 350 to 365 to accommodate prg load on NTSC Reloaded MKII (via alterationx10)
                                  //       12/03/24 v0.6.3+M65:  365 to 375 special build to accommodate Mega65 ROML read
@@ -403,8 +399,8 @@ const uint8_t OutputPins[] = {
                                  //       12/31/24 v0.6.4:      365 to 390 release build to accommodate all. Measurement show this is the max for staying within the Phi2 half cycle
                                  
 // Times from Phi2 falling:
-#define Def_nS_VICStart     210  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
-#define Def_nS_VICDHold     365  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
+#define Def_nS_VICStart     215  //    delay from Phi2 falling to look for ROMH.  Too long or short will manifest as general screen noise (missing data) on ROMH games such as JupiterLander and RadarRatRace
+#define Def_nS_VICDHold     370  //    On a C64 VIC cycle read, when to stop driving the data bus.  Higher breaks UltiMax carts on NTSC
 //DMA timing, from here through the NTSC C128 set: docs/Architecture/DMA-Phi2-Timing.md copies these values
 //   into per-cycle positions and a diagram - update it when they change
 #define Def_nS_DMAAssert     40  //    delay from Phi2 falling to DMA assertion when activating
@@ -417,8 +413,8 @@ const uint8_t OutputPins[] = {
                                        //   DMA-pause reliability note in Known-Issues.md).  Swept 60-400 on a flat NTSC C128 (in 64
                                        //   mode): worse at both ends, no better than 200 in between.  Not the C128 fault, see DMASetupNTSC128.
 //Every dated measurement from here to the NTSC C128 set before 11/11/26 was taken while DMAByte() waited
-//   nS_DMASetup with the coarse WaitUntil_nS, which drove R/W and the address 9-20 nS (mean 14) later than the
-//   value; it now uses WaitUntil_nS_fine.  PAL is its old value + 14, the drive point it was tuned at, and is
+//   nS_DMASetup with a WaitUntil_nS that converted on every pass, which drove R/W and the address 9-20 nS
+//   (mean 14) later than the value.  PAL is its old value + 14, the drive point it was tuned at, and is
 //   not re-measured.  The NTSC C64 data setup and hold are their old values + 14 for the same reason: they
 //   are measured from the drive point, which moved 14 earlier.
 #define Def_nS_DMASetupPAL  454  //400 delay from Phi2 falling to RW/Addr setup
