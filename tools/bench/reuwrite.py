@@ -17,6 +17,7 @@ is stopped before a fetch is requested, and the client is left alone while it se
 """
 import os, random, subprocess, sys, tempfile, time
 from protocol import ACK, DRIVE_SD, FAIL, READ_C64_MEM, WRITE_C64_MEM, WRITE_REU, to_board
+from reuspans import rounds_between
 from trlink import Link
 
 MODE, IDLE, READY, ROUNDS, REQUEST, GO = 0xC100, 0xC101, 0xC104, 0xC110, 0xC120, 0xC125
@@ -210,7 +211,7 @@ if __name__ == '__main__':
             refusals(tr, size)
             rate(tr, rng)
             loop_to = counts(tr)
-            rounds, errors = loop_to[0] - loop_from[0] & 0xFFFF, loop_to[1] - loop_from[1] & 0xFFFF
+            rounds, errors = rounds_between(loop_from, loop_to)
             check(f'the client\'s own loop: {rounds} rounds, {errors} with page 0 wrong', rounds and not errors)
         finally:
             tr.reset()

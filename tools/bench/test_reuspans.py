@@ -4,9 +4,10 @@ hardware needed:
 
   python3 -m unittest discover -s tools/bench
 """
-import unittest
+import contextlib, io, unittest
 from reuspans import (FETCH_TAG, LOG_COUNT, MISSES, REGISTERS, RETRY_TAG, kinds_by_register,
-                      miss_kinds, misses_between, read_log, register_misses, require_an_reu, snapshot)
+                      miss_kinds, misses_between, read_log, register_misses, report, require_an_reu,
+                      rounds_between, snapshot)
 
 DF03, DF04, DF05 = 1, 2, 3
 
@@ -92,6 +93,21 @@ class Snapshot(unittest.TestCase):
     def test_the_log_count_and_the_miss_counters_come_from_one_read(self):
         _, misses, logged = snapshot(MissingC64())
         self.assertEqual(sum(misses), logged)
+
+
+class Report(unittest.TestCase):
+    def test_a_round_whose_page_came_back_wrong_is_still_a_round_run(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            report('phase', (0xFFF0, 3), (0x00B9, 4), {}, {})
+        self.assertIn('202 REU stash/fetch rounds, 1 with a page that came back wrong', out.getvalue())
+
+
+class RoundsBetween(unittest.TestCase):
+    def test_rounds_run_count_the_wrong_pages_too(self):
+        self.assertEqual(rounds_between((10, 0), (20, 5)), (15, 5))
+
+    def test_both_counters_wrap(self):
+        self.assertEqual(rounds_between((0xFFFF, 0xFFFE), (1, 1)), (5, 3))
 
 
 class RequireAnReu(unittest.TestCase):

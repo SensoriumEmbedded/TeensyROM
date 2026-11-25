@@ -119,11 +119,18 @@ def snapshot(tr):
     return counts(tr), register_misses(block[MISSES - LOG_COUNT:]), block[0]
 
 
-def require_an_reu(rounds, mismatches):
-    # rounds counts only the pages that came back right, and without an REU none does. A
-    # mismatch alone can be the first-byte loss in Known-Issues.md.
-    if rounds == 0:
-        raise SystemExit(f'the client is not seeing an REU ({rounds} rounds, {mismatches} mismatches): '
+def rounds_between(start, stop):
+    """Rounds run and rounds whose page came back wrong, from one counts() snapshot to a
+    later one. The client counts each round once, as a good page or as a wrong one."""
+    good, wrong = ((after - before) & 0xFFFF for before, after in zip(start, stop))
+    return good + wrong, wrong
+
+
+def require_an_reu(good, wrong):
+    # Without an REU no page comes back right. A wrong page alone can be the first-byte loss
+    # in Known-Issues.md.
+    if good == 0:
+        raise SystemExit(f'the client is not seeing an REU (no page of {wrong} rounds came back right): '
                          'is Special IO set to an REU?')
 
 
@@ -147,7 +154,7 @@ WRITERS = {
 
 
 def report(label, start, stop, misses, kinds):
-    rounds, errors = stop[0] - start[0] & 0xFFFF, stop[1] - start[1] & 0xFFFF
+    rounds, errors = rounds_between(start, stop)
     totals = [f'{sum(per_kind[kind] for per_kind in kinds.values())} {text}' for kind, text in KINDS.items()]
     print(f'{label}: {rounds} REU stash/fetch rounds, {errors} with a page that came back wrong, '
           f'{sum(misses.values())} register read-back misses' + (f' ({", ".join(totals)})' if misses else ''))
