@@ -46,6 +46,8 @@ The TR+ flash holds the core TeensyROM firmware and one extension, side by side.
 ### Using an extension
 * An extension usually comes with a small registration folder for your SD card, which tells TeensyROM which file types belong to it (for example, `.mpe` files for MPE).
 * Selecting one of those files from the SD card in the file browser hands the C64 over to the extension.
+* An extension can also play a file type TeensyROM already handles itself. For now that's `.sid` files in the [SIDHost](https://github.com/SensoriumEmbedded/TeensyROM-SIDHost) extension: highlight one on the SD card and press `Shift+S`. `Return` still uses the built-in SID player.
+  * If SIDHost isn't the installed extension or can't play the file, a message says why and the menu comes back.
 * To get back to the TeensyROM menu at any time, press the TeensyROM menu button, or reboot your C64.
 * If a file type doesn't open its extension, the "Installed Extension" settings page (below) lists what's registered and why one wouldn't start.
 

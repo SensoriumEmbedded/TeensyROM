@@ -148,6 +148,27 @@ the machine somewhere the user did not ask to go.
 Write `VM_BOOT_FROM_MIN` to `VM_EEP_BOOTIND_ADDR` first, give the EEPROM write
 time to land, then reset. That is right either way, and costs one EEPROM write.
 
+## A file opened by the host itself
+
+A package in `/VMS` reaches a host through `/VMS/launch.vml`, the
+`VmLaunchRecord` in `VMHostABI.h`: `root` is the package's folder,
+`manifest_crc` its manifest's CRC, and `content` the selected file when it is one
+the manifest claims. The menu's Shift+S on a `.sid` writes the same record
+with no package behind it:
+
+| Field | Value |
+|---|---|
+| `root` | `/VMS/SIDHost` |
+| `content` | the `.sid`'s absolute path on the SD card |
+| `manifest_crc` | `0` |
+
+It boots the host only when the descriptor's `name` is `SIDHost` and its `abi` is
+the main image's. That is the [SIDHost](https://github.com/SensoriumEmbedded/TeensyROM-SIDHost)
+extension; no other host is sent a file this way, because a module host would
+take the file for a module. Before writing the record, the main image checks
+the header against the PSID/RSID rules SIDHost's parser applies, and creates
+`/VMS` if the card has none. The folder `root` names need not exist.
+
 ## Building it
 
 Your sketch directory holds exactly one `.ino` plus whatever else it needs, as a
