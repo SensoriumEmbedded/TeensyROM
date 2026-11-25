@@ -180,14 +180,23 @@ def run_phase(tr, seconds, write, sweep, tap):
     return jobs, refused, bad, tapped
 
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('modes', nargs='*', choices=sorted(MODES), metavar='MODE', default=['locked'])
+    parser.add_argument('modes', nargs='*', metavar='MODE', help='locked (the default) or unlocked')
     parser.add_argument('--quiet', type=float, default=60, help='seconds with no host jobs (default 60)')
     parser.add_argument('--jobs', type=float, default=300, help='seconds of jobs per MODE (default 300)')
     parser.add_argument('--sweep', action='store_true', help='read $0000-$CFFF after each job')
     parser.add_argument('--tap', metavar='PAGE:FLAGS', help='arm the snoop tap and take its ring every second')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    args.modes = args.modes or ['locked']
+    unknown = [m for m in args.modes if m not in MODES]
+    if unknown:
+        parser.error(f"unknown MODE {', '.join(unknown)} (choose from {', '.join(sorted(MODES))})")
+    return args
+
+
+def main():
+    args = parse_args()
     failed = False
     with Link() as tr:
         try:

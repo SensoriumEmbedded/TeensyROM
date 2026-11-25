@@ -3,9 +3,9 @@
 
   python3 -m unittest discover -s tools/bench
 """
-import os, re, unittest
+import contextlib, io, os, re, unittest
 from reuhammer import (COUNTS, COUNTS_BYTES, HELD, HELD_HI, HIST_HI, PASSES, READY, REGISTERS, REPEATS,
-                       VALUES, counts_between, counts_from, describe_value)
+                       VALUES, counts_between, counts_from, describe_value, parse_args)
 
 CLIENT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reuhammer.a')
 
@@ -52,6 +52,19 @@ class Values(unittest.TestCase):
         self.assertIn("$DF03's value", describe_value(2, VALUES[1]))
         self.assertIn("$DF08's value", describe_value(0, VALUES[6]))
         self.assertNotIn('value,', describe_value(2, 0x00))
+
+
+class Modes(unittest.TestCase):
+    def test_no_mode_runs_locked(self):
+        self.assertEqual(parse_args([]).modes, ['locked'])
+
+    def test_modes_run_in_the_order_given(self):
+        self.assertEqual(parse_args(['unlocked', 'locked']).modes, ['unlocked', 'locked'])
+
+    def test_an_unknown_mode_is_refused(self):
+        with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit):
+            parse_args(['locked', 'sideways'])
+        self.assertIn('sideways', err.getvalue())
 
 
 class Client(unittest.TestCase):
