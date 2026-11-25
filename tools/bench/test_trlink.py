@@ -10,7 +10,6 @@ proves the framing and reply handling; it cannot prove what a real board does.
 import json
 import os
 import pathlib
-import pty
 import shutil
 import subprocess
 import sys
@@ -27,6 +26,13 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, FAIL, FW_CHECK,
                       WRITE_C64_MEM)
 from test_hexfile import RECORD_SEGMENT_ADDRESS, intel_hex, record, stamped
 from trlink import Link, ports
+
+try:
+    import pty
+except ImportError:
+    pty = None
+# test_winserial.py covers the port on Windows, against a fake kernel32.
+needs_pty = unittest.skipIf(pty is None, 'needs a pty, which Windows does not have')
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMMAND_PREFIX = 0x64
@@ -250,6 +256,7 @@ def run(board, script, *args, timeout=30):
                           capture_output=True, text=True, timeout=timeout)
 
 
+@needs_pty
 class BenchScripts(unittest.TestCase):
     def setUp(self):
         self.board = FakeBoard()
@@ -386,6 +393,7 @@ class BenchScripts(unittest.TestCase):
         self.assertIn('no TeensyROM serial port', out.stderr)
 
 
+@needs_pty
 class PortNames(unittest.TestCase):
     """A Teensy enumerates under a different name on each platform."""
 
@@ -400,6 +408,7 @@ class PortNames(unittest.TestCase):
                          ['cu.usbmodem2101', 'ttyACM0'])
 
 
+@needs_pty
 class PortChoice(unittest.TestCase):
     """What Link does with a node that is not a serial port, which reconnect()
     reaches for on its own."""
@@ -412,6 +421,7 @@ class PortChoice(unittest.TestCase):
             self.assertEqual(len(os.listdir('/dev/fd')), open_fds)
 
 
+@needs_pty
 class WriteBound(unittest.TestCase):
     """A board that stops draining its USB endpoint must not hang the host."""
 
@@ -455,6 +465,7 @@ class ScreenCodes(unittest.TestCase):
         self.assertEqual(petscii_row(bytes([8 | 0x80, 5 | 0x80])), 'he')
 
 
+@needs_pty
 class Reflash(unittest.TestCase):
     """fwupdate end to end, against a board that really drops its port and
     comes back."""
@@ -576,6 +587,7 @@ class Reflash(unittest.TestCase):
         self.assertEqual(self.board.files, {})
 
 
+@needs_pty
 class ExtensionRun(unittest.TestCase):
     """exttest.py's exit status, against a board that really drops its port and
     comes back. The arm covered here is the one a reboot alone cannot classify:

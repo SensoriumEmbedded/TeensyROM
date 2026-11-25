@@ -14,10 +14,15 @@ stops on its own after a few seconds. That is deliberate: a test that hangs
 forever against a regression is a test that cannot be watched go red.
 """
 import os
-import pty
 import threading
 import time
 import unittest
+
+try:
+    import pty
+except ImportError:
+    # test_winserial.py covers the port on Windows, against a fake kernel32.
+    raise unittest.SkipTest('needs a pty, which Windows does not have')
 
 import hostops
 from hostops import READY_TIMEOUT, _ready

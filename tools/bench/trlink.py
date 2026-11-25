@@ -14,22 +14,29 @@ apart. Reading and writing C64 memory (peek/poke) additionally needs a Fab 0.4
 board (Fab04_FullDMACapable).
 
 The port is $TR_PORT, else the first /dev/cu.usbmodem* on macOS or /dev/ttyACM*
-on Linux. Do not hardcode it. The main and minimal images present the same USB device,
+on Linux, or on Windows the first COM port of a TeensyROM's USB device
+(winserial.py). Do not hardcode it. The main and minimal images present the same USB device,
 with TeensyROM's own serial string (UsbNames_AppendUniqueID), and macOS names
 that by USB location (usbmodem2101) rather than by serial number, so the node
 follows the socket the board is in. Firmware before minimal became Serial + MIDI
 put minimal under the Teensy's serial number instead. The extension image has
 no USB.
 
-macOS and Linux only (termios); no third-party packages.
+macOS and Linux through termios, Windows through kernel32 (winserial.py); no
+third-party packages.
 """
 import glob
 import json
 import os
-import select
 import sys
-import termios
 import time
+
+import winserial
+
+WINDOWS = os.name == 'nt'
+if not WINDOWS:
+    import select
+    import termios
 
 from c64 import (F8, KEYBUF, KEYCOUNT, PETSCII_U, PETSCII_Y, SCREEN_BYTES,
                  SCREEN_RAM, screen_rows)
@@ -40,7 +47,6 @@ from protocol import (ACK, DELETE_FILE, DIR_END, DIR_START, DRIVE_NAMES,
                       VERSION_INFO, WRITE_C64_MEM, board_reply, from_board,
                       to_board)
 
-BAUD = termios.B115200
 LISTING_PAGE_SIZE = 1000
 PORT_DIR, PORT_GLOBS = '/dev', ('cu.usbmodem*', 'ttyACM*')
 REPLY_BYTES = 2
@@ -60,10 +66,24 @@ READ_LIMIT_TOTAL = 120.0
 
 def ports(beside=None):
     """Every node that looks like a TeensyROM, in /dev or in the directory that
-    `beside` names. A Teensy is cu.usbmodem* on macOS and ttyACM* on Linux."""
+    `beside` names. A Teensy is cu.usbmodem* on macOS and ttyACM* on Linux. On
+    Windows, the COM ports of a TeensyROM's USB device, and `beside` names nothing."""
+    if WINDOWS:
+        return winserial.ports()
     folder = os.path.dirname(beside) if beside else PORT_DIR
     return sorted(node for pattern in PORT_GLOBS
                   for node in glob.glob(os.path.join(folder, pattern)))
+
+
+def present(port):
+    """Whether `port` is there right now."""
+    return winserial.present(port) if WINDOWS else os.path.exists(port)
+
+
+def canonical(port):
+    """`port` spelled as ports() spells it, so the two compare: Windows takes com5
+    for COM5."""
+    return winserial.canonical(port) if WINDOWS else port
 
 
 def neighbours(port):
@@ -76,7 +96,8 @@ def neighbours(port):
 def find_port():
     port = os.environ.get('TR_PORT') or next(iter(ports()), None)
     if not port:
-        looked = ' or '.join(f'{PORT_DIR}/{pattern}' for pattern in PORT_GLOBS)
+        looked = (winserial.LOOKED if WINDOWS else
+                  ' or '.join(f'{PORT_DIR}/{pattern}' for pattern in PORT_GLOBS))
         raise SystemExit(f'no TeensyROM serial port found ({looked}); '
                          'set TR_PORT, and note the extension image has no USB')
     return port
@@ -87,10 +108,65 @@ def configure(fd):
     a = termios.tcgetattr(fd)
     a[0] = a[1] = a[3] = 0
     a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
-    a[4] = a[5] = BAUD
+    a[4] = a[5] = termios.B115200
     a[6][termios.VMIN] = 0
     a[6][termios.VTIME] = 0
     termios.tcsetattr(fd, termios.TCSANOW, a)
+
+
+class PosixPort:
+    """A tty on macOS or Linux. The other half is winserial.WindowsPort: both read,
+    write and close the same way, and Link uses whichever this platform has."""
+
+    def __init__(self, name):
+        """Raises OSError when `name` is not a serial port this can talk to."""
+        self.name = name
+        self.fd = os.open(name, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+        try:
+            configure(self.fd)
+        except termios.error as problem:
+            self.close()
+            raise OSError(f'{name} is not a serial port: {problem}') from problem
+
+    def read(self, n, timeout):
+        """Up to `n` bytes as soon as any are waiting, or b'' when none arrive within
+        `timeout` seconds. Raises OSError once the port has gone, which a tty whose
+        device went away reads as either an error or the end of the file."""
+        if not select.select([self.fd], [], [], timeout)[0]:
+            return b''
+        try:
+            data = os.read(self.fd, n)
+        except BlockingIOError:
+            return b''
+        if not data:
+            raise OSError(f'{self.name} went away')
+        return data
+
+    def write(self, chunk, timeout):
+        """How many of `chunk`'s bytes the port took: 0 when it has no room. Returns at
+        once, so `timeout` goes unused; wr() does the waiting here."""
+        try:
+            return os.write(self.fd, chunk)
+        except BlockingIOError:
+            return 0
+
+    def close(self):
+        try:
+            os.close(self.fd)
+        except OSError:
+            pass
+
+
+def backslash_unencodable(stream):
+    """Board output is decoded as latin1, and a redirected stdout on Windows is cp1252,
+    which has no characters for 0x80-0x9F: one such byte from the board would end the
+    script with a UnicodeEncodeError. Writes those as escapes instead."""
+    if hasattr(stream, 'reconfigure'):
+        stream.reconfigure(errors='backslashreplace')
+
+
+if WINDOWS:
+    backslash_unencodable(sys.stdout)
 
 
 def echo(data, out):
@@ -120,20 +196,12 @@ def image_in(seen):
 class Link:
     def __init__(self, port=None, settle=0.4):
         """Raises OSError when `port` is not a serial port this can talk to."""
-        self.port = port or find_port()
-        self.fd = os.open(self.port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        try:
-            configure(self.fd)
-        except termios.error as problem:
-            self.close()
-            raise OSError(f'{self.port} is not a serial port: {problem}') from problem
+        self.port = canonical(port or find_port())
+        self.serial = (winserial.WindowsPort if WINDOWS else PosixPort)(self.port)
         time.sleep(settle)
 
     def close(self):
-        try:
-            os.close(self.fd)
-        except OSError:
-            pass
+        self.serial.close()
 
     def __enter__(self):
         return self
@@ -144,11 +212,7 @@ class Link:
     def rd(self, n, timeout=10):
         buf, end = b'', time.time() + timeout
         while len(buf) < n and time.time() < end:
-            if select.select([self.fd], [], [], 0.2)[0]:
-                try:
-                    buf += os.read(self.fd, n - len(buf))
-                except BlockingIOError:
-                    pass
+            buf += self.serial.read(n - len(buf), 0.2)
         return buf
 
     def wr(self, data, stall=WRITE_STALL_LIMIT, total=WRITE_LIMIT_TOTAL):
@@ -160,12 +224,19 @@ class Link:
         stall_by, done_by = time.time() + stall, time.time() + total
         while off < len(view):
             try:
-                off += os.write(self.fd, view[off:off + 2048])
+                took = self.serial.write(view[off:off + 2048], stall)
+            except TimeoutError:
+                # The Windows port waits out `stall` inside the write, and one that timed
+                # out cannot be sent again, so give up now. That wait also means `total`
+                # can run over by up to `stall` there.
+                took, stall_by = 0, 0
+            if took:
+                off += took
                 stall_by = time.time() + stall
-            except BlockingIOError:
-                if time.time() >= stall_by:
-                    raise SystemExit(f'{self.port}: board stopped reading after '
-                                     f'{off} of {len(view)} bytes')
+            elif time.time() >= stall_by:
+                raise SystemExit(f'{self.port}: board stopped reading after '
+                                 f'{off} of {len(view)} bytes')
+            else:
                 time.sleep(0.002)
             # `off < len(view)` matters: a transfer that lands on the last byte exactly
             # at the deadline delivered everything, and must return rather than raise.
@@ -176,11 +247,7 @@ class Link:
     def drain(self, secs=0.4):
         end = time.time() + secs
         while time.time() < end:
-            if select.select([self.fd], [], [], 0.1)[0]:
-                try:
-                    os.read(self.fd, 4096)
-                except BlockingIOError:
-                    pass
+            self.serial.read(4096, 0.1)
 
     def stream(self, secs, out=sys.stdout):
         """Echo whatever the board prints. Returns True if the port dropped,
@@ -188,15 +255,10 @@ class Link:
         end = time.time() + secs
         while time.time() < end:
             try:
-                if select.select([self.fd], [], [], 0.4)[0]:
-                    chunk = os.read(self.fd, 4096)
-                    if not chunk:
-                        return True
-                    echo(chunk, out)
-            except BlockingIOError:
-                continue
+                chunk = self.serial.read(4096, 0.4)
             except OSError:
                 return True
+            echo(chunk, out)
         return False
 
     def raw(self, idle=0.3, timeout=5, total=READ_LIMIT_TOTAL):
@@ -213,15 +275,11 @@ class Link:
         out, deadline = b'', time.time() + timeout
         limit = time.time() + total
         while time.time() < min(deadline, limit):
-            if select.select([self.fd], [], [], 0.05)[0]:
-                try:
-                    chunk = os.read(self.fd, 4096)
-                except BlockingIOError:
-                    continue
-                except OSError:
-                    break
-                if not chunk:
-                    break
+            try:
+                chunk = self.serial.read(4096, 0.05)
+            except OSError:
+                break
+            if chunk:
                 out, deadline = out + chunk, time.time() + idle
         return out
 
@@ -440,7 +498,7 @@ def candidates(wanted, known):
     for, whatever is there."""
     if not wanted:
         return ports()
-    if os.path.exists(wanted):
+    if present(wanted):
         return [wanted]
     return [p for p in ports(wanted) if p not in known]
 
@@ -454,6 +512,7 @@ def reconnect(timeout=60, interval=0.05, port=None, known=None):
     instead. `known` is neighbours() from before the reboot; the default samples
     it here, which is only right while the board is still away."""
     wanted = port or os.environ.get('TR_PORT')
+    wanted = wanted and canonical(wanted)
     known = neighbours(wanted) if known is None else known
     end = time.time() + timeout
     while time.time() < end:

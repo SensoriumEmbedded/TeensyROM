@@ -6,7 +6,7 @@
 |---|---|---|
 | `npm test` | The build tools (`tools/**/*.test.mjs`) and the firmware-source tests (`Source/Teensy/tests/**/*.test.js`). Includes rebuilding the C64 headers and comparing them with the committed ones; outside CI that test is skipped unless `acme` is on `PATH`. | Node |
 | `npm run verify:extensions` | The extension loader, compiled and run on the host against packages the real packager writes. | A host C++ compiler (`g++`, or `--cxx` / `CXX`) |
-| `python3 -m unittest discover -s tools/bench` | The bench scripts, against a fake board. | macOS or Linux (they use `termios` and `pty`) |
+| `python3 -m unittest discover -s tools/bench` | The bench scripts, against a fake board. | macOS or Linux for all of it; on Windows the tests that need a `pty` skip |
 
 Run one test file with `node --test <path>`. Tests live next to the code they cover, as
 `*.test.mjs` or `*.test.js`. None of them touch a board: the flasher's tests stop before it
