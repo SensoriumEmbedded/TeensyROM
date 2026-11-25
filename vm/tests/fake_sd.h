@@ -11,6 +11,9 @@
 #include <vector>
 namespace fs=std::filesystem;
 #define FLASHMEM
+// The firmware's flash placement for strings and tables; on a host they are ordinary.
+#define PROGMEM
+#define PSTR(s) (s)
 enum { O_RDONLY=1,O_WRONLY=2,O_RDWR=3,O_CREAT=4,O_EXCL=8,O_TRUNC=16,T_WRITE=1,
  rmtSD=1,eepAdCrtBootName=100,eepAdMinBootInd=2,MinBootInd_ExecuteMin=1,wRegVid_TOD_Clks=36,
  rvtcNTSC=1,rvtc60Hz=2,rvtcC128=4 };

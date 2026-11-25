@@ -1016,6 +1016,9 @@ void IO1Hndlr_TeensyROM(uint8_t Address, bool R_Wn)
                case rCtlDeleteFileWAIT:
                   IO1[rwRegStatus] = rsDeleteFile; //work this in the main code
                   break;
+               case rCtlPlaySidInHostWAIT:
+                  IO1[rwRegStatus] = rsPlaySidInHost; //work this in the main code
+                  break;
                case rCtlMakeStrWAIT_First ... rCtlMakeStrWAIT_Last:
                   IO1[wRegControl] = Data; //preserve for later use
                   IO1[rwRegStatus] = rsMakeFilenameStr; //work this in the main code

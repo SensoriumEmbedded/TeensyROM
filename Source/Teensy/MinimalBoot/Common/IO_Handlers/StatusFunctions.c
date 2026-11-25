@@ -1459,6 +1459,43 @@ FLASHMEM void DeleteSelectedFile()
    IO1[rwRegScratch] = 1;
 }
 
+// The menu's Shift+S on a .sid from the SD card: play it in the installed SIDHost extension
+// instead of the built-in player. The host is never installed from here; with none, or
+// another one, in the slot, launchInHost says so and nothing reboots.
+#if defined(VM_EXTENSIONS_ENABLED)
+// Defined in VMLaunch.h, which reaches the main image through DriveDirLoad.ino: later in the
+// sketch than this file, which IOHandlers.h includes before any of the sketch's own .ino files.
+namespace VmLaunch { static FLASHMEM bool launchInHost(uint8_t source, const char *directory, const char *name, bool *badFile); }
+#endif
+
+FLASHMEM void PlaySidInHost()
+{
+   if (MenuSource[SelItemFullIdx].ItemType != rtFileSID)
+   {
+      SendMsgPrintfln(PSTR("Select a .sid file"));
+      return;
+   }
+#if defined(VM_EXTENSIONS_ENABLED)
+   const size_t PathLen = strlen(DriveDirPath);
+   bool BadFile = false;
+   if (IO1[rWRegCurrMenuWAIT] != rmtSD)
+      SendMsgPrintfln(PSTR("Only SD .sid files play in the extension"));
+   else if (PathLen && DriveDirPath[PathLen-1] == '*') //a disk image's entries, not files on the drive
+      SendMsgPrintfln(PSTR("Can't play from inside a disk image"));
+   else if (!VmLaunch::launchInHost(rmtSD, DriveDirPath, MenuSource[SelItemFullIdx].Name, &BadFile))
+   {
+      SendMsgPrintfln(PSTR("Select a .sid file"));
+      return;
+   }
+   if (BadFile) return; //the built-in player would refuse it too
+#elif defined(Fab04_Features)
+   SendMsgPrintfln(PSTR("No extension loader in this firmware."));
+#else
+   SendMsgPrintfln(PSTR("Only supported on TR+."));
+#endif
+   SendMsgPrintfln(PSTR("Return plays it in the built-in player"));
+}
+
 //Unsized so the static_assert below can compare its length against rsNumStatusTypes
 void (*StatusFunction[])() = //match RegStatusTypes order
 {
@@ -1499,6 +1536,7 @@ void (*StatusFunction[])() = //match RegStatusTypes order
    &ShowExtPackages,     // rsShowExtPackages
    &DeleteFileCheck,     // rsDeleteFileCheck
    &DeleteSelectedFile,  // rsDeleteFile
+   &PlaySidInHost,       // rsPlaySidInHost
 };
 static_assert(sizeof(StatusFunction) / sizeof(StatusFunction[0]) == rsNumStatusTypes,
               "StatusFunction[] / RegStatusTypes count mismatch");
