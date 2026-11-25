@@ -24,6 +24,7 @@ identifies a commit rather than a build. A tree with uncommitted edits to the
 image sources is stamped with its own build time, so two such runs are told
 apart as well.
 """
+import os
 import sys
 import time
 
@@ -33,6 +34,9 @@ from protocol import FW_FULL, IMAGES
 from trlink import Link, answering_board, neighbours
 
 CONFIRM_TIMEOUT, UPDATE_TIMEOUT, REBOOT_TIMEOUT = 30, 180, 90
+# The main image answers before the C64 it reset is back at the menu. On a TR+ in an NTSC
+# C128, a DMA read a few seconds after the board answered got no reply; the same read later did not.
+SETTLE = float(os.environ.get('TR_SETTLE', 10))
 MAIN_IMAGE = IMAGES[FW_FULL]
 SILENT = 'silent -- nothing answered the firmware check'
 
@@ -113,3 +117,5 @@ elif expected not in banner:
                      f'running the firmware above, so the update did not take')
 else:
     print(f'OK: the main image reports the build stamp from {local}')
+print(f'waiting {SETTLE:g} s for the C64 to reach the menu')
+time.sleep(SETTLE)

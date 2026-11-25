@@ -6,7 +6,7 @@ hardware needed:
 """
 import unittest
 from reuspans import (FETCH_TAG, LOG_COUNT, MISSES, REGISTERS, RETRY_TAG, kinds_by_register,
-                      miss_kinds, misses_between, read_log, register_misses, snapshot)
+                      miss_kinds, misses_between, read_log, register_misses, require_an_reu, snapshot)
 
 DF03, DF04, DF05 = 1, 2, 3
 
@@ -92,6 +92,15 @@ class Snapshot(unittest.TestCase):
     def test_the_log_count_and_the_miss_counters_come_from_one_read(self):
         _, misses, logged = snapshot(MissingC64())
         self.assertEqual(sum(misses), logged)
+
+
+class RequireAnReu(unittest.TestCase):
+    def test_a_bad_page_among_good_rounds_is_not_a_missing_reu(self):
+        require_an_reu(202, 1)
+
+    def test_no_good_round_is_a_missing_reu(self):
+        with self.assertRaises(SystemExit):
+            require_an_reu(0, 37)
 
 
 if __name__ == '__main__':
