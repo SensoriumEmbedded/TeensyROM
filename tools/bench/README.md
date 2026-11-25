@@ -38,9 +38,13 @@ whatever node appeared beside it.
 
 On Windows, run the scripts with `python` (or `py`), since `python3` may be the
 Microsoft Store placeholder. The port opens exclusively there, so close any serial
-monitor holding it first. The scripts that assemble a C64 client call `acme` from
-`PATH`: `npm run build:c64` fetches one into its own folder under `tools/.cache/`,
-and that folder can go on `PATH`.
+monitor holding it first. While an extension image holds the board, its COM port is
+still listed but does not open: a script gives up after 5 s and says nothing on the
+board answers USB, where macOS and Linux open the port and hear nothing. Windows can
+keep that script from exiting for about a minute more while it finishes with the
+port. The scripts that assemble a C64 client call `acme` from `PATH`: `npm run
+build:c64` fetches one under `tools/.cache/`, and the folder its `acme.exe` is in can
+go on `PATH`.
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).

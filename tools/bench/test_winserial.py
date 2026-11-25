@@ -10,6 +10,7 @@ winserial.py and trlink.py do with those answers; they cannot prove what usbser.
 import ctypes
 import io
 import os
+import threading
 import time
 import unittest
 from unittest import mock
@@ -51,6 +52,7 @@ class FakeKernel32:
     def __init__(self):
         self.error = 0
         self.open_error = 0
+        self.hold = None    # an Event GetCommState waits on: a device nothing answers
         self.not_serial = False
         self.refuses_settings = False
         self.opened = []
@@ -79,6 +81,8 @@ class FakeKernel32:
         return HANDLE
 
     def GetCommState(self, handle, dcb):
+        if self.hold is not None:
+            self.hold.wait(5)
         if self.not_serial:
             return self.fail(ERROR_INVALID_FUNCTION)
         # What another program might have left the port in.
@@ -278,6 +282,38 @@ class Port(unittest.TestCase):
         with self.assertRaisesRegex(OSError, 'COM7 is open in another program'):
             self.open()
         self.assertEqual(self.k.closed, [])
+
+    def stuck_open(self):
+        """Opens COM7 on a device nothing answers, which gives up; returns the thread
+        the open is still waiting in."""
+        self.k.hold = threading.Event()
+        self.addCleanup(self.k.hold.set)
+        with mock.patch.object(winserial, 'OPEN_LIMIT', 0.05), \
+                self.assertRaisesRegex(OSError, 'COM7 did not open within 0.05 s'):
+            self.open()
+        return winserial._stuck_opens['COM7']
+
+    def test_an_open_nothing_answers_gives_up_and_closes_the_port_once_it_can(self):
+        with mock.patch.dict(winserial._stuck_opens, clear=True):
+            stuck = self.stuck_open()
+            # Asked again while that open still waits: no second one beside it.
+            with self.assertRaisesRegex(OSError, 'COM7 did not open'):
+                self.open()
+            self.assertEqual(len(self.k.opened), 1)
+            self.k.hold.set()
+            stuck.join(1)
+            self.assertEqual(self.k.closed, [HANDLE])
+            self.k.hold = None
+            self.open()
+            self.assertEqual(len(self.k.opened), 2)
+
+    def test_an_open_given_up_on_that_fails_later_closes_the_port_once(self):
+        with mock.patch.dict(winserial._stuck_opens, clear=True):
+            stuck = self.stuck_open()
+            self.k.not_serial = True    # what GetCommState says once the device is gone
+            self.k.hold.set()
+            stuck.join(1)
+            self.assertEqual(self.k.closed, [HANDLE])
 
     def test_a_handle_that_is_not_a_serial_port_is_refused_and_closed(self):
         self.k.not_serial = True

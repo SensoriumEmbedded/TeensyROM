@@ -8,6 +8,7 @@ and a fake registry. Only opening a port and listing ports need Windows.
 """
 import ctypes
 import re
+import threading
 
 # The firmware's USB identities, from Teensyduino 1.61's cores/teensy4/usb_desc.h. Serial
 # + MIDI (USB_MIDI_SERIAL) is what build-firmware.mjs builds both the main and the minimal
@@ -26,6 +27,18 @@ INVALID_HANDLE = ctypes.c_void_p(-1).value
 ERROR_FILE_NOT_FOUND, ERROR_ACCESS_DENIED, ERROR_SEM_TIMEOUT = 2, 5, 121
 NOPARITY = ONESTOPBIT = 0
 DTR_CONTROL_ENABLE = RTS_CONTROL_ENABLE = 1
+
+# A live board opens in milliseconds. While an extension image holds the board, the minimal
+# image's USB device stays enumerated with nothing on the board answering it, and usbser.sys
+# waits 30 s for each request it makes of the device: on the bench GetCommState took 60 s
+# and the whole open over 150 s. Cancelling the call does not cut that short, so the process
+# still cannot exit until Windows is done (about a minute). Room for a board busy for a
+# moment as it boots, since all a timeout costs reconnect() is another try.
+OPEN_LIMIT = 5.0
+
+# The ports whose open was given up on, and the thread it is still waiting in. Another
+# open would only wait beside it.
+_stuck_opens = {}
 
 DWORD, WORD, BYTE = ctypes.c_uint32, ctypes.c_uint16, ctypes.c_ubyte
 
@@ -176,20 +189,63 @@ class WindowsPort:
         self.name = name
         self.k, self.last_error = (kernel32, last_error) if kernel32 else _api()
         self.read_ms = self.write_ms = None
+        self.handle = None
+        self._open()
+
+    def _open(self):
+        """Opens and configures the port, waiting up to OPEN_LIMIT seconds. An open still
+        waiting then is left to finish in its own thread, which closes the port once it
+        gets that far, so the port is not left open with nobody using it."""
+        stuck = _stuck_opens.get(self.name)
+        if stuck is not None and stuck.is_alive():
+            raise self._not_answering()
+        lock, done, outcome = threading.Lock(), threading.Event(), {}
+
+        def open_port():
+            try:
+                self._open_now()
+                problem = None
+            except OSError as error:
+                problem = error
+            with lock:
+                if outcome.get('given_up'):
+                    self.close()
+                    return
+                outcome['problem'] = problem
+            done.set()
+
+        # A daemon, or a call that never returns would keep the script from exiting.
+        thread = threading.Thread(target=open_port, name=f'open {self.name}', daemon=True)
+        thread.start()
+        done.wait(OPEN_LIMIT)
+        with lock:
+            if 'problem' not in outcome:
+                outcome['given_up'] = True
+                _stuck_opens[self.name] = thread
+                raise self._not_answering()
+        if outcome['problem'] is not None:
+            raise outcome['problem']
+
+    def _open_now(self):
         # \\.\ for every port, not just COM10 and up, which cannot be opened without it.
-        self.handle = self.k.CreateFileW('\\\\.\\' + name, GENERIC_READ | GENERIC_WRITE,
-                                         0, None, OPEN_EXISTING, 0, None)
-        if self.handle == INVALID_HANDLE:
-            self.handle = None
+        handle = self.k.CreateFileW('\\\\.\\' + self.name, GENERIC_READ | GENERIC_WRITE,
+                                    0, None, OPEN_EXISTING, 0, None)
+        if handle == INVALID_HANDLE:
             code = self.last_error()
-            raise OSError({ERROR_FILE_NOT_FOUND: f'{name}: no such port',
-                           ERROR_ACCESS_DENIED: f'{name} is open in another program'}.get(
-                               code, f'{name}: cannot open it (Windows error {code})'))
+            raise OSError({ERROR_FILE_NOT_FOUND: f'{self.name}: no such port',
+                           ERROR_ACCESS_DENIED: f'{self.name} is open in another program'}.get(
+                               code, f'{self.name}: cannot open it (Windows error {code})'))
+        self.handle = handle
         try:
             self._configure()
         except OSError:
             self.close()
             raise
+
+    def _not_answering(self):
+        return OSError(f'{self.name} did not open within {OPEN_LIMIT:g} s: nothing on the '
+                       'board answers USB, as when an extension image holds the machine '
+                       'or the board has hung')
 
     def _configure(self):
         dcb = DCB()
