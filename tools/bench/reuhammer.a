@@ -1,0 +1,135 @@
+; C64 side of reuhammer.py. IRQs off. $DF02-$DF08 are written once, then read back in
+; an unrolled loop, one IO2 read every 9 cycles. A read that does not match is counted
+; by register and by the value it read, and the register is read a second time: a
+; second read that matches means the first was answered late. One that misses too is
+; counted, and the register written again in case it changed. A CIA2 timer
+; NMI, once the bench starts it, stores to $D418 for locked slices to start on.
+;
+; reuhammer.py reads $8000-$8E17 in one DMA read, so the counts in it agree:
+;  $8000 + reg * $100 + value   wrong first reads, low bytes   (reg 0-6 = $DF02-$DF08)
+;  $8700 + reg * $100 + value   and high bytes
+;  $8E00-$8E03 passes of the unrolled loop, each REPEATS reads of every register
+;  $8E08 + reg, $8E10 + reg     second reads that missed too, low and high bytes
+* = $0801
+!word next, 10
+!byte $9e
+!text "2064"
+!byte 0
+next !word 0
+
+REPEATS = 32
+hist   = $8000
+histhi = $8700
+passes = $8e00
+held   = $8e08
+heldhi = $8e10
+ready  = $8e40          ; $5A once set up
+ptr    = $fb
+; what $DF02-$DF08 hold; reuhammer.py's VALUES
+V0 = $3C
+V1 = $C3
+V2 = $5A
+V3 = $A5
+V4 = $0F
+V5 = $F0
+V6 = $96
+reu_regs = $df02
+
+!macro check .k, .value {
+        lda reu_regs + .k
+        cmp #.value
+        beq .ok
+        ldx #.k
+        jsr miss
+.ok
+}
+
+* = $0810
+        sei
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+        lda #0
+        sta $d01a
+        sta ptr
+        lda #>hist
+        sta ptr+1
+        ldx #$0f            ; 14 histogram pages and the counters page
+        lda #0
+        tay
+-       sta (ptr),y
+        iny
+        bne -
+        inc ptr+1
+        dex
+        bne -
+        ldx #6
+-       lda want,x
+        sta reu_regs,x
+        dex
+        bpl -
+        lda #<nmi
+        sta $0318
+        lda #>nmi
+        sta $0319
+        lda #$5a
+        sta ready
+
+loop
+!for r, 1, REPEATS {
+        +check 0, V0
+        +check 1, V1
+        +check 2, V2
+        +check 3, V3
+        +check 4, V4
+        +check 5, V5
+        +check 6, V6
+}
+        inc passes
+        bne +
+        inc passes+1
+        bne +
+        inc passes+2
+        bne +
+        inc passes+3
++       jmp loop
+
+want    !byte V0, V1, V2, V3, V4, V5, V6
+
+; A = the value read, X = register. Keeps X.
+miss    tay
+        txa
+        clc
+        adc #>hist
+        sta ptr+1
+        lda (ptr),y
+        clc
+        adc #1
+        sta (ptr),y
+        bne +
+        lda ptr+1
+        clc
+        adc #>(histhi - hist)
+        sta ptr+1
+        lda (ptr),y
+        clc
+        adc #1
+        sta (ptr),y
++       lda reu_regs,x
+        cmp want,x
+        beq +
+        inc held,x
+        bne ++
+        inc heldhi,x
+++      lda want,x
+        sta reu_regs,x
++       rts
+
+nmi     pha
+        lda $dd0d
+        lda #$0f
+        sta $d418
+        pla
+        rti
