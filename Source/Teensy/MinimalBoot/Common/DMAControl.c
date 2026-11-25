@@ -289,6 +289,7 @@ FLASHMEM bool CloseDMA()
    if (Swap)
    {
       CloseDMAHeldSnoop = Held;
+      __asm__ volatile("" ::: "memory"); // CloseDMASnoop calls through CloseDMAHeldSnoop as soon as fBusSnoop points at it
       fBusSnoop = &CloseDMASnoop;
    }
    DMA_State = DMA_S_StartDisable;
