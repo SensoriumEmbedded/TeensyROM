@@ -136,14 +136,34 @@ static FLASHMEM bool clientDescriptor(const char *path,uint8_t d[128]){
     const bool ok=f&&f.seekSet(0x4070)&&f.read(d,128)==128;f.close();
     return ok&&!memcmp(d,"VMH1",4);
 }
+// The selected file's path as the host reads it: one slash between components. The browser's
+// path is "/" plus "/<dir>" per level, so below the root it starts "//", and stored or remote
+// paths can carry more. False, and said, when it does not fit `cap`.
+static FLASHMEM bool selectedPath(char *out,size_t cap,const char *directory,const char *name){
+    if(snprintf(out,cap,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)cap){SendMsgPrintfln("VM path too long");return false;}
+    char *w=out;for(const char *r=out;*r;r++)if(*r!='/'||w==out||w[-1]!='/')*w++=*r;*w=0;
+    return true;
+}
+// Writes `l` as the launch record and reboots into the installed host. Every refusal has been
+// said before this is called; it returns only when the record could not be written, and says so.
+static FLASHMEM void commitLaunch(Launch &l){
+    l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
+    FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
+    const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();
+    Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return;}
+    // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
+    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);
+    // C64/C128 is only known once the menu has reported. A launch made before that is sent through the
+    // menu first (RemoteLaunch), so the pair is only left invalid, rather than hand over a guess, if not.
+    const uint8_t vid=IO1[wRegVid_TOD_Clks]&7,machine[2]={vid,uint8_t((VidTODClksKnown&rvtcC128)?~vid:vid)};
+    EEPwriteNBuf(VM_EEP_MACHINE_ADDR,machine,2);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
+    RebootTR();
+}
 static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *name){
     if(source!=rmtSD)return false;
     const char *ext=strrchr(name,'.');if(!ext)return false;ext++;
-    Launch l{};char selected[256];
-    if(snprintf(selected,sizeof selected,"%s%s%s",directory,directory[strlen(directory)-1]=='/'?"":"/",name)>=(int)sizeof selected){SendMsgPrintfln("VM path too long");return true;}
-    // The host gets one slash between components. The browser's path is "/" plus "/<dir>"
-    // per level, so below the root it starts "//", and stored or remote paths can carry more.
-    {char *w=selected;for(const char *r=selected;*r;r++)if(*r!='/'||w==selected||w[-1]!='/')*w++=*r;*w=0;}
+    Launch l{};char selected[sizeof l.content];
+    if(!selectedPath(selected,sizeof selected,directory,name))return true;
     char id[24]{};const char *clientId=nullptr;
     if(!strcasecmp(ext,"crt")){
         uint8_t d[128];if(!clientDescriptor(selected,d))return false;
@@ -183,17 +203,7 @@ static FLASHMEM bool tryLaunch(uint8_t source,const char *directory,const char *
             else SendMsgPrintfln("%s host needs code at $%lx, not $%lx",hostName,
                         (unsigned long)vm_host_code_floor(hostId.code_floor),(unsigned long)image.code_base);
             return true;}}
-    l.magic=VM_LAUNCH_MAGIC;l.crc=vm_crc32(&l,offsetof(Launch,crc));
-    FsFile f=SD.sdfs.open("/VMS/launch.vml",O_WRONLY|O_CREAT|O_TRUNC);
-    const bool saved=f&&f.write(&l,sizeof l)==sizeof l&&f.sync();f.close();
-    Launch check{};if(!saved||!consume(check)||memcmp(&check,&l,sizeof l)){SendMsgPrintfln("VM launch record write failed");return true;}
-    // The EEPROM flag is the one-shot commit, and is cleared by MinimalBoot.
-    EEPwriteStr(eepAdCrtBootName,VM_HOST_MARKER);
-    // C64/C128 is only known once the menu has reported. A launch made before that is sent through the
-    // menu first (RemoteLaunch), so the pair is only left invalid, rather than hand over a guess, if not.
-    const uint8_t vid=IO1[wRegVid_TOD_Clks]&7,machine[2]={vid,uint8_t((VidTODClksKnown&rvtcC128)?~vid:vid)};
-    EEPwriteNBuf(VM_EEP_MACHINE_ADDR,machine,2);EEPROM.write(eepAdMinBootInd,MinBootInd_ExecuteMin);
-    RebootTR();return true;
+    commitLaunch(l);return true;
 }
 #endif
 }
