@@ -512,17 +512,34 @@ Each call resets the counts. Watching again keeps the last store's time unless t
 ---
 
 ### Snoop Tap (TR+ Only, `DbgSnoopTap` builds only)
-Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entries, and sends the ring to the host. It runs in `isrPHI2` after the bus snoop slot, so it keeps recording while Sample Watch holds the slot; a cycle a snoop handler claims (returns true for) is not recorded. A page flagged as a trigger and for writes freezes the ring 64 entries after its first write, so what led up to that write survives until the host takes it. Only images built with `DbgSnoopTap` defined in `TeensyROM.h` answer it. `tools/bench/snooptap.py` is its client.
+Records the C64's bus cycles on chosen pages into a ring of the last 1,024 entries, and sends the ring to the host. It runs in `isrPHI2` after the IO handlers, so recording a page never delays the cartridge's answer on it, and it keeps recording while Sample Watch holds the bus snoop slot; a cycle a snoop handler, or the global Kernal replacement, claims (returns true for) is not recorded. A page flagged as a trigger and for writes freezes the ring 64 entries after its first write, so what led up to that write survives until the host takes it. Only images built with `DbgSnoopTap` defined in `TeensyROM.h` answer it. `tools/bench/snooptap.py` is its client.
 
 **Workflow:**
 | Direction | Data |
 |---|---|
 | Receive | `SnoopTapToken` — `0x64F8` |
 | Receive | Mode: `0` = send the ring and keep recording, `1` = send the ring, then record the pages that follow, `2` = send the ring and stop |
-| Receive | Mode `1` only: 256 bytes, one per page `$00`..`$FF`, each a sum of `1` writes, `2` reads, `4` trigger (only with `1`), `8` DMA slice marks; `0` leaves the page unrecorded |
+| Receive | Mode `1` only: 256 bytes, one per page `$00`..`$FF`, each a sum of `1` writes, `2` reads, `4` trigger (only with `1`), `8` DMA slice marks, `16` bus timing (on any page: records late `isrPHI2` entries, late IO decodes and DMA asserts), `32` cycle timing (a timing record after each of the page's recorded cycles); `0` leaves the page unrecorded |
 | Send | `AckToken 0x64CC`; `FailToken 0x9B7F` and a line of text if the mode is not `0`, `1` or `2`, or the pages did not arrive |
 | Send | ARM cycles per second (4), entries recorded (4), entries skipped while paused or frozen (4), page cycles seen (4), triggered (1), entries sent (2): Low byte first |
-| Send | Each entry, oldest first: ARM cycle stamp (4), address (2), data (1, `0` for a read), info (1): Low byte first. Info bits `0x1F` are the DMA state (`enum DMA_States`), `0x20` a locked slice armed, `0x40` a read, `0x80` a slice mark, whose address and data are the slice's start and the low byte of its length |
+| Send | Each entry, oldest first: ARM cycle stamp (4), address (2), data (1, `0` for a read), info (1): Low byte first. Info bits `0x1F` are the DMA state (`enum DMA_States`), `0x20` a locked slice armed, `0x40` a read, `0x80` a slice mark, whose address and data are the slice's start and the low byte of its length. Info `0xC0`-`0xC7` is a timing record (below) |
+
+**Timing records** come in pairs, a record and its detail record next to it. Times are nS after the `isrPHI2` entry stamp unless they say otherwise, and stop at the field's largest value.
+
+| Info | Cycle stamp (4) | Address (2) | Data (1) |
+|---|---|---|---|
+| `0xC0` late entry: more than 1,100 nS since the last entry while the CPU owns the bus | entry stamp | nS since the last entry | DMA state |
+| `0xC1` its detail | interrupted PC | interrupted exception number (`xPSR` bits 0-8) | `BASEPRI` |
+| `0xC2` DMA assert | entry stamp | this cycle's address | reason in bits 0-1 (`0` bad line read, `1` read after a write, `2` read loop timeout, `3` immediate), `0x40` this cycle read, `0x20` the cycle before read |
+| `0xC3` its detail | nS from entry to Phi2 falling << 16, nS from that to the assert | the cycle before's address | nS since the last entry / 16 |
+| `0xC4` late decode: a cycle at `$DE00`-`$DFFF` decoded after Phi2 fell | entry stamp | address | DMA state, `0x40` a read |
+| `0xC5` its detail | interrupted PC | nS since the last entry | nS from entry to the decode / 16 |
+| `0xC6` cycle timing, after its access record | nS from entry to the GPIO6 read << 16; nS from there to the GPIO9 read | from the GPIO6 read: a read's nS to driving the data, `0x8000` if Phi2 fell before the hold time was up; a write's nS to sampling it; `0x7FFF` if the handler did neither | a read's nS from the GPIO6 read to releasing the data / 4, else `0xFF` |
+| `0xC7` its detail | nS from the GPIO6 read to the tap, after the handlers: past a cycle when a handler held `isrPHI2` | nS since the last entry | `0` |
+
+Bus timing and cycle timing are TR+ only.
+
+Bus timing costs `isrPHI2` time: a check on every cycle, a GPIO read on every cycle at `$DE00`-`$DFFF`, and the records it writes. On a machine with little timing margin that can cause the wrong reads it is there to find, so check a count of wrong reads taken with it armed against a release build under the same load.
 
 Each call clears the trigger and the counts it sends; page cycles that arrive while it sends are counted, as skipped, in the next call's reply.
 

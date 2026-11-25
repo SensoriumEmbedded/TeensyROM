@@ -245,7 +245,7 @@ class FakeBoard:
 
 
 def run(board, script, *args, timeout=30):
-    env = dict(os.environ, TR_PORT=board.port)
+    env = dict(os.environ, TR_PORT=board.port, TR_SETTLE='0')
     return subprocess.run([sys.executable, os.path.join(HERE, script), *args], env=env,
                           capture_output=True, text=True, timeout=timeout)
 

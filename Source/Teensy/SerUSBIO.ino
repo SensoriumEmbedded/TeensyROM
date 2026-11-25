@@ -594,7 +594,7 @@ FLASHMEM void ProcessCommand()
       case SampleWatchToken: //Count C64 writes to one address
          SampleWatchCommand();
          return;
-   #ifdef DbgSnoopTap
+   #ifdef SnoopTapBuild
       case SnoopTapToken: //Set the snooped pages, take what was recorded
          SnoopTapCommand();
          return;
@@ -1514,7 +1514,7 @@ FLASHMEM void SampleWatchCommand()
    SendU32(F_CPU_ACTUAL);
 }
 
-#if defined(DbgSnoopTap) && defined(Fab04_FullDMACapable)
+#ifdef SnoopTapBuild
 // What the ISR counted while the ring was being sent stays for the next take.
 static MASKEDRUN void SnoopRestart(uint32_t Skipped, uint32_t Taps)
 {
@@ -1530,7 +1530,9 @@ static MASKEDRUN void SnoopRestart(uint32_t Skipped, uint32_t Taps)
 // Receive <-- SnoopTapToken (0x64F8)
 // Receive <-- Mode: 0 = take only, 1 = take, then watch the 256 page bytes that follow
 //             (bit 0 writes, bit 1 reads, bit 2 the first write freezes the ring 64 entries later,
-//             bit 3 on any page also records each locked slice's start),
+//             bit 3 on any page also records each locked slice's start, bit 4 on any page also
+//             records late isrPHI2 entries, late IO decodes and DMA asserts, bit 5 adds a timing
+//             record to each of that page's cycles),
 //             2 = take, then stop
 // Send --> AckToken 0x64CC, or 0x9b7f and the reason
 // Send --> ARM cycles per second (4), cycles recorded since the last take (4), cycles not recorded
@@ -1577,10 +1579,13 @@ FLASHMEM void SnoopTapCommand()
    FlushCmdChannel(CmdChannel);
    if (Mode != 0)
    {
-      SnoopMarkSlices = false;
+      SnoopMarkSlices = SnoopMarkBus = false;
       memcpy(SnoopHot, Pages, sizeof SnoopHot);
       for (uint32_t Page = 0; Page < 256; Page++)
+      {
          if (Pages[Page] & SnoopSlices) SnoopMarkSlices = true;
+         if (Pages[Page] & SnoopBusTiming) SnoopMarkBus = true;
+      }
    }
    SnoopRestart(Skipped, Taps);
 }

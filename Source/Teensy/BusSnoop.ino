@@ -81,17 +81,19 @@ bool BusCount(uint16_t Address, bool R_Wn)
 
 enum : uint8_t { BL_Baseline, BL_GPIO6, BL_USBSTS, BL_ENDPTPRIME, BL_USBSTSThenGPIO6,
                              BL_WriteThenGPIO6, BL_NumProbes };
+// Not a named type: the Arduino builder puts BusLatSample()'s prototype above this file
+enum : uint8_t { BL_Kept, BL_GaveUp, BL_Interrupted };
 
 // FASTRUN so no flash fetch lands inside the timed accesses. Unmasked: started just after a
 // Phi2 stamp, a sample ends before the next rise, and one an exception landed in is dropped.
-static FASTRUN __attribute__((noinline)) bool BusLatSample(uint8_t Probe, uint32_t &Cycles)
+static FASTRUN __attribute__((noinline)) uint8_t BusLatSample(uint8_t Probe, uint32_t &Cycles)
 {
    const uint32_t Began = ARM_DWT_CYCCNT;
    while (true)
    {
       uint32_t Since = ARM_DWT_CYCCNT - LastCycCnt;
       if (Since < nSToCyc(nS_BusLatStart) || Since > nSToCyc(nS_BusLatNoPhi2)) break;
-      if (ARM_DWT_CYCCNT - Began > nSToCyc(nS_BusLatGiveUp)) return false;
+      if (ARM_DWT_CYCCNT - Began > nSToCyc(nS_BusLatGiveUp)) return BL_GaveUp;
    }
    const uint8_t Exceptions = DWT_EXCCNT;
    uint32_t Start = ARM_DWT_CYCCNT, Value;
@@ -103,11 +105,10 @@ static FASTRUN __attribute__((noinline)) bool BusLatSample(uint8_t Probe, uint32
       case BL_ENDPTPRIME:      Value = USB1_ENDPTPRIME; (void)Value; break;
       case BL_USBSTSThenGPIO6: Value = USB1_USBSTS; Value = ReadGPIO6; (void)Value; break;
       case BL_WriteThenGPIO6:  USB1_ENDPTSTATUS = 0; Value = ReadGPIO6; (void)Value; break; // read-only: the write is ignored
-      default:                 return false;
    }
    asm volatile("dsb" ::: "memory");  // Device-before-Strongly-ordered orders the accesses, not the load's data arriving
    Cycles = ARM_DWT_CYCCNT - Start;
-   return (uint8_t)DWT_EXCCNT == Exceptions;
+   return (uint8_t)DWT_EXCCNT == Exceptions ? BL_Kept : BL_Interrupted;
 }
 
 FLASHMEM void BusLatency()
@@ -115,24 +116,35 @@ FLASHMEM void BusLatency()
    static const char Names[BL_NumProbes][32] PROGMEM = {
       "nothing (counter reads and DSB)", "GPIO6 read", "USB1 USBSTS read", "USB1 ENDPTPRIME read",
       "GPIO6 read after a USBSTS read", "GPIO6 read after a USB1 write"};
+   struct { uint32_t Min = UINT32_MAX, Max = 0, Kept = 0, GaveUp = 0; } Stats[BL_NumProbes];
    const uint32_t DwtCtrl = ARM_DWT_CTRL;
    ARM_DWT_CTRL = DwtCtrl | DWT_EXCEVTENA;
-   CmdChannel->printf(PSTR("Bus latency, %d tries each, in CPU cycles at %lu MHz:\n"), BusLatSamples, F_CPU_ACTUAL / 1000000);
    for (uint8_t Probe = 0; Probe < BL_NumProbes; Probe++)
    {
-      uint32_t Min = UINT32_MAX, Max = 0, Kept = 0;
+      auto &Stat = Stats[Probe];
       for (uint32_t Try = 0; Try < BusLatSamples; Try++)
       {
          uint32_t Cycles;
-         if (!BusLatSample(Probe, Cycles)) continue;
-         Kept++;
-         if (Cycles < Min) Min = Cycles;
-         if (Cycles > Max) Max = Cycles;
+         const uint8_t Result = BusLatSample(Probe, Cycles);
+         if (Result == BL_GaveUp) Stat.GaveUp++;
+         if (Result != BL_Kept) continue;
+         Stat.Kept++;
+         if (Cycles < Stat.Min) Stat.Min = Cycles;
+         if (Cycles > Stat.Max) Stat.Max = Cycles;
       }
-      if (Kept) CmdChannel->printf(PSTR("%-34s %5lu kept  min %4lu  max %4lu  (%lu..%lu nS)\n"), Names[Probe], Kept,
-                                   Min, Max, CycTonS(Min), CycTonS(Max));
-      else CmdChannel->printf(PSTR("%-34s %5lu kept\n"), Names[Probe], Kept);
    }
    ARM_DWT_CTRL = DwtCtrl;
+
+   // Printed only now: usb_serial sends a part-filled packet from a timer interrupt, so a line
+   // printed between probes would go out while the next one samples.
+   CmdChannel->printf(PSTR("Bus latency, %d tries each, in CPU cycles at %lu MHz:\n"), BusLatSamples, F_CPU_ACTUAL / 1000000);
+   for (uint8_t Probe = 0; Probe < BL_NumProbes; Probe++)
+   {
+      const auto &Stat = Stats[Probe];
+      CmdChannel->printf(PSTR("%-34s %5lu kept %5lu gave up"), Names[Probe], Stat.Kept, Stat.GaveUp);
+      if (Stat.Kept) CmdChannel->printf(PSTR("  min %4lu  max %4lu  (%lu..%lu nS)"), Stat.Min, Stat.Max,
+                                        CycTonS(Stat.Min), CycTonS(Stat.Max));
+      CmdChannel->println();
+   }
 }
 #endif
