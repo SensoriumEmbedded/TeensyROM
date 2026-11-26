@@ -461,7 +461,7 @@ class Link:
 
     def remove_host(self):
         """Removes the installed extension host the way a user does, from the C64: reset
-        to the menu, then F8 for Settings, 0 for Installed Extensions, u, and y at the
+        to the menu, then F8 for Settings, 0 for Installed Extension, u, and y at the
         confirmation. There is no command for this over the wire, so the removal only
         ever runs when the C64 asked for it, and its messages are ones the C64 is
         waiting to read. Returns once the y is queued; what follows is the board's. A
@@ -479,9 +479,9 @@ class Link:
         time.sleep(3)
         self.wait_for('Config/Info Page Index', 20)
         self.key(ord('0'))
-        self.wait_for('Extension host in the firmware slot', 10)
+        self.wait_for('Uninstall Extension Host', 10)
         self.key(PETSCII_U)
-        self.wait_for('Remove it?', 10)
+        self.wait_for('Uninstall?', 10)
         self.key(PETSCII_Y)
 
     def launch(self, path, drive=DRIVE_SD):

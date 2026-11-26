@@ -7,7 +7,7 @@ a host -- and then erases the rest of the slot, so nothing of the host is left f
 without the extension loader to trip over.
 
 There is no removal command over the wire. This resets the C64 to the menu and presses
-what a user would -- F8 for Settings, 0 for Installed Extensions, u, then y -- by DMA, so
+what a user would -- F8 for Settings, 0 for Installed Extension, u, then y -- by DMA, so
 the removal runs on the C64's own request and every message it sends is one the C64 is
 waiting to read. Four things can follow the y:
 

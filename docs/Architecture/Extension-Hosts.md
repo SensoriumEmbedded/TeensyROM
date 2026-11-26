@@ -222,7 +222,7 @@ python3 tools/bench/hostinstall.py MYHOST.TRH
 ```
 
 Remove it from the C64 menu — `F8` for Settings, `0` for Installed
-Extensions, then `u` and `y`. There is no removal command over the wire;
+Extension, then `u` and `y`. There is no removal command over the wire;
 `python3 tools/bench/hostuninstall.py` presses those same keys by DMA, and
 `tools/bench/hostcycle.py` runs the whole install/remove cycle unattended.
 

@@ -8,10 +8,12 @@ If the firmware moves a token, this fails rather than a board.
 import pathlib
 import re
 import unittest
+from unittest import mock
 
 import hostops
 import protocol
 import snooptap
+import trlink
 from protocol import FIRMWARE_NAMES, from_board, to_board
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2] / 'Source' / 'Teensy'
@@ -199,6 +201,35 @@ class RemovalOutcome(unittest.TestCase):
             boot='Extension boot: host removal failed (code $41, detail $e)\n')
             .removed_cleanly())
         self.assertFalse(self.outcome().removed_cleanly())
+
+
+def c64_text():
+    """What each !tx line in the C64 programs draws: its quoted pieces run together,
+    so "F1", ChrRvsOff, " Teensy Mem" reads as it does on the screen."""
+    lines = []
+    for path in (SOURCE.parent / 'C64').rglob('*'):
+        if path.suffix in ('.asm', '.s'):
+            for line in re.findall(r'^\s*!tx\b(.*)$', path.read_text(errors='replace'), re.M):
+                lines.append(''.join(re.findall(r'"([^"]*)"', line)).lower())
+    return lines
+
+
+class ScreenPhrases(unittest.TestCase):
+    """remove_host() walks the menus by waiting for words on the C64 screen, and a
+    reworded page leaves it waiting for text that never comes."""
+
+    def test_every_phrase_remove_host_waits_for_is_drawn_by_the_c64(self):
+        link = trlink.Link.__new__(trlink.Link)
+        waited = []
+        with mock.patch.object(link, 'reset'), mock.patch.object(link, 'key'), \
+                mock.patch.object(link, 'wait_for',
+                                  side_effect=lambda phrase, timeout: waited.append(phrase)), \
+                mock.patch('trlink.time.sleep'):
+            link.remove_host()
+        self.assertTrue(waited)
+        drawn = c64_text()
+        missing = [p for p in waited if not any(p.lower() in line for line in drawn)]
+        self.assertEqual(missing, [], f'not drawn by any !tx line under {SOURCE.parent / "C64"}')
 
 
 class ByteOrder(unittest.TestCase):
