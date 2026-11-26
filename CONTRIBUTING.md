@@ -75,8 +75,8 @@ code. Full setup and tool-version details: [Source/BuildInfo.md](Source/BuildInf
   which carries the extension loader.
 - CI runs the tool tests, the bench tests and both firmware builds on every push and
   pull request (`.github/workflows/build.yml`). Run `npm test` and `python3 -m unittest
-  discover -s tools/bench` locally first; the bench tests need macOS or Linux, since
-  they use `termios` and `pty`.
+  discover -s tools/bench` locally first; the full bench run needs macOS or Linux,
+  since most of its tests use a `pty`, and on Windows those skip.
 
 There's no expectation that every contributor has physical TR/TR+ hardware to test
 against. Say so in your PR — hardware-untested changes get flagged and tested before

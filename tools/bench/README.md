@@ -2,7 +2,9 @@
 
 Drive a real TeensyROM from a host computer: reflash it, launch things, read and
 poke the C64's memory. They were written to verify firmware without anyone at the
-machine. Python 3, standard library only, macOS or Linux (they use `termios`).
+machine. Python 3, standard library only, on macOS, Linux or Windows: `termios` on the
+first two, and on Windows `ctypes` and `winreg` (`winserial.py`), with no WSL or extra
+drivers.
 
 You need a TR or TR+ in a C64/C128, powered on at the menu with an SD card in it,
 and a USB cable from the cartridge to the host. These scripts are the hands-free
@@ -26,10 +28,23 @@ on macOS. (On firmware before minimal became Serial + MIDI, minimal enumerated
 under the Teensy's serial number instead.)
 
 The port is `$TR_PORT`, else the first `/dev/cu.usbmodem*` on macOS or
-`/dev/ttyACM*` on Linux. Do not hardcode it. After a reboot `$TR_PORT` is a
+`/dev/ttyACM*` on Linux. On Windows it is the first COM port of a TeensyROM's USB
+device (`16C0:0489`, or `16C0:0483` for a minimal image from before it became
+Serial + MIDI), found in the registry; set `$TR_PORT` (`COM5`, any case) to pick
+another. Do not hardcode it. After a reboot `$TR_PORT` is a
 preference rather than a pin: the USB serial number changes across some firmware
 changes, so a board that does not come back under its old name is picked up from
 whatever node appeared beside it.
+
+On Windows, run the scripts with `python` (or `py`), since `python3` may be the
+Microsoft Store placeholder. The port opens exclusively there, so close any serial
+monitor holding it first. While an extension image holds the board, its COM port is
+still listed but does not open: a script gives up after 5 s and says nothing on the
+board answers USB, where macOS and Linux open the port and hear nothing. Windows can
+keep that script from exiting for about a minute more while it finishes with the
+port. The scripts that assemble a C64 client call `acme` from `PATH`: `npm run
+build:c64` fetches one under `tools/.cache/`, and the folder its `acme.exe` is in can
+go on `PATH`.
 
 `peek`, `poke` and everything built on them (`screen`, `keypress`, `colors`,
 `fwupdate`'s prompt answering) use DMA and need a Fab 0.4 board (a TR+).
@@ -73,10 +88,11 @@ a capture device instead.
 | `setclock.py [UTC time]` | Set the TR's real-time clock, to this computer's clock or an ISO 8601 UTC time such as `2026-10-16T17:00:00`. Only at the TR menu. |
 | `hostops.py` | Installing and removing a host, and `run_step` -- driving anything that ends in a reboot and reading which of the two shapes came back. Also the phrases a reboot is judged by: `INSTALLED`, `REMOVED` and `FINISHED_NORMALLY`. Shared by the `host*.py` scripts and by `exttest.py`, whose exit status is `finished_normally()`'s answer, so a phrase edited here moves that verdict; and by `test_bounds.py`, which patches its timeouts to test them, and `test_protocol.py`, which pins the phrases against the firmware's own `VmFail::describe()`. |
 | `trlink.py` | The shared library the above are built on. |
+| `winserial.py` | `trlink.py`'s serial port on Windows: the COM port through `kernel32`, and the TeensyROM's COM ports from the registry. |
 | `protocol.py` | Every value that goes on the wire, named once. |
 | `c64.py` | C64 memory locations, and screen codes as text. |
 | `hexfile.py` | Reads a firmware hex: the two image regions, and the build stamp in the main one. |
-| `test_*.py` | Tests against a fake board on a pty, and against the firmware's own definitions; no hardware. |
+| `test_*.py` | Tests against a fake board on a pty, a fake `kernel32` and registry, and the firmware's own definitions; no hardware. Windows has no pty, so the tests that need one skip there. |
 
 ## Recipes
 
@@ -121,6 +137,12 @@ drop, so the arm a reboot alone cannot classify -- finished, faulted, or no
 record at all -- is covered without hardware. Its other two arms are not, and
 need a board that sits still: a module that stays resident, and a launch the
 firmware refuses before the port ever drops.
+
+`test_winserial.py` runs `winserial.py` and `trlink.Link` against a fake `kernel32`
+and registry that answer the way Windows documents its calls answering, so it runs
+on Linux CI too. It proves the port settings, the reads, writes and drops as
+`Link` sees them, and which COM ports count as a board's; what `usbser.sys` really
+does on a reboot needs a board.
 
 `screen.py`, `colors.py`, `exttest.py`, `fwupdate.py` and everything built on
 `hostops.py` -- `hostinstall.py`, `hostuninstall.py`, `hostcycle.py`,

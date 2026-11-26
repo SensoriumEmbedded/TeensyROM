@@ -114,7 +114,7 @@ TeensyROM settings survive a USB flash.
 - **From the SD card or a USB drive, on the C64:** the firmware's own updater. See the
   firmware update section of [docs/General_Usage.md](/docs/General_Usage.md). It needs no
   computer, and it refuses a wrong image only after the file has been carried over.
-- **Through the SD card, remotely:** `tools/bench/fwupdate.py` (macOS and Linux) pushes
+- **Through the SD card, remotely:** `tools/bench/fwupdate.py` (macOS, Linux and Windows) pushes
   the image to the SD card, launches the updater and answers its prompt. It needs a TR+.
   See [tools/bench/README.md](/tools/bench/README.md).
 - **The Teensy Loader app by hand:** open the hex and press the program button. There is
