@@ -259,10 +259,48 @@ FLASHMEM bool PerformDMA(DMA_Trans_RnW RnW, uint16_t StartAddr, uint8_t *Buffer,
    return FinishDMA();
 }
 
+// The release has to get past the bus snoop.  isrPHI2 acts on DMA_S_StartDisable only in a
+// cycle fBusSnoop declines (ISRs.c returns as soon as the snoop takes one), and while /DMA
+// holds the CPU nothing drives the address bus: what it decodes as is whatever the lines float
+// to.  With Kernal Replace hooked that is taken as a CPU read of $E000-$FFFF on every cycle
+// except those with BA low, where KernalCheck declines -- badlines and sprite fetches.  So on a
+// blanked screen ($D011 DEN off) with no sprites the release never came: CloseDMA ran out its
+// ceiling, then AbortDMAUnless its own, and dropped /DMA unsynchronised after ~100 mS with a
+// transfer that had in fact landed reported as failed.  Seen on hardware with a DMA LOAD into
+// C64 RAM under a Kernal Replace image (C128 in C64 mode, a program that blanks the screen
+// for disk work): every DMA ~100 mS and failed, ~2.3 mS for 2 KB once the release got through.
+//
+// So while the release is pending the snoop is held off: CloseDMASnoop declines the cycle and
+// the state machine releases on the next PHI2 low.  From the cycle after the release on it hands
+// every cycle to the snoop it stands in for, so the CPU's first fetch is served exactly as
+// before; the pointer goes back once the release is seen.  Only when /DMA is known to be held
+// (a transfer, a HoldC64 or an immediate start completed): a CloseDMA after a start that never
+// asserted would otherwise take the snoop away from a running CPU's cycle.  A snoop that changes
+// fBusSnoop itself in the cycles between (REU_FF00_W_Check) keeps its change.
+static bool (*CloseDMAHeldSnoop)(uint16_t Address, bool R_Wn) = NULL;
+
+FASTRUN static bool CloseDMASnoop(uint16_t Address, bool R_Wn)
+{
+   if (DMA_State == DMA_S_StartDisable) return false;
+   return CloseDMAHeldSnoop(Address, R_Wn);
+}
+
 FLASHMEM bool CloseDMA()
 {
+   bool (*Held)(uint16_t, bool) = fBusSnoop;
+   const uint8_t State = DMA_State;
+   const bool Asserted = (State == DMA_S_TransferComplete || State == DMA_S_TransferReady || State == DMA_S_ActiveReady);
+   const bool Swap = Asserted && Held != NULL && Held != &CloseDMASnoop;
+   if (Swap)
+   {
+      CloseDMAHeldSnoop = Held;
+      __asm__ volatile("" ::: "memory"); // CloseDMASnoop calls through CloseDMAHeldSnoop as soon as fBusSnoop points at it
+      fBusSnoop = &CloseDMASnoop;
+   }
    DMA_State = DMA_S_StartDisable;
-   return WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
+   const bool Released = WaitForDMAState(DMA_S_DisableReady, DMA_HANDSHAKE_CEILING_mS);
+   if (Swap && fBusSnoop == &CloseDMASnoop) fBusSnoop = Held;
+   return Released;
 }
 
 // Stops the computer on a safe cycle, with nothing to transfer, until CloseDMA.
