@@ -37,7 +37,7 @@ DMA is asserted and BA checked while Phi2 is low. R/W and the address go out abo
 ## How DMAByte() uses them
 
 1. The caller latches `StartCycCnt` at Phi2 falling, then `DMAByte()` waits `nS_DMABAWait` and reads BA. If BA is low it returns and retries on the next cycle.
-2. It presets the address bits, then waits `nS_DMASetup` with `WaitUntil_nS_fine`, so the drive lands within a few nS of the value whatever code ran before it. The coarse `WaitUntil_nS` used until 11/11/2026 landed 9 to 20 nS late, by an amount that changed with each build's code layout, and on an NTSC C64 the write window is about 25 nS wide (below).
+2. It presets the address bits, then waits `nS_DMASetup` with `WaitUntil_nS`, which converts the value to cycles once, so the drive lands within a few nS of the value whatever code ran before it. The per-pass conversion used here until 11/11/2026 landed 9 to 20 nS late, by an amount that changed with each build's code layout, and on an NTSC C64 the write window is about 25 nS wide (below).
 3. It re-latches `StartCycCnt`. This is why `nS_DMADataSetup` and `nS_DMADataHold` are measured from setup, not from the falling edge.
 4. A read waits `nS_DMADataSetup` and samples the data port. A write drives the data, waits `nS_DMADataHold`, then releases the bus.
 

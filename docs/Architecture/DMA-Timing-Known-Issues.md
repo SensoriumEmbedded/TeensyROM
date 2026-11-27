@@ -42,7 +42,7 @@ enough to read on a scope — persistence-mode capture just shows a noisy band
 wait itself with the existing debug signal instead:
 ```c
 SetDebugAssert;
-WaitUntil_nS_fine(nS_DMADataHold);
+WaitUntil_nS(nS_DMADataHold);
 SetDebugDeassert;
 ```
 in `DataPortWriteWaitDMA()` ([DMAControl.c:38](../../Source/Teensy/MinimalBoot/Common/DMAControl.c)) — pin 52 on this TR+ build
@@ -51,50 +51,6 @@ between the pulse's falling edge and Phi2's next falling edge is the real
 margin, and tells you how early in the wait it'd be safe to start polling
 Phi2 without risking the early-exit failure the original check was pulled
 for. Deferred — needs the scope, not done yet.
-
-### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()`, methodically `[Development]`
-`WaitUntil_nS_fine()` (`Common_Defs.h`) fixes the same per-pass-reconversion
-overshoot as the DMA data-hold fix above, but only `DataPortWaitReadDMA()` and
-`DataPortWriteWaitDMA()` have been switched over so far, plus the `nS_DMASetup`
-waits in `DMAControl.c`'s `DMAByte()` and `IOH_KernalReplace.c`'s `KDS_SenseCycle()`
-(11/11/2026, see [DMA-Phi2-Timing.md](DMA-Phi2-Timing.md)). Nine live call sites
-still use the coarser `WaitUntil_nS()`:
-
-- `IOH_KernalReplace.c:153` — `nS_DMAAssert`
-- `ISRs.c:53,91,107,195,207` — `nS_DMAAssert` (×2), `nS_RWnReady`, `nS_PLAprop`,
-  `nS_VICStart` — all inside the main `isrPHI2()` cycle handler and its
-  DMA-assert path
-- `Common_Defs.h` `DataPortWriteWaitVIC`, `DataPortWaitRead` — `nS_VICDHold`, `nS_DataSetup` (the non-DMA
-  read/write helpers)
-- `IOH_REU.c:188` — `nS_DMAAssert`
-
-(`DMAByte()`'s BA-transition wait is no longer on this list — the
-`C128-DMA-Timing` import hoisted it to the same manual pattern as the
-already-fixed data-setup/hold waits, and gave it a name, `nS_DMABAWait`. Not
-using the `WaitUntil_nS_fine()` macro itself, so still worth a small follow-up
-for consistency, but the actual overshoot bug is already gone.)
-
-"Methodically" because each conversion is a real timing change, not a pure
-refactor — same lesson as this branch's own hoist: shrinking the overshoot
-moves every one of these waits earlier by some amount, and several
-(`nS_RWnReady`, `nS_PLAprop`, `nS_DMAAssert`) already carry board-specific
-tuning history (C128/C64C-specific bumps, Reloaded Mk2 special builds) in
-their surrounding comments. Converting all nine in one pass risks re-opening
-several already-settled margins at once with no way to tell which one
-regressed. Convert and re-verify one call site — or one tightly related group,
-like the three VIC-cycle waits inside `isrPHI2()` — at a time.
-
-`nS_DMAAssert` specifically is worth prioritizing over the others in this
-list: it's the *only* one of the nine that's shared with the CRT bank-swap
-pause mechanism (confirmed via `IOH_MagicDesk2.c`, which drives the same
-`DMA_State` machine and `SetDMAAssert`/`nS_DMAAssert` sequence used to enter
-`DMA_S_ActiveReady`, then never touches `nS_DMADataSetup`/`nS_DMADataHold` at
-all — those only run inside `DMAByte()`'s per-cycle transfer loop). If
-`nS_DMAAssert` turns out marginal on C128 the same way `nS_DMADataHold` was
-on NTSC, that would explain the bank-swap mechanism's separately-documented
-C128 unreliability (see [Known-Issues.md](Known-Issues.md)'s "Large-CRT
-bank-swap DMA reliability" entry) through one shared root cause — unconfirmed,
-but the most direct link between the two mechanisms found so far.
 
 ## Validation
 
@@ -407,6 +363,17 @@ means cycle-overrun/whole-byte (#5). `WorstPass` still stays serial-only.
 
 Verified on hardware after the fix above — screen output confirmed correct.
 
+### 9. Convert remaining `WaitUntil_nS()` call sites to `WaitUntil_nS_fine()` `[Closed]`
+`WaitUntil_nS()` itself now converts once per wait, and `WaitUntil_nS_fine()` is gone
+(11/24/2026). The per-pass conversion moved where each wait exited by up to one pass,
+about 12 nS, by an amount the build's code layout decided: on an NTSC C64 (Kawari) +
+TR+, the GPIO6 read in `isrPHI2()` landed 166 or 176 nS after entry depending on the
+build. The defaults tuned under it are raised by the old mean overshoot so they land
+where they were tuned (`Common_Defs.h`): `nS_RWnReady` +8 and `nS_DataSetup` +1,
+measured with the snoop tap's cycle timing; `nS_PLAprop` measured no shift;
+`nS_VICStart` and `nS_VICDHold` +5, half the old pass, not measured. `nS_DMAAssert` is unchanged: the
+assert lands about 108 nS after the falling edge at any value of 40 or lower.
+
 ### 10. `ExpPortDMA()` doesn't force off active IO Handlers before testing `[Closed — not a bug]`
 Initial read: entry to `ExpPortDMA()` ([StatusFunctions.c:845-851](../../Source/Teensy/MinimalBoot/Common/IO_Handlers/StatusFunctions.c)) never touches `CurrentIOHandler`, so whatever handler was active before the diagnostic started would stay live and could cross-talk with the test's own bus activity.
 
@@ -523,7 +490,7 @@ existing NTSC/PAL bit. `SetVideoStdTiming()` (`IOH_TeensyROM.c`, refactored
 out of the inline `wRegVid_TOD_Clks` write handler so the `td` serial command
 can call the same logic) then selects `Def_nS_DMASetupNTSC128=445` /
 `Def_nS_DMADataSetupNTSC128=375` / `Def_nS_DMADataHoldNTSC128=395` (460 / 374 /
-394 since 11/13/2026, re-measured under `WaitUntil_nS_fine`) instead of
+394 since 11/13/2026, re-measured with the wait converting once) instead of
 the plain NTSC set, when both bits are set.
 
 Same exposure as #1: this only ever fires once the menu has reported the
@@ -594,8 +561,9 @@ position each time.
 **Extensively eliminated already** (firmware-only, no scope needed):
 - BA sample point — exposed as a new tunable (`Def_nS_DMABAWait`, was a
   hardcoded `WaitUntil_nS(200)` in `DMAByte()`), swept 60–400: worse at both
-  ends, no better value than the existing 200. Directly relevant to #9's
-  `nS_DMAAssert`/bank-swap cross-reference, though this rules out the BA-wait
+  ends, no better value than the existing 200. Directly relevant to the
+  `nS_DMAAssert`/bank-swap link in [Known-Issues.md](Known-Issues.md)'s
+  "Large-CRT bank-swap DMA reliability" entry, though this rules out the BA-wait
   specifically, not `nS_DMAAssert` itself.
 - Badlines/VIC-IIe cycle stealing — screen blanked, sprites off: roughly
   halved the error count, so a real contributor, not the sole cause.

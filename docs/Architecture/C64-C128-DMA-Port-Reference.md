@@ -4,8 +4,7 @@ Factual background from Commodore's own documentation and schematics, gathered
 (2026-09-11) to check whether the C64 and C128 expansion ports impose
 different `/DMA` assert/de-assert timing requirements — directly relevant to
 [DMA-Timing-Known-Issues.md](DMA-Timing-Known-Issues.md) item #6 (the
-"C128 PHI2-generation-delay" theory) and to `nS_DMAAssert`'s existing
-C128-specific tuning bumps (item #9 in the same file). This file is reference
+"C128 PHI2-generation-delay" theory) and to `nS_DMAAssert`. This file is reference
 material, not a bug tracker — nothing here is a TeensyROM firmware finding,
 it's what Commodore itself published.
 
@@ -22,8 +21,8 @@ machine's port vs. the other's.
 What *is* documented is architectural, not a timing-window change: the C128
 routes `/DMA` through the MMU rather than straight to the CPU, adding a
 verified-real (but unquantified) extra logic stage between the port pin and a
-settled bus. That's a plausible source of the C128-specific margin `nS_DMAAssert`
-and friends already carry (per item #9), but it is **not** the same claim as
+settled bus. That's a plausible source of the C128-specific margin the DMA
+timing constants already carry, but it is **not** the same claim as
 item #6's "C128 has less PHI2-generation delay than C64" theory — that one
 remains untested by any source found here; it would have to be a real,
 undocumented difference in the two VIC chips' PHI2 output stage.
