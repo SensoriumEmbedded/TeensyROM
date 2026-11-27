@@ -290,8 +290,9 @@
    rsShowExtPackages = 0x22
    rsDeleteFileCheck = 0x23 ;the highlighted SD/USB file: show it, and in rwRegScratch whether it can go
    rsDeleteFile = 0x24 ;remove it and reload the listing; rwRegScratch reports success
+   rsPlaySidInHost = 0x25 ;play the selected SD .sid in the installed SIDHost extension, or say why not
 
-   rsNumStatusTypes = 0x25
+   rsNumStatusTypes = 0x26
 
    rsReady = 0x5a ;FW->64 (Rd) update finished (done, abort, or otherwise)
    rsC64Message = 0xa5 ;FW->64 (Rd) message for the C64, set to continue when finished
@@ -377,6 +378,7 @@
    rCtlShowExtPackagesWAIT = 60 ; the /VMS packages on SD, sent as one message per row
    rCtlDeleteFileCheckWAIT = 61 ; show the highlighted SD/USB file and, in rwRegScratch, whether it can be deleted
    rCtlDeleteFileWAIT = 62 ; delete it and reload the listing; rwRegScratch reports success
+   rCtlPlaySidInHostWAIT = 63 ; Shift+S on a .sid: play it in the installed SIDHost extension (reboots), or say why not
 
 
 

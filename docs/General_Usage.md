@@ -34,6 +34,8 @@
       * Requires Meatloaf using latest FW connected to the TR USB Host port.
     * `<Shift-K>` **(TR+ only)** Set highlighted file as the Kernal Replace image
     * `<Shift-R>` **(TR+ only)** Set highlighted file as the REU pre-load/save image
+    * `<Shift-S>` **(TR+ only)** Play the highlighted `.sid` in the installed [SIDHost](https://github.com/SensoriumEmbedded/TeensyROM-SIDHost) [Host Extension](TR_Host_Extensions.md) instead of the built-in SID player
+      * If SIDHost isn't installed or can't play the file (for example, it isn't on the SD card), a message says why and the menu comes back. `Return` still plays it in the built-in player.
     * `INST/DEL` Delete the highlighted file from the SD card or USB drive (asks for confirmation first)
     * `1-5` Programmable Hot Keys to immediately launch a specified file
       * Defaults: `1` Cynthcart, `2` Station64 **(TR+ default: REU-Checker v1.0)**, `3` CCGMS, `4` TeensyROM ASID Player, `5` Jupiter Lander CRT

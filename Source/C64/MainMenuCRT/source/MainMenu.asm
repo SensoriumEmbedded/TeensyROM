@@ -512,6 +512,11 @@ REUPreLoadSelect:
    lda #rCtlSetREUFileWAIT
    jmp CtlWriteWaitDotsAnyKeyListMenuHighlightCur
 
++  cmp #'S' ;Play a .sid in the installed SIDHost extension
+   bne +
+   jsr PlaySidInHost
+   jmp HighlightCurrent
+
 +  cmp #'M' ;Mount Dxx file
    bne +
    jsr PrintBanner ;SourcesColor
@@ -787,6 +792,23 @@ DirUpdate:
    sta rwRegCursorItemOnPg+IO1Port  ;set cursor to the first item in dir
    jmp ListAndDone
    
+PlaySidInHost:
+;Shift+S: the highlighted .sid plays in the installed SIDHost extension instead of the built-in
+;  player.  The TR reboots into the host, or says why it can't and the menu comes back.
+   lda rwRegCursorItemOnPg+IO1Port
+   sta rwRegSelItemOnPage+IO1Port ;select Item from page
+   jsr InverseRow ;unhighlight the current
+   jsr IRQDisable  ;turn off interrupt (also stops SID playback, if on)
+   jsr PrintBanner ;clear screen for messaging
+   lda TblEscC+EscNameColor
+   sta $0286  ;set text color
+   lda #rCtlPlaySidInHostWAIT
+   sta wRegControl+IO1Port
+   jsr WaitForTRDots ;returns only when the TR refused, after showing its message
+   jsr IRQEnable  ;background SID carries on as it was: a refusal is not a failed load
+   jsr AnyKeyMsgWait
+   jmp ListAndDone
+
 SelectItem:
 ;Execute/select an item from the list
    lda rwRegCursorItemOnPg+IO1Port 

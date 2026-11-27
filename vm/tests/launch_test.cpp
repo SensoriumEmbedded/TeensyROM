@@ -118,8 +118,87 @@ int main(int argc,char **argv){
     assert(!valid(0x42464346,0x432000d1,address+0x1801,0x60000000,123904));
     assert(!valid(0x42464346,0x432000d1,address+0x1801,address,VmBootImage::limit-address+1));
 
+    // Shift+S on a .sid: launchInHost boots the SIDHost extension with the file as content
+    // and the host's folder as root, no package behind it. Any other host, or none, refuses by
+    // name and nothing reboots; a selection that is not an SD .sid is not its to answer.
+    // A v2 header, one song, the load address in the data ($1000), and an RTS to load there.
+    auto sidImage=[](const char *magic){std::string s(0x7C,'\0');memcpy(&s[0],magic,4);s[5]=2;s[7]=0x7C;s[0x0F]=1;s[0x11]=1;
+                                       return s+std::string("\x00\x10\x60",3);};
+    auto put=[](const fs::path &p,const std::string &s){std::ofstream(p,std::ios::binary)<<s;};
+    fs::create_directories(base/"Music/Hubbard");
+    put(base/"Music/Hubbard/Commando.sid",sidImage("PSID"));
+    VmBootImage::install(0,VM_ABI,"SIDHost");
+    rebooted=false;message.clear();marker.clear();machineAt=-1;
+    assert(VmLaunch::launchInHost(rmtSD,"//Music/Hubbard","Commando.sid")&&rebooted&&message.empty());
+    assert(VmRegistry::consume(launch)&&!strcmp(launch.root,"/VMS/SIDHost")&&
+           !strcmp(launch.content,"/Music/Hubbard/Commando.sid")&&!launch.manifest_crc);
+    assert(marker==VM_HOST_MARKER&&machineAt==VM_EEP_MACHINE_ADDR);
+    VmBootImage::install(VM_HOST_SERVICES);   // a module host, named TeensyROM, would take the .sid for a module
+    rebooted=false;message.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando.sid")&&!rebooted&&
+           message.find("TeensyROM")!=std::string::npos&&message.find("SIDHost")!=std::string::npos);
+    VmBootImage::installWithoutDescriptor();
+    rebooted=false;message.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando.sid")&&!rebooted&&message.find("(no descriptor)")!=std::string::npos);
+    VmBootImage::erase();
+    rebooted=false;message.clear();
+    {bool badFile=true;   // a refusal of the host, not the file: the built-in player can still play it
+     assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando.sid",&badFile)&&!rebooted&&!message.empty()&&!badFile);}
+    VmBootImage::install(0,VM_ABI+1,"SIDHost");   // the right name built against another ABI reads the record differently
+    rebooted=false;message.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando.sid")&&!rebooted&&message.find("ABI")!=std::string::npos);
+    VmBootImage::install(0,VM_ABI,"SIDHost");
+    // The file itself is checked before anything is written, against the header rules the host
+    // refuses a file on: not a SID, empty, missing, or a header the host's parser would reject.
+    put(base/"Music/Hubbard/Notes.sid","just text");
+    put(base/"Music/Hubbard/Empty.sid","");
+    put(base/"Music/Hubbard/Magic.sid","PSID");
+    {std::string s=sidImage("PSID");s[5]=9;put(base/"Music/Hubbard/Version.sid",s);}
+    {std::string s=sidImage("PSID");s[7]=0x76;put(base/"Music/Hubbard/Offset.sid",s);}
+    {std::string s=sidImage("PSID");s[0x0F]=0;put(base/"Music/Hubbard/NoSongs.sid",s);}
+    {std::string s=sidImage("PSID");s[0x77]=1;put(base/"Music/Hubbard/Mus.sid",s);}
+    {std::string s=sidImage("RSID");s[8]=0x10;put(base/"Music/Hubbard/RsidLoad.sid",s);}
+    {std::string s=sidImage("RSID");s[4]=0;s[5]=1;s[7]=0x76;s.erase(0x76,6);put(base/"Music/Hubbard/RsidV1.sid",s);}
+    {std::string s=sidImage("PSID");s.resize(0x7E);put(base/"Music/Hubbard/NoData.sid",s);}
+    {std::string s=sidImage("PSID");s[0x7C]='\xFF';s[0x7D]='\xFF';s+='\x60';put(base/"Music/Hubbard/Wraps.sid",s);}
+    for(const char *bad:{"Notes.sid","Empty.sid","Missing.sid","Magic.sid","Version.sid","Offset.sid","NoSongs.sid",
+                         "Mus.sid","RsidLoad.sid","RsidV1.sid","NoData.sid","Wraps.sid"}){
+        rebooted=false;message.clear();marker.clear();bool badFile=false;
+        assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard",bad,&badFile)&&!rebooted&&marker.empty()&&
+               message.find("PSID")!=std::string::npos&&badFile);}
+    // A version 1 header, and a PSID that loads at the address its header names.
+    {std::string s=sidImage("PSID");s[5]=1;s[7]=0x76;s.erase(0x76,6);put(base/"Music/Hubbard/V1.sid",s);}
+    {std::string s=sidImage("PSID");s[8]=0x10;s.erase(0x7C,2);put(base/"Music/Hubbard/Header.sid",s);}
+    for(const char *good:{"V1.sid","Header.sid"}){
+        rebooted=false;message.clear();
+        assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard",good)&&rebooted&&message.empty());}
+    put(base/"Music/Hubbard/Real.sid",sidImage("RSID"));
+    rebooted=false;message.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Real.sid")&&rebooted&&message.empty());
+    // A card that never held a package has no /VMS, and the launch record lives there.
+    fs::rename(base/"VMS",base/"saved-VMS");
+    rebooted=false;message.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando.sid")&&rebooted&&message.empty());
+    assert(VmRegistry::consume(launch)&&!strcmp(launch.content,"/Music/Hubbard/Commando.sid"));
+    fs::remove_all(base/"VMS");fs::rename(base/"saved-VMS",base/"VMS");
+    // ".." in a name is legal on the card but not in the record: refused before the last
+    // record is overwritten.
+    put(base/"Music/Hubbard/Commando..sid",sidImage("PSID"));
+    rebooted=false;message.clear();marker.clear();
+    assert(VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","Commando..sid")&&!rebooted&&marker.empty()&&
+           message.find("..")!=std::string::npos);
+    assert(VmRegistry::consume(launch)&&!strcmp(launch.content,"/Music/Hubbard/Real.sid"));
+    rebooted=false;message.clear();
+    assert(!VmLaunch::launchInHost(2,"/Music/Hubbard","Commando.sid"));        // USB keeps the built-in player
+    assert(!VmLaunch::launchInHost(rmtSD,"/disk.d64*","Commando.sid"));        // inside a mounted image
+    assert(!VmLaunch::launchInHost(rmtSD,"/Music/Hubbard","GAME.PRG"));
+    assert(!VmLaunch::launchInHost(rmtSD,"","Commando.sid")&&!VmLaunch::launchInHost(rmtSD,nullptr,"Commando.sid"));
+    assert(!rebooted&&message.empty());
+
     puts("PASS: client and content launch, 12 stock file types and non-SD sources fall through untouched, "
          "1/2 MiB ordinary CRTs keep stock parsing, damaged and orphaned clients report without booting, "
          "cached extension table skipping the scan, deferring to it when over the limit or errored, and its staleness bound, "
-         "boot-image bounds");
+         "boot-image bounds, and the .sid launch into the SIDHost extension refusing every other host "
+         "and every header its parser rejects, and making /VMS on a card without one, "
+         "and refusing a path the record cannot carry");
 }
