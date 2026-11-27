@@ -23,8 +23,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { findBoards, identify, boardKind, teensyTool } from './lib/trserial.mjs';
-import { inspectImage, planFlash, describeBoard, sameBoard, findWritten, answerComplete, answerProblems, Refusal, LABEL }
-  from './lib/flash-plan.mjs';
+import { inspectImage, planFlash, describeBoard, sameBoard, findWritten, answerComplete, answerProblems, otherBoardChange,
+  Refusal, LABEL } from './lib/flash-plan.mjs';
 
 // Set once a write has begun. From then on the Teensy Loader may be holding the
 // image in Auto mode, so a failure closes it too (see closeTeensyLoader).
@@ -82,7 +82,8 @@ Which board is written:
 After each write the board must come back running the image's build date and,
 when the image's firmware reports a chip ID, answering with one: the same as
 before, if it reported one then. Every other board must still report what it
-did before.
+did before, except one that did not answer then and now runs a build that none
+of the images being written carries: that is reported as a note.
 TeensyROM settings survive: a USB write leaves the flash that holds them alone.
 
 Writing: on Windows through the Teensy Loader that Teensyduino installs, with
@@ -293,14 +294,18 @@ async function waitForBoard(board, image) {
 
 // Confirm what is actually running, rather than trusting that the write took:
 // the written board must answer with the image's build date and its chip ID
-// (see answerProblems), and every other board must be as it was. Note what the
-// date can and cannot tell you: it comes from the HEAD commit (see
-// sourceDateEpoch in build-firmware.mjs), not from the moment of compilation,
-// so it tells one commit's firmware from another's but says nothing about a
-// rebuild of uncommitted edits. Commit first if you need the banner to prove
-// which build is on the board. Returns the written board as it now reports
-// itself, or null when it has not come back yet.
-async function checkAfterWrite(board, image, others) {
+// (see answerProblems), and every other board must be as it was, except one
+// that was silent and now runs a build of none of `images` (otherBoardChange).
+// Note what the date can and cannot tell you: it comes from the HEAD commit
+// (see sourceDateEpoch in build-firmware.mjs), not from the moment of
+// compilation, so it tells one commit's firmware from another's but says
+// nothing about a rebuild of uncommitted edits. Commit first if you need the
+// banner to prove which build is on the board. Returns the boards whose answer
+// the next write compares against: the written one as it now reports itself,
+// and any noted one as it answered here, so that one going silent again at a
+// later check (mid-boot after taking a later image) is a change. Null when the
+// written board has not come back yet.
+async function checkAfterWrite(board, image, others, images) {
   const answered = await waitForBoard(board, image);
   if (!answered) {
     console.log('\nWritten, but the board has not answered since — re-run with --check to confirm.');
@@ -309,12 +314,16 @@ async function checkAfterWrite(board, image, others) {
   const { back, info } = answered;
   const now = findBoards();
   const problems = answerProblems(board, image, { ...info, port: back.port, kind: boardKind(info.version) });
+  const woke = [];
   for (const other of others) {
     const current = now.find((b) => b.port && sameBoard(b, other));
-    const after = current ? identify(current.port) : {};
-    if (after.version !== other.version || after.built !== other.built || after.uid !== other.uid) {
-      problems.push(`${other.port} changed: it was ${describeBoard(other)}, and is now ` +
-        (current ? describeBoard({ ...current, ...after }) : 'not on serial'));
+    const answer = current ? identify(current.port) : {};
+    const change = otherBoardChange(other, current, answer, images);
+    if (change?.problem) problems.push(change.problem);
+    if (change?.note) {
+      console.log(`\n${change.note}.`);
+      const { version, built, uid, minimal } = answer;
+      woke.push({ ...current, version, built, uid, minimal, kind: boardKind(version) });
     }
   }
   if (problems.length) {
@@ -324,7 +333,8 @@ async function checkAfterWrite(board, image, others) {
   }
   console.log(`\nWritten. ${back.port} now runs ${info.version}${info.built ? `, built ${info.built}` : ''}` +
     `${info.uid ? `, chip ${info.uid}` : ''}.`);
-  return { ...back, version: info.version, built: info.built, uid: info.uid, minimal: info.minimal, kind: boardKind(info.version) };
+  const written = { ...back, version: info.version, built: info.built, uid: info.uid, minimal: info.minimal, kind: boardKind(info.version) };
+  return [written, ...woke];
 }
 
 let opts;
@@ -364,16 +374,19 @@ for (const { board, image } of plan.writes) {
 
 if (opts.check) { console.log('\n--check: nothing written.'); process.exit(0); }
 
-// What each board reports now; a written board's entry is replaced by what it
-// reports after the write, so the next write compares against that.
+// What each board reports now; a checked board's entry is replaced by what it
+// reported at the check, so the next write compares against that. Only the
+// images handed to the loader can reach a board: one loaded but not written
+// (--all with no board of its type) must not decide whether a board was.
 const current = [...boards];
+const toWrite = [...new Set(plan.writes.map(({ image }) => image))];
 for (const { board, image } of plan.writes) {
   const others = current.filter((b) => !sameBoard(b, board));
   if (process.platform === 'win32') await writeWithTeensyLoader(image.path, board);
   else writeWithLoaderCli(image.path, board);
-  const after = await checkAfterWrite(board, image, others);
-  if (!after && plan.writes.length > 1) fail('Stopping before the next board, since this one could not be checked.');
-  if (after) current[current.findIndex((b) => sameBoard(b, board))] = after;
+  const checked = await checkAfterWrite(board, image, others, toWrite);
+  if (!checked && plan.writes.length > 1) fail('Stopping before the next board, since this one could not be checked.');
+  for (const after of checked ?? []) current[current.findIndex((b) => sameBoard(b, after))] = after;
 }
 closeTeensyLoader();
 if (process.platform === 'win32') console.log('Closed the Teensy Loader, so it cannot write this image to a board later.');

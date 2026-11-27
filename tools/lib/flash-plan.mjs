@@ -104,6 +104,28 @@ export function answerProblems(board, image, answer) {
   return problems;
 }
 
+// What a write did to a board it was not aimed at: `before` is that board as
+// identified before the write, `current` its entry in the listing taken after
+// (undefined once it has left serial), `answer` its version reply now ({} when
+// it has left), `images` every image this run writes. Any change is a problem,
+// since a write that reached the wrong board shows as one, except this: a board
+// that did not answer before and now answers in full with another build date
+// than every image's was not written by this run. A board busy with a program,
+// or with its port held by a serial monitor, goes from silent to answering on
+// its own, beside a write that went right. With --all, a board that took an
+// earlier image while silent may first answer at a later write's check, which
+// is why every image's date counts, not only the one just written.
+// Returns null, { problem }, or { note }.
+export function otherBoardChange(before, current, answer, images) {
+  if (answer.version === before.version && answer.built === before.built && answer.uid === before.uid) return null;
+  const now = current ? describeBoard({ ...current, ...answer }) : 'not on serial';
+  const woke = !before.version &&
+    images.every((image) => image.stamp && answerComplete(image, answer) && answer.built !== image.stamp);
+  return woke
+    ? { note: `${now}: did not answer before the write, and runs another build than this run writes, so no write reached it` }
+    : { problem: `${before.port} changed: it was ${describeBoard(before)}, and is now ${now}` };
+}
+
 // Boards: [{ port, bootloader, location, label, version, built, uid, kind }],
 // images: [{ path, kind, id, stamp }]. Returns { writes: [{ board, image }],
 // notes: [line] } in the order to write, or throws a Refusal.

@@ -2,7 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeHex, FLASH_BASE, MAIN_BASE } from './hex.mjs';
-import { inspectImage, planFlash, sameBoard, findWritten, answerComplete, answerProblems, describeBoard, Refusal } from './flash-plan.mjs';
+import { inspectImage, planFlash, sameBoard, findWritten, answerComplete, answerProblems, otherBoardChange, describeBoard, Refusal }
+  from './flash-plan.mjs';
 
 // Boards as flash-firmware.mjs hands them over, already identified.
 const tr = (port, uid, extra = {}) => ({ port, bootloader: false, location: `usb:${port}`, label: `${port} (Teensy 4.1) Serial+MIDI`,
@@ -183,6 +184,58 @@ test('the wrong type, or a board left in MinimalBoot, fails the check', () => {
   assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ version: 'TeensyROM+ v0.8.0.11', kind: 'tr-plus' })).join(),
     /reports TeensyROM\+ v0\.8\.0\.11, not TeensyROM/);
   assert.match(answerProblems(tr('COM12', '14470230'), trImage, answer({ minimal: true })).join(), /still in MinimalBoot/);
+});
+
+// Another board after a write: its entry in the listing, and its version reply now.
+const listed = { port: 'COM9', bootloader: false, location: 'usb:COM9', label: 'COM9 (Teensy 4.1) Serial+MIDI' };
+const reply = (extra = {}) => ({ version: 'TeensyROM+ v0.8.0.11', built: 'Nov 25 2026, 22:19:52', uid: '9230370', minimal: false, ...extra });
+const noReply = { version: null, built: null, uid: null, minimal: false };
+
+test('another board must be as it was before the write', () => {
+  const before = trPlus('COM9', '9230370', { built: 'Nov 25 2026, 22:19:52' });
+  assert.equal(otherBoardChange(before, listed, reply(), [plusImage]), null);
+  assert.match(otherBoardChange(before, listed, reply({ built: plusImage.stamp }), [plusImage]).problem,
+    /COM9 changed: it was COM9  TeensyROM\+ v0\.8\.0\.11, built Nov 25 2026, 22:19:52  chip 9230370, and is now .*Sep 25 2026/);
+  assert.match(otherBoardChange(before, listed, noReply, [plusImage]).problem, /and is now COM9  did not answer/);
+  assert.match(otherBoardChange(before, undefined, {}, [plusImage]).problem, /and is now not on serial/);
+  assert.equal(otherBoardChange(silent('COM9'), listed, noReply, [plusImage]), null);
+});
+
+test('a board silent before the write that now answers with a build this run does not write is a note, not a problem', () => {
+  const woke = otherBoardChange(silent('COM9'), listed, reply(), [plusImage]);
+  assert.equal(woke.problem, undefined);
+  assert.match(woke.note, /^COM9  TeensyROM\+ v0\.8\.0\.11, built Nov 25 2026, 22:19:52  chip 9230370: did not answer before the write/);
+  // Still a problem when it could be the write's doing, or nothing tells it apart: the image's own
+  // build, MinimalBoot, a reply with no date or cut short of the chip ID, an image with no date, or
+  // gone from serial.
+  for (const [current, now, image] of [
+    [listed, reply({ built: plusImage.stamp }), plusImage],
+    [listed, reply({ minimal: true }), plusImage],
+    [listed, reply({ built: null }), plusImage],
+    [listed, reply({ uid: null }), plusImage],
+    [listed, reply(), { ...plusImage, stamp: null }],
+    [undefined, {}, plusImage],
+  ]) {
+    assert.match(otherBoardChange(silent('COM9'), current, now, [image]).problem, /COM9 changed: it was COM9  did not answer/);
+  }
+});
+
+test('a noted board, compared against what it answered, is a problem when it goes silent again', () => {
+  // flash-firmware.mjs keeps a noted board's answer for the run's next check; silent again there
+  // (mid-boot after a press of its program button took that write's image) must not pass.
+  const noted = { ...listed, ...reply(), kind: 'tr-plus' };
+  assert.match(otherBoardChange(noted, listed, noReply, [trImage]).problem,
+    /COM9 changed: it was COM9  TeensyROM\+ v0\.8\.0\.11, built Nov 25 2026, 22:19:52  chip 9230370, and is now COM9  did not answer/);
+  // Against its silent start the same answer goes unseen, which is why the baseline moves.
+  assert.equal(otherBoardChange(silent('COM9'), listed, noReply, [trImage]), null);
+});
+
+test('with --all, a silent board running any image this run writes is a problem, not only the one just written', () => {
+  // The TR+ image went to a board that was still booting at its own check; it answers at the TR write's.
+  const olderPlus = { ...plusImage, stamp: 'Nov 25 2026, 22:19:52' };
+  assert.match(otherBoardChange(silent('COM9'), listed, reply(), [trImage, olderPlus]).problem, /COM9 changed/);
+  assert.match(otherBoardChange(silent('COM9'), listed, reply(), [olderPlus, trImage]).problem, /COM9 changed/);
+  assert.ok(otherBoardChange(silent('COM9'), listed, reply(), [trImage, plusImage]).note);
 });
 
 // A hex with the given strings placed at the given addresses.

@@ -79,7 +79,11 @@ checks that:
 - the written board answers with the build date recorded in the image;
 - it answers with a chip ID when the image's firmware reports one, the same as before if
   it reported one then;
-- every other board still reports what it did before.
+- every other board still reports what it did before. The one exception is a board that did
+  not answer then (busy, or its port held by another program) and now answers in full with
+  a build date that none of the images being written carries: no write in the run could
+  have put that build there, so it is reported as a note. Its answer is what later writes
+  in the same run compare it against.
 
 A reply missing the date or the chip ID is asked for again, for up to 20 seconds, before
 the check fails.
