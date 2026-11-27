@@ -23,12 +23,12 @@ static uint32_t TRBlockBootSize;
 
 FLASHMEM static bool TRBlockFileRead(void *Context, uint32_t Offset, uint8_t *Block)
 {
-   return TRBlockFile.seekSet(Offset) && TRBlockFile.read(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
+   return TRBlockFile.seekSet(Offset) && TRBlockFile.read(Block, D64_SECTOR) == D64_SECTOR;
 }
 
 FLASHMEM static bool TRBlockFileWrite(void *Context, uint32_t Offset, const uint8_t *Block)
 {
-   if (!TRBlockFile.seekSet(Offset) || TRBlockFile.write(Block, GEOS_SECTOR_SIZE) != GEOS_SECTOR_SIZE) return false;
+   if (!TRBlockFile.seekSet(Offset) || TRBlockFile.write(Block, D64_SECTOR) != D64_SECTOR) return false;
    TRBlockDirty = true;
    TRBlockLastWritemS = millis();
    return true;
@@ -55,9 +55,12 @@ FLASHMEM static bool TRBlockOpen()
 
    if (!TRBlockFile.open(&SD.sdfs, TRBlockPath, O_RDWR)) return false;
    Size = TRBlockFile.size();
-   TRBlockImg = (struct TRBlockImage){ Size <= UINT32_MAX ? GeosFormatForSize(Size) : NULL, true, NULL,
-                                       TRBlockFileRead, TRBlockFileWrite, TRBlockFileFlush };
-   if (!TRBlockImg.Format)
+   memset(&TRBlockImg, 0, sizeof TRBlockImg);
+   TRBlockImg.Writable = true;
+   TRBlockImg.Read = TRBlockFileRead;
+   TRBlockImg.Write = TRBlockFileWrite;
+   TRBlockImg.Flush = TRBlockFileFlush;
+   if (!TRBlockImageOpen(&TRBlockImg, Size))
    {
       TRBlockFile.close();
       return false;

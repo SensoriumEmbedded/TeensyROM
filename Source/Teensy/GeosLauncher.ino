@@ -25,17 +25,14 @@ FLASHMEM static bool GeosFileWrite(void *Context, uint32_t Offset, const uint8_t
    return Image->seek(Offset) && Image->write(Block, GEOS_SECTOR_SIZE) == GEOS_SECTOR_SIZE;
 }
 
-FLASHMEM static struct GeosDisk GeosDiskOn(const struct GeosLauncher *Launcher, File *Image)
+FLASHMEM static void GeosDiskOn(const struct GeosLauncher *Launcher, File *Image, struct GeosDisk *Disk)
 {
-   struct GeosDisk Disk = {};
-   uint64_t Size = Image->size();
-
-   Disk.Format = Size <= UINT32_MAX ? GeosFormatForSize(Size) : NULL;
-   Disk.Target = &Launcher->Target;
-   Disk.Context = Image;
-   Disk.Read = GeosFileRead;
-   Disk.Write = GeosFileWrite;
-   return Disk;
+   memset(Disk, 0, sizeof *Disk);
+   Disk->Target = &Launcher->Target;
+   Disk->Context = Image;
+   Disk->Read = GeosFileRead;
+   Disk->Write = GeosFileWrite;
+   GeosDiskOpen(Disk, Image->size());
 }
 
 FLASHMEM static bool GeosHasImageExtension(const char *Name)
@@ -92,7 +89,7 @@ FLASHMEM static bool GeosInspectFile(const struct GeosLauncher *Launcher, const 
       if (Error) snprintf(Error, ErrorSize, PSTR("the image could not be opened"));
       return false;
    }
-   Disk = GeosDiskOn(Launcher, &Image);
+   GeosDiskOn(Launcher, &Image, &Disk);
    Inspected = GeosInspect(&Disk, Found);
    if (!Inspected && Error) snprintf(Error, ErrorSize, PSTR("%s"), Disk.Error);
    Image.close();
@@ -143,7 +140,7 @@ FLASHMEM static bool GeosPatchFile(const struct GeosLauncher *Launcher, const ch
       snprintf(Error, ErrorSize, PSTR("the image could not be opened"));
       return false;
    }
-   Disk = GeosDiskOn(Launcher, &Image);
+   GeosDiskOn(Launcher, &Image, &Disk);
    Patched = GeosInstallDriver(&Disk, &Today);
    if (!Patched) snprintf(Error, ErrorSize, PSTR("%s"), Disk.Error);
    Image.close();
@@ -296,7 +293,7 @@ FLASHMEM static bool GeosStart(const struct GeosLauncher *Launcher, const char *
       SendMsgPrintfln(PSTR("%s\r\ncould not be opened"), Name);
       return false;
    }
-   Disk = GeosDiskOn(Launcher, &Image);
+   GeosDiskOn(Launcher, &Image, &Disk);
    Built = GeosRefreshDriver(&Disk, &Changed) && GeosPrepareConfigure(&Disk, RAM_Image, RAM_ImageSize, &Changed) &&
            (Launcher->Machine == GeosC128
          ? GeosBuildC128Boot(&Disk, &Now, GeosIOHandler() == IOH_GeoRAM ? GEOS_REGS_BESIDE_GEORAM : GEOS_REGS_BESIDE_REU, RAM_Image, RAM_ImageSize, &Boot, &Length, &ClockSet)
