@@ -11,25 +11,26 @@
 
 #include "../BlockDevice/TRBlockImage.h"
 
-#define MAX_IMAGE 819200
+#define MAX_IMAGE 822400
 
-static uint8_t Bytes[MAX_IMAGE], Boot[MAX_IMAGE];
+// One byte past the largest image, so an oversized file reads as a size no image has
+static uint8_t Bytes[MAX_IMAGE + 1], Boot[MAX_IMAGE];
 static uint32_t Size, Flushes;
 static bool FlushFails;
 
 static bool ReadAt(void *Context, uint32_t Offset, uint8_t *Block)
 {
    (void)Context;
-   if (Offset + GEOS_SECTOR_SIZE > Size) return false;
-   memcpy(Block, Bytes + Offset, GEOS_SECTOR_SIZE);
+   if (Offset + D64_SECTOR > Size) return false;
+   memcpy(Block, Bytes + Offset, D64_SECTOR);
    return true;
 }
 
 static bool WriteAt(void *Context, uint32_t Offset, const uint8_t *Block)
 {
    (void)Context;
-   if (Offset + GEOS_SECTOR_SIZE > Size) return false;
-   memcpy(Bytes + Offset, Block, GEOS_SECTOR_SIZE);
+   if (Offset + D64_SECTOR > Size) return false;
+   memcpy(Bytes + Offset, Block, D64_SECTOR);
    return true;
 }
 
@@ -44,7 +45,7 @@ int main(int argc, char **argv)
 {
    FILE *In = argc >= 3 ? fopen(argv[1], "rb") : NULL;
    struct TRBlock Dev;
-   struct TRBlockImage Image = { NULL, argc < 4 || strcmp(argv[3], "ro"), NULL, ReadAt, WriteAt, FlushAll };
+   static struct TRBlockImage Image;
    struct TRBlockBackend Backend;
    char Line[64];
 
@@ -53,9 +54,13 @@ int main(int argc, char **argv)
       fprintf(stderr, "usage: trblock_harness IMAGE OUT [ro|nobackend|flushfails|boot=FILE]\n");
       return 2;
    }
-   Size = fread(Bytes, 1, MAX_IMAGE, In);
+   Size = fread(Bytes, 1, sizeof Bytes, In);
    fclose(In);
-   Image.Format = GeosFormatForSize(Size);
+   Image.Writable = argc < 4 || strcmp(argv[3], "ro");
+   Image.Read = ReadAt;
+   Image.Write = WriteAt;
+   Image.Flush = FlushAll;
+   TRBlockImageOpen(&Image, Size);
    FlushFails = argc >= 4 && !strcmp(argv[3], "flushfails");
    Backend = TRBlockImageBackend(&Image);
    if (argc >= 4 && !strncmp(argv[3], "boot=", 5))
